@@ -1,0 +1,29 @@
+{
+  "project": "vnstock-core-private",
+  "runtime_destination": "C:\\Projects\\VNSTOCK",
+  "allowed_branches": ["main"],
+  "size_limit_bytes": 5242880,
+  "allowlist": [
+    "*.py",
+    "*.bat",
+    "requirements.txt",
+    "tests/**",
+    "config/**",
+    "docs/**",
+    "README.md",
+    "CHANGELOG.md",
+    "CHANGELOG_UI.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+    "AI_CONTEXT.md"
+  ],
+  "denylist": [
+    ".gitignore",
+    "SOURCE_COPY_MANIFEST.sanitized.json",
+    "SOURCE_BASELINE_ADDITIONS.sanitized.json",
+    "docs/AUDIT_REPORT.md",
+    "tools/**",
+    ".deploy/**"
+  ]
+}
