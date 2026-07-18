@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-TOOL_VERSION = "2.0.2"
+TOOL_VERSION = "2.0.3"
 CONFIRM_TOKEN = "DEPLOY_AUTHENTIC_SOURCE"
 DEFAULT_SIZE_LIMIT_BYTES = 5 * 1024 * 1024  # 5 MiB
 DEFAULT_BACKUP_ROOT = Path(
@@ -143,6 +143,39 @@ def git_filtered_bytes(repo: Path, commit: str, rel_path: str) -> bytes:
             f"{result.stderr.decode('utf-8', errors='replace').strip()}"
         )
     return result.stdout
+
+
+def _git_relative_path(repo: Path, path: Path) -> Optional[str]:
+    """Return a normalized repo-relative path, or None when outside repo."""
+    candidate = path if path.is_absolute() else repo / path
+    try:
+        return candidate.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def git_path_is_ignored(repo: Path, path: Path) -> bool:
+    rel_path = _git_relative_path(repo, path)
+    if rel_path is None:
+        return False
+    result = subprocess.run(
+        ["git", "-C", str(repo), "check-ignore", "-q", "--", rel_path],
+        capture_output=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def git_path_is_tracked(repo: Path, path: Path) -> bool:
+    rel_path = _git_relative_path(repo, path)
+    if rel_path is None:
+        return False
+    result = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "--error-unmatch", "--", rel_path],
+        capture_output=True,
+        check=False,
+    )
+    return result.returncode == 0
 
 
 # --------------------------------------------------------------------------
@@ -264,6 +297,40 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def normalize_eol_bytes(data: bytes) -> bytes:
+    """Normalize CRLF and bare CR to LF for an independent EOL-only check."""
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
+def atomic_write_no_replace(path: Path, data: bytes) -> None:
+    """Transactionally create path without ever replacing an existing file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        raise DeployError(f"approval output already exists: {path}")
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent),
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            if os.name == "nt":
+                # Windows rename is atomic and refuses an existing destination.
+                os.rename(temporary_path, path)
+            else:
+                # POSIX rename replaces, so use an atomic no-replace hard link.
+                os.link(temporary_path, path)
+                temporary_path.unlink()
+        except FileExistsError as exc:
+            raise DeployError(f"approval output already exists: {path}") from exc
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
 
 
 # --------------------------------------------------------------------------
@@ -679,6 +746,141 @@ def build_plan(
 
 
 # --------------------------------------------------------------------------
+# initial-baseline approval draft generation (never applies)
+# --------------------------------------------------------------------------
+
+def _assert_safe_approval_output_path(path: Path) -> None:
+    if not path.is_absolute():
+        raise DeployError("approval output must be an absolute path")
+    if path.exists():
+        raise DeployError(f"approval output already exists: {path}")
+    for component in (path.parent, *path.parent.parents):
+        if component.exists() and is_symlink_or_junction(component):
+            raise DeployError(f"approval output path contains a symlink or junction: {component}")
+
+
+def generate_initial_baseline_approval(
+    repo: Path,
+    plan: DeployPlan,
+    dest_root: Path,
+    output_path: Optional[Path] = None,
+) -> dict:
+    """Create an unapproved draft from eligible EOL-only blocked plan rows."""
+    repo = repo.resolve()
+    dest_root = dest_root.resolve()
+    if Path(plan.source_repo).resolve() != repo:
+        raise DeployError("invalid source repository identity for approval draft")
+    if git_head_commit(repo) != plan.source_head:
+        raise DeployError("source HEAD changed after planning")
+    if git_current_branch(repo) != plan.source_branch:
+        raise DeployError("source branch changed after planning")
+    if git_status_dirty_tracked(repo):
+        raise DeployError("source working tree changed after planning")
+    if os.path.normcase(os.path.abspath(plan.runtime_destination)) != os.path.normcase(os.path.abspath(dest_root)):
+        raise DeployError("approval draft destination mismatch")
+    if plan.approval_context.manifest_path is not None:
+        raise DeployError("approval draft generation requires an unapproved plan")
+
+    blocked = plan.blocked()
+    if not blocked:
+        raise DeployError("approval draft requires at least one eligible blocked file")
+    ineligible = [
+        record for record in blocked
+        if record.block_reason != "initial_difference_unapproved"
+    ]
+    if ineligible:
+        details = ", ".join(
+            f"{record.rel_path}:{record.block_reason}" for record in ineligible
+        )
+        raise DeployError(f"approval draft has ineligible blocker(s): {details}")
+
+    entries: list[dict] = []
+    for record in sorted(blocked, key=lambda item: item.rel_path.replace("\\", "/")):
+        source_bytes = git_filtered_bytes(repo, plan.source_head, record.rel_path)
+        try:
+            runtime_path = resolve_dest_path(dest_root, record.rel_path)
+        except BlockedPathError as exc:
+            raise DeployError(str(exc)) from exc
+        if not runtime_path.exists() or not runtime_path.is_file():
+            raise DeployError(f"runtime file changed after planning: {record.rel_path}")
+        runtime_bytes = runtime_path.read_bytes()
+        if (len(source_bytes) != record.size_bytes
+                or sha256_bytes(source_bytes) != record.source_sha256):
+            raise DeployError(f"source bytes changed after planning: {record.rel_path}")
+        if (len(runtime_bytes) != record.runtime_size_bytes
+                or sha256_bytes(runtime_bytes) != record.runtime_sha256):
+            raise DeployError(f"runtime changed after planning: {record.rel_path}")
+        if source_bytes == runtime_bytes or normalize_eol_bytes(source_bytes) != normalize_eol_bytes(runtime_bytes):
+            raise DeployError(f"difference is not independently verified EOL-only: {record.rel_path}")
+        entries.append({
+            "expected_runtime_sha256": record.runtime_sha256,
+            "rel_path": record.rel_path.replace("\\", "/"),
+            "source_commit": plan.source_head,
+            "source_deployment_sha256": record.source_sha256,
+            # Retained for compatibility with the existing approval loader.
+            "source_sha256": record.source_sha256,
+        })
+
+    if output_path is None:
+        output_path = (
+            repo / ".deploy" / "approvals"
+            / f"production-initial-eol-approval-DRAFT-{plan.timestamp}.json"
+        )
+    elif not output_path.is_absolute():
+        raise DeployError("--approval-output must be an absolute path")
+    output_path = output_path.absolute()
+    _assert_safe_approval_output_path(output_path)
+
+    repo_relative = _git_relative_path(repo, output_path)
+    if repo_relative is not None:
+        expected_prefix = ".deploy/approvals/"
+        if not repo_relative.startswith(expected_prefix):
+            raise DeployError("approval output inside the repository must be under .deploy/approvals")
+        if not git_path_is_ignored(repo, output_path):
+            raise DeployError("approval output is not ignored by Git")
+        if git_path_is_tracked(repo, output_path):
+            raise DeployError("approval output is tracked by Git")
+
+    draft = {
+        "approvals": entries,
+        "destination": str(dest_root),
+        "entries": entries,
+        "generated_at": plan.timestamp,
+        "project": plan.project,
+        "source_commit": plan.source_head,
+        "status": "DRAFT_NOT_USER_APPROVED",
+        "tool_version": TOOL_VERSION,
+    }
+    serialized = (
+        json.dumps(draft, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    ).encode("utf-8")
+    created = False
+    try:
+        atomic_write_no_replace(output_path, serialized)
+        created = True
+        saved_bytes = output_path.read_bytes()
+        parsed = json.loads(saved_bytes.decode("utf-8"))
+        if parsed != draft:
+            raise DeployError("approval draft read-back verification failed")
+        digest = sha256_bytes(saved_bytes)
+        if repo_relative is not None:
+            if not git_path_is_ignored(repo, output_path) or git_path_is_tracked(repo, output_path):
+                raise DeployError("approval draft is not ignored and untracked after creation")
+    except Exception:
+        if created and output_path.exists():
+            output_path.unlink()
+        raise
+
+    return {
+        "approval_path": str(output_path.resolve()),
+        "approval_sha256": digest,
+        "entry_count": len(entries),
+        "source_commit": plan.source_head,
+        "status": "DRAFT_NOT_USER_APPROVED",
+    }
+
+
+# --------------------------------------------------------------------------
 # apply
 # --------------------------------------------------------------------------
 
@@ -891,6 +1093,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--preview-dir", type=Path, default=None, help="Override .deploy/previews/ path (testing).")
     parser.add_argument("--backup-root", type=Path, default=None, help="Override backup root (testing).")
     parser.add_argument("--approve-initial-baseline", type=Path, default=None, help="JSON manifest with approvals bound to path, commit, source hash and runtime hash.")
+    parser.add_argument("--generate-initial-baseline-approval", action="store_true", help="Generate an unapproved draft from eligible EOL-only initial blockers; never applies.")
+    parser.add_argument("--approval-output", type=Path, default=None, help="Absolute no-overwrite output path for generated approval draft.")
     parser.add_argument("--approve-file", action="append", default=[], help="Deprecated and refused: filename-only approvals are unsafe.")
     parser.add_argument("--rollback-manifest", type=Path, default=None, help="Rollback a successful deployment manifest.")
     parser.add_argument("--force-rollback-drift", action="store_true", help="Explicitly override rollback drift protection.")
@@ -899,6 +1103,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = build_arg_parser().parse_args(argv)
+
+    if args.approval_output is not None and not args.generate_initial_baseline_approval:
+        print("REFUSED: --approval-output requires --generate-initial-baseline-approval", file=sys.stderr)
+        return 2
+    if args.generate_initial_baseline_approval and (
+        args.apply or args.confirm is not None or args.approve_initial_baseline is not None
+        or args.approve_file or args.rollback_manifest is not None
+        or args.force_rollback_drift
+    ):
+        print("REFUSED: approval draft generation cannot be combined with apply, approval, or rollback options", file=sys.stderr)
+        return 2
 
     if args.apply and args.confirm != CONFIRM_TOKEN:
         print(f"REFUSED: --apply requires --confirm {CONFIRM_TOKEN}", file=sys.stderr)
@@ -968,6 +1183,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"BLOCKED files: {len(plan.blocked())}", file=sys.stderr)
         for record in plan.blocked():
             print(f"  {record.rel_path}: {record.block_reason}", file=sys.stderr)
+
+    if args.generate_initial_baseline_approval:
+        try:
+            generated = generate_initial_baseline_approval(
+                repo, plan, dest_root, args.approval_output,
+            )
+        except (DeployError, OSError, json.JSONDecodeError) as exc:
+            print(f"REFUSED: {exc}", file=sys.stderr)
+            return 2
+        print(json.dumps(generated, sort_keys=True))
+        return 0
 
     if mode == "dry-run":
         print("DRY-RUN complete. No changes written. Re-run with --apply --confirm "
