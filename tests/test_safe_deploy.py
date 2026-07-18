@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 TOOLS_DIR = Path(__file__).resolve().parent.parent / "tools"
 sys.path.insert(0, str(TOOLS_DIR))
@@ -208,7 +209,12 @@ class DriftDetectionTests(SafeDeployTestCase):
         (self.dest / "run.py").write_bytes(b"pre-existing-runtime-version\n")
         cfg = write_config(self.base, "proj", self.dest, ["*.py"])
         config = sd.DeployConfig.load(cfg)
-        plan = sd.build_plan(repo, config, self.dest, {}, {"run.py"}, "dry-run")
+        blocked = sd.build_plan(repo, config, self.dest, {}, {}, "dry-run")
+        rec = next(f for f in blocked.files if f.rel_path == "run.py")
+        approval = {"run.py": {"rel_path": "run.py", "source_commit": blocked.source_head,
+                               "source_sha256": rec.source_sha256,
+                               "expected_runtime_sha256": rec.runtime_sha256}}
+        plan = sd.build_plan(repo, config, self.dest, {}, approval, "dry-run")
         rec = next(f for f in plan.files if f.rel_path == "run.py")
         self.assertEqual(rec.classification, "update")
 
@@ -489,6 +495,161 @@ class ManifestTests(SafeDeployTestCase):
         self.assertEqual(entry["rel_path"], "run.py")
         self.assertTrue(entry["would_backup_to"].startswith(str(backup_root)))
         self.assertEqual((self.dest / "run.py").read_bytes(), b"v1\n")  # build_plan() never writes
+
+
+class SecurityCriticalRegressionTests(SafeDeployTestCase):
+    def _plan(self, files, runtime=None, state=None, approvals=None):
+        repo = make_source_repo(self.base, files)
+        for rel, data in (runtime or {}).items():
+            path = self.dest / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        cfg = write_config(self.base, "proj", self.dest, ["*.py", "*.bat", "nested/**"])
+        config = sd.DeployConfig.load(cfg)
+        plan = sd.build_plan(repo, config, self.dest, state or {}, approvals or {}, "apply",
+                             self.base / "backups")
+        return repo, config, plan
+
+    def test_filtered_bytes_ignore_machine_autocrlf_but_honor_attributes(self):
+        repo = make_source_repo(self.base, {
+            ".gitattributes": b"*.py text eol=lf\n*.bat text eol=crlf\n",
+            "run.py": b"x\n", "build.bat": b"@echo off\n",
+        })
+        head = sd.git_head_commit(repo)
+        for value in ("true", "false"):
+            _git(repo, "config", "core.autocrlf", value)
+            self.assertEqual(sd.git_filtered_bytes(repo, head, "run.py"), b"x\n")
+            self.assertEqual(sd.git_filtered_bytes(repo, head, "build.bat"), b"@echo off\r\n")
+
+    def test_bound_approval_accepts_only_exact_commit_and_hashes(self):
+        repo, config, blocked = self._plan({"run.py": b"source\n"}, {"run.py": b"runtime\n"})
+        rec = next(r for r in blocked.files if r.rel_path == "run.py")
+        approval = {"run.py": {
+            "rel_path": "run.py", "source_commit": blocked.source_head,
+            "source_sha256": rec.source_sha256, "expected_runtime_sha256": rec.runtime_sha256,
+        }}
+        approved = sd.build_plan(repo, config, self.dest, {}, approval, "apply", self.base / "backups")
+        self.assertEqual(next(r for r in approved.files if r.rel_path == "run.py").classification, "update")
+        approval["run.py"]["source_sha256"] = "0" * 64
+        mismatch = sd.build_plan(repo, config, self.dest, {}, approval, "apply", self.base / "backups")
+        self.assertEqual(next(r for r in mismatch.files if r.rel_path == "run.py").block_reason,
+                         "approval_source_hash_mismatch")
+        approval["run.py"]["source_sha256"] = rec.source_sha256
+        approval["run.py"]["expected_runtime_sha256"] = "f" * 64
+        mismatch = sd.build_plan(repo, config, self.dest, {}, approval, "apply", self.base / "backups")
+        self.assertEqual(next(r for r in mismatch.files if r.rel_path == "run.py").block_reason,
+                         "approval_runtime_hash_mismatch")
+
+    def test_eol_only_difference_uses_filtered_deploy_bytes(self):
+        repo = make_source_repo(self.base, {
+            ".gitattributes": b"*.py text eol=lf\n*.bat text eol=crlf\n",
+            "run.py": b"x\r\n", "build.bat": b"@echo off\n",
+        })
+        (self.dest / "run.py").write_bytes(b"x\n")
+        (self.dest / "build.bat").write_bytes(b"@echo off\r\n")
+        cfg = write_config(self.base, "proj", self.dest, ["*.py", "*.bat"])
+        plan = sd.build_plan(repo, sd.DeployConfig.load(cfg), self.dest, {}, {}, "dry-run")
+        self.assertEqual({r.rel_path: r.classification for r in plan.files if r.source_sha256},
+                         {"build.bat": "unchanged", "run.py": "unchanged"})
+
+    def test_source_head_change_after_plan_blocks_apply(self):
+        repo, _, plan = self._plan({"run.py": b"v1\n"})
+        (repo / "run.py").write_bytes(b"v2\n")
+        _git(repo, "add", "run.py"); _git(repo, "commit", "-m", "v2")
+        with self.assertRaisesRegex(sd.DeployError, "source HEAD changed"):
+            sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        self.assertFalse((self.dest / "run.py").exists())
+
+    def test_runtime_change_after_plan_blocks_apply(self):
+        old = b"old\n"; state = {"files": {"run.py": sd.sha256_bytes(old)}}
+        repo, _, plan = self._plan({"run.py": b"new\n"}, {"run.py": old}, state)
+        (self.dest / "run.py").write_bytes(b"drift\n")
+        with self.assertRaisesRegex(sd.DeployError, "runtime changed after planning"):
+            sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        self.assertEqual((self.dest / "run.py").read_bytes(), b"drift\n")
+
+    def test_corrupt_and_stale_state_are_fatal(self):
+        path = self.base / "state.json"; path.write_text("{broken", encoding="utf-8")
+        with self.assertRaises(sd.DeployError):
+            sd.load_deploy_state(path, "proj", self.dest)
+        path.write_text(json.dumps({"project": "other", "runtime_destination": str(self.dest), "files": {}}), encoding="utf-8")
+        with self.assertRaises(sd.DeployError):
+            sd.load_deploy_state(path, "proj", self.dest)
+
+    def test_second_file_failure_rolls_back_first_and_writes_manifest(self):
+        repo, _, plan = self._plan({"a.py": b"a\n", "b.py": b"b\n"})
+        real_atomic = sd.atomic_write
+        def fail_second(path, data):
+            if Path(path).name == "b.py":
+                raise OSError("injected replace failure")
+            return real_atomic(path, data)
+        with mock.patch.object(sd, "atomic_write", side_effect=fail_second):
+            with self.assertRaises(sd.DeployError):
+                sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        self.assertFalse((self.dest / "a.py").exists())
+        manifests = list((self.base / "backups").rglob("deploy-result.json"))
+        self.assertEqual(len(manifests), 1)
+        self.assertEqual(json.loads(manifests[0].read_text(encoding="utf-8"))["result"], "rolled_back_after_failure")
+
+    def test_backup_failure_does_not_replace_runtime(self):
+        old = b"old\n"; state = {"files": {"run.py": sd.sha256_bytes(old)}}
+        repo, _, plan = self._plan({"run.py": b"new\n"}, {"run.py": old}, state)
+        with mock.patch.object(sd, "backup_file", side_effect=OSError("backup denied")):
+            with self.assertRaises(sd.DeployError):
+                sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        self.assertEqual((self.dest / "run.py").read_bytes(), old)
+
+    def test_state_write_failure_rolls_back_runtime(self):
+        repo = make_source_repo(self.base, {"run.py": b"new\n"})
+        cfg = write_config(self.base, "proj", self.dest, ["*.py"])
+        argv = self.default_argv(repo, cfg, ["--apply", "--confirm", sd.CONFIRM_TOKEN,
+                    "--backup-root", str(self.base / "backups"), "--state-file", str(self.base / "state.json")])
+        with mock.patch.object(sd, "save_deploy_state", side_effect=OSError("state denied")):
+            self.assertEqual(self.run_tool(argv), 2)
+        self.assertFalse((self.dest / "run.py").exists())
+
+    def test_deploy_manifest_write_failure_rolls_back_runtime(self):
+        repo, _, plan = self._plan({"run.py": b"new\n"})
+        real_atomic = sd.atomic_write
+        def fail_manifest(path, data):
+            if Path(path).name == "deploy-result.json":
+                raise OSError("manifest denied")
+            return real_atomic(path, data)
+        with mock.patch.object(sd, "atomic_write", side_effect=fail_manifest):
+            with self.assertRaises(sd.DeployError):
+                sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        self.assertFalse((self.dest / "run.py").exists())
+
+    def test_junction_created_after_plan_is_rechecked(self):
+        repo, _, plan = self._plan({"nested/run.py": b"x\n"})
+        real = self.base / "real"; real.mkdir()
+        if not make_link(self.dest / "nested", real, True):
+            self.skipTest("junction creation unavailable")
+        with self.assertRaises(sd.DeployError):
+            sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        self.assertFalse((real / "run.py").exists())
+
+    def test_unicode_and_long_paths_apply(self):
+        rel = "nested/" + ("x" * 120) + "_đ.py"
+        repo, _, plan = self._plan({rel: b"ok\n"})
+        sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        self.assertEqual((self.dest / rel).read_bytes(), b"ok\n")
+
+    def test_case_only_collision_is_blocked(self):
+        repo, config, _ = self._plan({"nested/A.py": b"a"})
+        with mock.patch.object(sd, "git_ls_files", return_value=["nested/A.py", "nested/a.py"]):
+            plan = sd.build_plan(repo, config, self.dest, {}, {}, "dry-run")
+        collisions = [r for r in plan.files if r.block_reason == "case_path_collision"]
+        self.assertEqual({r.rel_path for r in collisions}, {"nested/A.py", "nested/a.py"})
+
+    def test_rollback_blocks_runtime_modified_after_deploy(self):
+        old = b"old\n"; state = {"files": {"run.py": sd.sha256_bytes(old)}}
+        repo, _, plan = self._plan({"run.py": b"new\n"}, {"run.py": old}, state)
+        result = sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        (self.dest / "run.py").write_bytes(b"edited\n")
+        with self.assertRaisesRegex(sd.DeployError, "rollback drift"):
+            sd.rollback_deployment(Path(result["manifest_path"]), self.dest)
+        self.assertEqual((self.dest / "run.py").read_bytes(), b"edited\n")
 
 
 if __name__ == "__main__":

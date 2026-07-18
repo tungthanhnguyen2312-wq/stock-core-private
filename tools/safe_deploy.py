@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-TOOL_VERSION = "1.0.0"
+TOOL_VERSION = "2.0.0"
 CONFIRM_TOKEN = "DEPLOY_AUTHENTIC_SOURCE"
 DEFAULT_SIZE_LIMIT_BYTES = 5 * 1024 * 1024  # 5 MiB
 DEFAULT_BACKUP_ROOT = Path(
@@ -104,8 +104,10 @@ def git_tags_at_head(repo: Path) -> list[str]:
 
 
 def git_ls_files(repo: Path) -> list[str]:
-    out = _run_git(repo, "ls-files")
-    return [line.strip().replace("\\", "/") for line in out.splitlines() if line.strip()]
+    result = subprocess.run(["git", "-C", str(repo), "ls-files", "-z"], capture_output=True, check=False)
+    if result.returncode != 0:
+        raise DeployError(f"git ls-files failed: {result.stderr.decode('utf-8', errors='replace').strip()}")
+    return [part.decode("utf-8", errors="surrogateescape") for part in result.stdout.split(b"\0") if part]
 
 
 def git_show_bytes(repo: Path, commit: str, rel_path: str) -> bytes:
@@ -218,10 +220,15 @@ def resolve_dest_path(dest_root: Path, rel_path: str) -> Path:
     '..'-free but symlink-mediated redirect, or any other way .resolve()
     could land outside dest_root).
     """
+    if (not rel_path or "\\" in rel_path or rel_path.startswith(("/", "//"))
+            or re.match(r"^[A-Za-z]:", rel_path) or ":" in rel_path):
+        raise BlockedPathError("path_traversal", f"suspicious relative path: {rel_path}")
     parts = Path(rel_path).parts
-    if ".." in parts or Path(rel_path).is_absolute():
+    if ".." in parts or "." in parts or Path(rel_path).is_absolute():
         raise BlockedPathError("path_traversal", f"suspicious relative path: {rel_path}")
     dest_root_resolved = dest_root.resolve()
+    if dest_root.exists() and is_symlink_or_junction(dest_root):
+        raise BlockedPathError("symlink_or_junction_in_path", f"runtime root is a link: {dest_root}")
     current = dest_root_resolved
     for part in parts:
         current = current / part
@@ -291,13 +298,25 @@ class DeployConfig:
 # deploy state (outside git, .deploy/state/<project>.json)
 # --------------------------------------------------------------------------
 
-def load_deploy_state(state_path: Path) -> dict:
+def load_deploy_state(state_path: Path, expected_project: Optional[str] = None,
+                      expected_destination: Optional[Path] = None) -> dict:
     if not state_path.exists():
         return {}
     try:
-        return json.loads(state_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return {}
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise DeployError(f"deploy state is unreadable or corrupt: {state_path}: {exc}") from exc
+    if not isinstance(data, dict) or not isinstance(data.get("files", {}), dict):
+        raise DeployError(f"deploy state has invalid schema: {state_path}")
+    if expected_project is not None and data.get("project") not in (None, expected_project):
+        raise DeployError(f"stale deploy state project mismatch: {data.get('project')!r}")
+    if expected_destination is not None and data.get("runtime_destination") is not None:
+        if os.path.normcase(os.path.abspath(data["runtime_destination"])) != os.path.normcase(os.path.abspath(expected_destination)):
+            raise DeployError("stale deploy state runtime destination mismatch")
+    for rel_path, digest in data.get("files", {}).items():
+        if not isinstance(rel_path, str) or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise DeployError(f"deploy state contains invalid file hash for {rel_path!r}")
+    return data
 
 
 def save_deploy_state(state_path: Path, state: dict) -> None:
@@ -305,11 +324,21 @@ def save_deploy_state(state_path: Path, state: dict) -> None:
     atomic_write(state_path, json.dumps(state, indent=2, ensure_ascii=False).encode("utf-8"))
 
 
-def load_approved_paths(approve_baseline: Optional[Path], approve_files: list[str]) -> set[str]:
-    approved: set[str] = set(approve_files)
+def load_approved_paths(approve_baseline: Optional[Path], approve_files: list[str]) -> dict[str, dict]:
+    if approve_files:
+        raise DeployError("filename-only --approve-file is insecure; use a bound approval manifest")
+    approved: dict[str, dict] = {}
     if approve_baseline is not None:
         data = json.loads(approve_baseline.read_text(encoding="utf-8"))
-        approved.update(data.get("approved_paths", []))
+        entries = data.get("approvals")
+        if not isinstance(entries, list):
+            raise DeployError("approval manifest must contain an 'approvals' list")
+        for entry in entries:
+            if not isinstance(entry, dict) or not isinstance(entry.get("rel_path"), str):
+                raise DeployError("invalid approval entry")
+            if entry["rel_path"] in approved:
+                raise DeployError(f"duplicate approval for {entry['rel_path']}")
+            approved[entry["rel_path"]] = entry
     return approved
 
 
@@ -337,7 +366,8 @@ def classify_file(
     runtime_hash: Optional[str],
     last_deploy_hash: Optional[str],
     rel_path: str,
-    approved_paths: set[str],
+    approved_paths: dict[str, dict],
+    source_commit: Optional[str] = None,
 ) -> tuple[str, Optional[str]]:
     if not runtime_exists:
         return "create", None
@@ -345,7 +375,16 @@ def classify_file(
         return "unchanged", None
     # runtime differs from source
     if last_deploy_hash is None:
-        if rel_path in approved_paths:
+        approval = approved_paths.get(rel_path) if isinstance(approved_paths, dict) else None
+        if approval is not None:
+            if approval.get("rel_path") != rel_path:
+                return "blocked", "approval_path_mismatch"
+            if approval.get("source_commit") != source_commit:
+                return "blocked", "approval_source_commit_mismatch"
+            if approval.get("source_sha256") != source_hash:
+                return "blocked", "approval_source_hash_mismatch"
+            if approval.get("expected_runtime_sha256") != runtime_hash:
+                return "blocked", "approval_runtime_hash_mismatch"
             return "update", None
         return "blocked", "initial_difference_unapproved"
     if runtime_hash == last_deploy_hash:
@@ -509,7 +548,7 @@ def build_plan(
     config: DeployConfig,
     dest_root: Path,
     state: dict,
-    approved_paths: set[str],
+    approved_paths: dict[str, dict],
     mode: str,
     backup_root: Path = DEFAULT_BACKUP_ROOT,
 ) -> DeployPlan:
@@ -522,11 +561,20 @@ def build_plan(
     records: list[FileRecord] = []
     known_rel_paths: set[str] = set()
 
+    folded: dict[str, list[str]] = {}
+    for path in tracked:
+        folded.setdefault(path.casefold(), []).append(path)
+    collision_paths = {p for paths in folded.values() if len(paths) > 1 for p in paths}
+
     for rel_path in tracked:
         if not matches_any(rel_path, config.allowlist):
             records.append(FileRecord(rel_path=rel_path, classification="excluded_not_allowlisted"))
             continue
         known_rel_paths.add(rel_path)
+
+        if rel_path in collision_paths:
+            records.append(FileRecord(rel_path=rel_path, classification="blocked", block_reason="case_path_collision"))
+            continue
 
         if matches_any(rel_path, config.denylist):
             records.append(FileRecord(rel_path=rel_path, classification="blocked", block_reason="denylist_match"))
@@ -562,7 +610,7 @@ def build_plan(
         last_deploy_hash = last_deploy_hashes.get(rel_path)
 
         classification, block_reason = classify_file(
-            runtime_exists, source_hash, runtime_hash, last_deploy_hash, rel_path, approved_paths,
+            runtime_exists, source_hash, runtime_hash, last_deploy_hash, rel_path, approved_paths, head,
         )
         records.append(FileRecord(
             rel_path=rel_path,
@@ -609,20 +657,80 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
             f"refusing to apply: {len(plan.blocked())} blocked file(s) present"
         )
 
+    if git_head_commit(repo) != plan.source_head:
+        raise DeployError("source HEAD changed after planning")
+    if git_status_dirty_tracked(repo):
+        raise DeployError("source working tree changed after planning")
+
     backup_dir = backup_root / plan.project / plan.timestamp
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = backup_dir / "deploy-result.json"
     backed_up: list[dict] = []
     written: list[str] = []
+    actions: list[dict] = []
 
-    for record in plan.files:
-        if record.classification not in ("create", "update"):
-            continue
-        dest_path = resolve_dest_path(dest_root, record.rel_path)
-        if record.classification == "update" and dest_path.exists():
-            backup_path = backup_file(dest_path, backup_dir, record.rel_path)
-            backed_up.append({"rel_path": record.rel_path, "backup_path": str(backup_path)})
-        data = git_filtered_bytes(repo, plan.source_head, record.rel_path)
-        atomic_write(dest_path, data)
-        written.append(record.rel_path)
+    try:
+        for record in plan.files:
+            if record.classification not in ("create", "update"):
+                continue
+            data = git_filtered_bytes(repo, plan.source_head, record.rel_path)
+            if (sha256_bytes(data) != record.source_sha256 or len(data) != record.size_bytes
+                    or len(data) > DEFAULT_SIZE_LIMIT_BYTES or scan_for_secrets(data)):
+                raise DeployError(f"source bytes changed or failed validation after planning: {record.rel_path}")
+            dest_path = resolve_dest_path(dest_root, record.rel_path)
+            exists_now = dest_path.exists()
+            runtime_hash_now = sha256_file(dest_path) if exists_now else None
+            if exists_now != (record.runtime_sha256 is not None) or runtime_hash_now != record.runtime_sha256:
+                raise DeployError(f"runtime changed after planning: {record.rel_path}")
+            backup_path: Optional[Path] = None
+            if record.classification == "update":
+                backup_path = backup_file(dest_path, backup_dir, record.rel_path)
+                if sha256_file(backup_path) != record.runtime_sha256:
+                    raise DeployError(f"backup verification failed: {record.rel_path}")
+                backed_up.append({"rel_path": record.rel_path, "backup_path": str(backup_path)})
+                if sha256_file(dest_path) != record.runtime_sha256:
+                    raise DeployError(f"runtime changed after backup: {record.rel_path}")
+            dest_path = resolve_dest_path(dest_root, record.rel_path)
+            exists_now = dest_path.exists()
+            runtime_hash_now = sha256_file(dest_path) if exists_now else None
+            if exists_now != (record.runtime_sha256 is not None) or runtime_hash_now != record.runtime_sha256:
+                raise DeployError(f"runtime changed immediately before replace: {record.rel_path}")
+            atomic_write(dest_path, data)
+            action = {
+                "rel_path": record.rel_path,
+                "action": record.classification,
+                "backup_path": str(backup_path) if backup_path else None,
+                "previous_sha256": record.runtime_sha256,
+                "deployed_sha256": record.source_sha256,
+            }
+            actions.append(action)
+            written.append(record.rel_path)
+            if sha256_file(dest_path) != record.source_sha256:
+                raise DeployError(f"post-replace hash mismatch: {record.rel_path}")
+    except Exception as exc:
+        rollback_errors: list[str] = []
+        for action in reversed(actions):
+            try:
+                dest_path = resolve_dest_path(dest_root, action["rel_path"])
+                if not dest_path.exists() or sha256_file(dest_path) != action["deployed_sha256"]:
+                    raise DeployError(f"rollback drift: {action['rel_path']}")
+                if action["action"] == "create":
+                    dest_path.unlink()
+                else:
+                    backup_path = Path(action["backup_path"])
+                    atomic_write(dest_path, backup_path.read_bytes())
+                    if sha256_file(dest_path) != action["previous_sha256"]:
+                        raise DeployError(f"rollback verification failed: {action['rel_path']}")
+            except Exception as rollback_exc:
+                rollback_errors.append(str(rollback_exc))
+        failure_manifest = {
+            "tool_version": TOOL_VERSION, "project": plan.project,
+            "source_commit": plan.source_head, "runtime_destination": str(dest_root),
+            "result": "rollback_failed" if rollback_errors else "rolled_back_after_failure",
+            "error": str(exc), "rollback_errors": rollback_errors, "actions": actions,
+        }
+        atomic_write(manifest_path, json.dumps(failure_manifest, indent=2, ensure_ascii=False).encode("utf-8"))
+        raise DeployError(f"apply failed; {failure_manifest['result']}: {exc}") from exc
 
     new_state = {
         "project": plan.project,
@@ -636,7 +744,78 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
             if r.classification in ("create", "update", "unchanged")
         },
     }
-    return {"written": written, "backed_up": backed_up, "backup_dir": str(backup_dir), "new_state": new_state}
+    success_manifest = {
+        "tool_version": TOOL_VERSION, "project": plan.project,
+        "source_commit": plan.source_head, "runtime_destination": str(dest_root),
+        "result": "success", "actions": actions,
+        "previous_state": {
+            "project": plan.project, "runtime_destination": str(dest_root),
+            "deploy_result": "pre_deploy_state",
+            "files": {r.rel_path: r.last_deploy_sha256 for r in plan.files if r.last_deploy_sha256},
+        },
+    }
+    try:
+        atomic_write(manifest_path, json.dumps(success_manifest, indent=2, ensure_ascii=False).encode("utf-8"))
+    except Exception as exc:
+        rollback_errors: list[str] = []
+        for action in reversed(actions):
+            try:
+                dest_path = resolve_dest_path(dest_root, action["rel_path"])
+                if not dest_path.exists() or sha256_file(dest_path) != action["deployed_sha256"]:
+                    raise DeployError(f"rollback drift: {action['rel_path']}")
+                if action["action"] == "create":
+                    dest_path.unlink()
+                else:
+                    backup_path = Path(action["backup_path"])
+                    atomic_write(dest_path, backup_path.read_bytes())
+                    if sha256_file(dest_path) != action["previous_sha256"]:
+                        raise DeployError(f"rollback verification failed: {action['rel_path']}")
+            except Exception as rollback_exc:
+                rollback_errors.append(str(rollback_exc))
+        outcome = "rollback_failed" if rollback_errors else "rolled_back_after_failure"
+        raise DeployError(f"deployment manifest write failed; {outcome}: {exc}") from exc
+    return {"written": written, "backed_up": backed_up, "backup_dir": str(backup_dir),
+            "manifest_path": str(manifest_path), "new_state": new_state}
+
+
+def rollback_deployment(manifest_path: Path, dest_root: Path, force_drift: bool = False,
+                        state_path: Optional[Path] = None) -> dict:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise DeployError(f"rollback manifest unreadable: {exc}") from exc
+    if manifest.get("result") != "success" or not isinstance(manifest.get("actions"), list):
+        raise DeployError("rollback manifest is not a successful deployment manifest")
+    if os.path.normcase(os.path.abspath(manifest.get("runtime_destination", ""))) != os.path.normcase(os.path.abspath(dest_root)):
+        raise DeployError("rollback manifest runtime destination mismatch")
+    for action in manifest["actions"]:
+        dest_path = resolve_dest_path(dest_root, action["rel_path"])
+        current_hash = sha256_file(dest_path) if dest_path.exists() else None
+        if current_hash != action["deployed_sha256"] and not force_drift:
+            raise DeployError(f"rollback drift: {action['rel_path']}")
+    restored: list[str] = []
+    for action in reversed(manifest["actions"]):
+        dest_path = resolve_dest_path(dest_root, action["rel_path"])
+        if action["action"] == "create":
+            if dest_path.exists():
+                dest_path.unlink()
+        else:
+            backup_path = Path(action["backup_path"])
+            if sha256_file(backup_path) != action["previous_sha256"]:
+                raise DeployError(f"rollback backup hash mismatch: {action['rel_path']}")
+            atomic_write(dest_path, backup_path.read_bytes())
+            if sha256_file(dest_path) != action["previous_sha256"]:
+                raise DeployError(f"rollback verification failed: {action['rel_path']}")
+        restored.append(action["rel_path"])
+    result = {"result": "rollback_success", "restored": restored, "source_manifest": str(manifest_path)}
+    if state_path is not None:
+        previous_state = manifest.get("previous_state")
+        if not isinstance(previous_state, dict):
+            raise DeployError("rollback manifest lacks previous deploy state")
+        save_deploy_state(state_path, previous_state)
+    atomic_write(manifest_path.parent / "rollback-result.json",
+                 json.dumps(result, indent=2, ensure_ascii=False).encode("utf-8"))
+    return result
 
 
 # --------------------------------------------------------------------------
@@ -653,8 +832,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-file", type=Path, default=None, help="Override .deploy/state/<project>.json path (testing).")
     parser.add_argument("--preview-dir", type=Path, default=None, help="Override .deploy/previews/ path (testing).")
     parser.add_argument("--backup-root", type=Path, default=None, help="Override backup root (testing).")
-    parser.add_argument("--approve-initial-baseline", type=Path, default=None, help="JSON file with an 'approved_paths' list.")
-    parser.add_argument("--approve-file", action="append", default=[], help="Repeatable: pre-approve one relative path for INITIAL_DIFFERENCE.")
+    parser.add_argument("--approve-initial-baseline", type=Path, default=None, help="JSON manifest with approvals bound to path, commit, source hash and runtime hash.")
+    parser.add_argument("--approve-file", action="append", default=[], help="Deprecated and refused: filename-only approvals are unsafe.")
+    parser.add_argument("--rollback-manifest", type=Path, default=None, help="Rollback a successful deployment manifest.")
+    parser.add_argument("--force-rollback-drift", action="store_true", help="Explicitly override rollback drift protection.")
     return parser
 
 
@@ -675,6 +856,18 @@ def main(argv: Optional[list[str]] = None) -> int:
     preview_dir = args.preview_dir if args.preview_dir is not None else repo / ".deploy" / "previews"
     backup_root = args.backup_root if args.backup_root is not None else DEFAULT_BACKUP_ROOT
 
+    if args.rollback_manifest is not None:
+        if args.confirm != CONFIRM_TOKEN:
+            print(f"REFUSED: rollback requires --confirm {CONFIRM_TOKEN}", file=sys.stderr)
+            return 2
+        try:
+            result = rollback_deployment(args.rollback_manifest, dest_root, args.force_rollback_drift, state_path)
+        except (DeployError, OSError) as exc:
+            print(f"REFUSED: {exc}", file=sys.stderr)
+            return 2
+        print(f"ROLLBACK complete: {len(result['restored'])} file(s) restored")
+        return 0
+
     dirty = git_status_dirty_tracked(repo)
     if dirty:
         print("REFUSED: source repo has uncommitted changes to tracked files:", file=sys.stderr)
@@ -687,8 +880,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"REFUSED: branch '{branch}' not in allowed branches {allowed_branches}", file=sys.stderr)
         return 2
 
-    state = load_deploy_state(state_path)
-    approved_paths = load_approved_paths(args.approve_initial_baseline, args.approve_file)
+    try:
+        state = load_deploy_state(state_path, config.project, dest_root)
+        approved_paths = load_approved_paths(args.approve_initial_baseline, args.approve_file)
+    except (DeployError, OSError, json.JSONDecodeError) as exc:
+        print(f"REFUSED: {exc}", file=sys.stderr)
+        return 2
 
     plan = build_plan(repo, config, dest_root, state, approved_paths, mode, backup_root)
 
@@ -719,8 +916,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("REFUSED: apply aborted, blocked files present (see above). Nothing written.", file=sys.stderr)
         return 2
 
-    result = apply_plan(repo, plan, dest_root, backup_root)
-    save_deploy_state(state_path, result["new_state"])
+    try:
+        result = apply_plan(repo, plan, dest_root, backup_root)
+        save_deploy_state(state_path, result["new_state"])
+    except (DeployError, OSError) as exc:
+        if "result" in locals() and result.get("manifest_path"):
+            try:
+                rollback_deployment(Path(result["manifest_path"]), dest_root)
+            except Exception as rollback_exc:
+                print(f"CRITICAL: state write failed and rollback failed: {rollback_exc}", file=sys.stderr)
+        print(f"REFUSED: apply failed: {exc}", file=sys.stderr)
+        return 2
     print(f"APPLY complete: {len(result['written'])} file(s) written, "
           f"{len(result['backed_up'])} backed up to {result['backup_dir']}")
     return 0
