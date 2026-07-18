@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -577,6 +578,13 @@ class SecurityCriticalRegressionTests(SafeDeployTestCase):
         with self.assertRaises(sd.DeployError):
             sd.load_deploy_state(path, "proj", self.dest)
 
+    def test_windows_path_forms_and_filename_only_approval_are_refused(self):
+        for rel in (r"..\evil.py", r"C:evil.py", r"C:\evil.py", r"\\server\share\evil.py", "/evil.py"):
+            with self.subTest(rel=rel), self.assertRaises(sd.BlockedPathError):
+                sd.resolve_dest_path(self.dest, rel)
+        with self.assertRaises(sd.DeployError):
+            sd.load_approved_paths(None, ["run.py"])
+
     def test_second_file_failure_rolls_back_first_and_writes_manifest(self):
         repo, _, plan = self._plan({"a.py": b"a\n", "b.py": b"b\n"})
         real_atomic = sd.atomic_write
@@ -599,6 +607,18 @@ class SecurityCriticalRegressionTests(SafeDeployTestCase):
             with self.assertRaises(sd.DeployError):
                 sd.apply_plan(repo, plan, self.dest, self.base / "backups")
         self.assertEqual((self.dest / "run.py").read_bytes(), old)
+
+    @unittest.skipUnless(os.name == "nt", "Windows read-only semantics")
+    def test_read_only_destination_fails_without_overwrite(self):
+        old = b"old\n"; state = {"files": {"run.py": sd.sha256_bytes(old)}}
+        repo, _, plan = self._plan({"run.py": b"new\n"}, {"run.py": old}, state)
+        target = self.dest / "run.py"; target.chmod(stat.S_IREAD)
+        try:
+            with self.assertRaises(sd.DeployError):
+                sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+            self.assertEqual(target.read_bytes(), old)
+        finally:
+            target.chmod(stat.S_IWRITE | stat.S_IREAD)
 
     def test_state_write_failure_rolls_back_runtime(self):
         repo = make_source_repo(self.base, {"run.py": b"new\n"})
