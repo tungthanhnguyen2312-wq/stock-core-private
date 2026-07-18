@@ -1,0 +1,20 @@
+# VNSTOCK — runtime dependencies
+# Chỉ liệt kê package thực sự được import trong code (đã kiểm bằng grep toàn bộ *.py).
+# Cài: pip install -r requirements.txt
+#
+# Sau khi cài, còn 1 bước bắt buộc cho vnstock (đọc docs/USER_GUIDE.md):
+#   python -c "from vnstock import vnai; vnai.setup_api_key('KEY_CUA_BAN')"
+
+# --- Lõi — bắt buộc cho toàn bộ pipeline (giá, metadata, macro, tin tức,
+#     cổ đông, BCTC, chỉ báo kỹ thuật, quant engine offline) ---
+vnstock>=4.0.4
+pandas>=2.3
+numpy>=2.2
+requests>=2.33
+pyarrow>=24.0
+
+# --- Tùy chọn — chỉ cần khi dùng đúng tính năng tương ứng ---
+anthropic>=0.116          # chỉ cần cho ai_analyzer.py khi GỌI API THẬT (không cần cho --dry-run)
+
+# pandas_ta               # chỉ cần cho `vn_indicators.py full` (~130 chỉ báo mở rộng, hiếm dùng);
+#                           đã bọc try/except trong code — bỏ qua êm nếu chưa cài, bỏ comment nếu cần

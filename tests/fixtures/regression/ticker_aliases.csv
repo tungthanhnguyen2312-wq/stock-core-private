@@ -1,0 +1,6 @@
+ticker,alias,alias_type,priority,valid_from,valid_to
+PAN,PAN Group,company_name,100,,
+HPG,Hoa Phat Group,company_name,100,,
+SSI,SSI Securities,company_name,100,,
+VCB,Vietcombank,company_name,100,,
+BVH,Bao Viet Holdings,company_name,100,,

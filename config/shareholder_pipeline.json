@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "sources": [
+    {
+      "name": "VCI",
+      "enabled": true,
+      "source_reference": "vnstock Company(source=VCI).shareholders"
+    },
+    {
+      "name": "KBS",
+      "enabled": true,
+      "source_reference": "vnstock Company(source=KBS).shareholders"
+    }
+  ],
+  "fallback_mode": "first_valid",
+  "freshness_threshold_days": 180,
+  "manual_override_path": "data/manual/shareholders_overrides.csv"
+}

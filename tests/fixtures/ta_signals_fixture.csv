@@ -1,0 +1,5 @@
+ticker,date,close,volume,patterns,smc,confluence,direction,industry,rs_rating,rel_vol,gtgd20_ty,margin_status
+SMC1,2026-07-10,20000,100000,hammer,fvg_bull;bos_bull,True,bullish,Khac,65.0,1.0,10.0,
+SMC2,2026-07-10,20000,100000,shooting_star,fvg_bear,False,bearish,Khac,50.0,1.0,10.0,
+SMC3,2026-07-10,20000,100000,doji,ob_bull,False,bullish,Khac,50.0,1.0,10.0,
+BAD1,2026-07-10,20000,900000,bullish_engulfing,bos_bull,True,bullish,Thep,99.0,3.0,200.0,suspend

@@ -1,0 +1,8 @@
+{
+  "ticker": "PAN",
+  "status": "source_empty",
+  "reason": "configured_sources_returned_no_usable_records",
+  "major_shareholders_count": null,
+  "raw_record_count": 0,
+  "parsed_record_count": 0
+}

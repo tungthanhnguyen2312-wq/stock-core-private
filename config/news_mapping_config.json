@@ -1,0 +1,8 @@
+{
+  "mapping_version": "1.0.0",
+  "auto_accept_confidence": 0.9,
+  "candidate_confidence": 0.7,
+  "lookback_days": 30,
+  "max_company_items": 20,
+  "max_fallback_items": 5
+}

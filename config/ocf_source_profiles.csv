@@ -1,0 +1,2 @@
+source,report_type,period_type,basis,raw_unit,normalized_unit,confidence,notes
+KBS,cash_flow,quarter,ytd,,unknown,0.90,Quarterly cash-flow columns are cumulative YTD; raw files do not declare a monetary unit

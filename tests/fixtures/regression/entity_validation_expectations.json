@@ -1,0 +1,7 @@
+{
+  "PAN": {"entity_type":"corporate","latest_non_null_period":"2025-Q4","latest_period_is_null":true},
+  "HPG": {"entity_type":"corporate","sga_status":"derived"},
+  "SSI": {"entity_type":"securities","da_source":"reported"},
+  "VCB": {"entity_type":"bank","sga_status":"not_applicable"},
+  "BVH": {"entity_type":"insurance","retained_earnings_source":"reported"}
+}

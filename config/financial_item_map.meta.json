@@ -1,0 +1,24 @@
+{
+  "registry_version": "1.0.0",
+  "provenance": {
+    "source_basis": "audited exact provider identifiers and labels",
+    "owner": "VNSTOCK data quality",
+    "updated_at": "2026-07-13"
+  },
+  "canonical_metrics": [
+    "amortization",
+    "depreciation",
+    "depreciation_and_amortization",
+    "ebit",
+    "ebitda",
+    "general_admin_expense",
+    "interest_expense",
+    "operating_cash_flow",
+    "profit_before_tax",
+    "retained_earnings",
+    "retained_earnings_current_year",
+    "retained_earnings_prior_year",
+    "selling_expense",
+    "sga"
+  ]
+}

@@ -1,0 +1,4 @@
+ticker,alias,alias_type,priority,valid_from,valid_to
+PAN,Công ty Cổ phần Tập đoàn PAN,legal_name,100,,
+PAN,Tập đoàn PAN,company_name,95,,
+PAN,PAN Group,registered_alias,90,,

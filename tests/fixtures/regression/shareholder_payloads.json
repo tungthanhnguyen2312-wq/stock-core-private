@@ -1,0 +1,5 @@
+{
+  "source_empty": [],
+  "malformed": [{"unexpected":"payload"}],
+  "valid": [{"share_holder":"Fixture Holder","quantity":100,"share_own_percent":0.25,"update_date":"2026-06-30"}]
+}

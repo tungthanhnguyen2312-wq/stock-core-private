@@ -1,0 +1,8 @@
+{
+  "ebit": 110.0,
+  "ebit_formula": "profit_before_tax + interest_expense",
+  "ebit_inputs": ["profit_before_tax", "interest_expense"],
+  "operating_cash_flow": -2885506210000.0,
+  "operating_cash_flow_basis": "ytd",
+  "selected_period": "2025-Q4"
+}

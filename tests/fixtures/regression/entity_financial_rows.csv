@@ -1,0 +1,11 @@
+ticker,entity_type,report_type,source,item_id,item,period,period_type,raw_unit,value
+PAN,corporate,cash_flow,VCI,operating_cash_flow,Operating cash flow,2025-Q4,ytd,million VND,-2885506.21
+PAN,corporate,cash_flow,VCI,operating_cash_flow,Operating cash flow,2026-Q1,quarter,million VND,
+PAN,corporate,income_statement,KBS,profit_before_tax,Profit before tax,2025-Q4,quarter,VND,100
+PAN,corporate,income_statement,KBS,interest_expense,Interest expense,2025-Q4,quarter,VND,10
+HPG,corporate,income_statement,KBS,selling_expense,Selling expense,2025-Q4,quarter,billion VND,40
+HPG,corporate,income_statement,KBS,general_admin_expense,General administration expense,2025-Q4,quarter,billion VND,60
+SSI,securities,income_statement,KBS,depreciation_and_amortization,Depreciation and amortization,2025-Q4,quarter,VND,20
+VCB,bank,income_statement,KBS,interest_expense,Interest expense,2025-Q4,quarter,VND,10
+VCB,bank,income_statement,KBS,selling_expense,Selling expense,2025-Q4,quarter,VND,40
+BVH,insurance,balance_sheet,VCI,current_period_undistributed_earnings,Retained earnings current year,2025-Q4,quarter,VND,30
