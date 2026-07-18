@@ -220,14 +220,15 @@ class DriftDetectionTests(SafeDeployTestCase):
 
 
 class BlockingGuardTests(SafeDeployTestCase):
-    def test_denylist_blocks_file(self):
+    def test_denylist_excludes_file_without_blocking_deploy(self):
         repo = make_source_repo(self.base, {"run.py": b"x", ".gitignore": b"*.pyc\n"})
         cfg = write_config(self.base, "proj", self.dest, ["*.py", ".gitignore"], denylist=[".gitignore"])
         config = sd.DeployConfig.load(cfg)
         plan = sd.build_plan(repo, config, self.dest, {}, set(), "dry-run")
         rec = next(f for f in plan.files if f.rel_path == ".gitignore")
-        self.assertEqual(rec.classification, "blocked")
+        self.assertEqual(rec.classification, "excluded_denylisted")
         self.assertEqual(rec.block_reason, "denylist_match")
+        self.assertEqual(plan.blocked(), [])
 
     def test_path_traversal_rejected(self):
         self.assertTrue(sd.match_pattern("../evil.py", "*.py") or True)  # sanity: pattern matching isn't the guard

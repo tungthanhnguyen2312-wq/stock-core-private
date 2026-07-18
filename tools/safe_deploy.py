@@ -577,7 +577,7 @@ def build_plan(
             continue
 
         if matches_any(rel_path, config.denylist):
-            records.append(FileRecord(rel_path=rel_path, classification="blocked", block_reason="denylist_match"))
+            records.append(FileRecord(rel_path=rel_path, classification="excluded_denylisted", block_reason="denylist_match"))
             continue
 
         try:
