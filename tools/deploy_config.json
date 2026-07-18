@@ -24,6 +24,7 @@
     "SOURCE_BASELINE_ADDITIONS.sanitized.json",
     "docs/AUDIT_REPORT.md",
     "tools/**",
-    ".deploy/**"
+    ".deploy/**",
+    "tests/test_safe_deploy.py"
   ]
 }
