@@ -499,6 +499,107 @@ class ManifestTests(SafeDeployTestCase):
         self.assertEqual((self.dest / "run.py").read_bytes(), b"v1\n")  # build_plan() never writes
 
 
+class BackupAccountingRegressionTests(SafeDeployTestCase):
+    def _plan(self, source, runtime=None, state=None, *, denylist=None,
+              runtime_scan_globs=None, mode="dry-run"):
+        repo = make_source_repo(self.base, source)
+        for rel, data in (runtime or {}).items():
+            path = self.dest / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        cfg = write_config(
+            self.base, "proj", self.dest, ["*.py"],
+            denylist=denylist, runtime_scan_globs=runtime_scan_globs,
+        )
+        plan = sd.build_plan(
+            repo, sd.DeployConfig.load(cfg), self.dest, state or {}, {}, mode,
+            self.base / "backups",
+        )
+        return repo, plan
+
+    def test_update_backup_estimate_uses_runtime_size(self):
+        runtime = b"old\n"
+        _, plan = self._plan(
+            {"run.py": b"replacement-is-longer\n"},
+            {"run.py": runtime},
+            {"files": {"run.py": sd.sha256_bytes(runtime)}},
+        )
+        manifest = plan.to_manifest_dict()
+        self.assertEqual(manifest["expected_backup_count"], 1)
+        self.assertEqual(manifest["expected_backup_bytes"], len(runtime))
+        self.assertEqual(manifest["backup_and_rollback_preview"][0]["size_bytes"], len(runtime))
+        self.assertEqual(plan.estimated_backup_bytes, len(runtime))
+
+    def test_multiple_update_backup_estimate_sums_runtime_sizes(self):
+        runtime = {"a.py": b"a\n", "b.py": b"runtime-b-is-longer\n"}
+        state = {"files": {rel: sd.sha256_bytes(data) for rel, data in runtime.items()}}
+        _, plan = self._plan(
+            {"a.py": b"replacement-a-is-longer\n", "b.py": b"b\n"},
+            runtime, state,
+        )
+        manifest = plan.to_manifest_dict()
+        self.assertEqual(manifest["expected_backup_count"], 2)
+        self.assertEqual(manifest["expected_backup_bytes"], sum(map(len, runtime.values())))
+        self.assertEqual(
+            sum(entry["size_bytes"] for entry in manifest["backup_and_rollback_preview"]),
+            sum(map(len, runtime.values())),
+        )
+
+    def test_create_contributes_no_backup_count_or_bytes(self):
+        _, plan = self._plan({"new.py": b"new\n"})
+        manifest = plan.to_manifest_dict()
+        self.assertEqual(manifest["expected_backup_count"], 0)
+        self.assertEqual(manifest["expected_backup_bytes"], 0)
+        self.assertEqual(manifest["backup_and_rollback_preview"], [])
+
+    def test_non_updates_and_runtime_only_contribute_no_backup_bytes(self):
+        source = {
+            "unchanged.py": b"same\n",
+            "blocked.py": b"source\n",
+            "denied.py": b"denied-source\n",
+            "README.md": b"not allowlisted\n",
+        }
+        runtime = {
+            "unchanged.py": b"same\n",
+            "blocked.py": b"runtime\n",
+            "denied.py": b"denied-runtime\n",
+            "runtime_only.py": b"runtime-only\n",
+        }
+        _, plan = self._plan(
+            source, runtime, denylist=["denied.py"], runtime_scan_globs=["*.py"],
+        )
+        classes = {record.rel_path: record.classification for record in plan.files}
+        self.assertEqual(classes["unchanged.py"], "unchanged")
+        self.assertEqual(classes["blocked.py"], "blocked")
+        self.assertEqual(classes["denied.py"], "excluded_denylisted")
+        self.assertEqual(classes["README.md"], "excluded_not_allowlisted")
+        self.assertIn("runtime_only.py", plan.runtime_only_files)
+        manifest = plan.to_manifest_dict()
+        self.assertEqual(manifest["expected_backup_count"], 0)
+        self.assertEqual(manifest["expected_backup_bytes"], 0)
+        self.assertEqual(manifest["backup_and_rollback_preview"], [])
+
+    def test_apply_result_backup_accounting_matches_preview_and_rollback(self):
+        runtime = b"original-runtime-is-longer\n"
+        repo, plan = self._plan(
+            {"run.py": b"new\n"},
+            {"run.py": runtime},
+            {"files": {"run.py": sd.sha256_bytes(runtime)}},
+            mode="apply",
+        )
+        preview = plan.to_manifest_dict()
+        result = sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        backup_path = Path(result["backed_up"][0]["backup_path"])
+        result_manifest = json.loads(Path(result["manifest_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(backup_path.read_bytes(), runtime)
+        self.assertEqual(result["backed_up"][0]["size_bytes"], len(runtime))
+        self.assertEqual(result_manifest["backup_count"], 1)
+        self.assertEqual(result_manifest["backup_bytes"], len(runtime))
+        self.assertEqual(preview["expected_backup_bytes"], result_manifest["backup_bytes"])
+        sd.rollback_deployment(Path(result["manifest_path"]), self.dest)
+        self.assertEqual((self.dest / "run.py").read_bytes(), runtime)
+
+
 class SecurityCriticalRegressionTests(SafeDeployTestCase):
     def _plan(self, files, runtime=None, state=None, approvals=None):
         repo = make_source_repo(self.base, files)
