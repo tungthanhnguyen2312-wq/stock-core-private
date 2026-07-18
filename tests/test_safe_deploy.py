@@ -103,6 +103,18 @@ class SafeDeployTestCase(unittest.TestCase):
 
 
 class UnchangedCreateUpdateTests(SafeDeployTestCase):
+    def test_git_filtered_bytes_honor_explicit_eol_attributes(self):
+        repo = make_source_repo(self.base, {
+            ".gitattributes": b"*.py text eol=lf\n*.bat text eol=crlf\n",
+            "run.py": b"print(1)\r\n",
+            "build.bat": b"@echo off\nexit /b 0\n",
+        })
+        head = sd.git_head_commit(repo)
+        self.assertEqual(sd.git_show_bytes(repo, head, "run.py"), b"print(1)\n")
+        self.assertEqual(sd.git_show_bytes(repo, head, "build.bat"), b"@echo off\nexit /b 0\n")
+        self.assertEqual(sd.git_filtered_bytes(repo, head, "run.py"), b"print(1)\n")
+        self.assertEqual(sd.git_filtered_bytes(repo, head, "build.bat"), b"@echo off\r\nexit /b 0\r\n")
+
     def test_new_source_file_classified_as_create(self):
         repo = make_source_repo(self.base, {"run.py": b"print(1)\n"})
         cfg = write_config(self.base, "proj", self.dest, ["*.py"])

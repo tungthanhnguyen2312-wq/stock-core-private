@@ -122,6 +122,27 @@ def git_show_bytes(repo: Path, commit: str, rel_path: str) -> bytes:
     return result.stdout
 
 
+def git_filtered_bytes(repo: Path, commit: str, rel_path: str) -> bytes:
+    """Return Git checkout/filter-aware bytes for a committed path.
+
+    ``git cat-file --filters`` applies the attributes recorded for the
+    requested tree path, including explicit ``eol=lf``/``eol=crlf`` rules,
+    without depending on the caller's checked-out working-tree bytes.
+    """
+    result = subprocess.run(
+        ["git", "-c", "core.autocrlf=false", "-C", str(repo), "cat-file", "--filters",
+         f"--path={rel_path}", f"{commit}:{rel_path}"],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise DeployError(
+            f"git -c core.autocrlf=false cat-file --filters --path={rel_path} {commit}:{rel_path} failed: "
+            f"{result.stderr.decode('utf-8', errors='replace').strip()}"
+        )
+    return result.stdout
+
+
 # --------------------------------------------------------------------------
 # pattern matching for allowlist / denylist / runtime scan globs
 # --------------------------------------------------------------------------
@@ -517,7 +538,7 @@ def build_plan(
             records.append(FileRecord(rel_path=rel_path, classification="blocked", block_reason=exc.reason))
             continue
 
-        source_bytes = git_show_bytes(repo, head, rel_path)
+        source_bytes = git_filtered_bytes(repo, head, rel_path)
         size_bytes = len(source_bytes)
 
         if size_bytes > config.size_limit_bytes:
@@ -599,7 +620,7 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
         if record.classification == "update" and dest_path.exists():
             backup_path = backup_file(dest_path, backup_dir, record.rel_path)
             backed_up.append({"rel_path": record.rel_path, "backup_path": str(backup_path)})
-        data = git_show_bytes(repo, plan.source_head, record.rel_path)
+        data = git_filtered_bytes(repo, plan.source_head, record.rel_path)
         atomic_write(dest_path, data)
         written.append(record.rel_path)
 
