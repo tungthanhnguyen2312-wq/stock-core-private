@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-TOOL_VERSION = "2.0.0"
+TOOL_VERSION = "2.0.1"
 CONFIRM_TOKEN = "DEPLOY_AUTHENTIC_SOURCE"
 DEFAULT_SIZE_LIMIT_BYTES = 5 * 1024 * 1024  # 5 MiB
 DEFAULT_BACKUP_ROOT = Path(
@@ -355,6 +355,7 @@ class FileRecord:
     runtime_sha256: Optional[str] = None
     last_deploy_sha256: Optional[str] = None
     size_bytes: Optional[int] = None
+    runtime_size_bytes: Optional[int] = None
 
     def to_dict(self) -> dict:
         return dataclasses.asdict(self)
@@ -514,7 +515,8 @@ class DeployPlan:
             backup_path = backup_dir / f.rel_path
             preview.append({
                 "rel_path": f.rel_path,
-                "size_bytes": f.size_bytes,
+                "size_bytes": f.runtime_size_bytes,
+                "source_size_bytes": f.size_bytes,
                 "would_backup_to": str(backup_path),
                 "rollback_restore_from": str(backup_path),
                 "rollback_restore_to": str(Path(self.runtime_destination) / f.rel_path),
@@ -523,6 +525,7 @@ class DeployPlan:
         return preview
 
     def to_manifest_dict(self) -> dict:
+        backup_preview = self.backup_preview()
         return {
             "tool_version": TOOL_VERSION,
             "project": self.project,
@@ -537,9 +540,11 @@ class DeployPlan:
             "summary": self.summary(),
             "files": [f.to_dict() for f in self.files],
             "runtime_only_files": self.runtime_only_files,
+            "expected_backup_count": len(backup_preview),
+            "expected_backup_bytes": self.estimated_backup_bytes,
             "estimated_backup_bytes": self.estimated_backup_bytes,
             "backup_root": self.backup_root,
-            "backup_and_rollback_preview": self.backup_preview(),
+            "backup_and_rollback_preview": backup_preview,
         }
 
 
@@ -606,6 +611,7 @@ def build_plan(
 
         source_hash = sha256_bytes(source_bytes)
         runtime_exists = dest_path.exists()
+        runtime_size_bytes = dest_path.stat().st_size if runtime_exists else None
         runtime_hash = sha256_file(dest_path) if runtime_exists else None
         last_deploy_hash = last_deploy_hashes.get(rel_path)
 
@@ -620,12 +626,13 @@ def build_plan(
             runtime_sha256=runtime_hash,
             last_deploy_sha256=last_deploy_hash,
             size_bytes=size_bytes,
+            runtime_size_bytes=runtime_size_bytes,
         ))
 
     runtime_only = scan_runtime_only(dest_root, config.runtime_scan_globs, known_rel_paths)
 
     estimated_backup_bytes = sum(
-        (r.size_bytes or 0) for r in records if r.classification == "update"
+        (r.runtime_size_bytes or 0) for r in records if r.classification == "update"
     )
 
     return DeployPlan(
@@ -680,14 +687,25 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
             dest_path = resolve_dest_path(dest_root, record.rel_path)
             exists_now = dest_path.exists()
             runtime_hash_now = sha256_file(dest_path) if exists_now else None
-            if exists_now != (record.runtime_sha256 is not None) or runtime_hash_now != record.runtime_sha256:
+            runtime_size_now = dest_path.stat().st_size if exists_now else None
+            if (exists_now != (record.runtime_sha256 is not None)
+                    or runtime_hash_now != record.runtime_sha256
+                    or runtime_size_now != record.runtime_size_bytes):
                 raise DeployError(f"runtime changed after planning: {record.rel_path}")
             backup_path: Optional[Path] = None
             if record.classification == "update":
                 backup_path = backup_file(dest_path, backup_dir, record.rel_path)
-                if sha256_file(backup_path) != record.runtime_sha256:
+                backup_hash = sha256_file(backup_path)
+                backup_size = backup_path.stat().st_size
+                if (backup_hash != record.runtime_sha256
+                        or backup_size != record.runtime_size_bytes):
                     raise DeployError(f"backup verification failed: {record.rel_path}")
-                backed_up.append({"rel_path": record.rel_path, "backup_path": str(backup_path)})
+                backed_up.append({
+                    "rel_path": record.rel_path,
+                    "backup_path": str(backup_path),
+                    "size_bytes": backup_size,
+                    "sha256": backup_hash,
+                })
                 if sha256_file(dest_path) != record.runtime_sha256:
                     raise DeployError(f"runtime changed after backup: {record.rel_path}")
             dest_path = resolve_dest_path(dest_root, record.rel_path)
@@ -701,12 +719,17 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
                 "action": record.classification,
                 "backup_path": str(backup_path) if backup_path else None,
                 "previous_sha256": record.runtime_sha256,
+                "previous_size_bytes": record.runtime_size_bytes,
                 "deployed_sha256": record.source_sha256,
             }
             actions.append(action)
             written.append(record.rel_path)
             if sha256_file(dest_path) != record.source_sha256:
                 raise DeployError(f"post-replace hash mismatch: {record.rel_path}")
+        actual_backup_bytes = sum(item["size_bytes"] for item in backed_up)
+        if (len(backed_up) != len(plan.backup_preview())
+                or actual_backup_bytes != plan.estimated_backup_bytes):
+            raise DeployError("backup accounting mismatch")
     except Exception as exc:
         rollback_errors: list[str] = []
         for action in reversed(actions):
@@ -728,6 +751,8 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
             "source_commit": plan.source_head, "runtime_destination": str(dest_root),
             "result": "rollback_failed" if rollback_errors else "rolled_back_after_failure",
             "error": str(exc), "rollback_errors": rollback_errors, "actions": actions,
+            "backed_up": backed_up, "backup_count": len(backed_up),
+            "backup_bytes": sum(item["size_bytes"] for item in backed_up),
         }
         atomic_write(manifest_path, json.dumps(failure_manifest, indent=2, ensure_ascii=False).encode("utf-8"))
         raise DeployError(f"apply failed; {failure_manifest['result']}: {exc}") from exc
@@ -748,6 +773,8 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
         "tool_version": TOOL_VERSION, "project": plan.project,
         "source_commit": plan.source_head, "runtime_destination": str(dest_root),
         "result": "success", "actions": actions,
+        "backed_up": backed_up, "backup_count": len(backed_up),
+        "backup_bytes": sum(item["size_bytes"] for item in backed_up),
         "previous_state": {
             "project": plan.project, "runtime_destination": str(dest_root),
             "deploy_result": "pre_deploy_state",
