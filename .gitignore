@@ -44,3 +44,8 @@ focus_extract.json
 # staging-tooling artifact: contains absolute local paths, kept out of git.
 # Tracked counterpart: SOURCE_COPY_MANIFEST.sanitized.json
 SOURCE_COPY_MANIFEST.json
+
+# safe_deploy.py working state: dry-run preview manifests and deploy state
+# (last-deployed hashes). Neither is source; both are regenerated locally
+# and contain absolute local paths.
+.deploy/

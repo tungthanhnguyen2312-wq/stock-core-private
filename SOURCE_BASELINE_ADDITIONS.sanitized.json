@@ -1,0 +1,59 @@
+{
+  "repo": "vnstock-core-private",
+  "created_utc": "2026-07-18T07:11:20.280218+00:00",
+  "note": "Additions-only manifest for Pha 2.1. Does NOT modify or replace the original baseline SOURCE_COPY_MANIFEST.sanitized.json from Pha 2. No absolute local paths recorded.",
+  "associated_commit_sha": "710a8e0",
+  "associated_commit_message": "docs: complete private source baseline documentation",
+  "total_files": 6,
+  "total_size_bytes": 41891,
+  "files": [
+    {
+      "relative_path": "AI_CONTEXT.md",
+      "sha256": "0462cd7d1459847408a90cdb0cb7ab6fbed65059c6b911b7d15b829c0313300c",
+      "size_bytes": 6696,
+      "classification": "source_documentation",
+      "dependency_evidence": "Written explicitly for AI/agents operating on the VNSTOCK pipeline source; maps every module; confirms no secrets, ANTHROPIC_API_KEY via env var only.",
+      "source_commit": "710a8e0"
+    },
+    {
+      "relative_path": "CHANGELOG.md",
+      "sha256": "39c77b88487b90484d76d0452788db22dcc12c3a0d612b2c6e8c85d17886c3c3",
+      "size_bytes": 19579,
+      "classification": "source_documentation",
+      "dependency_evidence": "Development history; no runtime code dependency; useful for understanding source evolution.",
+      "source_commit": "710a8e0"
+    },
+    {
+      "relative_path": "CHANGELOG_UI.md",
+      "sha256": "9adb1759d4da03da7198b5f8367b293cf5b4017b4d629b1e4eccc01e9b7fe641",
+      "size_bytes": 10376,
+      "classification": "source_documentation",
+      "dependency_evidence": "Frontend/UI changelog; content describes the PUBLIC website repo's files (not present in this private repo) but is itself clean, factual dev history.",
+      "source_commit": "710a8e0"
+    },
+    {
+      "relative_path": "CODE_OF_CONDUCT.md",
+      "sha256": "f87bd116b0e7f5369fd8041be7ac86da959c4e233c8b9d1f2578113b1f769cec",
+      "size_bytes": 1208,
+      "classification": "public_documentation",
+      "dependency_evidence": "Generic Contributor-Covenant-based policy, not repo-specific.",
+      "source_commit": "710a8e0"
+    },
+    {
+      "relative_path": "CONTRIBUTING.md",
+      "sha256": "faff15c5f4b4088de61c958b8c8cf35b37a63d40f540a66d42622b07cfe59595",
+      "size_bytes": 2857,
+      "classification": "public_documentation",
+      "dependency_evidence": "Explicitly describes contribution scope for the PUBLIC market-dashboard repo; will read as slightly out-of-context inside this private source repo (states pipeline code 'isn't in this repository', which is now false here).",
+      "source_commit": "710a8e0"
+    },
+    {
+      "relative_path": "SECURITY.md",
+      "sha256": "83d91ebc8bc83e494f70ff7880b908c87d3372fb81ed09b19021b8b31959fb0c",
+      "size_bytes": 1175,
+      "classification": "public_documentation",
+      "dependency_evidence": "Describes security scope of the PUBLIC static-site repo; references docs/ARCHITECTURE.md which no longer exists on disk (pre-existing dangling reference, not caused by this operation).",
+      "source_commit": "710a8e0"
+    }
+  ]
+}
