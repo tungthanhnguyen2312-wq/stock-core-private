@@ -336,6 +336,20 @@ def classify_file(
 # runtime-only scan (files present at destination, absent from source)
 # --------------------------------------------------------------------------
 
+_RUNTIME_SCAN_IGNORE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+_RUNTIME_SCAN_IGNORE_SUFFIXES = {".pyc", ".pyo"}
+
+
+def _is_runtime_scan_noise(path: Path) -> bool:
+    """Bytecode caches etc. are never source and never meaningfully
+    'runtime-only' in the sense this report cares about -- every real
+    Python invocation regenerates them, so including them just buries the
+    signal (files a human should actually look at) under noise."""
+    if path.suffix in _RUNTIME_SCAN_IGNORE_SUFFIXES:
+        return True
+    return any(part in _RUNTIME_SCAN_IGNORE_DIR_NAMES for part in path.parts)
+
+
 def iter_runtime_files_for_pattern(dest_root: Path, pattern: str):
     if pattern.endswith("/**"):
         prefix = pattern[:-3]
@@ -344,16 +358,19 @@ def iter_runtime_files_for_pattern(dest_root: Path, pattern: str):
             return
         for dirpath, dirnames, filenames in os.walk(base, followlinks=False):
             dirpath_p = Path(dirpath)
-            dirnames[:] = [d for d in dirnames if not is_symlink_or_junction(dirpath_p / d)]
+            dirnames[:] = [
+                d for d in dirnames
+                if not is_symlink_or_junction(dirpath_p / d) and d not in _RUNTIME_SCAN_IGNORE_DIR_NAMES
+            ]
             for fname in filenames:
                 fpath = dirpath_p / fname
-                if not is_symlink_or_junction(fpath):
+                if not is_symlink_or_junction(fpath) and not _is_runtime_scan_noise(fpath):
                     yield fpath
     elif "/" not in pattern:
         if not dest_root.exists():
             return
         for p in dest_root.glob(pattern):
-            if p.is_file() and not is_symlink_or_junction(p):
+            if p.is_file() and not is_symlink_or_junction(p) and not _is_runtime_scan_noise(p):
                 yield p
 
 

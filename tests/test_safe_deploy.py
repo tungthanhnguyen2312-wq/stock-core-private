@@ -402,6 +402,19 @@ class ApplyAndAtomicityTests(SafeDeployTestCase):
         plan = sd.build_plan(repo, config, self.dest, {}, set(), "dry-run")
         self.assertIn("runtime_only.py", plan.runtime_only_files)
 
+    def test_runtime_only_scan_ignores_pycache_noise(self):
+        repo = make_source_repo(self.base, {"tests/test_x.py": b"x"})
+        cache_dir = self.dest / "tests" / "__pycache__"
+        cache_dir.mkdir(parents=True)
+        (cache_dir / "test_x.cpython-313.pyc").write_bytes(b"bytecode")
+        (self.dest / "tests" / "genuinely_orphaned.py").write_bytes(b"y")
+        cfg = write_config(self.base, "proj", self.dest, ["tests/**"])
+        config = sd.DeployConfig.load(cfg)
+        plan = sd.build_plan(repo, config, self.dest, {}, set(), "dry-run")
+        self.assertIn("tests/genuinely_orphaned.py", plan.runtime_only_files)
+        self.assertTrue(all("__pycache__" not in f for f in plan.runtime_only_files))
+        self.assertTrue(all(not f.endswith(".pyc") for f in plan.runtime_only_files))
+
     def test_atomic_write_leaves_no_temp_file_on_success(self):
         target = self.dest / "atomic_test.txt"
         sd.atomic_write(target, b"payload")
