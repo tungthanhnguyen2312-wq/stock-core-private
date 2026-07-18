@@ -6,6 +6,7 @@ Run directly with: python -m unittest tests.test_safe_deploy -v
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -598,6 +599,105 @@ class BackupAccountingRegressionTests(SafeDeployTestCase):
         self.assertEqual(preview["expected_backup_bytes"], result_manifest["backup_bytes"])
         sd.rollback_deployment(Path(result["manifest_path"]), self.dest)
         self.assertEqual((self.dest / "run.py").read_bytes(), runtime)
+
+
+class ApprovalResultMetadataTests(SafeDeployTestCase):
+    def _write_approval(self, repo, config):
+        blocked = sd.build_plan(
+            repo, config, self.dest, {}, {}, "dry-run", self.base / "backups",
+        )
+        record = next(item for item in blocked.files if item.rel_path == "run.py")
+        payload = {
+            "approvals": [{
+                "rel_path": "run.py",
+                "source_commit": blocked.source_head,
+                "source_sha256": record.source_sha256,
+                "expected_runtime_sha256": record.runtime_sha256,
+            }],
+        }
+        raw = json.dumps(payload, indent=2).encode("utf-8")
+        path = self.base / "approval.json"
+        path.write_bytes(raw)
+        return path, hashlib.sha256(raw).hexdigest()
+
+    def _approved_plan(self):
+        repo = make_source_repo(self.base, {"run.py": b"new\n"})
+        (self.dest / "run.py").write_bytes(b"old\n")
+        config_path = write_config(self.base, "proj", self.dest, ["*.py"])
+        config = sd.DeployConfig.load(config_path)
+        approval_path, approval_sha256 = self._write_approval(repo, config)
+        approved_paths, approval_context = sd.load_approval_manifest(approval_path, [])
+        plan = sd.build_plan(
+            repo, config, self.dest, {}, approved_paths, "apply",
+            self.base / "backups", approval_context,
+        )
+        return repo, plan, approval_path, approval_sha256
+
+    def test_successful_approved_apply_records_exact_manifest_identity(self):
+        repo = make_source_repo(self.base, {"run.py": b"new\n"})
+        (self.dest / "run.py").write_bytes(b"old\n")
+        config_path = write_config(self.base, "proj", self.dest, ["*.py"])
+        config = sd.DeployConfig.load(config_path)
+        approval_path, approval_sha256 = self._write_approval(repo, config)
+        argv = self.default_argv(repo, config_path, [
+            "--apply", "--confirm", sd.CONFIRM_TOKEN,
+            "--backup-root", str(self.base / "backups"),
+            "--approve-initial-baseline", str(approval_path),
+        ])
+        self.assertEqual(self.run_tool(argv), 0)
+        result_path = next((self.base / "backups").rglob("deploy-result.json"))
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        self.assertEqual(result["approval_manifest_path"], str(approval_path.resolve()))
+        self.assertEqual(result["approval_manifest_sha256"], approval_sha256)
+
+    def test_manifest_change_after_validation_keeps_validated_bytes_hash(self):
+        repo, plan, approval_path, approval_sha256 = self._approved_plan()
+        approval_path.write_bytes(b'{"approvals": []}\n')
+        changed_sha256 = hashlib.sha256(approval_path.read_bytes()).hexdigest()
+        result = sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        manifest = json.loads(Path(result["manifest_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(manifest["approval_manifest_sha256"], approval_sha256)
+        self.assertNotEqual(manifest["approval_manifest_sha256"], changed_sha256)
+
+    def test_apply_without_approval_records_explicit_null_metadata(self):
+        repo = make_source_repo(self.base, {"run.py": b"new\n"})
+        config_path = write_config(self.base, "proj", self.dest, ["*.py"])
+        argv = self.default_argv(repo, config_path, [
+            "--apply", "--confirm", sd.CONFIRM_TOKEN,
+            "--backup-root", str(self.base / "backups"),
+        ])
+        self.assertEqual(self.run_tool(argv), 0)
+        result_path = next((self.base / "backups").rglob("deploy-result.json"))
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        self.assertIsNone(result["approval_manifest_path"])
+        self.assertIsNone(result["approval_manifest_sha256"])
+
+    def test_failure_result_retains_validated_approval_metadata(self):
+        repo, plan, approval_path, approval_sha256 = self._approved_plan()
+        real_atomic = sd.atomic_write
+
+        def fail_runtime_write(path, data):
+            if Path(path) == self.dest / "run.py":
+                raise OSError("injected runtime write failure")
+            return real_atomic(path, data)
+
+        with mock.patch.object(sd, "atomic_write", side_effect=fail_runtime_write):
+            with self.assertRaises(sd.DeployError):
+                sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        result_path = next((self.base / "backups").rglob("deploy-result.json"))
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        self.assertEqual(result["approval_manifest_path"], str(approval_path.resolve()))
+        self.assertEqual(result["approval_manifest_sha256"], approval_sha256)
+
+    def test_rollback_uses_result_without_rereading_approval_file(self):
+        repo, plan, approval_path, approval_sha256 = self._approved_plan()
+        result = sd.apply_plan(repo, plan, self.dest, self.base / "backups")
+        result_path = Path(result["manifest_path"])
+        manifest = json.loads(result_path.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["approval_manifest_sha256"], approval_sha256)
+        approval_path.unlink()
+        sd.rollback_deployment(result_path, self.dest)
+        self.assertEqual((self.dest / "run.py").read_bytes(), b"old\n")
 
 
 class SecurityCriticalRegressionTests(SafeDeployTestCase):

@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-TOOL_VERSION = "2.0.1"
+TOOL_VERSION = "2.0.2"
 CONFIRM_TOKEN = "DEPLOY_AUTHENTIC_SOURCE"
 DEFAULT_SIZE_LIMIT_BYTES = 5 * 1024 * 1024  # 5 MiB
 DEFAULT_BACKUP_ROOT = Path(
@@ -324,21 +324,43 @@ def save_deploy_state(state_path: Path, state: dict) -> None:
     atomic_write(state_path, json.dumps(state, indent=2, ensure_ascii=False).encode("utf-8"))
 
 
-def load_approved_paths(approve_baseline: Optional[Path], approve_files: list[str]) -> dict[str, dict]:
+@dataclasses.dataclass(frozen=True)
+class ApprovalContext:
+    manifest_path: Optional[str] = None
+    manifest_sha256: Optional[str] = None
+    manifest_bytes: Optional[bytes] = dataclasses.field(default=None, repr=False)
+
+
+def load_approval_manifest(
+    approve_baseline: Optional[Path], approve_files: list[str],
+) -> tuple[dict[str, dict], ApprovalContext]:
     if approve_files:
         raise DeployError("filename-only --approve-file is insecure; use a bound approval manifest")
     approved: dict[str, dict] = {}
-    if approve_baseline is not None:
-        data = json.loads(approve_baseline.read_text(encoding="utf-8"))
-        entries = data.get("approvals")
-        if not isinstance(entries, list):
-            raise DeployError("approval manifest must contain an 'approvals' list")
-        for entry in entries:
-            if not isinstance(entry, dict) or not isinstance(entry.get("rel_path"), str):
-                raise DeployError("invalid approval entry")
-            if entry["rel_path"] in approved:
-                raise DeployError(f"duplicate approval for {entry['rel_path']}")
-            approved[entry["rel_path"]] = entry
+    if approve_baseline is None:
+        return approved, ApprovalContext()
+    manifest_path = approve_baseline.resolve(strict=True)
+    manifest_bytes = manifest_path.read_bytes()
+    data = json.loads(manifest_bytes.decode("utf-8"))
+    entries = data.get("approvals")
+    if not isinstance(entries, list):
+        raise DeployError("approval manifest must contain an 'approvals' list")
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("rel_path"), str):
+            raise DeployError("invalid approval entry")
+        if entry["rel_path"] in approved:
+            raise DeployError(f"duplicate approval for {entry['rel_path']}")
+        approved[entry["rel_path"]] = entry
+    context = ApprovalContext(
+        manifest_path=str(manifest_path),
+        manifest_sha256=sha256_bytes(manifest_bytes),
+        manifest_bytes=manifest_bytes,
+    )
+    return approved, context
+
+
+def load_approved_paths(approve_baseline: Optional[Path], approve_files: list[str]) -> dict[str, dict]:
+    approved, _ = load_approval_manifest(approve_baseline, approve_files)
     return approved
 
 
@@ -492,6 +514,7 @@ class DeployPlan:
     runtime_only_files: list[str]
     estimated_backup_bytes: int
     backup_root: str
+    approval_context: ApprovalContext
 
     def summary(self) -> dict:
         counts: dict[str, int] = {}
@@ -544,6 +567,8 @@ class DeployPlan:
             "expected_backup_bytes": self.estimated_backup_bytes,
             "estimated_backup_bytes": self.estimated_backup_bytes,
             "backup_root": self.backup_root,
+            "approval_manifest_path": self.approval_context.manifest_path,
+            "approval_manifest_sha256": self.approval_context.manifest_sha256,
             "backup_and_rollback_preview": backup_preview,
         }
 
@@ -556,6 +581,7 @@ def build_plan(
     approved_paths: dict[str, dict],
     mode: str,
     backup_root: Path = DEFAULT_BACKUP_ROOT,
+    approval_context: Optional[ApprovalContext] = None,
 ) -> DeployPlan:
     tracked = git_ls_files(repo)
     head = git_head_commit(repo)
@@ -648,6 +674,7 @@ def build_plan(
         files=records,
         runtime_only_files=runtime_only,
         estimated_backup_bytes=estimated_backup_bytes,
+        approval_context=approval_context or ApprovalContext(),
     )
 
 
@@ -749,6 +776,8 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
         failure_manifest = {
             "tool_version": TOOL_VERSION, "project": plan.project,
             "source_commit": plan.source_head, "runtime_destination": str(dest_root),
+            "approval_manifest_path": plan.approval_context.manifest_path,
+            "approval_manifest_sha256": plan.approval_context.manifest_sha256,
             "result": "rollback_failed" if rollback_errors else "rolled_back_after_failure",
             "error": str(exc), "rollback_errors": rollback_errors, "actions": actions,
             "backed_up": backed_up, "backup_count": len(backed_up),
@@ -772,6 +801,8 @@ def apply_plan(repo: Path, plan: DeployPlan, dest_root: Path, backup_root: Path)
     success_manifest = {
         "tool_version": TOOL_VERSION, "project": plan.project,
         "source_commit": plan.source_head, "runtime_destination": str(dest_root),
+        "approval_manifest_path": plan.approval_context.manifest_path,
+        "approval_manifest_sha256": plan.approval_context.manifest_sha256,
         "result": "success", "actions": actions,
         "backed_up": backed_up, "backup_count": len(backed_up),
         "backup_bytes": sum(item["size_bytes"] for item in backed_up),
@@ -909,12 +940,17 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     try:
         state = load_deploy_state(state_path, config.project, dest_root)
-        approved_paths = load_approved_paths(args.approve_initial_baseline, args.approve_file)
+        approved_paths, approval_context = load_approval_manifest(
+            args.approve_initial_baseline, args.approve_file,
+        )
     except (DeployError, OSError, json.JSONDecodeError) as exc:
         print(f"REFUSED: {exc}", file=sys.stderr)
         return 2
 
-    plan = build_plan(repo, config, dest_root, state, approved_paths, mode, backup_root)
+    plan = build_plan(
+        repo, config, dest_root, state, approved_paths, mode, backup_root,
+        approval_context,
+    )
 
     preview_dir.mkdir(parents=True, exist_ok=True)
     preview_path = preview_dir / f"deploy-preview-{config.project}-{plan.timestamp}.json"
