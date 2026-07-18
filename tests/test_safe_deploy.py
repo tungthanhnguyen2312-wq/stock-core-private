@@ -700,6 +700,154 @@ class ApprovalResultMetadataTests(SafeDeployTestCase):
         self.assertEqual((self.dest / "run.py").read_bytes(), b"old\n")
 
 
+class ApprovalDraftGeneratorTests(SafeDeployTestCase):
+    def _fixture(self, source=None, runtime=None, size_limit_bytes=None):
+        files = {
+            ".gitignore": b".deploy/\n",
+            ".gitattributes": b"*.py text eol=lf\n",
+        }
+        files.update(source or {"a.py": b"alpha\n"})
+        repo = make_source_repo(self.base, files)
+        for rel_path, data in (runtime or {"a.py": b"alpha\r\n"}).items():
+            path = self.dest / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        config_path = write_config(
+            self.base, "proj", self.dest, ["*.py"],
+            runtime_scan_globs=["*.py"], size_limit_bytes=size_limit_bytes,
+        )
+        config = sd.DeployConfig.load(config_path)
+        plan = sd.build_plan(
+            repo, config, self.dest, {}, {}, "dry-run", self.base / "backups",
+        )
+        return repo, config_path, config, plan
+
+    def _generate(self, source=None, runtime=None, output_path=None, size_limit_bytes=None):
+        repo, _, _, plan = self._fixture(source, runtime, size_limit_bytes)
+        result = sd.generate_initial_baseline_approval(
+            repo, plan, self.dest, output_path,
+        )
+        return repo, plan, result
+
+    def test_valid_eol_only_draft_generation(self):
+        repo, _, _, plan = self._fixture()
+        result = sd.generate_initial_baseline_approval(repo, plan, self.dest)
+        draft_path = Path(result["approval_path"])
+        draft = json.loads(draft_path.read_text(encoding="utf-8"))
+        digest = hashlib.sha256(draft_path.read_bytes()).hexdigest()
+        self.assertEqual(draft["status"], "DRAFT_NOT_USER_APPROVED")
+        self.assertEqual(draft["source_commit"], plan.source_head)
+        self.assertEqual([entry["rel_path"] for entry in draft["entries"]], ["a.py"])
+        self.assertEqual(draft["entries"][0]["source_commit"], plan.source_head)
+        self.assertEqual(
+            draft["entries"][0]["source_deployment_sha256"],
+            sd.sha256_bytes(b"alpha\n"),
+        )
+        self.assertEqual(
+            draft["entries"][0]["expected_runtime_sha256"],
+            sd.sha256_bytes(b"alpha\r\n"),
+        )
+        self.assertTrue(sd.git_path_is_ignored(repo, draft_path))
+        self.assertFalse(sd.git_path_is_tracked(repo, draft_path))
+        self.assertEqual(result["approval_sha256"], digest)
+
+    def test_non_eol_difference_is_rejected_without_output(self):
+        repo, _, _, plan = self._fixture(runtime={"a.py": b"other\n"})
+        with self.assertRaisesRegex(sd.DeployError, "EOL-only"):
+            sd.generate_initial_baseline_approval(repo, plan, self.dest)
+        self.assertFalse((repo / ".deploy" / "approvals").exists())
+
+    def test_mixed_eligible_and_ineligible_blockers_refuse_entire_draft(self):
+        repo, _, _, plan = self._fixture(
+            source={"a.py": b"alpha\n", "b.py": b"bravo\n"},
+            runtime={"a.py": b"alpha\r\n", "b.py": b"different\n"},
+        )
+        with self.assertRaises(sd.DeployError):
+            sd.generate_initial_baseline_approval(repo, plan, self.dest)
+        self.assertFalse((repo / ".deploy" / "approvals").exists())
+
+    def test_existing_output_is_never_overwritten(self):
+        repo, _, _, plan = self._fixture()
+        output = repo / ".deploy" / "approvals" / "existing.json"
+        output.parent.mkdir(parents=True)
+        output.write_bytes(b"sentinel")
+        with self.assertRaisesRegex(sd.DeployError, "already exists"):
+            sd.generate_initial_baseline_approval(repo, plan, self.dest, output)
+        self.assertEqual(output.read_bytes(), b"sentinel")
+
+    def test_entry_order_and_contents_are_deterministic(self):
+        repo, _, _, plan = self._fixture(
+            source={"b.py": b"bravo\n", "a.py": b"alpha\n"},
+            runtime={"b.py": b"bravo\r\n", "a.py": b"alpha\r\n"},
+        )
+        first = repo / ".deploy" / "approvals" / "first.json"
+        second = repo / ".deploy" / "approvals" / "second.json"
+        sd.generate_initial_baseline_approval(repo, plan, self.dest, first)
+        sd.generate_initial_baseline_approval(repo, plan, self.dest, second)
+        one = json.loads(first.read_text(encoding="utf-8"))
+        two = json.loads(second.read_text(encoding="utf-8"))
+        self.assertEqual(one["entries"], two["entries"])
+        self.assertEqual([entry["rel_path"] for entry in one["entries"]], ["a.py", "b.py"])
+
+    def test_generated_draft_is_accepted_by_existing_loader(self):
+        repo, _, config, plan = self._fixture()
+        result = sd.generate_initial_baseline_approval(repo, plan, self.dest)
+        approved, context = sd.load_approval_manifest(Path(result["approval_path"]), [])
+        approved_plan = sd.build_plan(
+            repo, config, self.dest, {}, approved, "dry-run",
+            self.base / "backups", context,
+        )
+        self.assertFalse(approved_plan.blocked())
+        self.assertEqual(
+            {record.rel_path for record in approved_plan.files if record.classification == "update"},
+            {"a.py"},
+        )
+
+    def test_generated_draft_fails_after_source_commit_changes(self):
+        repo, _, config, plan = self._fixture()
+        result = sd.generate_initial_baseline_approval(repo, plan, self.dest)
+        (repo / "README.md").write_bytes(b"new commit\n")
+        _git(repo, "add", "README.md")
+        _git(repo, "commit", "-m", "change head")
+        approved, context = sd.load_approval_manifest(Path(result["approval_path"]), [])
+        changed = sd.build_plan(
+            repo, config, self.dest, {}, approved, "dry-run",
+            self.base / "backups", context,
+        )
+        record = next(item for item in changed.files if item.rel_path == "a.py")
+        self.assertEqual(record.block_reason, "approval_source_commit_mismatch")
+
+    def test_generated_draft_fails_after_runtime_changes(self):
+        repo, _, config, plan = self._fixture()
+        result = sd.generate_initial_baseline_approval(repo, plan, self.dest)
+        (self.dest / "a.py").write_bytes(b"changed\r\n")
+        approved, context = sd.load_approval_manifest(Path(result["approval_path"]), [])
+        changed = sd.build_plan(
+            repo, config, self.dest, {}, approved, "dry-run",
+            self.base / "backups", context,
+        )
+        record = next(item for item in changed.files if item.rel_path == "a.py")
+        self.assertEqual(record.block_reason, "approval_runtime_hash_mismatch")
+
+    def test_generation_has_no_deployment_side_effects(self):
+        repo, config_path, _, _ = self._fixture()
+        original = (self.dest / "a.py").read_bytes()
+        backup_root = self.base / "backups"
+        state_path = self.base / "state.json"
+        sd.REPO_ROOT = repo
+        argv = [
+            "--config", str(config_path),
+            "--generate-initial-baseline-approval",
+            "--backup-root", str(backup_root),
+            "--state-file", str(state_path),
+        ]
+        self.assertEqual(self.run_tool(argv), 0)
+        self.assertEqual((self.dest / "a.py").read_bytes(), original)
+        self.assertFalse(backup_root.exists())
+        self.assertFalse(state_path.exists())
+        self.assertEqual(list(self.base.rglob("deploy-result.json")), [])
+
+
 class SecurityCriticalRegressionTests(SafeDeployTestCase):
     def _plan(self, files, runtime=None, state=None, approvals=None):
         repo = make_source_repo(self.base, files)
