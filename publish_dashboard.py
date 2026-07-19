@@ -1,8 +1,17 @@
 """Build and publish the public Stock Look Up dashboard safely.
 
-Default mode is dry-run. Only ``--live`` may fetch/pull, stage, commit and push.
-The publisher is the single source of truth for copying artifacts, rebuilding the
-file:// fallback, writing build_info and deriving the exact git whitelist.
+Default mode (no ``--live``) is a strict, read-only dry-run: it validates
+inputs, computes the exact plan (which artifacts would be copied, the build
+id that would be generated, which HTML pages would get new asset-version
+tokens, and the git whitelist), and only *prints* that plan. It does not
+copy any artifact, does not write or update the build manifest, does not
+touch any HTML/CSS/JS file, does not write a log file, and never invokes a
+mutating git command (add/commit/push/fetch/pull).
+
+Only ``--live`` may write files and fetch/pull/stage/commit/push. The
+publisher is the single source of truth for copying artifacts, rebuilding
+the file:// fallback, writing build_info and deriving the exact git
+whitelist.
 """
 
 from __future__ import annotations
@@ -26,9 +35,15 @@ VN_TZ = timezone(timedelta(hours=7))
 SCRIPT_ROOT = Path(__file__).resolve().parent
 BACKEND_ROOT = Path(os.environ.get("STOCK_LOOKUP_BACKEND_DIR", SCRIPT_ROOT)).expanduser().resolve()
 WEB_ROOT = Path(os.environ.get("STOCK_LOOKUP_WEB_DIR", SCRIPT_ROOT)).expanduser().resolve()
-LOG_DIR = WEB_ROOT / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-LOG_FILE = LOG_DIR / f"publish-{datetime.now(VN_TZ):%Y%m%d-%H%M%S}.log"
+
+# LIVE_MODE gates every filesystem/log write in this module. main() sets it
+# from --live before doing anything else. Tests may also set it directly.
+LIVE_MODE = False
+# Fixed once per process so every log() call in one run lands in the same
+# file; the *directory* is still resolved from the current WEB_ROOT at each
+# call (not cached), so monkeypatching WEB_ROOT in tests is respected and a
+# dry-run never has a reason to touch this at all (see log() below).
+_RUN_TIMESTAMP = f"{datetime.now(VN_TZ):%Y%m%d-%H%M%S}"
 
 COPY_ARTIFACTS = (
     "screen_snapshot.csv", "market_breadth.csv",
@@ -48,12 +63,17 @@ NEVER_PUBLISH = {
 REQUIRED_SNAPSHOT_COLUMNS = {"ticker", "exchange", "date"}
 CANONICAL_EXCHANGES = {"HSX", "HNX", "UPCOM", "DELISTED"}
 EXCHANGE_ALIASES = {"HOSE": "HSX", "HCM": "HSX", "UPCOM": "UPCOM"}
+ASSET_VERSION_ATTR_RE = re.compile(r'(?P<prefix>\b(?:src|href)=["\'])(?P<url>[^"\']+)(?P<quote>["\'])', re.I)
 
 
 def log(message: str) -> None:
     line = f"[{datetime.now(VN_TZ).isoformat(timespec='seconds')}] {message}"
     print(line)
-    with LOG_FILE.open("a", encoding="utf-8") as handle:
+    if not LIVE_MODE:
+        return
+    log_dir = WEB_ROOT / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    with (log_dir / f"publish-{_RUN_TIMESTAMP}.log").open("a", encoding="utf-8") as handle:
         handle.write(line + "\n")
 
 
@@ -84,6 +104,10 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def content_sha256(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
 def write_if_changed(path: Path, content: str) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and path.read_text(encoding="utf-8") == content:
@@ -97,7 +121,27 @@ def normalize_exchange(value: object) -> str:
     return EXCHANGE_ALIASES.get(raw, raw)
 
 
+# ---------------------------------------------------------------------------
+# Copy artifacts backend -> web: plan (read-only) + apply (writes, LIVE only)
+# ---------------------------------------------------------------------------
+
+def plan_copy_artifacts() -> list[str]:
+    """Return the relative paths that a live run would copy. Never touches disk."""
+    if BACKEND_ROOT == WEB_ROOT:
+        return []
+    planned: list[str] = []
+    for relative in COPY_ARTIFACTS:
+        source, target = BACKEND_ROOT / relative, WEB_ROOT / relative
+        if not source.exists():
+            continue
+        if target.exists() and sha256(source) == sha256(target):
+            continue
+        planned.append(relative)
+    return planned
+
+
 def copy_public_artifacts() -> list[str]:
+    """Apply: actually copy the artifacts computed by plan_copy_artifacts(). LIVE only."""
     if BACKEND_ROOT == WEB_ROOT:
         log("Nguồn backend và web trùng nhau; bỏ qua self-copy.")
         return []
@@ -200,16 +244,19 @@ def build_signature(market_session: str, head: str) -> str:
     return digest.hexdigest()
 
 
-def rebuild_fallback(rows: list[dict[str, str]], breadth: list[dict[str, str]],
-                     market_session: str, generated_at: str) -> None:
+# ---------------------------------------------------------------------------
+# Build manifest + screener_data.js fallback: compute (read-only) + write (LIVE only)
+# ---------------------------------------------------------------------------
+
+def screener_fallback_content(rows: list[dict[str, str]], breadth: list[dict[str, str]],
+                              market_session: str, generated_at: str) -> str:
+    """Pure: the exact text that would become data/screener_data.js. No I/O."""
     meta = {"schema_version": 1, "generated_at": generated_at, "market_session": market_session}
-    content = (
+    return (
         "window.SCREENER_DATA_META = " + json.dumps(meta, ensure_ascii=False, separators=(",", ":")) + ";\n"
         "window.SCREEN_ROWS = " + json.dumps(typed_rows(rows), ensure_ascii=False, separators=(",", ":")) + ";\n"
         "window.BREADTH_ROWS = " + json.dumps(typed_rows(breadth), ensure_ascii=False, separators=(",", ":")) + ";\n"
     )
-    changed = write_if_changed(WEB_ROOT / "data/screener_data.js", content)
-    log(f"Fallback screener_data.js: {'đã tái tạo' if changed else 'không đổi'}.")
 
 
 def file_entry(relative: str) -> dict[str, object]:
@@ -221,8 +268,14 @@ def file_entry(relative: str) -> dict[str, object]:
     }
 
 
-def write_build_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
-                         market_session: str, head: str) -> dict[str, object]:
+def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
+                     market_session: str, head: str) -> tuple[dict[str, object], str]:
+    """Pure: compute the manifest dict + the screener_data.js content it references.
+
+    Reads existing on-disk files (screen_snapshot.csv, market_breadth.csv, the
+    build-signature inputs, and the previous data/build_info.json if present)
+    but never writes anything. Safe to call in dry-run.
+    """
     signature = build_signature(market_session, head)
     build_id = f"{market_session}-{head[:7]}-{signature[:10]}"
     existing_path = WEB_ROOT / "data/build_info.json"
@@ -234,9 +287,17 @@ def write_build_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str
             existing = {}
     generated_at = (existing.get("generated_at") if existing.get("build_id") == build_id else None)
     generated_at = str(generated_at or datetime.now(VN_TZ).isoformat(timespec="seconds"))
-    rebuild_fallback(rows, breadth, market_session, generated_at)
-    tracked_files = ["screen_snapshot.csv", "market_breadth.csv", "data/screener_data.js"]
+    screener_js_content = screener_fallback_content(rows, breadth, market_session, generated_at)
+    tracked_files = ["screen_snapshot.csv", "market_breadth.csv"]
     tracked_files += [name for name in ("ai_report_latest.md", "ai_report_latest.json") if (WEB_ROOT / name).exists()]
+    files: dict[str, object] = {name: file_entry(name) for name in tracked_files}
+    files["data/screener_data.js"] = {
+        "sha256": content_sha256(screener_js_content),
+        "size": len(screener_js_content.encode("utf-8")),
+        # Chưa ghi ra đĩa ở giai đoạn compute (dry-run có thể dừng ở đây) nên
+        # chưa có mtime thật; live apply sẽ có mtime thật sau khi write_build_manifest() ghi file.
+        "mtime": None,
+    }
     manifest: dict[str, object] = {
         "schema_version": 1,
         "build_id": build_id,
@@ -244,8 +305,26 @@ def write_build_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str
         "market_session": market_session,
         "git_commit": head,
         "row_counts": {"screen_snapshot": len(rows), "market_breadth": len(breadth)},
-        "files": {name: file_entry(name) for name in tracked_files},
+        "files": files,
     }
+    return manifest, screener_js_content
+
+
+def write_build_manifest(manifest: dict[str, object], screener_js_content: str) -> dict[str, object]:
+    """Apply: write data/screener_data.js, data/build_info.json, data/build_info.js. LIVE only.
+
+    Takes the already-computed manifest/content from compute_manifest() so
+    preview and live always agree on build_id/content — this function only
+    performs the filesystem writes and re-derives the real (post-write) file
+    entries for what actually landed on disk.
+    """
+    changed = write_if_changed(WEB_ROOT / "data/screener_data.js", screener_js_content)
+    log(f"Fallback screener_data.js: {'đã tái tạo' if changed else 'không đổi'}.")
+    manifest = dict(manifest)
+    files = dict(manifest["files"])  # type: ignore[arg-type]
+    files["data/screener_data.js"] = file_entry("data/screener_data.js")
+    manifest["files"] = files
+    existing_path = WEB_ROOT / "data/build_info.json"
     payload = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     write_if_changed(existing_path, payload)
     write_if_changed(
@@ -256,24 +335,44 @@ def write_build_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str
     )
     # Parse lại chính artifact vừa tạo; hỏng JSON phải dừng trước git.
     json.loads(existing_path.read_text(encoding="utf-8"))
-    log(f"Build manifest: {build_id} · {generated_at}")
+    log(f"Build manifest: {manifest['build_id']} · {manifest['generated_at']}")
     return manifest
 
 
-def update_asset_versions(build_id: str) -> list[str]:
+# ---------------------------------------------------------------------------
+# Asset cache-busting in HTML: plan (read-only) + apply (writes, LIVE only)
+# ---------------------------------------------------------------------------
+
+def _versioned_html(original: str, build_id: str) -> str:
+    """Pure text transform — no I/O. Shared by plan_asset_versions() and update_asset_versions()
+    so preview and live can never disagree about which pages/tags would change."""
+    def replace(match: re.Match[str]) -> str:
+        url = match.group("url")
+        if url.startswith(("http://", "https://", "//", "data:", "#", "/")):
+            return match.group(0)
+        bare = url.split("?", 1)[0].split("#", 1)[0]
+        if not bare.lower().endswith((".js", ".css")):
+            return match.group(0)
+        return f"{match.group('prefix')}{bare}?v={build_id}{match.group('quote')}"
+    return ASSET_VERSION_ATTR_RE.sub(replace, original)
+
+
+def plan_asset_versions(build_id: str) -> list[str]:
+    """Return the HTML page names that a live run would rewrite. Never touches disk."""
     changed: list[str] = []
-    attr_re = re.compile(r'(?P<prefix>\b(?:src|href)=["\'])(?P<url>[^"\']+)(?P<quote>["\'])', re.I)
     for page in sorted(WEB_ROOT.glob("*.html")):
         original = page.read_text(encoding="utf-8")
-        def replace(match: re.Match[str]) -> str:
-            url = match.group("url")
-            if url.startswith(("http://", "https://", "//", "data:", "#", "/")):
-                return match.group(0)
-            bare = url.split("?", 1)[0].split("#", 1)[0]
-            if not bare.lower().endswith((".js", ".css")):
-                return match.group(0)
-            return f"{match.group('prefix')}{bare}?v={build_id}{match.group('quote')}"
-        updated = attr_re.sub(replace, original)
+        if _versioned_html(original, build_id) != original:
+            changed.append(page.name)
+    return changed
+
+
+def update_asset_versions(build_id: str) -> list[str]:
+    """Apply: actually rewrite the HTML pages computed by plan_asset_versions(). LIVE only."""
+    changed: list[str] = []
+    for page in sorted(WEB_ROOT.glob("*.html")):
+        original = page.read_text(encoding="utf-8")
+        updated = _versioned_html(original, build_id)
         if updated != original:
             page.write_text(updated, encoding="utf-8", newline="\n")
             changed.append(page.name)
@@ -399,25 +498,54 @@ def publish_live(whitelist: list[str], branch: str) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build/publish dashboard; mặc định dry-run an toàn.")
-    parser.add_argument("--live", action="store_true", help="cho phép fetch/pull/add/commit/push thật")
+    parser = argparse.ArgumentParser(
+        description="Build/publish dashboard. Mặc định (không --live) là dry-run "
+                     "read-only tuyệt đối: không copy, không ghi manifest, không sửa "
+                     "HTML/CSS/JS, không ghi log, không git mutation — chỉ in kế hoạch.")
+    parser.add_argument("--live", action="store_true", help="cho phép ghi file, fetch/pull/add/commit/push thật")
     args = parser.parse_args()
-    mode = "LIVE" if args.live else "DRY-RUN"
+
+    global LIVE_MODE
+    LIVE_MODE = args.live
+    mode = "LIVE" if args.live else "DRY-RUN (read-only)"
     log(f"=== publish_dashboard {mode} ===")
     log(f"Backend={BACKEND_ROOT} · Web={WEB_ROOT}")
+
     try:
         branch, _remote, head = git_preflight()
         if args.live:
             sync_remote_before_live(branch)
             head = current_head()
-        copy_public_artifacts()
         rows, breadth, market_session = validate_snapshot()
-        manifest = write_build_manifest(rows, breadth, market_session, head)
+        copy_plan = plan_copy_artifacts()
+        manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head)
+        version_plan = plan_asset_versions(str(manifest["build_id"]))
+        validate_json_artifacts()
+        whitelist = build_whitelist()
+    except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
+        return fail(str(exc))
+
+    if not args.live:
+        log("[DRY-RUN] Kiểm tra xong — CHƯA copy artifact, CHƯA ghi manifest, CHƯA sửa "
+            "HTML/CSS/JS, CHƯA git add/commit/push. Không file nào trên đĩa bị thay đổi.")
+        log(f"[DRY-RUN] Sẽ copy {len(copy_plan)} artifact từ backend: "
+            f"{', '.join(copy_plan) or '(không có — backend=web hoặc đã khớp)'}")
+        log(f"[DRY-RUN] Build id dự kiến (phiên {market_session}): {manifest['build_id']}")
+        log(f"[DRY-RUN] Sẽ cập nhật asset-version trên {len(version_plan)} trang HTML: "
+            f"{', '.join(version_plan) or '(không có)'}")
+        log(f"[DRY-RUN] Whitelist git nếu publish thật: {len(whitelist)} file")
+        log("[DRY-RUN] Muốn xuất bản thật phải gọi rõ: publish_dashboard.py --live")
+        return 0
+
+    try:
+        copy_public_artifacts()
+        write_build_manifest(manifest, screener_js_content)
         update_asset_versions(str(manifest["build_id"]))
         validate_json_artifacts()
         whitelist = build_whitelist()
     except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
         return fail(str(exc))
+
     ok, diff_check = git("diff", "--check", "--", *whitelist)
     if not ok:
         return fail(f"git diff --check thất bại: {diff_check}")
@@ -430,10 +558,6 @@ def main() -> int:
         log(f"  {line}")
     if not changed:
         log("Không có thay đổi; exit 0, không commit/push.")
-        return 0
-    if not args.live:
-        log("[DRY-RUN] Chỉ build + validate. Không stage, commit hoặc push.")
-        log("[DRY-RUN] Muốn xuất bản thật phải gọi rõ: publish_dashboard.py --live")
         return 0
     return publish_live(whitelist, branch)
 
