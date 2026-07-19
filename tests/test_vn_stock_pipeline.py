@@ -64,6 +64,7 @@ class FakeResponse:
 
 class FetchRetryTests(unittest.TestCase):
     def setUp(self):
+        pipeline._reset_provider_health()
         self.sleep = mock.patch.object(pipeline.time, "sleep").start()
         self.jitter = mock.patch.object(pipeline.random, "uniform", return_value=0).start()
         self.addCleanup(mock.patch.stopall)
@@ -119,6 +120,22 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual("failed", outcome.status)
         self.assertTrue(outcome.transient_failure)
 
+    def test_degraded_provider_opens_circuit_and_uses_existing_failover(self):
+        pipeline._record_provider_result(
+            pipeline.PRIMARY_SRC,
+            transient_count=pipeline.PROVIDER_CIRCUIT_BUDGET,
+        )
+        provider = mock.Mock()
+        provider.history.return_value = raw_bar()
+        with mock.patch.object(pipeline, "_quote", return_value=provider) as quote:
+            outcome = pipeline.fetch_one("VNINDEX", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        quote.assert_called_once_with("VNINDEX", pipeline.FAILOVER_SRC)
+        self.assertEqual(
+            pipeline.PROVIDER_CIRCUIT_COOLDOWN - 1,
+            pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]["skip_remaining"],
+        )
+
     def test_429_honors_bounded_retry_after(self):
         quote_patch, _ = self.quote_with_effects(
             [transient("http_status", 429, retry_after=99), raw_bar()]
@@ -131,6 +148,7 @@ class FetchRetryTests(unittest.TestCase):
     def test_500_502_503_are_retried(self):
         for status in (500, 502, 503):
             with self.subTest(status=status):
+                pipeline._reset_provider_health()
                 self.sleep.reset_mock()
                 quote_patch, provider = self.quote_with_effects(
                     [transient("http_status", status), raw_bar()]
@@ -146,6 +164,7 @@ class FetchRetryTests(unittest.TestCase):
     def test_400_401_403_do_not_retry_within_provider(self):
         for status in (400, 401, 403):
             with self.subTest(status=status):
+                pipeline._reset_provider_health()
                 quote_patch, provider = self.quote_with_effects(
                     [permanent(status), permanent(status)]
                 )

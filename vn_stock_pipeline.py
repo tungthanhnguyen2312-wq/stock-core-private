@@ -53,6 +53,8 @@ BACKOFF_MAX = _env_number("VNSTOCK_PIPELINE_BACKOFF_MAX", 10.0, float, 0.0)
 BACKOFF_JITTER = _env_number("VNSTOCK_PIPELINE_BACKOFF_JITTER", 0.25, float, 0.0)
 RETRY_AFTER_MAX = _env_number("VNSTOCK_PIPELINE_RETRY_AFTER_MAX", 30.0, float, 0.0)
 SOURCE_FAILURE_BUDGET = _env_number("VNSTOCK_PIPELINE_SOURCE_FAILURE_BUDGET", 3, int, 1)
+PROVIDER_CIRCUIT_BUDGET = _env_number("VNSTOCK_PIPELINE_PROVIDER_CIRCUIT_BUDGET", 3, int, 1)
+PROVIDER_CIRCUIT_COOLDOWN = _env_number("VNSTOCK_PIPELINE_PROVIDER_COOLDOWN", 25, int, 1)
 
 TRANSIENT_HTTP_STATUS = {408, 429, 500, 502, 503, 504}
 PROVIDER_ENDPOINT_HINT = {
@@ -64,6 +66,8 @@ EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 EXIT_PARTIAL = 2
 EXIT_SOURCE_UNAVAILABLE = 3
+
+_PROVIDER_HEALTH = {}
 
 BATCH_SIZE = 300
 
@@ -333,25 +337,72 @@ def _legacy_request_error(error, source):
     return PermanentRequestError(type(error).__name__, endpoint, 0.0)
 
 
+def _reset_provider_health():
+    _PROVIDER_HEALTH.clear()
+
+
+def _provider_should_skip(source, ticker):
+    state = _PROVIDER_HEALTH.setdefault(source, {"strikes": 0, "skip_remaining": 0})
+    if state["skip_remaining"] <= 0:
+        return False
+    state["skip_remaining"] -= 1
+    print(
+        f"[provider-circuit] provider={source} ticker={ticker} result=skip "
+        f"remaining={state['skip_remaining']}",
+        flush=True,
+    )
+    return True
+
+
+def _record_provider_result(source, transient_count=0, healthy_response=False):
+    state = _PROVIDER_HEALTH.setdefault(source, {"strikes": 0, "skip_remaining": 0})
+    if transient_count:
+        state["strikes"] += transient_count
+    elif healthy_response:
+        state["strikes"] = max(0, state["strikes"] - 1)
+    if state["strikes"] >= PROVIDER_CIRCUIT_BUDGET:
+        state["strikes"] = 0
+        state["skip_remaining"] = PROVIDER_CIRCUIT_COOLDOWN
+        print(
+            f"[provider-circuit] provider={source} result=open "
+            f"cooldown_tickers={PROVIDER_CIRCUIT_COOLDOWN}",
+            flush=True,
+        )
+
+
 def fetch_one(ticker, start, end):
     empty_source_count = 0
     errors = []
     saw_transient = False
     saw_permanent = False
     for source in (PRIMARY_SRC, FAILOVER_SRC):
+        if _provider_should_skip(source, ticker):
+            errors.append(f"{source}:circuit_open")
+            saw_transient = True
+            continue
+        source_transient_count = 0
         for attempt in range(1, MAX_RETRY + 1):
             started = time.monotonic()
             try:
                 raw = _quote(ticker, source).history(start=start, end=end, interval=INTERVAL)
                 if raw is None or len(raw) == 0:
                     empty_source_count += 1
+                    _record_provider_result(
+                        source, source_transient_count, healthy_response=True
+                    )
                     _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
                     break  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
                 df = normalize(raw, ticker, source)
                 if df is not None and len(df):
+                    _record_provider_result(
+                        source, source_transient_count, healthy_response=True
+                    )
                     _request_log(ticker, source, attempt, "success", time.monotonic() - started)
                     return FetchOutcome("success", data=df)
                 saw_permanent = True
+                _record_provider_result(
+                    source, source_transient_count, healthy_response=True
+                )
                 errors.append(f"{source}:invalid_schema")
                 _request_log(
                     ticker,
@@ -369,6 +420,9 @@ def fetch_one(ticker, start, end):
                 message = str(inner).lower()
                 if any(k in message for k in ("dữ liệu trống", "không tìm thấy dữ liệu", "no data", "empty")):
                     empty_source_count += 1
+                    _record_provider_result(
+                        source, source_transient_count, healthy_response=True
+                    )
                     _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
                     break  # nguồn này xác nhận không có dữ liệu -> sang nguồn dự phòng
                 error = inner if isinstance(inner, PipelineRequestError) else _legacy_request_error(inner, source)
@@ -378,7 +432,9 @@ def fetch_one(ticker, start, end):
                 )
                 if isinstance(error, TransientRequestError):
                     saw_transient = True
+                    source_transient_count += 1
                     if attempt >= MAX_RETRY:
+                        _record_provider_result(source, source_transient_count)
                         _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
                         break
                     wait = _retry_delay(attempt, error)
@@ -386,6 +442,9 @@ def fetch_one(ticker, start, end):
                     time.sleep(wait)
                 else:
                     saw_permanent = True
+                    _record_provider_result(
+                        source, source_transient_count, healthy_response=True
+                    )
                     _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
                     break
     if empty_source_count == 2:
