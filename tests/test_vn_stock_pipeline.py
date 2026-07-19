@@ -110,6 +110,15 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual(4, provider.history.call_count)
         self.assertTrue(all("read_timeout" in item for item in outcome.errors))
 
+    def test_transient_primary_plus_permanent_failover_counts_toward_budget(self):
+        quote_patch, _ = self.quote_with_effects(
+            [transient(), transient(), permanent(403)]
+        )
+        with quote_patch:
+            outcome = pipeline.fetch_one("VNINDEX", "2026-07-17", "2026-07-18")
+        self.assertEqual("failed", outcome.status)
+        self.assertTrue(outcome.transient_failure)
+
     def test_429_honors_bounded_retry_after(self):
         quote_patch, _ = self.quote_with_effects(
             [transient("http_status", 429, retry_after=99), raw_bar()]

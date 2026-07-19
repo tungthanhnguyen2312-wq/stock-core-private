@@ -393,7 +393,10 @@ def fetch_one(ticker, start, end):
     return FetchOutcome(
         "failed",
         errors=errors,
-        transient_failure=saw_transient and not saw_permanent,
+        # Chỉ cần một provider gặp lỗi transient và toàn bộ failover đều không thành công
+        # thì mã này vẫn tính vào failure budget. Điều này tránh bỏ lọt outage của VCI
+        # khi KBS đồng thời trả lỗi cố định/không hỗ trợ riêng cho mã đó.
+        transient_failure=saw_transient,
     )
 
 # ==========================================
