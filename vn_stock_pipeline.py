@@ -354,12 +354,19 @@ def _provider_should_skip(source, ticker):
     return True
 
 
+def _provider_circuit_open(source):
+    state = _PROVIDER_HEALTH.get(source)
+    return bool(state and state["skip_remaining"] > 0)
+
+
 def _record_provider_result(source, transient_count=0, healthy_response=False):
     state = _PROVIDER_HEALTH.setdefault(source, {"strikes": 0, "skip_remaining": 0})
     if transient_count:
         state["strikes"] += transient_count
     elif healthy_response:
         state["strikes"] = max(0, state["strikes"] - 1)
+        # Một force-probe khỏe xác nhận provider đã hồi phục và đóng circuit sớm.
+        state["skip_remaining"] = 0
     if state["strikes"] >= PROVIDER_CIRCUIT_BUDGET:
         state["strikes"] = 0
         state["skip_remaining"] = PROVIDER_CIRCUIT_COOLDOWN
@@ -375,8 +382,21 @@ def fetch_one(ticker, start, end):
     errors = []
     saw_transient = False
     saw_permanent = False
-    for source in (PRIMARY_SRC, FAILOVER_SRC):
-        if _provider_should_skip(source, ticker):
+    primary_deferred = _provider_circuit_open(PRIMARY_SRC)
+    sources = (
+        (FAILOVER_SRC, PRIMARY_SRC)
+        if primary_deferred
+        else (PRIMARY_SRC, FAILOVER_SRC)
+    )
+    for source in sources:
+        force_probe = primary_deferred and source == PRIMARY_SRC
+        if force_probe:
+            print(
+                f"[provider-circuit] provider={source} ticker={ticker} "
+                "result=force_probe reason=failover_not_successful",
+                flush=True,
+            )
+        elif _provider_should_skip(source, ticker):
             errors.append(f"{source}:circuit_open")
             saw_transient = True
             continue
@@ -397,6 +417,8 @@ def fetch_one(ticker, start, end):
                     _record_provider_result(
                         source, source_transient_count, healthy_response=True
                     )
+                    if primary_deferred and source == FAILOVER_SRC:
+                        _provider_should_skip(PRIMARY_SRC, ticker)
                     _request_log(ticker, source, attempt, "success", time.monotonic() - started)
                     return FetchOutcome("success", data=df)
                 saw_permanent = True

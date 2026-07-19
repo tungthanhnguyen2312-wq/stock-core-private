@@ -136,6 +136,28 @@ class FetchRetryTests(unittest.TestCase):
             pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]["skip_remaining"],
         )
 
+    def test_failover_empty_force_probes_primary_before_concluding(self):
+        pipeline._record_provider_result(
+            pipeline.PRIMARY_SRC,
+            transient_count=pipeline.PROVIDER_CIRCUIT_BUDGET,
+        )
+        provider = mock.Mock()
+        provider.history.side_effect = [pd.DataFrame(), raw_bar()]
+        with mock.patch.object(pipeline, "_quote", return_value=provider) as quote:
+            outcome = pipeline.fetch_one("VNINDEX", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        self.assertEqual(
+            [
+                mock.call("VNINDEX", pipeline.FAILOVER_SRC),
+                mock.call("VNINDEX", pipeline.PRIMARY_SRC),
+            ],
+            quote.call_args_list,
+        )
+        self.assertEqual(
+            0,
+            pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]["skip_remaining"],
+        )
+
     def test_429_honors_bounded_retry_after(self):
         quote_patch, _ = self.quote_with_effects(
             [transient("http_status", 429, retry_after=99), raw_bar()]
