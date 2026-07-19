@@ -291,6 +291,16 @@ def normalize(df, ticker, source):
     out["volume"] = pd.to_numeric(out["volume"], errors="coerce").fillna(0).astype("int64")
     return out[["ticker", "date", "open", "high", "low", "close", "volume", "source"]]
 
+
+def _valid_history_schema(df):
+    if df is None or not hasattr(df, "columns"):
+        return False
+    columns = {str(column).lower() for column in df.columns}
+    return bool(columns.intersection({"time", "tradingdate", "date"})) and {
+        "close",
+        "volume",
+    }.issubset(columns)
+
 def _request_log(ticker, source, attempt, result, elapsed, error=None, wait=None):
     endpoint = error.endpoint if error else PROVIDER_ENDPOINT_HINT.get(source, "provider-history")
     fields = [
@@ -421,6 +431,17 @@ def fetch_one(ticker, start, end):
                         _provider_should_skip(PRIMARY_SRC, ticker)
                     _request_log(ticker, source, attempt, "success", time.monotonic() - started)
                     return FetchOutcome("success", data=df)
+                if _valid_history_schema(raw):
+                    # Payload đúng schema nhưng mọi bar bị lọc (volume=0/close rỗng) là
+                    # không có phiên giao dịch, không phải lỗi schema và tuyệt đối không ghi DB.
+                    empty_source_count += 1
+                    _record_provider_result(
+                        source, source_transient_count, healthy_response=True
+                    )
+                    _request_log(
+                        ticker, source, attempt, "empty", time.monotonic() - started
+                    )
+                    break
                 saw_permanent = True
                 _record_provider_result(
                     source, source_transient_count, healthy_response=True

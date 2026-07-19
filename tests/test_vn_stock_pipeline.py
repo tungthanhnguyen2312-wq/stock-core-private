@@ -207,6 +207,15 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual("empty", outcome.status)
         self.assertEqual(2, provider.history.call_count)
 
+    def test_valid_schema_with_only_zero_volume_is_empty_not_invalid(self):
+        quote_patch, provider = self.quote_with_effects(
+            [raw_bar(volume=0), pd.DataFrame()]
+        )
+        with quote_patch:
+            outcome = pipeline.fetch_one("DPP", "2026-07-17", "2026-07-18")
+        self.assertEqual("empty", outcome.status)
+        self.assertEqual(2, provider.history.call_count)
+
 
 class TransportTests(unittest.TestCase):
     @mock.patch.object(pipeline.requests, "get")
