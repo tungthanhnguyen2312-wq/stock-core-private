@@ -65,6 +65,7 @@ class FakeResponse:
 class FetchRetryTests(unittest.TestCase):
     def setUp(self):
         pipeline._reset_provider_health()
+        self.log_level = mock.patch.object(pipeline, "LOG_LEVEL", "INFO").start()
         self.sleep = mock.patch.object(pipeline.time, "sleep").start()
         self.jitter = mock.patch.object(pipeline.random, "uniform", return_value=0).start()
         self.addCleanup(mock.patch.stopall)
@@ -73,6 +74,10 @@ class FetchRetryTests(unittest.TestCase):
         provider = mock.Mock()
         provider.history.side_effect = effects
         return mock.patch.object(pipeline, "_quote", return_value=provider), provider
+
+    def open_circuit(self, source=pipeline.PRIMARY_SRC):
+        for _ in range(pipeline.PROVIDER_CIRCUIT_BUDGET):
+            pipeline._record_provider_result(source, transient_failure=True)
 
     def test_immediate_success_has_no_retry(self):
         quote_patch, provider = self.quote_with_effects([raw_bar()])
@@ -101,6 +106,31 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual("success", outcome.status)
         self.assertEqual(2, provider.history.call_count)
 
+    def test_primary_terminal_timeout_falls_back_to_kbs_once(self):
+        vci = mock.Mock()
+        vci.history.side_effect = [transient(), transient()]
+        kbs = mock.Mock()
+        kbs.history.return_value = raw_bar("AAA")
+
+        def quote(_ticker, source):
+            return vci if source == pipeline.PRIMARY_SRC else kbs
+
+        with mock.patch.object(pipeline, "_quote", side_effect=quote):
+            outcome = pipeline.fetch_one("AAA", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        self.assertEqual(pipeline.FAILOVER_SRC, outcome.data["source"].iloc[0])
+        self.assertEqual(2, vci.history.call_count)
+        self.assertEqual(1, kbs.history.call_count)
+
+    def test_retry_success_does_not_count_as_terminal_provider_failure(self):
+        quote_patch, _ = self.quote_with_effects([transient(), raw_bar()])
+        with mock.patch.object(pipeline, "PROVIDER_CIRCUIT_BUDGET", 1), quote_patch:
+            outcome = pipeline.fetch_one("AAA", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        state = pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]
+        self.assertEqual(0, state["strikes"])
+        self.assertEqual(0, state["skip_remaining"])
+
     def test_exhausted_transient_attempts_fail_clearly(self):
         effects = [transient(), transient(), transient(), transient()]
         quote_patch, provider = self.quote_with_effects(effects)
@@ -121,10 +151,7 @@ class FetchRetryTests(unittest.TestCase):
         self.assertTrue(outcome.transient_failure)
 
     def test_degraded_provider_opens_circuit_and_uses_existing_failover(self):
-        pipeline._record_provider_result(
-            pipeline.PRIMARY_SRC,
-            transient_count=pipeline.PROVIDER_CIRCUIT_BUDGET,
-        )
+        self.open_circuit()
         provider = mock.Mock()
         provider.history.return_value = raw_bar()
         with mock.patch.object(pipeline, "_quote", return_value=provider) as quote:
@@ -136,11 +163,19 @@ class FetchRetryTests(unittest.TestCase):
             pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]["skip_remaining"],
         )
 
-    def test_failover_empty_force_probes_primary_before_concluding(self):
+    def test_circuit_opens_only_after_terminal_failure_threshold(self):
+        for _ in range(pipeline.PROVIDER_CIRCUIT_BUDGET - 1):
+            pipeline._record_provider_result(
+                pipeline.PRIMARY_SRC, transient_failure=True
+            )
+            self.assertFalse(pipeline._provider_circuit_open(pipeline.PRIMARY_SRC))
         pipeline._record_provider_result(
-            pipeline.PRIMARY_SRC,
-            transient_count=pipeline.PROVIDER_CIRCUIT_BUDGET,
+            pipeline.PRIMARY_SRC, transient_failure=True
         )
+        self.assertTrue(pipeline._provider_circuit_open(pipeline.PRIMARY_SRC))
+
+    def test_failover_empty_force_probes_primary_before_concluding(self):
+        self.open_circuit()
         provider = mock.Mock()
         provider.history.side_effect = [pd.DataFrame(), raw_bar()]
         with mock.patch.object(pipeline, "_quote", return_value=provider) as quote:
@@ -158,6 +193,47 @@ class FetchRetryTests(unittest.TestCase):
             pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]["skip_remaining"],
         )
 
+    def test_circuit_skips_exact_ticker_cooldown_then_half_opens(self):
+        self.open_circuit()
+        for index in range(pipeline.PROVIDER_CIRCUIT_COOLDOWN):
+            self.assertTrue(
+                pipeline._provider_should_skip(pipeline.PRIMARY_SRC, f"T{index}")
+            )
+        self.assertFalse(pipeline._provider_should_skip(pipeline.PRIMARY_SRC, "PROBE"))
+        state = pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]
+        self.assertEqual(0, state["skip_remaining"])
+        self.assertTrue(state["awaiting_probe"])
+
+    def test_half_open_probe_closes_circuit_when_primary_recovers(self):
+        self.open_circuit()
+        for index in range(pipeline.PROVIDER_CIRCUIT_COOLDOWN):
+            pipeline._provider_should_skip(pipeline.PRIMARY_SRC, f"T{index}")
+        quote_patch, _ = self.quote_with_effects([raw_bar()])
+        output = io.StringIO()
+        with quote_patch, redirect_stdout(output):
+            outcome = pipeline.fetch_one("PROBE", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        self.assertIn("result=recovered", output.getvalue())
+        self.assertFalse(
+            pipeline._PROVIDER_HEALTH[pipeline.PRIMARY_SRC]["awaiting_probe"]
+        )
+
+    def test_permanent_ticker_error_does_not_open_provider_circuit(self):
+        vci = mock.Mock()
+        vci.history.side_effect = permanent(403)
+        kbs = mock.Mock()
+        kbs.history.return_value = raw_bar("AAA")
+
+        def quote(_ticker, source):
+            return vci if source == pipeline.PRIMARY_SRC else kbs
+
+        with mock.patch.object(pipeline, "PROVIDER_CIRCUIT_BUDGET", 1), mock.patch.object(
+            pipeline, "_quote", side_effect=quote
+        ):
+            outcome = pipeline.fetch_one("AAA", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        self.assertFalse(pipeline._provider_circuit_open(pipeline.PRIMARY_SRC))
+
     def test_429_honors_bounded_retry_after(self):
         quote_patch, _ = self.quote_with_effects(
             [transient("http_status", 429, retry_after=99), raw_bar()]
@@ -167,8 +243,8 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual("success", outcome.status)
         self.sleep.assert_called_once_with(pipeline.RETRY_AFTER_MAX)
 
-    def test_500_502_503_are_retried(self):
-        for status in (500, 502, 503):
+    def test_500_502_503_504_are_retried(self):
+        for status in (500, 502, 503, 504):
             with self.subTest(status=status):
                 pipeline._reset_provider_health()
                 self.sleep.reset_mock()
@@ -215,6 +291,26 @@ class FetchRetryTests(unittest.TestCase):
             outcome = pipeline.fetch_one("DPP", "2026-07-17", "2026-07-18")
         self.assertEqual("empty", outcome.status)
         self.assertEqual(2, provider.history.call_count)
+
+    def test_default_logging_suppresses_per_request_success_details(self):
+        quote_patch, _ = self.quote_with_effects([raw_bar()])
+        output = io.StringIO()
+        with quote_patch, redirect_stdout(output):
+            outcome = pipeline.fetch_one("AAA", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        self.assertNotIn("[request]", output.getvalue())
+
+    def test_debug_logging_includes_bounded_request_details(self):
+        quote_patch, _ = self.quote_with_effects([raw_bar()])
+        output = io.StringIO()
+        with mock.patch.object(pipeline, "LOG_LEVEL", "DEBUG"), quote_patch, redirect_stdout(output):
+            outcome = pipeline.fetch_one("AAA", "2026-07-17", "2026-07-18")
+        rendered = output.getvalue()
+        self.assertEqual("success", outcome.status)
+        self.assertIn("[request]", rendered)
+        self.assertIn("attempt=1/2", rendered)
+        self.assertIn("connect_timeout=5.0s", rendered)
+        self.assertIn("read_timeout=12.0s", rendered)
 
 
 class TransportTests(unittest.TestCase):
@@ -268,9 +364,10 @@ class TransportTests(unittest.TestCase):
             0.1,
         )
         output = io.StringIO()
-        with redirect_stdout(output):
+        with mock.patch.object(pipeline, "LOG_LEVEL", "DEBUG"), redirect_stdout(output):
             pipeline._request_log("AAA", "VCI", 1, "failed", 0.1, error)
         rendered = output.getvalue()
+        self.assertIn("exception=TransientRequestError", rendered)
         self.assertNotIn("TOPSECRET", rendered)
         self.assertNotIn("password", rendered)
         self.assertNotIn("account", rendered)
@@ -352,6 +449,29 @@ class DatabaseSafetyTests(unittest.TestCase):
             pipeline.upsert(conn, frame)
             count = conn.execute("SELECT COUNT(*) FROM ohlcv").fetchone()[0]
         self.assertEqual(1, count)
+
+    def test_fallback_result_upserts_once_and_records_kbs_source(self):
+        vci = mock.Mock()
+        vci.history.side_effect = [transient(), transient()]
+        kbs = mock.Mock()
+        kbs.history.return_value = raw_bar("AAA", volume=321)
+
+        def quote(_ticker, source):
+            return vci if source == pipeline.PRIMARY_SRC else kbs
+
+        pipeline._reset_provider_health()
+        with mock.patch.object(pipeline, "_quote", side_effect=quote), mock.patch.object(
+            pipeline.time, "sleep"
+        ):
+            outcome = pipeline.fetch_one("AAA", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        with closing(sqlite3.connect(self.db_path)) as conn:
+            pipeline.upsert(conn, outcome.data)
+            pipeline.upsert(conn, outcome.data)
+            row = conn.execute(
+                "SELECT COUNT(*), MAX(volume), MAX(source) FROM ohlcv WHERE ticker='AAA'"
+            ).fetchone()
+        self.assertEqual((1, 321, pipeline.FAILOVER_SRC), row)
 
     def test_index_volume_is_replaced_not_accumulated(self):
         with closing(sqlite3.connect(self.db_path)) as conn:
