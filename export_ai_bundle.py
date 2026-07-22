@@ -68,6 +68,18 @@ FOCUS_ANALYSIS_PATH = "Focus_Analysis.md"
 FINANCIAL_SNAPSHOT_PATH = "financial_snapshot.parquet"
 MARKET_BREADTH_PATH = "market_breadth.csv"
 MACRO_SNAPSHOT_PATH = "macro_snapshot.csv"
+RUNTIME_ROOT_ENV = "STOCK_LOOKUP_RUNTIME_ROOT"
+
+
+def runtime_root() -> Path:
+    """Return the runtime-data root, preserving the legacy CWD default."""
+    configured = os.environ.get(RUNTIME_ROOT_ENV)
+    return Path(configured) if configured else Path(".")
+
+
+def runtime_path(relative_path: str) -> Path:
+    """Resolve a runtime artifact without changing its legacy relative-path default."""
+    return runtime_root() / relative_path
 
 DEFAULT_TICKERS = ["POW", "SSI", "HPG", "EVF", "PAN"]
 OHLCV_RECENT_N = 30
@@ -219,7 +231,7 @@ def _mtime_iso(path: Path) -> str | None:
 # ==========================================================================
 
 def load_live_snapshot_rows(tickers: list[str]) -> tuple[dict, dict]:
-    path = Path(SNAPSHOT_LIVE_PATH)
+    path = runtime_path(SNAPSHOT_LIVE_PATH)
     if not path.exists():
         raise FileNotFoundError(
             f"Không thấy {path} — chạy `python vn_indicators.py` trước để sinh bản live.")
@@ -235,7 +247,7 @@ def load_live_snapshot_rows(tickers: list[str]) -> tuple[dict, dict]:
 
 
 def load_ta_signal_rows(tickers: list[str]) -> tuple[dict, dict]:
-    path = Path(TA_SIGNALS_PATH)
+    path = runtime_path(TA_SIGNALS_PATH)
     if not path.exists():
         raise FileNotFoundError(f"Không thấy {path} — chạy `python candle_scan.py` trước.")
     df = pd.read_csv(path, encoding="utf-8-sig")
@@ -250,7 +262,7 @@ def load_ta_signal_rows(tickers: list[str]) -> tuple[dict, dict]:
 
 
 def load_analysis_scores(tickers: list[str]) -> tuple[dict, dict, dict]:
-    path = Path(ANALYSIS_PATH)
+    path = runtime_path(ANALYSIS_PATH)
     if not path.exists():
         raise FileNotFoundError(f"Không thấy {path} — chạy `python stock_analyzer.py` trước.")
     with path.open("r", encoding="utf-8") as f:
@@ -279,7 +291,7 @@ def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
     quarter_end', do bctc_processor.py gắn — xem flag_fiscal_period_verification() ở đó). Nếu mọi
     kỳ đều rỗng hoặc chưa xác minh, vẫn trả kỳ mới nhất theo nhãn kèm cảnh báo rõ — không bịa số."""
-    path = Path(FINANCIAL_SNAPSHOT_PATH)
+    path = runtime_path(FINANCIAL_SNAPSHOT_PATH)
     if not path.exists():
         raise FileNotFoundError(f"Không thấy {path} — chạy `python bctc_processor.py` trước.")
     df = pd.read_parquet(path)
@@ -359,7 +371,7 @@ def load_ohlcv_recent(conn: sqlite3.Connection, ticker: str, n: int = OHLCV_RECE
 
 
 def load_focus_analysis_info() -> dict:
-    path = Path(FOCUS_ANALYSIS_PATH)
+    path = runtime_path(FOCUS_ANALYSIS_PATH)
     if not path.exists():
         return {"exists": False, "file": FOCUS_ANALYSIS_PATH, "data_date": None,
                 "records": None, "sha256": None, "warning": "focus_analysis_missing"}
@@ -416,7 +428,7 @@ def load_context_package_full(tk: str) -> dict | None:
 
 
 def load_market_breadth() -> tuple[list[dict] | None, dict]:
-    path = Path(MARKET_BREADTH_PATH)
+    path = runtime_path(MARKET_BREADTH_PATH)
     if not path.exists():
         return None, {"file": MARKET_BREADTH_PATH, "exists": False, "sha256": None}
     df = pd.read_csv(path, encoding="utf-8-sig")
@@ -433,7 +445,7 @@ def load_macro_snapshot() -> tuple[dict | None, dict]:
     """Trả dict khóa theo `series` (dxy, us_fedfunds, vn_gdp_yoy...) — mỗi entry giữ nguyên
     `date` riêng của series đó (macro có nhiều tần suất khác nhau — xem MarketConvention.md,
     một số series như DXY có thể trễ hơn ngày phiên giá nhiều ngày; KHÔNG coi cả bảng là 1 ngày)."""
-    path = Path(MACRO_SNAPSHOT_PATH)
+    path = runtime_path(MACRO_SNAPSHOT_PATH)
     if not path.exists():
         return None, {"file": MACRO_SNAPSHOT_PATH, "exists": False, "sha256": None}
     df = pd.read_csv(path, encoding="utf-8-sig")
@@ -881,7 +893,7 @@ def main() -> int:
         if not manifest_path.exists():
             print(f"[export_ai_bundle] LỖI: không thấy manifest '{manifest_path}'", file=sys.stderr)
             return 2
-        mismatches = verify_manifest(manifest_path, Path("."))
+        mismatches = verify_manifest(manifest_path, runtime_root())
         if not mismatches:
             print(f"[export_ai_bundle] --verify OK: mọi sha256 trong {manifest_path} vẫn khớp file hiện tại.")
             return 0
@@ -906,7 +918,7 @@ def main() -> int:
         context_info = load_context_package_info(tickers)
         breadth_records, breadth_info = load_market_breadth()
         macro_records, macro_info = load_macro_snapshot()
-        conn = _connect_db_readonly(Path(DB_PATH))
+        conn = _connect_db_readonly(runtime_path(DB_PATH))
     except (FileNotFoundError, ValueError, KeyError) as exc:
         print(f"[export_ai_bundle] LỖI: {exc}", file=sys.stderr)
         return 2
@@ -929,7 +941,7 @@ def main() -> int:
         categories["context_package"] = min(context_dates) if context_dates else None
 
         freshness = check_freshness(categories, prior_session)
-        order_violations = check_artifact_order(Path("."))
+        order_violations = check_artifact_order(runtime_root())
         freshness["artifact_order_violations"] = order_violations
         freshness["blocked"] = bool(freshness["blocked"] or order_violations)
         freshness["reference_session"] = latest_session

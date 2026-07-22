@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sys
 import tempfile
@@ -25,6 +26,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+RUNTIME_ROOT = ROOT.parent / "VNSTOCK"
+os.environ["STOCK_LOOKUP_RUNTIME_ROOT"] = str(RUNTIME_ROOT)
 
 import export_ai_bundle as bundle  # noqa: E402
 
@@ -47,6 +50,19 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _runtime_path(name: str) -> Path:
+    return RUNTIME_ROOT / name
+
+
+class RuntimeRootTests(unittest.TestCase):
+    def test_runtime_root_defaults_to_legacy_cwd(self):
+        with mock.patch.dict(os.environ, {bundle.RUNTIME_ROOT_ENV: ""}, clear=False):
+            self.assertEqual(bundle.runtime_path(bundle.DB_PATH), Path(bundle.DB_PATH))
+
+    def test_runtime_root_override_targets_public_runtime(self):
+        self.assertEqual(bundle.runtime_path(bundle.DB_PATH), _runtime_path(bundle.DB_PATH))
+
+
 def run_bundle_main(argv: list[str], out_dir: Path) -> int:
     """Gọi bundle.main() trong tiến trình; CHỈ đổi hướng nơi GHI output (OUT_DIR) sang thư mục
     tạm. Mọi nguồn ĐỌC (DB, CSV, JSON, parquet, Focus_Analysis.md, context package) vẫn là dữ liệu
@@ -61,8 +77,8 @@ class ScreenSnapshotLiveTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.full = pd.read_csv(ROOT / "screen_snapshot.csv", encoding="utf-8-sig")
-        cls.live = pd.read_csv(ROOT / "screen_snapshot_live.csv", encoding="utf-8-sig")
+        cls.full = pd.read_csv(_runtime_path("screen_snapshot.csv"), encoding="utf-8-sig")
+        cls.live = pd.read_csv(_runtime_path("screen_snapshot_live.csv"), encoding="utf-8-sig")
 
     def test_live_file_has_only_live_rows_with_zero_days_stale(self):
         self.assertGreater(len(self.live), 0)
@@ -91,7 +107,7 @@ class ScreenSnapshotLiveTests(unittest.TestCase):
             self.assertFalse(pd.isna(row.iloc[0]["rs_rating"]))
 
     def test_live_count_matches_market_breadth_all_row(self):
-        breadth = pd.read_csv(ROOT / "market_breadth.csv", encoding="utf-8-sig")
+        breadth = pd.read_csv(_runtime_path("market_breadth.csv"), encoding="utf-8-sig")
         all_row = breadth[breadth["group"] == "ALL"].iloc[0]
         self.assertEqual(len(self.live), int(all_row["n_symbols"]))
 
@@ -181,8 +197,8 @@ class ExportAiBundleIntegrationTests(unittest.TestCase):
     def setUpClass(cls):
         cls.tmpdir = tempfile.TemporaryDirectory()
         cls.out_dir = Path(cls.tmpdir.name)
-        cls.before_hashes = {name: _sha256(ROOT / name) for name in SOURCE_FILES_MUST_NOT_CHANGE
-                             if (ROOT / name).exists()}
+        cls.before_hashes = {name: _sha256(_runtime_path(name)) for name in SOURCE_FILES_MUST_NOT_CHANGE
+                             if _runtime_path(name).exists()}
         cls.returncode = run_bundle_main(["--allow-stale"], cls.out_dir)
         with (cls.out_dir / "focus_extract.json").open(encoding="utf-8") as f:
             cls.extract = json.load(f)
@@ -198,7 +214,7 @@ class ExportAiBundleIntegrationTests(unittest.TestCase):
 
     def test_source_files_are_not_modified(self):
         for name, before in self.before_hashes.items():
-            after = _sha256(ROOT / name)
+            after = _sha256(_runtime_path(name))
             self.assertEqual(before, after, f"{name} bị export_ai_bundle.py sửa — script phải chỉ đọc")
 
     def test_focus_extract_has_all_five_default_tickers_with_no_warnings(self):
@@ -208,7 +224,7 @@ class ExportAiBundleIntegrationTests(unittest.TestCase):
                              f"{tk} không nên có cảnh báo thiếu dữ liệu với 5 mã mặc định hôm nay")
 
     def test_price_and_date_of_each_ticker_match_db_source(self):
-        conn = bundle._connect_db_readonly(ROOT / "vn_stock.db")
+        conn = bundle._connect_db_readonly(_runtime_path("vn_stock.db"))
         try:
             for tk in bundle.DEFAULT_TICKERS:
                 row = conn.execute(
@@ -231,11 +247,11 @@ class ExportAiBundleIntegrationTests(unittest.TestCase):
 
     def test_manifest_record_counts_match_real_files(self):
         by_file = {f["file"]: f for f in self.manifest["files"]}
-        live_df = pd.read_csv(ROOT / "screen_snapshot_live.csv", encoding="utf-8-sig")
+        live_df = pd.read_csv(_runtime_path("screen_snapshot_live.csv"), encoding="utf-8-sig")
         self.assertEqual(by_file["screen_snapshot_live.csv"]["row_or_record_count"], len(live_df))
-        ta_df = pd.read_csv(ROOT / "ta_signals.csv", encoding="utf-8-sig")
+        ta_df = pd.read_csv(_runtime_path("ta_signals.csv"), encoding="utf-8-sig")
         self.assertEqual(by_file["ta_signals.csv"]["row_or_record_count"], len(ta_df))
-        with (ROOT / "analysis_latest.json").open(encoding="utf-8") as f:
+        with _runtime_path("analysis_latest.json").open(encoding="utf-8") as f:
             analysis = json.load(f)
         self.assertEqual(by_file["analysis_latest.json"]["row_or_record_count"], len(analysis["scores"]))
         self.assertEqual(by_file["focus_extract.json"]["row_or_record_count"], 5)
@@ -243,7 +259,7 @@ class ExportAiBundleIntegrationTests(unittest.TestCase):
     def test_manifest_sha256_matches_actual_source_files(self):
         by_file = {f["file"]: f for f in self.manifest["files"]}
         for name in ("screen_snapshot_live.csv", "ta_signals.csv", "analysis_latest.json"):
-            self.assertEqual(by_file[name]["sha256"], _sha256(ROOT / name))
+            self.assertEqual(by_file[name]["sha256"], _sha256(_runtime_path(name)))
         self.assertEqual(by_file["focus_extract.json"]["sha256"],
                          _sha256(self.out_dir / "focus_extract.json"))
 
@@ -305,10 +321,10 @@ class NoSourceMutationTests(unittest.TestCase):
         self.assertIn("PRAGMA query_only", text)
 
     def test_vn_stock_db_mtime_unchanged_by_bundle_run(self):
-        before = (ROOT / "vn_stock.db").stat().st_mtime_ns
+        before = _runtime_path("vn_stock.db").stat().st_mtime_ns
         with tempfile.TemporaryDirectory() as tmp:
             run_bundle_main(["--allow-stale"], Path(tmp))
-        after = (ROOT / "vn_stock.db").stat().st_mtime_ns
+        after = _runtime_path("vn_stock.db").stat().st_mtime_ns
         self.assertEqual(before, after)
 
 
@@ -324,7 +340,7 @@ class CanonicalRsRatingTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.live = pd.read_csv(ROOT / "screen_snapshot_live.csv", encoding="utf-8-sig")
+        cls.live = pd.read_csv(_runtime_path("screen_snapshot_live.csv"), encoding="utf-8-sig")
 
     def test_canonical_matches_screen_snapshot_live_for_default_tickers(self):
         snapshot_rows, snapshot_info = bundle.load_live_snapshot_rows(bundle.DEFAULT_TICKERS)
