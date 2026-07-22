@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from runtime_paths import RUNTIME_ROOT_ENV, runtime_root
 
@@ -19,6 +20,9 @@ class RuntimeRootTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(runtime_root(directory), Path(directory).resolve())
 
+    def test_uses_process_cwd_when_no_default_is_given(self):
+        with mock.patch.dict(os.environ, {RUNTIME_ROOT_ENV: ""}, clear=False):
+            self.assertEqual(runtime_root(), Path.cwd().resolve())
     def test_uses_environment_override(self):
         with tempfile.TemporaryDirectory() as directory:
             configured = Path(directory) / "dashboard-runtime"
