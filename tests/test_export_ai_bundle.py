@@ -26,7 +26,18 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-RUNTIME_ROOT = ROOT.parent / "VNSTOCK"
+
+
+def _resolve_runtime_root() -> Path:
+    candidates = (
+        ROOT.parent / "dashboard-runtime",
+        ROOT.parent / "VNSTOCK",
+        ROOT.parent.parent / "VNSTOCK",
+    )
+    return next((path.resolve() for path in candidates if path.exists()), candidates[0].resolve())
+
+
+RUNTIME_ROOT = _resolve_runtime_root()
 os.environ["STOCK_LOOKUP_RUNTIME_ROOT"] = str(RUNTIME_ROOT)
 
 import export_ai_bundle as bundle  # noqa: E402

@@ -1,6 +1,6 @@
 {
   "project": "vnstock-core-private",
-  "runtime_destination": "C:\\Projects\\VNSTOCK",
+  "runtime_destination": "C:\\Projects\\StockLookup\\dashboard-runtime",
   "allowed_branches": ["main"],
   "size_limit_bytes": 5242880,
   "allowlist": [

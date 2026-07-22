@@ -55,8 +55,20 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-AI_ANALYZE_ROOT = (SCRIPT_DIR.parent / "AI ANALYZE").resolve()
-CONTEXT_PACKAGES_DIR = AI_ANALYZE_ROOT / "exports" / "context_packages"
+
+
+def ai_runtime_root() -> Path:
+    """Locate the AI runtime in the new layout, with legacy-layout fallbacks."""
+    candidates = (
+        SCRIPT_DIR.parent / "ai-runtime",
+        SCRIPT_DIR.parent / "AI ANALYZE",
+        SCRIPT_DIR.parent.parent / "AI ANALYZE",
+    )
+    return next((path.resolve() for path in candidates if path.exists()), candidates[0].resolve())
+
+
+AI_RUNTIME_ROOT = ai_runtime_root()
+CONTEXT_PACKAGES_DIR = AI_RUNTIME_ROOT / "exports" / "context_packages"
 
 DB_PATH = "vn_stock.db"
 OUT_DIR = "."
@@ -80,6 +92,15 @@ def runtime_root() -> Path:
 def runtime_path(relative_path: str) -> Path:
     """Resolve a runtime artifact without changing its legacy relative-path default."""
     return runtime_root() / relative_path
+
+
+def context_package_reference(ticker: str) -> str:
+    """Return a manifest path relative to the active dashboard runtime root."""
+    path = CONTEXT_PACKAGES_DIR / f"{ticker}_context.json"
+    try:
+        return Path(os.path.relpath(path, start=runtime_root().resolve())).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 DEFAULT_TICKERS = ["POW", "SSI", "HPG", "EVF", "PAN"]
 OHLCV_RECENT_N = 30
@@ -388,7 +409,7 @@ def load_focus_analysis_info() -> dict:
 
 
 def load_context_package_info(tickers: list[str]) -> dict:
-    """Đọc chéo sang AI ANALYZE (CHỈ ĐỌC) — lấy metadata (ngày/sha256) cho freshness gate.
+    """Đọc chéo sang AI runtime (CHỈ ĐỌC) — lấy metadata (ngày/sha256) cho freshness gate.
     Nội dung TOÀN VĂN chỉ được nhúng vào analysis_bundle.json (không phải focus_extract.json,
     xem load_context_package_full)."""
     result = {}
@@ -400,16 +421,8 @@ def load_context_package_info(tickers: list[str]) -> dict:
         with path.open("r", encoding="utf-8") as f:
             payload = json.load(f)
         generated_at = payload.get("generated_at")
-        # Phải relative tới SCRIPT_DIR (VNSTOCK, = cwd giả định của mọi script trong repo — xem
-        # docstring đầu file), KHÔNG phải AI_ANALYZE_ROOT: verify_manifest() giải "file" trong
-        # manifest bằng root=Path(".") (= VNSTOCK khi chạy đúng cwd), nên "file" ghi ở đây phải
-        # resolve đúng từ ĐÓ, kể cả khi context package nằm ngoài cây thư mục VNSTOCK.
-        try:
-            rel = Path(os.path.relpath(path, start=SCRIPT_DIR)).as_posix()
-        except ValueError:
-            rel = path.as_posix()
         result[tk] = {
-            "exists": True, "file": rel, "generated_at": generated_at,
+            "exists": True, "file": context_package_reference(tk), "generated_at": generated_at,
             "data_date": generated_at[:10] if generated_at else None,
             "sha256": sha256_file(path), "mtime": _mtime_epoch(path), "mtime_iso": _mtime_iso(path),
         }
@@ -860,7 +873,7 @@ def build_manifest_files(tickers, snapshot_info, ta_info, analysis_info, financi
                       "warning": "focus_analysis_missing"})
     for tk, ctx in context_info.items():
         files.append({
-            "file": ctx.get("file", f"../AI ANALYZE/exports/context_packages/{tk}_context.json"),
+            "file": ctx.get("file", context_package_reference(tk)),
             "role": "source_context_package", "ticker": tk, "exists": ctx["exists"],
             "row_or_record_count": None, "count_basis": "single_ticker_package",
             "data_date": ctx.get("data_date"), "sha256": ctx.get("sha256"),
