@@ -73,6 +73,13 @@ DEFAULT_TICKERS = ["POW", "SSI", "HPG", "EVF", "PAN"]
 OHLCV_RECENT_N = 30
 MAX_TICKERS = 20
 
+# Contract for the basis of prices used by OHLCV-derived metrics.  This is deliberately
+# independent of a provider name, endpoint, or column spelling: none of those proves
+# whether a series has been adjusted for corporate actions.  Until a producer supplies
+# verified metadata, the bundle must communicate ``unknown`` rather than guessing.
+PRICE_BASIS_VALUES = frozenset({"raw", "adjusted", "unknown"})
+PRICE_BASIS_UNVERIFIED_CODE = "price_basis_unverified"
+
 FOCUS_DATE_RE = re.compile(r"phiên snapshot mới nhất:\s*\*\*(\d{4}-\d{2}-\d{2})\*\*")
 FOCUS_TICKER_RE = re.compile(r"^## (\S+)", re.MULTILINE)
 PERIOD_RE = re.compile(r"(\d{4})(?:-Q([1-4]))?")
@@ -150,6 +157,39 @@ def clean(value):
 
 def row_to_dict(row: pd.Series) -> dict:
     return {str(k): clean(v) for k, v in row.items()}
+
+
+def normalize_price_basis(value: object = None, verified: object = False) -> tuple[str, bool]:
+    """Return the safe canonical OHLCV price-basis pair.
+
+    ``raw`` and ``adjusted`` are accepted only with an explicit verified boolean.  Old
+    inputs without these fields, invalid values, and unverified claims all normalize to
+    ``("unknown", False)``.  This prevents a missing field from silently becoming an
+    adjusted-price assertion.
+    """
+    basis = str(value).strip().lower() if value is not None else ""
+    is_verified = verified is True
+    if is_verified and basis in {"raw", "adjusted"}:
+        return basis, True
+    return "unknown", False
+
+
+def build_price_basis_contract(metadata: dict | None = None) -> dict:
+    """Build backward-compatible price-basis provenance for one bundle.
+
+    The current producer has no verified provider contract or persisted OHLCV basis
+    metadata, so the default is intentionally unknown.  A future producer can pass the
+    two contract fields without changing bundle consumers.
+    """
+    metadata = metadata or {}
+    basis, verified = normalize_price_basis(
+        metadata.get("price_basis"), metadata.get("price_basis_verified"),
+    )
+    return {
+        "price_basis": basis,
+        "price_basis_verified": verified,
+        "source": metadata.get("source") if verified else "no_verified_price_basis_metadata",
+    }
 
 
 def _period_key(period) -> tuple[int, int]:
@@ -555,8 +595,19 @@ def _make_flag(
 
 
 def build_data_quality_flags(tickers: list[str], entries: dict,
-                             artifact_order_violations: list[dict]) -> list[dict]:
+                             artifact_order_violations: list[dict],
+                             price_basis: dict | None = None) -> list[dict]:
     flags: list[dict] = []
+    price_basis = price_basis or build_price_basis_contract()
+    if not price_basis["price_basis_verified"]:
+        flags.append(_make_flag(
+            scope="pipeline", ticker=None, code=PRICE_BASIS_UNVERIFIED_CODE, severity="warning",
+            detail="OHLCV price basis is unknown because no verified provider contract or metadata is available; "
+                   "do not assume prices or derived return/MA/RS metrics are corporate-action adjusted.",
+            metric="price_basis", evidence=price_basis,
+            consumer_action="Treat OHLCV-derived metrics as basis-unverified until a verified raw or adjusted "
+                            "price-basis contract is supplied.",
+        ))
     for v in artifact_order_violations:
         flags.append(_make_flag(
             scope="pipeline", ticker=None, code="artifact_created_before_upstream", severity="warning",
@@ -905,7 +956,8 @@ def main() -> int:
         conn.close()
 
     generated_at = datetime.now().astimezone().isoformat(timespec="seconds")
-    data_quality_flags = build_data_quality_flags(tickers, entries, order_violations)
+    price_basis = build_price_basis_contract()
+    data_quality_flags = build_data_quality_flags(tickers, entries, order_violations, price_basis)
 
     # ---------------------------------------------------------------- focus_extract.json (nhỏ)
     focus_extract = {
@@ -915,6 +967,8 @@ def main() -> int:
         "tickers_requested": tickers,
         "freshness": freshness,
         "canonical_sources": {"rs_rating": CANONICAL_RS_RATING_SOURCE},
+        "price_basis": price_basis["price_basis"],
+        "price_basis_verified": price_basis["price_basis_verified"],
         "tickers": entries,
         "ai_instructions": [
             "Nếu một mã trong tickers_requested có warnings khác rỗng nghĩa là THIẾU dữ liệu phần đó"
@@ -967,6 +1021,9 @@ def main() -> int:
         "tickers_requested": tickers,
         "freshness": freshness,
         "canonical_sources": {"rs_rating": CANONICAL_RS_RATING_SOURCE},
+        "price_basis": price_basis["price_basis"],
+        "price_basis_verified": price_basis["price_basis_verified"],
+        "price_basis_provenance": price_basis,
         "market_breadth": breadth_records,
         "macro_snapshot": macro_records,
         "tickers": bundle_entries,
@@ -1003,6 +1060,9 @@ def main() -> int:
         "generated_at": generated_at,
         "tickers": tickers,
         "freshness": freshness,
+        "price_basis": price_basis["price_basis"],
+        "price_basis_verified": price_basis["price_basis_verified"],
+        "price_basis_provenance": price_basis,
         "data_quality_flags": data_quality_flags,
         "files": manifest_files,
     }

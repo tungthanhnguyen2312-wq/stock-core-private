@@ -127,6 +127,52 @@ class FreshnessGateLogicTests(unittest.TestCase):
         self.assertIn("context_package", result["unknown"])
 
 
+class PriceBasisContractTests(unittest.TestCase):
+    """Pure contract tests: no runtime snapshots, database, or network required."""
+
+    def test_verified_raw_is_preserved(self):
+        contract = bundle.build_price_basis_contract({"price_basis": "raw", "price_basis_verified": True})
+        self.assertEqual(contract["price_basis"], "raw")
+        self.assertTrue(contract["price_basis_verified"])
+
+    def test_verified_adjusted_is_preserved(self):
+        contract = bundle.build_price_basis_contract({"price_basis": "adjusted", "price_basis_verified": True})
+        self.assertEqual(contract["price_basis"], "adjusted")
+        self.assertTrue(contract["price_basis_verified"])
+
+    def test_unknown_is_unverified(self):
+        contract = bundle.build_price_basis_contract({"price_basis": "unknown", "price_basis_verified": True})
+        self.assertEqual(contract["price_basis"], "unknown")
+        self.assertFalse(contract["price_basis_verified"])
+
+    def test_missing_or_unverified_basis_falls_back_to_unknown(self):
+        self.assertEqual(bundle.build_price_basis_contract(), {
+            "price_basis": "unknown",
+            "price_basis_verified": False,
+            "source": "no_verified_price_basis_metadata",
+        })
+        self.assertEqual(
+            bundle.normalize_price_basis("raw", False),
+            ("unknown", False),
+        )
+
+    def test_unknown_adds_quality_flag_and_verified_basis_does_not(self):
+        unknown_flags = bundle.build_data_quality_flags([], {}, [], bundle.build_price_basis_contract())
+        self.assertIn(bundle.PRICE_BASIS_UNVERIFIED_CODE, [flag["code"] for flag in unknown_flags])
+
+        verified_flags = bundle.build_data_quality_flags(
+            [], {}, [], bundle.build_price_basis_contract({"price_basis": "raw", "price_basis_verified": True}),
+        )
+        self.assertNotIn(bundle.PRICE_BASIS_UNVERIFIED_CODE, [flag["code"] for flag in verified_flags])
+
+    def test_contract_is_json_serializable_with_only_canonical_values(self):
+        for value, verified in (("raw", True), ("adjusted", True), ("unknown", False), (None, False)):
+            contract = bundle.build_price_basis_contract({"price_basis": value, "price_basis_verified": verified})
+            payload = json.loads(json.dumps(contract, allow_nan=False))
+            self.assertIn(payload["price_basis"], bundle.PRICE_BASIS_VALUES)
+            self.assertIsInstance(payload["price_basis_verified"], bool)
+
+
 class ExportAiBundleIntegrationTests(unittest.TestCase):
     """Chạy export_ai_bundle.py thật (--allow-stale để không phụ thuộc trạng thái fresh/stale hôm
     nay) trên dữ liệu thật, ghi ra thư mục tạm, rồi đối chiếu với nguồn."""
