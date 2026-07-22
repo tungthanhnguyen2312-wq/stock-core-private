@@ -22,6 +22,7 @@ from shareholder_pipeline import (
     ShareholderSourceAdapter,
     UnsupportedSourceError,
     build_shareholder_summary,
+    build_major_shareholder_snapshot_manifest,
     load_config,
     load_manual_overrides,
     provider_parser,
@@ -141,6 +142,23 @@ def init_db(conn):
         provenance_json TEXT NOT NULL)""")
     conn.execute("""CREATE INDEX IF NOT EXISTS idx_shareholder_records_v2_ticker_asof
         ON shareholder_records_v2(ticker, as_of_date DESC)""")
+    # Forward-only manifest: existing record rows are intentionally not
+    # backfilled because their historical completeness cannot be established.
+    conn.execute("""CREATE TABLE IF NOT EXISTS major_shareholder_snapshots(
+        snapshot_id TEXT PRIMARY KEY,
+        schema_version INTEGER NOT NULL,
+        ticker TEXT NOT NULL,
+        as_of_date TEXT NOT NULL,
+        source_name TEXT NOT NULL,
+        record_origin TEXT NOT NULL,
+        source_reference TEXT,
+        fetched_at TEXT NOT NULL,
+        record_count INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        is_complete INTEGER NOT NULL CHECK(is_complete IN (0, 1)),
+        CHECK(record_origin = 'api'))""")
+    conn.execute("""CREATE INDEX IF NOT EXISTS idx_major_shareholder_snapshots_scope_date
+        ON major_shareholder_snapshots(ticker, source_name, record_origin, source_reference, as_of_date)""")
     conn.execute("""CREATE TABLE IF NOT EXISTS shareholder_sync_runs(
         ticker TEXT PRIMARY KEY,
         final_status TEXT NOT NULL,
@@ -402,6 +420,26 @@ def persist_summary(conn, summary):
                     record["fetched_at"], record["note"], record["record_origin"],
                     record["reconciliation_status"], record["conflict_group"],
                     json.dumps(record["provenance"], ensure_ascii=False, separators=(",", ":")),
+                ),
+            )
+        manifest = build_major_shareholder_snapshot_manifest(summary)
+        if manifest is not None:
+            conn.execute(
+                """INSERT INTO major_shareholder_snapshots
+                (snapshot_id,schema_version,ticker,as_of_date,source_name,record_origin,source_reference,
+                 fetched_at,record_count,status,is_complete)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(snapshot_id) DO UPDATE SET
+                    schema_version=excluded.schema_version,
+                    fetched_at=excluded.fetched_at,
+                    record_count=excluded.record_count,
+                    status=excluded.status,
+                    is_complete=excluded.is_complete""",
+                (
+                    manifest["snapshot_id"], manifest["schema_version"], manifest["ticker"],
+                    manifest["as_of_date"], manifest["source_name"], manifest["record_origin"],
+                    manifest["source_reference"], manifest["fetched_at"], manifest["record_count"],
+                    manifest["status"], manifest["is_complete"],
                 ),
             )
         conn.execute(

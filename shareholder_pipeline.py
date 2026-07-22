@@ -414,6 +414,198 @@ def deduplicate_records(records: Iterable[ShareholderRecord]) -> list[Shareholde
     )
 
 
+MAJOR_SHAREHOLDER_SNAPSHOT_SCHEMA_VERSION = 1
+
+
+def _strict_date_string(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError:
+        return None
+
+
+def _snapshot_scope(record: Mapping[str, Any]) -> tuple[Any, Any, Any, Any]:
+    return (
+        record.get("ticker"),
+        record.get("source_name"),
+        record.get("record_origin"),
+        record.get("source_reference"),
+    )
+
+
+def build_major_shareholder_snapshot_manifest(summary: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Return a complete forward-only API snapshot manifest, or ``None``.
+
+    Historical records are retained separately in ``shareholder_records_v2``.  A
+    manifest is intentionally stricter: absence of a holder can only be used in
+    a delta when the source response represents one complete, dated API scope.
+    """
+    records = [record for record in summary.get("records", ()) if record.get("record_origin") == "api"]
+    if not records:
+        return None
+
+    source_names = {record.get("source_name") for record in records}
+    done_sources = {
+        attempt.get("source")
+        for attempt in summary.get("attempts", ())
+        if attempt.get("status") == DONE
+    }
+    if len(source_names) != 1 or source_names.isdisjoint(done_sources):
+        return None
+
+    scopes = {_snapshot_scope(record) for record in records}
+    if len(scopes) != 1:
+        return None
+    ticker, source_name, record_origin, source_reference = next(iter(scopes))
+    if not ticker or not source_name or record_origin != "api":
+        return None
+
+    as_of_dates = {_strict_date_string(record.get("as_of_date")) for record in records}
+    fetched_at_values = {record.get("fetched_at") for record in records}
+    normalized_names = [record.get("normalized_holder_name") for record in records]
+    if (
+        None in as_of_dates
+        or len(as_of_dates) != 1
+        or None in fetched_at_values
+        or len(fetched_at_values) != 1
+        or any(not name for name in normalized_names)
+        or len(set(normalized_names)) != len(normalized_names)
+        or any(record.get("reconciliation_status") == "conflict_preserved" for record in records)
+    ):
+        return None
+
+    as_of_date = next(iter(as_of_dates))
+    identity = json.dumps(
+        [ticker, as_of_date, source_name, record_origin, source_reference],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    return {
+        "snapshot_id": hashlib.sha256(identity.encode("utf-8")).hexdigest(),
+        "schema_version": MAJOR_SHAREHOLDER_SNAPSHOT_SCHEMA_VERSION,
+        "ticker": ticker,
+        "as_of_date": as_of_date,
+        "source_name": source_name,
+        "record_origin": record_origin,
+        "source_reference": source_reference,
+        "fetched_at": next(iter(fetched_at_values)),
+        "record_count": len(records),
+        "status": DONE,
+        "is_complete": 1,
+    }
+
+
+def validate_major_shareholder_snapshot(
+    snapshot: Mapping[str, Any], records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Validate the strict contract required before absence can mean disappearance."""
+    if snapshot.get("is_complete") != 1:
+        return {"eligible": False, "reason": "incomplete_snapshot"}
+    if snapshot.get("record_origin") != "api":
+        return {"eligible": False, "reason": "manual_only_snapshot"}
+    if snapshot.get("status") != DONE:
+        return {"eligible": False, "reason": "invalid_snapshot_status"}
+    as_of_date = _strict_date_string(snapshot.get("as_of_date"))
+    if as_of_date is None:
+        return {"eligible": False, "reason": "invalid_snapshot_date"}
+    if not records:
+        return {"eligible": False, "reason": "empty_snapshot"}
+
+    expected_scope = (
+        snapshot.get("ticker"),
+        snapshot.get("source_name"),
+        snapshot.get("record_origin"),
+        snapshot.get("source_reference"),
+    )
+    identities: set[str] = set()
+    for record in records:
+        if record.get("record_origin") != "api":
+            return {"eligible": False, "reason": "mixed_scope"}
+        if _snapshot_scope(record) != expected_scope:
+            return {"eligible": False, "reason": "mixed_scope"}
+        if _strict_date_string(record.get("as_of_date")) != as_of_date:
+            return {"eligible": False, "reason": "invalid_record_date"}
+        if record.get("reconciliation_status") == "conflict_preserved":
+            return {"eligible": False, "reason": "conflict_preserved"}
+        identity = record.get("normalized_holder_name")
+        if not identity or identity in identities:
+            return {"eligible": False, "reason": "invalid_holder_identity"}
+        identities.add(identity)
+    return {"eligible": True, "reason": "eligible"}
+
+
+def calculate_major_shareholder_delta(
+    previous_snapshot: Mapping[str, Any],
+    previous_records: Sequence[Mapping[str, Any]],
+    current_snapshot: Mapping[str, Any],
+    current_records: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Calculate non-inferred holder deltas for two already-selected consecutive snapshots."""
+    previous_valid = validate_major_shareholder_snapshot(previous_snapshot, previous_records)
+    if not previous_valid["eligible"]:
+        return {"status": "ineligible_snapshot", "reason": f"previous_{previous_valid['reason']}", "changes": []}
+    current_valid = validate_major_shareholder_snapshot(current_snapshot, current_records)
+    if not current_valid["eligible"]:
+        return {"status": "ineligible_snapshot", "reason": f"current_{current_valid['reason']}", "changes": []}
+
+    if previous_snapshot.get("ticker") != current_snapshot.get("ticker"):
+        return {"status": "incomparable_ticker", "reason": "ticker_mismatch", "changes": []}
+    previous_scope = tuple(previous_snapshot.get(key) for key in ("source_name", "record_origin", "source_reference"))
+    current_scope = tuple(current_snapshot.get(key) for key in ("source_name", "record_origin", "source_reference"))
+    if previous_scope != current_scope:
+        return {"status": "incomparable_source_scope", "reason": "source_scope_mismatch", "changes": []}
+    if previous_snapshot["as_of_date"] >= current_snapshot["as_of_date"]:
+        return {"status": "ineligible_snapshot", "reason": "invalid_snapshot_order", "changes": []}
+
+    previous_by_holder = {record["normalized_holder_name"]: record for record in previous_records}
+    current_by_holder = {record["normalized_holder_name"]: record for record in current_records}
+    changes: list[dict[str, Any]] = []
+    for holder in sorted(set(previous_by_holder) | set(current_by_holder)):
+        before = previous_by_holder.get(holder)
+        after = current_by_holder.get(holder)
+        if before is None:
+            changes.append({
+                "change_type": "new_holder", "normalized_holder_name": holder,
+                "holder_name_before": None, "holder_name_after": after.get("holder_name"),
+                "shares_before": None, "shares_after": after.get("shares"), "shares_delta": None,
+                "ownership_pct_before": None, "ownership_pct_after": after.get("ownership_pct"),
+                "ownership_pct_delta": None, "shares_changed": False, "ownership_pct_changed": False,
+            })
+            continue
+        if after is None:
+            changes.append({
+                "change_type": "disappeared_holder", "normalized_holder_name": holder,
+                "holder_name_before": before.get("holder_name"), "holder_name_after": None,
+                "shares_before": before.get("shares"), "shares_after": None, "shares_delta": None,
+                "ownership_pct_before": before.get("ownership_pct"), "ownership_pct_after": None,
+                "ownership_pct_delta": None, "shares_changed": False, "ownership_pct_changed": False,
+            })
+            continue
+        before_shares, after_shares = before.get("shares"), after.get("shares")
+        before_pct, after_pct = before.get("ownership_pct"), after.get("ownership_pct")
+        shares_changed = before_shares is not None and after_shares is not None and before_shares != after_shares
+        ownership_pct_changed = before_pct is not None and after_pct is not None and before_pct != after_pct
+        if shares_changed or ownership_pct_changed:
+            changes.append({
+                "change_type": "changed", "normalized_holder_name": holder,
+                "holder_name_before": before.get("holder_name"), "holder_name_after": after.get("holder_name"),
+                "shares_before": before_shares, "shares_after": after_shares,
+                "shares_delta": after_shares - before_shares if shares_changed else None,
+                "ownership_pct_before": before_pct, "ownership_pct_after": after_pct,
+                "ownership_pct_delta": after_pct - before_pct if ownership_pct_changed else None,
+                "shares_changed": shares_changed, "ownership_pct_changed": ownership_pct_changed,
+            })
+    return {
+        "status": "ok",
+        "reason": "comparable_complete_snapshots",
+        "from_snapshot_id": previous_snapshot.get("snapshot_id"),
+        "to_snapshot_id": current_snapshot.get("snapshot_id"),
+        "changes": changes,
+    }
+
+
 def evaluate_freshness(records: Sequence[ShareholderRecord], threshold_days: int, today: date | None = None) -> dict[str, Any]:
     latest = max((record.as_of_date for record in records if record.as_of_date), default=None)
     if latest is None:
