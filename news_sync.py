@@ -5,11 +5,14 @@ import time
 import sqlite3
 import random
 import argparse
+import os
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import xml.etree.ElementTree as ET
 import requests
 import pandas as pd
+
+from runtime_paths import runtime_root
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiêu đề tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -32,8 +35,13 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 # Feed nào chết (đổi URL/dẹp RSS) sẽ chỉ in cảnh báo, không làm gãy cả phiên chạy.
 # Toàn bộ feed dưới đây ĐÃ KIỂM CHỨNG sống ngày 2026-07-09.
 
-DB_PATH = "vn_stock.db"
-OUT_LATEST = "news_latest.csv"
+def resolve_runtime_paths(cwd=None):
+    """Return mutable news paths under the configured runtime root."""
+    root = runtime_root(cwd or os.getcwd())
+    return root, root / "vn_stock.db", root / "news_latest.csv"
+
+
+RUNTIME_ROOT, DB_PATH, OUT_LATEST = resolve_runtime_paths()
 REQUEST_DELAY = 1.0
 MAX_RETRY = 3
 BACKOFF_BASE = 5

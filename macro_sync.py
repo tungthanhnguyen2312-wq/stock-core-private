@@ -12,6 +12,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
 
+from runtime_paths import runtime_root
+
 try:
     import requests
 except ImportError:  # Cho phép --export-web-only chạy bằng Python stdlib.
@@ -46,10 +48,19 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 #   KHÔNG có API miễn phí máy đọc được cho CPI VN theo THÁNG (GSO chỉ ra thông cáo).
 # - Lệch múi giờ: nến Mỹ ngày T khớp với phiên VN ngày T+1.
 
-DB_PATH = "vn_stock.db"
-OUT_SNAPSHOT = "macro_snapshot.csv"
-WEB_JSON = os.path.join("data", "macro_snapshot.json")
-WEB_JS = os.path.join("data", "macro_snapshot.js")
+def resolve_runtime_paths(cwd=None):
+    """Return mutable macro paths under the configured runtime root."""
+    root = runtime_root(cwd or os.getcwd())
+    return (
+        root,
+        root / "vn_stock.db",
+        root / "macro_snapshot.csv",
+        root / "data" / "macro_snapshot.json",
+        root / "data" / "macro_snapshot.js",
+    )
+
+
+RUNTIME_ROOT, DB_PATH, OUT_SNAPSHOT, WEB_JSON, WEB_JS = resolve_runtime_paths()
 SCHEMA_VERSION = 1
 REQUEST_DELAY = 1.0
 MAX_RETRY = 3

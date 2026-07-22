@@ -6,6 +6,7 @@ import random
 import argparse
 from datetime import datetime
 import pandas as pd
+from runtime_paths import runtime_root
 
 # Console Windows mặc định cp1252 -> vỡ khi in tên ngành/cổ đông tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -21,8 +22,9 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 # dính survivorship bias (mã hủy niêm yết không còn metadata) + lookahead bias
 # (P/E hôm nay không tồn tại tại thời điểm quá khứ). CHỈ DÙNG ĐỂ LỌC LIVE.
 
-DB_PATH = "vn_stock.db"
-BLACKLIST_FILE = "blacklist.csv"
+RUNTIME_ROOT = runtime_root(os.getcwd())
+DB_PATH = str(RUNTIME_ROOT / "vn_stock.db")
+BLACKLIST_FILE = str(RUNTIME_ROOT / "blacklist.csv")
 INDEX_SYMBOLS = ["VNINDEX", "HNXINDEX", "UPCOMINDEX"]   # chỉ số, không có metadata doanh nghiệp
 
 EXCHANGE_ALIASES = {

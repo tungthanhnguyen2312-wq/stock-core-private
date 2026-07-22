@@ -12,12 +12,14 @@ from urllib.parse import urlsplit
 
 import pandas as pd
 import requests
+from runtime_paths import runtime_root
 
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
 # ==========================================
-DB_PATH = "vn_stock.db"
-OUT_DIR = "."
+RUNTIME_ROOT = runtime_root(os.getcwd())
+DB_PATH = str(RUNTIME_ROOT / "vn_stock.db")
+OUT_DIR = str(RUNTIME_ROOT)
 START_DATE = "2015-01-01"
 INTERVAL = "1D"
 
@@ -77,7 +79,7 @@ BATCH_SIZE = 300
 
 INDEX_SYMBOLS = ["VNINDEX", "HNXINDEX", "UPCOMINDEX"]
 USE_FILE = True
-TICKERS_FILE = "tickers.txt"
+TICKERS_FILE = str(RUNTIME_ROOT / "tickers.txt")
 WATCHLIST = ["SSI", "EVF", "PAN", "HPG", "FPT", "PVD", "QNS", "VNM", "POW", "PDR", "NLG"]
 
 # ==========================================

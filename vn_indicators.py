@@ -23,11 +23,13 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from runtime_paths import runtime_root
 
 warnings.filterwarnings("ignore")
 
-DB_PATH = "vn_stock.db"
-OUT_DIR = "."
+RUNTIME_ROOT = runtime_root(os.getcwd())
+DB_PATH = str(RUNTIME_ROOT / "vn_stock.db")
+OUT_DIR = str(RUNTIME_ROOT)
 INDEX_SYMBOLS = ["VNINDEX", "HNXINDEX", "UPCOMINDEX"]   # chỉ số: có trong DB nhưng KHÔNG vào bảng lọc
 MIN_BARS = 60
 FULL_TA = ("full" in sys.argv)          # `python vn_indicators.py full` -> tính thêm ~130 chỉ báo pandas_ta

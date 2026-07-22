@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from candlestick_patterns import atomic_write_snapshot, build_snapshot
+from runtime_paths import runtime_root
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -31,12 +32,24 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 #   ngưỡng là quy ước, chỉnh hằng số bên dưới.
 # - Chỉ quét mã có nến ĐÚNG phiên quét (mã ngừng GD không vào kết quả).
 
-DB_PATH = "vn_stock.db"
-OUT_CSV = "ta_signals.csv"
-OUT_JSON = "ta_signals.json"
-DATA_DIR = "data"                          # JSON cho dashboard (index.html + GitHub Pages sau này)
-PATTERN_OUT_JSON = os.path.join(DATA_DIR, "candlestick_patterns.json")
-PATTERN_OUT_JS = os.path.join(DATA_DIR, "candlestick_patterns.js")
+def resolve_runtime_paths(cwd=None):
+    """Return mutable candle-scan paths under the configured runtime root."""
+    root = runtime_root(cwd or os.getcwd())
+    data_dir = root / "data"
+    return (
+        root,
+        root / "vn_stock.db",
+        root / "ta_signals.csv",
+        root / "ta_signals.json",
+        root / "screen_snapshot.csv",
+        root / "market_breadth.csv",
+        data_dir,
+        data_dir / "candlestick_patterns.json",
+        data_dir / "candlestick_patterns.js",
+    )
+
+
+RUNTIME_ROOT, DB_PATH, OUT_CSV, OUT_JSON, SNAPSHOT_PATH, MARKET_BREADTH_PATH, DATA_DIR, PATTERN_OUT_JSON, PATTERN_OUT_JS = resolve_runtime_paths()
 WATCHLIST = ["POW", "HPG", "SSI", "PAN", "EVF"]  # luôn có mặt trong dashboard, kể cả không tín hiệu
 # [VÁ P1-3] POW thiếu khỏi WATCHLIST — đã ghi nhận ở STOCK_ANALYSIS_MASTER_PLAN.md mục 7 (P1-3).
 INDEX_SYMBOLS = ["VNINDEX", "HNXINDEX", "UPCOMINDEX"]
@@ -327,8 +340,8 @@ def main():
     # nền lọc tái sử dụng từ snapshot (không tính lại)
     snap_cols = ["ticker", "industry", "rs_rating", "rel_vol", "gtgd20_ty",
                  "margin_status", "atr_pct", "above_sma200", "chg_today_pct", "ret_1m"]
-    if os.path.exists("screen_snapshot.csv"):
-        full_snap = pd.read_csv("screen_snapshot.csv")
+    if SNAPSHOT_PATH.exists():
+        full_snap = pd.read_csv(SNAPSHOT_PATH)
         snap = full_snap[snap_cols]
     else:
         print(" [cảnh báo] Thiếu screen_snapshot.csv -> không có nền rs/rel_vol/industry")
@@ -491,8 +504,8 @@ def main():
     # Fallback giữ TOÀN BỘ field để giao diện card không mất chi tiết. Phiên lấy max
     # của mã đang niêm yết, không phụ thuộc thứ tự rows[0].
     scr = full_snap.replace({np.nan: None})
-    breadth_js = pd.read_csv("market_breadth.csv").replace({np.nan: None}) \
-        if os.path.exists("market_breadth.csv") else pd.DataFrame()
+    breadth_js = pd.read_csv(MARKET_BREADTH_PATH).replace({np.nan: None}) \
+        if MARKET_BREADTH_PATH.exists() else pd.DataFrame()
     active = full_snap[full_snap.get("exchange", "").astype(str).str.upper() != "DELISTED"]
     market_session = str(active["date"].dropna().max()) if len(active) else str(full_snap["date"].dropna().max())
     fallback_meta = {"schema_version": 1,

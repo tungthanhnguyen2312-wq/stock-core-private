@@ -7,6 +7,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from runtime_paths import runtime_root
 
 import vn_indicators as vi   # thư viện chỉ báo chính thức (Phase 1) — analyzer CHỈ TIÊU THỤ, không tự tính lại
 
@@ -62,7 +63,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 #   - Cột boolean lưu dạng chữ "True"/"False"; structure lưu chữ thường up/side/down.
 # ==========================================================================
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = str(runtime_root(os.path.dirname(os.path.abspath(__file__))))
 SNAPSHOT_CSV = os.path.join(ROOT, "screen_snapshot.csv")
 BREADTH_CSV = os.path.join(ROOT, "market_breadth.csv")
 PARQUET = os.path.join(ROOT, "ohlcv_flat.parquet")
