@@ -49,6 +49,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+from shareholder_pipeline import DONE, calculate_major_shareholder_delta
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -389,6 +390,200 @@ def load_ohlcv_recent(conn: sqlite3.Connection, ticker: str, n: int = OHLCV_RECE
         "ORDER BY date DESC LIMIT ?", (ticker, n)).fetchall()
     cols = ["date", "open", "high", "low", "close", "volume"]
     return [{c: clean(v) for c, v in zip(cols, r)} for r in reversed(rows)]
+
+
+# ===========================================================================
+# CORPORATE INTELLIGENCE (read-only, source-scoped snapshot export)
+# ===========================================================================
+
+def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
+    return conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone() is not None
+
+
+def _json_object(value: object) -> dict | None:
+    try:
+        decoded = json.loads(value)
+    except (TypeError, ValueError):
+        return None
+    return decoded if isinstance(decoded, dict) else None
+
+
+def _corporate_status(items: list[dict]) -> str:
+    if not items:
+        return "missing"
+    valid = sum(item["status"] == "available" for item in items)
+    return "available" if valid == len(items) else ("partial" if valid else "malformed")
+
+
+def _corporate_overall_status(*sections: dict) -> str:
+    statuses = [section["status"] for section in sections]
+    if "available" in statuses:
+        return "available" if all(status == "available" for status in statuses) else "partial"
+    return "malformed" if "malformed" in statuses else "missing"
+
+
+def _snapshot_envelope(row: tuple) -> dict:
+    return {
+        "snapshot_id": row[0], "schema_version": row[1], "source_name": row[2],
+        "source_reference": row[3], "snapshot_date": row[4], "raw_hash": row[5],
+        "record_count": row[6], "snapshot_status": row[7], "is_complete": row[8],
+    }
+
+
+def _latest_rows_by_source(conn: sqlite3.Connection, table: str, ticker: str) -> list[tuple]:
+    rows = conn.execute(
+        f"SELECT snapshot_id,schema_version,source_name,source_reference,fetched_at,raw_hash,record_count,status,is_complete,raw_payload_json "
+        f"FROM {table} WHERE ticker=? ORDER BY source_name, fetched_at DESC, snapshot_id DESC", (ticker,)
+    ).fetchall()
+    latest: dict[str, tuple] = {}
+    for row in rows:
+        latest.setdefault(row[2], row)
+    return list(latest.values())
+
+
+def _load_profile_intelligence(conn: sqlite3.Connection, ticker: str) -> dict:
+    if not (_table_exists(conn, "company_profile_snapshots") and _table_exists(conn, "company_profile_records")):
+        return {"status": "missing", "reason": "snapshot_tables_unavailable", "sources": []}
+    sources = []
+    for row in _latest_rows_by_source(conn, "company_profile_snapshots", ticker):
+        item = _snapshot_envelope(row)
+        records = conn.execute(
+            "SELECT provider_identity,identity_basis,qualified_fields_json,raw_record_json,provenance_json "
+            "FROM company_profile_records WHERE snapshot_id=?", (row[0],)
+        ).fetchall()
+        if row[7] != "complete_response" or row[8] != 1 or row[6] != 1 or len(records) != 1 or _json_object(row[9]) is None:
+            item.update({"status": "malformed_snapshot", "reason": "manifest_or_record_count_invalid"})
+        else:
+            record = records[0]
+            qualified, raw, provenance = (_json_object(value) for value in record[2:])
+            if not all((qualified, raw, provenance)):
+                item.update({"status": "malformed_snapshot", "reason": "record_json_invalid"})
+            else:
+                item.update({"status": "available", "record": {
+                    "provider_identity": record[0], "identity_basis": record[1],
+                    "qualified_fields": qualified, "raw_record": raw, "provenance": provenance,
+                }})
+        sources.append(item)
+    return {"status": _corporate_status(sources), "sources": sources}
+
+
+def _load_collection_intelligence(conn: sqlite3.Connection, ticker: str, *, table: str, record_table: str,
+                                  field_names: list[str]) -> dict:
+    if not (_table_exists(conn, table) and _table_exists(conn, record_table)):
+        return {"status": "missing", "reason": "snapshot_tables_unavailable", "sources": []}
+    columns = ["source_record_identity", *field_names, "raw_record_json", "provenance_json"]
+    sources = []
+    for row in _latest_rows_by_source(conn, table, ticker):
+        item = _snapshot_envelope(row)
+        records = conn.execute(f"SELECT {','.join(columns)} FROM {record_table} WHERE snapshot_id=?", (row[0],)).fetchall()
+        if row[7] != "complete_response" or row[8] != 1 or row[6] != len(records) or _json_object(row[9]) is None:
+            item.update({"status": "malformed_snapshot", "reason": "manifest_or_record_count_invalid"})
+        else:
+            output, malformed = [], False
+            for record in records:
+                raw, provenance = _json_object(record[-2]), _json_object(record[-1])
+                if raw is None or provenance is None:
+                    malformed = True
+                    break
+                output.append({"source_record_identity": record[0], "fields": dict(zip(field_names, record[1:-2])),
+                               "raw_record": raw, "provenance": provenance})
+            if malformed:
+                item.update({"status": "malformed_snapshot", "reason": "record_json_invalid"})
+            else:
+                item.update({"status": "available", "records": output})
+        sources.append(item)
+    return {"status": _corporate_status(sources), "sources": sources}
+
+
+def _major_records_for_snapshot(conn: sqlite3.Connection, snapshot: tuple) -> list[dict]:
+    rows = conn.execute(
+        "SELECT ticker,holder_name,normalized_holder_name,shares,ownership_pct,as_of_date,source_name,source_reference,"
+        "record_origin,reconciliation_status,provenance_json FROM shareholder_records_v2 "
+        "WHERE ticker=? AND as_of_date=? AND source_name=? AND source_reference IS ? AND record_origin='api'",
+        (snapshot[2], snapshot[3], snapshot[4], snapshot[6]),
+    ).fetchall()
+    records = []
+    for row in rows:
+        try:
+            provenance = json.loads(row[10])
+        except (TypeError, ValueError):
+            return []
+        records.append({
+            "ticker": row[0], "holder_name": row[1], "normalized_holder_name": row[2], "shares": row[3],
+            "ownership_pct": row[4], "as_of_date": row[5], "source_name": row[6], "source_reference": row[7],
+            "record_origin": row[8], "reconciliation_status": row[9], "provenance": provenance,
+        })
+    return records
+
+
+def _load_major_shareholders_intelligence(conn: sqlite3.Connection, ticker: str) -> dict:
+    if not (_table_exists(conn, "major_shareholder_snapshots") and _table_exists(conn, "shareholder_records_v2")):
+        return {"status": "missing", "reason": "snapshot_tables_unavailable", "sources": []}
+    rows = conn.execute(
+        "SELECT snapshot_id,schema_version,ticker,as_of_date,source_name,record_origin,source_reference,fetched_at,record_count,status,is_complete "
+        "FROM major_shareholder_snapshots WHERE ticker=? AND status=? AND is_complete=1 AND record_origin='api' "
+        "ORDER BY source_name, source_reference, as_of_date DESC, fetched_at DESC", (ticker, DONE),
+    ).fetchall()
+    latest: dict[tuple, tuple] = {}
+    for row in rows:
+        latest.setdefault((row[4], row[6]), row)
+    sources = []
+    for current in latest.values():
+        records = _major_records_for_snapshot(conn, current)
+        item = {
+            "snapshot_id": current[0], "schema_version": current[1], "source_name": current[4],
+            "source_reference": current[6], "snapshot_date": current[3], "fetched_at": current[7],
+            "record_count": current[8], "snapshot_status": current[9], "is_complete": current[10],
+        }
+        if len(records) != current[8] or not records:
+            item.update({"status": "malformed_snapshot", "reason": "manifest_or_record_count_invalid"})
+        else:
+            previous = conn.execute(
+                "SELECT snapshot_id,schema_version,ticker,as_of_date,source_name,record_origin,source_reference,fetched_at,record_count,status,is_complete "
+                "FROM major_shareholder_snapshots WHERE ticker=? AND source_name=? AND source_reference IS ? "
+                "AND status=? AND is_complete=1 AND record_origin='api' AND as_of_date<? "
+                "ORDER BY as_of_date DESC, fetched_at DESC LIMIT 1",
+                (ticker, current[4], current[6], DONE, current[3]),
+            ).fetchone()
+            if previous is None:
+                delta = {"status": "missing_prior_snapshot", "reason": "no_prior_comparable_snapshot", "changes": []}
+            else:
+                previous_records = _major_records_for_snapshot(conn, previous)
+                previous_manifest = {
+                    "snapshot_id": previous[0], "ticker": previous[2], "as_of_date": previous[3],
+                    "source_name": previous[4], "record_origin": previous[5], "source_reference": previous[6],
+                    "status": previous[9], "is_complete": previous[10],
+                }
+                current_manifest = {
+                    "snapshot_id": current[0], "ticker": current[2], "as_of_date": current[3],
+                    "source_name": current[4], "record_origin": current[5], "source_reference": current[6],
+                    "status": current[9], "is_complete": current[10],
+                }
+                delta = calculate_major_shareholder_delta(previous_manifest, previous_records, current_manifest, records)
+            item.update({"status": "available", "records": records, "delta": delta})
+        sources.append(item)
+    return {"status": _corporate_status(sources), "sources": sources}
+
+
+def load_corporate_intelligence(conn: sqlite3.Connection, ticker: str) -> dict:
+    """Load latest provider snapshots without merging source semantics."""
+    profile = _load_profile_intelligence(conn, ticker)
+    subsidiaries = _load_collection_intelligence(
+        conn, ticker, table="company_subsidiary_snapshots", record_table="company_subsidiary_records",
+        field_names=["provider_record_id", "organization_name", "relationship_type", "ownership_percent",
+                     "ownership_unit", "charter_capital", "currency", "provider_update_date"],
+    )
+    ownership = _load_collection_intelligence(
+        conn, ticker, table="ownership_structure_snapshots", record_table="ownership_structure_records",
+        field_names=["owner_type", "ownership_percentage", "shares_owned", "update_date"],
+    )
+    return {
+        "status": _corporate_overall_status(profile, subsidiaries, ownership),
+        "company_profile": profile,
+        "company_subsidiaries": subsidiaries,
+        "ownership_structure": ownership,
+        "major_shareholders": _load_major_shareholders_intelligence(conn, ticker),
+    }
 
 
 def load_focus_analysis_info() -> dict:
@@ -806,6 +1001,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         },
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
+        "corporate_intelligence": load_corporate_intelligence(conn, tk),
         "warnings": warnings,
     }
 
