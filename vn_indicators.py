@@ -67,6 +67,17 @@ __all__ = [
 # PHẦN 1A — TIỆN ÍCH NỘI BỘ
 # ==========================================================================
 
+def configure_utf8_streams(stdout=None, stderr=None) -> None:
+    """Best-effort UTF-8 console setup; safe for pipes and test doubles."""
+    for stream in (sys.stdout if stdout is None else stdout, sys.stderr if stderr is None else stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError, AttributeError):
+            pass
+
 def _series(df: pd.DataFrame, col: str) -> pd.Series:
     """Lấy 1 cột KHÔNG phân biệt hoa thường ('close' hay 'Close' đều được).
 
@@ -822,6 +833,7 @@ def structure(df):
     return st, dist
 
 def main():
+    configure_utf8_streams()
     conn = sqlite3.connect(DB_PATH)
     tickers = [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM ohlcv").fetchall()]
     print(f"[indicators] Tính cục bộ {len(tickers)} mã | FULL_TA={FULL_TA}")
