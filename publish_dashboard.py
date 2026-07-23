@@ -47,7 +47,7 @@ _RUN_TIMESTAMP = f"{datetime.now(VN_TZ):%Y%m%d-%H%M%S}"
 
 COPY_ARTIFACTS = (
     "screen_snapshot.csv", "market_breadth.csv",
-    "ai_report_latest.md", "ai_report_latest.json",
+    "ai_report_latest.md", "ai_report_latest.json", "analysis_bundle.json",
     "data/macro_snapshot.json", "data/macro_snapshot.js",
     "data/candlestick_patterns.json", "data/candlestick_patterns.js",
     "data/candle_signals.json", "data/candle_signals.js",
