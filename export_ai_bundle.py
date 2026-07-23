@@ -94,6 +94,11 @@ def runtime_path(relative_path: str) -> Path:
     """Resolve a runtime artifact without changing its legacy relative-path default."""
     return runtime_root() / relative_path
 
+def output_path(relative_path: str) -> Path:
+    """Resolve generated output in the active runtime (or an absolute test override)."""
+    path = Path(relative_path)
+    return path if path.is_absolute() else runtime_path(relative_path)
+
 
 def context_package_reference(ticker: str) -> str:
     """Return a manifest path relative to the active dashboard runtime root."""
@@ -1205,7 +1210,9 @@ def main() -> int:
             " freshness.artifact_order_violations).",
         ],
     }
-    out_path = Path(OUT_DIR) / "focus_extract.json"
+    output_dir = output_path(OUT_DIR)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_path = output_dir / 'focus_extract.json'
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(focus_extract, f, ensure_ascii=False, indent=2, allow_nan=False)
         f.write("\n")
@@ -1262,7 +1269,7 @@ def main() -> int:
             " đừng chỉ đọc phần 'tickers'.",
         ],
     }
-    bundle_path = Path(OUT_DIR) / "analysis_bundle.json"
+    bundle_path = output_dir / 'analysis_bundle.json'
     with bundle_path.open("w", encoding="utf-8") as f:
         json.dump(analysis_bundle, f, ensure_ascii=False, indent=2, allow_nan=False)
         f.write("\n")
@@ -1295,7 +1302,7 @@ def main() -> int:
             " KHÔNG dùng làm căn cứ phân tích chính thức nếu không thực sự cần thiết."
         )
 
-    manifest_path = Path(OUT_DIR) / "bundle_manifest.json"
+    manifest_path = output_dir / 'bundle_manifest.json'
     with manifest_path.open("w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2, allow_nan=False)
         f.write("\n")

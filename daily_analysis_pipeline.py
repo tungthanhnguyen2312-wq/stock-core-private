@@ -1,0 +1,110 @@
+"""Sequential canonical post-session analysis pipeline."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Callable, Sequence
+
+from runtime_paths import RUNTIME_ROOT_ENV
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_TICKERS = ["POW", "SSI", "HPG", "EVF", "PAN"]
+REQUIRED = ("screen_snapshot.csv", "screen_snapshot_live.csv", "market_breadth.csv",
+            "analysis_latest.json", "analysis_latest.md", "Market_Scan.csv", "Market_Scan.md",
+            "Focus_Analysis.md", "ta_signals.csv", "ta_signals.json", "macro_snapshot.csv",
+            "news_latest.csv", "analysis_bundle.json", "bundle_manifest.json")
+DEPS = {"screen_snapshot_live.csv": ("screen_snapshot.csv",),
+        "market_breadth.csv": ("screen_snapshot.csv",),
+        "ta_signals.csv": ("screen_snapshot.csv",), "ta_signals.json": ("ta_signals.csv",),
+        "analysis_latest.json": ("screen_snapshot_live.csv", "ta_signals.csv"),
+        "analysis_latest.md": ("analysis_latest.json",), "Market_Scan.csv": ("screen_snapshot_live.csv", "ta_signals.csv"), "Market_Scan.md": ("Market_Scan.csv",),
+        "Focus_Analysis.md": ("screen_snapshot_live.csv", "market_breadth.csv", "macro_snapshot.csv", "news_latest.csv"),
+        "analysis_bundle.json": ("screen_snapshot_live.csv", "market_breadth.csv", "ta_signals.csv", "analysis_latest.json", "Focus_Analysis.md", "macro_snapshot.csv", "news_latest.csv")}
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+def digest(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""): h.update(block)
+    return h.hexdigest()
+
+def inspect(root: Path, names: Sequence[str] = REQUIRED) -> dict[str, dict]:
+    report = {}
+    for name in names:
+        p = root / name
+        item = {"path": str(p), "exists": p.is_file(), "freshness_status": "missing", "dependency_status": "not_checked"}
+        if p.is_file():
+            st = p.stat(); item.update(size=st.st_size, modified_time=datetime.fromtimestamp(st.st_mtime, timezone.utc).isoformat(timespec="seconds"), sha256=digest(p), freshness_status="fresh")
+        report[name] = item
+    for name, deps in DEPS.items():
+        if name not in report:
+            continue
+        item = report[name]
+        if not item["exists"]: item["dependency_status"] = "missing_artifact"; continue
+        stale = [dep for dep in deps if not report[dep]["exists"] or (root / name).stat().st_mtime < (root / dep).stat().st_mtime]
+        item["dependency_status"] = "stale" if stale else "ok"
+        if stale: item.update(freshness_status="stale_dependency", stale_dependencies=stale)
+    return report
+
+def upstream_ok(root: Path) -> tuple[bool, dict[str, dict]]:
+    report = inspect(root, REQUIRED[:-2])
+    return all(x["freshness_status"] == "fresh" for x in report.values()), report
+
+def run(name: str, command: list[str], env: dict[str, str], runner: Callable) -> dict:
+    started, tick = now(), time.monotonic(); result = runner(command, cwd=SCRIPT_DIR, env=env, check=False)
+    record = {"name": name, "command": command, "started_at": started, "ended_at": now(), "exit_code": result.returncode, "duration_seconds": round(time.monotonic()-tick, 3)}
+    print(f"[daily_analysis] {name}: exit={result.returncode} duration={record['duration_seconds']}s", flush=True)
+    if result.returncode: raise RuntimeError(f"{name} failed with exit code {result.returncode}")
+    return record
+
+def steps(args: argparse.Namespace, tickers: list[str]) -> list[tuple[str, list[str]]]:
+    py=sys.executable; result=[]
+    if not args.skip_price_update: result.append(("price_update", [py,"vn_stock_pipeline.py","update"]))
+    if not args.skip_macro: result.append(("macro_sync", [py,"macro_sync.py"]))
+    if not args.skip_news: result.append(("news_sync", [py,"news_sync.py"]))
+    return result + [("indicators",[py,"vn_indicators.py"]),("candle_scan",[py,"candle_scan.py"]),("strategy_all",[py,"stock_analyzer.py","--strategy","all"]),("market_scan",[py,"stock_analyzer.py","--scan-market"]),("focus_analysis",[py,"stock_analyzer.py","--tickers",*tickers]),("export_bundle",[py,"export_ai_bundle.py","--tickers",",".join(tickers)])]
+
+def enrich(root: Path, tickers: list[str], executed: list[dict], report: dict[str, dict]) -> None:
+    path=root/"bundle_manifest.json"; manifest=json.loads(path.read_text(encoding="utf-8"))
+    session = json.loads((root/"analysis_bundle.json").read_text(encoding="utf-8")).get("reference_session_date")
+    manifest.update(schema_version="1.2.0", runtime_root=str(root), session_date=session,
+                    daily_analysis={"generated_at":now(),"command_step_order":executed,"watchlist":tickers},
+                    artifact_verification=report, overall_verification_result="passed")
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False)+"\n", encoding="utf-8")
+
+def parse(argv=None):
+    p=argparse.ArgumentParser(description="Run canonical daily analysis sequentially.")
+    p.add_argument("--runtime-root", required=True); p.add_argument("--tickers", nargs="+", default=DEFAULT_TICKERS)
+    p.add_argument("--skip-price-update", action="store_true"); p.add_argument("--skip-macro", action="store_true"); p.add_argument("--skip-news", action="store_true"); p.add_argument("--verify-only", action="store_true")
+    return p.parse_args(argv)
+
+def main(argv=None, runner=subprocess.run) -> int:
+    args=parse(argv); root=Path(args.runtime_root).expanduser().resolve()
+    if not root.is_dir(): print(f"[daily_analysis] runtime root does not exist: {root}", file=sys.stderr); return 2
+    tickers=[x.upper() for x in args.tickers]; env=os.environ.copy(); env[RUNTIME_ROOT_ENV]=str(root); executed=[]
+    try:
+        if args.verify_only:
+            executed.append(run("verify_bundle",[sys.executable,"export_ai_bundle.py","--verify",str(root/"bundle_manifest.json")],env,runner))
+            if not all(item["freshness_status"] == "fresh" for item in inspect(root).values()):
+                raise RuntimeError("required artifact missing or stale during verification")
+            return 0
+        else:
+            for name, command in steps(args,tickers):
+                if name == "export_bundle" and not upstream_ok(root)[0]: raise RuntimeError("required upstream artifact missing or stale; refusing bundle export")
+                executed.append(run(name,command,env,runner))
+            executed.append(run("verify_bundle",[sys.executable,"export_ai_bundle.py","--verify",str(root/"bundle_manifest.json")],env,runner))
+        report=inspect(root)
+        if not all(item["freshness_status"] == "fresh" for item in report.values()): raise RuntimeError("required artifact missing or stale after pipeline")
+        enrich(root,tickers,executed,report); return 0
+    except (RuntimeError, OSError, json.JSONDecodeError) as exc:
+        print(f"[daily_analysis] FAILED: {exc}", file=sys.stderr); return 1
+if __name__ == "__main__": raise SystemExit(main())
