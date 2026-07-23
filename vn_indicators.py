@@ -24,6 +24,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from runtime_paths import runtime_root
+from live_universe import evaluate as evaluate_live_universe
 
 warnings.filterwarnings("ignore")
 
@@ -771,6 +772,16 @@ def normalize_exchange(value):
     raw = str(value).strip().upper()
     return EXCHANGE_ALIASES.get(raw, raw or None)
 
+def load_instrument_master(conn):
+    """Latest complete forward-only listing snapshot, or empty (fail-closed)."""
+    exists = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='instrument_master_records'").fetchone()
+    if not exists:
+        return pd.DataFrame(columns=["ticker", "instrument_type", "listing_exchange", "listing_source", "listing_snapshot_hash"])
+    return pd.read_sql("""SELECT r.symbol AS ticker, r.instrument_type, r.exchange AS listing_exchange,
+                         r.source_name AS listing_source, s.raw_hash AS listing_snapshot_hash
+                  FROM instrument_master_records r JOIN instrument_master_snapshots s ON s.snapshot_id=r.snapshot_id
+                  WHERE r.snapshot_id=(SELECT snapshot_id FROM instrument_master_snapshots
+                                       WHERE is_complete=1 ORDER BY fetched_at DESC LIMIT 1)""", conn)
 def market_breadth(s):
     """ĐỘ RỘNG THỊ TRƯỜNG tính từ chính DB, không cần nguồn ngoài.
     Chỉ đếm mã có nến ĐÚNG phiên gần nhất toàn thị trường (mã ngừng GD/dữ liệu cũ
@@ -778,7 +789,7 @@ def market_breadth(s):
     Dòng đầu = ALL (toàn thị trường), các dòng sau = từng ngành (ICB từ metadata),
     xếp theo sức mạnh RS trung bình giảm dần."""
     dmax = s["date"].max()
-    live = s[s["date"] == dmax].copy()
+    live = s[s["live_universe_status"] == "live"].copy()
 
     def one(g, name):
         chg = pd.to_numeric(g["chg_today_pct"], errors="coerce")
@@ -866,6 +877,7 @@ def main():
         if i % 100 == 0:
             print(f"   Đã xử lý: {i}/{len(tickers)} mã")
     meta_df = load_metadata(conn)   # lớp metadata của meta_sync.py (bảng `metadata`, KHÔNG phải `meta`)
+    instrument_master = load_instrument_master(conn)
     conn.close()
 
     if not snap:
@@ -876,9 +888,9 @@ def main():
     # LIVE = có nến đúng phiên gần nhất toàn hệ thống (cùng định nghĩa dùng trong market_breadth()).
     # Mã ngừng giao dịch/dữ liệu cũ vẫn giữ trong bảng đầy đủ (tương thích cũ) nhưng KHÔNG được xếp
     # hạng RS chung với mã live -> tránh "RS ảo" của mã chết chiếm đầu bảng khi sort theo rs_rating.
-    dmax = s["date"].max()
-    s["is_live"] = s["date"] == dmax
-    s["days_stale"] = (pd.to_datetime(dmax) - pd.to_datetime(s["date"])).dt.days
+    s = s.merge(meta_df, on="ticker", how="left")
+    s = evaluate_live_universe(s, instrument_master)
+    dmax = s["reference_market_date"].dropna().max()
 
     # RS rating: percentile return có trọng số; mã mới <12m xếp tạm theo ret_3m (thay vì NaN).
     # CHỈ xếp hạng percentile trong tập LIVE — mã không live -> rs_rating để trống (NA), không tính.
@@ -891,7 +903,6 @@ def main():
 
     # LEFT JOIN lớp metadata: mã bị blacklist CHỈ GẮN CỜ qua margin_status, KHÔNG xóa
     # (tự lọc khi dùng, không mất dữ liệu). Cảnh báo point-in-time: xem load_metadata().
-    s = s.merge(meta_df, on="ticker", how="left")
     if s["ticker"].duplicated().any():
         dupes = s.loc[s["ticker"].duplicated(keep=False), "ticker"].unique().tolist()
         raise RuntimeError(f"Metadata merge tạo ticker trùng: {dupes[:20]}")

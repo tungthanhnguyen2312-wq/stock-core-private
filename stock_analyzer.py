@@ -248,6 +248,11 @@ def load_snapshot(csv_path: str = SNAPSHOT_CSV, db_path: str = DB_FILE) -> pd.Da
     return df
 
 
+def current_live_universe(df: pd.DataFrame) -> pd.DataFrame:
+    """Canonical consumer gate; legacy snapshots retain date-only audit compatibility."""
+    if "live_universe_status" in df.columns:
+        return df[df["live_universe_status"].astype(str).eq("live")].copy()
+    return df[df["date"] == df["date"].max()].copy()
 def load_prices(tickers) -> pd.DataFrame:
     """Nạp lịch sử giá CHỈ của các mã cần từ parquet (lọc ngay lúc đọc, không load cả kho)."""
     if not os.path.exists(PARQUET):
@@ -668,7 +673,7 @@ class DataHub:
         """Bản gốc live trong cache — nội bộ, đừng trả ra ngoài (dùng live()/live_size())."""
         if "__live__" not in self._cache:
             df = self.get("snapshot")
-            self._cache["__live__"] = None if df is None else df[df["date"] == df["date"].max()]
+            self._cache["__live__"] = None if df is None else current_live_universe(df)
         return self._cache["__live__"]
 
     def live(self):
@@ -1666,8 +1671,8 @@ def main():
     # --- 2 chế độ cũ: giữ nguyên hành vi (tương thích ngược) ---
     if args.tickers or args.scan_market:
         log("Đang nạp dữ liệu (snapshot + metadata)...")
-        df = load_snapshot()
-        log(f"Snapshot: {len(df)} mã, phiên mới nhất {df['date'].max()}.")
+        df = current_live_universe(load_snapshot())
+        log(f"Live universe: {len(df)} mã.")
         if args.tickers:
             run_focus(df, args.tickers)
         if args.scan_market:

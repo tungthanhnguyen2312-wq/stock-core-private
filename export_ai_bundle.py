@@ -50,6 +50,7 @@ from pathlib import Path
 
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
+from live_universe import summary as live_universe_summary
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -263,12 +264,25 @@ def load_live_snapshot_rows(tickers: list[str]) -> tuple[dict, dict]:
         raise FileNotFoundError(
             f"Không thấy {path} — chạy `python vn_indicators.py` trước để sinh bản live.")
     df = pd.read_csv(path, encoding="utf-8-sig")
+    if "live_universe_status" not in df.columns:
+        if "is_live" in df.columns and df["is_live"].astype(str).str.lower().eq("true").all():
+            df["live_universe_status"] = "live"
+            df["live_universe_reason"] = "legacy_live_snapshot"
+        else:
+            raise ValueError("screen_snapshot_live.csv lacks live-universe contract")
+    if not df["live_universe_status"].astype(str).eq("live").all():
+        raise ValueError("screen_snapshot_live.csv violates live-universe contract")
     by_ticker = {tk: (row_to_dict(df[df["ticker"] == tk].iloc[0])
                       if (df["ticker"] == tk).any() else None) for tk in tickers}
     info = {
         "file": path.name, "rows": int(len(df)),
         "data_date": str(df["date"].max()) if len(df) else None,
         "sha256": sha256_file(path), "mtime": _mtime_epoch(path), "mtime_iso": _mtime_iso(path),
+        "live_universe": live_universe_summary(
+            pd.read_csv(runtime_path(SNAPSHOT_PATH), encoding="utf-8-sig")
+            if runtime_path(SNAPSHOT_PATH).exists() else df,
+            source=SNAPSHOT_PATH if runtime_path(SNAPSHOT_PATH).exists() else SNAPSHOT_LIVE_PATH,
+        ),
     }
     return by_ticker, info
 
@@ -286,7 +300,6 @@ def load_ta_signal_rows(tickers: list[str]) -> tuple[dict, dict]:
         "sha256": sha256_file(path), "mtime": _mtime_epoch(path), "mtime_iso": _mtime_iso(path),
     }
     return by_ticker, info
-
 
 def load_analysis_scores(tickers: list[str]) -> tuple[dict, dict, dict]:
     path = runtime_path(ANALYSIS_PATH)
@@ -1192,6 +1205,7 @@ def main() -> int:
         "reference_session_date": latest_session,
         "tickers_requested": tickers,
         "freshness": freshness,
+        "live_universe": snapshot_info["live_universe"],
         "canonical_sources": {"rs_rating": CANONICAL_RS_RATING_SOURCE},
         "price_basis": price_basis["price_basis"],
         "price_basis_verified": price_basis["price_basis_verified"],
@@ -1248,6 +1262,7 @@ def main() -> int:
         "reference_session_date": latest_session,
         "tickers_requested": tickers,
         "freshness": freshness,
+        "live_universe": snapshot_info["live_universe"],
         "canonical_sources": {"rs_rating": CANONICAL_RS_RATING_SOURCE},
         "price_basis": price_basis["price_basis"],
         "price_basis_verified": price_basis["price_basis_verified"],
@@ -1288,6 +1303,7 @@ def main() -> int:
         "generated_at": generated_at,
         "tickers": tickers,
         "freshness": freshness,
+        "live_universe": snapshot_info["live_universe"],
         "price_basis": price_basis["price_basis"],
         "price_basis_verified": price_basis["price_basis_verified"],
         "price_basis_provenance": price_basis,
