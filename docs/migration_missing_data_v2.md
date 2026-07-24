@@ -22,6 +22,7 @@ Do not use truthiness to test numeric fields: zero is a valid value. Do not coun
 The active Python environment must provide pandas and a Parquet engine such as `pyarrow`.
 
 ```powershell
+Set-Location <producer-repository>
 python snapshot_rebuild.py --replace
 ```
 

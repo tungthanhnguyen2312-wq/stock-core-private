@@ -43,5 +43,6 @@ for OCF selection because it has no OCF value.
 Generate the diagnostic with:
 
 ```powershell
+Set-Location <producer-repository>
 python tests/diagnostics/ocf_audit.py --ticker PAN --output reports/ocf_diagnostics_pan.json
 ```

@@ -38,6 +38,7 @@ Every metric records `status`, `basis`, `reason`, `formula`, and JSON-encoded
 Generate the diagnostic with:
 
 ```powershell
+Set-Location <producer-repository>
 python tests/diagnostics/advanced_financial_audit.py --ticker PAN --output reports/advanced_financial_metrics_pan.json
 ```
 

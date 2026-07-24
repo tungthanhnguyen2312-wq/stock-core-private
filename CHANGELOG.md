@@ -1,6 +1,6 @@
 # CHANGELOG — VNSTOCK
 
-Lịch sử phát triển chính thức của dự án. Chi tiết riêng về giao diện web: xem [CHANGELOG_UI.md](CHANGELOG_UI.md). Tài liệu vận hành đầy đủ: xem [docs/](docs/) (bắt đầu từ [docs/USER_GUIDE.md](docs/USER_GUIDE.md)).
+Lịch sử phát triển chính thức của dự án. Chi tiết riêng về giao diện web: xem [CHANGELOG_UI.md](CHANGELOG_UI.md). Tài liệu kỹ thuật hiện hành: xem [docs/](docs/).
 
 ---
 
@@ -63,7 +63,7 @@ Lịch sử phát triển chính thức của dự án. Chi tiết riêng về g
 ## [1.1.0] — 2026-07-12 · Gộp FINANCIAL_REPORT vào VNSTOCK
 
 ### Thay đổi kiến trúc
-- **Gộp dự án `FINANCIAL_REPORT` (độc lập cũ) vào VNSTOCK** thành nhánh BCTC — xem [docs/FINANCIAL_REPORT.md](docs/FINANCIAL_REPORT.md). Backup đầy đủ trước khi gộp tại `../BACKUP_20260712/`.
+- **Gộp dự án `FINANCIAL_REPORT` (độc lập cũ) vào VNSTOCK** thành nhánh BCTC — xem tài liệu kỹ thuật hiện hành trong [docs/](docs/). Đã tạo backup đầy đủ trước khi gộp; bản backup không thuộc repository này.
 - **Đổi tên theo convention VNSTOCK** (`*_sync.py` = cào mạng · `*_processor.py` = biến đổi offline): `scrape_report.py` → `bctc_sync.py`, `financial_processor.py` → `bctc_processor.py`. KHÔNG đụng tên file `.py` nào của 8 module pipeline cũ (Task Scheduler đang trỏ tên cũ).
 - **Di chuyển vào VNSTOCK gốc**: `bctc_sync.py`, `bctc_processor.py`, `config.json`, `data_bctc/` (3.583 file), `financial_snapshot.csv/.parquet`. `AUDIT_REPORT.md` + `VALIDATION_REPORT.md` → `docs/`. Log gộp vào `logs/` (không đè file nào có sẵn). Xóa `__pycache__` cũ, không chuyển.
 - **Va chạm `tickers.txt` xử lý bằng đổi tên**: `FINANCIAL_REPORT/tickers.txt` → `VNSTOCK/tickers_bctc.txt` (`bctc_sync.py` đã trỏ sang file mới); `VNSTOCK/tickers.txt` (universe giá, 1.745 mã) giữ nguyên không đụng. Ghi nhận: 2 file khảo sát ra **byte-identical** tại thời điểm gộp — tách tên để phòng lệch nhau về sau, không phải vì đang lệch.

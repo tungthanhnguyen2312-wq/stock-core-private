@@ -80,12 +80,14 @@ The sync writes a legacy snapshot only after receiving valid API records. Empty,
 Run the required fixture suite without network access:
 
 ```powershell
+Set-Location <producer-repository>
 python -m unittest tests.test_shareholder_pipeline -v
 ```
 
 Generate the read-only PAN diagnostic:
 
 ```powershell
+Set-Location <producer-repository>
 python tests/diagnostics/shareholder_audit.py --ticker PAN
 ```
 

@@ -1,26 +1,17 @@
-# Security Policy
+# Chính sách bảo mật
 
-## Scope
+## Phạm vi
 
-This repository publishes a **static dashboard** (HTML/CSS/JS served via GitHub Pages) plus
-public documentation. It does not run a server, does not accept user input that reaches a
-backend, and does not store credentials or user data client-side. The data pipeline that
-produces the CSV/JSON files consumed by the dashboard runs locally and is **not** part of
-this repository (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+Repository này chứa mã nguồn Producer, kiểm thử, data contract và tài liệu kỹ thuật. Database runtime, artifact sinh tự động, backup và thông tin xác thực phải nằm ngoài repository.
 
-## Reporting a Vulnerability
+Dashboard runtime được chọn thông qua `STOCK_LOOKUP_RUNTIME_ROOT`. Không dùng đường dẫn tuyệt đối hoặc giả định về cấu trúc workspace sibling khi tái hiện vấn đề.
 
-If you find a security issue in the published site (e.g. an XSS vector in how the dashboard
-renders CSV/JSON/Markdown data, or a dependency pulled from CDN with a known CVE), please
-open a [GitHub issue](https://github.com/tungthanhnguyen2312-wq/market-dashboard/issues) with
-a clear description and reproduction steps. Do not
-include real portfolio/financial data in reports — sample/synthetic data is enough to
-reproduce a rendering bug.
+## Báo cáo vấn đề bảo mật
 
-There is no bug bounty program; this is a personal/portfolio project maintained on a
-best-effort basis.
+Hãy báo cáo riêng cho người duy trì repository khi phát hiện lỗ hổng hoặc nguy cơ rò rỉ dữ liệu. Không đăng công khai thông tin xác thực, database runtime, dữ liệu tài chính cá nhân, artifact vận hành hoặc nội dung nhạy cảm.
 
-## Supported Versions
+Báo cáo nên có mô tả, phạm vi ảnh hưởng, bước tái hiện tối thiểu và dữ liệu mẫu đã được loại bỏ thông tin nhạy cảm.
 
-Only the `main` branch is maintained. There are no tagged releases with independent security
-support at this time.
+## Phiên bản được duy trì
+
+Branch `main` là branch được duy trì. Các branch hoặc snapshot cũ không có cam kết vá lỗi độc lập.

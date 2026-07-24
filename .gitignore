@@ -49,3 +49,7 @@ SOURCE_COPY_MANIFEST.json
 # (last-deployed hashes). Neither is source; both are regenerated locally
 # and contain absolute local paths.
 .deploy/
+
+# Artifact macro dành cho dashboard, được sinh lại từ runtime.
+data/macro_snapshot.json
+data/macro_snapshot.js

@@ -10,16 +10,18 @@ Expected PAN outputs live in `tests/fixtures/expected`. Golden comparisons selec
 
 ## Running the suites
 
-From `VNSTOCK`:
+From Producer:
 
 ```powershell
+Set-Location <producer-repository>
 python -m unittest discover -s tests -p "test_*.py"
 python -m unittest discover -s tests/regression -p "test_*.py"
 ```
 
-From `AI ANALYZE`:
+From Consumer:
 
 ```powershell
+Set-Location <consumer-repository>
 python -m unittest discover -s tests -p "test_*.py"
 python -m unittest discover -s tests/regression -p "test_*.py"
 ```

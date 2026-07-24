@@ -32,6 +32,7 @@ khai riêng ở Phase 3; xem [operating_cash_flow.md](operating_cash_flow.md).
 Diagnostic PAN:
 
 ```powershell
+Set-Location <producer-repository>
 python financial_mapping.py --ticker PAN --output reports/financial_mapping_diagnostics_pan.json
 ```
 

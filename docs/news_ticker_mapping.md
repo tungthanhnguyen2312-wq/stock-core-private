@@ -44,6 +44,7 @@ reported as a missing mapping.
 Generate the diagnostic and mapping table with:
 
 ```powershell
+Set-Location <producer-repository>
 python tests/diagnostics/news_mapping_audit.py --ticker PAN --output reports/news_mapping_diagnostics_pan.json --map-output reports/news_ticker_map_pan.csv
 ```
 
