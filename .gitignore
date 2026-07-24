@@ -53,3 +53,4 @@ SOURCE_COPY_MANIFEST.json
 # Artifact macro dành cho dashboard, được sinh lại từ runtime.
 data/macro_snapshot.json
 data/macro_snapshot.js
+screen_snapshot_live.csv
