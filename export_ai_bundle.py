@@ -45,12 +45,13 @@ import os
 import re
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
 from live_universe import summary as live_universe_summary
+from freshness_history import freshness_envelope
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -1026,7 +1027,7 @@ def build_context_package_flags(tickers: list[str], bundle_entries: dict) -> lis
 # ==========================================================================
 
 def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                       financial_rows, snapshot_info, ta_info) -> dict:
+                       financial_rows, snapshot_info, ta_info, reference_at) -> dict:
     warnings = []
     if snapshot_rows.get(tk) is None:
         warnings.append("khong_co_trong_screen_snapshot_live (mã không live hoặc chưa sync)")
@@ -1041,6 +1042,29 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
     if not ohlcv:
         warnings.append("khong_co_du_lieu_ohlcv")
     rs_reconciliation = reconcile_rs_rating(tk, snapshot_rows, ta_rows, snapshot_info, ta_info)
+    corporate = load_corporate_intelligence(conn, tk)
+    snapshot_freshness = freshness_envelope(domain="daily_market", as_of_date=(snapshot_rows.get(tk) or {}).get("date"), generated_at=snapshot_info.get("mtime_iso"), source=SNAPSHOT_LIVE_PATH, reference_at=reference_at)
+    technical_freshness = freshness_envelope(domain="technical", as_of_date=(ta_rows.get(tk) or {}).get("date"), generated_at=ta_info.get("mtime_iso"), source=TA_SIGNALS_PATH, reference_at=reference_at, dependency=snapshot_freshness)
+    financial_freshness = freshness_envelope(domain="financial_quarterly", as_of_date=fin.get("period_used"), generated_at=fin.get("row", {}).get("generated_at") if fin.get("row") else None, source=FINANCIAL_SNAPSHOT_PATH, reference_at=reference_at)
+    for name, section in corporate.items():
+        if not isinstance(section, dict):
+            continue
+        coverage = section.get("coverage_status") or section.get("status")
+        source_date = section.get("fetched_at") or section.get("snapshot_date") or section.get("as_of_date")
+        source_name = section.get("source") or section.get("provider")
+        if not source_date and isinstance(section.get("sources"), list):
+            provenance_dates = []
+            for source_item in section["sources"]:
+                if not isinstance(source_item, dict):
+                    continue
+                source_name = source_name or source_item.get("source_name")
+                for record in source_item.get("records", []) if isinstance(source_item.get("records"), list) else []:
+                    provenance = record.get("provenance") if isinstance(record, dict) else None
+                    if isinstance(provenance, dict) and provenance.get("retrieved_at"):
+                        provenance_dates.append(provenance["retrieved_at"])
+                source_date = source_date or source_item.get("snapshot_date")
+            source_date = max(provenance_dates) if provenance_dates else source_date
+        section["freshness"] = freshness_envelope(domain="corporate_events" if name == "corporate_events" else "corporate_snapshot", as_of_date=source_date, generated_at=source_date, source=source_name, reference_at=reference_at, completeness=coverage)
     return {
         "snapshot": snapshot_rows.get(tk),
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],
@@ -1058,15 +1082,21 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         },
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
-        "corporate_intelligence": load_corporate_intelligence(conn, tk),
+        "corporate_intelligence": corporate,
+        "freshness": {
+            "daily_prices": snapshot_freshness,
+            "technical_signals": technical_freshness,
+            "ai_report": freshness_envelope(domain="ai_report", as_of_date=score_session.get("session_date"), generated_at=score_session.get("generated_at"), source=ANALYSIS_PATH, reference_at=reference_at, dependency=snapshot_freshness),
+            "financial_statements": financial_freshness,
+        },
         "warnings": warnings,
     }
 
 
 def build_focus_extract(tickers, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                        financial_rows, snapshot_info, ta_info):
+                        financial_rows, snapshot_info, ta_info, reference_at):
     return {tk: build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                                   financial_rows, snapshot_info, ta_info)
+                                   financial_rows, snapshot_info, ta_info, reference_at)
            for tk in tickers}
 
 
@@ -1145,6 +1175,7 @@ def main() -> int:
                     " cho vài mã quan tâm.")
     parser.add_argument("--tickers", help="Danh sách mã cách nhau bởi dấu phẩy"
                         " (mặc định POW,SSI,HPG,EVF,PAN)")
+    parser.add_argument("--evaluation-at", help="Explicit ISO evaluation timestamp for deterministic freshness envelopes")
     parser.add_argument("--allow-stale", action="store_true",
                         help="Vẫn xuất bundle dù nguồn lệch phiên/lệch thứ tự tạo artifact"
                              " (ghi cảnh báo rõ vào manifest)")
@@ -1228,13 +1259,25 @@ def main() -> int:
             return 1
         freshness["status"] = "stale_override" if freshness["blocked"] else "fresh"
 
+        reference_at = datetime.fromisoformat(args.evaluation_at.replace("Z", "+00:00")) if args.evaluation_at else datetime.now(timezone.utc)
+        if reference_at.tzinfo is None:
+            reference_at = reference_at.replace(tzinfo=timezone.utc)
         entries = build_focus_extract(tickers, conn, snapshot_rows, ta_rows, score_rows,
-                                      score_session, financial_rows, snapshot_info, ta_info)
+                                      score_session, financial_rows, snapshot_info, ta_info, reference_at)
     finally:
         conn.close()
 
-    generated_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    generated_at = reference_at.isoformat(timespec="seconds")
     price_basis = build_price_basis_contract()
+    breadth_freshness = freshness_envelope(domain="daily_market", as_of_date=breadth_info.get("data_date"), generated_at=breadth_info.get("mtime_iso") or breadth_info.get("data_date"), source=MARKET_BREADTH_PATH, reference_at=reference_at)
+    macro_freshness = {}
+    if isinstance(macro_records, dict):
+        for series, record in macro_records.items():
+            if not isinstance(record, dict):
+                continue
+            frequency = str(record.get("expected_frequency") or record.get("freq") or "").lower()
+            domain = "macro_weekly" if "week" in frequency or "tu?n" in frequency else "macro_monthly" if "month" in frequency or "th?ng" in frequency else "macro_quarterly" if "quarter" in frequency or "qu?" in frequency else "macro_daily"
+            macro_freshness[series] = freshness_envelope(domain=domain, as_of_date=record.get("date"), generated_at=record.get("as_of") or record.get("date"), source=record.get("source") or series, reference_at=reference_at)
     data_quality_flags = build_data_quality_flags(tickers, entries, order_violations, price_basis)
 
     # ---------------------------------------------------------------- focus_extract.json (nhỏ)
@@ -1307,7 +1350,9 @@ def main() -> int:
         "price_basis_verified": price_basis["price_basis_verified"],
         "price_basis_provenance": price_basis,
         "market_breadth": breadth_records,
+        "market_breadth_freshness": breadth_freshness,
         "macro_snapshot": macro_records,
+        "macro_freshness": macro_freshness,
         "tickers": bundle_entries,
         "data_quality_flags": data_quality_flags,
         "provenance": manifest_files,
