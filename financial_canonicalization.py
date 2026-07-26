@@ -90,7 +90,7 @@ def canonicalize_financial_rows(rows: pd.DataFrame, ticker: str | None = None) -
 
 
 def derive_ttm(records: list[dict[str, Any]], metric: str, scope: str) -> dict[str, Any]:
-    candidates = [r for r in records if r["canonical_metric"] == metric and r["statement_scope"] == scope and r["period_identity"]["period_type"] == "quarter" and r["quality_state"] == "available" and r["derivation_status"] == "reported"]
+    candidates = [r for r in records if r["canonical_metric"] == metric and r["statement_scope"] == scope and isinstance(r.get("period_identity"), dict) and r["period_identity"].get("period_type") == "quarter" and r["quality_state"] == "available" and r["derivation_status"] == "reported"]
     by_period = {(r["period_identity"]["fiscal_year"], r["period_identity"]["fiscal_quarter"]): r for r in candidates}
     for year, quarter in sorted(by_period, reverse=True):
         sequence = [(year, quarter - i) for i in range(4)]
