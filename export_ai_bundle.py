@@ -56,6 +56,8 @@ from financial_canonicalization import canonicalize_financial_rows
 from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
 from corporate_actions_export import build_corporate_actions_section
+from financial_observations import canonical_records, store_path
+from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
@@ -415,12 +417,13 @@ def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
 def load_financial_canonical(tickers: list[str]) -> dict[str, dict]:
     """Additive canonical records; legacy financial_latest remains unchanged."""
     df = pd.read_parquet(runtime_path(FINANCIAL_SNAPSHOT_PATH))
+    observation_records = canonical_records(store_path(runtime_root()), {ticker: get_default_registry().entity_type_for(ticker) for ticker in tickers})
     result = {}
     for ticker in tickers:
         canonical = canonicalize_financial_rows(df, ticker)
         evidence = load_cited_financial_records(runtime_root(), ticker)
         canonical["records"] = sorted(
-            canonical["records"] + evidence["records"],
+            canonical["records"] + evidence["records"] + observation_records.get(ticker, []),
             key=lambda record: (record["canonical_metric"], (record.get("period_identity") or {}).get("period", ""),
                                 record["statement_scope"], record["source"]),
         )
