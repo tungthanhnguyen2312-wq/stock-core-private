@@ -61,3 +61,14 @@ caller like `fundamental_quality.py`'s `_latest_common_period` or
 `export_ai_bundle.py`'s `_financial_input` decides which period wins when two
 "available" records compete for the same canonical name (e.g. this bridge's
 FY2024 citation vs. `official_evidence.py`'s FY2025 narrative bridge).
+
+`load_verified_share_basis` / `latest_share_basis` are a separate, standalone
+reader for `data/official-evidence/share_basis_citations.jsonl` -- share
+counts are never part of a VCI raw observation, so there is no
+`observation_id` to cross-check the way `load_verified_citations` does.
+Verification is by evidence hash, deterministic citation ID, and membership
+in an explicit identity-type allowlist that keeps period-end,
+weighted-average (basic/diluted), and valuation-date share counts strictly
+separate; `latest_share_basis` never falls back to a different identity_type
+when the one requested has no citation. See
+`docs/share_basis_qualification.md` for what is and is not qualified today.

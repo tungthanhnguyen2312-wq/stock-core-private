@@ -57,7 +57,7 @@ from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
 from corporate_actions_export import build_corporate_actions_section
 from financial_observations import canonical_records, store_path
-from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities
+from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
@@ -1092,6 +1092,26 @@ def _financial_input(canonical: dict | None) -> dict[str, dict]:
     return by_metric
 
 
+def _net_net_share_count(tk: str) -> dict | None:
+    """A period-end share count for Net-Net, cited to the audited statement notes.
+
+    Returns None (Net-Net's share_count input is simply omitted) when no
+    verified period-end citation exists for this ticker -- never a
+    weighted-average or live/valuation-date count substituted in its place.
+    """
+    verified = load_verified_share_basis(runtime_root())
+    entry = latest_share_basis(verified["by_identity"], tk, "period_end_shares_outstanding")
+    if entry is None:
+        return None
+    return {
+        "value": entry["value"],
+        "semantics": "period_end",
+        "period_identity": {"period": entry["reporting_period"], "period_type": entry["reporting_frequency"]},
+        "source": "share_basis_evidence",
+        "evidence": {"evidence_id": entry["evidence_id"], "citation_id": entry["citation_id"], "citation": entry["citation"]},
+    }
+
+
 def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
                        financial_rows, financial_canonical, snapshot_info, ta_info, reference_at) -> dict:
     warnings = []
@@ -1157,13 +1177,20 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         # Existing snapshot P/E/P/B and metadata fields still lack qualified denominator,
         # share-basis, and enterprise-value semantics -- do not pass them as inputs. The
         # observation-store canonical records below are additive and only ever carry
-        # quality_state="available" where an exact evidence citation verified them; FCFF
+        # quality_state="available" where an exact evidence citation verified them. FCFF
         # still requires externally-sourced WACC/growth/forecast assumptions this exporter
-        # does not fabricate, and Net-Net still requires a qualified share_count.
-        "intrinsic_valuation": evaluate_intrinsic_valuation({"financial": _financial_input(financial_canonical.get(tk)), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
+        # does not fabricate. Net-Net's share_count is a cited period-end count (or None,
+        # never a weighted-average/live count substituted in its place).
+        "intrinsic_valuation": evaluate_intrinsic_valuation({"financial": _financial_input(financial_canonical.get(tk)), "share_count": _net_net_share_count(tk), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
         # No source-owned scenario evidence mapping is qualified yet; do not infer one here.
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
         "risk_analysis": evaluate_market_risk({}, reference_at=reference_at.isoformat()),
+        # relative_valuation deliberately receives no share_count/market_cap: its single
+        # share_count slot feeds both P/E (needs weighted-average) and P/B (needs
+        # period-end) identically, so populating it for one would silently alias the
+        # other -- fixing that shared-slot design is out of scope here. Nor is there a
+        # qualified valuation-date share count, an FY2024-aligned price, or a qualified
+        # market_cap to reconstruct one from (see docs/share_basis_qualification.md).
         "relative_valuation": evaluate_relative_valuation({
             "entity_type": get_default_registry().entity_type_for(tk),
             "current_price": {"value": (snapshot_rows.get(tk) or {}).get("close"),

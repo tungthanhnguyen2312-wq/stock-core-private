@@ -31,13 +31,24 @@ def evaluate_intrinsic_valuation(inputs:Mapping[str,Any]|None,reference_at:str|N
   ev=assumptions["forecast_fcff"]/(assumptions["wacc"]-assumptions["terminal_growth"]) if assumptions["wacc"]>assumptions["terminal_growth"] else None
   methods["fcff_dcf"]=out("fcff_dcf","available" if ev is not None else "incomparable",applicability="applicable",valuation_date=reference_at,historical_input_periods=periods,statement_scope=scopes.pop(),forecast_horizon=assumptions.get("forecast_horizon"),assumptions=[{"name":k,"value":assumptions[k],"source":assumptions[k+"_source"]} for k in ("wacc","terminal_growth","forecast_fcff")],used_inputs=list(vals),sensitivity_dimensions=["wacc","terminal_growth"],enterprise_value=ev,warnings=[] if ev is not None else ["terminal_growth_must_be_below_wacc"])
  else: methods["fcff_dcf"]=out("fcff_dcf","unavailable",missing_inputs=missing+([] if assumption_ok else ["sourced_wacc_terminal_growth_and_forecast"]),warnings=["FCFF is not derived from unknown, cumulative, or incompatible cash flow."])
- # Net-Net needs qualified balance-sheet components and share basis.
+ # Net-Net needs qualified balance-sheet components and a share basis consistent with
+ # them. "period_end" is the semantically correct identity here (equity-base
+ # consistency with a balance-sheet snapshot); "basic"/"diluted" (weighted-average,
+ # EPS-style) remain accepted for backward compatibility but are not what this
+ # method's own documentation asks for. Never widened to accept an unrelated identity
+ # such as a live/valuation-date share count, and never substituted from one to another.
  net={}; miss=[]
  for m in ("current_assets","cash_and_equivalents","receivables","inventory","total_liabilities"):
   net[m],bad=q(fin.get(m),m)
   if bad:miss.append(bad+":"+m)
- share=d.get("share_count") if isinstance(d.get("share_count"),Mapping) else {}; sv=n(share.get("value")); shareok=sv is not None and sv>0 and share.get("semantics") in {"basic","diluted"}
+ share=d.get("share_count") if isinstance(d.get("share_count"),Mapping) else {}; sv=n(share.get("value"))
  ps=[fin.get(m,{}).get("period_identity",{}).get("period") for m in net if isinstance(fin.get(m),Mapping)]; ss={fin.get(m,{}).get("statement_scope") for m in net if isinstance(fin.get(m),Mapping)}
+ # If the share count declares its own period, it must match the balance-sheet
+ # components' single common period; if it declares none, we don't retroactively
+ # require one (legacy callers with no period_identity are unaffected).
+ share_period=share.get("period_identity",{}).get("period") if isinstance(share.get("period_identity"),Mapping) else None
+ share_period_ok=share_period is None or (len(ps)>0 and len(set(ps))==1 and share_period==ps[0])
+ shareok=sv is not None and sv>0 and share.get("semantics") in {"basic","diluted","period_end"} and share_period_ok
  if not miss and len(set(ps))==1 and len(ss)==1 and shareok:
   equity=net["cash_and_equivalents"]+net["receivables"]+net["inventory"]-net["total_liabilities"]
   methods["net_net"]=out("net_net","available",applicability="applicable",valuation_date=reference_at,historical_input_periods=ps,statement_scope=ss.pop(),used_inputs=list(net)+["share_count"],equity_value=equity,per_share_value=equity/sv,is_actionable=bool(d.get("current_price_actionable") is True),warnings=[] if d.get("current_price_actionable") is True else ["current_price_not_actionable"])

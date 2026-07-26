@@ -11,12 +11,27 @@ from financial_observations import read_observations, store_path
 VERSION = "1.0.0"
 MANIFEST_RELATIVE = Path("data") / "official-evidence" / "manifest.json"
 CITATIONS_RELATIVE = Path("data") / "official-evidence" / "qualification_citations.jsonl"
+SHARE_BASIS_RELATIVE = Path("data") / "official-evidence" / "share_basis_citations.jsonl"
 MANIFEST_SCHEMA_VERSION = "1.0.0"
 _SUPPORTED_SCOPES = {"consolidated"}
 _RESOLVED_WARNINGS = {"statement_scope_unknown", "currency_or_scale_unknown"}
 _REQUIRED_CITATION_FIELDS = ("citation_id", "observation_id", "evidence_id", "ticker", "reporting_frequency",
     "reporting_period", "raw_statement_type", "raw_item_id", "raw_value", "official_value",
     "statement_scope", "currency", "unit_scale")
+
+# Three strictly distinct share-count identities -- never aliased or substituted for
+# one another. "valuation_date_shares_outstanding" is listed as a supported identity
+# type (the schema is ready for it) but no citation of that type exists yet: VCI's
+# Company.overview() issue_share field carries no basis/as-of-date/currency metadata,
+# so it is not eligible for citation the way a PDF-note figure is.
+_SUPPORTED_SHARE_IDENTITIES = {
+    "period_end_shares_outstanding",
+    "weighted_average_basic_shares_outstanding",
+    "weighted_average_diluted_shares_outstanding",
+    "valuation_date_shares_outstanding",
+}
+_REQUIRED_SHARE_BASIS_FIELDS = ("citation_id", "ticker", "identity_type", "reporting_frequency",
+    "reporting_period", "value", "evidence_id")
 
 # Metric-level source-presentation sign rules -- never ticker-specific. Each entry
 # must be independently cited and tested before being added. Absent an entry here,
@@ -186,6 +201,105 @@ def load_verified_citations(runtime_root: Path) -> dict[str, Any]:
 
     return {"status": "available" if by_observation else "unavailable", "version": VERSION,
             "by_observation_id": by_observation, "rejected": rejected}
+
+
+def _load_share_basis_rows(runtime_root: Path) -> list[Any] | None:
+    """Return parsed JSONL rows, or None if the file is missing or malformed (fail closed)."""
+    path = runtime_root / SHARE_BASIS_RELATIVE
+    if not path.exists():
+        return None
+    rows: list[Any] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return rows
+
+
+def load_verified_share_basis(runtime_root: Path) -> dict[str, Any]:
+    """Read and verify data/official-evidence/share_basis_citations.jsonl; fails closed per record.
+
+    Each entry is a standalone, PDF-cited fact -- share counts are never part
+    of a VCI raw observation, so unlike load_verified_citations there is no
+    observation_id to cross-check against. The three share-count identities
+    (period-end, valuation-date, weighted-average basic/diluted) are kept
+    strictly separate by identity_type; nothing here ever infers one from
+    another or from a price.
+
+    Returns {"status": ..., "version": VERSION,
+    "by_identity": {(ticker, identity_type, reporting_period): verified_entry},
+    "rejected": [...]}. A missing manifest or citations file yields an empty result.
+    """
+    evidence_by_id = _load_manifest(runtime_root)
+    rows = _load_share_basis_rows(runtime_root)
+    rejected: list[dict[str, Any]] = []
+    if evidence_by_id is None or rows is None:
+        return {"status": "unavailable", "version": VERSION, "by_identity": {}, "rejected": rejected}
+
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for raw in rows:
+        if not isinstance(raw, dict) or not all(field in raw for field in _REQUIRED_SHARE_BASIS_FIELDS):
+            rejected.append({"citation": raw, "reason": "malformed_citation"})
+            continue
+        key = (raw["ticker"], raw["identity_type"], raw["reporting_period"])
+        grouped.setdefault(key, []).append(raw)
+
+    by_identity: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for key, citations in grouped.items():
+        unique_by_content = {_hash(c): c for c in citations}
+        if len(unique_by_content) > 1:
+            rejected.append({"key": key, "reason": "conflicting_citations"})
+            continue
+        citation = next(iter(unique_by_content.values()))
+
+        expected_id = _hash({"ticker": citation["ticker"], "identity_type": citation["identity_type"],
+                              "reporting_period": citation["reporting_period"], "evidence_id": citation["evidence_id"],
+                              "value": citation["value"]})
+        if citation["citation_id"] != expected_id:
+            rejected.append({"key": key, "reason": "citation_id_not_deterministic"})
+            continue
+
+        if citation["identity_type"] not in _SUPPORTED_SHARE_IDENTITIES:
+            rejected.append({"key": key, "reason": "unsupported_identity_type"})
+            continue
+
+        evidence = evidence_by_id.get(citation["evidence_id"])
+        if evidence is None:
+            rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
+            continue
+
+        by_identity[key] = {
+            "ticker": citation["ticker"],
+            "identity_type": citation["identity_type"],
+            "reporting_frequency": citation["reporting_frequency"],
+            "reporting_period": citation["reporting_period"],
+            "value": citation["value"],
+            "evidence_id": citation["evidence_id"],
+            "citation_id": citation["citation_id"],
+            "citation": citation.get("citation"),
+            "qualification_version": VERSION,
+            "verified_at": citation.get("verified_at"),
+        }
+
+    return {"status": "available" if by_identity else "unavailable", "version": VERSION,
+            "by_identity": by_identity, "rejected": rejected}
+
+
+def latest_share_basis(by_identity: Mapping[tuple[str, str, str], dict[str, Any]], ticker: str,
+                        identity_type: str, frequency: str = "annual") -> dict[str, Any] | None:
+    """The most recent verified entry for (ticker, identity_type, frequency), or None.
+
+    Never falls back to a different identity_type -- an absent period-end
+    entry is not satisfied by a weighted-average or valuation-date one.
+    """
+    candidates = [entry for (entry_ticker, entry_identity, _), entry in by_identity.items()
+                  if entry_ticker == ticker and entry_identity == identity_type
+                  and entry["reporting_frequency"] == frequency]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda entry: entry["reporting_period"])
 
 
 def _clear_resolved_reason(reason: Any) -> str | None:
