@@ -52,6 +52,7 @@ import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
 from live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope
+from financial_canonicalization import canonicalize_financial_rows
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -401,6 +402,12 @@ def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
                 " phải nhãn kỳ thô lớn nhất trong file — xem latest_raw_fiscal_label nếu cần nhãn gốc.",
     }
     return by_ticker, info
+
+
+def load_financial_canonical(tickers: list[str]) -> dict[str, dict]:
+    """Additive canonical records; legacy financial_latest remains unchanged."""
+    df = pd.read_parquet(runtime_path(FINANCIAL_SNAPSHOT_PATH))
+    return {ticker: canonicalize_financial_rows(df, ticker) for ticker in tickers}
 
 
 def load_ohlcv_recent(conn: sqlite3.Connection, ticker: str, n: int = OHLCV_RECENT_N) -> list[dict]:
@@ -1027,7 +1034,7 @@ def build_context_package_flags(tickers: list[str], bundle_entries: dict) -> lis
 # ==========================================================================
 
 def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                       financial_rows, snapshot_info, ta_info, reference_at) -> dict:
+                       financial_rows, financial_canonical, snapshot_info, ta_info, reference_at) -> dict:
     warnings = []
     if snapshot_rows.get(tk) is None:
         warnings.append("khong_co_trong_screen_snapshot_live (mã không live hoặc chưa sync)")
@@ -1085,6 +1092,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "financial_latest_quality": {
             "excluded_unverified_periods": fin.get("excluded_unverified_periods", []),
         },
+        "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
         "corporate_intelligence": corporate,
@@ -1095,9 +1103,9 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
 
 
 def build_focus_extract(tickers, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                        financial_rows, snapshot_info, ta_info, reference_at):
+                        financial_rows, financial_canonical, snapshot_info, ta_info, reference_at):
     return {tk: build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                                   financial_rows, snapshot_info, ta_info, reference_at)
+                                   financial_rows, financial_canonical, snapshot_info, ta_info, reference_at)
            for tk in tickers}
 
 
@@ -1212,6 +1220,7 @@ def main() -> int:
         ta_rows, ta_info = load_ta_signal_rows(tickers)
         score_rows, score_session, analysis_info = load_analysis_scores(tickers)
         financial_rows, financial_info = load_financial_latest(tickers)
+        financial_canonical = load_financial_canonical(tickers)
         focus_analysis_info = load_focus_analysis_info()
         context_info = load_context_package_info(tickers)
         breadth_records, breadth_info = load_market_breadth()
@@ -1264,7 +1273,7 @@ def main() -> int:
         if reference_at.tzinfo is None:
             reference_at = reference_at.replace(tzinfo=timezone.utc)
         entries = build_focus_extract(tickers, conn, snapshot_rows, ta_rows, score_rows,
-                                      score_session, financial_rows, snapshot_info, ta_info, reference_at)
+                                      score_session, financial_rows, financial_canonical, snapshot_info, ta_info, reference_at)
     finally:
         conn.close()
 
