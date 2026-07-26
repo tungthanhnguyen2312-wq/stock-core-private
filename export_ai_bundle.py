@@ -53,6 +53,7 @@ from shareholder_pipeline import DONE, calculate_major_shareholder_delta
 from live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope
 from financial_canonicalization import canonicalize_financial_rows
+from official_evidence import load_cited_financial_records
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
@@ -412,7 +413,19 @@ def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
 def load_financial_canonical(tickers: list[str]) -> dict[str, dict]:
     """Additive canonical records; legacy financial_latest remains unchanged."""
     df = pd.read_parquet(runtime_path(FINANCIAL_SNAPSHOT_PATH))
-    return {ticker: canonicalize_financial_rows(df, ticker) for ticker in tickers}
+    result = {}
+    for ticker in tickers:
+        canonical = canonicalize_financial_rows(df, ticker)
+        evidence = load_cited_financial_records(runtime_root(), ticker)
+        canonical["records"] = sorted(
+            canonical["records"] + evidence["records"],
+            key=lambda record: (record["canonical_metric"], (record.get("period_identity") or {}).get("period", ""),
+                                record["statement_scope"], record["source"]),
+        )
+        canonical["official_evidence"] = {"status": evidence["status"], "reason": evidence["reason"],
+                                            "record_count": len(evidence["records"])}
+        result[ticker] = canonical
+    return result
 
 
 def load_ohlcv_recent(conn: sqlite3.Connection, ticker: str, n: int = OHLCV_RECENT_N) -> list[dict]:
