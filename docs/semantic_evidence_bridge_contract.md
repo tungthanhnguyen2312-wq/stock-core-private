@@ -1,0 +1,34 @@
+# Semantic Evidence Bridge Contract
+
+`semantic_evidence_bridge.py` is the single reader that links
+`data/official-evidence/manifest.json` and `qualification_citations.jsonl`
+(both runtime data, outside source Git) to canonical records produced by
+`financial_observations.canonical_records`. It contains no ticker-specific
+logic; scope is entirely a property of the citation data, which today holds
+exactly the 9 HPG/annual/2024 citations from the bounded evidence bridge.
+
+`load_verified_citations` fails closed per record: a missing manifest or
+citations file yields `status: "unavailable"` with an empty result (legacy,
+pre-citation behavior). A present file still fails closed, per citation, on
+evidence hash mismatch, non-deterministic citation ID, unsupported
+`statement_scope` (only `consolidated` is recognized), an `observation_id`
+absent from the current `observations.jsonl`, an identity/value mismatch
+against that observation, or two differing citations for the same
+`observation_id`. `observations.jsonl` is only ever read, never written.
+
+Value verification is signed, never by absolute value. Absent an explicit,
+cited, versioned entry in `_SIGN_RULES`, a citation must match the raw value
+exactly. The only current entry is `("income_statement", "interest_expenses")`
+v1: the consolidated statement (form B02-DN/HN) prints the interest-expense
+breakdown unsigned, while VCI stores it negative.
+
+`enrich_canonical_records` returns a new by-ticker structure; inputs and
+`observations.jsonl` are never mutated. A direct record is upgraded
+(`statement_scope`/`currency`/`unit_scale`/`quality_state`, plus an additive
+`evidence` block) only when its single backing observation has a verified
+citation. A derived record (e.g. `total_interest_bearing_debt`) is upgraded
+only when every required component (per `_DERIVED_COMPONENTS`, mirroring
+`cash_flow_debt_mapping._derive_total_debt`) is itself upgraded with mutually
+compatible scope/currency/scale; its `observation_ids` and `evidence` then
+list every component. Records with no verified citation pass through
+unchanged.
