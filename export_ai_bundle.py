@@ -1043,8 +1043,8 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         warnings.append("khong_co_du_lieu_ohlcv")
     rs_reconciliation = reconcile_rs_rating(tk, snapshot_rows, ta_rows, snapshot_info, ta_info)
     corporate = load_corporate_intelligence(conn, tk)
-    snapshot_freshness = freshness_envelope(domain="daily_market", as_of_date=(snapshot_rows.get(tk) or {}).get("date"), generated_at=snapshot_info.get("mtime_iso"), source=SNAPSHOT_LIVE_PATH, reference_at=reference_at)
-    technical_freshness = freshness_envelope(domain="technical", as_of_date=(ta_rows.get(tk) or {}).get("date"), generated_at=ta_info.get("mtime_iso"), source=TA_SIGNALS_PATH, reference_at=reference_at, dependency=snapshot_freshness)
+    snapshot_freshness = freshness_envelope(domain="daily_market", as_of_date=(snapshot_rows.get(tk) or {}).get("date"), generated_at=(snapshot_rows.get(tk) or {}).get("date"), source=SNAPSHOT_LIVE_PATH, reference_at=reference_at)
+    technical_freshness = freshness_envelope(domain="technical", as_of_date=(ta_rows.get(tk) or {}).get("date"), generated_at=(ta_rows.get(tk) or {}).get("date"), source=TA_SIGNALS_PATH, reference_at=reference_at, dependency=snapshot_freshness)
     financial_freshness = freshness_envelope(domain="financial_quarterly", as_of_date=fin.get("period_used"), generated_at=fin.get("row", {}).get("generated_at") if fin.get("row") else None, source=FINANCIAL_SNAPSHOT_PATH, reference_at=reference_at)
     for name, section in corporate.items():
         if not isinstance(section, dict):
@@ -1269,7 +1269,7 @@ def main() -> int:
 
     generated_at = reference_at.isoformat(timespec="seconds")
     price_basis = build_price_basis_contract()
-    breadth_freshness = freshness_envelope(domain="daily_market", as_of_date=breadth_info.get("data_date"), generated_at=breadth_info.get("mtime_iso") or breadth_info.get("data_date"), source=MARKET_BREADTH_PATH, reference_at=reference_at)
+    breadth_freshness = freshness_envelope(domain="daily_market", as_of_date=breadth_info.get("data_date"), generated_at=breadth_info.get("data_date"), source=MARKET_BREADTH_PATH, reference_at=reference_at)
     macro_freshness = {}
     if isinstance(macro_records, dict):
         for series, record in macro_records.items():
