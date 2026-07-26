@@ -85,6 +85,8 @@ def normalize_event(ticker: str, provider: str, payload: Mapping[str, Any]) -> d
         "issue_date": payload.get("issue_date"),
         "start_date": payload.get("start_date"),
         "end_date": payload.get("end_date"),
+        "action_type_vi": _text(payload.get("action_type_vi")),
+        "action_type_en": _text(payload.get("action_type_en")),
         "payout_date": payload.get("payout_date"),
         "listing_date": payload.get("listing_date"),
         "exercise_ratio": payload.get("exercise_ratio"),
@@ -115,6 +117,8 @@ def init_db(conn: sqlite3.Connection) -> None:
         issue_date TEXT,
         start_date TEXT,
         end_date TEXT,
+        action_type_vi TEXT,
+        action_type_en TEXT,
         payout_date TEXT,
         listing_date TEXT,
         exercise_ratio REAL,
@@ -141,6 +145,10 @@ def init_db(conn: sqlite3.Connection) -> None:
         UNIQUE(provider, provider_event_id, raw_payload_hash))""")
     conn.execute("""CREATE INDEX IF NOT EXISTS idx_corporate_event_observations_record_time
         ON corporate_event_observations(record_id, retrieved_at)""")
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(corporate_event_records)")}
+    for column in ("action_type_vi", "action_type_en"):
+        if column not in existing:
+            conn.execute(f"ALTER TABLE corporate_event_records ADD COLUMN {column} TEXT")
     conn.execute("""CREATE TABLE IF NOT EXISTS corporate_event_ingestion_runs(
         run_id TEXT PRIMARY KEY,
         schema_version INTEGER NOT NULL,
@@ -225,14 +233,14 @@ def ingest_events(
                     """INSERT INTO corporate_event_records
                     (record_id,schema_version,provider,provider_event_id,ticker,event_code,category,event_name_vi,event_name_en,
                      event_title_vi,event_title_en,display_date1,display_date2,public_date,record_date,exright_date,issue_date,
-                     start_date,end_date,payout_date,listing_date,exercise_ratio,value_per_share,first_observed_at,last_observed_at,
+                     start_date,end_date,action_type_vi,action_type_en,payout_date,listing_date,exercise_ratio,value_per_share,first_observed_at,last_observed_at,
                      revision_status,coverage_status)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (record_id, CORPORATE_EVENTS_SCHEMA_VERSION, source, event["provider_event_id"], symbol,
                      event["event_code"], event["category"], event["event_name_vi"], event["event_name_en"],
                      event["event_title_vi"], event["event_title_en"], event["display_date1"], event["display_date2"],
                      event["public_date"], event["record_date"], event["exright_date"], event["issue_date"], event["start_date"],
-                     event["end_date"], event["payout_date"], event["listing_date"], event["exercise_ratio"], event["value_per_share"],
+                     event["end_date"], event["action_type_vi"], event["action_type_en"], event["payout_date"], event["listing_date"], event["exercise_ratio"], event["value_per_share"],
                      retrieved_at, retrieved_at, revision_status, COVERAGE_STATUS),
                 )
             observation_id = hashlib.sha256(_canonical_json([source, event["provider_event_id"], payload_hash]).encode("utf-8")).hexdigest()

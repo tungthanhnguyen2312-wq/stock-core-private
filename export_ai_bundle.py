@@ -55,6 +55,7 @@ from freshness_history import evaluate_analysis_readiness, freshness_envelope
 from financial_canonicalization import canonicalize_financial_rows
 from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
+from corporate_actions_export import build_corporate_actions_section
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
@@ -616,10 +617,12 @@ def _load_corporate_events_intelligence(conn: sqlite3.Connection, ticker: str) -
     tables = ("corporate_event_records", "corporate_event_observations", "corporate_event_ingestion_runs")
     if not all(_table_exists(conn, table) for table in tables):
         return {"status": "missing", "reason": "forward_observation_tables_unavailable", "sources": []}
+    record_columns = {row[1] for row in conn.execute("PRAGMA table_info(corporate_event_records)")}
+    action_fields = "action_type_vi,action_type_en," if {"action_type_vi", "action_type_en"} <= record_columns else "NULL AS action_type_vi,NULL AS action_type_en,"
     rows = conn.execute(
         "SELECT record_id,provider,provider_event_id,event_code,category,event_name_vi,event_name_en,event_title_vi,event_title_en,"
-        "display_date1,display_date2,public_date,record_date,exright_date,issue_date,start_date,end_date,payout_date,listing_date,"
-        "exercise_ratio,value_per_share,last_observed_at,revision_status,coverage_status "
+        "display_date1,display_date2,public_date,record_date,exright_date,issue_date,start_date,end_date," + action_fields +
+        "payout_date,listing_date,exercise_ratio,value_per_share,last_observed_at,revision_status,coverage_status "
         "FROM corporate_event_records WHERE ticker=? ORDER BY provider,provider_event_id", (ticker,),
     ).fetchall()
     if not rows:
@@ -631,17 +634,17 @@ def _load_corporate_events_intelligence(conn: sqlite3.Connection, ticker: str) -
             "FROM corporate_event_observations WHERE record_id=? ORDER BY retrieved_at DESC,observation_id DESC LIMIT 1", (row[0],),
         ).fetchone()
         parameters = _json_object(observation[4]) if observation else None
-        if observation is None or parameters is None or row[1] != "VCI" or not row[2] or row[23] != "partial_unqualified_50_row_cap":
+        if observation is None or parameters is None or row[1] != "VCI" or not row[2] or row[25] != "partial_unqualified_50_row_cap":
             return {"status": "malformed", "reason": "forward_event_record_invalid", "sources": []}
         fields = dict(zip([
             "event_code", "category", "event_name_vi", "event_name_en", "event_title_vi", "event_title_en",
             "display_date1", "display_date2", "public_date", "record_date", "exright_date", "issue_date",
-            "start_date", "end_date", "payout_date", "listing_date", "exercise_ratio", "value_per_share",
-        ], row[3:21]))
+            "start_date", "end_date", "action_type_vi", "action_type_en", "payout_date", "listing_date", "exercise_ratio", "value_per_share",
+        ], row[3:23]))
         records.append({"provider_event_id": row[2], "fields": fields, "provenance": {
             "provider": row[1], "raw_payload_hash": observation[0], "retrieved_at": observation[1],
             "vnstock_version": observation[2], "endpoint": observation[3], "parameters": parameters,
-            "coverage_status": observation[5], "revision_status": row[22],
+            "coverage_status": observation[5], "revision_status": row[24],
         }})
     coverage = "partial_unqualified_50_row_cap"
     return {"status": "partial", "reason": "forward_observations_not_complete_history", "coverage_status": coverage,
@@ -660,13 +663,15 @@ def load_corporate_intelligence(conn: sqlite3.Connection, ticker: str) -> dict:
         conn, ticker, table="ownership_structure_snapshots", record_table="ownership_structure_records",
         field_names=["owner_type", "ownership_percentage", "shares_owned", "update_date"],
     )
+    events = _load_corporate_events_intelligence(conn, ticker)
     return {
         "status": _corporate_overall_status(profile, subsidiaries, ownership),
         "company_profile": profile,
         "company_subsidiaries": subsidiaries,
         "ownership_structure": ownership,
         "major_shareholders": _load_major_shareholders_intelligence(conn, ticker),
-        "corporate_events": _load_corporate_events_intelligence(conn, ticker),
+        "corporate_events": events,
+        "corporate_actions": build_corporate_actions_section(events),
     }
 
 
