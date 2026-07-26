@@ -80,7 +80,11 @@ def canonicalize_financial_rows(rows: pd.DataFrame, ticker: str | None = None) -
                 previous["quality_state"] = "incomparable"; previous["reason"] = "duplicate_identity_conflicting_value"
                 record["quality_state"] = "incomparable"; record["reason"] = "duplicate_identity_conflicting_value"
             seen[key] = record; records.append(record)
-    records.sort(key=lambda r: (r["canonical_metric"], r["period_identity"]["period"], r["statement_scope"], r["source_field"]))
+    # A TTM outcome is explicit for every metric/scope combination; unavailable is not synthesized.
+    base = list(records)
+    for metric, scope in sorted({(r["canonical_metric"], r["statement_scope"]) for r in base}):
+        records.append(derive_ttm(base, metric, scope))
+    records.sort(key=lambda r: (r["canonical_metric"], (r["period_identity"] or {}).get("period", ""), r["statement_scope"], str(r["source_field"])))
     return {"status": "available" if records else "missing", "ticker": ticker, "records": records,
             "invalid_periods": sorted(invalid_periods, key=lambda x: (str(x["period"]), x["reason"]))}
 
