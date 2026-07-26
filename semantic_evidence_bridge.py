@@ -32,10 +32,12 @@ _SIGN_RULES: dict[tuple[str, str], dict[str, Any]] = {
     },
 }
 
-# Generic derived-metric composition, mirroring cash_flow_debt_mapping._derive_total_debt's
-# own component set. Not ticker-specific: applies to any ticker's canonical records.
+# Generic derived-metric composition, mirroring cash_flow_debt_mapping.py's own
+# _derive_total_debt/_derive_shareholders_equity component sets. Not ticker-specific:
+# applies to any ticker's canonical records.
 _DERIVED_COMPONENTS: dict[str, tuple[str, ...]] = {
     "total_interest_bearing_debt": ("short_term_borrowings", "long_term_borrowings"),
+    "shareholders_equity": ("total_equity", "minority_interest_equity"),
 }
 
 
@@ -266,4 +268,55 @@ def enrich_canonical_records(by_ticker: Mapping[str, list[dict[str, Any]]], runt
     for ticker, records in by_ticker.items():
         direct_pass = [_enrich_direct(dict(record), by_observation_id) for record in records]
         result[ticker] = [_enrich_derived(record, direct_pass) for record in direct_pass]
+    return result
+
+
+# Centralized downstream metric-identity reconciliation. Each entry is a reasoned,
+# documented equivalence between the canonical name this pipeline produces and the
+# name a downstream contract asks for -- never a blind alias. See
+# docs/semantic_evidence_bridge_contract.md for the full reasoning.
+_METRIC_IDENTITY_MAP: dict[str, dict[str, str]] = {
+    "total_interest_bearing_debt": {
+        "downstream_name": "total_debt",
+        "version": "v1",
+        "reason": "fundamental_quality.financial_strength, intrinsic_valuation.fcff_dcf, and "
+                  "relative_valuation.ev_ebitda/ev_sales all use total_debt as an enterprise-value "
+                  "/ net-debt input (market_cap + debt - cash); by convention that is "
+                  "interest-bearing borrowings, not total liabilities.",
+    },
+    "net_income_attributable_to_parent": {
+        "downstream_name": "net_income",
+        "version": "v1",
+        "reason": "fundamental_quality's DuPont ROE, Piotroski, and net-margin ratios, and "
+                  "relative_valuation's P/E denominator, pair net_income against parent-only "
+                  "shareholders_equity/EPS; by convention that is income attributable to parent, "
+                  "not consolidated income including non-controlling interest.",
+    },
+}
+
+
+def reconcile_metric_identities(by_ticker: Mapping[str, list[dict[str, Any]]]) -> dict[str, list[dict[str, Any]]]:
+    """Expose already evidence-qualified records under the name a downstream contract expects.
+
+    Never activates for a record without a verified "evidence" block from
+    enrich_canonical_records: an unresolved identity leaves the downstream
+    input unavailable rather than being aliased into existence. The original,
+    precisely-named record is always kept alongside the reconciled copy.
+    """
+    result: dict[str, list[dict[str, Any]]] = {}
+    for ticker, records in by_ticker.items():
+        extra: list[dict[str, Any]] = []
+        for record in records:
+            mapping = _METRIC_IDENTITY_MAP.get(record.get("canonical_metric"))
+            if mapping is None or "evidence" not in record or record.get("quality_state") != "available":
+                continue
+            reconciled = dict(record)
+            reconciled["canonical_metric"] = mapping["downstream_name"]
+            reconciled["identity_reconciliation"] = {
+                "reconciled_from": record["canonical_metric"],
+                "version": mapping["version"],
+                "reason": mapping["reason"],
+            }
+            extra.append(reconciled)
+        result[ticker] = records + extra
     return result

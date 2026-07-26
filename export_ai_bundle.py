@@ -57,7 +57,7 @@ from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
 from corporate_actions_export import build_corporate_actions_section
 from financial_observations import canonical_records, store_path
-from semantic_evidence_bridge import enrich_canonical_records
+from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
@@ -420,6 +420,7 @@ def load_financial_canonical(tickers: list[str]) -> dict[str, dict]:
     df = pd.read_parquet(runtime_path(FINANCIAL_SNAPSHOT_PATH))
     observation_records = canonical_records(store_path(runtime_root()), {ticker: get_default_registry().entity_type_for(ticker) for ticker in tickers})
     observation_records = enrich_canonical_records(observation_records, runtime_root())
+    observation_records = reconcile_metric_identities(observation_records)
     result = {}
     for ticker in tickers:
         canonical = canonicalize_financial_rows(df, ticker)
@@ -1062,6 +1063,35 @@ def build_context_package_flags(tickers: list[str], bundle_entries: dict) -> lis
 # LẮP GHÉP ENTRY 1 MÃ (dùng chung cho focus_extract.json VÀ analysis_bundle.json)
 # ==========================================================================
 
+# Higher wins when two "available" records compete for the same canonical_metric
+# name (e.g. the exact, per-item-cited observation-store pipeline vs. the
+# narrative annual-report bridge in official_evidence.py, which may cover a
+# different period). Explicit and deterministic -- never an accident of
+# whatever order canonical["records"] happens to be sorted in.
+_SOURCE_RIGOR = {"financial_observation_store": 2, "official_evidence": 1}
+
+
+def _financial_input(canonical: dict | None) -> dict[str, dict]:
+    """Reshape additive canonical records into the {metric: record} form that
+    relative_valuation/intrinsic_valuation expect. Excludes placeholder records
+    with no value or no real period identity -- they can never satisfy a
+    downstream gate and their period_identity=None shape crashes
+    intrinsic_valuation's unguarded .get("period_identity", {}) chain, which was
+    never exercised while every call site passed financial={}."""
+    records = (canonical or {}).get("records", []) if isinstance(canonical, dict) else []
+    by_metric: dict[str, dict] = {}
+    for record in records:
+        metric = record.get("canonical_metric")
+        if metric is None or record.get("value") is None or not isinstance(record.get("period_identity"), dict):
+            continue
+        candidate_rank = (record.get("quality_state") == "available", _SOURCE_RIGOR.get(record.get("source"), 0))
+        current = by_metric.get(metric)
+        current_rank = (current.get("quality_state") == "available", _SOURCE_RIGOR.get(current.get("source"), 0)) if current else (False, -1)
+        if candidate_rank > current_rank:
+            by_metric[metric] = record
+    return by_metric
+
+
 def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
                        financial_rows, financial_canonical, snapshot_info, ta_info, reference_at) -> dict:
     warnings = []
@@ -1123,20 +1153,24 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         },
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "financial_identity": empty_identity_export(),
-        "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), "unknown"),
-        # Existing snapshot P/E/P/B and metadata fields lack qualified denominator,
-        # share-basis, and enterprise-value semantics. Do not pass them as inputs.
-        "intrinsic_valuation": evaluate_intrinsic_valuation({"financial": {}, "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
+        "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), get_default_registry().entity_type_for(tk)),
+        # Existing snapshot P/E/P/B and metadata fields still lack qualified denominator,
+        # share-basis, and enterprise-value semantics -- do not pass them as inputs. The
+        # observation-store canonical records below are additive and only ever carry
+        # quality_state="available" where an exact evidence citation verified them; FCFF
+        # still requires externally-sourced WACC/growth/forecast assumptions this exporter
+        # does not fabricate, and Net-Net still requires a qualified share_count.
+        "intrinsic_valuation": evaluate_intrinsic_valuation({"financial": _financial_input(financial_canonical.get(tk)), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
         # No source-owned scenario evidence mapping is qualified yet; do not infer one here.
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
         "risk_analysis": evaluate_market_risk({}, reference_at=reference_at.isoformat()),
         "relative_valuation": evaluate_relative_valuation({
-            "entity_type": "unknown",
+            "entity_type": get_default_registry().entity_type_for(tk),
             "current_price": {"value": (snapshot_rows.get(tk) or {}).get("close"),
                               "as_of_date": (snapshot_rows.get(tk) or {}).get("date"),
                               "source": SNAPSHOT_LIVE_PATH,
                               "is_actionable": snapshot_freshness.get("is_actionable")},
-            "financial": {},
+            "financial": _financial_input(financial_canonical.get(tk)),
         }, reference_at=reference_at.isoformat()),
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
