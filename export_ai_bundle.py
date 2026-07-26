@@ -54,6 +54,7 @@ from live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope
 from financial_canonicalization import canonicalize_financial_rows
 from official_evidence import load_cited_financial_records
+from financial_identity import empty_identity_export
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
@@ -1111,6 +1112,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
             "excluded_unverified_periods": fin.get("excluded_unverified_periods", []),
         },
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
+        "financial_identity": empty_identity_export(),
         "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), "unknown"),
         # Existing snapshot P/E/P/B and metadata fields lack qualified denominator,
         # share-basis, and enterprise-value semantics. Do not pass them as inputs.
