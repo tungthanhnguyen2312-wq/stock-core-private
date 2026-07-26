@@ -1,0 +1,7 @@
+# Official Evidence Contract
+
+Schema version `1.0.0`. An official-evidence record requires a stable evidence ID derived from source authority, source URL/identifier, file hash, ticker/issuer identity, reporting period, and source location. Required fields include qualification state, document/retrieval dates where supplied, language/format, extraction method/version, raw evidence reference, normalized candidate, unit/currency, warnings, and contradiction/supersession state.
+
+Qualification states are `qualified`, `partial`, `unqualified`, `unavailable`, and `contradictory`. Authority is never inferred from filename. A normalized field is actionable only with a direct official citation, deterministic issuer/ticker match, hash, and source location. Missing locations, conflicting documents, unverified LLM extraction, and ambiguous scope remain non-actionable. Later documents supersede earlier records only with explicit restatement semantics. Null, zero, and negative reported values are distinct.
+
+Bounded workspace audit result: outside excluded `reports` and unrelated archives/backups, no downloaded or referenced official issuer/authority document has a stable URL/identifier, document hash, issuer identity, reporting-period identity, and page/table/record citation. Existing financial mappings, test fixtures, and runtime-derived records are not official evidence. Therefore no `official_evidence` bundle section, canonical-scope update, share-basis update, corporate-action adjustment update, or Consumer fact is emitted.
