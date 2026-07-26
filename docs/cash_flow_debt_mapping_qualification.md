@@ -1,0 +1,26 @@
+# Cash-flow, Debt and Earnings Item Mapping Qualification
+
+Audit date: 2026-07-26. Read-only `vnstock==4.0.4` probes covered HPG, PAN and
+VCB with KBS/VCI `income_statement`, `balance_sheet` and `cash_flow`, annual
+and quarterly invocation. VCI annual schemas were stable across the two
+corporates; VCB uses a distinct bank schema. KBS balance sheets were empty.
+
+| Canonical metric | VCI exact item code | Scope | Qualification |
+|---|---|---|---|
+| Operating cash flow | `net_cash_inflows_outflows_from_operating_activities` (corporate); `net_cash_from_operating_activities` (bank) | cash flow | qualified item identity |
+| Investing cash flow | `net_cash_inflows_outflows_from_investing_activities` (corporate); `net_cash_from_investing_activities` (bank) | cash flow | qualified item identity |
+| Financing cash flow | `net_cash_inflows_outflows_from_financing_activities` | corporate cash flow | qualified item identity; unavailable for observed VCB schema |
+| Capital expenditure | `purchases_of_fixed_assets_and_other_long_term_assets` | cash flow | qualified direct item; raw sign preserved; never aggregate CFI |
+| Short/long borrowings | `short_term_borrowings`, `long_term_borrowings` | corporate balance sheet | qualified item identity |
+| Total interest-bearing debt | compatible short + long borrowings | corporate balance sheet | derived only with both component provenance |
+| Interest expense | `interest_expenses` (corporate); `interest_and_similar_expenses` (bank) | income statement | qualified item identity; finance cost excluded |
+| Parent-attributable income | `attributable_to_parent_company` | income statement | qualified item identity |
+| Cash and equivalents | `cash_and_cash_equivalents` | corporate balance sheet | qualified item identity; unavailable for observed VCB bank balance schema |
+
+VCI responses do not provide consolidated/separate scope, currency, scale, or
+quarterly standalone-versus-cumulative semantics. The mapper records these as
+`unknown`/`partial` and never subtracts periods. The current runtime has no raw
+statement artifacts; `financial_snapshot` retains normalized values but not the
+required provider/version/method/parameter/raw-item provenance. Therefore no
+new records are added to production canonical financial output until an
+append-only qualified raw observation is retained.
