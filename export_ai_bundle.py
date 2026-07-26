@@ -51,7 +51,7 @@ from pathlib import Path
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
 from live_universe import summary as live_universe_summary
-from freshness_history import freshness_envelope
+from freshness_history import evaluate_analysis_readiness, freshness_envelope
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -1065,6 +1065,11 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
                 source_date = source_date or source_item.get("snapshot_date")
             source_date = max(provenance_dates) if provenance_dates else source_date
         section["freshness"] = freshness_envelope(domain="corporate_events" if name == "corporate_events" else "corporate_snapshot", as_of_date=source_date, generated_at=source_date, source=source_name, reference_at=reference_at, completeness=coverage)
+    freshness = {
+        "daily_prices": snapshot_freshness, "technical_signals": technical_freshness,
+        "ai_report": freshness_envelope(domain="ai_report", as_of_date=score_session.get("session_date"), generated_at=score_session.get("generated_at"), source=ANALYSIS_PATH, reference_at=reference_at, dependency=snapshot_freshness),
+        "financial_statements": financial_freshness,
+    }
     return {
         "snapshot": snapshot_rows.get(tk),
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],
@@ -1083,12 +1088,8 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
         "corporate_intelligence": corporate,
-        "freshness": {
-            "daily_prices": snapshot_freshness,
-            "technical_signals": technical_freshness,
-            "ai_report": freshness_envelope(domain="ai_report", as_of_date=score_session.get("session_date"), generated_at=score_session.get("generated_at"), source=ANALYSIS_PATH, reference_at=reference_at, dependency=snapshot_freshness),
-            "financial_statements": financial_freshness,
-        },
+        "freshness": freshness,
+        "analysis_readiness": evaluate_analysis_readiness(freshness=freshness, corporate_intelligence=corporate, reference_at=reference_at),
         "warnings": warnings,
     }
 
