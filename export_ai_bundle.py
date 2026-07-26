@@ -54,6 +54,7 @@ from live_universe import summary as live_universe_summary
 from freshness_history import evaluate_analysis_readiness, freshness_envelope
 from financial_canonicalization import canonicalize_financial_rows
 from fundamental_quality import evaluate_fundamental_quality
+from relative_valuation import evaluate_relative_valuation
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -1095,6 +1096,16 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         },
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), "unknown"),
+        # Existing snapshot P/E/P/B and metadata fields lack qualified denominator,
+        # share-basis, and enterprise-value semantics. Do not pass them as inputs.
+        "relative_valuation": evaluate_relative_valuation({
+            "entity_type": "unknown",
+            "current_price": {"value": (snapshot_rows.get(tk) or {}).get("close"),
+                              "as_of_date": (snapshot_rows.get(tk) or {}).get("date"),
+                              "source": SNAPSHOT_LIVE_PATH,
+                              "is_actionable": snapshot_freshness.get("is_actionable")},
+            "financial": {},
+        }, reference_at=reference_at.isoformat()),
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
         "corporate_intelligence": corporate,
