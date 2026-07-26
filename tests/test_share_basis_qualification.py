@@ -182,8 +182,8 @@ class ShareBasisQualificationTests(unittest.TestCase):
         for result in (before, after):
             self.assertEqual(result["methods"]["pe"]["state"], "unavailable")
             self.assertEqual(result["methods"]["pb"]["state"], "unavailable")
-            self.assertIn("qualified_share_count", result["methods"]["pe"]["missing_inputs"])
-            self.assertIn("qualified_share_count", result["methods"]["pb"]["missing_inputs"])
+            self.assertIn("qualified_weighted_average_share_count", result["methods"]["pe"]["missing_inputs"])
+            self.assertIn("qualified_period_end_share_count", result["methods"]["pb"]["missing_inputs"])
         self.assertEqual(before, after)
 
 

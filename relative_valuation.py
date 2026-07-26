@@ -5,7 +5,7 @@ import math
 from typing import Any, Mapping
 
 SCHEMA_VERSION = "1.0.0"
-METHOD_VERSION = "1.0.0"
+METHOD_VERSION = "1.1.0"
 METHODS = ("pe", "pb", "ps", "ev_ebitda", "ev_sales")
 MIN_REFERENCE_OBSERVATIONS = 3
 
@@ -59,16 +59,55 @@ def _qualified(record: Mapping[str, Any] | None, required_metric: str | None = N
     return (number, [] if number is not None else ["canonical_value_missing_or_malformed"])
 
 
+def _share_input(inputs: Mapping[str, Any], key: str, expected_semantics: str) -> tuple[float | int | None, Mapping[str, Any], bool]:
+    """A single share-count identity, read only from its own dedicated key.
+
+    Never falls back to another key or another semantics value: a P/E caller
+    that only supplies a period-end count gets no weighted-average count, and
+    vice versa, even though the two may be numerically equal for some period.
+    """
+    candidate = inputs.get(key) if isinstance(inputs.get(key), Mapping) else {}
+    value = _number(candidate.get("value"))
+    ok = value is not None and value > 0 and candidate.get("semantics") == expected_semantics
+    return value, candidate, ok
+
+
+def _resolve_market_cap(inputs: Mapping[str, Any], price: Mapping[str, Any], price_value, price_ok: bool,
+                         period_end_value, period_end_record: Mapping[str, Any], period_end_ok: bool
+                         ) -> tuple[float | int | None, dict[str, Any], list[str]]:
+    """A directly-qualified market_cap input, or else price x period-end shares.
+
+    The reconstruction is never built from a weighted-average or any other
+    non-period-end share count, and never proceeds unless the price's declared
+    financial_period matches the period-end share count's own period exactly.
+    """
+    direct = inputs.get("market_cap") if isinstance(inputs.get("market_cap"), Mapping) else {}
+    direct_value = _number(direct.get("value"))
+    if direct_value is not None and direct.get("semantics") == "qualified_market_cap" and direct.get("as_of_date"):
+        return direct_value, {"market_cap": dict(direct)}, []
+    share_period = period_end_record.get("period_identity", {}).get("period") if isinstance(period_end_record.get("period_identity"), Mapping) else None
+    aligned = bool(price.get("financial_period")) and price.get("financial_period") == share_period
+    if not price_ok or not period_end_ok or not aligned:
+        missing = ([] if price_ok else ["actionable_current_price"]) + ([] if period_end_ok else ["qualified_period_end_share_count"]) + ([] if aligned else ["price_share_period_alignment"])
+        return None, {}, missing
+    return price_value * period_end_value, {"price": dict(price), "share_count_period_end": dict(period_end_record)}, []
+
+
 def evaluate_relative_valuation(inputs: Mapping[str, Any] | None, reference_at: str | None = None) -> dict[str, Any]:
     """Evaluate only explicitly qualified observations; never reconstruct legacy inputs."""
     inputs = inputs if isinstance(inputs, Mapping) else {}
     entity_type = str(inputs.get("entity_type") or "unknown")
     price = inputs.get("current_price") if isinstance(inputs.get("current_price"), Mapping) else {}
     price_value = _number(price.get("value")); price_ok = bool(price.get("is_actionable") is True and price.get("as_of_date") and price_value is not None)
-    share = inputs.get("share_count") if isinstance(inputs.get("share_count"), Mapping) else {}
-    share_value = _number(share.get("value")); share_ok = share.get("semantics") in {"basic", "diluted"} and share_value is not None and share_value > 0
     financial = inputs.get("financial") if isinstance(inputs.get("financial"), Mapping) else {}
     direct = inputs.get("direct_multiples") if isinstance(inputs.get("direct_multiples"), Mapping) else {}
+    # P/E uses a weighted-average basic share count (EPS-style numerator). P/B and P/S
+    # reuse one reconstructed market cap built only from a period-end share count.
+    # These are two distinct identities, read from two distinct input keys, and never
+    # substituted for one another -- not even when their values happen to be equal.
+    wa_value, wa_record, wa_ok = _share_input(inputs, "share_count_weighted_average_basic", "weighted_average_basic")
+    pe_value, pe_record, pe_ok = _share_input(inputs, "share_count_period_end", "period_end")
+    market_cap_value, market_cap_provenance, market_cap_missing = _resolve_market_cap(inputs, price, price_value, price_ok, pe_value, pe_record, pe_ok)
     methods: dict[str, dict[str, Any]] = {}
     for name in METHODS:
         methods[name] = _method(name, applicability="inapplicable" if entity_type == "financial" and name.startswith("ev_") else "unknown")
@@ -97,29 +136,37 @@ def evaluate_relative_valuation(inputs: Mapping[str, Any] | None, reference_at: 
             methods[name] = _method(name, "malformed", missing_inputs=["qualified_direct_multiple_contract"], warnings=["direct_multiple_missing_semantics_or_provenance"]); continue
         denominator, missing = _qualified(financial.get(metric), metric)
         if name.startswith("ev_"):
-            market_cap = inputs.get("market_cap") if isinstance(inputs.get("market_cap"), Mapping) else {}
             debt, debt_missing = _qualified(financial.get("total_debt"), "total_debt")
             cash, cash_missing = _qualified(financial.get("cash_and_equivalents"), "cash_and_equivalents")
-            cap = _number(market_cap.get("value")); cap_ok = cap is not None and market_cap.get("semantics") == "qualified_market_cap" and market_cap.get("as_of_date")
-            if cap_ok and debt is not None and cash is not None and denominator is not None and denominator > 0:
-                methods[name] = _method(name, "available", applicability="applicable", observed_multiple=(cap+debt-cash)/denominator,
-                    numerator_identity="enterprise_value", denominator_identity=metric, price_as_of_date=market_cap.get("as_of_date"),
-                    financial_period=financial[metric].get("period_identity"), statement_scope=financial[metric].get("statement_scope"),
-                    source=market_cap.get("source"), provenance={"market_cap": market_cap, "debt": financial["total_debt"], "cash": financial["cash_and_equivalents"]},
+            if market_cap_value is not None and debt is not None and cash is not None and denominator is not None and denominator > 0:
+                methods[name] = _method(name, "available", applicability="applicable", observed_multiple=(market_cap_value+debt-cash)/denominator,
+                    numerator_identity="enterprise_value_from_qualified_market_cap", denominator_identity=metric,
+                    price_as_of_date=price.get("as_of_date"), financial_period=financial[metric].get("period_identity"), statement_scope=financial[metric].get("statement_scope"),
+                    source=price.get("source"), provenance={**market_cap_provenance, "debt": financial.get("total_debt"), "cash": financial.get("cash_and_equivalents")},
                     is_actionable=price_ok, warnings=[] if price_ok else ["current_price_not_actionable"])
-            else: methods[name] = _method(name, "unavailable", missing_inputs=missing+debt_missing+cash_missing+([] if cap_ok else ["qualified_market_cap"]), warnings=["enterprise_value_semantics_or_inputs_unqualified"])
+            else: methods[name] = _method(name, "unavailable", missing_inputs=missing+debt_missing+cash_missing+market_cap_missing, warnings=["enterprise_value_semantics_or_inputs_unqualified"])
             continue
         if denominator is None or denominator <= 0:
             methods[name] = _method(name, "incomparable" if denominator is not None and denominator < 0 else "unavailable", missing_inputs=missing or ["positive_denominator_required"], warnings=["negative_or_zero_denominator_not_normalized"]); continue
         period = financial[metric].get("period_identity")
-        aligned = isinstance(period, Mapping) and price.get("financial_period") == period.get("period")
-        if not price_ok or not share_ok or not aligned:
-            methods[name] = _method(name, "unavailable", missing_inputs=([] if price_ok else ["actionable_current_price"]) + ([] if share_ok else ["qualified_share_count"]) + ([] if aligned else ["price_financial_period_alignment"])); continue
         scope = financial[metric].get("statement_scope")
-        methods[name] = _method(name, "available", applicability="applicable", observed_multiple=(price_value*share_value)/denominator,
-            numerator_identity="market_cap_derived_from_price_and_qualified_share_count", denominator_identity=metric,
-            price_as_of_date=price.get("as_of_date"), financial_period=financial[metric].get("period_identity"), statement_scope=scope,
-            source=price.get("source"), provenance={"price": dict(price), "share_count": dict(share), "financial": dict(financial[metric])}, is_actionable=True)
+        if name == "pe":
+            aligned = isinstance(period, Mapping) and price.get("financial_period") == period.get("period")
+            if not price_ok or not wa_ok or not aligned:
+                methods[name] = _method(name, "unavailable", missing_inputs=([] if price_ok else ["actionable_current_price"]) + ([] if wa_ok else ["qualified_weighted_average_share_count"]) + ([] if aligned else ["price_financial_period_alignment"])); continue
+            methods[name] = _method(name, "available", applicability="applicable", observed_multiple=(price_value*wa_value)/denominator,
+                numerator_identity="market_cap_derived_from_price_and_qualified_weighted_average_share_count", denominator_identity=metric,
+                price_as_of_date=price.get("as_of_date"), financial_period=period, statement_scope=scope,
+                source=price.get("source"), provenance={"price": dict(price), "share_count_weighted_average_basic": dict(wa_record), "financial": dict(financial[metric])}, is_actionable=True)
+            continue
+        # pb, ps: reuse the single reconstructed-or-direct market cap (period-end shares).
+        aligned = isinstance(period, Mapping) and price.get("financial_period") == period.get("period")
+        if market_cap_value is None or not aligned:
+            methods[name] = _method(name, "unavailable", missing_inputs=market_cap_missing + ([] if aligned else ["price_financial_period_alignment"])); continue
+        methods[name] = _method(name, "available", applicability="applicable", observed_multiple=market_cap_value/denominator,
+            numerator_identity="market_cap_derived_from_price_and_qualified_period_end_share_count", denominator_identity=metric,
+            price_as_of_date=price.get("as_of_date"), financial_period=period, statement_scope=scope,
+            source=price.get("source"), provenance={**market_cap_provenance, "financial": dict(financial[metric])}, is_actionable=True)
     for name, values in (inputs.get("historical") or {}).items():
         if name in methods and isinstance(values, list):
             ref, warnings = _reference(values, inputs.get("historical_universe")); methods[name]["reference_range"] = ref; methods[name]["observation_count"] = len(values); methods[name]["warnings"].extend(warnings)

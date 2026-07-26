@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -12,7 +13,16 @@ VERSION = "1.0.0"
 MANIFEST_RELATIVE = Path("data") / "official-evidence" / "manifest.json"
 CITATIONS_RELATIVE = Path("data") / "official-evidence" / "qualification_citations.jsonl"
 SHARE_BASIS_RELATIVE = Path("data") / "official-evidence" / "share_basis_citations.jsonl"
+MARKET_PRICE_RELATIVE = Path("data") / "official-evidence" / "market_price_citations.jsonl"
+DB_RELATIVE = "vn_stock.db"
 MANIFEST_SCHEMA_VERSION = "1.0.0"
+# The only adjustment status this reader accepts today: a raw, as-quoted close with
+# no back-adjustment applied. A citation is only valid under this status when the
+# ticker had no unsettled corporate action as of the trading_date -- never inferred
+# here, only ever asserted by whoever wrote the citation and checked at review time.
+_SUPPORTED_ADJUSTMENT_STATUSES = {"raw_as_quoted_no_adjustment_applied"}
+_REQUIRED_MARKET_PRICE_FIELDS = ("citation_id", "ticker", "trading_date", "price_field", "value",
+    "provider", "adjustment_status")
 _SUPPORTED_SCOPES = {"consolidated"}
 _RESOLVED_WARNINGS = {"statement_scope_unknown", "currency_or_scale_unknown"}
 _REQUIRED_CITATION_FIELDS = ("citation_id", "observation_id", "evidence_id", "ticker", "reporting_frequency",
@@ -300,6 +310,104 @@ def latest_share_basis(by_identity: Mapping[tuple[str, str, str], dict[str, Any]
     if not candidates:
         return None
     return max(candidates, key=lambda entry: entry["reporting_period"])
+
+
+def _load_market_price_rows(runtime_root: Path) -> list[Any] | None:
+    """Return parsed JSONL rows, or None if the file is missing or malformed (fail closed)."""
+    path = runtime_root / MARKET_PRICE_RELATIVE
+    if not path.exists():
+        return None
+    rows: list[Any] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return rows
+
+
+def _query_ohlcv(db_path: Path, ticker: str, trading_date: str) -> dict[str, Any] | None:
+    """Read-only lookup of one (ticker, date) row. Never opens the database for writing."""
+    if not db_path.is_file():
+        return None
+    try:
+        connection = sqlite3.connect(f"file:{db_path.as_posix()}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return None
+    try:
+        connection.row_factory = sqlite3.Row
+        cursor = connection.execute(
+            "SELECT ticker, date, open, high, low, close, source FROM ohlcv WHERE ticker=? AND date=?",
+            (ticker, trading_date),
+        )
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    except sqlite3.Error:
+        return None
+    finally:
+        connection.close()
+
+
+def load_verified_market_price(runtime_root: Path) -> dict[str, Any]:
+    """Read and verify data/official-evidence/market_price_citations.jsonl.
+
+    Each entry cites one specific (ticker, trading_date) row in the read-only
+    ohlcv table. There is no PDF/manifest hash here -- the database row itself
+    is the evidence, re-queried on every call and required to still match the
+    cited price_field/value/provider exactly. Fails closed on a missing row, a
+    drifted value, a non-deterministic citation_id, two differing citations
+    for the same (ticker, trading_date), or an adjustment_status outside the
+    supported set. Never opens the database for writing, and never derives a
+    "nearest prior trading day" -- only the exact date actually cited.
+
+    Returns {"status": ..., "version": VERSION,
+    "by_ticker_date": {(ticker, trading_date): verified_entry}, "rejected": [...]}.
+    """
+    rows = _load_market_price_rows(runtime_root)
+    rejected: list[dict[str, Any]] = []
+    if rows is None:
+        return {"status": "unavailable", "version": VERSION, "by_ticker_date": {}, "rejected": rejected}
+
+    db_path = runtime_root / DB_RELATIVE
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for raw in rows:
+        if not isinstance(raw, dict) or not all(field in raw for field in _REQUIRED_MARKET_PRICE_FIELDS):
+            rejected.append({"citation": raw, "reason": "malformed_citation"})
+            continue
+        grouped.setdefault((raw["ticker"], raw["trading_date"]), []).append(raw)
+
+    by_ticker_date: dict[tuple[str, str], dict[str, Any]] = {}
+    for key, citations in grouped.items():
+        unique_by_content = {_hash(c): c for c in citations}
+        if len(unique_by_content) > 1:
+            rejected.append({"key": key, "reason": "conflicting_citations"})
+            continue
+        citation = next(iter(unique_by_content.values()))
+
+        expected_id = _hash({"ticker": citation["ticker"], "trading_date": citation["trading_date"],
+                              "price_field": citation["price_field"], "value": citation["value"],
+                              "provider": citation["provider"]})
+        if citation["citation_id"] != expected_id:
+            rejected.append({"key": key, "reason": "citation_id_not_deterministic"})
+            continue
+
+        if citation["adjustment_status"] not in _SUPPORTED_ADJUSTMENT_STATUSES:
+            rejected.append({"key": key, "reason": "unsupported_adjustment_status"})
+            continue
+
+        live = _query_ohlcv(db_path, citation["ticker"], citation["trading_date"])
+        if live is None:
+            rejected.append({"key": key, "reason": "ohlcv_row_missing"})
+            continue
+        if live.get(citation["price_field"]) != citation["value"] or live.get("source") != citation["provider"]:
+            rejected.append({"key": key, "reason": "ohlcv_value_drifted_from_citation"})
+            continue
+
+        by_ticker_date[key] = {**citation, "qualification_version": VERSION}
+
+    return {"status": "available" if by_ticker_date else "unavailable", "version": VERSION,
+            "by_ticker_date": by_ticker_date, "rejected": rejected}
 
 
 def _clear_resolved_reason(reason: Any) -> str | None:

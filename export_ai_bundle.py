@@ -57,7 +57,7 @@ from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
 from corporate_actions_export import build_corporate_actions_section
 from financial_observations import canonical_records, store_path
-from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis
+from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
@@ -1112,6 +1112,62 @@ def _net_net_share_count(tk: str) -> dict | None:
     }
 
 
+def _relative_valuation_period_end_share_count(tk: str) -> dict | None:
+    """The same period-end share-count identity as _net_net_share_count, shaped for
+    relative_valuation's P/B and historical market-cap reconstruction. Kept as its
+    own function (rather than sharing Net-Net's) so Net-Net's wiring is never
+    touched by this milestone; never a weighted-average or live count."""
+    verified = load_verified_share_basis(runtime_root())
+    entry = latest_share_basis(verified["by_identity"], tk, "period_end_shares_outstanding")
+    if entry is None:
+        return None
+    return {
+        "value": entry["value"],
+        "semantics": "period_end",
+        "period_identity": {"period": entry["reporting_period"], "period_type": entry["reporting_frequency"]},
+        "source": "share_basis_evidence",
+        "evidence": {"evidence_id": entry["evidence_id"], "citation_id": entry["citation_id"], "citation": entry["citation"]},
+    }
+
+
+def _relative_valuation_weighted_average_share_count(tk: str) -> dict | None:
+    """A weighted-average basic share count cited to the audited statement notes,
+    for relative_valuation's P/E only -- never substituted with the period-end count
+    above, even where their values happen to be equal for a given period."""
+    verified = load_verified_share_basis(runtime_root())
+    entry = latest_share_basis(verified["by_identity"], tk, "weighted_average_basic_shares_outstanding")
+    if entry is None:
+        return None
+    return {
+        "value": entry["value"],
+        "semantics": "weighted_average_basic",
+        "period_identity": {"period": entry["reporting_period"], "period_type": entry["reporting_frequency"]},
+        "source": "share_basis_evidence",
+        "evidence": {"evidence_id": entry["evidence_id"], "citation_id": entry["citation_id"], "citation": entry["citation"]},
+    }
+
+
+def _historical_relative_valuation_price(tk: str) -> dict | None:
+    """A cited historical closing price for relative_valuation's P/E, P/B, P/S, and
+    EV/Sales. Never the live snapshot price used elsewhere in this exporter --
+    this milestone evaluates one historical FY2024 valuation date, not a current one.
+    Returns None (the whole relative_valuation call correctly fails closed) when no
+    verified price citation exists for this ticker."""
+    verified = load_verified_market_price(runtime_root())
+    candidates = [entry for (ticker, _trading_date), entry in verified["by_ticker_date"].items() if ticker == tk]
+    if not candidates:
+        return None
+    entry = max(candidates, key=lambda e: e["trading_date"])
+    return {
+        "value": entry["value"],
+        "as_of_date": entry["trading_date"],
+        "financial_period": entry["financial_period"],
+        "source": f"{entry['provider']}:{entry['source_table']}",
+        "is_actionable": True,
+        "evidence": {"citation_id": entry["citation_id"], "adjustment_status": entry["adjustment_status"]},
+    }
+
+
 def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
                        financial_rows, financial_canonical, snapshot_info, ta_info, reference_at) -> dict:
     warnings = []
@@ -1185,18 +1241,18 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         # No source-owned scenario evidence mapping is qualified yet; do not infer one here.
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
         "risk_analysis": evaluate_market_risk({}, reference_at=reference_at.isoformat()),
-        # relative_valuation deliberately receives no share_count/market_cap: its single
-        # share_count slot feeds both P/E (needs weighted-average) and P/B (needs
-        # period-end) identically, so populating it for one would silently alias the
-        # other -- fixing that shared-slot design is out of scope here. Nor is there a
-        # qualified valuation-date share count, an FY2024-aligned price, or a qualified
-        # market_cap to reconstruct one from (see docs/share_basis_qualification.md).
+        # This is a historical FY2024 valuation-date snapshot, never a current one: the
+        # price is a cited 2024-12-31 close (see docs/historical_relative_valuation_snapshot.md),
+        # not the live snapshot_rows price used elsewhere in this exporter. P/E reads a
+        # weighted-average share count; P/B and the market-cap reconstruction P/S/EV-Sales
+        # share read a period-end count -- two distinct identities, never aliased even
+        # though their values happen to be equal for HPG FY2024. Either input is simply
+        # omitted (fails closed) when no citation exists for this ticker.
         "relative_valuation": evaluate_relative_valuation({
             "entity_type": get_default_registry().entity_type_for(tk),
-            "current_price": {"value": (snapshot_rows.get(tk) or {}).get("close"),
-                              "as_of_date": (snapshot_rows.get(tk) or {}).get("date"),
-                              "source": SNAPSHOT_LIVE_PATH,
-                              "is_actionable": snapshot_freshness.get("is_actionable")},
+            "current_price": _historical_relative_valuation_price(tk),
+            "share_count_weighted_average_basic": _relative_valuation_weighted_average_share_count(tk),
+            "share_count_period_end": _relative_valuation_period_end_share_count(tk),
             "financial": _financial_input(financial_canonical.get(tk)),
         }, reference_at=reference_at.isoformat()),
         "ohlcv_recent": ohlcv,
