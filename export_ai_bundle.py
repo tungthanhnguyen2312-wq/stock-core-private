@@ -55,6 +55,7 @@ from freshness_history import evaluate_analysis_readiness, freshness_envelope
 from financial_canonicalization import canonicalize_financial_rows
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
+from intrinsic_valuation import evaluate_intrinsic_valuation
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -1098,6 +1099,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), "unknown"),
         # Existing snapshot P/E/P/B and metadata fields lack qualified denominator,
         # share-basis, and enterprise-value semantics. Do not pass them as inputs.
+        "intrinsic_valuation": evaluate_intrinsic_valuation({"financial": {}, "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
         "relative_valuation": evaluate_relative_valuation({
             "entity_type": "unknown",
             "current_price": {"value": (snapshot_rows.get(tk) or {}).get("close"),
