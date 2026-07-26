@@ -583,6 +583,44 @@ def _load_major_shareholders_intelligence(conn: sqlite3.Connection, ticker: str)
     return {"status": _corporate_status(sources), "sources": sources}
 
 
+
+def _load_corporate_events_intelligence(conn: sqlite3.Connection, ticker: str) -> dict:
+    """Export bounded VCI observations without asserting complete event history."""
+    tables = ("corporate_event_records", "corporate_event_observations", "corporate_event_ingestion_runs")
+    if not all(_table_exists(conn, table) for table in tables):
+        return {"status": "missing", "reason": "forward_observation_tables_unavailable", "sources": []}
+    rows = conn.execute(
+        "SELECT record_id,provider,provider_event_id,event_code,category,event_name_vi,event_name_en,event_title_vi,event_title_en,"
+        "display_date1,display_date2,public_date,record_date,exright_date,issue_date,start_date,end_date,payout_date,listing_date,"
+        "exercise_ratio,value_per_share,last_observed_at,revision_status,coverage_status "
+        "FROM corporate_event_records WHERE ticker=? ORDER BY provider,provider_event_id", (ticker,),
+    ).fetchall()
+    if not rows:
+        return {"status": "missing", "reason": "no_forward_event_observations", "sources": []}
+    records = []
+    for row in rows:
+        observation = conn.execute(
+            "SELECT raw_payload_hash,retrieved_at,vnstock_version,endpoint,parameters_json,coverage_status "
+            "FROM corporate_event_observations WHERE record_id=? ORDER BY retrieved_at DESC,observation_id DESC LIMIT 1", (row[0],),
+        ).fetchone()
+        parameters = _json_object(observation[4]) if observation else None
+        if observation is None or parameters is None or row[1] != "VCI" or not row[2] or row[23] != "partial_unqualified_50_row_cap":
+            return {"status": "malformed", "reason": "forward_event_record_invalid", "sources": []}
+        fields = dict(zip([
+            "event_code", "category", "event_name_vi", "event_name_en", "event_title_vi", "event_title_en",
+            "display_date1", "display_date2", "public_date", "record_date", "exright_date", "issue_date",
+            "start_date", "end_date", "payout_date", "listing_date", "exercise_ratio", "value_per_share",
+        ], row[3:21]))
+        records.append({"provider_event_id": row[2], "fields": fields, "provenance": {
+            "provider": row[1], "raw_payload_hash": observation[0], "retrieved_at": observation[1],
+            "vnstock_version": observation[2], "endpoint": observation[3], "parameters": parameters,
+            "coverage_status": observation[5], "revision_status": row[22],
+        }})
+    coverage = "partial_unqualified_50_row_cap"
+    return {"status": "partial", "reason": "forward_observations_not_complete_history", "coverage_status": coverage,
+            "warnings": ["VCI public events are bounded observations (50-row cap); not complete history or lifecycle status."],
+            "sources": [{"source_name": "VCI", "coverage_status": coverage, "record_count": len(records), "records": records}]}
+
 def load_corporate_intelligence(conn: sqlite3.Connection, ticker: str) -> dict:
     """Load latest provider snapshots without merging source semantics."""
     profile = _load_profile_intelligence(conn, ticker)
@@ -601,6 +639,7 @@ def load_corporate_intelligence(conn: sqlite3.Connection, ticker: str) -> dict:
         "company_subsidiaries": subsidiaries,
         "ownership_structure": ownership,
         "major_shareholders": _load_major_shareholders_intelligence(conn, ticker),
+        "corporate_events": _load_corporate_events_intelligence(conn, ticker),
     }
 
 

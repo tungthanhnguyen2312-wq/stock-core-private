@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 import company_profile_sync as profile_sync  # noqa: E402
 import company_subsidiaries_sync as subsidiaries_sync  # noqa: E402
+import corporate_events_sync as events_sync  # noqa: E402
 import export_ai_bundle as bundle  # noqa: E402
 import ownership_structure_sync as ownership_sync  # noqa: E402
 
@@ -60,6 +61,28 @@ class CorporateIntelligenceExportTests(unittest.TestCase):
         self.assertEqual(result["status"], "missing")
         self.assertEqual(result["company_profile"]["status"], "missing")
         conn.close()
+
+    def test_corporate_events_export_is_partial_with_bounded_provenance(self):
+        events_sync.init_db(self.conn)
+        events_sync.ingest_events(self.conn, "AAA", "VCI", [{
+            "id": "event-1", "ticker": "AAA", "event_code": "DIV", "category": "DIVIDEND",
+            "event_title_vi": "Cash dividend", "event_title_en": "Dividend", "record_date": None,
+            "exercise_ratio": None, "value_per_share": 0,
+        }], FETCHED_AT, parameters={"fixture": True})
+        section = bundle.load_corporate_intelligence(self.conn, "AAA")["corporate_events"]
+        self.assertEqual((section["status"], section["coverage_status"]), ("partial", "partial_unqualified_50_row_cap"))
+        record = section["sources"][0]["records"][0]
+        self.assertEqual(record["provider_event_id"], "event-1")
+        self.assertIsNone(record["fields"]["record_date"])
+        self.assertEqual(record["fields"]["value_per_share"], 0)
+        self.assertEqual(record["provenance"]["provider"], "VCI")
+
+    def test_corporate_events_missing_and_malformed_are_explicit(self):
+        self.assertEqual(bundle.load_corporate_intelligence(self.conn, "AAA")["corporate_events"]["status"], "missing")
+        events_sync.init_db(self.conn)
+        self.conn.execute("INSERT INTO corporate_event_records(record_id,schema_version,provider,provider_event_id,ticker,first_observed_at,last_observed_at,revision_status,coverage_status) VALUES('bad',1,'KBS','bad','AAA',?,?,?,?)", (FETCHED_AT, FETCHED_AT, "observed", "partial_unqualified_50_row_cap"))
+        self.conn.commit()
+        self.assertEqual(bundle.load_corporate_intelligence(self.conn, "AAA")["corporate_events"]["status"], "malformed")
 
     def test_malformed_latest_snapshot_is_not_silently_replaced(self):
         profile_sync.persist_current_snapshot(self.conn, "AAA", "VCI", {"record": {"symbol": "AAA", "organ_code": "AAA"}}, FETCHED_AT)
