@@ -57,6 +57,7 @@ from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
+from risk_liquidity import evaluate_market_risk
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -1103,6 +1104,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "intrinsic_valuation": evaluate_intrinsic_valuation({"financial": {}, "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
         # No source-owned scenario evidence mapping is qualified yet; do not infer one here.
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
+        "risk_analysis": evaluate_market_risk({}, reference_at=reference_at.isoformat()),
         "relative_valuation": evaluate_relative_valuation({
             "entity_type": "unknown",
             "current_price": {"value": (snapshot_rows.get(tk) or {}).get("close"),
