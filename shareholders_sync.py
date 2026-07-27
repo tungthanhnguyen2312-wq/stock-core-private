@@ -28,6 +28,7 @@ from shareholder_pipeline import (
     provider_parser,
     run_source_chain,
 )
+from runtime_paths import runtime_root
 
 # Console Windows mặc định cp1252 -> vỡ khi in tên cổ đông tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -43,9 +44,14 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 # [BẪY POINT-IN-TIME] Cơ cấu cổ đông là snapshot "lần cào gần nhất", không phải lịch sử theo
 # ngày. Đừng backtest bằng bảng này — chỉ dùng để lọc/đọc bối cảnh sở hữu HIỆN TẠI.
 
-DB_PATH = "vn_stock.db"
-LOG_FILE = os.path.join("logs", "shareholders_sync.log")
-ROOT = Path(__file__).resolve().parent
+def resolve_runtime_paths(cwd=None):
+    """Return mutable shareholders_sync paths under the configured runtime root."""
+    root = runtime_root(cwd or os.getcwd())
+    return root, root / "vn_stock.db", root / "logs" / "shareholders_sync.log"
+
+
+RUNTIME_ROOT, DB_PATH, LOG_FILE = resolve_runtime_paths()
+ROOT = Path(__file__).resolve().parent  # script's own directory -- source-relative, not runtime-relative
 PIPELINE_CONFIG_PATH = ROOT / "config" / "shareholder_pipeline.json"
 
 REQUEST_DELAY = 1.1        # ~55 req/phút TỔNG -> dưới trần 60 req/phút của quota vnstock

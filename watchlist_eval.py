@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import bisect
 import json
+import os
 import sqlite3
 import sys
 from datetime import datetime
@@ -48,14 +49,22 @@ from pathlib import Path
 
 import pandas as pd
 
+from runtime_paths import runtime_root
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-DB_PATH = "vn_stock.db"
+
+def resolve_runtime_paths(cwd=None):
+    """Return mutable watchlist_eval paths under the configured runtime root."""
+    root = runtime_root(cwd or os.getcwd())
+    return (root, root / "vn_stock.db", root / "watchlist_eval_latest.json",
+            root / "watchlist_eval_latest.md")
+
+
+RUNTIME_ROOT, DB_PATH, OUT_JSON, OUT_MD = resolve_runtime_paths()
 INDEX_SYMBOL = "VNINDEX"
 DEFAULT_HORIZONS = (5, 20, 60)
-OUT_JSON = "watchlist_eval_latest.json"
-OUT_MD = "watchlist_eval_latest.md"
 SCORE_BUCKET_EDGES = [0, 40, 50, 60, 70, 80, 100]
 SCORE_BUCKET_LABELS = ["<40", "40-50", "50-60", "60-70", "70-80", "80-100"]
 
@@ -273,7 +282,7 @@ def main() -> int:
                                  "return T+N phiên + excess return so VN-Index, không look-ahead.")
     ap.add_argument("--horizons", default=",".join(str(n) for n in DEFAULT_HORIZONS),
                     help="Danh sách N phiên cách nhau bởi dấu phẩy (mặc định 5,20,60)")
-    ap.add_argument("--db", default=DB_PATH, help="Đường dẫn vn_stock.db (mặc định vn_stock.db)")
+    ap.add_argument("--db", default=str(DB_PATH), help=f"Đường dẫn vn_stock.db (mặc định {DB_PATH})")
     args = ap.parse_args()
     try:
         horizons = tuple(sorted({int(x) for x in args.horizons.split(",") if x.strip()}))
@@ -303,9 +312,9 @@ def main() -> int:
         conn.close()
 
     report = build_report(evaluated, horizons)
-    Path(OUT_JSON).write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
-                              encoding="utf-8")
-    Path(OUT_MD).write_text(render_markdown(report), encoding="utf-8")
+    OUT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+                        encoding="utf-8")
+    OUT_MD.write_text(render_markdown(report), encoding="utf-8")
 
     print(f"[watchlist_eval] {report['n_rows_total']} lượt pick / {report['n_sessions_covered']} phiên"
          f" ({report['session_date_range'][0]} -> {report['session_date_range'][1]})"

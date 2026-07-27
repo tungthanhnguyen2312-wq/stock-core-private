@@ -1022,5 +1022,101 @@ class SecurityCriticalRegressionTests(SafeDeployTestCase):
         self.assertEqual((self.dest / "run.py").read_bytes(), b"edited\n")
 
 
+class DeployStateReconciliationTests(SafeDeployTestCase):
+    """Covers the specific gap the Runtime Boundary & Deploy Authority Closeout
+    milestone exercised for real: a state file whose project matches but whose
+    recorded runtime_destination is stale (e.g. after a workspace directory
+    rename/restructure), and the reconciliation of that one field."""
+
+    def test_matching_project_but_stale_destination_is_blocked(self):
+        state_path = self.base / "state.json"
+        state_path.write_text(json.dumps({
+            "project": "proj",
+            "runtime_destination": str(self.base / "old_pre_migration_path"),
+            "files": {"run.py": sd.sha256_bytes(b"v1\n")},
+        }), encoding="utf-8")
+        with self.assertRaisesRegex(sd.DeployError, "stale deploy state runtime destination mismatch"):
+            sd.load_deploy_state(state_path, "proj", self.dest)
+
+    def test_reconciled_destination_loads_and_preserves_file_history(self):
+        old_destination = self.base / "old_pre_migration_path"
+        original_files = {"run.py": sd.sha256_bytes(b"v1\n"), "README.md": sd.sha256_bytes(b"docs\n")}
+        state_path = self.base / "state.json"
+        state_path.write_text(json.dumps({
+            "project": "proj",
+            "last_deployed_source_commit": "abc123",
+            "last_deploy_timestamp": "20260101T000000Z",
+            "runtime_destination": str(old_destination),
+            "deploy_result": "success",
+            "files": original_files,
+        }), encoding="utf-8")
+
+        # Reconciliation touches only runtime_destination, using the tool's own
+        # writer -- exactly what this milestone's fix does against the real state
+        # file, never a hand-written JSON replacement.
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["runtime_destination"] = str(self.dest)
+        sd.save_deploy_state(state_path, state)
+
+        reloaded = sd.load_deploy_state(state_path, "proj", self.dest)
+        self.assertEqual(reloaded["files"], original_files)
+        self.assertEqual(reloaded["last_deployed_source_commit"], "abc123")
+        # The old destination must now correctly be rejected -- reconciliation
+        # is a one-way pointer update, not a second valid value.
+        with self.assertRaises(sd.DeployError):
+            sd.load_deploy_state(state_path, "proj", old_destination)
+
+    def test_untouched_runtime_file_becomes_safe_update_after_reconciliation(self):
+        """The real-world payoff of reconciling only the destination field: a
+        runtime file that was never independently touched still classifies as a
+        safe 'update' against newer source, exactly as it would have if the
+        state file had always pointed at the right place."""
+        repo = make_source_repo(self.base, {"run.py": b"v2-newer-source\n"})
+        (self.dest / "run.py").write_bytes(b"v1-originally-deployed\n")
+        old_destination = self.base / "old_pre_migration_path"
+        state_path = self.base / "state.json"
+        state_path.write_text(json.dumps({
+            "project": "proj",
+            "runtime_destination": str(old_destination),
+            "files": {"run.py": sd.sha256_bytes(b"v1-originally-deployed\n")},
+        }), encoding="utf-8")
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["runtime_destination"] = str(self.dest)
+        sd.save_deploy_state(state_path, state)
+
+        cfg = write_config(self.base, "proj", self.dest, ["*.py"])
+        config = sd.DeployConfig.load(cfg)
+        reconciled_state = sd.load_deploy_state(state_path, "proj", self.dest)
+        plan = sd.build_plan(repo, config, self.dest, reconciled_state, {}, "dry-run")
+        rec = next(f for f in plan.files if f.rel_path == "run.py")
+        self.assertEqual(rec.classification, "update")
+        self.assertIsNone(rec.block_reason)
+
+    def test_independently_touched_runtime_file_still_blocks_after_reconciliation(self):
+        """Reconciling the destination pointer must never itself launder a real
+        runtime_drift condition -- a file that was independently edited at the
+        destination stays blocked exactly as before."""
+        repo = make_source_repo(self.base, {"run.py": b"v2-newer-source\n"})
+        (self.dest / "run.py").write_bytes(b"hand-edited-independently\n")
+        old_destination = self.base / "old_pre_migration_path"
+        state_path = self.base / "state.json"
+        state_path.write_text(json.dumps({
+            "project": "proj",
+            "runtime_destination": str(old_destination),
+            "files": {"run.py": sd.sha256_bytes(b"v1-originally-deployed\n")},
+        }), encoding="utf-8")
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["runtime_destination"] = str(self.dest)
+        sd.save_deploy_state(state_path, state)
+
+        cfg = write_config(self.base, "proj", self.dest, ["*.py"])
+        config = sd.DeployConfig.load(cfg)
+        reconciled_state = sd.load_deploy_state(state_path, "proj", self.dest)
+        plan = sd.build_plan(repo, config, self.dest, reconciled_state, {}, "dry-run")
+        rec = next(f for f in plan.files if f.rel_path == "run.py")
+        self.assertEqual(rec.classification, "blocked")
+        self.assertEqual(rec.block_reason, "runtime_drift")
+
+
 if __name__ == "__main__":
     unittest.main()

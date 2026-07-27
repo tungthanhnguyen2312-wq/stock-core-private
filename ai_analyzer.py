@@ -6,6 +6,8 @@ import argparse
 from datetime import datetime
 import pandas as pd
 
+from runtime_paths import runtime_root
+
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -29,11 +31,19 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 # CHẠY: python ai_analyzer.py --dry-run   # xem payload, không tốn tiền
 #       python ai_analyzer.py             # gọi API thật (cần ANTHROPIC_API_KEY)
 
-DB_PATH = "vn_stock.db"
+def resolve_runtime_paths(cwd=None):
+    """Return mutable ai_analyzer paths under the configured runtime root."""
+    root = runtime_root(cwd or os.getcwd())
+    return (root, root / "vn_stock.db", root / "screen_snapshot.csv",
+            root / "market_breadth.csv", root / "macro_snapshot.csv",
+            root / "news_latest.csv")
+
+
+(RUNTIME_ROOT, DB_PATH, SCREEN_SNAPSHOT_PATH, MARKET_BREADTH_PATH,
+ MACRO_SNAPSHOT_PATH, NEWS_LATEST_PATH) = resolve_runtime_paths()
 MODEL = "claude-sonnet-5"
 TOP_N = 10
 NEWS_PER_REGION = 20
-OUT_DIR = "."
 
 SYSTEM_PROMPT = """Bạn là chiến lược gia đầu tư chứng khoán Việt Nam, phong cách kết hợp \
 CANSLIM (xu hướng + sức mạnh tương đối + thanh khoản) và SMC (cấu trúc swing, vùng hỗ trợ). \
@@ -96,7 +106,7 @@ REPORT_SCHEMA = {
 def load_top_stocks(n):
     """Python chọn top N, KHÔNG để LLM chọn từ 1.578 mã: margin sạch + thanh khoản >=3 tỷ
     -> sort RS giảm dần. Trả về (df_top, set toàn bộ ticker gửi đi để validate ảo giác)."""
-    s = pd.read_csv("screen_snapshot.csv")
+    s = pd.read_csv(SCREEN_SNAPSHOT_PATH)
     clean = s[s["margin_status"].isna() & (s["gtgd20_ty"] >= 3)]
     top = clean.sort_values("rs_rating", ascending=False).head(n)
     cols = ["ticker", "exchange", "industry", "close", "chg_today_pct", "rs_rating", "rsi14",
@@ -115,7 +125,7 @@ def load_vnindex(conn):
 
 def load_news(per_region):
     """Chỉ lấy TIÊU ĐỀ (summary tốn token mà nhiễu), mới nhất mỗi khu vực."""
-    news = pd.read_csv("news_latest.csv")
+    news = pd.read_csv(NEWS_LATEST_PATH)
     parts = []
     for region in ("world", "vn"):
         sub = news[news["region"] == region].head(per_region)
@@ -129,8 +139,8 @@ def build_payload(top_n, news_n):
     vnindex = load_vnindex(conn)
     conn.close()
     top = load_top_stocks(top_n)
-    breadth = pd.read_csv("market_breadth.csv")
-    macro = pd.read_csv("macro_snapshot.csv")
+    breadth = pd.read_csv(MARKET_BREADTH_PATH)
+    macro = pd.read_csv(MACRO_SNAPSHOT_PATH)
     macro["value"] = macro["value"].round(2)   # 7482.7099609375 -> 7482.71, đỡ phí token
 
     payload = f"""## 1. VNINDEX
@@ -218,8 +228,8 @@ def main():
     ap.add_argument("--top", type=int, default=TOP_N)
     args = ap.parse_args()
 
-    for f in ("screen_snapshot.csv", "market_breadth.csv", "macro_snapshot.csv", "news_latest.csv"):
-        if not os.path.exists(f):
+    for f in (SCREEN_SNAPSHOT_PATH, MARKET_BREADTH_PATH, MACRO_SNAPSHOT_PATH, NEWS_LATEST_PATH):
+        if not f.exists():
             sys.exit(f"[Lỗi] Thiếu {f} — chạy pipeline theo thứ tự trong README mục 6 trước.")
 
     payload, sent = build_payload(args.top, NEWS_PER_REGION)
@@ -227,23 +237,26 @@ def main():
     print(f"[ai_analyzer] Payload {len(payload):,} ký tự (~{est:,} token) | {len(sent)} mã | model {args.model}")
 
     if args.dry_run:
-        with open("ai_prompt_preview.txt", "w", encoding="utf-8") as f:
+        preview_path = RUNTIME_ROOT / "ai_prompt_preview.txt"
+        with open(preview_path, "w", encoding="utf-8") as f:
             f.write(SYSTEM_PROMPT + "\n\n=====\n\n" + payload)
-        print("[dry-run] Đã ghi payload -> ai_prompt_preview.txt (tự duyệt trước khi chạy thật)")
+        print(f"[dry-run] Đã ghi payload -> {preview_path} (tự duyệt trước khi chạy thật)")
         return
 
     report, usage = call_llm(payload, args.model)
     validate(report, sent)
 
     stamp = datetime.now().strftime("%Y%m%d")
-    with open(f"ai_report_{stamp}.json", "w", encoding="utf-8") as f:
+    report_json_path = RUNTIME_ROOT / f"ai_report_{stamp}.json"
+    report_md_path = RUNTIME_ROOT / f"ai_report_{stamp}.md"
+    with open(report_json_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
-    with open(f"ai_report_{stamp}.md", "w", encoding="utf-8") as f:
+    with open(report_md_path, "w", encoding="utf-8") as f:
         f.write(render_md(report, args.model))
     # Giá Sonnet 5 niêm yết $3/$15 mỗi 1M token (khuyến mãi $2/$10 đến 31/08/2026)
     cost = usage.input_tokens / 1e6 * 3 + usage.output_tokens / 1e6 * 15
     print(f"[ai_analyzer] Token vào/ra: {usage.input_tokens:,}/{usage.output_tokens:,} ≈ ${cost:.3f}")
-    print(f"[ai_analyzer] Đã ghi ai_report_{stamp}.json + ai_report_{stamp}.md")
+    print(f"[ai_analyzer] Đã ghi {report_json_path} + {report_md_path}")
 
 if __name__ == "__main__":
     main()
