@@ -92,8 +92,18 @@ statement_scope: "consolidated" | currency: "VND" | unit_scale: 1
 period_identity: {period: "2024", period_type: "annual"}
 quality_state: "available" | derivation_status: "derived"
 formula_version: "ebitda_v1_profit_before_tax_plus_interest_expense_plus_depreciation_and_amortization"
+warnings: [EBITDA_COMPARABILITY_WARNING]
 derivation_lineage: {formula, formula_version, components: [...], excluded: [...]}
 ```
+
+The record always carries `warnings: [EBITDA_COMPARABILITY_WARNING]` alongside
+`formula_version` -- both travel with the value everywhere it is read
+(`financial_canonical`, `derive_ebitda`'s return value, and anything a future consumer
+derives from it). This is a specific, versioned derivation from the audited statements,
+never VCI's or any other provider's own reported `ebitda` field, and never
+normalized/adjusted for one-off items; it is never presented as if it were either, and
+comparisons to a provider-reported or differently-formulated peer EBITDA may not be
+meaningful.
 
 `export_ai_bundle.load_financial_canonical` calls `load_verified_ebitda_components`
 once and `derive_ebitda` once per ticker, appending the record (when not `None`) into

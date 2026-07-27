@@ -420,6 +420,15 @@ EBITDA_COMPONENTS_RELATIVE = Path("data") / "official-evidence" / "ebitda_compon
 # operating_profit is audited and available (13,267,005,585,330 for HPG FY2024) but is
 # deliberately excluded -- see docs/hpg_fy2024_ebitda_qualification.md.
 EBITDA_FORMULA_VERSION = "ebitda_v1_profit_before_tax_plus_interest_expense_plus_depreciation_and_amortization"
+# Carried on every derived ebitda record (never omitted, never merged into "reason",
+# which this codebase reserves for explaining non-availability): this figure is a
+# specific, versioned derivation from the audited statements, not a reported provider
+# field and not normalized/adjusted for one-off items -- comparisons to a provider's
+# own EBITDA field or to peer EBITDA under a different formula may not be meaningful.
+EBITDA_COMPARABILITY_WARNING = (
+    "derived_ebitda_specific_formula_version_" + EBITDA_FORMULA_VERSION + "_not_a_reported_or_normalized_ebitda_"
+    "and_may_not_be_comparable_to_provider_reported_or_differently_formulated_peer_ebitda"
+)
 _SUPPORTED_EBITDA_COMPONENTS = {"profit_before_tax", "interest_expense", "depreciation_and_amortization"}
 _REQUIRED_EBITDA_COMPONENT_FIELDS = ("citation_id", "ticker", "metric", "reporting_frequency", "reporting_period",
     "statement_scope", "currency", "unit_scale", "value", "evidence_id")
@@ -537,6 +546,10 @@ def derive_ebitda(by_key: Mapping[tuple[str, str, str], dict[str, Any]], ticker:
     them combined; the separate goodwill-amortization line on the same statement ("Phân bổ
     lợi thế thương mại") is a distinct, non-operating M&A-related item and is never folded
     in here -- see docs/hpg_fy2024_ebitda_qualification.md.
+
+    The returned record always carries `warnings: [EBITDA_COMPARABILITY_WARNING]` alongside
+    `formula_version` -- this is a derived, versioned figure, never a reported provider
+    field and never normalized/adjusted, so it is never presented as if it were either.
     """
     pbt = latest_ebitda_component(by_key, ticker, "profit_before_tax", frequency)
     interest = latest_ebitda_component(by_key, ticker, "interest_expense", frequency)
@@ -556,6 +569,7 @@ def derive_ebitda(by_key: Mapping[tuple[str, str, str], dict[str, Any]], ticker:
         "statement_scope": pbt["statement_scope"], "currency": pbt["currency"], "unit_scale": pbt["unit_scale"],
         "derivation_status": "derived", "quality_state": "available", "reason": None,
         "restatement_state": "unknown", "formula_version": EBITDA_FORMULA_VERSION,
+        "warnings": [EBITDA_COMPARABILITY_WARNING],
         "derivation_lineage": {
             "formula": "profit_before_tax + interest_expense + depreciation_and_amortization",
             "formula_version": EBITDA_FORMULA_VERSION,

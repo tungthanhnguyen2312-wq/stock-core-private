@@ -159,6 +159,10 @@ class EbitdaQualificationTests(unittest.TestCase):
             self.assertEqual(record["formula_version"], bridge.EBITDA_FORMULA_VERSION)
             self.assertEqual(record["derivation_lineage"]["formula_version"], bridge.EBITDA_FORMULA_VERSION)
             self.assertEqual(len(record["derivation_lineage"]["components"]), 3)
+            # Comparability warning: never presented as a reported or normalized EBITDA.
+            self.assertIn(bridge.EBITDA_COMPARABILITY_WARNING, record["warnings"])
+            self.assertIn("not_a_reported_or_normalized_ebitda", bridge.EBITDA_COMPARABILITY_WARNING)
+            self.assertIn(bridge.EBITDA_FORMULA_VERSION, bridge.EBITDA_COMPARABILITY_WARNING)
 
     def test_derive_ebitda_never_folds_in_operating_profit_or_goodwill_amortization(self):
         # A value that would result from double-counting or an alternate formulation
