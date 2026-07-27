@@ -1244,7 +1244,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         # still requires externally-sourced WACC/growth/forecast assumptions this exporter
         # does not fabricate. Net-Net's share_count is a cited period-end count (or None,
         # never a weighted-average/live count substituted in its place).
-        "intrinsic_valuation": evaluate_intrinsic_valuation({"financial": _financial_input(financial_canonical.get(tk)), "share_count": _net_net_share_count(tk), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
+        "intrinsic_valuation": evaluate_intrinsic_valuation({"entity_type": get_default_registry().entity_type_for(tk), "financial": _financial_input(financial_canonical.get(tk)), "share_count": _net_net_share_count(tk), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
         # No source-owned scenario evidence mapping is qualified yet; do not infer one here.
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
         "risk_analysis": evaluate_market_risk({}, reference_at=reference_at.isoformat()),

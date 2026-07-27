@@ -571,6 +571,38 @@ class AnalysisBundleIntegrationTests(unittest.TestCase):
                 self.assertNotEqual(evidence.get("status"), "not_applicable", flag)
 
 
+class IntrinsicValuationEntityTypeWiringTests(unittest.TestCase):
+    """build_ticker_entry's evaluate_intrinsic_valuation call must pass entity_type through
+    (mirroring the relative_valuation/fundamental_quality calls a few lines away) so a bank's
+    Net-Net/FCFF report inapplicable, not unavailable -- previously this key was omitted, so
+    entity_type always resolved to "unknown" inside intrinsic_valuation.py regardless of the
+    ticker's real registry classification."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.TemporaryDirectory()
+        cls.out_dir = Path(cls.tmpdir.name)
+        cls.returncode = run_bundle_main(["--tickers", "VCB,HPG", "--allow-stale"], cls.out_dir)
+        with (cls.out_dir / "analysis_bundle.json").open(encoding="utf-8") as f:
+            cls.bundle = json.load(f)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmpdir.cleanup()
+
+    def test_bank_entity_type_reaches_intrinsic_valuation(self):
+        methods = self.bundle["tickers"]["VCB"]["intrinsic_valuation"]["methods"]
+        self.assertEqual(methods["net_net"]["state"], "inapplicable")
+        self.assertEqual(methods["fcff_dcf"]["state"], "inapplicable")
+
+    def test_corporate_entity_type_unaffected(self):
+        # HPG is entity_type=corporate: passing entity_type through must not change its
+        # pre-existing, already-qualified applicability at all.
+        methods = self.bundle["tickers"]["HPG"]["intrinsic_valuation"]["methods"]
+        self.assertNotEqual(methods["net_net"]["state"], "inapplicable")
+        self.assertNotEqual(methods["fcff_dcf"]["state"], "inapplicable")
+
+
 class FiscalPeriodQualityIntegrationTests(unittest.TestCase):
     """Mục 6 (phía consumer): load_financial_latest() phải khai has_fiscal_period_flag và luôn có
     excluded_unverified_periods (danh sách rỗng nếu financial_snapshot.parquet hiện hành chưa có
