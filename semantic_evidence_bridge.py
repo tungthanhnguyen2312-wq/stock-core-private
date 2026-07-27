@@ -56,6 +56,39 @@ _SIGN_RULES: dict[tuple[str, str], dict[str, Any]] = {
                     "income_statement raw_value sign convention for this item is negative.",
         "reconcile": lambda raw, official: raw == -official,
     },
+    # VCB FY2024 (Circular 49/2014/TT-NHNN consolidated income statement, form
+    # B03/TCTD-HN): these four lines are subtraction terms in the statement's own
+    # printed running total (e.g. XI = IX - X) and are shown in parentheses on the
+    # page; KBS's raw_value for each is the plain positive magnitude. Not
+    # ticker-specific -- applies to any bank sharing this raw item vocabulary.
+    ("income_statement", "interest_expense_and_similar_expenses"): {
+        "version": "v1",
+        "citation": "Form B03/TCTD-HN line 2 'Chi phi lai va cac chi phi tuong tu' is printed in "
+                    "parentheses (subtracted from line 1 to give I. Thu nhap lai thuan); KBS's "
+                    "raw_value sign convention for this item is positive.",
+        "reconcile": lambda raw, official: raw == -official,
+    },
+    ("income_statement", "operating_expenses"): {
+        "version": "v1",
+        "citation": "Form B03/TCTD-HN line VIII 'Chi phi hoat dong' is printed in parentheses "
+                    "(subtracted per the statement's own IX = I+...+VII-VIII formula); KBS's "
+                    "raw_value sign convention for this item is positive.",
+        "reconcile": lambda raw, official: raw == -official,
+    },
+    ("income_statement", "provision_for_credit_losses"): {
+        "version": "v1",
+        "citation": "Form B03/TCTD-HN line X 'Chi phi du phong rui ro tin dung' is printed in "
+                    "parentheses (subtracted per the statement's own XI = IX-X formula); KBS's "
+                    "raw_value sign convention for this item is positive.",
+        "reconcile": lambda raw, official: raw == -official,
+    },
+    ("income_statement", "corporate_income_tax"): {
+        "version": "v1",
+        "citation": "Form B03/TCTD-HN line XII 'Chi phi thue TNDN' is printed in parentheses "
+                    "(subtracted from XI to give XIII. Loi nhuan sau thue); KBS's raw_value sign "
+                    "convention for this item is positive.",
+        "reconcile": lambda raw, official: raw == -official,
+    },
 }
 
 # Generic derived-metric composition, mirroring cash_flow_debt_mapping.py's own
@@ -64,6 +97,7 @@ _SIGN_RULES: dict[tuple[str, str], dict[str, Any]] = {
 _DERIVED_COMPONENTS: dict[str, tuple[str, ...]] = {
     "total_interest_bearing_debt": ("short_term_borrowings", "long_term_borrowings"),
     "shareholders_equity": ("total_equity", "minority_interest_equity"),
+    "total_operating_income": ("operating_profit_before_credit_provision", "bank_operating_expenses"),
 }
 
 

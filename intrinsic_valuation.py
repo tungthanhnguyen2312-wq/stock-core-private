@@ -18,6 +18,19 @@ def q(r,metric):
  v=n(r.get("value"));return (v,None) if v is not None else (None,"canonical_value_missing_or_malformed")
 def evaluate_intrinsic_valuation(inputs:Mapping[str,Any]|None,reference_at:str|None=None):
  d=inputs if isinstance(inputs,Mapping) else {}; fin=d.get("financial") if isinstance(d.get("financial"),Mapping) else {}; entity=str(d.get("entity_type") or "unknown"); methods={}
+ # Both methods below are ordinary-corporate formulations: FCFF nets ordinary operating
+ # cash flow, CapEx, and interest-bearing debt (a bank's funding is customer deposits
+ # and interbank placements, never qualified here as total_debt); Net-Net nets
+ # current_assets/inventory/receivables against total_liabilities, a classification a
+ # bank's balance sheet does not use. Both are inapplicable to the bank archetype
+ # itself, not merely missing inputs -- entity_type=="bank" only, never ticker-specific.
+ if entity == "bank":
+  return {"schema_version":SCHEMA_VERSION,"reference_at":reference_at,"status":"unknown","methods":{
+    "fcff_dcf": out("fcff_dcf","inapplicable",applicability="inapplicable",
+        warnings=["fcff_ordinary_operating_cash_flow_capex_and_interest_bearing_debt_formulation_not_qualified_for_bank_archetype"]),
+    "net_net": out("net_net","inapplicable",applicability="inapplicable",
+        warnings=["net_net_current_assets_inventory_receivables_identity_not_qualified_for_bank_balance_sheet_structure"]),
+   }, "warnings":["DDM, FCFE, RNAV, and SOTP are absent until their source contracts are qualified."]}
  # FCFF requires standalone compatible cash-flow components, explicit forecast and sourced WACC/terminal assumptions.
  vals={}; missing=[]
  for m in ("operating_cash_flow","capital_expenditure","total_debt","cash_and_equivalents"):

@@ -16,7 +16,22 @@ RELATIVE_STORE = Path("data") / "financial-observations" / "observations.jsonl"
 METHODS = ("income_statement", "balance_sheet", "cash_flow")
 FREQUENCIES = ("year", "quarter")
 _CODES = {"net_cash_inflows_outflows_from_operating_activities", "net_cash_inflows_outflows_from_investing_activities", "net_cash_inflows_outflows_from_financing_activities", "net_cash_from_operating_activities", "net_cash_from_investing_activities", "purchases_of_fixed_assets_and_other_long_term_assets", "short_term_borrowings", "long_term_borrowings", "cash_and_cash_equivalents", "interest_expenses", "interest_and_similar_expenses", "attributable_to_parent_company",
-    "total_assets", "owners_equity", "minority_interests", "current_assets", "accounts_receivable", "inventories_net", "liabilities", "net_sales", "net_profit_loss_after_tax"}
+    "total_assets", "owners_equity", "minority_interests", "current_assets", "accounts_receivable", "inventories_net", "liabilities", "net_sales", "net_profit_loss_after_tax",
+    # Bank archetype (Circular 49/2014/TT-NHNN statement template) -- entity_type="bank" only,
+    # selected via _BANK in cash_flow_debt_mapping.py. Raw VCI/KBS item_ids differ from the
+    # corporate (Circular 200/202) template above even where the underlying concept is similar,
+    # so they are listed explicitly rather than reused.
+    "interest_income_and_similar_income", "interest_expense_and_similar_expenses", "net_interest_income",
+    "net_fee_and_commission_income", "net_gain_loss_from_foreign_currencies_and_gold_trading",
+    "net_gain_loss_from_trading_securities", "net_gain_loss_from_investment_securities", "net_other_income",
+    "income_from_capital_contribution_and_long_term_investments", "operating_expenses",
+    "operating_profit_before_provision_for_credit_losses", "provision_for_credit_losses", "profit_before_tax",
+    "corporate_income_tax", "net_profit", "net_profit_atttributable_to_the_equity_holders_of_the_bank",
+    "cash_and_precious_metals", "balances_with_the_sbv", "placements_with_and_loans_to_other_credit_institutions",
+    "loans_and_advances_to_customers", "less_provision_for_losses_on_loans_and_advances_to_customers",
+    "loans_and_advances_to_customers_net", "investment_securities", "total_liabilities", "deposits_from_customers",
+    "deposits_and_loans_from_other_credit_institutions", "convertible_bonds_cds_and_other_valuable_papers_issued",
+    "minority_interest"}
 
 
 def _json(value: Any) -> str:

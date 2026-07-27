@@ -17,7 +17,7 @@ class T(unittest.TestCase):
   x=inputs();x["current_price"]["financial_period"]="2025-Q1";self.assertEqual(evaluate_relative_valuation(x)["methods"]["pb"]["state"],"unavailable")
  def test_ev_direct_peer_and_sector_guards(self):
   x=inputs();del x["financial"]["cash_and_equivalents"];self.assertEqual(evaluate_relative_valuation(x)["methods"]["ev_sales"]["state"],"unavailable")
-  x=inputs(entity_type="financial");self.assertEqual(evaluate_relative_valuation(x)["methods"]["ev_sales"]["state"],"inapplicable")
+  x=inputs(entity_type="bank");self.assertEqual(evaluate_relative_valuation(x)["methods"]["ev_sales"]["state"],"inapplicable")
   x=inputs(direct_multiples={"pe":{"value":-2,"as_of_date":"2026-01-01","source":"provider","multiple_semantics":"pe","is_actionable":True}});self.assertEqual(evaluate_relative_valuation(x)["methods"]["pe"]["state"],"incomparable")
   x=inputs(historical={"pe":[1,2,3,100]},historical_universe={"deterministic":True});self.assertEqual(evaluate_relative_valuation(x)["methods"]["pe"]["reference_range"]["high"],3)
   x=inputs(historical={"pe":[1,2]},historical_universe={"deterministic":True});self.assertIsNone(evaluate_relative_valuation(x)["methods"]["pe"]["reference_range"])

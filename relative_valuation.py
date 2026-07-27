@@ -109,10 +109,16 @@ def evaluate_relative_valuation(inputs: Mapping[str, Any] | None, reference_at: 
     pe_value, pe_record, pe_ok = _share_input(inputs, "share_count_period_end", "period_end")
     market_cap_value, market_cap_provenance, market_cap_missing = _resolve_market_cap(inputs, price, price_value, price_ok, pe_value, pe_record, pe_ok)
     methods: dict[str, dict[str, Any]] = {}
+    # Enterprise-value methods (EV/Sales, EV/EBITDA) reconstruct market_cap + total_debt -
+    # cash; a bank's funding structure (customer deposits, interbank funding) is not
+    # interest-bearing debt in that sense, and this pipeline never qualifies a bank
+    # total_debt identity to feed it. entity_type=="bank" only -- not ticker-specific,
+    # and does not touch securities/insurance/finance_company (out of scope for this
+    # milestone; each would need its own reviewed archetype decision).
     for name in METHODS:
-        methods[name] = _method(name, applicability="inapplicable" if entity_type == "financial" and name.startswith("ev_") else "unknown")
-        if entity_type == "financial" and name.startswith("ev_"):
-            methods[name]["state"] = "inapplicable"; methods[name]["warnings"] = ["enterprise_value_method_not_qualified_for_financial_sector"]
+        methods[name] = _method(name, applicability="inapplicable" if entity_type == "bank" and name.startswith("ev_") else "unknown")
+        if entity_type == "bank" and name.startswith("ev_"):
+            methods[name]["state"] = "inapplicable"; methods[name]["warnings"] = ["enterprise_value_method_not_qualified_for_bank_archetype_customer_deposits_are_not_interest_bearing_debt"]
     specs = {"pe": "net_income", "pb": "shareholders_equity", "ps": "revenue", "ev_ebitda": "ebitda", "ev_sales": "revenue"}
     for name, metric in specs.items():
         if methods[name]["state"] == "inapplicable": continue
