@@ -410,6 +410,170 @@ def load_verified_market_price(runtime_root: Path) -> dict[str, Any]:
             "by_ticker_date": by_ticker_date, "rejected": rejected}
 
 
+EBITDA_COMPONENTS_RELATIVE = Path("data") / "official-evidence" / "ebitda_component_citations.jsonl"
+# HPG's consolidated income statement prints "Lợi nhuận thuần từ hoạt động kinh doanh"
+# (mã số 30, operating profit) net of financial income/expense -- {30 = 20 + (21-22) -
+# (25+26)} per its own printed formula -- so it is not a pre-interest figure and is
+# never used as the EBIT-equivalent input here. profit_before_tax + interest_expense
+# correctly reverses out tax and the disclosed interest component of financial expense,
+# matching the literal Earnings-Before-Interest-and-Tax meaning of the acronym.
+# operating_profit is audited and available (13,267,005,585,330 for HPG FY2024) but is
+# deliberately excluded -- see docs/hpg_fy2024_ebitda_qualification.md.
+EBITDA_FORMULA_VERSION = "ebitda_v1_profit_before_tax_plus_interest_expense_plus_depreciation_and_amortization"
+_SUPPORTED_EBITDA_COMPONENTS = {"profit_before_tax", "interest_expense", "depreciation_and_amortization"}
+_REQUIRED_EBITDA_COMPONENT_FIELDS = ("citation_id", "ticker", "metric", "reporting_frequency", "reporting_period",
+    "statement_scope", "currency", "unit_scale", "value", "evidence_id")
+
+
+def _load_ebitda_component_rows(runtime_root: Path) -> list[Any] | None:
+    """Return parsed JSONL rows, or None if the file is missing or malformed (fail closed)."""
+    path = runtime_root / EBITDA_COMPONENTS_RELATIVE
+    if not path.exists():
+        return None
+    rows: list[Any] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return rows
+
+
+def load_verified_ebitda_components(runtime_root: Path) -> dict[str, Any]:
+    """Read and verify data/official-evidence/ebitda_component_citations.jsonl; fails closed per record.
+
+    Each entry is a standalone, PDF-cited fact (profit_before_tax, interest_expense, or
+    depreciation_and_amortization) -- like share_basis_citations.jsonl, none of these is
+    part of a retained VCI raw observation, so there is no observation_id to cross-check
+    against. Verification is limited to: the cited evidence document still hash-verifies
+    against the manifest, the citation_id is the deterministic hash of its own content,
+    the metric is in the supported set, the scope is supported, and no two citations
+    conflict for the same (ticker, metric, reporting_period).
+
+    Returns {"status": ..., "version": VERSION, "by_key": {(ticker, metric,
+    reporting_period): verified_entry}, "rejected": [...]}.
+    """
+    evidence_by_id = _load_manifest(runtime_root)
+    rows = _load_ebitda_component_rows(runtime_root)
+    rejected: list[dict[str, Any]] = []
+    if evidence_by_id is None or rows is None:
+        return {"status": "unavailable", "version": VERSION, "by_key": {}, "rejected": rejected}
+
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for raw in rows:
+        if not isinstance(raw, dict) or not all(field in raw for field in _REQUIRED_EBITDA_COMPONENT_FIELDS):
+            rejected.append({"citation": raw, "reason": "malformed_citation"})
+            continue
+        key = (raw["ticker"], raw["metric"], raw["reporting_period"])
+        grouped.setdefault(key, []).append(raw)
+
+    by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for key, citations in grouped.items():
+        unique_by_content = {_hash(c): c for c in citations}
+        if len(unique_by_content) > 1:
+            rejected.append({"key": key, "reason": "conflicting_citations"})
+            continue
+        citation = next(iter(unique_by_content.values()))
+
+        expected_id = _hash({"ticker": citation["ticker"], "metric": citation["metric"],
+                              "reporting_period": citation["reporting_period"], "evidence_id": citation["evidence_id"],
+                              "value": citation["value"]})
+        if citation["citation_id"] != expected_id:
+            rejected.append({"key": key, "reason": "citation_id_not_deterministic"})
+            continue
+
+        if citation["metric"] not in _SUPPORTED_EBITDA_COMPONENTS:
+            rejected.append({"key": key, "reason": "unsupported_metric"})
+            continue
+
+        if citation["statement_scope"] not in _SUPPORTED_SCOPES:
+            rejected.append({"key": key, "reason": "unsupported_scope"})
+            continue
+
+        evidence = evidence_by_id.get(citation["evidence_id"])
+        if evidence is None:
+            rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
+            continue
+
+        by_key[key] = {
+            "ticker": citation["ticker"], "metric": citation["metric"],
+            "reporting_frequency": citation["reporting_frequency"], "reporting_period": citation["reporting_period"],
+            "statement_scope": citation["statement_scope"], "currency": citation["currency"],
+            "unit_scale": citation["unit_scale"], "value": citation["value"],
+            "evidence_id": citation["evidence_id"], "citation_id": citation["citation_id"],
+            "citation": citation.get("citation"), "qualification_version": VERSION,
+            "verified_at": citation.get("verified_at"),
+        }
+
+    return {"status": "available" if by_key else "unavailable", "version": VERSION, "by_key": by_key, "rejected": rejected}
+
+
+def latest_ebitda_component(by_key: Mapping[tuple[str, str, str], dict[str, Any]], ticker: str,
+                             metric: str, frequency: str = "annual") -> dict[str, Any] | None:
+    """The most recent verified entry for (ticker, metric, frequency), or None.
+
+    Never falls back to a different metric -- an absent profit_before_tax entry is not
+    satisfied by interest_expense or depreciation_and_amortization, even if numerically
+    plausible.
+    """
+    candidates = [entry for (entry_ticker, entry_metric, _), entry in by_key.items()
+                  if entry_ticker == ticker and entry_metric == metric and entry["reporting_frequency"] == frequency]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda entry: entry["reporting_period"])
+
+
+def derive_ebitda(by_key: Mapping[tuple[str, str, str], dict[str, Any]], ticker: str,
+                   frequency: str = "annual") -> dict[str, Any] | None:
+    """ebitda = profit_before_tax + interest_expense + depreciation_and_amortization.
+
+    All three components must be independently verified (load_verified_ebitda_components)
+    and must agree exactly on reporting_period, statement_scope, currency, and unit_scale --
+    never combined across a mismatch. Returns None (the canonical record is simply absent,
+    same convention as every other evidence-gated helper in this module) when any component
+    is missing or the three disagree on identity. Depreciation and amortization are combined
+    only because the cited cash-flow-statement line ("Khấu hao và phân bổ") already reports
+    them combined; the separate goodwill-amortization line on the same statement ("Phân bổ
+    lợi thế thương mại") is a distinct, non-operating M&A-related item and is never folded
+    in here -- see docs/hpg_fy2024_ebitda_qualification.md.
+    """
+    pbt = latest_ebitda_component(by_key, ticker, "profit_before_tax", frequency)
+    interest = latest_ebitda_component(by_key, ticker, "interest_expense", frequency)
+    da = latest_ebitda_component(by_key, ticker, "depreciation_and_amortization", frequency)
+    if pbt is None or interest is None or da is None:
+        return None
+    components = (pbt, interest, da)
+    if (len({c["reporting_period"] for c in components}) != 1 or len({c["statement_scope"] for c in components}) != 1
+            or len({c["currency"] for c in components}) != 1 or len({c["unit_scale"] for c in components}) != 1):
+        return None
+    return {
+        "canonical_metric": "ebitda", "value": pbt["value"] + interest["value"] + da["value"],
+        "source": "ebitda_component_evidence",
+        "source_field": "profit_before_tax+interest_expense+depreciation_and_amortization",
+        "source_statement": "income_statement_and_cash_flow_statement",
+        "period_identity": {"period": pbt["reporting_period"], "period_type": frequency},
+        "statement_scope": pbt["statement_scope"], "currency": pbt["currency"], "unit_scale": pbt["unit_scale"],
+        "derivation_status": "derived", "quality_state": "available", "reason": None,
+        "restatement_state": "unknown", "formula_version": EBITDA_FORMULA_VERSION,
+        "derivation_lineage": {
+            "formula": "profit_before_tax + interest_expense + depreciation_and_amortization",
+            "formula_version": EBITDA_FORMULA_VERSION,
+            "components": [{"metric": c["metric"], "value": c["value"], "evidence_id": c["evidence_id"],
+                             "citation_id": c["citation_id"], "citation": c["citation"]} for c in components],
+            "excluded": [
+                "operating_profit (Lợi nhuận thuần từ hoạt động kinh doanh, mã số 30): audited at "
+                "13,267,005,585,330 VND for HPG FY2024 but not used as the EBIT-equivalent input -- "
+                "it already nets financial income/expense per its own printed formula, so it is not "
+                "a pre-interest figure.",
+                "Phân bổ lợi thế thương mại (goodwill amortization, mã số 02, 12,295,891,969 VND): a "
+                "distinct, non-operating cash-flow-statement addback separate from the combined "
+                "\"Khấu hao và phân bổ\" line; never folded into depreciation_and_amortization.",
+            ],
+        },
+    }
+
+
 def _clear_resolved_reason(reason: Any) -> str | None:
     if not reason:
         return None

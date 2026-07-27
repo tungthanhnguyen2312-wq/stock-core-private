@@ -57,7 +57,7 @@ from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
 from corporate_actions_export import build_corporate_actions_section
 from financial_observations import canonical_records, store_path
-from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price
+from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price, load_verified_ebitda_components, derive_ebitda
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
@@ -421,12 +421,19 @@ def load_financial_canonical(tickers: list[str]) -> dict[str, dict]:
     observation_records = canonical_records(store_path(runtime_root()), {ticker: get_default_registry().entity_type_for(ticker) for ticker in tickers})
     observation_records = enrich_canonical_records(observation_records, runtime_root())
     observation_records = reconcile_metric_identities(observation_records)
+    # Standalone PDF-cited facts (profit_before_tax, interest_expense,
+    # depreciation_and_amortization), same pattern as share_basis_citations.jsonl --
+    # none of these is part of a retained VCI raw observation. See
+    # docs/hpg_fy2024_ebitda_qualification.md for the formula and its evidence.
+    verified_ebitda_components = load_verified_ebitda_components(runtime_root())
     result = {}
     for ticker in tickers:
         canonical = canonicalize_financial_rows(df, ticker)
         evidence = load_cited_financial_records(runtime_root(), ticker)
+        ebitda_record = derive_ebitda(verified_ebitda_components["by_key"], ticker)
+        extra_records = [ebitda_record] if ebitda_record is not None else []
         canonical["records"] = sorted(
-            canonical["records"] + evidence["records"] + observation_records.get(ticker, []),
+            canonical["records"] + evidence["records"] + observation_records.get(ticker, []) + extra_records,
             key=lambda record: (record["canonical_metric"], (record.get("period_identity") or {}).get("period", ""),
                                 record["statement_scope"], record["source"]),
         )
