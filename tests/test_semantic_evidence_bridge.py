@@ -176,6 +176,21 @@ class SemanticEvidenceBridgeTests(unittest.TestCase):
             self.assertNotIn(cash["observation_id"], verified2["by_observation_id"])
             self.assertEqual(verified2["rejected"][0]["reason"], "value_mismatch_after_sign_rule")
 
+    def test_signed_issuer_manifest_acceptance_rule_is_explicit_and_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            observations = _make_observations()
+            pdf_bytes = b"signed evidence"; sha256 = hashlib.sha256(pdf_bytes).hexdigest(); evidence_id = _evidence_id(sha256)
+            record = _evidence_record(evidence_id, "signed.pdf", sha256, ticker="VNM")
+            record["evidence_acceptance"] = {"rule_version": bridge.SIGNED_ISSUER_ACCEPTANCE_RULE, "embedded_signer": {"identity": "Issuer", "tax_identifier": "tax-id"}, "official_source_corroboration": {"source_url": "https://issuer.example/report", "audit_report_number": "audit-1"}, "direct_document_url_status": "unavailable_recorded"}
+            citation = _citation_for(observations[0], OFFICIAL_VALUES[observations[0]["raw_item_id"]], evidence_id)
+            _write_runtime(root, observations, [record], [citation], {"signed.pdf": pdf_bytes})
+            self.assertEqual(bridge.load_verified_citations(root)["status"], "available")
+            record["evidence_acceptance"]["official_source_corroboration"] = {"source_url": "https://issuer.example/report"}
+            _write_runtime(root, observations, [record], [citation], {"signed.pdf": pdf_bytes})
+            rejected = bridge.load_verified_citations(root)
+            self.assertEqual(rejected["by_observation_id"], {})
+            self.assertEqual(rejected["rejected"][0]["reason"], "evidence_missing_or_hash_mismatch")
     def test_derived_record_evidence_propagation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root, observations = self._valid_runtime(tmp)

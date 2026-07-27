@@ -19,6 +19,13 @@ absent from the current `observations.jsonl`, an identity/value mismatch
 against that observation, or two differing citations for the same
 `observation_id`. `observations.jsonl` is only ever read, never written.
 
+An evidence manifest may opt into
+`signed_issuer_document_with_official_source_corroboration_v1`. This generic,
+versioned acceptance path permits a hash-verified PDF with an embedded issuer
+identity when the historical direct document URL is explicitly unavailable. It
+requires signer identity and tax identifier, an official-source corroboration
+URL and audit-report number, plus `unavailable_recorded` URL status. Missing
+or malformed opt-in metadata is rejected; legacy records keep their contract.
 Value verification is signed, never by absolute value. Absent an explicit,
 cited, versioned entry in `_SIGN_RULES`, a citation must match the raw value
 exactly. The only current entry is `("income_statement", "interest_expenses")`

@@ -16,6 +16,7 @@ SHARE_BASIS_RELATIVE = Path("data") / "official-evidence" / "share_basis_citatio
 MARKET_PRICE_RELATIVE = Path("data") / "official-evidence" / "market_price_citations.jsonl"
 DB_RELATIVE = "vn_stock.db"
 MANIFEST_SCHEMA_VERSION = "1.0.0"
+SIGNED_ISSUER_ACCEPTANCE_RULE = "signed_issuer_document_with_official_source_corroboration_v1"
 # The only adjustment status this reader accepts today: a raw, as-quoted close with
 # no back-adjustment applied. A citation is only valid under this status when the
 # ticker had no unsettled corporate action as of the trading_date -- never inferred
@@ -85,6 +86,27 @@ def _verify_value(statement_type: str, raw_item_id: str, raw_value: Any, officia
     return bool(rule["reconcile"](raw_value, official_value)), rule["version"]
 
 
+def _manifest_acceptance_ok(record: Mapping[str, Any]) -> bool:
+    """Validate an optional, versioned non-URL evidence acceptance assertion."""
+    acceptance = record.get("evidence_acceptance")
+    if acceptance is None:
+        return True
+    if not isinstance(acceptance, Mapping):
+        return False
+    if acceptance.get("rule_version") != SIGNED_ISSUER_ACCEPTANCE_RULE:
+        return False
+    signer = acceptance.get("embedded_signer")
+    corroboration = acceptance.get("official_source_corroboration")
+    return (
+        isinstance(signer, Mapping)
+        and bool(signer.get("identity"))
+        and bool(signer.get("tax_identifier"))
+        and isinstance(corroboration, Mapping)
+        and bool(corroboration.get("source_url"))
+        and bool(corroboration.get("audit_report_number"))
+        and acceptance.get("direct_document_url_status") == "unavailable_recorded"
+    )
+
 def _load_manifest(runtime_root: Path) -> dict[str, dict[str, Any]] | None:
     """Return {evidence_id: record} restricted to hash-verified, qualified evidence.
 
@@ -107,6 +129,8 @@ def _load_manifest(runtime_root: Path) -> dict[str, dict[str, Any]] | None:
             continue
         evidence_id, filename = record.get("evidence_id"), record.get("filename")
         if not evidence_id or not filename or record.get("qualification_state") != "qualified":
+            continue
+        if not _manifest_acceptance_ok(record):
             continue
         document = path.parent / str(filename)
         if not document.is_file() or _sha256_file(document) != record.get("sha256"):
