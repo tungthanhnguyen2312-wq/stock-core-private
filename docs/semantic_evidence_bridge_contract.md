@@ -26,6 +26,28 @@ identity when the historical direct document URL is explicitly unavailable. It
 requires signer identity and tax identifier, an official-source corroboration
 URL and audit-report number, plus `unavailable_recorded` URL status. Missing
 or malformed opt-in metadata is rejected; legacy records keep their contract.
+
+A record may instead declare the weaker `third_party_mirrored_unsigned_
+audited_issuer_document_v1` class -- an audited issuer document with no
+embedded signature, retained from a third-party disclosure mirror rather than
+the issuer's own domain. This class is opt-in via three top-level facts
+(`issuer_hosted: false`, `source_host_classification: "third_party_mirror"`,
+`embedded_signature_status: "absent"|"unverified"`); declaring any one of the
+three makes all three, plus a matching `evidence_acceptance` block, mandatory
+-- hash equality alone never suffices once a record enters this class, and a
+partial declaration fails closed rather than falling back to the hash-only
+default. The block itself must carry `issuer_identity`, `auditor_identity`,
+`audit_opinion`, `report_date`, a supported `reporting_scope`, a
+`reporting_period`, a `document_sha256` matching the record's own `sha256`, a
+`provider_exact_match_status` of `"exact_match"` (the independently re-synced
+provider data was cross-checked against the document, not reconstructed from
+it), and a `warnings` list carrying the explicit acknowledgement that this
+hosting is weaker than issuer-hosted evidence. Missing any one of these fails
+the record closed. This path never marks a document issuer-hosted, signed, or
+otherwise equivalent to first-party provenance -- it only ever adds an
+explicit, versioned, weaker-provenance acceptance on top of the existing hash
+check. Entirely generic: keyed on field values, never on ticker or issuer.
+
 Value verification is signed, never by absolute value. Absent an explicit,
 cited, versioned entry in `_SIGN_RULES`, a citation must match the raw value
 exactly. The only current entry is `("income_statement", "interest_expenses")`

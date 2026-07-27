@@ -15,12 +15,25 @@ sha256 `63498215e56d0d61a6c27c161913395cdbac45a027017b308301b771e27aa104`,
 `12163420/E-67794777-HN`, signed 2025-03-28). Sourced from `static2.vietstock.vn`
 (a known Vietnamese disclosure mirror), not `vietcombank.com.vn` directly --
 the issuer's own domain is unreachable from this environment (browser
-policy). No embedded PDF signature was found (unlike VNM's evidence); the
-manifest record carries no `evidence_acceptance` block and qualifies purely
-on the existing default path (local file present, sha256 matches, content
-verified page-by-page: company seal, EY seal and signatures, and printed
-figures cross-checked against the independently re-synced provider data).
-Recorded transparently in the manifest's `warnings`.
+policy). No embedded PDF signature was found (unlike VNM's evidence).
+
+**Provenance hardening (post-pilot addendum):** hash equality alone does not
+imply official issuer provenance, so this record no longer qualifies on the
+default hash-only path. It now declares the generic, versioned
+`third_party_mirrored_unsigned_audited_issuer_document_v1` acceptance rule in
+`semantic_evidence_bridge.py` (ticker-neutral, applies to any issuer document
+sharing this hosting/signature profile): explicit `issuer_hosted: false`,
+`source_host_classification: "third_party_mirror"`, and
+`embedded_signature_status: "absent"` fields, plus an `evidence_acceptance`
+block carrying issuer identity, auditor identity, audit opinion, report date,
+reporting scope/period, a self-consistent document hash, an explicit
+`provider_exact_match_status: "exact_match"` (content verified page-by-page:
+company seal, EY seal and signatures, and printed figures cross-checked
+against the independently re-synced provider data, never reconstructed from
+the PDF), and a warning that third-party-mirror hosting is weaker than
+issuer-hosted evidence. Missing any of these fails the record closed rather
+than silently falling back to hash-only trust. See
+`docs/semantic_evidence_bridge_contract.md` for the full rule contract.
 
 ## Provider recollection
 

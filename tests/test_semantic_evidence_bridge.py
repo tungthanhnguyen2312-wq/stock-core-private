@@ -67,6 +67,34 @@ def _citation_for(observation, official_value, evidence_id):
         "disambiguation": "test", "verified_at": "2026-07-26T21:00:00+07:00", "schema_version": "1.0.0"}
 
 
+def _mirror_acceptance(sha256, **overrides):
+    acceptance = {
+        "rule_version": bridge.THIRD_PARTY_MIRROR_UNSIGNED_ACCEPTANCE_RULE,
+        "issuer_identity": "Test Issuer Co.",
+        "auditor_identity": "Test Auditor LLP",
+        "audit_opinion": "unqualified",
+        "report_date": "2025-03-28",
+        "reporting_scope": "consolidated",
+        "reporting_period": "2024",
+        "document_sha256": sha256,
+        "provider_exact_match_status": "exact_match",
+        "warnings": [bridge.THIRD_PARTY_MIRROR_HOSTING_WARNING],
+    }
+    acceptance.update(overrides)
+    return acceptance
+
+
+def _mirror_record(evidence_id, filename, sha256, ticker, declare_provenance=True, acceptance=None):
+    record = _evidence_record(evidence_id, filename, sha256, ticker=ticker)
+    if declare_provenance:
+        record["issuer_hosted"] = False
+        record["source_host_classification"] = "third_party_mirror"
+        record["embedded_signature_status"] = "absent"
+    if acceptance is not None:
+        record["evidence_acceptance"] = acceptance
+    return record
+
+
 def _write_runtime(root, observations, evidence_records=None, citation_dicts=None, pdf_bytes_by_filename=None):
     append_observations(store_path(root), observations)
     evidence_dir = root / "data" / "official-evidence"
@@ -191,6 +219,107 @@ class SemanticEvidenceBridgeTests(unittest.TestCase):
             rejected = bridge.load_verified_citations(root)
             self.assertEqual(rejected["by_observation_id"], {})
             self.assertEqual(rejected["rejected"][0]["reason"], "evidence_missing_or_hash_mismatch")
+
+    # Generic acceptance path for an audited issuer document retained from a
+    # third-party mirror with no embedded signature. Uses fake tickers (ZZZ/QQQ)
+    # throughout -- this rule is keyed entirely on explicit field values, never
+    # on ticker or issuer identity (see also test_no_ticker_specific_branch-style
+    # checks in test_vcb_banking_identity_qualification.py).
+    def test_third_party_mirror_rule_rejects_default_hash_only_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            observations = _make_observations(ticker="ZZZ")
+            pdf_bytes = b"mirrored evidence"; sha256 = hashlib.sha256(pdf_bytes).hexdigest(); evidence_id = _evidence_id(sha256, ticker="ZZZ")
+            # Declares the weaker hosting class but carries no evidence_acceptance block --
+            # must not silently fall back to the hash-only trust that an absent block ordinarily grants.
+            record = _mirror_record(evidence_id, "mirror.pdf", sha256, ticker="ZZZ")
+            citation = _citation_for(observations[0], OFFICIAL_VALUES[observations[0]["raw_item_id"]], evidence_id)
+            _write_runtime(root, observations, [record], [citation], {"mirror.pdf": pdf_bytes})
+            verified = bridge.load_verified_citations(root)
+            self.assertEqual(verified["by_observation_id"], {})
+            self.assertEqual(verified["rejected"][0]["reason"], "evidence_missing_or_hash_mismatch")
+
+    def test_third_party_mirror_rule_qualifies_with_all_required_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            observations = _make_observations(ticker="ZZZ")
+            pdf_bytes = b"mirrored evidence"; sha256 = hashlib.sha256(pdf_bytes).hexdigest(); evidence_id = _evidence_id(sha256, ticker="ZZZ")
+            record = _mirror_record(evidence_id, "mirror.pdf", sha256, ticker="ZZZ", acceptance=_mirror_acceptance(sha256))
+            citation = _citation_for(observations[0], OFFICIAL_VALUES[observations[0]["raw_item_id"]], evidence_id)
+            _write_runtime(root, observations, [record], [citation], {"mirror.pdf": pdf_bytes})
+            verified = bridge.load_verified_citations(root)
+            self.assertEqual(verified["status"], "available")
+            self.assertIn(observations[0]["observation_id"], verified["by_observation_id"])
+
+    def test_third_party_mirror_rule_fails_closed_on_missing_required_fields(self):
+        # Each override individually breaks one required identity/audit/scope/hash/
+        # exact-match fact; every one must independently fail closed.
+        required_field_removals = [
+            {"issuer_identity": ""}, {"auditor_identity": ""}, {"audit_opinion": ""}, {"report_date": ""},
+            {"reporting_scope": ""}, {"reporting_period": ""}, {"document_sha256": "0" * 64},
+            {"provider_exact_match_status": "not_verified"}, {"warnings": []},
+        ]
+        for override in required_field_removals:
+            with self.subTest(override=override):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    observations = _make_observations(ticker="ZZZ")
+                    pdf_bytes = b"mirrored evidence"; sha256 = hashlib.sha256(pdf_bytes).hexdigest(); evidence_id = _evidence_id(sha256, ticker="ZZZ")
+                    record = _mirror_record(evidence_id, "mirror.pdf", sha256, ticker="ZZZ", acceptance=_mirror_acceptance(sha256, **override))
+                    citation = _citation_for(observations[0], OFFICIAL_VALUES[observations[0]["raw_item_id"]], evidence_id)
+                    _write_runtime(root, observations, [record], [citation], {"mirror.pdf": pdf_bytes})
+                    verified = bridge.load_verified_citations(root)
+                    self.assertEqual(verified["by_observation_id"], {}, f"should fail closed for {override}")
+                    self.assertEqual(verified["rejected"][0]["reason"], "evidence_missing_or_hash_mismatch")
+
+    def test_third_party_mirror_rule_fails_closed_on_partial_top_level_declaration(self):
+        # Declaring only one of the three top-level classification facts (not all
+        # three) must still fail closed -- never a partial opt-in that reverts to
+        # hash-only trust.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            observations = _make_observations(ticker="ZZZ")
+            pdf_bytes = b"mirrored evidence"; sha256 = hashlib.sha256(pdf_bytes).hexdigest(); evidence_id = _evidence_id(sha256, ticker="ZZZ")
+            record = _evidence_record(evidence_id, "mirror.pdf", sha256, ticker="ZZZ")
+            record["issuer_hosted"] = False  # only one of three required facts declared
+            record["evidence_acceptance"] = _mirror_acceptance(sha256)
+            citation = _citation_for(observations[0], OFFICIAL_VALUES[observations[0]["raw_item_id"]], evidence_id)
+            _write_runtime(root, observations, [record], [citation], {"mirror.pdf": pdf_bytes})
+            verified = bridge.load_verified_citations(root)
+            self.assertEqual(verified["by_observation_id"], {})
+
+    def test_third_party_mirror_rule_rejects_signature_status_contradicting_unsigned_premise(self):
+        # This rule only ever models an unsigned document -- it must never accept a
+        # record that both claims this weaker class and an embedded signature.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            observations = _make_observations(ticker="ZZZ")
+            pdf_bytes = b"mirrored evidence"; sha256 = hashlib.sha256(pdf_bytes).hexdigest(); evidence_id = _evidence_id(sha256, ticker="ZZZ")
+            record = _mirror_record(evidence_id, "mirror.pdf", sha256, ticker="ZZZ", acceptance=_mirror_acceptance(sha256))
+            record["embedded_signature_status"] = "present"
+            citation = _citation_for(observations[0], OFFICIAL_VALUES[observations[0]["raw_item_id"]], evidence_id)
+            _write_runtime(root, observations, [record], [citation], {"mirror.pdf": pdf_bytes})
+            verified = bridge.load_verified_citations(root)
+            self.assertEqual(verified["by_observation_id"], {})
+
+    def test_third_party_mirror_rule_is_ticker_neutral(self):
+        for ticker in ("ZZZ", "QQQ"):
+            with self.subTest(ticker=ticker):
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    observations = _make_observations(ticker=ticker)
+                    pdf_bytes = b"mirrored evidence"; sha256 = hashlib.sha256(pdf_bytes).hexdigest(); evidence_id = _evidence_id(sha256, ticker=ticker)
+                    record = _mirror_record(evidence_id, "mirror.pdf", sha256, ticker=ticker, acceptance=_mirror_acceptance(sha256))
+                    citation = _citation_for(observations[0], OFFICIAL_VALUES[observations[0]["raw_item_id"]], evidence_id)
+                    _write_runtime(root, observations, [record], [citation], {"mirror.pdf": pdf_bytes})
+                    verified = bridge.load_verified_citations(root)
+                    self.assertEqual(verified["status"], "available")
+
+    def test_third_party_mirror_rule_source_has_no_ticker_specific_branch(self):
+        text = Path(bridge.__file__).read_text(encoding="utf-8")
+        self.assertNotIn('"VCB"', text)
+        self.assertNotIn("'VCB'", text)
+
     def test_derived_record_evidence_propagation(self):
         with tempfile.TemporaryDirectory() as tmp:
             root, observations = self._valid_runtime(tmp)

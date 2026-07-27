@@ -17,6 +17,16 @@ MARKET_PRICE_RELATIVE = Path("data") / "official-evidence" / "market_price_citat
 DB_RELATIVE = "vn_stock.db"
 MANIFEST_SCHEMA_VERSION = "1.0.0"
 SIGNED_ISSUER_ACCEPTANCE_RULE = "signed_issuer_document_with_official_source_corroboration_v1"
+# Generic, versioned acceptance path for an audited issuer document retained from a
+# third-party mirror with no embedded signature -- e.g. a national disclosure mirror
+# standing in for an issuer domain that is unreachable from this environment. Hash
+# equality is never sufficient on its own for this weaker hosting class: a record
+# opts in by declaring the three classification facts below, and every identity/
+# audit/scope/exact-match fact in its evidence_acceptance block must then be
+# explicit or the record fails closed. Never implies issuer-hosted or signed status.
+THIRD_PARTY_MIRROR_UNSIGNED_ACCEPTANCE_RULE = "third_party_mirrored_unsigned_audited_issuer_document_v1"
+THIRD_PARTY_MIRROR_HOSTING_WARNING = "third_party_mirror_hosting_is_weaker_than_issuer_hosted_evidence"
+_SUPPORTED_EMBEDDED_SIGNATURE_STATUSES_FOR_MIRROR_RULE = {"absent", "unverified"}
 # The only adjustment status this reader accepts today: a raw, as-quoted close with
 # no back-adjustment applied. A citation is only valid under this status when the
 # ticker had no unsettled corporate action as of the trading_date -- never inferred
@@ -120,8 +130,49 @@ def _verify_value(statement_type: str, raw_item_id: str, raw_value: Any, officia
     return bool(rule["reconcile"](raw_value, official_value)), rule["version"]
 
 
+def _third_party_mirror_provenance_declared(record: Mapping[str, Any]) -> bool:
+    """A record opts into the weaker third-party-mirror provenance class by setting
+    any one of these three top-level classification facts. Once any one is present,
+    all three plus a matching evidence_acceptance block become mandatory -- a
+    record can never partially declare this class and fall back to hash-only."""
+    return any(field in record for field in ("issuer_hosted", "source_host_classification", "embedded_signature_status"))
+
+
+def _third_party_mirror_acceptance_ok(record: Mapping[str, Any]) -> bool:
+    """Fail-closed acceptance for an audited issuer document retained from a
+    third-party mirror with no embedded signature (see THIRD_PARTY_MIRROR_UNSIGNED_
+    ACCEPTANCE_RULE above). Generic and reusable: keyed entirely on explicit field
+    values, never on ticker or issuer identity. Document hash equality (checked
+    separately by the caller) is necessary but never sufficient here -- every
+    identity, audit, scope, and exact-match fact below must also be explicit."""
+    if (record.get("issuer_hosted") is not False
+            or record.get("source_host_classification") != "third_party_mirror"
+            or record.get("embedded_signature_status") not in _SUPPORTED_EMBEDDED_SIGNATURE_STATUSES_FOR_MIRROR_RULE):
+        return False
+    acceptance = record.get("evidence_acceptance")
+    if not isinstance(acceptance, Mapping) or acceptance.get("rule_version") != THIRD_PARTY_MIRROR_UNSIGNED_ACCEPTANCE_RULE:
+        return False
+    if not bool(acceptance.get("issuer_identity")) or not bool(acceptance.get("auditor_identity")):
+        return False
+    if not bool(acceptance.get("audit_opinion")) or not bool(acceptance.get("report_date")):
+        return False
+    if acceptance.get("reporting_scope") not in _SUPPORTED_SCOPES or not bool(acceptance.get("reporting_period")):
+        return False
+    document_sha256 = acceptance.get("document_sha256")
+    if not bool(document_sha256) or document_sha256 != record.get("sha256"):
+        return False
+    if acceptance.get("provider_exact_match_status") != "exact_match":
+        return False
+    warnings = acceptance.get("warnings")
+    if not isinstance(warnings, list) or THIRD_PARTY_MIRROR_HOSTING_WARNING not in warnings:
+        return False
+    return True
+
+
 def _manifest_acceptance_ok(record: Mapping[str, Any]) -> bool:
     """Validate an optional, versioned non-URL evidence acceptance assertion."""
+    if _third_party_mirror_provenance_declared(record):
+        return _third_party_mirror_acceptance_ok(record)
     acceptance = record.get("evidence_acceptance")
     if acceptance is None:
         return True
