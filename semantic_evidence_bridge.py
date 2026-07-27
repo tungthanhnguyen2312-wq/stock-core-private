@@ -600,14 +600,9 @@ def derive_ebitda(by_key: Mapping[tuple[str, str, str], dict[str, Any]], ticker:
             "components": [{"metric": c["metric"], "value": c["value"], "evidence_id": c["evidence_id"],
                              "citation_id": c["citation_id"], "citation": c["citation"]} for c in components],
             "excluded": [
-                "operating_profit (Lợi nhuận thuần từ hoạt động kinh doanh, mã số 30): audited at "
-                "13,267,005,585,330 VND for HPG FY2024 but not used as the EBIT-equivalent input -- "
-                "it already nets financial income/expense per its own printed formula, so it is not "
-                "a pre-interest figure.",
-                "Phân bổ lợi thế thương mại (goodwill amortization, mã số 02, 12,295,891,969 VND): a "
-                "distinct, non-operating cash-flow-statement addback separate from the combined "
-                "\"Khấu hao và phân bổ\" line; never folded into depreciation_and_amortization.",
-            ],
+                    "operating_profit (line code 30): excluded because the printed formula already nets financial income and expense; it is not a pre-interest figure.",
+                    "goodwill amortization (line code 02): excluded because it is a distinct cash-flow-statement addback separate from the cited combined depreciation_and_amortization line; it is never folded into EBITDA.",
+                ],
         },
     }
 

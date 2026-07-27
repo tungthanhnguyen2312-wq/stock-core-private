@@ -181,6 +181,9 @@ class EbitdaQualificationTests(unittest.TestCase):
             excluded_text = " ".join(record["derivation_lineage"]["excluded"])
             self.assertIn("operating_profit", excluded_text)
             self.assertIn("goodwill", excluded_text.lower())
+            # Metadata must be reusable: it cannot carry a prior ticker's facts.
+            self.assertNotIn("HPG", excluded_text)
+            self.assertNotIn("FY2024", excluded_text)
 
     def test_derive_ebitda_missing_component_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
