@@ -5,7 +5,9 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 import metadata_registry_export as adapter
 
@@ -152,6 +154,114 @@ class MetadataRegistryExportTests(unittest.TestCase):
         version = adapter.compute_transform_version()
         self.assertRegex(version, r"^meta_sync\.py@sha256:[0-9a-f]{12}$")
         self.assertEqual(version, "meta_sync.py@sha256:f110d22d1231")
+
+    def test_default_registry_snapshot_dir_matches_spec(self):
+        self.assertEqual(adapter.DEFAULT_REGISTRY_SNAPSHOT_DIR.parts[-2:], ("registry_snapshots", "metadata"))
+
+    def test_registry_snapshot_filename_and_content_are_schema_valid_jsonl(self):
+        with tempfile.TemporaryDirectory() as raw:
+            db = Path(raw) / "vn_stock.db"
+            self.make_db(db, [(
+                "AAA", "HSX", "Hóa chất", 98.49, 8.38, 0.51, 6.75,
+                2669576000000.0, 393742730.0, 0.4977, 4.0, None, "2026-07-27 19:38",
+            )])
+            records = adapter.export_records(db, tickers=["AAA"])
+            registry_dir = Path(raw) / "registry_snapshots" / "metadata"
+            fixed_now = datetime(2026, 7, 28, 10, 0, 0, tzinfo=timezone.utc)
+
+            path = adapter.write_registry_snapshot(records, registry_dir, now=fixed_now)
+
+            self.assertEqual(path.parent, registry_dir)
+            self.assertRegex(path.name, r"^vnstock_metadata_snapshot_\d{8}T\d{6}Z_[0-9a-f]{12}\.jsonl$")
+            self.assertTrue(path.name.startswith("vnstock_metadata_snapshot_20260728T100000Z_"))
+
+            lines = path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), len(adapter.FIELD_CATALOG))
+
+            validator = _consumer_schema_validator()
+            schema = validator.load_json(SCHEMA_PATH)
+            for line in lines:
+                record = json.loads(line)
+                self.assertEqual(validator.validate(record, schema), [], record)
+
+    def test_registry_snapshot_serialization_is_order_independent(self):
+        with tempfile.TemporaryDirectory() as raw:
+            db = Path(raw) / "vn_stock.db"
+            self.make_db(db, [
+                ("AAA", "HSX", "X", 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, None, "2026-07-27 19:38"),
+                ("BBB", "HSX", "X", 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, None, "2026-07-27 19:38"),
+            ])
+            records = adapter.export_records(db)
+            shuffled = list(reversed(records))
+            fixed_now = datetime(2026, 7, 28, 10, 0, 0, tzinfo=timezone.utc)
+
+            name_forward = adapter.registry_snapshot_filename(adapter._jsonl_body(records), fixed_now)
+            name_shuffled = adapter.registry_snapshot_filename(adapter._jsonl_body(shuffled), fixed_now)
+            self.assertEqual(name_forward, name_shuffled)
+
+    def test_registry_snapshot_never_overwrites(self):
+        with tempfile.TemporaryDirectory() as raw:
+            db = Path(raw) / "vn_stock.db"
+            self.make_db(db, [(
+                "AAA", "HSX", "X", 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, None, "2026-07-27 19:38",
+            )])
+            records = adapter.export_records(db, tickers=["AAA"])
+            registry_dir = Path(raw) / "snap"
+            fixed_now = datetime(2026, 7, 28, 10, 0, 0, tzinfo=timezone.utc)
+
+            first_path = adapter.write_registry_snapshot(records, registry_dir, now=fixed_now)
+            original_content = first_path.read_bytes()
+
+            with self.assertRaises(FileExistsError):
+                adapter.write_registry_snapshot(records, registry_dir, now=fixed_now)
+
+            self.assertEqual(first_path.read_bytes(), original_content)  # untouched by the refused retry
+            self.assertEqual(len(list(registry_dir.iterdir())), 1)  # no stray temp/second file
+
+    def test_registry_snapshot_atomic_no_partial_or_temp_file_on_failure(self):
+        with tempfile.TemporaryDirectory() as raw:
+            db = Path(raw) / "vn_stock.db"
+            self.make_db(db, [(
+                "AAA", "HSX", "X", 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, None, "2026-07-27 19:38",
+            )])
+            records = adapter.export_records(db, tickers=["AAA"])
+            registry_dir = Path(raw) / "snap"
+            fixed_now = datetime(2026, 7, 28, 10, 0, 0, tzinfo=timezone.utc)
+
+            with mock.patch("metadata_registry_export.os.rename", side_effect=OSError("simulated failure")):
+                with self.assertRaises(OSError):
+                    adapter.write_registry_snapshot(records, registry_dir, now=fixed_now)
+
+            remaining = list(registry_dir.iterdir()) if registry_dir.exists() else []
+            self.assertEqual(remaining, [])  # neither the final file nor a stray temp file
+
+    def test_cli_registry_snapshot_flag_optional_and_explicit(self):
+        omitted = adapter._parse_args(["--db", "unused.db"])
+        self.assertIsNone(omitted.registry_snapshot)
+
+        bare = adapter._parse_args(["--db", "unused.db", "--registry-snapshot"])
+        self.assertEqual(Path(bare.registry_snapshot), adapter.DEFAULT_REGISTRY_SNAPSHOT_DIR)
+
+        custom = adapter._parse_args(["--db", "unused.db", "--registry-snapshot", "custom_dir"])
+        self.assertEqual(custom.registry_snapshot, "custom_dir")
+
+    def test_main_cli_end_to_end_writes_registry_snapshot_only_when_asked(self):
+        with tempfile.TemporaryDirectory() as raw:
+            db = Path(raw) / "vn_stock.db"
+            self.make_db(db, [(
+                "AAA", "HSX", "X", 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, None, "2026-07-27 19:38",
+            )])
+            registry_dir = Path(raw) / "snap"
+
+            exit_code = adapter.main(["--db", str(db), "--tickers", "AAA"])
+            self.assertEqual(exit_code, 0)
+            self.assertFalse(registry_dir.exists())  # dry-run only: nothing written anywhere
+
+            exit_code = adapter.main(["--db", str(db), "--tickers", "AAA", "--registry-snapshot", str(registry_dir)])
+            self.assertEqual(exit_code, 0)
+            written = list(registry_dir.glob("*.jsonl"))
+            self.assertEqual(len(written), 1)
+            self.assertEqual(len(written[0].read_text(encoding="utf-8").splitlines()), len(adapter.FIELD_CATALOG))
 
 
 if __name__ == "__main__":

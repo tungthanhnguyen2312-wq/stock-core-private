@@ -5,9 +5,14 @@ operations-review/evidence/subsource-freshness-metadata-refresh-closeout-2026072
 REGISTRY_HANDOFF_NOTES.md for the contract this module implements.
 
 Scope, deliberately bounded: this module only reads `metadata` (mode=ro) and shapes records in
-memory. It does not choose or write to any registry storage/service -- none exists yet. It never
-writes a file unless the caller passes an explicit output path; there is no default production
-output location. It does not modify meta_sync.py, the database schema, or daily_analysis_pipeline.py.
+memory. It does not choose or write to any registry storage/service beyond plain immutable files
+on local disk. It never writes a file unless the caller passes an explicit output path or the
+--registry-snapshot flag; there is no default production trigger. It does not modify meta_sync.py,
+the database schema, or daily_analysis_pipeline.py -- this never runs as part of the daily chain.
+
+`--registry-snapshot` writes one immutable JSONL file per invocation into
+`registry_snapshots/metadata/` (see docs/metadata_registry_snapshot_contract.md for the naming,
+atomicity, and retention contract).
 """
 
 from __future__ import annotations
@@ -15,11 +20,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sqlite3
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_REGISTRY_SNAPSHOT_DIR = SCRIPT_DIR / "registry_snapshots" / "metadata"
 
 SOURCE = "vnstock_metadata_snapshot"
 
@@ -198,14 +207,81 @@ def write_records(records: list[dict[str, Any]], output_path: Path) -> None:
     )
 
 
+def _sorted_for_output(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Stable sort by (ticker, field-catalog order), independent of the input order, so a
+    registry snapshot's content -- and therefore its content-hash filename component -- never
+    depends on how records happened to be assembled or which ticker subset was requested."""
+    return sorted(records, key=lambda r: (r["ticker"], FIELDS.index(r["field"])))
+
+
+def _jsonl_body(records: list[dict[str, Any]]) -> bytes:
+    ordered = _sorted_for_output(records)
+    if not ordered:
+        return b""
+    lines = (json.dumps(r, ensure_ascii=False, allow_nan=False) for r in ordered)
+    return ("\n".join(lines) + "\n").encode("utf-8")
+
+
+def registry_snapshot_filename(body: bytes, now: datetime) -> str:
+    """`vnstock_metadata_snapshot_<UTC-YYYYMMDDTHHMMSSZ>_<content-sha256-12>.jsonl` -- timestamp
+    and content hash are both embedded so two snapshots (different content, or the same content
+    a second apart) never collide on name."""
+    stamp = now.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    content_hash = hashlib.sha256(body).hexdigest()[:12]
+    return f"vnstock_metadata_snapshot_{stamp}_{content_hash}.jsonl"
+
+
+def write_registry_snapshot(
+    records: list[dict[str, Any]],
+    registry_dir: Path,
+    now: datetime | None = None,
+) -> Path:
+    """Atomically write ONE immutable JSONL snapshot into registry_dir: a temp file in the same
+    directory, then a rename -- same-volume atomic, and on this project's Windows environment
+    `os.rename` raises rather than overwriting if the destination already exists. That covers the
+    only way two invocations could otherwise collide (same UTC second and byte-identical
+    content); anything already there is left untouched and this raises FileExistsError instead
+    of silently succeeding or clobbering.
+
+    Never writes unless explicitly called -- there is no scheduling or pipeline wiring here.
+    """
+    now = now or datetime.now(timezone.utc)
+    body = _jsonl_body(records)
+    filename = registry_snapshot_filename(body, now)
+    registry_dir.mkdir(parents=True, exist_ok=True)
+    final_path = registry_dir / filename
+    if final_path.exists():
+        raise FileExistsError(f"registry snapshot already exists, refusing to overwrite: {final_path}")
+    fd, tmp_name = tempfile.mkstemp(dir=registry_dir, prefix=".tmp-", suffix=".jsonl")
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(body)
+        os.rename(tmp_name, final_path)
+    except BaseException:
+        Path(tmp_name).unlink(missing_ok=True)
+        raise
+    return final_path
+
+
 def _parse_args(argv=None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Dry-run export of `metadata` rows as vnstock_metadata_snapshot registry "
-        "handoff records. Read-only; writes a file only when --output is given explicitly."
+        "handoff records. Read-only; writes a file only when --output or --registry-snapshot "
+        "is given explicitly."
     )
     parser.add_argument("--db", required=True, type=Path, help="path to vn_stock.db")
     parser.add_argument("--tickers", nargs="*", default=None, help="ticker subset (default: full table)")
     parser.add_argument("--output", type=Path, default=None, help="explicit output path (omit for dry-run only)")
+    parser.add_argument(
+        "--registry-snapshot",
+        nargs="?",
+        const=str(DEFAULT_REGISTRY_SNAPSHOT_DIR),
+        default=None,
+        metavar="DIR",
+        help="write one immutable JSONL registry snapshot into DIR (default when given with no "
+        "value: registry_snapshots/metadata/ next to this script). Omit this flag entirely to "
+        "skip -- this never runs implicitly.",
+    )
     return parser.parse_args(argv)
 
 
@@ -215,8 +291,12 @@ def main(argv=None) -> int:
     if args.output is not None:
         write_records(records, args.output)
         print(f"[metadata_registry_export] wrote {len(records)} records to {args.output}")
-    else:
-        print(f"[metadata_registry_export] dry-run: {len(records)} records (pass --output to write a file)")
+    if args.registry_snapshot is not None:
+        path = write_registry_snapshot(records, Path(args.registry_snapshot))
+        print(f"[metadata_registry_export] wrote immutable registry snapshot: {path}")
+    if args.output is None and args.registry_snapshot is None:
+        print(f"[metadata_registry_export] dry-run: {len(records)} records "
+              "(pass --output or --registry-snapshot to write a file)")
     return 0
 
 

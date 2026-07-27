@@ -54,3 +54,7 @@ SOURCE_COPY_MANIFEST.json
 data/macro_snapshot.json
 data/macro_snapshot.js
 screen_snapshot_live.csv
+
+# metadata_registry_export.py --registry-snapshot output: generated, immutable snapshot files,
+# not source. See docs/metadata_registry_snapshot_contract.md for the retention contract.
+registry_snapshots/
