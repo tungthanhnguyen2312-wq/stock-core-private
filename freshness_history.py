@@ -33,6 +33,12 @@ RULES = {
     "macro_monthly": DomainRule("macro_monthly", 31, 14),
     "macro_quarterly": DomainRule("macro_quarterly", 92, 35),
     "financial_quarterly": DomainRule("financial_quarterly", 92, 45, historical=True),
+    # meta_sync.py's own cadence contract: per-ticker fundamentals (pe/pb/roe/market_cap/
+    # shares_outstanding/free_float/foreign_room) are documented as "changes slowly -> quarterly
+    # rerun is enough". Unlike financial_quarterly this is NOT historical=True: it is a
+    # live-current snapshot (point-in-time "today" market data), not reporting-period evidence,
+    # so it genuinely should read as stale once a quarter+grace has passed with no resync.
+    "vnstock_metadata_snapshot": DomainRule("vnstock_metadata_snapshot", 92, 35),
     "corporate_snapshot": DomainRule("corporate_snapshot", 92, 45, requires_complete=True),
     "corporate_events": DomainRule("corporate_events", 1, 7, requires_complete=True),
 }

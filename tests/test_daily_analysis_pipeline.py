@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, os, tempfile, unittest
+import json, os, sqlite3, tempfile, unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -74,6 +74,34 @@ class PipelineTests(unittest.TestCase):
                 def fake(command, **kwargs): calls.append(command); return SimpleNamespace(returncode=0)
                 self.assertEqual(pipeline.main(["--runtime-root", raw, "--skip-price-update", "--skip-macro", "--skip-news"], fake), 1)
                 self.assertNotIn("export_ai_bundle.py", [x[1] for x in calls])
+
+    def make_metadata_db(self, root, updated_value):
+        conn = sqlite3.connect(root / "vn_stock.db")
+        conn.execute("CREATE TABLE metadata(ticker TEXT PRIMARY KEY, updated TEXT)")
+        conn.execute("INSERT INTO metadata(ticker, updated) VALUES ('AAA', ?)", (updated_value,))
+        conn.commit(); conn.close()
+
+    def test_stale_vnstock_metadata_snapshot_blocks_export(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root=Path(raw); self.make_upstream(root); self.make_metadata_db(root, "2000-01-01 00:00"); calls=[]
+            def fake(cmd,**kw): calls.append(cmd); return SimpleNamespace(returncode=0)
+            self.assertEqual(pipeline.main(["--runtime-root",raw,"--skip-price-update","--skip-macro","--skip-news"],fake),1)
+            self.assertNotIn("export_ai_bundle.py",[x[1] for x in calls])
+
+    def test_fresh_vnstock_metadata_snapshot_does_not_block_export(self):
+        with tempfile.TemporaryDirectory(prefix="daily runtime fresh meta ") as raw:
+            root=Path(raw); self.make_upstream(root)
+            fresh = pipeline.datetime.now(pipeline.timezone.utc).strftime("%Y-%m-%d %H:%M")
+            self.make_metadata_db(root, fresh)
+            def fake(command,**kwargs):
+                if command[1]=="export_ai_bundle.py" and "--verify" not in command:
+                    (root/"analysis_bundle.json").write_text(json.dumps({"reference_session_date":"2026-07-27"}),encoding="utf-8")
+                    (root/"bundle_manifest.json").write_text(json.dumps({"files":[]}),encoding="utf-8")
+                return SimpleNamespace(returncode=0)
+            self.assertEqual(pipeline.main(["--runtime-root",str(root),"--tickers","AAA"],fake),0)
+            manifest=json.loads((root/"bundle_manifest.json").read_text(encoding="utf-8"))
+            self.assertFalse(manifest["subsource_freshness"]["blocked"])
+            self.assertEqual(manifest["subsource_freshness"]["sources"]["vnstock_metadata_snapshot"]["freshness_status"],"current")
 
     def test_failure_prevents_export_verify_and_partial_manifest(self):
         with tempfile.TemporaryDirectory() as raw:

@@ -18,7 +18,13 @@ Daily prices/breadth, technical/candlestick outputs, and AI reports use their
 market-data timestamp. Technical and AI outputs inherit a non-current dependency.
 Macro uses daily, weekly, monthly, or quarterly cadence inferred from its series
 metadata. Quarterly financials are normally `historical`, not stale: their period
-is evidence, while an absent/unverified latest filing is fail-closed. Corporate
+is evidence, while an absent/unverified latest filing is fail-closed. The
+vnstock metadata snapshot (external pe/pb/roe/market_cap/shares_outstanding/
+free_float/foreign_room, refreshed on the same quarterly cadence) is the
+opposite case: it is a live-current snapshot, not reporting-period evidence, so
+it uses the same 92-day/35-day cadence and grace as quarterly macro and genuinely
+becomes `stale` — never `historical` — once unrefreshed past that window.
+Corporate
 profile, ownership, subsidiaries, and qualified shareholder snapshots retain
 their existing completeness/comparability gates and are actionable only when a
 complete available snapshot is current. Corporate Events are forward

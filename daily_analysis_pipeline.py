@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import time
@@ -12,10 +13,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Sequence
 
+from freshness_history import freshness_envelope
 from runtime_paths import RUNTIME_ROOT_ENV
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_TICKERS = ["POW", "SSI", "HPG", "EVF", "PAN"]
+DEFAULT_TICKERS = [
+    "POW",
+    "SSI",
+    "HPG",
+    "EVF",
+    "PAN",
+    "PNJ",
+    "QNS",
+    "PDR",
+    "GEX",
+]
 REQUIRED = ("screen_snapshot.csv", "screen_snapshot_live.csv", "market_breadth.csv",
             "analysis_latest.json", "analysis_latest.md", "Market_Scan.csv", "Market_Scan.md",
             "Focus_Analysis.md", "ta_signals.csv", "ta_signals.json", "macro_snapshot.csv",
@@ -27,6 +39,17 @@ DEPS = {"screen_snapshot_live.csv": ("screen_snapshot.csv",),
         "analysis_latest.md": ("analysis_latest.json",), "Market_Scan.csv": ("screen_snapshot_live.csv", "ta_signals.csv"), "Market_Scan.md": ("Market_Scan.csv",),
         "Focus_Analysis.md": ("screen_snapshot_live.csv", "market_breadth.csv", "macro_snapshot.csv", "news_latest.csv"),
         "analysis_bundle.json": ("screen_snapshot_live.csv", "market_breadth.csv", "ta_signals.csv", "analysis_latest.json", "Focus_Analysis.md", "macro_snapshot.csv", "news_latest.csv")}
+
+# Reusable daily sub-source freshness matrix: DB-resident sub-sources whose own content-level
+# staleness is invisible to the file-mtime checks above (vn_stock.db's file mtime changes on
+# every write, including unrelated tables, so it never reveals that one specific table's data
+# stopped being refreshed). Each entry names the domain (see freshness_history.RULES -- that
+# module stays the single owner of cadence/grace policy) and how to read that sub-source's most
+# recent observed timestamp. Extend this matrix with more rows as more DB-resident sub-sources
+# need a mandatory pre-export freshness check; do not hand-roll a parallel cadence policy here.
+MANDATORY_SUBSOURCE_FRESHNESS = {
+    "vnstock_metadata_snapshot": {"domain": "vnstock_metadata_snapshot", "table": "metadata", "column": "updated"},
+}
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -59,6 +82,38 @@ def upstream_ok(root: Path) -> tuple[bool, dict[str, dict]]:
     report = inspect(root, REQUIRED[:-2])
     return all(x["freshness_status"] == "fresh" for x in report.values()), report
 
+def subsource_as_of(root: Path, table: str, column: str) -> str | None:
+    """Read-only MAX(column) probe for one DB-resident sub-source. Missing db/table -> None
+    (treated as not-yet-populated, not as stale -- see check_subsource_freshness)."""
+    db_path = root / "vn_stock.db"
+    if not db_path.is_file():
+        return None
+    conn = sqlite3.connect(f"file:{db_path.resolve().as_posix()}?mode=ro", uri=True)
+    try:
+        conn.execute("PRAGMA query_only = ON")
+        conn.execute("PRAGMA busy_timeout = 30000")
+        row = conn.execute(f"SELECT MAX({column}) FROM {table}").fetchone()
+        return row[0] if row else None
+    except sqlite3.DatabaseError:
+        return None
+    finally:
+        conn.close()
+
+def check_subsource_freshness(root: Path, reference_at: datetime, matrix: dict = MANDATORY_SUBSOURCE_FRESHNESS) -> dict:
+    """Mandatory sub-source freshness gate: blocked only on a genuine 'stale' verdict (past
+    cadence+grace) from freshness_history's domain rules -- never on 'missing' (an unpopulated
+    or absent table is a different failure mode, already surfaced elsewhere, e.g. every consumer
+    that hard-requires the table would fail before reaching bundle export). This keeps the gate
+    fail-closed for the real bug (data present but stale) without misfiring in environments/tests
+    that never had the table to begin with."""
+    envelopes = {}
+    for name, spec in matrix.items():
+        as_of = subsource_as_of(root, spec["table"], spec["column"])
+        envelopes[name] = freshness_envelope(domain=spec["domain"], as_of_date=as_of, generated_at=as_of,
+                                             source=f"{spec['table']}.{spec['column']}", reference_at=reference_at)
+    blocked = any(e["freshness_status"] == "stale" for e in envelopes.values())
+    return {"reference_at": reference_at.isoformat(timespec="seconds"), "sources": envelopes, "blocked": blocked}
+
 def run(name: str, command: list[str], env: dict[str, str], runner: Callable) -> dict:
     started, tick = now(), time.monotonic(); result = runner(command, cwd=SCRIPT_DIR, env=env, check=False)
     record = {"name": name, "command": command, "started_at": started, "ended_at": now(), "exit_code": result.returncode, "duration_seconds": round(time.monotonic()-tick, 3)}
@@ -78,7 +133,8 @@ def enrich(root: Path, tickers: list[str], executed: list[dict], report: dict[st
     session = json.loads((root/"analysis_bundle.json").read_text(encoding="utf-8")).get("reference_session_date")
     manifest.update(schema_version="1.2.0", runtime_root=str(root), session_date=session,
                     daily_analysis={"generated_at":now(),"command_step_order":executed,"watchlist":tickers},
-                    artifact_verification=report, overall_verification_result="passed")
+                    artifact_verification=report, overall_verification_result="passed",
+                    subsource_freshness=check_subsource_freshness(root, datetime.now(timezone.utc)))
     path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False)+"\n", encoding="utf-8")
 
 def parse(argv=None):
@@ -99,7 +155,10 @@ def main(argv=None, runner=subprocess.run) -> int:
             return 0
         else:
             for name, command in steps(args,tickers):
-                if name == "export_bundle" and not upstream_ok(root)[0]: raise RuntimeError("required upstream artifact missing or stale; refusing bundle export")
+                if name == "export_bundle":
+                    if not upstream_ok(root)[0]: raise RuntimeError("required upstream artifact missing or stale; refusing bundle export")
+                    subsource = check_subsource_freshness(root, datetime.now(timezone.utc))
+                    if subsource["blocked"]: raise RuntimeError(f"mandatory sub-source freshness gate failed; refusing bundle export: {subsource['sources']}")
                 executed.append(run(name,command,env,runner))
             executed.append(run("verify_bundle",[sys.executable,"export_ai_bundle.py","--verify",str(root/"bundle_manifest.json")],env,runner))
         report=inspect(root)
