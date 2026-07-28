@@ -217,7 +217,8 @@ def _load_manifest(runtime_root: Path) -> dict[str, dict[str, Any]] | None:
             continue
         if not _manifest_acceptance_ok(record):
             continue
-        document = path.parent / str(filename)
+        archive_path = record.get("archive_document_path")
+        document = Path(str(archive_path)) if archive_path else path.parent / str(filename)
         if not document.is_file() or _sha256_file(document) != record.get("sha256"):
             continue
         verified[evidence_id] = record
@@ -369,9 +370,17 @@ def load_verified_share_basis(runtime_root: Path) -> dict[str, Any]:
     for key, citations in grouped.items():
         unique_by_content = {_hash(c): c for c in citations}
         if len(unique_by_content) > 1:
-            rejected.append({"key": key, "reason": "conflicting_citations"})
-            continue
-        citation = next(iter(unique_by_content.values()))
+            ids = {c.get("citation_id") for c in unique_by_content.values()}
+            successors = [c for c in unique_by_content.values()
+                          if isinstance(c.get("supersedes_citation_ids"), list)
+                          and set(c["supersedes_citation_ids"]) == ids - {c.get("citation_id")}
+                          and all(c.get("value") == other.get("value") for other in unique_by_content.values() if other is not c)]
+            if len(successors) != 1:
+                rejected.append({"key": key, "reason": "conflicting_citations"})
+                continue
+            citation = successors[0]
+        else:
+            citation = next(iter(unique_by_content.values()))
 
         expected_id = _hash({"ticker": citation["ticker"], "identity_type": citation["identity_type"],
                               "reporting_period": citation["reporting_period"], "evidence_id": citation["evidence_id"],
