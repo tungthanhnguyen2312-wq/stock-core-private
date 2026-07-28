@@ -14,6 +14,41 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
+try:
+    from observability_events import (
+        EventOutcome,
+        EventStage,
+        build_observability_event,
+        emit_observability_event,
+    )
+except ImportError:
+    try:
+        from stock_core_private.observability_events import (
+            EventOutcome,
+            EventStage,
+            build_observability_event,
+            emit_observability_event,
+        )
+    except ImportError:
+        EventOutcome = EventStage = build_observability_event = emit_observability_event = None
+
+
+def _emit_event(stage: str, outcome: str, target_path: Path, reason: str | None = None, error_type: str | None = None) -> None:
+    if build_observability_event and emit_observability_event:
+        try:
+            ev = build_observability_event(
+                stage,
+                outcome,
+                artifact_filename=target_path.name,
+                reason=reason,
+                error_type=error_type,
+                target_path=target_path,
+            )
+            log_dir = target_path.parent / "logs"
+            emit_observability_event(ev, log_dir / "observability_events.jsonl")
+        except Exception:
+            pass
+
 
 class AtomicWriteError(RuntimeError):
     """Raised when an atomic write, validation, or replacement fails."""
@@ -85,10 +120,18 @@ def atomic_write_file(
                 os.fsync(handle.fileno())
 
         if validator is not None:
-            validator(tmp_path)
+            try:
+                validator(tmp_path)
+                _emit_event("pre_promotion_validation", "success", target_path)
+            except Exception as val_exc:
+                _emit_event("pre_promotion_validation", "failed", target_path, reason=str(val_exc), error_type=type(val_exc).__name__)
+                raise
 
         os.replace(tmp_path, target_path)
+        _emit_event("atomic_promotion", "success", target_path)
     except Exception as exc:
+        if not isinstance(exc, ValueError):
+            _emit_event("atomic_promotion", "failed", target_path, reason=str(exc), error_type=type(exc).__name__)
         if tmp_path.exists():
             try:
                 tmp_path.unlink()

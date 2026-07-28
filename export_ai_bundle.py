@@ -45,6 +45,20 @@ import os
 import re
 from atomic_io import atomic_write_json
 try:
+    from observability_events import (
+        EventOutcome,
+        EventStage,
+        build_observability_event,
+        emit_observability_event,
+    )
+except ImportError:
+    from stock_core_private.observability_events import (
+        EventOutcome,
+        EventStage,
+        build_observability_event,
+        emit_observability_event,
+    )
+try:
     from price_basis_contract import (
         PriceBasis,
         VolumeBasis,
@@ -1516,6 +1530,17 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / 'focus_extract.json'
     atomic_write_json(out_path, focus_extract)
+    emit_observability_event(build_observability_event(
+        EventStage.ARTIFACT_GENERATION,
+        EventOutcome.SUCCESS,
+        artifact_filename="focus_extract.json",
+        sha256=sha256_file(out_path),
+        size_bytes=out_path.stat().st_size if out_path.exists() else None,
+        price_basis=price_basis["price_basis"],
+        volume_basis=price_basis["volume_basis"],
+        is_actionable=price_basis["is_actionable"],
+        target_path=out_path,
+    ), output_dir / "observability_events.jsonl")
 
     # ---------------------------------------------------------- analysis_bundle.json (đầy đủ)
     bundle_entries = {}
@@ -1577,6 +1602,17 @@ def main() -> int:
     }
     bundle_path = output_dir / 'analysis_bundle.json'
     atomic_write_json(bundle_path, analysis_bundle)
+    emit_observability_event(build_observability_event(
+        EventStage.ARTIFACT_GENERATION,
+        EventOutcome.SUCCESS,
+        artifact_filename="analysis_bundle.json",
+        sha256=sha256_file(bundle_path),
+        size_bytes=bundle_path.stat().st_size if bundle_path.exists() else None,
+        price_basis=price_basis["price_basis"],
+        volume_basis=price_basis["volume_basis"],
+        is_actionable=price_basis["is_actionable"],
+        target_path=bundle_path,
+    ), output_dir / "observability_events.jsonl")
 
     # ---------------------------------------------------------------- bundle_manifest.json
     manifest_files = manifest_files + [
@@ -1612,6 +1648,17 @@ def main() -> int:
 
     manifest_path = output_dir / 'bundle_manifest.json'
     atomic_write_json(manifest_path, manifest)
+    emit_observability_event(build_observability_event(
+        EventStage.MANIFEST_VERIFICATION,
+        EventOutcome.SUCCESS,
+        artifact_filename="bundle_manifest.json",
+        sha256=sha256_file(manifest_path),
+        size_bytes=manifest_path.stat().st_size if manifest_path.exists() else None,
+        price_basis=price_basis["price_basis"],
+        volume_basis=price_basis["volume_basis"],
+        is_actionable=price_basis["is_actionable"],
+        target_path=manifest_path,
+    ), output_dir / "observability_events.jsonl")
 
     status_word = "CẢNH BÁO STALE (--allow-stale)" if freshness["status"] == "stale_override" else "OK"
     print(f"[export_ai_bundle] {status_word} — {len(tickers)} mã"

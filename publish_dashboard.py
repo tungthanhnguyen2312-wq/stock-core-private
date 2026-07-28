@@ -29,6 +29,20 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
+try:
+    from observability_events import (
+        EventOutcome,
+        EventStage,
+        build_observability_event,
+        emit_observability_event,
+    )
+except ImportError:
+    from stock_core_private.observability_events import (
+        EventOutcome,
+        EventStage,
+        build_observability_event,
+        emit_observability_event,
+    )
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -376,6 +390,23 @@ def write_build_manifest(manifest: dict[str, object], screener_js_content: str) 
     # Parse lại chính artifact vừa tạo; hỏng JSON phải dừng trước git.
     json.loads(existing_path.read_text(encoding="utf-8"))
     log(f"Build manifest: {manifest['build_id']} · {manifest['generated_at']}")
+    try:
+        bc = manifest.get("price_basis_contract", {})
+        ev = build_observability_event(
+            EventStage.PUBLISH_DASHBOARD,
+            EventOutcome.SUCCESS,
+            artifact_filename="build_info.json",
+            sha256=hashlib.sha256(existing_path.read_bytes()).hexdigest(),
+            size_bytes=existing_path.stat().st_size,
+            price_basis=bc.get("price_basis") if isinstance(bc, dict) else None,
+            volume_basis=bc.get("volume_basis") if isinstance(bc, dict) else None,
+            is_actionable=bc.get("is_actionable") if isinstance(bc, dict) else None,
+            is_live_write=True,
+            target_path=existing_path,
+        )
+        emit_observability_event(ev, WEB_ROOT / "logs" / "observability_events.jsonl")
+    except Exception:
+        pass
     return manifest
 
 
