@@ -173,11 +173,12 @@ class PriceBasisContractTests(unittest.TestCase):
         self.assertFalse(contract["price_basis_verified"])
 
     def test_missing_or_unverified_basis_falls_back_to_unknown(self):
-        self.assertEqual(bundle.build_price_basis_contract(), {
-            "price_basis": "unknown",
-            "price_basis_verified": False,
-            "source": "no_verified_price_basis_metadata",
-        })
+        c = bundle.build_price_basis_contract()
+        self.assertEqual(c["price_basis"], "unknown")
+        self.assertFalse(c["price_basis_verified"])
+        self.assertFalse(c["is_actionable"])
+        self.assertEqual(c["volume_basis"], "raw_shares_traded")
+        self.assertEqual(c["source"], "no_verified_price_basis_metadata")
         self.assertEqual(
             bundle.normalize_price_basis("raw", False),
             ("unknown", False),

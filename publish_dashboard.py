@@ -301,6 +301,42 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
         # chưa có mtime thật; live apply sẽ có mtime thật sau khi write_build_manifest() ghi file.
         "mtime": None,
     }
+    bundle_path = WEB_ROOT / "analysis_bundle.json"
+    if not bundle_path.exists() and BACKEND_ROOT != WEB_ROOT:
+        bundle_path = BACKEND_ROOT / "analysis_bundle.json"
+
+    basis_contract: dict[str, object] = {
+        "price_basis": "unknown",
+        "price_basis_verified": False,
+        "is_actionable": False,
+        "volume_basis": "raw_shares_traded",
+        "volume_basis_verified": True,
+        "adjustment_source": None,
+        "effective_date": None,
+        "limitations": ["Price basis is unverified or unknown; corporate actions may affect price and return calculations."],
+    }
+    if bundle_path.exists():
+        try:
+            b_data = json.loads(bundle_path.read_text(encoding="utf-8"))
+            if isinstance(b_data, dict):
+                prov = b_data.get("price_basis_provenance")
+                if isinstance(prov, dict):
+                    basis_contract.update({
+                        "price_basis": prov.get("price_basis", b_data.get("price_basis", "unknown")),
+                        "price_basis_verified": prov.get("price_basis_verified", b_data.get("price_basis_verified", False)),
+                        "is_actionable": prov.get("is_actionable", False),
+                        "volume_basis": prov.get("volume_basis", "raw_shares_traded"),
+                        "volume_basis_verified": prov.get("volume_basis_verified", True),
+                        "adjustment_source": prov.get("adjustment_source"),
+                        "effective_date": prov.get("effective_date"),
+                        "limitations": prov.get("limitations", basis_contract["limitations"]),
+                    })
+                elif "price_basis" in b_data:
+                    basis_contract["price_basis"] = str(b_data["price_basis"])
+                    basis_contract["price_basis_verified"] = b_data.get("price_basis_verified") is True
+        except (OSError, json.JSONDecodeError):
+            pass
+
     manifest: dict[str, object] = {
         "schema_version": 1,
         "build_id": build_id,
@@ -308,6 +344,7 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
         "market_session": market_session,
         "git_commit": head,
         "row_counts": {"screen_snapshot": len(rows), "market_breadth": len(breadth)},
+        "price_basis_contract": basis_contract,
         "files": files,
     }
     return manifest, screener_js_content

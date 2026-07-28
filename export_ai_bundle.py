@@ -44,6 +44,20 @@ import json
 import os
 import re
 from atomic_io import atomic_write_json
+try:
+    from price_basis_contract import (
+        PriceBasis,
+        VolumeBasis,
+        qualify_price_basis,
+        qualify_volume_basis,
+    )
+except ImportError:
+    from stock_core_private.price_basis_contract import (
+        PriceBasis,
+        VolumeBasis,
+        qualify_price_basis,
+        qualify_volume_basis,
+    )
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -229,20 +243,28 @@ def normalize_price_basis(value: object = None, verified: object = False) -> tup
 
 
 def build_price_basis_contract(metadata: dict | None = None) -> dict:
-    """Build backward-compatible price-basis provenance for one bundle.
-
-    The current producer has no verified provider contract or persisted OHLCV basis
-    metadata, so the default is intentionally unknown.  A future producer can pass the
-    two contract fields without changing bundle consumers.
-    """
+    """Build complete price-basis & volume-basis provenance contract for bundle outputs."""
     metadata = metadata or {}
-    basis, verified = normalize_price_basis(
-        metadata.get("price_basis"), metadata.get("price_basis_verified"),
+    p_contract = qualify_price_basis(
+        metadata.get("price_basis"),
+        verified=metadata.get("price_basis_verified") is True,
+        adjustment_source=metadata.get("adjustment_source"),
+        effective_date=metadata.get("effective_date"),
+    )
+    v_contract = qualify_volume_basis(
+        metadata.get("volume_basis", VolumeBasis.RAW_SHARES_TRADED.value),
+        verified=metadata.get("volume_basis_verified") is not False,
     )
     return {
-        "price_basis": basis,
-        "price_basis_verified": verified,
-        "source": metadata.get("source") if verified else "no_verified_price_basis_metadata",
+        "price_basis": p_contract["price_basis"],
+        "price_basis_verified": p_contract["price_basis_verified"],
+        "is_actionable": p_contract["is_actionable"],
+        "volume_basis": v_contract["volume_basis"],
+        "volume_basis_verified": v_contract["volume_basis_verified"],
+        "adjustment_source": p_contract["adjustment_source"],
+        "effective_date": p_contract["effective_date"],
+        "limitations": p_contract["limitations"],
+        "source": metadata.get("source") if p_contract["price_basis_verified"] else "no_verified_price_basis_metadata",
     }
 
 
@@ -1471,6 +1493,10 @@ def main() -> int:
         "canonical_sources": {"rs_rating": CANONICAL_RS_RATING_SOURCE},
         "price_basis": price_basis["price_basis"],
         "price_basis_verified": price_basis["price_basis_verified"],
+        "is_actionable": price_basis["is_actionable"],
+        "volume_basis": price_basis["volume_basis"],
+        "volume_basis_verified": price_basis["volume_basis_verified"],
+        "price_basis_provenance": price_basis,
         "tickers": entries,
         "ai_instructions": [
             "Nếu một mã trong tickers_requested có warnings khác rỗng nghĩa là THIẾU dữ liệu phần đó"
@@ -1526,6 +1552,9 @@ def main() -> int:
         "canonical_sources": {"rs_rating": CANONICAL_RS_RATING_SOURCE},
         "price_basis": price_basis["price_basis"],
         "price_basis_verified": price_basis["price_basis_verified"],
+        "is_actionable": price_basis["is_actionable"],
+        "volume_basis": price_basis["volume_basis"],
+        "volume_basis_verified": price_basis["volume_basis_verified"],
         "price_basis_provenance": price_basis,
         "market_breadth": breadth_records,
         "market_breadth_freshness": breadth_freshness,
@@ -1566,6 +1595,9 @@ def main() -> int:
         "live_universe": snapshot_info["live_universe"],
         "price_basis": price_basis["price_basis"],
         "price_basis_verified": price_basis["price_basis_verified"],
+        "is_actionable": price_basis["is_actionable"],
+        "volume_basis": price_basis["volume_basis"],
+        "volume_basis_verified": price_basis["volume_basis_verified"],
         "price_basis_provenance": price_basis,
         "data_quality_flags": data_quality_flags,
         "files": manifest_files,
