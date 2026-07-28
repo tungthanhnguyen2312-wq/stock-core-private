@@ -125,6 +125,8 @@ FINANCIAL_SNAPSHOT_PATH = "financial_snapshot.parquet"
 MARKET_BREADTH_PATH = "market_breadth.csv"
 MACRO_SNAPSHOT_PATH = "macro_snapshot.csv"
 RUNTIME_ROOT_ENV = "STOCK_LOOKUP_RUNTIME_ROOT"
+AI_RUNTIME_ROOT_ENV = "STOCK_LOOKUP_AI_RUNTIME_ROOT"
+CONTEXT_PACKAGES_DIR_ENV = "STOCK_LOOKUP_CONTEXT_PACKAGES_DIR"
 
 
 def runtime_root() -> Path:
@@ -132,6 +134,19 @@ def runtime_root() -> Path:
     configured = os.environ.get(RUNTIME_ROOT_ENV)
     return Path(configured) if configured else Path(".")
 
+
+def context_packages_dir() -> Path:
+    """Resolve context packages explicitly for an isolated pilot when requested.
+
+    The legacy/default path is intentionally unchanged.  A caller must set this
+    variable explicitly; there is no discovery of a production runtime path.
+    """
+    explicit_packages = os.environ.get(CONTEXT_PACKAGES_DIR_ENV)
+    if explicit_packages:
+        return Path(explicit_packages)
+    configured = os.environ.get(AI_RUNTIME_ROOT_ENV)
+    root = Path(configured) if configured else AI_RUNTIME_ROOT
+    return root / "exports" / "context_packages"
 
 def runtime_path(relative_path: str) -> Path:
     """Resolve a runtime artifact without changing its legacy relative-path default."""
@@ -145,7 +160,7 @@ def output_path(relative_path: str) -> Path:
 
 def context_package_reference(ticker: str) -> str:
     """Return a manifest path relative to the active dashboard runtime root."""
-    path = CONTEXT_PACKAGES_DIR / f"{ticker}_context.json"
+    path = context_packages_dir() / f"{ticker}_context.json"
     try:
         return Path(os.path.relpath(path, start=runtime_root().resolve())).as_posix()
     except ValueError:
@@ -748,7 +763,7 @@ def load_context_package_info(tickers: list[str]) -> dict:
     xem load_context_package_full)."""
     result = {}
     for tk in tickers:
-        path = CONTEXT_PACKAGES_DIR / f"{tk}_context.json"
+        path = context_packages_dir() / f"{tk}_context.json"
         if not path.exists():
             result[tk] = {"exists": False, "data_date": None, "sha256": None}
             continue
@@ -767,7 +782,7 @@ def load_context_package_full(tk: str) -> dict | None:
     """Nội dung TOÀN VĂN context package cho 1 mã — chỉ dùng cho analysis_bundle.json (bundle lớn,
     dành cho công cụ đọc file trực tiếp). KHÔNG dùng cho focus_extract.json (giữ nhỏ theo thiết kế
     gốc chống truncation)."""
-    path = CONTEXT_PACKAGES_DIR / f"{tk}_context.json"
+    path = context_packages_dir() / f"{tk}_context.json"
     if not path.exists():
         return None
     with path.open("r", encoding="utf-8") as f:
