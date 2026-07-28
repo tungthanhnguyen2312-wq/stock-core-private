@@ -518,10 +518,6 @@ def run_scan(df):
         ["Mã", "Ngành", "Vốn hóa (tỷ)", "GTGD20 (tỷ)", "Room ngoại %", "Free float", "RS"],
         f"Tiêu chí: {ftse['reason'].iloc[0] if len(ftse) else 'HOSE · vốn hóa + thanh khoản + room + free float'} "
         "(free_float_est là proxy tự tính, không phải số FTSE chính thức)."))
-    parts.append("\n---\n*Dữ liệu sinh tự động, chỉ mang tính tham khảo — không phải khuyến nghị đầu tư.*")
-    with open(SCAN_MD, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(parts))
-
     # --- Xuất CSV thô: đủ mọi dòng của 3 nhóm, thêm cột category + reason ---
     for d, cat in ((gems, "top_gem"), (rf, "red_flag"), (ftse, "ftse_candidate")):
         d["category"] = cat
@@ -531,6 +527,12 @@ def run_scan(df):
              "exchange", "industry", "foreign_room_pct", "free_float_est", "margin_status"]
     raw = raw[front + [c for c in raw.columns if c not in front]]
     raw.to_csv(SCAN_CSV, index=False, encoding="utf-8-sig")  # BOM để Excel đọc tiếng Việt đúng
+
+    # Market_Scan.md declares the CSV as an upstream dependency in the daily pipeline.
+    # Write the CSV first so the generated files satisfy that fail-closed contract.
+    parts.append("\n---\n*Dữ liệu sinh tự động, chỉ mang tính tham khảo — không phải khuyến nghị đầu tư.*")
+    with open(SCAN_MD, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(parts))
 
     log(f"Kết quả: {len(gems)} gems · {len(rf)} red flags · {len(ftse)} FTSE candidates.")
     log(f"Đã lưu -> {os.path.basename(SCAN_MD)} + {os.path.basename(SCAN_CSV)}")
