@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Evidence Registry JSONL Replay Parity Specification",
+  "version": "1.0.0",
+  "inputs": [
+    {"path":"data/official-evidence/manifest.json","kind":"manifest","identity":"evidence_id","order":1},
+    {"path":"data/financial-observations/observations.jsonl","kind":"observation","identity":"observation_id","order":2},
+    {"path":"data/official-evidence/qualification_citations.jsonl","kind":"citation","citation_kind":"qualification","identity":"citation_id","order":3},
+    {"path":"data/official-evidence/share_basis_citations.jsonl","kind":"citation","citation_kind":"share_basis","identity":"citation_id","order":4},
+    {"path":"data/official-evidence/market_price_citations.jsonl","kind":"citation","citation_kind":"market_price","identity":"citation_id","order":5},
+    {"path":"data/official-evidence/ebitda_component_citations.jsonl","kind":"citation","citation_kind":"ebitda","identity":"citation_id","order":6}
+  ],
+  "fact_identity": ["ticker","period","metric","source","citation_id_or_observation_id"],
+  "required_parity": {"counts":["documents","observations","citations","direct_facts","derived_lineage"],"sets":["document_ids","observation_ids","citation_ids","fact_identities","derived_lineage_identities"],"fields":["value","sha256","qualification_status","evidence_id","observation_id","citation_id","supersedes_citation_ids"]},
+  "allowed_differences":["temporary_primary_key","replay_run_id","checkpoint_metadata","ingested_at","physical_row_order"],
+  "blocking_differences":["identity","value","document_hash","qualification_status","relationship","derived_input_set","unexpected_authoritative_fact","missing_authoritative_fact","bank_deposits_to_debt","vcb_corporate_model_enabled"],
+  "fail_closed":["malformed_json","duplicate_identity_conflict","document_hash_mismatch","dangling_document","dangling_observation","unsupported_metric_semantics","invalid_supersession"],
+  "sector_examples":{"HPG":"corporate qualified evidence","VNM":"partial evidence retained without promotion","VCB":"bank; deposits distinct from debt and corporate valuation models inapplicable"},
+  "temporary_target":{"recommended":"sqlite_isolated","authority":"none","dual_write":false,"cutover":false}
+}

@@ -43,7 +43,7 @@ class EvidenceRegistry:
                 evidence=row.get("evidence_id"); citation=row.get("citation_id"); oid=row.get("observation_id")
                 metric=row.get("identity_type") or row.get("raw_item_id") or row.get("metric")
                 status="qualified" if evidence in self.documents and self.documents[evidence]["_valid"] else "invalid"
-                if evidence not in self.documents:self.issues.append({"reason":"dangling_evidence","citation_id":citation})
+                if kind!="market_price" and evidence not in self.documents:self.issues.append({"reason":"dangling_evidence","citation_id":citation})
                 if kind=="qualification" and oid not in obs:self.issues.append({"reason":"dangling_observation","citation_id":citation})
                 if kind=="share_basis" and metric not in SUPPORTED_SHARE:self.issues.append({"reason":"unsupported_metric_semantics","citation_id":citation})
                 self.facts.append({"identity":_id(kind,row),"kind":kind,"ticker":row.get("ticker"),"period":row.get("reporting_period") or row.get("trading_date"),"metric":metric,"source":kind,"qualification_status":row.get("qualification_status",status),"citation_id":citation,"observation_id":oid,"document_hash":self.documents.get(evidence,{}).get("sha256"),"evidence_id":evidence,"lineage":{"document":evidence,"observation":oid,"supersedes":row.get("supersedes_citation_ids",[])},"raw":row})
@@ -63,7 +63,7 @@ class EvidenceRegistry:
                 self.facts.append({"identity":f"derived:{ticker}:{p}:{r['canonical_metric']}:{','.join(sorted(r.get('observation_ids',[])))}","kind":"derived","ticker":ticker,"period":p,"metric":r["canonical_metric"],"source":"canonical_derived" if r.get("derivation_status")=="derived" else "canonical_direct","qualification_status":r.get("quality_state"),"citation_id":None,"observation_id":None,"document_hash":None,"evidence_id":None,"lineage":{"observation_ids":r.get("observation_ids",[]),"evidence":r.get("evidence")},"raw":r})
     def _integrity(self)->None:
         groups={}
-        for f in self.facts: groups.setdefault((f["ticker"],f["period"],f["metric"],f["source"]),[]).append(f)
+        for f in self.facts: groups.setdefault((f["ticker"],f["period"],f["metric"],f["source"],f["raw"].get("raw_statement_type")),[]).append(f)
         for key,items in groups.items():
             ids={x["citation_id"] or x["identity"] for x in items}
             if len(ids)>1 and items[0]["source"]!="canonical_direct":
