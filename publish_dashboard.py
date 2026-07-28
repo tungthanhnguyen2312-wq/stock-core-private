@@ -570,7 +570,7 @@ def publish_live(whitelist: list[str], branch: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build/publish dashboard. Mặc định (không --live) là dry-run "
+        description="""Build/publish dashboard with atomic writes, asset versioning, basis contracts, and Phase 2A pipeline integration."""
                      "read-only tuyệt đối: không copy, không ghi manifest, không sửa "
                      "HTML/CSS/JS, không ghi log, không git mutation — chỉ in kế hoạch.")
     parser.add_argument("--live", action="store_true", help="cho phép ghi file, fetch/pull/add/commit/push thật")

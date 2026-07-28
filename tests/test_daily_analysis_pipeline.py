@@ -136,4 +136,24 @@ class PipelineTests(unittest.TestCase):
             root=Path(raw); self.make_upstream(root); (root/"analysis_bundle.json").write_text(json.dumps({"reference_session_date":"2026-07-22"}),encoding="utf-8"); (root/"bundle_manifest.json").write_text("{}",encoding="utf-8")
             pipeline.enrich(root,["POW"],[{"name":"x"}],pipeline.inspect(root)); data=json.loads((root/"bundle_manifest.json").read_text(encoding="utf-8")); item=data["artifact_verification"]["screen_snapshot.csv"]
             self.assertEqual(data["overall_verification_result"],"passed"); self.assertIn("sha256",item); self.assertIn("modified_time",item); self.assertIn("dependency_status",item)
+
+    def test_publish_dashboard_step_flag(self):
+        args = pipeline.parse(["--runtime-root", "x", "--publish-dashboard", "--live-publish"])
+        names = [name for name, cmd in pipeline.steps(args, ["POW"])]
+        self.assertIn("publish_dashboard", names)
+        cmd = dict(pipeline.steps(args, ["POW"]))["publish_dashboard"]
+        self.assertIn("--live", cmd)
+
+    def test_observability_events_emitted_on_pipeline_run(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            logs_dir = root / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            record = pipeline.run("test_step", [pipeline.sys.executable, "-c", "import sys; sys.exit(0)"], {}, runner=pipeline.subprocess.run, root=root)
+            self.assertEqual(record["exit_code"], 0)
+            events_file = logs_dir / "observability_events.jsonl"
+            self.assertTrue(events_file.is_file())
+            content = events_file.read_text(encoding="utf-8")
+            self.assertIn("test_step", content)
+
 if __name__ == "__main__": unittest.main()
