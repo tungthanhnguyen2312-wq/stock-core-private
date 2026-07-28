@@ -28,6 +28,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -112,7 +114,7 @@ def write_if_changed(path: Path, content: str) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() and path.read_text(encoding="utf-8") == content:
         return False
-    path.write_text(content, encoding="utf-8", newline="\n")
+    atomic_write_file(path, content, encoding="utf-8", newline="\n")
     return True
 
 
@@ -153,7 +155,8 @@ def copy_public_artifacts() -> list[str]:
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists() and sha256(source) == sha256(target):
             continue
-        shutil.copy2(source, target)
+        validator = validate_json_file if relative.endswith(".json") else None
+        atomic_copy_file(source, target, validator=validator)
         copied.append(relative)
     log(f"Đã copy {len(copied)} artifact từ backend: {', '.join(copied) or '(không đổi)'}")
     return copied

@@ -43,6 +43,7 @@ import hashlib
 import json
 import os
 import re
+from atomic_io import atomic_write_json
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -1488,9 +1489,7 @@ def main() -> int:
     output_dir = output_path(OUT_DIR)
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / 'focus_extract.json'
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(focus_extract, f, ensure_ascii=False, indent=2, allow_nan=False)
-        f.write("\n")
+    atomic_write_json(out_path, focus_extract)
 
     # ---------------------------------------------------------- analysis_bundle.json (đầy đủ)
     bundle_entries = {}
@@ -1548,9 +1547,7 @@ def main() -> int:
         ],
     }
     bundle_path = output_dir / 'analysis_bundle.json'
-    with bundle_path.open("w", encoding="utf-8") as f:
-        json.dump(analysis_bundle, f, ensure_ascii=False, indent=2, allow_nan=False)
-        f.write("\n")
+    atomic_write_json(bundle_path, analysis_bundle)
 
     # ---------------------------------------------------------------- bundle_manifest.json
     manifest_files = manifest_files + [
@@ -1582,9 +1579,7 @@ def main() -> int:
         )
 
     manifest_path = output_dir / 'bundle_manifest.json'
-    with manifest_path.open("w", encoding="utf-8") as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2, allow_nan=False)
-        f.write("\n")
+    atomic_write_json(manifest_path, manifest)
 
     status_word = "CẢNH BÁO STALE (--allow-stale)" if freshness["status"] == "stale_override" else "OK"
     print(f"[export_ai_bundle] {status_word} — {len(tickers)} mã"
