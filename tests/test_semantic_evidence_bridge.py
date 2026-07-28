@@ -330,7 +330,12 @@ class SemanticEvidenceBridgeTests(unittest.TestCase):
                             next(o for o in observations if o["raw_item_id"] == "long_term_borrowings")["observation_id"]}
             self.assertEqual(set(derived["observation_ids"]), expected_ids)
             self.assertEqual(derived["quality_state"], "available")
-            self.assertEqual(len(derived["evidence"]["components"]), 2)
+            components = derived["evidence"]["components"]
+            self.assertEqual(len(components), 2)
+            self.assertEqual([component["canonical_metric"] for component in components], ["long_term_borrowings", "short_term_borrowings"])
+            self.assertTrue(all(component["derivation_role"] == "required_component" for component in components))
+            for component in components:
+                self.assertTrue({"value", "period_identity", "statement_scope", "currency", "unit_scale", "source", "observation_ids", "citation_id", "evidence_id"}.issubset(component))
         with tempfile.TemporaryDirectory() as tmp2:
             # Only one of the two required components cited -> derived record must NOT be upgraded.
             root2 = Path(tmp2)

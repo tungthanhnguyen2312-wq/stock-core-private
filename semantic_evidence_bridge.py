@@ -758,8 +758,19 @@ def _enrich_derived(record: dict[str, Any], siblings: Sequence[dict[str, Any]]) 
     enriched["reason"] = _clear_resolved_reason(record.get("reason"))
     enriched["observation_ids"] = sorted({obs_id for m in matches for obs_id in (m.get("observation_ids") or [])})
     enriched["evidence"] = {"components": [
-        {"canonical_metric": m["canonical_metric"], "observation_ids": m.get("observation_ids"), **m["evidence"]}
-        for m in matches
+        {
+            "canonical_metric": m["canonical_metric"],
+            "derivation_role": "required_component",
+            "value": m.get("value"),
+            "period_identity": m.get("period_identity"),
+            "statement_scope": m.get("statement_scope"),
+            "currency": m.get("currency"),
+            "unit_scale": m.get("unit_scale"),
+            "source": m.get("source"),
+            "observation_ids": m.get("observation_ids"),
+            **m["evidence"],
+        }
+        for m in sorted(matches, key=lambda item: item["canonical_metric"])
     ]}
     return enriched
 
