@@ -167,6 +167,51 @@ class CorporateActionFactorTests(unittest.TestCase):
                 self.assertNotIn("adjusted_return", f)
                 self.assertNotIn("price_series", f)
 
+    def test_cash_dividend_adjustment_factor_derivation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdf_bytes = b"%PDF-1.4 test cash factor derivation"
+            sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+            ev_id = _evidence_id(sha256)
+            cash_cits = [_cash_citation("VNM", "13/NQ-CTS.HĐQT/2024", "2024-03-18", 1500, "2024-04-26", ev_id, rec_date="2024-04-12", ex_date="2024-04-11")]
+
+            # Set up market price citation for pre-event trading session (2024-04-10)
+            evidence_dir = root / "data" / "official-evidence"
+            evidence_dir.mkdir(parents=True, exist_ok=True)
+            _write_factor_runtime(root, cash_cits, [], pdf_bytes=pdf_bytes)
+
+            price_cit_id = _hash({"ticker": "VNM", "trading_date": "2024-04-10", "price_field": "close", "value": 67500.0, "provider": "SSI"})
+            price_cit = {
+                "citation_id": price_cit_id, "ticker": "VNM", "trading_date": "2024-04-10",
+                "price_field": "close", "value": 67500.0, "currency": "VND", "adjustment_status": "raw_as_quoted_no_adjustment_applied",
+                "provider": "SSI", "schema_version": "1.0.0"
+            }
+            with (evidence_dir / "market_price_citations.jsonl").open("w", encoding="utf-8") as fh:
+                fh.write(json.dumps(price_cit, ensure_ascii=False) + "\n")
+
+            # Mock DB row lookup using DB_RELATIVE mock or direct test
+            import sqlite3
+            db_path = root / "vn_stock.db"
+            conn = sqlite3.connect(db_path)
+            conn.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT, open REAL, high REAL, low REAL, close REAL, volume REAL, source TEXT)")
+            conn.execute("INSERT INTO ohlcv VALUES ('VNM', '2024-04-10', 67000.0, 68000.0, 66800.0, 67500.0, 1000000.0, 'SSI')")
+            conn.commit()
+            conn.close()
+
+            res = factors.derive_cash_dividend_adjustment_factors(root, ticker="VNM")
+            self.assertEqual(res["status"], "available")
+            self.assertEqual(len(res["cash_dividend_factors"]), 1)
+
+            f = res["cash_dividend_factors"][0]
+            self.assertEqual(f["event_type"], "cash_dividend")
+            self.assertEqual(f["cash_amount"], 1500)
+            self.assertEqual(f["reference_price_date"], "2024-04-10")
+            self.assertEqual(f["reference_price_value"], 67500.0)
+            self.assertEqual(f["theoretical_post_event_price"], 66000.0)
+            self.assertAlmostEqual(f["theoretical_price_multiplier"], 66000.0 / 67500.0, places=9)
+            self.assertNotIn("adjusted_price", f)
+            self.assertNotIn("adjusted_return", f)
+
 
 if __name__ == "__main__":
     unittest.main()
