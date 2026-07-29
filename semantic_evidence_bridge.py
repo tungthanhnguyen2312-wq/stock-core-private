@@ -15,6 +15,7 @@ CITATIONS_RELATIVE = Path("data") / "official-evidence" / "qualification_citatio
 SHARE_BASIS_RELATIVE = Path("data") / "official-evidence" / "share_basis_citations.jsonl"
 MARKET_PRICE_RELATIVE = Path("data") / "official-evidence" / "market_price_citations.jsonl"
 CASH_DIVIDEND_RELATIVE = Path("data") / "official-evidence" / "cash_dividend_citations.jsonl"
+NON_CASH_EVENT_RELATIVE = Path("data") / "official-evidence" / "non_cash_event_citations.jsonl"
 DB_RELATIVE = "vn_stock.db"
 MANIFEST_SCHEMA_VERSION = "1.0.0"
 SIGNED_ISSUER_ACCEPTANCE_RULE = "signed_issuer_document_with_official_source_corroboration_v1"
@@ -535,6 +536,142 @@ def load_verified_cash_dividends(runtime_root: Path) -> dict[str, Any]:
             "dividend_rate_pct": citation.get("dividend_rate_pct"),
             "currency": citation["currency"],
             "share_class": citation.get("share_class", "common"),
+            "event_status": citation.get("event_status", "completed"),
+            "supersedes_citation_ids": citation.get("supersedes_citation_ids", []),
+            "evidence": {
+                "evidence_id": citation["evidence_id"],
+                "citation_id": citation["citation_id"],
+                "citation": citation.get("citation"),
+                "document_sha256": evidence.get("sha256"),
+                "publication_date": evidence.get("publication_date"),
+                "source_url": evidence.get("source_url"),
+            },
+            "qualification_version": VERSION,
+            "verified_at": citation.get("verified_at"),
+        }
+
+        by_event_key[key] = event_object
+        canonical_events.append(event_object)
+
+    return {
+        "status": "available" if canonical_events else "unavailable",
+        "version": VERSION,
+        "by_event_key": by_event_key,
+        "events": canonical_events,
+        "rejected": rejected
+    }
+
+
+_REQUIRED_NON_CASH_EVENT_FIELDS = (
+    "citation_id", "ticker", "event_type", "resolution_number",
+    "declaration_date", "ratio_numerator", "ratio_denominator", "evidence_id"
+)
+_SUPPORTED_NON_CASH_EVENT_TYPES = {"stock_dividend", "bonus_share"}
+
+
+def _load_non_cash_event_rows(runtime_root: Path) -> list[Any] | None:
+    """Return parsed JSONL rows, or None if the file is missing or malformed (fail closed)."""
+    path = runtime_root / NON_CASH_EVENT_RELATIVE
+    if not path.exists():
+        return None
+    rows: list[Any] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return rows
+
+
+def load_verified_non_cash_events(runtime_root: Path) -> dict[str, Any]:
+    """Read and verify data/official-evidence/non_cash_event_citations.jsonl; fails closed per record.
+
+    Emits Producer-owned canonical non-cash corporate action event objects (stock_dividend, bonus_share)
+    referencing verified evidence IDs, document hashes, and citations.
+    Emits 0 adjustment factors and 0 adjusted returns.
+
+    Returns {"status": ..., "version": VERSION, "by_event_key": {...}, "events": [...], "rejected": [...]}.
+    """
+    evidence_by_id = _load_manifest(runtime_root)
+    rows = _load_non_cash_event_rows(runtime_root)
+    rejected: list[dict[str, Any]] = []
+    if evidence_by_id is None or rows is None:
+        return {"status": "unavailable", "version": VERSION, "by_event_key": {}, "events": [], "rejected": rejected}
+
+    grouped: dict[tuple[str, str, str, str], list[dict[str, Any]]] = {}
+    for raw in rows:
+        if not isinstance(raw, dict) or not all(field in raw for field in _REQUIRED_NON_CASH_EVENT_FIELDS):
+            rejected.append({"citation": raw, "reason": "malformed_citation"})
+            continue
+        key = (raw["ticker"], raw["event_type"], str(raw["resolution_number"]), str(raw["declaration_date"]))
+        grouped.setdefault(key, []).append(raw)
+
+    by_event_key: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    canonical_events: list[dict[str, Any]] = []
+
+    for key, citations in grouped.items():
+        unique_by_content = {_hash(c): c for c in citations}
+        if len(unique_by_content) > 1:
+            ids = {c.get("citation_id") for c in unique_by_content.values()}
+            successors = [c for c in unique_by_content.values()
+                          if isinstance(c.get("supersedes_citation_ids"), list)
+                          and set(c["supersedes_citation_ids"]) == ids - {c.get("citation_id")}]
+            if len(successors) != 1:
+                rejected.append({"key": key, "reason": "conflicting_citations"})
+                continue
+            citation = successors[0]
+        else:
+            citation = next(iter(unique_by_content.values()))
+
+        expected_id = _hash({
+            "ticker": citation["ticker"],
+            "event_type": citation["event_type"],
+            "resolution_number": citation["resolution_number"],
+            "declaration_date": citation["declaration_date"],
+            "ratio_numerator": citation["ratio_numerator"],
+            "ratio_denominator": citation["ratio_denominator"],
+            "ex_rights_date": citation.get("ex_rights_date"),
+            "event_status": citation.get("event_status"),
+            "evidence_id": citation["evidence_id"]
+        })
+        if citation["citation_id"] != expected_id:
+            rejected.append({"key": key, "reason": "citation_id_not_deterministic"})
+            continue
+
+        if citation["event_type"] not in _SUPPORTED_NON_CASH_EVENT_TYPES:
+            rejected.append({"key": key, "reason": "unsupported_event_type"})
+            continue
+
+        evidence = evidence_by_id.get(citation["evidence_id"])
+        if evidence is None:
+            rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
+            continue
+
+        num = int(citation["ratio_numerator"])
+        den = int(citation["ratio_denominator"])
+        ratio_float = num / den if den > 0 else None
+        if ratio_float is None:
+            rejected.append({"key": key, "reason": "invalid_entitlement_ratio"})
+            continue
+
+        event_object = {
+            "event_id": citation["citation_id"],
+            "ticker": citation["ticker"],
+            "issuer": evidence.get("issuer", "Vietnam Dairy Products Joint Stock Company"),
+            "event_type": citation["event_type"],
+            "resolution_number": citation["resolution_number"],
+            "declaration_date": citation["declaration_date"],
+            "record_date": citation.get("record_date"),
+            "ex_rights_date": citation.get("ex_rights_date"),
+            "distribution_date": citation.get("distribution_date"),
+            "effective_date": citation.get("effective_date"),
+            "entitlement_ratio": {"new_shares": num, "existing_shares": den, "ratio_float": ratio_float},
+            "funding_source": citation.get("funding_source"),
+            "share_class": citation.get("share_class", "common"),
+            "pre_action_shares": citation.get("pre_action_shares"),
+            "post_action_shares": citation.get("post_action_shares"),
+            "fractional_share_treatment": citation.get("fractional_share_treatment"),
             "event_status": citation.get("event_status", "completed"),
             "supersedes_citation_ids": citation.get("supersedes_citation_ids", []),
             "evidence": {
