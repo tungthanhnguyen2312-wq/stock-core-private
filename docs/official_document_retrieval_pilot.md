@@ -1,0 +1,3 @@
+# Cited official document retrieval pilot
+
+Phase 5A is `EVIDENCE_LIMITED`. This Producer-only research helper reads the existing manifest, qualification citations, and retained PDF bytes. It validates SHA-256 before extraction and indexes only cited PDF pages for HPG, VNM, and VCB FY2024 consolidated statements. pypdf text extraction is split into stable 240-token page sections; scanned pages with no text layer fall back only to their already-retained direct-citation labels, chunk IDs hash document hash, page, and exact section text. Search is lexical term-count ranking with chunk-ID tie breaking and returns no passage without a direct citation on its PDF page. It neither writes runtime data nor creates financial observations.
