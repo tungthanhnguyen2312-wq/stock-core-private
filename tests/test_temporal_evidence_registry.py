@@ -36,5 +36,21 @@ class TemporalRegistryTests(unittest.TestCase):
   with patch("temporal_evidence_registry._sidecar_temporal_sources",return_value=sources):
    first=promote_temporal_metadata([base],Path("unused"));second=promote_temporal_metadata([base],Path("unused"))
   self.assertEqual(len(first),1);self.assertEqual(first,second);self.assertEqual(first[0]["citation_id"],"cite");self.assertIn("period_end",first[0]["temporal_reasons"])
+ def test_replay_parity_exact_and_expected_enrichment(self):
+  from temporal_evidence_registry import _promoted_temporal,classify_replay_parity,identity
+  base=rec();docs={"e":{"publication_date":"2025-01-01"}};citations={"c":{"verified_at":"2025-01-02"}}
+  exact=classify_replay_parity([base],[base],docs,citations);self.assertEqual(exact["EXACT"],1)
+  temporal,reasons=_promoted_temporal(base,docs["e"],citations["c"]);overlay={"record_type":"temporal_promotion","base_record_id":base["record_id"],"ticker":base["ticker"],"period":base["period"],"metric":base["metric"],"source":base["source"],"qualification_status":base.get("qualification_status"),"observation_id":base["observation_id"],"citation_id":base["citation_id"],"evidence_id":base["evidence_id"],"document_hash":base["document_hash"],"lineage":base["lineage"],"supersedes":base["supersedes"],"temporal":temporal,"temporal_reasons":reasons};overlay["record_id"]=identity(overlay)
+  result=classify_replay_parity([base],[base,overlay],docs,citations);self.assertEqual(result["EXPECTED_ENRICHMENT"],1);self.assertIsNone(overlay["temporal"]["period_end"]);self.assertIn("period_end",overlay["temporal_reasons"])
+ def test_replay_parity_rejects_conflict_and_reports_extra(self):
+  from temporal_evidence_registry import classify_replay_parity
+  base=rec();broken=dict(base);broken["document_hash"]="different";self.assertRaises(TemporalRegistryError,classify_replay_parity,[base],[broken],{}, {})
+  extra=rec("HPG");result=classify_replay_parity([base],[base,extra],{},{});self.assertEqual(result["UNEXPECTED_EXTRA"],1)
+ def test_replay_parity_hash_is_stable_on_repeated_replay(self):
+  import hashlib
+  from temporal_evidence_registry import canonical
+  with tempfile.TemporaryDirectory() as d:
+   p=Path(d)/"s.jsonl";x=rec();append(p,[x]);first=replay(p);append(p,[x]);second=replay(p)
+  self.assertEqual(hashlib.sha256(canonical(first)).hexdigest(),hashlib.sha256(canonical(second)).hexdigest())
 if __name__=="__main__":
  unittest.main()

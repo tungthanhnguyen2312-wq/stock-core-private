@@ -90,7 +90,7 @@ def promote_temporal_metadata(records:list[Mapping[str,Any]],runtime_root:Path)-
   doc=docs.get(base.get("evidence_id"));raw=citations.get(base.get("citation_id"));temporal,reasons=_promoted_temporal(base,doc,raw)
   direct=any(((doc or {}).get("publication_date"),(raw or {}).get("effective_date") or (raw or {}).get("ex_rights_date"),(raw or {}).get("period_end"),(raw or {}).get("observed_at") or (raw or {}).get("retrieved_at"),(raw or {}).get("verified_at")))
   if temporal==base.get("temporal") and not direct:continue
-  promoted={"record_type":"temporal_promotion","base_record_id":base["record_id"],"ticker":base.get("ticker"),"period":base.get("period"),"metric":base.get("metric"),"source":base.get("source"),"observation_id":base.get("observation_id"),"citation_id":base.get("citation_id"),"evidence_id":base.get("evidence_id"),"document_hash":base.get("document_hash"),"lineage":base.get("lineage",{}),"supersedes":base.get("supersedes",[]),"temporal":temporal,"temporal_reasons":reasons};promoted["record_id"]=identity(promoted);out.append(promoted)
+  promoted={"record_type":"temporal_promotion","base_record_id":base["record_id"],"ticker":base.get("ticker"),"period":base.get("period"),"metric":base.get("metric"),"source":base.get("source"),"qualification_status":base.get("qualification_status"),"observation_id":base.get("observation_id"),"citation_id":base.get("citation_id"),"evidence_id":base.get("evidence_id"),"document_hash":base.get("document_hash"),"lineage":base.get("lineage"),"supersedes":base.get("supersedes",[]),"temporal":temporal,"temporal_reasons":reasons};promoted["record_id"]=identity(promoted);out.append(promoted)
  return out
 def run_promoted_vertical_slice(runtime_root:Path)->dict[str,Any]:
  records=source_records(runtime_root)
@@ -100,3 +100,32 @@ def run_promoted_vertical_slice(runtime_root:Path)->dict[str,Any]:
   fields=("published_at","effective_at","period_end","observed_at","calculated_at")
   coverage=lambda values:{f:sum(r["temporal"].get(f) is not None for r in values) for f in fields}
   return {"base_count":len(base),"promotion_count":len(promotions),"before":coverage(base),"after":coverage([r for r in rows if r.get("record_type")=="temporal_promotion"]),"first":first,"second":second,"replay_hash":hashlib.sha256(canonical(rows)).hexdigest(),"records":rows}
+
+_PARITY_FIELDS=("record_type","ticker","period","metric","source","qualification_status","observation_id","citation_id","evidence_id","document_hash","lineage","supersedes","temporal")
+def classify_replay_parity(source:list[Mapping[str,Any]],rows:list[Mapping[str,Any]],docs:Mapping[str,Any],citations:Mapping[str,Any])->dict[str,Any]:
+ source_by_id={r["record_id"]:r for r in source};base=[r for r in rows if r.get("record_type")!="temporal_promotion"];base_by_id={r["record_id"]:r for r in base};promotions=[r for r in rows if r.get("record_type")=="temporal_promotion"]
+ exact=missing=semantic=unexpected=0
+ for record_id,original in source_by_id.items():
+  replayed=base_by_id.get(record_id)
+  if replayed is None:missing+=1;continue
+  if canonical(original)==canonical(replayed):exact+=1;continue
+  raise TemporalRegistryError("source_replay_conflict")
+ for record_id in base_by_id:
+  if record_id not in source_by_id:unexpected+=1
+ expected=0
+ for overlay in promotions:
+  parent=source_by_id.get(overlay.get("base_record_id"))
+  if parent is None:unexpected+=1;continue
+  for field in _PARITY_FIELDS[1:-1]:
+   if overlay.get(field)!=parent.get(field):raise TemporalRegistryError("promotion_lineage_or_reference_mutation")
+  temporal,reasons=_promoted_temporal(parent,docs.get(parent.get("evidence_id")),citations.get(parent.get("citation_id")))
+  if overlay.get("temporal")!=temporal or overlay.get("temporal_reasons")!=reasons:raise TemporalRegistryError("promotion_temporal_value_mutation")
+  expected+=1
+ return {"EXACT":exact,"SEMANTICALLY_EQUIVALENT":semantic,"EXPECTED_ENRICHMENT":expected,"MISSING":missing,"CONFLICT":0,"UNEXPECTED_EXTRA":unexpected,"source_counts":{kind:sum(r.get("record_type")==kind for r in source) for kind in sorted({r.get("record_type") for r in source})},"replay_counts":{kind:sum(r.get("record_type")==kind for r in rows) for kind in sorted({r.get("record_type") for r in rows})}}
+def run_replay_parity(runtime_root:Path)->dict[str,Any]:
+ source=source_records(runtime_root);docs,citations=_sidecar_temporal_sources(runtime_root)
+ with tempfile.TemporaryDirectory(prefix="temporal-parity-") as d:
+  store=Path(d)/"shadow.jsonl";first=append(store,source);base=replay(store);promotions=promote_temporal_metadata(base,runtime_root);promotion_first=append(store,promotions);second=append(store,source+promotions);rows=replay(store);again=replay(store)
+  if canonical(rows)!=canonical(again):raise TemporalRegistryError("parity_replay_not_byte_stable")
+  result=classify_replay_parity(source,rows,docs,citations);result.update({"SOURCE_RECORDS":len(source),"REPLAY_RECORDS":len(rows),"first":first,"promotion_first":promotion_first,"second":second,"REPLAY_HASH":hashlib.sha256(canonical(rows)).hexdigest(),"TEMPORAL_NULLS_PRESERVED":all(r["temporal"].get(k) is None for r in rows if r.get("record_type")=="temporal_promotion" for k in r.get("temporal_reasons",{})),"CROSS_TICKER_ISOLATION":all(len(query(rows,ticker=t))==len([r for r in rows if r.get("ticker")==t]) for t in TICKERS)})
+  return result
