@@ -38,13 +38,13 @@ def _share_citation(ticker, identity_type, period, value, evidence_id, frequency
             "schema_version": "1.0.0"}
 
 
-def _write_runtime(root, citations, pdf_bytes=b"%PDF-1.4 test share basis evidence", filename="hpg.pdf"):
+def _write_runtime(root, citations, pdf_bytes=b"%PDF-1.4 test share basis evidence", filename="hpg.pdf", ticker="HPG"):
     evidence_dir = root / "data" / "official-evidence"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     sha256 = hashlib.sha256(pdf_bytes).hexdigest()
-    evidence_id = _evidence_id(sha256)
+    evidence_id = _evidence_id(sha256, ticker=ticker)
     (evidence_dir / filename).write_bytes(pdf_bytes)
-    (evidence_dir / "manifest.json").write_text(json.dumps({"schema_version": "1.0.0", "records": [_evidence_record(evidence_id, filename, sha256)]}), encoding="utf-8")
+    (evidence_dir / "manifest.json").write_text(json.dumps({"schema_version": "1.0.0", "records": [_evidence_record(evidence_id, filename, sha256, ticker=ticker)]}), encoding="utf-8")
     with (evidence_dir / "share_basis_citations.jsonl").open("w", encoding="utf-8") as fh:
         for c in citations:
             fh.write(json.dumps(c, ensure_ascii=False) + "\n")
@@ -54,12 +54,25 @@ def _write_runtime(root, citations, pdf_bytes=b"%PDF-1.4 test share basis eviden
 def _real_hpg_runtime(root):
     """The two real, currently-retained HPG FY2024 share-basis facts."""
     pdf_bytes = b"%PDF-1.4 test share basis evidence"
-    evidence_id = _evidence_id(pdf_bytes and hashlib.sha256(pdf_bytes).hexdigest())
+    evidence_id = _evidence_id(hashlib.sha256(pdf_bytes).hexdigest(), ticker="HPG")
     citations = [
         _share_citation("HPG", "period_end_shares_outstanding", "2024", 6396250200, evidence_id, note="27"),
         _share_citation("HPG", "weighted_average_basic_shares_outstanding", "2024", 6396250200, evidence_id, note="40.1"),
     ]
-    _write_runtime(root, citations, pdf_bytes)
+    _write_runtime(root, citations, pdf_bytes, filename="hpg.pdf", ticker="HPG")
+
+
+def _real_vnm_runtime(root):
+    """The three real, qualified VNM FY2024 share-basis facts."""
+    pdf_bytes = b"%PDF-1.4 test VNM share basis evidence"
+    sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+    evidence_id = _evidence_id(sha256, ticker="VNM")
+    citations = [
+        _share_citation("VNM", "period_end_shares_outstanding", "2024", 2089955445, evidence_id, note="printed p. 32"),
+        _share_citation("VNM", "weighted_average_basic_shares_outstanding", "2024", 2089955445, evidence_id, note="printed p. 185"),
+        _share_citation("VNM", "treasury_shares_outstanding", "2024", 0, evidence_id, note="printed p. 32"),
+    ]
+    _write_runtime(root, citations, pdf_bytes, filename="vnm.pdf", ticker="VNM")
 
 
 def _financial_net_net_inputs(period="2024"):
@@ -71,6 +84,34 @@ def _financial_net_net_inputs(period="2024"):
 
 
 class ShareBasisQualificationTests(unittest.TestCase):
+    def test_vnm_fy2024_share_basis_qualification(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _real_vnm_runtime(root)
+            verified = bridge.load_verified_share_basis(root)
+            self.assertEqual(verified["status"], "available")
+            self.assertEqual(verified["rejected"], [])
+            period_end = bridge.latest_share_basis(verified["by_identity"], "VNM", "period_end_shares_outstanding")
+            weighted_avg = bridge.latest_share_basis(verified["by_identity"], "VNM", "weighted_average_basic_shares_outstanding")
+            treasury = bridge.latest_share_basis(verified["by_identity"], "VNM", "treasury_shares_outstanding")
+            valuation_date = bridge.latest_share_basis(verified["by_identity"], "VNM", "valuation_date_shares_outstanding")
+
+            self.assertIsNotNone(period_end)
+            self.assertEqual(period_end["value"], 2089955445)
+            self.assertIsNotNone(weighted_avg)
+            self.assertEqual(weighted_avg["value"], 2089955445)
+            self.assertIsNotNone(treasury)
+            self.assertEqual(treasury["value"], 0)
+            self.assertIsNone(valuation_date)
+
+            # All three citation IDs must be distinct despite value overlaps
+            self.assertNotEqual(period_end["citation_id"], weighted_avg["citation_id"])
+            self.assertNotEqual(period_end["citation_id"], treasury["citation_id"])
+
+            # Determinism test
+            second_read = bridge.load_verified_share_basis(root)
+            self.assertEqual(verified, second_read)
+
     def test_identity_separation_never_conflates_three_identities(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

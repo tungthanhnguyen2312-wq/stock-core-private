@@ -50,6 +50,7 @@ _SUPPORTED_SHARE_IDENTITIES = {
     "weighted_average_basic_shares_outstanding",
     "weighted_average_diluted_shares_outstanding",
     "valuation_date_shares_outstanding",
+    "treasury_shares_outstanding",
 }
 _REQUIRED_SHARE_BASIS_FIELDS = ("citation_id", "ticker", "identity_type", "reporting_frequency",
     "reporting_period", "value", "evidence_id")
