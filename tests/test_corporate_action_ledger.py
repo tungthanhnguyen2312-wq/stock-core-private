@@ -1,0 +1,173 @@
+import hashlib
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+import corporate_action_ledger as ledger
+import semantic_evidence_bridge as bridge
+
+
+def _hash(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+
+
+def _evidence_id(sha256, ticker="VNM"):
+    return _hash({"authority_domain": "vinamilk.com.vn", "source_url": "u", "sha256": sha256, "ticker": ticker,
+        "reporting_period": "2024", "evidence_type": "audited_consolidated_financial_statements"})
+
+
+def _evidence_record(evidence_id, filename, sha256, ticker="VNM"):
+    return {"evidence_id": evidence_id, "authority": "KPMG Vietnam", "authority_domain": "vinamilk.com.vn", "ticker": ticker,
+        "issuer": "Vietnam Dairy Products Joint Stock Company", "evidence_type": "audited_consolidated_financial_statements",
+        "source_url": "https://vinamilk.com.vn/" + filename, "document_title": "Vinamilk 2024 Annual Report",
+        "reporting_period": "2024", "publication_date": "2025-02-28", "retrieved_at": "2026-07-28T13:42:50Z",
+        "content_type": "application/pdf", "language": "en", "filename": filename, "sha256": sha256, "byte_size": 100,
+        "source_location_capability": "official_ir_portal", "qualification_state": "qualified", "warnings": [], "is_actionable": False}
+
+
+def _cash_citation(ticker, res_num, decl_date, cash_amt, pay_date, evidence_id, rec_date=None, ex_date=None, status="completed"):
+    citation_id = _hash({
+        "ticker": ticker, "event_type": "cash_dividend", "resolution_number": res_num,
+        "declaration_date": decl_date, "cash_amount": cash_amt, "payment_date": pay_date,
+        "event_status": status, "evidence_id": evidence_id
+    })
+    return {
+        "citation_id": citation_id, "ticker": ticker, "event_type": "cash_dividend",
+        "resolution_number": res_num, "declaration_date": decl_date, "record_date": rec_date,
+        "ex_dividend_date": ex_date, "payment_date": pay_date, "cash_amount": cash_amt,
+        "currency": "VND", "event_status": status, "supersedes_citation_ids": [],
+        "evidence_id": evidence_id, "citation": {"note_number": "Annual Report p. 33"},
+        "verified_at": "2026-07-29T11:04:07Z", "schema_version": "1.0.0"
+    }
+
+
+def _non_cash_citation(ticker, event_type, res_num, decl_date, num, den, evidence_id,
+                        rec_date=None, ex_date=None, dist_date=None, funding="undistributed_earnings",
+                        status="completed"):
+    citation_id = _hash({
+        "ticker": ticker, "event_type": event_type, "resolution_number": res_num,
+        "declaration_date": decl_date, "ratio_numerator": num, "ratio_denominator": den,
+        "ex_rights_date": ex_date, "event_status": status, "evidence_id": evidence_id
+    })
+    return {
+        "citation_id": citation_id, "ticker": ticker, "event_type": event_type,
+        "resolution_number": res_num, "declaration_date": decl_date, "record_date": rec_date,
+        "ex_rights_date": ex_date, "distribution_date": dist_date, "ratio_numerator": num,
+        "ratio_denominator": den, "funding_source": funding, "event_status": status,
+        "supersedes_citation_ids": [], "evidence_id": evidence_id,
+        "citation": {"note_number": "Annual Report p. 33"},
+        "verified_at": "2026-07-29T11:04:07Z", "schema_version": "1.0.0"
+    }
+
+
+def _write_ledger_runtime(root, cash_citations, non_cash_citations, share_citations=None, pdf_bytes=b"%PDF-1.4 test ledger"):
+    evidence_dir = root / "data" / "official-evidence"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+    evidence_id = _evidence_id(sha256, ticker="VNM")
+    (evidence_dir / "vnm.pdf").write_bytes(pdf_bytes)
+    (evidence_dir / "manifest.json").write_text(json.dumps({"schema_version": "1.0.0", "records": [_evidence_record(evidence_id, "vnm.pdf", sha256)]}), encoding="utf-8")
+
+    with (evidence_dir / "cash_dividend_citations.jsonl").open("w", encoding="utf-8") as fh:
+        for c in cash_citations:
+            fh.write(json.dumps(c, ensure_ascii=False) + "\n")
+
+    with (evidence_dir / "non_cash_event_citations.jsonl").open("w", encoding="utf-8") as fh:
+        for c in non_cash_citations:
+            fh.write(json.dumps(c, ensure_ascii=False) + "\n")
+
+    if share_citations is not None:
+        with (evidence_dir / "share_basis_citations.jsonl").open("w", encoding="utf-8") as fh:
+            for c in share_citations:
+                fh.write(json.dumps(c, ensure_ascii=False) + "\n")
+
+    return evidence_id
+
+
+class CorporateActionLedgerTests(unittest.TestCase):
+    def test_full_vnm_ledger_construction(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdf_bytes = b"%PDF-1.4 test VNM corporate action ledger"
+            sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+            ev_id = _evidence_id(sha256)
+
+            cash_cits = [
+                _cash_citation("VNM", "13/NQ-CTS.HĐQT/2024", "2024-03-18", 1500, "2024-04-26", ev_id, rec_date="2024-04-12", ex_date="2024-04-11"),
+                _cash_citation("VNM", "15/NQ-CTS.HĐQT/2024", "2024-05-10", 500, "2024-06-21", ev_id, rec_date="2024-06-05", ex_date="2024-06-04"),
+                _cash_citation("VNM", "03/NQ-CTS.HĐQT/2024", "2024-01-15", 900, "2024-02-28", ev_id, rec_date="2024-02-15", ex_date="2024-02-14"),
+            ]
+            non_cash_cits = [
+                _non_cash_citation("VNM", "stock_dividend", "05/NQ-CTS.HĐQT/2021", "2021-06-15", 1, 10, ev_id, rec_date="2021-07-20", ex_date="2021-07-19"),
+                _non_cash_citation("VNM", "bonus_share", "08/NQ-CTS.HĐQT/2022", "2022-05-18", 1, 5, ev_id, rec_date="2022-06-22", ex_date="2022-06-21"),
+            ]
+
+            _write_ledger_runtime(root, cash_cits, non_cash_cits, pdf_bytes=pdf_bytes)
+
+            res = ledger.build_corporate_action_ledger(root, ticker="VNM")
+            self.assertEqual(res["status"], "available")
+            self.assertEqual(res["ticker"], "VNM")
+            self.assertEqual(len(res["ledger_entries"]), 5)
+
+            counts = res["entry_counts"]
+            self.assertEqual(counts["cash_dividend"], 3)
+            self.assertEqual(counts["stock_dividend"], 1)
+            self.assertEqual(counts["bonus_share"], 1)
+
+            # Verify deterministic ordering (oldest event date first)
+            entries = res["ledger_entries"]
+            types_in_order = [e["event_type"] for e in entries]
+            self.assertEqual(types_in_order[0], "stock_dividend")  # 2021
+            self.assertEqual(types_in_order[1], "bonus_share")      # 2022
+            self.assertEqual(set(types_in_order[2:]), {"cash_dividend"}) # 2024
+
+    def test_byte_identical_repeated_builds(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdf_bytes = b"%PDF-1.4 test ledger"
+            sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+            ev_id = _evidence_id(sha256)
+            cash_cits = [_cash_citation("VNM", "13/NQ-CTS.HĐQT/2024", "2024-03-18", 1500, "2024-04-26", ev_id)]
+            _write_ledger_runtime(root, cash_cits, [], pdf_bytes=pdf_bytes)
+
+            run1 = ledger.build_corporate_action_ledger(root, ticker="VNM")
+            run2 = ledger.build_corporate_action_ledger(root, ticker="VNM")
+            self.assertEqual(run1, run2)
+
+    def test_zero_adjustment_factors_or_returns_emitted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdf_bytes = b"%PDF-1.4 test ledger"
+            sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+            ev_id = _evidence_id(sha256)
+            cash_cits = [_cash_citation("VNM", "13/NQ-CTS.HĐQT/2024", "2024-03-18", 1500, "2024-04-26", ev_id)]
+            non_cash_cits = [_non_cash_citation("VNM", "stock_dividend", "05/NQ-CTS.HĐQT/2021", "2021-06-15", 1, 10, ev_id)]
+            _write_ledger_runtime(root, cash_cits, non_cash_cits, pdf_bytes=pdf_bytes)
+
+            res = ledger.build_corporate_action_ledger(root, ticker="VNM")
+            for entry in res["ledger_entries"]:
+                self.assertNotIn("adjustment_factor", entry)
+                self.assertNotIn("adjusted_price", entry)
+                self.assertNotIn("adjusted_return", entry)
+
+    def test_hash_mismatch_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pdf_bytes = b"%PDF-1.4 test ledger"
+            sha256 = hashlib.sha256(pdf_bytes).hexdigest()
+            ev_id = _evidence_id(sha256)
+            cash_cits = [_cash_citation("VNM", "13/NQ-CTS.HĐQT/2024", "2024-03-18", 1500, "2024-04-26", ev_id)]
+            _write_ledger_runtime(root, cash_cits, [], pdf_bytes=pdf_bytes)
+
+            # Tamper with PDF file bytes
+            (root / "data" / "official-evidence" / "vnm.pdf").write_bytes(b"tampered pdf content")
+
+            res = ledger.build_corporate_action_ledger(root, ticker="VNM")
+            self.assertEqual(res["status"], "unavailable")
+            self.assertEqual(res["ledger_entries"], [])
+
+
+if __name__ == "__main__":
+    unittest.main()
