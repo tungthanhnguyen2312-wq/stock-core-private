@@ -92,6 +92,7 @@ from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
+from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
@@ -1495,6 +1496,20 @@ def main() -> int:
             reference_at = reference_at.replace(tzinfo=timezone.utc)
         entries = build_focus_extract(tickers, conn, snapshot_rows, ta_rows, score_rows,
                                       score_session, financial_rows, financial_canonical, snapshot_info, ta_info, reference_at)
+        for ticker, entry in entries.items():
+            entity_type = get_default_registry().entity_type_for(ticker)
+            entry["entity_type"] = entity_type
+            opportunity = evaluate_opportunity(entry, ticker=ticker, entity_type=entity_type)
+            entry["opportunity_ranking"] = opportunity
+            entry["scenario_analysis"] = evaluate_scenario_analysis({
+                "freshness": entry.get("freshness"),
+                "readiness": (entry.get("analysis_readiness") or {}).get("domains"),
+                "corporate_intelligence": entry.get("corporate_intelligence"),
+                "corporate_events": (entry.get("corporate_intelligence") or {}).get("corporate_events"),
+                "technical": {"above_sma50": (entry.get("ta_signal") or {}).get("above_sma50")},
+                "opportunity": opportunity,
+            }, reference_at=reference_at.isoformat())
+        opportunity_ranking = rank_opportunities(entries)
     finally:
         conn.close()
 
@@ -1527,6 +1542,7 @@ def main() -> int:
         "volume_basis_verified": price_basis["volume_basis_verified"],
         "price_basis_provenance": price_basis,
         "tickers": entries,
+        "opportunity_ranking": opportunity_ranking,
         "ai_instructions": [
             "Nếu một mã trong tickers_requested có warnings khác rỗng nghĩa là THIẾU dữ liệu phần đó"
             " — DỪNG và báo lại, TUYỆT ĐỐI không tự suy diễn/bịa số liệu kỹ thuật thay thế.",
@@ -1601,6 +1617,7 @@ def main() -> int:
         "macro_snapshot": macro_records,
         "macro_freshness": macro_freshness,
         "tickers": bundle_entries,
+        "opportunity_ranking": opportunity_ranking,
         "data_quality_flags": data_quality_flags,
         "provenance": manifest_files,
         "ai_instructions": focus_extract["ai_instructions"] + [
