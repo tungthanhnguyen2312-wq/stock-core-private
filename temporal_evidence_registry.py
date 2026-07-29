@@ -1,4 +1,4 @@
-﻿"""Temporary append-only temporal registry over verified HPG/VNM/VCB evidence sidecars."""
+"""Temporary append-only temporal registry over verified HPG/VNM/VCB evidence sidecars."""
 from __future__ import annotations
 import hashlib,json,tempfile
 from pathlib import Path
@@ -25,11 +25,11 @@ def source_records(runtime_root:Path)->list[dict[str,Any]]:
    obs={"record_type":"observation","observation_id":fact["observation_id"],"ticker":fact.get("ticker"),"period":fact.get("period"),"metric":fact.get("metric"),"source":"financial_observations","citation_id":fact.get("citation_id"),"evidence_id":fact.get("evidence_id"),"document_hash":fact.get("document_hash"),"temporal":_temporal(raw,doc),"supersedes":[]};obs["record_id"]=identity(obs);out.append(obs)
  return out
 def validate(record:Mapping[str,Any])->dict[str,Any]:
- if not isinstance(record,Mapping) or record.get("record_type") not in {"document","observation","citation","qualification","canonical_derived_lineage"}:raise TemporalRegistryError("record_type_invalid")
+ if not isinstance(record,Mapping) or record.get("record_type") not in {"document","observation","citation","qualification","canonical_derived_lineage","temporal_promotion"}:raise TemporalRegistryError("record_type_invalid")
  if not isinstance(record.get("record_id"),str) or record["record_id"]!=identity({k:v for k,v in record.items() if k!="record_id"}):raise TemporalRegistryError("identity_invalid")
  temporal=record.get("temporal")
  if not isinstance(temporal,Mapping) or set(temporal)!={"observed_at","published_at","effective_at","period_end","calculated_at"}:raise TemporalRegistryError("temporal_fields_missing")
- if record["record_type"]!="document" and record.get("ticker") not in TICKERS:raise TemporalRegistryError("ticker_out_of_slice")
+ if record["record_type"] not in {"document","temporal_promotion"} and record.get("ticker") not in TICKERS:raise TemporalRegistryError("ticker_out_of_slice")
  return dict(record)
 def append(path:Path,records:list[Mapping[str,Any]])->dict[str,int]:
  existing={r["record_id"]:canonical(r) for r in replay(path)};added=0;idem=0
@@ -62,3 +62,41 @@ def run_vertical_slice(runtime_root:Path)->dict[str,Any]:
   if canonical(rows)!=canonical(again):raise TemporalRegistryError("replay_not_byte_stable")
   kinds={k:sum(r["record_type"]==k for r in rows) for k in ("document","observation","citation","qualification","canonical_derived_lineage")};missing=sum(any(v is None for v in r["temporal"].values()) for r in rows)
   return {"record_count":len(rows),"counts":kinds,"tickers":sorted({r.get("ticker") for r in rows if r.get("ticker")}),"missing_temporal_metadata":missing,"first":first,"second":second,"replay_hash":hashlib.sha256(canonical(rows)).hexdigest()}
+
+def _sidecar_temporal_sources(runtime_root:Path)->tuple[dict[str,dict[str,Any]],dict[str,dict[str,Any]]]:
+ base=runtime_root/"data"/"official-evidence";manifest=json.loads((base/"manifest.json").read_text(encoding="utf-8"))
+ docs={r.get("evidence_id"):r for r in manifest.get("records",[]) if r.get("evidence_id")}
+ citations={}
+ for name in ("qualification_citations.jsonl","share_basis_citations.jsonl","market_price_citations.jsonl","ebitda_component_citations.jsonl","cash_dividend_citations.jsonl","non_cash_event_citations.jsonl"):
+  p=base/name
+  if not p.exists():continue
+  for line in p.read_text(encoding="utf-8").splitlines():
+   if line:
+    row=json.loads(line)
+    if row.get("citation_id"):citations[row["citation_id"]]=row
+ return docs,citations
+def _promoted_temporal(base:Mapping[str,Any],doc:Mapping[str,Any]|None,raw:Mapping[str,Any]|None)->tuple[dict[str,Any],dict[str,str]]:
+ original=base["temporal"]; raw=raw or {};doc=doc or {};values=dict(original);reasons={}
+ support={"published_at":doc.get("publication_date"),"effective_at":raw.get("effective_date") or raw.get("ex_rights_date"),"period_end":raw.get("period_end"),"observed_at":raw.get("observed_at") or raw.get("retrieved_at"),"calculated_at":raw.get("verified_at")}
+ for field,value in support.items():
+  if values.get(field) is not None and value is not None and values[field]!=value:raise TemporalRegistryError("contradictory_temporal_"+field)
+  if values.get(field) is None and value is not None:values[field]=value
+  if values.get(field) is None:reasons[field]="unsupported_no_direct_source"
+ return values,reasons
+def promote_temporal_metadata(records:list[Mapping[str,Any]],runtime_root:Path)->list[dict[str,Any]]:
+ docs,citations=_sidecar_temporal_sources(runtime_root);out=[]
+ for base in records:
+  if base.get("record_type")=="temporal_promotion":continue
+  doc=docs.get(base.get("evidence_id"));raw=citations.get(base.get("citation_id"));temporal,reasons=_promoted_temporal(base,doc,raw)
+  direct=any(((doc or {}).get("publication_date"),(raw or {}).get("effective_date") or (raw or {}).get("ex_rights_date"),(raw or {}).get("period_end"),(raw or {}).get("observed_at") or (raw or {}).get("retrieved_at"),(raw or {}).get("verified_at")))
+  if temporal==base.get("temporal") and not direct:continue
+  promoted={"record_type":"temporal_promotion","base_record_id":base["record_id"],"ticker":base.get("ticker"),"period":base.get("period"),"metric":base.get("metric"),"source":base.get("source"),"observation_id":base.get("observation_id"),"citation_id":base.get("citation_id"),"evidence_id":base.get("evidence_id"),"document_hash":base.get("document_hash"),"lineage":base.get("lineage",{}),"supersedes":base.get("supersedes",[]),"temporal":temporal,"temporal_reasons":reasons};promoted["record_id"]=identity(promoted);out.append(promoted)
+ return out
+def run_promoted_vertical_slice(runtime_root:Path)->dict[str,Any]:
+ records=source_records(runtime_root)
+ with tempfile.TemporaryDirectory(prefix="temporal-promotion-") as d:
+  store=Path(d)/"shadow.jsonl";before=append(store,records);base=replay(store);promotions=promote_temporal_metadata(base,runtime_root);first=append(store,promotions);second=append(store,promotions);rows=replay(store);again=replay(store)
+  if canonical(rows)!=canonical(again):raise TemporalRegistryError("promotion_replay_not_stable")
+  fields=("published_at","effective_at","period_end","observed_at","calculated_at")
+  coverage=lambda values:{f:sum(r["temporal"].get(f) is not None for r in values) for f in fields}
+  return {"base_count":len(base),"promotion_count":len(promotions),"before":coverage(base),"after":coverage([r for r in rows if r.get("record_type")=="temporal_promotion"]),"first":first,"second":second,"replay_hash":hashlib.sha256(canonical(rows)).hexdigest(),"records":rows}
