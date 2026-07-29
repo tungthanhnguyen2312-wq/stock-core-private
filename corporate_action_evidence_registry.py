@@ -29,6 +29,17 @@ def replay(path:Path)->list[dict[str,Any]]:
  return sorted([validate(json.loads(x)) for x in path.read_text(encoding="utf-8").splitlines() if x],key=lambda r:(r["ticker"],r["temporal"].get("effective_at") or "",r["provider_event_id"]))
 def query(rows:list[Mapping[str,Any]],ticker:str|None=None,action_type:str|None=None,effective_date:str|None=None)->list[dict[str,Any]]:
  return [dict(r) for r in rows if (ticker is None or r["ticker"]==ticker) and (action_type is None or r["action_type"]==action_type) and (effective_date is None or r["temporal"].get("effective_at")==effective_date)]
+def promote_official_stock_dividend(provider,official):
+ required={"ticker","provider_event_id","ratio","approval_date","record_date","issuance_date","listing_date","completion_date","source_hash","citation_id","citation"}
+ if not required.issubset(official) or provider.get("ticker")!=official["ticker"] or provider.get("provider_event_id")!=official["provider_event_id"]:raise CorporateActionRegistryError("official_identity_mismatch")
+ if provider.get("exercise_ratio")!=official["ratio"] or provider.get("record_date")!=official["record_date"]:raise CorporateActionRegistryError("official_ratio_or_record_conflict")
+ if official.get("lifecycle")!="completed":raise CorporateActionRegistryError("official_completion_missing")
+ temporal={"observed_at":official.get("observed_at"),"published_at":official["approval_date"],"effective_at":official["listing_date"],"record_at":official["record_date"],"payment_at":None,"issue_at":official["issuance_date"],"listing_at":official["listing_date"]}
+ r={"schema_version":VERSION,"ticker":official["ticker"],"provider":provider.get("provider","VCI"),"provider_event_id":official["provider_event_id"],"action_type":"stock_dividend","event_code":"ISS","cash_amount":None,"share_ratio":official["ratio"],"temporal":temporal,"source_hash":official["source_hash"],"citation_id":official["citation_id"],"citation_reason":"official_execution_evidence","qualification":"qualified","coverage_limitation":provider.get("coverage_status"),"supersedes":official.get("supersedes",[]),"adjustment_provenance":"shadow_only","date_lineage":{k:official[k] for k in ("approval_date","record_date","issuance_date","listing_date","completion_date")},"citation":official["citation"]};r["record_id"]=identity(r);return r
+def shadow_share_factor(record):
+ r=validate(record)
+ if r.get("qualification")!="qualified" or r.get("action_type")!="stock_dividend" or not r.get("share_ratio"):raise CorporateActionRegistryError("shadow_factor_requires_qualified_stock_dividend")
+ f={"factor_version":"1.0.0","event_record_id":r["record_id"],"ticker":r["ticker"],"share_quantity_multiplier":1+r["share_ratio"],"theoretical_price_multiplier":1/(1+r["share_ratio"]),"lineage":{"citation_id":r["citation_id"],"source_hash":r["source_hash"],"date_lineage":r["date_lineage"]},"application":"shadow_only"};f["factor_id"]="sf-"+hashlib.sha256(canonical(f)).hexdigest();return f
 def source_records(db:Path)->list[dict[str,Any]]:
  c=sqlite3.connect(f"file:{db.resolve().as_posix()}?mode=ro",uri=True);c.row_factory=sqlite3.Row
  try:rows=c.execute("SELECT r.*,o.raw_payload_hash,o.retrieved_at FROM corporate_event_records r JOIN corporate_event_observations o USING(record_id) WHERE r.ticker IN ('HPG','PAN','VCB','VNM') AND r.category='DIVIDEND' ORDER BY r.ticker,r.provider,r.provider_event_id").fetchall()
