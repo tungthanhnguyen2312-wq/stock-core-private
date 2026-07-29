@@ -67,5 +67,28 @@ class TemporalRegistryTests(unittest.TestCase):
  def test_dual_read_diagnostics_are_deterministic(self):
   from temporal_evidence_registry import compare_dual_read,canonical
   base=rec();first=compare_dual_read([base],[base],{},{});second=compare_dual_read([base],[base],{},{});self.assertEqual(canonical(first),canonical(second))
+ def test_authority_selector_default_is_current_authority(self):
+  from unittest.mock import patch
+  from temporal_evidence_registry import DEFAULT_READ_AUTHORITY,read_authority_selector
+  base=rec()
+  with patch("temporal_evidence_registry.authority_read",return_value=[base]):result=read_authority_selector(Path("unused"))
+  self.assertEqual(DEFAULT_READ_AUTHORITY,"current_authority");self.assertEqual(result["returned_from"],"current_authority");self.assertEqual(result["rows"],[base])
+ def test_registry_primary_and_fault_fallback_do_not_merge(self):
+  from unittest.mock import patch
+  from temporal_evidence_registry import read_authority_selector
+  base=rec();sources=([base],[base],{}, {})
+  with patch("temporal_evidence_registry.authority_read",return_value=[base]),patch("temporal_evidence_registry._temporary_registry_rows",return_value=sources):
+   primary=read_authority_selector(Path("unused"),"registry_primary_with_fallback")
+   self.assertEqual(primary["returned_from"],"registry_primary");self.assertEqual(primary["rows"],[base])
+   for fault in ("identity_conflict","citation_source_hash_mismatch","lineage_loss","temporal_mutation","missing_registry_record","malformed_registry_store","registry_exception"):
+    fallback=read_authority_selector(Path("unused"),"registry_primary_with_fallback",fault);self.assertTrue(fallback["fallback"]);self.assertEqual(fallback["returned_from"],"current_authority");self.assertEqual(fallback["rows"],[base]);self.assertEqual(fallback["overlays"],[])
+ def test_selector_unsupported_and_rollback_are_deterministic(self):
+  from unittest.mock import patch
+  from temporal_evidence_registry import canonical,read_authority_selector
+  unsupported=read_authority_selector(Path("unused"),"registry_primary_with_fallback",unsupported="query");self.assertTrue(unsupported["fallback"]);self.assertEqual(unsupported["returned_from"],"current_authority")
+  base=rec()
+  with patch("temporal_evidence_registry.authority_read",return_value=[base]):
+   first=read_authority_selector(Path("unused"),"current_authority");rollback=read_authority_selector(Path("unused"),"current_authority")
+  self.assertEqual(canonical(first),canonical(rollback))
 if __name__=="__main__":
  unittest.main()

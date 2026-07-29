@@ -167,3 +167,43 @@ def run_shadow_dual_read(runtime_root:Path)->dict[str,Any]:
  if canonical(first)!=canonical(second):raise TemporalRegistryError("dual_read_diagnostics_not_deterministic")
  keys=("EXACT","EXPECTED_ENRICHMENT","SEMANTIC_MISMATCH","AUTHORITY_ONLY","REGISTRY_ONLY","QUERY_UNSUPPORTED")
  return {"AUTHORITY_QUERIES":len(specs),"REGISTRY_QUERIES":len(specs),**{key:sum(r[key] for r in first) for key in keys},"TEMPORAL_NULLS_PRESERVED":all(r["TEMPORAL_NULLS_PRESERVED"] for r in first),"FALLBACK_TO_AUTHORITY":all(r["returned_from"]=="authority" and r["authority"]==authority_read(runtime_root,**spec) for r,spec in zip(first,specs)),"ORDERING_PARITY":all(r["ORDERING_PARITY"] for r in first),"DIAGNOSTICS_DETERMINISTIC":True,"REPLAY_HASH":hashlib.sha256(canonical(first)).hexdigest(),"results":first}
+DEFAULT_READ_AUTHORITY="current_authority";READ_AUTHORITIES={"current_authority","registry_shadow","registry_primary_with_fallback"}
+def _temporary_registry_rows(runtime_root:Path)->tuple[list[dict[str,Any]],list[dict[str,Any]],dict[str,Any],dict[str,Any]]:
+ source=source_records(runtime_root);docs,citations=_sidecar_temporal_sources(runtime_root)
+ with tempfile.TemporaryDirectory(prefix="temporal-cutover-") as d:
+  store=Path(d)/"shadow.jsonl";append(store,source);base=replay(store);append(store,promote_temporal_metadata(base,runtime_root));rows=replay(store)
+ return source,rows,docs,citations
+def _inject_registry_fault(rows:list[dict[str,Any]],fault:str|None)->list[dict[str,Any]]:
+ altered=[dict(r) for r in rows]
+ if fault is None:return altered
+ if fault in {"malformed_registry_store","registry_exception"}:raise TemporalRegistryError(fault)
+ base=next((r for r in altered if r.get("record_type")!="temporal_promotion"),None)
+ if base is None:raise TemporalRegistryError("fault_without_base_record")
+ if fault=="missing_registry_record":return [r for r in altered if r is not base]
+ if fault=="identity_conflict":base["metric"]="conflicting_metric"
+ elif fault=="citation_source_hash_mismatch":base["document_hash"]="conflicting-hash"
+ elif fault=="lineage_loss":base["lineage"]={}
+ elif fault=="temporal_mutation":base["temporal"]=dict(base["temporal"],published_at="2099-01-01")
+ else:raise TemporalRegistryError("fault_unsupported")
+ return altered
+def read_authority_selector(runtime_root:Path,mode:str=DEFAULT_READ_AUTHORITY,fault:str|None=None,**filters:Any)->dict[str,Any]:
+ safe_mode=mode if mode in READ_AUTHORITIES else DEFAULT_READ_AUTHORITY
+ try:authority=authority_read(runtime_root,**filters)
+ except TemporalRegistryError as exc:return {"mode":safe_mode,"returned_from":"current_authority","rows":[],"overlays":[],"fallback":True,"fallback_reason":str(exc),"diagnostics":{"unsupported_query":True}}
+ if safe_mode=="current_authority":return {"mode":safe_mode,"returned_from":"current_authority","rows":authority,"overlays":[],"fallback":False,"fallback_reason":None,"diagnostics":{}}
+ try:
+  source,all_rows,docs,citations=_temporary_registry_rows(runtime_root);ids={r["record_id"] for r in authority};registry=[r for r in all_rows if r.get("record_type")!="temporal_promotion" and r["record_id"] in ids];registry.extend(r for r in all_rows if r.get("record_type")=="temporal_promotion" and r.get("base_record_id") in ids);registry=_ordered(_inject_registry_fault(registry,fault));comparison=compare_dual_read(authority,registry,docs,citations);base=[r for r in registry if r.get("record_type")!="temporal_promotion"];overlays=[r for r in registry if r.get("record_type")=="temporal_promotion"];safe=comparison["SEMANTIC_MISMATCH"]==0 and comparison["AUTHORITY_ONLY"]==0 and comparison["REGISTRY_ONLY"]==0 and comparison["EXACT"]==len(authority) and comparison["ORDERING_PARITY"]
+  if safe_mode=="registry_shadow":return {"mode":safe_mode,"returned_from":"current_authority","rows":authority,"overlays":overlays,"fallback":False,"fallback_reason":None,"diagnostics":comparison}
+  if safe:return {"mode":safe_mode,"returned_from":"registry_primary","rows":base,"overlays":overlays,"fallback":False,"fallback_reason":None,"diagnostics":comparison}
+  return {"mode":safe_mode,"returned_from":"current_authority","rows":authority,"overlays":[],"fallback":True,"fallback_reason":"registry_parity_failure","diagnostics":comparison}
+ except (TemporalRegistryError,ValueError) as exc:return {"mode":safe_mode,"returned_from":"current_authority","rows":authority,"overlays":[],"fallback":True,"fallback_reason":str(exc),"diagnostics":{"registry_exception":str(exc)}}
+def run_cutover_rehearsal(runtime_root:Path)->dict[str,Any]:
+ kinds=("document","observation","citation","qualification","canonical_derived_lineage");specs=[{}]+[{"ticker":t} for t in sorted(TICKERS)]+[{"record_type":kind} for kind in kinds];primary=[read_authority_selector(runtime_root,"registry_primary_with_fallback",**spec) for spec in specs];baseline=[read_authority_selector(runtime_root,"current_authority",**spec) for spec in specs]
+ if any(r["returned_from"]!="registry_primary" for r in primary):raise TemporalRegistryError("registry_primary_rehearsal_failed")
+ faults=("identity_conflict","citation_source_hash_mismatch","lineage_loss","temporal_mutation","missing_registry_record","malformed_registry_store","registry_exception");faults_first={fault:read_authority_selector(runtime_root,"registry_primary_with_fallback",fault) for fault in faults};unsupported=read_authority_selector(runtime_root,"registry_primary_with_fallback",unsupported="query")
+ if any(not r["fallback"] or r["returned_from"]!="current_authority" for r in faults_first.values()) or not unsupported["fallback"]:raise TemporalRegistryError("rehearsal_fallback_failed")
+ rollback=[read_authority_selector(runtime_root,"current_authority",**spec) for spec in specs];baseline_bytes=canonical(baseline);rollback_bytes=canonical(rollback)
+ if baseline_bytes!=rollback_bytes:raise TemporalRegistryError("rollback_baseline_not_stable")
+ repeat=[read_authority_selector(runtime_root,"registry_primary_with_fallback",**spec) for spec in specs]
+ if canonical(primary)!=canonical(repeat):raise TemporalRegistryError("primary_read_not_deterministic")
+ return {"DEFAULT_AUTHORITY":DEFAULT_READ_AUTHORITY,"TEMPORARY_REGISTRY_PRIMARY_READS":len(primary),"EXACT_RESULTS":sum(r["diagnostics"]["EXACT"] for r in primary),"EXPECTED_ENRICHMENTS":sum(r["diagnostics"]["EXPECTED_ENRICHMENT"] for r in primary),"FAULT_CASES_EXERCISED":len(faults)+1,"FALLBACK_CASES_PASSED":len(faults)+1,"CONFLICTING_OUTPUTS_MERGED":0,"ROLLBACK_TO_AUTHORITY":True,"BASELINE_BYTES_RESTORED":True,"DIAGNOSTICS_DETERMINISTIC":True,"CUTOVER_GATES":{"parity":"PASS","fallback":"PASS","rollback":"PASS","observability":"PASS","recovery":"PASS","configuration_safety":"PASS"},"REHEARSAL_HASH":hashlib.sha256(canonical(primary)).hexdigest()}
