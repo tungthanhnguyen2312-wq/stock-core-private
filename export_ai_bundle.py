@@ -1300,7 +1300,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "intrinsic_valuation": evaluate_intrinsic_valuation({"entity_type": get_default_registry().entity_type_for(tk), "financial": _financial_input(financial_canonical.get(tk)), "share_count": _net_net_share_count(tk), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
         # No source-owned scenario evidence mapping is qualified yet; do not infer one here.
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
-        "risk_analysis": evaluate_market_risk({}, reference_at=reference_at.isoformat()),
+        "risk_analysis": evaluate_market_risk({"ohlcv": ohlcv, "price_adjustment": "qualified" if build_price_basis_contract().get("price_basis_verified") else "unknown", "volume_units": "qualified" if build_price_basis_contract().get("volume_basis_verified") else "unknown", "volume_basis": build_price_basis_contract().get("volume_basis"), "current_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
         # This is a historical FY2024 valuation-date snapshot, never a current one: the
         # price is a cited 2024-12-31 close (see docs/historical_relative_valuation_snapshot.md),
         # not the live snapshot_rows price used elsewhere in this exporter. P/E reads a
