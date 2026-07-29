@@ -62,9 +62,9 @@ def qualify_price_basis(
 
 
 def qualify_volume_basis(
-    basis: str | VolumeBasis | None = VolumeBasis.RAW_SHARES_TRADED.value,
+    basis: str | VolumeBasis | None = VolumeBasis.UNKNOWN.value,
     *,
-    verified: bool = True,
+    verified: bool = False,
     provenance_notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Qualify historical volume basis independently from price basis.
@@ -141,7 +141,7 @@ def derive_metric_basis(
     """Propagate price and volume basis metadata down to derived indicators and valuation metrics."""
     price_basis = price_contract.get("price_basis", PriceBasis.UNKNOWN.value)
     price_verified = price_contract.get("price_basis_verified", False)
-    vol_basis = volume_contract.get("volume_basis", VolumeBasis.RAW_SHARES_TRADED.value) if volume_contract else None
+    vol_basis = volume_contract.get("volume_basis", VolumeBasis.UNKNOWN.value) if volume_contract else None
 
     is_actionable = price_verified and (price_basis != PriceBasis.UNKNOWN.value)
 

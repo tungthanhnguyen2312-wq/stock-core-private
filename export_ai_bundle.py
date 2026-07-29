@@ -282,8 +282,8 @@ def build_price_basis_contract(metadata: dict | None = None) -> dict:
         effective_date=metadata.get("effective_date"),
     )
     v_contract = qualify_volume_basis(
-        metadata.get("volume_basis", VolumeBasis.RAW_SHARES_TRADED.value),
-        verified=metadata.get("volume_basis_verified") is not False,
+        metadata.get("volume_basis", VolumeBasis.UNKNOWN.value),
+        verified=metadata.get("volume_basis_verified") is True,
     )
     return {
         "price_basis": p_contract["price_basis"],

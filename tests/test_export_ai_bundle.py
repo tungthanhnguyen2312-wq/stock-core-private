@@ -177,7 +177,8 @@ class PriceBasisContractTests(unittest.TestCase):
         self.assertEqual(c["price_basis"], "unknown")
         self.assertFalse(c["price_basis_verified"])
         self.assertFalse(c["is_actionable"])
-        self.assertEqual(c["volume_basis"], "raw_shares_traded")
+        self.assertEqual(c["volume_basis"], "unknown")
+        self.assertFalse(c["volume_basis_verified"])
         self.assertEqual(c["source"], "no_verified_price_basis_metadata")
         self.assertEqual(
             bundle.normalize_price_basis("raw", False),
