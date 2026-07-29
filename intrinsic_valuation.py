@@ -24,12 +24,12 @@ def evaluate_intrinsic_valuation(inputs:Mapping[str,Any]|None,reference_at:str|N
  # current_assets/inventory/receivables against total_liabilities, a classification a
  # bank's balance sheet does not use. Both are inapplicable to the bank archetype
  # itself, not merely missing inputs -- entity_type=="bank" only, never ticker-specific.
- if entity == "bank":
+ if entity in {"bank", "securities"}:
   return {"schema_version":SCHEMA_VERSION,"reference_at":reference_at,"status":"unknown","methods":{
     "fcff_dcf": out("fcff_dcf","inapplicable",applicability="inapplicable",
-        warnings=["fcff_ordinary_operating_cash_flow_capex_and_interest_bearing_debt_formulation_not_qualified_for_bank_archetype"]),
+        warnings=["fcff_ordinary_operating_cash_flow_capex_and_interest_bearing_debt_formulation_not_qualified_for_non_corporate_financial_archetype"]),
     "net_net": out("net_net","inapplicable",applicability="inapplicable",
-        warnings=["net_net_current_assets_inventory_receivables_identity_not_qualified_for_bank_balance_sheet_structure"]),
+        warnings=["net_net_current_assets_inventory_receivables_identity_not_qualified_for_non_corporate_financial_balance_sheet_structure"]),
    }, "warnings":["DDM, FCFE, RNAV, and SOTP are absent until their source contracts are qualified."]}
  # FCFF requires standalone compatible cash-flow components, explicit forecast and sourced WACC/terminal assumptions.
  vals={}; missing=[]

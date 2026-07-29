@@ -116,9 +116,9 @@ def evaluate_relative_valuation(inputs: Mapping[str, Any] | None, reference_at: 
     # and does not touch securities/insurance/finance_company (out of scope for this
     # milestone; each would need its own reviewed archetype decision).
     for name in METHODS:
-        methods[name] = _method(name, applicability="inapplicable" if entity_type == "bank" and name.startswith("ev_") else "unknown")
-        if entity_type == "bank" and name.startswith("ev_"):
-            methods[name]["state"] = "inapplicable"; methods[name]["warnings"] = ["enterprise_value_method_not_qualified_for_bank_archetype_customer_deposits_are_not_interest_bearing_debt"]
+        methods[name] = _method(name, applicability="inapplicable" if entity_type in {"bank", "securities"} and name.startswith("ev_") else "unknown")
+        if entity_type in {"bank", "securities"} and name.startswith("ev_"):
+            methods[name]["state"] = "inapplicable"; methods[name]["warnings"] = ["enterprise_value_method_not_qualified_for_non_corporate_financial_archetype"]
     specs = {"pe": "net_income", "pb": "shareholders_equity", "ps": "revenue", "ev_ebitda": "ebitda", "ev_sales": "revenue"}
     for name, metric in specs.items():
         if methods[name]["state"] == "inapplicable": continue
