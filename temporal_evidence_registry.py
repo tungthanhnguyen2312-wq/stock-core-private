@@ -129,3 +129,41 @@ def run_replay_parity(runtime_root:Path)->dict[str,Any]:
   if canonical(rows)!=canonical(again):raise TemporalRegistryError("parity_replay_not_byte_stable")
   result=classify_replay_parity(source,rows,docs,citations);result.update({"SOURCE_RECORDS":len(source),"REPLAY_RECORDS":len(rows),"first":first,"promotion_first":promotion_first,"second":second,"REPLAY_HASH":hashlib.sha256(canonical(rows)).hexdigest(),"TEMPORAL_NULLS_PRESERVED":all(r["temporal"].get(k) is None for r in rows if r.get("record_type")=="temporal_promotion" for k in r.get("temporal_reasons",{})),"CROSS_TICKER_ISOLATION":all(len(query(rows,ticker=t))==len([r for r in rows if r.get("ticker")==t]) for t in TICKERS)})
   return result
+_READ_FIELDS={"ticker","period","metric","source","record_type"}
+def _ordered(records:list[Mapping[str,Any]])->list[dict[str,Any]]:
+ return sorted((dict(r) for r in records),key=lambda r:(str(r.get("ticker","")),str(r.get("period","")),str(r.get("metric","")),r["record_id"]))
+def authority_read(runtime_root:Path,**filters:Any)->list[dict[str,Any]]:
+ if set(filters)-_READ_FIELDS:raise TemporalRegistryError("query_unsupported")
+ return _ordered([r for r in source_records(runtime_root) if all(r.get(k)==v for k,v in filters.items())])
+def compare_dual_read(authority:list[Mapping[str,Any]],registry:list[Mapping[str,Any]],docs:Mapping[str,Any],citations:Mapping[str,Any])->dict[str,Any]:
+ base=[r for r in registry if r.get("record_type")!="temporal_promotion"];overlays=[r for r in registry if r.get("record_type")=="temporal_promotion"];authority_by_id={r["record_id"]:r for r in authority};base_by_id={r["record_id"]:r for r in base}
+ exact=expected=semantic=authority_only=registry_only=0;diagnostics={"record_count_mismatch":len(authority)!=len(base),"identity_mismatch":False,"source_hash_or_citation_mismatch":False,"lineage_loss":False,"temporal_mutation":False,"ordering_difference":[r["record_id"] for r in authority]!=[r["record_id"] for r in base],"unsupported_query":False}
+ for record_id,row in authority_by_id.items():
+  candidate=base_by_id.get(record_id)
+  if candidate is None:authority_only+=1;continue
+  if canonical(row)==canonical(candidate):exact+=1;continue
+  semantic+=1;diagnostics["identity_mismatch"]=True
+  if row.get("document_hash")!=candidate.get("document_hash") or row.get("citation_id")!=candidate.get("citation_id"):diagnostics["source_hash_or_citation_mismatch"]=True
+  if row.get("lineage")!=candidate.get("lineage") or row.get("supersedes")!=candidate.get("supersedes"):diagnostics["lineage_loss"]=True
+  if row.get("temporal")!=candidate.get("temporal"):diagnostics["temporal_mutation"]=True
+ for record_id in base_by_id:
+  if record_id not in authority_by_id:registry_only+=1
+ for overlay in overlays:
+  parent=authority_by_id.get(overlay.get("base_record_id"))
+  if parent is None:registry_only+=1;continue
+  temporal,reasons=_promoted_temporal(parent,docs.get(parent.get("evidence_id")),citations.get(parent.get("citation_id")))
+  references=("ticker","period","metric","source","qualification_status","observation_id","citation_id","evidence_id","document_hash","lineage","supersedes")
+  if any(overlay.get(field)!=parent.get(field) for field in references):semantic+=1;diagnostics["lineage_loss"]=True;continue
+  if overlay.get("temporal")!=temporal or overlay.get("temporal_reasons")!=reasons:semantic+=1;diagnostics["temporal_mutation"]=True;continue
+  expected+=1
+ return {"EXACT":exact,"EXPECTED_ENRICHMENT":expected,"SEMANTIC_MISMATCH":semantic,"AUTHORITY_ONLY":authority_only,"REGISTRY_ONLY":registry_only,"QUERY_UNSUPPORTED":0,"TEMPORAL_NULLS_PRESERVED":all(row["temporal"].get(field) is None for row in overlays for field in row.get("temporal_reasons",{})),"ORDERING_PARITY":not diagnostics["ordering_difference"],"diagnostics":diagnostics}
+def shadow_dual_read(runtime_root:Path,**filters:Any)->dict[str,Any]:
+ if set(filters)-_READ_FIELDS:return {"returned_from":"authority","authority":[],"registry":[],"EXACT":0,"EXPECTED_ENRICHMENT":0,"SEMANTIC_MISMATCH":0,"AUTHORITY_ONLY":0,"REGISTRY_ONLY":0,"QUERY_UNSUPPORTED":1,"TEMPORAL_NULLS_PRESERVED":True,"ORDERING_PARITY":True,"diagnostics":{"unsupported_query":True}}
+ authority=authority_read(runtime_root,**filters);source=source_records(runtime_root);docs,citations=_sidecar_temporal_sources(runtime_root)
+ with tempfile.TemporaryDirectory(prefix="temporal-dual-read-") as d:
+  store=Path(d)/"shadow.jsonl";append(store,source);base=replay(store);promotions=promote_temporal_metadata(base,runtime_root);append(store,promotions);all_rows=replay(store);ids={r["record_id"] for r in authority};registry=[r for r in all_rows if r.get("record_type")!="temporal_promotion" and r["record_id"] in ids];registry.extend(r for r in all_rows if r.get("record_type")=="temporal_promotion" and r.get("base_record_id") in ids);registry=_ordered(registry);result=compare_dual_read(authority,registry,docs,citations);result.update({"returned_from":"authority","authority":authority,"registry":registry});return result
+def run_shadow_dual_read(runtime_root:Path)->dict[str,Any]:
+ kinds=("document","observation","citation","qualification","canonical_derived_lineage");specs=[{}]+[{"ticker":t} for t in sorted(TICKERS)]+[{"record_type":kind} for kind in kinds];first=[shadow_dual_read(runtime_root,**spec) for spec in specs];second=[shadow_dual_read(runtime_root,**spec) for spec in specs]
+ if canonical(first)!=canonical(second):raise TemporalRegistryError("dual_read_diagnostics_not_deterministic")
+ keys=("EXACT","EXPECTED_ENRICHMENT","SEMANTIC_MISMATCH","AUTHORITY_ONLY","REGISTRY_ONLY","QUERY_UNSUPPORTED")
+ return {"AUTHORITY_QUERIES":len(specs),"REGISTRY_QUERIES":len(specs),**{key:sum(r[key] for r in first) for key in keys},"TEMPORAL_NULLS_PRESERVED":all(r["TEMPORAL_NULLS_PRESERVED"] for r in first),"FALLBACK_TO_AUTHORITY":all(r["returned_from"]=="authority" and r["authority"]==authority_read(runtime_root,**spec) for r,spec in zip(first,specs)),"ORDERING_PARITY":all(r["ORDERING_PARITY"] for r in first),"DIAGNOSTICS_DETERMINISTIC":True,"REPLAY_HASH":hashlib.sha256(canonical(first)).hexdigest(),"results":first}

@@ -52,5 +52,20 @@ class TemporalRegistryTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as d:
    p=Path(d)/"s.jsonl";x=rec();append(p,[x]);first=replay(p);append(p,[x]);second=replay(p)
   self.assertEqual(hashlib.sha256(canonical(first)).hexdigest(),hashlib.sha256(canonical(second)).hexdigest())
+ def test_dual_read_matching_authority_and_expected_overlay(self):
+  from temporal_evidence_registry import _promoted_temporal,compare_dual_read,identity
+  base=rec();docs={"e":{"publication_date":"2025-01-01"}};citations={"c":{"verified_at":"2025-01-02"}};temporal,reasons=_promoted_temporal(base,docs["e"],citations["c"])
+  overlay={"record_type":"temporal_promotion","base_record_id":base["record_id"],"ticker":base["ticker"],"period":base["period"],"metric":base["metric"],"source":base["source"],"qualification_status":base.get("qualification_status"),"observation_id":base["observation_id"],"citation_id":base["citation_id"],"evidence_id":base["evidence_id"],"document_hash":base["document_hash"],"lineage":base["lineage"],"supersedes":base["supersedes"],"temporal":temporal,"temporal_reasons":reasons};overlay["record_id"]=identity(overlay)
+  result=compare_dual_read([base],[base,overlay],docs,citations);self.assertEqual(result["EXACT"],1);self.assertEqual(result["EXPECTED_ENRICHMENT"],1);self.assertTrue(result["TEMPORAL_NULLS_PRESERVED"])
+ def test_dual_read_reports_authority_only_and_ordering_difference(self):
+  from temporal_evidence_registry import compare_dual_read
+  base=rec();other=rec("HPG");missing=compare_dual_read([base],[],{},{});self.assertEqual(missing["AUTHORITY_ONLY"],1)
+  ordered=compare_dual_read([base,other],[other,base],{},{});self.assertFalse(ordered["ORDERING_PARITY"]);self.assertTrue(ordered["diagnostics"]["ordering_difference"])
+ def test_dual_read_unsupported_falls_back_to_authority(self):
+  from temporal_evidence_registry import shadow_dual_read
+  result=shadow_dual_read(Path("unused"),unsupported="value");self.assertEqual(result["returned_from"],"authority");self.assertEqual(result["QUERY_UNSUPPORTED"],1);self.assertEqual(result["authority"],[])
+ def test_dual_read_diagnostics_are_deterministic(self):
+  from temporal_evidence_registry import compare_dual_read,canonical
+  base=rec();first=compare_dual_read([base],[base],{},{});second=compare_dual_read([base],[base],{},{});self.assertEqual(canonical(first),canonical(second))
 if __name__=="__main__":
  unittest.main()
