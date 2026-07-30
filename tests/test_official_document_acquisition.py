@@ -12,7 +12,7 @@ class AcquisitionTests(unittest.TestCase):
  def test_url_identity_idempotency_and_deterministic_manifest(self):
   self.assertEqual(canonical_url("HTTPS://IR.EXAMPLE.test/a?b=2&a=1#x"),"https://ir.example.test/a?a=1&b=2")
   with patch("official_document_acquisition._extraction_state",return_value="ready_for_direct_citations"):
-   first=acquire([self.spec()],self.root,fetcher=self.fetch); before=(self.root/MANIFEST).read_text(); second=acquire([self.spec()],self.root,fetcher=self.fetch)
+   first=acquire([self.spec()],self.root,fetcher=self.fetch); before=(self.root/MANIFEST).read_text(); second=acquire([self.spec()],self.root,fetcher=lambda *_,**__: self.fail("network should not run"),local_idempotency_only=True)
   self.assertEqual(first["outcomes"][0]["state"],"retained"); self.assertEqual(second["outcomes"][0]["state"],"skipped_idempotent")
   self.assertEqual(before,(self.root/MANIFEST).read_text()); handoff=retrieval_handoff(self.root); self.assertEqual(len(handoff),1); self.assertEqual(handoff[0]["canonical_observation_status"],"not_created")
  def test_changed_bytes_versions_and_supersession(self):

@@ -93,6 +93,7 @@ def acquire(
     requests: Iterable[Mapping[str, Any]], destination: Path, *,
     fetcher: Callable[..., tuple[int, Mapping[str, str], bytes]] = fetch_http,
     timeout_seconds: int = 20, max_attempts: int = 2, observed_at: str | None = None,
+    local_idempotency_only: bool = False,
 ) -> dict[str, Any]:
     """Acquire a finite explicit list, version bytes by hash, and append records only."""
     if not 1 <= timeout_seconds <= 30 or not 1 <= max_attempts <= 3: raise ValueError("bounded_retry_or_timeout_invalid")
@@ -104,6 +105,11 @@ def acquire(
         except ValueError as exc:
             outcomes.append({"state": str(exc), "ticker": str(spec.get("ticker", "")).upper()}); continue
         prior = [r for r in records if r.get("ticker") == ticker and r.get("canonical_url") == url]
+        if local_idempotency_only:
+            existing = next((r for r in reversed(prior) if (root / str(r.get("relative_path") or "")).is_file() and _sha((root / str(r["relative_path"])).read_bytes()) == r.get("sha256")), None)
+            if existing:
+                outcomes.append({"ticker": ticker, "document_id": existing["document_id"], "state": "skipped_idempotent", "local_hash_verified": True})
+                continue
         status, headers, body, error = 0, {}, b"", None
         for attempt in range(max_attempts):
             try:
