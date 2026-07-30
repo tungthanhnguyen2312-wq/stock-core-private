@@ -40,7 +40,22 @@ def add_batch(checkpoint:dict[str,Any],record:Mapping[str,Any],pages:list[tuple[
   row={'document_id':record['document_id'],'document_sha256':record['sha256'],'page':page,'provenance':'ocr','status':status,'text':text,'text_sha256':hashlib.sha256(text.encode()).hexdigest(),'stdout_sha256':hashlib.sha256(stdout).hexdigest(),'diagnostic':diagnostic(stderr)}
   if status=='ocr_available':row['citation_id']=citation_id(record['document_id'],record['sha256'],page,text)
   out['pages'].append(row)
- return {'schema_version':'1.0.0','pages':replay(out['pages'])}
+ result={'schema_version':'1.0.0','pages':replay(out['pages'])}
+ if 'revisions' in out:result['revisions']=replay_revisions(out['revisions'])
+ return result
+def rotated_revision_id(doc:str,sha:str,page:int,rotation:int,engine:str,text:str)->str:
+ return hashlib.sha256(f'ocr_revision|{doc}|{sha}|{page}|{rotation}|{engine}|{text}'.encode()).hexdigest()
+def add_rotated_revision(checkpoint:dict[str,Any],record:Mapping[str,Any],page:int,rotation:int,engine:str,stdout:bytes,stderr:bytes)->dict[str,Any]:
+ if rotation not in {90,270}:raise ValueError('ocr_rotation_invalid')
+ source=next((x for x in checkpoint.get('pages',[]) if x.get('document_id')==record['document_id'] and x.get('page')==page),None)
+ if source is None:raise ValueError('ocr_revision_source_page_missing')
+ try:text=decode_utf8(stdout,kind='ocr');status='ocr_available' if text.strip() else 'ocr_empty_page'
+ except ValueError:text='';status='invalid_utf8_ocr_text'
+ rid=rotated_revision_id(record['document_id'],record['sha256'],page,rotation,engine,text);out={**checkpoint,'schema_version':'1.0.0','pages':list(checkpoint.get('pages',[])),'revisions':list(checkpoint.get('revisions',[]))}
+ if any(x.get('revision_id')==rid for x in out['revisions']):return {**out,'revisions':replay_revisions(out['revisions'])}
+ row={'revision_id':rid,'document_id':record['document_id'],'document_sha256':record['sha256'],'source_page':page,'source_page_citation_id':source.get('citation_id'),'rotation_degrees':rotation,'ocr_engine':engine,'provenance':'ocr_rotated_revision','status':status,'text':text,'text_sha256':hashlib.sha256(text.encode()).hexdigest(),'stdout_sha256':hashlib.sha256(stdout).hexdigest(),'diagnostic':diagnostic(stderr),'linkage':'augments','augments_citation_id':source.get('citation_id'),'supersedes_revision_id':None}
+ if status=='ocr_available':row['citation_id']=citation_id(record['document_id'],record['sha256'],page,text)
+ out['revisions'].append(row);return {**out,'revisions':replay_revisions(out['revisions'])}
 def replay(rows:list[Mapping[str,Any]])->list[dict[str,Any]]:
  out=[]
  for r in rows:
@@ -49,3 +64,13 @@ def replay(rows:list[Mapping[str,Any]])->list[dict[str,Any]]:
   if r['status']=='ocr_available' and r.get('citation_id')!=citation_id(r['document_id'],r['document_sha256'],int(r['page']),r['text']):raise ValueError('ocr_citation_identity_mismatch')
   out.append(dict(r))
  return sorted(out,key=lambda r:(r['document_id'],int(r['page']),r.get('citation_id','')))
+def replay_revisions(rows:list[Mapping[str,Any]])->list[dict[str,Any]]:
+ out=[]
+ for r in rows:
+  if r.get('provenance')!='ocr_rotated_revision' or r.get('status') not in STATES:raise ValueError('ocr_revision_provenance_invalid')
+  if int(r.get('source_page',0))<1 or int(r.get('rotation_degrees',0)) not in {90,270}:raise ValueError('ocr_revision_rotation_invalid')
+  rid=rotated_revision_id(r['document_id'],r['document_sha256'],int(r['source_page']),int(r['rotation_degrees']),r['ocr_engine'],r['text'])
+  if r.get('revision_id')!=rid:raise ValueError('ocr_revision_identity_mismatch')
+  if r['status']=='ocr_available' and r.get('citation_id')!=citation_id(r['document_id'],r['document_sha256'],int(r['source_page']),r['text']):raise ValueError('ocr_revision_citation_identity_mismatch')
+  out.append(dict(r))
+ return sorted(out,key=lambda r:r['revision_id'])
