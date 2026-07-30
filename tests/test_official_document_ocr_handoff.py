@@ -1,7 +1,9 @@
-import hashlib,json,tempfile,unittest
+import hashlib,io,json,tempfile,unittest
 from pathlib import Path
 from official_document_ocr_handoff import *
 class T(unittest.TestCase):
+ def test_console_is_utf8_safe(self):
+  raw=io.BytesIO();stream=io.TextIOWrapper(raw,encoding='cp1252');text='T\u00ednh c\u1ee5c b\u1ed9';configure_utf8_console(stream,object());stream.write(text);stream.flush();self.assertEqual(raw.getvalue(),text.encode('utf-8'))
  def rec(self,d):p=Path(d)/'x.pdf';p.write_bytes(b'x');return {'document_id':'d','sha256':hashlib.sha256(b'x').hexdigest(),'relative_path':'x.pdf','extraction_status':'needs_ocr'}
  def test_select_hash_checkpoint_resume_atomic(self):
   with tempfile.TemporaryDirectory() as d:
