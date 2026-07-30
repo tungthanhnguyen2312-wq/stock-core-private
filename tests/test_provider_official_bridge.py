@@ -12,4 +12,6 @@ class BridgeTests(unittest.TestCase):
   p,o=self.rows();shares=provider_observation(self.snapshot(),identity='period_end_shares_outstanding',period='2024',scope='consolidated',unit='shares',sign='positive',raw_item_id='shares',raw_label='shares',value=20);a=exact_links([p,shares],[o]);self.assertEqual(len(a['links']),1);self.assertEqual(a['rejected'][0]['reason'],'official_identity_missing')
  def test_drift_and_unit_rejection(self):
   p,o=self.rows();drift={**p,'raw_value':11};unit={**p,'unit':'shares'};a=exact_links([drift,unit],[o]);self.assertEqual(len(a['links']),0);self.assertTrue(all(x['reason']=='exact_compatibility_failed' for x in a['rejected']))
+ def test_raw_item_scaling_and_empty_source_rejection(self):
+  p,o=self.rows();wrong_item={**p,'raw_item_id':'other_item'};scaled={**p,'raw_value':10000,'unit':'VND/share'};a=exact_links([wrong_item,scaled],[o]);self.assertEqual(len(a['links']),0);self.assertIn('raw_item_id',a['rejected'][0]['fields']);self.assertIn('raw_value',a['rejected'][1]['fields']);self.assertEqual(exact_links([],[o])['links'],[])
 if __name__=='__main__':unittest.main()

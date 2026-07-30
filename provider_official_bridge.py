@@ -23,7 +23,7 @@ def exact_links(provider_rows:Sequence[Mapping[str,Any]],official_rows:Sequence[
   target=official.get(str(row.get("identity")))
   if missing:rejected.append({"observation_id":row.get("observation_id"),"reason":"provider_fields_missing","fields":missing});continue
   if target is None:rejected.append({"observation_id":row["observation_id"],"reason":"official_identity_missing"});continue
-  fields=[key for key in ("reporting_period","statement_scope","unit","sign","raw_value") if row.get(key)!=target.get(key)]
+  fields=[key for key in ("reporting_period","statement_scope","unit","sign","raw_item_id","raw_value") if row.get(key)!=target.get(key)]
   if not target.get("citation_id") or not target.get("document_sha256"):fields.append("official_citation_or_hash")
   if fields:rejected.append({"observation_id":row["observation_id"],"reason":"exact_compatibility_failed","fields":fields});continue
   link={"provider_observation_id":row["observation_id"],"official_citation_id":target["citation_id"],"official_document_sha256":target["document_sha256"],"identity":row["identity"],"match":"exact"};link["link_id"]=digest(link);links.append(link)
