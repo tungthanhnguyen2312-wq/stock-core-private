@@ -284,6 +284,43 @@ class OpportunityRankingSemanticsTests(unittest.TestCase):
         self.assertEqual(contract["custom_metadata"], {"key": "value"})
 
 
+class TaSignalSemanticsTests(unittest.TestCase):
+    """Phase 0B.5: ta_signal semantic safety contract tests."""
+
+    def test_existing_ta_signal_is_preserved_and_marked_available(self):
+        ta_row = {"ticker": "POW", "date": "2026-07-30", "direction": "bullish"}
+        semantics = bundle.build_ta_signal_semantics(ta_row)
+        self.assertEqual(semantics["coverage_status"], "available")
+        self.assertEqual(semantics["evaluation_status"], "record_available")
+        self.assertFalse(semantics["is_actionable"])
+        self.assertFalse(semantics["is_no_signal_claim"])
+        self.assertIn("not an investment action", semantics["presence_interpretation"])
+
+    def test_missing_ta_row_remains_null_semantics(self):
+        semantics = bundle.build_ta_signal_semantics(None)
+        self.assertEqual(semantics["coverage_status"], "missing")
+        self.assertEqual(semantics["evaluation_status"], "unqualified")
+        self.assertEqual(semantics["reason"], "absent_from_ta_signals_csv")
+        self.assertFalse(semantics["is_actionable"])
+
+    def test_missing_ta_is_not_represented_as_confirmed_no_signal_result(self):
+        semantics = bundle.build_ta_signal_semantics(None)
+        self.assertFalse(semantics["is_no_signal_claim"])
+        self.assertIn("not a confirmed no-signal claim", semantics["null_interpretation"])
+
+    def test_missing_evaluation_evidence_remains_unqualified_and_non_actionable(self):
+        semantics = bundle.build_ta_signal_semantics(None)
+        self.assertEqual(semantics["evaluation_status"], "unqualified")
+        self.assertFalse(semantics["is_actionable"])
+
+    def test_unrelated_fields_remain_unchanged(self):
+        ta_row = {"ticker": "HPG", "patterns": "doji", "rs_rating": 80}
+        semantics = bundle.build_ta_signal_semantics(ta_row)
+        self.assertEqual(ta_row["ticker"], "HPG")
+        self.assertEqual(ta_row["patterns"], "doji")
+        self.assertEqual(ta_row["rs_rating"], 80)
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 

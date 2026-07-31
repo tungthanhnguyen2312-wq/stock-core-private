@@ -451,6 +451,29 @@ def build_opportunity_ranking_contract(ranking: dict | None) -> dict | None:
     return out
 
 
+def build_ta_signal_semantics(ta_row: dict | None) -> dict:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho ta_signal."""
+    if isinstance(ta_row, dict):
+        return {
+            "coverage_status": "available",
+            "evaluation_status": "record_available",
+            "reason": None,
+            "presence_interpretation": "Presence of a TA signal record indicates signal availability, not an investment action or complete technical conclusion.",
+            "null_interpretation": None,
+            "is_no_signal_claim": False,
+            "is_actionable": False,
+        }
+    return {
+        "coverage_status": "missing",
+        "evaluation_status": "unqualified",
+        "reason": "absent_from_ta_signals_csv",
+        "presence_interpretation": None,
+        "null_interpretation": "null indicates absence from TA signals scan output, not a confirmed no-signal claim or neutral conclusion.",
+        "is_no_signal_claim": False,
+        "is_actionable": False,
+    }
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1392,6 +1415,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],
         "rs_rating_reconciliation": rs_reconciliation,
         "ta_signal": ta_rows.get(tk),
+        "ta_signal_semantics": build_ta_signal_semantics(ta_rows.get(tk)),
         "analysis_score": build_analysis_score_contract(score_rows.get(tk), score_session),
         "financial_latest": fin.get("row"),
         "financial_period_used": fin.get("period_used"),
