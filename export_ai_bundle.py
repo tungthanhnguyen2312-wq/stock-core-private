@@ -886,16 +886,72 @@ def get_session_anchor_and_prior(conn: sqlite3.Connection, reference_date: str) 
     return latest, prior
 
 
-def check_freshness(categories: dict, prior_session: str) -> dict:
-    """categories: {tên_nhóm: ngày_hoặc_None}. Nhóm có ngày < phiên liền trước -> stale (chặn)."""
+DEFAULT_SESSION_SCOPED_CATEGORIES = {
+    "screen_snapshot_live",
+    "ta_signals",
+    "analysis_latest",
+    "focus_analysis",
+    "context_package",
+}
+
+
+def check_freshness(
+    categories: dict,
+    prior_session: str,
+    reference_session: str | None = None,
+    session_scoped_categories: set[str] | list[str] | None = None,
+) -> dict:
+    """categories: {tên_nhóm: ngày_hoặc_None}.
+
+    Nhóm session-scoped yêu cầu ngày == reference_session.
+    Thiếu ngày (None) cho nhóm session-scoped -> fail closed (blocked).
+    Nhóm non-session (cadence khác) giữ nguyên ngày < prior_session.
+    """
+    scoped = set(session_scoped_categories) if session_scoped_categories is not None else DEFAULT_SESSION_SCOPED_CATEGORIES
+    target_session = reference_session or prior_session
     stale, unknown = [], []
+
     for name, date_str in categories.items():
         if date_str is None:
             unknown.append(name)
+            if name in scoped or reference_session is not None:
+                stale.append({
+                    "category": name,
+                    "date": None,
+                    "prior_session_required": prior_session,
+                    "reference_session_required": target_session,
+                    "reason": "missing_session_identity",
+                })
             continue
-        if date_str < prior_session:
-            stale.append({"category": name, "date": date_str, "prior_session_required": prior_session})
-    return {"prior_session": prior_session, "stale": stale, "unknown": unknown, "blocked": bool(stale)}
+
+        if name in scoped and reference_session is not None:
+            if date_str != reference_session:
+                stale.append({
+                    "category": name,
+                    "date": date_str,
+                    "prior_session_required": prior_session,
+                    "reference_session_required": reference_session,
+                    "reason": "session_mismatch",
+                })
+        else:
+            if date_str < prior_session:
+                stale.append({
+                    "category": name,
+                    "date": date_str,
+                    "prior_session_required": prior_session,
+                    "reference_session_required": target_session,
+                    "reason": "older_than_prior_session",
+                })
+
+    res = {
+        "prior_session": prior_session,
+        "stale": stale,
+        "unknown": unknown,
+        "blocked": bool(stale),
+    }
+    if reference_session is not None:
+        res["reference_session"] = reference_session
+    return res
 
 
 def check_artifact_order(root: Path, graph: dict[str, list[str]] | None = None) -> list[dict]:
@@ -1469,7 +1525,7 @@ def main() -> int:
         context_dates = [v["data_date"] for v in context_info.values() if v.get("data_date")]
         categories["context_package"] = min(context_dates) if context_dates else None
 
-        freshness = check_freshness(categories, prior_session)
+        freshness = check_freshness(categories, prior_session, reference_session=latest_session)
         order_violations = check_artifact_order(runtime_root())
         freshness["artifact_order_violations"] = order_violations
         freshness["blocked"] = bool(freshness["blocked"] or order_violations)
@@ -1482,8 +1538,9 @@ def main() -> int:
             print("[export_ai_bundle] CHẶN: dữ liệu lệch phiên hoặc lệch thứ tự tạo artifact"
                  " — KHÔNG xuất bundle.", file=sys.stderr)
             for item in freshness["stale"]:
+                req_sess = item.get("reference_session_required") or item.get("prior_session_required")
                 print(f"   - lệch phiên: {item['category']}: {item['date']}"
-                     f" (cần >= {item['prior_session_required']})", file=sys.stderr)
+                     f" (cần {req_sess})", file=sys.stderr)
             for v in order_violations:
                 print(f"   - lệch thứ tự artifact: {v['detail']}", file=sys.stderr)
             print("   Chạy lại với --allow-stale nếu cố tình muốn xuất"

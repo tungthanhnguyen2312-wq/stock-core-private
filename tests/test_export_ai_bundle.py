@@ -124,34 +124,61 @@ class ScreenSnapshotLiveTests(unittest.TestCase):
 
 
 class FreshnessGateLogicTests(unittest.TestCase):
-    """P0-3: hàm thuần check_freshness() — độc lập với trạng thái stale/fresh THẬT của repo hôm nay,
-    để test không tự nhiên đổi kết quả khi ai đó refresh lại Focus_Analysis.md sau này."""
+    """P0-3 / Phase 0B.1: check_freshness() session coherence gate tests."""
 
-    def test_blocks_when_one_category_older_than_prior_session(self):
+    def test_bundle_session_2026_07_30_plus_asset_session_2026_07_29_fails_freshness(self):
         categories = {
-            "screen_snapshot_live": "2026-07-17", "ta_signals": "2026-07-17",
-            "analysis_latest": "2026-07-17", "focus_analysis": "2026-07-10",
-            "context_package": "2026-07-17",
+            "screen_snapshot_live": "2026-07-30",
+            "ta_signals": "2026-07-30",
+            "analysis_latest": "2026-07-30",
+            "focus_analysis": "2026-07-29",
+            "context_package": "2026-07-30",
         }
-        result = bundle.check_freshness(categories, prior_session="2026-07-16")
+        result = bundle.check_freshness(
+            categories, prior_session="2026-07-29", reference_session="2026-07-30"
+        )
         self.assertTrue(result["blocked"])
-        self.assertEqual([s["category"] for s in result["stale"]], ["focus_analysis"])
+        stale_categories = [s["category"] for s in result["stale"]]
+        self.assertIn("focus_analysis", stale_categories)
 
-    def test_passes_when_everything_within_one_session(self):
+    def test_matching_2026_07_30_sessions_pass(self):
         categories = {
-            "screen_snapshot_live": "2026-07-17", "ta_signals": "2026-07-17",
-            "analysis_latest": "2026-07-16", "focus_analysis": "2026-07-17",
-            "context_package": "2026-07-17",
+            "screen_snapshot_live": "2026-07-30",
+            "ta_signals": "2026-07-30",
+            "analysis_latest": "2026-07-30",
+            "focus_analysis": "2026-07-30",
+            "context_package": "2026-07-30",
         }
-        result = bundle.check_freshness(categories, prior_session="2026-07-16")
+        result = bundle.check_freshness(
+            categories, prior_session="2026-07-29", reference_session="2026-07-30"
+        )
         self.assertFalse(result["blocked"])
         self.assertEqual(result["stale"], [])
 
-    def test_unknown_category_is_reported_but_does_not_block(self):
-        categories = {"screen_snapshot_live": "2026-07-17", "context_package": None}
-        result = bundle.check_freshness(categories, prior_session="2026-07-16")
-        self.assertFalse(result["blocked"])
+    def test_missing_session_identity_fails_closed(self):
+        categories = {
+            "screen_snapshot_live": "2026-07-30",
+            "context_package": None,
+        }
+        result = bundle.check_freshness(
+            categories, prior_session="2026-07-29", reference_session="2026-07-30"
+        )
+        self.assertTrue(result["blocked"])
         self.assertIn("context_package", result["unknown"])
+        stale_categories = [s["category"] for s in result["stale"]]
+        self.assertIn("context_package", stale_categories)
+
+    def test_financial_period_freshness_behavior_unchanged(self):
+        categories = {
+            "financial_statements": "2026-03-31",
+        }
+        result = bundle.check_freshness(
+            categories,
+            prior_session="2026-03-01",
+            reference_session="2026-07-30",
+            session_scoped_categories={"screen_snapshot_live", "ta_signals", "focus_analysis", "context_package"},
+        )
+        self.assertFalse(result["blocked"])
 
 
 class PriceBasisContractTests(unittest.TestCase):
