@@ -227,6 +227,63 @@ class RiskScoreSemanticsTests(unittest.TestCase):
         self.assertEqual(contract["values"]["risk"], 100)
 
 
+class OpportunityRankingSemanticsTests(unittest.TestCase):
+    """Phase 0B.4: opportunity_ranking semantic safety contract tests."""
+
+    def test_original_ordering_and_values_are_preserved(self):
+        raw_ranking = {
+            "schema_version": "1.0.0",
+            "state": "available",
+            "ranking_basis": ["financial_quality", "ticker"],
+            "ranking_kind": "evidence_availability_ordering_only",
+            "ordered_tickers": [{"ticker": "HPG", "state": "available"}, {"ticker": "VNM", "state": "partial"}],
+            "is_actionable": False,
+        }
+        contract = bundle.build_opportunity_ranking_contract(raw_ranking)
+        self.assertEqual(contract["ordered_tickers"], raw_ranking["ordered_tickers"])
+        self.assertEqual(contract["state"], "available")
+
+    def test_ordering_basis_is_evidence_availability(self):
+        raw_ranking = {"ordered_tickers": []}
+        contract = bundle.build_opportunity_ranking_contract(raw_ranking)
+        self.assertEqual(contract["ordering_basis"], "evidence_availability")
+
+    def test_ranking_type_is_evidence_availability_ordering_only(self):
+        raw_ranking = {"ordered_tickers": []}
+        contract = bundle.build_opportunity_ranking_contract(raw_ranking)
+        self.assertEqual(contract["ranking_type"], "evidence_availability_ordering_only")
+        self.assertEqual(contract["ranking_kind"], "evidence_availability_ordering_only")
+
+    def test_investment_ranking_and_actionability_flags_are_false(self):
+        raw_ranking = {"ordered_tickers": []}
+        contract = bundle.build_opportunity_ranking_contract(raw_ranking)
+        self.assertFalse(contract["is_investment_ranking"])
+        self.assertFalse(contract["is_actionable"])
+
+    def test_limitations_prevent_investment_attractiveness_interpretation(self):
+        raw_ranking = {"ordered_tickers": []}
+        contract = bundle.build_opportunity_ranking_contract(raw_ranking)
+        limits_text = " ".join(contract["interpretation_limits"])
+        self.assertIn("not an investment-attractiveness score", limits_text)
+        self.assertIn("portfolio priority", limits_text)
+
+    def test_missing_input_does_not_create_valid_looking_ranking(self):
+        self.assertIsNone(bundle.build_opportunity_ranking_contract(None))
+        self.assertIsNone(bundle.build_opportunity_ranking_contract({}))
+
+    def test_unrelated_fields_remain_unchanged(self):
+        raw_ranking = {
+            "schema_version": "1.0.0",
+            "state": "available",
+            "ranking_basis": ["financial_quality", "ticker"],
+            "ordered_tickers": [{"ticker": "HPG", "state": "available"}],
+            "custom_metadata": {"key": "value"},
+        }
+        contract = bundle.build_opportunity_ranking_contract(raw_ranking)
+        self.assertEqual(contract["schema_version"], "1.0.0")
+        self.assertEqual(contract["custom_metadata"], {"key": "value"})
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 

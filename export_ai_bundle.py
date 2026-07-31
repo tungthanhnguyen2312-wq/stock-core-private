@@ -426,6 +426,31 @@ def build_analysis_score_contract(values: dict | None, session_info: dict) -> di
     }
 
 
+def build_opportunity_ranking_contract(ranking: dict | None) -> dict | None:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho opportunity_ranking."""
+    if not isinstance(ranking, dict) or not ranking:
+        return None
+
+    out = dict(ranking)
+    out["ordering_basis"] = "evidence_availability"
+    out["ranking_type"] = "evidence_availability_ordering_only"
+    out.setdefault("ranking_kind", "evidence_availability_ordering_only")
+    out["is_investment_ranking"] = False
+    out["is_actionable"] = False
+
+    existing_limits = list(ranking.get("interpretation_limits") or [])
+    required_limits = [
+        "Dimensions are evidence availability states, not an investment-attractiveness score, expected return, conviction, or portfolio priority.",
+        "No composite magic score, recommendation, probability, target price, or portfolio sizing.",
+    ]
+    for limit in required_limits:
+        if limit not in existing_limits:
+            existing_limits.append(limit)
+    out["interpretation_limits"] = existing_limits
+    out["limitations"] = existing_limits
+    return out
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1596,7 +1621,7 @@ def main() -> int:
                 "technical": {"above_sma50": (entry.get("ta_signal") or {}).get("above_sma50")},
                 "opportunity": opportunity,
             }, reference_at=reference_at.isoformat())
-        opportunity_ranking = rank_opportunities(entries)
+        opportunity_ranking = build_opportunity_ranking_contract(rank_opportunities(entries))
     finally:
         conn.close()
 
