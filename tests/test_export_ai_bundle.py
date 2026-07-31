@@ -321,6 +321,62 @@ class TaSignalSemanticsTests(unittest.TestCase):
         self.assertEqual(ta_row["rs_rating"], 80)
 
 
+class NewsWindowSemanticsTests(unittest.TestCase):
+    """Phase 0B.6: news_related cutoff semantic safety contract tests."""
+
+    def test_original_cutoff_value_is_preserved(self):
+        news_data = {
+            "status": "no_company_specific_news",
+            "company_news_count": 0,
+            "cutoff": "2026-06-29T15:36:20Z",
+            "latest_published_utc": None,
+        }
+        semantics = bundle.build_news_window_semantics(news_data)
+        self.assertEqual(semantics["cutoff_timestamp"], "2026-06-29T15:36:20Z")
+
+    def test_cutoff_semantics_are_lookback_window_start(self):
+        news_data = {"cutoff": "2026-06-29T15:36:20Z"}
+        semantics = bundle.build_news_window_semantics(news_data)
+        self.assertEqual(semantics["cutoff_semantics"], "lookback_window_start")
+
+    def test_cutoff_is_not_labeled_as_latest_update(self):
+        news_data = {"cutoff": "2026-06-29T15:36:20Z"}
+        semantics = bundle.build_news_window_semantics(news_data)
+        self.assertIn("start of the lookback window", semantics["cutoff_interpretation"])
+        self.assertNotIn("latest update", semantics["cutoff_semantics"])
+
+    def test_missing_latest_publication_or_retrieval_timestamps_remain_missing(self):
+        news_data = {"cutoff": "2026-06-29T15:36:20Z", "latest_published_utc": None}
+        semantics = bundle.build_news_window_semantics(news_data)
+        self.assertIsNone(semantics["latest_published_utc"])
+        self.assertNotIn("retrieved_at", semantics)
+        self.assertNotIn("fetched_at", semantics)
+
+    def test_zero_mapped_articles_does_not_become_confirmed_no_news_claim(self):
+        news_data = {"company_news_count": 0, "cutoff": "2026-06-29T15:36:20Z"}
+        semantics = bundle.build_news_window_semantics(news_data)
+        self.assertFalse(semantics["is_no_relevant_news_claim"])
+        limits_text = " ".join(semantics["interpretation_limits"])
+        self.assertIn("zero mapped articles does not prove that no relevant company news exists", limits_text)
+
+    def test_mapping_coverage_remains_unqualified_and_non_actionable(self):
+        news_data = {"cutoff": "2026-06-29T15:36:20Z"}
+        semantics = bundle.build_news_window_semantics(news_data)
+        self.assertEqual(semantics["mapping_coverage_status"], "unqualified")
+        self.assertFalse(semantics["is_actionable"])
+
+    def test_unrelated_fields_remain_unchanged(self):
+        news_data = {
+            "status": "no_company_specific_news",
+            "company_news_count": 0,
+            "cutoff": "2026-06-29T15:36:20Z",
+            "market_news_count": 30,
+        }
+        semantics = bundle.build_news_window_semantics(news_data)
+        self.assertEqual(news_data["status"], "no_company_specific_news")
+        self.assertEqual(news_data["market_news_count"], 30)
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 

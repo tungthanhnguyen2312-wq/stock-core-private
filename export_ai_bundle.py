@@ -474,6 +474,37 @@ def build_ta_signal_semantics(ta_row: dict | None) -> dict:
     }
 
 
+def build_news_window_semantics(news_data: dict | None) -> dict | None:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho news_related / cutoff window."""
+    if not isinstance(news_data, dict):
+        return None
+
+    cutoff_val = news_data.get("cutoff")
+
+    semantics = {
+        "cutoff_semantics": "lookback_window_start",
+        "cutoff_timestamp": cutoff_val,
+        "cutoff_interpretation": "cutoff represents the start of the lookback window, not the latest news update or article publication time.",
+        "mapping_coverage_status": "unqualified",
+        "is_no_relevant_news_claim": False,
+        "is_actionable": False,
+        "interpretation_limits": [
+            "cutoff is the start of the lookback window, not the latest news update or retrieval time.",
+            "zero mapped articles does not prove that no relevant company news exists.",
+            "ticker alias linkage coverage is unqualified and not guaranteed to be complete.",
+        ],
+    }
+
+    if "retrieved_at" in news_data:
+        semantics["retrieved_at"] = news_data["retrieved_at"]
+    if "fetched_at" in news_data:
+        semantics["fetched_at"] = news_data["fetched_at"]
+    if "latest_published_utc" in news_data:
+        semantics["latest_published_utc"] = news_data["latest_published_utc"]
+
+    return semantics
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1714,10 +1745,16 @@ def main() -> int:
     for tk in tickers:
         entry = dict(entries[tk])  # copy nông — không sửa entries gốc (focus_extract vẫn nhỏ)
         entry["context_package"] = load_context_package_full(tk)
-        entry["news_related"] = (
+        raw_news = (
             (entry["context_package"] or {}).get("news_summary")
             if entry["context_package"] else None
         )
+        if isinstance(raw_news, dict):
+            news_related = dict(raw_news)
+            news_related["news_window_semantics"] = build_news_window_semantics(raw_news)
+            entry["news_related"] = news_related
+        else:
+            entry["news_related"] = None
         if entry["context_package"] is None:
             entry.setdefault("warnings", []).append(
                 "khong_co_context_package (chưa build_ticker_context.py cho mã này -> thiếu"
