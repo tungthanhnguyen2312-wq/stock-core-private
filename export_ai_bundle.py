@@ -392,6 +392,40 @@ def load_analysis_scores(tickers: list[str]) -> tuple[dict, dict, dict]:
     return by_ticker, session_info, info
 
 
+def build_analysis_score_contract(values: dict | None, session_info: dict) -> dict:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho analysis_score."""
+    if not isinstance(values, dict):
+        return {
+            "session_date": session_info.get("session_date"),
+            "regime": session_info.get("regime"),
+            "values": None,
+            "risk_semantics": None,
+        }
+
+    risk_val = values.get("risk")
+    risk_semantics = None
+    if risk_val is not None:
+        risk_semantics = {
+            "legacy_field": "risk",
+            "legacy_field_ambiguity": "The field name 'risk' is legacy nomenclature and must not be interpreted as higher-means-more-risk.",
+            "polarity": "higher_is_safer",
+            "score_value": risk_val,
+            "interpretation": "100 means no configured penalty flags were triggered (maximum configured safety score). 0 means all penalty flags were triggered.",
+            "limitations": [
+                "100 means no configured penalty flags were triggered; it is not a calibrated probability of loss.",
+                "It is not an investment-attractiveness score.",
+            ],
+            "is_actionable": False,
+        }
+
+    return {
+        "session_date": session_info.get("session_date"),
+        "regime": session_info.get("regime"),
+        "values": values,
+        "risk_semantics": risk_semantics,
+    }
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1333,11 +1367,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],
         "rs_rating_reconciliation": rs_reconciliation,
         "ta_signal": ta_rows.get(tk),
-        "analysis_score": {
-            "session_date": score_session["session_date"],
-            "regime": score_session["regime"],
-            "values": score_rows.get(tk),
-        },
+        "analysis_score": build_analysis_score_contract(score_rows.get(tk), score_session),
         "financial_latest": fin.get("row"),
         "financial_period_used": fin.get("period_used"),
         "financial_latest_quality": {

@@ -181,6 +181,52 @@ class FreshnessGateLogicTests(unittest.TestCase):
         self.assertFalse(result["blocked"])
 
 
+class RiskScoreSemanticsTests(unittest.TestCase):
+    """Phase 0B.3: analysis_score risk semantic safety contract tests."""
+
+    def test_value_100_is_described_as_maximum_configured_safety_not_maximum_risk(self):
+        values = {"score": 50, "fundamental": 60, "technical": 70, "momentum": 80, "liquidity": 90, "macro": 50, "risk": 100}
+        session_info = {"session_date": "2026-07-30", "regime": "phòng thủ"}
+        contract = bundle.build_analysis_score_contract(values, session_info)
+        semantics = contract["risk_semantics"]
+        self.assertIsNotNone(semantics)
+        self.assertEqual(semantics["polarity"], "higher_is_safer")
+        self.assertIn("maximum configured safety", semantics["interpretation"])
+        self.assertNotIn("maximum risk", semantics["interpretation"].lower())
+
+    def test_polarity_is_higher_is_safer(self):
+        values = {"risk": 80}
+        session_info = {"session_date": "2026-07-30", "regime": "phòng thủ"}
+        contract = bundle.build_analysis_score_contract(values, session_info)
+        self.assertEqual(contract["risk_semantics"]["polarity"], "higher_is_safer")
+
+    def test_actionability_is_false(self):
+        values = {"risk": 100}
+        session_info = {"session_date": "2026-07-30", "regime": "phòng thủ"}
+        contract = bundle.build_analysis_score_contract(values, session_info)
+        self.assertFalse(contract["risk_semantics"]["is_actionable"])
+
+    def test_missing_input_does_not_become_100(self):
+        session_info = {"session_date": "2026-07-30", "regime": "phòng thủ"}
+        contract = bundle.build_analysis_score_contract(None, session_info)
+        self.assertIsNone(contract["values"])
+        self.assertIsNone(contract["risk_semantics"])
+
+    def test_unrelated_analysis_score_fields_remain_unchanged(self):
+        values = {"score": 50.9, "fundamental": 54, "technical": 8, "momentum": 38, "liquidity": 100, "macro": 32, "risk": 100}
+        session_info = {"session_date": "2026-07-30", "regime": "phòng thủ"}
+        contract = bundle.build_analysis_score_contract(values, session_info)
+        self.assertEqual(contract["session_date"], "2026-07-30")
+        self.assertEqual(contract["regime"], "phòng thủ")
+        self.assertEqual(contract["values"]["score"], 50.9)
+        self.assertEqual(contract["values"]["fundamental"], 54)
+        self.assertEqual(contract["values"]["technical"], 8)
+        self.assertEqual(contract["values"]["momentum"], 38)
+        self.assertEqual(contract["values"]["liquidity"], 100)
+        self.assertEqual(contract["values"]["macro"], 32)
+        self.assertEqual(contract["values"]["risk"], 100)
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 
