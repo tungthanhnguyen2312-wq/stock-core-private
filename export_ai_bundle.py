@@ -96,6 +96,7 @@ from scenario_analysis import evaluate_scenario_analysis
 from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from analysis_lane_eligibility import evaluate_ticker_lanes
+from distribution_evidence import build_distribution_evidence_for_ticker
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -2261,6 +2262,43 @@ def build_manifest_files(tickers, snapshot_info, ta_info, analysis_info, financi
 
 
 # ==========================================================================
+# Phase 5D — opt-in distribution evidence wiring (disabled by default)
+# ==========================================================================
+# Reuses the exact Phase 5A opt-in flag (--include-analysis-lane-eligibility); no new
+# CLI surface. distribution_evidence.py is never called unless that flag is set, and this
+# section never recalculates coverage, derives yield/payout/CAGR/return, or reclassifies
+# cash vs non-cash -- the complete builder result is attached unmodified. Runs before
+# attach_analysis_lane_eligibility() so tickers[ticker].distribution_evidence is already
+# present on entry when the lane evaluator reads it.
+
+def build_distribution_evidence_for_ticker_safe(ticker: str, root: Path) -> dict[str, Any] | None:
+    """Fail-closed wrapper: a local build failure for this ticker returns None (so no
+    distribution_evidence key is attached for it) and never raises into the caller's
+    per-ticker loop or corrupts any other field on this or any other ticker's entry."""
+    try:
+        return build_distribution_evidence_for_ticker(root, ticker)
+    except Exception:
+        return None
+
+
+def attach_distribution_evidence(
+    bundle_entries: dict[str, dict], root: Path, include: bool,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False): when include is False,
+    build_distribution_evidence_for_ticker() is never called and no distribution_evidence
+    key is ever added -- current default bundle behavior is preserved exactly. When True,
+    attaches the complete builder result per ticker; a ticker whose build fails closed is
+    simply skipped, never corrupting any other ticker's fields."""
+    if not include:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_distribution_evidence_for_ticker_safe(tk, root)
+        if result is not None:
+            entry["distribution_evidence"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # Phase 5A — opt-in analysis-lane eligibility wiring (disabled by default)
 # ==========================================================================
 # Same disabled-by-default style as sector_aware_downstream_facts.py: the evaluator in
@@ -2313,6 +2351,7 @@ def build_analysis_lane_eligibility_for_ticker(
             ta_signal_semantics=entry.get("ta_signal_semantics"),
             news_window_semantics=_lane_eval_news_window_semantics(entry),
             price_basis_provenance=price_basis_provenance,
+            distribution_evidence=entry.get("distribution_evidence"),
         )
     except Exception:
         return None
@@ -2540,6 +2579,7 @@ def main() -> int:
                 " news_related/shareholder/valuation_inputs chi tiết)")
         bundle_entries[tk] = entry
 
+    attach_distribution_evidence(bundle_entries, runtime_root(), args.include_analysis_lane_eligibility)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
 
     # item F: bundle_entries[tk]["context_package"] only exists from this point on (it isn't

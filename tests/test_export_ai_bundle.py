@@ -1538,6 +1538,9 @@ class AnalysisLaneEligibilityPipelineIntegrationTests(unittest.TestCase):
         disabled_hpg = dict(disabled["tickers"]["HPG"])
         enabled_hpg = dict(enabled["tickers"]["HPG"])
         enabled_hpg.pop("analysis_lane_eligibility", None)
+        # Phase 5D: distribution_evidence reuses this same opt-in flag (per milestone
+        # instruction, no new CLI flag), so it is also attached only when enabled.
+        enabled_hpg.pop("distribution_evidence", None)
         self.assertEqual(disabled_hpg, enabled_hpg)
 
     def test_repeated_fixed_time_enabled_builds_are_deterministic(self):

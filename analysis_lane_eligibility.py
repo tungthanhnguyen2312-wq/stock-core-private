@@ -57,6 +57,13 @@ _DIMENSION_STATE_ALLOWED = frozenset({
 
 _SHARE_BASIS_BLOCKING_STATUSES = frozenset({"incomparable", "insufficient_identity", "not_available"})
 
+# distribution_evidence.coverage_status values (stock-core-private/distribution_evidence.py,
+# Phase 5D). "conflict" means a ticker-scoped citation was rejected (hash mismatch,
+# conflicting citations, malformed citation, unsupported type/currency, invalid ratio) --
+# a stronger, more specific signal than mere absence, so it blocks rather than merely
+# under-evidences the lane.
+_DISTRIBUTION_EVIDENCE_COVERAGE_STATES = frozenset({"missing", "partial", "conflict", "available"})
+
 
 def _is_mapping(value: Any) -> bool:
     return isinstance(value, Mapping)
@@ -300,28 +307,35 @@ def evaluate_income_defensive(
     risk_semantics: Mapping[str, Any] | None,
     share_basis_identities: Mapping[str, Any] | None,
     financial_period_coverage: Mapping[str, Any] | None,
+    earnings_anomaly: Mapping[str, Any] | None = None,
+    distribution_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Distribution/dividend evidence is not among the ten named Phase 4B input
-    contracts, and this lane's purpose is fundamentally distribution-evidence-based
-    (Phase 4A Section 3.2). It therefore can never reach eligible_for_analysis in this
-    milestone; it always reports insufficient_evidence, while still surfacing the
-    currently-available risk/share-basis/coverage gates for a future integration."""
+    """Income/defensive eligibility (Phase 5D), gated on the source-qualified
+    distribution_evidence contract (stock-core-private/distribution_evidence.py).
+
+    Reaches eligible_for_analysis only when: entity_type is a confirmed/known type;
+    a verified financial period exists; distribution_evidence is present, well-formed,
+    not conflicting, and meets its minimum cash-history evidence rule (coverage_status
+    == "available" and history_status == "multi_period_available", i.e. at least two
+    distinct qualified annual cash-distribution periods); and no unresolved earnings
+    anomaly blocks the lane. distribution_evidence itself never derives yield, payout
+    ratio, CAGR, or return, and this evaluator adds no further calculation on top of it.
+    When distribution_evidence is not supplied (the default), this lane behaves exactly
+    as before Phase 5D: insufficient_evidence, distribution_evidence_unavailable.
+    """
     lane = "income_defensive"
     et_path = f"tickers.{ticker}.entity_type"
     rs_path = f"tickers.{ticker}.risk_semantics"
     sbi_path = f"tickers.{ticker}.share_basis_identities"
     fpc_path = f"tickers.{ticker}.financial_period_coverage"
+    ea_path = f"tickers.{ticker}.earnings_anomaly"
+    de_path = f"tickers.{ticker}.distribution_evidence"
 
-    blocking_reasons = ["distribution_evidence_contract_not_available_to_this_evaluator"]
     data_warnings: list[str] = []
     limitations = [
-        "income_defensive eligibility fundamentally requires distribution/dividend evidence, which "
-        "is not among the ten Phase 4A/4B named input contracts; this result never reaches "
-        "eligible_for_analysis in this milestone.",
+        "distribution_evidence carries source-qualified cash/non-cash corporate-action "
+        "history only; this evaluator derives no yield, payout ratio, CAGR, or return.",
     ]
-
-    if entity_type in (None, "unknown"):
-        data_warnings.append("entity_type_unknown")
 
     if risk_semantics is None:
         data_warnings.append("risk_semantics_unavailable")
@@ -335,6 +349,7 @@ def evaluate_income_defensive(
             "evaluator does not classify the numeric value.",
         )
 
+    share_basis_blockers: list[str] = []
     if not _is_mapping(share_basis_identities):
         data_warnings.append("share_basis_identities_missing")
     else:
@@ -342,19 +357,72 @@ def evaluate_income_defensive(
         if _is_mapping(pairs):
             for pair_name, pair in pairs.items():
                 if _is_mapping(pair) and pair.get("status") in _SHARE_BASIS_BLOCKING_STATUSES:
-                    blocking_reasons.append(f"share_basis_identity_{pair.get('status')}:{pair_name}")
+                    share_basis_blockers.append(f"share_basis_identity_{pair.get('status')}:{pair_name}")
+
+    def _result(status: str, reasons: Sequence[str], **kwargs: Any) -> dict[str, Any]:
+        return _lane_result(
+            lane, status,
+            blocking_reasons=[*reasons, *share_basis_blockers],
+            data_warnings=data_warnings,
+            supporting_paths=[et_path, rs_path, sbi_path, fpc_path, ea_path, de_path],
+            limitations=limitations,
+            **kwargs,
+        )
+
+    if entity_type in (None, "unknown"):
+        return _result(
+            "insufficient_evidence", ["entity_type_unknown"],
+            required_evidence=["confirmed entity_type"],
+        )
 
     if not _is_mapping(financial_period_coverage):
-        data_warnings.append("financial_period_coverage_missing")
+        return _result(
+            "insufficient_evidence", ["financial_period_coverage_missing"],
+            required_evidence=["financial_period_coverage"],
+        )
+    if financial_period_coverage.get("latest_verified_period") is None:
+        return _result(
+            "insufficient_evidence", ["no_verified_financial_period"],
+            required_evidence=["financial_period_coverage.latest_verified_period"],
+        )
 
-    return _lane_result(
-        lane, "insufficient_evidence",
-        blocking_reasons=blocking_reasons,
-        data_warnings=data_warnings,
-        required_evidence=["corporate_action_distribution_evidence (not a named input to this milestone)"],
-        supporting_paths=[et_path, rs_path, sbi_path, fpc_path],
-        limitations=limitations,
-    )
+    if not _is_mapping(distribution_evidence):
+        return _result(
+            "insufficient_evidence", ["distribution_evidence_unavailable"],
+            required_evidence=["distribution_evidence"],
+        )
+
+    de_coverage = distribution_evidence.get("coverage_status")
+    de_history = distribution_evidence.get("history_status")
+    de_blocking = distribution_evidence.get("blocking_reasons")
+    if de_coverage not in _DISTRIBUTION_EVIDENCE_COVERAGE_STATES or not isinstance(de_blocking, list):
+        return _result("blocked", ["distribution_evidence_malformed"])
+    if de_coverage == "conflict" or de_blocking:
+        return _result(
+            "blocked",
+            [f"distribution_evidence_conflict:{reason}" for reason in de_blocking] or ["distribution_evidence_conflict"],
+        )
+    if de_coverage != "available" or de_history != "multi_period_available":
+        return _result(
+            "insufficient_evidence",
+            [f"distribution_evidence_coverage_status:{de_coverage}", f"distribution_evidence_history_status:{de_history}"],
+            required_evidence=["distribution_evidence with coverage_status=available and history_status=multi_period_available"],
+        )
+
+    if not _is_mapping(earnings_anomaly):
+        return _result(
+            "insufficient_evidence", ["earnings_anomaly_data_missing"],
+            required_evidence=["earnings_anomaly"],
+        )
+    ea_status = earnings_anomaly.get("status")
+    if ea_status == "anomaly_observed":
+        explanation_status = earnings_anomaly.get("explanation_status")
+        if explanation_status not in _RESOLVED_EARNINGS_EXPLANATION_STATUSES:
+            return _result("blocked", [f"unexplained_earnings_anomaly:{explanation_status}"])
+    elif ea_status != "not_observed":
+        return _result("insufficient_evidence", [f"earnings_anomaly_status_inconclusive:{ea_status}"])
+
+    return _result("eligible_for_analysis", [])
 
 
 def evaluate_structural_catalyst(
@@ -546,6 +614,7 @@ def evaluate_ticker_lanes(
     ta_signal_semantics: Mapping[str, Any] | None = None,
     news_window_semantics: Mapping[str, Any] | None = None,
     price_basis_provenance: Mapping[str, Any] | None = None,
+    distribution_evidence: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Evaluate all five Phase 4A analytical lanes for one ticker at one cutoff.
 
@@ -556,6 +625,9 @@ def evaluate_ticker_lanes(
     tickers[ticker].news_related.news_window_semantics), and price_basis_provenance
     (the single combined price/volume-basis contract Producer's build_price_basis_contract
     already emits). entity_type is the existing per-ticker classification field.
+    distribution_evidence (Phase 5D, optional, default None) is the source-qualified
+    corporate-action contract from stock-core-private/distribution_evidence.py; it is
+    consumed only by income_defensive and never changes any other lane's result.
 
     This function does not parse a raw bundle, read any file, or perform I/O -- callers
     are responsible for extracting these values from wherever they live in an actual
@@ -587,6 +659,8 @@ def evaluate_ticker_lanes(
             risk_semantics=risk_semantics,
             share_basis_identities=share_basis_identities,
             financial_period_coverage=financial_period_coverage,
+            earnings_anomaly=earnings_anomaly,
+            distribution_evidence=distribution_evidence,
         ),
         evaluate_structural_catalyst(
             ticker,
