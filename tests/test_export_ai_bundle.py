@@ -608,6 +608,83 @@ class ShareBasisIdentitiesTests(unittest.TestCase):
         self.assertEqual(contract["ticker"], "PNJ")
 
 
+class EarningsAnomalyTests(unittest.TestCase):
+    """Phase 3B hardened: NVL earnings anomaly semantic contract tests."""
+
+    def test_nvl_like_pat_greater_than_revenue_triggers_anomaly(self):
+        fin_nvl = {
+            "period_used": "2026-Q1",
+            "row": {"period": "2026-Q1", "revenue": 500.0, "net_profit": 1200.0},
+        }
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin_nvl)
+        self.assertEqual(contract["status"], "anomaly_observed")
+        self.assertEqual(contract["trigger"], "profit_after_tax_exceeds_revenue")
+        self.assertEqual(contract["period"], "2026-Q1")
+
+    def test_anomaly_condition_is_not_labeled_automatically_as_data_error(self):
+        fin = {"period_used": "2026-Q1", "row": {"revenue": 100.0, "net_profit": 300.0}}
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin)
+        self.assertEqual(contract["data_quality_status"], "source_values_observed_verification_unavailable")
+        self.assertNotEqual(contract["status"], "data_error")
+
+    def test_anomaly_is_not_represented_as_recurring_profitability(self):
+        fin = {"period_used": "2026-Q1", "row": {"revenue": 100.0, "net_profit": 300.0}}
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin)
+        self.assertEqual(contract["recurrence_status"], "unproven_single_period")
+
+    def test_available_decomposition_fields_are_preserved_without_invention(self):
+        fin = {
+            "period_used": "2026-Q1",
+            "row": {"revenue": 100.0, "net_profit": 300.0, "financial_income": 400.0},
+        }
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin)
+        decomp = contract["decomposition"]
+        self.assertEqual(decomp["financial_income"], 400.0)
+        self.assertIsNone(decomp["operating_profit"])
+        self.assertEqual(decomp["availability_status"], "partially_available")
+        self.assertEqual(contract["explanation_status"], "decomposition_available_unreconciled")
+
+    def test_missing_decomposition_evidence_remains_unavailable(self):
+        fin = {"period_used": "2026-Q1", "row": {"revenue": 100.0, "net_profit": 300.0}}
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin)
+        decomp = contract["decomposition"]
+        self.assertIsNone(decomp["operating_profit"])
+        self.assertIsNone(decomp["financial_income"])
+        self.assertIsNone(decomp["other_profit"])
+        self.assertEqual(decomp["availability_status"], "unavailable")
+        self.assertEqual(contract["explanation_status"], "insufficient_statement_detail")
+
+    def test_pat_over_revenue_ratio_is_not_labeled_as_normal_operating_margin(self):
+        fin = {"period_used": "2026-Q1", "row": {"revenue": 100.0, "net_profit": 300.0}}
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin)
+        obs = contract["observed_relationships"]
+        self.assertEqual(obs["relationship_type"], "pat_exceeds_revenue")
+        self.assertNotEqual(obs["relationship_type"], "normal_operating_margin")
+
+    def test_is_actionable_is_false(self):
+        fin = {"period_used": "2026-Q1", "row": {"revenue": 100.0, "net_profit": 300.0}}
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin)
+        self.assertFalse(contract["is_actionable"])
+
+    def test_non_trigger_ticker_uses_not_observed_status(self):
+        fin_normal = {"period_used": "2026-Q1", "row": {"revenue": 1000.0, "net_profit": 150.0}}
+        contract = bundle.build_earnings_anomaly_contract("HPG", fin_normal)
+        self.assertEqual(contract["status"], "not_observed")
+        self.assertIsNone(contract["trigger"])
+        self.assertEqual(contract["data_quality_status"], "source_values_observed_verification_unavailable")
+
+    def test_missing_revenue_or_pat_fails_closed(self):
+        fin_missing = {"period_used": "2026-Q1", "row": {"revenue": None, "net_profit": 100.0}}
+        contract = bundle.build_earnings_anomaly_contract("MISSING", fin_missing)
+        self.assertEqual(contract["status"], "not_observed")
+
+    def test_legacy_financial_fields_remain_unchanged(self):
+        fin_nvl = {"period_used": "2026-Q1", "row": {"revenue": 500.0, "net_profit": 1200.0}}
+        contract = bundle.build_earnings_anomaly_contract("NVL", fin_nvl)
+        self.assertEqual(fin_nvl["row"]["revenue"], 500.0)
+        self.assertEqual(fin_nvl["row"]["net_profit"], 1200.0)
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 

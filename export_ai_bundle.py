@@ -929,6 +929,120 @@ def build_share_basis_identities_contract(
     }
 
 
+def build_earnings_anomaly_contract(
+    tk: str,
+    fin_entry: dict | None,
+    canonical_entry: dict | None = None,
+) -> dict:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho earnings relationship anomalies (vd NVL PAT > Revenue)."""
+    if not isinstance(fin_entry, dict) or not fin_entry.get("row"):
+        return {
+            "ticker": tk,
+            "status": "not_available",
+            "trigger": None,
+            "period": None,
+            "observed_relationships": {},
+            "decomposition": {
+                "operating_profit": None,
+                "financial_income": None,
+                "other_profit": None,
+                "availability_status": "unavailable",
+            },
+            "explanation_status": "insufficient_statement_detail",
+            "recurrence_status": "unproven_single_period",
+            "data_quality_status": "source_values_observed_verification_unavailable",
+            "limitations": [
+                "No financial statement records are available for this ticker.",
+                "Source values remain unverified unless explicit primary-source verification exists.",
+            ],
+            "is_actionable": False,
+        }
+
+    row = fin_entry.get("row") or {}
+    period = fin_entry.get("period_used") or row.get("period")
+
+    rev = row.get("revenue")
+    pat = row.get("net_profit")
+
+    has_rev = rev is not None and not pd.isna(rev)
+    has_pat = pat is not None and not pd.isna(pat)
+
+    rev_val = float(rev) if has_rev else None
+    pat_val = float(pat) if has_pat else None
+
+    is_anomaly = False
+    if rev_val is not None and pat_val is not None and rev_val > 0 and pat_val > rev_val:
+        is_anomaly = True
+
+    if not is_anomaly:
+        return {
+            "ticker": tk,
+            "status": "not_observed",
+            "trigger": None,
+            "period": period,
+            "observed_relationships": {
+                "revenue": rev_val,
+                "net_profit": pat_val,
+                "relationship_type": "standard_operating_relationship",
+            },
+            "decomposition": {
+                "operating_profit": row.get("operating_profit"),
+                "financial_income": row.get("financial_income"),
+                "other_profit": row.get("other_profit"),
+                "availability_status": "standard",
+            },
+            "explanation_status": "not_applicable",
+            "recurrence_status": "not_applicable",
+            "data_quality_status": "source_values_observed_verification_unavailable",
+            "limitations": [
+                "Source values remain unverified unless explicit primary-source verification exists.",
+            ],
+            "is_actionable": False,
+        }
+
+    ratio = pat_val / rev_val if rev_val and rev_val > 0 else None
+
+    op_prof = row.get("operating_profit")
+    fin_inc = row.get("financial_income")
+    oth_prof = row.get("other_profit")
+
+    has_decomp = (op_prof is not None) or (fin_inc is not None) or (oth_prof is not None)
+    decomp_status = "partially_available" if has_decomp else "unavailable"
+    exp_status = "decomposition_available_unreconciled" if has_decomp else "insufficient_statement_detail"
+
+    limitations = [
+        "The relationship PAT > revenue exists in current retained payload and is not automatically a data error.",
+        "Source values remain unverified unless explicit primary-source verification exists.",
+        "Do not interpret PAT > revenue or ratio_pat_to_revenue as an operating margin, profitability margin, or sustainable margin.",
+        "Non-operating income, financial income, disposal gains, or accounting reversals require detailed line-item audit.",
+        "Single-period relationship does not establish multi-period recurring earnings quality.",
+    ]
+
+    return {
+        "ticker": tk,
+        "status": "anomaly_observed",
+        "trigger": "profit_after_tax_exceeds_revenue",
+        "period": period,
+        "observed_relationships": {
+            "revenue": rev_val,
+            "net_profit": pat_val,
+            "ratio_pat_to_revenue": ratio,
+            "relationship_type": "pat_exceeds_revenue",
+        },
+        "decomposition": {
+            "operating_profit": op_prof,
+            "financial_income": fin_inc,
+            "other_profit": oth_prof,
+            "availability_status": decomp_status,
+        },
+        "explanation_status": exp_status,
+        "recurrence_status": "unproven_single_period",
+        "data_quality_status": "source_values_observed_verification_unavailable",
+        "limitations": limitations,
+        "is_actionable": False,
+    }
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1885,6 +1999,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
             "excluded_unverified_periods": fin.get("excluded_unverified_periods", []),
         },
         "financial_period_coverage": build_financial_period_coverage_contract(tk, fin, financial_canonical.get(tk)),
+        "earnings_anomaly": build_earnings_anomaly_contract(tk, fin, financial_canonical.get(tk)),
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "financial_identity": empty_identity_export(),
         "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), get_default_registry().entity_type_for(tk)),
