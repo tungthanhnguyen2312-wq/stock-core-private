@@ -781,6 +781,154 @@ def build_valuation_namespaces_contract(
     }
 
 
+def build_share_basis_identities_contract(
+    tk: str,
+    snapshot_row: dict | None,
+    runtime_root_dir: Path | None = None,
+) -> dict:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho dated share-basis identities và comparability."""
+    if runtime_root_dir is None:
+        runtime_root_dir = runtime_root()
+
+    curr_val = None
+    curr_obs_at = None
+    curr_source = None
+    if isinstance(snapshot_row, dict):
+        curr_val = snapshot_row.get("shares_outstanding")
+        curr_obs_at = snapshot_row.get("date")
+        curr_source = snapshot_row.get("source") or "live_market_snapshot"
+
+    current_market = {
+        "value": curr_val,
+        "effective_date": curr_obs_at,
+        "observed_at": curr_obs_at,
+        "basis_type": "current_market_shares_outstanding",
+        "source": curr_source,
+        "provenance": "live_market_snapshot",
+        "qualification_status": "unverified" if curr_val is not None else "missing",
+        "limitations": [
+            "Current market shares outstanding are live/vendor provided without primary-source audit citation.",
+            "Market capitalization confirmation for current price does not validate historical or period-end share bases.",
+        ],
+    }
+
+    pe_entry = None
+    wa_entry = None
+    try:
+        verified = load_verified_share_basis(runtime_root_dir)
+        pe_entry = latest_share_basis(verified["by_identity"], tk, "period_end_shares_outstanding")
+        wa_entry = latest_share_basis(verified["by_identity"], tk, "weighted_average_basic_shares_outstanding")
+    except Exception:
+        pass
+
+    if pe_entry:
+        pe_val = pe_entry.get("value")
+        pe_period = pe_entry.get("reporting_period")
+        pe_source = "share_basis_evidence"
+        pe_status = "verified"
+    else:
+        pe_val = None
+        pe_period = None
+        pe_source = None
+        pe_status = "missing"
+
+    financial_period_end = {
+        "value": pe_val,
+        "financial_period": pe_period,
+        "effective_date": pe_period,
+        "basis_type": "period_end_shares_outstanding",
+        "source": pe_source,
+        "provenance": "audited_financial_statement_notes" if pe_entry else None,
+        "qualification_status": pe_status,
+        "limitations": [
+            "Period-end shares outstanding reflect exact balance-sheet date counts, not weighted-average or current counts.",
+        ],
+    }
+
+    if wa_entry:
+        wa_val = wa_entry.get("value")
+        wa_period = wa_entry.get("reporting_period")
+        wa_source = "share_basis_evidence"
+        wa_status = "verified"
+    else:
+        wa_val = None
+        wa_period = None
+        wa_source = None
+        wa_status = "missing"
+
+    weighted_average = {
+        "value": wa_val,
+        "financial_period": wa_period,
+        "effective_date": wa_period,
+        "basis_type": "weighted_average_basic_shares_outstanding",
+        "source": wa_source,
+        "provenance": "audited_financial_statement_notes" if wa_entry else None,
+        "qualification_status": wa_status,
+        "limitations": [
+            "Weighted-average shares reflect time-weighted basic shares used for E.P.S. calculations, not point-in-time counts.",
+        ],
+    }
+
+    def _evaluate_share_pair_comparability(obj_a: dict, obj_b: dict, pair_label: str) -> dict:
+        val_a = obj_a.get("value")
+        val_b = obj_b.get("value")
+
+        if val_a is None and val_b is None:
+            return {
+                "status": "not_available",
+                "reasons": [f"Both share identities in {pair_label} are missing."],
+                "is_actionable": False,
+            }
+        if val_a is None or val_b is None:
+            return {
+                "status": "insufficient_identity",
+                "reasons": [f"One share identity in {pair_label} is missing."],
+                "is_actionable": False,
+            }
+
+        reasons = []
+        basis_a = obj_a.get("basis_type")
+        basis_b = obj_b.get("basis_type")
+        if basis_a != basis_b:
+            reasons.append(f"Basis type mismatch ({basis_a} vs {basis_b}).")
+
+        date_a = obj_a.get("effective_date")
+        date_b = obj_b.get("effective_date")
+        if date_a != date_b:
+            reasons.append(f"Effective date/period mismatch ({date_a} vs {date_b}).")
+
+        if len(reasons) > 0:
+            return {
+                "status": "incomparable",
+                "reasons": reasons,
+                "is_actionable": False,
+            }
+
+        return {
+            "status": "comparable",
+            "reasons": [],
+            "is_actionable": False,
+        }
+
+    comparability = {
+        "pairs": {
+            "current_vs_period_end": _evaluate_share_pair_comparability(current_market, financial_period_end, "current_vs_period_end"),
+            "current_vs_weighted_average": _evaluate_share_pair_comparability(current_market, weighted_average, "current_vs_weighted_average"),
+            "period_end_vs_weighted_average": _evaluate_share_pair_comparability(financial_period_end, weighted_average, "period_end_vs_weighted_average"),
+        },
+        "disclaimer": "Share counts from different effective dates or basis types (current live market vs audited period-end vs time-weighted basic) must not be treated as interchangeable.",
+        "is_actionable": False,
+    }
+
+    return {
+        "ticker": tk,
+        "current_market": current_market,
+        "financial_period_end": financial_period_end,
+        "weighted_average": weighted_average,
+        "comparability": comparability,
+    }
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1745,6 +1893,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "risk_analysis": evaluate_market_risk({"ticker": tk, "ohlcv": ohlcv, "price_adjustment": "qualified" if build_price_basis_contract().get("price_basis_verified") else "unknown", "volume_units": "qualified" if build_price_basis_contract().get("volume_basis_verified") else "unknown", "volume_basis": build_price_basis_contract().get("volume_basis"), "current_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat(), runtime_root=runtime_root),
         "relative_valuation": relative_val,
         "valuation_namespaces": build_valuation_namespaces_contract(tk, snapshot_rows.get(tk), relative_val, fin),
+        "share_basis_identities": build_share_basis_identities_contract(tk, snapshot_rows.get(tk), runtime_root()),
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
         "corporate_intelligence": corporate,

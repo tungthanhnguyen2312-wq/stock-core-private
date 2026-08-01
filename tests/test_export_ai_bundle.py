@@ -539,6 +539,75 @@ class ValuationNamespaceTests(unittest.TestCase):
         self.assertEqual(relative_val["valuation"]["pe"]["value"], 10.55)
 
 
+class ShareBasisIdentitiesTests(unittest.TestCase):
+    """Phase 3A: dated share-basis identity contract tests."""
+
+    def test_current_period_end_and_weighted_average_shares_remain_separate(self):
+        snapshot_row = {"shares_outstanding": 334000000, "date": "2026-07-30", "source": "KBS"}
+        contract = bundle.build_share_basis_identities_contract("PNJ", snapshot_row)
+        self.assertIn("current_market", contract)
+        self.assertIn("financial_period_end", contract)
+        self.assertIn("weighted_average", contract)
+        self.assertEqual(contract["current_market"]["value"], 334000000)
+        self.assertEqual(contract["current_market"]["basis_type"], "current_market_shares_outstanding")
+
+    def test_different_effective_dates_produce_incomparable(self):
+        snapshot_row = {"shares_outstanding": 334000000, "date": "2026-07-30"}
+        contract = bundle.build_share_basis_identities_contract("PNJ", snapshot_row)
+        pair = contract["comparability"]["pairs"]["current_vs_period_end"]
+        self.assertIn(pair["status"], ("incomparable", "insufficient_identity"))
+        self.assertFalse(pair["is_actionable"])
+
+    def test_different_basis_types_produce_incomparable(self):
+        snapshot_row = {"shares_outstanding": 334000000, "date": "2026-07-30"}
+        contract = bundle.build_share_basis_identities_contract("PNJ", snapshot_row)
+        pair = contract["comparability"]["pairs"]["current_vs_period_end"]
+        self.assertFalse(pair["is_actionable"])
+
+    def test_equal_numeric_values_alone_do_not_establish_comparability(self):
+        snapshot_row = {"shares_outstanding": 1000000, "date": "2026-07-30"}
+        contract = bundle.build_share_basis_identities_contract("TEST", snapshot_row)
+        pairs = contract["comparability"]["pairs"]
+        for p in pairs.values():
+            self.assertNotEqual(p["status"], "comparable")
+
+    def test_missing_identity_metadata_produces_insufficient_identity(self):
+        snapshot_row = {"shares_outstanding": 334000000, "date": "2026-07-30"}
+        contract = bundle.build_share_basis_identities_contract("TEST_MISSING", snapshot_row)
+        pair = contract["comparability"]["pairs"]["current_vs_period_end"]
+        self.assertIn(pair["status"], ("insufficient_identity", "incomparable"))
+
+    def test_missing_share_identity_produces_not_available(self):
+        contract = bundle.build_share_basis_identities_contract("NONE", None)
+        pair = contract["comparability"]["pairs"]["current_vs_period_end"]
+        self.assertEqual(pair["status"], "not_available")
+        self.assertFalse(pair["is_actionable"])
+
+    def test_current_market_cap_confirmation_does_not_qualify_period_end_or_weighted_average_shares(self):
+        snapshot_row = {"shares_outstanding": 334000000, "date": "2026-07-30"}
+        contract = bundle.build_share_basis_identities_contract("PNJ", snapshot_row)
+        self.assertEqual(contract["current_market"]["qualification_status"], "unverified")
+        self.assertEqual(contract["financial_period_end"]["qualification_status"], "missing")
+        self.assertEqual(contract["weighted_average"]["qualification_status"], "missing")
+
+    def test_pnj_current_shares_and_q1_period_end_shares_remain_distinct(self):
+        snapshot_row = {"shares_outstanding": 334000000, "date": "2026-07-30"}
+        contract = bundle.build_share_basis_identities_contract("PNJ", snapshot_row)
+        self.assertEqual(contract["current_market"]["basis_type"], "current_market_shares_outstanding")
+        self.assertEqual(contract["financial_period_end"]["basis_type"], "period_end_shares_outstanding")
+        self.assertNotEqual(contract["current_market"]["basis_type"], contract["financial_period_end"]["basis_type"])
+
+    def test_existing_valuation_and_legacy_share_fields_remain_unchanged(self):
+        snapshot_row = {"shares_outstanding": 334000000}
+        contract = bundle.build_share_basis_identities_contract("PNJ", snapshot_row)
+        self.assertEqual(snapshot_row["shares_outstanding"], 334000000)
+
+    def test_unrelated_fields_remain_unchanged(self):
+        contract = bundle.build_share_basis_identities_contract("PNJ", {"shares_outstanding": 334000000})
+        self.assertIn("ticker", contract)
+        self.assertEqual(contract["ticker"], "PNJ")
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 
