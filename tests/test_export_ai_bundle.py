@@ -1502,6 +1502,29 @@ class AnalysisLaneEligibilityUnitTests(unittest.TestCase):
         self.assertNotIn("analysis_lane_eligibility", bundle_entries["HPG"])
 
 
+class TrustedSubsetProofTests(unittest.TestCase):
+    _ENTRIES = {"HPG": {"snapshot": {"date": "2026-07-30"}}, "VNM": {"snapshot": {"date": "2026-07-30"}}}
+    _BASIS = {"price_basis": "raw", "price_basis_verified": True, "volume_basis": "raw_shares_traded", "volume_basis_verified": True}
+
+    def test_valid_proof_is_deterministic_and_binds_hash(self):
+        first = bundle.build_trusted_subset_proof(["HPG", "VNM"], "2026-07-30", "2026-08-01T00:00:00+00:00", "a" * 64, self._ENTRIES, self._BASIS)
+        second = bundle.build_trusted_subset_proof(["VNM", "HPG"], "2026-07-30", "2026-08-01T00:00:00+00:00", "a" * 64, self._ENTRIES, self._BASIS)
+        self.assertEqual(first, second)
+        self.assertEqual(first["bundle_sha256"], "a" * 64)
+
+    def test_missing_or_mixed_session_rejected(self):
+        with self.assertRaises(ValueError):
+            bundle.build_trusted_subset_proof(["HPG", "VNM"], None, "t", "h", self._ENTRIES, self._BASIS)
+        bad = {**self._ENTRIES, "VNM": {"snapshot": {"date": "2026-07-29"}}}
+        with self.assertRaises(ValueError):
+            bundle.build_trusted_subset_proof(["HPG", "VNM"], "2026-07-30", "t", "h", bad, self._BASIS)
+
+    def test_unknown_basis_is_preserved_untrusted(self):
+        proof = bundle.build_trusted_subset_proof(["HPG", "VNM"], "2026-07-30", "t", "h", self._ENTRIES, {"price_basis": "unknown", "price_basis_verified": False, "volume_basis": "unknown", "volume_basis_verified": False})
+        self.assertEqual(proof["trust_state"], "untrusted_basis")
+        self.assertEqual(proof["price_basis"]["state"], "unknown")
+
+
 class AnalysisLaneEligibilityPipelineIntegrationTests(unittest.TestCase):
     """Phase 5A opt-in wiring exercised through the real export_ai_bundle.main() pipeline
     against real retained data (same convention as the rest of this file) -- proves the

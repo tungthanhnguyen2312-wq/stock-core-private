@@ -243,6 +243,36 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def build_trusted_subset_proof(tickers: list[str], session_identity: str | None,
+                               generated_at: str, bundle_sha256: str,
+                               entries: Mapping[str, Any], basis: Mapping[str, Any]) -> dict | None:
+    """Return the additive HPG/VNM exact-session proof, or no proof for other bundles."""
+    if sorted(tickers) != ["HPG", "VNM"]:
+        return None
+    if not session_identity:
+        raise ValueError("trusted_subset_missing_session")
+    per_ticker = {}
+    for ticker in ("HPG", "VNM"):
+        entry = entries.get(ticker)
+        session = (entry or {}).get("snapshot", {}).get("date") if isinstance(entry, Mapping) else None
+        if session != session_identity:
+            raise ValueError("trusted_subset_mixed_session")
+        per_ticker[ticker] = {
+            "session_identity": session,
+            "required_current_fields_qualified": bool((entry or {}).get("snapshot")),
+            "warnings": list((entry or {}).get("warnings") or []),
+        }
+    return {
+        "schema_version": "1.0.0", "tickers": ["HPG", "VNM"],
+        "trust_state": "exact_session_qualified" if basis.get("price_basis_verified") is True and basis.get("volume_basis_verified") is True else "untrusted_basis",
+        "session_identity": session_identity, "generated_at": generated_at,
+        "bundle_filename": "analysis_bundle.json", "bundle_sha256": bundle_sha256,
+        "per_ticker": per_ticker,
+        "price_basis": {"state": basis.get("price_basis", "unknown"), "verified": basis.get("price_basis_verified") is True},
+        "volume_basis": {"state": basis.get("volume_basis", "unknown"), "verified": basis.get("volume_basis_verified") is True},
+    }
+
+
 def clean(value):
     """NaN/NaT/pd.NA -> None (JSON chuẩn không có NaN); numpy scalar -> kiểu Python gốc."""
     if value is None:
@@ -2707,6 +2737,9 @@ def main() -> int:
          "row_or_record_count": len(bundle_entries), "count_basis": "tickers_in_bundle",
          "data_date": latest_session, "sha256": sha256_file(bundle_path)},
     ]
+    trusted_subset = build_trusted_subset_proof(
+        tickers, latest_session, generated_at, sha256_file(bundle_path), bundle_entries, price_basis,
+    )
     manifest = {
         "schema_version": "1.1.0",
         "generated_at": generated_at,
@@ -2721,6 +2754,7 @@ def main() -> int:
         "price_basis_provenance": price_basis,
         "data_quality_flags": data_quality_flags,
         "files": manifest_files,
+        "trusted_subset": trusted_subset,
     }
     if freshness["status"] == "stale_override":
         manifest["STALE_DATA_WARNING"] = (
