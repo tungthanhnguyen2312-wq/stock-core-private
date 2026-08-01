@@ -1086,13 +1086,28 @@ def build_share_basis_identities_contract(
         pe_source = None
         pe_status = "missing"
 
+    def _share_provenance(entry: Mapping[str, Any] | None) -> dict | None:
+        if not entry:
+            return None
+        return {
+            "evidence_id": entry.get("evidence_id"),
+            "citation_id": entry.get("citation_id"),
+            "citation": entry.get("citation"),
+            "document_sha256": entry.get("document_sha256"),
+            "source_url": entry.get("source_url"),
+            "publication_date": entry.get("publication_date"),
+            "retrieved_at": entry.get("retrieved_at"),
+        }
+
     financial_period_end = {
         "value": pe_val,
         "financial_period": pe_period,
-        "effective_date": pe_period,
+        "effective_date": f"{pe_period}-12-31" if pe_entry and pe_entry.get("reporting_frequency") == "annual" else None,
         "basis_type": "period_end_shares_outstanding",
+        "unit": pe_entry.get("unit") if pe_entry else None,
+        "share_class": pe_entry.get("share_class") if pe_entry else None,
         "source": pe_source,
-        "provenance": "audited_financial_statement_notes" if pe_entry else None,
+        "provenance": _share_provenance(pe_entry),
         "qualification_status": pe_status,
         "limitations": [
             "Period-end shares outstanding reflect exact balance-sheet date counts, not weighted-average or current counts.",
@@ -1113,10 +1128,12 @@ def build_share_basis_identities_contract(
     weighted_average = {
         "value": wa_val,
         "financial_period": wa_period,
-        "effective_date": wa_period,
+        "effective_date": None,
         "basis_type": "weighted_average_basic_shares_outstanding",
+        "unit": wa_entry.get("unit") if wa_entry else None,
+        "share_class": wa_entry.get("share_class") if wa_entry else None,
         "source": wa_source,
-        "provenance": "audited_financial_statement_notes" if wa_entry else None,
+        "provenance": _share_provenance(wa_entry),
         "qualification_status": wa_status,
         "limitations": [
             "Weighted-average shares reflect time-weighted basic shares used for E.P.S. calculations, not point-in-time counts.",
@@ -1174,11 +1191,33 @@ def build_share_basis_identities_contract(
         "is_actionable": False,
     }
 
+    def _missing_identity(identity_type: str, reason: str) -> dict:
+        return {
+            "value": None,
+            "effective_date": None,
+            "basis_type": identity_type,
+            "unit": "shares",
+            "qualification_status": "missing",
+            "limitations": [reason],
+        }
+
     return {
         "ticker": tk,
         "current_market": current_market,
         "financial_period_end": financial_period_end,
         "weighted_average": weighted_average,
+        "weighted_average_diluted": _missing_identity(
+            "weighted_average_diluted_shares_outstanding",
+            "No retained, hash-verified FY2024 diluted weighted-average share citation exists.",
+        ),
+        "treasury_shares": _missing_identity(
+            "treasury_shares_outstanding",
+            "No retained, hash-verified FY2024 treasury-share citation exists; issued shares are not substituted.",
+        ),
+        "issued_shares": _missing_identity(
+            "issued_shares",
+            "No retained, hash-verified FY2024 issued-share citation exists; outstanding shares are not substituted.",
+        ),
         "comparability": comparability,
     }
 

@@ -870,6 +870,26 @@ class ShareBasisIdentitiesTests(unittest.TestCase):
         contract = bundle.build_share_basis_identities_contract("PNJ", snapshot_row)
         self.assertEqual(snapshot_row["shares_outstanding"], 334000000)
 
+    def test_real_fy2024_share_evidence_keeps_period_end_and_weighted_average_distinct(self):
+        for ticker, expected in (("HPG", 6396250200), ("VNM", 2089955445)):
+            contract = bundle.build_share_basis_identities_contract(ticker, None, RUNTIME_ROOT)
+            period_end = contract["financial_period_end"]
+            weighted = contract["weighted_average"]
+            self.assertEqual(period_end["value"], expected)
+            self.assertEqual(period_end["effective_date"], "2024-12-31")
+            self.assertEqual(period_end["unit"], "shares")
+            self.assertEqual(period_end["share_class"], "common_outstanding")
+            self.assertEqual(weighted["value"], expected)
+            self.assertIsNone(weighted["effective_date"])
+            self.assertNotEqual(period_end["basis_type"], weighted["basis_type"])
+            self.assertTrue(period_end["provenance"]["citation_id"])
+
+    def test_missing_diluted_treasury_and_issued_shares_remain_fail_closed(self):
+        contract = bundle.build_share_basis_identities_contract("HPG", None, RUNTIME_ROOT)
+        for name in ("weighted_average_diluted", "treasury_shares", "issued_shares"):
+            self.assertIsNone(contract[name]["value"])
+            self.assertEqual(contract[name]["qualification_status"], "missing")
+
     def test_unrelated_fields_remain_unchanged(self):
         contract = bundle.build_share_basis_identities_contract("PNJ", {"shares_outstanding": 334000000})
         self.assertIn("ticker", contract)

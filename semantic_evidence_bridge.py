@@ -419,6 +419,12 @@ def load_verified_share_basis(runtime_root: Path) -> dict[str, Any]:
             "citation": citation.get("citation"),
             "qualification_version": VERSION,
             "verified_at": citation.get("verified_at"),
+            "unit": citation.get("unit"),
+            "share_class": citation.get("share_class"),
+            "publication_date": evidence.get("publication_date"),
+            "retrieved_at": evidence.get("retrieved_at"),
+            "document_sha256": evidence.get("sha256"),
+            "source_url": evidence.get("source_url"),
         }
 
     return {"status": "available" if by_identity else "unavailable", "version": VERSION,
