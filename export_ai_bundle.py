@@ -97,7 +97,10 @@ from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from analysis_lane_eligibility import evaluate_ticker_lanes
 from distribution_evidence import build_distribution_evidence_for_ticker
-from fundamental_quality_evidence import build_fundamental_quality_evidence_for_ticker
+from fundamental_quality_evidence import (
+    build_fundamental_quality_evidence_for_ticker,
+    build_historical_capital_structure_analysis,
+)
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -2472,6 +2475,10 @@ def attach_fundamental_quality_evidence(
         result = build_fundamental_quality_evidence_for_ticker_safe(tk, entry, root)
         if result is not None:
             entry["fundamental_quality_evidence"] = result
+        entry["historical_capital_structure"] = build_historical_capital_structure_analysis(
+            tk, entry.get("entity_type"), entry.get("financial_canonical"),
+            entry.get("financial_period_coverage"), (entry.get("freshness") or {}).get("financial_statements"), root,
+        )
     return bundle_entries
 
 

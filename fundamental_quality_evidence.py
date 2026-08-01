@@ -25,6 +25,16 @@ _REQUIRED_SCOPE = "consolidated"
 _REQUIRED_PERIOD_TYPE = "annual"
 MANIFEST_RELATIVE = Path("data") / "official-evidence" / "manifest.json"
 
+_CAPITAL_REQUIRED_METRICS = (
+    "cash_and_equivalents", "short_term_borrowings", "long_term_borrowings",
+    "total_debt", "shareholders_equity",
+)
+_CAPITAL_OPTIONAL_METRIC = "minority_interest_equity"
+_DERIVED_COMPONENTS = {
+    "total_debt": ("short_term_borrowings", "long_term_borrowings"),
+    "shareholders_equity": ("total_equity", "minority_interest_equity"),
+}
+
 _STANDING_LIMITATIONS: tuple[str, ...] = (
     "This contract reports a single-period cash-conversion ratio and accrual gap only; it "
     "does not derive a trend, growth rate, rating, score, ranking, or recommendation.",
@@ -142,6 +152,149 @@ def _qualify_metric_at_period(
         observation_id=observation_ids, citation_id=citation_id, evidence_id=evidence_id,
         source_hash=source_hash, qualification_status="qualified", rejection_reason=None,
     )
+
+
+def _qualify_capital_metric_at_period(
+    records: list[Any], metric: str, period: str, manifest_hashes: dict[str, str] | None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Qualify one historical capital-structure identity, including only the two
+    established reconciled derivations whose components carry complete evidence lineage."""
+    candidates = _candidates(records, metric).get(period, [])
+    entry = {
+        "canonical_field_identity": metric, "reporting_period": period,
+        "reporting_frequency": _REQUIRED_PERIOD_TYPE, "statement_scope": _REQUIRED_SCOPE,
+        "currency": None, "scale": None, "value": None, "observation_id": None,
+        "citation_id": None, "evidence_id": None, "source_hash": None,
+        "qualification_status": "unqualified", "rejection_reason": None,
+    }
+    if not candidates:
+        entry["rejection_reason"] = "no_qualified_consolidated_annual_record_for_period"
+        return None, entry
+    if len(candidates) != 1:
+        entry["rejection_reason"] = "conflicting_observations_same_period"
+        return None, entry
+    record = candidates[0]
+    entry.update({"currency": record.get("currency"), "scale": record.get("unit_scale"), "value": record.get("value")})
+    if record.get("value") is None:
+        entry["rejection_reason"] = "value_missing"
+        return None, entry
+    if record.get("derivation_status") == "direct":
+        evidence = record.get("evidence") if isinstance(record.get("evidence"), Mapping) else {}
+        evidence_id, citation_id, observation_ids = evidence.get("evidence_id"), evidence.get("citation_id"), record.get("observation_ids")
+        if not evidence_id or not citation_id or not isinstance(observation_ids, list) or not observation_ids:
+            entry["rejection_reason"] = "missing_citation_lineage"
+            return None, entry
+        source_hash = (manifest_hashes or {}).get(evidence_id)
+        if not source_hash:
+            entry.update({"evidence_id": evidence_id, "citation_id": citation_id, "observation_id": observation_ids})
+            entry["rejection_reason"] = "evidence_hash_unresolvable_against_manifest"
+            return None, entry
+        entry.update({"observation_id": observation_ids, "citation_id": citation_id, "evidence_id": evidence_id, "source_hash": source_hash, "qualification_status": "qualified"})
+        return record, entry
+    expected = _DERIVED_COMPONENTS.get(metric)
+    components = ((record.get("evidence") or {}).get("components") if isinstance(record.get("evidence"), Mapping) else None)
+    if record.get("derivation_status") != "derived" or not expected or not isinstance(components, list):
+        entry["rejection_reason"] = "unsupported_derivation_status_for_capital_structure"
+        return None, entry
+    by_metric = {component.get("canonical_metric"): component for component in components if isinstance(component, Mapping)}
+    if set(by_metric) != set(expected):
+        entry["rejection_reason"] = "derived_component_identity_mismatch"
+        return None, entry
+    component_entries = []
+    for identity in expected:
+        component = by_metric[identity]
+        compatible = (component.get("period_identity", {}).get("period") == period and
+                      component.get("period_identity", {}).get("period_type") == _REQUIRED_PERIOD_TYPE and
+                      component.get("statement_scope") == _REQUIRED_SCOPE and
+                      component.get("currency") == record.get("currency") and
+                      component.get("unit_scale") == record.get("unit_scale"))
+        evidence_id, citation_id, observation_ids = component.get("evidence_id"), component.get("citation_id"), component.get("observation_ids")
+        source_hash = (manifest_hashes or {}).get(evidence_id) if evidence_id else None
+        if not compatible or component.get("value") is None or not citation_id or not isinstance(observation_ids, list) or not observation_ids or not source_hash:
+            entry["rejection_reason"] = "derived_component_lineage_or_compatibility_unqualified"
+            return None, entry
+        component_entries.append({"canonical_field_identity": identity, "value": component["value"], "observation_id": observation_ids, "citation_id": citation_id, "evidence_id": evidence_id, "source_hash": source_hash})
+    entry.update({"observation_id": record.get("observation_ids"), "qualification_status": "qualified", "derivation": "compatible_canonical_components", "component_provenance": component_entries})
+    return record, entry
+
+
+def build_historical_capital_structure_analysis(
+    ticker: str, entity_type: str | None, financial_canonical: Mapping[str, Any] | None,
+    financial_period_coverage: Mapping[str, Any] | None, financial_freshness: Mapping[str, Any] | None,
+    runtime_root: Path,
+) -> dict[str, Any]:
+    """Evidence-qualified, single-period capital structure only. It never consumes shares
+    or market data and is deliberately non-actionable."""
+    warnings = ["price_basis_unknown_or_unverified", "volume_basis_unknown_or_unverified", "current_shares_unqualified"]
+    base = {"schema_version": "1.0.0", "analysis": "historical_capital_structure", "ticker": ticker,
+            "historical_only": True, "market_dependent": False, "is_actionable": False,
+            "applicability": "applicable" if entity_type in _APPLICABLE_ENTITY_TYPES else "not_applicable",
+            "status": "unavailable", "reporting_period": None, "period_end": None,
+            "publication_timestamp": None, "statement_scope": _REQUIRED_SCOPE, "currency": None,
+            "scale": None, "inputs": [], "metrics": {}, "data_warnings": warnings,
+            "blocking_reasons": [], "provenance": {"source": "financial_canonical", "evidence_manifest_path": MANIFEST_RELATIVE.as_posix()}}
+    if entity_type not in _APPLICABLE_ENTITY_TYPES:
+        base["blocking_reasons"] = ["entity_type_not_applicable_for_nonfinancial_capital_structure"]
+        return base
+    period = (financial_period_coverage or {}).get("latest_verified_period") if isinstance(financial_period_coverage, Mapping) else None
+    freshness = financial_freshness if isinstance(financial_freshness, Mapping) else {}
+    if not period:
+        base["blocking_reasons"] = ["no_verified_financial_period"]
+        return base
+    base.update({"reporting_period": period, "period_end": freshness.get("financial_period_end"),
+                 "publication_timestamp": freshness.get("source_publication_timestamp")})
+    if freshness.get("publication_timestamp_qualified") is not True:
+        base["blocking_reasons"].append("financial_publication_timestamp_unqualified")
+    records = (financial_canonical or {}).get("records") if isinstance(financial_canonical, Mapping) else None
+    if not isinstance(records, list):
+        base["blocking_reasons"].append("financial_canonical_missing_or_empty")
+        return base
+    hashes = _load_manifest_hashes(runtime_root)
+    resolved: dict[str, dict[str, Any]] = {}
+    for metric in _CAPITAL_REQUIRED_METRICS + (_CAPITAL_OPTIONAL_METRIC,):
+        record, entry = _qualify_capital_metric_at_period(records, metric, period, hashes)
+        entry["ticker"] = ticker
+        base["inputs"].append(entry)
+        if record is not None:
+            resolved[metric] = record
+    qualified = [record for record in resolved.values()]
+    if qualified:
+        currencies, scales = {r.get("currency") for r in qualified}, {r.get("unit_scale") for r in qualified}
+        if len(currencies) == 1 and len(scales) == 1:
+            base.update({"currency": next(iter(currencies)), "scale": next(iter(scales))})
+        else:
+            base["blocking_reasons"].append("currency_or_scale_mismatch_across_capital_inputs")
+    def metric(value: Any, status: str, numerator: str, denominator: str | None = None, reason: str | None = None) -> dict[str, Any]:
+        return {"value": value, "qualification_status": status, "numerator_identity": numerator,
+                "denominator_identity": denominator, "blocking_reason": reason}
+    debt, cash, equity = (resolved.get("total_debt"), resolved.get("cash_and_equivalents"), resolved.get("shareholders_equity"))
+    debt_value = debt.get("value") if debt else None
+    cash_value = cash.get("value") if cash else None
+    equity_value = equity.get("value") if equity else None
+    def compatible(*records: dict[str, Any] | None) -> bool:
+        present = [record for record in records if record is not None]
+        return len(present) == len(records) and len({record.get("currency") for record in present}) == 1 and len({record.get("unit_scale") for record in present}) == 1
+    base["metrics"]["gross_debt"] = metric(debt_value, "qualified" if debt else "unavailable", "total_debt", reason=None if debt else "total_debt_unqualified")
+    base["metrics"]["cash"] = metric(cash_value, "qualified" if cash else "unavailable", "cash_and_equivalents", reason=None if cash else "cash_and_equivalents_unqualified")
+    debt_cash_compatible = compatible(debt, cash)
+    net_debt = debt_value - cash_value if debt_cash_compatible else None
+    base["metrics"]["net_debt"] = metric(net_debt, "qualified" if net_debt is not None else "unavailable", "total_debt_less_cash_and_equivalents", reason=None if net_debt is not None else "total_debt_or_cash_currency_or_scale_unqualified")
+    denominator_valid = equity_value is not None and equity_value > 0
+    ratios = (
+        ("debt_to_equity", debt_value, "total_debt", (debt, equity)),
+        ("net_debt_to_equity", net_debt, "total_debt_less_cash_and_equivalents", (debt, cash, equity)),
+        ("minority_interest_to_equity", (resolved.get(_CAPITAL_OPTIONAL_METRIC) or {}).get("value"), _CAPITAL_OPTIONAL_METRIC, (resolved.get(_CAPITAL_OPTIONAL_METRIC), equity)),
+    )
+    for name, numerator, identity, inputs in ratios:
+        status = "qualified" if numerator is not None and denominator_valid and compatible(*inputs) else "unavailable"
+        reason = None if status == "qualified" else ("shareholders_equity_nonpositive_or_unqualified" if not denominator_valid else f"{identity}_currency_or_scale_unqualified")
+        base["metrics"][name] = metric(numerator / equity_value if status == "qualified" else None, status, identity, "shareholders_equity", reason)
+    debt_denominator_valid = debt_value is not None and debt_value > 0 and debt_cash_compatible
+    base["metrics"]["cash_to_debt"] = metric(cash_value / debt_value if cash_value is not None and debt_denominator_valid else None, "qualified" if cash_value is not None and debt_denominator_valid else "unavailable", "cash_and_equivalents", "total_debt", None if cash_value is not None and debt_denominator_valid else "total_debt_currency_scale_nonpositive_or_unqualified")
+    unavailable = [name for name, value in base["metrics"].items() if value["qualification_status"] != "qualified"]
+    base["status"] = "available" if not unavailable and not base["blocking_reasons"] else "partial"
+    base["blocking_reasons"] += sorted({value["blocking_reason"] for value in base["metrics"].values() if value["blocking_reason"]})
+    return base
 
 
 def _blocked(ticker: str, entity_type: str | None, applicability: str, status: str,

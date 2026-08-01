@@ -45,6 +45,36 @@ def _write_manifest(root: Path, evidence_id: str, sha256: str) -> None:
 
 
 _VERIFIED_FPC_2024 = {"ticker": "TEST", "latest_verified_period": "2024", "is_actionable": False}
+_CAPITAL_FRESHNESS_2024 = {
+    "financial_period_end": "2024-12-31", "source_publication_timestamp": "2025-03-01T00:00:00+00:00",
+    "publication_timestamp_qualified": True,
+}
+
+
+def _derived_record(metric, value, components, **kwargs):
+    record = _record(metric, value, derivation_status="derived", **kwargs)
+    record["evidence"] = {"components": components}
+    return record
+
+
+def _capital_records(cash=200, debt=100, equity=500, minority=20, **kwargs):
+    short, long = debt * 3 // 5, debt - (debt * 3 // 5)
+    records = [
+        _record("cash_and_equivalents", cash, **kwargs),
+        _record("short_term_borrowings", short, **kwargs),
+        _record("long_term_borrowings", long, **kwargs),
+        _record("total_equity", equity + minority, **kwargs),
+        _record("minority_interest_equity", minority, **kwargs),
+    ]
+    records.append(_derived_record("total_debt", debt, [
+        {**records[1], "evidence_id": "ev-1", "citation_id": "cit-short"},
+        {**records[2], "evidence_id": "ev-1", "citation_id": "cit-long"},
+    ], **kwargs))
+    records.append(_derived_record("shareholders_equity", equity, [
+        {**records[3], "evidence_id": "ev-1", "citation_id": "cit-total-equity"},
+        {**records[4], "evidence_id": "ev-1", "citation_id": "cit-minority"},
+    ], **kwargs))
+    return {"records": records}
 
 
 class InputQualificationAndFormulaTests(unittest.TestCase):
@@ -88,6 +118,81 @@ class InputQualificationAndFormulaTests(unittest.TestCase):
             self.assertEqual(result["status"], "unavailable")
             self.assertIn("net_income_zero_denominator", result["blocking_reasons"])
             self.assertEqual(result["metrics"], {})
+
+
+class HistoricalCapitalStructureTests(unittest.TestCase):
+    def _build(self, canonical, freshness=_CAPITAL_FRESHNESS_2024):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_manifest(root, "ev-1", "ab" * 32)
+            return fqe.build_historical_capital_structure_analysis(
+                "TEST", "corporate", canonical, _VERIFIED_FPC_2024, freshness, root,
+            )
+
+    def test_aligned_inputs_derive_metrics_and_preserve_market_blockers(self):
+        result = self._build(_capital_records())
+        self.assertEqual(result["status"], "available")
+        self.assertEqual(result["metrics"]["gross_debt"]["value"], 100)
+        self.assertEqual(result["metrics"]["net_debt"]["value"], -100)
+        self.assertEqual(result["metrics"]["debt_to_equity"]["value"], 0.2)
+        self.assertEqual(result["metrics"]["cash_to_debt"]["value"], 2)
+        self.assertEqual(result["metrics"]["minority_interest_to_equity"]["value"], 0.04)
+        self.assertTrue(result["historical_only"])
+        self.assertFalse(result["market_dependent"])
+        self.assertIn("price_basis_unknown_or_unverified", result["data_warnings"])
+        self.assertIn("volume_basis_unknown_or_unverified", result["data_warnings"])
+        self.assertTrue(next(item for item in result["inputs"] if item["canonical_field_identity"] == "total_debt")["component_provenance"])
+
+    def test_missing_cash_and_debt_component_block_only_affected_metrics(self):
+        canonical = _capital_records()
+        canonical["records"] = [record for record in canonical["records"] if record["canonical_metric"] != "cash_and_equivalents"]
+        result = self._build(canonical)
+        self.assertEqual(result["metrics"]["gross_debt"]["qualification_status"], "qualified")
+        self.assertEqual(result["metrics"]["cash"]["qualification_status"], "unavailable")
+        self.assertEqual(result["metrics"]["debt_to_equity"]["qualification_status"], "qualified")
+        canonical = _capital_records()
+        debt = next(record for record in canonical["records"] if record["canonical_metric"] == "total_debt")
+        debt["evidence"]["components"] = debt["evidence"]["components"][:1]
+        result = self._build(canonical)
+        self.assertEqual(result["metrics"]["gross_debt"]["qualification_status"], "unavailable")
+        self.assertEqual(result["metrics"]["cash"]["qualification_status"], "qualified")
+
+    def test_period_scope_currency_and_scale_mismatches_fail_closed(self):
+        for kwargs in ({"period": "2023"}, {"scope": "separate"}, {"currency": "USD"}, {"scale": 1000}):
+            canonical = _capital_records()
+            target = next(record for record in canonical["records"] if record["canonical_metric"] == "cash_and_equivalents")
+            if "period" in kwargs:
+                target["period_identity"]["period"] = kwargs["period"]
+            if "scope" in kwargs:
+                target["statement_scope"] = kwargs["scope"]
+            if "currency" in kwargs:
+                target["currency"] = kwargs["currency"]
+            if "scale" in kwargs:
+                target["unit_scale"] = kwargs["scale"]
+            result = self._build(canonical)
+            self.assertEqual(result["metrics"]["cash"]["qualification_status"], "unavailable" if "period" in kwargs or "scope" in kwargs else "qualified")
+            self.assertEqual(result["status"], "partial")
+            if "currency" in kwargs or "scale" in kwargs:
+                self.assertEqual(result["metrics"]["net_debt"]["qualification_status"], "unavailable")
+                self.assertEqual(result["metrics"]["cash_to_debt"]["qualification_status"], "unavailable")
+
+    def test_nonpositive_equity_and_missing_minority_are_explicit(self):
+        canonical = _capital_records(equity=0)
+        result = self._build(canonical)
+        self.assertEqual(result["metrics"]["debt_to_equity"]["qualification_status"], "unavailable")
+        self.assertIn("shareholders_equity_nonpositive_or_unqualified", result["blocking_reasons"])
+        canonical = _capital_records()
+        canonical["records"] = [record for record in canonical["records"] if record["canonical_metric"] != "minority_interest_equity"]
+        result = self._build(canonical)
+        self.assertEqual(result["metrics"]["minority_interest_to_equity"]["qualification_status"], "unavailable")
+
+    def test_deterministic_and_publication_timestamp_required(self):
+        canonical = _capital_records()
+        first = self._build(copy.deepcopy(canonical))
+        second = self._build(copy.deepcopy(canonical))
+        self.assertEqual(first, second)
+        result = self._build(canonical, {})
+        self.assertIn("financial_publication_timestamp_unqualified", result["blocking_reasons"])
 
 
 class RealRetainedEvidenceTests(unittest.TestCase):
