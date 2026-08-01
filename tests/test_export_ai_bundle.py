@@ -468,6 +468,10 @@ class GenericVerifiedFinancialPeriodTests(unittest.TestCase):
         self.assertIsNone(cov["latest_complete_period"])
         # The independent, more recent calendar-eligible period is preserved, not overwritten.
         self.assertEqual(cov["latest_calendar_eligible_period"], "2026-Q1")
+        temporal = result["financial_temporal"]
+        self.assertEqual(temporal["period_end"], "2024-12-31")
+        self.assertEqual(temporal["publication_date"], "2025-03-24")
+        self.assertTrue(temporal["publication_timestamp_qualified"])
 
     def test_real_vnm_fy2024_consolidated_evidence_qualifies_as_the_second_slice(self):
         generic = bundle.resolve_verified_financial_periods(RUNTIME_ROOT)
@@ -481,6 +485,34 @@ class GenericVerifiedFinancialPeriodTests(unittest.TestCase):
         self.assertEqual(cov["coverage_status"], "verified_only")
         self.assertEqual(cov["latest_verified_period"], "2024")
         self.assertIsNone(cov["latest_complete_period"])
+        self.assertEqual(result["financial_temporal"]["publication_date"], "2025-02-28")
+        self.assertTrue(result["financial_temporal"]["publication_timestamp_qualified"])
+
+    def test_verified_publication_timestamp_drives_historical_freshness_not_current_readiness(self):
+        descriptor = {
+            "period": "2024",
+            "financial_temporal": {
+                "period_end": "2024-12-31", "publication_date": "2025-03-24",
+                "retrieved_at": "2026-07-26T21:00:00+07:00", "publication_timestamp_qualified": True,
+                "citation_ids": ["citation"], "evidence_ids": ["evidence"], "document_sha256": ["hash"],
+                "source_urls": ["https://issuer.example/fy2024.pdf"], "warnings": [],
+            },
+        }
+        freshness = bundle.build_financial_freshness({}, descriptor, bundle.datetime.fromisoformat("2026-08-01T00:00:00+00:00"))
+        self.assertEqual(freshness["freshness_status"], "historical")
+        self.assertFalse(freshness["is_actionable"])
+        self.assertEqual(freshness["financial_period_end"], "2024-12-31")
+        self.assertEqual(freshness["source_publication_timestamp"], "2025-03-24")
+
+    def test_missing_or_conflicting_publication_timestamp_remains_fail_closed(self):
+        descriptor = {"period": "2024", "financial_temporal": {"period_end": "2024-12-31", "publication_date": None,
+            "retrieved_at": "2026-07-26T21:00:00+07:00", "publication_timestamp_qualified": False,
+            "citation_ids": [], "evidence_ids": [], "document_sha256": [], "source_urls": [],
+            "warnings": ["financial_publication_timestamp_missing_or_conflicting"]}}
+        freshness = bundle.build_financial_freshness({}, descriptor, bundle.datetime.fromisoformat("2026-08-01T00:00:00+00:00"))
+        self.assertEqual(freshness["freshness_status"], "missing")
+        self.assertFalse(freshness["publication_timestamp_qualified"])
+        self.assertIn("financial_publication_timestamp_missing_or_conflicting", freshness["warnings"])
 
     def test_real_vcb_evidence_also_qualifies_generically_but_is_not_in_this_milestones_rollout(self):
         # Proves the resolver is genuinely generic (VCB's independently-qualifying

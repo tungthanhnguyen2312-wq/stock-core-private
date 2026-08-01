@@ -81,7 +81,7 @@ from typing import Any, Mapping
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
 from live_universe import summary as live_universe_summary
-from freshness_history import evaluate_analysis_readiness, freshness_envelope
+from freshness_history import evaluate_analysis_readiness, freshness_envelope, parse_timestamp
 from financial_canonicalization import canonicalize_financial_rows
 from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
@@ -595,9 +595,17 @@ def resolve_verified_financial_periods(runtime_root_dir: Path) -> dict[str, dict
         if not ticker or not period or not frequency or not scope:
             continue
         key = (ticker, period, frequency)
-        bucket = groups.setdefault(key, {"scopes": set(), "observation_ids": []})
+        bucket = groups.setdefault(key, {"scopes": set(), "observation_ids": [], "temporal_sources": {}})
         bucket["scopes"].add(scope)
         bucket["observation_ids"].append(obs_id)
+        evidence_id = citation.get("evidence_id")
+        if evidence_id:
+            bucket["temporal_sources"][evidence_id] = {
+                "publication_date": citation.get("publication_date"),
+                "retrieved_at": citation.get("retrieved_at"),
+                "document_sha256": citation.get("document_sha256"),
+                "source_url": citation.get("source_url"),
+            }
 
     qualified: dict[tuple[str, str, str], dict[str, Any]] = {}
     for (ticker, period, frequency), bucket in groups.items():
@@ -609,13 +617,30 @@ def resolve_verified_financial_periods(runtime_root_dir: Path) -> dict[str, dict
         period_type = _FREQUENCY_TO_PERIOD_TYPE.get(frequency)
         if period_type is None:
             continue
-        qualified[(ticker, period, frequency)] = {
+        descriptor = {
             "ticker": ticker,
             "period": period,
             "period_type": period_type,
             "statement_scope": scope,
             "observation_ids": sorted(bucket["observation_ids"]),
         }
+        temporal_sources = bucket["temporal_sources"]
+        if temporal_sources:
+            publication_dates = {item.get("publication_date") for item in temporal_sources.values() if parse_timestamp(item.get("publication_date"))}
+            retrieval_dates = {item.get("retrieved_at") for item in temporal_sources.values() if parse_timestamp(item.get("retrieved_at"))}
+            publication_qualified = len(publication_dates) == 1 and len(publication_dates) == len(temporal_sources)
+            descriptor["financial_temporal"] = {
+                "period_end": f"{period}-12-31" if period_type == "annual" and str(period).isdigit() and len(str(period)) == 4 else None,
+                "publication_date": next(iter(publication_dates)) if publication_qualified else None,
+                "retrieved_at": next(iter(retrieval_dates)) if len(retrieval_dates) == 1 else None,
+                "publication_timestamp_qualified": publication_qualified,
+                "citation_ids": sorted(citation.get("citation_id") for obs_id, citation in by_observation_id.items() if obs_id in bucket["observation_ids"] and citation.get("citation_id")),
+                "evidence_ids": sorted(temporal_sources),
+                "document_sha256": sorted({item.get("document_sha256") for item in temporal_sources.values() if item.get("document_sha256")}),
+                "source_urls": sorted({item.get("source_url") for item in temporal_sources.values() if item.get("source_url")}),
+                "warnings": [] if publication_qualified else ["financial_publication_timestamp_missing_or_conflicting"],
+            }
+        qualified[(ticker, period, frequency)] = descriptor
 
     by_ticker: dict[str, dict[str, Any]] = {}
     for (ticker, period, _frequency), descriptor in qualified.items():
@@ -632,6 +657,45 @@ def resolve_verified_financial_periods(runtime_root_dir: Path) -> dict[str, dict
 # observations_from_frame() already writes onto every observation ("annual"/"quarterly").
 _SUPPORTED_STATEMENT_SCOPES = {"consolidated"}
 _FREQUENCY_TO_PERIOD_TYPE = {"annual": "annual", "quarterly": "quarterly"}
+
+
+def build_financial_freshness(
+    fin_entry: Mapping[str, Any] | None,
+    verified_evidence_period: Mapping[str, Any] | None,
+    reference_at: datetime,
+) -> dict[str, Any]:
+    """Use only hash-verified retained-document temporal metadata for FY freshness."""
+    temporal = verified_evidence_period.get("financial_temporal") if isinstance(verified_evidence_period, Mapping) else None
+    if isinstance(temporal, Mapping):
+        envelope = freshness_envelope(
+            domain="financial_quarterly",
+            as_of_date=temporal.get("publication_date"),
+            generated_at=temporal.get("retrieved_at"),
+            source=(temporal.get("source_urls") or [None])[0],
+            reference_at=reference_at,
+        )
+        envelope.update({
+            "financial_period": verified_evidence_period.get("period"),
+            "financial_period_end": temporal.get("period_end"),
+            "source_publication_timestamp": temporal.get("publication_date"),
+            "source_retrieval_timestamp": temporal.get("retrieved_at"),
+            "publication_timestamp_qualified": temporal.get("publication_timestamp_qualified") is True,
+            "provenance": {
+                "citation_ids": temporal.get("citation_ids", []),
+                "evidence_ids": temporal.get("evidence_ids", []),
+                "document_sha256": temporal.get("document_sha256", []),
+                "source_urls": temporal.get("source_urls", []),
+            },
+            "warnings": list(temporal.get("warnings") or []),
+        })
+        return envelope
+    return freshness_envelope(
+        domain="financial_quarterly",
+        as_of_date=(fin_entry or {}).get("period_used"),
+        generated_at=((fin_entry or {}).get("row") or {}).get("generated_at"),
+        source=FINANCIAL_SNAPSHOT_PATH,
+        reference_at=reference_at,
+    )
 
 # Phase 5C rollout scope only -- not a qualification rule. Every ticker present in
 # resolve_verified_financial_periods()'s return value has already, identically, passed
@@ -2145,7 +2209,8 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
     corporate = load_corporate_intelligence(conn, tk)
     snapshot_freshness = freshness_envelope(domain="daily_market", as_of_date=(snapshot_rows.get(tk) or {}).get("date"), generated_at=(snapshot_rows.get(tk) or {}).get("date"), source=SNAPSHOT_LIVE_PATH, reference_at=reference_at)
     technical_freshness = freshness_envelope(domain="technical", as_of_date=(ta_rows.get(tk) or {}).get("date"), generated_at=(ta_rows.get(tk) or {}).get("date"), source=TA_SIGNALS_PATH, reference_at=reference_at, dependency=snapshot_freshness)
-    financial_freshness = freshness_envelope(domain="financial_quarterly", as_of_date=fin.get("period_used"), generated_at=fin.get("row", {}).get("generated_at") if fin.get("row") else None, source=FINANCIAL_SNAPSHOT_PATH, reference_at=reference_at)
+    verified_evidence_period = (verified_periods_by_ticker or {}).get(tk)
+    financial_freshness = build_financial_freshness(fin, verified_evidence_period, reference_at)
     for name, section in corporate.items():
         if not isinstance(section, dict):
             continue
@@ -2177,7 +2242,6 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "share_count_period_end": _relative_valuation_period_end_share_count(tk),
         "financial": _financial_input(financial_canonical.get(tk)),
     }, reference_at=reference_at.isoformat())
-    verified_evidence_period = (verified_periods_by_ticker or {}).get(tk)
     return {
         "snapshot": snapshot_rows.get(tk),
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],

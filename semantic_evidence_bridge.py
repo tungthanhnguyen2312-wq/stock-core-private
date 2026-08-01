@@ -320,6 +320,13 @@ def load_verified_citations(runtime_root: Path) -> dict[str, Any]:
             "citation": citation.get("citation"),
             "qualification_version": VERSION,
             "verified_at": citation.get("verified_at"),
+            # Retained document metadata is passed through only after the manifest
+            # record itself has hash-verified above.  These remain provenance, not
+            # a substitute for the reporting period or citation.
+            "publication_date": evidence.get("publication_date"),
+            "retrieved_at": evidence.get("retrieved_at"),
+            "document_sha256": evidence.get("sha256"),
+            "source_url": evidence.get("source_url"),
         }
 
     return {"status": "available" if by_observation else "unavailable", "version": VERSION,

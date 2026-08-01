@@ -126,6 +126,10 @@ class SemanticEvidenceBridgeTests(unittest.TestCase):
             verified = bridge.load_verified_citations(root)
             self.assertEqual(verified["status"], "available")
             self.assertEqual(len(verified["by_observation_id"]), 9)
+            sample = next(iter(verified["by_observation_id"].values()))
+            self.assertEqual(sample["publication_date"], "2025-03-24")
+            self.assertEqual(sample["retrieved_at"], "2026-07-26T00:00:00+07:00")
+            self.assertEqual(sample["document_sha256"], hashlib.sha256(b"%PDF-1.4 test evidence document").hexdigest())
             self.assertEqual({o["observation_id"] for o in observations}, set(verified["by_observation_id"]))
             for entry in verified["by_observation_id"].values():
                 self.assertEqual((entry["statement_scope"], entry["currency"], entry["unit_scale"]), ("consolidated", "VND", 1))
