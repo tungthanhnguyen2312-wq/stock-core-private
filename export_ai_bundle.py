@@ -508,61 +508,114 @@ def build_news_window_semantics(news_data: dict | None) -> dict | None:
 
 
 # ==========================================================================
-# Phase 5B — HPG FY2024 verified financial-period vertical slice
+# Phase 5C — generic verified financial-period resolver
 # ==========================================================================
-# Narrowly scoped by design (not a general mechanism): links the already fully
-# fail-closed load_verified_citations()/read_observations() resolvers (existing,
-# extensively tested in semantic_evidence_bridge.py / financial_observations.py, and
-# already used elsewhere for per-metric EBITDA/valuation qualification) to
-# financial_period_coverage at the (ticker, reporting_period, reporting_frequency)
-# level -- a linkage that did not exist before this milestone; the existing
-# `official_evidence.status == "verified"` check path is never actually reachable
+# Generalizes the Phase 5B (commit e8a351c) HPG/FY2024-hardcoded resolver into a fully
+# data-driven one. Links the already fully fail-closed load_verified_citations()/
+# read_observations() resolvers (existing, extensively tested in
+# semantic_evidence_bridge.py / financial_observations.py, and already used elsewhere
+# for per-metric EBITDA/valuation qualification) to financial_period_coverage at the
+# (ticker, reporting_period, reporting_frequency) level. Contains no ticker, period,
+# frequency, or scope literal anywhere in its logic -- every candidate is derived
+# entirely from what load_verified_citations()/read_observations() already return.
+# The existing `official_evidence.status == "verified"` check path remains unreachable
 # today (financial_canonicalization.py never sets that key, and the separate
 # official_evidence.py pilot module only ever returns status values of
-# missing/malformed/unavailable/available, never "verified"). This function takes no
-# ticker/period arguments and hardcodes exactly one slice on purpose: generalizing it
-# to another ticker or period is a distinct, future milestone, not this one.
-_PHASE_5B_VERIFIED_PERIOD_SCOPE = {
-    "ticker": "HPG", "reporting_period": "2024", "reporting_frequency": "annual", "period_type": "annual",
-}
+# missing/malformed/unavailable/available, never "verified") -- unaffected by this change.
 
+def resolve_verified_financial_periods(runtime_root_dir: Path) -> dict[str, dict[str, Any]]:
+    """Return, for every ticker with at least one fully evidence-verified reporting
+    period, a descriptor for its single latest such period: {ticker: {"ticker",
+    "period", "period_type", "statement_scope", "observation_ids"}}.
 
-def resolve_verified_financial_period_evidence(runtime_root_dir: Path) -> dict[str, Any] | None:
-    """Return a verified-evidence-period descriptor for the hardcoded Phase 5B scope
-    (HPG, FY2024, annual, consolidated) if and only if at least one fully verified,
-    consolidated-scope observation citation exists for it via load_verified_citations()
-    -- otherwise None (fail closed: covers hash mismatch, missing/malformed citation,
-    non-consolidated or ambiguous scope, and unknown observation identity, since all of
-    those already cause load_verified_citations() to omit or reject the citation).
-    Cross-checks each candidate citation's own observation record for an exact
-    ticker/period/frequency match before accepting it -- never infers scope or period
-    from numeric similarity alone."""
-    scope = _PHASE_5B_VERIFIED_PERIOD_SCOPE
+    A (ticker, reporting_period, reporting_frequency) candidate qualifies only when:
+    every verified citation covering it (via load_verified_citations(), which already
+    hash-verifies the source document against the manifest, cross-checks the exact
+    observation_id against the current retained observation store, and reconciles the
+    observation's raw value against the citation's official value) agrees on a single,
+    supported statement_scope ("consolidated") -- a period with zero verified
+    citations, with citations naming conflicting scopes, or citing a document that
+    itself carries no citations (e.g. one retained only for scope disambiguation) never
+    qualifies, since it is structurally absent from load_verified_citations()'s output
+    or excluded by the scope-agreement check below. Nothing here infers a period from
+    a filename, infers scope from value similarity, infers annual frequency from a
+    date's shape, infers completeness from citation count, or picks a "latest" period
+    by calendar order among unverified candidates -- "latest" here only ever compares
+    periods that already independently qualified.
+
+    Deterministic and read-only: makes no network call, writes nothing, and returns the
+    same result for the same retained inputs."""
     verified = load_verified_citations(runtime_root_dir)
     by_observation_id = verified.get("by_observation_id") or {}
     if not by_observation_id:
-        return None
+        return {}
     observations_by_id = {row["observation_id"]: row for row in read_observations(store_path(runtime_root_dir))}
-    matched_ids = []
+
+    groups: dict[tuple[str, str, str], dict[str, Any]] = {}
     for obs_id, citation in by_observation_id.items():
-        if citation.get("statement_scope") != "consolidated":
-            continue
         observation = observations_by_id.get(obs_id)
         if observation is None:
             continue
-        if (observation.get("ticker") == scope["ticker"]
-                and observation.get("reporting_period") == scope["reporting_period"]
-                and observation.get("reporting_frequency") == scope["reporting_frequency"]):
-            matched_ids.append(obs_id)
-    if not matched_ids:
-        return None
-    return {
-        "ticker": scope["ticker"],
-        "period": scope["reporting_period"],
-        "period_type": scope["period_type"],
-        "statement_scope": "consolidated",
-        "observation_ids": sorted(matched_ids),
-    }
+        ticker = observation.get("ticker")
+        period = observation.get("reporting_period")
+        frequency = observation.get("reporting_frequency")
+        scope = citation.get("statement_scope")
+        if not ticker or not period or not frequency or not scope:
+            continue
+        key = (ticker, period, frequency)
+        bucket = groups.setdefault(key, {"scopes": set(), "observation_ids": []})
+        bucket["scopes"].add(scope)
+        bucket["observation_ids"].append(obs_id)
+
+    qualified: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for (ticker, period, frequency), bucket in groups.items():
+        if len(bucket["scopes"]) != 1:
+            continue  # conflicting scope asserted for the same period -- fail closed, no inference
+        scope = next(iter(bucket["scopes"]))
+        if scope not in _SUPPORTED_STATEMENT_SCOPES:
+            continue
+        period_type = _FREQUENCY_TO_PERIOD_TYPE.get(frequency)
+        if period_type is None:
+            continue
+        qualified[(ticker, period, frequency)] = {
+            "ticker": ticker,
+            "period": period,
+            "period_type": period_type,
+            "statement_scope": scope,
+            "observation_ids": sorted(bucket["observation_ids"]),
+        }
+
+    by_ticker: dict[str, dict[str, Any]] = {}
+    for (ticker, period, _frequency), descriptor in qualified.items():
+        current = by_ticker.get(ticker)
+        if current is None or _period_key(period) > _period_key(current["period"]):
+            by_ticker[ticker] = descriptor
+    return by_ticker
+
+
+# Mirrors load_verified_citations()'s own _SUPPORTED_SCOPES ({"consolidated"}) -- kept
+# as a separate constant here rather than imported, since it is a property of what this
+# resolver accepts as unambiguous, not a re-export of semantic_evidence_bridge's
+# internal name. Frequency values are exactly what financial_observations.py's
+# observations_from_frame() already writes onto every observation ("annual"/"quarterly").
+_SUPPORTED_STATEMENT_SCOPES = {"consolidated"}
+_FREQUENCY_TO_PERIOD_TYPE = {"annual": "annual", "quarterly": "quarterly"}
+
+# Phase 5C rollout scope only -- not a qualification rule. Every ticker present in
+# resolve_verified_financial_periods()'s return value has already, identically, passed
+# the same generic evidence checks; this milestone deliberately surfaces at most one
+# additional ticker beyond HPG (Phase 5B) rather than every ticker the data happens to
+# support today. VNM is included (signed issuer document with official source
+# corroboration, evidence_acceptance rule "signed_issuer_document_with_official_source_
+# corroboration_v1"). VCB is excluded from this milestone's rollout even though its
+# FY2024 consolidated evidence also independently passes every check in the resolver
+# above -- its only recorded citations trace to the third-party-mirrored, unsigned
+# document (evidence_acceptance rule "third_party_mirrored_unsigned_audited_issuer_
+# document_v1"), which the retained manifest record itself flags:
+# "third_party_mirror_hosting_is_weaker_than_issuer_hosted_evidence". Expanding rollout
+# to VCB (or any other ticker the resolver already supports) is a future milestone's
+# decision, not a resolver limitation.
+_PHASE_5C_ENABLED_TICKERS = frozenset({"HPG", "VNM"})
 
 
 def _financial_period_coverage_verified_override(
@@ -2041,7 +2094,8 @@ def _historical_relative_valuation_price(tk: str) -> dict | None:
 
 
 def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                       financial_rows, financial_canonical, snapshot_info, ta_info, reference_at) -> dict:
+                       financial_rows, financial_canonical, snapshot_info, ta_info, reference_at,
+                       verified_periods_by_ticker=None) -> dict:
     warnings = []
     if snapshot_rows.get(tk) is None:
         warnings.append("khong_co_trong_screen_snapshot_live (mã không live hoặc chưa sync)")
@@ -2091,7 +2145,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "share_count_period_end": _relative_valuation_period_end_share_count(tk),
         "financial": _financial_input(financial_canonical.get(tk)),
     }, reference_at=reference_at.isoformat())
-    verified_evidence_period = resolve_verified_financial_period_evidence(runtime_root())
+    verified_evidence_period = (verified_periods_by_ticker or {}).get(tk)
     return {
         "snapshot": snapshot_rows.get(tk),
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],
@@ -2126,8 +2180,18 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
 
 def build_focus_extract(tickers, conn, snapshot_rows, ta_rows, score_rows, score_session,
                         financial_rows, financial_canonical, snapshot_info, ta_info, reference_at):
+    # Computed once for the whole bundle (not per ticker): resolve_verified_financial_periods()
+    # scans the entire retained citation/observation store, which would otherwise be redundant
+    # work repeated for every ticker. Filtered to this milestone's rollout scope -- see
+    # _PHASE_5C_ENABLED_TICKERS above for why VCB's independently-qualifying evidence is not
+    # surfaced yet.
+    verified_periods_by_ticker = {
+        tk: v for tk, v in resolve_verified_financial_periods(runtime_root()).items()
+        if tk in _PHASE_5C_ENABLED_TICKERS
+    }
     return {tk: build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
-                                   financial_rows, financial_canonical, snapshot_info, ta_info, reference_at)
+                                   financial_rows, financial_canonical, snapshot_info, ta_info, reference_at,
+                                   verified_periods_by_ticker)
            for tk in tickers}
 
 
