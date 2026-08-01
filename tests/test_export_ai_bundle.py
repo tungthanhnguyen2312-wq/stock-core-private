@@ -377,6 +377,70 @@ class NewsWindowSemanticsTests(unittest.TestCase):
         self.assertEqual(news_data["market_news_count"], 30)
 
 
+class FinancialPeriodCoverageTests(unittest.TestCase):
+    """Phase 2A hardened: per-ticker financial period coverage contract tests."""
+
+    def test_ticker_a_q2_does_not_cause_ticker_b_q1_to_report_q2(self):
+        fin_a = {"period_used": "2026-Q2", "row": {"period": "2026-Q2", "revenue": 100}, "excluded_unverified_periods": []}
+        fin_b = {"period_used": "2026-Q1", "row": {"period": "2026-Q1", "revenue": 80}, "excluded_unverified_periods": []}
+        cov_a = bundle.build_financial_period_coverage_contract("TICK_A", fin_a)
+        cov_b = bundle.build_financial_period_coverage_contract("TICK_B", fin_b)
+        self.assertEqual(cov_a["latest_calendar_eligible_period"], "2026-Q2")
+        self.assertEqual(cov_b["latest_calendar_eligible_period"], "2026-Q1")
+
+    def test_global_max_does_not_populate_missing_ticker_period(self):
+        cov_missing = bundle.build_financial_period_coverage_contract("TICK_MISSING", None)
+        self.assertIsNone(cov_missing["latest_raw_period"])
+        self.assertIsNone(cov_missing["latest_calendar_eligible_period"])
+        self.assertIsNone(cov_missing["latest_verified_period"])
+        self.assertIsNone(cov_missing["latest_complete_period"])
+        self.assertEqual(cov_missing["coverage_status"], "unavailable")
+
+    def test_calendar_eligibility_does_not_populate_latest_verified_period(self):
+        fin = {"period_used": "2026-Q1", "row": {"period": "2026-Q1", "revenue": 50}, "excluded_unverified_periods": []}
+        cov = bundle.build_financial_period_coverage_contract("TICK_V", fin)
+        self.assertEqual(cov["latest_calendar_eligible_period"], "2026-Q1")
+        self.assertIsNone(cov["latest_verified_period"])
+        self.assertEqual(cov["coverage_status"], "calendar_eligible_only")
+        limits_text = " ".join(cov["limitations"])
+        self.assertIn("calendar eligibility is not source verification", limits_text)
+
+    def test_explicit_verification_evidence_populates_latest_verified_period(self):
+        fin = {"period_used": "2026-Q1", "row": {"period": "2026-Q1", "revenue": 50, "source_verified": True}}
+        cov = bundle.build_financial_period_coverage_contract("TICK_VERIFIED", fin)
+        self.assertEqual(cov["latest_verified_period"], "2026-Q1")
+        self.assertEqual(cov["coverage_status"], "verified_only")
+
+    def test_verified_does_not_populate_latest_complete_period(self):
+        fin = {"period_used": "2026-Q1", "row": {"period": "2026-Q1", "source_verified": True}}
+        cov = bundle.build_financial_period_coverage_contract("TICK_VERIFIED", fin)
+        self.assertIsNone(cov["latest_complete_period"])
+        self.assertFalse(cov["is_actionable"])
+
+    def test_missing_data_remains_null_and_unavailable(self):
+        cov = bundle.build_financial_period_coverage_contract("EMPTY", {})
+        self.assertIsNone(cov["latest_raw_period"])
+        self.assertIsNone(cov["latest_calendar_eligible_period"])
+        self.assertIsNone(cov["latest_verified_period"])
+        self.assertIsNone(cov["latest_complete_period"])
+        self.assertEqual(cov["statement_coverage"], "missing")
+        self.assertEqual(cov["coverage_status"], "unavailable")
+        self.assertFalse(cov["is_actionable"])
+
+    def test_annual_quarterly_ttm_identities_remain_separate(self):
+        fin_q = {"period_used": "2026-Q1", "row": {"period": "2026-Q1"}}
+        fin_a = {"period_used": "2025", "row": {"period": "2025"}}
+        fin_ttm = {"period_used": "2026-TTM", "row": {"period": "2026-TTM"}}
+        self.assertEqual(bundle.build_financial_period_coverage_contract("Q", fin_q)["period_type"], "quarterly")
+        self.assertEqual(bundle.build_financial_period_coverage_contract("A", fin_a)["period_type"], "annual")
+        self.assertEqual(bundle.build_financial_period_coverage_contract("T", fin_ttm)["period_type"], "ttm")
+
+    def test_conflicting_period_identities_return_incomparable(self):
+        fin_conflict = {"period_used": "2026-Q1", "row": {"period": "2026-Q1"}, "warning": "conflicting_period_identities"}
+        cov = bundle.build_financial_period_coverage_contract("CONFLICT", fin_conflict)
+        self.assertEqual(cov["coverage_status"], "incomparable")
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 

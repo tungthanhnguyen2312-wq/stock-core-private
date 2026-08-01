@@ -505,6 +505,105 @@ def build_news_window_semantics(news_data: dict | None) -> dict | None:
     return semantics
 
 
+def build_financial_period_coverage_contract(
+    tk: str,
+    fin_entry: dict | None,
+    canonical_entry: dict | None = None,
+) -> dict:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho per-ticker financial period coverage."""
+    if not isinstance(fin_entry, dict) or not fin_entry.get("row"):
+        return {
+            "ticker": tk,
+            "latest_raw_period": None,
+            "latest_calendar_eligible_period": None,
+            "latest_verified_period": None,
+            "latest_complete_period": None,
+            "period_type": "unknown",
+            "statement_coverage": "missing",
+            "canonical_coverage": "missing" if not canonical_entry else canonical_entry.get("status", "missing"),
+            "coverage_status": "unavailable",
+            "limitations": [
+                "No financial snapshot records exist for this ticker.",
+                "Global maximum financial dates must never populate missing ticker coverage.",
+            ],
+            "is_actionable": False,
+        }
+
+    row = fin_entry.get("row") or {}
+    period_used = fin_entry.get("period_used")
+    excluded = fin_entry.get("excluded_unverified_periods") or []
+    is_incomparable = fin_entry.get("warning") == "conflicting_period_identities"
+
+    if excluded:
+        all_periods = sorted([period_used] + excluded, key=_period_key) if period_used else sorted(excluded, key=_period_key)
+        latest_raw_period = all_periods[-1]
+    else:
+        latest_raw_period = period_used
+
+    latest_calendar_eligible_period = period_used
+
+    source_verified = False
+    if isinstance(row, dict) and row.get("source_verified") is True:
+        source_verified = True
+    elif isinstance(canonical_entry, dict) and (canonical_entry.get("official_evidence") or {}).get("status") == "verified":
+        source_verified = True
+
+    latest_verified_period = period_used if source_verified else None
+
+    ref_period = latest_calendar_eligible_period or latest_raw_period
+    if ref_period and "-Q" in str(ref_period):
+        period_type = "quarterly"
+    elif ref_period and len(str(ref_period)) == 4 and str(ref_period).isdigit():
+        period_type = "annual"
+    elif ref_period and "TTM" in str(ref_period).upper():
+        period_type = "ttm"
+    else:
+        period_type = "unknown"
+
+    has_rev = row.get("revenue") is not None and not pd.isna(row.get("revenue")) if "revenue" in row else False
+    has_np = row.get("net_profit") is not None and not pd.isna(row.get("net_profit")) if "net_profit" in row else False
+    statement_coverage = "partial" if (has_rev or has_np) else "missing"
+
+    canonical_status = "missing"
+    if isinstance(canonical_entry, dict):
+        canonical_status = canonical_entry.get("status") or ("available" if canonical_entry.get("records") else "missing")
+
+    latest_complete_period = None
+
+    if is_incomparable:
+        coverage_status = "incomparable"
+    elif latest_verified_period:
+        coverage_status = "verified_only"
+    elif latest_calendar_eligible_period:
+        coverage_status = "calendar_eligible_only"
+    elif latest_raw_period:
+        coverage_status = "raw_only"
+    else:
+        coverage_status = "unavailable"
+
+    limitations = [
+        "Raw period presence does not imply calendar eligibility.",
+        "calendar eligibility is not source verification",
+        "verified period identity does not imply full 3-statement audit completeness",
+        "completeness criteria are unqualified in current repository store; latest_complete_period remains null",
+        "global maximum financial dates must never populate missing or lower-period ticker coverage",
+    ]
+
+    return {
+        "ticker": tk,
+        "latest_raw_period": latest_raw_period,
+        "latest_calendar_eligible_period": latest_calendar_eligible_period,
+        "latest_verified_period": latest_verified_period,
+        "latest_complete_period": latest_complete_period,
+        "period_type": period_type,
+        "statement_coverage": statement_coverage,
+        "canonical_coverage": canonical_status,
+        "coverage_status": coverage_status,
+        "limitations": limitations,
+        "is_actionable": False,
+    }
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1453,6 +1552,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "financial_latest_quality": {
             "excluded_unverified_periods": fin.get("excluded_unverified_periods", []),
         },
+        "financial_period_coverage": build_financial_period_coverage_contract(tk, fin, financial_canonical.get(tk)),
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "financial_identity": empty_identity_export(),
         "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), get_default_registry().entity_type_for(tk)),
