@@ -297,6 +297,65 @@ def build_historical_capital_structure_analysis(
     return base
 
 
+def build_historical_fundamental_brief(
+    ticker: str, earnings_quality: Mapping[str, Any] | None,
+    capital_structure: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Compose existing qualified historical contracts without re-resolving any source
+    identity or allowing the result to affect current-market readiness."""
+    capital = capital_structure if isinstance(capital_structure, Mapping) else {}
+    earnings = earnings_quality if isinstance(earnings_quality, Mapping) else {}
+    warnings = list(capital.get("data_warnings") or [])
+    for warning in ("price_basis_unknown_or_unverified", "volume_basis_unknown_or_unverified", "current_shares_unqualified"):
+        if warning not in warnings:
+            warnings.append(warning)
+    facts: list[dict[str, Any]] = []
+    missing: list[str] = [
+        "current qualified price basis is required for any market-dependent conclusion",
+        "current qualified volume basis is required for market-liquidity conclusions",
+        "current shares outstanding with an effective-date bridge is required for market value and per-share current-market conclusions",
+        "FY2023 comparable verified evidence is required for comparative-period conclusions",
+    ]
+    capital_metrics = capital.get("metrics") if isinstance(capital.get("metrics"), Mapping) else {}
+    for identity, item in capital_metrics.items():
+        if isinstance(item, Mapping) and item.get("qualification_status") == "qualified":
+            facts.append({"identity": identity, "value": item.get("value"), "source_contract": "historical_capital_structure",
+                          "numerator_identity": item.get("numerator_identity"), "denominator_identity": item.get("denominator_identity")})
+        elif isinstance(item, Mapping):
+            warnings.append(f"{identity}:{item.get('blocking_reason') or 'unqualified'}")
+    earnings_metrics = earnings.get("metrics") if earnings.get("status") == "available" and isinstance(earnings.get("metrics"), Mapping) else {}
+    for identity, value in earnings_metrics.items():
+        facts.append({"identity": identity, "value": value, "source_contract": "fundamental_quality_evidence"})
+    if not earnings_metrics:
+        missing.append("qualified FY2024 earnings-quality metrics are unavailable")
+    if not capital_metrics:
+        missing.append("qualified FY2024 capital-structure metrics are unavailable")
+    supported_inferences: list[dict[str, Any]] = []
+    net_debt = capital_metrics.get("net_debt") if isinstance(capital_metrics.get("net_debt"), Mapping) else None
+    if net_debt and net_debt.get("qualification_status") == "qualified":
+        direction = "positive" if net_debt.get("value") > 0 else "negative" if net_debt.get("value") < 0 else "zero"
+        supported_inferences.append({"statement": f"Net debt was {direction} for the reported period.",
+                                     "supporting_metrics": ["historical_capital_structure.net_debt"]})
+    cash_to_debt = capital_metrics.get("cash_to_debt") if isinstance(capital_metrics.get("cash_to_debt"), Mapping) else None
+    if cash_to_debt and cash_to_debt.get("qualification_status") == "qualified":
+        relationship = "exceeded" if cash_to_debt.get("value") > 1 else "did not exceed" if cash_to_debt.get("value") < 1 else "equalled"
+        supported_inferences.append({"statement": f"Cash {relationship} gross debt for the reported period.",
+                                     "supporting_metrics": ["historical_capital_structure.cash", "historical_capital_structure.gross_debt", "historical_capital_structure.cash_to_debt"]})
+    return {
+        "schema_version": "1.0.0", "ticker": ticker, "status": "available" if facts else "partial",
+        "historical_only": True, "market_dependent": False, "is_actionable": False,
+        "reporting_period": capital.get("reporting_period"), "publication_timestamp": capital.get("publication_timestamp"),
+        "statement_scope": capital.get("statement_scope"), "currency": capital.get("currency"), "scale": capital.get("scale"),
+        "facts": facts, "data_warnings": sorted(set(warnings)), "supported_inferences": supported_inferences,
+        "hypotheses": [], "missing_evidence": missing,
+        "invalidation_conditions": [
+            "A change to the FY2024 reporting period, consolidated scope, currency, scale, canonical identity, citation, source hash, or restatement state invalidates this brief.",
+            "Any market-dependent conclusion remains invalid until price and volume basis and current shares are qualified.",
+        ],
+        "provenance_references": {"earnings_quality": "fundamental_quality_evidence", "capital_structure": "historical_capital_structure"},
+    }
+
+
 def _blocked(ticker: str, entity_type: str | None, applicability: str, status: str,
              blocking_reasons: list[str], inputs: list[dict[str, Any]],
              data_warnings: list[str] | None = None) -> dict[str, Any]:

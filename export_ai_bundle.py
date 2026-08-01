@@ -99,6 +99,7 @@ from analysis_lane_eligibility import evaluate_ticker_lanes
 from distribution_evidence import build_distribution_evidence_for_ticker
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
+    build_historical_fundamental_brief,
     build_historical_capital_structure_analysis,
 )
 
@@ -2478,6 +2479,9 @@ def attach_fundamental_quality_evidence(
         entry["historical_capital_structure"] = build_historical_capital_structure_analysis(
             tk, entry.get("entity_type"), entry.get("financial_canonical"),
             entry.get("financial_period_coverage"), (entry.get("freshness") or {}).get("financial_statements"), root,
+        )
+        entry["historical_fundamental_brief"] = build_historical_fundamental_brief(
+            tk, result, entry["historical_capital_structure"],
         )
     return bundle_entries
 

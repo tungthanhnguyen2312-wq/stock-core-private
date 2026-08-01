@@ -195,6 +195,41 @@ class HistoricalCapitalStructureTests(unittest.TestCase):
         self.assertIn("financial_publication_timestamp_unqualified", result["blocking_reasons"])
 
 
+class HistoricalFundamentalBriefTests(unittest.TestCase):
+    def _brief(self, capital=None, earnings=None):
+        capital = capital or {"reporting_period": "2024", "publication_timestamp": "2025-03-01", "statement_scope": "consolidated", "currency": "VND", "scale": 1, "data_warnings": [], "metrics": {
+            "net_debt": {"value": 25, "qualification_status": "qualified", "numerator_identity": "total_debt_less_cash_and_equivalents", "denominator_identity": None},
+            "cash": {"value": 75, "qualification_status": "qualified", "numerator_identity": "cash_and_equivalents", "denominator_identity": None},
+            "gross_debt": {"value": 100, "qualification_status": "qualified", "numerator_identity": "total_debt", "denominator_identity": None},
+            "cash_to_debt": {"value": .75, "qualification_status": "qualified", "numerator_identity": "cash_and_equivalents", "denominator_identity": "total_debt"},
+        }}
+        earnings = earnings if earnings is not None else {"status": "available", "metrics": {"cash_conversion_ratio": 1.2}}
+        return fqe.build_historical_fundamental_brief("TEST", earnings, capital)
+
+    def test_qualified_facts_are_deterministic_and_historical_only(self):
+        first, second = self._brief(), self._brief()
+        self.assertEqual(first, second)
+        self.assertTrue(first["historical_only"])
+        self.assertFalse(first["market_dependent"])
+        self.assertEqual(first["hypotheses"], [])
+        self.assertIn("cash_to_debt", {fact["identity"] for fact in first["facts"]})
+        self.assertIn("Net debt was positive", first["supported_inferences"][0]["statement"])
+
+    def test_missing_metric_is_excluded_warned_and_market_blockers_remain(self):
+        capital = self._brief()["facts"]
+        brief = self._brief({"metrics": {"net_debt": {"value": None, "qualification_status": "unavailable", "blocking_reason": "cash_unqualified"}}})
+        self.assertNotIn("net_debt", {fact["identity"] for fact in brief["facts"]})
+        self.assertIn("net_debt:cash_unqualified", brief["data_warnings"])
+        for warning in ("price_basis_unknown_or_unverified", "volume_basis_unknown_or_unverified", "current_shares_unqualified"):
+            self.assertIn(warning, brief["data_warnings"])
+
+    def test_no_scoring_or_recommendation_fields(self):
+        brief = self._brief()
+        serialized = json.dumps(brief).lower()
+        for forbidden in ("score", "rank", "recommendation", "target_price"):
+            self.assertNotIn(f'"{forbidden}', serialized)
+
+
 class RealRetainedEvidenceTests(unittest.TestCase):
     """Requirement 6: HPG and VNM results must follow their real retained evidence."""
 
