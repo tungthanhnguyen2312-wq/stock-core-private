@@ -89,7 +89,7 @@ from corporate_actions_export import build_corporate_actions_section
 from financial_observations import canonical_records, read_observations, store_path
 from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price, load_verified_ebitda_components, derive_ebitda, load_verified_citations
 from financial_mapping import get_default_registry
-from fundamental_quality import evaluate_fundamental_quality
+from fundamental_quality import evaluate_fundamental_quality, reconcile_legacy_fundamental_quality_with_qualified_evidence
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
@@ -2633,6 +2633,12 @@ def main() -> int:
     attach_distribution_evidence(bundle_entries, runtime_root(), args.include_analysis_lane_eligibility)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     attach_fundamental_quality_evidence(bundle_entries, runtime_root(), args.include_fundamental_quality_evidence)
+    # Phase 6B: reconcile the legacy fundamental_quality.models.earnings_quality subsection
+    # against fundamental_quality_evidence when both are present on the same entry. A no-op
+    # (adds one informational limitation only) whenever the opt-in evidence contract was not
+    # computed this run -- unconditional so every invocation gets the same honest labeling.
+    for entry in bundle_entries.values():
+        reconcile_legacy_fundamental_quality_with_qualified_evidence(entry)
 
     # item F: bundle_entries[tk]["context_package"] only exists from this point on (it isn't
     # attached to the earlier `entries` build_data_quality_flags() already consumed above) —
