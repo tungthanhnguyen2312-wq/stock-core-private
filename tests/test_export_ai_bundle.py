@@ -1211,5 +1211,155 @@ class FiscalPeriodQualityIntegrationTests(unittest.TestCase):
         self.assertNotRegex(str(info["data_date"]), r"^\d{4}-Q[1-4]$")
 
 
+REQUIRED_LANE_FIELDS = {
+    "lane", "status", "eligible", "blocking_reasons", "data_warnings",
+    "required_evidence", "supporting_paths", "limitations", "is_actionable",
+}
+EXPECTED_LANE_ORDER = [
+    "quality_growth", "income_defensive", "structural_catalyst", "distressed_high_risk", "blocked_avoid",
+]
+
+_VERIFIED_BASIS = {
+    "price_basis": "raw", "price_basis_verified": True,
+    "volume_basis": "raw", "volume_basis_verified": True, "is_actionable": False,
+}
+_UNKNOWN_BASIS = {
+    "price_basis": "unknown", "price_basis_verified": False,
+    "volume_basis": "unknown", "volume_basis_verified": False, "is_actionable": False,
+}
+
+
+class AnalysisLaneEligibilityUnitTests(unittest.TestCase):
+    """Phase 5A opt-in wiring: build_analysis_lane_eligibility_for_ticker() /
+    attach_analysis_lane_eligibility(). Pure synthetic-dict unit tests -- no real data,
+    no DB, no CLI -- proving the wiring layer itself (not re-testing
+    analysis_lane_eligibility.py's own already-committed gate logic)."""
+
+    def _entry(self, **overrides) -> dict:
+        entry = {
+            "entity_type": "corporate",
+            "financial_period_coverage": {"coverage_status": "verified_only", "latest_verified_period": "2026-Q1"},
+            "earnings_anomaly": {"status": "not_observed", "explanation_status": "not_applicable"},
+            "valuation_namespaces": None,
+            "share_basis_identities": None,
+            "opportunity_ranking": {"dimensions": {"financial_quality": {"state": "available"}}},
+            "ta_signal_semantics": None,
+            "news_related": None,
+            "analysis_score": {"risk_semantics": None},
+        }
+        entry.update(overrides)
+        return entry
+
+    def test_enabled_result_preserves_all_lane_fields_and_ordering(self):
+        result = bundle.build_analysis_lane_eligibility_for_ticker("HPG", self._entry(), _VERIFIED_BASIS)
+        self.assertIsInstance(result, list)
+        self.assertEqual([r["lane"] for r in result], EXPECTED_LANE_ORDER)
+        for lane_result in result:
+            self.assertEqual(set(lane_result.keys()), REQUIRED_LANE_FIELDS)
+
+    def test_all_emitted_lanes_remain_non_actionable(self):
+        result = bundle.build_analysis_lane_eligibility_for_ticker("HPG", self._entry(), _VERIFIED_BASIS)
+        for lane_result in result:
+            self.assertIs(lane_result["is_actionable"], False)
+
+    def test_bundle_level_price_and_volume_basis_reach_the_evaluator(self):
+        verified = bundle.build_analysis_lane_eligibility_for_ticker("HPG", self._entry(), _VERIFIED_BASIS)
+        unverified = bundle.build_analysis_lane_eligibility_for_ticker("HPG", self._entry(), _UNKNOWN_BASIS)
+        verified_warnings = " ".join(w for r in verified for w in r["data_warnings"])
+        unverified_warnings = " ".join(w for r in unverified for w in r["data_warnings"])
+        self.assertNotIn("adjusted_return_claims_blocked", verified_warnings)
+        self.assertIn("adjusted_return_claims_blocked", unverified_warnings)
+
+    def test_no_score_ranking_recommendation_scenario_or_target_price_introduced(self):
+        result = bundle.build_analysis_lane_eligibility_for_ticker("HPG", self._entry(), _VERIFIED_BASIS)
+        for lane_result in result:
+            for forbidden in ("score", "rank", "recommendation", "scenario", "target_price", "preferred"):
+                self.assertNotIn(forbidden, lane_result)
+
+    def test_malformed_optional_ticker_contract_fails_closed_locally(self):
+        entry = self._entry(financial_period_coverage="not_a_dict")
+        result = bundle.build_analysis_lane_eligibility_for_ticker("HPG", entry, _VERIFIED_BASIS)
+        self.assertIsInstance(result, list)  # analysis_lane_eligibility.py itself fails closed per-lane, not per-call
+        quality_growth = next(r for r in result if r["lane"] == "quality_growth")
+        self.assertEqual(quality_growth["status"], "blocked")
+
+    def test_local_evaluator_exception_fails_closed_without_corrupting_other_tickers(self):
+        """A hard exception during one ticker's evaluation must be swallowed by the wiring
+        layer (return None, no key attached) and must not affect any other ticker's entry."""
+        bundle_entries = {
+            "BROKEN": self._entry(),
+            "HPG": self._entry(),
+        }
+        original = bundle.evaluate_ticker_lanes
+
+        def _raising(ticker, **kwargs):
+            if ticker == "BROKEN":
+                raise RuntimeError("simulated evaluator failure")
+            return original(ticker, **kwargs)
+
+        with mock.patch.object(bundle, "evaluate_ticker_lanes", side_effect=_raising):
+            bundle.attach_analysis_lane_eligibility(bundle_entries, _VERIFIED_BASIS, include=True)
+
+        self.assertNotIn("analysis_lane_eligibility", bundle_entries["BROKEN"])
+        self.assertIn("analysis_lane_eligibility", bundle_entries["HPG"])
+        self.assertEqual(
+            [r["lane"] for r in bundle_entries["HPG"]["analysis_lane_eligibility"]], EXPECTED_LANE_ORDER,
+        )
+
+    def test_disabled_include_never_calls_evaluator_or_attaches_field(self):
+        bundle_entries = {"HPG": self._entry()}
+        with mock.patch.object(bundle, "evaluate_ticker_lanes") as mocked:
+            bundle.attach_analysis_lane_eligibility(bundle_entries, _VERIFIED_BASIS, include=False)
+        mocked.assert_not_called()
+        self.assertNotIn("analysis_lane_eligibility", bundle_entries["HPG"])
+
+
+class AnalysisLaneEligibilityPipelineIntegrationTests(unittest.TestCase):
+    """Phase 5A opt-in wiring exercised through the real export_ai_bundle.main() pipeline
+    against real retained data (same convention as the rest of this file) -- proves the
+    default-disabled/enabled behavior and end-to-end determinism, not just the unit layer."""
+
+    FIXED_EVALUATION_AT = "2026-08-01T00:00:00+00:00"
+
+    def _run(self, extra_argv: list[str]) -> tuple[int, Path, dict]:
+        tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmpdir.cleanup)
+        out_dir = Path(tmpdir.name)
+        rc = run_bundle_main(["--tickers", "HPG", "--allow-stale", *extra_argv], out_dir)
+        with (out_dir / "analysis_bundle.json").open(encoding="utf-8") as f:
+            data = json.load(f)
+        return rc, out_dir, data
+
+    def test_default_disabled_output_has_no_analysis_lane_eligibility(self):
+        rc, _, data = self._run([])
+        self.assertEqual(rc, 0)
+        self.assertNotIn("analysis_lane_eligibility", data["tickers"]["HPG"])
+
+    def test_enabled_flag_produces_complete_five_lane_result_for_real_ticker(self):
+        rc, _, data = self._run(["--include-analysis-lane-eligibility"])
+        self.assertEqual(rc, 0)
+        result = data["tickers"]["HPG"]["analysis_lane_eligibility"]
+        self.assertEqual([r["lane"] for r in result], EXPECTED_LANE_ORDER)
+        for lane_result in result:
+            self.assertEqual(set(lane_result.keys()), REQUIRED_LANE_FIELDS)
+            self.assertIs(lane_result["is_actionable"], False)
+
+    def test_existing_ticker_contracts_unchanged_between_disabled_and_enabled_runs(self):
+        _, _, disabled = self._run(["--evaluation-at", self.FIXED_EVALUATION_AT])
+        _, _, enabled = self._run(["--evaluation-at", self.FIXED_EVALUATION_AT, "--include-analysis-lane-eligibility"])
+        disabled_hpg = dict(disabled["tickers"]["HPG"])
+        enabled_hpg = dict(enabled["tickers"]["HPG"])
+        enabled_hpg.pop("analysis_lane_eligibility", None)
+        self.assertEqual(disabled_hpg, enabled_hpg)
+
+    def test_repeated_fixed_time_enabled_builds_are_deterministic(self):
+        _, _, first = self._run(["--evaluation-at", self.FIXED_EVALUATION_AT, "--include-analysis-lane-eligibility"])
+        _, _, second = self._run(["--evaluation-at", self.FIXED_EVALUATION_AT, "--include-analysis-lane-eligibility"])
+        self.assertEqual(
+            first["tickers"]["HPG"]["analysis_lane_eligibility"],
+            second["tickers"]["HPG"]["analysis_lane_eligibility"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

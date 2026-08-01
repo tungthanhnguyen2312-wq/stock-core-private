@@ -76,6 +76,7 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Mapping
 
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
@@ -94,6 +95,7 @@ from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
 from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
+from analysis_lane_eligibility import evaluate_ticker_lanes
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -2111,6 +2113,82 @@ def build_manifest_files(tickers, snapshot_info, ta_info, analysis_info, financi
 
 
 # ==========================================================================
+# Phase 5A — opt-in analysis-lane eligibility wiring (disabled by default)
+# ==========================================================================
+# Same disabled-by-default style as sector_aware_downstream_facts.py: the evaluator in
+# analysis_lane_eligibility.py is never called unless a caller explicitly opts in. This
+# section does not alter that module's semantics -- it only assembles the already-built
+# per-ticker contracts (plus the bundle-level price/volume basis) into the exact keyword
+# arguments evaluate_ticker_lanes() expects, and attaches the complete, unmodified result
+# to tickers[ticker].analysis_lane_eligibility when enabled.
+
+def _lane_eval_risk_semantics(entry: Mapping[str, Any] | None) -> dict | None:
+    """Canonical nested analysis_score.risk_semantics, legacy top-level risk_semantics
+    fallback only when canonical is absent -- mirrors the Consumer-side resolution in
+    ai-core-private/builders/build_ticker_context.py::risk_semantics_contract (commit
+    21a3731), so the opt-in wiring sources risk_semantics the same way end to end."""
+    if not isinstance(entry, dict):
+        return None
+    analysis_score = entry.get("analysis_score")
+    canonical = analysis_score.get("risk_semantics") if isinstance(analysis_score, dict) else None
+    return canonical if canonical is not None else entry.get("risk_semantics")
+
+
+def _lane_eval_news_window_semantics(entry: Mapping[str, Any] | None) -> dict | None:
+    if not isinstance(entry, dict):
+        return None
+    news_related = entry.get("news_related")
+    return news_related.get("news_window_semantics") if isinstance(news_related, dict) else None
+
+
+def build_analysis_lane_eligibility_for_ticker(
+    ticker: str, entry: Mapping[str, Any], price_basis_provenance: Mapping[str, Any] | None,
+) -> list[dict[str, Any]] | None:
+    """Evaluate one ticker's analysis-lane eligibility from its already-built bundle
+    contracts. Does not alter evaluate_ticker_lanes()'s existing semantics: no scores, no
+    ticker/lane ranking, no recommendations, no scenario probabilities, no target prices,
+    no cross-lane suppression -- the complete evaluator result is returned unmodified.
+
+    A local evaluation failure for this ticker fails closed (returns None, so no
+    analysis_lane_eligibility key is attached for it) and never raises into the caller's
+    per-ticker loop or corrupts any other field on this or any other ticker's entry."""
+    try:
+        return evaluate_ticker_lanes(
+            ticker,
+            entity_type=entry.get("entity_type"),
+            financial_period_coverage=entry.get("financial_period_coverage"),
+            valuation_namespaces=entry.get("valuation_namespaces"),
+            share_basis_identities=entry.get("share_basis_identities"),
+            earnings_anomaly=entry.get("earnings_anomaly"),
+            risk_semantics=_lane_eval_risk_semantics(entry),
+            opportunity_ranking=entry.get("opportunity_ranking"),
+            ta_signal_semantics=entry.get("ta_signal_semantics"),
+            news_window_semantics=_lane_eval_news_window_semantics(entry),
+            price_basis_provenance=price_basis_provenance,
+        )
+    except Exception:
+        return None
+
+
+def attach_analysis_lane_eligibility(
+    bundle_entries: dict[str, dict], price_basis_provenance: Mapping[str, Any] | None, include: bool,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False), same style as
+    sector_aware_downstream_facts: when include is False, evaluate_ticker_lanes() is never
+    called and no analysis_lane_eligibility key is ever added -- current default bundle
+    behavior is preserved exactly. When True, attaches the complete evaluator result per
+    ticker; a ticker whose evaluation fails closed is simply skipped, never corrupting any
+    other ticker's fields."""
+    if not include:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_analysis_lane_eligibility_for_ticker(tk, entry, price_basis_provenance)
+        if result is not None:
+            entry["analysis_lane_eligibility"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # MAIN
 # ==========================================================================
 
@@ -2124,6 +2202,11 @@ def main() -> int:
     parser.add_argument("--allow-stale", action="store_true",
                         help="Vẫn xuất bundle dù nguồn lệch phiên/lệch thứ tự tạo artifact"
                              " (ghi cảnh báo rõ vào manifest)")
+    parser.add_argument("--include-analysis-lane-eligibility", action="store_true",
+                        help="Opt-in, disabled by default (Phase 5A): attach"
+                             " tickers[ticker].analysis_lane_eligibility from"
+                             " analysis_lane_eligibility.evaluate_ticker_lanes() per ticker."
+                             " Not enabled in any default/production invocation.")
     parser.add_argument("--verify", metavar="MANIFEST_PATH",
                         help="KHÔNG xuất gì — chỉ so sha256 trong 1 bundle_manifest.json cũ với"
                              " file hiện tại trên đĩa ('checksum dependency'); exit 0 nếu khớp"
@@ -2308,6 +2391,8 @@ def main() -> int:
                 "khong_co_context_package (chưa build_ticker_context.py cho mã này -> thiếu"
                 " news_related/shareholder/valuation_inputs chi tiết)")
         bundle_entries[tk] = entry
+
+    attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
 
     # item F: bundle_entries[tk]["context_package"] only exists from this point on (it isn't
     # attached to the earlier `entries` build_data_quality_flags() already consumed above) —
