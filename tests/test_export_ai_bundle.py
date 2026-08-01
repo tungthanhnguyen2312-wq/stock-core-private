@@ -441,6 +441,104 @@ class FinancialPeriodCoverageTests(unittest.TestCase):
         self.assertEqual(cov["coverage_status"], "incomparable")
 
 
+class ValuationNamespaceTests(unittest.TestCase):
+    """Phase 2B hardened: metric-specific valuation namespace and comparability contract tests."""
+
+    def test_pe_and_pb_identities_are_stored_separately(self):
+        snapshot_row = {"pe": 11.98, "pb": 1.45, "date": "2026-07-30", "source": "KBS"}
+        relative_val = {
+            "valuation": {"pe": {"value": 10.55}, "pb": {"value": 1.25}},
+            "inputs": {
+                "current_price": {"evidence": {"trading_date": "2024-12-31"}},
+                "share_count_weighted_average_basic": {"semantics": "weighted_average_basic"},
+                "share_count_period_end": {"semantics": "period_end"},
+                "financial": {"period_identity": {"period": "FY2024"}},
+            },
+        }
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, relative_val)
+        pe_live = contract["live_vendor"]["metrics"]["pe"]
+        pb_live = contract["live_vendor"]["metrics"]["pb"]
+        pe_hist = contract["historical_calculated"]["metrics"]["pe"]
+        pb_hist = contract["historical_calculated"]["metrics"]["pb"]
+        self.assertEqual(pe_live["value"], 11.98)
+        self.assertEqual(pb_live["value"], 1.45)
+        self.assertEqual(pe_hist["value"], 10.55)
+        self.assertEqual(pb_hist["value"], 1.25)
+        self.assertNotEqual(pe_hist["denominator_measure"], pb_hist["denominator_measure"])
+
+    def test_pe_and_pb_may_have_different_share_bases(self):
+        relative_val = {
+            "valuation": {"pe": {"value": 10.55}, "pb": {"value": 1.25}},
+            "inputs": {
+                "share_count_weighted_average_basic": {"semantics": "weighted_average_basic"},
+                "share_count_period_end": {"semantics": "period_end"},
+            },
+        }
+        contract = bundle.build_valuation_namespaces_contract("HPG", None, relative_val)
+        self.assertEqual(contract["historical_calculated"]["metrics"]["pe"]["share_basis"], "weighted_average_basic")
+        self.assertEqual(contract["historical_calculated"]["metrics"]["pb"]["share_basis"], "period_end")
+
+    def test_missing_live_vendor_methodology_remains_unknown(self):
+        snapshot_row = {"pe": 11.98}
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, None)
+        pe_live = contract["live_vendor"]["metrics"]["pe"]
+        self.assertEqual(pe_live["denominator_measure"], "vendor_unspecified")
+        self.assertEqual(pe_live["share_basis"], "vendor_unspecified")
+
+    def test_bundle_session_is_not_silently_promoted_to_proven_price_date(self):
+        snapshot_row = {"pe": 11.98}
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, None)
+        self.assertIsNone(contract["live_vendor"]["metrics"]["pe"]["price_date"])
+
+    def test_pe_comparability_is_evaluated_independently_from_pb(self):
+        snapshot_row = {"pe": 11.98, "pb": 1.45, "date": "2026-07-30"}
+        relative_val = {
+            "valuation": {"pe": {"value": 10.55}},
+            "inputs": {"current_price": {"evidence": {"trading_date": "2024-12-31"}}},
+        }
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, relative_val)
+        pe_comp = contract["comparability"]["metrics"]["pe"]
+        pb_comp = contract["comparability"]["metrics"]["pb"]
+        self.assertEqual(pe_comp["status"], "incomparable")
+        self.assertEqual(pb_comp["status"], "insufficient_identity")
+        self.assertFalse(pe_comp["is_actionable"])
+        self.assertFalse(pb_comp["is_actionable"])
+
+    def test_hpg_values_are_preserved_and_pe_incomparable(self):
+        snapshot_row = {"pe": 11.98, "date": "2026-07-30"}
+        relative_val = {
+            "valuation": {"pe": {"value": 10.55}},
+            "inputs": {"current_price": {"evidence": {"trading_date": "2024-12-31"}}},
+        }
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, relative_val)
+        self.assertEqual(contract["live_vendor"]["metrics"]["pe"]["value"], 11.98)
+        self.assertEqual(contract["historical_calculated"]["metrics"]["pe"]["value"], 10.55)
+        self.assertEqual(contract["comparability"]["metrics"]["pe"]["status"], "incomparable")
+
+    def test_missing_identity_produces_insufficient_identity(self):
+        snapshot_row = {"pe": 11.98}
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, None)
+        self.assertEqual(contract["comparability"]["metrics"]["pe"]["status"], "insufficient_identity")
+
+    def test_missing_metric_produces_not_available(self):
+        contract = bundle.build_valuation_namespaces_contract("EMPTY", None, None)
+        self.assertEqual(contract["comparability"]["metrics"]["pe"]["status"], "not_available")
+        self.assertEqual(contract["comparability"]["metrics"]["pb"]["status"], "not_available")
+
+    def test_matching_metric_names_alone_do_not_establish_comparability(self):
+        snapshot_row = {"pe": 11.98}
+        relative_val = {"valuation": {"pe": {"value": 10.55}}}
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, relative_val)
+        self.assertNotEqual(contract["comparability"]["metrics"]["pe"]["status"], "comparable")
+
+    def test_legacy_valuation_fields_remain_unchanged(self):
+        snapshot_row = {"pe": 11.98, "ticker": "HPG"}
+        relative_val = {"valuation": {"pe": {"value": 10.55}}}
+        contract = bundle.build_valuation_namespaces_contract("HPG", snapshot_row, relative_val)
+        self.assertEqual(snapshot_row["pe"], 11.98)
+        self.assertEqual(relative_val["valuation"]["pe"]["value"], 10.55)
+
+
 class PriceBasisContractTests(unittest.TestCase):
     """Pure contract tests: no runtime snapshots, database, or network required."""
 

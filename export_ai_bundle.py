@@ -604,6 +604,183 @@ def build_financial_period_coverage_contract(
     }
 
 
+def build_valuation_namespaces_contract(
+    tk: str,
+    snapshot_row: dict | None,
+    relative_val: dict | None,
+    financial_coverage: dict | None = None,
+) -> dict:
+    """Xây dựng hợp đồng an toàn ngữ nghĩa cho valuation_namespaces và comparability."""
+    live_pe_val = snapshot_row.get("pe") if isinstance(snapshot_row, dict) else None
+    live_pb_val = snapshot_row.get("pb") if isinstance(snapshot_row, dict) else None
+    obs_date = snapshot_row.get("date") if isinstance(snapshot_row, dict) else None
+    provider_name = (snapshot_row.get("source") if isinstance(snapshot_row, dict) else None) or "unknown_vendor"
+
+    live_pe_obj = {
+        "value": live_pe_val,
+        "price_date": obs_date,
+        "denominator_measure": "vendor_unspecified",
+        "financial_period": "vendor_unspecified",
+        "share_basis": "vendor_unspecified",
+        "method": "vendor_snapshot",
+        "provider": provider_name,
+        "provenance": "live_market_snapshot",
+        "limitations": [
+            "Live vendor P/E denominator, earnings period, share basis, and calculation method are unqualified in retained snapshot evidence.",
+        ],
+    }
+
+    live_pb_obj = {
+        "value": live_pb_val,
+        "price_date": obs_date,
+        "denominator_measure": "vendor_unspecified",
+        "financial_period": "vendor_unspecified",
+        "share_basis": "vendor_unspecified",
+        "method": "vendor_snapshot",
+        "provider": provider_name,
+        "provenance": "live_market_snapshot",
+        "limitations": [
+            "Live vendor P/B denominator, equity period, share basis, and calculation method are unqualified in retained snapshot evidence.",
+        ],
+    }
+
+    live_vendor = {
+        "metrics": {
+            "pe": live_pe_obj,
+            "pb": live_pb_obj,
+        },
+        "observed_at": obs_date,
+        "provider": provider_name,
+    }
+
+    hist_pe_val = None
+    hist_pb_val = None
+    price_date = None
+    fin_period = None
+    share_basis_pe = None
+    share_basis_pb = None
+    if isinstance(relative_val, dict):
+        val_res = relative_val.get("valuation") or {}
+        if isinstance(val_res, dict):
+            hist_pe_val = (val_res.get("pe") or {}).get("value")
+            hist_pb_val = (val_res.get("pb") or {}).get("value")
+        inputs = relative_val.get("inputs") or {}
+        if isinstance(inputs, dict):
+            curr_price = inputs.get("current_price") or {}
+            price_date = (curr_price.get("evidence") or {}).get("trading_date") or curr_price.get("as_of_date")
+            sh_wa = inputs.get("share_count_weighted_average_basic") or {}
+            share_basis_pe = sh_wa.get("semantics")
+            sh_pe = inputs.get("share_count_period_end") or {}
+            share_basis_pb = sh_pe.get("semantics")
+            fin_inp = inputs.get("financial") or {}
+            fin_period = (fin_inp.get("period_identity") or {}).get("period")
+
+    hist_pe_obj = {
+        "value": hist_pe_val,
+        "price_date": price_date,
+        "denominator_measure": "audited_net_profit",
+        "financial_period": fin_period or "FY2024",
+        "share_basis": share_basis_pe or "weighted_average_basic",
+        "method": "point_in_time_historical_valuation",
+        "provider": "observation_store_audited",
+        "provenance": "audited_financial_note_citation",
+        "limitations": [
+            "Valuation date uses historical FY2024 closing price (e.g. 2024-12-31), not live market price.",
+            "P/E uses audited weighted-average basic share count.",
+        ],
+    }
+
+    hist_pb_obj = {
+        "value": hist_pb_val,
+        "price_date": price_date,
+        "denominator_measure": "audited_total_equity",
+        "financial_period": fin_period or "FY2024",
+        "share_basis": share_basis_pb or "period_end",
+        "method": "point_in_time_historical_valuation",
+        "provider": "observation_store_audited",
+        "provenance": "audited_financial_note_citation",
+        "limitations": [
+            "Valuation date uses historical FY2024 closing price (e.g. 2024-12-31), not live market price.",
+            "P/B uses audited period-end share count.",
+        ],
+    }
+
+    historical_calculated = {
+        "metrics": {
+            "pe": hist_pe_obj,
+            "pb": hist_pb_obj,
+        },
+        "calculation_date": price_date,
+    }
+
+    def _evaluate_metric_comparability(live_obj: dict, hist_obj: dict, metric_name: str) -> dict:
+        v_live = live_obj.get("value")
+        v_hist = hist_obj.get("value")
+
+        if v_live is None and v_hist is None:
+            return {
+                "status": "not_available",
+                "reasons": [f"No {metric_name.upper()} metric value is available in either live_vendor or historical_calculated."],
+                "is_actionable": False,
+            }
+        if v_live is None or v_hist is None:
+            return {
+                "status": "insufficient_identity",
+                "reasons": [f"{metric_name.upper()} value missing from one valuation namespace."],
+                "is_actionable": False,
+            }
+
+        reasons = []
+        p_date_live = live_obj.get("price_date")
+        p_date_hist = hist_obj.get("price_date")
+        if p_date_live != p_date_hist:
+            reasons.append(f"Price date mismatch ({p_date_live} vs {p_date_hist}).")
+
+        sh_live = live_obj.get("share_basis")
+        sh_hist = hist_obj.get("share_basis")
+        if sh_live != sh_hist:
+            reasons.append(f"Share basis mismatch ({sh_live} vs {sh_hist}).")
+
+        den_live = live_obj.get("denominator_measure")
+        den_hist = hist_obj.get("denominator_measure")
+        if den_live != den_hist:
+            reasons.append(f"Denominator measure mismatch ({den_live} vs {den_hist}).")
+
+        m_live = live_obj.get("method")
+        m_hist = hist_obj.get("method")
+        if m_live != m_hist:
+            reasons.append(f"Calculation method mismatch ({m_live} vs {m_hist}).")
+
+        if len(reasons) > 0:
+            return {
+                "status": "incomparable",
+                "reasons": reasons,
+                "is_actionable": False,
+            }
+
+        return {
+            "status": "comparable",
+            "reasons": [],
+            "is_actionable": False,
+        }
+
+    comparability = {
+        "metrics": {
+            "pe": _evaluate_metric_comparability(live_pe_obj, hist_pe_obj, "pe"),
+            "pb": _evaluate_metric_comparability(live_pb_obj, hist_pb_obj, "pb"),
+        },
+        "disclaimer": "Valuation metrics from live_vendor and historical_calculated namespaces must not be compared as direct metric changes unless temporal, financial, and share-basis alignment is proven.",
+        "is_actionable": False,
+    }
+
+    return {
+        "ticker": tk,
+        "live_vendor": live_vendor,
+        "historical_calculated": historical_calculated,
+        "comparability": comparability,
+    }
+
+
 def load_financial_latest(tickers: list[str]) -> tuple[dict, dict]:
     """Lấy dòng BCTC quý GẦN NHẤT CÓ SỐ (revenue/net_profit khác NaN) cho mỗi mã, ĐÃ LOẠI các kỳ
     chưa xác minh theo lịch dương (P0-4: fiscal_period_status == 'future_relative_to_calendar_
@@ -1540,6 +1717,13 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "ai_report": freshness_envelope(domain="ai_report", as_of_date=score_session.get("session_date"), generated_at=score_session.get("generated_at"), source=ANALYSIS_PATH, reference_at=reference_at, dependency=snapshot_freshness),
         "financial_statements": financial_freshness,
     }
+    relative_val = evaluate_relative_valuation({
+        "entity_type": get_default_registry().entity_type_for(tk),
+        "current_price": _historical_relative_valuation_price(tk),
+        "share_count_weighted_average_basic": _relative_valuation_weighted_average_share_count(tk),
+        "share_count_period_end": _relative_valuation_period_end_share_count(tk),
+        "financial": _financial_input(financial_canonical.get(tk)),
+    }, reference_at=reference_at.isoformat())
     return {
         "snapshot": snapshot_rows.get(tk),
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],
@@ -1556,31 +1740,11 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "financial_identity": empty_identity_export(),
         "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), get_default_registry().entity_type_for(tk)),
-        # Existing snapshot P/E/P/B and metadata fields still lack qualified denominator,
-        # share-basis, and enterprise-value semantics -- do not pass them as inputs. The
-        # observation-store canonical records below are additive and only ever carry
-        # quality_state="available" where an exact evidence citation verified them. FCFF
-        # still requires externally-sourced WACC/growth/forecast assumptions this exporter
-        # does not fabricate. Net-Net's share_count is a cited period-end count (or None,
-        # never a weighted-average/live count substituted in its place).
         "intrinsic_valuation": evaluate_intrinsic_valuation({"entity_type": get_default_registry().entity_type_for(tk), "financial": _financial_input(financial_canonical.get(tk)), "share_count": _net_net_share_count(tk), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
-        # No source-owned scenario evidence mapping is qualified yet; do not infer one here.
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
         "risk_analysis": evaluate_market_risk({"ticker": tk, "ohlcv": ohlcv, "price_adjustment": "qualified" if build_price_basis_contract().get("price_basis_verified") else "unknown", "volume_units": "qualified" if build_price_basis_contract().get("volume_basis_verified") else "unknown", "volume_basis": build_price_basis_contract().get("volume_basis"), "current_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat(), runtime_root=runtime_root),
-        # This is a historical FY2024 valuation-date snapshot, never a current one: the
-        # price is a cited 2024-12-31 close (see docs/historical_relative_valuation_snapshot.md),
-        # not the live snapshot_rows price used elsewhere in this exporter. P/E reads a
-        # weighted-average share count; P/B and the market-cap reconstruction P/S/EV-Sales
-        # share read a period-end count -- two distinct identities, never aliased even
-        # though their values happen to be equal for HPG FY2024. Either input is simply
-        # omitted (fails closed) when no citation exists for this ticker.
-        "relative_valuation": evaluate_relative_valuation({
-            "entity_type": get_default_registry().entity_type_for(tk),
-            "current_price": _historical_relative_valuation_price(tk),
-            "share_count_weighted_average_basic": _relative_valuation_weighted_average_share_count(tk),
-            "share_count_period_end": _relative_valuation_period_end_share_count(tk),
-            "financial": _financial_input(financial_canonical.get(tk)),
-        }, reference_at=reference_at.isoformat()),
+        "relative_valuation": relative_val,
+        "valuation_namespaces": build_valuation_namespaces_contract(tk, snapshot_rows.get(tk), relative_val, fin),
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
         "corporate_intelligence": corporate,
