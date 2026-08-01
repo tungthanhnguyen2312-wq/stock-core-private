@@ -441,6 +441,126 @@ class FinancialPeriodCoverageTests(unittest.TestCase):
         self.assertEqual(cov["coverage_status"], "incomparable")
 
 
+class HPGFY2024VerifiedPeriodTests(unittest.TestCase):
+    """Phase 5B: resolve_verified_financial_period_evidence() / the new
+    verified_evidence_period parameter on build_financial_period_coverage_contract().
+    Mixes real-retained-data proofs (this repo's established convention) with
+    controlled/mocked proofs for fail-closed paths that real data cannot exercise
+    (hash mismatch, wrong period, unknown observation) without corrupting a fixture."""
+
+    FIN = {"period_used": "2026-Q1", "row": {"period": "2026-Q1", "revenue": 1}}
+
+    # -- 1. Real HPG FY2024 audited consolidated evidence qualifies the period --------
+
+    def test_real_hpg_fy2024_consolidated_evidence_qualifies_the_period(self):
+        result = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["ticker"], "HPG")
+        self.assertEqual(result["period"], "2024")
+        self.assertEqual(result["statement_scope"], "consolidated")
+        self.assertGreater(len(result["observation_ids"]), 0)
+        cov = bundle.build_financial_period_coverage_contract("HPG", self.FIN, None, result)
+        self.assertEqual(cov["coverage_status"], "verified_only")
+        self.assertEqual(cov["latest_verified_period"], "2024")
+        # The independent, more recent calendar-eligible period is preserved, not overwritten.
+        self.assertEqual(cov["latest_calendar_eligible_period"], "2026-Q1")
+
+    def test_real_hpg_verified_observation_ids_exclude_the_separate_statement_evidence(self):
+        # hpg-separate-fy2024-audited.pdf's evidence_id -- confirmed in manifest.json to
+        # carry zero citations ("not_used_as_citation_source_disambiguation_only").
+        separate_statement_evidence_id = "cd4c4754fb807ef05610e62456010e8fffe22ac3a86f7125cc6f74ca9354aadc"
+        result = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        verified = bundle.load_verified_citations(RUNTIME_ROOT)
+        for obs_id in result["observation_ids"]:
+            self.assertNotEqual(verified["by_observation_id"][obs_id]["evidence_id"], separate_statement_evidence_id)
+
+    def test_real_resolver_is_deterministic(self):
+        first = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        second = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        self.assertEqual(first, second)
+
+    def test_real_resolver_does_not_mutate_evidence_or_observation_files(self):
+        targets = [
+            _runtime_path("data/official-evidence/qualification_citations.jsonl"),
+            _runtime_path("data/official-evidence/manifest.json"),
+            _runtime_path("data/financial-observations/observations.jsonl"),
+        ]
+        before = {p: (_sha256(p) if p.exists() else None) for p in targets}
+        bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        after = {p: (_sha256(p) if p.exists() else None) for p in targets}
+        self.assertEqual(before, after)
+
+    def test_other_tickers_and_periods_unaffected_by_hpg_verified_evidence(self):
+        hpg_result = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        cov_other_ticker = bundle.build_financial_period_coverage_contract("VNM", self.FIN, None, hpg_result)
+        self.assertEqual(cov_other_ticker["coverage_status"], "calendar_eligible_only")
+        self.assertIsNone(cov_other_ticker["latest_verified_period"])
+        cov_no_override = bundle.build_financial_period_coverage_contract("HPG", self.FIN, None, None)
+        self.assertEqual(cov_no_override["coverage_status"], "calendar_eligible_only")
+        self.assertIsNone(cov_no_override["latest_verified_period"])
+
+    # -- 2. Separate/parent statement evidence must not qualify the consolidated period -
+
+    def test_separate_scope_override_is_rejected(self):
+        fake_override = {
+            "ticker": "HPG", "period": "2024", "period_type": "annual",
+            "statement_scope": "separate", "observation_ids": ["deadbeef"],
+        }
+        cov = bundle.build_financial_period_coverage_contract("HPG", self.FIN, None, fake_override)
+        self.assertEqual(cov["coverage_status"], "calendar_eligible_only")
+        self.assertIsNone(cov["latest_verified_period"])
+
+    def test_override_with_no_observation_ids_is_rejected(self):
+        fake_override = {"ticker": "HPG", "period": "2024", "period_type": "annual",
+                          "statement_scope": "consolidated", "observation_ids": []}
+        cov = bundle.build_financial_period_coverage_contract("HPG", self.FIN, None, fake_override)
+        self.assertIsNone(cov["latest_verified_period"])
+
+    # -- 3/4/5. Hash mismatch / missing citation / wrong period fail closed (mocked) ----
+
+    def test_no_verified_citations_available_fails_closed(self):
+        with mock.patch.object(bundle, "load_verified_citations", return_value={"status": "unavailable", "by_observation_id": {}, "rejected": []}):
+            result = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        self.assertIsNone(result)
+
+    def test_verified_citation_for_wrong_period_fails_closed(self):
+        fake_verified = {
+            "status": "available",
+            "by_observation_id": {"obs-2023": {"statement_scope": "consolidated"}},
+        }
+        fake_observations = [{"observation_id": "obs-2023", "ticker": "HPG",
+                               "reporting_period": "2023", "reporting_frequency": "annual"}]
+        with mock.patch.object(bundle, "load_verified_citations", return_value=fake_verified), \
+             mock.patch.object(bundle, "read_observations", return_value=fake_observations):
+            result = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        self.assertIsNone(result)
+
+    def test_verified_citation_with_unknown_observation_identity_fails_closed(self):
+        fake_verified = {
+            "status": "available",
+            "by_observation_id": {"obs-unknown": {"statement_scope": "consolidated"}},
+        }
+        with mock.patch.object(bundle, "load_verified_citations", return_value=fake_verified), \
+             mock.patch.object(bundle, "read_observations", return_value=[]):  # observation store empty -> unknown identity
+            result = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        self.assertIsNone(result)
+
+    # -- 7. Verified does not automatically mean complete ------------------------------
+
+    def test_verified_does_not_populate_latest_complete_period_hpg(self):
+        result = bundle.resolve_verified_financial_period_evidence(RUNTIME_ROOT)
+        cov = bundle.build_financial_period_coverage_contract("HPG", self.FIN, None, result)
+        self.assertIsNone(cov["latest_complete_period"])
+        self.assertFalse(cov["is_actionable"])
+
+    # -- 10. Existing calendar-eligible behavior remains compatible when evidence absent
+
+    def test_existing_two_argument_call_signature_still_works_unchanged(self):
+        cov = bundle.build_financial_period_coverage_contract("HPG", self.FIN)
+        self.assertEqual(cov["coverage_status"], "calendar_eligible_only")
+        self.assertIsNone(cov["latest_verified_period"])
+
+
 class ValuationNamespaceTests(unittest.TestCase):
     """Phase 2B hardened: metric-specific valuation namespace and comparability contract tests."""
 

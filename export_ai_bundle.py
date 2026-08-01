@@ -86,8 +86,8 @@ from financial_canonicalization import canonicalize_financial_rows
 from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
 from corporate_actions_export import build_corporate_actions_section
-from financial_observations import canonical_records, store_path
-from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price, load_verified_ebitda_components, derive_ebitda
+from financial_observations import canonical_records, read_observations, store_path
+from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price, load_verified_ebitda_components, derive_ebitda, load_verified_citations
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality
 from relative_valuation import evaluate_relative_valuation
@@ -507,23 +507,100 @@ def build_news_window_semantics(news_data: dict | None) -> dict | None:
     return semantics
 
 
+# ==========================================================================
+# Phase 5B — HPG FY2024 verified financial-period vertical slice
+# ==========================================================================
+# Narrowly scoped by design (not a general mechanism): links the already fully
+# fail-closed load_verified_citations()/read_observations() resolvers (existing,
+# extensively tested in semantic_evidence_bridge.py / financial_observations.py, and
+# already used elsewhere for per-metric EBITDA/valuation qualification) to
+# financial_period_coverage at the (ticker, reporting_period, reporting_frequency)
+# level -- a linkage that did not exist before this milestone; the existing
+# `official_evidence.status == "verified"` check path is never actually reachable
+# today (financial_canonicalization.py never sets that key, and the separate
+# official_evidence.py pilot module only ever returns status values of
+# missing/malformed/unavailable/available, never "verified"). This function takes no
+# ticker/period arguments and hardcodes exactly one slice on purpose: generalizing it
+# to another ticker or period is a distinct, future milestone, not this one.
+_PHASE_5B_VERIFIED_PERIOD_SCOPE = {
+    "ticker": "HPG", "reporting_period": "2024", "reporting_frequency": "annual", "period_type": "annual",
+}
+
+
+def resolve_verified_financial_period_evidence(runtime_root_dir: Path) -> dict[str, Any] | None:
+    """Return a verified-evidence-period descriptor for the hardcoded Phase 5B scope
+    (HPG, FY2024, annual, consolidated) if and only if at least one fully verified,
+    consolidated-scope observation citation exists for it via load_verified_citations()
+    -- otherwise None (fail closed: covers hash mismatch, missing/malformed citation,
+    non-consolidated or ambiguous scope, and unknown observation identity, since all of
+    those already cause load_verified_citations() to omit or reject the citation).
+    Cross-checks each candidate citation's own observation record for an exact
+    ticker/period/frequency match before accepting it -- never infers scope or period
+    from numeric similarity alone."""
+    scope = _PHASE_5B_VERIFIED_PERIOD_SCOPE
+    verified = load_verified_citations(runtime_root_dir)
+    by_observation_id = verified.get("by_observation_id") or {}
+    if not by_observation_id:
+        return None
+    observations_by_id = {row["observation_id"]: row for row in read_observations(store_path(runtime_root_dir))}
+    matched_ids = []
+    for obs_id, citation in by_observation_id.items():
+        if citation.get("statement_scope") != "consolidated":
+            continue
+        observation = observations_by_id.get(obs_id)
+        if observation is None:
+            continue
+        if (observation.get("ticker") == scope["ticker"]
+                and observation.get("reporting_period") == scope["reporting_period"]
+                and observation.get("reporting_frequency") == scope["reporting_frequency"]):
+            matched_ids.append(obs_id)
+    if not matched_ids:
+        return None
+    return {
+        "ticker": scope["ticker"],
+        "period": scope["reporting_period"],
+        "period_type": scope["period_type"],
+        "statement_scope": "consolidated",
+        "observation_ids": sorted(matched_ids),
+    }
+
+
+def _financial_period_coverage_verified_override(
+    tk: str, verified_evidence_period: Mapping[str, Any] | None,
+) -> tuple[bool, str | None]:
+    """Defense in depth: re-validate verified_evidence_period against this exact ticker
+    even though the resolver above is already hardcoded to one scope -- a future wiring
+    change must not silently apply HPG's verified period to a different ticker."""
+    if (
+        isinstance(verified_evidence_period, Mapping)
+        and verified_evidence_period.get("ticker") == tk
+        and verified_evidence_period.get("statement_scope") == "consolidated"
+        and verified_evidence_period.get("observation_ids")
+    ):
+        return True, verified_evidence_period.get("period")
+    return False, None
+
+
 def build_financial_period_coverage_contract(
     tk: str,
     fin_entry: dict | None,
     canonical_entry: dict | None = None,
+    verified_evidence_period: Mapping[str, Any] | None = None,
 ) -> dict:
     """Xây dựng hợp đồng an toàn ngữ nghĩa cho per-ticker financial period coverage."""
+    evidence_verified, evidence_verified_period = _financial_period_coverage_verified_override(tk, verified_evidence_period)
+
     if not isinstance(fin_entry, dict) or not fin_entry.get("row"):
         return {
             "ticker": tk,
             "latest_raw_period": None,
             "latest_calendar_eligible_period": None,
-            "latest_verified_period": None,
+            "latest_verified_period": evidence_verified_period if evidence_verified else None,
             "latest_complete_period": None,
             "period_type": "unknown",
             "statement_coverage": "missing",
             "canonical_coverage": "missing" if not canonical_entry else canonical_entry.get("status", "missing"),
-            "coverage_status": "unavailable",
+            "coverage_status": "verified_only" if evidence_verified else "unavailable",
             "limitations": [
                 "No financial snapshot records exist for this ticker.",
                 "Global maximum financial dates must never populate missing ticker coverage.",
@@ -545,12 +622,18 @@ def build_financial_period_coverage_contract(
     latest_calendar_eligible_period = period_used
 
     source_verified = False
+    verified_period_value = None
     if isinstance(row, dict) and row.get("source_verified") is True:
         source_verified = True
+        verified_period_value = period_used
     elif isinstance(canonical_entry, dict) and (canonical_entry.get("official_evidence") or {}).get("status") == "verified":
         source_verified = True
+        verified_period_value = period_used
+    elif evidence_verified:
+        source_verified = True
+        verified_period_value = evidence_verified_period
 
-    latest_verified_period = period_used if source_verified else None
+    latest_verified_period = verified_period_value if source_verified else None
 
     ref_period = latest_calendar_eligible_period or latest_raw_period
     if ref_period and "-Q" in str(ref_period):
@@ -2008,6 +2091,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "share_count_period_end": _relative_valuation_period_end_share_count(tk),
         "financial": _financial_input(financial_canonical.get(tk)),
     }, reference_at=reference_at.isoformat())
+    verified_evidence_period = resolve_verified_financial_period_evidence(runtime_root())
     return {
         "snapshot": snapshot_rows.get(tk),
         "canonical_rs_rating": rs_reconciliation["canonical_rs_rating"],
@@ -2020,7 +2104,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "financial_latest_quality": {
             "excluded_unverified_periods": fin.get("excluded_unverified_periods", []),
         },
-        "financial_period_coverage": build_financial_period_coverage_contract(tk, fin, financial_canonical.get(tk)),
+        "financial_period_coverage": build_financial_period_coverage_contract(tk, fin, financial_canonical.get(tk), verified_evidence_period),
         "earnings_anomaly": build_earnings_anomaly_contract(tk, fin, financial_canonical.get(tk)),
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "financial_identity": empty_identity_export(),
