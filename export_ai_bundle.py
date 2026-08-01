@@ -660,20 +660,40 @@ def build_valuation_namespaces_contract(
     share_basis_pe = None
     share_basis_pb = None
     if isinstance(relative_val, dict):
-        val_res = relative_val.get("valuation") or {}
-        if isinstance(val_res, dict):
-            hist_pe_val = (val_res.get("pe") or {}).get("value")
-            hist_pb_val = (val_res.get("pb") or {}).get("value")
+        methods = relative_val.get("methods")
+        if isinstance(methods, dict):
+            pe_m = methods.get("pe") if isinstance(methods.get("pe"), dict) else {}
+            if pe_m.get("state") == "available":
+                hist_pe_val = pe_m.get("observed_multiple")
+                price_date = pe_m.get("price_as_of_date")
+                fin_p = pe_m.get("financial_period")
+                if isinstance(fin_p, dict):
+                    fin_period = fin_p.get("period")
+                prov = pe_m.get("provenance") if isinstance(pe_m.get("provenance"), dict) else {}
+                sh_wa = prov.get("share_count_weighted_average_basic") if isinstance(prov.get("share_count_weighted_average_basic"), dict) else {}
+                share_basis_pe = sh_wa.get("semantics")
+
+            pb_m = methods.get("pb") if isinstance(methods.get("pb"), dict) else {}
+            if pb_m.get("state") == "available":
+                hist_pb_val = pb_m.get("observed_multiple")
+                price_date = price_date or pb_m.get("price_as_of_date")
+                fin_p = pb_m.get("financial_period")
+                if isinstance(fin_p, dict):
+                    fin_period = fin_period or fin_p.get("period")
+                prov = pb_m.get("provenance") if isinstance(pb_m.get("provenance"), dict) else {}
+                sh_pe = prov.get("share_count_period_end") if isinstance(prov.get("share_count_period_end"), dict) else {}
+                share_basis_pb = sh_pe.get("semantics")
+
         inputs = relative_val.get("inputs") or {}
         if isinstance(inputs, dict):
             curr_price = inputs.get("current_price") or {}
-            price_date = (curr_price.get("evidence") or {}).get("trading_date") or curr_price.get("as_of_date")
+            price_date = price_date or (curr_price.get("evidence") or {}).get("trading_date") or curr_price.get("as_of_date")
             sh_wa = inputs.get("share_count_weighted_average_basic") or {}
-            share_basis_pe = sh_wa.get("semantics")
+            share_basis_pe = share_basis_pe or sh_wa.get("semantics")
             sh_pe = inputs.get("share_count_period_end") or {}
-            share_basis_pb = sh_pe.get("semantics")
+            share_basis_pb = share_basis_pb or sh_pe.get("semantics")
             fin_inp = inputs.get("financial") or {}
-            fin_period = (fin_inp.get("period_identity") or {}).get("period")
+            fin_period = fin_period or (fin_inp.get("period_identity") or {}).get("period")
 
     hist_pe_obj = {
         "value": hist_pe_val,
