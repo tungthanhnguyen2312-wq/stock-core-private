@@ -45,5 +45,46 @@ class CashFlowDebtMappingTests(unittest.TestCase):
         self.assertEqual({r["canonical_metric"] for r in rows},{"operating_cash_flow","interest_expense"})
         self.assertEqual(canonicalize_items([],entity_type="corporate"),{"status":"unavailable","records":[]})
 
+    # Phase 6E: current_liabilities / retained_earnings / profit_before_tax direct
+    # mappings, and the derived ebit = profit_before_tax - interest_expense identity.
+
+    def test_current_liabilities_retained_earnings_profit_before_tax_direct_mapping(self):
+        rows=self.records([item("current_liabilities",75225243262689,"balance_sheet"),
+                            item("undistributed_earnings",49599124109203,"balance_sheet"),
+                            item("profit_before_tax",13693502261178,"income_statement")])
+        by_metric={r["canonical_metric"]:r for r in rows}
+        self.assertEqual(by_metric["current_liabilities"]["value"],75225243262689)
+        self.assertEqual(by_metric["retained_earnings"]["value"],49599124109203)
+        self.assertEqual(by_metric["profit_before_tax"]["value"],13693502261178)
+        self.assertEqual({r["direct_or_derived"] for r in rows},{"direct"})
+
+    def test_ebit_derives_as_profit_before_tax_minus_negative_interest_expense(self):
+        """interest_expense's canonical value carries VCI's own negative sign convention
+        (see test_interest_is_not_finance_cost_and_attributable_is_explicit); EBIT must
+        subtract that negative value (adding its magnitude back), not add it directly."""
+        rows=self.records([item("profit_before_tax",13693502261178,"income_statement"),
+                            item("interest_expenses",-2287360810880,"income_statement")])
+        ebit=next(r for r in rows if r["canonical_metric"]=="ebit")
+        self.assertEqual(ebit["value"],13693502261178-(-2287360810880))
+        self.assertEqual(ebit["value"],15980863072058)
+        self.assertEqual(ebit["direct_or_derived"],"derived")
+        self.assertEqual(len(ebit["provenance"]["components"]),2)
+
+    def test_ebit_not_derived_when_only_one_component_present(self):
+        rows=self.records([item("profit_before_tax",13693502261178,"income_statement")])
+        self.assertNotIn("ebit",{r["canonical_metric"] for r in rows})
+
+    def test_ebit_not_derived_across_incompatible_periods(self):
+        rows=self.records([item("profit_before_tax",100,"income_statement",period="2024"),
+                            item("interest_expenses",-10,"income_statement",period="2023")])
+        self.assertNotIn("ebit",{r["canonical_metric"] for r in rows})
+
+    def test_ebit_never_substitutes_ebitda_or_operating_profit(self):
+        rows=self.records([item("profit_before_tax",100,"income_statement"),
+                            item("interest_expenses",-10,"income_statement"),
+                            item("depreciation_and_amortization",5,"income_statement")])
+        self.assertEqual({r["canonical_metric"] for r in rows},{"profit_before_tax","interest_expense","ebit"})
+        self.assertEqual(next(r for r in rows if r["canonical_metric"]=="ebit")["value"],110)
+
 
 if __name__ == "__main__": unittest.main()

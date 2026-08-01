@@ -5,7 +5,7 @@ import math
 from typing import Any, Mapping, Sequence
 
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 _CORPORATE = {
     ("cash_flow", "net_cash_inflows_outflows_from_operating_activities"): "operating_cash_flow",
     ("cash_flow", "net_cash_inflows_outflows_from_investing_activities"): "investing_cash_flow",
@@ -27,6 +27,11 @@ _CORPORATE = {
     ("income_statement", "net_sales"): "revenue",
     ("income_statement", "net_profit_loss_after_tax"): "net_profit_after_tax_total",
     ("income_statement", "minority_interests"): "minority_interest_net_income",
+    # 1.3.0: distress/strength identity expansion (Phase 6E) -- direct VCI item_ids
+    # observed on the same already-cited, already-verified consolidated statement pages.
+    ("balance_sheet", "current_liabilities"): "current_liabilities",
+    ("balance_sheet", "undistributed_earnings"): "retained_earnings",
+    ("income_statement", "profit_before_tax"): "profit_before_tax",
 }
 _BANK = {
     ("cash_flow", "net_cash_from_operating_activities"): "operating_cash_flow",
@@ -114,6 +119,7 @@ def canonicalize_items(items: Sequence[Mapping[str, Any]], *, entity_type: str) 
     records.extend(_derive_total_debt(records))
     records.extend(_derive_shareholders_equity(records))
     records.extend(_derive_total_operating_income(records))
+    records.extend(_derive_ebit(records))
     return {"status":"available" if records else "unavailable", "records":sorted(records,key=lambda r:(r["canonical_metric"],r["provider"],r["period"]))}
 
 
@@ -144,6 +150,27 @@ def _derive_shareholders_equity(records: list[dict[str, Any]]) -> list[dict[str,
         total,minority=group.get("total_equity"),group.get("minority_interest_equity")
         if not total or not minority or total["value"] is None or minority["value"] is None: continue
         output.append({**total,"canonical_metric":"shareholders_equity","value":total["value"]-minority["value"],"raw_item_code":None,"raw_label":None,"direct_or_derived":"derived","qualification_state":"partial" if "statement_scope_unknown" in total["warnings"] or "currency_or_scale_unknown" in total["warnings"] else "qualified","warnings":list(total["warnings"]),"provenance":{**total["provenance"],"components":[total,minority]}})
+    return output
+
+
+def _derive_ebit(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """EBIT = profit_before_tax - interest_expense. interest_expense's canonical value is
+    already negative (VCI's own raw storage sign for this item, reconciled against the
+    unsigned printed statement figure by the interest_expenses sign rule in
+    semantic_evidence_bridge.py); profit_before_tax is a natural positive subtotal that
+    already had that same negative interest_expense deducted. Subtracting the (negative)
+    interest_expense value therefore adds its magnitude back, recovering EBIT -- this is
+    not EBITDA, operating profit, or any other proxy substituted for EBIT."""
+    groups: dict[tuple[Any, ...], dict[str, dict[str, Any]]] = {}
+    for record in records:
+        if record["canonical_metric"] not in {"profit_before_tax","interest_expense"} or record["qualification_state"] == "contradictory": continue
+        key=tuple(record[k] for k in ("provider","vnstock_version","source_method","statement_type","reporting_frequency","period","statement_scope","currency","scale"))
+        groups.setdefault(key,{})[record["canonical_metric"]]=record
+    output=[]
+    for group in groups.values():
+        pbt,interest=group.get("profit_before_tax"),group.get("interest_expense")
+        if not pbt or not interest or pbt["value"] is None or interest["value"] is None: continue
+        output.append({**pbt,"canonical_metric":"ebit","value":pbt["value"]-interest["value"],"raw_item_code":None,"raw_label":None,"direct_or_derived":"derived","qualification_state":"partial" if "statement_scope_unknown" in pbt["warnings"] or "currency_or_scale_unknown" in pbt["warnings"] else "qualified","warnings":list(pbt["warnings"]),"provenance":{**pbt["provenance"],"components":[pbt,interest]}})
     return output
 
 
