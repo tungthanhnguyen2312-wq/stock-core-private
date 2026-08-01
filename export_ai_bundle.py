@@ -97,6 +97,7 @@ from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from analysis_lane_eligibility import evaluate_ticker_lanes
 from distribution_evidence import build_distribution_evidence_for_ticker
+from fundamental_quality_evidence import build_fundamental_quality_evidence_for_ticker
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -2299,6 +2300,49 @@ def attach_distribution_evidence(
 
 
 # ==========================================================================
+# Phase 6A — opt-in fundamental quality evidence wiring (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-fundamental-quality-evidence), independent of the Phase
+# 5A/5D flag. tickers[ticker].fundamental_quality_evidence is a distinct key from the
+# pre-existing, always-on tickers[ticker].fundamental_quality field -- this section never
+# reads or writes that field, so the default bundle (and every existing fundamental_quality
+# consumer) is unaffected regardless of this new flag's state.
+
+def build_fundamental_quality_evidence_for_ticker_safe(ticker: str, entry: Mapping[str, Any], root: Path) -> dict[str, Any] | None:
+    """Fail-closed wrapper: a local build failure for this ticker returns None (so no
+    fundamental_quality_evidence key is attached for it) and never raises into the caller's
+    per-ticker loop or corrupts any other field on this or any other ticker's entry."""
+    try:
+        return build_fundamental_quality_evidence_for_ticker(
+            ticker,
+            entity_type=entry.get("entity_type"),
+            financial_canonical=entry.get("financial_canonical"),
+            financial_period_coverage=entry.get("financial_period_coverage"),
+            runtime_root=root,
+        )
+    except Exception:
+        return None
+
+
+def attach_fundamental_quality_evidence(
+    bundle_entries: dict[str, dict], root: Path, include: bool,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False): when include is False,
+    build_fundamental_quality_evidence_for_ticker() is never called and no
+    fundamental_quality_evidence key is ever added -- current default bundle behavior
+    (including the pre-existing fundamental_quality field) is preserved exactly. When True,
+    attaches the complete builder result per ticker; a ticker whose build fails closed is
+    simply skipped, never corrupting any other ticker's fields."""
+    if not include:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_fundamental_quality_evidence_for_ticker_safe(tk, entry, root)
+        if result is not None:
+            entry["fundamental_quality_evidence"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # Phase 5A — opt-in analysis-lane eligibility wiring (disabled by default)
 # ==========================================================================
 # Same disabled-by-default style as sector_aware_downstream_facts.py: the evaluator in
@@ -2394,6 +2438,13 @@ def main() -> int:
                              " tickers[ticker].analysis_lane_eligibility from"
                              " analysis_lane_eligibility.evaluate_ticker_lanes() per ticker."
                              " Not enabled in any default/production invocation.")
+    parser.add_argument("--include-fundamental-quality-evidence", action="store_true",
+                        help="Opt-in, disabled by default (Phase 6A): attach"
+                             " tickers[ticker].fundamental_quality_evidence from"
+                             " fundamental_quality_evidence.build_fundamental_quality_evidence_for_ticker()"
+                             " per ticker. Distinct from the pre-existing, always-on"
+                             " tickers[ticker].fundamental_quality field. Not enabled in any"
+                             " default/production invocation.")
     parser.add_argument("--verify", metavar="MANIFEST_PATH",
                         help="KHÔNG xuất gì — chỉ so sha256 trong 1 bundle_manifest.json cũ với"
                              " file hiện tại trên đĩa ('checksum dependency'); exit 0 nếu khớp"
@@ -2581,6 +2632,7 @@ def main() -> int:
 
     attach_distribution_evidence(bundle_entries, runtime_root(), args.include_analysis_lane_eligibility)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
+    attach_fundamental_quality_evidence(bundle_entries, runtime_root(), args.include_fundamental_quality_evidence)
 
     # item F: bundle_entries[tk]["context_package"] only exists from this point on (it isn't
     # attached to the earlier `entries` build_data_quality_flags() already consumed above) —
