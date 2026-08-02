@@ -1,5 +1,6 @@
 {
   "accepted_events": [],
+  "authority_level": "provider_internal_empirical",
   "adapter_schema_version": "legacy_lineage_unknown",
   "agreement_rate": 0.0,
   "canonical_data_path": "dashboard-runtime/vn_stock.db:ohlcv.close -> export_ai_bundle.load_ohlcv_recent",
@@ -26,14 +27,17 @@
     "Only the VCI rows in the current ohlcv table are in scope.",
     "Legacy OHLCV rows without ohlcv_lineage remain provider-version unknown.",
     "Volume basis and current shares are independent unqualified blockers.",
-    "Cash-dividend test not run: no qualified retained compatible cash-dividend events."
+    "Cash-dividend test not run: no qualified retained compatible cash-dividend events.",
+    "VCI_PROVIDER_INTERNAL_ROUTE_BLOCKED_BY_RATIO_SEMANTICS: vnstock 4.0.4 Company.events exposes exercise_ratio without an installed endpoint schema, conversion implementation, numerator, denominator, direction, or scale contract."
   ],
   "method": "empirical_corporate_action_continuity",
   "provider": "VCI",
+  "not_verified_for": ["official corporate-action lineage", "current-share transition", "execution-price semantics", "market capitalization", "valuation", "ranking", "recommendations", "backtesting"],
   "provider_version": "legacy_version_unknown",
-  "retest_after": "eight qualified retained stock-action events and one retained active-path provider version",
+  "retest_after": "VCI publishes a versioned exercise_ratio semantic contract or adapter conversion defining numerator, denominator, direction, scale, and ISS applicability",
   "schema_version": "1.0.0",
   "status": "INCONCLUSIVE",
   "tested_at": "2026-08-02T12:30:00Z",
+  "verified_for": [],
   "value": "unknown"
 }

@@ -27,3 +27,6 @@
 ## 2026-08-02 - Bounded official-event locator
 - Provider corporate-action records are used only to select and deduplicate a bounded ISS candidate set; locator URLs are restricted to configured official hosts and are never evidence or qualified events.
 - Issuer domains are admitted only from retained official citations; candidates without a qualified mapping cannot pass the issuer-domain tier.
+
+## 2026-08-02 - VCI provider-internal ratio semantics
+- The installed vnstock 4.0.4 `Company.events` public method delegates dynamically and its available source/docstring establishes no `exercise_ratio` numerator, denominator, direction, scale, or ISS-specific applicability. The provider-internal route is terminally blocked until that direct contract changes; no price windows may be acquired from those values.
