@@ -1,7 +1,7 @@
 # Stock Lookup state
 
-- Active phase: P0 — Market-data basis and lineage.
-- Active milestone: Configure `EODHD_API_TOKEN`, then run authenticated HPG/VNM private-shadow price-authority qualification.
+- Active phase: P0 market-data qualification is paused; bounded P1 evidence work may continue without weakening its gates.
+- Active milestone: qualify HPG/VNM point-in-time common-outstanding share identity and coverage through the trusted session.
 - Producer baseline: `3c7a372`.
 - Consumer baseline: `6797cab`.
 - Dashboard baseline: `5ecbbad`.
@@ -21,5 +21,6 @@
 - Blocker: production snapshots have not been regenerated through the forward timestamp contract. No historical timestamp was inferred or backfilled.
 - Partial progress: HPG's issuer-hosted 2026 completion notice is retained in the approved acquisition boundary with a verified source hash. It states 8,442,964,520 listed shares after the change, effective 2026-07-02 and tradable 2026-07-15. Canonical promotion and proof of coverage through the trusted session remain required before labeling the identity current.
 - Partial progress: VNM's issuer-linked reviewed consolidated interim statement is retained with a verified source hash. Note 22 directly reports 2,089,955,445 issued and outstanding common shares at 2026-06-30, unchanged from 2026-01-01. It remains a latest qualified historical identity because the document does not prove absence of a July transition through the trusted session.
-- Next exit gates: authenticated same-session EODHD HPG/VNM schema qualification for P0, plus official effective-date/outstanding-share evidence through the trusted session for P1.
+- Completed: a deterministic share-transition resolver now requires direct common-outstanding identity, issuer scope, share units, effective dates, completed lifecycle evidence, citation/hash lineage, and explicit coverage through the target date. Listed, registered, or issued-only counts cannot be promoted when treasury treatment is unresolved.
+- Next exit gates: P0 resumes only on an explicit authenticated-source validation; P1 requires direct HPG common-outstanding/treasury semantics and HPG/VNM transition coverage through the trusted session.
 - Production state: runtime databases and generated production artifacts remain unchanged by governance work.
