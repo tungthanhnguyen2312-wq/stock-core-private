@@ -47,6 +47,9 @@ REQUIRED_IDENTITIES = (
 # structural inapplicability, distinct from insufficient_evidence -- citing bank
 # identities would not make the score meaningful.
 _NON_APPLICABLE_ENTITY_TYPES = frozenset({"bank", "securities", "insurance", "finance_company"})
+# Absent/unknown is a third state, distinct from both "corporate" and "known to be a
+# financial institution". It blocks rather than defaulting -- see evaluate_altman_z_score.
+_UNQUALIFIED_ENTITY_TYPES = frozenset({"", "unknown", "none", "null"})
 
 _IDENTITY_ALIGNMENT_KEYS = ("period", "statement_scope", "currency", "unit_scale")
 
@@ -54,7 +57,7 @@ _IDENTITY_ALIGNMENT_KEYS = ("period", "statement_scope", "currency", "unit_scale
 def _out(status: str, **extra: Any) -> dict[str, Any]:
     result = {
         "schema_version": VERSION, "model": "altman_z_score", "variant": VARIANT,
-        "formula": FORMULA, "status": status, "score": None, "zone": None,
+        "formula": FORMULA, "status": status, "score": None, "zone": None, "zone_proximity": None,
         "components": {}, "inputs": {}, "missing_inputs": [], "blocking_reasons": [],
         "thresholds": {"distress_below": DISTRESS_THRESHOLD, "safe_above": SAFE_THRESHOLD},
         "period": None, "statement_scope": None, "currency": None, "unit_scale": None,
@@ -71,12 +74,34 @@ def _out(status: str, **extra: Any) -> dict[str, Any]:
     return result
 
 
+# A zone label is a step function over a continuous score, so a score sitting just inside
+# a boundary carries far less information than the bare label suggests -- VNM FY2024 lands
+# at 2.8976 against a 2.90 safe threshold, 0.08% away from a different verdict. Reporting
+# the distance to the nearest boundary, and flagging it when it is within this relative
+# tolerance, keeps the label from being read as more decisive than the arithmetic is.
+NEAR_THRESHOLD_RELATIVE_TOLERANCE = 0.02
+
+
 def _zone(score: float) -> str:
     if score < DISTRESS_THRESHOLD:
         return "distress"
     if score > SAFE_THRESHOLD:
         return "safe"
     return "grey"
+
+
+def _zone_proximity(score: float) -> dict[str, Any]:
+    """Distance from `score` to the nearer zone boundary, plus a near-threshold flag."""
+    distances = {"distress_below": abs(score - DISTRESS_THRESHOLD), "safe_above": abs(score - SAFE_THRESHOLD)}
+    nearest = min(distances, key=distances.get)
+    threshold = DISTRESS_THRESHOLD if nearest == "distress_below" else SAFE_THRESHOLD
+    distance = distances[nearest]
+    return {
+        "nearest_threshold": nearest, "nearest_threshold_value": threshold,
+        "distance_to_nearest_threshold": distance,
+        "relative_distance": distance / threshold,
+        "near_threshold": distance / threshold <= NEAR_THRESHOLD_RELATIVE_TOLERANCE,
+    }
 
 
 def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
@@ -89,11 +114,19 @@ def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
     regardless of how complete its identities are -- structural inapplicability is
     reported as itself, never as missing evidence.
     """
-    if str(entity_type or "").strip().lower() in _NON_APPLICABLE_ENTITY_TYPES:
+    normalized_entity_type = str(entity_type or "").strip().lower()
+    if normalized_entity_type in _NON_APPLICABLE_ENTITY_TYPES:
         return _out("not_applicable", blocking_reasons=[
             f"Altman corporate Z'-score is not applicable to entity_type={entity_type!r}: the model "
             "was estimated on non-financial firms and its working-capital and asset-turnover terms "
             "have no equivalent meaning for a financial institution's balance sheet."])
+    if normalized_entity_type in _UNQUALIFIED_ENTITY_TYPES:
+        # An absent or "unknown" entity_type must never be silently read as "corporate":
+        # that would fail open, quietly applying a non-financial model to what may be a
+        # bank. Unknown stays unknown, and the caller is told which fact is missing.
+        return _out("insufficient_evidence", missing_inputs=["entity_type"], blocking_reasons=[
+            f"entity_type is not qualified (got {entity_type!r}); the Altman corporate Z'-score "
+            "cannot be asserted to apply without knowing the entity archetype."])
     identities = identities if isinstance(identities, Mapping) else {}
     present = {name: identities[name] for name in REQUIRED_IDENTITIES
                if isinstance(identities.get(name), Mapping) and _number(identities[name].get("value")) is not None}
@@ -126,8 +159,17 @@ def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
     }
     score = sum(COEFFICIENTS[name] * ratio for name, ratio in ratios.items())
     sample = next(iter(present.values()))
+    proximity = _zone_proximity(score)
+    limitations = None
+    if proximity["near_threshold"]:
+        limitations = _out("available")["limitations"] + [
+            f"Score is {proximity['distance_to_nearest_threshold']:.4f} from the "
+            f"{proximity['nearest_threshold']} boundary ({proximity['nearest_threshold_value']}), within "
+            f"{NEAR_THRESHOLD_RELATIVE_TOLERANCE:.0%} of it: the zone label is not robust to small "
+            "input revisions and should not be read as a decisive classification."]
     return _out(
-        "available", score=score, zone=_zone(score),
+        "available", score=score, zone=_zone(score), zone_proximity=proximity,
+        **({"limitations": limitations} if limitations else {}),
         components={name: {"ratio": ratio, "coefficient": COEFFICIENTS[name],
                             "weighted": COEFFICIENTS[name] * ratio,
                             "definition": _DEFINITIONS[name]} for name, ratio in ratios.items()},

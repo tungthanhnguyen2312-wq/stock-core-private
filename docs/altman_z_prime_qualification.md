@@ -1,4 +1,4 @@
-# Altman Z'-Score Qualification (HPG FY2024)
+# Altman Z'-Score Qualification (HPG and VNM, FY2024)
 
 Closes the Phase 6D "Altman readiness" gate that had been open since 2026-08-01.
 Bounded to one model (`altman_z_score.py`), one variant, and one already-retained
@@ -47,10 +47,9 @@ EBITDA components: the cited document must still hash-verify against `manifest.j
 `_SUPPORTED_FINANCIAL_IDENTITIES`, the scope must be supported, and no two citations may
 conflict for the same `(ticker, metric, reporting_period)`.
 
-Both values were read directly from rendered pages of
-`hpg-consolidated-fy2024-audited.pdf` (evidence_id `a7c3711d...ddcd2a8`; the pages are
-scanned images with no text layer) and each was cross-checked against the statement's own
-printed arithmetic before promotion:
+Both issuers' PDFs are scanned images with no text layer, so every value was read from a
+rendered page and cross-checked against the statement's own printed arithmetic before
+promotion. HPG (`hpg-consolidated-fy2024-audited.pdf`, evidence_id `a7c3711d...ddcd2a8`):
 
 | Identity | Code | Page | Value (VND) | Cross-check |
 |---|---|---|---|---|
@@ -74,9 +73,16 @@ HPG FY2024 consolidated, VND, unit_scale 1, computed end-to-end from the evidenc
 | X4 | book value of equity / total liabilities | 1.043746 | 0.438374 |
 | X5 | sales / total assets | 0.618537 | 0.617300 |
 
-**Z' = 1.5006 -> grey zone.** `is_actionable` is `False` and `historical_only` is `True`:
-this is an evidence-qualified single-period diagnostic for FY2024, not a current-market
-assessment and not an investment signal.
+**HPG Z' = 1.5006 -> grey zone.** `is_actionable` is `False` and `historical_only` is
+`True`: this is an evidence-qualified single-period diagnostic for FY2024, not a
+current-market assessment and not an investment signal.
+
+**VNM Z' = 2.8976 -> grey zone, flagged `near_threshold`.** The safe boundary is 2.90, so
+VNM sits 0.0024 (0.08%) below a different verdict. A zone label is a step function over a
+continuous score, so every result carries `zone_proximity` (distance to the nearer
+boundary and its relative size), and a result within 2% of a boundary additionally gets a
+limitation saying the label is not robust to small input revisions. Reporting VNM as a
+clean "grey" without that caveat would overstate what the arithmetic supports.
 
 Working capital is derived inside the model (`current_assets - current_liabilities`) and
 is never accepted as a supplied input. EBIT is derived as
@@ -84,23 +90,41 @@ is never accepted as a supplied input. EBIT is derived as
 
 ## Scope and fail-closed behaviour
 
-- **VNM**: `insufficient_evidence`, naming exactly `current_liabilities` and
-  `retained_earnings`. VNM's own consolidated PDF is retained and hash-verified, so the
-  same two-citation promotion would close it -- deliberately not done here; each value
-  must be read and cross-checked individually, not assumed by analogy with HPG.
-- **VCB**: `not_applicable` on `entity_type`, independent of evidence. Altman's corporate
-  Z/Z' was estimated on non-financial firms; a bank's balance sheet has no operating-cycle
-  current/non-current split and no meaningful asset turnover. Structural inapplicability
-  is reported as itself, never as an evidence gap -- citing bank identities would not make
-  the score meaningful.
+- **VNM**: qualified in the same way, from pdf_page 9 of its own retained consolidated
+  PDF (both figures are on one page there). `current_liabilities` = 18,459,546,837,640
+  (code 310), `retained_earnings` = 3,471,224,745,772 (code 421). Cross-checks:
+  `310 + 330 = 300` = the qualified `liabilities` citation exactly; `421a + 421b = 421`;
+  `440 = 300 + 400` = the qualified `total_assets` citation exactly. **Z' = 2.8976**.
+- **SSI / EVF**: `not_applicable` on `entity_type` (securities, finance_company),
+  independent of evidence. Altman's corporate Z/Z' was estimated on non-financial firms;
+  a financial institution's balance sheet has no operating-cycle current/non-current split
+  and no meaningful asset turnover. Structural inapplicability is reported as itself,
+  never as an evidence gap.
+- **VCB**: `insufficient_evidence` naming `entity_type`. Its bundle entry carries
+  `entity_type: null`, and an absent archetype is a third state -- neither "corporate" nor
+  "known financial institution". Defaulting it to corporate would fail open, applying a
+  non-financial model to a bank; the contract blocks instead.
 - Any disagreement among the qualified identities on period, statement scope, currency, or
   unit scale fails closed rather than combining across the mismatch.
 - `total_assets` and `total_liabilities` must both be strictly positive.
 
-## Not wired into the bundle
+## Bundle wiring
 
-`altman_z_score.py` is a standalone, pure contract with its own tests. It is **not** yet
-attached to `analysis_bundle.json` and does not change `fundamental_quality.py`'s existing
-`altman_z_score` model slot (still `inapplicable`). Wiring it is a separate milestone --
-it needs the opt-in flag pattern used by the other Phase 5/6 contracts plus Consumer
-pass-through, and must not silently change default bundle output.
+Attached as `tickers[ticker].financial_distress_evidence` by
+`export_ai_bundle.build_financial_distress_evidence_for_ticker()`, behind the **existing**
+`--include-fundamental-quality-evidence` flag. No new CLI surface was added: Z' is a
+fundamental-quality/distress model over the same already-qualified FY2024 evidence, so it
+belongs on the same switch. With the flag off (the default) the builder is never called
+and no key is added -- default bundle output is byte-for-byte unchanged, and the four
+pinned production artifacts were verified unchanged after both promotions.
+
+Input sourcing inside the builder is deliberately minimal rather than a second evidence
+reader: the two distress citations are loaded from `financial_identity_citations.jsonl`
+and **choose the reporting period**, and the five remaining identities are then taken from
+the entry's own already-enriched `financial_canonical` records -- accepted only at
+`quality_state == "available"` and only at that exact same period, scope, currency, and
+unit scale. `total_equity` (not `shareholders_equity`) is X4's numerator, matching the
+statement's own `400 = 410` subtotal and the `440 = 300 + 400` identity.
+
+`fundamental_quality.py`'s pre-existing `altman_z_score` model slot is untouched and still
+reports `inapplicable`; the two are separate keys and this milestone does not merge them.

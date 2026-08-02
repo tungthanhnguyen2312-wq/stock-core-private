@@ -130,13 +130,56 @@ class EntityTypeApplicabilityTests(unittest.TestCase):
             self.assertEqual(result["missing_inputs"], [], "structural inapplicability is not an evidence gap")
             self.assertTrue(result["blocking_reasons"], entity_type)
 
-    def test_corporate_and_unknown_entity_types_still_evaluate_normally(self):
-        for entity_type in ("corporate", "unknown", ""):
+    def test_corporate_entity_type_evaluates_normally(self):
+        self.assertEqual(evaluate_altman_z_score(_identities(), entity_type="corporate")["status"], "available")
+
+    def test_absent_or_unknown_entity_type_blocks_instead_of_defaulting_to_corporate(self):
+        """Fail-open guard: silently reading an absent entity_type as "corporate" would
+        apply a non-financial model to what may well be a bank -- VCB's own bundle entry
+        carries entity_type=None today. Unknown must stay unknown."""
+        for entity_type in (None, "", "unknown", "  ", "None"):
             result = evaluate_altman_z_score(_identities(), entity_type=entity_type)
-            self.assertEqual(result["status"], "available", entity_type)
+            self.assertEqual(result["status"], "insufficient_evidence", repr(entity_type))
+            self.assertIn("entity_type", result["missing_inputs"], repr(entity_type))
+            self.assertIsNone(result["score"], repr(entity_type))
 
     def test_default_entity_type_is_corporate(self):
         self.assertEqual(evaluate_altman_z_score(_identities())["status"], "available")
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ZoneProximityTests(unittest.TestCase):
+    """A zone label is a step function over a continuous score. VNM FY2024 lands at
+    2.8976 against a 2.90 'safe' boundary -- 0.08% away from a different verdict -- so
+    the bare label overstates how decisive the arithmetic is."""
+
+    def _score_near_safe_boundary(self):
+        # VNM FY2024 consolidated, PDF-verified; Z' = 2.8976 vs SAFE_THRESHOLD 2.90.
+        return {
+            "current_assets": 37553650065098, "current_liabilities": 18459546837640,
+            "retained_earnings": 3471224745772, "total_assets": 55049061537061,
+            "total_liabilities": 18874658707398, "net_sales": 61782609528445,
+            "owners_equity": 36174402829663, "ebit": 11879078302630,
+        }
+
+    def test_vnm_fy2024_is_flagged_as_near_the_safe_threshold(self):
+        result = evaluate_altman_z_score(_identities(self._score_near_safe_boundary()))
+        self.assertEqual(result["status"], "available")
+        self.assertAlmostEqual(result["score"], 2.8976, places=3)
+        self.assertEqual(result["zone"], "grey")
+        proximity = result["zone_proximity"]
+        self.assertTrue(proximity["near_threshold"])
+        self.assertEqual(proximity["nearest_threshold"], "safe_above")
+        self.assertLess(proximity["distance_to_nearest_threshold"], 0.01)
+        self.assertTrue(any("not robust to small input revisions" in l for l in result["limitations"]))
+
+    def test_hpg_fy2024_is_not_flagged_as_near_a_threshold(self):
+        result = evaluate_altman_z_score(_identities())
+        self.assertAlmostEqual(result["score"], 1.5006, places=3)
+        self.assertFalse(result["zone_proximity"]["near_threshold"])
+        self.assertFalse(any("not robust" in l for l in result["limitations"]))
+
+    def test_proximity_is_absent_when_no_score_was_produced(self):
+        self.assertIsNone(evaluate_altman_z_score({})["zone_proximity"])

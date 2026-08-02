@@ -87,7 +87,8 @@ from official_evidence import load_cited_financial_records
 from financial_identity import empty_identity_export
 from corporate_actions_export import build_corporate_actions_section
 from financial_observations import canonical_records, read_observations, store_path
-from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price, load_verified_ebitda_components, derive_ebitda, load_verified_citations
+from semantic_evidence_bridge import enrich_canonical_records, reconcile_metric_identities, load_verified_share_basis, latest_share_basis, load_verified_market_price, load_verified_ebitda_components, latest_ebitda_component, derive_ebitda, load_verified_citations, load_verified_financial_identities, latest_financial_identity
+from altman_z_score import evaluate_altman_z_score
 from financial_mapping import get_default_registry
 from fundamental_quality import evaluate_fundamental_quality, reconcile_legacy_fundamental_quality_with_qualified_evidence
 from relative_valuation import evaluate_relative_valuation
@@ -2553,7 +2554,93 @@ def attach_fundamental_quality_evidence(
         entry["historical_fundamental_brief"] = build_historical_fundamental_brief(
             tk, result, entry["historical_capital_structure"],
         )
+        entry["financial_distress_evidence"] = build_financial_distress_evidence_for_ticker(
+            tk, entry.get("entity_type"), entry.get("financial_canonical"), root,
+        )
     return bundle_entries
+
+
+# Altman Z' identity sourcing. Deliberately reuses the Phase 6A opt-in flag rather than
+# adding a new CLI surface: Z' is a fundamental-quality/distress model over the same
+# already-qualified FY2024 evidence, so it belongs on the same switch. Default bundle
+# output is unchanged while that flag is off.
+# Altman identity name -> the canonical_metric already present on the entry's
+# financial_canonical records. `total_equity` (not `shareholders_equity`) is X4's
+# numerator: Z' uses total book equity including non-controlling interests, matching the
+# statement's own 400 = 410 subtotal and the 440 = 300 + 400 identity.
+_ALTMAN_FROM_CANONICAL = {
+    "current_assets": "current_assets", "total_assets": "total_assets",
+    "total_liabilities": "total_liabilities", "net_sales": "revenue", "owners_equity": "total_equity",
+}
+
+
+def _altman_identity(entry: Mapping[str, Any], extra: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    identity = {"value": entry["value"], "period": entry["reporting_period"],
+                "statement_scope": entry["statement_scope"], "currency": entry["currency"],
+                "unit_scale": entry["unit_scale"], "citation_id": entry["citation_id"]}
+    if extra:
+        identity.update(extra)
+    return identity
+
+
+def build_financial_distress_evidence_for_ticker(ticker: str, entity_type: Any,
+                                                  financial_canonical: Mapping[str, Any] | None,
+                                                  root: Path) -> dict[str, Any]:
+    """Assemble Altman Z' inputs from already-qualified evidence only, then evaluate.
+
+    Never reads a price, a current-session field, or an unqualified provider row. The two
+    distress-specific identities come from financial_identity_citations.jsonl and choose
+    the reporting period; the five balance-sheet/income-statement identities are then taken
+    from the entry's own already-enriched canonical records, accepted only at
+    quality_state == "available" and only at that exact same period/scope/currency/scale.
+    EBIT is derived from the already-qualified EBITDA components. Any absence simply leaves
+    that identity out and evaluate_altman_z_score() fails closed naming it; this function
+    never raises into the caller's per-ticker loop.
+    """
+    identities: dict[str, dict[str, Any]] = {}
+    try:
+        financial_identities = load_verified_financial_identities(root).get("by_key") or {}
+        for metric in ("current_liabilities", "retained_earnings"):
+            found = latest_financial_identity(financial_identities, ticker, metric)
+            if found is not None:
+                identities[metric] = _altman_identity(found)
+
+        anchor = next(iter(identities.values()), None)
+        if anchor is not None:
+            records = (financial_canonical or {}).get("records") or []
+            for name, canonical_metric in _ALTMAN_FROM_CANONICAL.items():
+                for record in records:
+                    if (record.get("canonical_metric") == canonical_metric
+                            and record.get("quality_state") == "available"
+                            and (record.get("period_identity") or {}).get("period") == anchor["period"]
+                            and record.get("statement_scope") == anchor["statement_scope"]
+                            and record.get("currency") == anchor["currency"]
+                            and record.get("unit_scale") == anchor["unit_scale"]
+                            and record.get("value") is not None):
+                        identities[name] = {"value": record["value"], "period": anchor["period"],
+                                             "statement_scope": record["statement_scope"],
+                                             "currency": record["currency"], "unit_scale": record["unit_scale"],
+                                             "canonical_metric": canonical_metric,
+                                             "source": record.get("source")}
+                        break
+
+        components = load_verified_ebitda_components(root).get("by_key") or {}
+        pbt = latest_ebitda_component(components, ticker, "profit_before_tax")
+        interest = latest_ebitda_component(components, ticker, "interest_expense")
+        if (pbt is not None and interest is not None
+                and pbt["reporting_period"] == interest["reporting_period"]
+                and pbt["statement_scope"] == interest["statement_scope"]
+                and pbt["currency"] == interest["currency"] and pbt["unit_scale"] == interest["unit_scale"]):
+            identities["ebit"] = _altman_identity(pbt, {
+                "value": pbt["value"] + interest["value"],
+                "derivation": "profit_before_tax + interest_expense",
+                "citation_id": [pbt["citation_id"], interest["citation_id"]]})
+    except Exception:
+        pass
+    # entity_type is passed through as-is, never coerced to a default: an absent value is
+    # a distinct third state and evaluate_altman_z_score() blocks on it rather than
+    # assuming the corporate archetype.
+    return evaluate_altman_z_score(identities, entity_type=entity_type)
 
 
 # ==========================================================================
