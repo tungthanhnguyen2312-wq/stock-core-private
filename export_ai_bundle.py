@@ -421,6 +421,12 @@ def retained_source_timestamp(row: dict | None) -> object | None:
             return value
     return None
 
+
+def common_retained_source_timestamp(rows: list[dict]) -> object | None:
+    values = {retained_source_timestamp(row) for row in rows}
+    values.discard(None)
+    return next(iter(values)) if len(values) == 1 else None
+
 def load_analysis_scores(tickers: list[str]) -> tuple[dict, dict, dict]:
     path = runtime_path(ANALYSIS_PATH)
     if not path.exists():
@@ -1763,6 +1769,7 @@ def load_market_breadth() -> tuple[list[dict] | None, dict]:
     info = {
         "file": path.name, "exists": True, "rows": int(len(df)),
         "data_date": str(df["date"].max()) if len(df) and "date" in df.columns else None,
+        "source_generated_at": common_retained_source_timestamp(records),
         "sha256": sha256_file(path), "mtime": _mtime_epoch(path), "mtime_iso": _mtime_iso(path),
     }
     return records, info
@@ -2250,7 +2257,7 @@ def _historical_relative_valuation_price(tk: str) -> dict | None:
 
 def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
                        financial_rows, financial_canonical, snapshot_info, ta_info, reference_at,
-                       verified_periods_by_ticker=None) -> dict:
+                       price_basis, verified_periods_by_ticker=None) -> dict:
     warnings = []
     if snapshot_rows.get(tk) is None:
         warnings.append("khong_co_trong_screen_snapshot_live (mã không live hoặc chưa sync)")
@@ -2296,6 +2303,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "ai_report": freshness_envelope(domain="ai_report", as_of_date=score_session.get("session_date"), generated_at=score_session.get("generated_at"), source=ANALYSIS_PATH, reference_at=reference_at, dependency=snapshot_freshness),
         "financial_statements": financial_freshness,
     }
+    current_price_actionable = snapshot_freshness.get("is_actionable") is True and price_basis.get("price_basis_verified") is True
     relative_val = evaluate_relative_valuation({
         "entity_type": get_default_registry().entity_type_for(tk),
         "current_price": _historical_relative_valuation_price(tk),
@@ -2320,9 +2328,9 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "financial_canonical": financial_canonical.get(tk, {"status": "missing", "records": []}),
         "financial_identity": empty_identity_export(),
         "fundamental_quality": evaluate_fundamental_quality(financial_canonical.get(tk), get_default_registry().entity_type_for(tk)),
-        "intrinsic_valuation": evaluate_intrinsic_valuation({"entity_type": get_default_registry().entity_type_for(tk), "financial": _financial_input(financial_canonical.get(tk)), "share_count": _net_net_share_count(tk), "current_price_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat()),
+        "intrinsic_valuation": evaluate_intrinsic_valuation({"entity_type": get_default_registry().entity_type_for(tk), "financial": _financial_input(financial_canonical.get(tk)), "share_count": _net_net_share_count(tk), "current_price_actionable": current_price_actionable}, reference_at=reference_at.isoformat()),
         "scenario_analysis": evaluate_scenario_analysis({}, reference_at=reference_at.isoformat()),
-        "risk_analysis": evaluate_market_risk({"ticker": tk, "ohlcv": ohlcv, "price_adjustment": "qualified" if build_price_basis_contract().get("price_basis_verified") else "unknown", "volume_units": "qualified" if build_price_basis_contract().get("volume_basis_verified") else "unknown", "volume_basis": build_price_basis_contract().get("volume_basis"), "current_actionable": snapshot_freshness.get("is_actionable")}, reference_at=reference_at.isoformat(), runtime_root=runtime_root),
+        "risk_analysis": evaluate_market_risk({"ticker": tk, "ohlcv": ohlcv, "price_adjustment": "qualified" if price_basis.get("price_basis_verified") else "unknown", "volume_units": "qualified" if price_basis.get("volume_basis_verified") else "unknown", "volume_basis": price_basis.get("volume_basis"), "current_actionable": current_price_actionable}, reference_at=reference_at.isoformat(), runtime_root=runtime_root),
         "relative_valuation": relative_val,
         "valuation_namespaces": build_valuation_namespaces_contract(tk, snapshot_rows.get(tk), relative_val, fin),
         "share_basis_identities": build_share_basis_identities_contract(tk, snapshot_rows.get(tk), runtime_root()),
@@ -2330,7 +2338,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "ohlcv_recent_count": len(ohlcv),
         "corporate_intelligence": corporate,
         "freshness": freshness,
-        "analysis_readiness": evaluate_analysis_readiness(freshness=freshness, corporate_intelligence=corporate, reference_at=reference_at),
+        "analysis_readiness": evaluate_analysis_readiness(freshness=freshness, corporate_intelligence=corporate, reference_at=reference_at, price_basis_provenance=price_basis),
         "warnings": warnings,
     }
 
@@ -2346,9 +2354,10 @@ def build_focus_extract(tickers, conn, snapshot_rows, ta_rows, score_rows, score
         tk: v for tk, v in resolve_verified_financial_periods(runtime_root()).items()
         if tk in _PHASE_5C_ENABLED_TICKERS
     }
+    price_basis = build_price_basis_contract()
     return {tk: build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_session,
                                    financial_rows, financial_canonical, snapshot_info, ta_info, reference_at,
-                                   verified_periods_by_ticker)
+                                   price_basis, verified_periods_by_ticker)
            for tk in tickers}
 
 
@@ -2714,7 +2723,7 @@ def main() -> int:
 
     generated_at = reference_at.isoformat(timespec="seconds")
     price_basis = build_price_basis_contract()
-    breadth_freshness = freshness_envelope(domain="daily_market", as_of_date=breadth_info.get("data_date"), generated_at=breadth_info.get("data_date"), source=MARKET_BREADTH_PATH, reference_at=reference_at)
+    breadth_freshness = freshness_envelope(domain="daily_market", as_of_date=breadth_info.get("data_date"), generated_at=breadth_info.get("source_generated_at"), source=MARKET_BREADTH_PATH, reference_at=reference_at)
     macro_freshness = {}
     if isinstance(macro_records, dict):
         for series, record in macro_records.items():

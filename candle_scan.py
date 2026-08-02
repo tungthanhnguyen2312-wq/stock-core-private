@@ -3,13 +3,13 @@ import sys
 import json
 import sqlite3
 import argparse
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from datetime import timedelta
 import numpy as np
 import pandas as pd
 
 from candlestick_patterns import atomic_write_snapshot, build_snapshot
 from runtime_paths import runtime_root
+from source_timestamp import resolve_source_datetime, source_timestamp
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -285,6 +285,7 @@ def js_dump(obj):
 def main():
     ap = argparse.ArgumentParser(description="Quét mẫu nến + SMC + cổ tức -> ta_signals.* và data/*.json cho dashboard")
     ap.add_argument("--date", default=None, help="quét phiên YYYY-MM-DD (mặc định: mới nhất trong DB)")
+    ap.add_argument("--generated-at", help="ISO-8601 timezone-aware source generation timestamp")
     ap.add_argument("--limit", type=int, default=0, help="chỉ quét N mã đầu + watchlist (để test)")
     ap.add_argument("--pattern-lookback-1d", type=int, default=90, help="số nến 1D gần nhất để xuất mẫu")
     ap.add_argument("--pattern-lookback-1w", type=int, default=78, help="số nến 1W gần nhất để xuất mẫu")
@@ -296,9 +297,11 @@ def main():
     ap.add_argument("--pattern-workers", type=int, default=min(4, max(1, (os.cpu_count() or 2) - 1)),
                     help="số worker scan theo mã (mặc định tối đa 4)")
     args = ap.parse_args()
+    generated_at = resolve_source_datetime(args.generated_at)
+    generated_at_text = source_timestamp(generated_at)
 
     conn = sqlite3.connect(DB_PATH)
-    cutoff = (datetime.now() - timedelta(days=LOOKBACK_CAL_DAYS)).strftime("%Y-%m-%d")
+    cutoff = (generated_at - timedelta(days=LOOKBACK_CAL_DAYS)).strftime("%Y-%m-%d")
     df = pd.read_sql("SELECT ticker, date, open, high, low, close, volume FROM ohlcv "
                      "WHERE date >= ? ORDER BY ticker, date", conn, params=(cutoff,))
     # Một query lịch sử dùng chung cho 1D/1W/1M; cửa sổ 2.600 ngày đủ 60+ nến tháng,
@@ -363,7 +366,6 @@ def main():
                               dates=tdf["date"].values, volume=tdf["volume"].values)
 
     # Snapshot mẫu nến đa khung hoàn toàn tách khỏi candle_signals legacy.
-    generated_at = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
     pattern_tickers = None
     if args.limit:
         pattern_tickers = set(keep) | set(WATCHLIST)
@@ -410,10 +412,11 @@ def main():
     sig = sig.sort_values(["confluence", "rs_rating"], ascending=[False, False])
 
     # ---------- 1) ta_signals.csv/json (giữ format cũ + cột smc/confluence) ----------
+    sig["source_generated_at"] = generated_at_text
     flat = sig.copy()
     flat["patterns"] = flat["patterns"].apply(";".join)
     flat["smc"] = flat["smc"].apply(";".join)
-    out_cols = ["ticker", "date", "close", "volume", "patterns", "smc", "confluence",
+    out_cols = ["ticker", "date", "source_generated_at", "close", "volume", "patterns", "smc", "confluence",
                 "direction", "industry", "rs_rating", "rel_vol", "gtgd20_ty", "margin_status"]
     flat[out_cols].to_csv(OUT_CSV, index=False, encoding="utf-8-sig")
 
@@ -465,7 +468,7 @@ def main():
                        "meta_industry"]].rename(columns={"meta_industry": "industry"}) \
         .replace({np.nan: None}).to_dict(orient="records")
 
-    payload = {"generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    payload = {"generated_at": generated_at_text,
                "scan_date": str(dscan), "watchlist": watch,
                "signals": sig_records, "dividend_note": div_note,
                "dividend_investing": div_records}
@@ -489,7 +492,7 @@ def main():
     ranks = hm[["pct_above_ma200", "ret_1w", "ret_1m", "pct_up_today"]].rank(pct=True)
     hm["strength"] = (ranks.mean(axis=1) * 100).round(1)
     hm = hm.sort_values("strength", ascending=False)
-    hm_payload = {"generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    hm_payload = {"generated_at": generated_at_text,
                   "scan_date": str(dscan),
                   "sectors": hm.replace({np.nan: None}).to_dict(orient="records")}
     with open(os.path.join(DATA_DIR, "sector_heatmap.json"), "w", encoding="utf-8") as f:
@@ -509,7 +512,7 @@ def main():
     active = full_snap[full_snap.get("exchange", "").astype(str).str.upper() != "DELISTED"]
     market_session = str(active["date"].dropna().max()) if len(active) else str(full_snap["date"].dropna().max())
     fallback_meta = {"schema_version": 1,
-                     "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                     "generated_at": generated_at_text,
                      "market_session": market_session}
     with open(os.path.join(DATA_DIR, "screener_data.js"), "w", encoding="utf-8") as f:
         f.write("window.SCREENER_DATA_META = " + js_dump(fallback_meta) + ";\n")

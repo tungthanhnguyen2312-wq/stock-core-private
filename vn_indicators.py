@@ -20,11 +20,13 @@ import os
 import sys
 import sqlite3
 import warnings
+import argparse
 
 import numpy as np
 import pandas as pd
 from runtime_paths import runtime_root
 from live_universe import evaluate as evaluate_live_universe
+from source_timestamp import source_timestamp
 
 warnings.filterwarnings("ignore")
 
@@ -834,6 +836,10 @@ def structure(df):
 
 def main():
     configure_utf8_streams()
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--generated-at")
+    timestamp_args, _ = parser.parse_known_args()
+    generated_at = source_timestamp(timestamp_args.generated_at)
     conn = sqlite3.connect(DB_PATH)
     tickers = [r[0] for r in conn.execute("SELECT DISTINCT ticker FROM ohlcv").fetchall()]
     print(f"[indicators] Tính cục bộ {len(tickers)} mã | FULL_TA={FULL_TA}")
@@ -896,6 +902,7 @@ def main():
         print(" [Lỗi] Không có dữ liệu hợp lệ để xuất bảng."); return
 
     s = pd.DataFrame(snap)
+    s["source_generated_at"] = generated_at
 
     # LIVE = có nến đúng phiên gần nhất toàn hệ thống (cùng định nghĩa dùng trong market_breadth()).
     # Mã ngừng giao dịch/dữ liệu cũ vẫn giữ trong bảng đầy đủ (tương thích cũ) nhưng KHÔNG được xếp
@@ -935,6 +942,7 @@ def main():
     print(f"[indicators] Bảng lọc LIVE {int(s['is_live'].sum())}/{len(s)} mã (phiên {dmax}) -> {live_out}")
 
     breadth = market_breadth(s)
+    breadth["source_generated_at"] = generated_at
     out_b = os.path.join(OUT_DIR, "market_breadth.csv")
     breadth.to_csv(out_b, index=False, encoding="utf-8-sig")
     print(f"[indicators] Độ rộng thị trường ({len(breadth) - 1} ngành) -> {out_b}")

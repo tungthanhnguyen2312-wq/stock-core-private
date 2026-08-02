@@ -16,6 +16,11 @@ the caller when available.
 
 Daily prices/breadth, technical/candlestick outputs, and AI reports use their
 market-data timestamp. Technical and AI outputs inherit a non-current dependency.
+Forward-generated `screen_snapshot.csv`, `screen_snapshot_live.csv`,
+`market_breadth.csv`, and `ta_signals.csv` retain one timezone-aware
+`source_generated_at` value for the complete deterministic build. The market
+session remains the separate `date`/`as_of_date` identity; neither it nor a file
+mtime may substitute for the retained generation timestamp.
 Macro uses daily, weekly, monthly, or quarterly cadence inferred from its series
 metadata. Quarterly financials are normally `historical`, not stale: their period
 is evidence, while an absent/unverified latest filing is fail-closed. The

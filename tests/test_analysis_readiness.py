@@ -22,4 +22,13 @@ class AnalysisReadinessTests(unittest.TestCase):
         blocked = evaluate_analysis_readiness(freshness={"daily_prices": envelope(), "technical_signals": envelope(), "financial_statements": envelope()}, corporate_intelligence=corporate(status="partial", actionable=False), reference_at=REF); self.assertEqual(blocked["domains"]["corporate_intelligence"]["state"], "blocked")
     def test_null_and_zero_are_untouched(self):
         source = {"nullable": None, "zero": 0}; evaluate_analysis_readiness(freshness={"daily_prices": envelope(), "technical_signals": envelope(), "financial_statements": envelope()}, corporate_intelligence=corporate(), reference_at=REF); self.assertEqual(source, {"nullable": None, "zero": 0})
+    def test_unqualified_price_or_volume_basis_blocks_current_market_readiness(self):
+        freshness = {"daily_prices": envelope(), "technical_signals": envelope(), "financial_statements": envelope()}
+        blocked = evaluate_analysis_readiness(freshness=freshness, corporate_intelligence=corporate(), reference_at=REF, price_basis_provenance={"price_basis_verified": False, "volume_basis_verified": False})
+        self.assertEqual(blocked["domains"]["market_technical"]["state"], "blocked")
+        self.assertEqual(blocked["domains"]["market_technical"]["reason"], "price_or_volume_basis_unqualified")
+    def test_explicitly_qualified_bases_preserve_freshness_readiness(self):
+        freshness = {"daily_prices": envelope(), "technical_signals": envelope(), "financial_statements": envelope()}
+        ready = evaluate_analysis_readiness(freshness=freshness, corporate_intelligence=corporate(), reference_at=REF, price_basis_provenance={"price_basis_verified": True, "volume_basis_verified": True})
+        self.assertEqual(ready["domains"]["market_technical"]["state"], "ready")
 if __name__ == "__main__": unittest.main()

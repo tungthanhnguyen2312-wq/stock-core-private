@@ -192,6 +192,12 @@ class FreshnessGateLogicTests(unittest.TestCase):
             value = f"2026-07-30T08:00:00Z"
             self.assertEqual(bundle.retained_source_timestamp({"date": "2026-07-30", key: value}), value)
 
+    def test_common_timestamp_rejects_conflicting_rows(self):
+        same = [{"source_generated_at": "2026-07-30T08:00:00Z"}] * 2
+        mixed = same + [{"source_generated_at": "2026-07-30T08:01:00Z"}]
+        self.assertEqual(bundle.common_retained_source_timestamp(same), "2026-07-30T08:00:00Z")
+        self.assertIsNone(bundle.common_retained_source_timestamp(mixed))
+
 
 class RiskScoreSemanticsTests(unittest.TestCase):
     """Phase 0B.3: analysis_score risk semantic safety contract tests."""

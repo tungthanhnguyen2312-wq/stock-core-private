@@ -128,8 +128,8 @@ def _readiness(state: str, reason: str, required_inputs: list[str]) -> dict[str,
     return {"state": state, "reason": reason, "required_inputs": required_inputs, "is_actionable": state == "ready"}
 
 
-def evaluate_analysis_readiness(*, freshness: dict[str, Any] | None, corporate_intelligence: dict[str, Any] | None, reference_at: datetime) -> dict[str, Any]:
-    """Derive readiness only from canonical envelopes and existing CI gates."""
+def evaluate_analysis_readiness(*, freshness: dict[str, Any] | None, corporate_intelligence: dict[str, Any] | None, reference_at: datetime, price_basis_provenance: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Derive readiness from canonical freshness/CI gates and optional basis proof."""
     if parse_timestamp(reference_at) is None:
         raise ValueError("reference_at must be an ISO timestamp")
     source = freshness if isinstance(freshness, dict) else {}
@@ -143,6 +143,15 @@ def evaluate_analysis_readiness(*, freshness: dict[str, Any] | None, corporate_i
         if any(value.get("freshness_status") in {"missing", "unknown"} for value in values): return _readiness("blocked", "required_input_missing_or_unknown", names)
         return _readiness("degraded", "required_input_not_actionable", names)
     market = required(["daily_prices", "technical_signals"])
+    if price_basis_provenance is not None and not (
+        price_basis_provenance.get("price_basis_verified") is True
+        and price_basis_provenance.get("volume_basis_verified") is True
+    ):
+        market = _readiness(
+            "blocked",
+            "price_or_volume_basis_unqualified",
+            ["daily_prices", "technical_signals", "price_basis", "volume_basis"],
+        )
     financial = envelope("financial_statements")
     if financial is None: fundamental = _readiness("unknown", "financial_freshness_missing_or_malformed", ["financial_statements"])
     elif financial.get("is_actionable") is True: fundamental = _readiness("ready", "financial_input_current_and_actionable", ["financial_statements"])

@@ -15,6 +15,7 @@
 - Blocker: `DOCUMENTED_RAW_ADJUSTED_PATH_UNAVAILABLE`; no installed package exposes a directly documented raw-and-adjusted Vietnam equity EOD path.
 - Governance gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = NO`; paid access, credentials, and provider integration require an explicit owner decision covering cost, licensing, access, and authority. No provider is selected by default.
 - Blocker: price basis is `unknown/unverified`; volume basis and current shares are also unqualified.
-- Blocker: current daily-market and technical rows retain session dates but no explicit source generation/retrieval timestamp; session identity cannot substitute for freshness evidence.
+- Completed: forward daily-market and technical snapshot generators retain an explicit timezone-aware `source_generated_at`; session identity remains separate.
+- Blocker: production snapshots have not been regenerated through that forward contract; VNM also has no canonical technical-signal row in the bounded validation. No historical timestamp was inferred or backfilled.
 - Next exit gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES`, followed by version-retained ingestion and basis qualification on that exact path.
 - Production state: runtime databases and generated production artifacts remain unchanged by governance work.
