@@ -1,42 +1,58 @@
 import json, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
-from official_document_acquisition import DOCUMENT_CLASSES, MANIFEST, acquire, canonical_url, coverage_matrix, retrieval_handoff
+from official_document_acquisition import EVENTS, MANIFEST, _response_failure, acquire, canonical_url, import_offline_event
 
 PDF=b"%PDF-1.4\nfixture\n"
+HTML=b"<html><body>official notice</body></html>"
+
 class AcquisitionTests(unittest.TestCase):
  def setUp(self): self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name)
  def tearDown(self): self.tmp.cleanup()
- def spec(self, **more): return {"ticker":"SSI","canonical_url":"https://ir.example.test/files/fy2024.pdf#fragment","document_class":"audited_annual_financial_statements","reporting_period":"2024","published_at":"2025-03-31","observed_at":"2025-04-01T00:00:00Z","source_authority":"issuer_ir"}|more
- def fetch(self, url, *, timeout_seconds): return 200,{"Content-Type":"application/pdf"},PDF
- def test_url_identity_idempotency_and_deterministic_manifest(self):
-  self.assertEqual(canonical_url("HTTPS://IR.EXAMPLE.test/a?b=2&a=1#x"),"https://ir.example.test/a?a=1&b=2")
-  with patch("official_document_acquisition._extraction_state",return_value="ready_for_direct_citations"):
-   first=acquire([self.spec()],self.root,fetcher=self.fetch); before=(self.root/MANIFEST).read_text(); second=acquire([self.spec()],self.root,fetcher=lambda *_,**__: self.fail("network should not run"),local_idempotency_only=True)
-  self.assertEqual(first["outcomes"][0]["state"],"retained"); self.assertEqual(second["outcomes"][0]["state"],"skipped_idempotent")
-  self.assertEqual(before,(self.root/MANIFEST).read_text()); handoff=retrieval_handoff(self.root); self.assertEqual(len(handoff),1); self.assertEqual(handoff[0]["canonical_observation_status"],"not_created")
- def test_changed_bytes_versions_and_supersession(self):
-  with patch("official_document_acquisition._extraction_state",return_value="needs_ocr"): acquire([self.spec()],self.root,fetcher=self.fetch)
-  old=retrieval_handoff(self.root)[0]["document_id"]
-  changed=lambda *_,**__: (200,{"Content-Type":"application/pdf"},PDF+b"v2")
+ def spec(self, **more): return {"ticker":"HPG","canonical_url":"https://issuer.example/f.pdf","document_class":"corporate_action_notice","reporting_period":"2024","source_authority":"issuer_ir","observed_at":"2026-08-02T00:00:00Z"}|more
+ def fetch(self, *_args, **_kwargs): return 200,{"Content-Type":"application/pdf"},PDF,"https://cdn.example/f.pdf"
+ def metadata(self, **more): return {"ticker":"HPG","exchange":"HOSE","action_type":"bonus_share","ex_date":"2024-01-04","ratio":.2,"ratio_basis":"new_shares_per_existing_share","source_authority":"issuer_ir","source_url":"https://issuer.example/f.pdf","document_identity":"fixture-notice-1","retrieved_at":"2026-08-02T00:00:00Z","reporting_period":"2024"}|more
+ def test_success_redirect_and_cache(self):
   with patch("official_document_acquisition._extraction_state",return_value="needs_ocr"):
-   out=acquire([self.spec(document_class="amendment_or_supersession_notice",supersedes_document_id=old)],self.root,fetcher=changed)
-  self.assertEqual(out["outcomes"][0]["state"],"retained"); records=json.loads((self.root/MANIFEST).read_text())["records"]
-  self.assertEqual(records[-1]["supersedes_document_id"],old); self.assertEqual(len(records),2)
- def test_bounded_retry_and_needs_ocr(self):
-  attempts=[]
-  def eventually(url, *, timeout_seconds):
-   attempts.append((url,timeout_seconds))
-   if len(attempts)==1: raise TimeoutError()
+   first=acquire([self.spec()],self.root,fetcher=self.fetch); second=acquire([self.spec()],self.root,fetcher=lambda *_a,**_k:self.fail("network"))
+  self.assertEqual(first["outcomes"][0]["state"],"retained"); self.assertEqual(second["outcomes"][0]["state"],"cached_valid")
+  self.assertEqual(json.loads((self.root/MANIFEST).read_text())["records"][0]["final_url"],"https://cdn.example/f.pdf")
+ def test_timeout_then_success_and_two_timeouts(self):
+  calls=[]
+  def retry(*_a,**_k):
+   calls.append(1)
+   if len(calls)==1: raise TimeoutError()
    return 200,{"Content-Type":"application/pdf"},PDF
-  with patch("official_document_acquisition._extraction_state",return_value="needs_ocr"):
-   out=acquire([self.spec()],self.root,fetcher=eventually,max_attempts=2,timeout_seconds=20)
-  self.assertEqual(out["outcomes"][0]["state"],"retained"); self.assertEqual(len(attempts),2); self.assertEqual(out["outcomes"][0]["extraction_status"],"needs_ocr")
- def test_isolation_failures_and_coverage(self):
-  bad=lambda *_,**__: (404,{},b"")
-  self.assertEqual(acquire([self.spec(ticker="BAD")],self.root,fetcher=self.fetch)["outcomes"][0]["state"],"unsupported_request")
-  self.assertEqual(acquire([self.spec()],self.root,fetcher=bad)["outcomes"][0]["state"],"inaccessible")
-  malformed=lambda *_,**__: (200,{"Content-Type":"text/html"},b"no")
-  self.assertEqual(acquire([self.spec()],self.root,fetcher=malformed)["outcomes"][0]["state"],"malformed")
-  matrix=coverage_matrix([]); self.assertEqual(len(matrix),5*len(DOCUMENT_CLASSES)); self.assertTrue(all(x["state"]=="missing" for x in matrix))
+  self.assertEqual(acquire([self.spec()],self.root,fetcher=retry,sleep=lambda _:None)["outcomes"][0]["state"],"retained")
+  with tempfile.TemporaryDirectory() as other:
+   self.assertEqual(acquire([self.spec()],Path(other),fetcher=lambda *_a,**_k:(_ for _ in ()).throw(TimeoutError()),sleep=lambda _:None)["outcomes"][0]["state"],"timeout")
+ def test_invalid_oversized_truncated_and_partial_cleanup(self):
+  html=lambda *_a,**_k:(200,{"Content-Type":"text/plain"},b"no")
+  large=lambda *_a,**_k:(200,{"Content-Type":"application/pdf"},PDF+b"x"*2000)
+  self.assertEqual(acquire([self.spec()],self.root,fetcher=html)["outcomes"][0]["state"],"invalid_content_type")
+  self.assertEqual(acquire([self.spec()],self.root,fetcher=large,max_response_bytes=1024)["outcomes"][0]["state"],"response_size_limit")
+  self.assertEqual(_response_failure(200,{"Content-Type":"application/pdf"},b"%PDF",0),"empty_or_truncated_document")
+  self.assertFalse(list(self.root.rglob("*.part")))
+ def test_hash_conflict(self):
+  with patch("official_document_acquisition._extraction_state",return_value="needs_ocr"): acquire([self.spec()],self.root,fetcher=self.fetch)
+  record=json.loads((self.root/MANIFEST).read_text())["records"][0]; (self.root/record["relative_path"]).write_bytes(PDF+b"bad")
+  self.assertEqual(acquire([self.spec()],self.root,fetcher=self.fetch)["outcomes"][0]["state"],"hash_conflict")
+ def test_offline_pdf_html_dry_run_and_idempotence(self):
+  pdf=self.root/"notice.pdf"; pdf.write_bytes(PDF)
+  dry=import_offline_event(pdf,self.root,self.metadata(),dry_run=True); self.assertEqual(dry["state"],"dry_run")
+  first=import_offline_event(pdf,self.root,self.metadata()); second=import_offline_event(pdf,self.root,self.metadata())
+  self.assertEqual(first["state"],"retained"); self.assertEqual(second["state"],"cached_valid")
+  event=json.loads((self.root/EVENTS).read_text()); self.assertTrue(event["qualified_for_price_basis_test"]); self.assertFalse(event["qualified_for_share_transition"])
+  html=self.root/"notice.html"; html.write_bytes(HTML)
+  self.assertEqual(import_offline_event(html,self.root,self.metadata(source_url="https://issuer.example/h.html"))["state"],"retained")
+ def test_offline_rejects_missing_empty_and_conflicting_metadata(self):
+  with self.assertRaisesRegex(ValueError,"local_document_missing"): import_offline_event(self.root/"none.pdf",self.root,self.metadata())
+  empty=self.root/"empty.pdf"; empty.write_bytes(b"")
+  with self.assertRaisesRegex(ValueError,"unsupported_or_empty_local_document"): import_offline_event(empty,self.root,self.metadata())
+  pdf=self.root/"notice.pdf"; pdf.write_bytes(PDF)
+  with self.assertRaisesRegex(ValueError,"required_event_metadata_missing"): import_offline_event(pdf,self.root,self.metadata(ex_date=None))
+  import_offline_event(pdf,self.root,self.metadata())
+  with self.assertRaisesRegex(ValueError,"offline_event_metadata_conflict"): import_offline_event(pdf,self.root,self.metadata(retrieved_at="2026-08-03T00:00:00Z"))
+ def test_url_is_deterministic(self): self.assertEqual(canonical_url("HTTPS://ISSUER.EXAMPLE/a?b=2&a=1#x"),"https://issuer.example/a?a=1&b=2")
+
 if __name__=='__main__': unittest.main()

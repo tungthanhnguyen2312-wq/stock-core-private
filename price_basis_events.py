@@ -49,7 +49,7 @@ def project_price_test_events(entries: list[Mapping[str, Any]]) -> dict[str, lis
             excluded.append({**base, "reason": "event_type_not_price_test_eligible"})
         elif entry.get("exchange") != "HOSE":
             excluded.append({**base, "reason": "exchange_identity_missing_or_unsupported"})
-        elif not ex_date or not isinstance(ratio, Mapping) or not isinstance(ratio.get("ratio_float"), (int, float)) or ratio["ratio_float"] < 0.10:
+        elif not ex_date or entry.get("ratio_basis") != "new_shares_per_existing_share" or not isinstance(ratio, Mapping) or not isinstance(ratio.get("ratio_float"), (int, float)) or ratio["ratio_float"] < 0.10:
             excluded.append({**base, "reason": "qualified_ex_date_or_ratio_missing"})
         elif not (entry.get("official_source_id") or evidence.get("source_url") or evidence.get("evidence_id")) or not evidence.get("citation_id") or not evidence.get("document_sha256") or not entry.get("retrieved_at"):
             excluded.append({**base, "reason": "official_citation_or_source_hash_missing"})

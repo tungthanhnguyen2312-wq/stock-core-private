@@ -1,0 +1,13 @@
+{
+  "ticker": "HPG",
+  "exchange": "HOSE",
+  "action_type": "bonus_share",
+  "ex_date": "2024-01-04",
+  "ratio": 0.2,
+  "ratio_basis": "new_shares_per_existing_share",
+  "source_authority": "fixture_official_authority",
+  "source_url": "https://fixture.example/official-event.html",
+  "document_identity": "fixture-official-event-1",
+  "retrieved_at": "2026-08-02T00:00:00Z",
+  "reporting_period": "2024"
+}
