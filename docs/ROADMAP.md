@@ -5,10 +5,23 @@
 - Prerequisite: owner approval is complete for a private EODHD HPG/VNM shadow path. A newly rotated, unexposed environment-only credential and authenticated payload qualification are required before ingestion; production/public redistribution requires a separately qualified license boundary.
 - Exit gates: `OHLCV_PROVIDER_VERSION_RETAINED = YES`; `QUALIFIED_PRICE_TEST_EVENTS >= 8`; `PRICE_BASIS_ACTIVE_PATH = DETERMINED_DOCUMENTED | DETERMINED_EMPIRICALLY`; `VOLUME_BASIS_ACTIVE_PATH = DETERMINED`; `NO_MARKET_CONSUMER_USES_UNQUALIFIED_BASIS = YES`.
 
+### P0 sub-items (from the 2026-08-02 P0.1 audit)
+- P0.1 (docs reconciliation): **done** 2026-08-02. STATE.md reviewed head corrected, Phase 0A-6E cross-reference table added (this file).
+- P0.2 (approved evidence write boundary): **done** 2026-08-02. `evidence_promotion.py` + ADR in `docs/DECISIONS.md`; one real promotion executed (VNM cash dividend, resolves the Phase 5E blocker below). See STATE.md 2026-08-02 entries.
+- P0.3 (bring `operations-review/` under version control or a hash-manifest): **not started** -- this is a repo-structure decision (git-init a new repo vs. tracking each repo's own `operations-review/` subdirectory vs. a hash-manifest) that changes durable history across 3 repos; needs an explicit owner decision before any file is staged, not a unilateral action.
+
 ## P1 — Trusted current-session readiness — PARTIAL
 - Completed: exact-session manifest structure, hash binding, Consumer validation, and forward-retained daily/technical source timestamps for HPG/VNM.
 - Remaining: direct share-transition coverage through the trusted 2026-07-30 session, production regeneration through the forward timestamp contract, and price/volume-qualified same-session current fields.
 - Exit gate: `HPG_VNM_CURRENT_SUBSET_FULLY_QUALIFIED = YES`.
+
+### P1 sub-items (from the 2026-08-02 P0.1 audit)
+- P1.1 (promote 3 HPG FY2024 citations -- current_liabilities/retained_earnings/profit_before_tax): **blocked, not just on write boundary**. Confirmed 2026-08-02: `financial-observations/observations.jsonl` has zero raw observations for those `raw_item_id` values for HPG at any period -- there is no observation for `evidence_promotion.py` to attach a citation to. Needs a new bounded VCI/KBS sync or a distinct manual-observation intake path (out of this session's scope: no external data acquisition performed). See Phase 6E row above.
+- P1.2 (activate `altman_z_prime`): **blocked**, depends on P1.1.
+- P1.3 (VNM cash-dividend promotion): **done** 2026-08-02, same work as P0.2.
+- P1.4 (split `price_display`/`price_analytic` namespaces so unqualified basis is structurally unusable, not just advisory): **designed, not implemented**. Deferred this session: `price_basis` threads through ~30 call sites in `export_ai_bundle.py` alone plus the Consumer's `build_ticker_context.py` and prompt templates -- a correct implementation needs its own bounded milestone with Consumer-side verification, not a same-session addition alongside a production evidence-store write.
+- P1.5 (ticker capability / trusted-ticker matrix): **done** 2026-08-02. `ticker_capability.py`, pure and tested (8 tests), not yet wired into `export_ai_bundle.py`'s opt-in attach chain. See STATE.md for the real matrix computed against production evidence.
+- P1.6 (share-transition coverage through 2026-07-30): **not started**, requires new issuer/exchange evidence acquisition -- out of scope without an explicit bounded-acquisition decision.
 
 ## P2 — Point-in-time valuation alignment — BLOCKED
 - Starts only after P0 and required P1 gates: market cap, raw/adjusted namespaces, point-in-time shares, and valuation-period alignment.
@@ -25,3 +38,34 @@
 ## P5 — Portfolio and platform expansion — DEFERRED
 - Portfolio fit/sizing, backtesting, RAG, Dashboard v2, and infrastructure scaling are last priority.
 - Exit gate: `PORTFOLIO_AND_PLATFORM_PREREQUISITES_QUALIFIED = YES`.
+
+## Cross-reference: P0–P5 governance track vs. Phase 0A–6E working-session track
+
+The dated `phase_*` milestones recorded under `operations-review/` (both `stock-core-private/operations-review/` and the top-level `operations-review/`) are working-session checkpoints, not a separate roadmap. Every one maps onto exactly one P0–P5 gate below; none stands outside this roadmap. Added 2026-08-02 (P0.1 audit) so no phase is orphaned from the governance gates it was actually working toward.
+
+| Phase | Date (UTC) | What it did | Maps to | Producer/Consumer evidence |
+|---|---|---|---|---|
+| 0A — Data Truth & Artifact Coherence Audit | 2026-07-31 | End-to-end audit of export path vs. runtime artifacts, cross-cutting prerequisite for every later gate | Prerequisite to P0–P3 (audit, not a gate itself) | `operations-review/phase_0a_data_truth_audit_20260731T143000Z.md` |
+| 0B — AI Semantic Hardening Closeout | 2026-07-31 | Producer export-path semantic safety contracts | Prerequisite to P0–P3 | `operations-review/phase_0b_closeout_20260731.md` |
+| 1B — VCI OHLCV Source Semantics Qualification | 2026-08-01 | Qualified (blocked) VCI active price-path semantics | **P0** — market-data basis and lineage | `operations-review/phase_1b_vci_ohlcv_semantics_20260801T080900Z.md` |
+| 1C — KBS OHLCV Source Semantics Qualification | 2026-08-01 | Qualified (blocked) KBS provider OHLCV semantics | **P0** — market-data basis and lineage | `operations-review/phase_1c_kbs_ohlcv_semantics_20260801T081200Z.md` |
+| 3D — Consumer Contract-Shape Closure | 2026-08-01 | Fixed `opportunity_ranking`/`news_window_semantics` pass-through gaps, Consumer commit `1e1c646` | **P3** — evidence-qualified investment analysis (historical-only) | `ai-core-private` commit `1e1c646` |
+| 4A — Analysis Engine & Market Scan V2 Design | 2026-08-01 | Design-only contract for five analysis lanes; no source/runtime change | **P4** — market scan and ranking (design scaffolding only; P4 itself stays DEFERRED) | `operations-review/phase_4a_analysis_engine_market_scan_v2_design_20260801T072613Z.md` |
+| 4B — Analysis Lane Eligibility Gates | 2026-08-01 | `analysis_lane_eligibility.py`, Producer commit `bfce838`; `is_actionable` hardcoded `False` on every lane result | **P4** scaffolding, opt-in only, non-actionable by construction | Producer commit `bfce838` |
+| 4C — Lane Shadow Validation | 2026-08-01 | Shadow pilot of lane eligibility against real bundle data | **P4** scaffolding | `operations-review/phase_4c_lane_shadow_20260801T081307Z/` |
+| 4D — Consumer Lane Eligibility Pass-Through | 2026-08-01 | `build_ticker_context.py` wiring, Consumer commit `a6c4e33` | **P4** scaffolding | Consumer commit `a6c4e33` |
+| 4E — Frozen Pilot | 2026-08-01 | Frozen end-to-end pilot of the lane layer | **P4** scaffolding | `operations-review/phase_4e_frozen_pilot_20260801T084520Z/` |
+| 4F — Deterministic Shadow | 2026-08-01 | Determinism check on lane outputs | **P4** scaffolding | `operations-review/phase_4f_deterministic_shadow_20260801T090749Z/` |
+| 4 — Closeout | 2026-08-01 | Closes 4A–4F as inert, opt-in, non-actionable scaffolding; does not activate P4 | **P4** stays DEFERRED | `operations-review/phase_4_closeout_20260801T091701Z.md` |
+| 5A — Opt-In Lane Smoke | 2026-08-01 | Smoke test of opt-in lane attachment path | **P4** scaffolding / **P3** extension | `operations-review/phase_5a_opt_in_lane_smoke_20260801T093210Z/` |
+| 5B — HPG Verified Period | 2026-08-01 | Verified-period resolution for HPG, commit `e8a351c`/`44d81cf` | **P3** extension | `stock-core-private` commits `e8a351c`, `44d81cf` |
+| 5C — Generic Verified Period | 2026-08-01 | Generalized verified-period resolution across tickers | **P3** extension | `operations-review/phase_5c_generic_verified_period_20260801T101631Z/` |
+| 5D — Distribution Evidence | 2026-08-01 | `distribution_evidence` contract, commit `1ca1307`; HPG/VNM cash+non-cash lanes, all `is_actionable=False` | **P3** extension (feeds future `income_defensive` lane under P4) | `operations-review/phase_5d_distribution_evidence_20260801T104910Z/validation_summary.json` |
+| 5E — VNM Cash-Distribution Evidence Promotion | 2026-08-01 blocked; **resolved 2026-08-02 (P0.2)** | Originally blocked: evidence-qualified but no approved write boundary for `*_citations.jsonl`. Resolved by `evidence_promotion.py` (P0.2): VSD notice 177392 promoted into `manifest.json`/`cash_dividend_citations.jsonl`; `load_verified_cash_dividends()` now returns 1 event, 0 rejected; 4 pinned artifacts confirmed unchanged | **P3** extension, unblocked | `operations-review/phase_5e_vnm_cash_distribution_evidence_storage_boundary_blocker_20260801T111043Z.txt` (original blocker); `stock-core-private/evidence_promotion.py` + STATE.md 2026-08-02 P0.2 entry (resolution) |
+| 6A — Qualified Fundamental Quality Model | 2026-08-01 | `fundamental_quality.py`, commit `7c44136` (Piotroski, Altman/Beneish stubs, bank variant) | **P3** extension | `stock-core-private` commit `7c44136` |
+| 6B — Legacy Fundamental Quality Hardening | 2026-08-01 | Reconciled legacy quality output against Phase 6A contract, commit `477cc1c` | **P3** extension | `stock-core-private` commit `477cc1c` |
+| 6C — Comparative DuPont / FY2023 Slice | 2026-08-01 | Case C: FY2023 does not qualify for HPG or VNM; no source change | **P3** extension (comparative-period sub-gate, decoupled from P0/Altman) | `operations-review/phase_6c_comparative_dupont_20260801T121408Z/phase_6c_report.md` |
+| 6D — Financial Identity Expansion & Altman Readiness | 2026-08-01 | Case C: no new identity qualifies (only pre-existing `current_assets`, `total_liabilities`); Altman not attempted | **P3** extension; blocked one layer deeper than 5E — see 6E | `operations-review/phase_6d_financial_identity_altman_20260801T122147Z/phase_6d_report.md` |
+| 6E — HPG Missing Financial Identity Retention | 2026-08-01 | Case B: read `current_liabilities`/`retained_earnings`/`profit_before_tax` directly off the retained FY2024 PDF; added mapping + derived-EBIT rule, commit `4351302`. Values are **not** promoted to `qualification_citations.jsonl` — mapping capability only | **P3** extension; **verified 2026-08-02 (P0.1 audit) not to be the same blocker class as 5E**: `dashboard-runtime/data/financial-observations/observations.jsonl` has zero rows with `raw_item_id` in `{current_liabilities, undistributed_earnings, profit_before_tax}` for HPG at any period 2018-2026 — no raw observation exists to attach a citation to, so `evidence_promotion.py` cannot unblock this the way it unblocked 5E. This is the data-acquisition gap Phase 6D itself named ("never retained by any upstream sync"), not a missing write boundary. Unlocking it requires either (a) a new bounded VCI/KBS sync capturing these raw items (external data acquisition, out of this milestone's scope), or (b) a defined, source-cited manual-observation path distinct from `evidence_promotion.py`'s citation-only scope | `stock-core-private` commit `4351302`; STATE.md 2026-08-02 P0.1 correction; observation-store query 2026-08-02 |
+
+No `phase_*` artifact found under either `operations-review/` tree falls outside P0–P5; any future phase must be added to this table in the same milestone that creates it.

@@ -537,7 +537,7 @@ def load_verified_cash_dividends(runtime_root: Path) -> dict[str, Any]:
         event_object = {
             "event_id": citation["citation_id"],
             "ticker": citation["ticker"],
-            "issuer": evidence.get("issuer", "Vietnam Dairy Products Joint Stock Company"),
+            "issuer": evidence.get("issuer"),
             "event_type": citation["event_type"],
             "resolution_number": citation["resolution_number"],
             "declaration_date": citation["declaration_date"],
@@ -558,6 +558,7 @@ def load_verified_cash_dividends(runtime_root: Path) -> dict[str, Any]:
                 "document_sha256": evidence.get("sha256"),
                 "publication_date": evidence.get("publication_date"),
                 "source_url": evidence.get("source_url"),
+                "authority": evidence.get("authority"),
             },
             "qualification_version": VERSION,
             "verified_at": citation.get("verified_at"),
@@ -671,7 +672,7 @@ def load_verified_non_cash_events(runtime_root: Path) -> dict[str, Any]:
         event_object = {
             "event_id": citation["citation_id"],
             "ticker": citation["ticker"],
-            "issuer": evidence.get("issuer", "Vietnam Dairy Products Joint Stock Company"),
+            "issuer": evidence.get("issuer"),
             "event_type": citation["event_type"],
             "resolution_number": citation["resolution_number"],
             "declaration_date": citation["declaration_date"],
@@ -694,6 +695,7 @@ def load_verified_non_cash_events(runtime_root: Path) -> dict[str, Any]:
                 "document_sha256": evidence.get("sha256"),
                 "publication_date": evidence.get("publication_date"),
                 "source_url": evidence.get("source_url"),
+                "authority": evidence.get("authority"),
             },
             "qualification_version": VERSION,
             "verified_at": citation.get("verified_at"),
