@@ -108,7 +108,8 @@ def _zone_proximity(score: float) -> dict[str, Any]:
 
 
 def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
-                             entity_type: str = "corporate", industry: Any = None) -> dict[str, Any]:
+                             entity_type: str = "corporate", industry: Any = None,
+                             statement_taxonomy: Any = None) -> dict[str, Any]:
     """Pure. `identities` maps identity name -> {"value", "period", "statement_scope",
     "currency", "unit_scale", and optional lineage keys carried through unchanged}.
 
@@ -120,8 +121,15 @@ def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
     NOT sufficient: Z' retains the industry-sensitive X5 term and was estimated on
     manufacturing firms, so a confirmed non-financial issuer in a non-manufacturing industry
     still yields "insufficient_evidence" rather than a score.
+
+    `statement_taxonomy` is optional GENERATED evidence (see `statement_taxonomy_sidecar`)
+    and is forwarded unchanged to the applicability gate, which consults it only to
+    *withhold* applicability -- an observed specialized-financial template yields
+    `not_applicable` even with no resolved entity type, while `corporate_vas` alone never
+    grants eligibility. A manually verified `entity_type` always takes precedence.
     """
-    applicability = evaluate_altman_applicability(entity_type, industry)
+    applicability = evaluate_altman_applicability(entity_type, industry,
+                                                   statement_taxonomy=statement_taxonomy)
     if applicability["applicability"] != "eligible":
         status = applicability["applicability"]
         missing = ["entity_type"] if str(entity_type or "").strip().lower() in _UNQUALIFIED_ENTITY_TYPES else []
@@ -134,22 +142,24 @@ def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
                if isinstance(identities.get(name), Mapping) and _number(identities[name].get("value")) is not None}
     missing = [name for name in REQUIRED_IDENTITIES if name not in present]
     if missing:
-        return _out("insufficient_evidence", missing_inputs=missing,
+        return _out("insufficient_evidence", applicability=applicability, missing_inputs=missing,
                     blocking_reasons=[f"required identity not qualified: {', '.join(missing)}"])
 
     alignment = {key: {present[name].get(key) for name in present} for key in _IDENTITY_ALIGNMENT_KEYS}
     conflicting = [key for key, values in alignment.items() if len(values) != 1]
     if conflicting:
-        return _out("insufficient_evidence",
+        return _out("insufficient_evidence", applicability=applicability,
                     blocking_reasons=[f"qualified identities disagree on {', '.join(conflicting)}; "
                                        "never combined across a mismatch"])
 
     values = {name: _number(entry["value"]) for name, entry in present.items()}
     total_assets, total_liabilities = values["total_assets"], values["total_liabilities"]
     if total_assets <= 0:
-        return _out("insufficient_evidence", blocking_reasons=["total_assets must be strictly positive"])
+        return _out("insufficient_evidence", applicability=applicability,
+                    blocking_reasons=["total_assets must be strictly positive"])
     if total_liabilities <= 0:
-        return _out("insufficient_evidence", blocking_reasons=["total_liabilities must be strictly positive"])
+        return _out("insufficient_evidence", applicability=applicability,
+                    blocking_reasons=["total_liabilities must be strictly positive"])
 
     working_capital = values["current_assets"] - values["current_liabilities"]
     ratios = {

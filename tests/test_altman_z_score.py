@@ -238,3 +238,48 @@ class ManufacturingApplicabilityGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ApplicabilityIsCarriedOnEveryFailPathTests(unittest.TestCase):
+    """An eligible issuer that merely lacks a qualified identity must stay distinguishable
+    from one the model does not apply to. Dropping the applicability verdict on the
+    identity-missing path made PAN report `applicability: null` in production while it was
+    in fact eligible -- a distinction the Dashboard and Consumer both surface."""
+
+    ELIGIBLE = {"entity_type": "corporate", "industry": "Tai nguyen Co ban"}
+
+    def _identity(self, value):
+        return {"value": value, "period": "2024", "statement_scope": "consolidated",
+                "currency": "VND", "unit_scale": 1}
+
+    def _full(self, **overrides):
+        identities = {name: self._identity(1_000.0) for name in REQUIRED_IDENTITIES}
+        identities.update({k: self._identity(v) for k, v in overrides.items()})
+        return identities
+
+    def test_missing_identity_still_reports_eligible_applicability(self):
+        identities = self._full()
+        del identities["retained_earnings"]
+        result = _raw_evaluate(identities, **self.ELIGIBLE)
+        self.assertEqual(result["status"], "insufficient_evidence")
+        self.assertEqual(result["applicability"]["applicability"], "eligible")
+        self.assertEqual(result["missing_inputs"], ["retained_earnings"])
+
+    def test_non_positive_denominator_still_reports_eligible_applicability(self):
+        for metric in ("total_assets", "total_liabilities"):
+            result = _raw_evaluate(self._full(**{metric: 0.0}), **self.ELIGIBLE)
+            self.assertEqual(result["status"], "insufficient_evidence")
+            self.assertEqual(result["applicability"]["applicability"], "eligible")
+
+    def test_misaligned_identities_still_report_eligible_applicability(self):
+        identities = self._full()
+        identities["ebit"] = {**self._identity(1_000.0), "currency": "USD"}
+        result = _raw_evaluate(identities, **self.ELIGIBLE)
+        self.assertEqual(result["status"], "insufficient_evidence")
+        self.assertEqual(result["applicability"]["applicability"], "eligible")
+
+    def test_a_financial_taxonomy_withholds_even_with_a_complete_identity_set(self):
+        result = _raw_evaluate(self._full(), entity_type=None, industry=None,
+                                                 statement_taxonomy="credit_institution")
+        self.assertEqual(result["status"], "not_applicable")
+        self.assertIsNone(result["score"])
