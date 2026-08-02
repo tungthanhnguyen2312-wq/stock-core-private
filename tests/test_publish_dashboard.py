@@ -171,6 +171,24 @@ class DryRunIsFullyReadOnlyTests(_PublishDashboardTestBase):
         version_plan = pd.plan_asset_versions(str(manifest["build_id"]))
         self.assertIn("dashboard.html", version_plan)
 
+    def test_missing_volume_basis_fails_closed_in_computed_manifest(self):
+        rows, breadth, market_session = pd.validate_snapshot()
+        manifest, _content = pd.compute_manifest(rows, breadth, market_session, "0" * 40)
+        contract = manifest["price_basis_contract"]
+        self.assertEqual(contract["volume_basis"], "unknown")
+        self.assertFalse(contract["volume_basis_verified"])
+
+    def test_partial_provenance_cannot_enable_volume_basis_by_default(self):
+        (self.tmp / "analysis_bundle.json").write_text(
+            '{"price_basis_provenance":{"price_basis":"unknown","price_basis_verified":false}}\n',
+            encoding="utf-8",
+        )
+        rows, breadth, market_session = pd.validate_snapshot()
+        manifest, _content = pd.compute_manifest(rows, breadth, market_session, "0" * 40)
+        contract = manifest["price_basis_contract"]
+        self.assertEqual(contract["volume_basis"], "unknown")
+        self.assertFalse(contract["volume_basis_verified"])
+
 
 class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
     """--live: the same three write functions must run, in order, and only touch the
