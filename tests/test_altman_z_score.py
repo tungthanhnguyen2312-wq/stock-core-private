@@ -15,8 +15,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from altman_z_score import (  # noqa: E402
-    DISTRESS_THRESHOLD, REQUIRED_IDENTITIES, SAFE_THRESHOLD, VARIANT, evaluate_altman_z_score,
+    DISTRESS_THRESHOLD, REQUIRED_IDENTITIES, SAFE_THRESHOLD, VARIANT,
+    evaluate_altman_z_score as _raw_evaluate,
 )
+
+# HPG's real industry; every arithmetic-path test must clear the applicability gate first.
+_QUALIFIED_INDUSTRY = "Tai nguyen Co ban"
+
+
+def evaluate_altman_z_score(identities, entity_type="corporate", industry=_QUALIFIED_INDUSTRY):
+    return _raw_evaluate(identities, entity_type=entity_type, industry=industry)
 
 _HPG_FY2024 = {
     "current_assets": 86674276272995,
@@ -146,8 +154,6 @@ class EntityTypeApplicabilityTests(unittest.TestCase):
     def test_default_entity_type_is_corporate(self):
         self.assertEqual(evaluate_altman_z_score(_identities())["status"], "available")
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class ZoneProximityTests(unittest.TestCase):
@@ -183,3 +189,52 @@ class ZoneProximityTests(unittest.TestCase):
 
     def test_proximity_is_absent_when_no_score_was_produced(self):
         self.assertIsNone(evaluate_altman_z_score({})["zone_proximity"])
+
+
+class ManufacturingApplicabilityGateTests(unittest.TestCase):
+    """Z' retains X5 = sales / total assets, the most industry-sensitive of the five terms,
+    and was estimated on manufacturing firms. `entity_type == "corporate"` is therefore NOT
+    sufficient -- applying Z' to every non-financial issuer would fail open across the whole
+    universe. The four-variable Z'' exists for non-manufacturers and is not implemented."""
+
+    def test_qualified_manufacturing_industry_is_required_for_a_score(self):
+        for industry in ("Tai nguyen Co ban", "Thuc pham va do uong", "Hoa chat"):
+            self.assertEqual(_raw_evaluate(_identities(), entity_type="corporate",
+                                            industry=industry)["status"], "available", industry)
+
+    def test_non_manufacturing_corporate_gets_insufficient_evidence_not_a_score(self):
+        for industry in ("Bat dong san", "Ban le", "Cong nghe Thong tin", "Dien, nuoc & xang dau khi dot"):
+            result = _raw_evaluate(_identities(), entity_type="corporate", industry=industry)
+            self.assertEqual(result["status"], "insufficient_evidence", industry)
+            self.assertIsNone(result["score"], industry)
+            self.assertIn("qualified_manufacturing_industry", result["missing_inputs"], industry)
+
+    def test_mixed_industry_labels_are_excluded_on_purpose(self):
+        """Construction+materials and industrial goods+services each mix manufacturers with
+        non-manufacturers, so the label cannot qualify an individual issuer."""
+        for industry in ("Xay dung va Vat lieu", "Hang & Dich vu Cong nghiep", "Y te"):
+            self.assertEqual(_raw_evaluate(_identities(), entity_type="corporate",
+                                            industry=industry)["status"], "insufficient_evidence", industry)
+
+    def test_missing_industry_blocks_even_for_a_confirmed_corporate(self):
+        for industry in (None, "", "   "):
+            result = _raw_evaluate(_identities(), entity_type="corporate", industry=industry)
+            self.assertEqual(result["status"], "insufficient_evidence", repr(industry))
+
+    def test_financial_entity_is_not_applicable_regardless_of_industry(self):
+        result = _raw_evaluate(_identities(), entity_type="bank", industry="Tai nguyen Co ban")
+        self.assertEqual(result["status"], "not_applicable")
+
+    def test_diacritics_do_not_change_the_verdict(self):
+        with_marks = _raw_evaluate(_identities(), entity_type="corporate", industry="Tài nguyên Cơ bản")
+        without = _raw_evaluate(_identities(), entity_type="corporate", industry="Tai nguyen Co ban")
+        self.assertEqual(with_marks["status"], "available")
+        self.assertEqual(with_marks["status"], without["status"])
+
+    def test_applicability_verdict_is_carried_in_the_result(self):
+        result = _raw_evaluate(_identities(), entity_type="corporate", industry="Tai nguyen Co ban")
+        self.assertEqual(result["applicability"]["applicability"], "eligible")
+        self.assertTrue(result["applicability"]["industry_qualified_manufacturing"])
+
+if __name__ == "__main__":
+    unittest.main()

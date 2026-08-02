@@ -27,6 +27,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from altman_applicability import evaluate_altman_applicability
+
 VERSION = "1.0.0"
 VARIANT = "altman_z_prime_1983_private_firm"
 FORMULA = "0.717*X1 + 0.847*X2 + 3.107*X3 + 0.420*X4 + 0.998*X5"
@@ -58,6 +60,7 @@ def _out(status: str, **extra: Any) -> dict[str, Any]:
     result = {
         "schema_version": VERSION, "model": "altman_z_score", "variant": VARIANT,
         "formula": FORMULA, "status": status, "score": None, "zone": None, "zone_proximity": None,
+        "applicability": None,
         "components": {}, "inputs": {}, "missing_inputs": [], "blocking_reasons": [],
         "thresholds": {"distress_below": DISTRESS_THRESHOLD, "safe_above": SAFE_THRESHOLD},
         "period": None, "statement_scope": None, "currency": None, "unit_scale": None,
@@ -105,28 +108,27 @@ def _zone_proximity(score: float) -> dict[str, Any]:
 
 
 def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
-                             entity_type: str = "corporate") -> dict[str, Any]:
+                             entity_type: str = "corporate", industry: Any = None) -> dict[str, Any]:
     """Pure. `identities` maps identity name -> {"value", "period", "statement_scope",
     "currency", "unit_scale", and optional lineage keys carried through unchanged}.
 
     Returns a fail-closed envelope; see module docstring. Never raises on missing or
-    malformed input. A financial-institution `entity_type` returns "not_applicable"
-    regardless of how complete its identities are -- structural inapplicability is
-    reported as itself, never as missing evidence.
+    malformed input.
+
+    Applicability is decided first, by `altman_applicability.evaluate_altman_applicability`,
+    and a non-eligible verdict short-circuits before any arithmetic. `entity_type` alone is
+    NOT sufficient: Z' retains the industry-sensitive X5 term and was estimated on
+    manufacturing firms, so a confirmed non-financial issuer in a non-manufacturing industry
+    still yields "insufficient_evidence" rather than a score.
     """
-    normalized_entity_type = str(entity_type or "").strip().lower()
-    if normalized_entity_type in _NON_APPLICABLE_ENTITY_TYPES:
-        return _out("not_applicable", blocking_reasons=[
-            f"Altman corporate Z'-score is not applicable to entity_type={entity_type!r}: the model "
-            "was estimated on non-financial firms and its working-capital and asset-turnover terms "
-            "have no equivalent meaning for a financial institution's balance sheet."])
-    if normalized_entity_type in _UNQUALIFIED_ENTITY_TYPES:
-        # An absent or "unknown" entity_type must never be silently read as "corporate":
-        # that would fail open, quietly applying a non-financial model to what may be a
-        # bank. Unknown stays unknown, and the caller is told which fact is missing.
-        return _out("insufficient_evidence", missing_inputs=["entity_type"], blocking_reasons=[
-            f"entity_type is not qualified (got {entity_type!r}); the Altman corporate Z'-score "
-            "cannot be asserted to apply without knowing the entity archetype."])
+    applicability = evaluate_altman_applicability(entity_type, industry)
+    if applicability["applicability"] != "eligible":
+        status = applicability["applicability"]
+        missing = ["entity_type"] if str(entity_type or "").strip().lower() in _UNQUALIFIED_ENTITY_TYPES else []
+        if status == "insufficient_evidence" and not missing and not applicability["industry_qualified_manufacturing"]:
+            missing = ["qualified_manufacturing_industry"]
+        return _out(status, applicability=applicability, missing_inputs=missing,
+                    blocking_reasons=[applicability["reason"]])
     identities = identities if isinstance(identities, Mapping) else {}
     present = {name: identities[name] for name in REQUIRED_IDENTITIES
                if isinstance(identities.get(name), Mapping) and _number(identities[name].get("value")) is not None}
@@ -169,6 +171,7 @@ def evaluate_altman_z_score(identities: Mapping[str, Mapping[str, Any]] | None,
             "input revisions and should not be read as a decisive classification."]
     return _out(
         "available", score=score, zone=_zone(score), zone_proximity=proximity,
+        applicability=applicability,
         **({"limitations": limitations} if limitations else {}),
         components={name: {"ratio": ratio, "coefficient": COEFFICIENTS[name],
                             "weighted": COEFFICIENTS[name] * ratio,
