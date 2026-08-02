@@ -1595,6 +1595,46 @@ class TrustedSubsetProofTests(unittest.TestCase):
         self.assertEqual(proof["price_basis"]["state"], "unknown")
 
 
+class EmbeddedContextBasisConsistencyTests(unittest.TestCase):
+    _UNKNOWN = {
+        "price_basis": "unknown",
+        "price_basis_verified": False,
+        "volume_basis": "unknown",
+        "volume_basis_verified": False,
+    }
+
+    def test_matching_context_has_no_conflicts(self):
+        context = {"price_summary": dict(self._UNKNOWN)}
+        self.assertEqual(bundle.context_package_basis_conflicts(context, self._UNKNOWN), [])
+
+    def test_verified_volume_claim_conflicting_with_canonical_unknown_is_rejected(self):
+        context = {
+            "price_summary": {
+                **self._UNKNOWN,
+                "volume_basis": "raw_shares_traded",
+                "volume_basis_verified": True,
+            }
+        }
+        conflicts = bundle.context_package_basis_conflicts(context, self._UNKNOWN)
+        self.assertIn("context_package.price_summary.volume_basis", conflicts)
+        self.assertIn("context_package.price_summary.volume_basis_verified", conflicts)
+
+    def test_nested_unverified_basis_value_cannot_leak(self):
+        context = {
+            "price_summary": dict(self._UNKNOWN),
+            "risk_analysis": {"average_volume": {"provenance": {"volume_basis": "raw_shares_traded"}}},
+        }
+        self.assertEqual(
+            bundle.context_package_basis_conflicts(context, self._UNKNOWN),
+            ["context_package.risk_analysis.average_volume.provenance.volume_basis"],
+        )
+
+    def test_legacy_context_without_complete_basis_contract_is_rejected(self):
+        conflicts = bundle.context_package_basis_conflicts({"price_summary": {}}, self._UNKNOWN)
+        self.assertEqual(len(conflicts), 4)
+        self.assertTrue(all(path.endswith(":missing") for path in conflicts))
+
+
 class AnalysisLaneEligibilityPipelineIntegrationTests(unittest.TestCase):
     """Phase 5A opt-in wiring exercised through the real export_ai_bundle.main() pipeline
     against real retained data (same convention as the rest of this file) -- proves the

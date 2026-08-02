@@ -1760,6 +1760,49 @@ def load_context_package_full(tk: str) -> dict | None:
         return json.load(f)
 
 
+def context_package_basis_conflicts(
+    context_package: Mapping[str, Any] | None,
+    canonical_basis: Mapping[str, Any],
+) -> list[str]:
+    """Return every embedded basis path that contradicts the current bundle contract.
+
+    Context packages are generated independently and may pre-date the bundle being
+    exported.  They must never re-introduce a basis claim that the current canonical
+    build has already kept unknown or unverified.
+    """
+    if not isinstance(context_package, Mapping):
+        return []
+    fields = (
+        "price_basis",
+        "price_basis_verified",
+        "volume_basis",
+        "volume_basis_verified",
+    )
+    expected = {field: canonical_basis.get(field) for field in fields}
+    conflicts: list[str] = []
+    price_summary = context_package.get("price_summary")
+    if not isinstance(price_summary, Mapping):
+        conflicts.append("context_package.price_summary:missing_or_malformed")
+    else:
+        for field in fields:
+            if field not in price_summary:
+                conflicts.append(f"context_package.price_summary.{field}:missing")
+
+    def walk(value: Any, path: str) -> None:
+        if isinstance(value, Mapping):
+            for field in fields:
+                if field in value and value.get(field) != expected[field]:
+                    conflicts.append(f"{path}.{field}")
+            for key, child in value.items():
+                walk(child, f"{path}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                walk(child, f"{path}[{index}]")
+
+    walk(context_package, "context_package")
+    return sorted(set(conflicts))
+
+
 def load_market_breadth() -> tuple[list[dict] | None, dict]:
     path = runtime_path(MARKET_BREADTH_PATH)
     if not path.exists():
@@ -2785,7 +2828,15 @@ def main() -> int:
     bundle_entries = {}
     for tk in tickers:
         entry = dict(entries[tk])  # copy nông — không sửa entries gốc (focus_extract vẫn nhỏ)
-        entry["context_package"] = load_context_package_full(tk)
+        context_package = load_context_package_full(tk)
+        basis_conflicts = context_package_basis_conflicts(context_package, price_basis)
+        if basis_conflicts:
+            entry["context_package"] = None
+            entry.setdefault("warnings", []).append(
+                "context_package_basis_mismatch_fail_closed:" + ",".join(basis_conflicts)
+            )
+        else:
+            entry["context_package"] = context_package
         raw_news = (
             (entry["context_package"] or {}).get("news_summary")
             if entry["context_package"] else None
