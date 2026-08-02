@@ -103,5 +103,37 @@ class TaxonomyToAltmanBridgeTests(unittest.TestCase):
             self.assertEqual(evaluate_altman_applicability(entity_type, _MANUFACTURING)["applicability"],
                               "not_applicable", entity_type)
 
+
+
+class StatementTaxonomyEvidenceTests(unittest.TestCase):
+    """`statement_taxonomy` is consulted only to withhold applicability, never to grant it."""
+
+    def test_financial_taxonomy_withholds_even_without_a_resolved_entity_type(self):
+        for taxonomy in ("credit_institution", "securities_company", "financial_specialized_ambiguous"):
+            result = evaluate_altman_applicability(None, _MANUFACTURING, statement_taxonomy=taxonomy)
+            self.assertEqual(result["applicability"], "not_applicable", taxonomy)
+
+    def test_non_evidential_taxonomy_leaves_insufficient_evidence(self):
+        for taxonomy in (None, "", "unknown", "unresolved"):
+            result = evaluate_altman_applicability(None, _MANUFACTURING, statement_taxonomy=taxonomy)
+            self.assertEqual(result["applicability"], "insufficient_evidence", repr(taxonomy))
+
+    def test_corporate_taxonomy_alone_never_grants_eligibility(self):
+        """Observing a corporate template is not a resolved issuer entity type."""
+        result = evaluate_altman_applicability(None, _MANUFACTURING, statement_taxonomy="corporate_vas")
+        self.assertEqual(result["applicability"], "insufficient_evidence")
+
+    def test_manual_entity_type_takes_precedence_over_taxonomy(self):
+        contradicted = evaluate_altman_applicability("bank", _MANUFACTURING,
+                                                      statement_taxonomy="corporate_vas")
+        self.assertEqual(contradicted["applicability"], "not_applicable")
+        confirmed = evaluate_altman_applicability("corporate", _MANUFACTURING,
+                                                   statement_taxonomy="credit_institution")
+        self.assertEqual(confirmed["applicability"], "eligible")
+
+    def test_taxonomy_is_echoed_in_the_result(self):
+        result = evaluate_altman_applicability(None, _MANUFACTURING, statement_taxonomy="credit_institution")
+        self.assertEqual(result["statement_taxonomy"], "credit_institution")
+
 if __name__ == "__main__":
     unittest.main()

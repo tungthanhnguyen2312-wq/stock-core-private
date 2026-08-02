@@ -106,14 +106,15 @@ markers and are unaffected.
 
 - 1,380 tickers classified; every retained quarterly period evaluated, not just the latest.
 - Resolved taxonomy: `corporate_vas` 1,297 / `securities_company` 41 /
-  `credit_institution` 29 / unresolved 13.
+  `credit_institution` 29 / `financial_specialized_ambiguous` 13. Sums to 1,380.
 - **Cross-period stability: 1,380 stable, 0 unstable.** No ticker's observed taxonomy
   changes across periods.
-- The correction moved 13 tickers out of `credit_institution` into unresolved -- they had
-  been labelled on the shared lending line alone.
+- The correction moved 13 tickers out of `credit_institution` into
+  `financial_specialized_ambiguous` -- they had been labelled on the shared lending line
+  alone.
 - Confusion against the 15 manual profiles: bank->credit_institution (4),
   corporate->corporate_vas (8), finance_company->credit_institution (1),
-  securities->securities_company (1), insurance->unresolved (1). Zero
+  securities->securities_company (1), insurance->financial_specialized_ambiguous (1). Zero
   corporate/non-corporate disagreements.
 
 **The 15-profile set remains a smoke test, not an accuracy measurement.** It contains one
@@ -123,13 +124,24 @@ migrations, or payloads missing markers.
 
 ## Measured Altman delta -- the prior "~1,100" projection was wrong
 
-| | eligible | insufficient_evidence | not_applicable |
-|---|---|---|---|
-| Manual profiles only | 3 | 1,370 | 7 |
-| With shadow overlay | 375 | 998 | 7 |
+| | eligible | insufficient_evidence | not_applicable | total |
+|---|---|---|---|---|
+| Manual profiles only | 3 | 1,370 | 7 | 1,380 |
+| With shadow overlay | 375 | 922 | **83** | 1,380 |
 
 Newly eligible by applicability: **372**, not ~1,100. Still blocked after the overlay:
-929 on `industry_not_qualified_manufacturing`, 76 on unresolved entity type.
+922 on `industry_not_qualified_manufacturing`, 83 on
+`financial_entity_or_taxonomy_not_applicable`.
+
+`not_applicable` reconciles exactly to the specialized financial taxonomies:
+41 `securities_company` + 29 `credit_institution` + 13 `financial_specialized_ambiguous`
+= 83. The seven manually-labelled financial issuers (BID, MBB, TCB, VCB, EVF, SSI, BVH)
+are a subset of those 83, not an addition -- each also classifies into a financial
+taxonomy, so there is no double count.
+
+Every reconciliation assertion in the report holds: taxonomy buckets, before buckets,
+after buckets, and (block reasons + eligible) each sum to the classified universe of
+1,380.
 
 **Applicability is not a score.** A ticker also needs all identities at one aligned
 period/scope/currency/scale. Against the provider snapshot:
@@ -170,3 +182,79 @@ companies with financial arms, and issuers that changed template -- plus a gener
 sidecar (`generated_statement_profiles.jsonl`) carrying full provenance, with resolution
 order `manual verified > generated high-confidence > unknown`. The sidecar is not created
 in this milestone.
+
+---
+
+# Closeout: SHADOW_TAXONOMY_APPLICABILITY_INTEGRATION
+
+Corrective pass over checkpoint `f7fd3e4`, which reported 29 `credit_institution` +
+41 `securities_company` yet still only 7 `not_applicable` -- identical to manual-only.
+
+## Root cause
+
+Cause (1) and (2) of the four candidates, plus (4). In
+`tools/shadow_taxonomy_qualification.py` the overlay was:
+
+```python
+overlay_type = manual_type or ("corporate" if resolved[ticker] == CORPORATE_TAXONOMY else None)
+after_verdict = evaluate_altman_applicability(overlay_type, industry)
+```
+
+Every non-corporate taxonomy collapsed to `None` before reaching the gate, so all 70
+specialized financial filers were evaluated as "entity type unknown" and bucketed
+`insufficient_evidence`. The taxonomy was computed correctly and then discarded at the
+overlay step; `evaluate_altman_applicability` never saw it. Fail-closed throughout, so no
+wrong score was produced -- but the state contract was wrong.
+
+Cause (4) applied too: every applicability test called the function directly with a
+hand-written entity type. Nothing exercised `run()`, so the discard was invisible.
+
+A second defect compounded it: `resolved[]` was computed from *observed-only* taxonomies,
+so a consistently-abstained ticker (BVH) collapsed to `"unresolved"`, destroying the
+positive financial evidence that `financial_specialized_ambiguous` carries.
+
+## Fixes
+
+1. `evaluate_altman_applicability(entity_type, industry, statement_taxonomy=None)`.
+   Taxonomy is consulted **only to withhold** applicability, never to grant it: an observed
+   financial template yields `not_applicable` even with no resolved entity type, while
+   `corporate_vas` alone never yields `eligible`. Authoritative `entity_type` always wins.
+2. Shadow resolution now uses the taxonomy **value** across periods.
+   `financial_specialized_ambiguous` and `unknown` are real taxonomy values, not failures.
+3. The observed taxonomy is passed into the gate for every ticker.
+4. Report carries a `reconciliation` block asserting every bucketing totals the universe.
+
+## Regression found and fixed in the same pass
+
+`f7fd3e4` added the industry requirement to `evaluate_altman_z_score` but
+`export_ai_bundle.build_financial_distress_evidence_for_ticker` never supplied one, so
+**HPG and VNM silently regressed to `insufficient_evidence` in the bundle path** while the
+documentation still claimed their scores. Added `_retained_industry()` (read-only,
+fail-quiet SQLite lookup of `metadata.industry`) and wired it in. Verified restored:
+
+| Ticker | Status | Score | Industry |
+|---|---|---|---|
+| HPG | available | 1.500557431830876 | Tài nguyên Cơ bản |
+| VNM | available | 2.897596214248344 | Thực phẩm và đồ uống |
+| SSI / EVF | not_applicable | — | Dịch vụ tài chính |
+| VCB | insufficient_evidence | — | Ngân hàng (entity_type null on entry) |
+| VIC / FPT | insufficient_evidence | — | non-manufacturing |
+
+## Contract now enforced end-to-end
+
+| Input | Applicability |
+|---|---|
+| `credit_institution` | `not_applicable` |
+| `securities_company` | `not_applicable` |
+| `financial_specialized_ambiguous` | `not_applicable` |
+| `unknown` / `unresolved`, no financial evidence | `insufficient_evidence` |
+| `corporate_vas` + resolved non-financial entity + manufacturing industry | `eligible` |
+| any missing value | never `corporate`, never `eligible` |
+
+`tests/test_shadow_taxonomy_integration.py` exercises this through `run()` itself, patching
+only the three I/O seams (manual profiles, industries, per-period classification).
+
+```
+SHADOW_TAXONOMY_APPLICABILITY_INTEGRATION: PASS
+CANONICAL_PROFILE_BACKFILL_AUTHORIZED: NO
+```

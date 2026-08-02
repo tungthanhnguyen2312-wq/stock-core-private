@@ -92,16 +92,22 @@ def run(runtime_root: Path) -> dict[str, Any]:
         observed_taxonomies = {r["statement_taxonomy"] for r in observed}
         first = min((r["reporting_period"] for r in results), default=None)
         last = max((r["reporting_period"] for r in results), default=None)
-        stable = len(observed_taxonomies) <= 1
+        stable = len(taxonomies) <= 1
         stability[ticker] = {
             "periods_evaluated": len(results), "distinct_taxonomies": sorted(taxonomies),
+            "observed_taxonomies": sorted(observed_taxonomies),
             "stable": stable, "first_observed_period": first, "last_observed_period": last,
         }
         if not stable:
-            unstable.append({"ticker": ticker, "taxonomies": sorted(observed_taxonomies),
+            unstable.append({"ticker": ticker, "taxonomies": sorted(taxonomies),
                               "periods_evaluated": len(results)})
-        # A ticker resolves only if every period that produced an observation agrees.
-        resolved[ticker] = observed_taxonomies.pop() if len(observed_taxonomies) == 1 else "unresolved"
+        # Resolve on the taxonomy VALUE across periods. `financial_specialized_ambiguous`
+        # and `unknown` are real taxonomy values, not failures to classify: collapsing an
+        # abstained-but-consistent taxonomy into "unresolved" previously destroyed the
+        # positive financial evidence that `financial_specialized_ambiguous` carries, which
+        # is exactly what let 70 specialized financial filers fall through to
+        # `insufficient_evidence` instead of `not_applicable`.
+        resolved[ticker] = taxonomies.pop() if len(taxonomies) == 1 else "unresolved"
 
     taxonomy_counts = collections.Counter(resolved.values())
 
@@ -125,23 +131,27 @@ def run(runtime_root: Path) -> dict[str, Any]:
     for ticker in sorted(resolved):
         industry = industries.get(ticker)
         manual_type = manual.get(ticker)
+        taxonomy = resolved[ticker]
+        # Baseline: manual profiles only, no taxonomy evidence at all.
         before_verdict = evaluate_altman_applicability(manual_type, industry)
         before[before_verdict["applicability"]] += 1
         # Overlay proposes "corporate" ONLY where the taxonomy is corporate_vas across all
-        # periods AND no manual profile already says otherwise.
-        overlay_type = manual_type or (
-            "corporate" if resolved[ticker] == CORPORATE_TAXONOMY else None)
-        after_verdict = evaluate_altman_applicability(overlay_type, industry)
+        # periods AND no manual profile already says otherwise. The observed taxonomy is
+        # passed through in every case so a specialized financial filing can withhold
+        # applicability even when no entity type resolves.
+        overlay_type = manual_type or ("corporate" if taxonomy == CORPORATE_TAXONOMY else None)
+        after_verdict = evaluate_altman_applicability(overlay_type, industry,
+                                                      statement_taxonomy=taxonomy)
         after[after_verdict["applicability"]] += 1
         if before_verdict["applicability"] != "eligible" and after_verdict["applicability"] == "eligible":
             newly_eligible.append(ticker)
-        if after_verdict["applicability"] != "eligible":
-            if overlay_type is None or str(overlay_type).lower() in {"", "unknown"}:
-                after_block_reasons["entity_type_unresolved_even_with_overlay"] += 1
-            elif not after_verdict["industry_qualified_manufacturing"]:
-                after_block_reasons["industry_not_qualified_manufacturing"] += 1
+        if after_verdict["applicability"] == "not_applicable":
+            after_block_reasons["financial_entity_or_taxonomy_not_applicable"] += 1
+        elif after_verdict["applicability"] != "eligible":
+            if not overlay_type or str(overlay_type).lower() in {"", "unknown"}:
+                after_block_reasons["entity_type_unresolved_and_taxonomy_not_evidential"] += 1
             else:
-                after_block_reasons["financial_entity_not_applicable"] += 1
+                after_block_reasons["industry_not_qualified_manufacturing"] += 1
 
     return {
         "schema_version": "1.0.0",
@@ -166,6 +176,18 @@ def run(runtime_root: Path) -> dict[str, Any]:
             "newly_eligible_count": len(newly_eligible),
             "newly_eligible_sample": newly_eligible[:25],
             "still_blocked_reasons_after_overlay": dict(after_block_reasons.most_common()),
+        },
+        "reconciliation": {
+            "classified_tickers": len(resolved),
+            "taxonomy_bucket_total": sum(taxonomy_counts.values()),
+            "taxonomy_buckets_sum_to_universe": sum(taxonomy_counts.values()) == len(resolved),
+            "before_bucket_total": sum(before.values()),
+            "after_bucket_total": sum(after.values()),
+            "before_buckets_sum_to_universe": sum(before.values()) == len(resolved),
+            "after_buckets_sum_to_universe": sum(after.values()) == len(resolved),
+            "after_block_reason_total": sum(after_block_reasons.values()),
+            "block_reasons_plus_eligible_sum_to_universe":
+                sum(after_block_reasons.values()) + after.get("eligible", 0) == len(resolved),
         },
         "review_queue_non_corporate_or_ambiguous": sorted(
             t for t, tax in resolved.items() if tax != CORPORATE_TAXONOMY)[:200],

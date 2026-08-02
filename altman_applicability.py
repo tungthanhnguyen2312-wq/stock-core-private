@@ -37,6 +37,19 @@ VERSION = "1.0.0"
 FINANCIAL_ENTITY_TYPES = frozenset({"bank", "securities", "insurance", "finance_company"})
 UNQUALIFIED_ENTITY_TYPES = frozenset({"", "unknown", "none", "null"})
 
+# Observed statement taxonomies that are positive evidence the filer reports under a
+# specialized *financial* template. Knowing which financial template it is (bank vs finance
+# company vs insurer) is not required to know the corporate Z' does not apply -- a filing
+# with deposit-taking, client-settlement, or other specialized financial lines has no
+# operating-cycle working capital and no meaningful asset turnover either way. These
+# therefore resolve to `not_applicable` even when `issuer_entity_type` is still unknown.
+FINANCIAL_STATEMENT_TAXONOMIES = frozenset({
+    "credit_institution", "securities_company", "financial_specialized_ambiguous",
+})
+# `unknown` is the absence of evidence, not evidence of a financial filer, so it can never
+# support `not_applicable` -- it stays `insufficient_evidence`.
+NON_EVIDENTIAL_TAXONOMIES = frozenset({"", "unknown", "none", "null", "unresolved"})
+
 # Vietnamese ICB level-2 labels whose constituents are unambiguously goods-producing.
 # Compared diacritic-insensitively so a provider accent/spacing change does not silently
 # drop a whitelist entry into abstention.
@@ -65,15 +78,25 @@ def is_manufacturing_industry(industry: Any) -> bool:
     return _fold(industry) in _MANUFACTURING_FOLDED
 
 
-def evaluate_altman_applicability(entity_type: Any, industry: Any) -> dict[str, Any]:
+def evaluate_altman_applicability(entity_type: Any, industry: Any,
+                                   statement_taxonomy: Any = None) -> dict[str, Any]:
     """Pure. Returns {"applicability", "reason", "entity_type", "industry",
-    "industry_qualified_manufacturing", "version"}.
+    "statement_taxonomy", "industry_qualified_manufacturing", "version"}.
 
     applicability is one of "not_applicable" | "eligible" | "insufficient_evidence".
+
+    `statement_taxonomy` is optional observed evidence (see
+    `statement_taxonomy_classifier`). It is consulted only to *withhold* applicability,
+    never to grant it: an observed financial template yields `not_applicable` even when the
+    issuer entity type is unknown, but `corporate_vas` alone never produces `eligible` --
+    that still requires a resolved non-financial entity type and a qualified manufacturing
+    industry. A manual/authoritative `entity_type` always takes precedence over taxonomy.
     """
     normalized_entity = _fold(entity_type)
+    normalized_taxonomy = _fold(statement_taxonomy)
     result = {
         "version": VERSION, "entity_type": entity_type, "industry": industry,
+        "statement_taxonomy": statement_taxonomy,
         "industry_qualified_manufacturing": is_manufacturing_industry(industry),
     }
 
@@ -84,10 +107,18 @@ def evaluate_altman_applicability(entity_type: Any, industry: Any) -> dict[str, 
                            "asset-turnover terms have no equivalent meaning here.")}
 
     if normalized_entity in UNQUALIFIED_ENTITY_TYPES:
+        # No authoritative entity type. Observed taxonomy may still positively evidence a
+        # specialized financial filing, which is enough to withhold the corporate model.
+        if normalized_taxonomy in FINANCIAL_STATEMENT_TAXONOMIES:
+            return {**result, "applicability": "not_applicable",
+                    "reason": (f"statement_taxonomy={statement_taxonomy!r} is a specialized financial "
+                               "reporting template; the corporate Z'-score does not apply regardless of "
+                               "which financial subtype the issuer turns out to be.")}
         return {**result, "applicability": "insufficient_evidence",
-                "reason": (f"entity_type is not qualified (got {entity_type!r}); an absent archetype is "
-                           "never read as corporate, because that would apply a non-financial model to "
-                           "what may be a bank.")}
+                "reason": (f"entity_type is not qualified (got {entity_type!r}) and statement_taxonomy "
+                           f"({statement_taxonomy!r}) is not positive evidence of a financial filing; an "
+                           "absent archetype is never read as corporate, because that would apply a "
+                           "non-financial model to what may be a bank.")}
 
     if not industry or not str(industry).strip():
         return {**result, "applicability": "insufficient_evidence",

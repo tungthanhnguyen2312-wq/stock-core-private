@@ -2583,6 +2583,25 @@ def _altman_identity(entry: Mapping[str, Any], extra: Mapping[str, Any] | None =
     return identity
 
 
+def _retained_industry(ticker: str, root: Path) -> str | None:
+    """The retained ICB-style industry label for `ticker`, or None.
+
+    Read-only and fail-quiet: an unreadable metadata table simply yields None, and the
+    Altman applicability gate then blocks on a missing industry rather than assuming one.
+    """
+    try:
+        connection = sqlite3.connect(f"file:{(root / 'vn_stock.db').as_posix()}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return None
+    try:
+        row = connection.execute("SELECT industry FROM metadata WHERE ticker = ?", (ticker,)).fetchone()
+    except sqlite3.Error:
+        return None
+    finally:
+        connection.close()
+    return str(row[0]) if row and row[0] and str(row[0]).strip() else None
+
+
 def build_financial_distress_evidence_for_ticker(ticker: str, entity_type: Any,
                                                   financial_canonical: Mapping[str, Any] | None,
                                                   root: Path) -> dict[str, Any]:
@@ -2639,8 +2658,11 @@ def build_financial_distress_evidence_for_ticker(ticker: str, entity_type: Any,
         pass
     # entity_type is passed through as-is, never coerced to a default: an absent value is
     # a distinct third state and evaluate_altman_z_score() blocks on it rather than
-    # assuming the corporate archetype.
-    return evaluate_altman_z_score(identities, entity_type=entity_type)
+    # assuming the corporate archetype. industry is required too -- Z' keeps the
+    # industry-sensitive X5 term, so a confirmed non-financial issuer in a
+    # non-manufacturing industry is still withheld.
+    return evaluate_altman_z_score(identities, entity_type=entity_type,
+                                    industry=_retained_industry(ticker, root))
 
 
 # ==========================================================================
