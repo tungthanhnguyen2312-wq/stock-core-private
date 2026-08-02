@@ -59,5 +59,8 @@ class AcquisitionTests(unittest.TestCase):
   future=acquire([self.spec(reporting_period="2027")],self.root,fetcher=self.fetch)
   self.assertEqual(current["outcomes"][0]["state"],"retained")
   self.assertEqual(future["outcomes"][0]["state"],"unsupported_request")
+ def test_reviewed_interim_statement_is_supported(self):
+  result=acquire([self.spec(reporting_period="2026",document_class="reviewed_interim_financial_statements")],self.root,fetcher=self.fetch)
+  self.assertEqual(result["outcomes"][0]["state"],"retained")
 
 if __name__=='__main__': unittest.main()

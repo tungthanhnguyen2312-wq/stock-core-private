@@ -5,7 +5,7 @@
 Each retained version records canonical URL, issuer authority, document class, period, publication/observation dates, HTTP metadata, SHA-256, and immutable hash-addressed relative path. Repeated URL/hash pairs are skipped. Changed bytes append a new record and can name a previous `supersedes_document_id`; no prior byte or manifest record is replaced.
 For governed, non-production retention, the canonical caller destination is `operations-review/governed-official-evidence-v1/` relative to the Producer repository. It is deliberately untracked, outside every runtime/database root, and is the only location where this pilot may retain downloaded PDF binaries. Its deterministic manifest and citation handoff are operational evidence, not Git-binary inputs.
 
-The initial classes are audited annual financial statements, annual reports, AGM documents/resolutions, corporate-action notices, and amendment/supersession notices. Failure states are `unsupported_request`, `inaccessible`, `malformed`, `unsupported_document`, `needs_ocr`, and `malformed_document`; the coverage matrix marks no retained class as `missing`.
+The supported classes are audited annual financial statements, reviewed interim financial statements, annual reports, AGM documents/resolutions, corporate-action notices, and amendment/supersession notices. Failure states are `unsupported_request`, `inaccessible`, `malformed`, `unsupported_document`, `needs_ocr`, and `malformed_document`; the coverage matrix marks no retained class as `missing`.
 
 The bounded period allowlist includes 2026 so current-year HPG/VNM corporate-action
 completion notices can be retained without weakening the ticker or document-class
