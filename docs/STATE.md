@@ -1,37 +1,161 @@
 # Stock Lookup state
 
-- Active phase: P0 market-data qualification and P1 trusted current-session readiness remain the only active gates.
-- Active milestone: rerun one bounded HPG/VNM private-shadow validation only after EODHD service responsiveness is restored; independently retain direct share-transition coverage through the trusted session when available.
-- Producer reviewed head: `1b04355`.
-- Consumer reviewed head: `33f1c3b`.
-- Dashboard baseline: `5ecbbad`.
-- Completed: trusted-subset manifest/hash validation, Consumer trust validation, and HPG/VNM FY2024 verified historical-only financial analysis.
-- Completed: historical fundamental briefs, Consumer context/prompt integration, AI response validation, and empirical price-basis tool scaffolding.
-- Completed: Dashboard publisher defaults missing or partial volume-basis provenance to `unknown/unverified`; absence can no longer enable liquidity semantics.
-- Blocker: active VCI OHLCV rows are legacy records without retained provider/library version; new ingestion now retains version-bound lineage, but cannot retroactively qualify legacy rows.
-- Completed: price-test event identity is official-event evidence; a VCI corporate-action event ID is optional metadata and is not a qualification prerequisite.
-- Blocker: `VCI_PROVIDER_INTERNAL_ROUTE_BLOCKED_BY_RATIO_SEMANTICS`; vnstock 4.0.4 `Company.events` exposes `exercise_ratio` without a direct numerator/denominator/direction/scale contract, so provider-internal price windows are not authorized.
-- Blocker: `ACTIVE_PRICE_PATH_SEMANTICS_UNQUALIFIED`; the bundle consumes unchanged `ohlcv.close` from `Quote(source='VCI').provider.history(start,end,interval='1D')`, whose installed documentation defines historical OHLC but no adjustment/default contract.
-- Blocker: `DOCUMENTED_RAW_ADJUSTED_PATH_UNAVAILABLE`; no installed package exposes a directly documented raw-and-adjusted Vietnam equity EOD path.
-- Governance gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES_PRIVATE_SHADOW_EODHD`; owner approval, a rotated User-scope credential, and secret-safe access plumbing are present. The first bounded live attempt on 2026-08-02 timed out on `HPG.VN` before any payload qualified; `VNM.VN` was not requested. This is a provider-responsiveness blocker, not evidence of authentication success or failure. Production/public redistribution is not approved.
-- Blocker: price basis is `unknown/unverified`; volume basis and current shares are also unqualified.
-- Completed: forward daily-market and technical snapshot generators retain an explicit timezone-aware `source_generated_at`; session identity remains separate.
-- Completed: the bounded HPG/VNM shadow validation retains current daily and technical timestamps for both tickers; VNM's canonical technical row is neutral with no pattern or SMC and is coverage, not a signal.
-- Completed: Producer rejects embedded AI context packages whose price/volume basis fields are missing or conflict with the current bundle contract; Consumer reports a structurally valid `untrusted_basis` proof as `basis_unqualified`.
-- Blocker: production snapshots have not been regenerated through the forward timestamp contract. No historical timestamp was inferred or backfilled.
-- Partial progress: HPG's signed, issuer-hosted 2026 voting-share notice is retained with a verified source hash. It directly reports zero treasury shares and 8,442,964,520 voting shares after the change on 2026-06-04. Together with the issuer annual report's 7,675,465,855 opening outstanding shares, the resolver qualifies 8,442,964,520 as the latest historical common-outstanding identity; coverage through the 2026-07-30 trusted session remains unproven.
-- Partial progress: VNM's issuer-linked reviewed consolidated interim statement is retained with a verified source hash. Note 22 directly reports 2,089,955,445 issued and outstanding common shares at 2026-06-30, unchanged from 2026-01-01. It remains a latest qualified historical identity because the document does not prove absence of a July transition through the trusted session.
-- Completed: a deterministic share-transition resolver now requires direct common-outstanding identity, issuer scope, share units, effective dates, completed lifecycle evidence, citation/hash lineage, and explicit coverage through the target date. Listed, registered, or issued-only counts cannot be promoted when treasury treatment is unresolved.
-- Correction (2026-08-02, P0.1 audit): a 2026-08-02 handoff report described HPG FY2024 current liabilities (75,225,243,262,689 VND), retained/undistributed earnings (49,599,124,109,203 VND), profit-before-tax (13,693,502,261,178 VND), and derived EBIT (15,980,863,072,058 VND) as "verified values." These figures were read directly, by hand, from the retained hash-verified `hpg-consolidated-fy2024-audited.pdf` (pdf_page 9/10/11) during Phase 6E, and `cash_flow_debt_mapping.py` v1.3.0 (commit `4351302`) now carries the canonical mapping/derivation rules for `current_liabilities`, `retained_earnings`, `profit_before_tax`, and derived `ebit`. That commit touched only `cash_flow_debt_mapping.py` and its tests; the four values are exercised solely in `tests/test_hpg_fy2024_identity_expansion.py` and `tests/test_cash_flow_debt_mapping.py` synthetic fixtures. They have **not** been promoted into `dashboard-runtime/data/official-evidence/qualification_citations.jsonl`, which still holds exactly the same 19 HPG rows as before Phase 6E. They are therefore mapping capability, not qualified evidence: unqualified for `EvidenceRegistry`, `historical_fundamental_brief`, or the Altman gate. Confirmed 2026-08-02 (P0.2 audit): this is **not** the same blocker class as Phase 5E. `dashboard-runtime/data/financial-observations/observations.jsonl` has zero rows with `raw_item_id` in `{current_liabilities, undistributed_earnings, profit_before_tax}` for HPG at any period 2018-2026 -- there is no raw observation for `evidence_promotion.py` (the P0.2 write boundary) to attach a citation to, only a mapping rule with nothing to map. Unlocking this needs either a new bounded VCI/KBS sync that actually retains these raw items, or a distinct manual-observation intake path -- not another citation promotion. Do not treat these four values as qualified until a citation row exists and `EvidenceRegistry` reports it with zero new issues.
-- Completed (2026-08-02, P0.2): `evidence_promotion.py` is the approved, source-controlled evidence write boundary (docs/DECISIONS.md, "Approved evidence write boundary"). It appended one manifest record and one citation to `dashboard-runtime/data/official-evidence/{manifest.json,cash_dividend_citations.jsonl}` for the VNM cash-dividend event blocked at Phase 5E (VSD notice 177392, resolution 15/NQ-CTS.HDQT/2024, VND 500/share, record date 2024-12-27, payment 2025-02-28, evidence hash re-verified live before write). `semantic_evidence_bridge.load_verified_cash_dividends()` now reports `status: available`, 1 event, 0 rejected. The four pinned production artifacts (`vn_stock.db`, `analysis_bundle.json`, `bundle_manifest.json`, `focus_extract.json`) were hash-checked byte-identical before and after; the `distribution_evidence`/`income_defensive` lane consuming this event is still `is_actionable=False` pending its own lane-activation gate (P1.3), not this write boundary.
-- Completed (2026-08-02, P0.2 byproduct): fixed a hardcoded-default bug found while exercising the newly-promoted VNM event through the real pipeline for the first time. `semantic_evidence_bridge.py`'s `load_verified_cash_dividends()`/`load_verified_non_cash_events()` defaulted `issuer` to `"Vietnam Dairy Products Joint Stock Company"` and never carried `authority` into the nested `evidence` object at all; `corporate_action_ledger.py` then defaulted `source_authority` to the fixed string `"KPMG Limited Vietnam / Issuer IR Portal"` for every ticker whenever that (always-missing) field was absent. Both were VNM-only leftovers from the original Phase 5D/5E pilot that would have silently mislabeled issuer/authority for any other ticker's promoted event. Fixed to pass the real `authority`/`issuer` through from the manifest record and fall back to `None` (not a fabricated company name) when genuinely absent. All 84 tests across the affected modules pass unchanged; a full 1122-test suite run shows the same 25 pre-existing failures/errors as before this change, none in a file that imports either module.
-- Completed (2026-08-02, P1.5): `ticker_capability.py` -- pure, deterministic 5-tier capability matrix (T0 informational, T1 technical-display, T2 historical-fundamental, T3 distribution-event, T4 market-dependent), gated only on already-qualified Producer contracts, `is_actionable=False` hardcoded on every tier (same convention as `analysis_lane_eligibility.py`). Not yet wired into `export_ai_bundle.py`'s opt-in attach chain. Verified read-only against real production evidence: `HPG={T0,T1,T2}`, `VNM={T0,T1,T2,T3}` (T3 newly true after the P0.2 promotion), `VCB={T0,T1,T2}`, `PAN={T0,T1}`, `SSI={T0,T1}`. No ticker reaches T4 (matches the current global `price_basis=unknown` state).
-- Fixed (2026-08-02, P1.4, live production bug): `risk_liquidity.py::evaluate_market_risk()` was exposing VNM `point_in_time_beta`/`point_in_time_correlation` (return-derived metrics) with `is_actionable: true` in the default bundle **regardless of price/volume basis state** -- verified live: beta 0.0705, correlation 0.0610, `is_actionable: true`, while `price_basis` is globally `unknown/unverified`. Every sibling metric in the same function (`realized_volatility`, `downside_volatility`, `maximum_drawdown`) already correctly gates `is_actionable` on `current_actionable`; only these two skipped it. Fixed to use `bool(d.get("current_actionable"))`; re-verified live now returns `is_actionable: false` for VNM with a warning, value still computed and visible (same pattern as `realized_volatility`). Regression test added. Full `test_export_ai_bundle.py` re-run shows the same 2 pre-existing failures as before this change (rs_rating canonical mismatch, HPG share-mismatch promotion), neither touched by this fix.
-- Correction (2026-08-02, supersedes the P0.1/P0.2 entries above): the claim that HPG's `current_liabilities`/`retained_earnings`/`profit_before_tax` needed a new VCI/KBS sync was **wrong**. The observation-store fact behind it was right (`observations.jsonl` has no raw row for those items) but the "standalone PDF-cited fact" pattern already existed in production for exactly that case, and `ebitda_component_citations.jsonl` already held `profit_before_tax` and `interest_expense` for both HPG and VNM. Only two facts were actually missing.
-- Completed (2026-08-02): HPG FY2024 `current_liabilities` = 75,225,243,262,689 (code 310) and `retained_earnings` = 49,599,124,109,203 (code 421) are now qualified in the new `data/official-evidence/financial_identity_citations.jsonl`. Both were read directly from rendered pages of the already-retained, hash-verified `hpg-consolidated-fy2024-audited.pdf` (scanned, no text layer) and cross-checked against the statement's own printed arithmetic (`310 + 330 = 300`; `421a + 421b = 421`; `300 + 400 = 440`), each tying exactly to an already-qualified citation. Promoted via `evidence_promotion.py`; no manifest record added; four pinned production artifacts hash-checked byte-identical before and after.
-- Completed (2026-08-02, closes the Phase 6D Altman gate): `altman_z_score.py` implements the **Z'-score (1983 private-firm variant)** -- `X4` uses book value of equity, so no market price is consumed and the model is not coupled to the P0 price-basis blocker. Altman is single-period, so the unresolved FY2023 comparative gap never blocked it. **HPG FY2024 Z' = 1.5006 (grey)**; **VNM FY2024 Z' = 2.8976 (grey, `near_threshold` flagged** -- 0.0024, i.e. 0.08%, below the 2.90 safe boundary; every result carries `zone_proximity` and a result within 2% of a boundary gains a limitation stating the label is not robust to small input revisions). Both computed end-to-end from the evidence store with no hardcoded values; `is_actionable=False`, `historical_only=True`. VNM's two identities were promoted the same way as HPG's, read from pdf_page 9 of its own retained consolidated PDF with the same three arithmetic cross-checks. Wired as `tickers[ticker].financial_distress_evidence` behind the existing `--include-fundamental-quality-evidence` flag (no new CLI surface; default bundle output unchanged). SSI/EVF `not_applicable` on entity_type; VCB `insufficient_evidence` naming `entity_type` -- its entry carries `null`, and defaulting that to "corporate" would fail open by applying a non-financial model to a bank. See `docs/altman_z_prime_qualification.md`.
-- Fixed (2026-08-02, relative valuation temporal labelling): HPG's published multiples (`pe` 10.55, `pb` 1.11, `ps` 0.91, `ev_sales` 1.46, `ev_ebitda` 8.86) are built from a *cited historical* close (2024-12-31) but were shipping with `warnings: []` and no temporal marker, while the envelope's own `reference_at` is the current build time -- an FY2024 multiple was indistinguishable from a current-market claim. Every available multiple now carries `historical_only`, `market_dependent: false`, `as_of_semantics`, and a warning naming its valuation date. The computation itself was already correct and is unchanged.
-- Fixed (2026-08-02): `corporate_action_factors.py` still defaulted `issuer` to the hardcoded string `"Vietnam Dairy Products Joint Stock Company"` -- the same VNM-only leftover already removed from `semantic_evidence_bridge.py` and `corporate_action_ledger.py`, missed in that pass. Now falls back to `None`.
-- Verified gate result at the reviewed heads: P0 `INCOMPLETE`, P1 `INCOMPLETE`, market-dependent readiness `FAIL`, historical-only HPG/VNM readiness `PASS`.
-- Next exit gates: one successful authenticated same-session EODHD HPG/VNM schema validation after service recovery, plus direct HPG/VNM transition coverage through the 2026-07-30 trusted session. No automatic API retry is authorized.
-- Production state: runtime databases and generated production artifacts remain unchanged by governance work.
+Last verified: **2026-08-03**, by an end-to-end production run of the supported operating
+command against `dashboard-runtime` (reference session `2026-07-30`).
+
+## Canonical state lines
+
+`tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
+
+- Active phase: P0 market-data basis qualification is the only remaining hard gate; P1 exact-session integrity and P1B/P1C (generated taxonomy sidecar, one-command operating workflow) are done.
+- Active milestone: qualify `issuer_entity_type` for the ~1,289 tickers where it is unresolved, and retain `retained_earnings` systemically in the statement sync; neither depends on the blocked market-data basis.
+- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py`; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
+
+## Operate it
+
+```powershell
+python C:\Projects\StockLookup\stock-core-private\tools\operate_stocklookup.py --runtime-root C:\Projects\StockLookup\dashboard-runtime --execute --prepare-inputs
+```
+
+Drop `--execute` for a strict dry run; drop `--prepare-inputs` when the session inputs are
+already fresh (it is the slow part — `candle_scan.py` alone is ~25 minutes over the full
+universe); add `--publish` / `--publish --live` for the dashboard publisher. Exit codes:
+`0` success · `1` gate failed (artifacts rolled back) · `2` bad invocation · `3` locked.
+Full flag reference: `operations-review/local_runbook.md`. The command never fetches
+prices, macro series or news; run the daily market chain first when the market data itself
+is stale.
+
+## Current production artifact set
+
+Written into the runtime root by the command above, hash-bound to each other by the
+exact-session proof in `bundle_manifest.json`:
+
+| artifact | role |
+| --- | --- |
+| `analysis_bundle.json` | the full bundle the Consumer and Dashboard read |
+| `bundle_manifest.json` | source hashes + the exact-session proof (`trusted_subset`) |
+| `focus_extract.json` | the small truncation-resistant extract |
+| `statement_taxonomy_sidecar.json` | generated statement-taxonomy evidence, session-bound |
+| `reports/operate_stocklookup_latest.json` | deterministic operating report for the last run |
+
+## What is live and usable
+
+- **Exact-session bundle integrity.** Producer contract `stocklookup-producer/2026.08.03`,
+  proof schema `1.1.0`, pinned identically on both sides. The proof covers **every**
+  exported ticker with explicit `unproven_tickers` accounting, hash-binds the whole session
+  artifact set, and the Consumer verifies cross-artifact session/`generated_at` agreement,
+  per-ticker session identity, every declared artifact hash and the trusted-artifact
+  namespace, with 31 named rejection reasons. See `docs/exact_session_bundle_contract.md`.
+- **Generated statement taxonomy.** 1,381 payloads → 1,380 classified, 1 omitted (BIO, no
+  reporting-period columns), byte-stable on unchanged inputs.
+  `corporate_vas` 1,297 · `securities_company` 41 · `credit_institution` 29 ·
+  `financial_specialized_ambiguous` 13. Authority level `generated_evidence`, strictly
+  below `config/ticker_entity_profiles.csv`, which is **unchanged**;
+  `CANONICAL_PROFILE_BACKFILL_AUTHORIZED = NO`. See `docs/statement_taxonomy_sidecar_contract.md`.
+- **Altman Z' (1983 private-firm variant), historical-only.** Reachable through the
+  authorized bundle path, not a standalone script. Verified live in the current production
+  bundle: **HPG FY2024 Z' = 1.500557431830876 (grey)**; **VNM FY2024 Z' = 2.897596214248344
+  (grey, `near_threshold` flagged** — 0.0024 below the 2.90 boundary). Financial filers
+  never receive a score: SSI (securities), EVF (finance_company) and VCB (bank) all return
+  `not_applicable`. Every non-eligible and every identity-blocked result carries its
+  applicability verdict and a named reason. No Z'' variant exists and none was added.
+- **Historical point-in-time relative valuation.** HPG FY2024 `pe` 10.55, `pb` 1.11,
+  `ps` 0.91, `ev_sales` 1.46, `ev_ebitda` 8.86 — each carrying `price_as_of_date`
+  (2024-12-31), `financial_period` (2024), `historical_only: true`,
+  `market_dependent: false`, `as_of_semantics` and a warning naming the valuation date.
+  `reference_at` is the build time and is never conflated with either.
+- **Fundamental quality, fundamental-quality evidence, distribution evidence, corporate
+  intelligence, corporate events, scenario analysis, analysis-lane eligibility** — all
+  reachable through the bundle; the opt-in sections are enabled by the operating command.
+- **Dashboard.** The company panel renders a Financial Distress section showing model
+  variant, applicability, score, zone and the boundary warning, plus the generated
+  statement taxonomy explicitly labelled as generated evidence. A filer the model does not
+  apply to is never shown a score; a `status: available` result with no numeric score
+  renders no number; malformed subsection data cannot break the section and all output
+  stays escaped.
+
+## What is blocked, and why
+
+- **Price basis `unknown`, `verified: false`. Volume basis `unknown`, `verified: false`.**
+  Unchanged by this milestone; no new direct source evidence was obtained. Everything
+  current-market-dependent stays fail-closed for every ticker: current valuation, current
+  return, adjusted return, beta, correlation, backtest, concentration, position sizing.
+  `is_actionable` is `false` at the bundle root.
+- The exact active VCI path, VCI corporate-action discovery, `exercise_ratio` semantics and
+  official-URL discovery are **exhausted** as qualification routes. Do not reopen them.
+  `VCI_PROVIDER_INTERNAL_ROUTE_BLOCKED_BY_RATIO_SEMANTICS`,
+  `ACTIVE_PRICE_PATH_SEMANTICS_UNQUALIFIED`, `DOCUMENTED_RAW_ADJUSTED_PATH_UNAVAILABLE`.
+- **EODHD**: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES_PRIVATE_SHADOW_EODHD`. No live
+  token was exercised in this milestone and none was printed, inspected or committed. The
+  one bounded attempt on 2026-08-02 timed out before any payload qualified; that is a
+  provider-responsiveness result, not evidence about authentication.
+- **Trust state of the current production bundle is `untrusted_basis`.** Integrity is
+  `exact_session_verified`; the basis axis is `unqualified`. Both are reported separately
+  so an unverified price basis no longer suppresses honest non-market readiness.
+- **Share-transition coverage** through the trusted session is still unproven for HPG and
+  VNM (latest qualified historical identities only).
+
+## Measured coverage (period 2025-Q4, 1,148 tickers with a snapshot row)
+
+Screening tier, provider-reported — statement scope, restatement state and publication date
+are unknown for this tier, so these are diagnostics, not evidence-qualified results.
+
+| capability | runnable | blocked by |
+| --- | --- | --- |
+| liquidity screen | 1,113 (96.95%) | `current_assets`/`current_liabilities` 35 |
+| leverage screen | 1,077 (93.82%) | `total_liabilities` 35, `equity`/`total_assets` 6 |
+| DuPont ROE | 1,075 (93.64%) | `net_profit` 23, `revenue` 21 |
+| earnings quality | 818 (71.25%) | `operating_cash_flow` 319, `net_profit` 23 |
+| Altman Z' inputs complete | 22 (1.92%) | **`retained_earnings` 1,097** |
+
+Input availability: `retained_earnings` 51 available / 1,097 missing · `ebit` 8 / 1,140 ·
+`ebitda` 0 / 1,148 · `interest_expense` 266 / 882 · `operating_cash_flow` 829 / 319.
+
+Altman applicability across the 1,380 classified tickers (real authority order, real
+industry labels): **eligible 3 · not_applicable 83 · insufficient_evidence 1,294**.
+The 83 reconcile exactly to 41 `securities_company` + 29 `credit_institution` +
+13 `financial_specialized_ambiguous`. Of the 1,294, **1,289 are blocked on an unresolved
+issuer entity type** and 5 on a non-qualified manufacturing industry.
+
+Altman scores actually available in the production bundle: **2** (HPG, VNM) — eligibility
+is necessary but not sufficient; a score also needs all seven qualified identities.
+
+Current-market-dependent capabilities: **0 tickers**, blocked by market semantics.
+
+### Top remaining blockers, by tickers affected
+
+1. **Issuer entity type unresolved — 1,289 tickers.** The generated taxonomy can only
+   withhold a model, never grant one, so `corporate_vas` alone leaves Altman on
+   `insufficient_evidence`. Unlocking this needs an authoritative issuer-type source, not
+   more taxonomy work. Highest analytical value by a wide margin.
+2. **`retained_earnings` not retained — 1,097 tickers.** The single input that blocks
+   Altman at the screening tier. A systemic mapping/retention fix in the statement sync,
+   not per-ticker PDF reading.
+3. **`operating_cash_flow` missing — 319 tickers.** Blocks earnings quality.
+4. **Price/volume basis unverified — every ticker.** Blocks the entire current-market tier.
+   Needs a new market-data source authority; the existing provider routes are exhausted.
+
+## Historical corrections that remain in force
+
+- HPG FY2024 `current_liabilities` (75,225,243,262,689) and `retained_earnings`
+  (49,599,124,109,203) are qualified in `data/official-evidence/financial_identity_citations.jsonl`,
+  read from the retained hash-verified `hpg-consolidated-fy2024-audited.pdf` and
+  cross-checked against the statement's own printed arithmetic. VNM's two identities were
+  promoted the same way.
+- `evidence_promotion.py` is the only approved evidence write boundary
+  (`docs/DECISIONS.md`, "Approved evidence write boundary").
+- `risk_liquidity.py::evaluate_market_risk()` no longer hardcodes `is_actionable=True` on
+  `point_in_time_beta`/`point_in_time_correlation`; both follow `current_actionable`.
+- Relative-valuation multiples carry explicit historical-only temporal labelling; an FY2024
+  P/E is no longer indistinguishable from a current-market claim.
+- `bctc_processor.py` resolves `data_bctc/`, `financial_snapshot.*`, `logs/` and `reports/`
+  through the runtime root like the rest of the daily chain; it previously read and wrote
+  them inside the source repository.
+
+## Next highest-value milestone
+
+Qualify `issuer_entity_type` for the ~1,289 tickers where it is unresolved, from an
+authoritative source (exchange/issuer registration data), and retain `retained_earnings`
+systemically in the statement sync. Together these are the only two gaps standing between
+the current 3 eligible tickers and universe-wide historical distress screening — and
+neither depends on the blocked market-data basis.
