@@ -17,6 +17,7 @@ import sys
 if sys_path not in sys.path:
     sys.path.insert(0, sys_path)
 from corporate_action_ledger import build_corporate_action_ledger
+from price_basis_events import project_price_test_events
 
 VERSION = "1.0.0"
 MIN_EVENTS = 8
@@ -44,10 +45,34 @@ def _ratio(value: Any) -> float | None:
 
 
 def _series(conn: sqlite3.Connection, ticker: str) -> list[dict[str, Any]]:
-    rows = conn.execute(
-        "SELECT date, close, source FROM ohlcv WHERE ticker=? ORDER BY date", (ticker,)
-    ).fetchall()
-    return [{"date": row[0], "close": float(row[1]), "provider": row[2]} for row in rows if row[1] is not None]
+    has_lineage = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ohlcv_lineage'"
+    ).fetchone() is not None
+    if has_lineage:
+        rows = conn.execute(
+            """SELECT o.date, o.close, o.source, l.provider_version, l.adapter_schema_version,
+                      l.endpoint, l.canonical_field, l.retrieved_at, l.source_record_hash, l.unit_scale
+               FROM ohlcv o LEFT JOIN ohlcv_lineage l
+                 ON l.ticker=o.ticker AND l.trading_session_date=o.date
+               WHERE o.ticker=? ORDER BY o.date""", (ticker,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT date, close, source FROM ohlcv WHERE ticker=? ORDER BY date", (ticker,)).fetchall()
+    result = []
+    for row in rows:
+        if row[1] is None:
+            continue
+        result.append({
+            "date": row[0], "close": float(row[1]), "provider": row[2],
+            "provider_version": row[3] if has_lineage and row[3] else "legacy_version_unknown",
+            "adapter_schema_version": row[4] if has_lineage and row[4] else "legacy_lineage_unknown",
+            "endpoint": row[5] if has_lineage and row[5] else None,
+            "canonical_field": row[6] if has_lineage and row[6] else "ohlcv.close",
+            "retrieved_at": row[7] if has_lineage and row[7] else None,
+            "source_record_hash": row[8] if has_lineage and row[8] else None,
+            "unit_scale": row[9] if has_lineage and row[9] else None,
+        })
+    return result
 
 
 def analyze_event(event: Mapping[str, Any], rows: list[Mapping[str, Any]]) -> dict[str, Any]:
@@ -56,7 +81,8 @@ def analyze_event(event: Mapping[str, Any], rows: list[Mapping[str, Any]]) -> di
     event_id = event.get("canonical_event_id")
     base = {"event_id": event_id, "ticker": event.get("ticker"), "ex_date": ex_date, "ratio": ratio,
             "event_type": event.get("event_type"), "status": "excluded"}
-    if event.get("qualification_state") != "qualified" or event.get("event_type") not in {"stock_dividend", "bonus_share"}:
+    qualified = event.get("qualified_for_price_basis_test") or event.get("qualification_state") == "qualified"
+    if not qualified or event.get("event_type") not in {"stock_dividend", "bonus_share", "stock_split"}:
         return {**base, "reason": "event_type_or_evidence_unqualified"}
     if not ex_date or ratio is None:
         return {**base, "reason": "missing_qualified_ex_date_or_ratio"}
@@ -87,17 +113,31 @@ def build_contract(db_path: Path, evidence_root: Path, tested_at: str) -> dict[s
         excluded: list[dict[str, Any]] = []
         diagnostics: list[dict[str, Any]] = []
         provider_versions: set[str] = set()
+        adapter_versions: set[str] = set()
+        provider_names: set[str] = set()
         for ticker in ("HPG", "VNM"):
             ledger = build_corporate_action_ledger(evidence_root, ticker)
-            if ledger.get("status") != "available":
-                excluded.append({"ticker": ticker, "reason": "no_qualified_retained_corporate_action_events"})
-                continue
             rows = _series(conn, ticker)
             providers = {row["provider"] for row in rows}
+            versions = {row["provider_version"] for row in rows}
+            adapters = {row["adapter_schema_version"] for row in rows}
             if providers != {"VCI"}:
                 excluded.append({"ticker": ticker, "reason": "mixed_or_noncanonical_ohlcv_provider", "providers": sorted(providers)})
                 continue
-            for event in ledger.get("ledger_entries", []):
+            if len(versions) != 1 or "legacy_version_unknown" in versions:
+                excluded.append({"ticker": ticker, "reason": "legacy_or_mixed_ohlcv_provider_version", "provider_versions": sorted(versions)})
+                continue
+            provider_names.update(providers)
+            provider_versions.update(versions)
+            adapter_versions.update(adapters)
+            projection = project_price_test_events(ledger.get("ledger_entries", []))
+            excluded.extend(projection["excluded"])
+            if ledger.get("status") != "available" and not projection["excluded"]:
+                excluded.append({"ticker": ticker, "reason": "no_qualified_retained_corporate_action_events"})
+            for event in projection["accepted"]:
+                if event["provider"] != next(iter(providers)) or event["provider_version"] != next(iter(versions)):
+                    excluded.append({"event_id": event.get("event_id"), "ticker": ticker, "reason": "event_provider_version_not_active_ohlcv_path"})
+                    continue
                 item = analyze_event(event, rows)
                 diagnostics.append(item)
                 if item["status"] == "accepted":
@@ -108,27 +148,27 @@ def build_contract(db_path: Path, evidence_root: Path, tested_at: str) -> dict[s
         dominant, dominant_count = (counts.most_common(1)[0] if counts else (None, 0))
         agreement = dominant_count / len(events) if events else 0.0
         contradictions = [item["event_id"] for item in events if item.get("classification") != dominant]
-        # The schema has no retained library/provider version. It is a required qualifier,
-        # so it prevents a determined result even if future event continuity is consistent.
-        provider_version = "unretained_in_ohlcv_schema"
+        provider_version = next(iter(provider_versions)) if len(provider_versions) == 1 else "legacy_version_unknown"
+        adapter_version = next(iter(adapter_versions)) if len(adapter_versions) == 1 else "legacy_lineage_unknown"
         if len(events) < MIN_EVENTS:
             status, value = "INCONCLUSIVE", "unknown"
         elif contradictions or agreement < MIN_AGREEMENT:
             status, value = "MIXED_OR_VERSION_DEPENDENT", "unknown"
-        elif provider_version == "unretained_in_ohlcv_schema":
+        elif provider_version == "legacy_version_unknown":
             status, value = "MIXED_OR_VERSION_DEPENDENT", "unknown"
         else:
             status = "DETERMINED_EMPIRICALLY_RAW" if dominant == "raw" else "DETERMINED_EMPIRICALLY_ADJUSTED"
             value = dominant
         manifest = evidence_root / "data" / "official-evidence" / "manifest.json"
         return {
-            "schema_version": VERSION, "status": status, "value": value, "provider": "VCI",
-            "provider_version": provider_version, "canonical_data_path": "dashboard-runtime/vn_stock.db:ohlcv.close -> export_ai_bundle.load_ohlcv_recent",
+            "schema_version": VERSION, "status": status, "value": value, "provider": next(iter(provider_names), "VCI"),
+            "provider_version": provider_version, "adapter_schema_version": adapter_version,
+            "canonical_data_path": "dashboard-runtime/vn_stock.db:ohlcv.close -> export_ai_bundle.load_ohlcv_recent",
             "method": "empirical_corporate_action_continuity", "accepted_events": events,
             "excluded_events": excluded, "event_diagnostics": diagnostics, "agreement_rate": agreement,
             "contradictory_events": contradictions, "tested_at": tested_at,
-            "input_data_hash": _sha256([db_path, manifest]), "retest_after": "qualified retained stock-dividend/bonus event set reaches eight non-overlapping events and source version is retained",
-            "limitations": ["Only the VCI rows in the current ohlcv table are in scope.", "Provider/library version is not retained in the active ohlcv schema.", "Volume basis and current shares are independent unqualified blockers.", "Cash-dividend test not run: no qualified retained compatible cash-dividend events."],
+            "input_data_hash": _sha256([db_path, manifest]), "retest_after": "eight qualified retained stock-action events and one retained active-path provider version",
+            "limitations": ["Only the VCI rows in the current ohlcv table are in scope.", "Legacy OHLCV rows without ohlcv_lineage remain provider-version unknown.", "Volume basis and current shares are independent unqualified blockers.", "Cash-dividend test not run: no qualified retained compatible cash-dividend events."],
         }
     finally:
         conn.close()

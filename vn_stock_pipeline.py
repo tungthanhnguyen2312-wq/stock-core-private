@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 import pandas as pd
 import requests
 from runtime_paths import runtime_root
+from market_data_lineage import build_ohlcv_lineage_records, init_ohlcv_lineage_schema, upsert_ohlcv_lineage
 
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
@@ -109,6 +110,7 @@ class PermanentRequestError(PipelineRequestError):
 class FetchOutcome:
     status: str
     data: object = None
+    lineage: list = field(default_factory=list)
     errors: list = field(default_factory=list)
     transient_failure: bool = False
 
@@ -241,6 +243,7 @@ def init_db(conn):
         ticker TEXT, date TEXT, open REAL, high REAL, low REAL, close REAL,
         volume INTEGER, source TEXT, PRIMARY KEY(ticker, date))""")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_date ON ohlcv(date)")
+    init_ohlcv_lineage_schema(conn)
     conn.execute("""CREATE TABLE IF NOT EXISTS meta(
         ticker TEXT PRIMARY KEY, status TEXT, rows INTEGER, updated TEXT)""")
     conn.commit()
@@ -295,7 +298,9 @@ def normalize(df, ticker, source):
         out[c] = out[c] * scale
 
     out["volume"] = pd.to_numeric(out["volume"], errors="coerce").fillna(0).astype("int64")
-    return out[["ticker", "date", "open", "high", "low", "close", "volume", "source"]]
+    normalized = out[["ticker", "date", "open", "high", "low", "close", "volume", "source"]]
+    normalized.attrs["unit_scale"] = scale
+    return normalized
 
 
 def _valid_history_schema(df):
@@ -459,11 +464,15 @@ def fetch_one(ticker, start, end):
                     break  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
                 df = normalize(raw, ticker, source)
                 if df is not None and len(df):
+                    retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+                    lineage = build_ohlcv_lineage_records(
+                        df, source=source, endpoint=PROVIDER_ENDPOINT_HINT[source], retrieved_at=retrieved_at
+                    )
                     _record_provider_result(source, healthy_response=True)
                     if primary_deferred and source == FAILOVER_SRC:
                         _provider_should_skip(PRIMARY_SRC, ticker)
                     _request_log(ticker, source, attempt, "success", time.monotonic() - started)
-                    return FetchOutcome("success", data=df)
+                    return FetchOutcome("success", data=df, lineage=lineage)
                 if _valid_history_schema(raw):
                     # Payload đúng schema nhưng mọi bar bị lọc (volume=0/close rỗng) là
                     # không có phiên giao dịch, không phải lỗi schema và tuyệt đối không ghi DB.
@@ -566,7 +575,7 @@ def cmd_backfill(mode="pending"):
         with closing(sqlite3.connect(DB_PATH)) as conn:
             init_db(conn)
             if outcome.status == "success":
-                upsert(conn, outcome.data)
+                upsert(conn, outcome.data, outcome.lineage)
                 set_meta(conn, tk, "done", len(outcome.data))
                 success_count += 1
                 consecutive_transient = 0
@@ -623,7 +632,7 @@ def cmd_update():
         if outcome.status == "success":
             with closing(sqlite3.connect(DB_PATH)) as conn:
                 init_db(conn)
-                upsert(conn, outcome.data)
+                upsert(conn, outcome.data, outcome.lineage)
             ok_count += 1
             consecutive_transient = 0
             print(f" {i:>4}/{len(universe)} {tk:<10} +{len(outcome.data)} dòng mới (Từ {start})")
@@ -674,12 +683,13 @@ def cmd_export():
     print(f" [export] {len(df):,} dòng / {df['ticker'].nunique()} mã -> {pq_path}")
     return EXIT_SUCCESS
 
-def upsert(conn, df):
+def upsert(conn, df, lineage_records=None):
     with conn:
         conn.executemany("""INSERT INTO ohlcv VALUES (?,?,?,?,?,?,?,?)
             ON CONFLICT(ticker, date) DO UPDATE SET
             open=excluded.open, high=excluded.high, low=excluded.low, close=excluded.close,
             volume=excluded.volume, source=excluded.source""", df.itertuples(index=False, name=None))
+        upsert_ohlcv_lineage(conn, lineage_records or [])
 
 def set_meta(conn, ticker, status, rows):
     with conn:

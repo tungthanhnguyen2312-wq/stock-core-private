@@ -44,6 +44,13 @@ class EmpiricalPriceBasisTests(unittest.TestCase):
         self.assertFalse(contract["price_basis_verified"])
         self.assertFalse(contract["is_actionable"])
 
+    def test_provider_version_is_part_of_the_qualification_identity(self):
+        source_event = event()
+        source_event.update({"qualified_for_price_basis_test": True, "provider": "VCI", "provider_version": "4.0.4"})
+        result = analyze_event(source_event, rows(100, 100 / 1.2))
+        self.assertEqual(result["classification"], "raw")
+        self.assertEqual(source_event["provider_version"], "4.0.4")
+
 
 if __name__ == "__main__":
     unittest.main()
