@@ -1,5 +1,7 @@
 # Stock Look Up — Producer
 
+Codex governance source of truth: [docs/STATE.md](docs/STATE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/DECISIONS.md](docs/DECISIONS.md), and [docs/AI_RULES.md](docs/AI_RULES.md). Producer owns source qualification, canonicalization, and artifact authority; its active responsibility is P0 market-data basis and lineage.
+
 Repository này chứa mã nguồn phía Producer của Stock Look Up. Producer thu thập, chuẩn hóa, kiểm tra và xuất dữ liệu thị trường cùng các artifact phục vụ Consumer và dashboard.
 
 ## Phạm vi repository
