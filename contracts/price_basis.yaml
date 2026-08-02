@@ -30,12 +30,13 @@
     "Cash-dividend test not run: no qualified retained compatible cash-dividend events.",
     "VCI_PROVIDER_INTERNAL_ROUTE_BLOCKED_BY_RATIO_SEMANTICS: vnstock 4.0.4 Company.events exposes exercise_ratio without an installed endpoint schema, conversion implementation, numerator, denominator, direction, or scale contract."
     ,"ACTIVE_PRICE_PATH_SEMANTICS_UNQUALIFIED: vnstock 4.0.4 Quote.history documents historical OHLC only; the dynamic VCI provider implementation and its adjustment/default contract are not exposed by the installed path."
+    ,"DOCUMENTED_RAW_ADJUSTED_PATH_UNAVAILABLE: vnstock_data is not installed and no installed Vnstock/repository method directly documents both raw and adjusted Vietnam equity EOD namespaces."
   ],
   "method": "empirical_corporate_action_continuity",
   "provider": "VCI",
   "not_verified_for": ["official corporate-action lineage", "current-share transition", "execution-price semantics", "market capitalization", "valuation", "ranking", "recommendations", "backtesting"],
   "provider_version": "legacy_version_unknown",
-  "retest_after": "Vnstock/VCI publishes a version-scoped Quote.history adjustment contract for the exact provider implementation and defaults",
+  "retest_after": "EXPLICIT_MARKET_DATA_SOURCE_AUTHORITY_CHANGE_REQUIRED",
   "schema_version": "1.0.0",
   "status": "INCONCLUSIVE",
   "tested_at": "2026-08-02T12:30:00Z",
