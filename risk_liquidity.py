@@ -66,7 +66,8 @@ def evaluate_market_risk(d: dict[str, Any] | None, reference_at: str | None = No
                         "upstream_lineage": last_row.get("upstream_lineage", {}),
                     },
                     calculation_assumptions=["simple_returns", "sample_covariance_over_sample_benchmark_variance"],
-                    is_actionable=True,
+                    is_actionable=bool(d.get("current_actionable")),
+                    warnings=[] if d.get("current_actionable") else ["current price/volume basis is unqualified; beta is a deterministic simple-return computation over the retained OHLCV series, not a basis-verified investment signal"],
                 )
             else:
                 pit_beta = out("point_in_time_beta", "unavailable", reason=last_row.get("unavailable_reason", "insufficient_aligned_observations"), missing_inputs=["60_consecutive_aligned_vnm_vnindex_pairs"])
@@ -87,7 +88,8 @@ def evaluate_market_risk(d: dict[str, Any] | None, reference_at: str | None = No
                         "upstream_lineage": last_row.get("upstream_lineage", {}),
                     },
                     calculation_assumptions=["simple_returns", "pearson_product_moment"],
-                    is_actionable=True,
+                    is_actionable=bool(d.get("current_actionable")),
+                    warnings=[] if d.get("current_actionable") else ["current price/volume basis is unqualified; correlation is a deterministic simple-return computation over the retained OHLCV series, not a basis-verified investment signal"],
                 )
             else:
                 pit_corr = out("point_in_time_correlation", "unavailable", reason=last_row.get("unavailable_reason", "insufficient_aligned_observations"), missing_inputs=["60_consecutive_aligned_vnm_vnindex_pairs"])
