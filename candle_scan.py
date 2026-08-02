@@ -50,7 +50,7 @@ def resolve_runtime_paths(cwd=None):
 
 
 RUNTIME_ROOT, DB_PATH, OUT_CSV, OUT_JSON, SNAPSHOT_PATH, MARKET_BREADTH_PATH, DATA_DIR, PATTERN_OUT_JSON, PATTERN_OUT_JS = resolve_runtime_paths()
-WATCHLIST = ["POW", "HPG", "SSI", "PAN", "EVF"]  # luôn có mặt trong dashboard, kể cả không tín hiệu
+WATCHLIST = ["POW", "HPG", "VNM", "SSI", "PAN", "EVF"]  # luôn có mặt trong dashboard, kể cả không tín hiệu
 # [VÁ P1-3] POW thiếu khỏi WATCHLIST — đã ghi nhận ở STOCK_ANALYSIS_MASTER_PLAN.md mục 7 (P1-3).
 INDEX_SYMBOLS = ["VNINDEX", "HNXINDEX", "UPCOMINDEX"]
 

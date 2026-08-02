@@ -16,6 +16,7 @@
 - Governance gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = NO`; paid access, credentials, and provider integration require an explicit owner decision covering cost, licensing, access, and authority. No provider is selected by default.
 - Blocker: price basis is `unknown/unverified`; volume basis and current shares are also unqualified.
 - Completed: forward daily-market and technical snapshot generators retain an explicit timezone-aware `source_generated_at`; session identity remains separate.
-- Blocker: production snapshots have not been regenerated through that forward contract; VNM also has no canonical technical-signal row in the bounded validation. No historical timestamp was inferred or backfilled.
+- Completed: the bounded HPG/VNM shadow validation retains current daily and technical timestamps for both tickers; VNM's canonical technical row is neutral with no pattern or SMC and is coverage, not a signal.
+- Blocker: production snapshots have not been regenerated through the forward timestamp contract. No historical timestamp was inferred or backfilled.
 - Next exit gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES`, followed by version-retained ingestion and basis qualification on that exact path.
 - Production state: runtime databases and generated production artifacts remain unchanged by governance work.
