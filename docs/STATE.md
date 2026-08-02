@@ -1,7 +1,7 @@
 # Stock Lookup state
 
 - Active phase: P0 market-data qualification and P1 trusted current-session readiness remain the only active gates.
-- Active milestone: configure a newly rotated, unexposed EODHD credential outside Git for one bounded HPG/VNM private-shadow validation; independently retain direct share-transition coverage through the trusted session when available.
+- Active milestone: rerun one bounded HPG/VNM private-shadow validation only after EODHD service responsiveness is restored; independently retain direct share-transition coverage through the trusted session when available.
 - Producer reviewed head: `12958d9`.
 - Consumer reviewed head: `33f1c3b`.
 - Dashboard baseline: `5ecbbad`.
@@ -13,7 +13,7 @@
 - Blocker: `VCI_PROVIDER_INTERNAL_ROUTE_BLOCKED_BY_RATIO_SEMANTICS`; vnstock 4.0.4 `Company.events` exposes `exercise_ratio` without a direct numerator/denominator/direction/scale contract, so provider-internal price windows are not authorized.
 - Blocker: `ACTIVE_PRICE_PATH_SEMANTICS_UNQUALIFIED`; the bundle consumes unchanged `ohlcv.close` from `Quote(source='VCI').provider.history(start,end,interval='1D')`, whose installed documentation defines historical OHLC but no adjustment/default contract.
 - Blocker: `DOCUMENTED_RAW_ADJUSTED_PATH_UNAVAILABLE`; no installed package exposes a directly documented raw-and-adjusted Vietnam equity EOD path.
-- Governance gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES_PRIVATE_SHADOW_EODHD`; owner approval is recorded and secret-safe access plumbing is available. The credential previously pasted into chat is treated as compromised and is not usable; a rotated environment-only credential is required. Production/public redistribution is not approved.
+- Governance gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES_PRIVATE_SHADOW_EODHD`; owner approval, a rotated User-scope credential, and secret-safe access plumbing are present. The first bounded live attempt on 2026-08-02 timed out on `HPG.VN` before any payload qualified; `VNM.VN` was not requested. This is a provider-responsiveness blocker, not evidence of authentication success or failure. Production/public redistribution is not approved.
 - Blocker: price basis is `unknown/unverified`; volume basis and current shares are also unqualified.
 - Completed: forward daily-market and technical snapshot generators retain an explicit timezone-aware `source_generated_at`; session identity remains separate.
 - Completed: the bounded HPG/VNM shadow validation retains current daily and technical timestamps for both tickers; VNM's canonical technical row is neutral with no pattern or SMC and is coverage, not a signal.
@@ -23,5 +23,5 @@
 - Partial progress: VNM's issuer-linked reviewed consolidated interim statement is retained with a verified source hash. Note 22 directly reports 2,089,955,445 issued and outstanding common shares at 2026-06-30, unchanged from 2026-01-01. It remains a latest qualified historical identity because the document does not prove absence of a July transition through the trusted session.
 - Completed: a deterministic share-transition resolver now requires direct common-outstanding identity, issuer scope, share units, effective dates, completed lifecycle evidence, citation/hash lineage, and explicit coverage through the target date. Listed, registered, or issued-only counts cannot be promoted when treasury treatment is unresolved.
 - Verified gate result at the reviewed heads: P0 `INCOMPLETE`, P1 `INCOMPLETE`, market-dependent readiness `FAIL`, historical-only HPG/VNM readiness `PASS`.
-- Next exit gates: one authenticated same-session EODHD HPG/VNM schema validation using a rotated credential, plus direct HPG/VNM transition coverage through the 2026-07-30 trusted session.
+- Next exit gates: one successful authenticated same-session EODHD HPG/VNM schema validation after service recovery, plus direct HPG/VNM transition coverage through the 2026-07-30 trusted session. No automatic API retry is authorized.
 - Production state: runtime databases and generated production artifacts remain unchanged by governance work.
