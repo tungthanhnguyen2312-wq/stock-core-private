@@ -9,7 +9,7 @@
 - Completed: historical fundamental briefs, Consumer context/prompt integration, AI response validation, and empirical price-basis tool scaffolding.
 - Blocker: active VCI OHLCV rows are legacy records without retained provider/library version; new ingestion now retains version-bound lineage, but cannot retroactively qualify legacy rows.
 - Completed: price-test event identity is official-event evidence; a VCI corporate-action event ID is optional metadata and is not a qualification prerequisite.
-- Blocker: no retained official document has explicit ex-date and ratio metadata for price-test intake; operator-supplied official PDF/HTML bytes plus stable source URL and explicit event metadata are required.
+- Blocker: bounded automated discovery selected nine non-overlapping local ISS candidates but returned zero official-host locators; no official byte acquisition or VCI window retrieval is authorized.
 - Blocker: price basis is `unknown/unverified`; volume basis and current shares are also unqualified.
 - Next exit gate: `OHLCV_PROVIDER_VERSION_RETAINED = YES` and `QUALIFIED_PRICE_TEST_EVENTS >= 8`.
 - Production state: runtime databases and generated production artifacts remain unchanged by governance work.
