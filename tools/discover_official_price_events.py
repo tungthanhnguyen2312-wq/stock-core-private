@@ -17,7 +17,12 @@ from urllib.parse import urlsplit
 import requests
 
 MAX_CANDIDATES = 30
-OFFICIAL_HOSTS = ("hose.vn", "hsx.vn", "vsd.vn", "hoaphat.com.vn", "vietcombank.com.vn", "vinamilk.com.vn")
+OFFICIAL_HOSTS = ("hose.vn", "hsx.vn", "vsd.vn")
+
+def load_issuer_domains(path: Path) -> dict[str, tuple[str, ...]]:
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if data.get("schema_version") != "1.0.0": raise ValueError("issuer_domain_registry_unsupported")
+    return {row["ticker"]: tuple(row["official_domains"]) for row in data["issuers"] if row.get("qualification") == "qualified"}
 
 
 def select_candidates(db_path: Path, *, as_of: str, limit: int = MAX_CANDIDATES) -> dict[str, list[dict[str, Any]]]:
@@ -38,28 +43,29 @@ def select_candidates(db_path: Path, *, as_of: str, limit: int = MAX_CANDIDATES)
     return {"accepted": accepted, "excluded": excluded}
 
 
-def is_official_url(url: str) -> bool:
+def is_official_url(url: str, domains: Iterable[str] = OFFICIAL_HOSTS) -> bool:
     host = urlsplit(url).hostname or ""
-    return any(host == allowed or host.endswith("." + allowed) for allowed in OFFICIAL_HOSTS)
+    return any(host == allowed or host.endswith("." + allowed) for allowed in domains)
 
 
-def official_locator_results(candidate: Mapping[str, Any], search_html: str, *, discovered_at: str) -> list[dict[str, Any]]:
+def official_locator_results(candidate: Mapping[str, Any], search_html: str, *, discovered_at: str, issuer_domains: Mapping[str, tuple[str, ...]] | None = None) -> list[dict[str, Any]]:
     """Return only official-host document/page URLs found by a bounded locator."""
     urls = re.findall(r'https?://[^"\s<>]+', search_html)
     seen, result = set(), []
     for url in urls:
         url = url.rstrip(".,)")
-        if url in seen or not is_official_url(url): continue
+        domains = (*OFFICIAL_HOSTS, *((issuer_domains or {}).get(candidate["ticker"], ())))
+        if url in seen or not is_official_url(url, domains): continue
         seen.add(url)
-        result.append({"ticker": candidate["ticker"], "candidate_ex_date": candidate["candidate_ex_date"], "authority": next(host for host in OFFICIAL_HOSTS if (urlsplit(url).hostname or "").endswith(host)), "url": url, "discovery_method": "bounded_search_locator", "discovered_at": discovered_at})
+        result.append({"ticker": candidate["ticker"], "candidate_ex_date": candidate["candidate_ex_date"], "authority": "issuer_or_official_authority", "url": url, "discovery_method": "bounded_search_locator", "discovered_at": discovered_at})
     return result
 
 
-def discover(candidates: Iterable[Mapping[str, Any]], *, search: Callable[[str], str], discovered_at: str) -> dict[str, Any]:
+def discover(candidates: Iterable[Mapping[str, Any]], *, search: Callable[[str], str], discovered_at: str, issuer_domains: Mapping[str, tuple[str, ...]] | None = None) -> dict[str, Any]:
     found, failures = [], []
     for candidate in candidates:
         query = f'{candidate["ticker"]} {candidate["candidate_ex_date"]} stock dividend official disclosure'
-        try: found.extend(official_locator_results(candidate, search(query), discovered_at=discovered_at))
+        try: found.extend(official_locator_results(candidate, search(query), discovered_at=discovered_at, issuer_domains=issuer_domains))
         except Exception as exc: failures.append({"ticker": candidate["ticker"], "reason": "locator_network_error", "error": type(exc).__name__})
     return {"locators": found, "failures": failures}
 
@@ -71,7 +77,7 @@ def _search(query: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(); parser.add_argument("--db", type=Path, required=True); parser.add_argument("--as-of", required=True); parser.add_argument("--output", type=Path, required=True); parser.add_argument("--network", action="store_true")
-    args = parser.parse_args(argv); selected = select_candidates(args.db, as_of=args.as_of); result = {"candidates": selected, "discovery": discover(selected["accepted"], search=_search if args.network else lambda _: "", discovered_at=f"{args.as_of}T00:00:00Z")}
+    args = parser.parse_args(argv); selected = select_candidates(args.db, as_of=args.as_of); registry = load_issuer_domains(Path(__file__).resolve().parents[1] / "contracts" / "issuer_domains.json"); result = {"candidates": selected, "qualified_issuer_domains": sorted(registry), "discovery": discover(selected["accepted"], search=_search if args.network else lambda _: "", discovered_at=f"{args.as_of}T00:00:00Z", issuer_domains=registry)}
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"); return 0
 
 if __name__ == "__main__": raise SystemExit(main())

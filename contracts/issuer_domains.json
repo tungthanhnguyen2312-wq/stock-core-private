@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "issuers": [
+    {"ticker":"HPG","issuer_name":"Hoa Phat Group Joint Stock Company","official_domains":["hoaphat.com.vn","file.hoaphat.com.vn"],"source":"retained_official_citation","qualification":"qualified"},
+    {"ticker":"VCB","issuer_name":"Joint Stock Commercial Bank for Foreign Trade of Viet Nam","official_domains":["vietcombank.com.vn","portal.vietcombank.com.vn"],"source":"retained_official_citation","qualification":"qualified"},
+    {"ticker":"SSI","issuer_name":"SSI Securities Corporation","official_domains":["ssi.com.vn"],"source":"retained_official_citation","qualification":"qualified"}
+  ]
+}
