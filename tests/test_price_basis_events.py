@@ -11,10 +11,11 @@ from price_basis_events import project_price_test_events
 
 def event(**overrides):
     result = {
-        "canonical_event_id": "official-1", "ticker": "HPG", "event_type": "bonus_share", "ex_date": "2024-01-04",
+        "canonical_event_id": "official-1", "ticker": "HPG", "exchange": "HOSE", "event_type": "bonus_share", "ex_date": "2024-01-04",
         "entitlement_ratio": {"ratio_float": 0.2}, "provider": "VCI", "provider_version": "4.0.4",
-        "provider_event_id": "vci-1", "source_field_identities": {"ex_date": "exright_date", "ratio": "exercise_ratio"},
-        "evidence": {"citation_id": "citation-1", "document_sha256": "hash-1"},
+        "provider_event_id": "vci-1", "official_source_id": "hose-notice-1", "retrieved_at": "2026-08-02T00:00:00Z",
+        "source_field_identities": {"ex_date": "notice.ex_date", "ratio": "notice.ratio"},
+        "evidence": {"citation_id": "citation-1", "document_sha256": "hash-1", "source_url": "https://official.example/1"},
         "qualified_for_share_transition": False,
     }
     result.update(overrides)
@@ -38,6 +39,10 @@ class PriceBasisEventProjectionTests(unittest.TestCase):
         self.assertEqual(projected["accepted"], [])
         self.assertEqual(projected["excluded"][0]["reason"], "duplicate_identity_conflicting_payload")
 
-    def test_missing_provider_lineage_is_excluded(self):
-        projected = project_price_test_events([event(provider_version=None)])
-        self.assertEqual(projected["excluded"][0]["reason"], "provider_event_lineage_missing")
+    def test_provider_lineage_is_optional_metadata(self):
+        projected = project_price_test_events([event(provider_version=None, provider_event_id=None, provider=None)])
+        self.assertEqual(len(projected["accepted"]), 1)
+
+    def test_record_date_cannot_substitute_for_ex_date(self):
+        projected = project_price_test_events([event(ex_date=None, record_date="2024-01-04")])
+        self.assertEqual(projected["excluded"][0]["reason"], "qualified_ex_date_or_ratio_missing")

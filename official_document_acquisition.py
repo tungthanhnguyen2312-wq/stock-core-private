@@ -22,7 +22,7 @@ DOCUMENT_CLASSES = (
     "audited_annual_financial_statements", "annual_report", "agm_document_or_resolution",
     "corporate_action_notice", "amendment_or_supersession_notice",
 )
-PERIODS = frozenset({"2024", "2025"})
+PERIODS = frozenset({"2023", "2024", "2025"})
 MANIFEST = "official_document_acquisition_manifest.json"
 
 

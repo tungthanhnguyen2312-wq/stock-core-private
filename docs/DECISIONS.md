@@ -13,4 +13,9 @@
 ## 2026-08-02 — Forward-only OHLCV and price-test lineage
 - New OHLCV observations retain provider package version, adapter/schema version, endpoint, canonical field, retrieval time, session date, source-record hash, and source-specific scale in `ohlcv_lineage`.
 - Historical rows without that retained record are `legacy_version_unknown`; no package version is inferred retroactively.
-- A corporate action may qualify for price continuity without qualifying a share transition, but still requires direct provider event identity plus official citation/hash, ex-date, and ratio lineage.
+- A corporate action may qualify for price continuity without qualifying a share transition; it requires official citation/hash, explicit ex-date, and ratio lineage, while provider event identity is optional metadata.
+
+## 2026-08-02 — Official price-test event authority
+- Price-continuity event identity is derived deterministically from official authority, document hash, ticker, exchange, action type, explicit ex-date, and ratio basis.
+- VCI corporate-action event IDs are optional metadata; an official event and a VCI price window join on ticker, exchange, qualified ex-date, and tested price path.
+- Record date never substitutes for an explicit official ex-date.
