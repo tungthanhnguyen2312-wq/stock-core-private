@@ -171,3 +171,38 @@ class HistoricalRelativeValuationSnapshotTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TemporalScopeLabellingTests(unittest.TestCase):
+    """Regression guard (2026-08-02): an available multiple is built from a cited
+    *historical* close (HPG FY2024 -> 2024-12-31) while the envelope's reference_at is
+    the current build time. Without an explicit marker, a downstream reader (Consumer,
+    AI prompt, Dashboard) cannot tell an FY2024 point-in-time P/E from a claim that the
+    ticker currently trades at that multiple."""
+
+    def _available_pe(self):
+        result = evaluate_relative_valuation({"entity_type": "corporate", "current_price": _price(),
+            "share_count_weighted_average_basic": _share(6396250200, "weighted_average_basic"),
+            "share_count_period_end": _share(6396250200, "period_end"), "financial": _financial()},
+            reference_at="2026-07-30T00:00:00+00:00")
+        return result["methods"]["pe"]
+
+    def test_available_multiple_is_marked_historical_only_and_not_market_dependent(self):
+        pe = self._available_pe()
+        self.assertEqual(pe["state"], "available")
+        self.assertTrue(pe["historical_only"])
+        self.assertFalse(pe["market_dependent"])
+        self.assertEqual(pe["as_of_semantics"], "point_in_time_valuation_date_not_current_session")
+
+    def test_available_multiple_carries_a_dated_not_current_warning(self):
+        pe = self._available_pe()
+        self.assertTrue(pe["warnings"], "an available historical multiple must never ship with zero warnings")
+        self.assertTrue(any(pe["price_as_of_date"] in w for w in pe["warnings"]),
+                        "the warning must name the actual valuation date")
+        self.assertTrue(any("not a current-market valuation" in w for w in pe["warnings"]))
+
+    def test_unavailable_method_is_not_labelled(self):
+        result = evaluate_relative_valuation({}, reference_at="2026-07-30T00:00:00+00:00")
+        pe = result["methods"]["pe"]
+        self.assertNotEqual(pe["state"], "available")
+        self.assertNotIn("historical_only", pe)

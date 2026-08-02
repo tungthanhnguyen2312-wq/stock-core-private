@@ -1127,3 +1127,106 @@ def reconcile_metric_identities(by_ticker: Mapping[str, list[dict[str, Any]]]) -
             extra.append(reconciled)
         result[ticker] = records + extra
     return result
+
+
+# ==========================================================================
+# Standalone PDF-cited balance-sheet identities (Altman/distress inputs)
+# ==========================================================================
+# Same "standalone, PDF-cited fact" pattern as share_basis_citations.jsonl and
+# ebitda_component_citations.jsonl: financial_observations.py's retention allowlist
+# (_CODES) has never included `current_liabilities` or `undistributed_earnings` for any
+# ticker or period, so `observations.jsonl` holds no raw VCI observation for either and
+# the observation-store cross-check used by qualification_citations.jsonl cannot apply.
+# Verification is therefore the same as the EBITDA components': the cited evidence
+# document must still hash-verify against manifest.json, the citation_id must be the
+# deterministic hash of its own content, the metric must be in the supported set, the
+# scope must be supported, and no two citations may conflict for the same
+# (ticker, metric, reporting_period). Fails closed otherwise.
+
+FINANCIAL_IDENTITY_RELATIVE = Path("data") / "official-evidence" / "financial_identity_citations.jsonl"
+_SUPPORTED_FINANCIAL_IDENTITIES = {"current_liabilities", "retained_earnings"}
+_REQUIRED_FINANCIAL_IDENTITY_FIELDS = ("citation_id", "ticker", "metric", "reporting_frequency", "reporting_period",
+    "statement_scope", "currency", "unit_scale", "value", "evidence_id")
+
+
+def _load_financial_identity_rows(runtime_root: Path) -> list[Any] | None:
+    """Return parsed JSONL rows, or None if the file is missing or malformed (fail closed)."""
+    path = runtime_root / FINANCIAL_IDENTITY_RELATIVE
+    if not path.exists():
+        return None
+    rows: list[Any] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return rows
+
+
+def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
+    """Read and verify data/official-evidence/financial_identity_citations.jsonl.
+
+    Returns {"status": ..., "version": VERSION, "by_key": {(ticker, metric,
+    reporting_period): verified_entry}, "rejected": [...]}. Fails closed per record.
+    """
+    evidence_by_id = _load_manifest(runtime_root)
+    rows = _load_financial_identity_rows(runtime_root)
+    rejected: list[dict[str, Any]] = []
+    if evidence_by_id is None or rows is None:
+        return {"status": "unavailable", "version": VERSION, "by_key": {}, "rejected": rejected}
+
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = {}
+    for raw in rows:
+        if not isinstance(raw, dict) or not all(field in raw for field in _REQUIRED_FINANCIAL_IDENTITY_FIELDS):
+            rejected.append({"citation": raw, "reason": "malformed_citation"})
+            continue
+        grouped.setdefault((raw["ticker"], raw["metric"], raw["reporting_period"]), []).append(raw)
+
+    by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for key, citations in grouped.items():
+        unique_by_content = {_hash(c): c for c in citations}
+        if len(unique_by_content) > 1:
+            rejected.append({"key": key, "reason": "conflicting_citations"})
+            continue
+        citation = next(iter(unique_by_content.values()))
+
+        expected_id = _hash({"ticker": citation["ticker"], "metric": citation["metric"],
+                              "reporting_period": citation["reporting_period"], "evidence_id": citation["evidence_id"],
+                              "value": citation["value"]})
+        if citation["citation_id"] != expected_id:
+            rejected.append({"key": key, "reason": "citation_id_not_deterministic"})
+            continue
+        if citation["metric"] not in _SUPPORTED_FINANCIAL_IDENTITIES:
+            rejected.append({"key": key, "reason": "unsupported_metric"})
+            continue
+        if citation["statement_scope"] not in _SUPPORTED_SCOPES:
+            rejected.append({"key": key, "reason": "unsupported_scope"})
+            continue
+        evidence = evidence_by_id.get(citation["evidence_id"])
+        if evidence is None:
+            rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
+            continue
+
+        by_key[key] = {
+            "ticker": citation["ticker"], "metric": citation["metric"],
+            "reporting_frequency": citation["reporting_frequency"], "reporting_period": citation["reporting_period"],
+            "statement_scope": citation["statement_scope"], "currency": citation["currency"],
+            "unit_scale": citation["unit_scale"], "value": citation["value"],
+            "evidence_id": citation["evidence_id"], "citation_id": citation["citation_id"],
+            "citation": citation.get("citation"), "qualification_version": VERSION,
+            "verified_at": citation.get("verified_at"),
+        }
+
+    return {"status": "available" if by_key else "unavailable", "version": VERSION, "by_key": by_key, "rejected": rejected}
+
+
+def latest_financial_identity(by_key: Mapping[tuple[str, str, str], dict[str, Any]], ticker: str,
+                               metric: str, frequency: str = "annual") -> dict[str, Any] | None:
+    """The most recent verified entry for (ticker, metric, frequency), or None. Never
+    falls back to a different metric."""
+    candidates = [entry for (entry_ticker, entry_metric, _), entry in by_key.items()
+                  if entry_ticker == ticker and entry_metric == metric and entry["reporting_frequency"] == frequency]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda entry: entry["reporting_period"])

@@ -273,7 +273,7 @@ def derive_cash_dividend_adjustment_factors(runtime_root: Path, ticker: str = "V
             "ledger_entry_id": entry["ledger_entry_id"],
             "event_type": "cash_dividend",
             "ticker": ticker,
-            "issuer": entry.get("issuer", "Vietnam Dairy Products Joint Stock Company"),
+            "issuer": entry.get("issuer"),
             "share_class": entry.get("share_class", "common"),
             "cash_amount": cash_amt,
             "currency": currency,

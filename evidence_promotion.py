@@ -90,6 +90,26 @@ def build_manifest_record(*, evidence_id: str, archive_document_path: Path, sha2
     }
 
 
+def build_financial_identity_citation(*, ticker: str, metric: str, reporting_period: str,
+                                       value: int | float, evidence_id: str, statement_scope: str = "consolidated",
+                                       currency: str = "VND", unit_scale: int = 1,
+                                       reporting_frequency: str = "annual", citation: str | None = None,
+                                       verified_at: str | None = None) -> dict[str, Any]:
+    """Pure. A standalone PDF-cited balance-sheet identity (see
+    semantic_evidence_bridge.load_verified_financial_identities). citation_id is computed
+    exactly as that loader re-derives it, so the row is accepted deterministically."""
+    if metric not in bridge._SUPPORTED_FINANCIAL_IDENTITIES:
+        raise ValueError(f"unsupported financial identity metric: {metric!r}")
+    citation_id = _hash({"ticker": ticker, "metric": metric, "reporting_period": reporting_period,
+                          "evidence_id": evidence_id, "value": value})
+    return {
+        "citation_id": citation_id, "ticker": ticker, "metric": metric,
+        "reporting_frequency": reporting_frequency, "reporting_period": reporting_period,
+        "statement_scope": statement_scope, "currency": currency, "unit_scale": unit_scale,
+        "value": value, "evidence_id": evidence_id, "citation": citation, "verified_at": verified_at,
+    }
+
+
 def build_cash_dividend_citation(*, ticker: str, resolution_number: str, declaration_date: str,
                                   cash_amount: float, currency: str, evidence_id: str,
                                   record_date: str | None = None, payment_date: str | None = None,

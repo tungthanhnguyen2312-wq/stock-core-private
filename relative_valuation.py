@@ -31,6 +31,29 @@ def _method(name: str, state: str = "unavailable", **extra: Any) -> dict[str, An
               "interpretation_limits": ["No target price is produced by this contract."],
               "is_actionable": False}
     result.update(extra)
+    return _label_temporal_scope(result)
+
+
+def _label_temporal_scope(result: dict[str, Any]) -> dict[str, Any]:
+    """Stamp every available multiple with the temporal scope of the price it was built
+    from, so a historical point-in-time multiple can never be read as a current-market one.
+
+    The price feeding this contract is a cited historical close (see
+    docs/historical_relative_valuation_snapshot.md -- HPG FY2024 uses the 2024-12-31
+    session), while the envelope's own reference_at is the current build time. Without an
+    explicit marker the two are indistinguishable downstream: an FY2024 P/E of 10.55 would
+    read as "HPG currently trades at 10.55x". `historical_only` states which one it is;
+    `market_dependent` stays False because nothing here consumes a current-session price.
+    """
+    if result.get("state") != "available" or result.get("price_as_of_date") is None:
+        return result
+    result["historical_only"] = True
+    result["market_dependent"] = False
+    result["as_of_semantics"] = "point_in_time_valuation_date_not_current_session"
+    warning = (f"Point-in-time multiple as of {result['price_as_of_date']}, not a current-market valuation; "
+               "the current price basis is separately unqualified and no current multiple is produced.")
+    if warning not in result["warnings"]:
+        result["warnings"] = list(result["warnings"]) + [warning]
     return result
 
 
