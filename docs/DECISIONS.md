@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-08-02 — EODHD private-shadow source authority approved
+- The owner approved EODHD for bounded, private HPG/VNM source qualification; this supersedes only the earlier missing-owner-approval blocker.
+- The approved candidate path is the authenticated EOD endpoint for `HPG.VN` and `VNM.VN`, preserving raw `close`, split-and-dividend-adjusted `adjusted_close`, and split-adjusted `volume` as separate identities.
+- Credentials are environment-only and never retained. Production ingestion, publication, redistribution, valuation, ranking, recommendations, sizing, and backtesting remain unauthorized until their independent gates pass.
+- Price and volume basis remain `unknown/unverified` until an authenticated same-session payload passes the adapter schema check. Current shares remain independently unqualified.
+
 ## 2026-08-02 — Market-data source authority remains unapproved
 - EODHD is not an approved Stock Lookup source authority; its credential plumbing is removed because it was introduced before owner approval.
 - No paid provider, credential, API call, or source migration may be inferred from a technical option or roadmap blocker.
