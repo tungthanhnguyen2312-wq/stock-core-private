@@ -1,7 +1,7 @@
 # Stock Lookup state
 
 - Active phase: P0 — Market-data basis and lineage.
-- Active milestone: Import operator-supplied official event documents, retain VCI windows, rerun qualification.
+- Active milestone: Configure EODHD credential, then run authenticated price-authority enablement.
 - Producer baseline: `3c7a372`.
 - Consumer baseline: `6797cab`.
 - Dashboard baseline: `5ecbbad`.
