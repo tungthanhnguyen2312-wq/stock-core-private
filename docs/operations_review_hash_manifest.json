@@ -1,0 +1,1306 @@
+{
+ "schema_version": "1.0.0",
+ "label": "stock-core-private/operations-review (Producer working-session artifacts; not git-tracked directly -- 525MB incl. shadow vn_stock.db snapshots and large PDFs)",
+ "root_description": "C:\\Projects\\StockLookup\\stock-core-private\\operations-review",
+ "generated_at": "2026-08-02T12:40:12.977361+00:00",
+ "file_count": 216,
+ "total_bytes": 549690142,
+ "entries": [
+  {
+   "path": "_price_refresh_run.tmp.log",
+   "sha256": "72510edb5a461ead23a5ff0b4ecc2e5551827ad0e966ba486ce2e202188764f7",
+   "byte_size": 105447,
+   "mtime": "2026-07-29T14:54:47.515445+00:00"
+  },
+  {
+   "path": "eodhd_governance_recovery_20260802T130402+0700.md",
+   "sha256": "9057ca7a62de34f6851e69e25a79e314c7870ab1eab90c61193915d486bcd877",
+   "byte_size": 2077,
+   "mtime": "2026-08-02T06:04:20.316349+00:00"
+  },
+  {
+   "path": "eodhd_live_validation_20260802T163000+0700.md",
+   "sha256": "50d91609f44288858e26cd31170e185144690b4544c6bec9fa7fb4a852f9bcba",
+   "byte_size": 1141,
+   "mtime": "2026-08-02T09:54:54.676408+00:00"
+  },
+  {
+   "path": "eodhd_private_shadow_authority_20260802.md",
+   "sha256": "bb7f75b7901188b7150f9cbc1d83fcc85d5a10a1ccf51dc64c70c952c3a5c5ef",
+   "byte_size": 1978,
+   "mtime": "2026-08-02T07:56:36.226361+00:00"
+  },
+  {
+   "path": "evidence/phase4c-closeout-20260729T022030Z/pilot.py",
+   "sha256": "0b3249b120e3e0497cc30c58cb31fc45acbe493bf80d382812b4d4e92fe29f4f",
+   "byte_size": 1351,
+   "mtime": "2026-07-29T02:20:30.328349+00:00"
+  },
+  {
+   "path": "exact_session_trusted_subset_20260801T140000Z.md",
+   "sha256": "7bc846dc7cf468f8fb725a92c9ffad21bdfb0eb540da000b5d7a6f7cefb9b4e2",
+   "byte_size": 1105,
+   "mtime": "2026-08-01T13:10:00.344252+00:00"
+  },
+  {
+   "path": "governance_roadmap_consolidation_20260802T105617Z.md",
+   "sha256": "f0c2753212cbd62dfa3dc808e72a7d512e561d5f238ad08e7c15e1e1fffcded4",
+   "byte_size": 1282,
+   "mtime": "2026-08-02T03:56:27.250781+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/coverage_matrix.json",
+   "sha256": "fd73bd4883530f014123a9992ae46ea9763cf0fb4768a350866b6f1415e49dc2",
+   "byte_size": 4023,
+   "mtime": "2026-07-30T02:52:01.728254+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/direct_page_citation_handoff.jsonl",
+   "sha256": "ff7928574519622318fd27824c63eb237805de7ee63e8238bc155493354733df",
+   "byte_size": 10302,
+   "mtime": "2026-07-30T02:52:01.726741+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/HPG/2024/audited_annual_financial_statements/304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64.pdf",
+   "sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+   "byte_size": 8575133,
+   "mtime": "2026-07-30T02:51:25.086602+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/PAN/2024/annual_report/757f8e5fe983013f20c8adf0f8fde1131baa3b3731a749735d26745a9420c83b.pdf",
+   "sha256": "757f8e5fe983013f20c8adf0f8fde1131baa3b3731a749735d26745a9420c83b",
+   "byte_size": 15316835,
+   "mtime": "2026-07-30T02:51:56.501292+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/PAN/2024/audited_annual_financial_statements/f1d6fb0dde557d9e098e13cc10ca0b0506e10e446f3ac6dc8122c4fa560df006.pdf",
+   "sha256": "f1d6fb0dde557d9e098e13cc10ca0b0506e10e446f3ac6dc8122c4fa560df006",
+   "byte_size": 21005059,
+   "mtime": "2026-07-30T02:51:46.061595+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/PAN/2025/agm_document_or_resolution/21982c2f0c755875e6783fd7970d8e69e1526edf2e0ee752b08d337bfbfcc19d.pdf",
+   "sha256": "21982c2f0c755875e6783fd7970d8e69e1526edf2e0ee752b08d337bfbfcc19d",
+   "byte_size": 5157526,
+   "mtime": "2026-07-30T02:51:57.826335+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/SSI/2024/annual_report/9fc4daa419476319c94c49c313db216c75ac160b09038b314a60822ee5767fea.pdf",
+   "sha256": "9fc4daa419476319c94c49c313db216c75ac160b09038b314a60822ee5767fea",
+   "byte_size": 62306944,
+   "mtime": "2026-07-30T02:51:31.696847+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/SSI/2024/audited_annual_financial_statements/38e5b9ba2fc951120be813b09df05fa2d8b152b3b95443c6cd108de8abf03b74.pdf",
+   "sha256": "38e5b9ba2fc951120be813b09df05fa2d8b152b3b95443c6cd108de8abf03b74",
+   "byte_size": 29552744,
+   "mtime": "2026-07-30T05:27:48.642303+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/SSI/2025/agm_document_or_resolution/197cb6cd3fd65e1ce1279596d28f5aa2a9ae7e95172f74a93910b6649392ff90.pdf",
+   "sha256": "197cb6cd3fd65e1ce1279596d28f5aa2a9ae7e95172f74a93910b6649392ff90",
+   "byte_size": 23375644,
+   "mtime": "2026-07-30T02:51:33.496298+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/VCB/2024/annual_report/9deccc3518e23302d00353b4d371a9dd251b67b12f9fe58a4da4ad3c727e99f8.pdf",
+   "sha256": "9deccc3518e23302d00353b4d371a9dd251b67b12f9fe58a4da4ad3c727e99f8",
+   "byte_size": 3397968,
+   "mtime": "2026-07-30T02:51:28.169054+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/documents/VNM/2024/annual_report/4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab.pdf",
+   "sha256": "4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab",
+   "byte_size": 27001307,
+   "mtime": "2026-07-30T02:51:27.732688+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/logs/observability_events.jsonl",
+   "sha256": "8756c8af92daf59c0218a96957e6ffe20721dc80ccc81474871b36d8a27037eb",
+   "byte_size": 5908,
+   "mtime": "2026-07-30T07:20:20.438370+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/ocr_sidecar_checkpoint.json",
+   "sha256": "bdcc480bf23b2c0ef0273b2b5eb3f3733238ebc13366daeda5badec75629cf81",
+   "byte_size": 160702,
+   "mtime": "2026-07-30T05:38:42.810334+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/official_document_acquisition_manifest.json",
+   "sha256": "911d9a300de4b55e58f221c4d972809423b2c3271e19ed8c9ce574e91ef76b43",
+   "byte_size": 8867,
+   "mtime": "2026-07-30T05:27:48.957178+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/pan_notes_15_39.png",
+   "sha256": "2b820ca37244d047badf79f10cf3bf11eb85be9e2257a8b1d0d3e7a6a825ffdf",
+   "byte_size": 1015764,
+   "mtime": "2026-07-30T04:33:05.510497+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/pan_notes_40_66.png",
+   "sha256": "6c1acb14e469d94019ea26194ee863c93500b00b61ad4fd0c5be2a4657062b1e",
+   "byte_size": 1023029,
+   "mtime": "2026-07-30T04:33:05.807698+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase6c-final-evidence-report.json",
+   "sha256": "b14885df3dea23e961e3fdcaa172e9216d77862794fb903f4e781be168f7504b",
+   "byte_size": 796,
+   "mtime": "2026-07-30T03:48:55.561917+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase6c2-progress.json",
+   "sha256": "18073db1c792edddb3952f6a4dbb12381109b90167a34c8ec008d12a01dda527",
+   "byte_size": 1758,
+   "mtime": "2026-07-30T03:42:23.343414+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7a-pan-targeted-extraction.json",
+   "sha256": "4cef99f1e4bd7674316667353cd5ed8570f00ac43dde58523e3a59653962e79d",
+   "byte_size": 2204,
+   "mtime": "2026-07-30T04:28:21.210760+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7a-sparse-locator.json",
+   "sha256": "ed0f532b78d02ec0261c0a630dc2f55d39dbc9deab1862d515abe2b5ecdc5f58",
+   "byte_size": 13963,
+   "mtime": "2026-07-30T04:10:38.262840+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7b-pan-observation-completion.json",
+   "sha256": "6789d17c86bb4a5740f512aee0499fb122df97dd0c91ee0074305be8d9271312",
+   "byte_size": 2413,
+   "mtime": "2026-07-30T04:36:59.052392+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7b-pan-provider-official-bridge.json",
+   "sha256": "20068a251f3721fd806e8cce49d90d63be7cd992d43b25d135b58bd42efd4ed6",
+   "byte_size": 79872,
+   "mtime": "2026-07-30T05:18:33.480572+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7c-official-document-canonical-activation.json",
+   "sha256": "52f6e56432729ddf6bb7846be277379e2035fbb1241e749e8cf8907364be1ef0",
+   "byte_size": 45442,
+   "mtime": "2026-07-30T05:58:14.189501+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7c-pan-residual-recovery.json",
+   "sha256": "2bc0a729e4e00677dfed64ce7c11a0843a701e17d061b1e3460b9b40eedec135",
+   "byte_size": 3087,
+   "mtime": "2026-07-30T04:47:33.877327+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7d-pan-ssi-sector-aware-downstream-shadow.json",
+   "sha256": "92cf557c22db7cab50d708a96f5f746ae4ff76a79fcbb00c3e5733d8bffb0743",
+   "byte_size": 18754,
+   "mtime": "2026-07-30T06:06:54.134056+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7d-ssi-official-evidence.json",
+   "sha256": "d859edc17d3ce529d25a0e8cdb583f1c9dffd47a15132d1053b87e47713405f9",
+   "byte_size": 10325,
+   "mtime": "2026-07-30T05:39:33.731420+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7e-sector-aware-downstream-facts.json",
+   "sha256": "a090f8ce6b749c119a3ac90539c7c303a4ac46e1bfc25c6b46c2d698b47caaa0",
+   "byte_size": 11970,
+   "mtime": "2026-07-30T07:20:20.415493+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7e-ssi-provider-official-bridge.json",
+   "sha256": "cf3fef577b63c12a27d57d97d26e45518b603323d21e975484ee581d800313af",
+   "byte_size": 305710,
+   "mtime": "2026-07-30T05:53:23.486505+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/phase7e-ssi-provider-recollection-raw.json",
+   "sha256": "ef39078035829df524945c7f14ca7611faf98a2fffa00da7bae3943125efb565",
+   "byte_size": 293731,
+   "mtime": "2026-07-30T05:49:54.843534+00:00"
+  },
+  {
+   "path": "governed-official-evidence-v1/retention_report.json",
+   "sha256": "25e7596c635498b33c551c6517eb388a9569cdb53bc6cae05215086279a107a4",
+   "byte_size": 41118,
+   "mtime": "2026-07-30T02:52:01.729263+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/closeout.md",
+   "sha256": "23427b5c837d3b9541ac758effcfc217411ac02c4cb90116f96022a5bc5ffa24",
+   "byte_size": 1905,
+   "mtime": "2026-08-02T08:39:32.995156+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/documents/HPG/2025/annual_report/b684eb4c8d3b7b5e09258584451c86af553fc3a61c12fb1100bd31559d661e43.pdf",
+   "sha256": "b684eb4c8d3b7b5e09258584451c86af553fc3a61c12fb1100bd31559d661e43",
+   "byte_size": 17340305,
+   "mtime": "2026-08-02T08:37:39.920092+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/documents/HPG/2025/reviewed_interim_financial_statements/e92860f9d7bbe0dff53c5e576f95c5c1c4b904bbeb927c13d52a61f2e896b359.pdf",
+   "sha256": "e92860f9d7bbe0dff53c5e576f95c5c1c4b904bbeb927c13d52a61f2e896b359",
+   "byte_size": 5454989,
+   "mtime": "2026-08-02T08:24:14.829186+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/documents/HPG/2026/corporate_action_notice/8bbae21fbb3e6c11f925385ac35b290e86e3db8753188131acbbba3bad5b29b2.pdf",
+   "sha256": "8bbae21fbb3e6c11f925385ac35b290e86e3db8753188131acbbba3bad5b29b2",
+   "byte_size": 555299,
+   "mtime": "2026-08-02T08:33:15.776137+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/documents/HPG/2026/corporate_action_notice/cb41c96ef78bed7654030e55bb06dea22d051b1c9fcf1a6cf024e9f964563c1c.html",
+   "sha256": "cb41c96ef78bed7654030e55bb06dea22d051b1c9fcf1a6cf024e9f964563c1c",
+   "byte_size": 32705,
+   "mtime": "2026-08-02T08:06:19.530744+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/documents/HPG/2026/corporate_governance_report/f9cd63753fcffd3087a4c3040f55b6ee93094873a0b1892dbb1640d463221682.pdf",
+   "sha256": "f9cd63753fcffd3087a4c3040f55b6ee93094873a0b1892dbb1640d463221682",
+   "byte_size": 9725044,
+   "mtime": "2026-08-02T08:35:09.103515+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/documents/VNM/2026/reviewed_interim_financial_statements/a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561.pdf",
+   "sha256": "a6155aa757b320b893a78093b0454473f4a581aead225af4eb4ef1fbd6628561",
+   "byte_size": 4351080,
+   "mtime": "2026-08-02T08:19:38.983770+00:00"
+  },
+  {
+   "path": "hpg-vnm-current-share-bridge-20260802/official_document_acquisition_manifest.json",
+   "sha256": "83c731024d94d471c0455415306d7591ade2403420f67a0046e6e0297deda522",
+   "byte_size": 6575,
+   "mtime": "2026-08-02T08:37:40.371760+00:00"
+  },
+  {
+   "path": "hpg_fy2024_altman_evidence_retention_20260801T133000Z.md",
+   "sha256": "4271e729d0f139c4992aa53b700c8d42a7f2f531ccb934295a322b9e3508caff",
+   "byte_size": 2478,
+   "mtime": "2026-08-01T13:07:28.189976+00:00"
+  },
+  {
+   "path": "hpg_vnm_alternative_market_source_20260801T210616.md",
+   "sha256": "4da76e3d0cd0d075d0f3c897c87e03c5b152f6681ef70990cd8723f3e141dd11",
+   "byte_size": 2167,
+   "mtime": "2026-08-01T14:06:41.358190+00:00"
+  },
+  {
+   "path": "hpg_vnm_current_share_bridge_followup_20260802.md",
+   "sha256": "a3f85b614ad14ec1e3eb37c540db596d3c08fc2d3904dfbd304270e645768f2c",
+   "byte_size": 2122,
+   "mtime": "2026-08-02T07:37:27.447481+00:00"
+  },
+  {
+   "path": "hpg_vnm_empirical_price_basis_20260802T103553Z.md",
+   "sha256": "f6312272230e753e72bddd9bd48261f776a25b0ebb6549e72218eb586a58ae58",
+   "byte_size": 1329,
+   "mtime": "2026-08-02T03:36:02.819323+00:00"
+  },
+  {
+   "path": "hpg_vnm_fy2024_capital_structure_analysis_20260801T223419Z.md",
+   "sha256": "4520e3519920adb1606e16f24b19670217c1ed3ffce0d52a21a61a77bc09ca85",
+   "byte_size": 1279,
+   "mtime": "2026-08-01T15:34:29.957287+00:00"
+  },
+  {
+   "path": "hpg_vnm_fy2024_financial_freshness_20260801T212900.md",
+   "sha256": "8d5cdc1ac8fbbfcee4726375e7c0d39d77fcb534eaf09ee427b94612350409e1",
+   "byte_size": 2328,
+   "mtime": "2026-08-01T14:14:56.304490+00:00"
+  },
+  {
+   "path": "hpg_vnm_fy2024_historical_fundamental_brief_20260801T224213Z.md",
+   "sha256": "efe5c1b14b449d8a4be8165e13cad53c87b4cab82380c0b3dfc6e98ed4eb298b",
+   "byte_size": 1170,
+   "mtime": "2026-08-01T15:42:22.996374+00:00"
+  },
+  {
+   "path": "hpg_vnm_fy2024_share_capital_structure_20260801T214700.md",
+   "sha256": "34f9fbbe3e3a97c19e7c6b5c34fbd4fee6331c7054863e0e4204a513778359ce",
+   "byte_size": 1833,
+   "mtime": "2026-08-01T14:20:11.960889+00:00"
+  },
+  {
+   "path": "hpg_vnm_official_event_closeout_20260802T140000Z/price_basis_first.json",
+   "sha256": "c0ec2b2265fc86c3cbb1b40ec951fa4af6be07170c208e952dd2164155b5b40a",
+   "byte_size": 1443,
+   "mtime": "2026-08-02T04:40:42.308542+00:00"
+  },
+  {
+   "path": "hpg_vnm_official_event_closeout_20260802T140000Z/price_basis_parity.json",
+   "sha256": "c0ec2b2265fc86c3cbb1b40ec951fa4af6be07170c208e952dd2164155b5b40a",
+   "byte_size": 1443,
+   "mtime": "2026-08-02T04:40:42.699471+00:00"
+  },
+  {
+   "path": "hpg_vnm_official_event_closeout_20260802T140000Z/report.md",
+   "sha256": "6dac12c793e7265f325488909752662b510e3634d2ff1a2f25e5d67304f36310",
+   "byte_size": 1279,
+   "mtime": "2026-08-02T04:41:28.558282+00:00"
+  },
+  {
+   "path": "hpg_vnm_official_price_basis_20260802T101759Z.md",
+   "sha256": "0c89b5bb0c2eb00740e6c910a1d1a33b921d66c6c9168b0125dab441e246801d",
+   "byte_size": 975,
+   "mtime": "2026-08-02T03:18:09.519186+00:00"
+  },
+  {
+   "path": "hpg_vnm_post_fy2024_share_transition_bridge_20260801T215700.md",
+   "sha256": "40c08ac703a471d59f2e03f10491f5ae21f470db517f62345ea7b70b17d4731f",
+   "byte_size": 1921,
+   "mtime": "2026-08-01T15:24:14.271168+00:00"
+  },
+  {
+   "path": "hpg_vnm_price_volume_basis_20260801T153000Z.md",
+   "sha256": "33bd82e33b3c0bc10ea8ad920d47871c2e26e1d0e819b3fab7f0318d99de543a",
+   "byte_size": 971,
+   "mtime": "2026-08-01T14:03:03.702663+00:00"
+  },
+  {
+   "path": "hpg_vnm_share_transition_resolver_20260802T152907+0700.md",
+   "sha256": "83e93a9deff0a782424ef14e32ce8cc5413185e9d8b5d8942e49313dd556c606",
+   "byte_size": 2523,
+   "mtime": "2026-08-02T08:39:32.996663+00:00"
+  },
+  {
+   "path": "kbs_ohlcv_sample_hpg.json",
+   "sha256": "ccf45415aa71b9b334ea2a22dcd0f9eb5b1a5f6b7164a8ac77d281292068196d",
+   "byte_size": 991,
+   "mtime": "2026-08-01T01:11:52.829310+00:00"
+  },
+  {
+   "path": "logs/observability_events.jsonl",
+   "sha256": "d96a40db6124a84be24634d5d8963e4b45a3479f834a7707013a9766745ae3df",
+   "byte_size": 2196,
+   "mtime": "2026-07-30T05:29:18.658417+00:00"
+  },
+  {
+   "path": "non-cash-corporate-action-official-evidence/closeout.log",
+   "sha256": "e672de4a9e4fb24af8b62d84f82ad3d8fcee78f45883324a62f21bd6919b1a19",
+   "byte_size": 1249,
+   "mtime": "2026-07-29T16:06:46.505942+00:00"
+  },
+  {
+   "path": "non-cash-corporate-action-official-evidence/closeout.txt",
+   "sha256": "e672de4a9e4fb24af8b62d84f82ad3d8fcee78f45883324a62f21bd6919b1a19",
+   "byte_size": 1249,
+   "mtime": "2026-07-29T16:06:46.506845+00:00"
+  },
+  {
+   "path": "non-cash-corporate-action-official-evidence/source-manifest.json",
+   "sha256": "c3a7e9a1625cd09e8044118731beac6ceba39b8009635951d6fbddbb40af2bf4",
+   "byte_size": 3084,
+   "mtime": "2026-07-29T16:06:46.502940+00:00"
+  },
+  {
+   "path": "non-cash-corporate-action-official-evidence/vsdc-vcb-listing-change-execution.html",
+   "sha256": "8a79e8b0ca1381cd1cac12a82818f382052e55a323e9386ebbd54a7f93e712ef",
+   "byte_size": 64405,
+   "mtime": "2026-07-29T16:09:34.229315+00:00"
+  },
+  {
+   "path": "official-document-acquisition-allowlist-20260730.json",
+   "sha256": "a3f9b91859b4b8f2aa7a89b8e0e8aa26d3e4b5c74041de6739e493e6178b4126",
+   "byte_size": 7176,
+   "mtime": "2026-07-30T02:36:28.129338+00:00"
+  },
+  {
+   "path": "official-price-event-bridge-v1/official_document_acquisition_manifest.json",
+   "sha256": "b57a94c05df2fccbd220ca08d15add713be709ff40b85e65fd9f52e29c638e34",
+   "byte_size": 49,
+   "mtime": "2026-08-02T04:40:08.278223+00:00"
+  },
+  {
+   "path": "official_price_bridge_parity_20260802T123000Z.json",
+   "sha256": "bedf0163c903412606c7467393fea46c654a68651ca22907bdb312c93a3ed247",
+   "byte_size": 1443,
+   "mtime": "2026-08-02T04:23:28.962997+00:00"
+  },
+  {
+   "path": "p0_2_evidence_write_boundary_vnm_cash_dividend_promotion_20260802.md",
+   "sha256": "714dc2fd87eef5db874d8afd0613cb84573bbb287651cad73b41163f43f19ac8",
+   "byte_size": 3409,
+   "mtime": "2026-08-02T12:20:57.429571+00:00"
+  },
+  {
+   "path": "p0_acquisition_closeout_20260802T150000Z/gate_check.json",
+   "sha256": "24a595b02630c4aa9f49b53fca05b67a2a8cfad1d906d455de2c1d298dd745c1",
+   "byte_size": 170,
+   "mtime": "2026-08-02T05:17:53.653488+00:00"
+  },
+  {
+   "path": "p0_acquisition_closeout_20260802T150000Z/handoff.json",
+   "sha256": "704418503da223a92a102980403b1c0a34acd7e16b740f34a836b8c6add4fd6f",
+   "byte_size": 876,
+   "mtime": "2026-08-02T05:17:53.588625+00:00"
+  },
+  {
+   "path": "p0_acquisition_closeout_20260802T150000Z/local_evidence_inventory.json",
+   "sha256": "3b341d9544a43a141b48bc99fc27f65150c89b5518e5ca44557ca1c01a644106",
+   "byte_size": 2761,
+   "mtime": "2026-08-02T05:17:53.372670+00:00"
+  },
+  {
+   "path": "p0_acquisition_closeout_20260802T150000Z/offline_dry_run.json",
+   "sha256": "d5c011f6b14ffe958531ce1dd51e30d8efc801604025e09ecb37dfc427874521",
+   "byte_size": 237,
+   "mtime": "2026-08-02T05:17:53.286255+00:00"
+  },
+  {
+   "path": "p0_acquisition_closeout_20260802T150000Z/report.md",
+   "sha256": "38ab6f7fc519f41a8fb7e6beada0784997f0c83406a73088f54ca06174be6e09",
+   "byte_size": 721,
+   "mtime": "2026-08-02T05:18:36.112473+00:00"
+  },
+  {
+   "path": "p0_automated_official_discovery_20260802T153000Z/discovery.json",
+   "sha256": "ea2c046714508f28dfcc7ea6ef682b30a31aacbdfad208123dab8919fd6e86b0",
+   "byte_size": 2585,
+   "mtime": "2026-08-02T05:25:45.265146+00:00"
+  },
+  {
+   "path": "p0_automated_official_discovery_20260802T153000Z/report.md",
+   "sha256": "4c66487efdbf00680823deeadcb62746a1302a37a15d49189e9bb994a34c09fe",
+   "byte_size": 534,
+   "mtime": "2026-08-02T05:26:04.763283+00:00"
+  },
+  {
+   "path": "p0_locator_coverage_repair_20260802T160000Z/discovery.json",
+   "sha256": "744a9a6e27fd4b5a222ee0831ff72149c620a4d8639c8d2c34dadbcd23bf7ce2",
+   "byte_size": 2659,
+   "mtime": "2026-08-02T05:31:07.205558+00:00"
+  },
+  {
+   "path": "p0_locator_coverage_repair_20260802T160000Z/report.md",
+   "sha256": "ae861ded6bfbcb3831759776acb11e4f655df550f819fc08cc9c5c56dbab2be8",
+   "byte_size": 560,
+   "mtime": "2026-08-02T05:31:44.015702+00:00"
+  },
+  {
+   "path": "p0_market_data_lineage_20260802T113000Z.md",
+   "sha256": "fdccf7eb8e8c7acf7e5cefacc56e1bba22020bf51508b425b3fa6d5d9b695309",
+   "byte_size": 1245,
+   "mtime": "2026-08-02T04:06:10.188582+00:00"
+  },
+  {
+   "path": "p0_official_corporate_action_bridge_20260802T123000Z.md",
+   "sha256": "cb4e377d32ab6690792bd2872acb831c7009633d692d8ff2365b1190a7927dd6",
+   "byte_size": 989,
+   "mtime": "2026-08-02T04:23:52.074524+00:00"
+  },
+  {
+   "path": "p0_price_event_dataset_blocker_20260802T120000Z.md",
+   "sha256": "954ef2fd4d1e6f4e2e42eb159980f3ce2d20de76c5427c983a1380a75cda9436",
+   "byte_size": 1236,
+   "mtime": "2026-08-02T04:16:13.050055+00:00"
+  },
+  {
+   "path": "p0_volume_basis_publish_boundary_20260802T130815+0700.md",
+   "sha256": "6bcf216fd1e7e95b7a9bb531bdfbcada83bce89f6c53e30eb5fe4598f3af0ef3",
+   "byte_size": 1942,
+   "mtime": "2026-08-02T06:08:29.818237+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/explicit_shadow_output/analysis_bundle.json",
+   "sha256": "06ee4241ae972416d91f8f5a2d8146c12dbb66c54669367633a6979403265e59",
+   "byte_size": 2560171,
+   "mtime": "2026-08-02T06:20:43.772305+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/explicit_shadow_output/bundle_manifest.json",
+   "sha256": "b8efb9cc5453eda10470cb62da03599a2af289b89939f4ea73f3132bbeff04dd",
+   "byte_size": 21328,
+   "mtime": "2026-08-02T06:20:43.835091+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/explicit_shadow_output/focus_extract.json",
+   "sha256": "d80a847d9e2b2c6b464f62d4cfe1d9507b34679912dbafd46a40a622c1c87c48",
+   "byte_size": 1140817,
+   "mtime": "2026-08-02T06:20:43.687671+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/explicit_shadow_output/logs/observability_events.jsonl",
+   "sha256": "d7194f76bc3c1a97abd7c06c2141ddef53ea1bbf2325e856ae5a60fcff083b66",
+   "byte_size": 3448,
+   "mtime": "2026-08-02T06:20:43.855287+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/explicit_shadow_output/observability_events.jsonl",
+   "sha256": "86d7d1ab138559517511db7db1f0b52799af5af44048c77b7de11ca48de9f0a1",
+   "byte_size": 1949,
+   "mtime": "2026-08-02T06:20:43.857321+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final2_timestamp_export/analysis_bundle.json",
+   "sha256": "cd5107eac3f675c0a79fc5418975ef287ad2979a4edda1677dea39adba65cb07",
+   "byte_size": 2096308,
+   "mtime": "2026-08-02T07:27:39.368551+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final2_timestamp_export/bundle_manifest.json",
+   "sha256": "7315fad5e3f475e8b34609d2a8bfa5368d4add263a64ecbf5fb605ebc58317eb",
+   "byte_size": 23631,
+   "mtime": "2026-08-02T07:27:39.415552+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final2_timestamp_export/focus_extract.json",
+   "sha256": "434563924b09cccb6883d235c5adbed001bcabd83dea7b6b72697325ed63f5db",
+   "byte_size": 674228,
+   "mtime": "2026-08-02T07:27:39.310377+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final2_timestamp_export/logs/observability_events.jsonl",
+   "sha256": "d7b5bfe044a46ebaa91d766e6dc4c6f79aac3b09422a679ca8e535d38d32f93a",
+   "byte_size": 3454,
+   "mtime": "2026-08-02T07:27:39.432186+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final2_timestamp_export/observability_events.jsonl",
+   "sha256": "c037d09872f0626101e0cd4824d1070dc08e3622299d6070e15373219ef947b6",
+   "byte_size": 1951,
+   "mtime": "2026-08-02T07:27:39.434188+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final_timestamp_export/analysis_bundle.json",
+   "sha256": "71958cd759ed65cdf9b178bbc8bdd52563d3b4767f5d6dfd6512005638fc3cf8",
+   "byte_size": 2096308,
+   "mtime": "2026-08-02T07:25:54.648292+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final_timestamp_export/bundle_manifest.json",
+   "sha256": "2144a46c94e7cc968f4efad582f2902a7ed11278296ccb1782babc6169faecdf",
+   "byte_size": 23631,
+   "mtime": "2026-08-02T07:25:54.730227+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final_timestamp_export/focus_extract.json",
+   "sha256": "434563924b09cccb6883d235c5adbed001bcabd83dea7b6b72697325ed63f5db",
+   "byte_size": 674228,
+   "mtime": "2026-08-02T07:25:54.558844+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final_timestamp_export/logs/observability_events.jsonl",
+   "sha256": "88f5f8be4892cb687cf9d3f272d5a082345843baa040eb4a903ea99af08809c6",
+   "byte_size": 3448,
+   "mtime": "2026-08-02T07:25:54.747485+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/final_timestamp_export/observability_events.jsonl",
+   "sha256": "a51181e6fb2f7e3a4f69a26a4e066399469eb464ea3d22307e2f9ff17025d67f",
+   "byte_size": 1948,
+   "mtime": "2026-08-02T07:25:54.750011+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/qualified_timestamp_export/analysis_bundle.json",
+   "sha256": "f985d72967a4e6bb7ec0eb60f5b4cb736c70b723f5fc09374ad1c9e24bcae257",
+   "byte_size": 2096087,
+   "mtime": "2026-08-02T07:23:22.703021+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/qualified_timestamp_export/bundle_manifest.json",
+   "sha256": "a2562381e7d4aca2bc015f9f3c8ad869ec425d2ff073286785dfbc0c7efdf16f",
+   "byte_size": 23631,
+   "mtime": "2026-08-02T07:23:22.746270+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/qualified_timestamp_export/focus_extract.json",
+   "sha256": "78a2bccd129b2fe38b1f0da5b83b6c2709458eb62cf69b39e9335129e2b8e4a1",
+   "byte_size": 674007,
+   "mtime": "2026-08-02T07:23:22.646284+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/qualified_timestamp_export/logs/observability_events.jsonl",
+   "sha256": "5cb171451959a7059634a9113bb80a9398d8ea09ffc0d5d3642966b6eb0ddaac",
+   "byte_size": 3472,
+   "mtime": "2026-08-02T07:23:22.761467+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/qualified_timestamp_export/observability_events.jsonl",
+   "sha256": "02507dad958465370fbe6d9a86f3109691d0919d0dcd256a9db6ad2ba0743a71",
+   "byte_size": 1960,
+   "mtime": "2026-08-02T07:23:22.763389+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/report.md",
+   "sha256": "bdddc4c93c5ee3dea042f9c32af539aafdb628d0c4d45a183250105f78137e56",
+   "byte_size": 2059,
+   "mtime": "2026-08-02T06:21:14.674081+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/analysis_bundle.json",
+   "sha256": "fb2b9c0034b2b42150db746a98b640dd8e8f72e7662e7469c9911d024b6e5dcc",
+   "byte_size": 2092816,
+   "mtime": "2026-08-02T06:19:36.460569+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/analysis_latest.json",
+   "sha256": "aef939f9459b8a9a807df983cf1f718f4db34fbb3ea946b887f3846d2eed9068",
+   "byte_size": 64614,
+   "mtime": "2026-07-30T11:52:28.813317+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/bundle_manifest.json",
+   "sha256": "242b0adb449d2477fa18e9f875c876e6efff7a35280b2b4554815b2df3d268bc",
+   "byte_size": 21346,
+   "mtime": "2026-08-02T06:19:36.526377+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/candle_signals.js",
+   "sha256": "0389931a3fa94f3ea9c4a3283353efb878fb37792188cd44b55593313eef24ee",
+   "byte_size": 137671,
+   "mtime": "2026-08-02T07:29:11.530646+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/candle_signals.json",
+   "sha256": "0aaa0d7c1e8af952b7e5d35d349cda11595096e8de4f478dcd6e9e3e3597b7b5",
+   "byte_size": 137646,
+   "mtime": "2026-08-02T07:29:11.521899+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/candlestick_patterns.js",
+   "sha256": "eaa47e966c44992596a20f6799a6b68e76dc4dcd52408d55f69747a617a61059",
+   "byte_size": 228632,
+   "mtime": "2026-08-02T07:29:11.488690+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/candlestick_patterns.json",
+   "sha256": "cf070c07b9abbe6b396e0bf027fc89d97c8bf455d16a28e03f7a77ab7265ce54",
+   "byte_size": 228600,
+   "mtime": "2026-08-02T07:29:11.482703+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/ebitda_component_citations.jsonl",
+   "sha256": "b17acad1b8d316cf1d874d2464488b654f563b36d57b01d171d8ca78ebd52bf0",
+   "byte_size": 3483,
+   "mtime": "2026-07-27T04:04:36.971025+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/hpg-annual-report-2025.pdf",
+   "sha256": "7793d056c095a62b2df55e104b9b97591d258cc32be2a3fa0a87e16e2dc37579",
+   "byte_size": 18890242,
+   "mtime": "2026-07-26T12:32:55.338527+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/hpg-consolidated-fy2024-audited.pdf",
+   "sha256": "304a93a65e1587f625e0045d6ec9bcfba6647d19df4034cfd8fc1ec7b62eeb64",
+   "byte_size": 8575133,
+   "mtime": "2026-07-26T14:25:24.529140+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/hpg-separate-fy2024-audited.pdf",
+   "sha256": "cc03bc33e3227ffcc3a80f4e7fab9b1573f0372457add19d61b35b95f065d344",
+   "byte_size": 4722017,
+   "mtime": "2026-07-26T14:25:24.570588+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/manifest.json",
+   "sha256": "bf0a5f793a7bcb8c840a2ac197c6abece34abec688d0d22d8f2cf985c9d57fff",
+   "byte_size": 10227,
+   "mtime": "2026-07-28T14:17:20.695539+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/market_price_citations.jsonl",
+   "sha256": "88812693807701695bfb09ebb1203d1b7eae1e03a2ec0f69176c6eb66a09d8ab",
+   "byte_size": 1371,
+   "mtime": "2026-07-27T05:53:00.137839+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/qualification_citations.jsonl",
+   "sha256": "27bf9e1c163193a64bd67beee65d1827a40283c5adbf6adafc0f073842040e1b",
+   "byte_size": 59479,
+   "mtime": "2026-07-27T05:51:52.920667+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/share_basis_citations.jsonl",
+   "sha256": "24993450f64083e8aa0ba5fead157c6af04395c536098934f0ea1532bf031291",
+   "byte_size": 5592,
+   "mtime": "2026-07-28T14:15:30.275618+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/vcb-consolidated-fy2024-audited-vas.pdf",
+   "sha256": "63498215e56d0d61a6c27c161913395cdbac45a027017b308301b771e27aa104",
+   "byte_size": 6982628,
+   "mtime": "2026-07-27T05:34:56.716445+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/official-evidence/vnm-consolidated-fy2024-audited-vas.pdf",
+   "sha256": "a70f448abc8aa61f0b6d25a281a1af4bf0d46d7309083d18556129cc53620450",
+   "byte_size": 3453158,
+   "mtime": "2026-07-27T03:36:03.593997+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/screener_data.js",
+   "sha256": "593ce9322ed1c4a1d6746d596254fca073fa76e2568b6b1b57c2af9a7b32feaf",
+   "byte_size": 2024017,
+   "mtime": "2026-08-02T07:29:11.659979+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/sector_heatmap.js",
+   "sha256": "469f31e87d175701ebf9377bfb9e31f85429a10fcf82ed02e476a38c53561adc",
+   "byte_size": 4049,
+   "mtime": "2026-08-02T07:29:11.560496+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/data/sector_heatmap.json",
+   "sha256": "6e7cc43aef24d2bdd0a0fe1314e78de3f0bb71ef64b21cc0510b2edf4c055837",
+   "byte_size": 4024,
+   "mtime": "2026-08-02T07:29:11.559610+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/financial_snapshot.parquet",
+   "sha256": "66454c311af4c068afc7315f930c91bc5ea9e6892672ee39d0f651622f0f30a1",
+   "byte_size": 2454371,
+   "mtime": "2026-07-18T03:21:23.373651+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/Focus_Analysis.md",
+   "sha256": "761c5ea61e2cde2cee6c4ec9fb75fc70acc88ccb4554fb18fc6ce6801588ea8e",
+   "byte_size": 22283,
+   "mtime": "2026-07-29T15:32:23.344188+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/focus_extract.json",
+   "sha256": "f84d4d519c402d5e53f6db928486c13dedf1381e1844c89c5d8e4648539309bd",
+   "byte_size": 673444,
+   "mtime": "2026-08-02T06:19:36.390786+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/logs/observability_events.jsonl",
+   "sha256": "5c971b75af024cee5dadeab35a769db9972a5193200a3698ec7bd0c5f9b05ed2",
+   "byte_size": 3400,
+   "mtime": "2026-08-02T06:19:36.546054+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/macro_snapshot.csv",
+   "sha256": "c5b8b2573fdfad25fe3a489da8ffe9d6a1dfd747d7399ee9d12f120181d1d963",
+   "byte_size": 2212,
+   "mtime": "2026-07-30T11:37:12.162891+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/market_breadth.csv",
+   "sha256": "d1845086a3adbd5c4e7e0aa92f2e35a4d94a41a3059842aae340ad946e2c2974",
+   "byte_size": 1683,
+   "mtime": "2026-08-02T07:21:55.966076+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/observability_events.jsonl",
+   "sha256": "8348fbe5400025061770c7d5fb825d2f841f9c357c2bde9eec883aaa408c529f",
+   "byte_size": 1924,
+   "mtime": "2026-08-02T06:19:36.550255+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/operations-review/closeout_audit_20260802/bundle/analysis_bundle.json",
+   "sha256": "29c75d6f6c2da9382a8ab504816bab847e64738735bbebd480ffe2ffb25584e0",
+   "byte_size": 704172,
+   "mtime": "2026-08-02T07:43:04.345720+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/operations-review/closeout_audit_20260802/bundle/bundle_manifest.json",
+   "sha256": "f72bc2cdeb99f1e6befaaf30802fb3a302d4ffe64a10c38b7aaad56b14e84a06",
+   "byte_size": 14679,
+   "mtime": "2026-08-02T07:43:04.376122+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/operations-review/closeout_audit_20260802/bundle/focus_extract.json",
+   "sha256": "c0c3488d56219354684f8a0abd96933fe3f22dc4c0557b85a00480ad6cfdb38d",
+   "byte_size": 674590,
+   "mtime": "2026-08-02T07:43:04.283050+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/operations-review/closeout_audit_20260802/bundle/logs/observability_events.jsonl",
+   "sha256": "27bfda5f81ad12732c29eb1db6c0ffbea42f353569fca6c44b6d8ded1619a976",
+   "byte_size": 3712,
+   "mtime": "2026-08-02T07:43:04.389254+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/operations-review/closeout_audit_20260802/bundle/observability_events.jsonl",
+   "sha256": "8490ad7162dc4d27fd392dea76a6a949014509b3565bbbecf5f1b59cd9afd12c",
+   "byte_size": 2079,
+   "mtime": "2026-08-02T07:43:04.390253+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/screen_snapshot.csv",
+   "sha256": "cbcf6ef34ef1672a2b1bf2836df60055c7aa37e54764a72db2834d20e492155f",
+   "byte_size": 550864,
+   "mtime": "2026-08-02T07:21:55.921472+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/screen_snapshot_live.csv",
+   "sha256": "ccbd2794de8bad18058d741d076933288241cbe442b0f6168c417c410e956ca8",
+   "byte_size": 307256,
+   "mtime": "2026-08-02T07:21:55.945299+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/ta_signals.csv",
+   "sha256": "c0ef1075da70af55cb802202aafc84596d39143e0a865e7ad15f076b4a085a70",
+   "byte_size": 2870,
+   "mtime": "2026-08-02T07:29:11.502368+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/ta_signals.json",
+   "sha256": "a702c24dd3c4dd5ee10517dae46c80632f7917ee82fa245f08866064fb8ac70c",
+   "byte_size": 83802,
+   "mtime": "2026-08-02T07:29:11.509597+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/shadow_runtime/vn_stock.db",
+   "sha256": "90c9a65bddbd79183169c6a5f67855bce396499332c11ddf237e230d86922259",
+   "byte_size": 203558912,
+   "mtime": "2026-07-30T11:52:28.831734+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/source_timestamp_closeout.md",
+   "sha256": "8313c9d2b41d7b35d9b23cf4ffa3d300bcf76f326321f40accd0283608712a97",
+   "byte_size": 2556,
+   "mtime": "2026-08-02T07:31:45.281827+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/trusted_subset_timestamp_export/analysis_bundle.json",
+   "sha256": "48845ff3a66f56494b1685d63a5022555c3ab731c34dcf5a32d66915cd5d98be",
+   "byte_size": 2096271,
+   "mtime": "2026-08-02T07:29:23.872330+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/trusted_subset_timestamp_export/bundle_manifest.json",
+   "sha256": "5310a4eeca1de5d15c6f1810bc222d5f5f52cd651424fe69495fe2b2c360ea6a",
+   "byte_size": 23185,
+   "mtime": "2026-08-02T07:29:23.926342+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/trusted_subset_timestamp_export/focus_extract.json",
+   "sha256": "c0c3488d56219354684f8a0abd96933fe3f22dc4c0557b85a00480ad6cfdb38d",
+   "byte_size": 674590,
+   "mtime": "2026-08-02T07:29:23.814021+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/trusted_subset_timestamp_export/logs/observability_events.jsonl",
+   "sha256": "87c8cfd1e02ee302cf079a5533ed1f5163d5ab82e302c800db51b3ffb0f91216",
+   "byte_size": 3502,
+   "mtime": "2026-08-02T07:29:23.954287+00:00"
+  },
+  {
+   "path": "p1_current_freshness_20260802T131500+0700/trusted_subset_timestamp_export/observability_events.jsonl",
+   "sha256": "accd99c27e591139fc33caa79af9d751f62cbf3f6d610de9e6c23346385fc9a8",
+   "byte_size": 1975,
+   "mtime": "2026-08-02T07:29:23.956476+00:00"
+  },
+  {
+   "path": "phase2e-temporal-operational/phase2e-recovery.failed.json",
+   "sha256": "3d28570458e39180f22a8997ef9d9794b47460cadba288bd900aba1f66c35e32",
+   "byte_size": 1200,
+   "mtime": "2026-07-29T11:43:19.957456+00:00"
+  },
+  {
+   "path": "phase2e-temporal-operational/phase2e-recovery.pass.json",
+   "sha256": "18e2b46ca4528996bc4e1cbe4e428f064b7d95ec65497961dd5fd08aeda03410",
+   "byte_size": 2250,
+   "mtime": "2026-07-29T11:43:31.134516+00:00"
+  },
+  {
+   "path": "phase2e-temporal-operational/phase2e-success.pass.json",
+   "sha256": "006c0e6132e1c68bc4326f04133b9270d968f183af6000ced8960302a802b862",
+   "byte_size": 2248,
+   "mtime": "2026-07-29T11:43:19.297780+00:00"
+  },
+  {
+   "path": "phase3a-qualified-vci-price-benchmark.json",
+   "sha256": "212eff541d506da2ce8dc4f375ed74771c03bcc10b8b38f2e1849cad56501b2f",
+   "byte_size": 3189,
+   "mtime": "2026-07-29T12:06:27.314572+00:00"
+  },
+  {
+   "path": "phase3a-storage-decision.json",
+   "sha256": "d07f2ae02682e53ba7e1c327c7309ee63d35b38c33e93cef5d2171c98363eaf3",
+   "byte_size": 130,
+   "mtime": "2026-07-29T12:11:34.165904+00:00"
+  },
+  {
+   "path": "phase6a-official-document-live-acquisition-20260730.json",
+   "sha256": "75a76050d90785c38b8d2069577a7237c32330c517b21c359a49a88ee81817b8",
+   "byte_size": 44830,
+   "mtime": "2026-07-30T02:43:11.288888+00:00"
+  },
+  {
+   "path": "phase6d-controlled-discovery-ledger.json",
+   "sha256": "2a73f7df4f7a87b4350657b5331c927f6af887f6442dccc8a48a8587c6f6c973",
+   "byte_size": 5685,
+   "mtime": "2026-07-30T05:29:18.622302+00:00"
+  },
+  {
+   "path": "phase6d-five-ticker-coverage-matrix.json",
+   "sha256": "c537271a298c90d3a847c2309b4bee3471cc89941e2e6ab16adc1e3ec3141da1",
+   "byte_size": 4411,
+   "mtime": "2026-07-30T05:29:18.642818+00:00"
+  },
+  {
+   "path": "phase7f-pan-ssi-consumer-context-pilot.json",
+   "sha256": "58adcaf62db90b52f6353b8adb18f8806f33ebafb293e88dc5617be91d90a492",
+   "byte_size": 1465,
+   "mtime": "2026-07-30T07:30:15.420007+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/bundle_output/analysis_bundle.json",
+   "sha256": "572e38f59e63d22ec8e5c1b84754a0e1625e98ea3d75e90fc5de997aface21fc",
+   "byte_size": 1953938,
+   "mtime": "2026-08-01T10:52:26.583381+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/bundle_output/bundle_manifest.json",
+   "sha256": "2971f084dc92a33c3ab5dccf63846c26ef2d5cb49e15c410a0ebc4e29d805ec0",
+   "byte_size": 20664,
+   "mtime": "2026-08-01T10:52:26.629685+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/bundle_output/focus_extract.json",
+   "sha256": "ea40e7da44fd8300a0e7b623041ca415dc37d01fd8f4dd961b8da4dfb2e201db",
+   "byte_size": 1182984,
+   "mtime": "2026-08-01T10:52:25.972568+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/bundle_output/logs/observability_events.jsonl",
+   "sha256": "be28ec1d4d79fbbe34e81b11c90929e0a83221eaf6cb21580da070ed108dd6fe",
+   "byte_size": 3430,
+   "mtime": "2026-08-01T10:52:26.648878+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/bundle_output/observability_events.jsonl",
+   "sha256": "f37529769c37eef3892aa9aad6fb97769852286cbcf0687ee194cf044af28872",
+   "byte_size": 1940,
+   "mtime": "2026-08-01T10:52:26.649930+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/contexts/HPG_context.json",
+   "sha256": "b6912eb1d13ad0ba0ac6cc03e736ba7b301ae8f6ff02a865c1a610abdf988283",
+   "byte_size": 725396,
+   "mtime": "2026-08-01T10:52:29.015275+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/contexts/VNM_context.json",
+   "sha256": "607eb7ae868c9cf2b83ba16664bc0c7393c3814391625a23b3c136e7006c5ee0",
+   "byte_size": 431485,
+   "mtime": "2026-08-01T10:52:27.979641+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/run_smoke.py",
+   "sha256": "4292b1dc9476ef04b579fb514c4a2f24b4d599758ca272f87b8b6e4d44b3c3dc",
+   "byte_size": 9415,
+   "mtime": "2026-08-01T10:50:02.343385+00:00"
+  },
+  {
+   "path": "phase_5d_distribution_evidence_20260801T104910Z/validation_summary.json",
+   "sha256": "af719a6e14839eb7d6a862c1e5141ecc9f94d2c35c9bea468399ed9a52f6642e",
+   "byte_size": 3956,
+   "mtime": "2026-08-01T10:52:29.016575+00:00"
+  },
+  {
+   "path": "phase_5e_vnm_cash_distribution_evidence_storage_boundary_blocker_20260801T111043Z.txt",
+   "sha256": "d3e01792b87900dd51163fa2989221b10d1da2fc3e05b61da7f7bfb58ce04808",
+   "byte_size": 5117,
+   "mtime": "2026-08-01T11:11:18.790423+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/bundle_output/analysis_bundle.json",
+   "sha256": "f519c31e7f1b6033b375d58c3a2d40df89410a8f82527aa873a4fdf4b55e8d1e",
+   "byte_size": 1937889,
+   "mtime": "2026-08-01T11:45:50.121968+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/bundle_output/bundle_manifest.json",
+   "sha256": "dd5f36fab5a185c69c022908578c42ced6b0fb8c758f0bbf99d60e15db1696e9",
+   "byte_size": 20664,
+   "mtime": "2026-08-01T11:45:50.164638+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/bundle_output/focus_extract.json",
+   "sha256": "6417cc032030bf04e668f4ea75e9c8ef079abd3bbb47c77561b9df4a30a125f6",
+   "byte_size": 1182984,
+   "mtime": "2026-08-01T11:45:50.061059+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/bundle_output/logs/observability_events.jsonl",
+   "sha256": "31d78d07c06865729605966645333770c24a2cae3efbf2751cdafddd815af4d1",
+   "byte_size": 3418,
+   "mtime": "2026-08-01T11:45:50.184460+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/bundle_output/observability_events.jsonl",
+   "sha256": "a30d8229084ee534c76ef479628e02571189808834fc7be160047557504413cd",
+   "byte_size": 1934,
+   "mtime": "2026-08-01T11:45:50.186463+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/contexts/HPG_context.json",
+   "sha256": "083fc798b5b17b2cd6caa14321e3caf5df85fa3e6b8582c94370f28d164ae5c1",
+   "byte_size": 717258,
+   "mtime": "2026-08-01T11:45:51.752872+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/contexts/VNM_context.json",
+   "sha256": "a5731eedb52aa907a5b8de4181eddfd2fed82759b00ff21764554ed6d0b72b53",
+   "byte_size": 423390,
+   "mtime": "2026-08-01T11:45:52.849140+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/run_smoke.py",
+   "sha256": "c78eeca884e9de8e650855ed0b42a4d82fe0f4d2d1702e256656461b2a95cfb2",
+   "byte_size": 8570,
+   "mtime": "2026-08-01T11:45:31.352600+00:00"
+  },
+  {
+   "path": "phase_6a_fundamental_quality_20260801T114449Z/validation_summary.json",
+   "sha256": "4b4c8d49b6acec66abbd19e765c4f269c3cf2f3ed363816ae5cd7b9545923bd5",
+   "byte_size": 3645,
+   "mtime": "2026-08-01T11:45:52.851151+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/bundle_output/analysis_bundle.json",
+   "sha256": "f3f024d82d496ff78c704bb4e6f418d9eef27db9ab35726c484d01fdc1e1c4dc",
+   "byte_size": 1885435,
+   "mtime": "2026-08-01T12:06:03.125609+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/bundle_output/bundle_manifest.json",
+   "sha256": "d54140d326370cde3a78d9df90ad083e807ef6c345337a213dddeb8c24563db0",
+   "byte_size": 20664,
+   "mtime": "2026-08-01T12:06:03.189947+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/bundle_output/focus_extract.json",
+   "sha256": "486314b4b5c45aca296bd25fe810be9c2794b89e56e0daa7a4191e3cbe028221",
+   "byte_size": 1130176,
+   "mtime": "2026-08-01T12:06:03.041142+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/bundle_output/logs/observability_events.jsonl",
+   "sha256": "b1233173f930c00a63febc19fb9463c1291f56ebac2d7a95703024c7b55d8082",
+   "byte_size": 3460,
+   "mtime": "2026-08-01T12:06:03.211629+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/bundle_output/observability_events.jsonl",
+   "sha256": "b78dc1b99bc9dea4975181fc2a9f07b0b5dfd55600236abd3d00537ef443408a",
+   "byte_size": 1955,
+   "mtime": "2026-08-01T12:06:03.215159+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/contexts/HPG_context.json",
+   "sha256": "d86204531a133f174563fa15af8c1967dce60c85df8509626f8bc762e0789ac9",
+   "byte_size": 707384,
+   "mtime": "2026-08-01T12:06:05.368511+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/contexts/VNM_context.json",
+   "sha256": "8694e8c5a6b2bc58c2df8d1d423eaf35ef8ef9c005eb9b3df1901ffad3a428a1",
+   "byte_size": 413528,
+   "mtime": "2026-08-01T12:06:06.952649+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/run_smoke.py",
+   "sha256": "3b78e4d4dbe0af6caab48f77ef1c488b2cb57f57bcf41f8dd4ba15a8d2557d7d",
+   "byte_size": 8969,
+   "mtime": "2026-08-01T12:05:44.875175+00:00"
+  },
+  {
+   "path": "phase_6b_legacy_fundamental_quality_20260801T120508Z/validation_summary.json",
+   "sha256": "69e86289cfa593a8d6fb2234e76b3cc651898ef7bdbc83030c90a7f3914c2ddc",
+   "byte_size": 3897,
+   "mtime": "2026-08-01T12:06:06.956349+00:00"
+  },
+  {
+   "path": "phase_6c_comparative_dupont_20260801T121408Z/phase_6c_report.md",
+   "sha256": "69b375996571d7d9621e887632c0f1b416e506664fe006d0ca1704fb3ab0ccac",
+   "byte_size": 6480,
+   "mtime": "2026-08-01T12:14:38.738394+00:00"
+  },
+  {
+   "path": "phase_6d_financial_identity_altman_20260801T122147Z/phase_6d_report.md",
+   "sha256": "c18e951266937657a1ef4307698049b0570fd6e66183268e731002f8cfdaf691",
+   "byte_size": 5839,
+   "mtime": "2026-08-01T12:22:15.838191+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z.md",
+   "sha256": "b4d3a305ab7abe2928f2c300ffd24a7ac29b1c1b83ce69e10e3c4758a1f83006",
+   "byte_size": 7227,
+   "mtime": "2026-08-01T13:00:17.167328+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z_smoke/bundle_output/analysis_bundle.json",
+   "sha256": "9f4916dec11196672300480a8339705c1605ebb8959fea53cf03f77712d59f8c",
+   "byte_size": 1422316,
+   "mtime": "2026-08-01T12:59:37.508931+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z_smoke/bundle_output/bundle_manifest.json",
+   "sha256": "67ce959b2a7c4de7cef9d9e5549414530ad9ca7750f7fc53938e66f3ecbca3af",
+   "byte_size": 16352,
+   "mtime": "2026-08-01T12:59:37.572966+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z_smoke/bundle_output/focus_extract.json",
+   "sha256": "1c25862feae74db82589a8f0e7d40a49bf4993250d6400d5382f19a69686cf2a",
+   "byte_size": 726798,
+   "mtime": "2026-08-01T12:59:37.441502+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z_smoke/bundle_output/logs/observability_events.jsonl",
+   "sha256": "d2d8f444c2182c0c30342bd55c28577c462db3de57e6d23963c7365cb10a0ed0",
+   "byte_size": 3532,
+   "mtime": "2026-08-01T12:59:37.592167+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z_smoke/bundle_output/observability_events.jsonl",
+   "sha256": "407a40a7f75168cb251b2dd4a957cdc914782368c42874b7409713de98613977",
+   "byte_size": 1990,
+   "mtime": "2026-08-01T12:59:37.594073+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z_smoke/run_smoke.py",
+   "sha256": "54531a64c0dd6a8373b69665979533624edeedb66bf6c7970986802c382412db",
+   "byte_size": 4545,
+   "mtime": "2026-08-01T12:59:24.220155+00:00"
+  },
+  {
+   "path": "phase_6e_hpg_financial_identity_retention_20260801T125841Z_smoke/validation_summary.json",
+   "sha256": "1a82fccdccd49513faedd714f9f04ace6ab8e0a39335756f935472c042b3a331",
+   "byte_size": 1853,
+   "mtime": "2026-08-01T12:59:38.078650+00:00"
+  },
+  {
+   "path": "price_basis_parity_20260802T103000Z.yaml",
+   "sha256": "f84d3fc8873289e2a5fed3129c84631b3a31854a25fd597630bf622347b4d1dc",
+   "byte_size": 1281,
+   "mtime": "2026-08-02T03:35:23.249210+00:00"
+  },
+  {
+   "path": "price_basis_parity_20260802T113000Z.json",
+   "sha256": "ed9d714ef2fa0a45df2c9d3843cbf52f0f50407575aa0f23cb857630fbb8b7aa",
+   "byte_size": 1443,
+   "mtime": "2026-08-02T04:05:03.376621+00:00"
+  },
+  {
+   "path": "price_basis_source_authority_20260802T102040Z.md",
+   "sha256": "196006612f02d6a50ed30f90294f1f47ab56784dbeeb323c06798e386b03eecd",
+   "byte_size": 1175,
+   "mtime": "2026-08-02T03:20:48.738054+00:00"
+  },
+  {
+   "path": "recover_runtime_artifacts_20260802.py",
+   "sha256": "e67a91ece90263d263a26990d14557fe72e0f5d911990afddf5d5a4b0fc821ba",
+   "byte_size": 1131,
+   "mtime": "2026-08-02T06:17:01.671476+00:00"
+  },
+  {
+   "path": "roadmap_closeout_audit_20260802.md",
+   "sha256": "63e238b3696b06eaee573f356d6ff09a1dcd1f5a2d0c79a56e1da603e128ce49",
+   "byte_size": 4152,
+   "mtime": "2026-08-02T07:45:45.872378+00:00"
+  },
+  {
+   "path": "roadmap_phase_milestone_reconciliation_20260802T162147+0700.md",
+   "sha256": "5a8426fe32ea722ea7c292d73f1bbcf31f33f60a0987a580b7f3ee9c2434cf8c",
+   "byte_size": 2978,
+   "mtime": "2026-08-02T09:22:20.671866+00:00"
+  },
+  {
+   "path": "temporal_evidence_metadata_qualification_20260729T175900Z.json",
+   "sha256": "e2e477621ff220505a708bffd28855d3a9fc0df6b848781d3839a46d393c05f0",
+   "byte_size": 899,
+   "mtime": "2026-07-29T10:54:31.814535+00:00"
+  },
+  {
+   "path": "temporal_evidence_metadata_qualification_20260729T175900Z.log",
+   "sha256": "f95291b888876ecd65fbe44dd1cb3cb757810aab4f7d7033cc4c1a0c939df309",
+   "byte_size": 881,
+   "mtime": "2026-07-29T10:54:31.816449+00:00"
+  },
+  {
+   "path": "trusted_subset_manifest_implementation_20260801T150000Z.md",
+   "sha256": "28902837c048167748af2bd71bc90a287880cfaec7eaab81d59ba608a4a1e54b",
+   "byte_size": 216,
+   "mtime": "2026-08-01T13:54:44.206584+00:00"
+  },
+  {
+   "path": "vcb-capital-structure-evidence-closeout/closeout.log",
+   "sha256": "fffb709781f9886f0c2575adfadb47febc963f93851545cd2a53f2b454037b22",
+   "byte_size": 1134,
+   "mtime": "2026-07-29T16:21:49.743590+00:00"
+  },
+  {
+   "path": "vcb-capital-structure-evidence-closeout/closeout.txt",
+   "sha256": "fffb709781f9886f0c2575adfadb47febc963f93851545cd2a53f2b454037b22",
+   "byte_size": 1134,
+   "mtime": "2026-07-29T16:21:49.743590+00:00"
+  },
+  {
+   "path": "vci_ohlcv_sample_hpg.json",
+   "sha256": "1f57e4fefeb75770ded3502e761894b5e1b79fac6887f540d6bd4e224dd2c58f",
+   "byte_size": 515,
+   "mtime": "2026-08-01T01:08:57.454782+00:00"
+  },
+  {
+   "path": "vinamilk-financial-index-20260802.html",
+   "sha256": "d3be653d3827a9ab55835a441a616098db11a86639dc429fb41ac58c62daaa6c",
+   "byte_size": 352897,
+   "mtime": "2026-08-02T08:19:06.993537+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/date-role-lifecycle-closeout.log",
+   "sha256": "9acf12381f48a69c312ca112e365a6a40de7cc815186db84a691ba526baceee2",
+   "byte_size": 1150,
+   "mtime": "2026-07-29T12:35:51.474607+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/date-role-lifecycle-closeout.txt",
+   "sha256": "9acf12381f48a69c312ca112e365a6a40de7cc815186db84a691ba526baceee2",
+   "byte_size": 1150,
+   "mtime": "2026-07-29T12:35:51.475607+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/ex-date-rule-actionability-closeout.log",
+   "sha256": "b81a609daa940e4e0168f434abfbc5e06a22a0826fa35044bf932d5cc3613569",
+   "byte_size": 1215,
+   "mtime": "2026-07-29T15:53:33.269553+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/ex-date-rule-actionability-closeout.txt",
+   "sha256": "b81a609daa940e4e0168f434abfbc5e06a22a0826fa35044bf932d5cc3613569",
+   "byte_size": 1215,
+   "mtime": "2026-07-29T15:53:33.270554+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/official-evidence-closeout.log",
+   "sha256": "e28a2f42e6428a921688f5dd06515b41d7a0b324c91f1d1966663aaf4370fcf7",
+   "byte_size": 855,
+   "mtime": "2026-07-29T12:20:49.403034+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/official-evidence-closeout.txt",
+   "sha256": "e28a2f42e6428a921688f5dd06515b41d7a0b324c91f1d1966663aaf4370fcf7",
+   "byte_size": 855,
+   "mtime": "2026-07-29T12:20:49.403991+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/source-manifest.json",
+   "sha256": "303d8d39587029c104ea8d647a27e899863f3acf12c79b4135f8f7aa66680b80",
+   "byte_size": 5156,
+   "mtime": "2026-07-29T12:35:51.472698+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/vinamilk-2024-annual-report.pdf",
+   "sha256": "f0d99c9a6650e5f718f098784de037b342a5b9fff4184f5fd00ef7f8656c774a",
+   "byte_size": 26068030,
+   "mtime": "2026-07-29T12:33:03.184970+00:00"
+  },
+  {
+   "path": "vnm-2024-cash-dividend-official-evidence/vsdc-record-date-notice.html",
+   "sha256": "4a27d077058566f2403b0a34fe3b959322116c0ddabfe7be4725e42c4d26ecd5",
+   "byte_size": 67446,
+   "mtime": "2026-07-29T12:18:42.636456+00:00"
+  }
+ ]
+}
