@@ -2,6 +2,7 @@
 
 ## P0 — Market-data basis and lineage — ACTIVE
 - Deliverables: provider/schema-version lineage; qualified corporate-action lineage; empirical active-path price test; volume semantics; source/version scale handling.
+- Prerequisite: a replacement source may be integrated only after explicit owner approval of source authority, cost, licensing, and access. Until then, no paid provider or credential plumbing is an active milestone.
 - Exit gates: `OHLCV_PROVIDER_VERSION_RETAINED = YES`; `QUALIFIED_PRICE_TEST_EVENTS >= 8`; `PRICE_BASIS_ACTIVE_PATH = DETERMINED_DOCUMENTED | DETERMINED_EMPIRICALLY`; `VOLUME_BASIS_ACTIVE_PATH = DETERMINED`; `NO_MARKET_CONSUMER_USES_UNQUALIFIED_BASIS = YES`.
 
 ## P1 — Trusted current-session readiness — PARTIAL

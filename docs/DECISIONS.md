@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-08-02 — Market-data source authority remains unapproved
+- EODHD is not an approved Stock Lookup source authority; its credential plumbing is removed because it was introduced before owner approval.
+- No paid provider, credential, API call, or source migration may be inferred from a technical option or roadmap blocker.
+- Selecting a replacement source requires an explicit owner decision covering cost, licensing, access, and authority; until then price basis remains `unknown/unverified` and all market-dependent consumers remain fail closed.
+- This recovery changes governance and inert development plumbing only; it does not alter runtime databases, published artifacts, or the completed historical-only HPG/VNM path.
+
 ## 2026-08-02 — Active-path empirical price qualification
 - An empirical price conclusion applies only to the exact provider, retained version, and canonical data path tested.
 - An inconclusive result remains unverified and cannot become a canonical assumption.
