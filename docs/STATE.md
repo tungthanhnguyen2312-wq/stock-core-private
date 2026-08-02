@@ -1,9 +1,9 @@
 # Stock Lookup state
 
-- Active phase: P0 market-data qualification is paused; bounded P1 evidence work may continue without weakening its gates.
-- Active milestone: qualify HPG/VNM point-in-time common-outstanding share identity and coverage through the trusted session.
-- Producer baseline: `3c7a372`.
-- Consumer baseline: `6797cab`.
+- Active phase: P0 market-data qualification and P1 trusted current-session readiness remain the only active gates.
+- Active milestone: configure a newly rotated, unexposed EODHD credential outside Git for one bounded HPG/VNM private-shadow validation; independently retain direct share-transition coverage through the trusted session when available.
+- Producer reviewed head: `12958d9`.
+- Consumer reviewed head: `33f1c3b`.
 - Dashboard baseline: `5ecbbad`.
 - Completed: trusted-subset manifest/hash validation, Consumer trust validation, and HPG/VNM FY2024 verified historical-only financial analysis.
 - Completed: historical fundamental briefs, Consumer context/prompt integration, AI response validation, and empirical price-basis tool scaffolding.
@@ -13,7 +13,7 @@
 - Blocker: `VCI_PROVIDER_INTERNAL_ROUTE_BLOCKED_BY_RATIO_SEMANTICS`; vnstock 4.0.4 `Company.events` exposes `exercise_ratio` without a direct numerator/denominator/direction/scale contract, so provider-internal price windows are not authorized.
 - Blocker: `ACTIVE_PRICE_PATH_SEMANTICS_UNQUALIFIED`; the bundle consumes unchanged `ohlcv.close` from `Quote(source='VCI').provider.history(start,end,interval='1D')`, whose installed documentation defines historical OHLC but no adjustment/default contract.
 - Blocker: `DOCUMENTED_RAW_ADJUSTED_PATH_UNAVAILABLE`; no installed package exposes a directly documented raw-and-adjusted Vietnam equity EOD path.
-- Governance gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES_PRIVATE_SHADOW_EODHD`; owner approval is recorded, secret-safe access plumbing is available, and authenticated HPG/VNM payload qualification is pending. Production/public redistribution is not approved.
+- Governance gate: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES_PRIVATE_SHADOW_EODHD`; owner approval is recorded and secret-safe access plumbing is available. The credential previously pasted into chat is treated as compromised and is not usable; a rotated environment-only credential is required. Production/public redistribution is not approved.
 - Blocker: price basis is `unknown/unverified`; volume basis and current shares are also unqualified.
 - Completed: forward daily-market and technical snapshot generators retain an explicit timezone-aware `source_generated_at`; session identity remains separate.
 - Completed: the bounded HPG/VNM shadow validation retains current daily and technical timestamps for both tickers; VNM's canonical technical row is neutral with no pattern or SMC and is coverage, not a signal.
@@ -22,5 +22,6 @@
 - Partial progress: HPG's signed, issuer-hosted 2026 voting-share notice is retained with a verified source hash. It directly reports zero treasury shares and 8,442,964,520 voting shares after the change on 2026-06-04. Together with the issuer annual report's 7,675,465,855 opening outstanding shares, the resolver qualifies 8,442,964,520 as the latest historical common-outstanding identity; coverage through the 2026-07-30 trusted session remains unproven.
 - Partial progress: VNM's issuer-linked reviewed consolidated interim statement is retained with a verified source hash. Note 22 directly reports 2,089,955,445 issued and outstanding common shares at 2026-06-30, unchanged from 2026-01-01. It remains a latest qualified historical identity because the document does not prove absence of a July transition through the trusted session.
 - Completed: a deterministic share-transition resolver now requires direct common-outstanding identity, issuer scope, share units, effective dates, completed lifecycle evidence, citation/hash lineage, and explicit coverage through the target date. Listed, registered, or issued-only counts cannot be promoted when treasury treatment is unresolved.
-- Next exit gates: P0 resumes only on an explicit authenticated-source validation; P1 requires HPG/VNM transition coverage through the trusted session.
+- Verified gate result at the reviewed heads: P0 `INCOMPLETE`, P1 `INCOMPLETE`, market-dependent readiness `FAIL`, historical-only HPG/VNM readiness `PASS`.
+- Next exit gates: one authenticated same-session EODHD HPG/VNM schema validation using a rotated credential, plus direct HPG/VNM transition coverage through the 2026-07-30 trusted session.
 - Production state: runtime databases and generated production artifacts remain unchanged by governance work.

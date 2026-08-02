@@ -2,12 +2,12 @@
 
 ## P0 — Market-data basis and lineage — ACTIVE
 - Deliverables: provider/schema-version lineage; qualified corporate-action lineage; empirical active-path price test; volume semantics; source/version scale handling.
-- Prerequisite: owner approval is complete for a private EODHD HPG/VNM shadow path. Authenticated payload qualification is required before ingestion; production/public redistribution requires a separately qualified license boundary.
+- Prerequisite: owner approval is complete for a private EODHD HPG/VNM shadow path. A newly rotated, unexposed environment-only credential and authenticated payload qualification are required before ingestion; production/public redistribution requires a separately qualified license boundary.
 - Exit gates: `OHLCV_PROVIDER_VERSION_RETAINED = YES`; `QUALIFIED_PRICE_TEST_EVENTS >= 8`; `PRICE_BASIS_ACTIVE_PATH = DETERMINED_DOCUMENTED | DETERMINED_EMPIRICALLY`; `VOLUME_BASIS_ACTIVE_PATH = DETERMINED`; `NO_MARKET_CONSUMER_USES_UNQUALIFIED_BASIS = YES`.
 
 ## P1 — Trusted current-session readiness — PARTIAL
 - Completed: exact-session manifest structure, hash binding, Consumer validation, and forward-retained daily/technical source timestamps for HPG/VNM.
-- Remaining: qualified current shares, production regeneration through the forward timestamp contract, and price/volume-qualified same-session current fields.
+- Remaining: direct share-transition coverage through the trusted 2026-07-30 session, production regeneration through the forward timestamp contract, and price/volume-qualified same-session current fields.
 - Exit gate: `HPG_VNM_CURRENT_SUBSET_FULLY_QUALIFIED = YES`.
 
 ## P2 — Point-in-time valuation alignment — BLOCKED

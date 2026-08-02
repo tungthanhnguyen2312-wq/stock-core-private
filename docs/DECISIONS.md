@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-08-02 — Exposed credentials are invalid for qualification
+- Any provider credential pasted into chat, diagnostics, source, or command output is treated as compromised and must be revoked or rotated before use.
+- Only a replacement credential configured directly in the process environment may cross the existing secret-safe request boundary.
+- The exposed EODHD credential was not used; no authenticated request, production ingestion, publication, or source migration is authorized by its mere availability.
+
 ## 2026-08-02 — EODHD private-shadow source authority approved
 - The owner approved EODHD for bounded, private HPG/VNM source qualification; this supersedes only the earlier missing-owner-approval blocker.
 - The approved candidate path is the authenticated EOD endpoint for `HPG.VN` and `VNM.VN`, preserving raw `close`, split-and-dividend-adjusted `adjusted_close`, and split-adjusted `volume` as separate identities.
