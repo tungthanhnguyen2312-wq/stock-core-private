@@ -19,6 +19,7 @@
 - Completed: the bounded HPG/VNM shadow validation retains current daily and technical timestamps for both tickers; VNM's canonical technical row is neutral with no pattern or SMC and is coverage, not a signal.
 - Completed: Producer rejects embedded AI context packages whose price/volume basis fields are missing or conflict with the current bundle contract; Consumer reports a structurally valid `untrusted_basis` proof as `basis_unqualified`.
 - Blocker: production snapshots have not been regenerated through the forward timestamp contract. No historical timestamp was inferred or backfilled.
-- Blocker: the current-share bridge remains unqualified. An issuer document directly states HPG's 2025 transition to 7,675,465,855 shares, but it is not retained/promoted and the 2026 10% event lacks official completion/outstanding evidence; VNM lacks an exhaustive post-FY2024 official bridge through the trusted session.
+- Partial progress: HPG's issuer-hosted 2026 completion notice is retained in the approved acquisition boundary with a verified source hash. It states 8,442,964,520 listed shares after the change, effective 2026-07-02 and tradable 2026-07-15. Canonical promotion and proof of coverage through the trusted session remain required before labeling the identity current.
+- Blocker: VNM lacks an exhaustive post-FY2024 official bridge through the trusted session; no absence-of-change inference is permitted.
 - Next exit gates: authenticated same-session EODHD HPG/VNM schema qualification for P0, plus official effective-date/outstanding-share evidence through the trusted session for P1.
 - Production state: runtime databases and generated production artifacts remain unchanged by governance work.

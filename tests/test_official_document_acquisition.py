@@ -54,5 +54,10 @@ class AcquisitionTests(unittest.TestCase):
   import_offline_event(pdf,self.root,self.metadata())
   with self.assertRaisesRegex(ValueError,"offline_event_metadata_conflict"): import_offline_event(pdf,self.root,self.metadata(retrieved_at="2026-08-03T00:00:00Z"))
  def test_url_is_deterministic(self): self.assertEqual(canonical_url("HTTPS://ISSUER.EXAMPLE/a?b=2&a=1#x"),"https://issuer.example/a?a=1&b=2")
+ def test_current_year_corporate_action_is_supported_but_future_year_is_rejected(self):
+  current=acquire([self.spec(reporting_period="2026")],self.root,fetcher=self.fetch)
+  future=acquire([self.spec(reporting_period="2027")],self.root,fetcher=self.fetch)
+  self.assertEqual(current["outcomes"][0]["state"],"retained")
+  self.assertEqual(future["outcomes"][0]["state"],"unsupported_request")
 
 if __name__=='__main__': unittest.main()

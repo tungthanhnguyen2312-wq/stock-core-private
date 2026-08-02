@@ -20,7 +20,7 @@ MANIFEST = "official_document_acquisition_manifest.json"
 EVENTS = "official_price_test_events.jsonl"
 TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN"})
 DOCUMENT_CLASSES = ("audited_annual_financial_statements", "annual_report", "agm_document_or_resolution", "corporate_action_notice", "amendment_or_supersession_notice")
-PERIODS = frozenset({"2023", "2024", "2025"})
+PERIODS = frozenset({"2023", "2024", "2025", "2026"})
 CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 20 * 1024 * 1024
 REQUEST_HEADERS = {"Accept": "application/pdf,text/html;q=0.9", "User-Agent": "StockLookupOfficialEvidence/1.1"}
 
