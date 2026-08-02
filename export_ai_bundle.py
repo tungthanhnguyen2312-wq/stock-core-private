@@ -103,6 +103,14 @@ from fundamental_quality_evidence import (
     build_historical_fundamental_brief,
     build_historical_capital_structure_analysis,
 )
+from statement_taxonomy_sidecar import (
+    SIDECAR_FILENAME as TAXONOMY_SIDECAR_FILENAME,
+    load_sidecar as load_taxonomy_sidecar,
+    resolve_entity_authority,
+    resolve_taxonomy,
+    sidecar_path as taxonomy_sidecar_path,
+    sidecar_provenance,
+)
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt (cùng vá như candle_scan.py dòng 14).
 if hasattr(sys.stdout, "reconfigure"):
@@ -112,7 +120,20 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def ai_runtime_root() -> Path:
-    """Locate the AI runtime in the new layout, with legacy-layout fallbacks."""
+    """Locate the AI runtime in the new layout, with legacy-layout fallbacks.
+
+    `ai-core-private` is checked FIRST because it is where the Consumer's
+    `builders/build_ticker_context.py` actually writes context packages today.
+    `ai-runtime/exports/context_packages` still exists in this workspace but is an
+    out-of-band copy that stopped being refreshed, so preferring it silently fed the
+    bundle context packages several sessions older than the ones just built -- which the
+    export's own session-scoped freshness gate then correctly refused. The directory is
+    only preferred when it really holds context packages, so a workspace that still uses
+    the legacy layout is unaffected.
+    """
+    consumer = SCRIPT_DIR.parent / "ai-core-private"
+    if (consumer / "exports" / "context_packages").is_dir():
+        return consumer.resolve()
     candidates = (
         SCRIPT_DIR.parent / "ai-runtime",
         SCRIPT_DIR.parent / "AI ANALYZE",
@@ -245,6 +266,20 @@ def normalize_tickers(raw: str | None) -> list[str]:
     return seen
 
 
+# Exact-session bundle contract. Bumped whenever the manifest/proof shape or any
+# verification rule changes: the Consumer pins this exact value, so a bundle emitted by an
+# older Producer can never be presented as current trusted output.
+PRODUCER_BUNDLE_CONTRACT_VERSION = "stocklookup-producer/2026.08.03"
+TRUSTED_SUBSET_SCHEMA_VERSION = "1.1.0"
+# The complete namespace of filenames that carry export-session trust. A Consumer scans
+# exactly these names next to the bundle; anything present here but not declared in the
+# manifest is an unexpected trusted artifact and fails closed.
+TRUSTED_ARTIFACT_NAMESPACE = (
+    "analysis_bundle.json", "bundle_manifest.json", "focus_extract.json",
+    TAXONOMY_SIDECAR_FILENAME,
+)
+
+
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -255,28 +290,80 @@ def sha256_file(path: Path) -> str:
 
 def build_trusted_subset_proof(tickers: list[str], session_identity: str | None,
                                generated_at: str, bundle_sha256: str,
-                               entries: Mapping[str, Any], basis: Mapping[str, Any]) -> dict | None:
-    """Return the additive HPG/VNM exact-session proof, or no proof for other bundles."""
-    if sorted(tickers) != ["HPG", "VNM"]:
+                               entries: Mapping[str, Any], basis: Mapping[str, Any],
+                               session_artifacts: Mapping[str, str] | None = None) -> dict | None:
+    """Return the additive exact-session proof for this export.
+
+    Schema 1.1.0 covers EVERY exported ticker, not only the historical HPG/VNM subset: a
+    bundle with no proof at all is a bundle the Consumer cannot verify, so restricting the
+    proof to two tickers left every production export unverifiable. `tickers` is the set
+    the proof actually covers (one current-session snapshot each); everything else is
+    listed under `unproven_tickers` with a reason and is never exact-session trusted.
+
+    Schema 1.1.0 also adds everything a Consumer needs to prove that a manifest describes
+    THIS export session and no other, rather than merely being structurally well-formed:
+
+      producer_contract_version    -- the Producer contract that emitted the proof.
+      bundle_reference_session_date / bundle_generated_at
+                                   -- copied from the bundle body, so a manifest paired
+                                      with a different bundle body is detectable even when
+                                      that body hashes correctly against its own manifest.
+      required_artifacts           -- filename + sha256 for every artifact written in this
+                                      session (bundle_manifest.json excluded: it cannot
+                                      hash itself).
+      expected_artifact_filenames  -- the exact trusted-artifact set for this session. A
+                                      Consumer rejects a trusted artifact present on disk
+                                      but absent here.
+
+    `session_artifacts` maps filename -> sha256 for the session outputs other than
+    bundle_manifest.json; analysis_bundle.json is always included from `bundle_sha256`.
+    """
+    if not tickers:
         return None
     if not session_identity:
         raise ValueError("trusted_subset_missing_session")
-    per_ticker = {}
-    for ticker in ("HPG", "VNM"):
+    per_ticker: dict[str, dict[str, Any]] = {}
+    unproven: list[dict[str, Any]] = []
+    for ticker in sorted(tickers):
         entry = entries.get(ticker)
-        session = (entry or {}).get("snapshot", {}).get("date") if isinstance(entry, Mapping) else None
+        snapshot = (entry or {}).get("snapshot") if isinstance(entry, Mapping) else None
+        session = snapshot.get("date") if isinstance(snapshot, Mapping) else None
         if session != session_identity:
-            raise ValueError("trusted_subset_mixed_session")
+            # Not a hard export failure: a symbol with no current-session snapshot (an
+            # index row, a halted or delisted ticker) must not abort the whole bundle. It
+            # is excluded from the proven set instead, with an explicit reason, and the
+            # Consumer refuses to treat it as exact-session trusted.
+            unproven.append({
+                "ticker": ticker,
+                "observed_session_identity": session,
+                "reason": ("snapshot_missing" if snapshot is None
+                           else "snapshot_session_differs_from_reference_session"),
+            })
+            continue
         per_ticker[ticker] = {
             "session_identity": session,
-            "required_current_fields_qualified": bool((entry or {}).get("snapshot")),
+            "required_current_fields_qualified": bool(snapshot),
             "warnings": list((entry or {}).get("warnings") or []),
         }
+    if not per_ticker:
+        return None
+    artifacts = dict(session_artifacts or {})
+    artifacts["analysis_bundle.json"] = bundle_sha256
+    required_artifacts = [{"file": name, "sha256": artifacts[name]} for name in sorted(artifacts)]
+    expected_filenames = sorted(set(artifacts) | {"bundle_manifest.json"})
     return {
-        "schema_version": "1.0.0", "tickers": ["HPG", "VNM"],
+        "schema_version": TRUSTED_SUBSET_SCHEMA_VERSION,
+        "producer_contract_version": PRODUCER_BUNDLE_CONTRACT_VERSION,
+        "tickers": sorted(per_ticker),
+        "unproven_tickers": unproven,
+        "bundle_ticker_set": sorted(tickers),
         "trust_state": "exact_session_qualified" if basis.get("price_basis_verified") is True and basis.get("volume_basis_verified") is True else "untrusted_basis",
         "session_identity": session_identity, "generated_at": generated_at,
         "bundle_filename": "analysis_bundle.json", "bundle_sha256": bundle_sha256,
+        "bundle_reference_session_date": session_identity,
+        "bundle_generated_at": generated_at,
+        "required_artifacts": required_artifacts,
+        "expected_artifact_filenames": expected_filenames,
         "per_ticker": per_ticker,
         "price_basis": {"state": basis.get("price_basis", "unknown"), "verified": basis.get("price_basis_verified") is True},
         "volume_basis": {"state": basis.get("volume_basis", "unknown"), "verified": basis.get("volume_basis_verified") is True},
@@ -1744,10 +1831,42 @@ def load_context_package_info(tickers: list[str]) -> dict:
         generated_at = payload.get("generated_at")
         result[tk] = {
             "exists": True, "file": context_package_reference(tk), "generated_at": generated_at,
-            "data_date": generated_at[:10] if generated_at else None,
+            "data_date": context_package_session_date(payload),
             "sha256": sha256_file(path), "mtime": _mtime_epoch(path), "mtime_iso": _mtime_iso(path),
         }
     return result
+
+
+def context_package_session_date(payload: Mapping[str, Any] | None) -> str | None:
+    """The market session a context package DESCRIBES, not the time it was BUILT.
+
+    `generated_at` is a build timestamp. Using its date as the package's session identity
+    conflated two different facts and only ever agreed by accident, on days when the
+    package happened to be rebuilt before the next session. Rebuilding a package for the
+    2026-07-30 session on 2026-08-03 then failed the session-scoped freshness gate as
+    "context_package: 2026-08-03 (needs 2026-07-30)" -- the package was correct and the
+    label was wrong.
+
+    The Consumer already records the session explicitly under `latest_available_dates`
+    (`price`/`technical`, both sourced from the same snapshot the bundle anchors on).
+    `generated_at` remains the fallback for a legacy package that predates that field.
+    """
+    if not isinstance(payload, Mapping):
+        return None
+    latest = payload.get("latest_available_dates")
+    if isinstance(latest, Mapping):
+        for key in ("price", "technical"):
+            value = latest.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()[:10]
+    technical = payload.get("technical_summary")
+    if isinstance(technical, Mapping):
+        for key in ("screen_snapshot_date", "latest_signal_date"):
+            value = technical.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()[:10]
+    generated_at = payload.get("generated_at")
+    return generated_at[:10] if isinstance(generated_at, str) and generated_at else None
 
 
 def load_context_package_full(tk: str) -> dict | None:
@@ -2534,6 +2653,7 @@ def build_fundamental_quality_evidence_for_ticker_safe(ticker: str, entry: Mappi
 
 def attach_fundamental_quality_evidence(
     bundle_entries: dict[str, dict], root: Path, include: bool,
+    taxonomy_sidecar: Mapping[str, Any] | None = None,
 ) -> dict[str, dict]:
     """Disabled-by-default opt-in (default include=False): when include is False,
     build_fundamental_quality_evidence_for_ticker() is never called and no
@@ -2554,8 +2674,29 @@ def attach_fundamental_quality_evidence(
         entry["historical_fundamental_brief"] = build_historical_fundamental_brief(
             tk, result, entry["historical_capital_structure"],
         )
+        # Generated statement-taxonomy evidence, resolved under the fixed authority order:
+        # the manual profile always wins; the generated taxonomy can only withhold the
+        # corporate model; an unknown taxonomy never defaults to corporate. The full
+        # generated record is attached as provenance and is explicitly labelled
+        # generated_evidence -- never as a manually verified issuer type.
+        taxonomy = resolve_taxonomy(taxonomy_sidecar, tk)
+        authority = resolve_entity_authority(entry.get("entity_type"), taxonomy)
+        entry["statement_taxonomy_evidence"] = {
+            "authority_level": "generated_evidence",
+            "statement_taxonomy": taxonomy,
+            "entity_type_authority": authority["authority"],
+            "resolved_entity_type": authority["entity_type"],
+            "resolution_reason": authority["reason"],
+            "record": sidecar_provenance(taxonomy_sidecar, tk),
+            "limitations": [
+                "Generated statement taxonomy observes the reporting TEMPLATE a filing uses;"
+                " it is not a manually verified issuer_entity_type and carries lower authority"
+                " than config/ticker_entity_profiles.csv.",
+            ],
+        }
         entry["financial_distress_evidence"] = build_financial_distress_evidence_for_ticker(
             tk, entry.get("entity_type"), entry.get("financial_canonical"), root,
+            statement_taxonomy=taxonomy,
         )
     return bundle_entries
 
@@ -2604,7 +2745,8 @@ def _retained_industry(ticker: str, root: Path) -> str | None:
 
 def build_financial_distress_evidence_for_ticker(ticker: str, entity_type: Any,
                                                   financial_canonical: Mapping[str, Any] | None,
-                                                  root: Path) -> dict[str, Any]:
+                                                  root: Path,
+                                                  statement_taxonomy: Any = None) -> dict[str, Any]:
     """Assemble Altman Z' inputs from already-qualified evidence only, then evaluate.
 
     Never reads a price, a current-session field, or an unqualified provider row. The two
@@ -2660,9 +2802,12 @@ def build_financial_distress_evidence_for_ticker(ticker: str, entity_type: Any,
     # a distinct third state and evaluate_altman_z_score() blocks on it rather than
     # assuming the corporate archetype. industry is required too -- Z' keeps the
     # industry-sensitive X5 term, so a confirmed non-financial issuer in a
-    # non-manufacturing industry is still withheld.
+    # non-manufacturing industry is still withheld. statement_taxonomy is generated
+    # evidence of the reporting *template* only: it can withhold Z' for a specialized
+    # financial filer whose entity type is unresolved, and can never grant eligibility.
     return evaluate_altman_z_score(identities, entity_type=entity_type,
-                                    industry=_retained_industry(ticker, root))
+                                    industry=_retained_industry(ticker, root),
+                                    statement_taxonomy=statement_taxonomy)
 
 
 # ==========================================================================
@@ -2962,9 +3107,32 @@ def main() -> int:
                 " news_related/shareholder/valuation_inputs chi tiết)")
         bundle_entries[tk] = entry
 
+    # Generated statement-taxonomy sidecar: read-only, and optional by construction. A
+    # missing, malformed, or session-mismatched sidecar yields no taxonomy evidence at all,
+    # which leaves the Altman gate on insufficient_evidence rather than on an assumed
+    # archetype. A stale sidecar is treated as absent rather than silently bound into the
+    # session proof -- an exact-session artifact set must not carry a previous session's
+    # generated evidence.
+    taxonomy_sidecar = load_taxonomy_sidecar(runtime_root())
+    if taxonomy_sidecar is not None:
+        sidecar_session = str(taxonomy_sidecar.get("session_identity") or "")
+        if sidecar_session != str(latest_session):
+            data_quality_flags = data_quality_flags + [_make_flag(
+                scope="pipeline", ticker=None, severity="warning",
+                code="statement_taxonomy_sidecar_session_mismatch",
+                detail=(f"{TAXONOMY_SIDECAR_FILENAME} is bound to session {sidecar_session!r}"
+                        f" but this export references session {latest_session!r}; the sidecar"
+                        " was ignored and no generated taxonomy evidence was applied."),
+                metric="statement_taxonomy", evidence={"sidecar_session_identity": sidecar_session,
+                                                       "export_session_identity": latest_session},
+                consumer_action=("Rebuild the sidecar for the current session with"
+                                 " tools/build_statement_taxonomy_sidecar.py, then re-export."),
+            )]
+            taxonomy_sidecar = None
     attach_distribution_evidence(bundle_entries, runtime_root(), args.include_analysis_lane_eligibility)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
-    attach_fundamental_quality_evidence(bundle_entries, runtime_root(), args.include_fundamental_quality_evidence)
+    attach_fundamental_quality_evidence(bundle_entries, runtime_root(), args.include_fundamental_quality_evidence,
+                                        taxonomy_sidecar=taxonomy_sidecar)
     # Phase 6B: reconcile the legacy fundamental_quality.models.earnings_quality subsection
     # against fundamental_quality_evidence when both are present on the same entry. A no-op
     # (adds one informational limitation only) whenever the opt-in evidence contract was not
@@ -3039,11 +3207,35 @@ def main() -> int:
          "row_or_record_count": len(bundle_entries), "count_basis": "tickers_in_bundle",
          "data_date": latest_session, "sha256": sha256_file(bundle_path)},
     ]
+    # Session artifact set: every trusted artifact this export actually produced or is
+    # binding itself to, other than bundle_manifest.json (which cannot hash itself).
+    session_artifacts = {"focus_extract.json": sha256_file(out_path)}
+    sidecar_file = taxonomy_sidecar_path(runtime_root())
+    if taxonomy_sidecar is not None and sidecar_file.exists():
+        sidecar_sha256 = sha256_file(sidecar_file)
+        session_artifacts[TAXONOMY_SIDECAR_FILENAME] = sidecar_sha256
+        manifest_files = manifest_files + [{
+            "file": TAXONOMY_SIDECAR_FILENAME, "role": "generated_evidence",
+            "row_or_record_count": len(taxonomy_sidecar.get("records") or []),
+            "count_basis": "tickers_classified",
+            "data_date": taxonomy_sidecar.get("session_identity"),
+            "sha256": sidecar_sha256,
+        }]
     trusted_subset = build_trusted_subset_proof(
         tickers, latest_session, generated_at, sha256_file(bundle_path), bundle_entries, price_basis,
+        session_artifacts=session_artifacts,
     )
     manifest = {
         "schema_version": "1.1.0",
+        "producer_contract_version": PRODUCER_BUNDLE_CONTRACT_VERSION,
+        "trusted_artifact_namespace": list(TRUSTED_ARTIFACT_NAMESPACE),
+        "statement_taxonomy_sidecar": {
+            "present": taxonomy_sidecar is not None,
+            "records_fingerprint": (taxonomy_sidecar or {}).get("records_fingerprint"),
+            "input_fingerprint": (taxonomy_sidecar or {}).get("input_fingerprint"),
+            "session_identity": (taxonomy_sidecar or {}).get("session_identity"),
+            "authority_level": "generated_evidence",
+        },
         "generated_at": generated_at,
         "tickers": tickers,
         "freshness": freshness,

@@ -1582,12 +1582,53 @@ class TrustedSubsetProofTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(first["bundle_sha256"], "a" * 64)
 
-    def test_missing_or_mixed_session_rejected(self):
+    def test_missing_session_identity_is_a_hard_error(self):
         with self.assertRaises(ValueError):
             bundle.build_trusted_subset_proof(["HPG", "VNM"], None, "t", "h", self._ENTRIES, self._BASIS)
+
+    def test_mixed_session_ticker_is_excluded_from_the_proven_set_not_raised(self):
+        # A symbol with no current-session snapshot (an index row, a halted ticker) must
+        # not abort the export. It is excluded from `tickers`, listed under
+        # `unproven_tickers` with a reason, and the Consumer refuses to trust it.
         bad = {**self._ENTRIES, "VNM": {"snapshot": {"date": "2026-07-29"}}}
-        with self.assertRaises(ValueError):
-            bundle.build_trusted_subset_proof(["HPG", "VNM"], "2026-07-30", "t", "h", bad, self._BASIS)
+        proof = bundle.build_trusted_subset_proof(["HPG", "VNM"], "2026-07-30", "t", "h", bad, self._BASIS)
+        self.assertEqual(proof["tickers"], ["HPG"])
+        self.assertEqual(proof["bundle_ticker_set"], ["HPG", "VNM"])
+        self.assertEqual(proof["unproven_tickers"], [{
+            "ticker": "VNM", "observed_session_identity": "2026-07-29",
+            "reason": "snapshot_session_differs_from_reference_session"}])
+        self.assertNotIn("VNM", proof["per_ticker"])
+
+    def test_missing_snapshot_is_named_distinctly_from_a_session_difference(self):
+        entries = {**self._ENTRIES, "VNINDEX": {}}
+        proof = bundle.build_trusted_subset_proof(["HPG", "VNM", "VNINDEX"], "2026-07-30", "t", "h",
+                                                   entries, self._BASIS)
+        self.assertEqual(proof["tickers"], ["HPG", "VNM"])
+        self.assertEqual(proof["unproven_tickers"],
+                         [{"ticker": "VNINDEX", "observed_session_identity": None,
+                           "reason": "snapshot_missing"}])
+
+    def test_no_proven_ticker_yields_no_proof_at_all(self):
+        self.assertIsNone(bundle.build_trusted_subset_proof(
+            ["VNINDEX"], "2026-07-30", "t", "h", {"VNINDEX": {}}, self._BASIS))
+
+    def test_required_artifacts_and_expected_set_bind_every_session_artifact(self):
+        proof = bundle.build_trusted_subset_proof(
+            ["HPG", "VNM"], "2026-07-30", "t", "h", self._ENTRIES, self._BASIS,
+            session_artifacts={"focus_extract.json": "b" * 64,
+                               "statement_taxonomy_sidecar.json": "c" * 64})
+        self.assertEqual(proof["required_artifacts"], [
+            {"file": "analysis_bundle.json", "sha256": "h"},
+            {"file": "focus_extract.json", "sha256": "b" * 64},
+            {"file": "statement_taxonomy_sidecar.json", "sha256": "c" * 64},
+        ])
+        self.assertEqual(proof["expected_artifact_filenames"], [
+            "analysis_bundle.json", "bundle_manifest.json", "focus_extract.json",
+            "statement_taxonomy_sidecar.json"])
+        self.assertEqual(proof["producer_contract_version"], bundle.PRODUCER_BUNDLE_CONTRACT_VERSION)
+        self.assertEqual(proof["schema_version"], bundle.TRUSTED_SUBSET_SCHEMA_VERSION)
+        self.assertEqual(proof["bundle_reference_session_date"], "2026-07-30")
+        self.assertEqual(proof["bundle_generated_at"], "t")
 
     def test_unknown_basis_is_preserved_untrusted(self):
         proof = bundle.build_trusted_subset_proof(["HPG", "VNM"], "2026-07-30", "t", "h", self._ENTRIES, {"price_basis": "unknown", "price_basis_verified": False, "volume_basis": "unknown", "volume_basis_verified": False})
