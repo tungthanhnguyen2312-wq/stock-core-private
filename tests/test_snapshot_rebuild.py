@@ -9,16 +9,18 @@ from pathlib import Path
 import pandas as pd
 
 
+from _runtime_root import require_runtime_path  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT = ROOT / "financial_snapshot.csv"
-REPORT = ROOT / "reports" / "financial_snapshot_rebuild.json"
 
 
 class SnapshotRebuildTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.frame = pd.read_csv(SNAPSHOT)
-        cls.report = json.loads(REPORT.read_text(encoding="utf-8"))
+        cls.frame = pd.read_csv(require_runtime_path("financial_snapshot.csv"))
+        cls.report = json.loads(
+            require_runtime_path("reports", "financial_snapshot_rebuild.json").read_text(encoding="utf-8")
+        )
 
     def test_rebuilt_snapshot_contains_advanced_metrics(self):
         required = {

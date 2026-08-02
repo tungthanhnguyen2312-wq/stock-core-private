@@ -12,6 +12,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from _runtime_root import require_runtime_path  # noqa: E402
+
 import bctc_processor as processor  # noqa: E402
 
 
@@ -45,7 +47,7 @@ def _ocf_rows(
 
 class OperatingCashFlowPhase3Tests(unittest.TestCase):
     def test_pan_ocf_raw_data_detection(self):
-        diagnostic = processor.diagnose_ocf_raw(ROOT / "data_bctc" / "PAN_cash_flow_quarter.csv")
+        diagnostic = processor.diagnose_ocf_raw(require_runtime_path("data_bctc", "PAN_cash_flow_quarter.csv"))
         self.assertGreater(diagnostic["cash_flow_raw_row_count"], 0)
         self.assertEqual(diagnostic["candidate_item_ids"], ["operating_cash_flow"])
         self.assertEqual(diagnostic["selected_row"]["period"], "2025-Q4")

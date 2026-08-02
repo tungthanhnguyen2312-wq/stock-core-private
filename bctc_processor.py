@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 
 from financial_mapping import get_default_registry
+from runtime_paths import runtime_root
 from source_schema_guards import SourceSchemaError, guard_financial_statement_columns
 
 # Reconfigure console stdout encoding to UTF-8 to handle Vietnamese text output safely
@@ -33,13 +34,21 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 # SYSTEM PATHS & CONFIGURATION
 # ==========================================
 ROOT_DIR = Path(__file__).resolve().parent
-INPUT_DIR = ROOT_DIR / "data_bctc"
-LOG_DIR = ROOT_DIR / "logs"
+# Generated statement payloads and snapshots are RUNTIME state, not source. Every other
+# script in the daily chain already resolves them through runtime_paths.runtime_root();
+# this module still pinned them to its own source directory, so running it from
+# `stock-core-private` silently read an empty data_bctc/ and wrote financial_snapshot.*
+# back into the source repo. Defaulting to ROOT_DIR keeps the legacy behaviour byte for
+# byte when STOCK_LOOKUP_RUNTIME_ROOT is unset (including the deployed runtime copy,
+# whose __file__ already lives in the runtime root).
+RUNTIME_DIR = runtime_root(ROOT_DIR)
+INPUT_DIR = RUNTIME_DIR / "data_bctc"
+LOG_DIR = RUNTIME_DIR / "logs"
 
 # Output files
-CSV_OUT = ROOT_DIR / "financial_snapshot.csv"
-PARQUET_OUT = ROOT_DIR / "financial_snapshot.parquet"
-REPORT_OUT = ROOT_DIR / "docs" / "VALIDATION_REPORT.md"  # gộp 2026-07-12: chuyển vào docs/
+CSV_OUT = RUNTIME_DIR / "financial_snapshot.csv"
+PARQUET_OUT = RUNTIME_DIR / "financial_snapshot.parquet"
+REPORT_OUT = ROOT_DIR / "docs" / "VALIDATION_REPORT.md"  # gộp 2026-07-12: chuyển vào docs/ (source-tracked)
 FINANCIAL_REGISTRY = get_default_registry()
 OCF_SOURCE_PROFILE_PATH = ROOT_DIR / "config" / "ocf_source_profiles.csv"
 PARQUET_ENGINE_AVAILABLE = bool(
@@ -1785,7 +1794,7 @@ Hệ thống xử lý gracefully các giá trị trống (`NaN`) đối với c�
     print(f"\n[SUCCESS] Đã ghi báo cáo audit tại: {REPORT_OUT}")
     print("=" * 50)
 
-QUARANTINE_REPORT_OUT = ROOT_DIR / "reports" / "bctc_quarantine_latest.json"
+QUARANTINE_REPORT_OUT = RUNTIME_DIR / "reports" / "bctc_quarantine_latest.json"
 
 
 def main() -> None:

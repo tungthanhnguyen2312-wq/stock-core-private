@@ -18,7 +18,16 @@ class FundamentalQualityTests(unittest.TestCase):
         records=[r("revenue",100),r("net_income",10),r("total_assets",50),r("shareholders_equity",25),r("operating_cash_flow",12),r("total_debt",20),r("cash_and_equivalents",5)]
         result=evaluate_fundamental_quality({"records":records},"corporate")
         self.assertEqual(result,evaluate_fundamental_quality({"records":records},"corporate"))
-        self.assertEqual(result["models"]["piotroski_f_score"]["score_or_value"],3)
+        # A 3-of-3 non-comparative criteria count is NOT a Piotroski F-Score: the standard
+        # score is 0-9 and six of its criteria are year-over-year comparisons this module
+        # never evaluates. score_or_value therefore stays None (nothing score-shaped is
+        # presented as usable) and the raw count is reported separately, explicitly scoped.
+        piotroski=result["models"]["piotroski_f_score"]
+        self.assertIsNone(piotroski["score_or_value"])
+        self.assertEqual(piotroski["result_state"],"partial")
+        self.assertEqual(piotroski["component_results"]["non_comparative_criteria_met"],3)
+        self.assertEqual(piotroski["component_results"]["non_comparative_criteria_evaluated"],3)
+        self.assertIn("NOT reported here",piotroski["component_results"]["standard_piotroski_f_score_scale"])
         growth=result["models"]["growth_profitability"]
         self.assertEqual(growth["input_classification"],{"revenue":"qualified","net_income":"qualified"})
         self.assertEqual(growth["used_input_facts"]["revenue"]["citation_id"],"cit-revenue")
