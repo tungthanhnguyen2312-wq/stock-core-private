@@ -167,6 +167,11 @@ def output_path(relative_path: str) -> Path:
     return path if path.is_absolute() else runtime_path(relative_path)
 
 
+def resolve_output_dir(explicit: str | None = None) -> Path:
+    """Keep the legacy runtime destination unless an explicit shadow destination is supplied."""
+    return output_path(explicit if explicit is not None else OUT_DIR)
+
+
 def context_package_reference(ticker: str) -> str:
     """Return a manifest path relative to the active dashboard runtime root."""
     path = context_packages_dir() / f"{ticker}_context.json"
@@ -404,6 +409,17 @@ def load_ta_signal_rows(tickers: list[str]) -> tuple[dict, dict]:
         "sha256": sha256_file(path), "mtime": _mtime_epoch(path), "mtime_iso": _mtime_iso(path),
     }
     return by_ticker, info
+
+
+def retained_source_timestamp(row: dict | None) -> object | None:
+    """Return only an explicit retained source timestamp; a session date is not one."""
+    if not isinstance(row, dict):
+        return None
+    for key in ("source_generated_at", "generated_at", "retrieved_at"):
+        value = row.get(key)
+        if value not in (None, ""):
+            return value
+    return None
 
 def load_analysis_scores(tickers: list[str]) -> tuple[dict, dict, dict]:
     path = runtime_path(ANALYSIS_PATH)
@@ -2250,8 +2266,10 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         warnings.append("khong_co_du_lieu_ohlcv")
     rs_reconciliation = reconcile_rs_rating(tk, snapshot_rows, ta_rows, snapshot_info, ta_info)
     corporate = load_corporate_intelligence(conn, tk)
-    snapshot_freshness = freshness_envelope(domain="daily_market", as_of_date=(snapshot_rows.get(tk) or {}).get("date"), generated_at=(snapshot_rows.get(tk) or {}).get("date"), source=SNAPSHOT_LIVE_PATH, reference_at=reference_at)
-    technical_freshness = freshness_envelope(domain="technical", as_of_date=(ta_rows.get(tk) or {}).get("date"), generated_at=(ta_rows.get(tk) or {}).get("date"), source=TA_SIGNALS_PATH, reference_at=reference_at, dependency=snapshot_freshness)
+    snapshot_row = snapshot_rows.get(tk) or {}
+    technical_row = ta_rows.get(tk) or {}
+    snapshot_freshness = freshness_envelope(domain="daily_market", as_of_date=snapshot_row.get("date"), generated_at=retained_source_timestamp(snapshot_row), source=SNAPSHOT_LIVE_PATH, reference_at=reference_at)
+    technical_freshness = freshness_envelope(domain="technical", as_of_date=technical_row.get("date"), generated_at=retained_source_timestamp(technical_row), source=TA_SIGNALS_PATH, reference_at=reference_at, dependency=snapshot_freshness)
     verified_evidence_period = (verified_periods_by_ticker or {}).get(tk)
     financial_freshness = build_financial_freshness(fin, verified_evidence_period, reference_at)
     for name, section in corporate.items():
@@ -2574,6 +2592,7 @@ def main() -> int:
     parser.add_argument("--tickers", help="Danh sách mã cách nhau bởi dấu phẩy"
                         " (mặc định POW,SSI,HPG,EVF,PAN)")
     parser.add_argument("--evaluation-at", help="Explicit ISO evaluation timestamp for deterministic freshness envelopes")
+    parser.add_argument("--output-dir", help="Explicit output directory for an isolated/shadow export")
     parser.add_argument("--allow-stale", action="store_true",
                         help="Vẫn xuất bundle dù nguồn lệch phiên/lệch thứ tự tạo artifact"
                              " (ghi cảnh báo rõ vào manifest)")
@@ -2737,7 +2756,7 @@ def main() -> int:
             " freshness.artifact_order_violations).",
         ],
     }
-    output_dir = output_path(OUT_DIR)
+    output_dir = resolve_output_dir(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     out_path = output_dir / 'focus_extract.json'
     atomic_write_json(out_path, focus_extract)

@@ -73,6 +73,10 @@ class RuntimeRootTests(unittest.TestCase):
     def test_runtime_root_override_targets_public_runtime(self):
         self.assertEqual(bundle.runtime_path(bundle.DB_PATH), _runtime_path(bundle.DB_PATH))
 
+    def test_explicit_output_dir_does_not_follow_runtime_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(bundle.resolve_output_dir(tmp), Path(tmp))
+
 
 def run_bundle_main(argv: list[str], out_dir: Path) -> int:
     """Gọi bundle.main() trong tiến trình; CHỈ đổi hướng nơi GHI output (OUT_DIR) sang thư mục
@@ -179,6 +183,14 @@ class FreshnessGateLogicTests(unittest.TestCase):
             session_scoped_categories={"screen_snapshot_live", "ta_signals", "focus_analysis", "context_package"},
         )
         self.assertFalse(result["blocked"])
+
+    def test_session_date_is_not_source_generation_timestamp(self):
+        self.assertIsNone(bundle.retained_source_timestamp({"date": "2026-07-30"}))
+
+    def test_explicit_source_timestamp_is_preserved(self):
+        for key in ("source_generated_at", "generated_at", "retrieved_at"):
+            value = f"2026-07-30T08:00:00Z"
+            self.assertEqual(bundle.retained_source_timestamp({"date": "2026-07-30", key: value}), value)
 
 
 class RiskScoreSemanticsTests(unittest.TestCase):
