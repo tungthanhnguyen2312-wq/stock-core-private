@@ -1,0 +1,32 @@
+{
+  "accepted_events": [],
+  "agreement_rate": 0.0,
+  "canonical_data_path": "dashboard-runtime/vn_stock.db:ohlcv.close -> export_ai_bundle.load_ohlcv_recent",
+  "contradictory_events": [],
+  "event_diagnostics": [],
+  "excluded_events": [
+    {
+      "reason": "no_qualified_retained_corporate_action_events",
+      "ticker": "HPG"
+    },
+    {
+      "reason": "no_qualified_retained_corporate_action_events",
+      "ticker": "VNM"
+    }
+  ],
+  "input_data_hash": "c464cdd340aa63165bd617d403253dfce13df755ee165a589e5c17f437cfe5bd",
+  "limitations": [
+    "Only the VCI rows in the current ohlcv table are in scope.",
+    "Provider/library version is not retained in the active ohlcv schema.",
+    "Volume basis and current shares are independent unqualified blockers.",
+    "Cash-dividend test not run: no qualified retained compatible cash-dividend events."
+  ],
+  "method": "empirical_corporate_action_continuity",
+  "provider": "VCI",
+  "provider_version": "unretained_in_ohlcv_schema",
+  "retest_after": "qualified retained stock-dividend/bonus event set reaches eight non-overlapping events and source version is retained",
+  "schema_version": "1.0.0",
+  "status": "INCONCLUSIVE",
+  "tested_at": "2026-08-02T10:30:00Z",
+  "value": "unknown"
+}
