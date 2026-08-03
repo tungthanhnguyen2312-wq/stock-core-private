@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-08-03 - P1J Provider-Reported Share Authority Hardening
+- Field provenance proven: `vn_stock.db → metadata.shares_outstanding` is populated from `Company(source="VCI", symbol=tk).overview()` raw field `issue_share` (`ISSUED_SHARES`).
+- Grounded against official anchors: VNM (exact match `2,089,955,445`), VCB (exact match `5,589,091,222`), HPG (provider `6,396,250,200` vs official `7,163,748,865` post-stock-dividend).
+- Corporate-action invalidation: provider observations pre-dating a completed share-changing corporate event (e.g. stock dividend) are invalidated as `provider_reported_stale` (2 tickers).
+- Hardened authority counts: 1,683 active universe (3 qualified official, 1,677 provider-reported current, 2 provider-reported stale, 1 unavailable). Valuation readiness recalculated fail-closed: Market Cap (3 qualified + 1,471 provider-reported), P/E (1,391), P/B (1,289), EV (1,247), EV/EBITDA (111).
+
 ## 2026-08-03 - P1I Market-Wide Current Shares Coverage
 - Market-wide effective shares are resolved across the active universe (1,683 tickers) into 3 explicit authority lanes: `qualified_official` (3 tickers), `provider_reported` (1,679 tickers), and `unavailable` (1 ticker).
 - Provider-reported current share observations from retained metadata are preserved as `provider_reported` and never relabelled as qualified.

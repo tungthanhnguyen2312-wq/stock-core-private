@@ -19,6 +19,7 @@ every P-gate below is now reached through one of them.
   **Step B1 approved and activated 2026-08-03 via P1G**: official source registry activated by owner approval; bounded document store, corporate-action event ledger, dated shares timeline, and price adjustment factor policies fully connected into Producer bundle, Consumer context pass-through, and top-level operator dry run.
   **P1H Valuation Readiness Activation shipped 2026-08-03**: resolved current effective shares and session prices to reconstruct current market capitalization and unblock P/E, P/B, EV, and EV/EBITDA readiness fail-closed across Producer, Consumer, and post-close operator.
   **P1I Market-Wide Current Shares Coverage shipped 2026-08-03**: expanded current effective shares across active universe into 3 explicit authority lanes, scaling market-cap and valuation readiness across 1,683 tickers.
+  **P1J Provider-Reported Share Authority Hardening shipped 2026-08-03**: proven provenance of VCI issue_share, grounded against official anchors, corporate-action invalidation connected, and valuation readiness recalculated fail-closed.
 
 The pillars are independent up to pillar A's enterprise-value layer, which needs a market
 capitalisation and therefore waits on pillar B.
