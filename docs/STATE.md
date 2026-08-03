@@ -342,6 +342,28 @@ away while HPG resolved as `provider_reported_lagged`.
 31 December 2024; no retained document covers the interval to the session. Closing that needs an
 official notice per ticker, not more code.
 
+### Retained evidence is exhausted for share basis — audited 2026-08-03
+
+HPG was the only ticker promotable from documents already on disk. The rest were checked and
+are insufficient, so re-mining this seam will not produce another `qualified_official`:
+
+- **VCB** — `operations-review/non-cash-corporate-action-official-evidence/vsdc-vcb-listing-change-execution.html`
+  is a genuine VSDC notice for a 2025 share-issuing dividend (record date 2025-03-13, official
+  trading date 2025-05-09) but states **no `shares_after` and no ratio**, so it cannot establish
+  a count and deriving one would be backsolving. It does confirm documentarily that a
+  share-changing event post-dates VCB's FY2024 anchor, which is why that anchor must not be
+  promoted and why VCB's `provider_reported_unverifiable_freshness` verdict is right. It also
+  carries a record date and a trading date but no ex-date — the pattern already on record.
+- **VNM** — the retained 2026 reviewed interim statements (72 pages) do not restate the share
+  count in any form; a digit search for `2,089,955,445` returns nothing. No newer anchor exists.
+- `operations-review/governed-official-evidence-v1/` holds unadopted documents for PAN, SSI,
+  VCB and VNM, but they are annual reports, audited statements and AGM resolutions — period-end
+  sources, not executed-event notices, so adopting them would add anchors the promotion gate
+  correctly refuses.
+
+Everything beyond HPG therefore requires **acquiring** a notice, which requires the registry to
+admit again, which requires the owner to record the approval instant's clock provenance.
+
 **Retired figures.** `qualified_official 3`, `provider_reported_current 1,677`,
 `provider_reported_stale 2`, `provider_reported_market_cap 1,471`, `pe_ready 1,391`,
 `pb_ready 1,289`, `ev_ready 1,247`, `ev_ebitda_ready 111` were literals. The valuation-readiness
