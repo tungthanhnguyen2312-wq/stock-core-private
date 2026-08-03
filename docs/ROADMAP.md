@@ -12,8 +12,9 @@ every P-gate below is now reached through one of them.
   incremental. **Layer 3 (canonical facts) shipped 2026-08-03 as P1E**: 195,552 canonical facts
   with scope/sign/unit/basis resolved from evidence only, both dialects, six-value per-metric
   status, per-metric review queues. **Layer 4 readiness** is live as a reporting layer —
-  EBITDA ready for 231 tickers (was 2), ROE for 1,321 — with no new valuation model. Serves
-  P2a, P3, P4.
+  EBITDA ready for 231 tickers (was 2), ROE for 1,321 — with no new valuation model.
+  **P1F Canonical Production Activation shipped 2026-08-03**: connected canonical fact store
+  through Producer bundle (`--include-canonical-financial-facts`), Consumer context, and top-level operator dry run. Serves P2a, P3, P4.
 - **Pillar B — official corporate-action ingestion and price-adjustment engine** — `docs/official_corporate_action_ingestion_design.md`.
   **Step B1 shipped 2026-08-03** as a written, enforced, reviewable source registry that is
   `AWAITING_OWNER_APPROVAL`; B2–B6 are blocked on that approval. The immutable document store,

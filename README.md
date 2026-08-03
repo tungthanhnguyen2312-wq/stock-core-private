@@ -19,6 +19,9 @@ Chạy lệnh từ thư mục gốc của repository và cấu hình dashboard r
 Set-Location <producer-repository>
 $env:STOCK_LOOKUP_RUNTIME_ROOT = '<dashboard-runtime-root>'
 python -m pip install -r requirements.txt
+
+# Post-close local dry run with canonical financial facts enabled:
+python tools/operate_stocklookup.py --runtime-root <dashboard-runtime-root> --include-canonical-financial-facts
 ```
 
 Xem [CONTRIBUTING.md](CONTRIBUTING.md) về phạm vi đóng góp, [SECURITY.md](SECURITY.md) về báo cáo vấn đề bảo mật và thư mục [docs/](docs/) về contract dữ liệu cùng tài liệu kỹ thuật.

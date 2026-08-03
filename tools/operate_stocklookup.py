@@ -110,6 +110,7 @@ class Operator:
     def __init__(self, root: Path, tickers: list[str], *, execute: bool, publish: bool,
                  live: bool, prepare: bool = False, web_root: Path | None = None,
                  verify_live_url: str | None = None,
+                 include_canonical_financial_facts: bool = False,
                  runner: Callable[..., Any] = subprocess.run):
         self.root = root
         self.tickers = tickers
@@ -118,6 +119,7 @@ class Operator:
         self.live = live
         self.web_root = web_root
         self.verify_live_url = verify_live_url
+        self.include_canonical_financial_facts = include_canonical_financial_facts
         self.runner = runner
         self.steps: list[dict[str, Any]] = []
         self.rollback_dir: Path | None = None
@@ -301,11 +303,21 @@ class Operator:
         command += ["--session-identity", session or "", "--generated-at", _now()]
         self._run("taxonomy_sidecar_build", command, ROOT)
 
+    def verify_canonical_fact_store(self) -> None:
+        """Verify the market-wide canonical fact store integrity."""
+        from canonical_fact_store import verify as verify_fact_store
+        res = verify_fact_store(self.root)
+        if not res.get("ok"):
+            raise GateFailure("verify_canonical_fact_store", str(res.get("reason") or "fact store check failed"))
+        self._record("verify_canonical_fact_store", "passed", checked=res.get("checked"))
+
     def export_bundle(self) -> None:
         command = [sys.executable, str(ROOT / "export_ai_bundle.py"),
                    "--tickers", ",".join(self.tickers),
                    "--include-fundamental-quality-evidence",
                    "--include-analysis-lane-eligibility"]
+        if self.include_canonical_financial_facts:
+            command.append("--include-canonical-financial-facts")
         self._run("export_analysis_bundle", command, ROOT)
 
     # ------------------------------------------------------------------ 4. verify
@@ -445,10 +457,15 @@ class Operator:
             self.capture_rollback_point()
             if not self.execute:
                 self.build_sidecar(session)
+                if self.include_canonical_financial_facts:
+                    self.verify_canonical_fact_store()
                 self._record("dry_run_plan", "passed", detail=(
                     ("would rebuild the offline session inputs, " if self.prepare else "")
-                    + "would rebuild the taxonomy sidecar, export the bundle + manifest,"
-                    " verify every declared artifact hash, run Consumer exact-session"
+                    + "would rebuild the taxonomy sidecar, "
+                    + ("verify canonical fact store, " if self.include_canonical_financial_facts else "")
+                    + "export the bundle + manifest"
+                    + (" with canonical financials enabled" if self.include_canonical_financial_facts else "")
+                    + ", verify every declared artifact hash, run Consumer exact-session"
                     " validation, then "
                     + (f"publish live into {self.web_root}" if self.live
                        else f"run the release publisher dry-run against {self.web_root}"
@@ -464,6 +481,8 @@ class Operator:
             # the export, because the export binds the sidecar's bytes into the manifest's
             # required-artifact set and reads its taxonomy for the applicability gate.
             self.build_sidecar(session)
+            if self.include_canonical_financial_facts:
+                self.verify_canonical_fact_store()
             self.export_bundle()
             self.verify_manifest_sources()
             self.verify_session_artifacts()
@@ -502,6 +521,8 @@ def parse_args(argv=None) -> argparse.Namespace:
                              " packages). Never fetches prices/macro/news. Takes a verified,"
                              " restorable copy of vn_stock.db before running, because"
                              " stock_analyzer.py upserts its own watchlist_history table.")
+    parser.add_argument("--include-canonical-financial-facts", action="store_true",
+                        help="Opt-in (P1F): attach market-wide canonical financial facts and readiness to Producer bundle.")
     parser.add_argument("--publish", action="store_true",
                         help="Also run tools/publish_release.py (its own dry-run unless --live).")
     parser.add_argument("--web-root", default=None,
@@ -556,7 +577,9 @@ def main(argv=None, runner=subprocess.run) -> int:
             return 2
     operator = Operator(root, tickers, execute=args.execute, publish=args.publish,
                         live=args.live, prepare=args.prepare_inputs, web_root=web_root,
-                        verify_live_url=args.verify_live_url, runner=runner)
+                        verify_live_url=args.verify_live_url,
+                        include_canonical_financial_facts=args.include_canonical_financial_facts,
+                        runner=runner)
     try:
         with PipelineLock(root / "locks" / "pipeline.lock"):
             return operator.run()

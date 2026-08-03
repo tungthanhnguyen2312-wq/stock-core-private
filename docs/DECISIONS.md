@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-08-03 - P1F Canonical Financial Production Activation
+- Canonical financial export is connected through `--include-canonical-financial-facts` on `export_ai_bundle.py` and top-level operator `tools/operate_stocklookup.py`.
+- Consumer context `ai-core-private/builders/build_ticker_context.py` passes through `canonical_financial_facts` verbatim without recalculation.
+- Default Producer bundle remains byte-identical when flag is disabled.
+- Full local post-close dry run verified through `python tools/operate_stocklookup.py --runtime-root <path> --include-canonical-financial-facts`.
+
 ## 2026-08-03 - `provider_reported` is the honest ceiling; a convention is not evidence
 - Layer 3 emits `qualified` only where a value agrees digit-for-digit with an independently promoted official citation, which is the only place a currency and an absolute unit scale are actually evidenced. Everything else that resolves cleanly is `provider_reported`.
 - The retained payloads carry no currency column, no unit header and no internal anchor fixing the absolute unit. Vietnamese listed issuers do file in VND under VAS; that is a convention, not evidence in these bytes, and promoting it would make the qualification contract meaningless everywhere else.
