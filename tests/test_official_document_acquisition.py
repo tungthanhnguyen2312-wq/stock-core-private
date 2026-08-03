@@ -6,10 +6,24 @@ from official_document_acquisition import EVENTS, MANIFEST, _response_failure, a
 PDF=b"%PDF-1.4\nfixture\n"
 HTML=b"<html><body>official notice</body></html>"
 
+#: These tests are about retention mechanics -- caching, redirects, hash conflicts, size and
+#: timeout handling -- against fixture hosts that are deliberately not real. `acquire()` now
+#: refuses anything the source registry does not admit, so they run against a registry that
+#: declares those fixture hosts. Governance itself is covered by
+#: tests/test_acquisition_registry_gate.py, against the shipped registry.
+FIXTURE_REGISTRY={"schema_version":"1.0.0","approval_state":{"state":"APPROVED","approved_at":"2026-08-03T07:00:00Z","approved_at_provenance":"test fixture, UTC"},
+ "global_policy":{"connect_timeout_seconds":5,"read_timeout_seconds":15,"max_attempts":2,"max_response_bytes":20971520,"user_agent":"test"},
+ "sources":[{"source_id":"issuer_ir","activation":"approved","allowed_hosts":["issuer.example","cdn.example"],
+   "document_types":["corporate_action_notice","reviewed_interim_financial_statements","corporate_governance_report","annual_report","amendment_or_supersession_notice"],
+   "min_request_interval_seconds":0,"parser_version":"1.0.0"}]}
+
 class AcquisitionTests(unittest.TestCase):
- def setUp(self): self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name)
+ def setUp(self):
+  self.tmp=tempfile.TemporaryDirectory(); self.root=Path(self.tmp.name)
+  patcher=patch("official_document_acquisition.load_registry",return_value=FIXTURE_REGISTRY)
+  patcher.start(); self.addCleanup(patcher.stop)
  def tearDown(self): self.tmp.cleanup()
- def spec(self, **more): return {"ticker":"HPG","canonical_url":"https://issuer.example/f.pdf","document_class":"corporate_action_notice","reporting_period":"2024","source_authority":"issuer_ir","observed_at":"2026-08-02T00:00:00Z"}|more
+ def spec(self, **more): return {"ticker":"HPG","source_id":"issuer_ir","canonical_url":"https://issuer.example/f.pdf","document_class":"corporate_action_notice","reporting_period":"2024","source_authority":"issuer_ir","observed_at":"2026-08-02T00:00:00Z"}|more
  def fetch(self, *_args, **_kwargs): return 200,{"Content-Type":"application/pdf"},PDF,"https://cdn.example/f.pdf"
  def metadata(self, **more): return {"ticker":"HPG","exchange":"HOSE","action_type":"bonus_share","ex_date":"2024-01-04","ratio":.2,"ratio_basis":"new_shares_per_existing_share","source_authority":"issuer_ir","source_url":"https://issuer.example/f.pdf","document_identity":"fixture-notice-1","retrieved_at":"2026-08-02T00:00:00Z","reporting_period":"2024"}|more
  def test_success_redirect_and_cache(self):

@@ -15,10 +15,14 @@ from typing import Any, Callable, Iterable, Mapping
 
 import requests
 
-VERSION = "1.1.0"
+from official_source_registry import ADMITTED, admit, load_registry
+
+VERSION = "1.2.0"
 MANIFEST = "official_document_acquisition_manifest.json"
 EVENTS = "official_price_test_events.jsonl"
 TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN"})
+#: Retained for the storage-path vocabulary only. The gate on what may be requested comes
+#: from the registry (`declared_document_types`), never from this tuple.
 DOCUMENT_CLASSES = ("audited_annual_financial_statements", "reviewed_interim_financial_statements", "annual_report", "corporate_governance_report", "agm_document_or_resolution", "corporate_action_notice", "amendment_or_supersession_notice")
 PERIODS = frozenset({"2023", "2024", "2025", "2026"})
 CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 20 * 1024 * 1024
@@ -68,10 +72,33 @@ def _write_manifest(path: Path, records: list[dict[str, Any]]) -> None:
     _atomic_write(path, (json.dumps({"schema_version": VERSION, "records": records}, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"))
 
 
-def _validate_spec(spec: Mapping[str, Any]) -> tuple[str, str, str, str]:
+def declared_document_types(registry: Mapping[str, Any]) -> frozenset[str]:
+    """Every document type any source declares.
+
+    The gate on an individual request is `admit()`, which checks the type against *that*
+    source. This union only decides whether a request is well-formed enough to ask about, and
+    it comes from the registry so the two vocabularies cannot drift: the module's own
+    `DOCUMENT_CLASSES` was missing `ex_right_notice`, `listing_change_notice` and
+    `last_registration_date_notice`, so the acquirer refused, as malformed, requests for the
+    exact notices that carry an ex-date — the field the price-adjustment factor is blocked on.
+    """
+    return frozenset(str(entry) for source in registry.get("sources") or []
+                     for entry in source.get("document_types") or [])
+
+
+def _declared_interval(registry: Mapping[str, Any], source_id: str) -> float:
+    for source in registry.get("sources") or []:
+        if str(source.get("source_id")) == source_id:
+            return float(source.get("min_request_interval_seconds") or 0.0)
+    return 0.0
+
+
+def _validate_spec(spec: Mapping[str, Any], allowed_types: frozenset[str]) -> tuple[str, str, str, str, str]:
     ticker, document_class, period = str(spec.get("ticker", "")).upper(), str(spec.get("document_class", "")), str(spec.get("reporting_period", ""))
-    if ticker not in TICKERS or document_class not in DOCUMENT_CLASSES or period not in PERIODS: raise ValueError("unsupported_request")
-    return ticker, document_class, period, canonical_url(str(spec.get("canonical_url", "")))
+    source_id = str(spec.get("source_id", ""))
+    if not source_id: raise ValueError("missing_source_id")
+    if ticker not in TICKERS or document_class not in allowed_types or period not in PERIODS: raise ValueError("unsupported_request")
+    return ticker, document_class, period, canonical_url(str(spec.get("canonical_url", ""))), source_id
 
 
 def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TIMEOUT_SECONDS,
@@ -135,14 +162,38 @@ def _extraction_state(path: Path) -> str:
 def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetcher: Callable[..., tuple[Any, ...]] = fetch_http,
             timeout_seconds: int = READ_TIMEOUT_SECONDS, max_attempts: int = 2, observed_at: str | None = None,
             sleep: Callable[[float], None] = time.sleep, connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS,
-            max_response_bytes: int = MAX_RESPONSE_BYTES) -> dict[str, Any]:
+            max_response_bytes: int = MAX_RESPONSE_BYTES, registry: Mapping[str, Any] | None = None,
+            clock: Callable[[], float] = time.monotonic) -> dict[str, Any]:
+    """Retain official documents, one request at a time, each admitted by the source registry.
+
+    Nothing here reaches the network until `official_source_registry.admit()` has approved that
+    exact source, host, document type and request interval. Until this milestone it never did:
+    `admit()`'s only caller in the tree was the offline slice runner, so the owner-approved
+    registry governed a JSON file and not a single request. A gate nothing calls is a comment.
+    """
     if not 1 <= timeout_seconds <= 30 or not 1 <= max_attempts <= 2 or max_response_bytes < 1024: raise ValueError("bounded_retry_or_timeout_invalid")
+    registry = registry if registry is not None else load_registry()
+    allowed_types = declared_document_types(registry)
+    last_request_at: dict[str, float] = {}
     root = Path(destination); root.mkdir(parents=True, exist_ok=True); manifest_path = root / MANIFEST; records = _load(manifest_path)["records"]; outcomes = []
     for spec in requests_:
-        try: ticker, document_class, period, url = _validate_spec(spec)
+        try: ticker, document_class, period, url, source_id = _validate_spec(spec, allowed_types)
         except ValueError as exc: outcomes.append({"state": str(exc), "ticker": str(spec.get("ticker", "")).upper()}); continue
         cached = _cached(root, records, ticker, url)
         if cached: outcomes.append({"ticker": ticker, "document_id": cached["document_id"], "state": "cached_valid"}); continue
+        # Honour the source's declared minimum interval before asking, so the rate rule shapes
+        # the request rather than merely reporting on one already made.
+        previous = last_request_at.get(source_id)
+        elapsed = (clock() - previous) if previous is not None else None
+        interval = _declared_interval(registry, source_id)
+        if elapsed is not None and elapsed < interval: sleep(interval - elapsed); elapsed = interval
+        decision = admit(source_id, url, document_class, registry=registry, seconds_since_last_request=elapsed)
+        if decision["decision"] != ADMITTED:
+            outcomes.append({"ticker": ticker, "canonical_url": url, "source_id": source_id,
+                             "state": "refused_by_source_registry", "reason": decision["reason"],
+                             "detail": decision["detail"]})
+            continue
+        last_request_at[source_id] = clock()
         fd, temp_name = tempfile.mkstemp(prefix=".download-", suffix=".part", dir=root); os.close(fd); temporary = Path(temp_name)
         status, headers, prefix, final_url, failure = 0, {}, b"", url, None
         for attempt in range(max_attempts):

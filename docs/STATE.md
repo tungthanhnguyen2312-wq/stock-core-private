@@ -387,8 +387,12 @@ a pass over the canonical fact store, which the operating command does not do.
 
 ## Next highest-value milestone
 
-**Pillar B steps B2–B6 — official-document acquisition. Unblocked 2026-08-03.** The registry
-admits again, so the constraint is no longer governance but coverage: almost nothing has been
+**Pillar B steps B2–B6 — official-document acquisition. Governed since 2026-08-04.** The
+registry admits, and `acquire()` now consults it before every request (it previously
+consulted nothing). The registry also supplies the requestable document vocabulary, so
+`ex_right_notice`, `listing_change_notice` and `last_registration_date_notice` are
+requestable for the first time — the ex-date the adjustment factor is blocked on could not
+previously be asked for. **No live acquisition has run yet.** The constraint is coverage: almost nothing has been
 acquired through it. The ledger
 holds 250 rows across **5 of 1,683 tickers** at `partial_unqualified_50_row_cap`, which is the
 single fact that keeps `qualified_official` current shares at 0 and keeps the adjustment factor
