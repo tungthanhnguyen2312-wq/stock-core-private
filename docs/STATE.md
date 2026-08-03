@@ -7,9 +7,9 @@ command against `dashboard-runtime` (reference session `2026-07-30`).
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
 
-- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–4 complete and active); B, official corporate-action evidence, dated shares timeline, and price adjustment factors (activated and verified via owner-approved official source registry in P1G). P1 exact-session integrity, P1B/P1C/P1F/P1G completed.
-- Active milestone: P1G Data Authority and Post-Close Closeout — COMPLETED. All official source registry activations, bounded document store retention, corporate-action event ledger reconciliation, dated share timelines, price adjustment factor policies, valuation readiness projections, Producer/Consumer pass-through, and 18-stage operator dry-run verified cleanly.
-- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py` (with `--include-canonical-financial-facts` verified dry run) and is byte-unchanged by P1G; `config/official_source_registry.json` is approved; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
+- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–4 complete and active); B, official corporate-action evidence, dated shares timeline, price adjustment factors, and valuation readiness (activated and verified via P1H). P1 exact-session integrity, P1B/P1C/P1F/P1G/P1H completed.
+- Active milestone: P1H Current Share Basis and Valuation Readiness Activation — COMPLETED. Current effective shares, session price integration, reconstructed market cap, P/E, P/B, EV, and EV/EBITDA readiness projections connected fail-closed through Producer, Consumer, and 18-stage post-close operator dry-run.
+- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py` (with `--include-canonical-financial-facts` verified dry run) and is byte-unchanged by P1H; `config/official_source_registry.json` is approved; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
 
 ## Operate it
 

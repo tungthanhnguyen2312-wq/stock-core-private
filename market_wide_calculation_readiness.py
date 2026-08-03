@@ -229,8 +229,38 @@ def evaluate_ebitda(period_facts: Mapping[str, Mapping[str, Any]], period: str,
         warnings=warnings)
 
 
-def evaluate_market_capitalisation(period: str) -> dict[str, Any]:
-    """Always blocked, and precise about why. Two independent causes, both still open."""
+def evaluate_market_capitalisation(period: str,
+                                   session_price: float | int | None = None,
+                                   effective_shares: Mapping[str, Any] | int | None = None) -> dict[str, Any]:
+    """Reconstructed current snapshot market cap when price and shares are resolved, or blocked."""
+    price_val = float(session_price) if session_price is not None and not isinstance(session_price, bool) and float(session_price) > 0 else None
+    shares_val = None
+    shares_status = STATUS_UNAVAILABLE
+    shares_authority = "unresolved"
+    if isinstance(effective_shares, Mapping):
+        shares_val = effective_shares.get("value")
+        shares_status = str(effective_shares.get("status") or effective_shares.get("qualification") or STATUS_UNAVAILABLE)
+        shares_authority = str(effective_shares.get("authority") or "dated_shares_timeline")
+    elif isinstance(effective_shares, (int, float)) and not isinstance(effective_shares, bool) and effective_shares > 0:
+        shares_val = int(effective_shares)
+        shares_status = STATUS_QUALIFIED
+        shares_authority = "official_shares_fact"
+
+    if price_val is not None and shares_val is not None and shares_val > 0:
+        market_cap_val = round(price_val * shares_val, 2)
+        status = STATUS_QUALIFIED if shares_status in (STATUS_QUALIFIED, "qualified", "current_qualified") else STATUS_PROVIDER_REPORTED
+        return _result(
+            "market_capitalisation", READY, period=period, value=market_cap_val, status=status,
+            formula="resolved_session_price * current_effective_shares",
+            reason="current snapshot reconstructed from resolved session price and current effective shares outstanding",
+            terms={
+                "session_price": price_val,
+                "current_effective_shares": shares_val,
+                "shares_authority": shares_authority,
+                "basis_type": "current_snapshot",
+            },
+            warnings=["current_snapshot_only_does_not_unlock_historical_series_or_backtest"])
+
     return _result(
         "market_capitalisation", BLOCKED, period=period, status=STATUS_UNAVAILABLE,
         reason=("no retained provider line carries a share count, and the price basis is "
@@ -257,6 +287,22 @@ def evaluate_enterprise_value(period_facts: Mapping[str, Mapping[str, Any]], per
     else:
         component_failures = [f"missing_term:{name}" for name in missing]
 
+    if market_cap["readiness"] == READY and components_ready:
+        debt = float(terms["total_interest_bearing_debt"]["value"])
+        cash = float(terms["cash_and_cash_equivalents"]["value"])
+        ev_val = round(float(market_cap["value"]) + debt - cash, 2)
+        status = STATUS_QUALIFIED if market_cap["status"] == STATUS_QUALIFIED and all(str(f["status"]) == STATUS_QUALIFIED for f in terms.values()) else STATUS_PROVIDER_REPORTED
+        return _result(
+            "enterprise_value", READY, period=period, value=ev_val, status=status,
+            formula=EV_FORMULA,
+            reason="current market capitalisation and balance-sheet terms available and compatible",
+            terms={
+                "market_capitalisation": market_cap["value"],
+                "total_interest_bearing_debt": debt,
+                "cash_and_cash_equivalents": cash,
+            },
+            warnings=["current_snapshot_enterprise_value_only"])
+
     blocked_by = list(market_cap["blocked_by"]) + sorted(set(component_failures))
     return _result(
         "enterprise_value", BLOCKED, period=period, status=STATUS_UNAVAILABLE,
@@ -275,18 +321,27 @@ def evaluate_ev_ebitda(ebitda: Mapping[str, Any], enterprise_value: Mapping[str,
         return _result("ev_ebitda", NOT_APPLICABLE, period=period, status=STATUS_NOT_APPLICABLE,
                        reason="EBITDA is not defined for this filer, so neither is EV/EBITDA",
                        blocked_by=["metric_not_defined_for_template_family"])
+    if enterprise_value["readiness"] == READY and ebitda["readiness"] == READY and float(ebitda["value"]) > 0:
+        val = round(float(enterprise_value["value"]) / float(ebitda["value"]), 4)
+        status = STATUS_QUALIFIED if enterprise_value["status"] == STATUS_QUALIFIED and ebitda["status"] == STATUS_QUALIFIED else STATUS_PROVIDER_REPORTED
+        return _result(
+            "ev_ebitda", READY, period=period, value=val, status=status,
+            formula="enterprise_value / ebitda",
+            reason="enterprise value and EBITDA are ready and compatible",
+            terms={"enterprise_value": enterprise_value["value"], "ebitda": ebitda["value"]})
+
     blocked_by = list(enterprise_value["blocked_by"])
     if ebitda["readiness"] != READY:
         blocked_by.append("ebitda_not_ready")
     return _result("ev_ebitda", BLOCKED, period=period, status=STATUS_UNAVAILABLE,
                    formula="enterprise_value / ebitda",
-                   reason="enterprise value is unavailable",
+                   reason="enterprise value or EBITDA is unavailable",
                    blocked_by=sorted(set(blocked_by)))
 
 
 def evaluate_price_ratio(metric: str, denominator: Mapping[str, Any] | None, period: str,
                          market_cap: Mapping[str, Any], denominator_name: str) -> dict[str, Any]:
-    """P/E and P/B. The fundamental denominator may be ready; the numerator never is."""
+    """P/E and P/B. Calculated when current market cap and fundamental denominator are ready."""
     blocked_by = list(market_cap["blocked_by"])
     denominator_ready = (denominator is not None
                          and str(denominator["status"]) in USABLE_STATUSES)
@@ -294,6 +349,16 @@ def evaluate_price_ratio(metric: str, denominator: Mapping[str, Any] | None, per
         blocked_by.append(f"missing_term:{denominator_name}")
     elif not denominator_ready:
         blocked_by.append(f"unusable_term:{denominator_name}:{denominator['status']}")
+
+    if market_cap["readiness"] == READY and denominator_ready and float(denominator["value"]) != 0:
+        ratio_val = round(float(market_cap["value"]) / float(denominator["value"]), 4)
+        status = STATUS_QUALIFIED if market_cap["status"] == STATUS_QUALIFIED and str(denominator["status"]) == STATUS_QUALIFIED else STATUS_PROVIDER_REPORTED
+        return _result(
+            metric, READY, period=period, value=ratio_val, status=status,
+            formula=f"market_capitalisation / {denominator_name}",
+            reason=f"current market capitalisation and {denominator_name} are ready",
+            terms={"market_capitalisation": market_cap["value"], denominator_name: denominator["fact_id"]})
+
     return _result(
         metric, BLOCKED, period=period, status=STATUS_UNAVAILABLE,
         formula=f"market_capitalisation / {denominator_name}",
@@ -356,14 +421,16 @@ def evaluate_roe(period_facts: Mapping[str, Mapping[str, Any]], period: str) -> 
 
 
 def evaluate_ticker(ticker: str, facts: Sequence[Mapping[str, Any]],
-                    applicability: Mapping[str, Any]) -> dict[str, Any]:
+                    applicability: Mapping[str, Any],
+                    session_price: float | int | None = None,
+                    effective_shares: Mapping[str, Any] | int | None = None) -> dict[str, Any]:
     """Every readiness verdict for one ticker, one entry per period."""
     by_period = _facts_by_period(facts)
     periods: list[dict[str, Any]] = []
     for period in sorted(by_period):
         period_facts = by_period[period]
         ebitda = evaluate_ebitda(period_facts, period, applicability)
-        market_cap = evaluate_market_capitalisation(period)
+        market_cap = evaluate_market_capitalisation(period, session_price=session_price, effective_shares=effective_shares)
         enterprise_value = evaluate_enterprise_value(period_facts, period, market_cap)
         periods.append({
             "reporting_period": period,

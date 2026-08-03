@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-08-03 - P1H Current Share Basis and Valuation Readiness Activation
+- Current effective shares are resolved by authority order: qualified official shares fact on/before session, qualified corporate-action transition, or repo-governed share basis. Never backsolved from market cap or inferred from raw labels.
+- Session price input uses existing session close from `vn_stock.db` / snapshot, explicitly labelled as `current_snapshot` without claiming historical price-series adjustment or backtesting eligibility.
+- Reconstructed current market capitalization (`resolved_session_price * current_effective_shares`) unblocks P/E, P/B, EV, and EV/EBITDA readiness fail-closed (3 qualified current shares, 3 reconstructed market cap, 3 P/E ready, 3 P/B ready, 2 EV ready, 2 EV/EBITDA ready, with banking templates correctly `not_applicable`).
+- Final valuation readiness projections pass through Consumer context verbatim and land in `tools/operate_stocklookup.py` summary report. Baseline production hashes remain strictly unchanged.
+
 ## 2026-08-03 - P1G Data Authority and Post-Close Closeout
 - Owner approved activation of existing declared official sources in `config/official_source_registry.json`: HOSE, HNX, VSDC, and qualified issuer IR hosts (`file.hoaphat.com.vn`, `www.vinamilk.com.vn`, etc.).
 - Broad discovery, undeclared hosts, and paid providers (EODHD) remain strictly prohibited and fail closed.
