@@ -125,6 +125,7 @@ class Operator:
         self.rollback_dir: Path | None = None
         self.database_backup: Path | None = None
         self.prepare = prepare
+        self.reference_session_date: str | None = None
         self.started_at = _now()
         self.env = {**os.environ, RUNTIME_ROOT_ENV: str(root), "PYTHONIOENCODING": "utf-8"}
 
@@ -189,6 +190,7 @@ class Operator:
             raise GateFailure("preflight_database", "ohlcv carries no trading session to anchor on")
         self._record("preflight_database", "passed", quick_check=str(result),
                      reference_session_date=anchor[0])
+        self.reference_session_date = str(anchor[0])
         return str(anchor[0])
 
     def preflight_locks(self) -> None:
@@ -423,6 +425,26 @@ class Operator:
                      volume_basis_verified=bundle.get("volume_basis_verified"))
 
     # ------------------------------------------------------------------ report
+    def market_wide_shares_coverage(self) -> dict[str, Any]:
+        """Measure current-share authority across the universe, for the session just resolved.
+
+        Measured on every run. This block previously carried the counts as literals, so the
+        report asserted a market-wide coverage figure that no run had computed and that no
+        data change could ever move. A measurement that cannot fail is not a measurement.
+
+        Never raises: a report that cannot be produced is reported as such, and an
+        unmeasurable coverage block never fails a run whose artifacts are otherwise sound.
+        """
+        if not self.reference_session_date:
+            return {"status": "unavailable", "reason": "no reference session was resolved"}
+        try:
+            from market_wide_current_shares_resolver import resolve_market_wide_shares
+            summary = resolve_market_wide_shares(self.root, self.reference_session_date)
+        except Exception as exc:  # noqa: BLE001 - reported, never fatal to the artifact set
+            return {"status": "unresolved_error", "reason": f"{type(exc).__name__}: {exc}"}
+        # The per-ticker map belongs in the resolver's own output, not in an operating report.
+        return {key: value for key, value in summary.items() if key != "tickers"}
+
     def report(self, outcome: str, failure: GateFailure | None, rollback: dict[str, Any] | None) -> dict[str, Any]:
         payload = {
             "schema_version": "1.0.0",
@@ -438,28 +460,7 @@ class Operator:
             "failed_gate": failure.gate if failure else None,
             "failure_detail": failure.detail if failure else None,
             "rollback": rollback,
-            "market_wide_shares_coverage": {
-                "active_universe_count": 1683,
-                "qualified_official_count": 3,
-                "provider_reported_current_count": 1677,
-                "provider_reported_stale_count": 2,
-                "provider_reported_conflicted_count": 0,
-                "unknown_share_concept_count": 0,
-                "unknown_observation_date_count": 0,
-                "unavailable_count": 1,
-                "qualified_market_cap_count": 3,
-                "provider_reported_market_cap_count": 1471,
-                "pe_ready_count": 1391,
-                "pb_ready_count": 1289,
-                "ev_ready_count": 1247,
-                "ev_ebitda_ready_count": 111,
-                "principal_blockers": [
-                    "invalidated_by_post_observation_corporate_action",
-                    "no_canonical_facts_for_non_financial_filers",
-                    "banking_template_ev_inapplicable",
-                    "missing_depreciation_and_amortization_annual_cash_flow"
-                ],
-            },
+            "market_wide_shares_coverage": self.market_wide_shares_coverage(),
             "artifact_sha256": self.artifact_hashes(),
             "steps": self.steps,
         }
@@ -499,7 +500,11 @@ class Operator:
             if self.prepare:
                 self.backup_database()
                 self.prepare_inputs()
-                self.preflight_database()
+                # Re-anchor: preparing inputs is what brings the new session into the
+                # database, so the session resolved before it is the previous one. The
+                # sidecar is bound to this value below, and binding it to a stale session
+                # is exactly what the exact-session proof exists to catch.
+                session = self.preflight_database()
             # Order matters: the sidecar must exist and be bound to this session BEFORE
             # the export, because the export binds the sidecar's bytes into the manifest's
             # required-artifact set and reads its taxonomy for the applicability gate.

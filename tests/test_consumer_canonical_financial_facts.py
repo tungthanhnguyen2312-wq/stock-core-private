@@ -11,6 +11,11 @@ sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
 sys.path.insert(0, str(CONSUMER_ROOT))
 
+#: The session the retained runtime is anchored to. The share and price legs of this
+#: section are both session-relative, so the tests state the session explicitly.
+SESSION = "2026-07-30"
+
+
 from canonical_financial_bundle_section import attach  # noqa: E402
 from builders.build_ticker_context import (  # noqa: E402
     canonical_financial_facts_contract,
@@ -58,7 +63,7 @@ class TestConsumerCanonicalFinancialFacts(unittest.TestCase):
     def test_ebitda_ready_non_financial(self) -> None:
         """Case 1: EBITDA-ready non-financial company (AAH)."""
         bundle_entries = {"AAH": {"company_name": "Hop Lay Holdings"}}
-        attached = attach(bundle_entries, self.runtime_root, include=True)
+        attached = attach(bundle_entries, self.runtime_root, include=True, session_date=SESSION)
         bundle = {"schema_version": "1.0.0", "tickers": attached}
         self.assertIn("canonical_financial_facts", attached["AAH"])
         sec = attached["AAH"]["canonical_financial_facts"]
@@ -85,7 +90,7 @@ class TestConsumerCanonicalFinancialFacts(unittest.TestCase):
     def test_financial_institution_not_applicable(self) -> None:
         """Case 2: Financial institution (VCB) with EBITDA not_applicable."""
         bundle_entries = {"VCB": {"company_name": "Vietcombank"}}
-        attached = attach(bundle_entries, self.runtime_root, include=True)
+        attached = attach(bundle_entries, self.runtime_root, include=True, session_date=SESSION)
         bundle = {"schema_version": "1.0.0", "tickers": attached}
         self.assertIn("canonical_financial_facts", attached["VCB"])
         sec = attached["VCB"]["canonical_financial_facts"]
@@ -105,7 +110,7 @@ class TestConsumerCanonicalFinancialFacts(unittest.TestCase):
     def test_conflicted_or_unavailable_case(self) -> None:
         """Case 3: Conflicted or unavailable canonical facts preserve status & withhold values."""
         bundle_entries = {"HPG": {"company_name": "Hoa Phat Group"}}
-        attached = attach(bundle_entries, self.runtime_root, include=True)
+        attached = attach(bundle_entries, self.runtime_root, include=True, session_date=SESSION)
         bundle = {"schema_version": "1.0.0", "tickers": attached}
         sec = attached["HPG"]["canonical_financial_facts"]
         

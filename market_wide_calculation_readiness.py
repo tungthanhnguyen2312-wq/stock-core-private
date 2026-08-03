@@ -231,35 +231,55 @@ def evaluate_ebitda(period_facts: Mapping[str, Mapping[str, Any]], period: str,
 
 def evaluate_market_capitalisation(period: str,
                                    session_price: float | int | None = None,
-                                   effective_shares: Mapping[str, Any] | int | None = None) -> dict[str, Any]:
-    """Reconstructed current snapshot market cap when price and shares are resolved, or blocked."""
+                                   effective_shares: Mapping[str, Any] | int | None = None,
+                                   *, price_basis_verified: bool = False) -> dict[str, Any]:
+    """Reconstructed current snapshot market cap when price and shares are resolved, or blocked.
+
+    A market cap has two legs and is only as qualified as the weaker one. `price_basis_verified`
+    is what carries the price leg's authority in; without it the result can never be
+    `qualified`, however well-evidenced the share count is. The share leg contributes its
+    concept as well as its value: an `ISSUED_SHARES` count does not deduct treasury shares, so
+    a cap built on it is not comparable with one built on shares outstanding, and says so.
+    """
     price_val = float(session_price) if session_price is not None and not isinstance(session_price, bool) and float(session_price) > 0 else None
     shares_val = None
     shares_status = STATUS_UNAVAILABLE
     shares_authority = "unresolved"
+    shares_concept = "unknown_share_concept"
     if isinstance(effective_shares, Mapping):
         shares_val = effective_shares.get("value")
         shares_status = str(effective_shares.get("status") or effective_shares.get("qualification") or STATUS_UNAVAILABLE)
         shares_authority = str(effective_shares.get("authority") or "dated_shares_timeline")
+        shares_concept = str(effective_shares.get("share_concept") or "unknown_share_concept")
     elif isinstance(effective_shares, (int, float)) and not isinstance(effective_shares, bool) and effective_shares > 0:
         shares_val = int(effective_shares)
         shares_status = STATUS_QUALIFIED
         shares_authority = "official_shares_fact"
+        shares_concept = "current_common_shares_outstanding"
 
     if price_val is not None and shares_val is not None and shares_val > 0:
         market_cap_val = round(price_val * shares_val, 2)
-        status = STATUS_QUALIFIED if shares_status in (STATUS_QUALIFIED, "qualified", "current_qualified") else STATUS_PROVIDER_REPORTED
+        shares_qualified = shares_status in (STATUS_QUALIFIED, "qualified", "current_qualified")
+        status = STATUS_QUALIFIED if (shares_qualified and price_basis_verified) else STATUS_PROVIDER_REPORTED
+        warnings = ["current_snapshot_only_does_not_unlock_historical_series_or_backtest"]
+        if not price_basis_verified:
+            warnings.append("price_basis_unverified_market_capitalisation_cannot_be_qualified")
+        if shares_concept == "ISSUED_SHARES":
+            warnings.append("share_count_is_issued_shares_treasury_not_deducted_not_comparable_"
+                            "with_shares_outstanding")
         return _result(
             "market_capitalisation", READY, period=period, value=market_cap_val, status=status,
             formula="resolved_session_price * current_effective_shares",
             reason="current snapshot reconstructed from resolved session price and current effective shares outstanding",
             terms={
                 "session_price": price_val,
+                "price_basis_verified": bool(price_basis_verified),
                 "current_effective_shares": shares_val,
                 "shares_authority": shares_authority,
+                "share_concept": shares_concept,
                 "basis_type": "current_snapshot",
             },
-            warnings=["current_snapshot_only_does_not_unlock_historical_series_or_backtest"])
+            warnings=warnings)
 
     return _result(
         "market_capitalisation", BLOCKED, period=period, status=STATUS_UNAVAILABLE,
@@ -423,14 +443,17 @@ def evaluate_roe(period_facts: Mapping[str, Mapping[str, Any]], period: str) -> 
 def evaluate_ticker(ticker: str, facts: Sequence[Mapping[str, Any]],
                     applicability: Mapping[str, Any],
                     session_price: float | int | None = None,
-                    effective_shares: Mapping[str, Any] | int | None = None) -> dict[str, Any]:
+                    effective_shares: Mapping[str, Any] | int | None = None,
+                    *, price_basis_verified: bool = False) -> dict[str, Any]:
     """Every readiness verdict for one ticker, one entry per period."""
     by_period = _facts_by_period(facts)
     periods: list[dict[str, Any]] = []
     for period in sorted(by_period):
         period_facts = by_period[period]
         ebitda = evaluate_ebitda(period_facts, period, applicability)
-        market_cap = evaluate_market_capitalisation(period, session_price=session_price, effective_shares=effective_shares)
+        market_cap = evaluate_market_capitalisation(period, session_price=session_price,
+                                                    effective_shares=effective_shares,
+                                                    price_basis_verified=price_basis_verified)
         enterprise_value = evaluate_enterprise_value(period_facts, period, market_cap)
         periods.append({
             "reporting_period": period,

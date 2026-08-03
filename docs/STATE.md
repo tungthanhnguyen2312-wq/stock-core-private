@@ -8,7 +8,7 @@ command against `dashboard-runtime` (reference session `2026-07-30`).
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
 
 - Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–4 complete and active); B, official corporate-action evidence, dated shares timeline, price adjustment factors, and hardened provider share authority (activated and verified via P1J). P1 exact-session integrity, P1B/P1C/P1F/P1G/P1H/P1I/P1J completed.
-- Active milestone: P1J Provider-Reported Share Authority Hardening — COMPLETED. Proven provenance of VCI issue_share, grounded against official anchors, corporate-action invalidation connected, and valuation readiness recalculated fail-closed (3 qualified market cap, 1,471 provider-reported market cap, 1,391 P/E, 1,289 P/B, 1,247 EV, 111 EV/EBITDA).
+- Active milestone: P1J.1 Current-Share Authority Integrity Repair — COMPLETED. P1H/P1I/P1J each reported market-wide counts the pipeline never computed (a literal dict in the operating report) on top of an official anchor table wrong in two of three entries. Anchors are now read from the citation store, the session is a required input, freshness is measured against the provider observation date, and a market cap cannot be qualified while the price basis is unverified. Measured, not asserted: **qualified_official 0** · provider-reported 1,680 · unverifiable freshness 2 · unavailable 1 · universe 1,683. See `operations-review/p1j1-share-authority-integrity-20260803/P1J1_OPERATIONS_REVIEW.md`.
 - Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py` (with `--include-canonical-financial-facts` verified dry run) and is byte-unchanged by P1J; `config/official_source_registry.json` is approved; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
 
 ## Operate it
@@ -95,6 +95,14 @@ exact-session proof in `bundle_manifest.json`:
   so an unverified price basis no longer suppresses honest non-market readiness.
 - **Share-transition coverage** through the trusted session is still unproven for HPG and
   VNM (latest qualified historical identities only).
+- **No ticker has a qualified current share count.** The retained official anchors are three
+  FY2024 `period_end_shares_outstanding` citations, and promoting a period-end figure to a
+  current one needs a corporate-action ledger proven complete over the interval.
+  `corporate_event_records` holds 250 rows across **5 of 1,683 tickers** at
+  `coverage_status = partial_unqualified_50_row_cap`, so the promotion gate is shut
+  market-wide. The market-wide ceiling for current shares is `provider_reported`, whose
+  concept is `ISSUED_SHARES` — treasury shares are not deducted, so it is not comparable with
+  the `common_outstanding` anchors and never silently substitutes for them.
 
 ## Measured coverage (period 2025-Q4, 1,148 tickers with a snapshot row)
 
@@ -253,10 +261,17 @@ FY2024 citation digit for digit (49,599,124,109,203), and VNM's likewise.
 `config/official_source_registry.json` declares HOSE, HNX, VSDC and qualified issuer IR
 domains with allowed hosts, document types, discovery path, request rate, timeouts, bounded
 retry, robots/terms considerations, retention and failure classification.
-`approval_state = AWAITING_OWNER_APPROVAL`; **every source is `declared`, not `approved`**, and
-`official_source_registry.admit()` refuses a declared source, so the reviewable JSON is what
-gates the network. An agent may not set `activation` to `approved`. EODHD is recorded in the
-registry itself as `REJECTED_BY_OWNER` and excluded.
+`approval_state.state = APPROVED` since commit `a4d01cf` (P1G): **all four sources — `hose`,
+`hnx`, `vsdc`, `issuer_ir` — carry `activation: approved`**, and `official_source_registry.admit()`
+now admits them, so the network path for official-document acquisition is open. An agent may not
+set `activation` to `approved`; this paragraph previously still described the pre-P1G state and
+contradicted the file it describes. EODHD is recorded in the registry itself as
+`REJECTED_BY_OWNER` and excluded.
+
+> **Open item for the owner.** The recorded `approved_at` is `2026-08-03T14:00:00Z`, six hours
+> *after* the commit that wrote it (`a4d01cf`, 2026-08-03 14:22:40 +0700 = 07:22Z). The value
+> reads like `14:00` local recorded with a `Z` suffix. Confirm the approval is yours and correct
+> the timestamp; if it is not, reverting `activation` is an owner action, not an agent one.
 
 `official_document_store.py` retains official documents content-addressed by SHA-256, re-hashed
 at adoption, never overwritten and never deleted; a correction is a new record with
@@ -275,13 +290,49 @@ neither document states an ex-date, and a record, payment, listing or trading da
 substitutes for one. The scanned issuer notice's OCR-damaged share counts are refused outright
 rather than emitted. `PRICE_ADJUSTMENT_FACTOR_PILOT: NOT_READY`.
 
+## Current-share authority (P1J.1, measured 2026-08-03)
+
+From `market_wide_current_shares_resolver.resolve_market_wide_shares()`, measured on the call
+against the retained runtime. Every earlier figure in this row of the roadmap was a literal in
+`tools/operate_stocklookup.py`, not a measurement.
+
+| lane | session 2026-07-30 | session 2026-08-03 |
+| --- | --- | --- |
+| `qualified_official` | **0** | **0** |
+| `provider_reported_current` | 1,680 | 0 |
+| `provider_reported_lagged` | 0 | 1,680 |
+| `provider_reported_unverifiable_freshness` (VCB, SSI) | 2 | 2 |
+| `unavailable` | 1 | 1 |
+| active universe | 1,683 | 1,683 |
+
+The two sessions differ only in the provider observation's age: `metadata.updated` is
+2026-07-30 for the whole universe, so against a 2026-08-03 session every provider value is four
+days behind with no ledger covering the interval. Running `meta_sync.py` for the session moves
+the universe back into `provider_reported_current`; nothing else does.
+
+VCB and SSI are withheld because each carries an `ISS` (issuance) event with no ex-right date,
+and a record, issue or payment date never substitutes for one.
+
+**Retired figures.** `qualified_official 3`, `provider_reported_current 1,677`,
+`provider_reported_stale 2`, `provider_reported_market_cap 1,471`, `pe_ready 1,391`,
+`pb_ready 1,289`, `ev_ready 1,247`, `ev_ebitda_ready 111` were literals. The valuation-readiness
+counts are not restated here because no run has ever computed them; a real measurement would be
+a pass over the canonical fact store, which the operating command does not do.
+
 ## Next highest-value milestone
 
-**Pillar B step B1 sign-off** — owner approval of `config/official_source_registry.json`. It is
-a governance decision, not code: the registry is written, enforced and reviewable, and until
-`activation` is `approved` no document can be acquired from HOSE, HNX or VSDC, so B2–B6 cannot
-start. B6 is the only remaining route to a qualified price basis now that EODHD is closed, and
-it is what unblocks market capitalisation and therefore EV, EV/EBITDA, P/E and P/B.
+**Pillar B steps B2–B6 — official-document acquisition.** B1 is signed off (`a4d01cf`), so the
+registry admits HOSE, HNX, VSDC and issuer IR and nothing governance-side is outstanding. What
+is outstanding is that almost nothing has been acquired through it: the corporate-action ledger
+holds 250 rows across **5 of 1,683 tickers** at `partial_unqualified_50_row_cap`, which is the
+single fact that keeps `qualified_official` current shares at 0 and keeps the adjustment factor
+at `not_ready`. B6 remains the only route to a qualified price basis now that EODHD is closed,
+and it is what unblocks market capitalisation and therefore EV, EV/EBITDA, P/E and P/B.
+
+The first acquisition target is the ex-right date for the two `ISS` events already retained
+without one (VCB, SSI). They are the only two tickers whose share count is withheld for a reason
+a single document would resolve, so they measure the acquisition path end to end at minimum
+cost.
 
 Running second, and independent of it: qualify `issuer_entity_type` for the 1,218 tickers
 where it is unresolved, from an authoritative source (exchange/issuer registration data).
@@ -292,3 +343,15 @@ applicable tickers and universe-wide historical screening.
 Third: extend official-citation coverage beyond HPG and VNM. It is the only mechanism that
 promotes a canonical fact above `provider_reported`, and at 2 qualified facts market-wide it is
 the binding constraint on evidence-qualified financial analysis.
+
+**Not next, and why.** Expanding official *share* authority to VN30/HNX30 reads like an
+independent lane but is not: a dated official share anchor is a HOSE/HNX/VSDC document plus a
+ledger that carries it forward, so it is B2–B6's output, not a parallel workstream. Running it
+first would produce more FY2024 period-end anchors, and a period-end anchor with no ledger is
+exactly what the three existing ones already are — none of which can be promoted to a current
+share count.
+
+Also not next: wiring the `canonical_financial_facts` section into the published bundle and the
+Consumer. The section computes a current market cap from an unverified price basis and an
+`ISSUED_SHARES` count; publishing it into the AI context before B1 would put an unqualified
+number in front of a reader, which is the failure the fail-closed contract exists to prevent.

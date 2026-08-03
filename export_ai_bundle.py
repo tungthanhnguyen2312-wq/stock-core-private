@@ -2637,11 +2637,18 @@ def attach_distribution_evidence(
 
 
 def attach_canonical_financial_facts(bundle_entries: dict[str, dict], root: Path,
-                                     include: bool) -> dict[str, dict]:
-    """Disabled-by-default opt-in; see canonical_financial_bundle_section.attach."""
+                                     include: bool, *, session_date: str | None = None,
+                                     price_basis_verified: bool = False) -> dict[str, dict]:
+    """Disabled-by-default opt-in; see canonical_financial_bundle_section.attach.
+
+    `session_date` is the session the rest of this export is anchored to. The section resolves
+    a share count and a price for that session, so it has to be told which one; left to a
+    default it stamped one session's shares onto every export.
+    """
     from canonical_financial_bundle_section import attach
 
-    return attach(bundle_entries, root, include)
+    return attach(bundle_entries, root, include, session_date=session_date,
+                  price_basis_verified=price_basis_verified)
 
 
 # ==========================================================================
@@ -3163,7 +3170,9 @@ def main() -> int:
     # unset nothing is read from the canonical fact store and no key is added, so the default
     # bundle -- and therefore the exact-session proof that hash-binds it -- is unchanged.
     attach_canonical_financial_facts(bundle_entries, runtime_root(),
-                                     args.include_canonical_financial_facts)
+                                     args.include_canonical_financial_facts,
+                                     session_date=latest_session,
+                                     price_basis_verified=price_basis.get("price_basis_verified") is True)
     # Phase 6B: reconcile the legacy fundamental_quality.models.earnings_quality subsection
     # against fundamental_quality_evidence when both are present on the same entry. A no-op
     # (adds one informational limitation only) whenever the opt-in evidence contract was not

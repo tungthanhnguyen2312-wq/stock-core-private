@@ -45,10 +45,43 @@ python tools/operate_stocklookup.py --runtime-root C:\Projects\StockLookup\dashb
 * **Dry-Run Mode (Default)**: Validates state and execution plan; writes nothing to production files or served checkout.
 * **Live Mode (`--execute --publish --web-root <path> --live`)**: Promotes release artifacts by atomic rename into served checkout, updates manifest hashes, and commits release.
 
+## Verifying the run
+
+Read these off the report the run just wrote (`reports/operate_stocklookup_latest.json`),
+in this order. Anything that does not match is the finding.
+
+1. `steps[].preflight_database.reference_session_date` is the session you intended to publish.
+2. `market_wide_shares_coverage.session_date` equals it, and `status` is `measured`.
+   `measured_at` is this run's clock. A block with `status: unresolved_error` means the share
+   stores could not be read — that is a finding, not a formatting issue.
+3. `market_wide_shares_coverage.counts_reconcile` is `true` and the lane counts sum to
+   `active_universe_count`.
+4. Read the lane split rather than a single headline. `qualified_official` is **0** and will
+   stay 0 until the corporate-action ledger is qualified for a ticker that also has an
+   official anchor — see `docs/STATE.md`. Everything usable is `provider_reported_*`.
+5. If the whole universe is `provider_reported_lagged`, the provider share observation
+   (`metadata.updated`) is older than the session. `--prepare-inputs` does **not** refresh it;
+   it is offline by construction. Only the daily market chain's `meta_sync.py` moves it.
+6. `outcome`, `failed_gate`, and — on failure — that `rollback.performed` is `true` and the
+   four artifact hashes match the previous session's set.
+
+Do not read a valuation-readiness count out of this report. It does not compute one, and the
+counts that used to appear here (`pe_ready_count` and siblings) were literals — see
+`docs/DECISIONS.md`, "A reported measurement must be produced by the run that reports it".
+
+## Known failure: stale context packages
+
+`export_analysis_bundle` fails with `lệch phiên: context_package: <old> (cần <session>)` when
+the Consumer's context packages belong to an earlier session than the one resolved. This is the
+export gate working, not a bug. Re-run with `--prepare-inputs`, which rebuilds them (slow —
+`candle_scan.py` alone is ~25 minutes over the full universe). `--allow-stale` exists but
+records the divergence in the manifest and should not be used for a published release.
+
 ## Canonical Financial Limitations
 
 * EBITDA ready for 231 tickers; ROE ready for 1,321 tickers.
 * Market Capitalisation, EV, EV/EBITDA, P/E, and P/B remain `unavailable` / `blocked_by_price_basis` because price basis and share count acquisition are unverified.
+* No ticker has a qualified current share count: the three retained official anchors are FY2024 period-end figures, and the corporate-action ledger covers 5 of 1,683 tickers at `partial_unqualified_50_row_cap`, so none can be carried forward to the session.
 * Corporate-action crawling and price basis qualification remain separate downstream milestones.
 
 ## Failure & Recovery

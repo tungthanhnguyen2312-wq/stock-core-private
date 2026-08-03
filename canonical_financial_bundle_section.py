@@ -164,7 +164,16 @@ def build_section(ticker: str, facts: Sequence[Mapping[str, Any]],
     }
 
 
-def _resolve_session_inputs(ticker: str, entry: Mapping[str, Any], runtime_root: Path | str) -> tuple[float | None, dict[str, Any] | None]:
+def _resolve_session_inputs(ticker: str, entry: Mapping[str, Any], runtime_root: Path | str,
+                            session_date: str,
+                            shares_store: Any = None) -> tuple[float | None, dict[str, Any] | None]:
+    """The price and share count for one ticker, both pinned to `session_date`.
+
+    The database fallback asks for the session's close, not the newest close. `ORDER BY date
+    DESC LIMIT 1` returned whatever row happened to be last for that ticker, so a ticker that
+    stopped trading weeks ago contributed its last price to the current session's market cap
+    with nothing marking the mismatch.
+    """
     t = str(ticker).upper()
     price = None
     if isinstance(entry, Mapping) and entry.get("close") is not None and not isinstance(entry.get("close"), bool) and float(entry.get("close")) > 0:
@@ -174,25 +183,31 @@ def _resolve_session_inputs(ticker: str, entry: Mapping[str, Any], runtime_root:
         if db_path.is_file():
             try:
                 import sqlite3
-                conn = sqlite3.connect(db_path)
-                cursor = conn.cursor()
-                cursor.execute("SELECT close FROM ohlcv WHERE ticker = ? ORDER BY date DESC LIMIT 1", (t,))
-                row = cursor.fetchone()
+                conn = sqlite3.connect(f"file:{db_path.resolve().as_posix()}?mode=ro", uri=True)
+                try:
+                    conn.execute("PRAGMA query_only = ON")
+                    conn.execute("PRAGMA busy_timeout = 30000")
+                    row = conn.execute(
+                        "SELECT close FROM ohlcv WHERE ticker = ? AND date = ?",
+                        (t, session_date)).fetchone()
+                finally:
+                    conn.close()
                 if row and row[0] is not None and float(row[0]) > 0:
                     price = float(row[0])
-                conn.close()
             except Exception:
                 pass
 
     import market_wide_current_shares_resolver as shares_resolver
-    resolved_shares = shares_resolver.resolve_effective_shares(t, runtime_root)
+    resolved_shares = shares_resolver.resolve_effective_shares(
+        t, runtime_root, session_date, store=shares_store)
     shares = resolved_shares if resolved_shares.get("value") is not None else None
 
     return price, shares
 
 
 def attach(bundle_entries: Mapping[str, dict], runtime_root: Path | str,
-           include: bool) -> Mapping[str, dict]:
+           include: bool, *, session_date: str | None = None,
+           price_basis_verified: bool = False) -> Mapping[str, dict]:
     """Disabled-by-default opt-in, matching the Phase 5A/6A wiring exactly.
 
     With `include=False` nothing is read, nothing is built and no key is added, so the default
@@ -200,6 +215,11 @@ def attach(bundle_entries: Mapping[str, dict], runtime_root: Path | str,
     partially written, so one bad shard can never corrupt another ticker's entry.
     """
     if not include:
+        return bundle_entries
+    if not session_date:
+        # No session, no snapshot. A share count and a price are both session-relative, so
+        # building the section without knowing the session is how one session's numbers end
+        # up inside another session's bundle.
         return bundle_entries
 
     from canonical_fact_store import _load_state, read_facts
@@ -211,6 +231,14 @@ def attach(bundle_entries: Mapping[str, dict], runtime_root: Path | str,
         return bundle_entries
     fingerprint = state.get("state_fingerprint")
     records = {str(record["ticker"]): record for record in state.get("tickers") or []}
+
+    # One read of the share stores for the whole export rather than one per ticker.
+    shares_store = None
+    try:
+        from market_wide_current_shares_resolver import _Store
+        shares_store = _Store(runtime_root)
+    except Exception:  # noqa: BLE001 - each ticker then resolves fail-closed on its own
+        shares_store = None
 
     for ticker, entry in bundle_entries.items():
         record = records.get(str(ticker).upper())
@@ -226,12 +254,14 @@ def attach(bundle_entries: Mapping[str, dict], runtime_root: Path | str,
                 "template_family": record.get("template_family"),
                 "authority": record.get("archetype_authority"),
             }
-            price, shares = _resolve_session_inputs(ticker, entry, runtime_root)
+            price, shares = _resolve_session_inputs(ticker, entry, runtime_root, session_date,
+                                                    shares_store)
             readiness = evaluate_ticker(ticker, facts, {
                 "ticker": str(ticker).upper(), "archetype": archetype,
                 "metric_applicability": {metric: metric_applicability(archetype, metric)
                                          for metric in ("ebitda", "ev_ebitda")}},
-                session_price=price, effective_shares=shares)
+                session_price=price, effective_shares=shares,
+                price_basis_verified=price_basis_verified)
             entry[SECTION_KEY] = build_section(ticker, facts, readiness, fingerprint)
         except Exception:  # noqa: BLE001 - one ticker failing never corrupts the export
             continue

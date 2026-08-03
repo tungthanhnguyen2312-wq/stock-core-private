@@ -15,6 +15,11 @@ sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
 sys.path.insert(0, str(CONSUMER_ROOT))
 
+#: The session the retained runtime is anchored to. The share and price legs of this
+#: section are both session-relative, so the tests state the session explicitly.
+SESSION = "2026-07-30"
+
+
 import official_source_registry as registry  # noqa: E402
 import official_document_store as doc_store  # noqa: E402
 import corporate_action_events as events  # noqa: E402
@@ -235,7 +240,7 @@ class WorkstreamG_ProducerConsumerIntegrationTests(unittest.TestCase):
             "HPG": {"company_name": "Hoa Phat Group"},
             "VCB": {"company_name": "Vietcombank"},
         }
-        attached = attach(bundle_entries, self.runtime_root, include=True)
+        attached = attach(bundle_entries, self.runtime_root, include=True, session_date=SESSION)
         bundle = {"schema_version": "1.0.0", "tickers": attached}
 
         context_hpg = {"ticker": "HPG", "provenance": []}

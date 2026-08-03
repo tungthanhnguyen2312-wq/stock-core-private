@@ -190,3 +190,40 @@ Reopening requires an explicit owner decision.
 ## 2026-08-03 - Income-statement taxonomy evidence lives outside the pinned classifier
 - The new exclusive income-statement marker sets are in `financial_entity_applicability.py`, not in `statement_taxonomy_classifier.py`. That module is pinned at `VERSION = "2.0.0"` and feeds `statement_taxonomy_sidecar.json`, which is hash-bound into the shipped bundle; adding markers there would move the sidecar fingerprint and change a production artifact for a reason unrelated to this milestone.
 - The markers were validated market-wide before being written down: zero occurrences across the union of all 1,261 corporate-template income statements, 100% match within each group, zero cross-group overlap. The insurance set resolves 12 of the 13 tickers the balance sheet can only call `financial_specialized_ambiguous`.
+
+## 2026-08-03 - A reported measurement must be produced by the run that reports it
+- `tools/operate_stocklookup.py::report()` carried `market_wide_shares_coverage` as a dict literal: `active_universe_count: 1683`, `pe_ready_count: 1391` and eleven siblings. Advancing a milestone meant editing the numbers by hand — commit `5209447` changed `1679 → 1677` and `1393 → 1391` as source edits. The block would have printed identical numbers against an empty runtime root, and the only production report ever written carries the key as `null`.
+- **A number in an operating report must be computed by that run, from that run's inputs, and must carry `measured_at` and the session it was measured for.** A count that no data change can move is not a measurement, and labelling it one in a report the operator saves as a baseline is worse than omitting it.
+- The valuation-readiness counts were **removed rather than re-derived**. They describe a pass over the canonical fact store, which this command does not perform and never performed; restating them anywhere would repeat the original error in a new place.
+- This applies to milestone operations reviews as well. P1J's review recorded a "Workstream B" grounding table whose HPG and VCB rows disagree with both the database and the citation store, because the comparison was written rather than run.
+
+## 2026-08-03 - Official share anchors are read from the citation store, never carried as literals
+- `market_wide_current_shares_resolver.QUALIFIED_SHARES` held three share counts as literals. Two were wrong. HPG's `7,163,748,865` appears in no citation and no ledger: it applied the 2026-06-04 stock dividend to the FY2024 period-end figure, when the event's own ratio fixes its base at `767,498,665 / 0.0999937567 = 7,675,465,852` and the ledger records `shares_after = 8,442,964,520`. VCB's `5,589,091,222` is the citation's `5,589,091,262` mistyped by 40 shares.
+- The resolver was therefore overriding a **correct** provider value with a fabricated one 15% too low for HPG, under the system's highest authority label.
+- Anchors now come from `data/official-evidence/share_basis_citations.jsonl` on every call. A regression test asserts both retired literals appear nowhere in the module.
+
+## 2026-08-03 - A period-end share count is not a current share count
+- All three retained anchors are `identity_type: period_end_shares_outstanding`, `reporting_period: 2024`. Serving one as a *current* share count asserts that nothing changed between the period end and the session — which is a claim about the corporate-action record, not about the anchor.
+- Promotion to `qualified_official` therefore requires an official anchor **and** a ledger whose `coverage_status` is qualified across that interval. `corporate_event_records` covers 5 of 1,683 tickers at `partial_unqualified_50_row_cap`, so the gate is shut market-wide and `qualified_official` is **0**, not 3.
+- This is not a regression. It is what was always true; the previous count reported the size of a hardcoded table.
+
+## 2026-08-03 - Freshness is measured against the observation, and only an ex-right date positions an event
+- The retired rule invalidated a provider share count when any event carried a date after a fixed literal `'2024-12-31'`, across `exright_date`, `record_date` **or** `issue_date`, for any event category. It therefore invalidated counts on events the observation already reflects (HPG's 2026-06-04 dividend against a 2026-07-30 observation), and fired on shareholder meetings and major-shareholder trades, which change no share count.
+- The rule is now: compare the event's **ex-right date** against the provider's observation date (`metadata.updated`). A record, issue, payment or listing date never substitutes for an ex-right date — the same rule pillar B already applies to adjustment factors.
+- `ISS` is the declared share-changing code; ten codes are declared not share-changing; anything else is `unclassified` and treated as share-relevant. An unknown code is never silently benign.
+- A share-relevant event with no ex-right date cannot be positioned, so the ticker resolves to `provider_reported_unverifiable_freshness` with no value, rather than to either `current` or `stale`.
+
+## 2026-08-03 - A failed read is not an absent value, and a share store is opened read-only
+- Both retired lookups wrapped their queries in `except Exception: pass`. An unreadable corporate-event table returned an empty set, silently promoting the whole universe to `provider_reported_current`; an unreadable metadata row was reported as "no valid retained share observation found". Fail-open, under a fail-closed contract.
+- Read failures now raise `ShareStoreUnreadable` and surface as `unresolved_error`, a lane of its own that is never folded into `unavailable` or into a provider lane. A market-wide read failure reports no counts at all rather than zeroes.
+- The database is opened read-only (`mode=ro`, `PRAGMA query_only`, `busy_timeout`), matching the operating command's probe. The retired code opened it read-write once per ticker and again for the event scan — 3,366 read-write connections for one market-wide pass, against a database in rollback-journal mode with a live daily writer.
+
+## 2026-08-03 - A market capitalisation is only as qualified as its weaker leg
+- `evaluate_market_capitalisation()` set `status = qualified` from the share status alone. The price basis has been `unknown`/`verified: false` throughout, so a qualified share count produced a "qualified" market cap built on an unqualified price.
+- The price leg's authority is now an explicit input (`price_basis_verified`) and defaults to `False`. No market cap, and therefore no EV, EV/EBITDA, P/E or P/B, can be `qualified` while the price basis is unverified.
+- The share **concept** travels with the value. `ISSUED_SHARES` does not deduct treasury shares, so a cap built on it is not comparable with one built on `common_outstanding`, and carries a named warning saying so instead of being averaged into a universe-wide figure.
+- The session price is read for the session (`WHERE date = ?`), not as the newest row for the ticker. `ORDER BY date DESC LIMIT 1` gave a delisted or suspended ticker's last-ever close to the current session's market cap with nothing marking the mismatch.
+
+## 2026-08-03 - The session is an input to every session-relative resolution
+- `resolve_effective_shares` defaulted `target_date` to the literal `"2026-07-30"`, and the one production caller passed nothing, so every export stamped that session's shares onto whatever session it was building. `session_date` is now required and validated on both entry points, and `canonical_financial_bundle_section.attach()` attaches nothing without one.
+- `Operator.run()` re-anchors the session after `prepare_inputs()`. It previously called `preflight_database()` again and discarded the result, binding the taxonomy sidecar to the session that preceded the input refresh.
