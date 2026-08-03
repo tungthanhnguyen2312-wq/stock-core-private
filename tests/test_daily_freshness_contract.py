@@ -415,9 +415,11 @@ class DryRunPurityTests(DailyChainTestCase):
 class B1ApprovalInstantTests(unittest.TestCase):
     """The recorded instant, and what may be concluded from it.
 
-    `approved_at` is `2026-08-03T14:00:00Z`; the commit that wrote it was created at about
-    `07:22Z`. No owner record in the repository states which clock 14:00 was read from, so
-    the instant is unverified and stays unverified until the owner says otherwise.
+    `approved_at` was `2026-08-03T14:00:00Z` while the commit that wrote it was created at
+    about `07:22Z`. The owner confirmed on 2026-08-03 that they approved the registry
+    personally and that 14:00 was Asia/Ho_Chi_Minh, so the canonical instant is `07:00:00Z`
+    and the record carries that provenance. The rules that held it unverified are still under
+    test below, against synthetic states — the fix was a fact from the owner, not a weakening.
     """
 
     @staticmethod
@@ -426,9 +428,17 @@ class B1ApprovalInstantTests(unittest.TestCase):
         state.update(overrides)
         return {"approval_state": state}
 
-    def test_the_shipped_instant_is_unverified(self) -> None:
+    def test_the_shipped_instant_is_verified_and_carries_its_clock(self) -> None:
         verdict = registry.approval_instant_verdict()
-        self.assertEqual(verdict["verdict"], registry.VERDICT_UNVERIFIED)
+        self.assertEqual(verdict["verdict"], registry.VERDICT_VERIFIED)
+        self.assertEqual(verdict["approved_at"], "2026-08-03T07:00:00Z")
+        self.assertIn("Ho_Chi_Minh", verdict[registry.APPROVAL_PROVENANCE_FIELD])
+
+    def test_the_shipped_instant_is_not_ahead_of_the_commit_that_recorded_it(self) -> None:
+        """The defect was a local time written with a `Z`; 07:22Z is when it was written."""
+        verdict = registry.approval_instant_verdict(
+            now=datetime(2026, 8, 3, 7, 22, tzinfo=timezone.utc))
+        self.assertEqual(verdict["verdict"], registry.VERDICT_VERIFIED)
 
     def test_a_future_instant_is_unverified(self) -> None:
         verdict = registry.approval_instant_verdict(
@@ -456,15 +466,23 @@ class B1ApprovalInstantTests(unittest.TestCase):
             {"approval_state": {"state": "AWAITING_OWNER_APPROVAL"}})
         self.assertEqual(verdict["verdict"], registry.VERDICT_PENDING)
 
-    def test_an_unverified_instant_admits_nothing(self) -> None:
+    def test_an_unverified_instant_still_admits_nothing(self) -> None:
+        """The gate is unchanged; only the record it reads was corrected by the owner."""
+        stripped = registry.load_registry()
+        stripped["approval_state"].pop(registry.APPROVAL_PROVENANCE_FIELD, None)
         decision = registry.admit("hose", "https://www.hsx.vn/notice.pdf",
-                                  "corporate_action_notice")
+                                  "corporate_action_notice", registry=stripped)
         self.assertEqual(decision["decision"], registry.REFUSED)
         self.assertEqual(decision["reason"], registry.REASON_APPROVAL_TIMESTAMP)
 
+    def test_a_verified_instant_admits(self) -> None:
+        decision = registry.admit("hose", "https://www.hsx.vn/notice.pdf",
+                                  "corporate_action_notice")
+        self.assertEqual(decision["decision"], registry.ADMITTED)
+
     def test_the_registry_summary_carries_the_verdict(self) -> None:
         self.assertEqual(registry.registry_summary()["approval_instant"]["verdict"],
-                         registry.VERDICT_UNVERIFIED)
+                         registry.VERDICT_VERIFIED)
 
 
 if __name__ == "__main__":

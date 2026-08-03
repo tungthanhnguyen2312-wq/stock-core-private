@@ -84,8 +84,11 @@ class SourceRegistryTests(unittest.TestCase):
         self.assertEqual(decision["policy"]["max_attempts"], 2)
 
     def test_an_unverifiable_approval_instant_refuses_an_otherwise_valid_request(self):
+        """The shipped instant is owner-verified, so strip its provenance to exercise the gate."""
+        unprovenanced = _approved_registry()
+        unprovenanced["approval_state"].pop(registry.APPROVAL_PROVENANCE_FIELD, None)
         decision = registry.admit("hnx", "https://www.hnx.vn/x", "corporate_action_notice",
-                                  registry=_approved_registry())
+                                  registry=unprovenanced)
         self.assertEqual(decision["decision"], registry.REFUSED)
         self.assertEqual(decision["reason"], registry.REASON_APPROVAL_TIMESTAMP)
 

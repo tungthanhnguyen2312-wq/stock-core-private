@@ -65,12 +65,19 @@ class WorkstreamA_SourceRegistryTests(unittest.TestCase):
                                 "corporate_action_notice", registry=verifiable)
         self.assertEqual(res_ir["decision"], registry.ADMITTED)
 
-    def test_the_shipped_approval_instant_is_unverified_and_admits_nothing(self) -> None:
+    def test_the_shipped_approval_instant_is_verified_and_admits(self) -> None:
+        """Owner-confirmed 2026-08-03: 14:00 was Asia/Ho_Chi_Minh, canonical 07:00Z."""
         verdict = registry.approval_instant_verdict()
-        self.assertEqual(verdict["verdict"], registry.VERDICT_UNVERIFIED)
+        self.assertEqual(verdict["verdict"], registry.VERDICT_VERIFIED)
         decision = registry.admit("hose", "https://www.hsx.vn/notice.pdf",
                                   "corporate_action_notice")
-        self.assertEqual(decision["decision"], registry.REFUSED)
+        self.assertEqual(decision["decision"], registry.ADMITTED)
+
+    def test_stripping_the_clock_provenance_closes_the_registry_again(self) -> None:
+        stripped = registry.load_registry()
+        stripped["approval_state"].pop(registry.APPROVAL_PROVENANCE_FIELD, None)
+        decision = registry.admit("hose", "https://www.hsx.vn/notice.pdf",
+                                  "corporate_action_notice", registry=stripped)
         self.assertEqual(decision["reason"], registry.REASON_APPROVAL_TIMESTAMP)
 
         # Refused cases

@@ -6,7 +6,8 @@
     "state": "APPROVED",
     "meaning": "Owner approved declared sources. `official_source_registry.py` admits requests for approved sources according to rate, host, and document rules.",
     "approved_by": "owner",
-    "approved_at": "2026-08-03T14:00:00Z",
+    "approved_at": "2026-08-03T07:00:00Z",
+    "approved_at_provenance": "Owner confirmed on 2026-08-03 that they approved the registry personally and that the originally recorded 14:00 was Asia/Ho_Chi_Minh (UTC+07:00); the canonical instant is therefore 07:00Z. The earlier 2026-08-03T14:00:00Z was a local time written with a Z suffix.",
     "reopening_rule": "Activating a source is an owner decision recorded here and in docs/DECISIONS.md."
   },
   "global_policy": {

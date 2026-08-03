@@ -269,28 +269,17 @@ set `activation` to `approved`; this paragraph previously still described the pr
 contradicted the file it describes. EODHD is recorded in the registry itself as
 `REJECTED_BY_OWNER` and excluded.
 
-> **B1_APPROVAL_STATUS: UNVERIFIED — the acquisition path is closed until the owner acts.**
-> The recorded `approved_at` is `2026-08-03T14:00:00Z`, seven hours *after* the commit that
-> wrote it (`a4d01cf`, 2026-08-03 14:22:40 +0700 = 07:22Z) — the signature of a local time
-> written with a `Z`. No owner record in this repository states which clock 14:00 was read
-> from, so the instant was **not** normalized and the approval was **not** modified.
-> `official_source_registry.approval_instant_verdict()` returns `unverified` and `admit()`
-> refuses every source with `approval_instant_not_verifiable`, so B2–B6 cannot acquire
-> anything.
+> **B1_APPROVAL_STATUS: VERIFIED — the acquisition path is open.** The owner confirmed on
+> 2026-08-03 that they approved the registry personally and that the originally recorded
+> `14:00` was Asia/Ho_Chi_Minh. The canonical instant is therefore `2026-08-03T07:00:00Z`,
+> which is consistent with the commit that wrote it (`a4d01cf`, 07:22Z); the earlier
+> `14:00:00Z` was a local time written with a `Z`. `approved_at_provenance` records the clock
+> and the confirmation, `approval_instant_verdict()` returns `verified`, and `admit()` admits
+> all four sources — `hose`, `hnx`, `vsdc`, `issuer_ir`.
 >
-> **The owner's answer must take exactly one of these three forms.** No other reading is
-> actionable, and a commit timestamp is not evidence of which clock was used — `14:22 +0700`
-> makes "14:00 local" plausible and proves nothing.
->
-> 1. *"14:00 is Vietnam time."* → set `approved_at = 2026-08-03T07:00:00+00:00` and
->    `approved_at_provenance = "owner recorded 14:00 Asia/Ho_Chi_Minh"`.
-> 2. *"14:00 is UTC."* → keep `approved_at = 2026-08-03T14:00:00Z` and set
->    `approved_at_provenance = "owner recorded 14:00 UTC"`.
-> 3. *"I did not approve the activation."* → revert `activation` to `declared` and leave the
->    registry closed. The timestamp is not legitimised either way.
->
-> Until then the registry stays blocked. The current value is neither corrected nor kept on the
-> strength of already existing, and an agent writes neither field.
+> The gate itself is unchanged and still closes: removing `approved_at_provenance` returns the
+> registry to refusing everything, and that is under test. What changed was a fact supplied by
+> the owner, not the standard.
 
 `official_document_store.py` retains official documents content-addressed by SHA-256, re-hashed
 at adoption, never overwritten and never deleted; a correction is a new record with
@@ -398,13 +387,9 @@ a pass over the canonical fact store, which the operating command does not do.
 
 ## Next highest-value milestone
 
-**Owner action first: record the B1 approval instant's clock provenance.** `activation` is
-`approved` for all four sources, but the recorded instant is unverifiable, so `admit()` refuses
-everything and B2–B6 cannot start. One field from the owner reopens the path; see the pillar B
-section above for the exact edit. Nothing else on this list can proceed past it.
-
-**Then pillar B steps B2–B6 — official-document acquisition.** What is outstanding once the
-registry admits again is that almost nothing has been acquired through it: the ledger
+**Pillar B steps B2–B6 — official-document acquisition. Unblocked 2026-08-03.** The registry
+admits again, so the constraint is no longer governance but coverage: almost nothing has been
+acquired through it. The ledger
 holds 250 rows across **5 of 1,683 tickers** at `partial_unqualified_50_row_cap`, which is the
 single fact that keeps `qualified_official` current shares at 0 and keeps the adjustment factor
 at `not_ready`. B6 remains the only route to a qualified price basis now that EODHD is closed,
