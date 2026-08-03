@@ -9,7 +9,7 @@ entry points rather than reimplementing them:
     export_ai_bundle.py --verify                recorded-vs-on-disk sha256 of every source
     ai-core-private/builders/build_ticker_context.py
                                                 Consumer load + exact-session validation
-    publish_dashboard.py                        the only thing allowed to publish
+    tools/publish_release.py                    the only thing allowed to publish
 
 WHAT IT DOES NOT DO
     It never fetches prices, macro series or news, and never writes to vn_stock.db or any
@@ -21,10 +21,18 @@ MODES
     (default)              dry run. Reads and reports; writes nothing, publishes nothing.
     --execute              rebuild sidecar + bundle + manifest, verify, Consumer-validate,
                            write the operating report.
-    --execute --publish    additionally run the dashboard publisher in ITS dry-run mode.
-    --execute --publish --live
-                           additionally run the publisher for real (git add/commit/push of
-                           its own whitelist only).
+    --execute --publish --web-root <served checkout>
+                           additionally run the release publisher in ITS dry-run mode.
+    --execute --publish --web-root <served checkout> --live
+                           additionally publish for real: stage, hash-verify, promote by
+                           atomic rename, and commit/push exactly the release allowlist.
+
+WHY --web-root IS REQUIRED
+    Publication is a promotion from the runtime root into the checkout that is actually
+    served, and the runtime root is not that checkout: it routinely sits on a feature
+    branch with unrelated generated-artifact drift. Publishing into it committed that drift
+    to a branch nothing serves. Naming the served destination explicitly is what makes the
+    release land where a reader will see it.
 
 EXIT CODES
     0 success   1 a gate failed (artifacts restored where a rollback point existed)
@@ -100,12 +108,16 @@ class GateFailure(RuntimeError):
 
 class Operator:
     def __init__(self, root: Path, tickers: list[str], *, execute: bool, publish: bool,
-                 live: bool, prepare: bool = False, runner: Callable[..., Any] = subprocess.run):
+                 live: bool, prepare: bool = False, web_root: Path | None = None,
+                 verify_live_url: str | None = None,
+                 runner: Callable[..., Any] = subprocess.run):
         self.root = root
         self.tickers = tickers
         self.execute = execute
         self.publish = publish
         self.live = live
+        self.web_root = web_root
+        self.verify_live_url = verify_live_url
         self.runner = runner
         self.steps: list[dict[str, Any]] = []
         self.rollback_dir: Path | None = None
@@ -350,18 +362,26 @@ class Operator:
                    "--tickers", ",".join(self.tickers[:2]), "--dry-run"], CONSUMER_ROOT)
 
     # ------------------------------------------------------------------ 6. publish
-    def publish_dashboard(self) -> None:
-        command = [sys.executable, str(ROOT / "publish_dashboard.py")]
+    def publish_release(self) -> None:
+        """Promote the verified artifact set into the served checkout, atomically.
+
+        Delegates to `tools/publish_release.py`, which owns the release boundary: an exact
+        allowlist, staging, hash verification against the manifest, the Consumer's own
+        exact-session validator, a hash-verified rollback copy, atomic rename promotion, and
+        a git commit restricted to the allowlist. Nothing about "which files are dirty"
+        enters the decision.
+        """
+        if self.web_root is None:
+            raise GateFailure("publish_release", "--publish requires --web-root")
+        command = [sys.executable, str(ROOT / "tools" / "publish_release.py"),
+                   "--source", str(self.root), "--destination", str(self.web_root),
+                   "--json-report", str(self.root / "reports" / "publish_release_latest.json")]
+        if self.verify_live_url:
+            command += ["--verify-live-url", self.verify_live_url]
         if self.live:
             command.append("--live")
-        env_backup = self.env
-        self.env = {**env_backup, "STOCK_LOOKUP_BACKEND_DIR": str(self.root),
-                    "STOCK_LOOKUP_WEB_DIR": str(self.root)}
-        try:
-            self._run("publish_dashboard_live" if self.live else "publish_dashboard_dry_run",
-                      command, self.root)
-        finally:
-            self.env = env_backup
+        self._run("publish_release_live" if self.live else "publish_release_dry_run",
+                  command, ROOT)
 
     def post_publish_smoke(self) -> None:
         bundle = json.loads((self.root / "analysis_bundle.json").read_text(encoding="utf-8"))
@@ -372,9 +392,14 @@ class Operator:
             problems.append("published bundle carries no ticker entries")
         if bundle.get("price_basis_verified") is not True and bundle.get("is_actionable") is True:
             problems.append("bundle claims actionable output on an unverified price basis")
-        for name in ("data/build_info.json",):
-            if self.live and not (self.root / name).is_file():
-                problems.append(f"{name} absent after a live publish")
+        if self.live and self.publish and self.web_root is not None:
+            # The release is only published if the served checkout holds these exact bytes.
+            for name, digest in self.artifact_hashes().items():
+                served = self.web_root / name
+                if not served.is_file():
+                    problems.append(f"{name} is absent from the served checkout")
+                elif _sha256(served) != digest:
+                    problems.append(f"{name} in the served checkout does not match the release")
         if problems:
             raise GateFailure("post_publish_smoke", "; ".join(problems))
         self._record("post_publish_smoke", "passed",
@@ -393,6 +418,7 @@ class Operator:
             "mode": "execute" if self.execute else "dry_run",
             "publish": self.publish, "live": self.live,
             "runtime_root_name": self.root.name,
+            "web_root": str(self.web_root) if self.web_root else None,
             "tickers": self.tickers,
             "started_at": self.started_at, "ended_at": _now(),
             "outcome": outcome,
@@ -424,7 +450,8 @@ class Operator:
                     + "would rebuild the taxonomy sidecar, export the bundle + manifest,"
                     " verify every declared artifact hash, run Consumer exact-session"
                     " validation, then "
-                    + ("publish live" if self.live else "run the publisher dry-run"
+                    + (f"publish live into {self.web_root}" if self.live
+                       else f"run the release publisher dry-run against {self.web_root}"
                        if self.publish else "stop before publishing")))
                 self.report("dry_run_ok", None, None)
                 return 0
@@ -443,7 +470,7 @@ class Operator:
             self.validate_consumer()
             self.consumer_context_smoke()
             if self.publish:
-                self.publish_dashboard()
+                self.publish_release()
             self.post_publish_smoke()
         except GateFailure as exc:
             failure = exc
@@ -476,9 +503,16 @@ def parse_args(argv=None) -> argparse.Namespace:
                              " restorable copy of vn_stock.db before running, because"
                              " stock_analyzer.py upserts its own watchlist_history table.")
     parser.add_argument("--publish", action="store_true",
-                        help="Also run publish_dashboard.py (its own dry-run unless --live).")
+                        help="Also run tools/publish_release.py (its own dry-run unless --live).")
+    parser.add_argument("--web-root", default=None,
+                        help="The Dashboard checkout that is actually served. Required with"
+                             " --publish; the release is promoted into it, never into the"
+                             " runtime root.")
+    parser.add_argument("--verify-live-url", default=None,
+                        help="With --publish --live: re-verify the published hashes over HTTP"
+                             " against the serving origin before reporting success.")
     parser.add_argument("--live", action="store_true",
-                        help="With --publish: let the publisher write, commit and push.")
+                        help="With --publish: let the publisher promote, commit and push.")
     return parser.parse_args(argv)
 
 
@@ -505,8 +539,24 @@ def main(argv=None, runner=subprocess.run) -> int:
     if args.prepare_inputs and not args.execute:
         print("[operate] --prepare-inputs requires --execute", file=sys.stderr)
         return 2
+    web_root: Path | None = None
+    if args.publish:
+        if not args.web_root:
+            print("[operate] --publish requires --web-root: name the Dashboard checkout that"
+                  " is actually served", file=sys.stderr)
+            return 2
+        web_root = Path(args.web_root).expanduser().resolve()
+        if not web_root.is_dir():
+            print(f"[operate] web root does not exist: {web_root}", file=sys.stderr)
+            return 2
+        if web_root == root:
+            print("[operate] the web root must not be the runtime root: publishing into the"
+                  " runtime root commits its unrelated drift to a branch nothing serves",
+                  file=sys.stderr)
+            return 2
     operator = Operator(root, tickers, execute=args.execute, publish=args.publish,
-                        live=args.live, prepare=args.prepare_inputs, runner=runner)
+                        live=args.live, prepare=args.prepare_inputs, web_root=web_root,
+                        verify_live_url=args.verify_live_url, runner=runner)
     try:
         with PipelineLock(root / "locks" / "pipeline.lock"):
             return operator.run()

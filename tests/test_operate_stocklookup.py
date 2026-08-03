@@ -83,13 +83,27 @@ class OperatorTests(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
-        self.root = _runtime(Path(tmp.name))
+        base = Path(tmp.name)
+        self.root = _runtime(base / "runtime")
         _artifacts(self.root)
+        # Publication now promotes into a separate served checkout; the runtime root is
+        # never its own publication destination.
+        self.served = base / "served"
+        self.served.mkdir()
 
     def _operator(self, runner, **kwargs):
         params = {"execute": True, "publish": False, "live": False}
         params.update(kwargs)
+        if params.get("publish"):
+            params.setdefault("web_root", self.served)
         return operate.Operator(self.root, ["HPG", "VNM"], runner=runner, **params)
+
+    def _mirror_release_into(self, web_root: Path) -> None:
+        """Stand in for what publish_release.py does when the fake runner replaces it."""
+        for name in operate.PRODUCTION_ARTIFACTS:
+            source = self.root / name
+            if source.is_file():
+                (web_root / name).write_bytes(source.read_bytes())
 
     # ---------------------------------------------------------------- dry run
     def test_dry_run_writes_nothing_and_publishes_nothing(self):
@@ -98,7 +112,7 @@ class OperatorTests(unittest.TestCase):
         self.assertEqual(self._operator(runner, execute=False, publish=True).run(), 0)
         self.assertEqual({p.name: p.read_bytes() for p in self.root.glob("*.json")}, before)
         self.assertFalse((self.root / "reports").exists())
-        self.assertNotIn("publish_dashboard.py", runner.names())
+        self.assertNotIn("publish_release.py", runner.names())
         self.assertNotIn("export_ai_bundle.py", runner.names())
 
     # ---------------------------------------------------------------- ordering
@@ -112,23 +126,44 @@ class OperatorTests(unittest.TestCase):
         runner = RecordingRunner()
         self.assertEqual(self._operator(runner, publish=True).run(), 0)
         joined = [" ".join(c) for c in runner.calls]
-        publish = next(i for i, c in enumerate(joined) if "publish_dashboard.py" in c)
+        publish = next(i for i, c in enumerate(joined) if "publish_release.py" in c)
         verify = next(i for i, c in enumerate(joined) if "--verify" in c)
         consumer = next(i for i, c in enumerate(joined) if "load_optional_analysis_bundle" in c)
         self.assertLess(verify, publish)
         self.assertLess(consumer, publish)
 
     def test_live_publish_passes_live_and_dry_run_does_not(self):
-        (self.root / "data").mkdir(exist_ok=True)
-        (self.root / "data" / "build_info.json").write_text("{}", encoding="utf-8")
-        runner = RecordingRunner()
+        runner = RecordingRunner(side_effect=lambda joined: (
+            self._mirror_release_into(self.served) if "publish_release.py" in joined else None))
         self.assertEqual(self._operator(runner, publish=True, live=True).run(), 0)
-        publish_call = next(c for c in runner.calls if "publish_dashboard.py" in " ".join(c))
+        publish_call = next(c for c in runner.calls if "publish_release.py" in " ".join(c))
         self.assertIn("--live", publish_call)
+        self.assertIn("--destination", publish_call)
+        self.assertIn(str(self.served), publish_call)
         runner = RecordingRunner()
         self.assertEqual(self._operator(runner, publish=True).run(), 0)
-        publish_call = next(c for c in runner.calls if "publish_dashboard.py" in " ".join(c))
+        publish_call = next(c for c in runner.calls if "publish_release.py" in " ".join(c))
         self.assertNotIn("--live", publish_call)
+
+    def test_a_live_publish_that_did_not_reach_the_served_checkout_fails_the_smoke_check(self):
+        # The publisher "succeeds" but nothing lands in the served checkout.
+        operator = self._operator(RecordingRunner(), publish=True, live=True)
+        self.assertEqual(operator.run(), 1)
+        report = json.loads((self.root / "reports" / "operate_stocklookup_latest.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["failed_gate"], "post_publish_smoke")
+        self.assertIn("absent from the served checkout", report["failure_detail"])
+
+    def test_a_served_checkout_holding_a_different_release_fails_the_smoke_check(self):
+        def stale_copy(joined):
+            if "publish_release.py" in joined:
+                self._mirror_release_into(self.served)
+                (self.served / "focus_extract.json").write_text('{"stale":true}', encoding="utf-8")
+
+        operator = self._operator(RecordingRunner(side_effect=stale_copy), publish=True, live=True)
+        self.assertEqual(operator.run(), 1)
+        report = json.loads((self.root / "reports" / "operate_stocklookup_latest.json").read_text(encoding="utf-8"))
+        self.assertEqual(report["failed_gate"], "post_publish_smoke")
+        self.assertIn("does not match the release", report["failure_detail"])
 
     def test_input_preparation_is_opt_in_and_never_fetches_market_data(self):
         runner = RecordingRunner()
@@ -176,7 +211,7 @@ class OperatorTests(unittest.TestCase):
     def test_consumer_rejection_stops_the_run_before_publishing(self):
         runner = RecordingRunner(fail_on="load_optional_analysis_bundle")
         self.assertEqual(self._operator(runner, publish=True).run(), 1)
-        self.assertNotIn("publish_dashboard.py", runner.names())
+        self.assertNotIn("publish_release.py", runner.names())
 
     # ---------------------------------------------------------------- rollback
     def test_a_failed_run_restores_the_previous_artifact_set(self):
@@ -230,6 +265,15 @@ class InvocationTests(unittest.TestCase):
         self.assertEqual(operate.main(["--runtime-root", str(self.root), "--publish", "--live"], runner=runner), 2)
         self.assertEqual(operate.main(["--runtime-root", str(self.root), "--prepare-inputs"], runner=runner), 2)
         self.assertEqual(operate.main(["--runtime-root", str(self.root), "--tickers", " , "], runner=runner), 2)
+        self.assertEqual(runner.calls, [])
+
+    def test_publishing_requires_a_separate_served_web_root(self):
+        runner = RecordingRunner()
+        base = ["--runtime-root", str(self.root), "--execute", "--publish"]
+        self.assertEqual(operate.main(base, runner=runner), 2)
+        self.assertEqual(operate.main([*base, "--web-root", str(self.root / "nope")], runner=runner), 2)
+        # Publishing into the runtime root is exactly the defect this argument exists to stop.
+        self.assertEqual(operate.main([*base, "--web-root", str(self.root)], runner=runner), 2)
         self.assertEqual(runner.calls, [])
 
     def test_a_second_instance_is_refused_while_the_lock_is_held(self):

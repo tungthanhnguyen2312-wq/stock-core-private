@@ -1,0 +1,139 @@
+# Release publication contract
+
+How one verified exact-session artifact set reaches the Dashboard that people actually
+read, and what the publisher refuses to do on the way there.
+
+See [`exact_session_bundle_contract.md`](exact_session_bundle_contract.md) for how the
+artifact set is produced and proved, and
+[`statement_taxonomy_sidecar_contract.md`](statement_taxonomy_sidecar_contract.md) for the
+sidecar's authority level. This document only covers publication.
+
+## The serving topology
+
+| | |
+|---|---|
+| Source (runtime root) | `dashboard-runtime` — where the export writes, and where local evidence, `vn_stock.db` and the untracked data stores live. Routinely on a feature branch with unrelated generated-artifact drift. |
+| Destination (served checkout) | `worktrees/market-dashboard-main` — a clean checkout of `tungthanhnguyen2312-wq/market-dashboard` on **`main`**. |
+| Authoritative branch | `main`. GitHub Pages is configured `source.branch = main`, `build_type = workflow`. |
+| Serving pipeline | push to `main` → `.github/workflows/dashboard-ci.yml` (*Dashboard CI*) → on success `deploy-pages.yml` (`workflow_run`) checks out the validated SHA and deploys the whole repo root. |
+| Served origin | <https://tungthanhnguyen2312-wq.github.io/market-dashboard/> |
+
+`feature/horizontal-top-navigation` is a feature branch. It is not a deployment branch, it
+is not built by Pages, and publishing onto it publishes to nobody.
+
+Publication is therefore **both** a filesystem promotion (runtime root → served checkout)
+and a git operation (commit + push to `main`). The frontend fetches
+`analysis_bundle.json` from the site root at runtime; the other three artifacts are
+published so the release can be verified from what was served.
+
+## The release allowlist
+
+```
+analysis_bundle.json
+bundle_manifest.json
+focus_extract.json
+statement_taxonomy_sidecar.json
+```
+
+Static in `tools/publish_release.py::RELEASE_ALLOWLIST`, and cross-checked against the
+manifest's own `trusted_subset.expected_artifact_filenames`. Neither side can widen the
+release alone: a manifest that declares a fifth trusted artifact is rejected
+(`unexpected_release_file`), and an allowlisted file the manifest does not declare is
+rejected (`release_set_incomplete`).
+
+Nothing else is published by this tool. In particular it never publishes
+`screen_snapshot.csv`, `market_breadth.csv`, `analysis_latest.json`, `data/*.js`,
+`data/*.json` or any other generated artifact, whether or not they are modified — the
+publisher never enumerates the source directory, so an unrelated modified file has no path
+into a release.
+
+`publish_dashboard.py` still owns the *dashboard data layer* rebuild (screener fallback,
+`build_info`, asset cache-busting). It derives its git whitelist by scanning the HTML/JS
+for referenced files, which is right for that job and wrong for a release: every already
+dirty generated artifact falls inside that whitelist. The two are separate on purpose.
+
+## What must hold before anything is promoted
+
+1. **Allowlist ↔ manifest agreement** — as above.
+2. **Every allowlisted file present** in the source (`required_artifact_missing`).
+3. **Hash verification** — each staged artifact's sha256 equals the manifest's
+   `trusted_subset.required_artifacts` entry (`manifest_hash_mismatch`).
+   `bundle_manifest.json` cannot hash itself; it is the document the others are checked
+   against.
+4. **One session** — `analysis_bundle.reference_session_date`,
+   `focus_extract.reference_session_date`, `statement_taxonomy_sidecar.session_identity`
+   and `trusted_subset.session_identity` are the same value, and the manifest's declared
+   `statement_taxonomy_sidecar.records_fingerprint` matches the sidecar on disk
+   (`session_mismatch`).
+5. **The Consumer's own validator** — `publish_release.py` imports
+   `ai-core-private/builders/build_ticker_context.verify_exact_session_bundle` and runs it
+   over the *staging directory*, rather than reimplementing the rules. A publisher carrying
+   its own copy of the exact-session rules drifts from the validator that actually gates the
+   Consumer, and then a release passes here and is rejected downstream.
+6. **A clean destination index** — an index already holding someone else's work would end
+   up inside the release commit no matter how narrow the publisher's own `git add` is
+   (`git_index_not_clean`).
+
+## How the promotion is atomic
+
+* **Staging.** Every allowlisted file is copied by exact name into a fresh temporary
+  directory and hash-verified there. Nothing has touched the destination yet.
+* **Rollback point.** The destination's current copy of each allowlisted file is copied to
+  `<runtime-root>/reports/release_rollback/<UTC timestamp>/`, each copy is re-hashed against
+  the live file, and a `rollback_manifest.json` records the previous hashes and which files
+  did not exist before this release.
+* **Promotion.** `os.replace` per file, from staging into the destination. No content is
+  generated during this step, so each file appears whole or not at all.
+* **Post-promotion verification.** The destination is re-hashed and must equal the incoming
+  set; the set of *unrelated* modified paths in the destination worktree must be identical
+  before and after (`unrelated_drift_disturbed`).
+* **Commit.** `git add -- <the four exact paths>`, then an assertion that the staged set is
+  a subset of the allowlist. No `git add -A`, no `git add .`, no pathspec glob. The staged
+  blobs are then compared byte-for-byte against the verified release
+  (`git_content_normalization`) — see *End-of-line translation* below.
+* **Push and remote verification.** `git push origin HEAD:<branch>`, then `ls-remote` must
+  report the pushed SHA.
+* **Served verification.** With `--verify-live-url`, each artifact is fetched from the
+  serving origin and its sha256 compared to the incoming release, retrying until the Pages
+  deployment converges or the timeout expires.
+
+**For the reader, the atomic unit is the commit.** Pages builds one deployment from one
+commit and swaps it in whole, so a reader sees the previous release or this one, never a
+mixture. The filesystem step is atomic per file and fully verified before the commit
+exists, which is what makes that guarantee meaningful.
+
+Any failure at any point after the rollback point restores the complete previous artifact
+set, re-verifies the restored hashes, and exits non-zero. A partial release is never left
+active.
+
+Republishing an unchanged release is a no-op: no file is rewritten (mtimes are untouched),
+no rollback point is taken, and no commit is created if the release is already committed.
+
+## End-of-line translation
+
+`market-dashboard` is checked out with `core.autocrlf=true`. Without an override, git
+rewrites every LF to CRLF on checkout, so a Windows working tree's bytes disagree with the
+manifest that describes them and every hash check fails on a fresh clone. The four release
+artifacts are pinned `-text` in the Dashboard repo's `.gitattributes`, and the publisher
+verifies the staged blob against the verified bytes before committing, so this cannot be
+reintroduced silently.
+
+## The one supported command
+
+```
+python stock-core-private/tools/operate_stocklookup.py \
+    --runtime-root C:\Projects\StockLookup\dashboard-runtime \
+    --execute \
+    --publish --web-root C:\Projects\StockLookup\worktrees\market-dashboard-main \
+    [--verify-live-url https://tungthanhnguyen2312-wq.github.io/market-dashboard] \
+    [--live]
+```
+
+`--publish` requires `--web-root`, and `--web-root` may not be the runtime root: publishing
+into the runtime root is exactly the defect this argument exists to stop. Without `--live`
+the publisher runs its own dry run and reports the full plan — source, destination, exact
+files, current and incoming hashes, excluded modified paths, rollback source — while
+writing nothing.
+
+After a live publish the operator command re-hashes all four artifacts in the served
+checkout and fails `post_publish_smoke` if any of them is absent or differs.
