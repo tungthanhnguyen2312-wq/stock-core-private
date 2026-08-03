@@ -221,13 +221,22 @@ resumable (state written after every ticker), and it **never writes a payload** 
 
 All 131 tickers are UPCOM listed equities (`instrument_type = STOCK`), so none is resolved as
 `unsupported_entity`. Probing through the same authorized `vnstock` `Finance` path used by
-`bctc_sync.py` classified every ticker probed so far as **`source_empty_confirmed`** — the
-provider genuinely carries no statements for them, across both KBS and VCI, for all three
-statement families. No `payload_available`, no `provider_error`, no `retrieval_failure`.
+`bctc_sync.py`, across both KBS and VCI and all three statement families:
 
-That is a definitive answer for the tickers covered: the gap is in the source, and no
-acquisition work will close it. See `missing_payload_report.json` for the per-ticker record
-and the count actually reached.
+```
+active-universe tickers with no retained payload : 131
+probed                                           : 131  (30 + 101, resumed across two runs)
+remaining unprobed                               :   0
+source_empty_confirmed                           : 131
+payload_available / provider_error / retrieval_failure : 0 / 0 / 0
+```
+
+**The sweep is complete and the answer is unanimous: the gap is in the source.** The provider
+carries no statements for any of these 131 issuers, so no acquisition work, retry or credential
+change will close it. The only thing that would is a different statement source.
+
+The second run resumed cleanly from the first run's written state and re-probed none of the 30
+tickers already settled, which is the resumability contract working on real data.
 
 ---
 

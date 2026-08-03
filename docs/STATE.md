@@ -221,12 +221,15 @@ FY2024 citation digit for digit (49,599,124,109,203), and VNM's likewise.
 3. **No retained line carries a share count.** `common_shares` and `paid_in_capital` are
    paid-in capital amounts in currency; converting them needs an assumed par value. This is an
    independent second blocker on market capitalisation, distinct from the price basis.
-4. **131 active-universe tickers have no retained statement payload — now classified.** Every
-   ticker probed through the authorized provider path returned `source_empty_confirmed` from
-   both KBS and VCI across all three statement families. The gap is in the source; no
-   acquisition work will close it. This also corrects `scrape_meta.csv`, which records all 131
-   as `empty` while `bctc_sync.call_api` returns `None` for any non-network exception, making
-   a genuine empty source and a parse error indistinguishable there.
+4. **131 active-universe tickers have no retained statement payload — now fully classified and
+   closed as an acquisition item.** All **131 of 131** were probed through the authorized
+   provider path and all **131 returned `source_empty_confirmed`** from both KBS and VCI across
+   all three statement families; zero `payload_available`, `provider_error` or
+   `retrieval_failure`. The gap is in the source, so no acquisition work, retry or credential
+   change will close it — only a different statement source would. This also corrects
+   `scrape_meta.csv`, which records all 131 as `empty` while `bctc_sync.call_api` returns
+   `None` for any non-network exception, making a genuine empty source and a parse error
+   indistinguishable there.
 
 ## Historical corrections that remain in force
 
