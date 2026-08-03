@@ -31,9 +31,9 @@ class WorkstreamA_ShareObservationInventoryTests(unittest.TestCase):
         self.assertEqual(hpg["authority"], "qualified_official")
 
         pan = shares_resolver.resolve_effective_shares("PAN", runtime_root)
-        self.assertEqual(pan["share_concept"], "current_common_shares_outstanding")
+        self.assertEqual(pan["share_concept"], "ISSUED_SHARES")
         self.assertEqual(pan["unit"], "shares")
-        self.assertEqual(pan["authority"], "provider_reported")
+        self.assertEqual(pan["authority"], "provider_reported_current")
 
 
 class WorkstreamB_AuthorityLanesTests(unittest.TestCase):
@@ -45,7 +45,7 @@ class WorkstreamB_AuthorityLanesTests(unittest.TestCase):
         self.assertEqual(hpg["status"], "qualified")
 
         pan = shares_resolver.resolve_effective_shares("PAN", runtime_root)
-        self.assertEqual(pan["authority"], "provider_reported")
+        self.assertEqual(pan["authority"], "provider_reported_current")
         self.assertEqual(pan["status"], "provider_reported")
         self.assertNotEqual(pan["status"], "qualified")
 
@@ -69,9 +69,9 @@ class WorkstreamD_MarketWideProjectionTests(unittest.TestCase):
         runtime_root = ROOT.parent / "dashboard-runtime"
         summary = shares_resolver.resolve_market_wide_shares(runtime_root)
         self.assertEqual(summary["active_universe_ticker_count"], 1683)
-        self.assertEqual(summary["qualified_official_current_shares_count"], 3)
-        self.assertEqual(summary["provider_reported_current_shares_count"], 1679)
-        self.assertEqual(summary["unavailable_current_shares_count"], 1)
+        self.assertEqual(summary["qualified_official_count"], 3)
+        self.assertEqual(summary["provider_reported_current_count"], 1677)
+        self.assertEqual(summary["unavailable_count"], 1)
 
 
 class WorkstreamE_ValuationReadinessExpansionTests(unittest.TestCase):
