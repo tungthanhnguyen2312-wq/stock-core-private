@@ -7,9 +7,9 @@ command against `dashboard-runtime` (reference session `2026-07-30`).
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
 
-- Active phase: P0 market-data basis qualification is the only remaining hard gate; P1 exact-session integrity and P1B/P1C (generated taxonomy sidecar, one-command operating workflow) are done.
-- Active milestone: qualify `issuer_entity_type` for the ~1,289 tickers where it is unresolved, and retain `retained_earnings` systemically in the statement sync; neither depends on the blocked market-data basis.
-- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py`; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
+- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–2 done as P1D, layer 3 next as P1E); B, official corporate-action ingestion and price adjustment (design only), which is now the only route to the P0 market-data gate. P1 exact-session integrity and P1B/P1C are done.
+- Active milestone: pillar A layer 3 — canonical financial facts market-wide (resolve statement scope, currency, unit scale, sign and cumulative basis over the 1,546,197 retained raw observations, both provider dialects); it does not depend on the blocked market-data basis.
+- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py`; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged, and the 2026-08-03 market-wide ingest wrote only into `data/market-wide-financials/`, leaving `vn_stock.db`, `analysis_bundle.json`, `bundle_manifest.json`, `focus_extract.json`, `statement_taxonomy_sidecar.json` and `screen_snapshot.csv` byte-identical.
 
 ## Operate it
 
@@ -85,10 +85,11 @@ exact-session proof in `bundle_manifest.json`:
   official-URL discovery are **exhausted** as qualification routes. Do not reopen them.
   `VCI_PROVIDER_INTERNAL_ROUTE_BLOCKED_BY_RATIO_SEMANTICS`,
   `ACTIVE_PRICE_PATH_SEMANTICS_UNQUALIFIED`, `DOCUMENTED_RAW_ADJUSTED_PATH_UNAVAILABLE`.
-- **EODHD**: `MARKET_DATA_SOURCE_AUTHORITY_APPROVED = YES_PRIVATE_SHADOW_EODHD`. No live
-  token was exercised in this milestone and none was printed, inspected or committed. The
-  one bounded attempt on 2026-08-02 timed out before any payload qualified; that is a
-  provider-responsiveness result, not evidence about authentication.
+- **EODHD is closed**: `EODHD_ROUTE_STATUS = REJECTED_BY_OWNER` (2026-08-03). The
+  2026-08-02 private-shadow approval is withdrawn after read timeouts on two independent
+  days. Do not test, retry, diagnose the network path, or propose a credential milestone;
+  the modules remain in the tree, disabled and off the roadmap. The market-data gate is now
+  routed through pillar B (`docs/official_corporate_action_ingestion_design.md`).
 - **Trust state of the current production bundle is `untrusted_basis`.** Integrity is
   `exact_session_verified`; the basis axis is `unqualified`. Both are reported separately
   so an unverified price basis no longer suppresses honest non-market readiness.
@@ -122,18 +123,60 @@ is necessary but not sufficient; a score also needs all seven qualified identiti
 
 Current-market-dependent capabilities: **0 tickers**, blocked by market semantics.
 
+## Market-wide raw financial retention (P1D, 2026-08-03)
+
+Pillar A layers 1–2, from `data/market-wide-financials/coverage_report.json`. Raw identity
+availability only — statement scope, currency, unit scale, sign and cumulative basis are all
+still `unknown`, so **nothing here is an evidence-qualified value**.
+
+| | |
+| --- | --- |
+| payloads discovered | 4,195 (1 unparsed: `BIO_balance_sheet.parquet`) |
+| raw observations retained | 1,546,197 across 1,493 tickers |
+| active universe (HSX 402 · HNX 299 · UPCOM 738) | 1,439 |
+| in store **and** active universe | 1,308 |
+| active universe with no retained payload at all | 131 |
+| all three statement families | 1,198 of 1,308 |
+| shards byte-reproducible under `--check` | 1,493 / 1,493 |
+
+EBITDA / EV-EBITDA applicability over the 1,308: `not_applicable` **82** (was 7),
+`applicable_subject_to_inputs` 8, `insufficient_evidence` 1,218. Archetype authority:
+`manual_profile` 15 · `generated_statement_evidence` 75 · `unknown` 1,218.
+
+Raw-identity coverage for the derived-EBITDA inputs, over the 1,226 tickers not ruled out:
+`profit_before_tax` 1,202 · `depreciation_amortization` 1,123 · `interest_expense` 1,066 ·
+**all three 1,016 (82.9%)**. Enterprise-value balance-sheet inputs complete for 1,148;
+market capitalisation still blocked on the price basis.
+
+### Two corrections this measurement forces on the blocker list above
+
+- The screening-tier table records `ebitda` as **0 available / 1,148** and EBITDA as
+  computable for 2 tickers market-wide. The raw depreciation identity is present for
+  **1,123** tickers. The retained cash-flow vocabulary splits into two mutually exclusive
+  provider dialects that partition the universe exactly (905 `depreciation_of_fixed_assets_and_investment_properties`
+  + 338 `depreciation_and_amortization` = 1,243). A mapping that knows one dialect reports
+  ~73% on a metric present for ~100% of filers.
+- The table records `retained_earnings` as **51 available / 1,097 missing**. The raw
+  identity (`undistributed_earnings`) is present for **1,148** tickers. The blocker is in
+  the snapshot projection, not the source data.
+
+Both are mapping work (P1E), not data acquisition.
+
 ### Top remaining blockers, by tickers affected
 
-1. **Issuer entity type unresolved — 1,289 tickers.** The generated taxonomy can only
+1. **Issuer entity type unresolved — 1,218 tickers** (was 1,289; income-statement evidence
+   and the market-wide pass account for the difference). The generated taxonomy can only
    withhold a model, never grant one, so `corporate_vas` alone leaves Altman on
    `insufficient_evidence`. Unlocking this needs an authoritative issuer-type source, not
    more taxonomy work. Highest analytical value by a wide margin.
-2. **`retained_earnings` not retained — 1,097 tickers.** The single input that blocks
-   Altman at the screening tier. A systemic mapping/retention fix in the statement sync,
-   not per-ticker PDF reading.
-3. **`operating_cash_flow` missing — 319 tickers.** Blocks earnings quality.
+2. **Canonical mapping not built — pillar A layer 3.** Supersedes the previous
+   "`retained_earnings` not retained" and "`operating_cash_flow` missing" entries: both raw
+   identities are retained for ~1,148 and ~1,137 tickers respectively. What is missing is
+   the dual-dialect mapping and the scope/unit/sign resolution, not the data.
+3. **131 active-universe tickers have no retained statement payload at all.** A genuine
+   acquisition gap, and the only one of these four that needs new data.
 4. **Price/volume basis unverified — every ticker.** Blocks the entire current-market tier.
-   Needs a new market-data source authority; the existing provider routes are exhausted.
+   EODHD is closed; the route is now pillar B's official corporate-action ledger.
 
 ## Historical corrections that remain in force
 
@@ -154,8 +197,21 @@ Current-market-dependent capabilities: **0 tickers**, blocked by market semantic
 
 ## Next highest-value milestone
 
-Qualify `issuer_entity_type` for the ~1,289 tickers where it is unresolved, from an
-authoritative source (exchange/issuer registration data), and retain `retained_earnings`
-systemically in the statement sync. Together these are the only two gaps standing between
-the current 3 eligible tickers and universe-wide historical distress screening — and
-neither depends on the blocked market-data basis.
+**Pillar A layer 3 — canonical financial facts market-wide** (`P1E`). Map the 1,546,197
+retained raw observations onto canonical metrics with statement scope, currency, unit scale,
+sign convention and cumulative-vs-discrete basis resolved, across **both** provider dialects,
+emitting a per-metric status in `qualified | provider_reported | partial | conflicted |
+unavailable | not_applicable` and routing only unresolved *metrics* — not whole tickers — to
+a review queue. The raw identities are already on disk for ~85% of the universe; this is
+mapping work, and it is what converts P1D's retention into usable facts.
+
+Running second, and independent of it: qualify `issuer_entity_type` for the 1,218 tickers
+where it is unresolved, from an authoritative source (exchange/issuer registration data).
+Generated taxonomy cannot do this by construction — it may only withhold a model, never
+grant one — so it needs a real issuer-type source, and it is the gate between 8 confirmed
+applicable tickers and universe-wide historical screening.
+
+Then **pillar B step B1** — the owner-approved crawl contract and host allowlist for
+HOSE/HNX/VSDC/issuer IR (`docs/official_corporate_action_ingestion_design.md`). It is the
+only remaining route to the price basis now that EODHD is closed, and B1 is a governance
+decision, not code, so it can be taken in parallel with P1E.

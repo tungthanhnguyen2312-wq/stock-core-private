@@ -1,8 +1,28 @@
 # Stock Lookup roadmap
 
-## P0 — Market-data basis and lineage — ACTIVE
+## Active development: two pillars (2026-08-03)
+
+Development has moved off per-ticker financial pilots. Adding a third HPG/VNM-style
+qualified ticker is explicitly **not** the next milestone. The two systems below are, and
+every P-gate below is now reached through one of them.
+
+- **Pillar A — market-wide canonical financial normalization** — `docs/market_wide_financial_normalization_contract.md`.
+  Layers 1 (raw retention, no allowlist) and 2 (statement taxonomy and model applicability)
+  shipped 2026-08-03: 1,546,197 raw observations over 1,493 tickers, byte-reproducible,
+  incremental. Layers 3 (canonical facts) and 4 (engines fed market-wide) are specified and
+  are the next implementation milestone. Serves P2a, P3, P4.
+- **Pillar B — official corporate-action ingestion and price-adjustment engine** — `docs/official_corporate_action_ingestion_design.md`.
+  Design only. Makes our own event ledger the adjustment authority, so no provider has to
+  document its adjustment policy for the price basis to qualify. Serves P0, and through it
+  P2b and P5.
+
+The pillars are independent up to pillar A's enterprise-value layer, which needs a market
+capitalisation and therefore waits on pillar B.
+
+## P0 — Market-data basis and lineage — ACTIVE, now routed through pillar B
 - Deliverables: provider/schema-version lineage; qualified corporate-action lineage; empirical active-path price test; volume semantics; source/version scale handling.
-- Prerequisite: owner approval is complete for a private EODHD HPG/VNM shadow path. A newly rotated, unexposed environment-only credential and authenticated payload qualification are required before ingestion; production/public redistribution requires a separately qualified license boundary.
+- **EODHD is closed as a route: `EODHD_ROUTE_STATUS: REJECTED_BY_OWNER`** (2026-08-03, `docs/DECISIONS.md`). The earlier private-shadow approval is withdrawn after two independent days of read timeouts. No further timeout test, retry, credential milestone, website check or network diagnosis is authorized; proposing one re-opens a closed decision. The disabled modules stay in the tree but are off this roadmap.
+- The remaining route is **pillar B**: crawl HOSE/HNX/VSDC/issuer IR, build an immutable corporate-action event ledger, and compute `close_official_event_adjusted` ourselves alongside `close_raw`. Sequenced B1–B6 in the design doc.
 - Exit gates: `OHLCV_PROVIDER_VERSION_RETAINED = YES`; `QUALIFIED_PRICE_TEST_EVENTS >= 8`; `PRICE_BASIS_ACTIVE_PATH = DETERMINED_DOCUMENTED | DETERMINED_EMPIRICALLY`; `VOLUME_BASIS_ACTIVE_PATH = DETERMINED`; `NO_MARKET_CONSUMER_USES_UNQUALIFIED_BASIS = YES`.
 
 ### P0 sub-items (from the 2026-08-02 P0.1 audit)
@@ -36,6 +56,18 @@
   - **Fixed**: both `is_actionable` assignments now read `bool(d.get("current_actionable"))` instead of a hardcoded `True`, with an explanatory warning attached when downgraded. The numeric `value` stays computed and visible (deterministic, lineage-tracked, same as `realized_volatility`'s pattern) -- only the actionability claim changed. Re-verified live: `is_actionable` is now `False` for VNM at the current (unqualified) basis state. Added a regression test (`tests/test_risk_liquidity.py::test_vnm_point_in_time_beta_correlation_is_actionable_follows_current_actionable_not_hardcoded_true`) that fails if this regresses. Full `tests/test_export_ai_bundle.py` re-run afterward: same 2 pre-existing failures as the untouched baseline (`test_all_consumers_use_same_canonical_rs_rating`, `test_hpg_material_share_mismatch_is_promoted_to_root_flags`), neither related to this change.
 - P1.5 (ticker capability / trusted-ticker matrix): **done** 2026-08-02. `ticker_capability.py`, pure and tested (8 tests), not yet wired into `export_ai_bundle.py`'s opt-in attach chain. See STATE.md for the real matrix computed against production evidence.
 - P1.6 (share-transition coverage through 2026-07-30): **not started**, requires new issuer/exchange evidence acquisition -- out of scope without an explicit bounded-acquisition decision.
+
+## P1D — Market-wide raw financial observation store — DONE 2026-08-03
+- Pillar A layers 1 and 2. `raw_financial_observations.py` (pure extraction, **no allowlist**), `raw_financial_store.py` (incremental gzip-JSONL shards keyed on payload hashes *and* extraction schema version), `financial_entity_applicability.py` (archetype + per-metric applicability), `market_wide_financial_coverage.py`, `tools/ingest_market_wide_financials.py`, `config/canonical_metric_candidates.csv`. 48 tests.
+- Offline: reads only `data_bctc/*.parquet`, `screen_snapshot.csv`, `statement_taxonomy_sidecar.json` and two tracked config files; no network, no `vn_stock.db`, and it writes nothing the bundle reads. It is not part of the release path.
+- Measured: 4,195 payloads → **1,546,197 raw observations over 1,493 tickers**; 1,308 of the 1,439 active-universe tickers have a shard; 1,198 have all three statement families; 1,493/1,493 shards byte-reproducible under `--check`; a rerun over unchanged inputs rebuilds 0.
+- EBITDA / EV-EBITDA `not_applicable` went from **7** manually-profiled tickers to **82**, closing the under-classification the 2026-08-03 audit reported. Income-statement evidence additionally resolves 12 of the 13 `financial_specialized_ambiguous` tickers to `insurance`.
+- Exit gate: `MARKET_WIDE_RAW_FINANCIAL_RETENTION = YES`.
+
+## P1E — Canonical financial facts (pillar A layer 3) — NEXT
+- Raw identity → canonical metric with statement scope, currency, unit scale, sign convention and cumulative-vs-discrete basis resolved; per-metric status in `qualified | provider_reported | partial | conflicted | unavailable | not_applicable`; exceptions to a review queue rather than per-ticker analysis.
+- Two findings from P1D size this work and correct two entries in `docs/STATE.md`'s blocker list: the raw `depreciation_amortization` identity is present for **1,123** tickers (STATE.md records EBITDA as computable for 2), and the raw `retained_earnings` identity for **1,148** (STATE.md records 51 available / 1,097 missing). Both gaps are single-dialect mapping, not data acquisition — the retained cash-flow vocabulary splits into two mutually exclusive provider dialects that partition the universe exactly (905 + 338 = 1,243).
+- Exit gate: `CANONICAL_FINANCIAL_FACTS_MARKET_WIDE = YES`.
 
 ## P2 — Point-in-time valuation alignment — SPLIT (see below)
 - **Correction 2026-08-02**: this gate was recorded as flatly BLOCKED with "no P/E, P/B, EV, EV/EBIT may be produced", but production HPG has been publishing `pe` 10.55, `pb` 1.11, `ps` 0.91, `ev_sales` 1.46 and `ev_ebitda` 8.86 for some time -- deliberately, correctly, and under their own design docs (`historical_relative_valuation_snapshot.md`, `hpg_fy2024_ebitda_qualification.md`). The gate text, not the code, was wrong: it conflated two different things.
