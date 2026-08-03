@@ -184,27 +184,9 @@ def _resolve_session_inputs(ticker: str, entry: Mapping[str, Any], runtime_root:
             except Exception:
                 pass
 
-    shares = None
-    if t == "HPG":
-        opening = {
-            "effective_date": "2024-12-31", "value": 6396250200, "unit": "shares",
-            "share_class": "common_outstanding", "identity_scope": "issuer",
-            "qualification": "qualified", "citation_id": "cite_hpg_2024", "source_hash": "hash_hpg_2024"
-        }
-        event = {
-            "event_id": "evt_hpg_stock_div", "action_type": "stock_dividend",
-            "effective_date": "2026-06-04", "qualification": "qualified", "lifecycle": "completed",
-            "resulting_identity_type": "common_outstanding_shares", "unit": "shares",
-            "identity_scope": "issuer", "opening_shares": 6396250200, "resulting_shares": 7163748865,
-            "citation_id": "cite_hpg_div", "source_hash": "hash_hpg_div"
-        }
-        import share_transition_bridge as share_bridge
-        res = share_bridge.resolve_share_transition(opening=opening, events=[event], target_date="2026-07-30", coverage_through="2026-07-30")
-        shares = {"value": res["current_shares"]["value"], "status": "qualified", "authority": "dated_shares_timeline"}
-    elif t == "VNM":
-        shares = {"value": 2089955445, "status": "qualified", "authority": "official_evidence_manifest"}
-    elif t == "VCB":
-        shares = {"value": 5589091222, "status": "qualified", "authority": "official_evidence_manifest"}
+    import market_wide_current_shares_resolver as shares_resolver
+    resolved_shares = shares_resolver.resolve_effective_shares(t, runtime_root)
+    shares = resolved_shares if resolved_shares.get("value") is not None else None
 
     return price, shares
 

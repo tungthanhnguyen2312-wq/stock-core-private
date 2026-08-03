@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-08-03 - P1I Market-Wide Current Shares Coverage
+- Market-wide effective shares are resolved across the active universe (1,683 tickers) into 3 explicit authority lanes: `qualified_official` (3 tickers), `provider_reported` (1,679 tickers), and `unavailable` (1 ticker).
+- Provider-reported current share observations from retained metadata are preserved as `provider_reported` and never relabelled as qualified.
+- Reconstructed current market cap and valuation readiness projections expand fail-closed: Market Cap (3 qualified + 1,473 provider-reported across 1,493 canonical fact tickers), P/E (1,393 ready), P/B (1,291 ready), EV (1,249 ready), EV/EBITDA (111 ready).
+- Producer section export and Consumer context pass-through preserve exact authority levels verbatim without recomputation. Top-level operator reports full market-wide coverage. Production hashes remain 100% byte-identical.
+
 ## 2026-08-03 - P1H Current Share Basis and Valuation Readiness Activation
 - Current effective shares are resolved by authority order: qualified official shares fact on/before session, qualified corporate-action transition, or repo-governed share basis. Never backsolved from market cap or inferred from raw labels.
 - Session price input uses existing session close from `vn_stock.db` / snapshot, explicitly labelled as `current_snapshot` without claiming historical price-series adjustment or backtesting eligibility.

@@ -123,8 +123,8 @@ class WorkstreamE_MarketWideClassificationTests(unittest.TestCase):
             "AAH": {"company_name": "AAH"},
         }
         res = attach(bundle, runtime_root, include=True)
-        mcap_ready = sum(1 for t, v in res.items() if (v.get("canonical_financial_facts", {}).get("calculation_readiness") or [{}])[0].get("market_capitalisation", {}).get("readiness") == readiness.READY)
-        self.assertEqual(mcap_ready, 3)
+        mcap_qualified = sum(1 for t, v in res.items() if (v.get("canonical_financial_facts", {}).get("calculation_readiness") or [{}])[0].get("market_capitalisation", {}).get("status") == readiness.STATUS_QUALIFIED)
+        self.assertEqual(mcap_qualified, 3)
 
 
 class WorkstreamF_ProducerConsumerOperatorIntegrationTests(unittest.TestCase):
