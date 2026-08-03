@@ -129,18 +129,22 @@ class WorkstreamD_ValuationReadinessTests(unittest.TestCase):
             "net_income": {"value": 11765835335016.0, "status": readiness.STATUS_PROVIDER_REPORTED, "fact_id": "net_inc_f", "reporting_period": "2024", "statement_scope": "consolidated", "currency": "VND", "scale": "unit", "cumulative_state": "cumulative"},
             "shareholders_equity": {"value": 111262497237341.0, "status": readiness.STATUS_PROVIDER_REPORTED, "fact_id": "eq_f", "reporting_period": "2024", "statement_scope": "consolidated", "currency": "VND", "scale": "unit", "cumulative_state": "cumulative"},
         }
-        mcap = readiness.evaluate_market_capitalisation(period="2024", session_price=21800.0, effective_shares=7163748865)
+        mcap = readiness.evaluate_market_capitalisation(
+            period="2024", session_price=21800.0,
+            effective_shares={"value": 8442964520, "status": readiness.STATUS_PROVIDER_REPORTED,
+                              "authority": "provider_reported_lagged",
+                              "share_concept": "ISSUED_SHARES"})
         ev = readiness.evaluate_enterprise_value(period_facts, "2024", mcap)
         self.assertEqual(ev["readiness"], readiness.READY)
-        self.assertEqual(ev["value"], 197289685364951.0)
+        self.assertEqual(ev["value"], 225176586643951.0)
 
         pe = readiness.evaluate_price_ratio("pe", period_facts["net_income"], "2024", mcap, "net_income")
         self.assertEqual(pe["readiness"], readiness.READY)
-        self.assertAlmostEqual(pe["value"], 13.2731, places=3)
+        self.assertAlmostEqual(pe["value"], 15.6433, places=3)
 
         pb = readiness.evaluate_price_ratio("pb", period_facts["shareholders_equity"], "2024", mcap, "shareholders_equity")
         self.assertEqual(pb["readiness"], readiness.READY)
-        self.assertAlmostEqual(pb["value"], 1.4036, places=3)
+        self.assertAlmostEqual(pb["value"], 1.6543, places=3)
 
 
 class WorkstreamE_MarketWideClassificationTests(unittest.TestCase):

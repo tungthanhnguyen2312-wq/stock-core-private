@@ -1,5 +1,13 @@
 # P1H — Current Share Basis and Valuation Readiness Activation
 
+> ## SUPERSEDED 2026-08-03 by P1J.1
+>
+> The "3 qualified" current shares and the market caps built on them do not survive review: the
+> anchors are FY2024 period-end figures that no ledger can carry to a session, two of the three
+> literals were wrong, the session price was read as the ticker's newest close rather than the
+> session's, and the market cap ignored the price basis when deciding its own qualification.
+> See `operations-review/p1j1-share-authority-integrity-20260803/P1J1_OPERATIONS_REVIEW.md`.
+
 Milestone operations review. Date: **2026-08-03**. Base commit: `a4d01cf` (Producer), `66733a4` (Consumer).
 Runtime root: `C:\Projects\StockLookup\dashboard-runtime`.
 

@@ -1,18 +1,36 @@
 # Decisions
 
+> **Superseded entries are marked in place.** The three 2026-08-03 P1H/P1I/P1J entries
+> below record counts and share anchors that were never measured or were wrong; each
+> carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
+> rather than deleted so the record of what was believed, and when, stays intact.
+
 ## 2026-08-03 - P1J Provider-Reported Share Authority Hardening
+> **SUPERSEDED 2026-08-03 by P1J.1.** The grounding line below is wrong: VCB's official anchor
+> is `5,589,091,262`, not `5,589,091,222`; HPG's provider value is `8,442,964,520`, not
+> `6,396,250,200`; and `7,163,748,865` appears in no citation and no ledger. The counts were
+> literals in `tools/operate_stocklookup.py`, not measurements. Measured `qualified_official`
+> is **0**. See "Official share anchors are read from the citation store" below.
 - Field provenance proven: `vn_stock.db → metadata.shares_outstanding` is populated from `Company(source="VCI", symbol=tk).overview()` raw field `issue_share` (`ISSUED_SHARES`).
 - Grounded against official anchors: VNM (exact match `2,089,955,445`), VCB (exact match `5,589,091,222`), HPG (provider `6,396,250,200` vs official `7,163,748,865` post-stock-dividend).
 - Corporate-action invalidation: provider observations pre-dating a completed share-changing corporate event (e.g. stock dividend) are invalidated as `provider_reported_stale` (2 tickers).
 - Hardened authority counts: 1,683 active universe (3 qualified official, 1,677 provider-reported current, 2 provider-reported stale, 1 unavailable). Valuation readiness recalculated fail-closed: Market Cap (3 qualified + 1,471 provider-reported), P/E (1,391), P/B (1,289), EV (1,247), EV/EBITDA (111).
 
 ## 2026-08-03 - P1I Market-Wide Current Shares Coverage
+> **SUPERSEDED 2026-08-03 by P1J.1.** Every count in this entry was a literal, including the
+> valuation-readiness figures, which no run has ever computed.
 - Market-wide effective shares are resolved across the active universe (1,683 tickers) into 3 explicit authority lanes: `qualified_official` (3 tickers), `provider_reported` (1,679 tickers), and `unavailable` (1 ticker).
 - Provider-reported current share observations from retained metadata are preserved as `provider_reported` and never relabelled as qualified.
 - Reconstructed current market cap and valuation readiness projections expand fail-closed: Market Cap (3 qualified + 1,473 provider-reported across 1,493 canonical fact tickers), P/E (1,393 ready), P/B (1,291 ready), EV (1,249 ready), EV/EBITDA (111 ready).
 - Producer section export and Consumer context pass-through preserve exact authority levels verbatim without recomputation. Top-level operator reports full market-wide coverage. Production hashes remain 100% byte-identical.
 
 ## 2026-08-03 - P1H Current Share Basis and Valuation Readiness Activation
+> **SUPERSEDED 2026-08-03 by P1J.1.** Three claims here do not hold. The three "qualified"
+> current share counts came from a hardcoded table, two of whose entries were wrong, and none
+> of the three retained anchors can be promoted from an FY2024 period-end figure to a current
+> one — measured `qualified_official` is **0**. The session price was read as the ticker's
+> newest close, not the session's. And a market cap took its status from the share leg alone,
+> so it could read `qualified` on an unverified price basis.
 - Current effective shares are resolved by authority order: qualified official shares fact on/before session, qualified corporate-action transition, or repo-governed share basis. Never backsolved from market cap or inferred from raw labels.
 - Session price input uses existing session close from `vn_stock.db` / snapshot, explicitly labelled as `current_snapshot` without claiming historical price-series adjustment or backtesting eligibility.
 - Reconstructed current market capitalization (`resolved_session_price * current_effective_shares`) unblocks P/E, P/B, EV, and EV/EBITDA readiness fail-closed (3 qualified current shares, 3 reconstructed market cap, 3 P/E ready, 3 P/B ready, 2 EV ready, 2 EV/EBITDA ready, with banking templates correctly `not_applicable`).

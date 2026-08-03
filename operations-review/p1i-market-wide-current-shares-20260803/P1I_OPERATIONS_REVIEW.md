@@ -1,5 +1,14 @@
 # P1I — Market-Wide Current Shares Coverage
 
+> ## SUPERSEDED 2026-08-03 by P1J.1
+>
+> Every coverage and valuation-readiness count in this review was a literal in
+> `tools/operate_stocklookup.py`, not a measurement, and the `qualified_official` lane counted
+> the rows of a hardcoded table two of whose three share anchors were wrong. Measured for the
+> same universe: `qualified_official` **0**, provider-reported 1,680, unverifiable freshness 2,
+> unavailable 1. See
+> `operations-review/p1j1-share-authority-integrity-20260803/P1J1_OPERATIONS_REVIEW.md`.
+
 Milestone operations review. Date: **2026-08-03**. Base commit: `5d6c0b7` (Producer), `66733a4` (Consumer).
 Runtime root: `C:\Projects\StockLookup\dashboard-runtime`.
 

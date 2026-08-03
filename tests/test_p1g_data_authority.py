@@ -116,9 +116,9 @@ class WorkstreamC_EventLedgerTests(unittest.TestCase):
             "event_type": "stock_dividend",
             "lifecycle_state": "announced",
             "announcement_date": "2026-05-15",
-            "shares_before": 6396250200,
+            "shares_before": 7675465855,
             "shares_issued": 767498665,
-            "stock_ratio": 0.119991969,
+            "stock_ratio": 0.0999937567,
             "source_authority": "Ho Chi Minh City Stock Exchange",
             "source_url": "https://www.hsx.vn/hpg1.html",
         }
@@ -132,10 +132,10 @@ class WorkstreamC_EventLedgerTests(unittest.TestCase):
             "ex_date": "2026-06-04",
             "record_date": "2026-06-05",
             "payment_or_execution_date": "2026-06-05",
-            "shares_before": 6396250200,
+            "shares_before": 7675465855,
             "shares_issued": 767498665,
-            "shares_after": 7163748865,
-            "stock_ratio": 0.119991969,
+            "shares_after": 8442964520,
+            "stock_ratio": 0.0999937567,
             "source_authority": "Ho Chi Minh City Stock Exchange",
             "source_url": "https://www.hsx.vn/hpg2.html",
         }
@@ -157,14 +157,14 @@ class WorkstreamD_DatedSharesTimelineTests(unittest.TestCase):
     def test_hpg_and_vnm_share_timelines(self) -> None:
         """Workstream D: Evaluates dated shares timeline across events and fail-closed cases."""
         opening_hpg = {
-            "effective_date": "2024-12-31",
-            "value": 6396250200,
+            "effective_date": "2026-06-03",
+            "value": 7675465855,
             "unit": "shares",
             "share_class": "common_outstanding",
             "identity_scope": "issuer",
             "qualification": "qualified",
-            "citation_id": "cite_hpg_2024",
-            "source_hash": "hash_hpg_2024",
+            "citation_id": "cite_hpg_pre_div",
+            "source_hash": "hash_hpg_pre_div",
         }
         event_hpg = {
             "event_id": "evt_hpg_stock_div",
@@ -175,8 +175,8 @@ class WorkstreamD_DatedSharesTimelineTests(unittest.TestCase):
             "resulting_identity_type": "common_outstanding_shares",
             "unit": "shares",
             "identity_scope": "issuer",
-            "opening_shares": 6396250200,
-            "resulting_shares": 7163748865,
+            "opening_shares": 7675465855,
+            "resulting_shares": 8442964520,
             "citation_id": "cite_hpg_div",
             "source_hash": "hash_hpg_div",
         }
@@ -187,7 +187,7 @@ class WorkstreamD_DatedSharesTimelineTests(unittest.TestCase):
             target_date="2026-07-30",
             coverage_through="2026-07-30",
         )
-        self.assertEqual(res_hpg["current_shares"]["value"], 7163748865)
+        self.assertEqual(res_hpg["current_shares"]["value"], 8442964520)
 
         # Insufficient evidence case fails closed
         unqualified_opening = dict(opening_hpg, qualification="provisional")
@@ -211,10 +211,10 @@ class WorkstreamE_AdjustmentFactorsTests(unittest.TestCase):
             "event_type": "stock_dividend",
             "lifecycle_state": "executed",
             "record_date": "2026-06-05",
-            "shares_before": 6396250200,
+            "shares_before": 7675465855,
             "shares_issued": 767498665,
-            "shares_after": 7163748865,
-            "stock_ratio": 0.119991969,
+            "shares_after": 8442964520,
+            "stock_ratio": 0.0999937567,
         }
         res = ledger.build_ledger([obs_no_ex_date])
         entry = res["entries"][0]

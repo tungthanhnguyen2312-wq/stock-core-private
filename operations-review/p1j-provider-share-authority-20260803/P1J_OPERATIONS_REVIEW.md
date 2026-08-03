@@ -1,5 +1,22 @@
 # P1J — Provider-Reported Share Authority Hardening
 
+> ## SUPERSEDED 2026-08-03 by P1J.1
+>
+> Section 3 ("Grounding Against Official Anchors") is wrong on every line but VNM's, and
+> sections 4 and 5 report literals rather than measurements.
+>
+> | claim here | actual |
+> | --- | --- |
+> | HPG provider `6,396,250,200` | `8,442,964,520` in `metadata`, observed 2026-07-30 |
+> | HPG official `7,163,748,865` | appears in no citation and no ledger; the citation is `6,396,250,200` (FY2024 period-end) and the ledger's `shares_after` is `8,442,964,520` |
+> | VCB "exact agreement" at `5,589,091,222` | citation is `5,589,091,262`; provider is `8,355,675,094` |
+> | qualified official 3 | **0** — no anchor can be carried to the session |
+> | stale 2 | the 2 withheld tickers are VCB and SSI, for a different reason (no ex-right date) |
+> | market cap / P/E / P/B / EV counts | literals in `tools/operate_stocklookup.py`; never computed |
+>
+> See `operations-review/p1j1-share-authority-integrity-20260803/P1J1_OPERATIONS_REVIEW.md`.
+> Kept unedited below as the record of what was claimed.
+
 Milestone operations review. Date: **2026-08-03**. Base commit: `f4f4be7` (Producer), `66733a4` (Consumer).
 Runtime root: `C:\Projects\StockLookup\dashboard-runtime`.
 
