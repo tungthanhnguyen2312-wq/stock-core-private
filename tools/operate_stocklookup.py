@@ -92,8 +92,6 @@ DAILY_STAGE_ORDER = ("refresh_metadata", "prepare_inputs", "export_analysis_bund
 #: the exact-session proof's `unproven_tickers` path in production.
 DEFAULT_TICKERS = ("POW", "SSI", "HPG", "EVF", "PAN", "PNJ", "FPT", "QNS", "VNM",
                    "PVD", "NVL", "VNINDEX")
-#: Not companies: no metadata, no shareholders, no context package.
-INDEX_SYMBOLS = frozenset({"VNINDEX", "HNXINDEX", "UPCOMINDEX"})
 #: builders/build_ticker_context_config.json::max_batch_size
 CONTEXT_BATCH_SIZE = 10
 
@@ -376,8 +374,10 @@ class Operator:
         directory = context_packages_dir()
         sessions: dict[str, str | None] = {}
         for ticker in self.tickers:
-            if ticker in INDEX_SYMBOLS:
-                continue
+            # No exclusions: this gate must check exactly what the export's own gate checks,
+            # and `export_ai_bundle.load_context_package_info()` is passed the full ticker
+            # list. Skipping index symbols here made this preflight pass while the export
+            # refused, which is worse than not having the preflight at all.
             path = directory / f"{ticker}_context.json"
             if not path.is_file():
                 sessions[ticker] = None
@@ -440,9 +440,13 @@ class Operator:
         # overwriting it; the Consumer never destroys a context package. Index symbols are
         # excluded (no issuer to build a company context for) and the list is chunked to
         # the Consumer's own max_batch_size rather than relying on it silently truncating.
-        companies = [t for t in self.tickers if t not in INDEX_SYMBOLS]
-        for index in range(0, len(companies), CONTEXT_BATCH_SIZE):
-            batch = companies[index:index + CONTEXT_BATCH_SIZE]
+        # Every requested ticker, index symbols included. Excluding them here while the
+        # export's freshness gate still checks their packages is what let
+        # `prepare_context_packages_*` report success against a package it never rebuilt:
+        # `VNINDEX_context.json` stayed on the previous session and blocked the export. The
+        # Consumer builds an index context perfectly well; there was nothing to exclude.
+        for index in range(0, len(self.tickers), CONTEXT_BATCH_SIZE):
+            batch = self.tickers[index:index + CONTEXT_BATCH_SIZE]
             self._run(f"prepare_context_packages_{index // CONTEXT_BATCH_SIZE + 1}",
                       [sys.executable, "builders/build_ticker_context.py",
                        "--tickers", ",".join(batch), "--no-dry-run", "--rotate-existing"],

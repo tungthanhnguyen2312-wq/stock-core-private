@@ -309,6 +309,65 @@ class DerivedInputGateTests(DailyChainTestCase):
         self.assertEqual(step["focus_analysis_session"], SESSION)
 
 
+class IndexSymbolContextPackageTests(DailyChainTestCase):
+    """The 2026-08-03 false success.
+
+    `prepare_context_packages_1/2` exited 0 and the export still refused, because the rebuild
+    excluded index symbols while `export_ai_bundle.load_context_package_info()` is passed the
+    full ticker list. `VNINDEX_context.json` therefore stayed on the previous session, and
+    every stage that could have noticed had been told to skip it.
+    """
+
+    INDEX = "VNINDEX"
+
+    def _operator_with_index(self, runner, **kwargs):
+        params = {"execute": True, "publish": False, "live": False}
+        params.update(kwargs)
+        return operate.Operator(self.root, [*TICKERS, self.INDEX], runner=runner, **params)
+
+    def test_the_rebuild_covers_index_symbols(self) -> None:
+        # The fake runner cannot write packages, so stand in for what the rebuild produces.
+        _write_context_packages(self.packages, SESSION, tickers=[*TICKERS, self.INDEX])
+        runner = RecordingRunner()
+        self.assertEqual(self._operator_with_index(runner, prepare=True).run(), 0)
+        context_calls = [call for call in runner.calls
+                         if "build_ticker_context.py" in " ".join(call)]
+        self.assertTrue(context_calls, "the context-package stage never ran")
+        requested = ",".join(" ".join(call) for call in context_calls)
+        self.assertIn(self.INDEX, requested,
+                      "an index symbol the export's gate checks was never rebuilt")
+
+    def test_a_stale_index_package_fails_the_preflight(self) -> None:
+        """Previously this passed the preflight and then failed inside the export."""
+        _write_context_packages(self.packages, PRIOR, tickers=[self.INDEX])
+        runner = RecordingRunner()
+        operator = self._operator_with_index(runner)
+        self.assertEqual(operator.run(), 1)
+        failure = next(step for step in operator.steps if step["status"] == "failed")
+        self.assertEqual(failure["step"], "preflight_derived_session_inputs")
+        self.assertEqual(failure["context_package_sessions"][self.INDEX], PRIOR)
+        self.assertNotIn("export_ai_bundle.py", runner.names())
+
+    def test_a_missing_index_package_is_not_silently_excused(self) -> None:
+        runner = RecordingRunner()
+        operator = self._operator_with_index(runner)
+        self.assertEqual(operator.run(), 1)
+        failure = next(step for step in operator.steps if step["status"] == "failed")
+        self.assertEqual(failure["step"], "preflight_derived_session_inputs")
+        self.assertIsNone(failure["context_package_sessions"][self.INDEX])
+
+    def test_the_preflight_checks_exactly_what_the_export_checks(self) -> None:
+        """The two gates disagreeing is the defect; assert the ticker sets are identical."""
+        runner = RecordingRunner()
+        operator = self._operator_with_index(runner)
+        _write_context_packages(self.packages, SESSION, tickers=[*TICKERS, self.INDEX])
+        self.assertEqual(operator.run(), 0)
+        step = next(s for s in operator.steps
+                    if s["step"] == "preflight_derived_session_inputs")
+        self.assertEqual(sorted(step["context_package_sessions"]),
+                         sorted([*TICKERS, self.INDEX]))
+
+
 class FailedStageContainmentTests(DailyChainTestCase):
     def test_nothing_publishes_after_a_failed_stage(self) -> None:
         _write_focus_analysis(self.root, PRIOR)
