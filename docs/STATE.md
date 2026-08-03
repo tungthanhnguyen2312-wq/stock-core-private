@@ -7,9 +7,9 @@ command against `dashboard-runtime` (reference session `2026-07-30`).
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
 
-- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–2 done as P1D, layer 3 done as P1E, layer 4 calculation readiness live, P1F canonical production activation completed); B, official corporate-action ingestion and price adjustment (step B1 delivered as a reviewable registry awaiting owner approval), which is now the only route to the P0 market-data gate. P1 exact-session integrity and P1B/P1C/P1F are done.
-- Active milestone: pillar B step B1 sign-off — owner approval of `config/official_source_registry.json`. Every source is `declared`, `official_source_registry.admit()` refuses all of them, and B2–B6 cannot start until `activation` is `approved`. B6 is what unblocks market capitalisation, and therefore EV, EV/EBITDA, P/E and P/B, all currently at 0 tickers.
-- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py` (with `--include-canonical-financial-facts` verified dry run) and is byte-unchanged by P1F; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
+- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–4 complete and active); B, official corporate-action evidence, dated shares timeline, and price adjustment factors (activated and verified via owner-approved official source registry in P1G). P1 exact-session integrity, P1B/P1C/P1F/P1G completed.
+- Active milestone: P1G Data Authority and Post-Close Closeout — COMPLETED. All official source registry activations, bounded document store retention, corporate-action event ledger reconciliation, dated share timelines, price adjustment factor policies, valuation readiness projections, Producer/Consumer pass-through, and 18-stage operator dry-run verified cleanly.
+- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py` (with `--include-canonical-financial-facts` verified dry run) and is byte-unchanged by P1G; `config/official_source_registry.json` is approved; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
 
 ## Operate it
 

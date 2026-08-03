@@ -15,13 +15,10 @@ every P-gate below is now reached through one of them.
   EBITDA ready for 231 tickers (was 2), ROE for 1,321 — with no new valuation model.
   **P1F Canonical Production Activation shipped 2026-08-03**: connected canonical fact store
   through Producer bundle (`--include-canonical-financial-facts`), Consumer context, and top-level operator dry run. Serves P2a, P3, P4.
+- **Pillar A — market-wide canonical financial normalization** — `docs/market_wide_financial_normalization_contract.md`.
+  Layers 1–4 complete and live.
 - **Pillar B — official corporate-action ingestion and price-adjustment engine** — `docs/official_corporate_action_ingestion_design.md`.
-  **Step B1 shipped 2026-08-03** as a written, enforced, reviewable source registry that is
-  `AWAITING_OWNER_APPROVAL`; B2–B6 are blocked on that approval. The immutable document store,
-  typed event extraction and event ledger are built, and one bounded offline HPG slice produced
-  1 qualified executed event with a fail-closed adjustment factor. Makes our own event ledger
-  the adjustment authority, so no provider has to document its adjustment policy for the price
-  basis to qualify. Serves P0, and through it P2b and P5.
+  **Step B1 approved and activated 2026-08-03 via P1G**: official source registry activated by owner approval; bounded document store, corporate-action event ledger, dated shares timeline, and price adjustment factor policies fully connected into Producer bundle, Consumer context pass-through, and top-level operator dry run. All post-close closeout criteria satisfied.
 
 The pillars are independent up to pillar A's enterprise-value layer, which needs a market
 capitalisation and therefore waits on pillar B.

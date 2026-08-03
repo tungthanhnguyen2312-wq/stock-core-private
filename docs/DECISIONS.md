@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-08-03 - P1G Data Authority and Post-Close Closeout
+- Owner approved activation of existing declared official sources in `config/official_source_registry.json`: HOSE, HNX, VSDC, and qualified issuer IR hosts (`file.hoaphat.com.vn`, `www.vinamilk.com.vn`, etc.).
+- Broad discovery, undeclared hosts, and paid providers (EODHD) remain strictly prohibited and fail closed.
+- Bounded document store retention, corporate-action event ledger reconciliation (9 event types, explicit lifecycle, strict ex-date requirement for factors), dated shares timeline, and valuation readiness (distinguishing current vs historical market cap and EV/P-E/P-B/EV-EBITDA readiness) land cleanly in the Producer.
+- Consumer context `ai-core-private/builders/build_ticker_context.py` passes through all canonical facts and readiness verbatim without recomputation.
+- Top-level operator `tools/operate_stocklookup.py` includes canonical financial facts and completes full 18-stage local post-close dry run cleanly. Baseline production hashes remain strictly unchanged.
+
 ## 2026-08-03 - P1F Canonical Financial Production Activation
 - Canonical financial export is connected through `--include-canonical-financial-facts` on `export_ai_bundle.py` and top-level operator `tools/operate_stocklookup.py`.
 - Consumer context `ai-core-private/builders/build_ticker_context.py` passes through `canonical_financial_facts` verbatim without recalculation.

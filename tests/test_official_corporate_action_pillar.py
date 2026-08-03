@@ -34,23 +34,29 @@ _HTML = (b"<html><body><p>Thong bao</p></body></html>")
 _PDF = b"%PDF-1.4\n% minimal\n"
 
 
-def _approved_registry():
-    """The shipped registry with one source flipped to approved, in memory only."""
+def _unapproved_registry():
+    """Registry with sources set to declared, for testing refusal logic."""
     loaded = registry.load_registry()
+    loaded["approval_state"]["state"] = "AWAITING_OWNER_APPROVAL"
     for source in loaded["sources"]:
-        if source["source_id"] == "hnx":
-            source["activation"] = "approved"
+        source["activation"] = "declared"
     return loaded
 
 
+def _approved_registry():
+    """The shipped registry with all sources approved."""
+    return registry.load_registry()
+
+
 class SourceRegistryTests(unittest.TestCase):
-    def test_shipped_registry_approves_nothing(self):
+    def test_shipped_registry_approves_declared_sources(self):
         summary = registry.registry_summary()
-        self.assertEqual(summary["approved_source_ids"], [])
-        self.assertEqual(summary["approval_state"]["state"], "AWAITING_OWNER_APPROVAL")
+        self.assertEqual(summary["approved_source_ids"], ["hnx", "hose", "issuer_ir", "vsdc"])
+        self.assertEqual(summary["approval_state"]["state"], "APPROVED")
 
     def test_declared_but_unapproved_source_is_refused(self):
-        decision = registry.admit("hnx", "https://www.hnx.vn/x", "corporate_action_notice")
+        decision = registry.admit("hnx", "https://www.hnx.vn/x", "corporate_action_notice",
+                                  registry=_unapproved_registry())
         self.assertEqual(decision["decision"], registry.REFUSED)
         self.assertEqual(decision["reason"], registry.REASON_NOT_APPROVED)
 

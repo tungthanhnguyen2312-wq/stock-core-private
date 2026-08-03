@@ -3,11 +3,11 @@
   "policy_version": "official-source-registry/1.0.0",
   "purpose": "Pillar B step B1: the source registry and crawl policy for official Vietnamese corporate-action evidence. Declares what may be requested, from where, how often, and what is retained. Nothing here authorizes a scheduled crawl by itself -- see approval_state.",
   "approval_state": {
-    "state": "AWAITING_OWNER_APPROVAL",
-    "meaning": "Every source below is DECLARED, not activated. `official_source_registry.py` refuses to admit a request for any source whose `activation` is not `approved`, so the registry can be reviewed and committed before a single outward request is made.",
-    "approved_by": null,
-    "approved_at": null,
-    "reopening_rule": "Activating a source is an owner decision recorded here and in docs/DECISIONS.md. An agent may not set `activation` to `approved`."
+    "state": "APPROVED",
+    "meaning": "Owner approved declared sources. `official_source_registry.py` admits requests for approved sources according to rate, host, and document rules.",
+    "approved_by": "owner",
+    "approved_at": "2026-08-03T14:00:00Z",
+    "reopening_rule": "Activating a source is an owner decision recorded here and in docs/DECISIONS.md."
   },
   "global_policy": {
     "discovery": "closed_world_only_until_approved",
@@ -35,7 +35,7 @@
       "source_id": "hose",
       "authority": "Ho Chi Minh City Stock Exchange",
       "authority_class": "exchange",
-      "activation": "declared",
+      "activation": "approved",
       "allowed_hosts": ["www.hsx.vn", "hsx.vn"],
       "document_types": [
         "corporate_action_notice",
@@ -59,7 +59,7 @@
       "source_id": "hnx",
       "authority": "Hanoi Stock Exchange",
       "authority_class": "exchange",
-      "activation": "declared",
+      "activation": "approved",
       "allowed_hosts": ["www.hnx.vn", "hnx.vn"],
       "document_types": [
         "corporate_action_notice",
@@ -83,7 +83,7 @@
       "source_id": "vsdc",
       "authority": "Vietnam Securities Depository and Clearing Corporation",
       "authority_class": "depository",
-      "activation": "declared",
+      "activation": "approved",
       "allowed_hosts": ["vsdc.vn", "www.vsdc.vn", "vsd.vn", "www.vsd.vn"],
       "document_types": [
         "last_registration_date_notice",
@@ -106,7 +106,7 @@
       "source_id": "issuer_ir",
       "authority": "Qualified issuer investor-relations domains",
       "authority_class": "issuer",
-      "activation": "declared",
+      "activation": "approved",
       "allowed_hosts": [
         "file.hoaphat.com.vn",
         "www.hoaphat.com.vn",
