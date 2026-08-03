@@ -278,12 +278,19 @@ contradicted the file it describes. EODHD is recorded in the registry itself as
 > refuses every source with `approval_instant_not_verifiable`, so B2–B6 cannot acquire
 > anything.
 >
-> To verify it, the owner adds `approved_at_provenance` to `approval_state`, naming the clock
-> the instant was read from, and corrects `approved_at` to the matching UTC value — for
-> example `"approved_at": "2026-08-03T07:00:00+00:00"` with
-> `"approved_at_provenance": "owner recorded 14:00 Asia/Ho_Chi_Minh"`. An agent may not write
-> either field. If the approval is not the owner's, reverting `activation` is likewise an
-> owner action.
+> **The owner's answer must take exactly one of these three forms.** No other reading is
+> actionable, and a commit timestamp is not evidence of which clock was used — `14:22 +0700`
+> makes "14:00 local" plausible and proves nothing.
+>
+> 1. *"14:00 is Vietnam time."* → set `approved_at = 2026-08-03T07:00:00+00:00` and
+>    `approved_at_provenance = "owner recorded 14:00 Asia/Ho_Chi_Minh"`.
+> 2. *"14:00 is UTC."* → keep `approved_at = 2026-08-03T14:00:00Z` and set
+>    `approved_at_provenance = "owner recorded 14:00 UTC"`.
+> 3. *"I did not approve the activation."* → revert `activation` to `declared` and leave the
+>    registry closed. The timestamp is not legitimised either way.
+>
+> Until then the registry stays blocked. The current value is neither corrected nor kept on the
+> strength of already existing, and an agent writes neither field.
 
 `official_document_store.py` retains official documents content-addressed by SHA-256, re-hashed
 at adoption, never overwritten and never deleted; a correction is a new record with
@@ -342,10 +349,29 @@ away while HPG resolved as `provider_reported_lagged`.
 31 December 2024; no retained document covers the interval to the session. Closing that needs an
 official notice per ticker, not more code.
 
+### `corroborated_period_end` — shadow lane, not an authority
+
+A period-end anchor whose count an independent observation matches has the same *shape* as the
+evidence that promotes an executed event, and not the same strength. It is measured but
+quarantined: **shadow-only**, `authority_rank` 1 against executed-event evidence's 2, never a
+value `authority` may take, never counted in the production lanes, and structurally unable to
+raise `is_actionable`. Promoting it out of shadow needs its own validation and its own owner
+decision.
+
+Measured for session 2026-08-03: **1 eligible — VNM**, whose observation is carrying **576
+days** (2024-12-31 → 2026-07-30). HPG is out of scope (its anchor is an executed event, which
+outranks this lane). VCB is refused: its observation contradicts its anchor, which the retained
+VSDC notice independently explains.
+
+Every verdict carries `proves_no_intervening_event: false` and cannot be made to say otherwise.
+Agreement proves the **net** count is unchanged, not that nothing happened — two offsetting
+events produce the same number.
+
 ### Retained evidence is exhausted for share basis — audited 2026-08-03
 
-HPG was the only ticker promotable from documents already on disk. The rest were checked and
-are insufficient, so re-mining this seam will not produce another `qualified_official`:
+HPG was the only ticker promotable from documents already on disk. **This audit is closed**;
+do not re-scan these 38 documents unless a new source appears or the evidence contract changes.
+The rest were checked and are insufficient:
 
 - **VCB** — `operations-review/non-cash-corporate-action-official-evidence/vsdc-vcb-listing-change-execution.html`
   is a genuine VSDC notice for a 2025 share-issuing dividend (record date 2025-03-13, official
