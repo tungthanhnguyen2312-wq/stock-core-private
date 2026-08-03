@@ -7,9 +7,9 @@ command against `dashboard-runtime` (reference session `2026-07-30`).
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
 
-- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–2 done as P1D, layer 3 next as P1E); B, official corporate-action ingestion and price adjustment (design only), which is now the only route to the P0 market-data gate. P1 exact-session integrity and P1B/P1C are done.
-- Active milestone: pillar A layer 3 — canonical financial facts market-wide (resolve statement scope, currency, unit scale, sign and cumulative basis over the 1,546,197 retained raw observations, both provider dialects); it does not depend on the blocked market-data basis.
-- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py`; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged, and the 2026-08-03 market-wide ingest wrote only into `data/market-wide-financials/`, leaving `vn_stock.db`, `analysis_bundle.json`, `bundle_manifest.json`, `focus_extract.json`, `statement_taxonomy_sidecar.json` and `screen_snapshot.csv` byte-identical.
+- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–2 done as P1D, layer 3 done as P1E, layer 4 readiness reporting live); B, official corporate-action ingestion and price adjustment (step B1 delivered as a reviewable registry awaiting owner approval), which is now the only route to the P0 market-data gate. P1 exact-session integrity and P1B/P1C are done.
+- Active milestone: pillar B step B1 sign-off — owner approval of `config/official_source_registry.json`. Every source is `declared`, `official_source_registry.admit()` refuses all of them, and B2–B6 cannot start until `activation` is `approved`. B6 is what unblocks market capitalisation, and therefore EV, EV/EBITDA, P/E and P/B, all currently at 0 tickers.
+- Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py` and is byte-unchanged by P1E; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged, and P1E wrote only into `data/canonical-financial-facts/`, `data/official-corporate-actions/` and two new files under `data/market-wide-financials/`, leaving `vn_stock.db`, `analysis_bundle.json`, `bundle_manifest.json`, `focus_extract.json`, `statement_taxonomy_sidecar.json` and `screen_snapshot.csv` byte-identical (SHA-256 recorded before and after in `operations-review/p1e-milestone-20260803/`).
 
 ## Operate it
 
@@ -148,7 +148,7 @@ Raw-identity coverage for the derived-EBITDA inputs, over the 1,226 tickers not 
 **all three 1,016 (82.9%)**. Enterprise-value balance-sheet inputs complete for 1,148;
 market capitalisation still blocked on the price basis.
 
-### Two corrections this measurement forces on the blocker list above
+### Two corrections this measurement forced on the blocker list above — both now closed by P1E
 
 - The screening-tier table records `ebitda` as **0 available / 1,148** and EBITDA as
   computable for 2 tickers market-wide. The raw depreciation identity is present for
@@ -160,23 +160,73 @@ market capitalisation still blocked on the price basis.
   identity (`undistributed_earnings`) is present for **1,148** tickers. The blocker is in
   the snapshot projection, not the source data.
 
-Both are mapping work (P1E), not data acquisition.
+Both were mapping work, and P1E did it.
+
+## Market-wide canonical financial facts (P1E, 2026-08-03)
+
+Pillar A layer 3, from `data/canonical-financial-facts/`. Detailed evidence:
+`operations-review/p1e-milestone-20260803/P1E_OPERATIONS_REVIEW.md`.
+
+| | |
+| --- | --- |
+| tickers with a fact shard | 1,493 |
+| canonical facts | 195,552 |
+| `qualified` | **2** (HPG and VNM `retained_earnings` 2024-Q4) |
+| `provider_reported` | 93,749 |
+| `partial` | 5,004 |
+| `conflicted` | 12,501 |
+| `unavailable` | 84,296 |
+| unresolved-metric queue (per metric, never per ticker) | 101,801 |
+| conflict queue | 12,619 |
+
+`provider_reported` is the honest market-wide ceiling and is **not** an evidence-qualified
+value. The retained payloads carry no currency column, no unit header and no anchor fixing the
+absolute unit; VND-under-VAS is a convention, not evidence in these bytes. The only route to
+`qualified` is agreement with an independently promoted official citation, which today exists
+for HPG and VNM only — HPG's provider 2024-Q4 `undistributed_earnings` matches the audited
+FY2024 citation digit for digit (49,599,124,109,203), and VNM's likewise.
+
+### Calculation readiness, 1,492 tickers
+
+| capability | ready | note |
+| --- | --- | --- |
+| ROE | **1,321** | single-period, never annualised |
+| EBITDA | **231** | was 2; reconciliation contract with full formula lineage |
+| EBITDA / EV-EBITDA `not_applicable` | 83 | financial filers, a verdict not a gap |
+| EV balance-sheet components | 1,338 | debt and cash ready; EV itself is not |
+| market capitalisation · EV · EV/EBITDA · P/E · P/B | **0** | blocked, see below |
+
+### Three findings P1E's measurements force
+
+- **Provider is not dialect.** HPG's income statement carries `source = KBS` and the full VCI
+  vocabulary. A mapping keyed on the `source` column drops every metric on that payload, so
+  candidate matching keys on the raw item id and dialect is detected from the vocabulary.
+- **Cash-flow period labels are not trustworthy.** HPG's cash-flow column labelled `2025-Q2`
+  carries an end-of-period cash balance matching the *2026-Q1* balance sheet. Balance-sheet
+  cash versus cash-flow end cash is therefore a period-attribution gate: divergent →
+  `conflicted`, unverifiable → capped at `partial`. It diverges for 314 of 678 sampled
+  ticker-periods, and it is the main reason EBITDA is 231 rather than ~1,000.
+- **The provider tier caps retention at 8 periods** ("Community edition: Financial statements
+  limited to 8 periods"). Every ticker has at most 8 quarterly periods and there are **no
+  annual periods at all**, which is why annual figures cannot be read from the store.
 
 ### Top remaining blockers, by tickers affected
 
-1. **Issuer entity type unresolved — 1,218 tickers** (was 1,289; income-statement evidence
-   and the market-wide pass account for the difference). The generated taxonomy can only
-   withhold a model, never grant one, so `corporate_vas` alone leaves Altman on
-   `insufficient_evidence`. Unlocking this needs an authoritative issuer-type source, not
-   more taxonomy work. Highest analytical value by a wide margin.
-2. **Canonical mapping not built — pillar A layer 3.** Supersedes the previous
-   "`retained_earnings` not retained" and "`operating_cash_flow` missing" entries: both raw
-   identities are retained for ~1,148 and ~1,137 tickers respectively. What is missing is
-   the dual-dialect mapping and the scope/unit/sign resolution, not the data.
-3. **131 active-universe tickers have no retained statement payload at all.** A genuine
-   acquisition gap, and the only one of these four that needs new data.
-4. **Price/volume basis unverified — every ticker.** Blocks the entire current-market tier.
-   EODHD is closed; the route is now pillar B's official corporate-action ledger.
+1. **Price/volume basis unverified — every ticker.** Blocks the entire current-market tier and
+   now also market capitalisation, and therefore EV, EV/EBITDA, P/E and P/B at 0 tickers.
+   EODHD is closed; the route is pillar B, gated on B1 owner approval.
+2. **Issuer entity type unresolved — 1,218 tickers.** The generated taxonomy can only withhold
+   a model, never grant one, so `corporate_vas` alone leaves Altman on
+   `insufficient_evidence`. Needs an authoritative issuer-type source, not more taxonomy work.
+3. **No retained line carries a share count.** `common_shares` and `paid_in_capital` are
+   paid-in capital amounts in currency; converting them needs an assumed par value. This is an
+   independent second blocker on market capitalisation, distinct from the price basis.
+4. **131 active-universe tickers have no retained statement payload — now classified.** Every
+   ticker probed through the authorized provider path returned `source_empty_confirmed` from
+   both KBS and VCI across all three statement families. The gap is in the source; no
+   acquisition work will close it. This also corrects `scrape_meta.csv`, which records all 131
+   as `empty` while `bctc_sync.call_api` returns `None` for any non-network exception, making
+   a genuine empty source and a parse error indistinguishable there.
 
 ## Historical corrections that remain in force
 
@@ -195,15 +245,40 @@ Both are mapping work (P1E), not data acquisition.
   through the runtime root like the rest of the daily chain; it previously read and wrote
   them inside the source repository.
 
+## Official corporate-action foundation (pillar B, 2026-08-03)
+
+`config/official_source_registry.json` declares HOSE, HNX, VSDC and qualified issuer IR
+domains with allowed hosts, document types, discovery path, request rate, timeouts, bounded
+retry, robots/terms considerations, retention and failure classification.
+`approval_state = AWAITING_OWNER_APPROVAL`; **every source is `declared`, not `approved`**, and
+`official_source_registry.admit()` refuses a declared source, so the reviewable JSON is what
+gates the network. An agent may not set `activation` to `approved`. EODHD is recorded in the
+registry itself as `REJECTED_BY_OWNER` and excluded.
+
+`official_document_store.py` retains official documents content-addressed by SHA-256, re-hashed
+at adoption, never overwritten and never deleted; a correction is a new record with
+`supersedes_document_id`. `corporate_action_events.py` extracts typed, cited observations with
+an explicit lifecycle (`proposed → approved → announced → record_date_confirmed → executed`,
+plus amended/cancelled/unknown) capped per document class.
+`official_corporate_action_ledger.py` links, deduplicates, resolves supersession and replays
+deterministically. It is separate from `corporate_action_ledger.py`, whose contract is unchanged.
+
+**Bounded vertical slice, HPG, offline, no network request.** Two retained official documents
+→ 2 documents adopted (store `verify` ok) → 2 observations → **1 qualified executed
+`stock_dividend`**: `shares_issued` 767,498,665, `shares_after` 8,442,964,520, ratio
+0.0999937567, five field-level citations, both source hashes, replay fingerprint stable across
+runs. **Adjustment factor `not_ready`, blocked by `missing_explicit_official_ex_date`** —
+neither document states an ex-date, and a record, payment, listing or trading date never
+substitutes for one. The scanned issuer notice's OCR-damaged share counts are refused outright
+rather than emitted. `PRICE_ADJUSTMENT_FACTOR_PILOT: NOT_READY`.
+
 ## Next highest-value milestone
 
-**Pillar A layer 3 — canonical financial facts market-wide** (`P1E`). Map the 1,546,197
-retained raw observations onto canonical metrics with statement scope, currency, unit scale,
-sign convention and cumulative-vs-discrete basis resolved, across **both** provider dialects,
-emitting a per-metric status in `qualified | provider_reported | partial | conflicted |
-unavailable | not_applicable` and routing only unresolved *metrics* — not whole tickers — to
-a review queue. The raw identities are already on disk for ~85% of the universe; this is
-mapping work, and it is what converts P1D's retention into usable facts.
+**Pillar B step B1 sign-off** — owner approval of `config/official_source_registry.json`. It is
+a governance decision, not code: the registry is written, enforced and reviewable, and until
+`activation` is `approved` no document can be acquired from HOSE, HNX or VSDC, so B2–B6 cannot
+start. B6 is the only remaining route to a qualified price basis now that EODHD is closed, and
+it is what unblocks market capitalisation and therefore EV, EV/EBITDA, P/E and P/B.
 
 Running second, and independent of it: qualify `issuer_entity_type` for the 1,218 tickers
 where it is unresolved, from an authoritative source (exchange/issuer registration data).
@@ -211,7 +286,6 @@ Generated taxonomy cannot do this by construction — it may only withhold a mod
 grant one — so it needs a real issuer-type source, and it is the gate between 8 confirmed
 applicable tickers and universe-wide historical screening.
 
-Then **pillar B step B1** — the owner-approved crawl contract and host allowlist for
-HOSE/HNX/VSDC/issuer IR (`docs/official_corporate_action_ingestion_design.md`). It is the
-only remaining route to the price basis now that EODHD is closed, and B1 is a governance
-decision, not code, so it can be taken in parallel with P1E.
+Third: extend official-citation coverage beyond HPG and VNM. It is the only mechanism that
+promotes a canonical fact above `provider_reported`, and at 2 qualified facts market-wide it is
+the binding constraint on evidence-qualified financial analysis.

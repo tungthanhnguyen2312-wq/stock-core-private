@@ -1,8 +1,22 @@
 # Official corporate-action ingestion and price-adjustment engine — design
 
-Status: **design only, 2026-08-03. Nothing in this document is implemented.**
-It is recorded now so the pillar is a named roadmap item with a written contract rather
-than an intention, and so the next milestone starts from a decision rather than a debate.
+Status, updated **2026-08-03**: **B1 delivered and awaiting owner approval; the B2–B4 machinery
+is built and proven on a bounded offline slice; no crawl has been performed.**
+
+| step | state |
+| --- | --- |
+| B1 crawl contract and allowlist | **delivered** as `config/official_source_registry.json`, enforced by `official_source_registry.py`. `approval_state = AWAITING_OWNER_APPROVAL`; every source is `declared`, and `admit()` refuses a declared source. **An agent may not approve it.** |
+| B2 bounded crawler | **blocked on B1.** The immutable blob store exists (`official_document_store.py`) and is exercised by adopting already-retained documents, with no network request. |
+| B3 classification and typed extraction | **built** (`corporate_action_events.py`), proven against retained HPG evidence. |
+| B4 linking and execution status | **built** (`official_corporate_action_ledger.py`): cross-document linking, deduplication, supersession, lifecycle, deterministic replay. |
+| B5 historical qualification | not started |
+| B6 factors and dual price series | not started. One factor path exists and is fail-closed: the slice's event yields `not_ready` for want of an explicit official ex-date. |
+
+The bounded vertical slice produced **1 qualified executed `stock_dividend`** for HPG from two
+independent retained official documents, with citations, both source hashes and a stable replay
+fingerprint. See `operations-review/p1e-milestone-20260803/P1E_OPERATIONS_REVIEW.md`.
+
+The original design follows unchanged.
 
 ## Why this pillar exists
 

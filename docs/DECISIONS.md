@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-08-03 - `provider_reported` is the honest ceiling; a convention is not evidence
+- Layer 3 emits `qualified` only where a value agrees digit-for-digit with an independently promoted official citation, which is the only place a currency and an absolute unit scale are actually evidenced. Everything else that resolves cleanly is `provider_reported`.
+- The retained payloads carry no currency column, no unit header and no internal anchor fixing the absolute unit. Vietnamese listed issuers do file in VND under VAS; that is a convention, not evidence in these bytes, and promoting it would make the qualification contract meaningless everywhere else.
+- The consequence is 2 qualified facts market-wide (HPG and VNM `retained_earnings` 2024-Q4) against 93,749 `provider_reported`. That is reported as a citation-coverage gap, not papered over. A status is never upgraded because a normalized label matched.
+- An annual official citation is additionally keyed to `YYYY-Q4` for **stock** metrics only: a balance sheet dated 31 December is both the FY year-end and the Q4 period end. The alias is never emitted for a flow metric, because FY revenue is not Q4 revenue.
+
+## 2026-08-03 - Dialect is a property of the vocabulary, not of the `source` column
+- `docs/market_wide_financial_normalization_contract.md` describes the split as two providers with two vocabularies, which reads as though `source` selects the dialect. It does not: HPG's income statement carries `source = KBS` and the full VCI vocabulary. Keying the mapping on the provider string drops every metric on that payload.
+- Candidate matching therefore keys on the raw item id, which is what actually discriminates, and `detect_dialect()` reports the dialect a payload's vocabulary evidences so the coverage report can still break every metric down by dialect and make a single-dialect regression visible.
+- A canonical metric's candidates may live on a different statement from the metric's declared home (`interest_expense` prefers the income statement and falls back to a cash-flow add-back), and the fallback is admitted only as a `substitute`, forcing `partial`.
+
+## 2026-08-03 - Cash-flow period labels are gated, not trusted
+- HPG's cash-flow payload column labelled `2025-Q2` carries an end-of-period cash balance that matches the **2026-Q1** balance sheet. The label does not identify the period the numbers describe.
+- End-of-period cash is the only cross-check the retained payloads offer between a balance sheet and a cash-flow statement, so it is a period-attribution gate: `divergent` makes every cash-flow fact for that period `conflicted`; an unavailable check caps them at `partial`. It diverges for 314 of 678 sampled ticker-periods.
+- Without this gate a depreciation figure from one quarter would silently be added to a profit figure from another inside EBITDA. This is why EBITDA is ready for 231 tickers rather than for every ticker whose raw identities are present.
+- The retained store is capped at 8 quarterly periods per ticker by the provider's community tier, and carries no annual periods at all. Annual figures cannot be read from it.
+
+## 2026-08-03 - The source registry gates the network, not a comment
+- `config/official_source_registry.json` is the pillar B step B1 artifact. Every source ships `declared`, `approval_state` is `AWAITING_OWNER_APPROVAL`, and `official_source_registry.admit()` refuses a source that is not `approved`. The reviewable JSON is therefore the thing that actually prevents an outward request.
+- **An agent may not set `activation` to `approved`.** That is an owner decision, recorded here and in the registry. B2-B6 may not begin until it is taken.
+- Host matching is exact after lower-casing and port-stripping, never suffix matching: `evil-hnx.vn` passes a naive suffix test, and an allowlist defeated by registering a domain is not one.
+- Issuer IR hosts are admitted only where a retained official citation already evidences them, extending the 2026-08-02 bounded official-event locator rule. EODHD is recorded inside the registry as `REJECTED_BY_OWNER` and excluded.
+
+## 2026-08-03 - No date substitutes for an official ex-date, and OCR damage is refused
+- A price-adjustment factor places an event on the price timeline and requires an explicit official ex-date. The existing rule that a record date never substitutes for one now extends to payment, listing and trading dates. The HPG slice's event is complete, executed and fully cited, and its factor is `not_ready` for exactly this reason.
+- Factors derived from this ledger carry `authority_state = outside_production_authority`, and the ledger never writes to `data/official-evidence/`; `evidence_promotion.py` remains the only evidence write boundary.
+- A document class caps the lifecycle state it may assert: a board resolution or AGM plan can reach `approved` and never `executed`.
+- Numbers are not read from a damaged scan. The retained HPG issuer notice extracts its post-change share count as `8.M2.964.520`, which tokenises to `2.964.520` — a value that parses cleanly and lies inside any plausible share range, so no bounds check catches it. Positional column reading is used only when the form's own column headers survive in order **and** two labelled rows agree, and the row arithmetic `before + change = after` must hold. Otherwise the document contributes no share count at all.
+
+## 2026-08-03 - Layer 3 enters the bundle additively, disabled by default
+- `--include-canonical-financial-facts` follows the Phase 5A/6A opt-in precedent exactly: with the flag unset nothing is read and no key is added, so the default bundle — and the exact-session proof that hash-binds it — is unchanged. Verified by an exact artifact diff: the Producer carrying this milestone, with the flag off and the production ticker set and flags, reproduces the shipped `analysis_bundle.json`, `focus_extract.json` and `bundle_manifest.json` content-identically, differing only in the documented clock fields.
+- A metric crosses the boundary only with its status, provenance, period, scope, unit, basis and limitations. **`conflicted` and `unavailable` facts cross as status and reason with `value: null` and `value_withheld: true`**, because a consumer that sees a number will eventually use it. Raw observations never cross; only `source_observation_ids` pointers do.
+- No ranking, no score, no whole-market ordering, and no change to `is_actionable`.
+- A mapping change must move `MAPPER_VERSION`. The incremental fingerprint covers it, and a mapper edited without bumping it left the store reporting `rebuilt: 0, unchanged: 1493` while serving facts built by code that no longer existed.
+
 ## 2026-08-02 — Approved evidence write boundary (P0.2)
 - `evidence_promotion.py` (Producer, source-controlled) is the sole module authorized to append records into `<runtime_root>/data/official-evidence/manifest.json` and its `*_citations.jsonl` sidecars. No other module, script, or hand-edit may write to those files.
 - Every write is append-only and idempotent: manifest records are deduped by `evidence_id`, citation records by `citation_id`. Nothing is ever edited, reordered, or deleted; a correction is a new row using the existing `supersedes_citation_ids` field already read by `semantic_evidence_bridge.py`.

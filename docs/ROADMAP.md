@@ -9,12 +9,18 @@ every P-gate below is now reached through one of them.
 - **Pillar A — market-wide canonical financial normalization** — `docs/market_wide_financial_normalization_contract.md`.
   Layers 1 (raw retention, no allowlist) and 2 (statement taxonomy and model applicability)
   shipped 2026-08-03: 1,546,197 raw observations over 1,493 tickers, byte-reproducible,
-  incremental. Layers 3 (canonical facts) and 4 (engines fed market-wide) are specified and
-  are the next implementation milestone. Serves P2a, P3, P4.
+  incremental. **Layer 3 (canonical facts) shipped 2026-08-03 as P1E**: 195,552 canonical facts
+  with scope/sign/unit/basis resolved from evidence only, both dialects, six-value per-metric
+  status, per-metric review queues. **Layer 4 readiness** is live as a reporting layer —
+  EBITDA ready for 231 tickers (was 2), ROE for 1,321 — with no new valuation model. Serves
+  P2a, P3, P4.
 - **Pillar B — official corporate-action ingestion and price-adjustment engine** — `docs/official_corporate_action_ingestion_design.md`.
-  Design only. Makes our own event ledger the adjustment authority, so no provider has to
-  document its adjustment policy for the price basis to qualify. Serves P0, and through it
-  P2b and P5.
+  **Step B1 shipped 2026-08-03** as a written, enforced, reviewable source registry that is
+  `AWAITING_OWNER_APPROVAL`; B2–B6 are blocked on that approval. The immutable document store,
+  typed event extraction and event ledger are built, and one bounded offline HPG slice produced
+  1 qualified executed event with a fail-closed adjustment factor. Makes our own event ledger
+  the adjustment authority, so no provider has to document its adjustment policy for the price
+  basis to qualify. Serves P0, and through it P2b and P5.
 
 The pillars are independent up to pillar A's enterprise-value layer, which needs a market
 capitalisation and therefore waits on pillar B.
@@ -23,6 +29,8 @@ capitalisation and therefore waits on pillar B.
 - Deliverables: provider/schema-version lineage; qualified corporate-action lineage; empirical active-path price test; volume semantics; source/version scale handling.
 - **EODHD is closed as a route: `EODHD_ROUTE_STATUS: REJECTED_BY_OWNER`** (2026-08-03, `docs/DECISIONS.md`). The earlier private-shadow approval is withdrawn after two independent days of read timeouts. No further timeout test, retry, credential milestone, website check or network diagnosis is authorized; proposing one re-opens a closed decision. The disabled modules stay in the tree but are off this roadmap.
 - The remaining route is **pillar B**: crawl HOSE/HNX/VSDC/issuer IR, build an immutable corporate-action event ledger, and compute `close_official_event_adjusted` ourselves alongside `close_raw`. Sequenced B1–B6 in the design doc.
+- **B1 is delivered and blocked on an owner decision** (2026-08-03). `config/official_source_registry.json` declares all four source classes with hosts, document types, rates, timeouts, retries, robots/terms, retention and failure classification; `official_source_registry.admit()` refuses every source while `activation` is `declared`. Setting `activation` to `approved` is an owner decision recorded in `docs/DECISIONS.md` and may not be made by an agent. Nothing in B2–B6 may begin until then.
+- **A second, independent blocker on market capitalisation surfaced in P1E**: no retained provider line carries a share count. `common_shares`/`paid_in_capital` are currency amounts, and converting them requires an assumed par value. Qualifying the price basis alone therefore does not produce a market capitalisation.
 - Exit gates: `OHLCV_PROVIDER_VERSION_RETAINED = YES`; `QUALIFIED_PRICE_TEST_EVENTS >= 8`; `PRICE_BASIS_ACTIVE_PATH = DETERMINED_DOCUMENTED | DETERMINED_EMPIRICALLY`; `VOLUME_BASIS_ACTIVE_PATH = DETERMINED`; `NO_MARKET_CONSUMER_USES_UNQUALIFIED_BASIS = YES`.
 
 ### P0 sub-items (from the 2026-08-02 P0.1 audit)

@@ -1,0 +1,145 @@
+{
+  "schema_version": "1.0.0",
+  "policy_version": "official-source-registry/1.0.0",
+  "purpose": "Pillar B step B1: the source registry and crawl policy for official Vietnamese corporate-action evidence. Declares what may be requested, from where, how often, and what is retained. Nothing here authorizes a scheduled crawl by itself -- see approval_state.",
+  "approval_state": {
+    "state": "AWAITING_OWNER_APPROVAL",
+    "meaning": "Every source below is DECLARED, not activated. `official_source_registry.py` refuses to admit a request for any source whose `activation` is not `approved`, so the registry can be reviewed and committed before a single outward request is made.",
+    "approved_by": null,
+    "approved_at": null,
+    "reopening_rule": "Activating a source is an owner decision recorded here and in docs/DECISIONS.md. An agent may not set `activation` to `approved`."
+  },
+  "global_policy": {
+    "discovery": "closed_world_only_until_approved",
+    "robots_policy": "respect_robots_txt_and_terms; a Disallow on the target path is terminal for that path, never worked around",
+    "user_agent": "StockLookupOfficialEvidence/1.1",
+    "connect_timeout_seconds": 5,
+    "read_timeout_seconds": 15,
+    "max_response_bytes": 20971520,
+    "max_attempts": 2,
+    "backoff": "exponential, base 0.25s, bounded by max_attempts",
+    "max_redirects": 5,
+    "concurrency": 1,
+    "retention": "immutable, content-addressed by SHA-256; documents are never overwritten, edited or deleted",
+    "credentials": "none; no source in this registry requires or accepts authentication",
+    "excluded_sources": [
+      {
+        "source": "EODHD",
+        "status": "REJECTED_BY_OWNER",
+        "note": "Permanently out of scope. Not to be tested, called, retried, diagnosed or recommended. See docs/DECISIONS.md 2026-08-03."
+      }
+    ]
+  },
+  "sources": [
+    {
+      "source_id": "hose",
+      "authority": "Ho Chi Minh City Stock Exchange",
+      "authority_class": "exchange",
+      "activation": "declared",
+      "allowed_hosts": ["www.hsx.vn", "hsx.vn"],
+      "document_types": [
+        "corporate_action_notice",
+        "ex_right_notice",
+        "listing_change_notice",
+        "amendment_or_supersession_notice"
+      ],
+      "discovery_path": "operator-supplied finite listing or detail URLs only; no pagination, no search, no link following",
+      "requests_per_minute": 6,
+      "min_request_interval_seconds": 10,
+      "terms_considerations": "Public disclosure pages. Exchange notices are published for investor use; retention is for evidence provenance, not redistribution.",
+      "parser_version": "1.0.0",
+      "retention_policy": "indefinite, content-addressed",
+      "failure_classification": [
+        "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
+        "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
+        "response_size_limit", "hash_conflict"
+      ]
+    },
+    {
+      "source_id": "hnx",
+      "authority": "Hanoi Stock Exchange",
+      "authority_class": "exchange",
+      "activation": "declared",
+      "allowed_hosts": ["www.hnx.vn", "hnx.vn"],
+      "document_types": [
+        "corporate_action_notice",
+        "ex_right_notice",
+        "listing_change_notice",
+        "amendment_or_supersession_notice"
+      ],
+      "discovery_path": "per-security event pages, operator-supplied; the design records these as the most structured source and therefore the first crawl candidate (B2)",
+      "requests_per_minute": 6,
+      "min_request_interval_seconds": 10,
+      "terms_considerations": "Public disclosure pages.",
+      "parser_version": "1.0.0",
+      "retention_policy": "indefinite, content-addressed",
+      "failure_classification": [
+        "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
+        "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
+        "response_size_limit", "hash_conflict"
+      ]
+    },
+    {
+      "source_id": "vsdc",
+      "authority": "Vietnam Securities Depository and Clearing Corporation",
+      "authority_class": "depository",
+      "activation": "declared",
+      "allowed_hosts": ["vsdc.vn", "www.vsdc.vn", "vsd.vn", "www.vsd.vn"],
+      "document_types": [
+        "last_registration_date_notice",
+        "corporate_action_notice",
+        "amendment_or_supersession_notice"
+      ],
+      "discovery_path": "operator-supplied finite notice URLs only",
+      "requests_per_minute": 4,
+      "min_request_interval_seconds": 15,
+      "terms_considerations": "Public registration notices. VSDC is the authority for record dates and entitlement execution method.",
+      "parser_version": "1.0.0",
+      "retention_policy": "indefinite, content-addressed",
+      "failure_classification": [
+        "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
+        "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
+        "response_size_limit", "hash_conflict"
+      ]
+    },
+    {
+      "source_id": "issuer_ir",
+      "authority": "Qualified issuer investor-relations domains",
+      "authority_class": "issuer",
+      "activation": "declared",
+      "allowed_hosts": [
+        "file.hoaphat.com.vn",
+        "www.hoaphat.com.vn",
+        "hoaphat.com.vn",
+        "www.vinamilk.com.vn",
+        "vinamilk.com.vn",
+        "d8um25gjecm9v.cloudfront.net",
+        "www.vietcombank.com.vn",
+        "vietcombank.com.vn",
+        "www.ssi.com.vn",
+        "ssi.com.vn"
+      ],
+      "host_admission_rule": "An issuer host is admitted only when a retained official citation already evidences it, per docs/DECISIONS.md 2026-08-02 'Bounded official-event locator'. This list is exactly the set already evidenced by operations-review/official-document-acquisition-allowlist-20260730.json and the retained acquisition manifests.",
+      "document_types": [
+        "corporate_action_notice",
+        "agm_document_or_resolution",
+        "corporate_governance_report",
+        "annual_report",
+        "audited_annual_financial_statements",
+        "reviewed_interim_financial_statements",
+        "amendment_or_supersession_notice"
+      ],
+      "discovery_path": "operator-supplied finite URLs only; issuer sites are not crawled",
+      "requests_per_minute": 6,
+      "min_request_interval_seconds": 10,
+      "terms_considerations": "Issuer-published investor-relations documents.",
+      "parser_version": "1.0.0",
+      "retention_policy": "indefinite, content-addressed",
+      "failure_classification": [
+        "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
+        "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
+        "response_size_limit", "hash_conflict"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,10 @@
 # Market-wide canonical financial normalization — contract
 
-Status: **layer 1 (raw retention) and layer 2 (statement taxonomy) implemented 2026-08-03.**
-Layers 3 and 4 are specified here and not yet built.
+Status: **layers 1–3 implemented 2026-08-03**; layer 4 is live as a readiness-reporting layer
+that introduces no new model. Layer 3 shipped as P1E — see
+`operations-review/p1e-milestone-20260803/P1E_OPERATIONS_REVIEW.md` for the measured result and
+`docs/DECISIONS.md` (2026-08-03) for the four decisions it forced. Three statements in the
+layer-3 section below were corrected by building it, and are marked inline.
 
 This contract replaces the per-ticker evidence-bridge pattern for financial statements. That
 pattern proved the qualification contract on HPG and VNM and is the right tool for a
@@ -191,7 +194,28 @@ result names substitute metrics (`p_b`, `roe`, `net_interest_margin`, `cost_to_i
 This closes the under-classification the 2026-08-03 market-wide readiness audit found:
 `not_applicable` went from **7** manually-profiled tickers to **82**.
 
-## Layer 3 — canonical facts (specified, not built)
+## Layer 3 — canonical facts (BUILT 2026-08-03)
+
+> **Corrections this section forced when it was implemented.** Kept inline rather than rewritten,
+> because the original reasoning is what the corrections are against.
+>
+> 1. **Provider does not select the dialect.** The table below is right that the vocabularies
+>    partition the universe; it is wrong to read `source` as choosing between them. HPG's income
+>    statement is `source = KBS` written in the VCI vocabulary. Matching keys on the raw item id;
+>    `canonical_financial_facts.detect_dialect()` reports the vocabulary's own dialect.
+> 2. **Scope, sign and basis are demonstrable; currency and absolute scale are not.** A non-zero
+>    minority interest grants `consolidated`; the gross-profit identity demonstrates the sign
+>    convention; beginning-of-period cash demonstrates the cumulative basis. Nothing in the
+>    payloads fixes the currency or the absolute unit, so `provider_reported` is the ceiling
+>    without an official citation.
+> 3. **A fourth resolver was needed and is a gate, not a diagnostic.** Balance-sheet cash must
+>    equal cash-flow end-of-period cash, or the cash-flow payload's period label is not
+>    trustworthy. See `docs/DECISIONS.md`, 2026-08-03.
+>
+> Implemented by `canonical_financial_resolvers.py`, `canonical_financial_facts.py` and
+> `canonical_fact_store.py`; operated by `tools/ingest_canonical_financial_facts.py`.
+
+### Original specification
 
 Target metric vocabulary and per-metric status:
 

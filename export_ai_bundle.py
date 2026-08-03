@@ -2627,6 +2627,24 @@ def attach_distribution_evidence(
 
 
 # ==========================================================================
+# P1E — opt-in market-wide canonical financial facts (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-canonical-financial-facts). Reads the layer-3 store under
+# <runtime_root>/data/canonical-financial-facts/ and attaches one additive key,
+# tickers[ticker].canonical_financial_facts. It never reads or writes financial_canonical,
+# fundamental_quality, financial_period_coverage or any other pre-existing field, so both the
+# default bundle and every existing consumer are unaffected regardless of the flag's state.
+
+
+def attach_canonical_financial_facts(bundle_entries: dict[str, dict], root: Path,
+                                     include: bool) -> dict[str, dict]:
+    """Disabled-by-default opt-in; see canonical_financial_bundle_section.attach."""
+    from canonical_financial_bundle_section import attach
+
+    return attach(bundle_entries, root, include)
+
+
+# ==========================================================================
 # Phase 6A — opt-in fundamental quality evidence wiring (disabled by default)
 # ==========================================================================
 # New dedicated flag (--include-fundamental-quality-evidence), independent of the Phase
@@ -2907,6 +2925,14 @@ def main() -> int:
                              " tickers[ticker].analysis_lane_eligibility from"
                              " analysis_lane_eligibility.evaluate_ticker_lanes() per ticker."
                              " Not enabled in any default/production invocation.")
+    parser.add_argument("--include-canonical-financial-facts", action="store_true",
+                        help="Opt-in, disabled by default (P1E): attach"
+                             " tickers[ticker].canonical_financial_facts from the market-wide"
+                             " canonical fact store, with per-metric status, provenance,"
+                             " period, scope, unit, basis and limitations, plus EBITDA/EV/"
+                             "EV-EBITDA/P-E/P-B/ROE readiness. Additive only; no legacy field"
+                             " is read or written. Not enabled in any default/production"
+                             " invocation.")
     parser.add_argument("--include-fundamental-quality-evidence", action="store_true",
                         help="Opt-in, disabled by default (Phase 6A): attach"
                              " tickers[ticker].fundamental_quality_evidence from"
@@ -3133,6 +3159,11 @@ def main() -> int:
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     attach_fundamental_quality_evidence(bundle_entries, runtime_root(), args.include_fundamental_quality_evidence,
                                         taxonomy_sidecar=taxonomy_sidecar)
+    # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
+    # unset nothing is read from the canonical fact store and no key is added, so the default
+    # bundle -- and therefore the exact-session proof that hash-binds it -- is unchanged.
+    attach_canonical_financial_facts(bundle_entries, runtime_root(),
+                                     args.include_canonical_financial_facts)
     # Phase 6B: reconcile the legacy fundamental_quality.models.earnings_quality subsection
     # against fundamental_quality_evidence when both are present on the same entry. A no-op
     # (adds one informational limitation only) whenever the opt-in evidence contract was not
