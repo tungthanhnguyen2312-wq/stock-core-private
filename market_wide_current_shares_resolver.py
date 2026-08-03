@@ -14,10 +14,13 @@ VCB `5,589,091,222` is the citation's `5,589,091,262` mistyped by 40 shares).
 Authority lanes
 ---------------
 ``qualified_official``
-    Official period-end anchor plus a corporate-action ledger proven complete from the anchor
-    date through the session. Every retained anchor is `period_end_shares_outstanding` for
-    2024 and the retained ledger is `partial_unqualified_50_row_cap` over 5 tickers, so no
-    ticker clears this gate today. The gate is enforced, not assumed.
+    An official anchor that states an absolute count at a date — a qualified executed
+    corporate action's `shares_after`, promoted through `evidence_promotion.py` — whose date
+    precedes the session, corroborated by an independent observation taken on or after it,
+    with no later share-changing event recorded. A `period_end_shares_outstanding` citation
+    never clears this on its own: it describes a balance-sheet date, and the interval from
+    there to the session is exactly what no retained evidence covers. One ticker clears it
+    today (HPG, from its own 2026-07-02 listing-change notice).
 ``provider_reported_current``
     Retained provider observation dated on or after the session being resolved.
 ``provider_reported_lagged``
@@ -47,7 +50,7 @@ import json
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Sequence
 
 RESOLVER_VERSION = "2.0.0"
 
@@ -64,12 +67,18 @@ NON_SHARE_CHANGING_EVENT_CODES = frozenset({
     "DIV", "DDINS", "DDIND", "DDRP", "AGME", "EGME", "MOVE", "SUSP", "OTHE", "AIS",
 })
 
-#: A ledger may only promote an anchor to `current` when its coverage is qualified. The
-#: retained ledger is row-capped and says so, which is why the promotion gate never opens.
-QUALIFIED_LEDGER_COVERAGE = frozenset({"qualified", "complete", "qualified_complete"})
-
 _OFFICIAL_ANCHOR_RELPATH = Path("data") / "official-evidence" / "share_basis_citations.jsonl"
-_ANCHOR_IDENTITY_TYPE = "period_end_shares_outstanding"
+
+#: A balance-sheet date. Becomes a *current* count only if something proves nothing changed
+#: since, which for 1,678 of 1,683 tickers nothing does.
+_PERIOD_END_IDENTITY = "period_end_shares_outstanding"
+
+#: An absolute count a qualified executed event states outright, at a stated date. It needs no
+#: proof for the interval before it — the issuer's own notice covers that — only for the
+#: interval after, which is what the promotion gate below tests.
+_EVENT_IDENTITY = "current_shares_outstanding_after_event"
+
+_ANCHOR_IDENTITY_TYPES = frozenset({_PERIOD_END_IDENTITY, _EVENT_IDENTITY})
 
 
 class ShareStoreUnreadable(RuntimeError):
@@ -139,33 +148,94 @@ def load_official_anchors(runtime_root: Path | str) -> dict[str, dict[str, Any]]
             record = json.loads(line)
         except ValueError:
             continue
-        if str(record.get("identity_type") or "") != _ANCHOR_IDENTITY_TYPE:
+        identity = str(record.get("identity_type") or "")
+        if identity not in _ANCHOR_IDENTITY_TYPES:
             continue
         ticker = str(record.get("ticker") or "").upper()
         value = record.get("value")
         if not ticker or not isinstance(value, (int, float)) or isinstance(value, bool) or value <= 0:
             continue
-        period = str(record.get("reporting_period") or "")
+        candidate = {
+            "value": int(value),
+            "identity_type": identity,
+            "reporting_period": str(record.get("reporting_period") or ""),
+            "reporting_frequency": record.get("reporting_frequency"),
+            "effective_date": record.get("effective_date"),
+            "event_id": record.get("event_id"),
+            "event_type": record.get("event_type"),
+            "share_class": record.get("share_class"),
+            "unit": record.get("unit"),
+            "citation_id": record.get("citation_id"),
+            "evidence_id": record.get("evidence_id"),
+            "source_content_hashes": record.get("source_content_hashes"),
+            "corroborated_value": record.get("corroborated_value"),
+            "corroborated_source": record.get("corroborated_source"),
+            "corroborated_on": record.get("corroborated_on"),
+            "verified_at": record.get("verified_at"),
+        }
         held = anchors.get(ticker)
-        if held is None or period > str(held.get("reporting_period") or ""):
-            anchors[ticker] = {
-                "value": int(value),
-                "reporting_period": period,
-                "reporting_frequency": record.get("reporting_frequency"),
-                "share_class": record.get("share_class"),
-                "unit": record.get("unit"),
-                "citation_id": record.get("citation_id"),
-                "evidence_id": record.get("evidence_id"),
-                "verified_at": record.get("verified_at"),
-            }
+        if held is None or _anchor_rank(candidate) > _anchor_rank(held):
+            anchors[ticker] = candidate
     return anchors
 
 
+def _anchor_rank(anchor: Mapping[str, Any]) -> tuple[int, str]:
+    """Later evidence wins, and an event-dated count outranks a period-end one at any date.
+
+    A 2024 period-end figure and a 2026 executed event are not two readings of the same thing:
+    one describes a balance-sheet date, the other states the count the issuer holds today.
+    """
+    boundary = _anchor_boundary(anchor)
+    return (1 if anchor.get("identity_type") == _EVENT_IDENTITY else 0,
+            boundary.isoformat() if boundary else "")
+
+
 def _anchor_boundary(anchor: Mapping[str, Any]) -> date | None:
-    """Last date an annual period-end anchor describes, used to size the ledger gap."""
+    """The date the anchor's count is true as of."""
+    stated = _as_date(anchor.get("effective_date"))
+    if stated is not None:
+        return stated
     period = str(anchor.get("reporting_period") or "")
     if str(anchor.get("reporting_frequency") or "") == "annual" and period.isdigit():
         return date(int(period), 12, 31)
+    return None
+
+
+def _promotion_refusal(anchor: Mapping[str, Any], boundary: date | None,
+                       session_on: date | None, observed_on: date | None,
+                       provider_value: Any, events: Sequence[Mapping[str, Any]]) -> str | None:
+    """Why this anchor is not a current share count, or None when it is one.
+
+    Each refusal names the missing fact rather than the missing feature, because every one of
+    them is closed by acquiring a document, not by writing code.
+    """
+    if anchor.get("identity_type") != _EVENT_IDENTITY:
+        return "anchor_is_a_period_end_figure_not_a_dated_current_count"
+    if boundary is None:
+        return "official_anchor_carries_no_resolvable_effective_date"
+    if session_on is None or boundary > session_on:
+        return "official_anchor_takes_effect_after_the_session"
+
+    # The interval the anchor does not cover is [effective_date, session]. An independent
+    # observation of the same absolute count closes it up to the date it was taken.
+    witness = anchor.get("corroborated_value")
+    if witness is None:
+        return "no_independent_observation_corroborates_the_stated_count"
+    if int(witness) != int(anchor["value"]):
+        return "independent_observation_contradicts_the_stated_count"
+    if provider_value is None or int(float(provider_value)) != int(anchor["value"]):
+        return "retained_provider_observation_no_longer_matches_the_corroborated_count"
+    if observed_on is None or observed_on < boundary:
+        return "corroborating_observation_predates_the_event"
+
+    # A share-changing event after the anchor would move the count again. The retained ledger
+    # cannot prove none exists market-wide, but it can prove one does.
+    for event in events:
+        if event["event_class"] == "not_share_changing":
+            continue
+        exright = event["exright_date"]
+        if exright is not None and exright > boundary:
+            return "a_later_share_changing_event_is_recorded_after_the_anchor"
     return None
 
 
@@ -279,19 +349,21 @@ def resolve_effective_shares(ticker: str, runtime_root: Path | str, session_date
             "official_anchor_citation_id": anchor["citation_id"],
             "official_anchor_effective_date": boundary.isoformat() if boundary else None,
         }
-        # The promotion gate: an anchor is a current share count only when the ledger proves
-        # nothing changed between the anchor date and the session.
-        if coverage in QUALIFIED_LEDGER_COVERAGE and boundary is not None and session_on is not None:
+        # The promotion gate. An anchor is a current share count only when nothing is known to
+        # have changed it between the anchor's date and the session, and only an anchor that
+        # states an absolute count at a date can carry that weight at all. A period-end figure
+        # cannot: it describes 31 December, and the interval from there to the session is
+        # exactly what no retained evidence covers.
+        refusal = _promotion_refusal(anchor, boundary, session_on, observed_on, shares,
+                                     store.events.get(t, []))
+        if refusal is None:
             return _result(t, session, "qualified_official", value=anchor["value"],
                            status="qualified", share_concept="current_common_shares_outstanding",
                            unit="shares", source="official_share_basis_citation",
-                           ledger_coverage_status=coverage,
-                           lineage="official period-end anchor carried forward through a "
-                                   "qualified corporate-action ledger",
+                           lineage=("official executed corporate action stating shares_after, "
+                                    "corroborated by an independent observation"),
                            **official)
-        official["official_anchor_not_promoted_because"] = (
-            "corporate_action_ledger_coverage_not_qualified" if boundary is not None
-            else "official_anchor_carries_no_resolvable_effective_date")
+        official["official_anchor_not_promoted_because"] = refusal
         official["ledger_coverage_status"] = coverage
 
     extra: dict[str, Any] = dict(official or {})

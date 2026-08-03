@@ -7,8 +7,8 @@ command against `dashboard-runtime` (reference session `2026-07-30`).
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
 
-- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–4 complete and active); B, official corporate-action evidence, dated shares timeline, price adjustment factors, and provider share authority (measured and fail-closed as of P1J.1; **no ticker has a qualified current share count** and the ledger covers 5 of 1,683). P0 market-data basis remains open and is the binding constraint: price and volume basis are `unknown`/`unverified`, so every current-market capability stays blocked. P1 exact-session integrity, P1B/P1C/P1F/P1G/P1H/P1I/P1J/P1J.1 completed.
-- Active milestone: P1J.1 Current-Share Authority Integrity Repair — COMPLETED. P1H/P1I/P1J each reported market-wide counts the pipeline never computed (a literal dict in the operating report) on top of an official anchor table wrong in two of three entries. Anchors are now read from the citation store, the session is a required input, freshness is measured against the provider observation date, and a market cap cannot be qualified while the price basis is unverified. Measured, not asserted: **qualified_official 0** · provider-reported 1,680 · unverifiable freshness 2 · unavailable 1 · universe 1,683. See `operations-review/p1j1-share-authority-integrity-20260803/P1J1_OPERATIONS_REVIEW.md`.
+- Active phase: development runs on two pillars — A, market-wide canonical financial normalization (layers 1–4 complete and active); B, official corporate-action evidence, dated shares timeline, price adjustment factors, and provider share authority (measured and fail-closed as of P1J.1; **1 of 1,683 tickers has a qualified current share count** after B1.1, and the official ledger holds 1 qualified executed event). P0 market-data basis remains open and is the binding constraint: price and volume basis are `unknown`/`unverified`, so every current-market capability stays blocked. P1 exact-session integrity, P1B/P1C/P1F/P1G/P1H/P1I/P1J/P1J.1 completed.
+- Active milestone: B1.1 Official Corporate-Action Evidence → Current Share Basis — COMPLETED. The official ledger's qualified executed HPG event stated `shares_after = 8,442,964,520` as of 2026-07-02 and nothing read it; the resolver looked only for period-end citations. It is now promoted through `evidence_promotion.py` as `current_shares_outstanding_after_event` and the promotion gate distinguishes a dated absolute count from a balance-sheet date. Measured: **qualified_official 1 (HPG)** · provider_reported_lagged 1,679 · unverifiable freshness 2 · unavailable 1 · universe 1,683. VNM and VCB refuse with `anchor_is_a_period_end_figure_not_a_dated_current_count`.
 - Production state: the production artifact set was regenerated and validated end to end on 2026-08-03 through `tools/operate_stocklookup.py` (with `--include-canonical-financial-facts` verified dry run) and is byte-unchanged by P1J; `config/official_source_registry.json` is approved; `config/ticker_entity_profiles.csv` and every authoritative database are unchanged.
 
 ## Operate it
@@ -95,7 +95,8 @@ exact-session proof in `bundle_manifest.json`:
   so an unverified price basis no longer suppresses honest non-market readiness.
 - **Share-transition coverage** through the trusted session is still unproven for HPG and
   VNM (latest qualified historical identities only).
-- **No ticker has a qualified current share count.** The retained official anchors are three
+- **Only one ticker has a qualified current share count** (HPG, B1.1 — see below). For the
+  other 1,682 the retained official anchors are
   FY2024 `period_end_shares_outstanding` citations, and promoting a period-end figure to a
   current one needs a corporate-action ledger proven complete over the interval.
   `corporate_event_records` holds 250 rows across **5 of 1,683 tickers** at
@@ -307,14 +308,13 @@ From `market_wide_current_shares_resolver.resolve_market_wide_shares()`, measure
 against the retained runtime. Every earlier figure in this row of the roadmap was a literal in
 `tools/operate_stocklookup.py`, not a measurement.
 
-| lane | session 2026-07-30 | session 2026-08-03 |
-| --- | --- | --- |
-| `qualified_official` | **0** | **0** |
-| `provider_reported_current` | 1,680 | 0 |
-| `provider_reported_lagged` | 0 | 1,680 |
-| `provider_reported_unverifiable_freshness` (VCB, SSI) | 2 | 2 |
-| `unavailable` | 1 | 1 |
-| active universe | 1,683 | 1,683 |
+| lane | session 2026-08-03 (B1.1) |
+| --- | --- |
+| `qualified_official` — **HPG** | **1** |
+| `provider_reported_lagged` | 1,679 |
+| `provider_reported_unverifiable_freshness` (VCB, SSI) | 2 |
+| `unavailable` | 1 |
+| active universe | 1,683 |
 
 The two sessions differ only in the provider observation's age: `metadata.updated` is
 2026-07-30 for the whole universe, so against a 2026-08-03 session every provider value is four
@@ -323,6 +323,24 @@ the universe back into `provider_reported_current`; nothing else does.
 
 VCB and SSI are withheld because each carries an `ISS` (issuance) event with no ex-right date,
 and a record, issue or payment date never substitutes for one.
+
+### B1.1 — the first qualified current share count
+
+**HPG = 8,442,964,520, effective 2026-07-02.** Not a period-end figure carried forward: the
+issuer's own listing-change notice states `shares_after` outright, the official ledger holds it
+as a qualified executed `stock_dividend` (event `b7a97e12…`, document `7d5eff9b…`, content hash
+`cb41c96e…`, replay fingerprint stable), and the provider's independent 2026-07-30 observation
+reports the same digits. Promoted through `evidence_promotion.py` — the sole write boundary —
+into `share_basis_citations.jsonl` as `identity_type: current_shares_outstanding_after_event`.
+
+The count had been sitting in the ledger since 2026-08-02 with nothing reading it: the resolver
+looked only for `period_end_shares_outstanding`, so a published share count sat one directory
+away while HPG resolved as `provider_reported_lagged`.
+
+**VNM and VCB are not promoted**, and the reason is now specific:
+`anchor_is_a_period_end_figure_not_a_dated_current_count`. Their FY2024 citations describe
+31 December 2024; no retained document covers the interval to the session. Closing that needs an
+official notice per ticker, not more code.
 
 **Retired figures.** `qualified_official 3`, `provider_reported_current 1,677`,
 `provider_reported_stale 2`, `provider_reported_market_cap 1,471`, `pe_ready 1,391`,

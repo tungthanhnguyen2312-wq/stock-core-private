@@ -36,6 +36,10 @@ QUALIFICATION_CITATIONS_RELATIVE = bridge.CITATIONS_RELATIVE
 MANIFEST_SCHEMA_VERSION = bridge.MANIFEST_SCHEMA_VERSION
 VERSION = "1.0.0"
 
+#: The identity a qualified executed event establishes: an absolute share count at a date,
+#: as opposed to `period_end_shares_outstanding`, which describes a balance-sheet date.
+_SHARE_EVENT_IDENTITY = "current_shares_outstanding_after_event"
+
 
 def _sha256_file(path: Path) -> str:
     return bridge._sha256_file(path)
@@ -132,6 +136,43 @@ def build_cash_dividend_citation(*, ticker: str, resolution_number: str, declara
         "record_date": record_date, "payment_date": payment_date, "event_status": event_status,
         "citation": citation, "verified_at": verified_at,
         "supersedes_citation_ids": supersedes_citation_ids or [],
+    }
+
+
+def build_share_basis_event_citation(*, ticker: str, shares_after: int, effective_date: str,
+                                      event_id: str, event_type: str, evidence_id: str,
+                                      source_content_hashes: list[str],
+                                      corroborated_value: int | None = None,
+                                      corroborated_source: str | None = None,
+                                      corroborated_on: str | None = None,
+                                      share_class: str = "common_outstanding",
+                                      citation: str | None = None,
+                                      verified_at: str | None = None) -> dict[str, Any]:
+    """Pure. A share count an official executed event states outright, at a stated date.
+
+    Distinct from `period_end_shares_outstanding`, and the distinction is the point: a
+    period-end figure describes a balance-sheet date and becomes a *current* count only if
+    something proves nothing changed since. An executed event's `shares_after` is an absolute
+    count the issuer states as of the event, so it needs no such proof for the interval before
+    it — only for the interval after.
+
+    An ex-right date is deliberately not required. An ex-date places an action on the *price*
+    timeline, which is what an adjustment factor needs; a share count needs proof the event
+    executed, which is `lifecycle_state = executed` plus a stated execution date. Conflating
+    the two is what left HPG's count unqualified while its own notice stated it.
+    """
+    citation_id = _hash({"ticker": ticker, "identity_type": _SHARE_EVENT_IDENTITY,
+                         "shares_after": shares_after, "effective_date": effective_date,
+                         "event_id": event_id, "evidence_id": evidence_id})
+    return {
+        "citation_id": citation_id, "ticker": ticker,
+        "identity_type": _SHARE_EVENT_IDENTITY, "value": int(shares_after),
+        "share_class": share_class, "unit": "shares",
+        "effective_date": effective_date, "event_id": event_id, "event_type": event_type,
+        "evidence_id": evidence_id, "source_content_hashes": sorted(source_content_hashes),
+        "corroborated_value": corroborated_value, "corroborated_source": corroborated_source,
+        "corroborated_on": corroborated_on,
+        "citation": citation, "verified_at": verified_at,
     }
 
 

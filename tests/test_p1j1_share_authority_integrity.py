@@ -85,8 +85,11 @@ class OfficialAnchorTests(unittest.TestCase):
     def test_anchors_come_from_the_citation_file(self) -> None:
         loaded = shares.load_official_anchors(RUNTIME)
         self.assertEqual(loaded["VCB"]["value"], 5589091262)
-        self.assertEqual(loaded["HPG"]["value"], 6396250200)
         self.assertEqual(loaded["VNM"]["value"], 2089955445)
+        # HPG's winning anchor is its 2026-07-02 executed event, not the FY2024 period-end
+        # figure; both are in the file and the event-dated one outranks it (B1.1).
+        self.assertEqual(loaded["HPG"]["value"], 8442964520)
+        self.assertEqual(loaded["HPG"]["identity_type"], "current_shares_outstanding_after_event")
 
     def test_the_retired_literals_are_produced_by_no_code_path(self) -> None:
         source = (ROOT / "market_wide_current_shares_resolver.py").read_text(encoding="utf-8")
@@ -94,7 +97,7 @@ class OfficialAnchorTests(unittest.TestCase):
             self.assertNotIn(wrong, source)
 
     def test_a_period_end_anchor_is_not_a_current_share_count(self) -> None:
-        """The promotion gate stays shut while the ledger cannot prove the interval."""
+        """A balance-sheet date is not today, and nothing retained covers the interval."""
         with tempfile.TemporaryDirectory() as tmp:
             root = build_runtime(
                 Path(tmp),
@@ -105,25 +108,16 @@ class OfficialAnchorTests(unittest.TestCase):
         self.assertNotEqual(result["authority"], "qualified_official")
         self.assertEqual(result["official_anchor_value"], 1000)
         self.assertEqual(result["official_anchor_not_promoted_because"],
-                         "corporate_action_ledger_coverage_not_qualified")
+                         "anchor_is_a_period_end_figure_not_a_dated_current_count")
         self.assertEqual(result["value"], 2000)
 
-    def test_a_qualified_ledger_opens_the_gate(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = build_runtime(
-                Path(tmp),
-                metadata=[("AAA", 2000.0, "2026-08-03 17:00")],
-                events=[("AAA", "AGME", "2026-05-01", "qualified")],
-                anchors=[anchor("AAA", 1000)])
-            result = shares.resolve_effective_shares("AAA", root, "2026-08-03")
-        self.assertEqual(result["authority"], "qualified_official")
-        self.assertEqual(result["value"], 1000)
-        self.assertEqual(result["share_concept"], "current_common_shares_outstanding")
-
-    def test_no_ticker_is_qualified_official_against_the_live_runtime(self) -> None:
-        """Today's retained ledger is row-capped, so the honest count is zero, not three."""
+    def test_only_one_ticker_is_qualified_official_against_the_live_runtime(self) -> None:
+        """HPG, from its own executed-event notice (B1.1). The other 1,682 have no such
+        document, and a period-end citation is not one."""
         summary = shares.resolve_market_wide_shares(RUNTIME, "2026-08-03")
-        self.assertEqual(summary["counts"].get("qualified_official", 0), 0)
+        self.assertEqual(summary["counts"].get("qualified_official", 0), 1)
+        self.assertEqual(shares.resolve_effective_shares("HPG", RUNTIME, "2026-08-03")["authority"],
+                         "qualified_official")
 
 
 class EventClassificationTests(unittest.TestCase):

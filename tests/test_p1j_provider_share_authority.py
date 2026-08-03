@@ -51,12 +51,13 @@ class WorkstreamB_OfficialAnchorGroundingTests(unittest.TestCase):
     """
 
     def test_the_hpg_provider_value_already_reflects_the_stock_dividend(self) -> None:
+        """Provider and official notice agree digit for digit — which is what B1.1 promotes."""
         result = shares_resolver.resolve_effective_shares("HPG", RUNTIME, SESSION)
         self.assertEqual(result["value"], 8442964520)
-        self.assertEqual(result["official_anchor_value"], 6396250200)
+        self.assertEqual(result["official_anchor_value"], 8442964520)
 
-    def test_the_official_anchor_is_a_2024_period_end_figure(self) -> None:
-        for ticker in ("HPG", "VNM", "VCB"):
+    def test_the_remaining_official_anchors_are_2024_period_end_figures(self) -> None:
+        for ticker in ("VNM", "VCB"):
             anchor = shares_resolver.load_official_anchors(RUNTIME)[ticker]
             self.assertEqual(anchor["reporting_period"], "2024")
             self.assertEqual(anchor["share_class"], "common_outstanding")
@@ -99,10 +100,11 @@ class WorkstreamE_MarketWideAuditTests(unittest.TestCase):
         self.assertTrue(summary["counts_reconcile"])
         self.assertEqual(summary["official_anchors_retained"], 3)
 
-    def test_the_provider_lane_is_the_market_wide_ceiling(self) -> None:
+    def test_the_provider_lane_is_the_ceiling_for_everything_without_a_notice(self) -> None:
+        """One ticker has an official executed-event notice; the rest cap at provider."""
         summary = shares_resolver.resolve_market_wide_shares(RUNTIME, SESSION)
-        self.assertEqual(summary["counts"].get("qualified_official", 0), 0)
-        self.assertGreater(summary["counts"].get("provider_reported_current", 0), 0)
+        self.assertEqual(summary["counts"].get("qualified_official", 0), 1)
+        self.assertGreater(summary["counts"].get("provider_reported_current", 0), 1000)
 
 
 class WorkstreamF_ProducerConsumerTests(unittest.TestCase):
