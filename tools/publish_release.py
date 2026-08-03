@@ -644,9 +644,15 @@ def run_publication(publisher: ReleasePublisher) -> tuple[int, dict[str, Any]]:
                               detail="the destination already holds this exact release; no file was rewritten")
             git_result = (publisher.git_publish(branch, incoming)
                           if publisher.use_git and branch else {"committed": False})
+            # The destination already holding these bytes says nothing about what the
+            # serving origin returns, so this check is not skipped on the idempotent path.
+            served = publisher.verify_live_served(incoming) if publisher.verify_live_url else None
+            if served is not None and not served["verified"]:
+                raise ReleaseError("verify_live_served",
+                                   "the serving origin did not converge on the published release")
             return 0, publisher.report("already_current", {
                 "previous_sha256": dict(current), "live_sha256": dict(current),
-                "excluded": excluded, "git": git_result, "rollback": None})
+                "excluded": excluded, "git": git_result, "served": served, "rollback": None})
 
         publisher.capture_rollback_point()
         publisher.promote()
