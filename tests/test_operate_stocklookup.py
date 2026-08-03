@@ -8,6 +8,7 @@ the real pipeline.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -26,17 +27,46 @@ GENERATED_AT = "2026-07-30T10:00:00+00:00"
 
 
 def _runtime(root: Path) -> Path:
+    """A runtime whose every session-scoped input already describes `SESSION`.
+
+    The operator now refuses to build on an input from another session, so a runtime that is
+    good enough to run against has to be internally aligned: the share observation, the focus
+    analysis and the context packages all belong to the session `ohlcv` anchors on. Tests that
+    care about one of those being stale de-align it explicitly.
+    """
     (root / "data_bctc").mkdir(parents=True, exist_ok=True)
     (root / "data_bctc" / "AAA_balance_sheet_quarter.parquet").write_bytes(b"payload")
     for name in operate.REQUIRED_UPSTREAM:
         if name != "vn_stock.db":
             (root / name).write_text("upstream", encoding="utf-8")
+    (root / "Focus_Analysis.md").write_text(
+        f"# Phan tich sau\n\n*phiên snapshot mới nhất: **{SESSION}***\n\n## HPG\n\n## VNM\n",
+        encoding="utf-8")
+    evidence = root / "data" / "official-evidence"
+    evidence.mkdir(parents=True, exist_ok=True)
+    (evidence / "share_basis_citations.jsonl").write_text("", encoding="utf-8")
+
     connection = sqlite3.connect(root / "vn_stock.db")
     connection.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT)")
     connection.execute("INSERT INTO ohlcv VALUES ('HPG', ?)", (SESSION,))
+    connection.execute("CREATE TABLE metadata (ticker TEXT, shares_outstanding REAL, updated TEXT)")
+    connection.executemany("INSERT INTO metadata VALUES (?, ?, ?)",
+                           [(t, 1000.0, f"{SESSION} 17:00") for t in ("HPG", "VNM")])
+    connection.execute("CREATE TABLE corporate_event_records "
+                       "(ticker TEXT, event_code TEXT, exright_date TEXT, coverage_status TEXT)")
     connection.commit()
     connection.close()
     return root
+
+
+def _context_packages(directory: Path, session: str = SESSION) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    for ticker in ("HPG", "VNM"):
+        (directory / f"{ticker}_context.json").write_text(json.dumps({
+            "ticker": ticker, "generated_at": f"{session}T11:00:00+00:00",
+            "latest_available_dates": {"price": session, "technical": session},
+        }), encoding="utf-8")
+    return directory
 
 
 def _artifacts(root: Path, *, session=SESSION, generated_at=GENERATED_AT, bundle_text=None):
@@ -90,6 +120,13 @@ class OperatorTests(unittest.TestCase):
         # never its own publication destination.
         self.served = base / "served"
         self.served.mkdir()
+        # Context packages live outside the runtime root, so point the resolver at this
+        # test's own copies rather than at whatever the workspace happens to hold.
+        previous = os.environ.get("STOCK_LOOKUP_CONTEXT_PACKAGES_DIR")
+        os.environ["STOCK_LOOKUP_CONTEXT_PACKAGES_DIR"] = str(_context_packages(base / "packages"))
+        self.addCleanup(lambda: (os.environ.__setitem__("STOCK_LOOKUP_CONTEXT_PACKAGES_DIR", previous)
+                                 if previous is not None
+                                 else os.environ.pop("STOCK_LOOKUP_CONTEXT_PACKAGES_DIR", None)))
 
     def _operator(self, runner, **kwargs):
         params = {"execute": True, "publish": False, "live": False}

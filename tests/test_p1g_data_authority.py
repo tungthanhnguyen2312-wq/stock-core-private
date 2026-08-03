@@ -35,17 +35,43 @@ from tools.operate_stocklookup import Operator  # noqa: E402
 
 
 class WorkstreamA_SourceRegistryTests(unittest.TestCase):
+    @staticmethod
+    def _verifiable_registry() -> dict:
+        """The shipped registry with the approval instant made verifiable, in memory only.
+
+        B1's recorded `approved_at` has no clock provenance and is future-dated, so `admit()`
+        refuses on it alone. Whether the owner meant 07:00Z or 14:00Z is not a question a test
+        may answer, so this fixture asserts nothing about the real approval: it isolates the
+        host, document-type and rate rules from the governance verdict.
+        """
+        loaded = registry.load_registry()
+        loaded["approval_state"]["approved_at"] = "2026-08-03T07:00:00+00:00"
+        loaded["approval_state"][registry.APPROVAL_PROVENANCE_FIELD] = "test fixture, UTC"
+        return loaded
+
     def test_approved_sources_admit_valid_urls(self) -> None:
         """Workstream A: Approved sources pass admit(); undeclared hosts or types fail."""
-        res_hose = registry.admit("hose", "https://www.hsx.vn/notice.pdf", "corporate_action_notice")
+        verifiable = self._verifiable_registry()
+        res_hose = registry.admit("hose", "https://www.hsx.vn/notice.pdf",
+                                  "corporate_action_notice", registry=verifiable)
         self.assertEqual(res_hose["decision"], registry.ADMITTED)
         self.assertEqual(res_hose["reason"], "admitted_by_registry")
 
-        res_vsdc = registry.admit("vsdc", "https://vsdc.vn/notice.pdf", "last_registration_date_notice")
+        res_vsdc = registry.admit("vsdc", "https://vsdc.vn/notice.pdf",
+                                  "last_registration_date_notice", registry=verifiable)
         self.assertEqual(res_vsdc["decision"], registry.ADMITTED)
 
-        res_ir = registry.admit("issuer_ir", "https://file.hoaphat.com.vn/notice.pdf", "corporate_action_notice")
+        res_ir = registry.admit("issuer_ir", "https://file.hoaphat.com.vn/notice.pdf",
+                                "corporate_action_notice", registry=verifiable)
         self.assertEqual(res_ir["decision"], registry.ADMITTED)
+
+    def test_the_shipped_approval_instant_is_unverified_and_admits_nothing(self) -> None:
+        verdict = registry.approval_instant_verdict()
+        self.assertEqual(verdict["verdict"], registry.VERDICT_UNVERIFIED)
+        decision = registry.admit("hose", "https://www.hsx.vn/notice.pdf",
+                                  "corporate_action_notice")
+        self.assertEqual(decision["decision"], registry.REFUSED)
+        self.assertEqual(decision["reason"], registry.REASON_APPROVAL_TIMESTAMP)
 
         # Refused cases
         res_unapproved_host = registry.admit("hose", "https://evil-hsx.vn/notice.pdf", "corporate_action_notice")
@@ -256,18 +282,32 @@ class WorkstreamH_OperatorIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runtime_root = ROOT.parent / "dashboard-runtime"
 
+    def _operator(self, **kwargs) -> Operator:
+        params = {"root": self.runtime_root, "tickers": ["HPG", "VNM", "VCB"],
+                  "execute": False, "publish": False, "live": False}
+        params.update(kwargs)
+        return Operator(**params)
+
     def test_operator_dry_run_executes_all_stages(self) -> None:
-        """Workstream H: Full post-close operator dry-run executes cleanly."""
-        op = Operator(
-            root=self.runtime_root,
-            tickers=["HPG", "VNM", "VCB"],
-            execute=False,
-            publish=False,
-            live=False,
-            include_canonical_financial_facts=True,
-        )
-        code = op.run()
-        self.assertEqual(code, 0)
+        """Workstream H: the post-close dry run reaches its plan on the live runtime.
+
+        Without the canonical-financial-facts flag no share count reaches the export, so the
+        share observation's age cannot affect the artifact and the run proceeds.
+        """
+        operator = self._operator()
+        self.assertEqual(operator.run(), 0)
+        self.assertTrue(any(step["step"] == "dry_run_plan" and step["status"] == "passed"
+                            for step in operator.steps))
+
+    def test_the_dry_run_refuses_lagged_shares_that_would_enter_the_export(self) -> None:
+        """The live runtime's share observation is older than its session, which is exactly
+        the case the freshness contract exists to catch."""
+        operator = self._operator(include_canonical_financial_facts=True)
+        self.assertEqual(operator.run(), 1)
+        failure = next(step for step in operator.steps if step["status"] == "failed")
+        self.assertEqual(failure["step"], "preflight_share_freshness")
+        self.assertGreater(failure["provider_reported_lagged_count"], 0)
+        self.assertLess(failure["shares_observation_date"], failure["reference_session"])
 
 
 if __name__ == "__main__":

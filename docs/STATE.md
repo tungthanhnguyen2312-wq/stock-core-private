@@ -268,10 +268,21 @@ set `activation` to `approved`; this paragraph previously still described the pr
 contradicted the file it describes. EODHD is recorded in the registry itself as
 `REJECTED_BY_OWNER` and excluded.
 
-> **Open item for the owner.** The recorded `approved_at` is `2026-08-03T14:00:00Z`, six hours
-> *after* the commit that wrote it (`a4d01cf`, 2026-08-03 14:22:40 +0700 = 07:22Z). The value
-> reads like `14:00` local recorded with a `Z` suffix. Confirm the approval is yours and correct
-> the timestamp; if it is not, reverting `activation` is an owner action, not an agent one.
+> **B1_APPROVAL_STATUS: UNVERIFIED — the acquisition path is closed until the owner acts.**
+> The recorded `approved_at` is `2026-08-03T14:00:00Z`, seven hours *after* the commit that
+> wrote it (`a4d01cf`, 2026-08-03 14:22:40 +0700 = 07:22Z) — the signature of a local time
+> written with a `Z`. No owner record in this repository states which clock 14:00 was read
+> from, so the instant was **not** normalized and the approval was **not** modified.
+> `official_source_registry.approval_instant_verdict()` returns `unverified` and `admit()`
+> refuses every source with `approval_instant_not_verifiable`, so B2–B6 cannot acquire
+> anything.
+>
+> To verify it, the owner adds `approved_at_provenance` to `approval_state`, naming the clock
+> the instant was read from, and corrects `approved_at` to the matching UTC value — for
+> example `"approved_at": "2026-08-03T07:00:00+00:00"` with
+> `"approved_at_provenance": "owner recorded 14:00 Asia/Ho_Chi_Minh"`. An agent may not write
+> either field. If the approval is not the owner's, reverting `activation` is likewise an
+> owner action.
 
 `official_document_store.py` retains official documents content-addressed by SHA-256, re-hashed
 at adoption, never overwritten and never deleted; a correction is a new record with
@@ -321,9 +332,13 @@ a pass over the canonical fact store, which the operating command does not do.
 
 ## Next highest-value milestone
 
-**Pillar B steps B2–B6 — official-document acquisition.** B1 is signed off (`a4d01cf`), so the
-registry admits HOSE, HNX, VSDC and issuer IR and nothing governance-side is outstanding. What
-is outstanding is that almost nothing has been acquired through it: the corporate-action ledger
+**Owner action first: record the B1 approval instant's clock provenance.** `activation` is
+`approved` for all four sources, but the recorded instant is unverifiable, so `admit()` refuses
+everything and B2–B6 cannot start. One field from the owner reopens the path; see the pillar B
+section above for the exact edit. Nothing else on this list can proceed past it.
+
+**Then pillar B steps B2–B6 — official-document acquisition.** What is outstanding once the
+registry admits again is that almost nothing has been acquired through it: the ledger
 holds 250 rows across **5 of 1,683 tickers** at `partial_unqualified_50_row_cap`, which is the
 single fact that keeps `qualified_official` current shares at 0 and keeps the adjustment factor
 at `not_ready`. B6 remains the only route to a qualified price basis now that EODHD is closed,

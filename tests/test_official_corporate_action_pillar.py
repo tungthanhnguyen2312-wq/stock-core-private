@@ -44,8 +44,25 @@ def _unapproved_registry():
 
 
 def _approved_registry():
-    """The shipped registry with all sources approved."""
+    """The shipped registry with all sources approved.
+
+    Its `approved_at` carries no clock provenance, so `admit()` refuses on the governance
+    verdict alone -- see `_verifiable_registry` for the copy used to exercise the admit path.
+    """
     return registry.load_registry()
+
+
+def _verifiable_registry():
+    """The shipped registry with the approval instant made verifiable, in memory only.
+
+    The instant is what B1 cannot currently prove, and that is a question for the owner, not
+    for a test fixture. Supplying the provenance here keeps the host, document-type and rate
+    rules under test without asserting anything about the real approval.
+    """
+    loaded = registry.load_registry()
+    loaded["approval_state"]["approved_at"] = "2026-08-03T07:00:00+00:00"
+    loaded["approval_state"][registry.APPROVAL_PROVENANCE_FIELD] = "test fixture, UTC"
+    return loaded
 
 
 class SourceRegistryTests(unittest.TestCase):
@@ -62,9 +79,15 @@ class SourceRegistryTests(unittest.TestCase):
 
     def test_approved_source_admits_an_allowlisted_host(self):
         decision = registry.admit("hnx", "https://www.hnx.vn/x", "corporate_action_notice",
-                                  registry=_approved_registry())
+                                  registry=_verifiable_registry())
         self.assertEqual(decision["decision"], registry.ADMITTED)
         self.assertEqual(decision["policy"]["max_attempts"], 2)
+
+    def test_an_unverifiable_approval_instant_refuses_an_otherwise_valid_request(self):
+        decision = registry.admit("hnx", "https://www.hnx.vn/x", "corporate_action_notice",
+                                  registry=_approved_registry())
+        self.assertEqual(decision["decision"], registry.REFUSED)
+        self.assertEqual(decision["reason"], registry.REASON_APPROVAL_TIMESTAMP)
 
     def test_host_matching_is_exact_not_suffix(self):
         decision = registry.admit("hnx", "https://evil-hnx.vn/x", "corporate_action_notice",

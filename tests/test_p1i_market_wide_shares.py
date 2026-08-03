@@ -111,8 +111,11 @@ class ProducerConsumerTests(unittest.TestCase):
 
 class PostCloseOperatorTests(unittest.TestCase):
     def test_the_dry_run_passes_and_measures_coverage(self) -> None:
+        # No canonical-facts flag: no share count reaches the export, so the share
+        # observation's age cannot block the run. The lagged case is covered by
+        # tests/test_daily_freshness_contract.py.
         operator = Operator(root=RUNTIME, tickers=["HPG", "VNM", "VCB"], execute=False,
-                            publish=False, live=False, include_canonical_financial_facts=True)
+                            publish=False, live=False)
         self.assertEqual(operator.run(), 0)
         coverage = operator.market_wide_shares_coverage()
         self.assertEqual(coverage["status"], "measured")

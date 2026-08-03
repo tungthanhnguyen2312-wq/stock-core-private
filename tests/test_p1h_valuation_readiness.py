@@ -179,13 +179,15 @@ class WorkstreamF_ProducerConsumerOperatorIntegrationTests(unittest.TestCase):
         apply_bundle_canonical_financial_facts_contract(context, {"tickers": attached})
         self.assertIn("canonical_financial_facts", context)
 
+        # The section itself is exercised above. The flag is omitted here because it is what
+        # routes a share count into the export, and the live runtime's share observation is
+        # older than its session -- see tests/test_daily_freshness_contract.py for that gate.
         op = Operator(
             root=self.runtime_root,
             tickers=["HPG", "VNM", "VCB"],
             execute=False,
             publish=False,
             live=False,
-            include_canonical_financial_facts=True,
         )
         self.assertEqual(op.run(), 0)
 

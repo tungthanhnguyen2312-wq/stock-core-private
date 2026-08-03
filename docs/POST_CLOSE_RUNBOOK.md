@@ -12,6 +12,58 @@ Run on Windows PowerShell from `stock-core-private`:
 python tools/operate_stocklookup.py --runtime-root C:\Projects\StockLookup\dashboard-runtime --include-canonical-financial-facts
 ```
 
+## The daily dependency chain
+
+```text
+metadata / current-share refresh   --refresh-metadata   (meta_sync.py; writes vn_stock.db)
+  -> focus analysis                --prepare-inputs     (stock_analyzer.py -> Focus_Analysis.md)
+  -> context packages              --prepare-inputs     (build_ticker_context.py)
+  -> AI bundle export              --execute            (export_ai_bundle.py)
+  -> Consumer exact-session check  --execute
+  -> release publication           --publish [--live]
+```
+
+Each stage consumes what the one before it produced. A stage run on a predecessor's stale
+output produces an artifact that is internally consistent and describes two sessions, so the
+order is enforced rather than documented: the operator refuses at the first stage whose input
+belongs to another session, and names both the stage and the remedy.
+
+A complete daily run, in one command:
+
+```powershell
+python tools/operate_stocklookup.py --runtime-root C:\Projects\StockLookup\dashboard-runtime --refresh-metadata --prepare-inputs --execute --include-canonical-financial-facts
+```
+
+Add `--publish --web-root <served checkout>` to stage a release, and `--live` to promote it.
+`--live` runs only when every prior gate has passed.
+
+### What each flag does, and does not
+
+| flag | does | does not |
+| --- | --- | --- |
+| `--refresh-metadata` | runs `meta_sync.py --refresh`: the only stage that moves `metadata.updated` and the provider share observation onto the current session | anything offline; it writes `vn_stock.db` and reaches the network, so it requires `--execute` and takes a restorable database copy first |
+| `--prepare-inputs` | rebuilds the offline session-scoped inputs: technical signals, strategy report, focus analysis, context packages | refresh metadata or current shares — its meaning is unchanged and deliberately narrow |
+| `--execute` | rebuilds and validates the artifact set | publish |
+
+Never use `--allow-stale` for a release. It exists to override the export's session gate and
+records the divergence in the manifest; a published bundle that used it is a mixed-session
+artifact carrying a warning nobody reads.
+
+### Remediation codes
+
+The operator fails at the first stage whose input is off-session, prints the code and stops.
+No later stage runs, and no success line is printed.
+
+| code | meaning | remedy |
+| --- | --- | --- |
+| `METADATA_REFRESH_REQUIRED` | the share observation is older than the session, and `--include-canonical-financial-facts` would put it into the export; or the share stores could not be read | re-run with `--refresh-metadata`, or drop `--include-canonical-financial-facts` |
+| `FOCUS_ANALYSIS_REFRESH_REQUIRED` | `Focus_Analysis.md` describes another session | re-run with `--prepare-inputs` |
+| `CONTEXT_PACKAGE_REFRESH_REQUIRED` | one or more context packages describe another session | re-run with `--prepare-inputs` |
+
+Lagged shares are **not** blocked when `--include-canonical-financial-facts` is absent: the
+default bundle carries no share-derived value, so the lag cannot reach the artifact. The lane
+counts are reported either way and a lagged value is never relabelled as current.
+
 ## Stage Order
 
 1. **Preflight safety & production hash baseline**: Verifies existence of required input artifacts (`vn_stock.db`, `data_bctc/`), acquires process lock, and records initial artifact SHA-256 hashes.

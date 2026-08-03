@@ -73,6 +73,19 @@ PRODUCTION_ARTIFACTS = ("analysis_bundle.json", "bundle_manifest.json", "focus_e
 REQUIRED_UPSTREAM = ("vn_stock.db", "screen_snapshot_live.csv", "market_breadth.csv",
                      "ta_signals.csv", "analysis_latest.json", "macro_snapshot.csv",
                      "Focus_Analysis.md")
+
+#: Remediation codes. A stale input used to surface as `exit code 1` from whichever
+#: subprocess happened to notice, which named neither the stale input nor the command that
+#: refreshes it. Each code below is one stage of the daily chain and one next action.
+METADATA_REFRESH_REQUIRED = "METADATA_REFRESH_REQUIRED"
+FOCUS_ANALYSIS_REFRESH_REQUIRED = "FOCUS_ANALYSIS_REFRESH_REQUIRED"
+CONTEXT_PACKAGE_REFRESH_REQUIRED = "CONTEXT_PACKAGE_REFRESH_REQUIRED"
+
+#: The daily chain, in dependency order. Each stage consumes what the one before it produced,
+#: so a stage that runs on a predecessor's stale output produces a mixed-session artifact that
+#: looks current. The order is enforced in `run()` and asserted in the test suite.
+DAILY_STAGE_ORDER = ("refresh_metadata", "prepare_inputs", "export_analysis_bundle",
+                     "validate_consumer", "publish_release")
 #: The published production ticker set. Kept identical to what the last successful export
 #: actually shipped -- narrowing it would silently drop tickers the dashboard already
 #: presents. VNINDEX is deliberately included: it has no company snapshot, so it exercises
@@ -111,6 +124,7 @@ class Operator:
                  live: bool, prepare: bool = False, web_root: Path | None = None,
                  verify_live_url: str | None = None,
                  include_canonical_financial_facts: bool = False,
+                 refresh_metadata: bool = False,
                  runner: Callable[..., Any] = subprocess.run):
         self.root = root
         self.tickers = tickers
@@ -125,7 +139,9 @@ class Operator:
         self.rollback_dir: Path | None = None
         self.database_backup: Path | None = None
         self.prepare = prepare
+        self.refresh_metadata = refresh_metadata
         self.reference_session_date: str | None = None
+        self.database_backed_up = False
         self.started_at = _now()
         self.env = {**os.environ, RUNTIME_ROOT_ENV: str(root), "PYTHONIOENCODING": "utf-8"}
 
@@ -252,6 +268,13 @@ class Operator:
         opt-in, under the single-instance lock, with this restorable copy taken and
         hash-verified first.
         """
+        if self.database_backed_up:
+            # Two stages may now write the database in one run (metadata refresh, then input
+            # preparation). The copy must be the pre-run state, so the second stage must not
+            # overwrite it with a state the first stage already changed.
+            self._record("backup_database", "skipped",
+                         detail="a restorable copy was already taken earlier in this run")
+            return
         source = self.root / "vn_stock.db"
         target = (self.rollback_dir or self.root / "reports") / "vn_stock.db"
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -261,8 +284,143 @@ class Operator:
         if before != after:
             raise GateFailure("database_backup", "copy of vn_stock.db does not match the original")
         self.database_backup = target
+        self.database_backed_up = True
         self._record("database_backup", "passed", sha256=before,
                      detail=f"restorable copy at reports/operate_rollback/{target.parent.name}/vn_stock.db")
+
+    def refresh_metadata_stage(self) -> None:
+        """Run `meta_sync.py`, the only thing that moves the provider share observation.
+
+        This is the one stage that writes to `vn_stock.db` and reaches the network, which is
+        why it is opt-in: without `--refresh-metadata` this command's contract is unchanged
+        and it still writes no authoritative store. It runs before `prepare_inputs()` because
+        focus analysis and the context packages are derived from what it refreshes; running it
+        after would leave both describing the previous observation.
+        """
+        self._run("refresh_metadata", [sys.executable, str(ROOT / "meta_sync.py"), "--refresh"],
+                  ROOT)
+
+    def preflight_share_freshness(self, session: str) -> dict[str, Any]:
+        """Measure current-share authority for this session, and refuse to export a stale one.
+
+        The share observation has no session-scoped freshness gate anywhere else: the
+        exporter's `check_freshness` covers the snapshot, signals, focus analysis and context
+        packages, but never `metadata`. A universe whose share counts were observed days
+        before the session therefore passed every gate silently.
+        """
+        from market_wide_current_shares_resolver import resolve_market_wide_shares
+
+        summary = resolve_market_wide_shares(self.root, session)
+        if summary.get("status") != "measured":
+            raise GateFailure("preflight_share_freshness",
+                              f"{METADATA_REFRESH_REQUIRED}: share stores unreadable — "
+                              f"{summary.get('reason')}")
+
+        counts = dict(summary.get("counts") or {})
+        observed = sorted({str(result["observation_date"])
+                           for result in (summary.get("tickers") or {}).values()
+                           if result.get("observation_date")})
+        lagged = counts.get("provider_reported_lagged", 0)
+        conflicted = (counts.get("provider_reported_unverifiable_freshness", 0)
+                      + counts.get("provider_reported_conflicted", 0))
+        named = ("qualified_official", "provider_reported_current", "provider_reported_lagged",
+                 "provider_reported_unverifiable_freshness", "provider_reported_conflicted",
+                 "unavailable")
+        detail = {
+            "reference_session": session,
+            "shares_observation_date": observed[-1] if observed else None,
+            "shares_observation_dates_seen": observed,
+            "qualified_official_count": counts.get("qualified_official", 0),
+            "provider_reported_current_count": counts.get("provider_reported_current", 0),
+            "provider_reported_lagged_count": lagged,
+            "conflicted_or_unverifiable_count": conflicted,
+            "unavailable_count": counts.get("unavailable", 0),
+            # Every lane, so the six named fields above can always be reconciled against the
+            # universe rather than quietly dropping a lane the caller did not ask about.
+            "withheld_other_count": sum(v for k, v in counts.items() if k not in named),
+            "counts": counts,
+            "counts_reconcile": bool(summary.get("counts_reconcile")),
+            "active_universe_count": summary.get("active_universe_count"),
+            "measured_at": summary.get("measured_at"),
+        }
+
+        # A lagged share count only reaches an artifact through the canonical-financial-facts
+        # section; the default bundle carries no share-derived value at all, which is the
+        # documented allowance for exporting while lagged. Nothing is relabelled either way.
+        if lagged and self.include_canonical_financial_facts:
+            self._record("preflight_share_freshness", "failed", **detail)
+            raise GateFailure(
+                "preflight_share_freshness",
+                f"{METADATA_REFRESH_REQUIRED}: {lagged} tickers carry a share observation from "
+                f"{detail['shares_observation_date']}, older than session {session}, and "
+                "--include-canonical-financial-facts puts that share count into the export. "
+                "Re-run with --refresh-metadata, or drop --include-canonical-financial-facts.")
+
+        allowance = (None if not lagged else
+                     "default bundle carries no share-derived value; lag cannot reach the artifact")
+        self._record("preflight_share_freshness", "passed", lag_allowed_because=allowance, **detail)
+        return detail
+
+    def _focus_analysis_session(self) -> str | None:
+        from export_ai_bundle import FOCUS_DATE_RE
+
+        path = self.root / "Focus_Analysis.md"
+        if not path.is_file():
+            return None
+        match = FOCUS_DATE_RE.search(path.read_text(encoding="utf-8", errors="replace"))
+        return match.group(1) if match else None
+
+    def _context_package_sessions(self) -> dict[str, str | None]:
+        from export_ai_bundle import context_package_session_date, context_packages_dir
+
+        directory = context_packages_dir()
+        sessions: dict[str, str | None] = {}
+        for ticker in self.tickers:
+            if ticker in INDEX_SYMBOLS:
+                continue
+            path = directory / f"{ticker}_context.json"
+            if not path.is_file():
+                sessions[ticker] = None
+                continue
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except ValueError:
+                sessions[ticker] = None
+                continue
+            sessions[ticker] = context_package_session_date(payload)
+        return sessions
+
+    def preflight_derived_session_inputs(self, session: str) -> None:
+        """Refuse before the export when focus analysis or a context package is off-session.
+
+        The exporter already refuses this, correctly, but it refuses as `exit code 1` from a
+        subprocess after the sidecar has been rebuilt. Checking here names which input is
+        stale and which stage refreshes it, before anything is rebuilt on top of it. Both
+        readings use the exporter's own parsers so the two gates cannot drift apart.
+        """
+        focus_session = self._focus_analysis_session()
+        if focus_session != session:
+            self._record("preflight_derived_session_inputs", "failed",
+                         focus_analysis_session=focus_session, reference_session=session)
+            raise GateFailure(
+                "preflight_derived_session_inputs",
+                f"{FOCUS_ANALYSIS_REFRESH_REQUIRED}: Focus_Analysis.md describes session "
+                f"{focus_session!r}, not {session!r}. Re-run with --prepare-inputs.")
+
+        sessions = self._context_package_sessions()
+        stale = sorted(ticker for ticker, value in sessions.items() if value != session)
+        if stale:
+            self._record("preflight_derived_session_inputs", "failed",
+                         context_package_sessions=sessions, reference_session=session)
+            raise GateFailure(
+                "preflight_derived_session_inputs",
+                f"{CONTEXT_PACKAGE_REFRESH_REQUIRED}: context packages for "
+                f"{', '.join(stale)} do not describe session {session!r} "
+                f"({ {t: sessions[t] for t in stale} }). Re-run with --prepare-inputs.")
+
+        self._record("preflight_derived_session_inputs", "passed",
+                     reference_session=session, focus_analysis_session=focus_session,
+                     context_package_sessions=sessions)
 
     def prepare_inputs(self) -> None:
         """Rebuild the session-scoped derived artifacts the export consumes.
@@ -480,11 +638,15 @@ class Operator:
             self.preflight_locks()
             self.capture_rollback_point()
             if not self.execute:
+                # Read-only stages still run in a dry run: they are what makes the dry run
+                # worth running. The write stages below are only described.
+                self.preflight_share_freshness(session)
                 self.build_sidecar(session)
                 if self.include_canonical_financial_facts:
                     self.verify_canonical_fact_store()
                 self._record("dry_run_plan", "passed", detail=(
-                    ("would rebuild the offline session inputs, " if self.prepare else "")
+                    ("would refresh metadata via meta_sync.py, " if self.refresh_metadata else "")
+                    + ("would rebuild the offline session inputs, " if self.prepare else "")
                     + "would rebuild the taxonomy sidecar, "
                     + ("verify canonical fact store, " if self.include_canonical_financial_facts else "")
                     + "export the bundle + manifest"
@@ -497,6 +659,15 @@ class Operator:
                 self.report("dry_run_ok", None, None)
                 return 0
 
+            # The daily chain, in dependency order. Metadata first: focus analysis and the
+            # context packages are both derived from it, so refreshing it after them would
+            # leave every downstream artifact describing the previous observation.
+            if self.refresh_metadata:
+                self.backup_database()
+                self.refresh_metadata_stage()
+                session = self.preflight_database()
+            self.preflight_share_freshness(session)
+
             if self.prepare:
                 self.backup_database()
                 self.prepare_inputs()
@@ -505,6 +676,10 @@ class Operator:
                 # sidecar is bound to this value below, and binding it to a stale session
                 # is exactly what the exact-session proof exists to catch.
                 session = self.preflight_database()
+
+            # Focus analysis and context packages must both describe `session` before
+            # anything is built on top of them.
+            self.preflight_derived_session_inputs(session)
             # Order matters: the sidecar must exist and be bound to this session BEFORE
             # the export, because the export binds the sidecar's bytes into the manifest's
             # required-artifact set and reads its taxonomy for the applicability gate.
@@ -549,6 +724,11 @@ def parse_args(argv=None) -> argparse.Namespace:
                              " packages). Never fetches prices/macro/news. Takes a verified,"
                              " restorable copy of vn_stock.db before running, because"
                              " stock_analyzer.py upserts its own watchlist_history table.")
+    parser.add_argument("--refresh-metadata", action="store_true",
+                        help=("Run meta_sync.py first, before any input preparation. This is "
+                              "the only stage that writes vn_stock.db and reaches the network, "
+                              "and the only thing that moves the provider share observation "
+                              "onto the current session. Requires --execute."))
     parser.add_argument("--include-canonical-financial-facts", action="store_true",
                         help="Opt-in (P1F): attach market-wide canonical financial facts and readiness to Producer bundle.")
     parser.add_argument("--publish", action="store_true",
@@ -576,6 +756,11 @@ def main(argv=None, runner=subprocess.run) -> int:
         return 2
     if args.live and not args.publish:
         print("[operate] --live requires --publish", file=sys.stderr)
+        return 2
+    if args.refresh_metadata and not args.execute:
+        # It writes vn_stock.db and reaches the network. A dry run that did either would not
+        # be a dry run.
+        print("[operate] --refresh-metadata requires --execute", file=sys.stderr)
         return 2
     if args.live and not args.execute:
         print("[operate] --live requires --execute", file=sys.stderr)
@@ -607,6 +792,7 @@ def main(argv=None, runner=subprocess.run) -> int:
                         live=args.live, prepare=args.prepare_inputs, web_root=web_root,
                         verify_live_url=args.verify_live_url,
                         include_canonical_financial_facts=args.include_canonical_financial_facts,
+                        refresh_metadata=args.refresh_metadata,
                         runner=runner)
     try:
         with PipelineLock(root / "locks" / "pipeline.lock"):

@@ -120,8 +120,10 @@ class WorkstreamF_ProducerConsumerTests(unittest.TestCase):
 
 class WorkstreamG_OperatorTests(unittest.TestCase):
     def test_the_operator_reports_a_measurement_not_a_constant(self) -> None:
+        # The canonical-facts flag is what makes a lagged share observation reach the export
+        # and therefore block the run; this test is about the coverage block, not that gate.
         operator = Operator(root=RUNTIME, tickers=["HPG", "VNM", "VCB"], execute=False,
-                            publish=False, live=False, include_canonical_financial_facts=True)
+                            publish=False, live=False)
         self.assertEqual(operator.run(), 0)
         coverage = operator.market_wide_shares_coverage()
         self.assertEqual(coverage["status"], "measured")
