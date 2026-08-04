@@ -39,7 +39,43 @@ COMPOSITION_DIMENSIONS = (
 #: let one leg's evidence speak for the other.
 AUCTION_SUBDIMENSIONS = ("opening_auction_inclusion", "closing_auction_inclusion")
 
-MARKET_SCOPE_STATES = frozenset({"unknown", "partially_qualified", "permanently_unresolved"})
+#: The canonical active market-scope vocabulary. ``partially_observed_but_not_qualified``
+#: replaced ``partially_qualified`` on 2026-08-04: the old word was accurate about one
+#: dimension and dangerously readable as "qualified enough to size against", which is the
+#: one reading the evidence does not support. Nothing about the evidence changed.
+MARKET_SCOPE_PARTIAL = "partially_observed_but_not_qualified"
+MARKET_SCOPE_UNRESOLVED = "permanently_unresolved"
+MARKET_SCOPE_STATES = frozenset({"unknown", MARKET_SCOPE_PARTIAL, MARKET_SCOPE_UNRESOLVED})
+
+#: Recognised only when reading a frozen evidence artifact written before the rename.
+#: :func:`assert_canonical_vocabulary` refuses it, so it can never re-enter an active
+#: contract. The artifacts themselves are not rewritten.
+SUPERSEDED_MARKET_SCOPE_STATES = frozenset({"partially_qualified"})
+
+#: A dimension verdict, as written into the contract.
+#:
+#: ``unknown``                                 -- nobody has looked, or looking was
+#:                                                inconclusive; reopenable by observation.
+#: ``unavailable_from_observed_vci_surfaces``  -- every observable VCI surface was examined
+#:                                                and none carries the dimension. Terminal
+#:                                                for VCI; reopenable only by a new source.
+#: ``demonstrated_for_observed_ato_field``     -- the single narrow opening-auction result.
+#:                                                Deliberately not spelled ``qualified``:
+#:                                                what was demonstrated is that one
+#:                                                observed ATO-labelled quantity sits inside
+#:                                                the provider accumulator, not that the
+#:                                                auction composition of the volume field is
+#:                                                known.
+DIMENSION_UNKNOWN = "unknown"
+DIMENSION_UNAVAILABLE = "unavailable_from_observed_vci_surfaces"
+DIMENSION_ATO_DEMONSTRATED = "demonstrated_for_observed_ato_field"
+DIMENSION_VERDICTS = frozenset(
+    {DIMENSION_UNKNOWN, DIMENSION_UNAVAILABLE, DIMENSION_ATO_DEMONSTRATED}
+)
+
+#: The auction roll-up. One leg demonstrated and the other unobserved is *partial
+#: observation*, never qualification -- ``qualified`` is not a reachable value.
+AUCTION_ROLLUP_PARTIAL = "partially_observed"
 
 #: Settled in commit 9887c1c: the intraday cursor has one-second resolution and the server
 #: caps a page at 100 rows, so a second holding >= 100 trades cannot be enumerated. That is
@@ -266,22 +302,32 @@ def composition_contract(
     ``liquidity_actionable`` is a constant here, not a computed value. There is no
     combination of inputs that turns it on, because sizing against a volume figure requires
     knowing what that figure counts, and market scope is the dimension that says so.
+
+    Callers pass the *route* outcome from :func:`qualify_dimension` -- ``qualified`` or
+    ``unknown`` -- or the terminal ``unavailable_from_observed_vci_surfaces``. A successful
+    route on the opening-auction leg is narrowed on write to
+    ``demonstrated_for_observed_ato_field``: the contract records what was demonstrated
+    about one observed field, and there is no spelling of it that reads as a qualified
+    volume composition.
     """
+    accepted_inputs = {"qualified", DIMENSION_UNKNOWN, DIMENSION_UNAVAILABLE}
     for dimension, verdict in dimension_verdicts.items():
         if dimension not in COMPOSITION_DIMENSIONS + AUCTION_SUBDIMENSIONS:
             raise CompositionError(f"unknown_composition_dimension:{dimension}")
-        if verdict not in {"qualified", "unknown"}:
+        if verdict not in accepted_inputs:
             raise CompositionError(f"dimension_verdict_invalid:{dimension}={verdict}")
+    if dimension_verdicts.get("closing_auction_inclusion") == "qualified":
+        # The opening leg was earned from a morning snapshot; the closing leg has no
+        # comparable evidence and no route defined here. Refusing it outright keeps the
+        # ATO narrowing from being copied onto ATC by a caller in a hurry.
+        raise CompositionError("closing_auction_inclusion_has_no_qualification_route")
 
     # auction_inclusion is a roll-up over its legs and is never asserted directly.
     if "auction_inclusion" in dimension_verdicts:
         raise CompositionError("auction_inclusion_is_derived_from_its_legs_not_asserted")
-    legs = {d: dimension_verdicts.get(d, "unknown") for d in AUCTION_SUBDIMENSIONS}
-    dimension_verdicts = dict(dimension_verdicts)
-    dimension_verdicts["auction_inclusion"] = (
-        "qualified" if any(v == "qualified" for v in legs.values()) else "unknown"
-    )
-    qualified = [d for d, v in dimension_verdicts.items() if v == "qualified"]
+    legs = {d: dimension_verdicts.get(d, DIMENSION_UNKNOWN) for d in AUCTION_SUBDIMENSIONS}
+    demonstrated_legs = sorted(leg for leg, v in legs.items() if v == "qualified")
+
     contract: dict[str, Any] = {
         "schema_version": VERSION,
         "provider": PROVIDER,
@@ -293,39 +339,113 @@ def composition_contract(
         "surfaces_examined": [dict(s) for s in surfaces_examined],
         "further_vci_pagination_authorized": FURTHER_PAGINATION_AUTHORIZED,
         "further_speculative_endpoint_probe_authorized": FURTHER_SPECULATIVE_ENDPOINT_PROBE_AUTHORIZED,
+        # The canonical spelling of the same fact. Both keys are emitted because the first
+        # is this repository's existing vocabulary and the second is the contract name; they
+        # are asserted equal rather than allowed to drift.
+        "further_vci_endpoint_probe_authorized": FURTHER_SPECULATIVE_ENDPOINT_PROBE_AUTHORIZED,
     }
-    for dimension in COMPOSITION_DIMENSIONS + AUCTION_SUBDIMENSIONS:
-        contract[dimension] = dimension_verdicts.get(dimension, "unknown")
-    if contract["auction_inclusion"] == "qualified":
-        # A roll-up that does not say which leg it covers is an overclaim waiting to be
-        # quoted, so the scope travels with it.
-        contract["auction_inclusion_scope"] = sorted(
-            leg for leg, verdict in legs.items() if verdict == "qualified"
+    for dimension in COMPOSITION_DIMENSIONS:
+        if dimension == "auction_inclusion":
+            continue
+        contract[dimension] = dimension_verdicts.get(dimension, DIMENSION_UNKNOWN)
+    for leg, verdict in legs.items():
+        contract[leg] = (
+            DIMENSION_ATO_DEMONSTRATED if verdict == "qualified" else verdict
         )
+
+    if demonstrated_legs:
+        # A roll-up that does not say which leg it covers is an overclaim waiting to be
+        # quoted, so the scope travels with it -- and the roll-up itself never reads
+        # "qualified", only "partially observed".
+        contract["auction_inclusion"] = AUCTION_ROLLUP_PARTIAL
+        contract["general_auction_composition"] = AUCTION_ROLLUP_PARTIAL
+        contract["auction_inclusion_scope"] = list(demonstrated_legs)
         contract["auction_inclusion_unresolved_legs"] = sorted(
             leg for leg, verdict in legs.items() if verdict != "qualified"
         )
+        # The demonstrated result, stated at the width it was actually demonstrated at.
+        contract["opening_auction_labeled_quantity"] = "observed"
+        contract["opening_auction_referent"] = "qualified_by_exchange_standard_term"
+        contract["opening_auction_included_in_provider_accumulated_volume"] = "demonstrated"
+    else:
+        contract["auction_inclusion"] = DIMENSION_UNKNOWN
+        contract["general_auction_composition"] = DIMENSION_UNKNOWN
 
     # A dimension can be unknown because nobody looked, or unknown because every observable
     # surface was examined and none carries it. Recording which keeps the second kind from
     # being reopened as though it were the first.
     contract["unresolved_dimension_resolution"] = dict(exhausted_dimensions or {})
 
-    if qualified:
-        contract["market_scope"] = "partially_qualified"
-        contract["state"] = "A_composition_partially_qualified"
-        contract["qualified_dimensions"] = sorted(qualified)
+    if demonstrated_legs:
+        contract["market_scope"] = MARKET_SCOPE_PARTIAL
+        contract["overall_market_scope"] = MARKET_SCOPE_PARTIAL
+        contract["state"] = "A_composition_partially_observed_not_qualified"
+        contract["demonstrated_dimensions"] = list(demonstrated_legs)
+        contract["market_composition_resolution"] = (
+            resolution or DIMENSION_UNAVAILABLE
+        )
     else:
-        contract["market_scope"] = "permanently_unresolved"
+        contract["market_scope"] = MARKET_SCOPE_UNRESOLVED
+        contract["overall_market_scope"] = MARKET_SCOPE_UNRESOLVED
         contract["state"] = "B_composition_permanently_unresolved_through_vci"
         contract["market_composition_resolution"] = (
-            resolution or "unavailable_from_observed_vci_surfaces"
+            resolution or DIMENSION_UNAVAILABLE
         )
         contract["permanence_scope"] = (
             "Under the currently observable VCI contract. Not a claim that VCI can never "
             "publish a field definition; a first-party definition would reopen this."
         )
     return contract
+
+
+#: The evidence artifact this contract was assembled from, and the fact that it is not
+#: rewritten. The artifact at ``63ecc48`` uses the superseded ``partially_qualified``
+#: spelling; it stays exactly as written, because an evidence record that gets edited when
+#: the vocabulary changes is not an evidence record.
+SUPERSEDED_ARTIFACT = {
+    "path": "operations-review/vci-volume-composition-20260804/composition_summary.json",
+    "key": "volume_contract",
+    "commit": "63ecc48",
+    "vocabulary": "partially_qualified",
+    "superseded_by": "market_scope=partially_observed_but_not_qualified",
+    "evidence_changed": False,
+    "note": (
+        "Terminology only. Every dimension verdict, the ATO reconciliation and the surface "
+        "inventory are unchanged; what changed is that three dimensions previously recorded "
+        "as `unknown` with a sidecar resolution are now written as "
+        "`unavailable_from_observed_vci_surfaces` at the top level, and the one demonstrated "
+        "leg is no longer spelled `qualified`."
+    ),
+}
+
+
+def active_contract() -> dict[str, Any]:
+    """The canonical, active VCI volume contract. One definition, assembled once.
+
+    Consumers that need the verdict read this rather than re-deriving it from an evidence
+    file, so there is no second place for the vocabulary to drift to.
+    """
+    contract = composition_contract(
+        provider_internal_volume_reconciled=True,
+        dimension_verdicts={
+            "matched_trade_inclusion": DIMENSION_UNAVAILABLE,
+            "negotiated_inclusion": DIMENSION_UNAVAILABLE,
+            "odd_lot_inclusion": DIMENSION_UNAVAILABLE,
+            "opening_auction_inclusion": "qualified",
+            "closing_auction_inclusion": DIMENSION_UNKNOWN,
+        },
+        unit="shares",
+        corporate_action_adjustment=DIMENSION_UNKNOWN,
+        surfaces_examined=CANDIDATE_SURFACES,
+        exhausted_dimensions={
+            "matched_trade_inclusion": DIMENSION_UNAVAILABLE,
+            "negotiated_inclusion": DIMENSION_UNAVAILABLE,
+            "odd_lot_inclusion": DIMENSION_UNAVAILABLE,
+            "closing_auction_inclusion": "not_observable_from_the_retained_morning_snapshot",
+        },
+    )
+    contract["supersedes"] = dict(SUPERSEDED_ARTIFACT)
+    return assert_canonical_vocabulary(contract)  # type: ignore[return-value]
 
 
 LIQUIDITY_CAPABILITIES = (
@@ -353,21 +473,85 @@ def liquidity_eligibility(contract: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def assert_fail_closed(contract: Mapping[str, Any]) -> Mapping[str, Any]:
-    """Refuse a contract that has leaked an unearned upgrade."""
+    """Refuse a contract that has leaked an unearned upgrade.
+
+    Accepts both the canonical vocabulary and the superseded ``partially_qualified``
+    spelling, so that a frozen evidence artifact written before the 2026-08-04 rename can
+    still be checked for safety without being rewritten. Use
+    :func:`assert_canonical_vocabulary` for anything that is *active*.
+    """
     if contract.get("liquidity_actionable"):
         raise CompositionError("liquidity_actionable_must_stay_false")
-    if contract.get("market_scope") not in MARKET_SCOPE_STATES:
-        raise CompositionError(f"market_scope_state_invalid:{contract.get('market_scope')}")
-    if contract.get("market_scope") == "partially_qualified" and not contract.get("qualified_dimensions"):
-        raise CompositionError("partially_qualified_without_a_qualified_dimension")
-    if contract.get("auction_inclusion") == "qualified" and not contract.get("auction_inclusion_scope"):
-        raise CompositionError("qualified_auction_inclusion_must_name_its_legs")
+    scope = contract.get("market_scope")
+    if scope not in MARKET_SCOPE_STATES | SUPERSEDED_MARKET_SCOPE_STATES:
+        raise CompositionError(f"market_scope_state_invalid:{scope}")
+    partial_evidence = contract.get("demonstrated_dimensions") or contract.get("qualified_dimensions")
+    if scope in {MARKET_SCOPE_PARTIAL} | SUPERSEDED_MARKET_SCOPE_STATES and not partial_evidence:
+        raise CompositionError("partial_market_scope_without_a_demonstrated_dimension")
+    if contract.get("auction_inclusion") in {"qualified", AUCTION_ROLLUP_PARTIAL} and not contract.get(
+        "auction_inclusion_scope"
+    ):
+        raise CompositionError("auction_roll_up_must_name_its_legs")
     if contract.get("further_vci_pagination_authorized"):
         raise CompositionError("further_pagination_is_not_authorized")
     if contract.get("further_speculative_endpoint_probe_authorized"):
         raise CompositionError("speculative_endpoint_probing_is_not_authorized")
+    if contract.get("further_vci_endpoint_probe_authorized"):
+        raise CompositionError("further_vci_endpoint_probing_is_not_authorized")
     if contract.get("provider") != PROVIDER:
         raise CompositionError("contract_provider_must_be_vci")
+    return contract
+
+
+#: Words that must not appear as an active verdict, and what to say instead. Each was a
+#: real spelling in this repository; each reads, to a consumer skimming for a green light,
+#: as more than the evidence supports.
+BANNED_ACTIVE_VERDICTS: dict[str, str] = {
+    "partially_qualified": MARKET_SCOPE_PARTIAL,
+    "qualified": "a dimension-specific demonstrated verdict",
+}
+
+
+def assert_canonical_vocabulary(contract: Mapping[str, Any]) -> Mapping[str, Any]:
+    """The strict check for an *active* contract: fail-closed **and** canonically worded.
+
+    Separate from :func:`assert_fail_closed` because the two answer different questions.
+    A frozen artifact can be safe and still use a word this milestone retired; an active
+    contract may not.
+    """
+    assert_fail_closed(contract)
+    scope = contract.get("market_scope")
+    if scope in SUPERSEDED_MARKET_SCOPE_STATES:
+        raise CompositionError(
+            f"superseded_market_scope_vocabulary:{scope}->{BANNED_ACTIVE_VERDICTS[str(scope)]}"
+        )
+    if contract.get("overall_market_scope") != scope:
+        raise CompositionError("overall_market_scope_must_agree_with_market_scope")
+    for dimension in COMPOSITION_DIMENSIONS + AUCTION_SUBDIMENSIONS:
+        verdict = contract.get(dimension)
+        if dimension == "auction_inclusion":
+            if verdict not in {DIMENSION_UNKNOWN, AUCTION_ROLLUP_PARTIAL}:
+                raise CompositionError(f"auction_roll_up_verdict_invalid:{verdict}")
+            continue
+        if verdict not in DIMENSION_VERDICTS:
+            raise CompositionError(f"non_canonical_dimension_verdict:{dimension}={verdict}")
+    if contract.get("general_auction_composition") != contract.get("auction_inclusion"):
+        raise CompositionError("general_auction_composition_must_agree_with_the_roll_up")
+    if contract.get("opening_auction_inclusion") == DIMENSION_ATO_DEMONSTRATED:
+        narrow = {
+            "opening_auction_labeled_quantity": "observed",
+            "opening_auction_referent": "qualified_by_exchange_standard_term",
+            "opening_auction_included_in_provider_accumulated_volume": "demonstrated",
+        }
+        for key, expected in narrow.items():
+            if contract.get(key) != expected:
+                raise CompositionError(f"narrow_ato_result_not_stated:{key}")
+        if contract.get("closing_auction_inclusion") == DIMENSION_ATO_DEMONSTRATED:
+            raise CompositionError("opening_leg_evidence_cannot_cover_the_closing_leg")
+    if contract.get("further_vci_endpoint_probe_authorized") is not contract.get(
+        "further_speculative_endpoint_probe_authorized"
+    ):
+        raise CompositionError("probe_authorization_keys_disagree")
     return contract
 
 

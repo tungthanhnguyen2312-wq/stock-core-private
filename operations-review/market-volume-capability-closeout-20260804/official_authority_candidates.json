@@ -1,0 +1,47 @@
+{
+  "active_market_composition_sources": [],
+  "automatic_acquisition_authorized": false,
+  "candidates": [
+    {
+      "acquisition_state": "nothing_acquired",
+      "authority": "official_exchange",
+      "authority_name": "Ho Chi Minh City Stock Exchange",
+      "authority_position": "preferred_currently_identified_official_authority_path",
+      "automatic_acquisition_authorized": false,
+      "blocking_reason_for_activation": "Every one of the eight candidate questions is open. A source whose units, ticker coverage and reuse terms are unknown cannot qualify anything, and acquisition is a separately authorized decision in any case.",
+      "candidate_id": "hose_trading_statistics",
+      "candidate_questions": [
+        "matched volume definition",
+        "negotiated volume definition",
+        "relationship between matched and total volume",
+        "units and scaling",
+        "ticker-level availability",
+        "date coverage",
+        "machine-readable access",
+        "access and reuse terms"
+      ],
+      "categories_note": "Recorded as categories the exchange is understood to distinguish publicly. Not a statement that any specific page, field or file has been located, fetched or read.",
+      "locator": null,
+      "locator_note": "No URL recorded. None has been observed and retained. A future milestone must obtain the locator from an operator-supplied or observed source, not compose one.",
+      "publicly_distinguished_categories": [
+        "matched_order_trading_statistics",
+        "negotiated_or_put_through_trading_statistics",
+        "end_of_day_matched_volume"
+      ],
+      "source": "HOSE",
+      "status": "future_qualification_candidate",
+      "why_this_candidate": "HOSE publicly distinguishes categories that the VCI closeout proved are absent from every observed VCI surface: matched-order trading statistics, negotiated or put-through trading statistics, and end-of-day matched volume. Those categories are the ones that would qualify matched_trade_inclusion and negotiated_inclusion.",
+      "would_not_reopen_by_itself": [
+        "volume_corporate_action_adjustment"
+      ],
+      "would_reopen": [
+        "matched_trade_inclusion",
+        "negotiated_inclusion",
+        "odd_lot_inclusion",
+        "closing_auction_inclusion"
+      ]
+    }
+  ],
+  "note": "Registering a candidate records what would have to be answered. It authorizes no request, and this module makes none.",
+  "schema_version": "1.0.0"
+}

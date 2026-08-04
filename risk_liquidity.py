@@ -4,9 +4,31 @@ import math
 from pathlib import Path
 from typing import Any
 
+import market_volume_capability_matrix as volume_capability
 from point_in_time_market_risk import calculate_point_in_time_beta_and_correlation
 
 VERSION = "1.0.0"
+
+
+def _unavailable_by_contract(metric: str, capability_name: str) -> dict[str, Any]:
+    """A metric that no input can open.
+
+    Distinct from ``out(metric)`` with ``missing_inputs``: that shape says "supply these and
+    I will compute it", which was the previous, wrong answer for days-to-liquidate. The
+    missing thing is not an input the caller has.
+    """
+    record = volume_capability.capability(capability_name)
+    return out(
+        metric,
+        "unavailable",
+        availability=record["availability"],
+        capability_class=record["capability_class"],
+        reason=record["reason"],
+        reopen_condition=record["reopen_condition"],
+        missing_inputs=[],
+        interpretation_limits=[record["reopen_note"]],
+        warnings=[record["note"]],
+    )
 
 
 def out(n: str, state: str = "unavailable", **k: Any) -> dict[str, Any]:
@@ -32,6 +54,38 @@ def out(n: str, state: str = "unavailable", **k: Any) -> dict[str, Any]:
     }
     x.update(k)
     return x
+
+
+def _average_volume(rows: list[dict[str, Any]], *, volume_units: bool, volume_basis: Any) -> dict[str, Any]:
+    """Mean of the retained provider volume series -- descriptive, provider-scoped.
+
+    Kept available deliberately. It is a mean over one provider's own series, which is a
+    description of what that provider reported, not a claim about how much could have been
+    traded. What changed in this milestone is that it now says so: it carries its capability
+    class and the four standing warnings, so a downstream reader cannot mistake it for a
+    liquidity measure just because it lives under ``liquidity_risk``.
+    """
+    record = volume_capability.capability("provider_volume_moving_average")
+    usable = bool(volume_units and rows)
+    return out(
+        "average_volume",
+        "available" if usable else "unavailable",
+        value=sum(float(x.get("volume", 0)) for x in rows) / len(rows) if usable else None,
+        unit="provider_volume_units" if usable else None,
+        source="VCI",
+        capability_class=record["capability_class"],
+        availability=record["availability"],
+        provenance={"volume_basis": volume_basis, "namespace": "provider_scoped"},
+        missing_inputs=[] if usable else ["qualified_volume_units"],
+        interpretation_limits=[
+            "Descriptive only. Not qualified market liquidity and not an official exchange "
+            "volume; days-to-liquidate, participation-rate sizing and market impact are "
+            f"{volume_capability.UNAVAILABLE_BY_CONTRACT}.",
+        ],
+        warnings=list(record["required_warnings"])
+        + ([] if usable else ["volume_basis_unqualified_or_incompatible"]),
+        is_actionable=False,
+    )
 
 
 def evaluate_market_risk(d: dict[str, Any] | None, reference_at: str | None = None, runtime_root: Path | None = None) -> dict[str, Any]:
@@ -95,21 +149,17 @@ def evaluate_market_risk(d: dict[str, Any] | None, reference_at: str | None = No
                 pit_corr = out("point_in_time_correlation", "unavailable", reason=last_row.get("unavailable_reason", "insufficient_aligned_observations"), missing_inputs=["60_consecutive_aligned_vnm_vnindex_pairs"])
 
     if not adjusted or len(rows) < 3:
-        liq = out(
-            "average_volume",
-            "available" if volume_units and rows else "unavailable",
-            value=sum(float(x.get("volume", 0)) for x in rows) / len(rows) if volume_units and rows else None,
-            unit="provider_volume_units" if volume_units else None,
-            provenance={"volume_basis": d.get("volume_basis")},
-            missing_inputs=[] if volume_units and rows else ["qualified_volume_units"],
-            warnings=[] if volume_units else ["volume_basis_unqualified_or_incompatible"],
-        )
+        liq = _average_volume(rows, volume_units=volume_units, volume_basis=d.get("volume_basis"))
         return {
             "schema_version": VERSION,
             "reference_at": reference_at,
             "dimensions": {
                 "market_risk": "available" if (pit_beta["state"] == "available" or pit_corr["state"] == "available") else "unavailable",
-                "liquidity": "available" if liq["state"] == "available" else "unavailable",
+                # Descriptive provider-scoped volume does not make a *liquidity* dimension
+                # available. It never did establish executable depth; it merely used to be
+                # reported under a name that implied it.
+                "liquidity": volume_capability.UNAVAILABLE_BY_CONTRACT,
+                "descriptive_provider_volume": "available" if liq["state"] == "available" else "unavailable",
                 "concentration": "unavailable",
                 "position_sizing_readiness": "unavailable",
                 "data_confidence": "partial" if (liq["state"] == "available" or pit_beta["state"] == "available") else "unknown",
@@ -124,7 +174,9 @@ def evaluate_market_risk(d: dict[str, Any] | None, reference_at: str | None = No
             },
             "liquidity_risk": {
                 "average_volume": liq,
-                "days_to_liquidate": out("days_to_liquidate", missing_inputs=["portfolio_order_size", "participation_rate", "qualified_volume_units"]),
+                "days_to_liquidate": _unavailable_by_contract("days_to_liquidate", "days_to_liquidate"),
+                "participation_rate_sizing": _unavailable_by_contract("participation_rate_sizing", "participation_rate_sizing"),
+                "market_impact": _unavailable_by_contract("market_impact", "market_impact_estimation"),
             },
             "portfolio_risk": {"state": "unavailable", "reason": "holdings_cash_and_risk_budget_contract_absent"},
             "backtest_summary": {"state": "unavailable", "reason": "point_in_time_signals_absent"},
@@ -141,14 +193,15 @@ def evaluate_market_risk(d: dict[str, Any] | None, reference_at: str | None = No
         peak = max(peak, c)
         mdd = min(mdd, c / peak - 1.0)
 
-    liq = out("average_volume", "available" if volume_units else "unavailable", value=sum(float(x.get("volume", 0)) for x in rows) / len(rows) if volume_units else None, unit="provider_volume_units", warnings=[] if volume_units else ["volume_units_unqualified"])
+    liq = _average_volume(rows, volume_units=volume_units, volume_basis=d.get("volume_basis"))
 
     return {
         "schema_version": VERSION,
         "reference_at": reference_at,
         "dimensions": {
             "market_risk": "available",
-            "liquidity": "available" if liq["state"] == "available" else "unavailable",
+            "liquidity": volume_capability.UNAVAILABLE_BY_CONTRACT,
+            "descriptive_provider_volume": "available" if liq["state"] == "available" else "unavailable",
             "concentration": "unavailable",
             "position_sizing_readiness": "unavailable",
             "data_confidence": "partial",
@@ -163,7 +216,9 @@ def evaluate_market_risk(d: dict[str, Any] | None, reference_at: str | None = No
         },
         "liquidity_risk": {
             "average_volume": liq,
-            "days_to_liquidate": out("days_to_liquidate", missing_inputs=["user_order_size_and_participation_rate"]),
+            "days_to_liquidate": _unavailable_by_contract("days_to_liquidate", "days_to_liquidate"),
+            "participation_rate_sizing": _unavailable_by_contract("participation_rate_sizing", "participation_rate_sizing"),
+            "market_impact": _unavailable_by_contract("market_impact", "market_impact_estimation"),
         },
         "portfolio_risk": {"state": "unavailable", "reason": "holdings_contract_absent"},
         "backtest_summary": {"state": "unavailable", "reason": "point_in_time_signals_absent"},

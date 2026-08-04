@@ -1,0 +1,290 @@
+{
+  "capabilities": {
+    "auction_versus_continuous_decomposition": {
+      "availability": "unavailable_by_contract",
+      "capability": "auction_versus_continuous_decomposition",
+      "capability_class": "liquidity_dependent",
+      "note": "One opening-auction quantity was demonstrated to sit inside the accumulator. That is one leg of one session boundary, not a decomposition -- the closing leg is unknown and the continuous remainder is a subtraction against unknowns.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "average_daily_volume_portfolio_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "average_daily_volume_portfolio_sizing",
+      "capability_class": "execution_dependent",
+      "note": "Averaging an undifferentiated total does not differentiate it.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "capacity_estimation": {
+      "availability": "unavailable_by_contract",
+      "capability": "capacity_estimation",
+      "capability_class": "liquidity_dependent",
+      "note": "Strategy capacity is days-to-liquidate integrated over a book.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "days_to_liquidate": {
+      "availability": "unavailable_by_contract",
+      "capability": "days_to_liquidate",
+      "capability_class": "liquidity_dependent",
+      "note": "Divides a position by daily volume. If that volume includes put-through blocks that were never available to a screen order, the answer is wrong in the optimistic direction, which is the direction that loses money.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "execution_simulation": {
+      "availability": "unavailable_by_contract",
+      "capability": "execution_simulation",
+      "capability_class": "execution_dependent",
+      "note": "Any fill model that treats the volume field as all executable matched liquidity.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "liquidity_adjusted_position_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "liquidity_adjusted_position_sizing",
+      "capability_class": "execution_dependent",
+      "note": "Sizing against a figure whose executable fraction is unknown.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "market_impact_estimation": {
+      "availability": "unavailable_by_contract",
+      "capability": "market_impact_estimation",
+      "capability_class": "liquidity_dependent",
+      "note": "Impact models are calibrated against matched continuous volume. Feeding an undifferentiated total in overstates depth.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "negotiated_versus_matched_flow_analysis": {
+      "availability": "unavailable_by_contract",
+      "capability": "negotiated_versus_matched_flow_analysis",
+      "capability_class": "liquidity_dependent",
+      "note": "Requires the split the closeout proved is absent from every observed VCI surface.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "odd_lot_analysis": {
+      "availability": "unavailable_by_contract",
+      "capability": "odd_lot_analysis",
+      "capability_class": "liquidity_dependent",
+      "note": "odd_lot_inclusion is unavailable_from_observed_vci_surfaces.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "participation_rate_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "participation_rate_sizing",
+      "capability_class": "execution_dependent",
+      "note": "A participation rate is a fraction of *executable matched* volume.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "production_backtest_liquidity_constraint": {
+      "availability": "unavailable_by_contract",
+      "capability": "production_backtest_liquidity_constraint",
+      "capability_class": "execution_dependent",
+      "note": "A backtest that caps fills by VCI `v` reports a capacity it cannot support.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "provider_relative_volume": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_relative_volume",
+      "capability_class": "descriptive_provider_scoped",
+      "namespace": "provider_scoped",
+      "note": "Today's provider volume against its own trailing mean -- a ratio within one series, so an unknown constant composition cancels.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "provider_volume_anomaly_detection": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_anomaly_detection",
+      "capability_class": "descriptive_provider_scoped",
+      "namespace": "provider_scoped",
+      "note": "Outliers *within the same provider series*. Cross-provider anomaly detection is not this capability.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "provider_volume_history_display": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_history_display",
+      "capability_class": "descriptive_provider_scoped",
+      "namespace": "provider_scoped",
+      "note": "Showing the retained daily volume series as the provider reported it.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "provider_volume_moving_average": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_moving_average",
+      "capability_class": "descriptive_provider_scoped",
+      "namespace": "provider_scoped",
+      "note": "A mean over the same provider series. Same composition on both sides.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "provider_volume_trend_indicator": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_trend_indicator",
+      "capability_class": "descriptive_provider_scoped",
+      "namespace": "provider_scoped",
+      "note": "Direction of the provider series over time, not a claim about market share.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "research_only_volume_technical_indicator": {
+      "availability": "available_under_existing_gates",
+      "capability": "research_only_volume_technical_indicator",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "namespace": "provider_scoped",
+      "note": "OBV, MFI, Chaikin and similar, whose interpretation is a shape in one series and does not require knowing the market's complete composition. Research scope: they may not be presented as a liquidity or executability finding.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "source_labeled_volume_comparison": {
+      "availability": "available_under_existing_gates",
+      "capability": "source_labeled_volume_comparison",
+      "capability_class": "descriptive_provider_scoped",
+      "namespace": "provider_scoped",
+      "note": "Comparison that names VCI as the source in the output, not in a footnote.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "turnover_tier_screening_score": {
+      "availability": "available_under_existing_gates",
+      "capability": "turnover_tier_screening_score",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "namespace": "provider_scoped",
+      "note": "Coarse close x volume banding used to rank screening candidates. Retained because it is a relative screen over one provider series, not a tradable-size estimate; it must never be labelled or exported as qualified market liquidity.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "volume_based_ranking_or_recommendation": {
+      "availability": "unavailable_by_contract",
+      "capability": "volume_based_ranking_or_recommendation",
+      "capability_class": "liquidity_dependent",
+      "note": "Ranking or recommending on volume presented as qualified market liquidity.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "volume_confirmation_signal": {
+      "availability": "available_under_existing_gates",
+      "capability": "volume_confirmation_signal",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "namespace": "provider_scoped",
+      "note": "'Did today's bar come with more volume than usual for this ticker' -- a within-series comparison. It says nothing about how much could have been traded.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "volume_derived_actionability_upgrade": {
+      "availability": "unavailable_by_contract",
+      "capability": "volume_derived_actionability_upgrade",
+      "capability_class": "liquidity_dependent",
+      "note": "No volume finding may raise is_actionable. The unit being shares and the accumulator reconciling are both true and neither is an actionability input.",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    }
+  },
+  "consumers": {
+    "analysis_lane_eligibility.backtest_claims_gate": "execution_dependent",
+    "analysis_lane_eligibility.liquidity_claims_gate": "liquidity_dependent",
+    "builders.build_ticker_context.price_basis_provenance": "descriptive_provider_scoped",
+    "builders.build_ticker_context.risk_analysis_passthrough": "descriptive_provider_scoped",
+    "candlestick_patterns.average_volume20": "descriptive_provider_scoped",
+    "candlestick_patterns.gtgd20_ty_calc": "analytical_not_liquidity_dependent",
+    "candlestick_patterns.low_liquidity_warning": "analytical_not_liquidity_dependent",
+    "candlestick_patterns.rel_vol_calc": "descriptive_provider_scoped",
+    "candlestick_patterns.volume_confirmation": "analytical_not_liquidity_dependent",
+    "export_ai_bundle.ohlcv_volume_passthrough": "descriptive_provider_scoped",
+    "export_ai_bundle.risk_analysis": "descriptive_provider_scoped",
+    "market_wide_calculation_readiness.position_sizing": "execution_dependent",
+    "opportunity_snapshot.position_sizing": "execution_dependent",
+    "risk_liquidity.average_volume": "descriptive_provider_scoped",
+    "risk_liquidity.backtest_summary": "execution_dependent",
+    "risk_liquidity.days_to_liquidate": "liquidity_dependent",
+    "risk_liquidity.position_sizing": "execution_dependent",
+    "stock_analyzer.indicator_volume_features": "analytical_not_liquidity_dependent",
+    "stock_analyzer.score_liquidity": "analytical_not_liquidity_dependent",
+    "ticker_capability.T4_market_dependent": "liquidity_dependent",
+    "vn_indicators.volume_indicators": "analytical_not_liquidity_dependent",
+    "vnm_execution_contract": "execution_dependent",
+    "vnm_shadow_backtest": "execution_dependent"
+  },
+  "further_vci_endpoint_probe_authorized": false,
+  "further_vci_pagination_authorized": false,
+  "provider": "VCI",
+  "reopen_condition": "new_authoritative_source_contract",
+  "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+  "required_descriptive_warnings": [
+    "market_composition_unresolved",
+    "corporate_action_adjustment_unresolved",
+    "value_is_provider_scoped",
+    "not_an_official_exchange_volume_contract"
+  ],
+  "schema_version": "1.0.0",
+  "source_contract": "vci_volume_composition",
+  "unavailable_reason": "complete_market_composition_not_qualified"
+}

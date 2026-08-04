@@ -1,0 +1,248 @@
+{
+  "consumers": {
+    "analysis_lane_eligibility.backtest_claims_gate": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "execution_dependent",
+      "consumer": "analysis_lane_eligibility.backtest_claims_gate",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "analysis_lane_eligibility.liquidity_claims_gate": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "liquidity_dependent",
+      "consumer": "analysis_lane_eligibility.liquidity_claims_gate",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "builders.build_ticker_context.price_basis_provenance": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "descriptive_provider_scoped",
+      "consumer": "builders.build_ticker_context.price_basis_provenance",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "builders.build_ticker_context.risk_analysis_passthrough": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "descriptive_provider_scoped",
+      "consumer": "builders.build_ticker_context.risk_analysis_passthrough",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "candlestick_patterns.average_volume20": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "descriptive_provider_scoped",
+      "consumer": "candlestick_patterns.average_volume20",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "candlestick_patterns.gtgd20_ty_calc": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "consumer": "candlestick_patterns.gtgd20_ty_calc",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "candlestick_patterns.low_liquidity_warning": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "consumer": "candlestick_patterns.low_liquidity_warning",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "candlestick_patterns.rel_vol_calc": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "descriptive_provider_scoped",
+      "consumer": "candlestick_patterns.rel_vol_calc",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "candlestick_patterns.volume_confirmation": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "consumer": "candlestick_patterns.volume_confirmation",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "export_ai_bundle.ohlcv_volume_passthrough": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "descriptive_provider_scoped",
+      "consumer": "export_ai_bundle.ohlcv_volume_passthrough",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "export_ai_bundle.risk_analysis": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "descriptive_provider_scoped",
+      "consumer": "export_ai_bundle.risk_analysis",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "market_wide_calculation_readiness.position_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "execution_dependent",
+      "consumer": "market_wide_calculation_readiness.position_sizing",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "opportunity_snapshot.position_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "execution_dependent",
+      "consumer": "opportunity_snapshot.position_sizing",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "risk_liquidity.average_volume": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "descriptive_provider_scoped",
+      "consumer": "risk_liquidity.average_volume",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "risk_liquidity.backtest_summary": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "execution_dependent",
+      "consumer": "risk_liquidity.backtest_summary",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "risk_liquidity.days_to_liquidate": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "liquidity_dependent",
+      "consumer": "risk_liquidity.days_to_liquidate",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "risk_liquidity.position_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "execution_dependent",
+      "consumer": "risk_liquidity.position_sizing",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "stock_analyzer.indicator_volume_features": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "consumer": "stock_analyzer.indicator_volume_features",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "stock_analyzer.score_liquidity": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "consumer": "stock_analyzer.score_liquidity",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "ticker_capability.T4_market_dependent": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "liquidity_dependent",
+      "consumer": "ticker_capability.T4_market_dependent",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "vn_indicators.volume_indicators": {
+      "availability": "available_under_existing_gates",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "consumer": "vn_indicators.volume_indicators",
+      "note": "Existing freshness and provenance gates still decide; this class does not bypass them.",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "vnm_execution_contract": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "execution_dependent",
+      "consumer": "vnm_execution_contract",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    },
+    "vnm_shadow_backtest": {
+      "availability": "unavailable_by_contract",
+      "capability_class": "execution_dependent",
+      "consumer": "vnm_shadow_backtest",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active."
+    }
+  },
+  "schema_version": "1.0.0",
+  "unregistered_consumer_behaviour": {
+    "availability": "unavailable_pending_classification",
+    "capability_class": "unknown_or_ambiguous",
+    "consumer": "example.unclassified_volume_consumer",
+    "reason": "consumer_not_classified_in_market_volume_capability_matrix",
+    "reopen_condition": "classify_the_consumer_in_CONSUMER_CLASSIFICATION"
+  }
+}

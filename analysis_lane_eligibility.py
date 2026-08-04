@@ -129,17 +129,36 @@ def _status_from_dimension_state(state: str | None) -> tuple[str, str]:
 # Cross-cutting gates (Gate 1, 3, 7, 8, 6/9) -- shared across all five lanes
 # ---------------------------------------------------------------------------
 
+#: Emitted for every ticker on every lane, whatever the basis says.
+#:
+#: Gate 1's basis warnings are conditional by design -- verify the basis and they lift. That
+#: is right for adjusted returns and wrong for liquidity, because the thing liquidity depends
+#: on is not the basis. The VCI composition closeout (commit 63ecc48) established that no
+#: observed surface says which trades the volume figure counts, and verifying units or
+#: adjustment would not answer it. So the liquidity refusal is stated separately and
+#: unconditionally, under its own token, and it does not lift.
+LIQUIDITY_CONTRACT_WARNING = (
+    "liquidity_claims_unavailable_by_contract:"
+    "complete_market_composition_not_qualified:"
+    "reopen=new_authoritative_source_contract"
+)
+
+
 def _price_volume_basis_warnings(price_basis_provenance: Mapping[str, Any] | None, ticker: str) -> list[str]:
     """Gate 1: unknown/unverified price or volume basis blocks adjusted-return,
     liquidity, and backtest-style claims. price_basis_provenance is the single
     combined contract Producer's build_price_basis_contract already emits (one
-    contract carries both price_basis and volume_basis, not two independent ones)."""
+    contract carries both price_basis and volume_basis, not two independent ones).
+
+    Plus the unconditional liquidity contract refusal, which is not a Gate 1 verdict at all
+    -- see :data:`LIQUIDITY_CONTRACT_WARNING`."""
     path = f"tickers.{ticker}.price_basis_provenance"
     if not _is_mapping(price_basis_provenance):
         return [
             f"adjusted_return_claims_blocked:price_basis_provenance_missing:{path}",
             f"liquidity_claims_blocked:price_basis_provenance_missing:{path}",
             f"backtest_claims_blocked:price_basis_provenance_missing:{path}",
+            LIQUIDITY_CONTRACT_WARNING,
         ]
     price_basis = price_basis_provenance.get("price_basis")
     price_verified = price_basis_provenance.get("price_basis_verified") is True
@@ -153,6 +172,7 @@ def _price_volume_basis_warnings(price_basis_provenance: Mapping[str, Any] | Non
         warnings.append(f"liquidity_claims_blocked:volume_basis={volume_basis!r}:{path}.volume_basis")
     if warnings:
         warnings.append(f"backtest_claims_blocked:price_or_volume_basis_unverified:{path}")
+    warnings.append(LIQUIDITY_CONTRACT_WARNING)
     return warnings
 
 

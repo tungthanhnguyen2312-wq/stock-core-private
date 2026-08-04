@@ -1,0 +1,114 @@
+{
+  "auction_inclusion": "partially_observed",
+  "auction_inclusion_scope": [
+    "opening_auction_inclusion"
+  ],
+  "auction_inclusion_unresolved_legs": [
+    "closing_auction_inclusion"
+  ],
+  "closing_auction_inclusion": "unknown",
+  "demonstrated_dimensions": [
+    "opening_auction_inclusion"
+  ],
+  "further_speculative_endpoint_probe_authorized": false,
+  "further_vci_endpoint_probe_authorized": false,
+  "further_vci_pagination_authorized": false,
+  "general_auction_composition": "partially_observed",
+  "liquidity_actionable": false,
+  "market_composition_resolution": "unavailable_from_observed_vci_surfaces",
+  "market_scope": "partially_observed_but_not_qualified",
+  "matched_trade_inclusion": "unavailable_from_observed_vci_surfaces",
+  "negotiated_inclusion": "unavailable_from_observed_vci_surfaces",
+  "odd_lot_inclusion": "unavailable_from_observed_vci_surfaces",
+  "opening_auction_included_in_provider_accumulated_volume": "demonstrated",
+  "opening_auction_inclusion": "demonstrated_for_observed_ato_field",
+  "opening_auction_labeled_quantity": "observed",
+  "opening_auction_referent": "qualified_by_exchange_standard_term",
+  "overall_market_scope": "partially_observed_but_not_qualified",
+  "provider": "VCI",
+  "provider_internal_volume_reconciled": true,
+  "schema_version": "1.0.0",
+  "state": "A_composition_partially_observed_not_qualified",
+  "supersedes": {
+    "commit": "63ecc48",
+    "evidence_changed": false,
+    "key": "volume_contract",
+    "note": "Terminology only. Every dimension verdict, the ATO reconciliation and the surface inventory are unchanged; what changed is that three dimensions previously recorded as `unknown` with a sidecar resolution are now written as `unavailable_from_observed_vci_surfaces` at the top level, and the one demonstrated leg is no longer spelled `qualified`.",
+    "path": "operations-review/vci-volume-composition-20260804/composition_summary.json",
+    "superseded_by": "market_scope=partially_observed_but_not_qualified",
+    "vocabulary": "partially_qualified"
+  },
+  "surfaces_examined": [
+    {
+      "authentication": "none observed; no cookie or token sent",
+      "composition_fields": [],
+      "endpoint": "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart",
+      "fields": [
+        "t",
+        "o",
+        "h",
+        "l",
+        "c",
+        "v",
+        "accumulatedVolume",
+        "accumulatedValue",
+        "minBatchTruncTime"
+      ],
+      "level": "ticker",
+      "method": "POST",
+      "observed_in": "vnstock 4.0.4 explorer/vci/quote.py; exercised by vn_stock_pipeline.py",
+      "period": "completed daily bars plus the in-progress session",
+      "rejection_reason": "v and accumulatedVolume are undifferentiated totals. No field names or separates any trade method.",
+      "surface_id": "vci_daily_gap_chart"
+    },
+    {
+      "authentication": "none observed",
+      "composition_fields": [],
+      "endpoint": "https://trading.vietcap.com.vn/api/market-watch/LEData/getAll",
+      "fields": [
+        "id",
+        "symbol",
+        "truncTime",
+        "matchType",
+        "matchVol",
+        "matchPrice",
+        "accumulatedVolume",
+        "accumulatedValue",
+        "type"
+      ],
+      "level": "ticker",
+      "method": "POST",
+      "observed_in": "vnstock 4.0.4 explorer/vci/quote.py; paginated in commit 9887c1c",
+      "period": "current session tape only",
+      "rejection_reason": "matchType is b/s -- the aggressor side, not the trade method. `type` is undocumented. Nothing separates put-through, auction or odd-lot trades, and the accumulator is a single undifferentiated running total.",
+      "surface_id": "vci_intraday_ledata"
+    },
+    {
+      "authentication": "none observed",
+      "composition_fields": [
+        "__probe_required__"
+      ],
+      "endpoint": "https://trading.vietcap.com.vn/api/price/symbols/getList",
+      "fields": [
+        "listingInfo",
+        "bidAsk",
+        "matchPrice"
+      ],
+      "level": "ticker (bulk list)",
+      "method": "POST",
+      "observed_in": "vnstock 4.0.4 explorer/vci/trading.py Trading.price_board; already exercised in production by meta_sync.py:156 and blacklist_sync.py:75",
+      "period": "live snapshot of the current session",
+      "rejection_reason": null,
+      "surface_id": "vci_price_board"
+    }
+  ],
+  "unresolved_dimension_resolution": {
+    "closing_auction_inclusion": "not_observable_from_the_retained_morning_snapshot",
+    "matched_trade_inclusion": "unavailable_from_observed_vci_surfaces",
+    "negotiated_inclusion": "unavailable_from_observed_vci_surfaces",
+    "odd_lot_inclusion": "unavailable_from_observed_vci_surfaces"
+  },
+  "volume_corporate_action_adjustment": "unknown",
+  "volume_field_identity": "qualified",
+  "volume_unit": "shares"
+}

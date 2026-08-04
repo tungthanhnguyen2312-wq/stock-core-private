@@ -152,8 +152,10 @@ class PartialQualificationUnlocksNothing(unittest.TestCase):
     """4/5. A qualified component cannot open liquidity; unresolved stays fail-closed."""
 
     def test_a_qualified_component_leaves_liquidity_shut(self):
-        result = composition.assert_fail_closed(contract(opening_auction_inclusion="qualified"))
-        self.assertEqual(result["market_scope"], "partially_qualified")
+        result = composition.assert_canonical_vocabulary(
+            contract(opening_auction_inclusion="qualified")
+        )
+        self.assertEqual(result["market_scope"], "partially_observed_but_not_qualified")
         self.assertFalse(result["liquidity_actionable"])
         eligibility = composition.liquidity_eligibility(result)
         self.assertEqual(eligibility["available"], [])
@@ -177,7 +179,7 @@ class PartialQualificationUnlocksNothing(unittest.TestCase):
 
     def test_a_qualified_auction_roll_up_must_name_its_legs(self):
         result = contract(opening_auction_inclusion="qualified")
-        self.assertEqual(result["auction_inclusion"], "qualified")
+        self.assertEqual(result["auction_inclusion"], "partially_observed")
         self.assertEqual(result["auction_inclusion_scope"], ["opening_auction_inclusion"])
         self.assertEqual(result["auction_inclusion_unresolved_legs"], ["closing_auction_inclusion"])
         stripped = dict(result)
