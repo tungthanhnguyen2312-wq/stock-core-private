@@ -1,0 +1,82 @@
+{
+  "artifact_count": 6,
+  "artifacts": [
+    {
+      "artifact": "raw/kbs_daily_HPG_20260804T065801Z_044530e72b66bae7.raw.json",
+      "requested_date_range": [
+        "2026-05-18",
+        "2026-06-02"
+      ],
+      "response_schema_fingerprint": "4b5f9a12396abdd5ead42099e07a2194a8bb88da5cf98e1260100b9957964053",
+      "retrieved_at": "2026-08-04T06:58:01Z",
+      "sha256": "044530e72b66bae75d3de67a8a25ddbe8afa69f4d80284d0d767bb820eda8091",
+      "ticker": "HPG",
+      "window_role": "share_related_event"
+    },
+    {
+      "artifact": "raw/kbs_daily_HPG_20260804T065805Z_93c2387123dc9fbd.raw.json",
+      "requested_date_range": [
+        "2026-07-20",
+        "2026-07-30"
+      ],
+      "response_schema_fingerprint": "6d747d2192c102f68366eecf5ecd7887e24a32ac09896c3f6a0defdb7817e71f",
+      "retrieved_at": "2026-08-04T06:58:05Z",
+      "sha256": "93c2387123dc9fbd1246ce60b437631f44c9a84ea5a98a84ed9532704206334d",
+      "ticker": "HPG",
+      "window_role": "no_event_control"
+    },
+    {
+      "artifact": "raw/kbs_daily_VCB_20260804T065802Z_adc500119401d92e.raw.json",
+      "requested_date_range": [
+        "2026-07-16",
+        "2026-07-30"
+      ],
+      "response_schema_fingerprint": "4b5f9a12396abdd5ead42099e07a2194a8bb88da5cf98e1260100b9957964053",
+      "retrieved_at": "2026-08-04T06:58:02Z",
+      "sha256": "adc500119401d92ebb6c3c46493b6c5bba37b78039da7d90bc8a5dfc3c5a31bd",
+      "ticker": "VCB",
+      "window_role": "cash_distribution"
+    },
+    {
+      "artifact": "raw/kbs_daily_VCB_20260804T065808Z_ad9a7e9c7c657683.raw.json",
+      "requested_date_range": [
+        "2026-07-01",
+        "2026-07-17"
+      ],
+      "response_schema_fingerprint": "399a01b2761244b112f0387ffc5a836130c15a13cad274bc9e24bde4c21def5e",
+      "retrieved_at": "2026-08-04T06:58:08Z",
+      "sha256": "ad9a7e9c7c657683bc2acce0f39d0802c4f5209361ea537a7b7e24e4d51ee669",
+      "ticker": "VCB",
+      "window_role": "cross_provider_divergence"
+    },
+    {
+      "artifact": "raw/kbs_daily_VNM_20260804T065804Z_c0a096ae295d2687.raw.json",
+      "requested_date_range": [
+        "2026-06-19",
+        "2026-07-03"
+      ],
+      "response_schema_fingerprint": "4b5f9a12396abdd5ead42099e07a2194a8bb88da5cf98e1260100b9957964053",
+      "retrieved_at": "2026-08-04T06:58:04Z",
+      "sha256": "c0a096ae295d2687828189e09ce6425a6aba830a69b2d13c15a6110389b2e702",
+      "ticker": "VNM",
+      "window_role": "cash_distribution"
+    },
+    {
+      "artifact": "raw/kbs_daily_VNM_20260804T065806Z_b021c258c7226835.raw.json",
+      "requested_date_range": [
+        "2026-07-20",
+        "2026-07-31"
+      ],
+      "response_schema_fingerprint": "6d747d2192c102f68366eecf5ecd7887e24a32ac09896c3f6a0defdb7817e71f",
+      "retrieved_at": "2026-08-04T06:58:06Z",
+      "sha256": "b021c258c7226835c6aa7bb2193c74056fc4519f3c2ef9726f0a5c5a1fc21d0f",
+      "ticker": "VNM",
+      "window_role": "no_event_control"
+    }
+  ],
+  "manifest_sha256": "06ef6206e5c1bd3253fdb7dbd89e330ae69207900086dfa8d9c5d2a4052752fc",
+  "provider": "KBS",
+  "schema_version": "1.0.0",
+  "source_authority": "observed_public_web_endpoint",
+  "transformation_code_identity": "kbs_empirical_basis.normalize_daily/1.0.0"
+}

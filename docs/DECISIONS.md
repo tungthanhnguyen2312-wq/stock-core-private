@@ -5,6 +5,86 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-04 - P0-Z KBS Empirical Basis and Capability Relaxation
+
+- **A canonical qualification ladder now sits between "documented" and "unknown."**
+  `evidence_qualification_tiers.py`: `documented_verified` / `empirically_deduced` /
+  `observed_only` / `unknown` / `conflicted` / `invalidated`. Only `documented_verified`
+  may claim the source's own semantics. `empirically_deduced` requires all 13 retention
+  fields (method, fields, tickers, windows, event evidence, artifact hashes, transformation
+  version, alternatives, falsifications, confidence, scope limits, retrieval timestamps,
+  mutability) and refuses empty alternatives or falsification lists — claiming the tier is
+  deliberately more work than claiming `unknown`. Recency never resolves a conflict; a
+  `supersede()` that states what the prior verdict was right about does.
+
+- **The Phase 1C KBS finding is re-confirmed; only its inference is superseded.** Six fresh
+  payloads carry `t/o/h/l/c/va/v` and no semantic metadata whatsoever — exactly as Phase 1C
+  reported. What does not follow is that the fields are unusable. Retained in
+  `provider_price_basis_registry._SUPERSEDED` as `phase1c_kbs_fields_unusable`, root cause
+  `absence_of_documentation_treated_as_absence_of_usable_data`, narrowed to
+  `documented_semantics=absent; field_identity=qualified; empirical_semantics=partially_available;
+  descriptive_capability=available; technical_capability=provider_scoped_available;
+  liquidity_capability=unavailable`. The Phase 1C report is not edited or deleted.
+
+- **KBS prices are event-adjusted, on two independent signals.** Pre-event sessions sit off
+  the HOSE tick lattice — so they were never matched order prices — and the off-lattice
+  prefix terminates exactly at a qualified ex-right date in three windows across three
+  tickers. Separately, the provider omits `va` over exactly the off-lattice runs and emits
+  it over exactly the on-lattice ones, 66 of 66 sessions. That second signal also kills the
+  retention hypothesis: HPG 2026-07-20..30 carries `va` while the later-dated VCB
+  2026-07-16..17 does not, so presence tracks the boundary and not the calendar.
+  `provider_methodology` stays `unknown` and `coverage_generalization` is
+  `limited_to_tested_windows`.
+
+- **The VWAP identity earns a quotient, not two scales — and this is enforced, not just
+  noted.** `(1,1)` and `(1000,1000)` predict identical implied prices for every session that
+  will ever exist. The quotient (1.0) comes from 36 discriminating rows over 3 tickers and 3
+  price levels with all 14 competing quotients rejected; the absolute anchor comes from a
+  retained issued-share count used strictly as an order-of-magnitude falsifier — `(1000,1000)`
+  implies HPG trading 27.5bn shares against 8.44bn issued. Without that anchor the units
+  report `scaled_units` at `observed_only`. The share count is **not** qualified for
+  valuation and is not qualified here; the argument survives it being wrong by any factor
+  short of the one it rejects.
+
+- **A row no candidate scale explains is a contradiction, not a failure.** Such a row
+  rejects all sixteen candidates identically, so it votes on nothing. Two of 38 eligible
+  rows (5.26%, under a 10% ceiling) are retained verbatim with their alternative
+  explanations: HPG 2026-06-01 carries a `va` byte-identical to 2026-06-02's, and VNM
+  2026-07-31 is unresolved. Above the ceiling the whole relationship reports `conflicted`.
+
+- **Volume adjustment is never inferred from price adjustment.** `volume_adjustment_verdict`
+  accepts the price verdict solely so the refusal is explicit. Verdict is `not_observed`:
+  the only as-of pair spans no share event. A separate result was obtained and is not the
+  same claim — on the 13 VCB sessions the VCI lane proved were rewritten, KBS closes match
+  the stored pre-event rows 0/13 while KBS volumes match them 13/13, so within one provider
+  the two fields are restated on different schedules.
+
+- **Market scope stays entirely unknown, and the bar for changing that is written down.**
+  Six dimensions, all `unknown`. An upgrade needs ≥2 admissible independent observations
+  (retained official exchange total, separately labelled provider fields with a demonstrated
+  relationship, complete intraday reconciliation, or another reproducible independent
+  observation) each with all six confounders eliminated. Secondary financial websites and
+  media reports are counted and can never qualify a dimension.
+  `assert_unit_does_not_qualify_scope` raises if a unit result tries to set a scope.
+
+- **Capability relaxation, not capability activation.** `kbs_capability_matrix.py`:
+  15 descriptive/technical capabilities available under 7 mandatory warnings and 7
+  provenance fields; 2 conditional behind `return_type = provider_series_return`, with
+  `raw_as_traded_return` / `official_exchange_return` / `total_shareholder_return` raising
+  rather than returning unavailable; shadow-backtest eligibility defined across 8 conditions
+  and **not implemented**; 13 liquidity, execution and point-in-time capabilities
+  `unavailable_by_contract` — terminal, with no field a caller can set. 20 consumers
+  classified; an unregistered consumer or capability fails closed.
+
+- **Non-effects.** No production database write, no bundle or dashboard publication, no
+  change to rankings, recommendations, sizing, liquidity outputs, point-in-time valuation or
+  production backtesting. `is_actionable` unchanged; `liquidity_actionable = false`. The VCI
+  verdict is untouched and neither verdict inherits the other.
+
+- Evidence: `operations-review/kbs-empirical-basis-20260804/` (report, `basis_summary.json`,
+  `capability_matrix.json`, `evidence_manifest.json`, six hash-addressed raw payloads).
+  Contract: `docs/kbs_empirical_basis_qualification.md`. `KBS_EMPIRICAL_BASIS: PARTIAL`.
+
 ## 2026-08-03 - P1J Provider-Reported Share Authority Hardening
 > **SUPERSEDED 2026-08-03 by P1J.1.** The grounding line below is wrong: VCB's official anchor
 > is `5,589,091,262`, not `5,589,091,222`; HPG's provider value is `8,442,964,520`, not

@@ -73,7 +73,48 @@ _ACTIVE: dict[str, dict[str, Any]] = {
             "No first-party methodology exists, so which events the provider adjusts for "
             "-- and which it silently does not -- is unknown.",
         ],
-    }
+    },
+    "KBS": {
+        "provider": "KBS",
+        "status": "active",
+        "source_field_identity": "observed",
+        # Nine sessions re-requested three days after a retained observation came back
+        # byte-identical, which is a *control*: no ex-right date falls inside that window.
+        # The series is demonstrably restated at event boundaries, so "not_observed" here
+        # records the absence of a rewrite test that spans one, not an immutable history.
+        "historical_mutability": "not_observed",
+        "price_basis": "empirically_event_adjusted",
+        "price_basis_qualification": "empirically_deduced",
+        "observed_adjustment_dimensions": ["cash_distribution", "share_related_event"],
+        "provider_methodology": "unknown",
+        "unobserved_event_types": "unknown",
+        "coverage_generalization": "limited_to_tested_windows",
+        "raw_as_traded_eligible": False,
+        "official_exchange_price": False,
+        "volume_unit": "shares",
+        "trading_value_unit": "VND",
+        "volume_unit_qualification": "empirically_deduced",
+        "volume_adjustment_basis": "not_observed",
+        "volume_market_scope": "unknown",
+        "liquidity_actionable": False,
+        "evidence": [
+            "operations-review/kbs-empirical-basis-20260804/basis_summary.json",
+            "operations-review/kbs-empirical-basis-20260804/evidence_manifest.json",
+            "operations-review/kbs-empirical-basis-20260804/KBS_EMPIRICAL_BASIS.md",
+        ],
+        "established_at": "2026-08-04",
+        "limitations": [
+            "Three qualified events across three tickers, all HOSE, all in 2026. Older "
+            "history, rights issues, par-value changes and other exchanges are untested.",
+            "No first-party methodology exists, so which events the provider adjusts for "
+            "-- and which it silently does not -- is unknown.",
+            "The unit result fixes the ratio of the two scales from the price range and "
+            "its absolute anchor from a retained, unqualified issued-share count used only "
+            "as an order-of-magnitude falsifier.",
+            "Two of thirty-eight eligible rows are explained by no candidate scale and are "
+            "retained as contradictions rather than resolved.",
+        ],
+    },
 }
 
 # --- Supersession history ----------------------------------------------------------
@@ -108,6 +149,56 @@ _SUPERSEDED: tuple[dict[str, Any], ...] = (
         ],
         "retained_for": "provenance; the artifact and its history are not deleted",
     },
+    {
+        "verdict_id": "phase1c_kbs_fields_unusable",
+        "provider": "KBS",
+        "status": "superseded",
+        # Note what is *not* superseded. Phase 1C's factual findings were all correct and
+        # are re-affirmed by this milestone: the payload carries no adjustment flag, no unit
+        # declaration and no trade-method metadata, and none exists in the adapter either.
+        "asserted_value": "fields_unusable_because_no_documented_semantics_were_found",
+        "retained_correct_for": (
+            "No documented semantic metadata exists for the KBS OHLCV fields. Re-confirmed "
+            "on 2026-08-04 against six freshly retrieved payloads: the response carries "
+            "t/o/h/l/c/v/va and nothing else."
+        ),
+        "asserted_in": [
+            "operations-review/phase_1c_kbs_ohlcv_semantics_20260801T081200Z.md "
+            "(KBS_PRICE_BASIS: ABSENT, KBS_VOLUME_BASIS: ABSENT, "
+            "PROVIDER_QUALIFICATION_BRANCH_CLOSED: YES)"
+        ],
+        "asserted_scope": "the KBS daily OHLCV lane in its entirety",
+        "asserted_at": "phase 1C, 2026-08-01",
+        "root_cause": "absence_of_documentation_treated_as_absence_of_usable_data",
+        "root_cause_detail": (
+            "The report established that the provider publishes no semantics and then "
+            "concluded that every consumer must fail closed. Those are different claims. "
+            "A field can have a known identity and a reproducibly demonstrated behaviour "
+            "and still no first-party definition, and a chart of the series was never a "
+            "claim about adjustment or market composition in the first place."
+        ),
+        "superseded_by": "provider_price_basis_registry:KBS@1.0.0",
+        "superseded_at": "2026-08-04",
+        "superseding_evidence": [
+            "Pre-event prices sit off the HOSE tick lattice, so they were never matched "
+            "order prices; the off-lattice prefix terminates exactly at a qualified "
+            "ex-right date for HPG (2026-05-25 share issue), VCB (2026-07-23 cash) and "
+            "VNM (2026-06-26 cash).",
+            "The provider omits `va` over exactly the off-lattice runs and emits it over "
+            "exactly the on-lattice ones, in all six windows -- an independent second "
+            "signal that tracks the boundary rather than the calendar.",
+            "36 of 38 eligible rows across three tickers place va/v inside the session "
+            "range at one scale quotient, and every competing quotient is rejected.",
+            "Two no-event control windows produced no boundary, which is what falsifies the "
+            "event attribution if it is wrong.",
+        ],
+        "narrowed_to": (
+            "documented_semantics=absent; field_identity=qualified; "
+            "empirical_semantics=partially_available; descriptive_capability=available; "
+            "technical_capability=provider_scoped_available; liquidity_capability=unavailable"
+        ),
+        "retained_for": "provenance; the report and its findings are not deleted or edited",
+    },
 )
 
 
@@ -135,12 +226,16 @@ def active_verdict(provider: str) -> dict[str, Any]:
     return dict(record)
 
 
+EXAMINED_PROVIDERS = ("VCI", "KBS")
+
+
 def unexamined_providers_note() -> str:
     return (
-        "Only VCI has an established price-basis verdict. Every other provider still "
-        "passes on its citation's adjustment_status alone, which is the same conflation "
-        "this module was created to fix -- it is simply not yet evidenced for them. "
-        "Qualifying or disqualifying another provider needs its own bounded pilot."
+        "VCI and KBS have established price-basis verdicts, each from its own bounded "
+        "lane and neither inherited from the other. Every other provider still passes on "
+        "its citation's adjustment_status alone, which is the same conflation this module "
+        "was created to fix -- it is simply not yet evidenced for them. Qualifying or "
+        "disqualifying another provider needs its own bounded lane."
     )
 
 
@@ -175,6 +270,16 @@ def ineligibility_reason(provider: str) -> str | None:
         return None
     if verdict.get("historical_mutability") == "retrospectively_rewritten":
         return "provider_series_retrospectively_rewritten"
+    # Not the same as unqualified. A series shown to be event-adjusted has a *qualified*
+    # basis; it is simply not the as-traded one. Reporting that as "unqualified" is what
+    # made an undocumented provider read as an unusable one.
+    if verdict.get("price_basis") in {
+        "empirically_event_adjusted",
+        "cash_distribution_adjusted_observed",
+        "share_event_adjusted_observed",
+        "documented_adjusted",
+    }:
+        return "provider_series_empirically_event_adjusted_not_as_traded"
     return "provider_price_basis_unqualified"
 
 

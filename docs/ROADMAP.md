@@ -27,6 +27,24 @@ capitalisation and therefore waits on pillar B.
 
 ## P0 — Market-data basis and lineage — ACTIVE, now routed through pillar B
 - Deliverables: provider/schema-version lineage; qualified corporate-action lineage; empirical active-path price test; volume semantics; source/version scale handling.
+- **P0-Z KBS empirical basis and capability relaxation shipped 2026-08-04 — PARTIAL.** One
+  previously closed lane reopened, and only one. Phase 1C was right that KBS publishes no
+  semantic metadata and wrong to conclude the fields were unusable; the premise is retained,
+  the inference superseded. A canonical qualification ladder now exists
+  (`evidence_qualification_tiers.py`) with `empirically_deduced` between documented and
+  unknown, gated on 13 mandatory retention fields. KBS: price `empirically_event_adjusted`,
+  `volume_unit = shares`, `trading_value_unit = VND`, `volume_market_scope = unknown`,
+  `raw_as_traded_eligible = false`, `provider_methodology = unknown`,
+  `coverage_generalization = limited_to_tested_windows`. Descriptive and provider-scoped
+  technical capabilities are available under mandatory warnings; liquidity, execution and
+  point-in-time capabilities are `unavailable_by_contract`. `is_actionable` unchanged.
+  `operations-review/kbs-empirical-basis-20260804/KBS_EMPIRICAL_BASIS.md`,
+  `docs/kbs_empirical_basis_qualification.md`.
+- **The generic price and volume basis remain `unknown`.** P0-V/P0-W qualified a
+  `vci.`-namespaced shadow basis and P0-Z qualified a `kbs.`-namespaced one. Neither is
+  generic, neither inherits the other, and two provider-scoped empirical verdicts do not
+  compose into a market-wide one. Promoting either needs a documented first-party contract,
+  which is what pillar B is for.
 - **EODHD is closed as a route: `EODHD_ROUTE_STATUS: REJECTED_BY_OWNER`** (2026-08-03, `docs/DECISIONS.md`). The earlier private-shadow approval is withdrawn after two independent days of read timeouts. No further timeout test, retry, credential milestone, website check or network diagnosis is authorized; proposing one re-opens a closed decision. The disabled modules stay in the tree but are off this roadmap.
 - The remaining route is **pillar B**: crawl HOSE/HNX/VSDC/issuer IR, build an immutable corporate-action event ledger, and compute `close_official_event_adjusted` ourselves alongside `close_raw`. Sequenced B1–B6 in the design doc.
 - **B1 is delivered and blocked on an owner decision** (2026-08-03). `config/official_source_registry.json` declares all four source classes with hosts, document types, rates, timeouts, retries, robots/terms, retention and failure classification; `official_source_registry.admit()` refuses every source while `activation` is `declared`. Setting `activation` to `approved` is an owner decision recorded in `docs/DECISIONS.md` and may not be made by an agent. Nothing in B2–B6 may begin until then.

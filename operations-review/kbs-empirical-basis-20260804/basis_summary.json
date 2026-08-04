@@ -1,0 +1,2781 @@
+{
+  "documented_semantics": "absent",
+  "failures": {},
+  "historical_rewrite_test": {
+    "changed_detail": [],
+    "current_observed_at": "2026-08-04T06:58:05Z",
+    "note": "No qualified ex-right date falls inside this window, so an unchanged result is a control observation and not an immutability proof.",
+    "prior_observation": "operations-review/kbs_ohlcv_sample_hpg.json",
+    "prior_observed_at": "2026-08-01T01:11:52Z",
+    "sessions_compared": 9,
+    "sessions_with_changed_close": 0,
+    "sessions_with_changed_trading_value": 0,
+    "sessions_with_changed_volume": 0,
+    "spans_qualified_share_event": false,
+    "verdict": "not_observed"
+  },
+  "market_scope": {
+    "dimensions": {
+      "closing_auction_inclusion": {
+        "dimension": "closing_auction_inclusion",
+        "independent_observations": 0,
+        "qualification": "unknown",
+        "reason": "insufficient_admissible_independent_observations",
+        "secondary_corroboration_count": 0,
+        "secondary_corroboration_upgraded_verdict": false,
+        "verdict": "unknown"
+      },
+      "continuous_matching_inclusion": {
+        "dimension": "continuous_matching_inclusion",
+        "independent_observations": 0,
+        "qualification": "unknown",
+        "reason": "insufficient_admissible_independent_observations",
+        "secondary_corroboration_count": 0,
+        "secondary_corroboration_upgraded_verdict": false,
+        "verdict": "unknown"
+      },
+      "negotiated_trade_inclusion": {
+        "dimension": "negotiated_trade_inclusion",
+        "independent_observations": 0,
+        "qualification": "unknown",
+        "reason": "insufficient_admissible_independent_observations",
+        "secondary_corroboration_count": 0,
+        "secondary_corroboration_upgraded_verdict": false,
+        "verdict": "unknown"
+      },
+      "odd_lot_inclusion": {
+        "dimension": "odd_lot_inclusion",
+        "independent_observations": 0,
+        "qualification": "unknown",
+        "reason": "insufficient_admissible_independent_observations",
+        "secondary_corroboration_count": 0,
+        "secondary_corroboration_upgraded_verdict": false,
+        "verdict": "unknown"
+      },
+      "opening_auction_inclusion": {
+        "dimension": "opening_auction_inclusion",
+        "independent_observations": 0,
+        "qualification": "unknown",
+        "reason": "insufficient_admissible_independent_observations",
+        "secondary_corroboration_count": 0,
+        "secondary_corroboration_upgraded_verdict": false,
+        "verdict": "unknown"
+      },
+      "total_exchange_volume_equivalence": {
+        "dimension": "total_exchange_volume_equivalence",
+        "independent_observations": 0,
+        "qualification": "unknown",
+        "reason": "insufficient_admissible_independent_observations",
+        "secondary_corroboration_count": 0,
+        "secondary_corroboration_upgraded_verdict": false,
+        "verdict": "unknown"
+      }
+    },
+    "liquidity_actionable": false,
+    "provider": "KBS",
+    "reason": "no_admissible_independent_observation_of_kbs_market_composition_exists",
+    "reopen_condition": "retained_official_exchange_totals_or_separately_labelled_provider_fields",
+    "schema_version": "1.0.0",
+    "source_authority": "observed_public_web_endpoint",
+    "volume_market_scope": "unknown"
+  },
+  "merged_price_verdict": {
+    "observed_adjustment_dimensions": [
+      "cash_distribution",
+      "share_related_event"
+    ],
+    "reason": "distinct_windows_demonstrated_distinct_adjustment_dimensions",
+    "verdict": "empirically_event_adjusted"
+  },
+  "price_basis_contract": {
+    "corroboration": [
+      {
+        "authority_effect": "none",
+        "basis": "locally stored rows, read-only; no VCI request issued",
+        "counterparty": "VCI",
+        "windows": {
+          "W1_share_event_HPG": 8,
+          "W2_cash_dividend_VCB": 6,
+          "W3_cash_dividend_VNM": 6,
+          "W4_control_HPG_reobservation": 9,
+          "W5_control_VNM": 10,
+          "W6_VCI_rewrite_sessions_VCB": 0
+        }
+      }
+    ],
+    "corroboration_upgraded_qualification": false,
+    "coverage_generalization": "limited_to_tested_windows",
+    "cross_provider_comparison_upgraded_verdict": false,
+    "documented_semantics": "absent",
+    "empirical_record": {
+      "alternative_explanations_considered": [
+        "The provider rounds an as-traded price and lands off the lattice by accident. Rejected: the off-lattice runs are contiguous and terminate exactly at a qualified ex-right date, and va is absent over exactly the same runs.",
+        "The window's off-lattice prefix is caused by an unqualified event nobody recorded. Not excluded for any single window; weakened by three windows across three tickers each matching a separately recorded event of the expected kind.",
+        "va is simply not retained for older sessions. Rejected: HPG 2026-07-20..30 carries va while VCB 2026-07-16..17 does not, so presence tracks the ex-right boundary and not the calendar.",
+        "va includes a trading component the OHLC range does not represent.",
+        "v and va have different market scopes, so their ratio is not a session VWAP.",
+        "Cross-provider equality reflects a shared upstream vendor rather than independent agreement. Not excluded; the comparison is therefore recorded as corroboration with no authority effect."
+      ],
+      "confidence": "moderate",
+      "coverage_generalization": "limited_to_tested_windows",
+      "event_evidence": [
+        {
+          "detail": "ISS share issue, stock dividend ratio 10.0%, exercise_ratio 0.1",
+          "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=31135d0d92c49322d66f26813bf4161505ce100e71d94057be4891b8467d7775,provider=VCI,ticker=HPG,event_code=ISS,exright_date=2026-05-25]",
+          "ex_date": "2026-05-25",
+          "kind": "share_related_event"
+        },
+        {
+          "detail": "DIV cash dividend, 450 VND/share",
+          "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=11ff5ae3e7ebbb8a0aca4d0240a33165b117ddafb1cee6d977d5a9c76cd2e534,provider=VCI,ticker=VCB,event_code=DIV,exright_date=2026-07-23]",
+          "ex_date": "2026-07-23",
+          "kind": "cash_distribution"
+        },
+        {
+          "detail": "DIV cash dividend, 1,850 VND/share",
+          "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=618ede7b5a5cf7c3ebbce05828da2c3543ad1ff9b0c02f2c5c67ddda07bf6a3a,provider=VCI,ticker=VNM,event_code=DIV,exright_date=2026-06-26]",
+          "ex_date": "2026-06-26",
+          "kind": "cash_distribution"
+        }
+      ],
+      "falsification_attempts": [
+        "A no-event control window was requested for two tickers; a boundary appearing there would have falsified the event attribution.",
+        "Every one of the sixteen candidate (v, va) scale pairs was scored, not just the expected one.",
+        "The winning scale pair was re-scored per ticker independently.",
+        "The retained 2026-08-01 HPG window was re-requested to look for a rewrite.",
+        "va presence was profiled against lattice conformance across all six windows, which would have shown a calendar pattern had retention been the cause."
+      ],
+      "historical_mutability": "not_observed",
+      "qualification": "empirically_deduced",
+      "qualification_schema_version": "1.0.0",
+      "raw_artifact_hashes": [
+        "044530e72b66bae75d3de67a8a25ddbe8afa69f4d80284d0d767bb820eda8091",
+        "93c2387123dc9fbd1246ce60b437631f44c9a84ea5a98a84ed9532704206334d",
+        "ad9a7e9c7c657683bc2acce0f39d0802c4f5209361ea537a7b7e24e4d51ee669",
+        "adc500119401d92ebb6c3c46493b6c5bba37b78039da7d90bc8a5dfc3c5a31bd",
+        "b021c258c7226835c6aa7bb2193c74056fc4519f3c2ef9726f0a5c5a1fc21d0f",
+        "c0a096ae295d2687828189e09ce6425a6aba830a69b2d13c15a6110389b2e702"
+      ],
+      "retrieval_timestamps": [
+        "2026-08-04T06:58:01Z",
+        "2026-08-04T06:58:02Z",
+        "2026-08-04T06:58:04Z",
+        "2026-08-04T06:58:05Z",
+        "2026-08-04T06:58:06Z",
+        "2026-08-04T06:58:08Z"
+      ],
+      "scope_limitations": [
+        "Three tickers, all HOSE, all 2026. Older history and other exchanges untested.",
+        "No first-party methodology exists, so which events the provider adjusts for -- and which it silently does not -- is unknown.",
+        "The rewrite comparison spans no qualified share event."
+      ],
+      "test_method": "HOSE tick-lattice conformance of the provider's own o/h/l/c across qualified ex-right boundaries, plus an as-of re-observation of an already-retained window, plus a bounded (v, va) unit-scale elimination.",
+      "tested_date_windows": [
+        "HPG:2026-05-18..2026-06-02",
+        "VCB:2026-07-16..2026-07-30",
+        "VNM:2026-06-19..2026-07-03",
+        "HPG:2026-07-20..2026-07-30",
+        "VNM:2026-07-20..2026-07-31",
+        "VCB:2026-07-01..2026-07-17"
+      ],
+      "tested_fields": [
+        "kbs.raw_o",
+        "kbs.raw_h",
+        "kbs.raw_l",
+        "kbs.raw_c",
+        "kbs.raw_v",
+        "kbs.raw_va"
+      ],
+      "tested_tickers": [
+        "HPG",
+        "VCB",
+        "VNM"
+      ],
+      "transformation_version": "kbs_empirical_basis.normalize_daily/1.0.0"
+    },
+    "field_identity": "qualified",
+    "historical_mutability": "not_observed",
+    "observed_adjustment_dimensions": [
+      "cash_distribution",
+      "share_related_event"
+    ],
+    "official_exchange_price": false,
+    "price_basis": "empirically_event_adjusted",
+    "price_basis_qualification": "empirically_deduced",
+    "provider": "KBS",
+    "provider_methodology": "unknown",
+    "raw_as_traded_eligible": false,
+    "schema_version": "1.0.0",
+    "source_authority": "observed_public_web_endpoint",
+    "tested_windows": [
+      "HPG:2026-05-18..2026-06-02",
+      "VCB:2026-07-16..2026-07-30",
+      "VNM:2026-06-19..2026-07-03",
+      "HPG:2026-07-20..2026-07-30",
+      "VNM:2026-07-20..2026-07-31",
+      "VCB:2026-07-01..2026-07-17"
+    ]
+  },
+  "price_volume_restatement_divergence": {
+    "note": "Demonstrates that the two fields are restated on different schedules. It does not establish what a share-related event does to volume, and it is not an input to the volume-adjustment verdict.",
+    "reference_identity": "dashboard-runtime/vn_stock.db:ohlcv[ticker=VCB,source=VCI,2026-07-01..2026-07-17] -- rows written by daily runs before the 2026-07-23 ex-date; the pipeline appends and does not rewrite history",
+    "sessions_compared": 13,
+    "sessions_with_restated_prices": 13,
+    "sessions_with_volume_equal_to_reference": 13,
+    "verdict": "price_restated_while_volume_unchanged"
+  },
+  "provider": "KBS",
+  "qualification_ladder": [
+    "documented_verified",
+    "empirically_deduced",
+    "observed_only",
+    "unknown",
+    "conflicted",
+    "invalidated"
+  ],
+  "request_budget": 6,
+  "requests_issued": 6,
+  "schema_version": "1.0.0",
+  "source_authority": "observed_public_web_endpoint",
+  "starting_contract": {
+    "close_field_identity": "qualified",
+    "high_field_identity": "qualified",
+    "historical_mutability": "unknown",
+    "liquidity_actionable": false,
+    "low_field_identity": "qualified",
+    "open_field_identity": "qualified",
+    "price_basis": "unknown",
+    "provider": "KBS",
+    "time_field_identity": "qualified",
+    "trading_value_field_identity": "qualified",
+    "trading_value_unit": "unknown",
+    "volume_adjustment_basis": "unknown",
+    "volume_field_identity": "qualified",
+    "volume_market_scope": "unknown",
+    "volume_unit": "unknown"
+  },
+  "unit_scaling": {
+    "candidates": [
+      {
+        "all_rows_inside_range": true,
+        "example_failures": [],
+        "mean_absolute_residual_to_range_midpoint": 83.9028,
+        "rows_evaluated": 36,
+        "rows_inside_range": 36,
+        "rows_outside_range": 0,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1,
+        "volume_scale": 1
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 24215727.0898,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 24131313.1825,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 24288795.1286,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000,
+        "volume_scale": 1
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 24215727089.8252,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 24131313182.4915,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 24288795128.5989,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000,
+        "volume_scale": 1
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 24215727089825.152,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 24131313182491.543,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 24288795128598.934,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000000,
+        "volume_scale": 1
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 2421.5727,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 2413.1313,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 2428.8795,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1,
+        "volume_scale": 10
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 2421572.709,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 2413131.3182,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 2428879.5129,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000,
+        "volume_scale": 10
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 2421572708.9825,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 2413131318.2492,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 2428879512.8599,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000,
+        "volume_scale": 10
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 2421572708982.515,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 2413131318249.1543,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 2428879512859.893,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000000,
+        "volume_scale": 10
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 242.1573,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 241.3131,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 242.888,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1,
+        "volume_scale": 100
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 242157.2709,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 241313.1318,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 242887.9513,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000,
+        "volume_scale": 100
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 242157270.8983,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 241313131.8249,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 242887951.286,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000,
+        "volume_scale": 100
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 242157270898.2515,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 241313131824.9154,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 242887951285.9893,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000000,
+        "volume_scale": 100
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 24.2157,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 24.1313,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 24.2888,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1,
+        "volume_scale": 1000
+      },
+      {
+        "all_rows_inside_range": true,
+        "example_failures": [],
+        "mean_absolute_residual_to_range_midpoint": 83.9028,
+        "rows_evaluated": 36,
+        "rows_inside_range": 36,
+        "rows_outside_range": 0,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000,
+        "volume_scale": 1000
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 24215727.0898,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 24131313.1825,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 24288795.1286,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000,
+        "volume_scale": 1000
+      },
+      {
+        "all_rows_inside_range": false,
+        "example_failures": [
+          {
+            "high": 24350.0,
+            "implied_average_price": 24215727089.8251,
+            "low": 24100.0,
+            "session_date": "2026-05-25"
+          },
+          {
+            "high": 24250.0,
+            "implied_average_price": 24131313182.4915,
+            "low": 24000.0,
+            "session_date": "2026-05-26"
+          },
+          {
+            "high": 24500.0,
+            "implied_average_price": 24288795128.5989,
+            "low": 24150.0,
+            "session_date": "2026-05-27"
+          }
+        ],
+        "mean_absolute_residual_to_range_midpoint": null,
+        "rows_evaluated": 36,
+        "rows_inside_range": 0,
+        "rows_outside_range": 36,
+        "rows_skipped_missing_or_zero": 0,
+        "tickers": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "trading_value_scale": 1000000000,
+        "volume_scale": 1000
+      }
+    ],
+    "degeneracy_resolution": {
+      "anchor_is_a_falsifier_not_a_measurement": true,
+      "members": [
+        [
+          1,
+          1
+        ],
+        [
+          1000,
+          1000
+        ]
+      ],
+      "rejections": [
+        {
+          "detail": {
+            "bound_evidence_identity": "dashboard-runtime/vn_stock.db:metadata[ticker=HPG].shares_outstanding (updated 2026-07-30 16:12)",
+            "bound_qualification": "observed_only",
+            "ceiling_applied": 16885929040.0,
+            "implied_shares_traded": 27485500000.0,
+            "retained_shares_outstanding": 8442964520.0,
+            "session_date": "2026-05-18",
+            "slack_multiple": 2.0,
+            "ticker": "HPG"
+          },
+          "rejected_because": "implied_session_volume_exceeds_retained_issued_capital",
+          "trading_value_scale": 1000,
+          "volume_scale": 1000
+        }
+      ],
+      "resolved": true,
+      "route": "absolute_magnitude_bound_against_retained_issued_share_count",
+      "selected": {
+        "trading_value_scale": 1,
+        "volume_scale": 1
+      }
+    },
+    "mean_absolute_residual_to_range_midpoint": 83.9028,
+    "per_ticker_support": {
+      "HPG": {
+        "all_rows_inside_range": true,
+        "example_failures": [],
+        "mean_absolute_residual_to_range_midpoint": 44.7059,
+        "rows_evaluated": 15,
+        "rows_inside_range": 15,
+        "rows_outside_range": 0,
+        "rows_skipped_missing_or_zero": 0,
+        "trading_value_scale": 1,
+        "volume_scale": 1
+      },
+      "VCB": {
+        "all_rows_inside_range": true,
+        "example_failures": [],
+        "mean_absolute_residual_to_range_midpoint": 100.9996,
+        "rows_evaluated": 6,
+        "rows_inside_range": 6,
+        "rows_outside_range": 0,
+        "rows_skipped_missing_or_zero": 0,
+        "trading_value_scale": 1,
+        "volume_scale": 1
+      },
+      "VNM": {
+        "all_rows_inside_range": true,
+        "example_failures": [],
+        "mean_absolute_residual_to_range_midpoint": 116.261,
+        "rows_evaluated": 15,
+        "rows_inside_range": 15,
+        "rows_outside_range": 0,
+        "rows_skipped_missing_or_zero": 0,
+        "trading_value_scale": 1,
+        "volume_scale": 1
+      }
+    },
+    "qualification": "empirically_deduced",
+    "reason": "one_candidate_held_across_every_ticker_and_every_competitor_was_rejected",
+    "rejected_candidates": [
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000,
+        "volume_scale": 1
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000,
+        "volume_scale": 1
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000000,
+        "volume_scale": 1
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1,
+        "volume_scale": 10
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000,
+        "volume_scale": 10
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000,
+        "volume_scale": 10
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000000,
+        "volume_scale": 10
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1,
+        "volume_scale": 100
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000,
+        "volume_scale": 100
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000,
+        "volume_scale": 100
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000000,
+        "volume_scale": 100
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1,
+        "volume_scale": 1000
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000,
+        "volume_scale": 1000
+      },
+      {
+        "rows_outside_range": 36,
+        "trading_value_scale": 1000000000,
+        "volume_scale": 1000
+      }
+    ],
+    "residual_contradictions_retained": 2,
+    "rows_eligible": 38,
+    "rows_evaluated": 36,
+    "rows_unexplained_by_every_candidate": 2,
+    "scale_quotient": 1.0,
+    "scale_quotient_meaning": "value units per one raw v unit; this is what the VWAP identity constrains and the only part of the result the price-range test earns on its own",
+    "schema_version": "1.0.0",
+    "selected": {
+      "trading_value_scale": 1,
+      "volume_scale": 1
+    },
+    "share_count_bounds_used": {
+      "HPG": {
+        "admissible_because": "order_of_magnitude_falsifier_not_a_measurement",
+        "as_of": "2026-07-30 16:12",
+        "evidence_identity": "dashboard-runtime/vn_stock.db:metadata[ticker=HPG].shares_outstanding (updated 2026-07-30 16:12)",
+        "qualification": "observed_only",
+        "shares_outstanding": 8442964520.0
+      },
+      "VCB": {
+        "admissible_because": "order_of_magnitude_falsifier_not_a_measurement",
+        "as_of": "2026-07-30 17:23",
+        "evidence_identity": "dashboard-runtime/vn_stock.db:metadata[ticker=VCB].shares_outstanding (updated 2026-07-30 17:23)",
+        "qualification": "observed_only",
+        "shares_outstanding": 8355675094.0
+      },
+      "VNM": {
+        "admissible_because": "order_of_magnitude_falsifier_not_a_measurement",
+        "as_of": "2026-07-30 17:30",
+        "evidence_identity": "dashboard-runtime/vn_stock.db:metadata[ticker=VNM].shares_outstanding (updated 2026-07-30 17:30)",
+        "qualification": "observed_only",
+        "shares_outstanding": 2089955445.0
+      }
+    },
+    "surviving_candidates": [
+      {
+        "trading_value_scale": 1,
+        "volume_scale": 1
+      },
+      {
+        "trading_value_scale": 1000,
+        "volume_scale": 1000
+      }
+    ],
+    "surviving_quotient_classes": {
+      "1.0": [
+        [
+          1,
+          1
+        ],
+        [
+          1000,
+          1000
+        ]
+      ]
+    },
+    "surviving_scale_quotients": [
+      1.0
+    ],
+    "tickers_evaluated": [
+      "HPG",
+      "VCB",
+      "VNM"
+    ],
+    "trading_value_unit": "VND",
+    "unexplained_row_alternative_explanations": [
+      "va includes a trading component the OHLC range does not represent",
+      "v and va have different market scopes",
+      "partial, revised or stale payload value",
+      "malformed payload"
+    ],
+    "unexplained_row_fraction": 0.0526,
+    "unexplained_row_fraction_ceiling": 0.1,
+    "unexplained_rows": [
+      {
+        "high": 24150.0,
+        "implied_average_price_at_unit_scale": 62899.4916,
+        "low": 23950.0,
+        "rejects_every_candidate": true,
+        "session_date": "2026-06-01",
+        "trading_value": 608131155000.0,
+        "volume": 9668300.0
+      },
+      {
+        "high": 61300.0,
+        "implied_average_price_at_unit_scale": 85891.7228,
+        "low": 60100.0,
+        "rejects_every_candidate": true,
+        "session_date": "2026-07-31",
+        "trading_value": 384777740000.0,
+        "volume": 4479800.0
+      }
+    ],
+    "volume_unit": "shares"
+  },
+  "volume_adjustment": {
+    "derived_from_price_adjustment": false,
+    "note": "A control window cannot demonstrate that a share event would leave volume alone.",
+    "reason": "no_volume_change_observed_but_no_share_event_spanned_the_comparison",
+    "sessions_compared": 9,
+    "verdict": "not_observed"
+  },
+  "windows": {
+    "W1_share_event_HPG": {
+      "artifact": "raw/kbs_daily_HPG_20260804T065801Z_044530e72b66bae7.raw.json",
+      "boundary_date": "2026-05-25",
+      "events": [
+        {
+          "detail": "ISS share issue, stock dividend ratio 10.0%, exercise_ratio 0.1",
+          "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=31135d0d92c49322d66f26813bf4161505ce100e71d94057be4891b8467d7775,provider=VCI,ticker=HPG,event_code=ISS,exright_date=2026-05-25]",
+          "ex_date": "2026-05-25",
+          "kind": "share_related_event"
+        }
+      ],
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-05-18"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-05-19"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-05-20"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-05-21"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd"
+            ],
+            "session_date": "2026-05-22"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-05-25"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-05-26"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-05-27"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-05-28"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-05-29"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-06-01"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-06-02"
+          }
+        ],
+        "sessions_off_lattice": 5,
+        "sessions_on_lattice": 7,
+        "sessions_total": 12
+      },
+      "price_verdict": {
+        "boundary_date": "2026-05-25",
+        "excludes_raw_as_traded": true,
+        "matched_events": [
+          {
+            "detail": "ISS share issue, stock dividend ratio 10.0%, exercise_ratio 0.1",
+            "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=31135d0d92c49322d66f26813bf4161505ce100e71d94057be4891b8467d7775,provider=VCI,ticker=HPG,event_code=ISS,exright_date=2026-05-25]",
+            "ex_date": "2026-05-25",
+            "kind": "share_related_event"
+          }
+        ],
+        "reason": "off_lattice_prefix_terminates_exactly_at_a_qualified_ex_date",
+        "supports_raw_as_traded": false,
+        "verdict": "share_event_adjusted_observed"
+      },
+      "raw_response_sha256": "044530e72b66bae75d3de67a8a25ddbe8afa69f4d80284d0d767bb820eda8091",
+      "requested_date_range": [
+        "2026-05-18",
+        "2026-06-02"
+      ],
+      "retrieved_at": "2026-08-04T06:58:01Z",
+      "returned_date_range": [
+        "2026-05-18",
+        "2026-06-02"
+      ],
+      "role": "share_related_event",
+      "sessions": 12,
+      "ticker": "HPG",
+      "trading_value_presence": {
+        "note": "Correlation only. It says the provider treats these sessions differently; it does not say why, and it is not a provider statement about either field.",
+        "presence_tracks_lattice_exactly": true,
+        "sessions": [
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-05-18",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-05-19",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-05-20",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-05-21",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-05-22",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-05-25",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-05-26",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-05-27",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-05-28",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-05-29",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-06-01",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-06-02",
+            "trading_value_present": true
+          }
+        ],
+        "sessions_total": 12,
+        "sessions_where_presence_agrees_with_lattice": 12,
+        "sessions_with_trading_value": 7
+      },
+      "vci_stored_comparison": {
+        "authority_effect": "none; agreement between two undocumented providers is compatibility, not semantics",
+        "close_exact_matches": 8,
+        "counterparty": "VCI (locally stored rows, read-only; no VCI request issued)",
+        "detail": [
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 24041.0,
+            "kbs_volume": 27485500.0,
+            "session_date": "2026-05-18",
+            "vci_stored_close_vnd": 24050.0,
+            "vci_stored_volume": 27528757,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 23859.0,
+            "kbs_volume": 25111900.0,
+            "session_date": "2026-05-19",
+            "vci_stored_close_vnd": 23860.0,
+            "vci_stored_volume": 25163815,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 23814.0,
+            "kbs_volume": 40983800.0,
+            "session_date": "2026-05-20",
+            "vci_stored_close_vnd": 23820.0,
+            "vci_stored_volume": 41052048,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 24132.0,
+            "kbs_volume": 30562500.0,
+            "session_date": "2026-05-21",
+            "vci_stored_close_vnd": 24140.0,
+            "vci_stored_volume": 30595854,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 23950.0,
+            "kbs_volume": 25794000.0,
+            "session_date": "2026-05-22",
+            "vci_stored_close_vnd": 23950.0,
+            "vci_stored_volume": 25827721,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 24100.0,
+            "kbs_volume": 26989100.0,
+            "session_date": "2026-05-25",
+            "vci_stored_close_vnd": 24100.0,
+            "vci_stored_volume": 27074403,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 24250.0,
+            "kbs_volume": 20723700.0,
+            "session_date": "2026-05-26",
+            "vci_stored_close_vnd": 24250.0,
+            "vci_stored_volume": 20759854,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 24150.0,
+            "kbs_volume": 23114500.0,
+            "session_date": "2026-05-27",
+            "vci_stored_close_vnd": 24150.0,
+            "vci_stored_volume": 23173011,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 24000.0,
+            "kbs_volume": 15668300.0,
+            "session_date": "2026-05-28",
+            "vci_stored_close_vnd": 24000.0,
+            "vci_stored_volume": 15705421,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 24000.0,
+            "kbs_volume": 16365900.0,
+            "session_date": "2026-05-29",
+            "vci_stored_close_vnd": 24000.0,
+            "vci_stored_volume": 16397908,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 24050.0,
+            "kbs_volume": 9668300.0,
+            "session_date": "2026-06-01",
+            "vci_stored_close_vnd": 24050.0,
+            "vci_stored_volume": 9694955,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 23700.0,
+            "kbs_volume": 25529600.0,
+            "session_date": "2026-06-02",
+            "vci_stored_close_vnd": 23700.0,
+            "vci_stored_volume": 25598352,
+            "volume_exact_match": false
+          }
+        ],
+        "sessions_compared": 12,
+        "volume_exact_matches": 0
+      },
+      "window_contains_qualified_event": true,
+      "window_id": "W1_share_event_HPG"
+    },
+    "W2_cash_dividend_VCB": {
+      "artifact": "raw/kbs_daily_VCB_20260804T065802Z_adc500119401d92e.raw.json",
+      "boundary_date": "2026-07-23",
+      "events": [
+        {
+          "detail": "DIV cash dividend, 450 VND/share",
+          "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=11ff5ae3e7ebbb8a0aca4d0240a33165b117ddafb1cee6d977d5a9c76cd2e534,provider=VCI,ticker=VCB,event_code=DIV,exright_date=2026-07-23]",
+          "ex_date": "2026-07-23",
+          "kind": "cash_distribution"
+        }
+      ],
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-16"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-17"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-20"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-21"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd"
+            ],
+            "session_date": "2026-07-22"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-23"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-24"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-27"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-28"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-29"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-30"
+          }
+        ],
+        "sessions_off_lattice": 5,
+        "sessions_on_lattice": 6,
+        "sessions_total": 11
+      },
+      "price_verdict": {
+        "boundary_date": "2026-07-23",
+        "excludes_raw_as_traded": true,
+        "matched_events": [
+          {
+            "detail": "DIV cash dividend, 450 VND/share",
+            "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=11ff5ae3e7ebbb8a0aca4d0240a33165b117ddafb1cee6d977d5a9c76cd2e534,provider=VCI,ticker=VCB,event_code=DIV,exright_date=2026-07-23]",
+            "ex_date": "2026-07-23",
+            "kind": "cash_distribution"
+          }
+        ],
+        "reason": "off_lattice_prefix_terminates_exactly_at_a_qualified_ex_date",
+        "supports_raw_as_traded": false,
+        "verdict": "cash_distribution_adjusted_observed"
+      },
+      "raw_response_sha256": "adc500119401d92ebb6c3c46493b6c5bba37b78039da7d90bc8a5dfc3c5a31bd",
+      "requested_date_range": [
+        "2026-07-16",
+        "2026-07-30"
+      ],
+      "retrieved_at": "2026-08-04T06:58:02Z",
+      "returned_date_range": [
+        "2026-07-16",
+        "2026-07-30"
+      ],
+      "role": "cash_distribution",
+      "sessions": 11,
+      "ticker": "VCB",
+      "trading_value_presence": {
+        "note": "Correlation only. It says the provider treats these sessions differently; it does not say why, and it is not a provider statement about either field.",
+        "presence_tracks_lattice_exactly": true,
+        "sessions": [
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-16",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-17",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-20",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-21",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-22",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-23",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-24",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-27",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-28",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-29",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-30",
+            "trading_value_present": true
+          }
+        ],
+        "sessions_total": 11,
+        "sessions_where_presence_agrees_with_lattice": 11,
+        "sessions_with_trading_value": 6
+      },
+      "vci_stored_comparison": {
+        "authority_effect": "none; agreement between two undocumented providers is compatibility, not semantics",
+        "close_exact_matches": 6,
+        "counterparty": "VCI (locally stored rows, read-only; no VCI request issued)",
+        "detail": [
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 58964.0,
+            "kbs_volume": 3349700.0,
+            "session_date": "2026-07-16",
+            "vci_stored_close_vnd": 59400.0,
+            "vci_stored_volume": 3349700,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 58071.0,
+            "kbs_volume": 1990100.0,
+            "session_date": "2026-07-17",
+            "vci_stored_close_vnd": 58500.0,
+            "vci_stored_volume": 1990100,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 56284.0,
+            "kbs_volume": 8536800.0,
+            "session_date": "2026-07-20",
+            "vci_stored_close_vnd": 56230.0,
+            "vci_stored_volume": 8570744,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 56284.0,
+            "kbs_volume": 3413200.0,
+            "session_date": "2026-07-21",
+            "vci_stored_close_vnd": 56230.0,
+            "vci_stored_volume": 3422678,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 54100.0,
+            "kbs_volume": 9173400.0,
+            "session_date": "2026-07-22",
+            "vci_stored_close_vnd": 54050.0,
+            "vci_stored_volume": 9207098,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 54000.0,
+            "kbs_volume": 7435600.0,
+            "session_date": "2026-07-23",
+            "vci_stored_close_vnd": 54000.0,
+            "vci_stored_volume": 7464625,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 54100.0,
+            "kbs_volume": 2503700.0,
+            "session_date": "2026-07-24",
+            "vci_stored_close_vnd": 54100.0,
+            "vci_stored_volume": 2515532,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 54000.0,
+            "kbs_volume": 2581300.0,
+            "session_date": "2026-07-27",
+            "vci_stored_close_vnd": 54000.0,
+            "vci_stored_volume": 2605658,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 54100.0,
+            "kbs_volume": 2607000.0,
+            "session_date": "2026-07-28",
+            "vci_stored_close_vnd": 54100.0,
+            "vci_stored_volume": 2621120,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 54600.0,
+            "kbs_volume": 2072300.0,
+            "session_date": "2026-07-29",
+            "vci_stored_close_vnd": 54600.0,
+            "vci_stored_volume": 2079079,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 56500.0,
+            "kbs_volume": 5427800.0,
+            "session_date": "2026-07-30",
+            "vci_stored_close_vnd": 56500.0,
+            "vci_stored_volume": 5439189,
+            "volume_exact_match": false
+          }
+        ],
+        "sessions_compared": 11,
+        "volume_exact_matches": 2
+      },
+      "window_contains_qualified_event": true,
+      "window_id": "W2_cash_dividend_VCB"
+    },
+    "W3_cash_dividend_VNM": {
+      "artifact": "raw/kbs_daily_VNM_20260804T065804Z_c0a096ae295d2687.raw.json",
+      "boundary_date": "2026-06-26",
+      "events": [
+        {
+          "detail": "DIV cash dividend, 1,850 VND/share",
+          "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=618ede7b5a5cf7c3ebbce05828da2c3543ad1ff9b0c02f2c5c67ddda07bf6a3a,provider=VCI,ticker=VNM,event_code=DIV,exright_date=2026-06-26]",
+          "ex_date": "2026-06-26",
+          "kind": "cash_distribution"
+        }
+      ],
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-06-19"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-06-22"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-06-23"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd"
+            ],
+            "session_date": "2026-06-24"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd"
+            ],
+            "session_date": "2026-06-25"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-06-26"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-06-29"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-06-30"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-01"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-02"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-03"
+          }
+        ],
+        "sessions_off_lattice": 5,
+        "sessions_on_lattice": 6,
+        "sessions_total": 11
+      },
+      "price_verdict": {
+        "boundary_date": "2026-06-26",
+        "excludes_raw_as_traded": true,
+        "matched_events": [
+          {
+            "detail": "DIV cash dividend, 1,850 VND/share",
+            "evidence_identity": "dashboard-runtime/vn_stock.db:corporate_event_records[record_id=618ede7b5a5cf7c3ebbce05828da2c3543ad1ff9b0c02f2c5c67ddda07bf6a3a,provider=VCI,ticker=VNM,event_code=DIV,exright_date=2026-06-26]",
+            "ex_date": "2026-06-26",
+            "kind": "cash_distribution"
+          }
+        ],
+        "reason": "off_lattice_prefix_terminates_exactly_at_a_qualified_ex_date",
+        "supports_raw_as_traded": false,
+        "verdict": "cash_distribution_adjusted_observed"
+      },
+      "raw_response_sha256": "c0a096ae295d2687828189e09ce6425a6aba830a69b2d13c15a6110389b2e702",
+      "requested_date_range": [
+        "2026-06-19",
+        "2026-07-03"
+      ],
+      "retrieved_at": "2026-08-04T06:58:04Z",
+      "returned_date_range": [
+        "2026-06-19",
+        "2026-07-03"
+      ],
+      "role": "cash_distribution",
+      "sessions": 11,
+      "ticker": "VNM",
+      "trading_value_presence": {
+        "note": "Correlation only. It says the provider treats these sessions differently; it does not say why, and it is not a provider statement about either field.",
+        "presence_tracks_lattice_exactly": true,
+        "sessions": [
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-06-19",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-06-22",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-06-23",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-06-24",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-06-25",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-06-26",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-06-29",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-06-30",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-01",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-02",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-03",
+            "trading_value_present": true
+          }
+        ],
+        "sessions_total": 11,
+        "sessions_where_presence_agrees_with_lattice": 11,
+        "sessions_with_trading_value": 6
+      },
+      "vci_stored_comparison": {
+        "authority_effect": "none; agreement between two undocumented providers is compatibility, not semantics",
+        "close_exact_matches": 6,
+        "counterparty": "VCI (locally stored rows, read-only; no VCI request issued)",
+        "detail": [
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 57178.0,
+            "kbs_volume": 3349900.0,
+            "session_date": "2026-06-19",
+            "vci_stored_close_vnd": 57130.0,
+            "vci_stored_volume": 3354797,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 56791.0,
+            "kbs_volume": 2997800.0,
+            "session_date": "2026-06-22",
+            "vci_stored_close_vnd": 56740.0,
+            "vci_stored_volume": 3005261,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 56597.0,
+            "kbs_volume": 2295600.0,
+            "session_date": "2026-06-23",
+            "vci_stored_close_vnd": 56550.0,
+            "vci_stored_volume": 2300575,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 56500.0,
+            "kbs_volume": 1532100.0,
+            "session_date": "2026-06-24",
+            "vci_stored_close_vnd": 56450.0,
+            "vci_stored_volume": 1538566,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 56500.0,
+            "kbs_volume": 1803300.0,
+            "session_date": "2026-06-25",
+            "vci_stored_close_vnd": 56450.0,
+            "vci_stored_volume": 1812950,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 56300.0,
+            "kbs_volume": 3173400.0,
+            "session_date": "2026-06-26",
+            "vci_stored_close_vnd": 56300.0,
+            "vci_stored_volume": 3185030,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 56100.0,
+            "kbs_volume": 1470900.0,
+            "session_date": "2026-06-29",
+            "vci_stored_close_vnd": 56100.0,
+            "vci_stored_volume": 1480380,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 54800.0,
+            "kbs_volume": 9320000.0,
+            "session_date": "2026-06-30",
+            "vci_stored_close_vnd": 54800.0,
+            "vci_stored_volume": 9342717,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 55200.0,
+            "kbs_volume": 2357300.0,
+            "session_date": "2026-07-01",
+            "vci_stored_close_vnd": 55200.0,
+            "vci_stored_volume": 2361716,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 55500.0,
+            "kbs_volume": 3669400.0,
+            "session_date": "2026-07-02",
+            "vci_stored_close_vnd": 55500.0,
+            "vci_stored_volume": 3681754,
+            "volume_exact_match": false
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 54900.0,
+            "kbs_volume": 4133600.0,
+            "session_date": "2026-07-03",
+            "vci_stored_close_vnd": 54900.0,
+            "vci_stored_volume": 4144347,
+            "volume_exact_match": false
+          }
+        ],
+        "sessions_compared": 11,
+        "volume_exact_matches": 0
+      },
+      "window_contains_qualified_event": true,
+      "window_id": "W3_cash_dividend_VNM"
+    },
+    "W4_control_HPG_reobservation": {
+      "artifact": "raw/kbs_daily_HPG_20260804T065805Z_93c2387123dc9fbd.raw.json",
+      "boundary_date": null,
+      "events": [],
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-20"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-21"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-22"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-23"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-24"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-27"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-28"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-29"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-30"
+          }
+        ],
+        "sessions_off_lattice": 0,
+        "sessions_on_lattice": 9,
+        "sessions_total": 9
+      },
+      "price_verdict": {
+        "boundary_date": null,
+        "excludes_raw_as_traded": false,
+        "matched_events": [],
+        "note": "A control window cannot distinguish an unadjusted series from an adjusted one with no event to adjust for.",
+        "reason": "no_qualified_event_inside_a_fully_on_lattice_window",
+        "supports_raw_as_traded": false,
+        "verdict": "inconclusive"
+      },
+      "raw_response_sha256": "93c2387123dc9fbd1246ce60b437631f44c9a84ea5a98a84ed9532704206334d",
+      "requested_date_range": [
+        "2026-07-20",
+        "2026-07-30"
+      ],
+      "retrieved_at": "2026-08-04T06:58:05Z",
+      "returned_date_range": [
+        "2026-07-20",
+        "2026-07-30"
+      ],
+      "role": "no_event_control",
+      "sessions": 9,
+      "ticker": "HPG",
+      "trading_value_presence": {
+        "note": "Correlation only. It says the provider treats these sessions differently; it does not say why, and it is not a provider statement about either field.",
+        "presence_tracks_lattice_exactly": true,
+        "sessions": [
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-20",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-21",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-22",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-23",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-24",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-27",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-28",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-29",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-30",
+            "trading_value_present": true
+          }
+        ],
+        "sessions_total": 9,
+        "sessions_where_presence_agrees_with_lattice": 9,
+        "sessions_with_trading_value": 9
+      },
+      "vci_stored_comparison": {
+        "authority_effect": "none; agreement between two undocumented providers is compatibility, not semantics",
+        "close_exact_matches": 9,
+        "counterparty": "VCI (locally stored rows, read-only; no VCI request issued)",
+        "detail": [
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 20600.0,
+            "kbs_volume": 53245200.0,
+            "session_date": "2026-07-20",
+            "vci_stored_close_vnd": 20600.0,
+            "vci_stored_volume": 53245200,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 20800.0,
+            "kbs_volume": 27198700.0,
+            "session_date": "2026-07-21",
+            "vci_stored_close_vnd": 20800.0,
+            "vci_stored_volume": 27198700,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 20700.0,
+            "kbs_volume": 43471900.0,
+            "session_date": "2026-07-22",
+            "vci_stored_close_vnd": 20700.0,
+            "vci_stored_volume": 43471900,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 20800.0,
+            "kbs_volume": 36967600.0,
+            "session_date": "2026-07-23",
+            "vci_stored_close_vnd": 20800.0,
+            "vci_stored_volume": 36967600,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 20800.0,
+            "kbs_volume": 17632000.0,
+            "session_date": "2026-07-24",
+            "vci_stored_close_vnd": 20800.0,
+            "vci_stored_volume": 17632000,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 20350.0,
+            "kbs_volume": 18166800.0,
+            "session_date": "2026-07-27",
+            "vci_stored_close_vnd": 20350.0,
+            "vci_stored_volume": 18166800,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 21000.0,
+            "kbs_volume": 29151700.0,
+            "session_date": "2026-07-28",
+            "vci_stored_close_vnd": 21000.0,
+            "vci_stored_volume": 29151700,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 21650.0,
+            "kbs_volume": 36250000.0,
+            "session_date": "2026-07-29",
+            "vci_stored_close_vnd": 21650.0,
+            "vci_stored_volume": 36250000,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 21800.0,
+            "kbs_volume": 29968000.0,
+            "session_date": "2026-07-30",
+            "vci_stored_close_vnd": 21800.0,
+            "vci_stored_volume": 29968000,
+            "volume_exact_match": true
+          }
+        ],
+        "sessions_compared": 9,
+        "volume_exact_matches": 9
+      },
+      "window_contains_qualified_event": false,
+      "window_id": "W4_control_HPG_reobservation"
+    },
+    "W5_control_VNM": {
+      "artifact": "raw/kbs_daily_VNM_20260804T065806Z_b021c258c7226835.raw.json",
+      "boundary_date": null,
+      "events": [],
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-20"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-21"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-22"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-23"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-24"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-27"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-28"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-29"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-30"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "off_lattice_fields": [],
+            "session_date": "2026-07-31"
+          }
+        ],
+        "sessions_off_lattice": 0,
+        "sessions_on_lattice": 10,
+        "sessions_total": 10
+      },
+      "price_verdict": {
+        "boundary_date": null,
+        "excludes_raw_as_traded": false,
+        "matched_events": [],
+        "note": "A control window cannot distinguish an unadjusted series from an adjusted one with no event to adjust for.",
+        "reason": "no_qualified_event_inside_a_fully_on_lattice_window",
+        "supports_raw_as_traded": false,
+        "verdict": "inconclusive"
+      },
+      "raw_response_sha256": "b021c258c7226835c6aa7bb2193c74056fc4519f3c2ef9726f0a5c5a1fc21d0f",
+      "requested_date_range": [
+        "2026-07-20",
+        "2026-07-31"
+      ],
+      "retrieved_at": "2026-08-04T06:58:06Z",
+      "returned_date_range": [
+        "2026-07-20",
+        "2026-07-31"
+      ],
+      "role": "no_event_control",
+      "sessions": 10,
+      "ticker": "VNM",
+      "trading_value_presence": {
+        "note": "Correlation only. It says the provider treats these sessions differently; it does not say why, and it is not a provider statement about either field.",
+        "presence_tracks_lattice_exactly": true,
+        "sessions": [
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-20",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-21",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-22",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-23",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-24",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-27",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-28",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-29",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-30",
+            "trading_value_present": true
+          },
+          {
+            "all_price_fields_on_lattice": true,
+            "session_date": "2026-07-31",
+            "trading_value_present": true
+          }
+        ],
+        "sessions_total": 10,
+        "sessions_where_presence_agrees_with_lattice": 10,
+        "sessions_with_trading_value": 10
+      },
+      "vci_stored_comparison": {
+        "authority_effect": "none; agreement between two undocumented providers is compatibility, not semantics",
+        "close_exact_matches": 10,
+        "counterparty": "VCI (locally stored rows, read-only; no VCI request issued)",
+        "detail": [
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 58500.0,
+            "kbs_volume": 4583900.0,
+            "session_date": "2026-07-20",
+            "vci_stored_close_vnd": 58500.0,
+            "vci_stored_volume": 4583900,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 58400.0,
+            "kbs_volume": 3543700.0,
+            "session_date": "2026-07-21",
+            "vci_stored_close_vnd": 58400.0,
+            "vci_stored_volume": 3543700,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 59100.0,
+            "kbs_volume": 10506300.0,
+            "session_date": "2026-07-22",
+            "vci_stored_close_vnd": 59100.0,
+            "vci_stored_volume": 10506300,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 57800.0,
+            "kbs_volume": 4827500.0,
+            "session_date": "2026-07-23",
+            "vci_stored_close_vnd": 57800.0,
+            "vci_stored_volume": 4827500,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 58900.0,
+            "kbs_volume": 4176800.0,
+            "session_date": "2026-07-24",
+            "vci_stored_close_vnd": 58900.0,
+            "vci_stored_volume": 4176800,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 57900.0,
+            "kbs_volume": 3671400.0,
+            "session_date": "2026-07-27",
+            "vci_stored_close_vnd": 57900.0,
+            "vci_stored_volume": 3671400,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 59600.0,
+            "kbs_volume": 5256600.0,
+            "session_date": "2026-07-28",
+            "vci_stored_close_vnd": 59600.0,
+            "vci_stored_volume": 5256600,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 60000.0,
+            "kbs_volume": 6199800.0,
+            "session_date": "2026-07-29",
+            "vci_stored_close_vnd": 60000.0,
+            "vci_stored_volume": 6199800,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 61200.0,
+            "kbs_volume": 6944300.0,
+            "session_date": "2026-07-30",
+            "vci_stored_close_vnd": 61200.0,
+            "vci_stored_volume": 6944300,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": true,
+            "kbs_close_vnd": 60900.0,
+            "kbs_volume": 4479800.0,
+            "session_date": "2026-07-31",
+            "vci_stored_close_vnd": 60900.0,
+            "vci_stored_volume": 4479800,
+            "volume_exact_match": true
+          }
+        ],
+        "sessions_compared": 10,
+        "volume_exact_matches": 10
+      },
+      "window_contains_qualified_event": false,
+      "window_id": "W5_control_VNM"
+    },
+    "W6_VCI_rewrite_sessions_VCB": {
+      "artifact": "raw/kbs_daily_VCB_20260804T065808Z_ad9a7e9c7c657683.raw.json",
+      "boundary_date": null,
+      "events": [],
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-01"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-02"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-03"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-06"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-07"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-08"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-09"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-10"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-13"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-14"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-15"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-16"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "off_lattice_fields": [
+              "kbs.observed_open_vnd",
+              "kbs.observed_high_vnd",
+              "kbs.observed_low_vnd",
+              "kbs.observed_close_vnd"
+            ],
+            "session_date": "2026-07-17"
+          }
+        ],
+        "sessions_off_lattice": 13,
+        "sessions_on_lattice": 0,
+        "sessions_total": 13
+      },
+      "price_verdict": {
+        "boundary_date": null,
+        "excludes_raw_as_traded": true,
+        "matched_events": [],
+        "reason": "adjustment_boundary_lies_outside_the_observed_window",
+        "supports_raw_as_traded": false,
+        "verdict": "inconclusive"
+      },
+      "raw_response_sha256": "ad9a7e9c7c657683bc2acce0f39d0802c4f5209361ea537a7b7e24e4d51ee669",
+      "requested_date_range": [
+        "2026-07-01",
+        "2026-07-17"
+      ],
+      "retrieved_at": "2026-08-04T06:58:08Z",
+      "returned_date_range": [
+        "2026-07-01",
+        "2026-07-17"
+      ],
+      "role": "cross_provider_divergence",
+      "sessions": 13,
+      "ticker": "VCB",
+      "trading_value_presence": {
+        "note": "Correlation only. It says the provider treats these sessions differently; it does not say why, and it is not a provider statement about either field.",
+        "presence_tracks_lattice_exactly": true,
+        "sessions": [
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-01",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-02",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-03",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-06",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-07",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-08",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-09",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-10",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-13",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-14",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-15",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-16",
+            "trading_value_present": false
+          },
+          {
+            "all_price_fields_on_lattice": false,
+            "session_date": "2026-07-17",
+            "trading_value_present": false
+          }
+        ],
+        "sessions_total": 13,
+        "sessions_where_presence_agrees_with_lattice": 13,
+        "sessions_with_trading_value": 0
+      },
+      "vci_stored_comparison": {
+        "authority_effect": "none; agreement between two undocumented providers is compatibility, not semantics",
+        "close_exact_matches": 0,
+        "counterparty": "VCI (locally stored rows, read-only; no VCI request issued)",
+        "detail": [
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 62538.0,
+            "kbs_volume": 4232900.0,
+            "session_date": "2026-07-01",
+            "vci_stored_close_vnd": 63000.0,
+            "vci_stored_volume": 4232900,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 61644.0,
+            "kbs_volume": 2744500.0,
+            "session_date": "2026-07-02",
+            "vci_stored_close_vnd": 62100.0,
+            "vci_stored_volume": 2744500,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 61545.0,
+            "kbs_volume": 2601900.0,
+            "session_date": "2026-07-03",
+            "vci_stored_close_vnd": 62000.0,
+            "vci_stored_volume": 2601900,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 60751.0,
+            "kbs_volume": 4173100.0,
+            "session_date": "2026-07-06",
+            "vci_stored_close_vnd": 61200.0,
+            "vci_stored_volume": 4173100,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 60850.0,
+            "kbs_volume": 2547200.0,
+            "session_date": "2026-07-07",
+            "vci_stored_close_vnd": 61300.0,
+            "vci_stored_volume": 2547200,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 61148.0,
+            "kbs_volume": 2051000.0,
+            "session_date": "2026-07-08",
+            "vci_stored_close_vnd": 61600.0,
+            "vci_stored_volume": 2051000,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 60652.0,
+            "kbs_volume": 2209800.0,
+            "session_date": "2026-07-09",
+            "vci_stored_close_vnd": 61100.0,
+            "vci_stored_volume": 2209800,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 60056.0,
+            "kbs_volume": 3016400.0,
+            "session_date": "2026-07-10",
+            "vci_stored_close_vnd": 60500.0,
+            "vci_stored_volume": 3016400,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 58468.0,
+            "kbs_volume": 6789000.0,
+            "session_date": "2026-07-13",
+            "vci_stored_close_vnd": 58900.0,
+            "vci_stored_volume": 6789000,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 58766.0,
+            "kbs_volume": 2829200.0,
+            "session_date": "2026-07-14",
+            "vci_stored_close_vnd": 59200.0,
+            "vci_stored_volume": 2829200,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 58766.0,
+            "kbs_volume": 2633300.0,
+            "session_date": "2026-07-15",
+            "vci_stored_close_vnd": 59200.0,
+            "vci_stored_volume": 2633300,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 58964.0,
+            "kbs_volume": 3349700.0,
+            "session_date": "2026-07-16",
+            "vci_stored_close_vnd": 59400.0,
+            "vci_stored_volume": 3349700,
+            "volume_exact_match": true
+          },
+          {
+            "close_exact_match": false,
+            "kbs_close_vnd": 58071.0,
+            "kbs_volume": 1990100.0,
+            "session_date": "2026-07-17",
+            "vci_stored_close_vnd": 58500.0,
+            "vci_stored_volume": 1990100,
+            "volume_exact_match": true
+          }
+        ],
+        "sessions_compared": 13,
+        "volume_exact_matches": 13
+      },
+      "window_contains_qualified_event": false,
+      "window_id": "W6_VCI_rewrite_sessions_VCB"
+    }
+  }
+}

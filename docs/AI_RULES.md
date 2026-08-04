@@ -8,6 +8,15 @@
 6. Never treat metadata, ordering, missing data, or fallback behavior as investment signals.
 7. Price basis, volume basis, and current shares are persistent blockers until explicitly qualified.
 8. Do not enable valuation, ranking, recommendations, sizing, or backtesting from unqualified inputs.
+8a. Undocumented is not unusable. Qualify evidence on the ladder in
+    `evidence_qualification_tiers.py` and record the tier: an `empirically_deduced` verdict
+    keeps descriptive and provider-scoped technical use open while liquidity, execution and
+    point-in-time use stay closed. Only `documented_verified` may speak for a source.
+8b. An empirical verdict carries its scope. State the tested tickers, windows and fields,
+    keep `provider_methodology = unknown` unless a first-party source says otherwise, and
+    never quote a verdict outside the windows that produced it.
+8c. A verdict belongs to one provider. It never transfers to another provider and never
+    lands on a field that does not say whose number it is.
 9. Write detailed diagnostics locally; keep final chat output compact.
 10. Do not run full suites unless a real cross-cutting source regression justifies it.
 11. Do not publish or deploy unless explicitly requested.
