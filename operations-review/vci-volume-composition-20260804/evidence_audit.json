@@ -1,0 +1,54 @@
+{
+  "roots": {
+    "vci-contract-reconciliation-20260804": {
+      "files": 1,
+      "raw_artifacts": 0,
+      "raw_without_sha_in_name": [],
+      "secret_findings": [],
+      "unreferenced_raw": []
+    },
+    "vci-direct-basis-pilot-20260804": {
+      "files": 11,
+      "raw_artifacts": 5,
+      "raw_without_sha_in_name": [],
+      "secret_findings": [],
+      "unreferenced_raw": []
+    },
+    "vci-intraday-pagination-20260804": {
+      "files": 138,
+      "raw_artifacts": 129,
+      "raw_without_sha_in_name": [],
+      "secret_findings": [],
+      "unreferenced_raw": []
+    },
+    "vci-volume-composition-20260804": {
+      "files": 4,
+      "raw_artifacts": 1,
+      "raw_without_sha_in_name": [],
+      "secret_findings": [],
+      "unreferenced_raw": []
+    }
+  },
+  "totals": {
+    "all_raw_names_self_verifying": true,
+    "byte_identical_detail": {
+      "161f91acb56225b24474bb64199fa981995722864ce3e8544c7bdbda788e59cf": [
+        "operations-review\\vci-intraday-pagination-20260804\\run-01-exclusive-boundary-discovery\\daily_bar_20260804T043354Z_161f91acb56225b2.raw.json",
+        "operations-review\\vci-intraday-pagination-20260804\\run-02-corrected-cursor\\daily_bar_20260804T043600Z_161f91acb56225b2.raw.json"
+      ],
+      "80c5fdb002477238d2e7e786d9cec24bf140963a39648d920e102e1728eb6a28": [
+        "operations-review\\vci-intraday-pagination-20260804\\run-02-corrected-cursor\\pages\\page_0001_1785817800_80c5fdb002477238.raw.json",
+        "operations-review\\vci-intraday-pagination-20260804\\run-01-exclusive-boundary-discovery\\pages\\page_0001_1785817800_80c5fdb002477238.raw.json"
+      ],
+      "f534f814773d3b2df616028f9a3614f3c3c2213d21c6978080905e49473efeb5": [
+        "operations-review\\vci-intraday-pagination-20260804\\run-03-vcb-complete-segment\\daily_bar_20260804T043758Z_f534f814773d3b2d.raw.json",
+        "operations-review\\vci-intraday-pagination-20260804\\run-03-vcb-complete-segment\\daily_bar_20260804T043946Z_f534f814773d3b2d.raw.json"
+      ]
+    },
+    "byte_identical_groups": 3,
+    "files": 154,
+    "raw_artifacts": 135,
+    "secret_findings": 0,
+    "unreferenced_raw_artifacts": 0
+  }
+}

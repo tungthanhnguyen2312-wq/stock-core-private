@@ -209,13 +209,15 @@ def fetch_daily_volume(session) -> dict:
     )
     body = transport["raw_body"]
     digest = pilot.response_sha256(body)
-    _write(EVIDENCE_DIR / f"daily_bar_{transport['retrieved_at'].replace(':','').replace('-','')}_{digest[:16]}.raw.json", body)
+    artifact_name = f"daily_bar_{transport['retrieved_at'].replace(':','').replace('-','')}_{digest[:16]}.raw.json"
+    _write(EVIDENCE_DIR / artifact_name, body)
     parsed = json.loads(body.decode("utf-8"))
     normalized = pilot.normalize_daily(pilot.parse_daily_payload(parsed, symbol=TICKER))
     latest = normalized["rows"][-1]
     return {
         "session_date": latest["vci.session_date"],
         "daily_volume": latest["vci.observed_daily_volume"],
+        "raw_artifact": artifact_name,
         "raw_response_sha256": digest,
         "retrieved_at": transport["retrieved_at"],
         "http_status": transport["http_status"],

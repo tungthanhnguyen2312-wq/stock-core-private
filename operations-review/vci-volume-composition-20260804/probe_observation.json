@@ -1,0 +1,45 @@
+{
+  "endpoint": "https://trading.vietcap.com.vn/api/price/symbols/getList",
+  "endpoint_provenance": "vnstock 4.0.4 explorer/vci/trading.py Trading.price_board; already exercised in production by meta_sync.py:156 and blacklist_sync.py:75",
+  "http_status": 200,
+  "method": "POST",
+  "provider": "VCI",
+  "raw_artifact": "vci_price_board_VCB_20260804T051433Z_b59c2965eee9f303.raw.json",
+  "raw_response_sha256": "b59c2965eee9f303f493ce1e3f647ef06e08309bf57a89044867211317a77b6e",
+  "redirect_count": 0,
+  "request_headers_redacted": {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Origin": "https://trading.vietcap.com.vn",
+    "Referer": "https://trading.vietcap.com.vn/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+  },
+  "request_parameters": {
+    "symbols": [
+      "VCB"
+    ]
+  },
+  "response_headers_redacted": {
+    "Content-Encoding": "gzip",
+    "Content-Type": "application/json; charset=utf-8",
+    "ETag": "W/\"98b-KfEfTp1XzggS0N2Q0e9Pn5VqsnU\"",
+    "Transfer-Encoding": "chunked",
+    "X-Cache": "MISS from da014.vn05.veloceed.com:443",
+    "access-control-allow-credentials": "true",
+    "access-control-allow-origin": "https://trading.vietcap.com.vn",
+    "content-security-policy": "default-src 'self' https://*.vietcap.com.vn; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: https://*.vietcap.com.vn https://analytics.google.com https://www.googletagmanager.com https://www.gstatic.com https://www.google-analytics.com https://connect.facebook.net https://www.google.com https://static.hotjar.com https://script.hotjar.com https://code.jquery.com https://cdnjs.cloudflare.com https://stackpath.bootstrapcdn.com https://deqik.com https://static.amcdn.vn https://media1.admicro.vn https://static.contineljs.com https://www.googleadservices.com https://g.doubleclick.net https://googleads.g.doubleclick.net https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://*.vietcap.com.vn https://static.amcdn.vn https://www.google.com https://fonts.googleapis.com https://media1.admicro.vn https://static.contineljs.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; media-src 'self' blob: https://*.vietcap.com.vn https://*.s3.ap-southeast-1.amazonaws.com; img-src https: data: blob:; font-src https: data: blob:; connect-src 'self' https://www.facebook.com https://graph.facebook.com https://*.vietcap.com.vn wss://*.vietcap.com.vn wss://*.vcsc.vn https://*.vcsc.vn https://*.s3.ap-southeast-1.amazonaws.com https://*.datadoghq.com https://browser-intake-us5-datadoghq.com https://*.hotjar.com https://deqik.com https://*.zalo.me https://connect.facebook.net https://*.doubleclick.net https://googleads.g.doubleclick.net https://analytics.google.com https://www.google-analytics.com https://www.google.com https://www.googleadservices.com https://*.googleapis.com https://www.gstatic.com; frame-src 'self' blob: https://www.canva.com https://*.vietcap.com.vn https://www.youtube.com https://www.google.com https://www.recaptcha.net; child-src 'self' blob: https://*.vietcap.com.vn https://www.youtube.com https://www.google.com https://www.recaptcha.net; frame-ancestors 'self' https://*.vietcap.com.vn; object-src 'self' https://*.vietcap.com.vn;,default-src 'self' https://*.vietcap.com.vn; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: https://*.vietcap.com.vn https://analytics.google.com https://www.googletagmanager.com https://www.gstatic.com https://www.google-analytics.com https://connect.facebook.net https://www.google.com https://static.hotjar.com https://script.hotjar.com https://code.jquery.com https://cdnjs.cloudflare.com https://stackpath.bootstrapcdn.com https://deqik.com https://static.amcdn.vn https://media1.admicro.vn https://static.contineljs.com https://www.googleadservices.com https://g.doubleclick.net https://googleads.g.doubleclick.net https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://*.vietcap.com.vn https://static.amcdn.vn https://www.google.com https://fonts.googleapis.com https://media1.admicro.vn https://static.contineljs.com https://cdn.jsdelivr.net https://stackpath.bootstrapcdn.com; img-src https: data: blob:; font-src https: data: blob:; connect-src 'self' wss://*.vietcap.com.vn wss://*.vcsc.vn https://*.vietcap.com.vn https://*.vcsc.vn https://*.facebook.com https://*.datadoghq.com https://browser-intake-us5-datadoghq.com https://*.hotjar.com https://deqik.com https://connect.facebook.net https://g.doubleclick.net https://googleads.g.doubleclick.net https://analytics.google.com https://www.google-analytics.com https://www.google.com https://www.googleadservices.com https://*.googleapis.com https://www.gstatic.com; frame-src 'self' blob: https://*.vietcap.com.vn https://www.youtube.com https://www.google.com https://www.recaptcha.net; child-src 'self' blob: https://*.vietcap.com.vn https://www.youtube.com https://www.google.com https://www.recaptcha.net; frame-ancestors 'self' https://*.vietcap.com.vn; object-src 'self' https://*.vietcap.com.vn;",
+    "date": "Tue, 04 Aug 2026 05:14:34 GMT",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "x-content-type-options": "nosniff",
+    "x-envoy-upstream-service-time": "2",
+    "x-service-name": "Test-App",
+    "x-xss-protection": "1; mode=block"
+  },
+  "response_schema_fingerprint": "f61366cd50301c5e7dd763f147da3a2f12bb626623f0702caec2b33edc29871d",
+  "retrieved_at": "2026-08-04T05:14:33Z",
+  "retry_count": 0,
+  "source_authority": "observed_public_web_endpoint",
+  "surface_id": "vci_price_board",
+  "ticker": "VCB"
+}

@@ -37,9 +37,13 @@ SOURCE_AUTHORITY = "observed_public_web_endpoint"
 PROVIDER_HOST = "trading.vietcap.com.vn"
 DAILY_ENDPOINT = "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart"
 INTRADAY_ENDPOINT = "https://trading.vietcap.com.vn/api/market-watch/LEData/getAll"
+#: The price board. Same host and access class as the two above, and already called by this
+#: repository's own production code (meta_sync.py, blacklist_sync.py) -- not a discovered
+#: endpoint. Provenance and the probe gate live in vci_volume_composition.CANDIDATE_SURFACES.
+PRICE_BOARD_ENDPOINT = "https://trading.vietcap.com.vn/api/price/symbols/getList"
 
 ALLOWED_TICKERS = ("HPG", "VNM", "VCB")
-ALLOWED_ENDPOINTS = (DAILY_ENDPOINT, INTRADAY_ENDPOINT)
+ALLOWED_ENDPOINTS = (DAILY_ENDPOINT, INTRADAY_ENDPOINT, PRICE_BOARD_ENDPOINT)
 
 #: Hard ceiling for the whole pilot. Exhausting it stops acquisition; it is never reset.
 REQUEST_BUDGET = 8

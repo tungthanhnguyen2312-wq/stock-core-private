@@ -1,9 +1,14 @@
 {
   "daily_volume": 1877000,
   "http_status": 200,
+  "raw_artifact": "daily_bar_20260804T043946Z_f534f814773d3b2d.raw.json",
   "raw_response_sha256": "f534f814773d3b2df616028f9a3614f3c3c2213d21c6978080905e49473efeb5",
   "redirect_count": 0,
   "retrieved_at": "2026-08-04T04:39:46Z",
   "retry_count": 0,
-  "session_date": "2026-08-04"
+  "session_date": "2026-08-04",
+  "superseded_attempt_artifacts": [
+    "daily_bar_20260804T043758Z_f534f814773d3b2d.raw.json"
+  ],
+  "superseded_attempt_note": "Byte-identical daily bar retained from an earlier attempt in this directory. The session was frozen in the lunch halt, so identical bytes are expected; kept rather than deleted because it is that attempt's reconciliation target."
 }
