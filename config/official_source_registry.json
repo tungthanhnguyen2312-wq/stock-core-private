@@ -20,6 +20,7 @@
     "max_attempts": 2,
     "backoff": "exponential, base 0.25s, bounded by max_attempts",
     "max_redirects": 5,
+    "max_redirects_enforcement": "official_document_acquisition.fetch_http follows one hop at a time and admits each hop against this registry before following it; a refused hop is terminal for that request and retains nothing",
     "concurrency": 1,
     "retention": "immutable, content-addressed by SHA-256; documents are never overwritten, edited or deleted",
     "credentials": "none; no source in this registry requires or accepts authentication",
@@ -53,7 +54,7 @@
       "failure_classification": [
         "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
         "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
-        "response_size_limit", "hash_conflict"
+        "redirect_refused_by_source_registry", "response_size_limit", "hash_conflict"
       ]
     },
     {
@@ -77,7 +78,7 @@
       "failure_classification": [
         "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
         "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
-        "response_size_limit", "hash_conflict"
+        "redirect_refused_by_source_registry", "response_size_limit", "hash_conflict"
       ]
     },
     {
@@ -100,7 +101,7 @@
       "failure_classification": [
         "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
         "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
-        "response_size_limit", "hash_conflict"
+        "redirect_refused_by_source_registry", "response_size_limit", "hash_conflict"
       ]
     },
     {
@@ -139,7 +140,7 @@
       "failure_classification": [
         "access_denied", "robots_or_anti_bot_block", "timeout", "tls_network_error",
         "invalid_content_type", "empty_or_truncated_document", "unstable_redirect",
-        "response_size_limit", "hash_conflict"
+        "redirect_refused_by_source_registry", "response_size_limit", "hash_conflict"
       ]
     }
   ]

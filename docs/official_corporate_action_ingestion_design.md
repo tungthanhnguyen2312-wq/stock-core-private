@@ -1,12 +1,13 @@
 # Official corporate-action ingestion and price-adjustment engine — design
 
-Status, updated **2026-08-03**: **B1 delivered and awaiting owner approval; the B2–B4 machinery
-is built and proven on a bounded offline slice; no crawl has been performed.**
+Status, updated **2026-08-04**: **B1 delivered, owner-approved and now actually enforced on the
+request path; B2–B4 machinery built and proven on a bounded offline slice; no crawl has been
+performed and no official URL has yet been requested over the network.**
 
 | step | state |
 | --- | --- |
-| B1 crawl contract and allowlist | **delivered** as `config/official_source_registry.json`, enforced by `official_source_registry.py`. `approval_state = AWAITING_OWNER_APPROVAL`; every source is `declared`, and `admit()` refuses a declared source. **An agent may not approve it.** |
-| B2 bounded crawler | **blocked on B1.** The immutable blob store exists (`official_document_store.py`) and is exercised by adopting already-retained documents, with no network request. |
+| B1 crawl contract and allowlist | **delivered and approved.** `config/official_source_registry.json` is enforced by `official_source_registry.py`; `approval_state = APPROVED` with `approved_at = 2026-08-03T07:00:00Z` and `approved_at_provenance` naming the clock. All four sources are `approved`. **An agent may not approve a source or write either approval field.** Since `3b4cc5f` the gate runs on every request, and since `2026-08-04` it also runs on every redirect hop and every retry. |
+| B2 bounded crawler | **unblocked on governance, blocked on inputs.** The immutable blob store exists (`official_document_store.py`) and is exercised by adopting already-retained documents with no network request. What is missing is not permission but an **owner-supplied listing or notice URL per ticker**: the registry declares only document types, never a listing/search page type, and no listing URL exists in any approved artifact. See "What B2 still needs" below. |
 | B3 classification and typed extraction | **built** (`corporate_action_events.py`), proven against retained HPG evidence. |
 | B4 linking and execution status | **built** (`official_corporate_action_ledger.py`): cross-document linking, deduplication, supersession, lifecycle, deterministic replay. |
 | B5 historical qualification | not started |
@@ -40,8 +41,8 @@ adjusted returns, event studies, and ownership/governance intelligence.
 
 | module | what it already does |
 |---|---|
-| `official_document_discovery.py` | closed-world discovery: caller supplies a finite set of qualified listing/detail pages; never searches, crawls or paginates |
-| `official_document_acquisition.py` | bounded acquisition against an allowlist, with hashing |
+| `official_document_discovery.py` | closed-world **validation** of caller-supplied listing/detail pages and their explicit links; never searches, crawls, paginates — and never parses. Document vocabulary and `source_id` come from the registry, so a candidate cannot be shaped that the gate would refuse for a reason discovery never checked |
+| `official_document_acquisition.py` | bounded acquisition, registry-admitted **per request, per redirect hop and per retry**, with hashing |
 | `official_document_retrieval.py`, `official_document_ocr_handoff.py` | retrieval and OCR handoff |
 | `corporate_action_evidence_registry.py`, `evidence_registry.py`, `evidence_replay.py` | evidence registry with replay parity (`docs/adr/ADR-002`) |
 | `corporate_action_ledger.py` | ledger MVP over qualified cash-dividend / stock-dividend / bonus events, deterministic ordering, immutable lineage, emits **0** adjustment factors by design |
@@ -51,6 +52,30 @@ adjusted returns, event studies, and ownership/governance intelligence.
 The gap is not the ledger and not the adjustment maths. The gap is a **production ingestion
 path**: today a human supplies each URL. Pillar B is the step from closed-world discovery to
 a periodic, bounded crawler with an immutable event ledger behind it.
+
+## What B2 still needs
+
+Governance is no longer the blocker; **inputs and one capability are.** A bounded discovery
+pilot for any single ticker requires all three, and none can be supplied by an agent:
+
+1. **An owner-supplied entry URL.** Every official URL in the repository is a terminal
+   document — the retained `https://vsd.vn/en/ad/177392` VSDC notice, issuer IR PDFs. Not one
+   is a listing or index page. The 2026-07-30 allowlist sets `discovery: prohibited`, and each
+   source's `discovery_path` says "operator-supplied ... URLs only", with `hose` adding
+   "no pagination, no search, no link following". An agent constructing a search URL from site
+   structure would be supplying the operator's authority to itself.
+2. **A decision on whether a listing page is admissible at all.** The registry declares ten
+   *document* types and no listing/index/search type, so `admit()` refuses `listing_page` with
+   `document_type_not_declared_for_source`. Labelling a listing page `corporate_action_notice`
+   to get it past the gate is defeating admission, not passing it. The narrower resolution —
+   naming a *notice detail* URL, the shape `vsd.vn/en/ad/177392` already has authority for —
+   needs no new type and no new capability.
+3. **A listing-page parser, if step 2 goes the listing route.**
+   `official_document_discovery.discover()` is a **validator, not a parser**: it checks
+   caller-supplied `links` dicts, and there is no HTML link extractor anywhere in first-party
+   code. Extracting candidates from a retained page today would mean a human or an agent
+   hand-reading HTML and hand-assigning document classes — which is inferred identity, the
+   thing the closed-world contract exists to prevent.
 
 ## Target pipeline
 

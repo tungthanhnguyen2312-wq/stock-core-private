@@ -12,11 +12,19 @@ import json
 import urllib.parse
 from typing import Any, Iterable, Mapping
 
-from official_document_acquisition import DOCUMENT_CLASSES, PERIODS, TICKERS, canonical_url
+from official_document_acquisition import PERIODS, TICKERS, canonical_url, declared_document_types
+from official_source_registry import load_registry
 
 VERSION = "1.0.0"
 MAX_LISTING_PAGES = 25
 MAX_RETAINED_DOCUMENTS = 10
+
+#: The content types acquisition actually retains. Discovery accepted only `.pdf`, so an
+#: exchange or depository notice published as HTML -- the form `vsdc-record-date-notice.html`
+#: and the retained HPG `listing_change_notice` already take -- could never become a
+#: candidate, although `acquire()` retains `text/html` and the evidence store holds such
+#: documents today. One layer's idea of admissible evidence has to match the other's.
+RETAINABLE_SUFFIXES = (".pdf", ".html", ".htm")
 
 
 def _sha(value: object) -> str:
@@ -45,13 +53,22 @@ def _known_by_url(records: Iterable[Mapping[str, Any]]) -> dict[str, list[Mappin
     return known
 
 
-def discover(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+def discover(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Iterable[Mapping[str, Any]],
+             registry: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Validate explicit direct-link discoveries without network access.
 
     Each listing requires a ticker, authority host, canonical listing URL and an
     explicit ``links`` collection.  A link must carry its raw on-page identity
     (class, period, publication date); no identity is guessed from a filename.
+
+    The admissible document vocabulary comes from the registry, as it does in `acquire()`.
+    It previously came from `official_document_acquisition.DOCUMENT_CLASSES`, which omits
+    `ex_right_notice`, `listing_change_notice` and `last_registration_date_notice` -- so
+    discovery rejected, as `ambiguous_document_identity`, exactly the three notices that
+    carry an ex-date, a listing change and a last registration date. Commit 3b4cc5f fixed
+    that drift in the acquirer and left it standing one import away.
     """
+    allowed_types = declared_document_types(registry if registry is not None else load_registry())
     pages = list(listing_pages)
     if len(pages) > MAX_LISTING_PAGES:
         raise ValueError("pagination_bound_exceeded")
@@ -62,8 +79,12 @@ def discover(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Itera
         ticker = str(page.get("ticker", "")).upper()
         authority = str(page.get("authority_host", ""))
         listing_url = str(page.get("canonical_url", ""))
-        page_base = {"page_index": page_index, "ticker": ticker, "source_authority": page.get("source_authority"), "listing_url": listing_url}
-        if ticker not in TICKERS or not _stable_url(listing_url) or not _authority_matches(listing_url, authority):
+        # The registry source that governs this page, carried onto every candidate found on
+        # it. Without it `retain()` builds specs `acquire()` refuses as `missing_source_id`,
+        # which is what it did for every candidate once 3b4cc5f made `source_id` mandatory.
+        source_id = str(page.get("source_id", ""))
+        page_base = {"page_index": page_index, "ticker": ticker, "source_id": source_id, "source_authority": page.get("source_authority"), "listing_url": listing_url}
+        if ticker not in TICKERS or not source_id or not _stable_url(listing_url) or not _authority_matches(listing_url, authority):
             ledger.append(page_base | {"state": "rejected", "reason": "listing_identity_or_authority_invalid"})
             continue
         for link in page.get("links", []):
@@ -75,8 +96,8 @@ def discover(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Itera
             candidate = page_base | {"canonical_url": url, "document_class": document_class, "reporting_period": period, "publication_date": link.get("publication_date"), "observed_at": link.get("observed_at"), "discovery_provenance": {"listing_url": listing_url, "link_text": link.get("link_text", ""), "page_index": page_index}}
             if not _stable_url(url): candidate |= {"state": "rejected", "reason": "unstable_or_session_url"}
             elif not _authority_matches(url, authority): candidate |= {"state": "rejected", "reason": "authority_rejected"}
-            elif not urllib.parse.urlsplit(url).path.lower().endswith(".pdf"): candidate |= {"state": "rejected", "reason": "unsupported_mime_hint"}
-            elif document_class not in DOCUMENT_CLASSES or period not in PERIODS or not candidate["publication_date"]: candidate |= {"state": "rejected", "reason": "ambiguous_document_identity"}
+            elif not urllib.parse.urlsplit(url).path.lower().endswith(RETAINABLE_SUFFIXES): candidate |= {"state": "rejected", "reason": "unsupported_mime_hint"}
+            elif document_class not in allowed_types or period not in PERIODS or not candidate["publication_date"]: candidate |= {"state": "rejected", "reason": "ambiguous_document_identity"}
             elif url in seen: candidate |= {"state": "unchanged", "reason": "duplicate_canonical_url"}
             elif url in known: candidate |= {"state": "unchanged", "reason": "governed_manifest_url_match", "known_document_ids": sorted(str(x.get("document_id")) for x in known[url])}
             else: candidate |= {"state": "new"}
@@ -85,12 +106,13 @@ def discover(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Itera
     accepted = [row for row in ledger if row.get("state") == "new"]
     if len(accepted) > MAX_RETAINED_DOCUMENTS:
         raise ValueError("retention_bound_exceeded")
-    return {"schema_version": VERSION, "pages_inspected": len(pages), "ledger": ledger, "ledger_sha256": _sha(ledger), "accepted_requests": [{key: row[key] for key in ("ticker", "canonical_url", "document_class", "reporting_period", "publication_date", "source_authority")} for row in accepted]}
+    return {"schema_version": VERSION, "pages_inspected": len(pages), "ledger": ledger, "ledger_sha256": _sha(ledger), "accepted_requests": [{key: row[key] for key in ("ticker", "source_id", "canonical_url", "document_class", "reporting_period", "publication_date", "source_authority")} for row in accepted]}
 
 
-def replay(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Iterable[Mapping[str, Any]], expected: Mapping[str, Any]) -> bool:
+def replay(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Iterable[Mapping[str, Any]], expected: Mapping[str, Any],
+           registry: Mapping[str, Any] | None = None) -> bool:
     """Confirm the persisted ledger is reproducible from the same inputs."""
-    actual = discover(listing_pages, manifest_records)
+    actual = discover(listing_pages, manifest_records, registry)
     return actual["ledger_sha256"] == expected.get("ledger_sha256") and actual["ledger"] == expected.get("ledger")
 
 
@@ -105,5 +127,5 @@ def retain(discovery: Mapping[str, Any], destination: Any, **kwargs: Any) -> dic
     for row in discovery.get("ledger", []):
         if row.get("state") not in {"new", "unchanged"} or not row.get("canonical_url") or row.get("reason") == "duplicate_canonical_url":
             continue
-        requests.append({"ticker": row["ticker"], "canonical_url": row["canonical_url"], "document_class": row["document_class"], "reporting_period": row["reporting_period"], "published_at": row["publication_date"], "observed_at": row.get("observed_at"), "source_authority": row.get("source_authority"), "discovery_provenance": row["discovery_provenance"]})
+        requests.append({"ticker": row["ticker"], "source_id": row.get("source_id"), "canonical_url": row["canonical_url"], "document_class": row["document_class"], "reporting_period": row["reporting_period"], "published_at": row["publication_date"], "observed_at": row.get("observed_at"), "source_authority": row.get("source_authority"), "discovery_provenance": row["discovery_provenance"]})
     return acquire(requests, destination, **kwargs) if requests else {"outcomes": []}

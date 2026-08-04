@@ -5,7 +5,7 @@ from official_document_discovery import discover, replay
 
 class DiscoveryTests(unittest.TestCase):
  def page(self, **more):
-  return {"ticker":"PAN","source_authority":"issuer_ir","authority_host":"thepangroup.vn","canonical_url":"https://thepangroup.vn/investor/page.htm","links":[{"canonical_url":"https://thepangroup.vn/files/ar.pdf","document_class":"annual_report","reporting_period":"2024","publication_date":"2025-03-01","observed_at":"2025-04-01T00:00:00Z","link_text":"Annual report 2024"}]}|more
+  return {"ticker":"PAN","source_id":"issuer_ir","source_authority":"issuer_ir","authority_host":"thepangroup.vn","canonical_url":"https://thepangroup.vn/investor/page.htm","links":[{"canonical_url":"https://thepangroup.vn/files/ar.pdf","document_class":"annual_report","reporting_period":"2024","publication_date":"2025-03-01","observed_at":"2025-04-01T00:00:00Z","link_text":"Annual report 2024"}]}|more
  def known(self): return [{"document_id":"old","canonical_url":"https://thepangroup.vn/files/old.pdf"}]
  def test_identity_and_url_deduplication(self):
   page=self.page(links=self.page()["links"]+[{"canonical_url":"https://thepangroup.vn/files/ar.pdf","document_class":"annual_report","reporting_period":"2024","publication_date":"2025-03-01"}])

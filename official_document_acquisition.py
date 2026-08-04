@@ -26,6 +26,7 @@ TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN"})
 DOCUMENT_CLASSES = ("audited_annual_financial_statements", "reviewed_interim_financial_statements", "annual_report", "corporate_governance_report", "agm_document_or_resolution", "corporate_action_notice", "amendment_or_supersession_notice")
 PERIODS = frozenset({"2023", "2024", "2025", "2026"})
 CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 20 * 1024 * 1024
+MAX_REDIRECTS = 5
 REQUEST_HEADERS = {"Accept": "application/pdf,text/html;q=0.9", "User-Agent": "StockLookupOfficialEvidence/1.1"}
 
 
@@ -93,6 +94,17 @@ def _declared_interval(registry: Mapping[str, Any], source_id: str) -> float:
     return 0.0
 
 
+def _declared_max_redirects(registry: Mapping[str, Any]) -> int:
+    """The redirect bound comes from the registry, which declared one nothing read.
+
+    `global_policy.max_redirects` sat in the reviewed JSON while `fetch_http` compared against
+    a hardcoded 5. They agreed, so nothing broke -- but the reviewable value governed nothing,
+    which is how the document-type vocabulary drifted too.
+    """
+    declared = (registry.get("global_policy") or {}).get("max_redirects")
+    return int(declared) if isinstance(declared, int) and declared >= 0 else MAX_REDIRECTS
+
+
 def _validate_spec(spec: Mapping[str, Any], allowed_types: frozenset[str]) -> tuple[str, str, str, str, str]:
     ticker, document_class, period = str(spec.get("ticker", "")).upper(), str(spec.get("document_class", "")), str(spec.get("reporting_period", ""))
     source_id = str(spec.get("source_id", ""))
@@ -102,34 +114,53 @@ def _validate_spec(spec: Mapping[str, Any], allowed_types: frozenset[str]) -> tu
 
 
 def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TIMEOUT_SECONDS,
-               connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS, max_response_bytes: int = MAX_RESPONSE_BYTES) -> tuple[int, Mapping[str, str], bytes, str]:
-    """Stream one response to caller-owned temporary storage; never promote it."""
-    response = requests.get(url, headers=REQUEST_HEADERS, timeout=(connect_timeout_seconds, timeout_seconds), allow_redirects=True, stream=True)
-    if len(response.history) > 5: raise ValueError("unstable_redirect")
-    headers, status = dict(response.headers.items()), response.status_code
-    length = response.headers.get("Content-Length")
-    if length and int(length) > max_response_bytes: raise ValueError("response_size_limit")
-    prefix = bytearray()
-    if not 200 <= status < 300:
-        for chunk in response.iter_content(chunk_size=1024): prefix.extend(chunk); break
-        return status, headers, bytes(prefix), response.url
-    if _content_type(headers) not in {"application/pdf", "text/html"}: return status, headers, b"", response.url
-    total = 0
-    try:
-        with temporary_path.open("wb") as out:
-            for chunk in response.iter_content(chunk_size=65536):
-                total += len(chunk)
-                if total > max_response_bytes: raise ValueError("response_size_limit")
-                if len(prefix) < 1024: prefix.extend(chunk[:1024-len(prefix)])
-                out.write(chunk)
-        return status, headers, bytes(prefix), response.url
-    except Exception:
-        temporary_path.unlink(missing_ok=True); raise
+               connect_timeout_seconds: int = CONNECT_TIMEOUT_SECONDS, max_response_bytes: int = MAX_RESPONSE_BYTES,
+               admit_hop: Callable[[str], bool] | None = None, max_redirects: int = MAX_REDIRECTS) -> tuple[int, Mapping[str, str], bytes, str]:
+    """Stream one response to caller-owned temporary storage; never promote it.
+
+    Redirects are followed one hop at a time, and `admit_hop` decides each hop *before* the
+    next request leaves. `allow_redirects=True` delegated that decision to the responding
+    host: a 302 off an allowlisted host was followed, retained and recorded, so the allowlist
+    governed the URL a spec named rather than the host the bytes came from. An allowlist a
+    redirect can step outside of is not one.
+    """
+    current, seen = url, set()
+    for _ in range(max_redirects + 1):
+        response = requests.get(current, headers=REQUEST_HEADERS, timeout=(connect_timeout_seconds, timeout_seconds), allow_redirects=False, stream=True)
+        if response.is_redirect or response.is_permanent_redirect:
+            location = response.headers.get("Location") or response.headers.get("location")
+            response.close()
+            if not location: raise ValueError("unstable_redirect")
+            target = canonical_url(urllib.parse.urljoin(current, str(location)))
+            if target in seen: raise ValueError("unstable_redirect")
+            if admit_hop is not None and not admit_hop(target): raise ValueError("redirect_refused_by_source_registry")
+            seen.add(current); current = target
+            continue
+        headers, status = dict(response.headers.items()), response.status_code
+        length = response.headers.get("Content-Length")
+        if length and int(length) > max_response_bytes: raise ValueError("response_size_limit")
+        prefix = bytearray()
+        if not 200 <= status < 300:
+            for chunk in response.iter_content(chunk_size=1024): prefix.extend(chunk); break
+            return status, headers, bytes(prefix), current
+        if _content_type(headers) not in {"application/pdf", "text/html"}: return status, headers, b"", current
+        total = 0
+        try:
+            with temporary_path.open("wb") as out:
+                for chunk in response.iter_content(chunk_size=65536):
+                    total += len(chunk)
+                    if total > max_response_bytes: raise ValueError("response_size_limit")
+                    if len(prefix) < 1024: prefix.extend(chunk[:1024-len(prefix)])
+                    out.write(chunk)
+            return status, headers, bytes(prefix), current
+        except Exception:
+            temporary_path.unlink(missing_ok=True); raise
+    raise ValueError("unstable_redirect")
 
 
 def _failure(exc: Exception) -> str:
     if isinstance(exc, (TimeoutError, requests.Timeout)): return "timeout"
-    if isinstance(exc, ValueError) and str(exc) in {"unstable_redirect", "response_size_limit"}: return str(exc)
+    if isinstance(exc, ValueError) and str(exc) in {"unstable_redirect", "response_size_limit", "redirect_refused_by_source_registry"}: return str(exc)
     if isinstance(exc, requests.SSLError): return "tls_network_error"
     if isinstance(exc, (OSError, requests.RequestException)): return "tls_network_error"
     return "network_error"
@@ -194,17 +225,27 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
                              "detail": decision["detail"]})
             continue
         last_request_at[source_id] = clock()
+        # Every redirect hop is admitted before it is followed, against the same source. The
+        # allowlist has to govern the host the bytes come from, not only the host a spec named.
+        def _admit_hop(target: str, _source_id: str = source_id, _document_class: str = document_class) -> bool:
+            return admit(_source_id, target, _document_class, registry=registry)["decision"] == ADMITTED
         fd, temp_name = tempfile.mkstemp(prefix=".download-", suffix=".part", dir=root); os.close(fd); temporary = Path(temp_name)
         status, headers, prefix, final_url, failure = 0, {}, b"", url, None
         for attempt in range(max_attempts):
             try:
-                response = fetcher(url, temporary_path=temporary, timeout_seconds=timeout_seconds, connect_timeout_seconds=connect_timeout_seconds, max_response_bytes=max_response_bytes) if fetcher is fetch_http else fetcher(url, timeout_seconds=timeout_seconds)
+                response = fetcher(url, temporary_path=temporary, timeout_seconds=timeout_seconds, connect_timeout_seconds=connect_timeout_seconds, max_response_bytes=max_response_bytes, admit_hop=_admit_hop, max_redirects=_declared_max_redirects(registry)) if fetcher is fetch_http else fetcher(url, timeout_seconds=timeout_seconds)
                 status, headers, prefix = response[:3]; final_url = response[3] if len(response) > 3 else url
                 if fetcher is not fetch_http: temporary.write_bytes(prefix)
                 failure = None; break
             except Exception as exc:
                 temporary.unlink(missing_ok=True); failure = _failure(exc)
-                if attempt + 1 < max_attempts: sleep(0.25 * (2 ** attempt))
+                if attempt + 1 >= max_attempts: break
+                # A retry is another request to the same host, so it waits out that source's
+                # declared interval. Backing off 0.25s against a declared 10s minimum made the
+                # retry path the one way to exceed the rate the registry publishes.
+                remaining = interval - (clock() - last_request_at[source_id])
+                sleep(max(0.25 * (2 ** attempt), remaining))
+                last_request_at[source_id] = clock()
         size = temporary.stat().st_size if temporary.exists() else 0
         failure = failure or ("response_size_limit" if size > max_response_bytes else _response_failure(int(status), headers, prefix, size))
         if failure:
@@ -212,6 +253,17 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
         try: final_url = canonical_url(str(final_url))
         except ValueError:
             temporary.unlink(missing_ok=True); outcomes.append({"ticker": ticker, "canonical_url": url, "state": "unstable_redirect", "http_status": status}); continue
+        # Defence in depth: `fetch_http` admits each hop before following it, but a caller may
+        # supply any fetcher. Bytes are never promoted from a host the registry would refuse,
+        # whoever fetched them.
+        if final_url != url:
+            landing = admit(source_id, final_url, document_class, registry=registry)
+            if landing["decision"] != ADMITTED:
+                temporary.unlink(missing_ok=True)
+                outcomes.append({"ticker": ticker, "canonical_url": url, "final_url": final_url, "source_id": source_id,
+                                 "state": "redirect_refused_by_source_registry", "reason": landing["reason"],
+                                 "detail": landing["detail"], "http_status": status})
+                continue
         sha256 = _sha_file(temporary); suffix = ".pdf" if _content_type(headers) == "application/pdf" else ".html"; relative = Path("documents") / ticker / period / _safe(document_class) / f"{sha256}{suffix}"; path = root / relative; path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists() and _sha_file(path) != sha256:
             temporary.unlink(missing_ok=True); outcomes.append({"ticker": ticker, "canonical_url": url, "state": "hash_conflict", "http_status": status}); continue
