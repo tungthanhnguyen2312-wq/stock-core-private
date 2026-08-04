@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib,json,sqlite3
 from pathlib import Path
 from typing import Any,Mapping
+from provider_price_basis_registry import blocks_raw_as_traded,ineligibility_reason
 VERSION="1.0.0"; PROVIDERS=("VCI","KBS")
 class OHLCVBasisError(ValueError):pass
 def _hash(path:Path)->str:
@@ -29,8 +30,10 @@ def qualify(db_path:Path,citation_path:Path)->dict[str,Any]:
  for provider in PROVIDERS:
   statuses={r.get("adjustment_status") for r in evidence[provider]}
   if len(statuses)>1:raise OHLCVBasisError(f"conflicting_price_basis_evidence:{provider}")
-  raw=bool(statuses=={"raw_as_quoted_no_adjustment_applied"} and len({r.get("ticker") for r in evidence[provider]})>=2)
-  result["providers"][provider]={"rows":coverage[provider],"price_basis":"raw_as_quoted_no_adjustment_applied" if raw else "unknown","price_basis_verified":raw,"volume_basis":"unknown","volume_basis_verified":False,"evidence_citation_ids":sorted(r.get("citation_id") for r in evidence[provider]),"limitations":([] if raw else ["no qualified provider-specific price evidence"])+["no qualified provider-specific volume-basis evidence"]}
+  # Citation agreement is about what the citations say; eligibility is about what the
+  # provider's series is. Both must hold, and only the second one can rule out a rewrite.
+  raw=bool(statuses=={"raw_as_quoted_no_adjustment_applied"} and len({r.get("ticker") for r in evidence[provider]})>=2 and not blocks_raw_as_traded(provider))
+  result["providers"][provider]={"rows":coverage[provider],"price_basis":"raw_as_quoted_no_adjustment_applied" if raw else "unknown","price_basis_verified":raw,"volume_basis":"unknown","volume_basis_verified":False,"evidence_citation_ids":sorted(r.get("citation_id") for r in evidence[provider]),"limitations":([] if raw else [ineligibility_reason(provider) or "no qualified provider-specific price evidence"])+["no qualified provider-specific volume-basis evidence"]}
  return result
 def validate_forward(record:Mapping[str,Any])->dict[str,Any]:
  required=("provider","price_basis","price_basis_verified","volume_basis","volume_basis_verified","basis_evidence_id")

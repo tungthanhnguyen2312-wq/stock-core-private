@@ -1,5 +1,14 @@
 # Historical Relative Valuation Snapshot (HPG, FY2024 year-end)
 
+> **Superseded 2026-08-04.** The reasoning below is wrong in both of its steps and the
+> citation it rests on is now rejected. `raw_as_quoted_no_adjustment_applied` records that
+> *this repository* applied no adjustment, not that VCI returned none; and a
+> back-adjustment comes from events **after** the cited date, so "the 2024 action had
+> already settled" looks the wrong way down the timeline. HPG's 2025-06-26 and 2026-05-25
+> share issues both post-date 2024-12-31, and 19,830 is not on the 50 VND HOSE tick, so it
+> was never a matched order price. See `provider_price_basis_registry` and
+> `operations-review/vci-contract-reconciliation-20260804/`.
+
 Bounded to HPG, one valuation date: the last trading session on or before
 2024-12-31, which is 2024-12-31 itself (a valid session, no fallback search
 needed). Never the live/current price or `issue_share`.

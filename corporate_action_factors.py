@@ -195,6 +195,7 @@ def derive_cash_dividend_adjustment_factors(runtime_root: Path, ticker: str = "V
             "factor_counts": {"cash_dividend": N, "unavailable": M}
         }
     """
+    from provider_price_basis_registry import ineligibility_reason, raw_as_traded_eligible
     from semantic_evidence_bridge import load_verified_market_price
 
     ledger_res = build_corporate_action_ledger(runtime_root, ticker=ticker)
@@ -248,6 +249,18 @@ def derive_cash_dividend_adjustment_factors(runtime_root: Path, ticker: str = "V
         if not ref_price_entry or ref_price_entry.get("adjustment_status") != "raw_as_quoted_no_adjustment_applied":
             counts["unavailable"] += 1
             unavailable.append({"entry": entry, "reason": "missing_or_unqualified_reference_price"})
+            continue
+
+        # Defence in depth. An adjustment factor derived from a reference price the
+        # provider has already adjusted would double-count the very event being priced,
+        # so the provider gate is re-checked here and not just at the bridge.
+        if not raw_as_traded_eligible(ref_price_entry.get("provider", "")):
+            counts["unavailable"] += 1
+            unavailable.append({
+                "entry": entry,
+                "reason": ineligibility_reason(ref_price_entry.get("provider", "")),
+                "provider": ref_price_entry.get("provider"),
+            })
             continue
 
         ref_price_val = ref_price_entry.get("value")

@@ -6,7 +6,9 @@ from typing import Any
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-BASIS="raw_as_quoted_no_adjustment_applied";SCHEMA=pa.schema([("ticker",pa.string()),("date",pa.string()),("open",pa.float64()),("high",pa.float64()),("low",pa.float64()),("close",pa.float64()),("provider",pa.string()),("price_basis",pa.string())])
+from provider_price_basis_registry import active_verdict
+BASIS=active_verdict("VCI")["price_basis"]  # was a hard-coded "raw_as_quoted_no_adjustment_applied"; see provider_price_basis_registry
+SCHEMA=pa.schema([("ticker",pa.string()),("date",pa.string()),("open",pa.float64()),("high",pa.float64()),("low",pa.float64()),("close",pa.float64()),("provider",pa.string()),("price_basis",pa.string())])
 class BenchmarkError(RuntimeError):pass
 def _hash(path:Path)->str:
  h=hashlib.sha256()

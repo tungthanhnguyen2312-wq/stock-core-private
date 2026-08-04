@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from financial_observations import read_observations, store_path
+from provider_price_basis_registry import ineligibility_reason, raw_as_traded_eligible
 
 VERSION = "1.0.0"
 MANIFEST_RELATIVE = Path("data") / "official-evidence" / "manifest.json"
@@ -29,10 +30,15 @@ SIGNED_ISSUER_ACCEPTANCE_RULE = "signed_issuer_document_with_official_source_cor
 THIRD_PARTY_MIRROR_UNSIGNED_ACCEPTANCE_RULE = "third_party_mirrored_unsigned_audited_issuer_document_v1"
 THIRD_PARTY_MIRROR_HOSTING_WARNING = "third_party_mirror_hosting_is_weaker_than_issuer_hosted_evidence"
 _SUPPORTED_EMBEDDED_SIGNATURE_STATUSES_FOR_MIRROR_RULE = {"absent", "unverified"}
-# The only adjustment status this reader accepts today: a raw, as-quoted close with
-# no back-adjustment applied. A citation is only valid under this status when the
-# ticker had no unsettled corporate action as of the trading_date -- never inferred
-# here, only ever asserted by whoever wrote the citation and checked at review time.
+# This status records one thing only: that **this repository** applied no back-adjustment
+# to the cited row. It is not a statement about the provider, and it was read as one until
+# 2026-08-04. Passing it is now necessary and not sufficient -- the provider must also be
+# raw-as-traded eligible in provider_price_basis_registry, which VCI is not.
+#
+# The original note here reasoned about corporate actions *unsettled as of the
+# trading_date*. That is the wrong direction: a back-adjustment is applied by events that
+# happen **after** the cited date, so a citation can be correct when written and be
+# rewritten by the provider months later.
 _SUPPORTED_ADJUSTMENT_STATUSES = {"raw_as_quoted_no_adjustment_applied"}
 _REQUIRED_MARKET_PRICE_FIELDS = ("citation_id", "ticker", "trading_date", "price_field", "value",
     "provider", "adjustment_status")
@@ -795,6 +801,19 @@ def load_verified_market_price(runtime_root: Path) -> dict[str, Any]:
 
         if citation["adjustment_status"] not in _SUPPORTED_ADJUSTMENT_STATUSES:
             rejected.append({"key": key, "reason": "unsupported_adjustment_status"})
+            continue
+
+        # The status above records that *this repository* applied no adjustment. Whether
+        # the provider already did is a separate question, and it is the one every caller
+        # of this function is actually asking.
+        if not raw_as_traded_eligible(citation["provider"]):
+            rejected.append(
+                {
+                    "key": key,
+                    "reason": ineligibility_reason(citation["provider"]),
+                    "provider": citation["provider"],
+                }
+            )
             continue
 
         live = _query_ohlcv(db_path, citation["ticker"], citation["trading_date"])

@@ -26,7 +26,7 @@ def _make_ohlcv_db(root: Path, rows):
     return db_path
 
 
-def _price_citation(ticker, trading_date, value, provider="VCI", adjustment_status="raw_as_quoted_no_adjustment_applied",
+def _price_citation(ticker, trading_date, value, provider="SSI", adjustment_status="raw_as_quoted_no_adjustment_applied",
                      price_field="close", financial_period="2024"):
     citation_id = _hash({"ticker": ticker, "trading_date": trading_date, "price_field": price_field,
                           "value": value, "provider": provider})
@@ -86,8 +86,8 @@ class HistoricalRelativeValuationSnapshotTests(unittest.TestCase):
     def test_last_trading_day_date_resolution(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            _make_ohlcv_db(root, [("HPG", "2024-12-30", 19940, 19970, 19830, 19900, 12176491, "VCI"),
-                                   ("HPG", "2024-12-31", 19900, 19900, 19790, 19830, 10258083, "VCI")])
+            _make_ohlcv_db(root, [("HPG", "2024-12-30", 19940, 19970, 19830, 19900, 12176491, "SSI"),
+                                   ("HPG", "2024-12-31", 19900, 19900, 19790, 19830, 10258083, "SSI")])
             _write_price_citations(root, [_price_citation("HPG", "2024-12-31", 19830.0)])
             verified = bridge.load_verified_market_price(root)
             self.assertEqual(verified["status"], "available")
@@ -137,7 +137,7 @@ class HistoricalRelativeValuationSnapshotTests(unittest.TestCase):
     def test_fail_closed_for_unsupported_adjustment_status(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            _make_ohlcv_db(root, [("HPG", "2024-12-31", 19900, 19900, 19790, 19830, 10258083, "VCI")])
+            _make_ohlcv_db(root, [("HPG", "2024-12-31", 19900, 19900, 19790, 19830, 10258083, "SSI")])
             _write_price_citations(root, [_price_citation("HPG", "2024-12-31", 19830.0,
                 adjustment_status="requires_split_adjustment_not_yet_applied")])
             unadjusted = bridge.load_verified_market_price(root)
@@ -206,3 +206,23 @@ class TemporalScopeLabellingTests(unittest.TestCase):
         pe = result["methods"]["pe"]
         self.assertNotEqual(pe["state"], "available")
         self.assertNotIn("historical_only", pe)
+
+    def test_vci_citation_is_rejected_however_well_formed(self):
+        """A perfectly valid citation still fails when the provider rewrites its history.
+
+        The citation below is deterministic, matches the live row exactly and carries the
+        supported adjustment_status. Before 2026-08-04 that was enough. It is not, because
+        every one of those checks is about this repository and the citation, and none of
+        them can see that VCI restates the value months later.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _make_ohlcv_db(root, [("HPG", "2024-12-31", 19900, 19900, 19790, 19830, 10258083, "VCI")])
+            _write_price_citations(root, [_price_citation("HPG", "2024-12-31", 19830.0, provider="VCI")])
+            result = bridge.load_verified_market_price(root)
+            self.assertEqual(result["by_ticker_date"], {})
+            self.assertEqual(result["rejected"][0]["reason"], "provider_series_retrospectively_rewritten")
+
+
+if __name__ == "__main__":
+    unittest.main()
