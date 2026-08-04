@@ -1,0 +1,51 @@
+{
+  "absolute_scale": "resolved",
+  "absolute_scale_anchor": "numeric_identity_with_an_independently_unit_qualified_series",
+  "absolute_scale_corroborating_anchor": "issued_share_count_plausibility_falsifier",
+  "coverage_generalization": "limited_to_tested_windows",
+  "established_at": "2026-08-04",
+  "event_time_rewriting": "not_testable_from_retained_pairs",
+  "event_time_rewriting_route": "prospective_pre_event_snapshot_required",
+  "evidence": [
+    "operations-review/kbs-empirical-basis-20260804/basis_summary.json",
+    "operations-review/kbs-empirical-basis-20260804/evidence_manifest.json",
+    "operations-review/kbs-empirical-basis-20260804/KBS_EMPIRICAL_BASIS.md",
+    "operations-review/kbs-empirical-closeout-20260804/KBS_EMPIRICAL_CLOSEOUT.md"
+  ],
+  "historical_mutability": "not_observed",
+  "limitations": [
+    "Three qualified events across three tickers, all HOSE, all in 2026. Older history, rights issues, par-value changes and other exchanges are untested.",
+    "No first-party methodology exists, so which events the provider adjusts for -- and which it silently does not -- is unknown.",
+    "The unit result fixes the ratio of the two scales from the price range; the absolute scale rests on numeric identity with a VCI series whose own unit verdict is itself only empirically deduced, corroborated by an unqualified issued-share count used solely as an order-of-magnitude falsifier.",
+    "Two of thirty-eight eligible rows are explained by no candidate scale and are retained as contradictions rather than resolved.",
+    "Event-time historical rewriting is untestable from any retained evidence and cannot be made testable by re-requesting an already-post-event window."
+  ],
+  "liquidity_actionable": false,
+  "observed_adjustment_dimensions": [
+    "cash_distribution",
+    "share_related_event"
+  ],
+  "official_exchange_price": false,
+  "post_event_snapshot_stability": "observed_for_tested_retrieval_interval",
+  "post_event_stability_interval": [
+    "2026-08-01",
+    "2026-08-04"
+  ],
+  "price_basis": "empirically_event_adjusted",
+  "price_basis_qualification": "empirically_deduced",
+  "provider": "KBS",
+  "provider_methodology": "unknown",
+  "raw_as_traded_eligible": false,
+  "source_field_identity": "observed",
+  "status": "active",
+  "trading_value_unit": "VND",
+  "trading_value_unit_qualification": "empirically_deduced",
+  "unit_anchor_admissible_for_valuation": false,
+  "unit_scale_ratio": 1.0,
+  "unobserved_event_types": "unknown",
+  "volume_adjustment_basis": "not_observed",
+  "volume_adjustment_route": "prospective_pre_event_snapshot_spanning_a_share_event",
+  "volume_market_scope": "unknown",
+  "volume_unit": "shares",
+  "volume_unit_qualification": "empirically_deduced"
+}

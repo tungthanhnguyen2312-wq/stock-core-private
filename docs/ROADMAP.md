@@ -40,6 +40,21 @@ capitalisation and therefore waits on pillar B.
   point-in-time capabilities are `unavailable_by_contract`. `is_actionable` unchanged.
   `operations-review/kbs-empirical-basis-20260804/KBS_EMPIRICAL_BASIS.md`,
   `docs/kbs_empirical_basis_qualification.md`.
+- **P0-Z.1 KBS empirical-basis closeout and prospective mutability protocol shipped
+  2026-08-04 — PASS, network-free.** Separates three questions P0-Z ran together:
+  event-time historical rewriting (`not_testable_from_retained_pairs` — every retained KBS
+  payload post-dates every qualified ex-right date in its window), post-event snapshot
+  stability (`observed_for_tested_retrieval_interval`, 9 sessions), and volume
+  corporate-action adjustment (`not_observed`). Re-grounds the absolute unit anchor on
+  numeric identity with an independently unit-qualified series, with the issued-share-count
+  falsifier retained as corroboration; units unchanged at `shares`/`VND`,
+  `empirically_deduced`. Adds `kbs_mutability_protocol.py` — the prospective pre/post
+  observation design, inert by contract. No capability changed.
+  `operations-review/kbs-empirical-closeout-20260804/KBS_EMPIRICAL_CLOSEOUT.md`.
+- **Event-time historical mutability is only reachable prospectively.** A snapshot retained
+  *before* a future corporate action plus a matching one after it. Re-requesting an
+  already-post-event window is not a substitute at any interval, and no roadmap item may
+  propose one. Owner authorisation is required per event; nothing is scheduled.
 - **The generic price and volume basis remain `unknown`.** P0-V/P0-W qualified a
   `vci.`-namespaced shadow basis and P0-Z qualified a `kbs.`-namespaced one. Neither is
   generic, neither inherits the other, and two provider-scoped empirical verdicts do not

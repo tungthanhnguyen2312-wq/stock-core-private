@@ -5,7 +5,81 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-04 - P0-Z.1 KBS Empirical Closeout and Prospective Mutability Protocol
+
+- **A post-event snapshot is not a substitute for a pre-event one, at any interval.** The
+  P0-Z closing report recommended re-requesting the HPG 2026-05-18..06-02 window "after
+  enough elapsed time" to settle whether KBS rewrites history at a corporate action. That
+  is wrong. The earliest retained KBS payload for that window is 2026-08-04 and the
+  ex-right date is 2026-05-25: whatever the provider did at the event, it had already done
+  it before the first observation. A second request — tomorrow or in a year — is another
+  post-event snapshot and can measure only post-event stability. Recorded as
+  `kbs_mutability_protocol.SUPERSEDED_RECOMMENDATION`, root cause
+  `post_event_snapshot_treated_as_a_substitute_for_a_pre_event_snapshot`.
+
+- **The three mutability questions are separated in the contract, not just in prose.**
+  *Event-time historical rewriting* is `not_testable_from_retained_pairs`; *post-event
+  snapshot stability* is `observed_for_tested_retrieval_interval` (9 sessions, 2026-08-01 →
+  2026-08-04, no change); *volume corporate-action adjustment* stays `not_observed`.
+  `classify_snapshot_pair` returns `both_post_event` for the retained pair and
+  `historical_rewrite_test` then reports `not_testable_from_this_pair` however clean the
+  diff is. `contract_historical_mutability` derives the contract field from the event-time
+  question alone, so stability can never feed it.
+
+- **A fixed defect: a post-event revision could have been read as an event adjustment.**
+  `volume_adjustment_verdict` checked "did the volume change" before checking whether the
+  pair straddled a share event, so a changed volume in a non-straddling pair returned
+  `retrospectively_rewritten_unknown_method`. The pair-class gate now comes first and the
+  caller's own `share_event_window_tested` claim cannot override it — neither a changed nor
+  an unchanged volume qualifies from a pair that does not straddle a share event.
+
+- **The framing correction is recorded against the frozen report, which is not edited.**
+  `CORRECTED_FRAMING` names the artifact, the sections, the misleading implication ("spans
+  no qualified share event" reads as a choice of window) and the correction, with
+  `measurements_changed: false` and `artifact_rewritten: false`. Every measurement in the
+  P0-Z report stands.
+
+- **The absolute unit anchor is re-grounded on stronger, independent evidence.** The VWAP
+  identity only ever constrained the scale *quotient*. The absolute scale now rests
+  primarily on `numeric_identity_with_an_independently_unit_qualified_series`: KBS returns
+  integers exactly equal to stored VCI volumes on 34 sessions across all three tickers, and
+  VCI's unit was established from its own per-trade tape rather than a plausibility bound,
+  so equality is arithmetically impossible under a thousand-fold difference. It transfers
+  **magnitude only** — `assert_identity_anchor_is_magnitude_only` refuses an anchor carrying
+  market scope, composition or source authority, so this is not the cross-provider authority
+  upgrade the ladder forbids. The issued-share-count falsifier (27,485,500,000 implied vs
+  8,442,964,520 retained, rejected with a 1.63× margin) is retained as the corroborating
+  route, still `observed_only`, still `unit_anchor_admissible_for_valuation = False`. Units
+  remain `shares`/`VND` at `empirically_deduced`; neither route can reach
+  `documented_verified`, and without either the result degrades to `scaled_units` at
+  `observed_only` with `absolute_scale = unresolved`.
+
+- **The prospective protocol is designed and inert.** `kbs_mutability_protocol.py`: 16
+  required pre-event manifest fields, a strictly-before-ex-date check that refuses a
+  same-day snapshot, identical-request enforcement, 8 compared fields including row presence
+  and schema, a mandatory control whose own movement yields `comparison_conflicted`, 5
+  separated change classes, 7 scoped verdicts, and deterministic phase-bearing artifact
+  paths. `network_access_authorized`, `scheduling_authorized`, `event_polling_authorized`
+  and `automatic_acquisition_authorized` are all false and asserted; the test checks the
+  module's parsed import graph rather than scanning its prose, which is *about* networks and
+  schedules. Owner authorisation is required per event.
+
+- **Non-effects.** No network request of any kind in this milestone. No production database
+  write, bundle or dashboard publication, ranking, recommendation, sizing, liquidity output,
+  point-in-time valuation or backtest change. All 15 descriptive/technical capabilities
+  remain available and all 13 liquidity/execution/point-in-time capabilities remain
+  `unavailable_by_contract`. `is_actionable` unchanged. The VCI verdict is untouched.
+
+- Evidence: `operations-review/kbs-empirical-closeout-20260804/`. Contract:
+  `docs/kbs_empirical_basis_qualification.md`. `KBS_EMPIRICAL_CLOSEOUT: PASS`.
+
 ## 2026-08-04 - P0-Z KBS Empirical Basis and Capability Relaxation
+> **PARTIALLY CORRECTED 2026-08-04 by P0-Z.1.** Every measurement below stands. Two things
+> are corrected: the mutability gloss ("the only as-of pair spans no share event") implies a
+> better window would have answered the event-time question, when in fact both retrievals
+> post-date every candidate event; and the absolute unit anchor is re-grounded on numeric
+> identity with an independently unit-qualified series, with the share-count falsifier
+> demoted to corroboration. See the P0-Z.1 entry above.
 
 - **A canonical qualification ladder now sits between "documented" and "unknown."**
   `evidence_qualification_tiers.py`: `documented_verified` / `empirically_deduced` /

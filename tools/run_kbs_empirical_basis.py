@@ -26,6 +26,8 @@ sys.path.insert(0, str(ROOT))
 import evidence_qualification_tiers as tiers  # noqa: E402
 import kbs_capability_matrix as caps  # noqa: E402
 import kbs_empirical_basis as kbs  # noqa: E402
+import kbs_mutability_protocol as protocol  # noqa: E402
+import vci_volume_composition as vci_comp  # noqa: E402
 
 EVIDENCE_DIR = ROOT / "operations-review" / "kbs-empirical-basis-20260804"
 RAW_DIR = EVIDENCE_DIR / "raw"
@@ -383,17 +385,22 @@ def analyse() -> dict:
             kbs.parse_daily_payload(prior_payload, symbol="HPG")
         )["rows"]
         current_rows = kbs.normalize_daily(rows_for(control))["rows"]
+        # Every qualified HPG ex-right date in 2026 precedes both observations, so this pair
+        # is `both_post_event` by construction and the event-time question is not testable
+        # from it. Declaring the dates is what makes that explicit instead of implied.
         rewrite = kbs.historical_rewrite_test(
             prior_rows=prior_rows,
             current_rows=current_rows,
             prior_observed_at=RETAINED_KBS_SAMPLE_RETRIEVED_AT,
             current_observed_at=control["retrieved_at"],
             prior_artifact="operations-review/kbs_ohlcv_sample_hpg.json",
+            event_ex_dates=["2026-05-11", "2026-05-25"],
         )
         rewrite["spans_qualified_share_event"] = False
         rewrite["note"] = (
-            "No qualified ex-right date falls inside this window, so an unchanged result "
-            "is a control observation and not an immutability proof."
+            "Both snapshots post-date every qualified HPG ex-right date, so this pair "
+            "measures post-event stability only. Re-requesting later cannot change that: "
+            "the pre-event observation the question needs no longer exists to be taken."
         )
 
     # --- price restated, volume not: the two fields move on different schedules ----
@@ -414,17 +421,37 @@ def analyse() -> dict:
 
     # --- unit scaling ------------------------------------------------------------
     share_bounds = retained_share_bounds(sorted(normalized_by_ticker))
-    units = kbs.select_unit_scales(normalized_by_ticker, share_count_bounds=share_bounds)
+    # The primary absolute anchor uses no share count at all: KBS returns integers exactly
+    # equal to a locally stored VCI series whose unit was established from VCI's own
+    # per-trade tape. Equality is impossible under a thousand-fold unit difference.
+    identity = kbs.unit_identity_anchor(
+        per_ticker_rows=normalized_by_ticker,
+        reference_volumes={
+            ticker: {
+                date: item["volume"]
+                for date, item in vci_stored(ticker, "2026-01-01", "2026-12-31").items()
+            }
+            for ticker in sorted(normalized_by_ticker)
+        },
+        reference_identity=(
+            "dashboard-runtime/vn_stock.db:ohlcv[source=VCI] volumes; unit established by "
+            "vci_volume_composition.active_contract().volume_unit from per-trade "
+            "accumulator reconciliation (commit 63ecc48), read-only, no VCI request issued"
+        ),
+        reference_unit=vci_comp.active_contract()["volume_unit"],
+        reference_unit_qualification=tiers.EMPIRICALLY_DEDUCED,
+    )
+    units = kbs.select_unit_scales(
+        normalized_by_ticker, share_count_bounds=share_bounds, identity_anchor=identity
+    )
     units["share_count_bounds_used"] = share_bounds
+    units["identity_anchor"] = identity
     kbs.assert_unit_does_not_qualify_scope(units)
 
     merged = kbs.merge_price_verdicts(
         {window_id: entry["price_verdict"] for window_id, entry in per_window.items()}
     )
-    mutability = (
-        rewrite["verdict"] if rewrite and rewrite["verdict"] == "retrospectively_rewritten" else
-        "not_observed" if rewrite else "unknown"
-    )
+    mutability = kbs.contract_historical_mutability(rewrite)
 
     volume_adjustment = kbs.volume_adjustment_verdict(
         rewrite_test=rewrite,
@@ -521,6 +548,20 @@ def analyse() -> dict:
         "windows": per_window,
         "merged_price_verdict": merged,
         "historical_rewrite_test": rewrite,
+        "mutability_questions": {
+            "event_time_rewriting": (rewrite or {}).get("event_time_rewriting", "not_observed"),
+            "post_event_snapshot_stability": (rewrite or {}).get(
+                "post_event_snapshot_stability", "not_observed"
+            ),
+            "volume_adjustment_basis": volume_adjustment["verdict"],
+            "why_event_time_is_not_testable_here": (
+                "Every retained KBS payload post-dates every qualified ex-right date in its "
+                "window. A pre/post pair cannot be reconstructed after the fact, and a "
+                "further request would be another post-event snapshot."
+            ),
+        },
+        "prospective_protocol": protocol.assert_protocol_inert(),
+        "prospective_protocol_fingerprint": protocol.protocol_fingerprint(),
         "price_volume_restatement_divergence": divergence,
         "price_basis_contract": contract,
         "unit_scaling": units,
@@ -538,11 +579,15 @@ def analyse() -> dict:
     print(json.dumps({
         "merged_price_verdict": merged,
         "historical_mutability": mutability,
+        "event_time_rewriting": (rewrite or {}).get("event_time_rewriting"),
+        "post_event_snapshot_stability": (rewrite or {}).get("post_event_snapshot_stability"),
+        "snapshot_pair_class": ((rewrite or {}).get("snapshot_pair") or {}).get("pair_class"),
         "volume_unit": units["volume_unit"],
         "trading_value_unit": units["trading_value_unit"],
+        "absolute_scale": units.get("absolute_scale"),
+        "absolute_scale_anchor": units.get("absolute_scale_anchor"),
         "unit_qualification": units["qualification"],
         "rows_evaluated": units["rows_evaluated"],
-        "surviving_candidates": units["surviving_candidates"],
         "volume_adjustment": volume_adjustment["verdict"],
         "price_volume_restatement_divergence": (divergence or {}).get("verdict"),
         "raw_as_traded_eligible": contract["raw_as_traded_eligible"],

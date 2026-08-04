@@ -1,0 +1,104 @@
+{
+  "activation": "owner_authorization_required_per_event",
+  "automatic_acquisition_authorized": false,
+  "change_classes": [
+    "price_rewrite",
+    "volume_rewrite",
+    "value_rewrite",
+    "schema_change",
+    "unrelated_provider_correction"
+  ],
+  "comparison_fields": [
+    "o",
+    "h",
+    "l",
+    "c",
+    "v",
+    "va",
+    "row_presence",
+    "schema"
+  ],
+  "control_required": true,
+  "corrected_framing": {
+    "also_corrected_in": [
+      "docs/kbs_empirical_basis_qualification.md",
+      "docs/STATE.md",
+      "docs/ROADMAP.md",
+      "docs/DECISIONS.md",
+      "docs/AI_RULES.md"
+    ],
+    "artifact": "operations-review/kbs-empirical-basis-20260804/KBS_EMPIRICAL_BASIS.md",
+    "artifact_rewritten": false,
+    "asserted_framing": "The rewrite comparison 'spans no qualified share event', and the only as-of pair 'spans no share event'.",
+    "commit": "4a07141",
+    "corrected_at": "2026-08-04",
+    "corrected_by": "kbs_mutability_protocol@1.0.0",
+    "corrected_framing": "Event-time historical mutability requires a snapshot retained BEFORE a future event and a matching snapshot retained AFTER it. The retained pair is both_post_event and measures post-event snapshot stability only.",
+    "evidence_changed": false,
+    "measurements_changed": false,
+    "sections": [
+      "3. Price basis / Historical mutability",
+      "5. Volume adjustment",
+      "8. Scope"
+    ],
+    "why_it_misleads": "Literally true, and it implies the gap is a choice of window -- that picking a window with an ex-right date inside it would have answered the question. It would not. Both retrievals (2026-08-01 and 2026-08-04) post-date every qualified ex-right date in every tested window, so no window selection and no further elapsed time can produce a pre/post pair from this evidence."
+  },
+  "coverage_generalization": "limited_to_tested_windows",
+  "event_polling_authorized": false,
+  "evidence_root": "operations-review/kbs-mutability-observation",
+  "network_access_authorized": false,
+  "post_event_must_match": [
+    "provider",
+    "ticker",
+    "endpoint",
+    "request_parameters",
+    "historical_window"
+  ],
+  "pre_event_manifest_fields": [
+    "protocol_version",
+    "provider",
+    "ticker",
+    "endpoint",
+    "request_parameters",
+    "historical_window",
+    "retrieved_at",
+    "raw_artifact",
+    "raw_sha256",
+    "response_schema_fingerprint",
+    "event_id",
+    "event_ex_date",
+    "event_kind",
+    "event_evidence_identity",
+    "control_ticker",
+    "control_window"
+  ],
+  "prospective_verdicts": [
+    "comparison_conflicted",
+    "event_time_price_rewrite_observed",
+    "event_time_volume_rewrite_observed",
+    "no_rewrite_observed_for_tested_event",
+    "observation_incomplete",
+    "price_rewrite_without_volume_rewrite",
+    "provider_schema_changed"
+  ],
+  "protocol_fingerprint": "ad993c26586074ae2a0e81cef7f9f9448a5fb0898abdaab7e82c7fc0caf20a71",
+  "provider": "KBS",
+  "purpose": "qualify_kbs_event_time_historical_mutability",
+  "scheduling_authorized": false,
+  "schema_version": "1.0.0",
+  "source_authority": "observed_public_web_endpoint",
+  "superseded_recommendation": {
+    "must_not_be_claimed_to_settle": [
+      "historical_mutability_across_the_share_event",
+      "corporate_action_adjustment_of_historical_volume"
+    ],
+    "proposed_at": "2026-08-04, closing report of commit 4a07141",
+    "recommendation": "Re-request the HPG 2026-05-18..2026-06-02 window after enough elapsed time to settle historical mutability across the 2026-05-25 event.",
+    "root_cause": "post_event_snapshot_treated_as_a_substitute_for_a_pre_event_snapshot",
+    "status": "superseded",
+    "superseded_by": "kbs_mutability_protocol.protocol_snapshot()",
+    "why_it_fails": "The earliest retained KBS payload for that window is 2026-08-04 and the ex-right date is 2026-05-25. Any further request is a second post-event snapshot, so the comparison can only measure post-event stability.",
+    "would_have_settled": []
+  },
+  "why_a_retrospective_test_is_impossible": "The earliest retained KBS payload for every tested window is 2026-08-04, and every qualified ex-right date in those windows precedes it. Any further request is another post-event snapshot, so no amount of elapsed time yields the pre/post pair the question requires."
+}

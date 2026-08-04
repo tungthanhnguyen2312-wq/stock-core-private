@@ -4,15 +4,33 @@
   "historical_rewrite_test": {
     "changed_detail": [],
     "current_observed_at": "2026-08-04T06:58:05Z",
-    "note": "No qualified ex-right date falls inside this window, so an unchanged result is a control observation and not an immutability proof.",
+    "event_time_rewriting": "not_testable_from_this_pair",
+    "note": "Both snapshots post-date every qualified HPG ex-right date, so this pair measures post-event stability only. Re-requesting later cannot change that: the pre-event observation the question needs no longer exists to be taken.",
+    "post_event_snapshot_stability": "observed_for_tested_retrieval_interval",
     "prior_observation": "operations-review/kbs_ohlcv_sample_hpg.json",
     "prior_observed_at": "2026-08-01T01:11:52Z",
+    "retrieval_interval": [
+      "2026-08-01",
+      "2026-08-04"
+    ],
     "sessions_compared": 9,
     "sessions_with_changed_close": 0,
     "sessions_with_changed_trading_value": 0,
     "sessions_with_changed_volume": 0,
+    "snapshot_pair": {
+      "current_observed_on": "2026-08-04",
+      "event_ex_dates": [
+        "2026-05-11",
+        "2026-05-25"
+      ],
+      "event_time_testable": false,
+      "note": "Any restatement made at the event was already present in the earlier snapshot. Waiting longer and re-requesting produces another post-event snapshot and cannot change that.",
+      "pair_class": "both_post_event",
+      "prior_observed_on": "2026-08-01",
+      "reason": "both_snapshots_were_taken_after_every_declared_ex_right_date"
+    },
     "spans_qualified_share_event": false,
-    "verdict": "not_observed"
+    "stability_is_not_immutability": "An unchanged post-event pair says the provider has not revised these rows since the earlier observation. It says nothing about what it did to them when the event became effective."
   },
   "market_scope": {
     "dimensions": {
@@ -86,6 +104,12 @@
     ],
     "reason": "distinct_windows_demonstrated_distinct_adjustment_dimensions",
     "verdict": "empirically_event_adjusted"
+  },
+  "mutability_questions": {
+    "event_time_rewriting": "not_testable_from_this_pair",
+    "post_event_snapshot_stability": "observed_for_tested_retrieval_interval",
+    "volume_adjustment_basis": "not_observed",
+    "why_event_time_is_not_testable_here": "Every retained KBS payload post-dates every qualified ex-right date in its window. A pre/post pair cannot be reconstructed after the fact, and a further request would be another post-event snapshot."
   },
   "price_basis_contract": {
     "corroboration": [
@@ -224,6 +248,73 @@
     "sessions_with_volume_equal_to_reference": 13,
     "verdict": "price_restated_while_volume_unchanged"
   },
+  "prospective_protocol": {
+    "activation": "owner_authorization_required_per_event",
+    "automatic_acquisition_authorized": false,
+    "change_classes": [
+      "price_rewrite",
+      "volume_rewrite",
+      "value_rewrite",
+      "schema_change",
+      "unrelated_provider_correction"
+    ],
+    "comparison_fields": [
+      "o",
+      "h",
+      "l",
+      "c",
+      "v",
+      "va",
+      "row_presence",
+      "schema"
+    ],
+    "control_required": true,
+    "coverage_generalization": "limited_to_tested_windows",
+    "event_polling_authorized": false,
+    "evidence_root": "operations-review/kbs-mutability-observation",
+    "network_access_authorized": false,
+    "post_event_must_match": [
+      "provider",
+      "ticker",
+      "endpoint",
+      "request_parameters",
+      "historical_window"
+    ],
+    "pre_event_manifest_fields": [
+      "protocol_version",
+      "provider",
+      "ticker",
+      "endpoint",
+      "request_parameters",
+      "historical_window",
+      "retrieved_at",
+      "raw_artifact",
+      "raw_sha256",
+      "response_schema_fingerprint",
+      "event_id",
+      "event_ex_date",
+      "event_kind",
+      "event_evidence_identity",
+      "control_ticker",
+      "control_window"
+    ],
+    "prospective_verdicts": [
+      "comparison_conflicted",
+      "event_time_price_rewrite_observed",
+      "event_time_volume_rewrite_observed",
+      "no_rewrite_observed_for_tested_event",
+      "observation_incomplete",
+      "price_rewrite_without_volume_rewrite",
+      "provider_schema_changed"
+    ],
+    "provider": "KBS",
+    "purpose": "qualify_kbs_event_time_historical_mutability",
+    "scheduling_authorized": false,
+    "schema_version": "1.0.0",
+    "source_authority": "observed_public_web_endpoint",
+    "why_a_retrospective_test_is_impossible": "The earliest retained KBS payload for every tested window is 2026-08-04, and every qualified ex-right date in those windows precedes it. Any further request is another post-event snapshot, so no amount of elapsed time yields the pre/post pair the question requires."
+  },
+  "prospective_protocol_fingerprint": "f6d68ea706c6e8dbf4f360dcf94f48aa0eb369444b95bc0ba28b61d7e4f351f2",
   "provider": "KBS",
   "qualification_ladder": [
     "documented_verified",
@@ -255,6 +346,8 @@
     "volume_unit": "unknown"
   },
   "unit_scaling": {
+    "absolute_scale": "resolved",
+    "absolute_scale_anchor": "numeric_identity_with_an_independently_unit_qualified_series",
     "candidates": [
       {
         "all_rows_inside_range": true,
@@ -780,7 +873,37 @@
       }
     ],
     "degeneracy_resolution": {
-      "anchor_is_a_falsifier_not_a_measurement": true,
+      "anchor_is_a_falsifier_not_a_measurement": false,
+      "corroborating_route": "issued_share_count_plausibility_falsifier",
+      "identity_anchor": {
+        "anchor": "numeric_identity_with_an_independently_unit_qualified_series",
+        "available": true,
+        "does_not_transfer": [
+          "market_composition",
+          "adjustment_behaviour",
+          "historical_mutability",
+          "source_authority"
+        ],
+        "implied_volume_scale": 1,
+        "per_ticker_exact_equality": {
+          "HPG": 9,
+          "VCB": 15,
+          "VNM": 10
+        },
+        "qualification_ceiling": "empirically_deduced",
+        "reason": null,
+        "reference_identity": "dashboard-runtime/vn_stock.db:ohlcv[source=VCI] volumes; unit established by vci_volume_composition.active_contract().volume_unit from per-trade accumulator reconciliation (commit 63ecc48), read-only, no VCI request issued",
+        "reference_unit": "shares",
+        "reference_unit_qualification": "empirically_deduced",
+        "sessions_compared": 66,
+        "sessions_exactly_equal": 34,
+        "tickers_with_exact_equality": [
+          "HPG",
+          "VCB",
+          "VNM"
+        ],
+        "transfers": "magnitude_only"
+      },
       "members": [
         [
           1,
@@ -791,29 +914,42 @@
           1000
         ]
       ],
-      "rejections": [
-        {
-          "detail": {
-            "bound_evidence_identity": "dashboard-runtime/vn_stock.db:metadata[ticker=HPG].shares_outstanding (updated 2026-07-30 16:12)",
-            "bound_qualification": "observed_only",
-            "ceiling_applied": 16885929040.0,
-            "implied_shares_traded": 27485500000.0,
-            "retained_shares_outstanding": 8442964520.0,
-            "session_date": "2026-05-18",
-            "slack_multiple": 2.0,
-            "ticker": "HPG"
-          },
-          "rejected_because": "implied_session_volume_exceeds_retained_issued_capital",
-          "trading_value_scale": 1000,
-          "volume_scale": 1000
-        }
-      ],
+      "qualification_ceiling": "empirically_deduced",
       "resolved": true,
-      "route": "absolute_magnitude_bound_against_retained_issued_share_count",
+      "route": "numeric_identity_with_an_independently_unit_qualified_series",
       "selected": {
         "trading_value_scale": 1,
         "volume_scale": 1
       }
+    },
+    "identity_anchor": {
+      "anchor": "numeric_identity_with_an_independently_unit_qualified_series",
+      "available": true,
+      "does_not_transfer": [
+        "market_composition",
+        "adjustment_behaviour",
+        "historical_mutability",
+        "source_authority"
+      ],
+      "implied_volume_scale": 1,
+      "per_ticker_exact_equality": {
+        "HPG": 9,
+        "VCB": 15,
+        "VNM": 10
+      },
+      "qualification_ceiling": "empirically_deduced",
+      "reason": null,
+      "reference_identity": "dashboard-runtime/vn_stock.db:ohlcv[source=VCI] volumes; unit established by vci_volume_composition.active_contract().volume_unit from per-trade accumulator reconciliation (commit 63ecc48), read-only, no VCI request issued",
+      "reference_unit": "shares",
+      "reference_unit_qualification": "empirically_deduced",
+      "sessions_compared": 66,
+      "sessions_exactly_equal": 34,
+      "tickers_with_exact_equality": [
+        "HPG",
+        "VCB",
+        "VNM"
+      ],
+      "transfers": "magnitude_only"
     },
     "mean_absolute_residual_to_range_midpoint": 83.9028,
     "per_ticker_support": {
@@ -1018,13 +1154,16 @@
         "volume": 4479800.0
       }
     ],
+    "unit_scale_ratio": 1.0,
     "volume_unit": "shares"
   },
   "volume_adjustment": {
     "derived_from_price_adjustment": false,
-    "note": "A control window cannot demonstrate that a share event would leave volume alone.",
-    "reason": "no_volume_change_observed_but_no_share_event_spanned_the_comparison",
+    "note": "Neither an unchanged nor a changed volume qualifies here. Unchanged cannot show what a share event would do; changed, in a pair that does not straddle one, is an ordinary provider revision and not an adjustment.",
+    "reason": "snapshot_pair_does_not_straddle_a_qualified_share_event",
     "sessions_compared": 9,
+    "sessions_with_changed_volume": 0,
+    "snapshot_pair_class": "both_post_event",
     "verdict": "not_observed"
   },
   "windows": {

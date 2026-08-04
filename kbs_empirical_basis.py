@@ -779,6 +779,100 @@ def merge_price_verdicts(per_window: Mapping[str, Mapping[str, Any]]) -> dict[st
 # ---------------------------------------------------------------------------------
 
 
+#: Whether historical rows change *when a corporate action becomes effective*. Answerable
+#: only by a pair that straddles the event.
+EVENT_TIME_REWRITING_VERDICTS = frozenset(
+    {
+        "retrospectively_rewritten",
+        "no_rewrite_observed_for_tested_event",
+        "not_testable_from_this_pair",
+        "not_observed",
+    }
+)
+
+#: Whether repeated requests made *after* the event return the same values. A different
+#: question, and never a substitute for the one above.
+POST_EVENT_STABILITY_VERDICTS = frozenset(
+    {"observed_for_tested_retrieval_interval", "instability_observed", "not_observed"}
+)
+
+PAIR_SPANS_EVENT = "spans_event"
+PAIR_BOTH_POST_EVENT = "both_post_event"
+PAIR_BOTH_PRE_EVENT = "both_pre_event"
+PAIR_NO_EVENT_DECLARED = "no_event_declared"
+
+
+def _instant_date(value: str) -> str:
+    """Calendar date of an ISO instant, for comparison against an ex-right date."""
+    text = str(value).strip()
+    match = _DATE_PREFIX.match(text)
+    if match is None:
+        raise KBSBasisError(f"observation_instant_unparseable:{value!r}")
+    return match.group(1)
+
+
+def classify_snapshot_pair(
+    *,
+    prior_observed_at: str,
+    current_observed_at: str,
+    event_ex_dates: Sequence[str],
+) -> dict[str, Any]:
+    """Where two retrieval instants sit relative to the events they are meant to test.
+
+    This is the guard that stops a real mistake. Two snapshots both taken *after* an event
+    can only show whether the provider has changed its mind since the later of them; the
+    restatement they were meant to detect had already happened before the first one was
+    taken. No amount of elapsed time between two post-event observations converts them into
+    a pre/post pair, so ``both_post_event`` is terminal for the event-time question and
+    re-requesting is not a route to it.
+    """
+    prior_date = _instant_date(prior_observed_at)
+    current_date = _instant_date(current_observed_at)
+    if current_date < prior_date:
+        raise KBSBasisError("snapshot_pair_out_of_order")
+    dates = sorted({str(date).strip() for date in event_ex_dates if str(date).strip()})
+    if not dates:
+        return {
+            "pair_class": PAIR_NO_EVENT_DECLARED,
+            "prior_observed_on": prior_date,
+            "current_observed_on": current_date,
+            "event_ex_dates": [],
+            "event_time_testable": False,
+        }
+    straddled = [date for date in dates if prior_date < date <= current_date]
+    if straddled:
+        return {
+            "pair_class": PAIR_SPANS_EVENT,
+            "prior_observed_on": prior_date,
+            "current_observed_on": current_date,
+            "event_ex_dates": dates,
+            "straddled_ex_dates": straddled,
+            "event_time_testable": True,
+        }
+    if all(date <= prior_date for date in dates):
+        return {
+            "pair_class": PAIR_BOTH_POST_EVENT,
+            "prior_observed_on": prior_date,
+            "current_observed_on": current_date,
+            "event_ex_dates": dates,
+            "event_time_testable": False,
+            "reason": "both_snapshots_were_taken_after_every_declared_ex_right_date",
+            "note": (
+                "Any restatement made at the event was already present in the earlier "
+                "snapshot. Waiting longer and re-requesting produces another post-event "
+                "snapshot and cannot change that."
+            ),
+        }
+    return {
+        "pair_class": PAIR_BOTH_PRE_EVENT,
+        "prior_observed_on": prior_date,
+        "current_observed_on": current_date,
+        "event_ex_dates": dates,
+        "event_time_testable": False,
+        "reason": "no_declared_ex_right_date_falls_between_the_two_observations",
+    }
+
+
 def historical_rewrite_test(
     *,
     prior_rows: Sequence[Mapping[str, Any]],
@@ -786,20 +880,38 @@ def historical_rewrite_test(
     prior_observed_at: str,
     current_observed_at: str,
     prior_artifact: str,
+    event_ex_dates: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Compare the same historical sessions across two retrieval instants.
 
-    This is the strongest evidence available to the milestone, because it does not require
-    interpreting a value at all -- it asks only whether the provider returned a different
-    number for a date that had already closed. ``not_observed`` on a window with no event
-    in it is a control result, not an immutability proof: see :func:`price_basis_contract`.
+    The comparison answers **two separate questions** and reports them under two separate
+    keys, because collapsing them is the failure this function was rewritten to prevent:
+
+    ``event_time_rewriting``
+        Did historical rows change when a corporate action became effective? Requires a
+        pair that straddles the event. A pair that does not straddle one returns
+        ``not_testable_from_this_pair`` no matter how clean the diff is.
+    ``post_event_snapshot_stability``
+        Do repeated requests made after the event return the same values? A real and
+        useful finding, and never evidence of event-time immutability.
+
+    ``event_ex_dates`` is required to distinguish them. Omitting it yields
+    ``no_event_declared`` and leaves the event-time question ``not_observed`` -- the
+    function will not guess that no event existed.
     """
+    pair = classify_snapshot_pair(
+        prior_observed_at=prior_observed_at,
+        current_observed_at=current_observed_at,
+        event_ex_dates=event_ex_dates,
+    )
     prior = {row["kbs.session_date"]: row for row in prior_rows}
     current = {row["kbs.session_date"]: row for row in current_rows}
     shared = sorted(set(prior) & set(current))
     if not shared:
         return {
-            "verdict": "unknown",
+            "snapshot_pair": pair,
+            "event_time_rewriting": "not_observed",
+            "post_event_snapshot_stability": "not_observed",
             "reason": "no_overlapping_sessions_between_the_two_observations",
             "sessions_compared": 0,
         }
@@ -827,8 +939,25 @@ def historical_rewrite_test(
                     "trading_value_changed": changed_value,
                 }
             )
+    changed = bool(detail)
+    if pair["event_time_testable"]:
+        event_time = "retrospectively_rewritten" if changed else "no_rewrite_observed_for_tested_event"
+    elif pair["pair_class"] == PAIR_BOTH_POST_EVENT:
+        event_time = "not_testable_from_this_pair"
+    else:
+        event_time = "not_observed"
+
+    # Stability is only *about* the post-event period when both observations sit there.
+    if pair["pair_class"] == PAIR_BOTH_POST_EVENT:
+        stability = "instability_observed" if changed else "observed_for_tested_retrieval_interval"
+    else:
+        stability = "not_observed"
+
     return {
-        "verdict": "retrospectively_rewritten" if detail else "not_observed",
+        "snapshot_pair": pair,
+        "event_time_rewriting": event_time,
+        "post_event_snapshot_stability": stability,
+        "retrieval_interval": [pair["prior_observed_on"], pair["current_observed_on"]],
         "sessions_compared": len(shared),
         "sessions_with_changed_close": sum(1 for item in detail if item["close_changed"]),
         "sessions_with_changed_volume": sum(1 for item in detail if item["volume_changed"]),
@@ -837,7 +966,27 @@ def historical_rewrite_test(
         "prior_observation": prior_artifact,
         "prior_observed_at": prior_observed_at,
         "current_observed_at": current_observed_at,
+        "stability_is_not_immutability": (
+            "An unchanged post-event pair says the provider has not revised these rows "
+            "since the earlier observation. It says nothing about what it did to them when "
+            "the event became effective."
+        ),
     }
+
+
+def contract_historical_mutability(rewrite_test: Mapping[str, Any] | None) -> str:
+    """The single contract-level value, derived from the event-time question alone.
+
+    Post-event stability never feeds this. The contract field means "has an event-time
+    rewrite been observed", and everything that is not an observation of one is
+    ``not_observed``.
+    """
+    if rewrite_test is None:
+        return "not_observed"
+    verdict = str(rewrite_test.get("event_time_rewriting", "not_observed"))
+    if verdict not in EVENT_TIME_REWRITING_VERDICTS:
+        raise KBSBasisError(f"event_time_rewriting_verdict_invalid:{verdict}")
+    return "retrospectively_rewritten" if verdict == "retrospectively_rewritten" else "not_observed"
 
 
 # ---------------------------------------------------------------------------------
@@ -1001,12 +1150,113 @@ def scale_quotient_class(
 #: share count to be precise.
 SHARE_COUNT_SLACK_MULTIPLE = 2.0
 
+#: The two admissible routes to an absolute scale, named so an artifact records *which* one
+#: carried the result rather than just that something did.
+ANCHOR_SHARE_COUNT = "issued_share_count_plausibility_falsifier"
+ANCHOR_UNIT_IDENTITY = "numeric_identity_with_an_independently_unit_qualified_series"
+
+#: How many exactly-equal sessions, across how many tickers, an identity anchor needs.
+#: Equality under a thousand-fold unit difference would require the two providers to
+#: disagree about the traded quantity by exactly 1000x on every matched session, so a
+#: handful of matches already settles it; the thresholds are here to exclude an accidental
+#: single coincidence, not to accumulate evidence.
+MIN_IDENTITY_SESSIONS = 5
+MIN_IDENTITY_TICKERS = 2
+
+
+def unit_identity_anchor(
+    *,
+    per_ticker_rows: Mapping[str, Sequence[Mapping[str, Any]]],
+    reference_volumes: Mapping[str, Mapping[str, Any]],
+    reference_identity: str,
+    reference_unit: str,
+    reference_unit_qualification: str,
+) -> dict[str, Any]:
+    """An absolute anchor built from numeric equality, using no share count at all.
+
+    If another series is known to count individual shares, and this provider returns the
+    *identical integer* for the same ticker and session, then this provider's figure counts
+    the same things. A thousand-fold unit difference is arithmetically impossible while the
+    two numbers are equal -- it would require the underlying traded quantity to be both X
+    and 1000X on every matched session.
+
+    Two boundaries this anchor does **not** cross, and which callers must not read into it:
+
+    * It transfers *magnitude only*. Market composition, adjustment behaviour and every
+      other semantic stay exactly where they were; the reference contract's own scope is
+      not inherited. :func:`assert_identity_anchor_is_magnitude_only` enforces it.
+    * It cannot outrank its reference. An anchor resting on an ``empirically_deduced``
+      unit verdict is itself at best ``empirically_deduced``.
+    """
+    if reference_unit != "shares":
+        return {
+            "available": False,
+            "reason": f"reference_series_unit_is_not_shares:{reference_unit}",
+            "anchor": ANCHOR_UNIT_IDENTITY,
+        }
+    if tiers.may_claim_official_semantics(reference_unit_qualification):
+        # Not an error -- but the ceiling below must still be the reference's tier, and a
+        # documented reference would let this anchor claim more than the KBS lane may.
+        reference_unit_qualification = tiers.EMPIRICALLY_DEDUCED
+
+    matches: dict[str, int] = {}
+    compared: dict[str, int] = {}
+    for ticker, rows in per_ticker_rows.items():
+        reference = reference_volumes.get(ticker) or {}
+        for row in rows:
+            session = row["kbs.session_date"]
+            observed = row.get("kbs.observed_daily_volume")
+            if session not in reference or observed is None:
+                continue
+            compared[ticker] = compared.get(ticker, 0) + 1
+            if float(observed) == float(reference[session]):
+                matches[ticker] = matches.get(ticker, 0) + 1
+
+    matched_tickers = sorted(ticker for ticker, count in matches.items() if count)
+    total_matches = sum(matches.values())
+    sufficient = (
+        total_matches >= MIN_IDENTITY_SESSIONS and len(matched_tickers) >= MIN_IDENTITY_TICKERS
+    )
+    return {
+        "available": sufficient,
+        "anchor": ANCHOR_UNIT_IDENTITY,
+        "reference_identity": reference_identity,
+        "reference_unit": reference_unit,
+        "reference_unit_qualification": reference_unit_qualification,
+        "sessions_compared": sum(compared.values()),
+        "sessions_exactly_equal": total_matches,
+        "tickers_with_exact_equality": matched_tickers,
+        "per_ticker_exact_equality": dict(sorted(matches.items())),
+        "implied_volume_scale": 1 if sufficient else None,
+        "qualification_ceiling": reference_unit_qualification,
+        "transfers": "magnitude_only",
+        "does_not_transfer": [
+            "market_composition",
+            "adjustment_behaviour",
+            "historical_mutability",
+            "source_authority",
+        ],
+        "reason": None if sufficient else "insufficient_exact_equality_across_tickers",
+    }
+
+
+def assert_identity_anchor_is_magnitude_only(anchor: Mapping[str, Any]) -> None:
+    """Refuse an identity anchor that has been made to carry a semantic verdict."""
+    if anchor.get("anchor") != ANCHOR_UNIT_IDENTITY:
+        return
+    if anchor.get("transfers") != "magnitude_only":
+        raise KBSBasisError("identity_anchor_must_transfer_magnitude_only")
+    for forbidden in ("market_scope", "volume_market_scope", "composition", "source_authority"):
+        if anchor.get(forbidden) is not None:
+            raise KBSBasisError(f"identity_anchor_must_not_carry_semantics:{forbidden}")
+
 
 def resolve_scale_degeneracy(
     *,
     members: Sequence[tuple[int, int]],
     per_ticker_rows: Mapping[str, Sequence[Mapping[str, Any]]],
     share_count_bounds: Mapping[str, Mapping[str, Any]] | None,
+    identity_anchor: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Break a quotient tie with an absolute magnitude bound, or refuse to break it.
 
@@ -1027,12 +1277,45 @@ def resolve_scale_degeneracy(
             "route": "no_degeneracy",
             "members": [list(member) for member in members],
         }
-    if not share_count_bounds:
+    if identity_anchor is not None:
+        assert_identity_anchor_is_magnitude_only(identity_anchor)
+    usable_identity = bool(identity_anchor and identity_anchor.get("available"))
+    if not share_count_bounds and not usable_identity:
         return {
             "resolved": False,
             "route": "no_absolute_anchor_supplied",
             "members": [list(member) for member in members],
             "reason": "vwap_identity_constrains_only_the_scale_quotient",
+            "identity_anchor": dict(identity_anchor) if identity_anchor else None,
+        }
+
+    # The identity anchor is tried first: it fixes the scale from an arithmetic equality and
+    # needs no share count, no slack multiple and no judgement about what volume is
+    # plausible. The plausibility bound is the corroborating second route, not the primary.
+    if usable_identity:
+        scale = identity_anchor["implied_volume_scale"]
+        isolated = [member for member in members if member[0] == scale]
+        if len(isolated) == 1:
+            return {
+                "resolved": True,
+                "selected": {
+                    "volume_scale": isolated[0][0],
+                    "trading_value_scale": isolated[0][1],
+                },
+                "route": ANCHOR_UNIT_IDENTITY,
+                "members": [list(member) for member in members],
+                "identity_anchor": dict(identity_anchor),
+                "qualification_ceiling": identity_anchor["qualification_ceiling"],
+                "corroborating_route": ANCHOR_SHARE_COUNT if share_count_bounds else None,
+                "anchor_is_a_falsifier_not_a_measurement": False,
+            }
+
+    if not share_count_bounds:
+        return {
+            "resolved": False,
+            "route": "identity_anchor_did_not_isolate_one_member",
+            "members": [list(member) for member in members],
+            "identity_anchor": dict(identity_anchor) if identity_anchor else None,
         }
 
     rejections: list[dict[str, Any]] = []
@@ -1086,10 +1369,17 @@ def resolve_scale_degeneracy(
     return {
         "resolved": True,
         "selected": {"volume_scale": surviving[0][0], "trading_value_scale": surviving[0][1]},
-        "route": "absolute_magnitude_bound_against_retained_issued_share_count",
+        "route": ANCHOR_SHARE_COUNT,
         "members": [list(member) for member in members],
         "rejections": rejections,
+        "identity_anchor": dict(identity_anchor) if identity_anchor else None,
         "anchor_is_a_falsifier_not_a_measurement": True,
+        "anchor_admissible_for_valuation": False,
+        "anchor_admissible_for_valuation_note": (
+            "An unqualified share count is admissible against a thousand-fold tie and "
+            "inadmissible in a market capitalisation. Usability as a falsifier is not a "
+            "qualification, and this key exists so nobody reuses it as one."
+        ),
     }
 
 
@@ -1104,6 +1394,7 @@ def select_unit_scales(
     per_ticker_rows: Mapping[str, Sequence[Mapping[str, Any]]],
     *,
     share_count_bounds: Mapping[str, Mapping[str, Any]] | None = None,
+    identity_anchor: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Choose the one defensible ``(v, va)`` scale pair, or refuse to choose.
 
@@ -1241,8 +1532,10 @@ def select_unit_scales(
         members=members,
         per_ticker_rows=per_ticker_rows,
         share_count_bounds=share_count_bounds,
+        identity_anchor=identity_anchor,
     )
     base["scale_quotient"] = quotient
+    base["unit_scale_ratio"] = quotient
     base["scale_quotient_meaning"] = (
         "value units per one raw v unit; this is what the VWAP identity constrains and "
         "the only part of the result the price-range test earns on its own"
@@ -1255,6 +1548,8 @@ def select_unit_scales(
             # them would assert an absolute scale that nothing here established.
             "volume_unit": "scaled_units",
             "trading_value_unit": "scaled_units",
+            "absolute_scale": "unresolved",
+            "absolute_scale_anchor": None,
             "qualification": tiers.OBSERVED_ONLY,
             "reason": "scale_quotient_established_but_absolute_scale_undetermined",
         }
@@ -1304,6 +1599,10 @@ def select_unit_scales(
         "per_ticker_support": {ticker: dict(item) for ticker, item in per_ticker_winner.items()},
         "volume_unit": _volume_unit_for(winner["volume_scale"]),
         "trading_value_unit": _trading_value_unit_for(winner["trading_value_scale"]),
+        "absolute_scale": "resolved",
+        "absolute_scale_anchor": degeneracy["route"],
+        # Never `documented_verified`: both routes are observations, and the identity route
+        # additionally cannot outrank the reference verdict it leans on.
         "qualification": tiers.EMPIRICALLY_DEDUCED,
         "reason": "one_candidate_held_across_every_ticker_and_every_competitor_was_rejected",
         "mean_absolute_residual_to_range_midpoint": winner["mean_absolute_residual_to_range_midpoint"],
@@ -1402,6 +1701,12 @@ def volume_adjustment_verdict(
     ``price_basis_verdict`` is accepted precisely so the refusal can be explicit: a price
     adjustment is a restatement of what a share was worth, and a volume is a count of
     shares that changed hands. Neither implies the other in either direction.
+    ``share_event_window_tested`` is what the *caller* believes; the snapshot pair inside
+    ``rewrite_test`` is what actually happened, and the pair wins. A pair that does not
+    straddle a share event cannot support any corporate-action volume verdict, in either
+    direction -- so that check comes first, before the diff is even consulted. Otherwise a
+    post-event revision would be read as an event adjustment purely because both look like
+    "the volume changed".
     """
     del price_basis_verdict  # deliberately unused; it is not an input to this question
     if rewrite_test is None:
@@ -1410,27 +1715,43 @@ def volume_adjustment_verdict(
             "reason": "no_retained_as_of_pair_covering_a_share_event_window",
             "derived_from_price_adjustment": False,
         }
-    if rewrite_test.get("sessions_with_changed_volume"):
-        return {
-            "verdict": "retrospectively_rewritten_unknown_method",
-            "reason": "the_same_historical_sessions_returned_different_volumes",
-            "sessions_with_changed_volume": rewrite_test["sessions_with_changed_volume"],
-            "derived_from_price_adjustment": False,
-            "note": "Rewritten is not the same as event-adjusted. Without a share-event "
-            "window in the comparison, the cause is unidentified.",
-        }
-    if not share_event_window_tested:
+    pair = rewrite_test.get("snapshot_pair") or {}
+    pair_class = pair.get("pair_class", PAIR_NO_EVENT_DECLARED)
+    spans_event = bool(pair.get("event_time_testable")) and bool(share_event_window_tested)
+
+    if not spans_event:
+        changed = rewrite_test.get("sessions_with_changed_volume") or 0
         return {
             "verdict": "not_observed",
-            "reason": "no_volume_change_observed_but_no_share_event_spanned_the_comparison",
+            "reason": (
+                "snapshot_pair_does_not_straddle_a_qualified_share_event"
+                if pair_class != PAIR_SPANS_EVENT
+                else "pair_straddles_an_event_that_is_not_share_related"
+            ),
+            "snapshot_pair_class": pair_class,
             "sessions_compared": rewrite_test.get("sessions_compared", 0),
+            "sessions_with_changed_volume": changed,
             "derived_from_price_adjustment": False,
-            "note": "A control window cannot demonstrate that a share event would leave "
-            "volume alone.",
+            "note": (
+                "Neither an unchanged nor a changed volume qualifies here. Unchanged cannot "
+                "show what a share event would do; changed, in a pair that does not "
+                "straddle one, is an ordinary provider revision and not an adjustment."
+            ),
+        }
+    if rewrite_test.get("sessions_with_changed_volume"):
+        return {
+            "verdict": "share_event_adjusted_volume_observed",
+            "reason": "volumes_changed_across_a_comparison_spanning_a_qualified_share_event",
+            "snapshot_pair_class": pair_class,
+            "sessions_with_changed_volume": rewrite_test["sessions_with_changed_volume"],
+            "derived_from_price_adjustment": False,
+            "note": "Scoped to the tested event and window. The provider's method is "
+            "not thereby established.",
         }
     return {
         "verdict": "unadjusted_volume_empirically_supported",
         "reason": "volumes_unchanged_across_a_comparison_spanning_a_qualified_share_event",
+        "snapshot_pair_class": pair_class,
         "sessions_compared": rewrite_test.get("sessions_compared", 0),
         "derived_from_price_adjustment": False,
     }

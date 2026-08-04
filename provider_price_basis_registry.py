@@ -78,11 +78,25 @@ _ACTIVE: dict[str, dict[str, Any]] = {
         "provider": "KBS",
         "status": "active",
         "source_field_identity": "observed",
-        # Nine sessions re-requested three days after a retained observation came back
-        # byte-identical, which is a *control*: no ex-right date falls inside that window.
-        # The series is demonstrably restated at event boundaries, so "not_observed" here
-        # records the absence of a rewrite test that spans one, not an immutable history.
+        # Three distinct questions, kept apart because conflating them is how a control
+        # result gets read as an immutability proof.
+        #
+        # 1. Event-time rewriting -- do historical rows change when a corporate action
+        #    becomes effective? NOT TESTABLE from any retained pair. The earliest KBS
+        #    payload for every tested window is 2026-08-04 and every qualified ex-right date
+        #    in those windows precedes it, so both snapshots sit on the same side of the
+        #    event. This is terminal for the retained evidence: a later request produces
+        #    another post-event snapshot, and elapsed time is not the missing ingredient.
+        #    Only a snapshot retained *before* a future event can answer it -- see
+        #    kbs_mutability_protocol.
+        # 2. Post-event snapshot stability -- observed over 2026-08-01..2026-08-04, 9
+        #    sessions, no change. A real finding, and not evidence about (1).
+        # 3. Volume corporate-action adjustment -- see volume_adjustment_basis below.
         "historical_mutability": "not_observed",
+        "event_time_rewriting": "not_testable_from_retained_pairs",
+        "event_time_rewriting_route": "prospective_pre_event_snapshot_required",
+        "post_event_snapshot_stability": "observed_for_tested_retrieval_interval",
+        "post_event_stability_interval": ["2026-08-01", "2026-08-04"],
         "price_basis": "empirically_event_adjusted",
         "price_basis_qualification": "empirically_deduced",
         "observed_adjustment_dimensions": ["cash_distribution", "share_related_event"],
@@ -94,13 +108,34 @@ _ACTIVE: dict[str, dict[str, Any]] = {
         "volume_unit": "shares",
         "trading_value_unit": "VND",
         "volume_unit_qualification": "empirically_deduced",
+        "trading_value_unit_qualification": "empirically_deduced",
+        # The price-range test earns the *quotient* of the two scales and nothing more --
+        # (1,1) and (1000,1000) are indistinguishable by it in principle. The absolute
+        # scale is earned separately, by two independent routes:
+        #   primary  -- KBS returns integers exactly equal to a locally stored VCI series
+        #               on 34 sessions across all three tickers, and VCI's volume unit was
+        #               established from its own per-trade tape, not from a plausibility
+        #               bound. Equality is impossible under a thousand-fold difference.
+        #               Transfers magnitude only; VCI's market scope is NOT inherited.
+        #   corroborating -- (1000,1000) implies HPG trading 27,485,500,000 shares on
+        #               2026-05-18 against a retained 8,442,964,520 issued. Rejected with a
+        #               1.63x margin.
+        # Neither route can reach documented_verified, and the share count remains
+        # inadmissible for valuation -- see unit_anchor_admissible_for_valuation.
+        "unit_scale_ratio": 1.0,
+        "absolute_scale": "resolved",
+        "absolute_scale_anchor": "numeric_identity_with_an_independently_unit_qualified_series",
+        "absolute_scale_corroborating_anchor": "issued_share_count_plausibility_falsifier",
+        "unit_anchor_admissible_for_valuation": False,
         "volume_adjustment_basis": "not_observed",
+        "volume_adjustment_route": "prospective_pre_event_snapshot_spanning_a_share_event",
         "volume_market_scope": "unknown",
         "liquidity_actionable": False,
         "evidence": [
             "operations-review/kbs-empirical-basis-20260804/basis_summary.json",
             "operations-review/kbs-empirical-basis-20260804/evidence_manifest.json",
             "operations-review/kbs-empirical-basis-20260804/KBS_EMPIRICAL_BASIS.md",
+            "operations-review/kbs-empirical-closeout-20260804/KBS_EMPIRICAL_CLOSEOUT.md",
         ],
         "established_at": "2026-08-04",
         "limitations": [
@@ -108,11 +143,14 @@ _ACTIVE: dict[str, dict[str, Any]] = {
             "history, rights issues, par-value changes and other exchanges are untested.",
             "No first-party methodology exists, so which events the provider adjusts for "
             "-- and which it silently does not -- is unknown.",
-            "The unit result fixes the ratio of the two scales from the price range and "
-            "its absolute anchor from a retained, unqualified issued-share count used only "
-            "as an order-of-magnitude falsifier.",
+            "The unit result fixes the ratio of the two scales from the price range; the "
+            "absolute scale rests on numeric identity with a VCI series whose own unit "
+            "verdict is itself only empirically deduced, corroborated by an unqualified "
+            "issued-share count used solely as an order-of-magnitude falsifier.",
             "Two of thirty-eight eligible rows are explained by no candidate scale and are "
             "retained as contradictions rather than resolved.",
+            "Event-time historical rewriting is untestable from any retained evidence and "
+            "cannot be made testable by re-requesting an already-post-event window.",
         ],
     },
 }

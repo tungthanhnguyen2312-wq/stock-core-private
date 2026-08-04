@@ -16,7 +16,17 @@
     keep `provider_methodology = unknown` unless a first-party source says otherwise, and
     never quote a verdict outside the windows that produced it.
 8c. A verdict belongs to one provider. It never transfers to another provider and never
-    lands on a field that does not say whose number it is.
+    lands on a field that does not say whose number it is. A *magnitude* anchor borrowed
+    from another series is the one exception, and it carries nothing else — not composition,
+    not adjustment behaviour, not authority.
+8d. To test whether a source rewrites history at an event, you need a snapshot retained
+    **before** that event. Two snapshots taken after it measure post-event stability only,
+    and no amount of elapsed time between them changes that. Never propose re-requesting an
+    already-post-event window as a substitute; check the pair with
+    `kbs_empirical_basis.classify_snapshot_pair` before claiming an event-time result.
+8e. A derived quantity constrains only what its algebra constrains. A ratio identity fixes
+    a ratio; naming the absolute terms needs a separately identified anchor, and without one
+    the answer is `unresolved`, not the plausible-looking option.
 9. Write detailed diagnostics locally; keep final chat output compact.
 10. Do not run full suites unless a real cross-cutting source regression justifies it.
 11. Do not publish or deploy unless explicitly requested.

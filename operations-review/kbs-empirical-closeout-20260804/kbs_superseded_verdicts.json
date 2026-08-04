@@ -1,0 +1,26 @@
+[
+  {
+    "asserted_at": "phase 1C, 2026-08-01",
+    "asserted_in": [
+      "operations-review/phase_1c_kbs_ohlcv_semantics_20260801T081200Z.md (KBS_PRICE_BASIS: ABSENT, KBS_VOLUME_BASIS: ABSENT, PROVIDER_QUALIFICATION_BRANCH_CLOSED: YES)"
+    ],
+    "asserted_scope": "the KBS daily OHLCV lane in its entirety",
+    "asserted_value": "fields_unusable_because_no_documented_semantics_were_found",
+    "narrowed_to": "documented_semantics=absent; field_identity=qualified; empirical_semantics=partially_available; descriptive_capability=available; technical_capability=provider_scoped_available; liquidity_capability=unavailable",
+    "provider": "KBS",
+    "retained_correct_for": "No documented semantic metadata exists for the KBS OHLCV fields. Re-confirmed on 2026-08-04 against six freshly retrieved payloads: the response carries t/o/h/l/c/v/va and nothing else.",
+    "retained_for": "provenance; the report and its findings are not deleted or edited",
+    "root_cause": "absence_of_documentation_treated_as_absence_of_usable_data",
+    "root_cause_detail": "The report established that the provider publishes no semantics and then concluded that every consumer must fail closed. Those are different claims. A field can have a known identity and a reproducibly demonstrated behaviour and still no first-party definition, and a chart of the series was never a claim about adjustment or market composition in the first place.",
+    "status": "superseded",
+    "superseded_at": "2026-08-04",
+    "superseded_by": "provider_price_basis_registry:KBS@1.0.0",
+    "superseding_evidence": [
+      "Pre-event prices sit off the HOSE tick lattice, so they were never matched order prices; the off-lattice prefix terminates exactly at a qualified ex-right date for HPG (2026-05-25 share issue), VCB (2026-07-23 cash) and VNM (2026-06-26 cash).",
+      "The provider omits `va` over exactly the off-lattice runs and emits it over exactly the on-lattice ones, in all six windows -- an independent second signal that tracks the boundary rather than the calendar.",
+      "36 of 38 eligible rows across three tickers place va/v inside the session range at one scale quotient, and every competing quotient is rejected.",
+      "Two no-event control windows produced no boundary, which is what falsifies the event attribution if it is wrong."
+    ],
+    "verdict_id": "phase1c_kbs_fields_unusable"
+  }
+]

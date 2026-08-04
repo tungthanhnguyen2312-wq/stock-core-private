@@ -65,8 +65,37 @@ liquidity_actionable      = false
 ```
 
 Tested on HPG, VNM and VCB, HOSE, 2026 only, across three qualified ex-right boundaries and
-two no-event controls. `historical_mutability = not_observed` records the absence of a
-rewrite test spanning an event, not an immutable history.
+two no-event controls.
+
+## The three mutability questions
+
+`historical_mutability = not_observed` is one answer to one of three separate questions.
+They were previously described in a way that ran them together, and the distinction is the
+whole reason the last of them is still open:
+
+| Question | Status | What would settle it |
+|---|---|---|
+| **Event-time historical rewriting** — do historical rows change when a corporate action becomes effective? | `not_testable_from_retained_pairs` | A snapshot retained **before** a future event plus a matching one after it |
+| **Post-event snapshot stability** — do repeated post-event requests return the same values? | `observed_for_tested_retrieval_interval` (9 sessions, 2026-08-01 → 2026-08-04, no change) | Already answered, for that interval only |
+| **Volume corporate-action adjustment** — is historical `v` rescaled by a share event? | `not_observed` | A pre/post as-of pair straddling a **share** event, or an independent direct contract |
+
+**Correction (2026-08-04).** Earlier wording said the retained comparison "spans no
+qualified share event". That is true and it misleads, because it implies the gap was a
+choice of window. It was not. Both retrievals post-date every qualified ex-right date in
+every tested window, so no window selection and no amount of further elapsed time can
+produce a pre/post pair from this evidence. **Event-time historical mutability requires a
+snapshot retained before a future event and a matching snapshot retained after the event.**
+A second request against an already-post-event window measures post-event stability and
+nothing else.
+
+`classify_snapshot_pair` enforces this: a pair whose retrievals sit on the same side of the
+event returns `both_post_event`, and `historical_rewrite_test` then reports
+`event_time_rewriting = not_testable_from_this_pair` however clean the diff is.
+`kbs_mutability_protocol.assert_not_a_retrospective_substitute` raises outright.
+
+The prospective protocol is `kbs_mutability_protocol.py`. It is inert: no network, no
+scheduling, no polling, no automatic acquisition. See the table under "Prospective
+protocol" below.
 
 ## What the evidence supports, and where each result stops
 
@@ -79,11 +108,18 @@ does not adjust for.
 
 **Units.** The VWAP identity constrains only the *quotient* of the two scales;
 `(1, 1)` and `(1000, 1000)` are indistinguishable by it in principle. The quotient (1.0)
-is earned from 36 discriminating rows across three tickers and three price levels. The
-absolute anchor is earned separately, from a retained issued-share count used strictly as an
-order-of-magnitude falsifier — admissible because the tie is a factor of a thousand, and
-recorded as a falsifier rather than a measurement. Two rows are explained by no candidate
-scale and are retained as contradictions.
+is earned from 36 discriminating rows across three tickers and three price levels. Two rows
+are explained by no candidate scale and are retained as contradictions.
+
+The **absolute** scale is earned separately, by two independent routes. Without either, the
+units report `scaled_units` at `observed_only` and `absolute_scale = unresolved`.
+
+| Route | Evidence | Authority |
+|---|---|---|
+| `numeric_identity_with_an_independently_unit_qualified_series` (**primary**) | KBS returns integers exactly equal to locally stored VCI volumes on **34 sessions across all three tickers**. VCI's volume unit was established from its own per-trade tape (commit `63ecc48`), not from a plausibility bound. Equality is arithmetically impossible under a thousand-fold unit difference. | `empirically_deduced`, capped by the reference verdict's own tier. Transfers **magnitude only** — VCI's market scope, adjustment behaviour and source authority are *not* inherited (`assert_identity_anchor_is_magnitude_only`). |
+| `issued_share_count_plausibility_falsifier` (corroborating) | `(1000, 1000)` implies HPG trading 27,485,500,000 shares on 2026-05-18 against a retained 8,442,964,520 issued — rejected past a deliberately loose 2× ceiling, with a 1.63× margin. | `observed_only`. The share count is a **falsifier, not a measurement**, and stays inadmissible for valuation (`unit_anchor_admissible_for_valuation = False`). |
+
+Neither route reaches `documented_verified`, and no route can.
 
 **Volume.** Not derived from the price finding, in either direction.
 `volume_adjustment_verdict` takes the price verdict as an argument solely so the refusal is
@@ -120,6 +156,35 @@ point-in-time source for the historical-truth class.
 The three forbidden return labels — `raw_as_traded_return`, `official_exchange_return`,
 `total_shareholder_return` — raise rather than returning unavailable, because a mislabelled
 return is worse than a missing one.
+
+## Prospective protocol — `kbs_mutability_protocol.py`
+
+Designed, not executed. It issues no request, schedules nothing, watches for no event and
+polls nothing; `assert_protocol_inert` refuses a record that switched any of that on, and
+the test suite checks the module's parsed import graph rather than trusting the prose.
+
+| Requirement | Enforced by |
+|---|---|
+| Pre-event snapshot retrieved **strictly before** the ex-right date | `build_pre_event_manifest` raises `snapshot_is_not_pre_event` otherwise |
+| Historical window closed before the ex-date, so every row is already final | `build_pre_event_manifest` |
+| Post-event request identical in provider, ticker, endpoint, parameters and window | `assert_post_event_request_matches` |
+| Immutable raw bytes, hash, schema fingerprint, parameters, retrieval instant | `PRE_EVENT_MANIFEST_FIELDS` (16 required) |
+| Field-by-field diff of `o` `h` `l` `c` `v` `va`, row presence and schema | `compare_snapshots` |
+| A no-event control ticker or window | `control_required`; a control that also moved yields `comparison_conflicted` |
+| Change classes kept apart | `price_rewrite`, `volume_rewrite`, `value_rewrite`, `schema_change`, `unrelated_provider_correction` |
+| One event stays one event | `assert_verdict_scoped` refuses a verdict that names a methodology or widens coverage |
+| Nothing is activated by a result | `contract_effect` moves the mutability dimensions only |
+
+Permitted verdicts: `event_time_price_rewrite_observed`, `event_time_volume_rewrite_observed`,
+`price_rewrite_without_volume_rewrite`, `no_rewrite_observed_for_tested_event`,
+`provider_schema_changed`, `comparison_conflicted`, `observation_incomplete`.
+
+Artifacts land at `operations-review/kbs-mutability-observation/<ex-date>-<event-id>/<phase>/`,
+with the phase in the path — a file whose name does not say which side of the event it came
+from is one filesystem accident away from being useless.
+
+Identifying a suitable future event and authorising the pre-event snapshot is an owner
+decision. The protocol is inert until one is taken.
 
 ## Boundaries
 
