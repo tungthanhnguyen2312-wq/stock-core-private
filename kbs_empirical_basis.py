@@ -348,6 +348,11 @@ def parse_daily_payload(payload: Any, *, symbol: str) -> list[dict[str, Any]]:
 
         # A missing v or va stays missing. Zero is a meaningful observation -- a session
         # with no trading -- and None is not, so the two are never merged.
+        #
+        # The *state* is recorded beside the value because the value alone cannot carry it:
+        # a key the provider never sent and a key it sent as null both parse to None, and
+        # they are different observations about the source. Anything downstream that reasons
+        # about coverage reads the state field, not the None.
         row: dict[str, Any] = {
             "kbs.raw_t": str(item["t"]),
             "kbs.session_date": session,
@@ -355,12 +360,69 @@ def parse_daily_payload(payload: Any, *, symbol: str) -> list[dict[str, Any]]:
             "kbs.raw_h": prices["h"],
             "kbs.raw_l": prices["l"],
             "kbs.raw_c": prices["c"],
-            "kbs.raw_v": _optional_number(item.get("v"), field="v", session=session),
-            "kbs.raw_va": _optional_number(item.get("va"), field="va", session=session),
         }
+        # The state is decided first and the value is read from it. Deriving the value
+        # independently is what let a malformed `va` abort a payload whose OHLC was
+        # perfectly good, and it is also what made an omitted field indistinguishable from
+        # a null one. A defect in one optional field is now recorded, not fatal.
+        for field, target in (("v", "kbs.raw_v"), ("va", "kbs.raw_va")):
+            state = _field_state(item, field, session=session)
+            row[f"{target}_state"] = state
+            row[target] = (
+                _optional_number(item[field], field=field, session=session)
+                if state in _NUMERIC_FIELD_STATES
+                else None
+            )
         rows.append(row)
     rows.sort(key=lambda row: row["kbs.session_date"])
     return rows
+
+
+#: The observable states of one optional numeric field in one raw payload row. These are
+#: states of the *provider's bytes*, not of anything this repository did to them.
+FIELD_STATE_PRESENT_NUMERIC = "present_numeric"
+FIELD_STATE_PRESENT_ZERO = "present_zero"
+FIELD_STATE_PRESENT_NULL = "present_null"
+FIELD_STATE_OMITTED = "field_omitted"
+FIELD_STATE_MALFORMED = "malformed"
+
+RAW_FIELD_STATES = (
+    FIELD_STATE_PRESENT_NUMERIC,
+    FIELD_STATE_PRESENT_ZERO,
+    FIELD_STATE_PRESENT_NULL,
+    FIELD_STATE_OMITTED,
+    FIELD_STATE_MALFORMED,
+)
+
+#: The two states that carry a number. A zero is one of them: a session that traded nothing
+#: is a measurement, and dropping it would bias every mean upward while looking careful.
+_NUMERIC_FIELD_STATES = frozenset({FIELD_STATE_PRESENT_NUMERIC, FIELD_STATE_PRESENT_ZERO})
+
+
+def _field_state(item: Mapping[str, Any], field: str, *, session: str) -> str:
+    """Classify one raw field's state, keeping four kinds of "no number" apart.
+
+    ``field_omitted`` (the provider never sent the key), ``present_null`` (it sent the key
+    with no value), ``present_zero`` (it sent a real zero) and ``malformed`` are four
+    different statements about the source. Collapsing them -- which a plain ``.get()``
+    does -- destroys the only evidence that says which one happened.
+    """
+    if field not in item:
+        return FIELD_STATE_OMITTED
+    value = item[field]
+    if value is None:
+        return FIELD_STATE_PRESENT_NULL
+    if isinstance(value, bool):
+        return FIELD_STATE_MALFORMED
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return FIELD_STATE_MALFORMED
+    if number != number:  # NaN is a malformed number, not an absent one
+        return FIELD_STATE_MALFORMED
+    if number < 0:
+        raise KBSBasisError(f"daily_row_{field}_negative:@{session}")
+    return FIELD_STATE_PRESENT_ZERO if number == 0 else FIELD_STATE_PRESENT_NUMERIC
 
 
 def _optional_number(value: Any, *, field: str, session: str) -> float | None:
@@ -474,7 +536,12 @@ def normalize_daily(raw_rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "kbs.observed_low_vnd": float(row["kbs.raw_l"]),
             "kbs.observed_close_vnd": float(row["kbs.raw_c"]),
             "kbs.observed_daily_volume": row["kbs.raw_v"],
+            "kbs.observed_daily_volume_state": row.get("kbs.raw_v_state"),
             "kbs.observed_daily_trading_value": row["kbs.raw_va"],
+            # Carried through untouched. Normalisation must not be able to turn "the
+            # provider never sent this" into "we have no value for this" -- they are the
+            # same None and different facts.
+            "kbs.observed_daily_trading_value_state": row.get("kbs.raw_va_state"),
         }
         for row in raw_rows
     ]

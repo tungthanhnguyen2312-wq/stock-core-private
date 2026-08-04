@@ -488,7 +488,8 @@ def analyse() -> dict:
             "recorded. Not excluded for any single window; weakened by three windows across "
             "three tickers each matching a separately recorded event of the expected kind.",
             "va is simply not retained for older sessions. Rejected: HPG 2026-07-20..30 "
-            "carries va while VCB 2026-07-16..17 does not, so presence tracks the ex-right "
+            "carries va while VCB 2026-07-16..17 does not, so presence is associated with "
+            "the ex-right "
             "boundary and not the calendar.",
             "va includes a trading component the OHLC range does not represent.",
             "v and va have different market scopes, so their ratio is not a session VWAP.",

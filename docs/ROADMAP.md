@@ -51,6 +51,15 @@ capitalisation and therefore waits on pillar B.
   `empirically_deduced`. Adds `kbs_mutability_protocol.py` — the prospective pre/post
   observation design, inert by contract. No capability changed.
   `operations-review/kbs-empirical-closeout-20260804/KBS_EMPIRICAL_CLOSEOUT.md`.
+- **P0-Z.2 KBS trading-value coverage and safe-aggregation contract shipped 2026-08-04 —
+  PASS, network-free.** `va` coverage is now a required input rather than a warning: 38 of
+  66 retained sessions carry it, so three windows are `partial_known`, two `complete` and
+  one `absent`. Whole-window claims require `coverage_state = complete`; partial statistics
+  must carry `statistic_scope = observed_rows_only` and declare their incomparability;
+  synthesis from price × volume is unavailable by contract and unimplemented. The
+  `va`/adjusted-row correlation (66/66, zero exceptions) is recorded as an *association*
+  with `causal_explanation = unknown`. No capability regressed.
+  `operations-review/kbs-trading-value-coverage-20260804/KBS_TRADING_VALUE_COVERAGE.md`.
 - **Event-time historical mutability is only reachable prospectively.** A snapshot retained
   *before* a future corporate action plus a matching one after it. Re-requesting an
   already-post-event window is not a substitute at any interval, and no roadmap item may

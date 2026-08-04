@@ -178,8 +178,11 @@ CAPABILITY_MATRIX: dict[str, dict[str, Any]] = {
     "kbs_descriptive_trading_value_statistics": _open(
         "kbs_descriptive_trading_value_statistics",
         CLASS_DESCRIPTIVE,
-        "va is present on only part of the history -- the provider omits it exactly where "
-        "it restated prices -- so any statistic must state its own coverage.",
+        "va is present on only part of the retained history. In the tested windows its "
+        "absence is perfectly associated with the empirically adjusted / off-lattice row "
+        "group; the mechanism is unknown and the association is not generalised beyond "
+        "those windows. Coverage is enforced by kbs_trading_value_coverage, not by this "
+        "note: an aggregate claiming a whole window must prove the window is covered.",
     ),
     "kbs_provider_relative_volume": _open(
         "kbs_provider_relative_volume",

@@ -102,7 +102,9 @@ protocol" below.
 **Price.** Pre-event sessions sit off the HOSE tick lattice, so they were never matched
 order prices; the off-lattice prefix terminates exactly at a qualified ex-right date in
 three windows across three tickers. Independently, the provider omits `va` over exactly the
-off-lattice runs — presence tracks the boundary, not the calendar. This says the series is
+off-lattice runs — its presence is associated with the boundary and not with the calendar,
+which is what rules out a retention policy. The mechanism is unknown; see
+`kbs_trading_value_coverage.OBSERVED_ASSOCIATION`. This says the series is
 event-adjusted. It does not say by what method, nor which events the provider silently
 does not adjust for.
 

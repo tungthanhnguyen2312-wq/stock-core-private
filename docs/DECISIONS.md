@@ -5,6 +5,66 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-04 - P0-Z.2 KBS Trading-Value Coverage and Safe Aggregation
+
+- **Coverage became an input instead of a warning.** `va` is present on 38 of 66 retained
+  sessions. A period total over those 38 rows looks exactly like a complete one — same type,
+  same order of magnitude, nothing in the output marking the difference. So a whole-window
+  claim now requires `coverage_state = complete`, and one that cannot get it must rename
+  itself: `statistic_scope = observed_rows_only`, `not_comparable_to_complete_period_total`,
+  covered and excluded sessions enumerated. `build_result` is the only constructor, so the
+  number and its metadata are produced in one call.
+
+- **The relabelling that matters is blocked by arithmetic.** Flipping `coverage_state` to
+  `complete` *and* `statistic_scope` to `complete_window` together passed every individual
+  field check. `assert_result_labelled` now validates the claimed state against the counts
+  the result carries: 2 covered of 3 requested cannot call itself complete, and a complete
+  result cannot carry excluded sessions.
+
+- **Two parser defects, found by trying to build the inventory.** `field_omitted` and
+  `present_null` both went through `item.get("va")` to `None`, so the two were
+  indistinguishable — and a malformed `va` aborted an entire payload whose OHLC was
+  perfectly good. The state is now decided first and the value read from it. Four kinds of
+  "no number" stay apart: omitted, null, zero, malformed; plus `row_missing` for a session
+  absent from the response.
+
+- **A real zero is usable.** `present_zero` counts toward coverage. A session that traded
+  nothing is a measurement, and excluding it would bias every mean upward while looking like
+  prudence.
+
+- **Normalized absence is not provider absence.** The `vnstock` adapter drops `va` for every
+  row regardless of what KBS sent, so a missing normalized field is evidence about our
+  configuration. `normalized_field_present` is carried separately and never merged with the
+  raw state.
+
+- **No synthesis, and nothing to disable.** `automatic_imputation_authorized` and
+  `missing_as_zero_authorized` are constants with no input that flips them.
+  `kbs.reconstructed_price_times_volume` is reserved, unimplemented and unauthorized: on
+  exactly the rows where `va` is absent the retained price is an *empirically adjusted*
+  price, so price × volume there is the product of a number the provider restated and one it
+  did not. No existing consumer creates such a field, so nothing had to be relabelled. The
+  unit work proved `va / v` lands in the session range — that validated the unit and is not
+  a licence to run the identity backwards.
+
+- **The 66/66 correlation is an association, not a mechanism.** `va` absence coincides
+  exactly with the empirically adjusted / off-lattice row group across all retained windows,
+  with zero exceptions. Recorded as `observed_association =
+  va_missing_on_tested_empirically_adjusted_rows`, `causal_explanation = unknown`,
+  `coverage_generalization = limited_to_retained_windows`. Nothing observed distinguishes a
+  provider that removes `va` when it adjusts from two fields sourced independently that
+  happen to align. Three active-source phrasings corrected; the frozen artifacts keep their
+  wording and the correction is recorded in `CORRECTED_CAUSAL_FRAMING`; the audit re-runs as
+  a standing test over active source.
+
+- **Non-effects.** No network request. No production write or publication. All 15
+  descriptive and technical capabilities remain available — an incomplete field is a reason
+  to label a statistic, not to close a chart. `volume_market_scope` stays `unknown`,
+  `liquidity_actionable` false, `is_actionable` unchanged. The `800c746` price, unit and
+  mutability contract is preserved; the prospective mutability protocol is unmodified.
+
+- Evidence: `operations-review/kbs-trading-value-coverage-20260804/`.
+  `KBS_TRADING_VALUE_COVERAGE: PASS`.
+
 ## 2026-08-04 - P0-Z.1 KBS Empirical Closeout and Prospective Mutability Protocol
 
 - **A post-event snapshot is not a substitute for a pre-event one, at any interval.** The

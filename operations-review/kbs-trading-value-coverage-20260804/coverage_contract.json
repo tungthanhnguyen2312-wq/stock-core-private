@@ -1,0 +1,145 @@
+{
+  "consumer_requirements": {
+    "builders.build_ticker_context.trading_value_passthrough": "row_level_only",
+    "candlestick_patterns.gtgd20_ty_calc": "partial_permitted_when_labelled",
+    "export_ai_bundle.ohlcv_passthrough": "row_level_only",
+    "export_ai_bundle.trading_value_passthrough": "row_level_only",
+    "opportunity_ranking.turnover_rank": "unavailable_by_contract",
+    "risk_liquidity.turnover_liquidity": "unavailable_by_contract",
+    "stock_analyzer.turnover_features": "partial_permitted_when_labelled"
+  },
+  "corrected_causal_framing": {
+    "artifacts": [
+      "operations-review/kbs-empirical-basis-20260804/KBS_EMPIRICAL_BASIS.md",
+      "operations-review/kbs-empirical-basis-20260804/capability_matrix.json",
+      "operations-review/kbs-empirical-basis-20260804/basis_summary.json",
+      "operations-review/kbs-empirical-closeout-20260804/kbs_superseded_verdicts.json"
+    ],
+    "artifacts_rewritten": false,
+    "asserted_framing": "'the provider omits va exactly where it restated prices' and 'presence tracks the ex-right boundary'.",
+    "commits": [
+      "4a07141",
+      "800c746"
+    ],
+    "corrected_at": "2026-08-04",
+    "corrected_by": "kbs_trading_value_coverage@1.0.0",
+    "corrected_framing": "In the retained tested windows, va absence is perfectly associated with the empirically adjusted / off-lattice row group. The causal mechanism is unknown and the finding is not generalised outside the retained windows.",
+    "corrected_in_active_source": [
+      "kbs_capability_matrix.CAPABILITY_MATRIX[kbs_descriptive_trading_value_statistics]",
+      "docs/kbs_empirical_basis_qualification.md",
+      "tools/run_kbs_empirical_basis.py"
+    ],
+    "evidence_changed": false,
+    "measurements_changed": false,
+    "why_it_misleads": "Both read as statements about what KBS does and why. The observation is that two row properties co-occur in the tested windows. Nothing observed distinguishes a provider that removes va when it adjusts, from two fields sourced independently that happen to align, from anything else."
+  },
+  "coverage_states": [
+    "complete",
+    "partial_known",
+    "absent",
+    "conflicted",
+    "unknown"
+  ],
+  "dataset": {
+    "automatic_imputation_authorized": false,
+    "causal_explanation": "unknown",
+    "coverage_generalization": "limited_to_retained_windows",
+    "cross_window_comparability": "limited",
+    "field": "kbs.observed_daily_trading_value",
+    "liquidity_actionable": false,
+    "missing_as_zero_authorized": false,
+    "observed_association": "va_missing_on_tested_empirically_adjusted_rows",
+    "provider": "KBS",
+    "schema_version": "1.0.0",
+    "trading_value_unit": "VND",
+    "trading_value_unit_qualification": "empirically_deduced",
+    "volume_market_scope": "unknown",
+    "window_coverage_states": [
+      "absent",
+      "complete",
+      "partial_known"
+    ]
+  },
+  "field": "kbs.observed_daily_trading_value",
+  "observed_association": {
+    "association": "va_missing_on_tested_empirically_adjusted_rows",
+    "causal_explanation": "unknown",
+    "coverage_generalization": "limited_to_retained_windows",
+    "direction": "va absent on off-lattice / empirically adjusted rows; present on tested on-lattice rows",
+    "exceptions_observed": 0,
+    "note": "An association between two observed row properties. It does not establish that the provider removes va *because* a price was adjusted, that the two fields share a pipeline, or anything else about how KBS is built. A mechanism would need a first-party statement, which does not exist.",
+    "provider_methodology": "unknown",
+    "qualification": "observed_only",
+    "sessions_observed": 66,
+    "tickers": [
+      "HPG",
+      "VCB",
+      "VNM"
+    ]
+  },
+  "operation_requirements": {
+    "average_trading_value": "partial_permitted_when_labelled",
+    "coverage_report": "row_level_only",
+    "cross_period_trading_value_comparison": "requires_complete_coverage",
+    "cross_ticker_trading_value_ranking": "unavailable_by_contract",
+    "display_observed_trading_value": "row_level_only",
+    "market_impact_from_trading_value": "unavailable_by_contract",
+    "negotiated_versus_matched_value_decomposition": "unavailable_by_contract",
+    "official_market_turnover": "unavailable_by_contract",
+    "official_vwap_claim": "unavailable_by_contract",
+    "overlapping_session_research_comparison": "partial_permitted_when_labelled",
+    "period_total_trading_value": "requires_complete_coverage",
+    "rolling_trading_value": "partial_permitted_when_labelled",
+    "row_implied_average_price": "row_level_only",
+    "synthesize_missing_trading_value_from_price_times_volume": "unavailable_by_contract",
+    "trading_value_capacity_metric": "unavailable_by_contract",
+    "trading_value_chart_with_gaps": "row_level_only",
+    "trading_value_dispersion": "partial_permitted_when_labelled",
+    "trading_value_growth": "requires_complete_coverage",
+    "trading_value_liquidity_metric": "unavailable_by_contract",
+    "trading_value_presence_anomaly_detection": "row_level_only",
+    "trading_value_technical_indicator": "requires_complete_coverage",
+    "turnover_for_period": "requires_complete_coverage",
+    "value_to_volume_ratio": "partial_permitted_when_labelled"
+  },
+  "partial_result_fields": [
+    "statistic_scope",
+    "coverage_state",
+    "covered_sessions",
+    "excluded_sessions",
+    "not_comparable_to_complete_period_total"
+  ],
+  "provider": "KBS",
+  "raw_field": "va",
+  "reconstructed_field_contract": {
+    "authorized": false,
+    "field": "kbs.reconstructed_price_times_volume",
+    "historical_interpretation": "unsupported",
+    "implemented": false,
+    "provider_observed_trading_value": false,
+    "source_field": "derived",
+    "why_it_is_not_va": "On exactly the rows where va is absent, the retained price is an empirically adjusted price. Price x volume there is not a restated turnover and not a historical one -- it is a product of a number the provider restated and a number it did not, whose meaning nobody has established."
+  },
+  "required_result_fields": [
+    "provider",
+    "coverage_state",
+    "covered_session_count",
+    "requested_session_count",
+    "missing_or_excluded_sessions",
+    "partial_coverage_warning"
+  ],
+  "row_states": [
+    "present_numeric",
+    "present_zero",
+    "present_null",
+    "field_omitted",
+    "malformed",
+    "row_missing"
+  ],
+  "schema_version": "1.0.0",
+  "source_authority": "observed_public_web_endpoint",
+  "usable_states": [
+    "present_numeric",
+    "present_zero"
+  ]
+}

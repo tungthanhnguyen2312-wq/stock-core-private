@@ -27,6 +27,15 @@
 8e. A derived quantity constrains only what its algebra constrains. A ratio identity fixes
     a ratio; naming the absolute terms needs a separately identified anchor, and without one
     the answer is `unresolved`, not the plausible-looking option.
+8f. A partial aggregate must say so in its own output. An operation claiming a whole window
+    needs `coverage_state = complete`; otherwise rename and restructure it as
+    `observed_rows_only` with its covered and excluded sessions. Never silently drop missing
+    rows and present the result as complete, and never impute a missing observation.
+8g. Keep the kinds of "no value" apart: field omitted, present-null, a real zero, malformed,
+    and a missing row are five different facts about a source. A zero is an observation.
+    Our own pipeline dropping a field is not evidence that the provider omitted it.
+8h. A correlation is not a mechanism, however clean. Record it as an observed association
+    with `causal_explanation = unknown` and scope it to the windows that produced it.
 9. Write detailed diagnostics locally; keep final chat output compact.
 10. Do not run full suites unless a real cross-cutting source regression justifies it.
 11. Do not publish or deploy unless explicitly requested.
