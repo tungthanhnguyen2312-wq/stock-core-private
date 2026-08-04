@@ -92,7 +92,11 @@
         "corporate_action_notice",
         "amendment_or_supersession_notice"
       ],
-      "discovery_path": "operator-supplied finite notice URLs only",
+      "index_document_types": [
+        "announcement_index_page"
+      ],
+      "index_document_type_rule": "A navigation/index page is a DISCOVERY INPUT, never corporate-action evidence. It is admissible for acquisition so links can be read from a stored artifact, and is refused by official_document_store.adopt_retained_document, so it can never reach the observation ledger, the resolver, qualified_official or corroborated_period_end. Declared for vsdc only, because vsdc is the one source whose index pages are observed in a retained first-party artifact (the /en/alc/6 breadcrumb in the retained VNM notice /en/ad/177392). Do not add this type to another source without the same kind of observation.",
+      "discovery_path": "operator-supplied finite notice URLs only, plus the announcement index pages named in index_document_types; no pagination, no search, no link following beyond one parsed index page",
       "requests_per_minute": 4,
       "min_request_interval_seconds": 15,
       "terms_considerations": "Public registration notices. VSDC is the authority for record dates and entitlement execution method.",

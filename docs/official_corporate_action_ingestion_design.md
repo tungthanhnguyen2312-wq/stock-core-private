@@ -53,10 +53,31 @@ The gap is not the ledger and not the adjustment maths. The gap is a **productio
 path**: today a human supplies each URL. Pillar B is the step from closed-world discovery to
 a periodic, bounded crawler with an immutable event ledger behind it.
 
-## What B2 still needs
+## B2 listing-page discovery — delivered 2026-08-04
 
-Governance is no longer the blocker; **inputs and one capability are.** A bounded discovery
-pilot for any single ticker requires all three, and none can be supplied by an agent:
+The three blockers below are resolved for `vsdc`. The registry declares
+`index_document_types: ["announcement_index_page"]` **for vsdc only**;
+`official_listing_page_parser.py` reads candidate links out of one stored artifact with no I/O
+of any kind; and the entry URL is observed in a retained artifact rather than assumed. One live
+acquisition has run (`https://vsd.vn/en/alc/6`). See `docs/STATE.md` and
+`operations-review/vnm-listing-discovery-20260804/`.
+
+**An index page is a discovery input, never evidence.** It is acquirable so links can be read
+from stored bytes, and `official_document_store.adopt_retained_document` refuses it by name, so
+it cannot reach the observation ledger, the resolver, `qualified_official` or
+`corroborated_period_end`. The two vocabularies are separate lists in the registry precisely so
+that this is structural rather than a naming convention.
+
+**What the pilot measured, and did not.** The chosen index is a chronological all-issuer feed;
+it carried no VNM entry on the day it was fetched. Extending this to a ticker whose notice is
+older than the feed window needs either a per-issuer index URL (none observed yet) or a
+deliberate decision about pagination, which the closed-world contract currently forbids. That
+is the next design question, and it is a question about *inputs*, not about the machinery.
+
+## What B2 needed (historical, resolved for vsdc)
+
+Governance was not the blocker; **inputs and one capability were.** A bounded discovery
+pilot for any single ticker required all three, and none could be supplied by an agent:
 
 1. **An owner-supplied entry URL.** Every official URL in the repository is a terminal
    document — the retained `https://vsd.vn/en/ad/177392` VSDC notice, issuer IR PDFs. Not one

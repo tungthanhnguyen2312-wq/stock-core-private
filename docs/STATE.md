@@ -392,7 +392,32 @@ registry admits, and `acquire()` now consults it before every request (it previo
 consulted nothing). The registry also supplies the requestable document vocabulary, so
 `ex_right_notice`, `listing_change_notice` and `last_registration_date_notice` are
 requestable for the first time — the ex-date the adjustment factor is blocked on could not
-previously be asked for. **No live acquisition has run yet.** The constraint is coverage: almost nothing has been
+previously be asked for.
+
+**The first live governed acquisition ran on 2026-08-04**: one VSDC announcement index page,
+`https://vsd.vn/en/alc/6`, retained at
+`sha256:97778a8215123f61db098e02682ff7e9518260aa728fa4a7224821ca1886cfd0` (51,080 bytes,
+`text/html`, HTTP 200, no redirect, one request). The entry URL was **observed**, not assumed:
+it is the breadcrumb `href="/en/alc/6"` inside the already-retained VNM notice
+`/en/ad/177392`. The registry now declares `announcement_index_page` as an
+`index_document_types` entry **for vsdc only**; index pages are acquirable discovery inputs and
+are refused by `official_document_store.adopt_retained_document`, so one can never reach the
+ledger, the resolver, `qualified_official` or `corroborated_period_end`.
+`official_listing_page_parser.py` reads candidate links out of the stored bytes with no I/O.
+See `operations-review/vnm-listing-discovery-20260804/`.
+
+That page yielded **0 VNM candidates** — it is a chronological all-issuer feed whose 14 entries
+were all dated 2026-08-03/04, and VNM's most recent VSDC announcement is 2026-06-17. The
+capability is proven; this entry URL's recency window is the limit. An **offline** parse of the
+already-retained VNM notice yields **10 deterministic VNM candidates**, none of which is a
+capital-structure event: VSDC's VNM announcements from 2023-07 to 2026-06 are cash dividends,
+AGMs and one record-date correction. A VSDC cash-dividend record-date notice carries issuer,
+ISIN, par value, record date and payment rate and **no share count**, so none of the 10 can
+corroborate `2,089,955,445`. The class that does carry an absolute registered share quantity is
+"adjustment of the number of registered shares" (observed for CTR on the acquired page and for
+VCB in the retained artifact); no such VNM notice appears in the retained window.
+
+The constraint is coverage: almost nothing has been
 acquired through it. The ledger
 holds 250 rows across **5 of 1,683 tickers** at `partial_unqualified_50_row_cap`, which is the
 single fact that keeps `qualified_official` current shares at 0 and keeps the adjustment factor

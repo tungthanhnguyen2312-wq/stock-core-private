@@ -13,18 +13,23 @@ import urllib.parse
 from typing import Any, Iterable, Mapping
 
 from official_document_acquisition import PERIODS, TICKERS, canonical_url, declared_document_types
-from official_source_registry import load_registry
+from official_source_registry import all_index_document_types, load_registry
 
 VERSION = "1.0.0"
 MAX_LISTING_PAGES = 25
 MAX_RETAINED_DOCUMENTS = 10
 
-#: The content types acquisition actually retains. Discovery accepted only `.pdf`, so an
-#: exchange or depository notice published as HTML -- the form `vsdc-record-date-notice.html`
-#: and the retained HPG `listing_change_notice` already take -- could never become a
-#: candidate, although `acquire()` retains `text/html` and the evidence store holds such
-#: documents today. One layer's idea of admissible evidence has to match the other's.
-RETAINABLE_SUFFIXES = (".pdf", ".html", ".htm")
+#: Extensions that are certainly not documents. This is a denylist on purpose.
+#:
+#: Discovery used to allowlist `.pdf`, which rejected two whole shapes of real evidence: an
+#: HTML notice (`vsdc-record-date-notice.html`, the retained HPG `listing_change_notice`), and
+#: an **extensionless** URL like `https://vsd.vn/en/ad/177392` -- the form every VSDC notice
+#: takes, including the one already retained as official VNM evidence. A URL extension is only
+#: a hint; `acquire()` validates the real `Content-Type` and refuses anything that is not
+#: `application/pdf` or `text/html`. So the hint's job is to drop stylesheets and images, not
+#: to decide what a document is.
+NON_DOCUMENT_SUFFIXES = (".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
+                         ".woff", ".woff2", ".ttf", ".eot", ".mp4", ".zip", ".xml", ".rss")
 
 
 def _sha(value: object) -> str:
@@ -68,7 +73,11 @@ def discover(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Itera
     carry an ex-date, a listing change and a last registration date. Commit 3b4cc5f fixed
     that drift in the acquirer and left it standing one import away.
     """
-    allowed_types = declared_document_types(registry if registry is not None else load_registry())
+    registry = registry if registry is not None else load_registry()
+    # An index page is a discovery *input*. Finding one linked from another index page is
+    # navigation, not a candidate document, and accepting it would be the first step of the
+    # link-following crawl the closed-world contract exists to prevent.
+    allowed_types = declared_document_types(registry) - all_index_document_types(registry)
     pages = list(listing_pages)
     if len(pages) > MAX_LISTING_PAGES:
         raise ValueError("pagination_bound_exceeded")
@@ -96,7 +105,7 @@ def discover(listing_pages: Iterable[Mapping[str, Any]], manifest_records: Itera
             candidate = page_base | {"canonical_url": url, "document_class": document_class, "reporting_period": period, "publication_date": link.get("publication_date"), "observed_at": link.get("observed_at"), "discovery_provenance": {"listing_url": listing_url, "link_text": link.get("link_text", ""), "page_index": page_index}}
             if not _stable_url(url): candidate |= {"state": "rejected", "reason": "unstable_or_session_url"}
             elif not _authority_matches(url, authority): candidate |= {"state": "rejected", "reason": "authority_rejected"}
-            elif not urllib.parse.urlsplit(url).path.lower().endswith(RETAINABLE_SUFFIXES): candidate |= {"state": "rejected", "reason": "unsupported_mime_hint"}
+            elif urllib.parse.urlsplit(url).path.lower().endswith(NON_DOCUMENT_SUFFIXES): candidate |= {"state": "rejected", "reason": "unsupported_mime_hint"}
             elif document_class not in allowed_types or period not in PERIODS or not candidate["publication_date"]: candidate |= {"state": "rejected", "reason": "ambiguous_document_identity"}
             elif url in seen: candidate |= {"state": "unchanged", "reason": "duplicate_canonical_url"}
             elif url in known: candidate |= {"state": "unchanged", "reason": "governed_manifest_url_match", "known_document_ids": sorted(str(x.get("document_id")) for x in known[url])}

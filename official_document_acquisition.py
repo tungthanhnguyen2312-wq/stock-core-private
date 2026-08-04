@@ -15,6 +15,7 @@ from typing import Any, Callable, Iterable, Mapping
 
 import requests
 
+import official_source_registry as registry_module
 from official_source_registry import ADMITTED, admit, load_registry
 
 VERSION = "1.2.0"
@@ -82,9 +83,15 @@ def declared_document_types(registry: Mapping[str, Any]) -> frozenset[str]:
     `DOCUMENT_CLASSES` was missing `ex_right_notice`, `listing_change_notice` and
     `last_registration_date_notice`, so the acquirer refused, as malformed, requests for the
     exact notices that carry an ex-date — the field the price-adjustment factor is blocked on.
+
+    Index page types (`index_document_types`) are included: an announcement index must be
+    requestable, or links can never be read from a stored artifact and every entry URL stays a
+    manual owner hand-off. They are requestable and *not* promotable -- `official_document_store`
+    refuses them, so the separation is enforced where evidence is written, not here.
     """
     return frozenset(str(entry) for source in registry.get("sources") or []
-                     for entry in source.get("document_types") or [])
+                     for field in ("document_types", registry_module.INDEX_DOCUMENT_TYPES_FIELD)
+                     for entry in source.get(field) or [])
 
 
 def _declared_interval(registry: Mapping[str, Any], source_id: str) -> float:

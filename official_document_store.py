@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from atomic_io import atomic_write_file, atomic_write_json
+from official_source_registry import RegistryError, is_discovery_input
 
 VERSION = "1.0.0"
 
@@ -191,6 +192,23 @@ def adopt_retained_document(runtime_root: Path | str, source_path: Path | str, *
     source_path = Path(source_path)
     if not source_path.is_file():
         raise UnsupportedDocument(f"retained document not found: {source_path}")
+    # A discovery input is refused by name, before the general vocabulary check, so the refusal
+    # states the actual rule. An announcement index page is admissible for *acquisition* -- that
+    # is how links are read from a stored artifact -- but it is navigation, not a disclosure.
+    # Letting one in here would put a page that asserts nothing about any issuer into the same
+    # store the observation ledger, the resolver and `qualified_official` read from. Relying on
+    # its absence from DOCUMENT_TYPES would make that an accident of omission; this makes it a rule.
+    # An unreadable registry must not break adoption, and must not open it either. Falling
+    # through lands on the DOCUMENT_TYPES check below, which refuses every index type anyway
+    # because none is listed there -- so the failure mode is still closed, just less explicit.
+    try:
+        discovery_input = is_discovery_input(str(document_type))
+    except RegistryError:
+        discovery_input = False
+    if discovery_input:
+        raise UnsupportedDocument(
+            f"{document_type!r} is a discovery input, not promotable corporate-action evidence; "
+            "index pages are parsed for candidate links and never adopted into the store")
     if str(document_type) not in DOCUMENT_TYPES:
         raise UnsupportedDocument(f"unsupported document_type: {document_type!r}")
 

@@ -106,6 +106,42 @@ def source_index(registry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             if isinstance(source, Mapping) and source.get("source_id")}
 
 
+#: A source declares two disjoint vocabularies. `document_types` are the documents that may
+#: become corporate-action evidence. `index_document_types` are navigation pages -- admissible
+#: so a stored artifact can be read for links, and never evidence themselves. Keeping them in
+#: separate lists is what makes "this is a listing page, not a notice" a structural fact rather
+#: than a naming convention: `official_document_store` refuses the second list outright, so a
+#: listing page cannot reach the ledger, the resolver, `qualified_official` or
+#: `corroborated_period_end` even if some future caller asks it to.
+INDEX_DOCUMENT_TYPES_FIELD = "index_document_types"
+
+
+def evidence_document_types(source: Mapping[str, Any]) -> frozenset[str]:
+    return frozenset(str(entry) for entry in source.get("document_types") or [])
+
+
+def index_document_types(source: Mapping[str, Any]) -> frozenset[str]:
+    return frozenset(str(entry) for entry in source.get(INDEX_DOCUMENT_TYPES_FIELD) or [])
+
+
+def admissible_document_types(source: Mapping[str, Any]) -> frozenset[str]:
+    """Everything this source may be asked for: evidence documents and index pages alike."""
+    return evidence_document_types(source) | index_document_types(source)
+
+
+def all_index_document_types(registry: Mapping[str, Any] | None = None) -> frozenset[str]:
+    """Every discovery-input type any source declares, across the whole registry."""
+    registry = registry if registry is not None else load_registry()
+    return frozenset().union(*(index_document_types(source)
+                               for source in source_index(registry).values())) \
+        if source_index(registry) else frozenset()
+
+
+def is_discovery_input(document_type: str, registry: Mapping[str, Any] | None = None) -> bool:
+    """Whether this type is a navigation page rather than promotable evidence."""
+    return str(document_type) in all_index_document_types(registry)
+
+
 def canonical_host(url: str) -> str | None:
     """Lower-cased host with any port stripped, or None when the URL is unusable."""
     try:
@@ -208,7 +244,7 @@ def admit(source_id: str, url: str, document_type: str, *,
     if host not in allowed:
         return _decision(REFUSED, REASON_HOST_NOT_ALLOWED, source_id, url, document_type,
                          detail=f"host {host!r} is not on the {source_id} allowlist")
-    if str(document_type) not in {str(entry) for entry in source.get("document_types") or []}:
+    if str(document_type) not in admissible_document_types(source):
         return _decision(REFUSED, REASON_DOCUMENT_TYPE, source_id, url, document_type,
                          detail=f"{document_type!r} is not declared for {source_id}")
     interval = float(source.get("min_request_interval_seconds") or 0.0)

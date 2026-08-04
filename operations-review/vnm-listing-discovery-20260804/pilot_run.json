@@ -1,0 +1,581 @@
+{
+  "accepted_requests": [],
+  "acquisition": {
+    "manifest": "C:\\Users\\tungt\\AppData\\Local\\Temp\\claude\\C--Projects-StockLookup\\58fe3e4b-5739-4a0d-8c0e-86f77fdaaa28\\scratchpad\\pilot\\official_document_acquisition_manifest.json",
+    "outcomes": [
+      {
+        "document_id": "43ee4065a9fb9c96dec77e1e51c365604f169d6ec108587f621e9ecc0d63e8d7",
+        "state": "cached_valid",
+        "ticker": "VNM"
+      }
+    ],
+    "schema_version": "1.2.0"
+  },
+  "discovery_ledger_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "discovery_states": [],
+  "listing_url": "https://vsd.vn/en/alc/6",
+  "observed_in": "operations-review/vnm-2024-cash-dividend-official-evidence/vsdc-record-date-notice.html",
+  "parse_summary": {
+    "candidates": 0,
+    "listing_url": "https://vsd.vn/en/alc/6",
+    "rejected": 96,
+    "rejected_by_reason": {
+      "different_issuer": 14,
+      "host_outside_approved_source": 1,
+      "no_issuer_code_prefix": 77,
+      "no_visible_title": 3,
+      "unsafe_or_unusable_url": 1
+    },
+    "ticker": "VNM"
+  },
+  "preflight": {
+    "admission": {
+      "decision": "admitted",
+      "detail": "host 'vsd.vn' and document type are declared and approved",
+      "document_type": "announcement_index_page",
+      "policy": {
+        "connect_timeout_seconds": 5,
+        "max_attempts": 2,
+        "max_response_bytes": 20971520,
+        "min_request_interval_seconds": 15.0,
+        "parser_version": "1.0.0",
+        "read_timeout_seconds": 15,
+        "user_agent": "StockLookupOfficialEvidence/1.1"
+      },
+      "reason": "admitted_by_registry",
+      "registry_version": "1.0.0",
+      "source_id": "vsdc",
+      "url": "https://vsd.vn/en/alc/6"
+    },
+    "approval_instant": {
+      "approved_at": "2026-08-03T07:00:00Z",
+      "approved_at_provenance": "Owner confirmed on 2026-08-03 that they approved the registry personally and that the originally recorded 14:00 was Asia/Ho_Chi_Minh (UTC+07:00); the canonical instant is therefore 07:00Z. The earlier 2026-08-03T14:00:00Z was a local time written with a Z suffix.",
+      "reason": "approval_instant_carries_clock_provenance",
+      "state": "APPROVED",
+      "verdict": "verified"
+    },
+    "is_index_type": true,
+    "max_redirects": 5,
+    "min_request_interval_seconds": 15,
+    "requestable_types": [
+      "agm_document_or_resolution",
+      "amendment_or_supersession_notice",
+      "announcement_index_page",
+      "annual_report",
+      "audited_annual_financial_statements",
+      "corporate_action_notice",
+      "corporate_governance_report",
+      "ex_right_notice",
+      "last_registration_date_notice",
+      "listing_change_notice",
+      "reviewed_interim_financial_statements"
+    ],
+    "source_index_types": [
+      "announcement_index_page"
+    ]
+  },
+  "rejected_links": [
+    {
+      "candidate_url": "https://vsd.vn/en/",
+      "reason": "no_visible_title"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/tin-tuc",
+      "link_text": "News",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/alc/6",
+      "link_text": "Securities registrat...",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/",
+      "reason": "no_visible_title"
+    },
+    {
+      "candidate_url": "https://vsd.vn/",
+      "link_text": "HOME",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/qAvcirUlO9cfJnF4OqtNOg",
+      "link_text": "ABOUT VSDC",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/gt-gioi-thieu-chung",
+      "link_text": "Overview",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/95x8btFY_P-wwnDwMT03yw",
+      "link_text": "Message from the Chairman",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/qAvcirUlO9cfJnF4OqtNOg",
+      "link_text": "History",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/-D58K6olopARbOdSeSy9sQ",
+      "link_text": "Organizational structure",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/aCrZF0N7oNadD7mO94AMOQ",
+      "link_text": "ISO 9001:2015",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/tAPN4Gez5anGD8ztNn7I_w",
+      "link_text": "Contact",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/gt-hoat-dong-su-kien",
+      "link_text": "Events",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/bao-cao-thuong-nien",
+      "link_text": "Annual reports",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alcs1/l6Npiq7Ex64NLhlhN9Go8A",
+      "link_text": "Events",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alcs/Mtfl_ooLEjNkYXhNT6zg1g",
+      "link_text": "International Cooperation",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sdc",
+      "link_text": "SERVICES",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/5YN8KJbNJhbnPYBYIu6YXw",
+      "link_text": "Securities Registration",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/rft7xrkuPfGyGNk-dm6arA",
+      "link_text": "Securities Depository",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/XAz40d2Q-9j569TvBgLQaQ",
+      "link_text": "Clearing and Settlement",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/tAPN4Gez5anGD8ztNn7I_w",
+      "link_text": "Corporate Actions",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/88cws5mF5827X-jf9oFMSQ",
+      "link_text": "E-voting",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/RKzwu9SD1frZYxwlm1jIRA",
+      "link_text": "Allocation of securities codes",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/F_-aZmoKa4FDj259O7icDQ",
+      "link_text": "Fund services",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/MSqRltWUSpjFAgAn7Vkqdg",
+      "link_text": "Allocation of trading codes for foreign investors",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/PAlmuS5bbQC4uNivUFsvDg",
+      "link_text": "Securities borrowing and lending",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/165",
+      "link_text": "Registration of guarantee measures",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tin-tuc",
+      "link_text": "NEWS",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/-f-_bsBS4BBXga52z2eexg",
+      "link_text": "Securities registration institution - related business news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/QOyONdQNUHa2sxfU8Hyu2w",
+      "link_text": "Depository members-related business news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/Kah_TNiKvv5twEgFVA9sww",
+      "link_text": "Clearing members-related business news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/yBFNipOdETLAK0JKQfICBQ",
+      "link_text": "Fund managers-related business news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alcs2/rmdR-AAe_4zpJnyTlg_HgA",
+      "link_text": "VSDC's news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tin-thi-truong-cac-bon",
+      "link_text": "Carbon market news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel",
+      "link_text": "LEGAL DOCUMENTS",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/1",
+      "link_text": "Laws",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/4",
+      "link_text": "Decrees",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/2",
+      "link_text": "Circulars",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/3",
+      "link_text": "Decisions",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/6",
+      "link_text": "Rules/Guidelines of VSDC",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/5",
+      "link_text": "Others",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/fa",
+      "link_text": "FAQ",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198831",
+      "link_text": "Disclosure of Foreign Ownership on 04/08/2026 at VSDC",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198816",
+      "issuer_code": "DAG",
+      "link_text": "DAG: 2026 Extraordinary General Meeting",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198818",
+      "issuer_code": "PSI",
+      "link_text": "PSI: 2026 Extraordinary General Meeting",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198827",
+      "issuer_code": "OCB12517",
+      "link_text": "OCB12517: Bond redemption before maturity",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198828",
+      "issuer_code": "OCB12521",
+      "link_text": "OCB12521: Bond redemption before maturity",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198822",
+      "issuer_code": "CTG12414",
+      "link_text": "CTG12414: 2nd Payment of Corporate Bond Interest (from 10/9/2025 inclusive to 10/9/2026 exclusive)",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198815",
+      "issuer_code": "CTR",
+      "link_text": "CTR: Adjustment of the number of registered shares",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198826",
+      "issuer_code": "SCM12601",
+      "link_text": "SCM12601: Bond Registration and Depository",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198820",
+      "issuer_code": "CTG12223",
+      "link_text": "CTG12223: 4th Payment of Bond Interest (from 30/8/2025 to 30/8/2026 exclusive)",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198823",
+      "issuer_code": "CTG12415",
+      "link_text": "CTG12415: 2nd Payment of Bond Interest (from 11/9/2025 inclusive to 11/9/2026 exclusive)",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198825",
+      "issuer_code": "VSN",
+      "link_text": "VSN: Payment of 2025 cash dividend",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198821",
+      "issuer_code": "CTG12224",
+      "link_text": "CTG12224: 4th Payment of Bond Interest (from 08/9/2025 to 08/9/2026 exclusive)",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198819",
+      "issuer_code": "PTB",
+      "link_text": "PTB: First Advance Payment of 2026 cash Dividend",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198824",
+      "issuer_code": "TPB12534",
+      "link_text": "TPB12534: 1st Payment of Bond Interest (from 16/9/2025 inclusive to 16/9/2026 exclusive)",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/ad/198817",
+      "issuer_code": "BRR",
+      "link_text": "BRR: Payment of 2025 Cash Dividend",
+      "reason": "different_issuer"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tra-cuu-thong-ke/TK_MASO_GDCKNDTNN?tab=1",
+      "link_text": "Trading codes",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tra-cuu-thong-ke/TK_MACK_BAOLUU?tab=2",
+      "link_text": "Expected allocation of securities codes",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tra-cuu-thong-ke/TK_MACK_HUYDK?tab=5",
+      "link_text": "Registration-cancelled codes",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tra-cuu-thong-ke/TK_MACK_CHUYENSAN?tab=4",
+      "link_text": "Trading platform-shifted codes",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tra-cuu-thong-ke/TK_MEMBER_THUHOI_GCN?tab=6",
+      "link_text": "Membership certificate revocation",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tra-cuu-thong-ke/TK_SL_TKGD_NDT?tab=7",
+      "link_text": "Number of investor's trading accounts",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/en/alc/6",
+      "reason": "no_visible_title"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/95x8btFY_P-wwnDwMT03yw",
+      "link_text": "Message from the Chairman",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/qAvcirUlO9cfJnF4OqtNOg",
+      "link_text": "History",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/-D58K6olopARbOdSeSy9sQ",
+      "link_text": "Organizational structure",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/aCrZF0N7oNadD7mO94AMOQ",
+      "link_text": "ISO 9001:2015",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alcs/Mtfl_ooLEjNkYXhNT6zg1g",
+      "link_text": "International cooperation",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/bao-cao-thuong-nien",
+      "link_text": "Annual reports",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alcs1/l6Npiq7Ex64NLhlhN9Go8A",
+      "link_text": "Events",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/5YN8KJbNJhbnPYBYIu6YXw",
+      "link_text": "Securities registration",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/rft7xrkuPfGyGNk-dm6arA",
+      "link_text": "Securities depository",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/XAz40d2Q-9j569TvBgLQaQ",
+      "link_text": "Clearing and settlement",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/tAPN4Gez5anGD8ztNn7I_w",
+      "link_text": "Corporate actions",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/MSqRltWUSpjFAgAn7Vkqdg",
+      "link_text": "Allocation of trading codes for foreign investors",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/RKzwu9SD1frZYxwlm1jIRA",
+      "link_text": "Allocation of securities codes",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/F_-aZmoKa4FDj259O7icDQ",
+      "link_text": "Fund services",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/PAlmuS5bbQC4uNivUFsvDg",
+      "link_text": "Securities borrowing and lending",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/88cws5mF5827X-jf9oFMSQ",
+      "link_text": "E-voting",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/sd/165",
+      "link_text": "Registration of guarantee measures",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/-f-_bsBS4BBXga52z2eexg",
+      "link_text": "Securities registration institution - related business news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/QOyONdQNUHa2sxfU8Hyu2w",
+      "link_text": "Depository members-related business news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/Kah_TNiKvv5twEgFVA9sww",
+      "link_text": "Clearing members-related news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alo/yBFNipOdETLAK0JKQfICBQ",
+      "link_text": "Fund managers-related news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/alcs2/rmdR-AAe_4zpJnyTlg_HgA",
+      "link_text": "VSDC's news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/tin-thi-truong-cac-bon",
+      "link_text": "Carbon market news",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/klOdIkD7lAjWtMEX_Nf-zA",
+      "link_text": "Laws",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/S5My0pdCSdSdVsCXYuVuzg",
+      "link_text": "Decrees",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/IDNrb24M7K5dUq1jRa14BA",
+      "link_text": "Circulars",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/mvba5rQld3S4EzxJc9mZow",
+      "link_text": "Decisions",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/txmsbpbv29VIBi2h_PhQ2Q",
+      "link_text": "Regulations of VSDC",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/lel/WnK9ehvINDFSyZ06RrL4YQ",
+      "link_text": "Others",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://vsd.vn/ads/tAPN4Gez5anGD8ztNn7I_w",
+      "link_text": "Contact",
+      "reason": "no_issuer_code_prefix"
+    },
+    {
+      "candidate_url": "https://mail.vsd.vn/owa/",
+      "link_text": "Email",
+      "reason": "host_outside_approved_source"
+    },
+    {
+      "link_text": "",
+      "raw_href": "javascript:;",
+      "reason": "unsafe_or_unusable_url"
+    }
+  ],
+  "review_queue": [],
+  "state": "cached_valid",
+  "stored_artifact": {
+    "content_length": 51080,
+    "content_type": "text/html",
+    "document_id": "43ee4065a9fb9c96dec77e1e51c365604f169d6ec108587f621e9ecc0d63e8d7",
+    "final_url": "https://vsd.vn/en/alc/6",
+    "relative_path": "documents/VNM/2026/announcement_index_page/97778a8215123f61db098e02682ff7e9518260aa728fa4a7224821ca1886cfd0.html",
+    "sha256": "97778a8215123f61db098e02682ff7e9518260aa728fa4a7224821ca1886cfd0"
+  },
+  "ticker": "VNM"
+}

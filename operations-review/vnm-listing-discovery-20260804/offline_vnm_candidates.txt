@@ -1,0 +1,53 @@
+summary: {"ticker": "VNM", "listing_url": "https://vsd.vn/en/ad/177392", "candidates": 10, "rejected": 130, "rejected_by_reason": {"different_issuer": 10, "host_outside_approved_source": 1, "no_issuer_code_prefix": 113, "no_visible_title": 3, "unsafe_or_unusable_url": 3}}
+
+discovery ledger sha256: d830ca1b88e97270452d619149b60a7b2b6d291a4cc8c820e5600f1da134346d
+discovery states: ['new']
+accepted_requests: 10
+
+ 1. [medium] ca2995ad96a94084  2026-06-17  corporate_action_notice
+    VNM: Residual Payment of 2025 cash dividend
+    https://vsd.vn/en/ad/197038
+    cues=[]
+ 2. [medium] 051f3bdbc2efb63c  2026-02-26  corporate_action_notice
+    VNM: 2026 Annual General Meeting
+    https://vsd.vn/en/ad/192327
+    cues=[]
+ 3. [medium] 3ac82e98bd22e717  2025-10-02  corporate_action_notice
+    VNM: Payment of 2024 Residual Cash Dividend and 1st Advance Payment of 2025 Cash Dividend
+    https://vsd.vn/en/ad/187729
+    cues=[]
+ 4. [medium] efd0d815b68ed4d5  2025-05-08  last_registration_date_notice
+    VNM: Correcting information of the notice of the record date
+    https://vsd.vn/en/ad/182559
+    cues=[]
+ 5. [medium] 56312ca0bd63d194  2025-04-29  corporate_action_notice
+    VNM: First Residual Payment of 2024 Cash Dividend
+    https://vsd.vn/en/ad/182377
+    cues=[]
+ 6. [medium] 8e8b6a2d17b86ddf  2025-02-05  corporate_action_notice
+    VNM: 2025 Annual General Meeting
+    https://vsd.vn/en/ad/178989
+    cues=[]
+ 7. [medium] 23d1d0f23e013215  2024-09-04  corporate_action_notice
+    VNM: Last Payment of 2023 cash dividend and First Advance Payment of 2024 Cash Dividend
+    https://vsd.vn/en/ad/174349
+    cues=[]
+ 8. [medium] e9988046d4e7f990  2024-03-08  corporate_action_notice
+    VNM: 2024 Annual General Meeting and Third Advance Payment of 2023 Cash Dividend
+    https://vsd.vn/en/ad/168521
+    cues=[]
+ 9. [medium] 5079c28e4047dbed  2023-12-14  corporate_action_notice
+    VNM: Second Advance Payment of 2023 Cash Dividend
+    https://vsd.vn/en/ad/165609
+    cues=[]
+10. [medium] ecf6bc12bd8c68c9  2023-07-18  corporate_action_notice
+    VNM: Payment of 2022 Residual Cash Dividend and First Advance Payment of 2023 Cash Dividend
+    https://vsd.vn/en/ad/160128
+    cues=[]
+
+REJECTIONS by reason:
+  different_issuer: 10   e.g. ['BAB12506', 'BHB12501', 'BTW', 'CLW', 'HDC12502', 'NAB12504']
+  host_outside_approved_source: 1   e.g. ['Email']
+  no_issuer_code_prefix: 113   e.g. ['1', '10', '11', '12', '13', '14']
+  no_visible_title: 3   e.g. []
+  unsafe_or_unusable_url: 3   e.g. []
