@@ -1,0 +1,97 @@
+{
+  "endpoint": "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart",
+  "http_status": 200,
+  "interval": "1D",
+  "method": "POST",
+  "normalized_field_names": [
+    "vci.observed_close_vnd",
+    "vci.observed_daily_volume",
+    "vci.observed_high_vnd",
+    "vci.observed_low_vnd",
+    "vci.observed_open_vnd",
+    "vci.session_date"
+  ],
+  "provider": "VCI",
+  "qualification_verdict": "pending_analysis",
+  "raw_artifact": "vci_daily_HPG_20260804T040318Z_a1486eca4e74670e.raw.json",
+  "raw_field_names": [
+    "accumulatedValue",
+    "accumulatedVolume",
+    "c",
+    "h",
+    "l",
+    "minBatchTruncTime",
+    "o",
+    "symbol",
+    "t",
+    "v"
+  ],
+  "raw_response_sha256": "a1486eca4e74670ef938cd68f70980f5a612492a693ed0363c67abd8b9be2d42",
+  "redirect_count": 0,
+  "request_headers_redacted": {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Origin": "https://trading.vietcap.com.vn",
+    "Referer": "https://trading.vietcap.com.vn/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+  },
+  "request_parameters": {
+    "countBack": 12,
+    "symbols": [
+      "HPG"
+    ],
+    "timeFrame": "ONE_DAY",
+    "to": 1780358400
+  },
+  "requested_date_range": [
+    "2026-05-18",
+    "2026-06-01"
+  ],
+  "response_schema_fingerprint": "7280bb1e97a43d2b709553b1f59feedab8949a1efc1b93bcd00c57a0a6ce481e",
+  "retrieved_at": "2026-08-04T04:03:18Z",
+  "retry_count": 0,
+  "returned_date_range": [
+    "2026-05-18",
+    "2026-06-02"
+  ],
+  "schema_version": "1.0.0",
+  "source_authority": "observed_public_web_endpoint",
+  "ticker": "HPG",
+  "transformation_code_identity": "vci_direct_basis_pilot.normalize_daily/1.0.0",
+  "transformations": [
+    {
+      "operation": "epoch_seconds_to_calendar_date",
+      "parameters": {
+        "assumed_timezone": "UTC",
+        "provider_stamps_daily_bars_at": "00:00:00Z"
+      },
+      "source_field": "vci.raw_t",
+      "target_field": "vci.session_date"
+    },
+    {
+      "note": "identity scale; the pilot refuses to guess a unit it cannot observe",
+      "operation": "scale",
+      "parameters": {
+        "factor": 1,
+        "rounding": "none"
+      },
+      "source_field": "vci.raw_open|high|low|close",
+      "target_field": "vci.observed_open|high|low|close_vnd"
+    },
+    {
+      "operation": "passthrough",
+      "parameters": {
+        "missing_policy": "preserve_null",
+        "zero_fill": false
+      },
+      "source_field": "vci.raw_volume",
+      "target_field": "vci.observed_daily_volume"
+    }
+  ],
+  "unresolved_semantic_dimensions": [
+    "price_adjustment_declaration",
+    "volume_market_scope"
+  ],
+  "window_id": "W3_capital_event",
+  "window_selection_evidence": "dashboard-runtime/vn_stock.db:corporate_event_records HPG/ISS/Share Issue exright_date=2026-05-25 record_date=2026-05-26 exercise_ratio=0.1 provider=VCI coverage=partial_unqualified_50_row_cap"
+}

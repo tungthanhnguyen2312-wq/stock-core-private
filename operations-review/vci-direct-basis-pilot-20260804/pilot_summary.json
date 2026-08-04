@@ -1,0 +1,700 @@
+{
+  "downstream_eligibility": {
+    "actionability_gate": "closed",
+    "blocked_capabilities": [
+      "production_backtesting",
+      "market_impact_models",
+      "days_to_liquidate",
+      "portfolio_sizing",
+      "liquidity_based_position_sizing",
+      "ranking",
+      "recommendations",
+      "price_targets",
+      "official_exchange_claims",
+      "adjustment_factors_for_another_source",
+      "generic_adjusted_return_fields",
+      "is_actionable",
+      "production_artifact_replacement"
+    ],
+    "liquidity_actionable": false,
+    "production_gate": "closed",
+    "scope": "vci_namespaced_shadow_only",
+    "unlocked_shadow_price_capabilities": [
+      "vci_namespaced_historical_returns",
+      "vci_namespaced_technical_indicators",
+      "controlled_source_comparison",
+      "anomaly_detection",
+      "isolated_shadow_evaluation"
+    ],
+    "unlocked_shadow_volume_capabilities": [
+      "vci_namespaced_descriptive_volume_history",
+      "vci_namespaced_volume_trend",
+      "data_quality_comparison"
+    ]
+  },
+  "failures": {},
+  "kbs_read_only_comparison": {
+    "authority_effect": "none; agreement between two undocumented providers is compatibility, not semantics",
+    "close_exact_matches": 9,
+    "detail": [
+      {
+        "close_exact_match": true,
+        "kbs_close": 20600,
+        "kbs_volume": 53245200,
+        "session_date": "2026-07-20",
+        "vci_stored_close": 20600.0,
+        "vci_stored_volume": 53245200,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 20800,
+        "kbs_volume": 27198700,
+        "session_date": "2026-07-21",
+        "vci_stored_close": 20800.0,
+        "vci_stored_volume": 27198700,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 20700,
+        "kbs_volume": 43471900,
+        "session_date": "2026-07-22",
+        "vci_stored_close": 20700.0,
+        "vci_stored_volume": 43471900,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 20800,
+        "kbs_volume": 36967600,
+        "session_date": "2026-07-23",
+        "vci_stored_close": 20800.0,
+        "vci_stored_volume": 36967600,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 20800,
+        "kbs_volume": 17632000,
+        "session_date": "2026-07-24",
+        "vci_stored_close": 20800.0,
+        "vci_stored_volume": 17632000,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 20350,
+        "kbs_volume": 18166800,
+        "session_date": "2026-07-27",
+        "vci_stored_close": 20350.0,
+        "vci_stored_volume": 18166800,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 21000,
+        "kbs_volume": 29151700,
+        "session_date": "2026-07-28",
+        "vci_stored_close": 21000.0,
+        "vci_stored_volume": 29151700,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 21650,
+        "kbs_volume": 36250000,
+        "session_date": "2026-07-29",
+        "vci_stored_close": 21650.0,
+        "vci_stored_volume": 36250000,
+        "volume_exact_match": true
+      },
+      {
+        "close_exact_match": true,
+        "kbs_close": 21800,
+        "kbs_volume": 29968000,
+        "session_date": "2026-07-30",
+        "vci_stored_close": 21800.0,
+        "vci_stored_volume": 29968000,
+        "volume_exact_match": true
+      }
+    ],
+    "kbs_artifact": "operations-review/kbs_ohlcv_sample_hpg.json (retrieved 2026-08-01T01:11:52Z)",
+    "sessions_compared": 9,
+    "volume_exact_matches": 9
+  },
+  "network_requests_issued": 0,
+  "price_verdict": {
+    "cross_provider_comparison": {
+      "basis": "already-local retained artifact, read-only, no new lane",
+      "close_exact_matches": 9,
+      "counterparty": "KBS",
+      "sessions_compared": 9
+    },
+    "cross_provider_comparison_upgraded_verdict": false,
+    "event_window_fit_upgraded_verdict": false,
+    "event_window_numeric_fit": {
+      "declared_cash_dividend_vnd_per_share": 450.0,
+      "distinct_close_ratios": [
+        0.9917
+      ],
+      "note": "A single constant multiplicative factor across independent sessions is consistent with a standard cash-dividend back-adjustment, but a fitted factor is not a source declaration.",
+      "single_constant_factor": true,
+      "window": "VCB 2026-07-01..2026-07-17, pre-ex-date observation vs post-ex-date observation"
+    },
+    "fields": [
+      "vci.raw_open",
+      "vci.raw_high",
+      "vci.raw_low",
+      "vci.raw_close"
+    ],
+    "per_window": {
+      "W1_control_no_event": "inconclusive",
+      "W2_cash_dividend_event": "dividend_adjusted",
+      "W3_capital_event": "split_adjusted"
+    },
+    "provider": "VCI",
+    "source_authority": "observed_public_web_endpoint",
+    "source_documentation": "absent",
+    "verdict": "split_and_dividend_adjusted"
+  },
+  "provider": "VCI",
+  "request_budget": 8,
+  "schema_version": "1.0.0",
+  "source_authority": "observed_public_web_endpoint",
+  "volume_declaration": {
+    "field": "vci.observed_daily_volume",
+    "liquidity_actionable": false,
+    "reconciliation": {
+      "daily_volume": 9315300,
+      "difference": 9168400,
+      "intraday_sum": 146900,
+      "note": "A difference here carries no scope information. Excluding pagination is a precondition for any matched-versus-negotiated inference.",
+      "reason": "pagination_or_session_coverage_not_exhausted",
+      "verdict": "intraday_sample_incomplete"
+    },
+    "unresolved_dimensions": [
+      "matched_order_inclusion",
+      "negotiated_put_through_inclusion",
+      "auction_inclusion",
+      "odd_lot_inclusion",
+      "provider_revision_behaviour"
+    ],
+    "volume_adjustment_basis": "unknown",
+    "volume_field_identity": "qualified",
+    "volume_market_scope": "unknown",
+    "volume_unit": "qualified"
+  },
+  "volume_revision_behaviour": {
+    "conclusion": "Daily volume is revised after first observation. The ratios are not constant, so this is not a single corporate-action volume factor. The earlier values being exact multiples of 100 (the HOSE round lot) and the later ones not is equally consistent with the first observation having captured a mid-session accumulator. The two causes cannot be separated from this evidence, so volume_adjustment_basis stays unknown.",
+    "detail": [
+      {
+        "post": 4242742,
+        "post_is_multiple_of_100": false,
+        "pre": 4232900,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00232512,
+        "session_date": "2026-07-01"
+      },
+      {
+        "post": 2753926,
+        "post_is_multiple_of_100": false,
+        "pre": 2744500,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00343451,
+        "session_date": "2026-07-02"
+      },
+      {
+        "post": 2608426,
+        "post_is_multiple_of_100": false,
+        "pre": 2601900,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00250817,
+        "session_date": "2026-07-03"
+      },
+      {
+        "post": 4185902,
+        "post_is_multiple_of_100": false,
+        "pre": 4173100,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00306774,
+        "session_date": "2026-07-06"
+      },
+      {
+        "post": 2555289,
+        "post_is_multiple_of_100": false,
+        "pre": 2547200,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00317564,
+        "session_date": "2026-07-07"
+      },
+      {
+        "post": 2057927,
+        "post_is_multiple_of_100": false,
+        "pre": 2051000,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00337738,
+        "session_date": "2026-07-08"
+      },
+      {
+        "post": 2216543,
+        "post_is_multiple_of_100": false,
+        "pre": 2209800,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00305141,
+        "session_date": "2026-07-09"
+      },
+      {
+        "post": 3027528,
+        "post_is_multiple_of_100": false,
+        "pre": 3016400,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00368917,
+        "session_date": "2026-07-10"
+      },
+      {
+        "post": 6813411,
+        "post_is_multiple_of_100": false,
+        "pre": 6789000,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00359567,
+        "session_date": "2026-07-13"
+      },
+      {
+        "post": 2836121,
+        "post_is_multiple_of_100": false,
+        "pre": 2829200,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00244627,
+        "session_date": "2026-07-14"
+      },
+      {
+        "post": 2645866,
+        "post_is_multiple_of_100": false,
+        "pre": 2633300,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00477196,
+        "session_date": "2026-07-15"
+      },
+      {
+        "post": 3363952,
+        "post_is_multiple_of_100": false,
+        "pre": 3349700,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.00425471,
+        "session_date": "2026-07-16"
+      },
+      {
+        "post": 2005298,
+        "post_is_multiple_of_100": false,
+        "pre": 1990100,
+        "pre_is_multiple_of_100": true,
+        "ratio": 1.0076368,
+        "session_date": "2026-07-17"
+      }
+    ],
+    "distinct_ratios": 13,
+    "post_any_multiple_of_100": false,
+    "pre_all_multiples_of_100": true,
+    "ratio_range": [
+      1.00232512,
+      1.0076368
+    ],
+    "sessions": 13
+  },
+  "windows": {
+    "W1_control_no_event": {
+      "changed_detail": [],
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-01-26"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-01-27"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-01-28"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-01-29"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-01-30"
+          }
+        ],
+        "sessions_off_lattice": 5,
+        "sessions_on_lattice": 0,
+        "sessions_total": 5
+      },
+      "price_verdict": {
+        "boundary_date": null,
+        "excludes_raw_unadjusted": true,
+        "matched_events": [],
+        "reason": "adjustment_boundary_lies_outside_the_observed_window",
+        "verdict": "inconclusive"
+      },
+      "prior_observation": "operations-review/vci_ohlcv_sample_hpg.json @ 2026-08-01T01:08:57Z",
+      "sessions_changed": 0,
+      "sessions_compared": 5
+    },
+    "W2_cash_dividend_event": {
+      "boundary_date": "2026-07-23",
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-06-29"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-06-30"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-01"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-02"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-03"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-06"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-07"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-08"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-09"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-10"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-13"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-14"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-15"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-16"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-17"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-20"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-21"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-07-22"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-07-23"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-07-24"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-07-27"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-07-28"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-07-29"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-07-30"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-07-31"
+          }
+        ],
+        "sessions_off_lattice": 18,
+        "sessions_on_lattice": 7,
+        "sessions_total": 25
+      },
+      "price_verdict": {
+        "boundary_date": "2026-07-23",
+        "excludes_raw_unadjusted": true,
+        "matched_events": [
+          {
+            "detail": "DIV cash dividend, 450 VND/share",
+            "evidence_identity": "vn_stock.db:corporate_event_records[provider=VCI,ticker=VCB,event_code=DIV,exright_date=2026-07-23]",
+            "ex_date": "2026-07-23",
+            "kind": "cash"
+          }
+        ],
+        "reason": "off_lattice_prefix_terminates_exactly_at_a_qualified_ex_date",
+        "verdict": "dividend_adjusted"
+      },
+      "retroactive_revision_test": {
+        "detail": [
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 62477.1,
+            "post_event_live_volume": 4242742,
+            "pre_event_snapshot_close_vnd": 63000.0,
+            "pre_event_snapshot_volume": 4232900,
+            "session_date": "2026-07-01",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 61584.57,
+            "post_event_live_volume": 2753926,
+            "pre_event_snapshot_close_vnd": 62100.0,
+            "pre_event_snapshot_volume": 2744500,
+            "session_date": "2026-07-02",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 61485.4,
+            "post_event_live_volume": 2608426,
+            "pre_event_snapshot_close_vnd": 62000.0,
+            "pre_event_snapshot_volume": 2601900,
+            "session_date": "2026-07-03",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 60692.04,
+            "post_event_live_volume": 4185902,
+            "pre_event_snapshot_close_vnd": 61200.0,
+            "pre_event_snapshot_volume": 4173100,
+            "session_date": "2026-07-06",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 60791.21,
+            "post_event_live_volume": 2555289,
+            "pre_event_snapshot_close_vnd": 61300.0,
+            "pre_event_snapshot_volume": 2547200,
+            "session_date": "2026-07-07",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 61088.72,
+            "post_event_live_volume": 2057927,
+            "pre_event_snapshot_close_vnd": 61600.0,
+            "pre_event_snapshot_volume": 2051000,
+            "session_date": "2026-07-08",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 60592.87,
+            "post_event_live_volume": 2216543,
+            "pre_event_snapshot_close_vnd": 61100.0,
+            "pre_event_snapshot_volume": 2209800,
+            "session_date": "2026-07-09",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 59997.85,
+            "post_event_live_volume": 3027528,
+            "pre_event_snapshot_close_vnd": 60500.0,
+            "pre_event_snapshot_volume": 3016400,
+            "session_date": "2026-07-10",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 58411.13,
+            "post_event_live_volume": 6813411,
+            "pre_event_snapshot_close_vnd": 58900.0,
+            "pre_event_snapshot_volume": 6789000,
+            "session_date": "2026-07-13",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 58708.64,
+            "post_event_live_volume": 2836121,
+            "pre_event_snapshot_close_vnd": 59200.0,
+            "pre_event_snapshot_volume": 2829200,
+            "session_date": "2026-07-14",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 58708.64,
+            "post_event_live_volume": 2645866,
+            "pre_event_snapshot_close_vnd": 59200.0,
+            "pre_event_snapshot_volume": 2633300,
+            "session_date": "2026-07-15",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 58906.98,
+            "post_event_live_volume": 3363952,
+            "pre_event_snapshot_close_vnd": 59400.0,
+            "pre_event_snapshot_volume": 3349700,
+            "session_date": "2026-07-16",
+            "volume_changed": true
+          },
+          {
+            "close_changed": true,
+            "post_event_live_close_vnd": 58014.45,
+            "post_event_live_volume": 2005298,
+            "pre_event_snapshot_close_vnd": 58500.0,
+            "pre_event_snapshot_volume": 1990100,
+            "session_date": "2026-07-17",
+            "volume_changed": true
+          }
+        ],
+        "note": "The snapshot rows were written by daily runs before the ex-date and the pipeline never rewrites historical rows, so they are a genuine pre-event observation of the same sessions.",
+        "prior_observation": "C:\\Projects\\StockLookup\\archive\\runtime-backups\\VNSTOCK_DATA_BACKUPS\\20260719_223620\\vn_stock.db (snapshot taken 2026-07-19, before the 2026-07-23 ex-date)",
+        "sessions_compared": 13,
+        "sessions_with_changed_close": 13,
+        "sessions_with_changed_volume": 13
+      }
+    },
+    "W3_capital_event": {
+      "boundary_date": "2026-05-25",
+      "lattice": {
+        "sessions": [
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-05-18"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-05-19"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-05-20"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-05-21"
+          },
+          {
+            "all_fields_on_lattice": false,
+            "session_date": "2026-05-22"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-05-25"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-05-26"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-05-27"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-05-28"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-05-29"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-06-01"
+          },
+          {
+            "all_fields_on_lattice": true,
+            "session_date": "2026-06-02"
+          }
+        ],
+        "sessions_off_lattice": 5,
+        "sessions_on_lattice": 7,
+        "sessions_total": 12
+      },
+      "price_verdict": {
+        "boundary_date": "2026-05-25",
+        "excludes_raw_unadjusted": true,
+        "matched_events": [
+          {
+            "detail": "ISS share issue, exercise_ratio 0.1",
+            "evidence_identity": "vn_stock.db:corporate_event_records[provider=VCI,ticker=HPG,event_code=ISS,exright_date=2026-05-25]",
+            "ex_date": "2026-05-25",
+            "kind": "capital"
+          }
+        ],
+        "reason": "off_lattice_prefix_terminates_exactly_at_a_qualified_ex_date",
+        "verdict": "split_adjusted"
+      }
+    },
+    "volume_reconciliation": {
+      "compared_session": "2026-08-04",
+      "daily_field_identity": {
+        "compared_session": "2026-08-04",
+        "daily_v": 9315300,
+        "exact_match": true,
+        "intraday_newest_accumulated_volume": 9315300.0,
+        "note": "Both observations are of an in-progress session taken ~1s apart, so this identifies the field, not the session total."
+      },
+      "intraday_accumulator_consistency": {
+        "accumulated_value_delta_matches_quantity_times_price": 99,
+        "accumulated_volume_delta_equals_trade_quantity": 99,
+        "checked_pairs": 99,
+        "implied_accumulated_value_scale_to_vnd": [
+          1000000
+        ],
+        "verdict": "accumulators_internally_consistent"
+      },
+      "intraday_page_size_requested": 30000,
+      "intraday_raw_artifact": "vci_intraday_HPG_20260804T040321Z_771a7d5701902a67.raw.json",
+      "intraday_rows_returned": 100,
+      "reconciliation": {
+        "daily_volume": 9315300,
+        "difference": 9168400,
+        "intraday_sum": 146900,
+        "note": "A difference here carries no scope information. Excluding pagination is a precondition for any matched-versus-negotiated inference.",
+        "reason": "pagination_or_session_coverage_not_exhausted",
+        "verdict": "intraday_sample_incomplete"
+      },
+      "server_side_row_cap_observed": true
+    }
+  }
+}
