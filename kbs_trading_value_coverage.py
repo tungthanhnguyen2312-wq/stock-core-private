@@ -497,8 +497,19 @@ PARTIAL_RESULT_FIELDS: tuple[str, ...] = (
     "not_comparable_to_complete_period_total",
 )
 
+#: The canonical statistic-scope vocabulary, shared by the coverage contract and the export
+#: seam so there is one spelling on both sides of the Producer/Consumer boundary.
+SCOPE_SINGLE_ROW = "single_observed_row"
+SCOPE_COMPLETE_WINDOW = "complete_requested_window"
 SCOPE_OBSERVED_ROWS_ONLY = "observed_rows_only"
-SCOPE_COMPLETE_WINDOW = "complete_window"
+SCOPE_NOT_APPLICABLE = "not_applicable"
+
+STATISTIC_SCOPES = (
+    SCOPE_SINGLE_ROW,
+    SCOPE_COMPLETE_WINDOW,
+    SCOPE_OBSERVED_ROWS_ONLY,
+    SCOPE_NOT_APPLICABLE,
+)
 
 
 def evaluate_operation(name: str, *, coverage: Mapping[str, Any]) -> dict[str, Any]:
@@ -734,16 +745,69 @@ def impute(*_args: Any, **_kwargs: Any) -> None:
 # Part F -- consumer and export gates
 # ---------------------------------------------------------------------------------
 
-#: Consumers that touch KBS trading value, and the strongest operation class each may run.
+#: Consumers that actually read KBS ``va``.
+#:
+#: This map was written at ``ee057b9`` from an assumption and is now written from a trace.
+#: The corrected answer is that **there are none**: ``va`` is dropped by the vnstock adapter
+#: before the pipeline sees it, the ``ohlcv`` table has no value column, and no exported
+#: artifact carries one. See :data:`ACTIVE_EXPORT_PATH`. The four "trading value" consumers
+#: previously listed here read no ``va``, and two of them named concepts that do not exist.
+#:
+#: The entries that remain are the *forbidden* ones. They are kept deliberately: they name
+#: uses that would be refused if anyone built them, and a register that only lists what
+#: exists cannot refuse anything.
 CONSUMER_REQUIREMENTS: dict[str, str] = {
-    "export_ai_bundle.ohlcv_passthrough": ROW_LEVEL,
-    "export_ai_bundle.trading_value_passthrough": ROW_LEVEL,
-    "builders.build_ticker_context.trading_value_passthrough": ROW_LEVEL,
-    "candlestick_patterns.gtgd20_ty_calc": PARTIAL_PERMITTED,
-    "stock_analyzer.turnover_features": PARTIAL_PERMITTED,
     "opportunity_ranking.turnover_rank": UNAVAILABLE_BY_CONTRACT,
     "risk_liquidity.turnover_liquidity": UNAVAILABLE_BY_CONTRACT,
 }
+
+#: Quantities that look like a trading value, are not ``va``, and cross the boundary today.
+#:
+#: ``gtgd20_ty`` is the real one. It is a 20-session rolling mean of ``close x volume`` in
+#: billion VND, computed in ``candlestick_patterns.py`` over the *stored* OHLCV series --
+#: overwhelmingly VCI rows -- and it never references ``va``. The closeout at ``ee057b9``
+#: stated that no existing consumer creates a price-times-volume field. That was wrong, and
+#: this register is the correction: the field exists, it is derived, and it is labelled here
+#: so nobody reads it as an observed provider trading value.
+#:
+#: It is *not* disabled. It reconstructs no missing ``va`` -- it is an independent screening
+#: metric that predates this lane, and its volume-side classification already lives in
+#: ``market_volume_capability_matrix`` as analytical-not-liquidity. Relabelling is the
+#: proportionate action; removing a working screen on the strength of a naming collision
+#: would not be.
+NON_VA_DERIVED_QUANTITIES: dict[str, dict[str, Any]] = {
+    "candlestick_patterns.gtgd20_ty_calc": {
+        "expression": "(close * volume).rolling(20, min_periods=3).mean() / 1e9",
+        "unit": "billion_VND_per_session",
+        "source_field": "derived",
+        "reads_kbs_va": False,
+        "provider_observed_trading_value": False,
+        "is_official_turnover": False,
+        "predominant_price_source": "VCI stored ohlcv rows",
+        "volume_side_classification": "market_volume_capability_matrix: analytical, "
+        "explicitly not qualified market liquidity",
+        "must_not_be_labelled": [
+            "kbs.observed_daily_trading_value",
+            "official_market_turnover",
+            "qualified_liquidity",
+        ],
+    }
+}
+
+
+def classify_derived_quantity(name: str) -> dict[str, Any]:
+    """Describe a trading-value-shaped derived quantity, or refuse to recognise it."""
+    record = NON_VA_DERIVED_QUANTITIES.get(name)
+    if record is None:
+        raise TradingValueCoverageError(f"unregistered_derived_quantity:{name}")
+    return dict(record)
+
+
+def assert_derived_quantity_not_relabelled(name: str, *, label: str) -> None:
+    """A derived quantity may not be handed an observed-value or official-turnover name."""
+    record = classify_derived_quantity(name)
+    if label in record["must_not_be_labelled"]:
+        raise TradingValueCoverageError(f"derived_quantity_relabelled_as_observed:{name}->{label}")
 
 
 def classify_consumer(consumer_id: str) -> dict[str, Any]:

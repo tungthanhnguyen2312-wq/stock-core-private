@@ -36,6 +36,14 @@
     Our own pipeline dropping a field is not evidence that the provider omitted it.
 8h. A correlation is not a mechanism, however clean. Record it as an observed association
     with `causal_explanation = unknown` and scope it to the windows that produced it.
+8i. Trace a data path before writing a contract about it. Registers of consumers, fields and
+    capabilities must name things that exist and actually read what they claim to read; a
+    plausible-sounding identifier is not evidence that a consumer exists. When a trace finds
+    nothing, record the absence as data rather than leaving it inferred from silence.
+8j. Cross-repository verdicts pass through, they do not get recomputed. The downstream side
+    copies the counts, may narrow a verdict, may never widen one, and may never drop a
+    required warning. Pin shared warning text to one source with a fingerprint both sides
+    assert.
 9. Write detailed diagnostics locally; keep final chat output compact.
 10. Do not run full suites unless a real cross-cutting source regression justifies it.
 11. Do not publish or deploy unless explicitly requested.

@@ -60,6 +60,15 @@ capitalisation and therefore waits on pillar B.
   `va`/adjusted-row correlation (66/66, zero exceptions) is recorded as an *association*
   with `causal_explanation = unknown`. No capability regressed.
   `operations-review/kbs-trading-value-coverage-20260804/KBS_TRADING_VALUE_COVERAGE.md`.
+- **P0-Z.3 KBS coverage export seam and Consumer pass-through shipped 2026-08-04 — PASS,
+  network-free, both repositories.** The trace found KBS `va` is not exported anywhere and
+  never has been, so no product surface was invented: `kbs_trading_value_export.py` is a
+  future-safe seam that refuses a value without a coverage block, and
+  `builders/kbs_trading_value_coverage_contract.py` receives it without recomputation or
+  upgrade. Two `ee057b9` claims corrected — a price-times-volume field does exist
+  (`gtgd20_ty`, relabelled not disabled) and the `va` consumer register named consumers that
+  read no `va`. No schema bumped. 561 tests across both trees against one frozen fixture.
+  `operations-review/kbs-coverage-pass-through-20260804/KBS_COVERAGE_PASS_THROUGH.md`.
 - **Event-time historical mutability is only reachable prospectively.** A snapshot retained
   *before* a future corporate action plus a matching one after it. Re-requesting an
   already-post-event window is not a substitute at any interval, and no roadmap item may

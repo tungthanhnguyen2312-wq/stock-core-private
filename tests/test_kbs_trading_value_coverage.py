@@ -464,7 +464,33 @@ class CapabilityAndConsumerTest(unittest.TestCase):
             )
         self.assertFalse(coverage.classify_consumer("some.new.reader")["allowed"])
         self.assertFalse(coverage.classify_consumer("opportunity_ranking.turnover_rank")["allowed"])
-        self.assertTrue(coverage.classify_consumer("export_ai_bundle.ohlcv_passthrough")["allowed"])
+        # There are no permitted va consumers, because nothing reads va: the register holds
+        # only the forbidden uses. Asserted so a future entry has to be justified by a trace.
+        self.assertEqual(
+            sorted(coverage.CONSUMER_REQUIREMENTS),
+            ["opportunity_ranking.turnover_rank", "risk_liquidity.turnover_liquidity"],
+        )
+        self.assertTrue(
+            all(req == coverage.UNAVAILABLE_BY_CONTRACT
+                for req in coverage.CONSUMER_REQUIREMENTS.values())
+        )
+
+    def test_19b_the_derived_price_times_volume_quantity_is_registered_not_hidden(self):
+        """gtgd20_ty exists, is derived, and is not observed va -- correcting ee057b9."""
+        record = coverage.classify_derived_quantity("candlestick_patterns.gtgd20_ty_calc")
+        self.assertFalse(record["reads_kbs_va"])
+        self.assertFalse(record["provider_observed_trading_value"])
+        self.assertFalse(record["is_official_turnover"])
+        self.assertEqual(record["source_field"], "derived")
+        self.assertIn("close * volume", record["expression"])
+        for label in ("kbs.observed_daily_trading_value", "official_market_turnover",
+                      "qualified_liquidity"):
+            with self.assertRaises(coverage.TradingValueCoverageError):
+                coverage.assert_derived_quantity_not_relabelled(
+                    "candlestick_patterns.gtgd20_ty_calc", label=label
+                )
+        with self.assertRaises(coverage.TradingValueCoverageError):
+            coverage.classify_derived_quantity("something.invented")
 
     def test_20_legacy_payloads_without_coverage_metadata_fail_closed_for_aggregates(self):
         legacy = {"provider": "KBS", "trading_value": 1.2e12}

@@ -1,0 +1,284 @@
+{
+  "absence_of_active_value_path": {
+    "activation": "populated only when a caller supplies observations through build_row_block or build_window_block; no bundle section is added by this module",
+    "consequence": "No bare KBS trading value crosses the Producer/Consumer boundary today, so there is nothing to retrofit and no legacy va aggregate to quarantine.",
+    "kbs_va_exported": false,
+    "seam_is_future_safe": true,
+    "trace": [
+      "raw KBS payload: va present on 38 of 66 retained sessions",
+      "vnstock.explorer.kbs.quote.Quote.history: drops va unless get_all=True",
+      "vn_stock_pipeline: ohlcv table has no value column",
+      "export_ai_bundle: no trading-value, va or turnover reference",
+      "analysis_bundle.json: ohlcv_recent rows carry {date,open,high,low,close,volume}"
+    ],
+    "traced_at": "2026-08-04"
+  },
+  "active_export_path": null,
+  "canonical_warnings": {
+    "kbs_trading_value_partial_coverage": "KBS trading-value coverage is partial for the requested interval. Statistics are computed from observed rows only. Missing sessions were not imputed or treated as zero. The result is provider-scoped and is not official market turnover or qualified liquidity evidence.",
+    "kbs_trading_value_provider_authority": "This is a KBS provider observation with empirically deduced units. It is not an official exchange trading-value contract."
+  },
+  "compatibility": {
+    "backward_readable": true,
+    "bundle_schema_version_bumped": false,
+    "export_block_version": "1.0.0",
+    "fails_closed_when": "a value is present and the coverage block is absent",
+    "forward_behaviour": "a reader without this block treats KBS trading value as coverage_state=unknown and refuses aggregate claims",
+    "unrelated_schemas_bumped": [],
+    "why_not": "The block is additive and no exported artifact contains one today, so nothing a current reader parses changes. Bumping the bundle schema would signal a breaking change that has not happened."
+  },
+  "complete_window_block": {
+    "coverage": {
+      "automatic_imputation_authorized": false,
+      "causal_explanation": "unknown",
+      "coverage_generalization": "limited_to_retained_windows",
+      "coverage_ratio": 1.0,
+      "coverage_state": "complete",
+      "covered_sessions": [
+        "2026-07-20",
+        "2026-07-21"
+      ],
+      "excluded_sessions": [],
+      "field_omitted_count": 0,
+      "malformed_count": 0,
+      "missing_as_zero_authorized": false,
+      "missing_sessions": [],
+      "partial_coverage_warning": null,
+      "present_null_count": 0,
+      "present_numeric_count": 2,
+      "present_zero_count": 0,
+      "requested_session_count": 2,
+      "returned_row_count": 2,
+      "row_missing_count": 0,
+      "statistic_scope": "complete_requested_window",
+      "usable_count": 2
+    },
+    "export_block_version": "1.0.0",
+    "not_comparable_to_complete_period_total": false,
+    "provider": "KBS",
+    "requested_window": [
+      "2026-07-20",
+      "2026-07-21"
+    ],
+    "source_field": "va",
+    "source_field_identity": "qualified",
+    "ticker": "HPG",
+    "trading_value_unit": "VND",
+    "trading_value_unit_qualification": "empirically_deduced",
+    "warning_tokens": [
+      "kbs_trading_value_provider_authority"
+    ],
+    "warnings": [
+      "This is a KBS provider observation with empirically deduced units. It is not an official exchange trading-value contract."
+    ]
+  },
+  "export_block_version": "1.0.0",
+  "fixture_version": "1.0.0",
+  "legacy_aggregate_without_coverage": {
+    "aggregate_allowed": false,
+    "coverage_state": "unknown",
+    "display_allowed": false,
+    "legacy": true,
+    "legacy_class": "legacy_aggregate_without_coverage",
+    "reason": "legacy_value_without_row_identity_or_coverage_cannot_be_interpreted"
+  },
+  "legacy_no_trading_value": {
+    "coverage_state": "unknown",
+    "legacy": true,
+    "legacy_class": "legacy_no_trading_value",
+    "unaffected": true
+  },
+  "legacy_row_observation": {
+    "aggregate_allowed": false,
+    "coverage_state": "unknown",
+    "display_allowed": true,
+    "legacy": true,
+    "legacy_class": "legacy_row_observation",
+    "legacy_provenance_warning": "Legacy KBS observation without a coverage block. Row identity is explicit, so the value may be displayed as a provider observation; it cannot support any statement about an interval.",
+    "warning_tokens": [
+      "kbs_trading_value_provider_authority"
+    ]
+  },
+  "omitted_row_block": {
+    "coverage": {
+      "automatic_imputation_authorized": false,
+      "causal_explanation": "unknown",
+      "coverage_generalization": "limited_to_retained_windows",
+      "coverage_ratio": 0.0,
+      "coverage_state": "absent",
+      "covered_sessions": [],
+      "excluded_sessions": [
+        {
+          "reason": "provider_did_not_send_the_field_for_this_session",
+          "session_date": "2026-07-22",
+          "state": "field_omitted"
+        }
+      ],
+      "field_omitted_count": 1,
+      "malformed_count": 0,
+      "missing_as_zero_authorized": false,
+      "missing_sessions": [],
+      "partial_coverage_warning": null,
+      "present_null_count": 0,
+      "present_numeric_count": 0,
+      "present_zero_count": 0,
+      "requested_session_count": 1,
+      "returned_row_count": 1,
+      "row_missing_count": 0,
+      "statistic_scope": "single_observed_row",
+      "usable_count": 0
+    },
+    "export_block_version": "1.0.0",
+    "provider": "KBS",
+    "session_date": "2026-07-22",
+    "source_field": "va",
+    "source_field_identity": "qualified",
+    "trading_value_field_state": "field_omitted",
+    "trading_value_unit": "VND",
+    "trading_value_unit_qualification": "empirically_deduced",
+    "trading_value_value": null,
+    "warning_tokens": [
+      "kbs_trading_value_provider_authority"
+    ],
+    "warnings": [
+      "This is a KBS provider observation with empirically deduced units. It is not an official exchange trading-value contract."
+    ]
+  },
+  "partial_window_block": {
+    "coverage": {
+      "automatic_imputation_authorized": false,
+      "causal_explanation": "unknown",
+      "coverage_generalization": "limited_to_retained_windows",
+      "coverage_ratio": 0.666667,
+      "coverage_state": "partial_known",
+      "covered_sessions": [
+        "2026-07-20",
+        "2026-07-21"
+      ],
+      "excluded_sessions": [
+        {
+          "reason": "provider_did_not_send_the_field_for_this_session",
+          "session_date": "2026-07-22",
+          "state": "field_omitted"
+        }
+      ],
+      "field_omitted_count": 1,
+      "malformed_count": 0,
+      "missing_as_zero_authorized": false,
+      "missing_sessions": [],
+      "partial_coverage_warning": "KBS trading-value coverage is partial for the requested interval. Statistics are computed from observed rows only. Missing sessions were not imputed or treated as zero. The result is provider-scoped and is not official market turnover or qualified liquidity evidence.",
+      "present_null_count": 0,
+      "present_numeric_count": 2,
+      "present_zero_count": 0,
+      "requested_session_count": 3,
+      "returned_row_count": 3,
+      "row_missing_count": 0,
+      "statistic_scope": "observed_rows_only",
+      "usable_count": 2
+    },
+    "export_block_version": "1.0.0",
+    "not_comparable_to_complete_period_total": true,
+    "provider": "KBS",
+    "requested_window": [
+      "2026-07-20",
+      "2026-07-22"
+    ],
+    "source_field": "va",
+    "source_field_identity": "qualified",
+    "ticker": "HPG",
+    "trading_value_unit": "VND",
+    "trading_value_unit_qualification": "empirically_deduced",
+    "warning_tokens": [
+      "kbs_trading_value_partial_coverage",
+      "kbs_trading_value_provider_authority"
+    ],
+    "warnings": [
+      "KBS trading-value coverage is partial for the requested interval. Statistics are computed from observed rows only. Missing sessions were not imputed or treated as zero. The result is provider-scoped and is not official market turnover or qualified liquidity evidence.",
+      "This is a KBS provider observation with empirically deduced units. It is not an official exchange trading-value contract."
+    ]
+  },
+  "purpose": "Frozen Producer output pinned by both repositories. Consumer asserts it can load every field and cannot upgrade the verdict; Producer asserts it still generates exactly this.",
+  "row_block": {
+    "coverage": {
+      "automatic_imputation_authorized": false,
+      "causal_explanation": "unknown",
+      "coverage_generalization": "limited_to_retained_windows",
+      "coverage_ratio": 1.0,
+      "coverage_state": "complete",
+      "covered_sessions": [
+        "2026-07-20"
+      ],
+      "excluded_sessions": [],
+      "field_omitted_count": 0,
+      "malformed_count": 0,
+      "missing_as_zero_authorized": false,
+      "missing_sessions": [],
+      "partial_coverage_warning": null,
+      "present_null_count": 0,
+      "present_numeric_count": 1,
+      "present_zero_count": 0,
+      "requested_session_count": 1,
+      "returned_row_count": 1,
+      "row_missing_count": 0,
+      "statistic_scope": "single_observed_row",
+      "usable_count": 1
+    },
+    "export_block_version": "1.0.0",
+    "provider": "KBS",
+    "session_date": "2026-07-20",
+    "source_field": "va",
+    "source_field_identity": "qualified",
+    "trading_value_field_state": "present_numeric",
+    "trading_value_unit": "VND",
+    "trading_value_unit_qualification": "empirically_deduced",
+    "trading_value_value": 20000000000.0,
+    "warning_tokens": [
+      "kbs_trading_value_provider_authority"
+    ],
+    "warnings": [
+      "This is a KBS provider observation with empirically deduced units. It is not an official exchange trading-value contract."
+    ]
+  },
+  "warnings_fingerprint": "1b7dcaba1bc5d019bea6f1de73eab88395337dc6552dfd6038ce3d9eaa8e6a3c",
+  "zero_row_block": {
+    "coverage": {
+      "automatic_imputation_authorized": false,
+      "causal_explanation": "unknown",
+      "coverage_generalization": "limited_to_retained_windows",
+      "coverage_ratio": 1.0,
+      "coverage_state": "complete",
+      "covered_sessions": [
+        "2026-07-21"
+      ],
+      "excluded_sessions": [],
+      "field_omitted_count": 0,
+      "malformed_count": 0,
+      "missing_as_zero_authorized": false,
+      "missing_sessions": [],
+      "partial_coverage_warning": null,
+      "present_null_count": 0,
+      "present_numeric_count": 0,
+      "present_zero_count": 1,
+      "requested_session_count": 1,
+      "returned_row_count": 1,
+      "row_missing_count": 0,
+      "statistic_scope": "single_observed_row",
+      "usable_count": 1
+    },
+    "export_block_version": "1.0.0",
+    "provider": "KBS",
+    "session_date": "2026-07-21",
+    "source_field": "va",
+    "source_field_identity": "qualified",
+    "trading_value_field_state": "present_zero",
+    "trading_value_unit": "VND",
+    "trading_value_unit_qualification": "empirically_deduced",
+    "trading_value_value": 0.0,
+    "warning_tokens": [
+      "kbs_trading_value_provider_authority"
+    ],
+    "warnings": [
+      "This is a KBS provider observation with empirically deduced units. It is not an official exchange trading-value contract."
+    ]
+  }
+}

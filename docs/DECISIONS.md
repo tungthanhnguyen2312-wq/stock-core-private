@@ -5,7 +5,74 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-04 - P0-Z.3 KBS Coverage Export Seam and Consumer Pass-Through
+
+- **KBS `va` has never been exported, and that is now recorded rather than assumed.** The
+  trace: `vnstock` drops `va` unless `get_all=True`; the `ohlcv` table has no value column;
+  `export_ai_bundle` contains no trading-value reference; `analysis_bundle.json`
+  `ohlcv_recent` rows carry `{date,open,high,low,close,volume}`. There is therefore no bare
+  KBS trading value crossing the boundary and nothing to retrofit.
+  `ABSENCE_OF_ACTIVE_VALUE_PATH` holds the trace so the next reader does not repeat it.
+
+- **Two errors in the `ee057b9` closeout, both found by tracing instead of assuming.** It
+  stated that no existing consumer creates a price-times-volume field — false:
+  `candlestick_patterns.py:148` computes `gtgd20_ty`, a 20-session rolling mean of
+  `close * volume` in billion VND that reaches `stock_analyzer`, `candle_scan`,
+  `ai_analyzer` and the Consumer schema registry. And its `CONSUMER_REQUIREMENTS` named four
+  `va` consumers, none of which read `va`; `stock_analyzer.turnover_features` and
+  `export_ai_bundle.trading_value_passthrough` do not exist at all. The register now holds
+  only the forbidden uses, and a future entry has to be justified by a trace.
+
+- **`gtgd20_ty` is relabelled, not disabled.** It reconstructs no missing `va`, predates this
+  lane, and its volume side is already classified in `market_volume_capability_matrix` as
+  analytical and explicitly not qualified liquidity. `NON_VA_DERIVED_QUANTITIES` records the
+  expression, that it reads no `va`, and the three labels it may never carry. Deleting a
+  working screen over a naming collision would not have been proportionate.
+
+- **The seam is built now because the cheap moment is before the first caller.** Once a bare
+  number is in a schema, every consumer of it becomes a migration.
+  `kbs_trading_value_export.py` costs nothing while `ACTIVE_EXPORT_PATH` is `None` and is
+  already in place the day someone flips `get_all=True`. It adds no bundle section and
+  populates no field with nulls.
+
+- **Labels are validated against counts on both sides.** `assert_block_valid` and the
+  Consumer's `assert_labels_agree_with_counts` both refuse `complete` beside fewer usable
+  rows than requested, `partial_known` with none or all rows usable, and
+  `complete_requested_window` scope on non-complete coverage. Every individual field can be
+  well-formed while the block as a whole lies; that is the check that catches it.
+
+- **Consumer passes through and never improves.** All 20 coverage fields copied verbatim,
+  nothing recomputed, a dropped field is an error, coverage may be narrowed but never
+  widened, and the authority and partial warnings cannot be removed. Consumer holds no copy
+  of Producer's capability matrix — Producer keeps authority.
+
+- **One warning source, pinned across repositories.** Two tokens, one text table, a SHA-256
+  fingerprint asserted from a frozen fixture that is byte-identical in both trees. A
+  Producer edit that is not mirrored fails a Consumer test rather than shipping two
+  different sentences for the same condition.
+
+- **Absence of metadata never means complete.** All three legacy classes resolve to
+  `coverage_state = unknown`. A legacy row observation with explicit row identity stays
+  displayable with a provenance warning; a legacy value without row identity or coverage is
+  refused outright.
+
+- **No schema bumped.** The block is additive and no artifact contains one, so nothing a
+  current reader parses changes. `compatibility()` states the forward behaviour explicitly:
+  a reader without the block treats KBS trading value as `unknown` and refuses aggregates.
+
+- **Non-effects.** No network request. No production write or publication. All descriptive
+  and technical capabilities preserved. `volume_market_scope` `unknown`,
+  `liquidity_actionable` false, `is_actionable` unchanged. 561 tests passing across both
+  repositories.
+
+- Evidence: `operations-review/kbs-coverage-pass-through-20260804/`.
+  `KBS_COVERAGE_PASS_THROUGH: PASS`.
+
 ## 2026-08-04 - P0-Z.2 KBS Trading-Value Coverage and Safe Aggregation
+> **PARTIALLY CORRECTED 2026-08-04 by P0-Z.3.** The coverage model, states, gates and
+> inventory all stand. Two claims do not: "no existing consumer creates such a field" was
+> false, and the `va` consumer register listed four consumers that read no `va`. See the
+> P0-Z.3 entry above.
 
 - **Coverage became an input instead of a warning.** `va` is present on 38 of 66 retained
   sessions. A period total over those 38 rows looks exactly like a complete one — same type,

@@ -1,12 +1,7 @@
 {
   "consumer_requirements": {
-    "builders.build_ticker_context.trading_value_passthrough": "row_level_only",
-    "candlestick_patterns.gtgd20_ty_calc": "partial_permitted_when_labelled",
-    "export_ai_bundle.ohlcv_passthrough": "row_level_only",
-    "export_ai_bundle.trading_value_passthrough": "row_level_only",
     "opportunity_ranking.turnover_rank": "unavailable_by_contract",
-    "risk_liquidity.turnover_liquidity": "unavailable_by_contract",
-    "stock_analyzer.turnover_features": "partial_permitted_when_labelled"
+    "risk_liquidity.turnover_liquidity": "unavailable_by_contract"
   },
   "corrected_causal_framing": {
     "artifacts": [
