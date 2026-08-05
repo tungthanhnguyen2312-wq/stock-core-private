@@ -30,6 +30,7 @@ from pathlib import Path
 
 from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
 import release_session_contract
+import trusted_subset_contract
 try:
     from observability_events import (
         EventOutcome,
@@ -50,7 +51,22 @@ if hasattr(sys.stdout, "reconfigure"):
 
 VN_TZ = timezone(timedelta(hours=7))
 SCRIPT_ROOT = Path(__file__).resolve().parent
-BACKEND_ROOT = Path(os.environ.get("STOCK_LOOKUP_BACKEND_DIR", SCRIPT_ROOT)).expanduser().resolve()
+
+def get_default_backend_root() -> Path:
+    if os.environ.get("STOCK_LOOKUP_BACKEND_DIR"):
+        return Path(os.environ["STOCK_LOOKUP_BACKEND_DIR"]).expanduser().resolve()
+    if os.environ.get("STOCK_LOOKUP_RUNTIME_ROOT"):
+        return Path(os.environ["STOCK_LOOKUP_RUNTIME_ROOT"]).expanduser().resolve()
+    for candidate_dir in (
+        SCRIPT_ROOT / ".." / "dashboard-runtime",
+        SCRIPT_ROOT / ".." / ".." / "dashboard-runtime",
+    ):
+        cand = candidate_dir.resolve()
+        if cand.is_dir() and (cand / "screen_snapshot.csv").is_file():
+            return cand
+    return SCRIPT_ROOT
+
+BACKEND_ROOT = get_default_backend_root()
 WEB_ROOT = Path(os.environ.get("STOCK_LOOKUP_WEB_DIR", SCRIPT_ROOT)).expanduser().resolve()
 
 # LIVE_MODE gates every filesystem/log write in this module. main() sets it
@@ -64,7 +80,7 @@ _RUN_TIMESTAMP = f"{datetime.now(VN_TZ):%Y%m%d-%H%M%S}"
 
 COPY_ARTIFACTS = (
     "screen_snapshot.csv", "market_breadth.csv",
-    "ai_report_latest.md", "ai_report_latest.json", "analysis_bundle.json",
+    "ai_report_latest.md", "ai_report_latest.json",
     "data/macro_snapshot.json", "data/macro_snapshot.js",
     "data/candlestick_patterns.json", "data/candlestick_patterns.js",
     "data/candle_signals.json", "data/candle_signals.js",
@@ -87,13 +103,13 @@ ASSET_VERSION_ATTR_RE = re.compile(r'(?P<prefix>\b(?:src|href)=["\'])(?P<url>[^"
 # instead of a hardcoded WEB_ROOT is what makes the dry-run preview and a live write
 # agree on content/build_id, and what lets session validation see the fresh generation
 # instead of the previous publish's already-copied — possibly stale — file.
-BACKEND_SOURCED = {"screen_snapshot.csv", "market_breadth.csv", "analysis_bundle.json",
+BACKEND_SOURCED = {"screen_snapshot.csv", "market_breadth.csv",
                    "ai_report_latest.md", "ai_report_latest.json"}
 # screen_snapshot_live.csv is not copied by this publisher (see COPY_ARTIFACTS) but is
 # generated alongside screen_snapshot.csv by the same vn_indicators.py run, so its
 # session is cross-checked here whenever it is present.
 REQUIRED_SESSION_ARTIFACTS = ("screen_snapshot.csv", "market_breadth.csv")
-OPTIONAL_SESSION_ARTIFACTS = ("screen_snapshot_live.csv", "analysis_bundle.json")
+OPTIONAL_SESSION_ARTIFACTS = ("screen_snapshot_live.csv",)
 
 
 def source_root(relative: str) -> Path:
@@ -228,7 +244,7 @@ def validate_release_session() -> release_session_contract.ReleaseSessionReport:
 
 
 def validate_snapshot() -> tuple[list[dict[str, str]], list[dict[str, str]], str]:
-    rows, fields = read_csv_rows(source_root("screen_snapshot.csv") / "screen_snapshot.csv")
+    rows, fields = read_csv_rows(BACKEND_ROOT / "screen_snapshot.csv")
     missing = REQUIRED_SNAPSHOT_COLUMNS - set(fields)
     if missing:
         raise ValueError(f"screen_snapshot.csv thiếu cột: {', '.join(sorted(missing))}")
@@ -254,7 +270,7 @@ def validate_snapshot() -> tuple[list[dict[str, str]], list[dict[str, str]], str
     if not active_dates:
         raise ValueError("không xác định được phiên mới nhất của mã đang niêm yết")
     market_session = max(active_dates)
-    breadth, _ = read_csv_rows(source_root("market_breadth.csv") / "market_breadth.csv")
+    breadth, _ = read_csv_rows(BACKEND_ROOT / "market_breadth.csv")
     log(f"Snapshot hợp lệ: {len(rows)} mã, {len(breadth)} dòng breadth, phiên {market_session}, HPG=HSX.")
     return rows, breadth, market_session
 
@@ -527,6 +543,26 @@ def build_whitelist() -> list[str]:
     return sorted(cleaned)
 
 
+def run_release_smoke_tests() -> int:
+    """Run tests/release-smoke.test.js against WEB_ROOT — the exact post-copy worktree —
+    via `node --test`. LIVE only, and only after copy_public_artifacts()/write_build_manifest()
+    have run: a dry-run has not copied anything yet, so there is no post-copy worktree to
+    test. This is the authoritative content check trusted_subset_contract cannot perform
+    (rendered HTML, per-ticker Altman/statement-taxonomy sections) — it must pass before
+    any git add/commit/push. See tests/release-smoke.test.js's own docstring: it runs
+    against the committed analysis_bundle.json/bundle_manifest.json, not a fixture."""
+    test_path = WEB_ROOT / "tests" / "release-smoke.test.js"
+    if not test_path.is_file():
+        log(f"[LỖI] không thấy {test_path} — release-smoke bắt buộc trước khi commit.")
+        return 1
+    proc = subprocess.run(["node", "--test", str(test_path)], cwd=WEB_ROOT,
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
+    for stream in (proc.stdout, proc.stderr):
+        if stream:
+            log(stream.rstrip())
+    return proc.returncode
+
+
 def git_preflight() -> tuple[str, str, str]:
     ok, root = git("rev-parse", "--show-toplevel")
     if not ok or Path(root).resolve() != WEB_ROOT:
@@ -608,10 +644,9 @@ def publish_live(whitelist: list[str], branch: str) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="""Build/publish dashboard with atomic writes, asset versioning, basis contracts, and Phase 2A pipeline integration."""
-                     "read-only tuyệt đối: không copy, không ghi manifest, không sửa "
-                     "HTML/CSS/JS, không ghi log, không git mutation — chỉ in kế hoạch.")
+        description="Build/publish dashboard with atomic writes, asset versioning, basis contracts, and Phase 2A pipeline integration.")
     parser.add_argument("--live", action="store_true", help="cho phép ghi file, fetch/pull/add/commit/push thật")
+    parser.add_argument("--isolated-test-fixture", action="store_true", help="cho phép BACKEND_ROOT trùng WEB_ROOT trong môi trường test isolated")
     args = parser.parse_args()
 
     global LIVE_MODE
@@ -619,6 +654,9 @@ def main() -> int:
     mode = "LIVE" if args.live else "DRY-RUN (read-only)"
     log(f"=== publish_dashboard {mode} ===")
     log(f"Backend={BACKEND_ROOT} · Web={WEB_ROOT}")
+
+    if BACKEND_ROOT.resolve() == WEB_ROOT.resolve() and not args.isolated_test_fixture:
+        return fail(f"BACKEND_ROOT và WEB_ROOT trùng nhau ({BACKEND_ROOT}). Cannot publish backend artifacts from web root to itself. Set STOCK_LOOKUP_BACKEND_DIR to point to dashboard-runtime (e.g. C:\\Projects\\StockLookup\\dashboard-runtime).")
 
     try:
         branch, _remote, head = git_preflight()
@@ -665,6 +703,30 @@ def main() -> int:
         whitelist = build_whitelist()
     except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
         return fail(str(exc))
+
+    # Post-copy, pre-commit gate: analysis_bundle.json is a member of the exact-session
+    # trusted subset that tools/publish_release.py owns (bundle_manifest.json,
+    # focus_extract.json, statement_taxonomy_sidecar.json alongside it). Copying it here
+    # without that subset already having been published together produces a mixed
+    # release — exactly what happened in commit fbaf1fe (2026-08-05): a fresh
+    # analysis_bundle.json committed next to a bundle_manifest.json still naming the
+    # previous session's hash. Refuse before any git mutation, not after.
+    # Scoped to analysis_bundle.json: the only trusted-subset member this publisher ever
+    # copies. An unrelated stale/undeclared sibling (e.g. a taxonomy sidecar
+    # tools/publish_release.py's own manifest legitimately excluded for this session) is
+    # not this publisher's concern and must not block its otherwise-unrelated commit.
+    trusted_report = trusted_subset_contract.verify_trusted_subset(WEB_ROOT, scope=("analysis_bundle.json",))
+    for line in trusted_report.render():
+        log(line)
+    if not trusted_report.ready:
+        return fail("trusted-subset verification failed — see TRUSTED_SUBSET_MISMATCH above; "
+                     "no git mutation performed. Publish the trusted subset with "
+                     "tools/publish_release.py first.")
+
+    smoke_rc = run_release_smoke_tests()
+    if smoke_rc != 0:
+        return fail(f"tests/release-smoke.test.js failed with exit code {smoke_rc}; "
+                     "no git mutation performed")
 
     ok, diff_check = git("diff", "--check", "--", *whitelist)
     if not ok:
