@@ -7,6 +7,7 @@ tests/test_selftest.py imports stock_analyzer — it only works on a machine tha
 real file on disk, which is the intended/only environment this script ever runs in.
 """
 
+import json
 import shutil
 import sys
 import tempfile
@@ -28,7 +29,13 @@ def _write_min_fixture(root: Path) -> None:
     (root / "screen_snapshot.csv").write_text(
         "ticker,exchange,date\nHPG,HSX,2026-07-17\nABC,HNX,2026-07-17\n", encoding="utf-8"
     )
-    (root / "market_breadth.csv").write_text("group,n_up\nALL,1\n", encoding="utf-8")
+    # date column matches screen_snapshot.csv above — release_session_contract cross-
+    # checks every session-sensitive artifact, so a realistic fixture ("published at
+    # least once") must agree on session, same as the real repo does after a publish.
+    (root / "market_breadth.csv").write_text("group,date,n_up\nALL,2026-07-17,1\n", encoding="utf-8")
+    (root / "analysis_bundle.json").write_text(
+        '{"reference_session_date": "2026-07-17"}\n', encoding="utf-8"
+    )
     for name in (
         "app.js", "style.css", "assets/js/value-format.js",
         "assets/js/company-panel.js", "assets/css/tailwind.generated.css",
@@ -262,6 +269,102 @@ class ValidationFailureStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
         m_version.assert_not_called()
         after = self._all_files(exclude_logs=True)
         self.assertEqual(before, after, "Validation thất bại không được để lại thay đổi nào trên đĩa")
+
+
+def _write_backend_fixture(root: Path, session: str, *, live_session: str | None = None) -> None:
+    """A backend/runtime root holding just the generated data files (no HTML/assets) —
+    what BACKEND_ROOT looks like after a `vn_indicators.py` + `export_ai_bundle.py` run."""
+    live_session = live_session or session
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "bundle_manifest.json").write_text(json.dumps({
+        "schema_version": "1.1.0",
+        "freshness": {"reference_session": session, "blocked": False, "status": "fresh"},
+    }), encoding="utf-8")
+    (root / "screen_snapshot.csv").write_text(
+        f"ticker,exchange,date\nHPG,HSX,{session}\nABC,HNX,{session}\n", encoding="utf-8")
+    (root / "market_breadth.csv").write_text(f"group,date,n_up\nALL,{session},1\n", encoding="utf-8")
+    (root / "screen_snapshot_live.csv").write_text(
+        f"ticker,exchange,date\nHPG,HSX,{live_session}\n", encoding="utf-8")
+    (root / "analysis_bundle.json").write_text(
+        json.dumps({"reference_session_date": session}), encoding="utf-8")
+
+
+class SessionMismatchStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
+    """Reproduces the reported defect directly: a session disagreement must stop the
+    publisher before any copy/manifest/version/git write, in both the single-root case
+    (bare invocation; BACKEND_ROOT defaults to WEB_ROOT) and the cross-root case."""
+
+    def test_single_root_self_inconsistent_manifest_fails_closed(self):
+        # The exact repro: bundle_manifest.json (already in WEB_ROOT from an earlier,
+        # separate publish_release.py run) disagrees with WEB_ROOT's own stale
+        # screen_snapshot.csv — BACKEND_ROOT == WEB_ROOT because no override was set.
+        (self.tmp / "bundle_manifest.json").write_text(json.dumps({
+            "freshness": {"reference_session": "2026-08-04", "blocked": False, "status": "fresh"},
+        }), encoding="utf-8")
+        before = self._all_files(exclude_logs=True)
+        with mock.patch.object(pd, "copy_public_artifacts") as m_copy, \
+             mock.patch.object(pd, "write_build_manifest") as m_manifest:
+            rc = self._run(["publish_dashboard.py"])
+        self.assertEqual(rc, 1)
+        m_copy.assert_not_called()
+        m_manifest.assert_not_called()
+        after = self._all_files(exclude_logs=True)
+        self.assertEqual(before, after)
+
+    def test_cross_root_stale_web_copy_does_not_mask_fresh_backend_mismatch_report(self):
+        backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
+        # WEB_ROOT (self.tmp) already holds screen_snapshot.csv dated 2026-07-17 from the
+        # fixture; BACKEND_ROOT disagrees internally (manifest says 08-04, its own
+        # screen_snapshot.csv is 07-24) — the exact "two publishers left it inconsistent"
+        # shape found in the real worktree. This must fail on the BACKEND disagreement,
+        # not silently pass by reading WEB_ROOT's unrelated stale copy instead.
+        _write_backend_fixture(backend, "2026-08-04")
+        (backend / "screen_snapshot.csv").write_text(
+            "ticker,exchange,date\nHPG,HSX,2026-07-24\nABC,HNX,2026-07-24\n", encoding="utf-8")
+        pd.BACKEND_ROOT = backend
+
+        with mock.patch.object(pd, "copy_public_artifacts") as m_copy:
+            rc = self._run(["publish_dashboard.py"])
+        self.assertEqual(rc, 1)
+        m_copy.assert_not_called()
+
+
+class PathResolutionReadsFreshBackendTests(_PublishDashboardTestBase):
+    """Scenario 11 (generalized): proves the publisher reads BACKEND_ROOT's current
+    generation, not whatever stale copy already sits in WEB_ROOT from a previous publish —
+    the concrete case is BACKEND_ROOT=dashboard-runtime, WEB_ROOT=the served checkout;
+    this test stands the same shape up with two temp directories."""
+
+    def test_dry_run_reports_backend_session_not_stale_web_root_session(self):
+        backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
+        _write_backend_fixture(backend, "2026-08-04")
+        pd.BACKEND_ROOT = backend
+        # self.tmp (WEB_ROOT) still holds the fixture's 2026-07-17 screen_snapshot.csv —
+        # a stand-in for the served checkout's last-published, now-stale copy.
+        self.assertIn("2026-07-17", (self.tmp / "screen_snapshot.csv").read_text(encoding="utf-8"))
+
+        rc = self._run(["publish_dashboard.py"])
+
+        self.assertEqual(rc, 0)
+        rows, breadth, market_session = pd.validate_snapshot()
+        self.assertEqual(market_session, "2026-08-04", "must read BACKEND_ROOT's session, not WEB_ROOT's stale copy")
+
+    def test_backend_missing_optional_files_falls_back_to_web_root_gracefully(self):
+        """BACKEND_ROOT lacking an optional artifact (e.g. analysis_bundle.json was never
+        generated there) must not crash source_root() — it degrades to WEB_ROOT for that
+        one name, same as a single-root invocation would."""
+        backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
+        (backend / "screen_snapshot.csv").write_text(
+            "ticker,exchange,date\nHPG,HSX,2026-07-17\nABC,HNX,2026-07-17\n", encoding="utf-8")
+        (backend / "market_breadth.csv").write_text("group,date,n_up\nALL,2026-07-17,1\n", encoding="utf-8")
+        pd.BACKEND_ROOT = backend
+
+        self.assertEqual(pd.source_root("analysis_bundle.json"), pd.WEB_ROOT)
+        rc = self._run(["publish_dashboard.py"])
+        self.assertEqual(rc, 0)
 
 
 if __name__ == "__main__":

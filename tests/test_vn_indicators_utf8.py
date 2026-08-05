@@ -96,6 +96,24 @@ class SubprocessSmokeTests(unittest.TestCase):
             self.assertIn("screen_snapshot_live.csv", produced)
             self.assertIn("market_breadth.csv", produced)
 
+            # One bounded run must produce screen_snapshot.csv and screen_snapshot_live.csv
+            # with compatible session metadata — the release-session contract
+            # (release_session_contract.py) trusts this pairing; if a future change ever
+            # split their generation across two runs (or sourced screen_snapshot_live.csv
+            # from a different DataFrame), this is what would catch it. This fixture's DB
+            # has no instrument_master_records/_snapshots table, so live_universe.evaluate()
+            # fail-closes every row to "unknown" (see load_instrument_master) and
+            # screen_snapshot_live.csv legitimately has zero data rows here — the subset
+            # check below still holds (vacuously) and still guards the real invariant.
+            import csv as _csv
+            with (runtime_root / "screen_snapshot.csv").open(encoding="utf-8-sig") as f:
+                full_dates = {row["date"] for row in _csv.DictReader(f) if row.get("exchange") != "DELISTED"}
+            with (runtime_root / "screen_snapshot_live.csv").open(encoding="utf-8-sig") as f:
+                live_dates = {row["date"] for row in _csv.DictReader(f)}
+            self.assertTrue(live_dates.issubset(full_dates),
+                            "screen_snapshot_live.csv's session(s) must also appear in the same "
+                            "run's screen_snapshot.csv — they must not diverge across separate runs")
+
         if prod_stat_before is not None:
             prod_stat_after = PROD_RUNTIME_DB.stat()
             self.assertEqual(prod_stat_before.st_mtime_ns, prod_stat_after.st_mtime_ns)

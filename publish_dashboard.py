@@ -29,6 +29,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
+import release_session_contract
 try:
     from observability_events import (
         EventOutcome,
@@ -80,6 +81,32 @@ REQUIRED_SNAPSHOT_COLUMNS = {"ticker", "exchange", "date"}
 CANONICAL_EXCHANGES = {"HSX", "HNX", "UPCOM", "DELISTED"}
 EXCHANGE_ALIASES = {"HOSE": "HSX", "HCM": "HSX", "UPCOM": "UPCOM"}
 ASSET_VERSION_ATTR_RE = re.compile(r'(?P<prefix>\b(?:src|href)=["\'])(?P<url>[^"\']+)(?P<quote>["\'])', re.I)
+
+# Names whose current-truth bytes live in BACKEND_ROOT for this run (the artifacts
+# copy_public_artifacts() mirrors into WEB_ROOT). Reading them through source_root()
+# instead of a hardcoded WEB_ROOT is what makes the dry-run preview and a live write
+# agree on content/build_id, and what lets session validation see the fresh generation
+# instead of the previous publish's already-copied — possibly stale — file.
+BACKEND_SOURCED = {"screen_snapshot.csv", "market_breadth.csv", "analysis_bundle.json",
+                   "ai_report_latest.md", "ai_report_latest.json"}
+# screen_snapshot_live.csv is not copied by this publisher (see COPY_ARTIFACTS) but is
+# generated alongside screen_snapshot.csv by the same vn_indicators.py run, so its
+# session is cross-checked here whenever it is present.
+REQUIRED_SESSION_ARTIFACTS = ("screen_snapshot.csv", "market_breadth.csv")
+OPTIONAL_SESSION_ARTIFACTS = ("screen_snapshot_live.csv", "analysis_bundle.json")
+
+
+def source_root(relative: str) -> Path:
+    """Where `relative`'s current-truth bytes live for this run.
+
+    BACKEND_ROOT when it is a name copy_public_artifacts() sources from there AND
+    BACKEND_ROOT actually has the file; WEB_ROOT otherwise (frontend source, destination
+    -only build outputs, or an optional backend artifact never generated there — e.g. a
+    single-root invocation where BACKEND_ROOT == WEB_ROOT already covers this trivially).
+    """
+    if relative in BACKEND_SOURCED and (BACKEND_ROOT / relative).is_file():
+        return BACKEND_ROOT
+    return WEB_ROOT
 
 
 def log(message: str) -> None:
@@ -188,8 +215,20 @@ def read_csv_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:
     return rows, fields
 
 
+def validate_release_session() -> release_session_contract.ReleaseSessionReport:
+    """Resolve + validate the one authoritative release session before trusting anything
+    already sitting in WEB_ROOT. Runs against BACKEND_ROOT (the fresh generation root;
+    identical to WEB_ROOT in a single-root invocation) so a leftover stale WEB_ROOT copy
+    from a previous publish can never mask itself as current — see
+    docs/dashboard_release_session_contract.md."""
+    root = BACKEND_ROOT
+    required = list(REQUIRED_SESSION_ARTIFACTS)
+    required += [name for name in OPTIONAL_SESSION_ARTIFACTS if (root / name).is_file()]
+    return release_session_contract.resolve_release_session(root, required)
+
+
 def validate_snapshot() -> tuple[list[dict[str, str]], list[dict[str, str]], str]:
-    rows, fields = read_csv_rows(WEB_ROOT / "screen_snapshot.csv")
+    rows, fields = read_csv_rows(source_root("screen_snapshot.csv") / "screen_snapshot.csv")
     missing = REQUIRED_SNAPSHOT_COLUMNS - set(fields)
     if missing:
         raise ValueError(f"screen_snapshot.csv thiếu cột: {', '.join(sorted(missing))}")
@@ -215,7 +254,7 @@ def validate_snapshot() -> tuple[list[dict[str, str]], list[dict[str, str]], str
     if not active_dates:
         raise ValueError("không xác định được phiên mới nhất của mã đang niêm yết")
     market_session = max(active_dates)
-    breadth, _ = read_csv_rows(WEB_ROOT / "market_breadth.csv")
+    breadth, _ = read_csv_rows(source_root("market_breadth.csv") / "market_breadth.csv")
     log(f"Snapshot hợp lệ: {len(rows)} mã, {len(breadth)} dòng breadth, phiên {market_session}, HPG=HSX.")
     return rows, breadth, market_session
 
@@ -253,7 +292,7 @@ def build_signature(market_session: str, head: str) -> str:
         "assets/js/value-format.js", "assets/js/company-panel.js",
         "assets/css/tailwind.generated.css",
     ):
-        path = WEB_ROOT / relative
+        path = source_root(relative) / relative
         if not path.exists():
             raise ValueError(f"thiếu file build bắt buộc: {relative}")
         digest.update(relative.encode())
@@ -277,7 +316,7 @@ def screener_fallback_content(rows: list[dict[str, str]], breadth: list[dict[str
 
 
 def file_entry(relative: str) -> dict[str, object]:
-    path = WEB_ROOT / relative
+    path = source_root(relative) / relative
     stat = path.stat()
     return {
         "sha256": sha256(path), "size": stat.st_size,
@@ -306,7 +345,8 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
     generated_at = str(generated_at or datetime.now(VN_TZ).isoformat(timespec="seconds"))
     screener_js_content = screener_fallback_content(rows, breadth, market_session, generated_at)
     tracked_files = ["screen_snapshot.csv", "market_breadth.csv"]
-    tracked_files += [name for name in ("ai_report_latest.md", "ai_report_latest.json") if (WEB_ROOT / name).exists()]
+    tracked_files += [name for name in ("ai_report_latest.md", "ai_report_latest.json")
+                      if (source_root(name) / name).exists()]
     files: dict[str, object] = {name: file_entry(name) for name in tracked_files}
     files["data/screener_data.js"] = {
         "sha256": content_sha256(screener_js_content),
@@ -315,9 +355,7 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
         # chưa có mtime thật; live apply sẽ có mtime thật sau khi write_build_manifest() ghi file.
         "mtime": None,
     }
-    bundle_path = WEB_ROOT / "analysis_bundle.json"
-    if not bundle_path.exists() and BACKEND_ROOT != WEB_ROOT:
-        bundle_path = BACKEND_ROOT / "analysis_bundle.json"
+    bundle_path = source_root("analysis_bundle.json") / "analysis_bundle.json"
 
     basis_contract: dict[str, object] = {
         "price_basis": "unknown",
@@ -584,6 +622,17 @@ def main() -> int:
 
     try:
         branch, _remote, head = git_preflight()
+        session_report = validate_release_session()
+    except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
+        return fail(str(exc))
+
+    for line in session_report.render():
+        log(line)
+    if not session_report.ready:
+        return fail("release session validation failed — see SESSION_MISMATCH above; "
+                     "no artifact was copied, no manifest written, no git mutation performed")
+
+    try:
         if args.live:
             sync_remote_before_live(branch)
             head = current_head()
