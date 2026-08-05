@@ -84,30 +84,49 @@ if not exist "%STOCK_LOOKUP_WEB_DIR%\build_frontend.bat" (
   exit /b 1
 )
 
-REM 6. Parse release groups (--whole-market, --trusted-ai, --all) and --live
+REM 6. Parse release groups (--whole-market, --trusted-ai, --all) and --live using SHIFT loop
 set "DO_TRUSTED_AI=0"
 set "DO_WHOLE_MARKET=0"
 set "GROUP_SPECIFIED=0"
 set "IS_LIVE=0"
-set "PYTHON_ARGS="
 
-for %%A in (%*) do (
-  if /I "%%~A"=="--whole-market" (
-    set "DO_WHOLE_MARKET=1"
-    set "GROUP_SPECIFIED=1"
-  ) else if /I "%%~A"=="--trusted-ai" (
-    set "DO_TRUSTED_AI=1"
-    set "GROUP_SPECIFIED=1"
-  ) else if /I "%%~A"=="--all" (
-    set "DO_WHOLE_MARKET=1"
-    set "DO_TRUSTED_AI=1"
-    set "GROUP_SPECIFIED=1"
-  ) else if /I "%%~A"=="--live" (
-    set "IS_LIVE=1"
-    set "PYTHON_ARGS=!PYTHON_ARGS! --live"
-  )
+:parse_args
+if "%~1"=="" goto args_done
+
+if /I "%~1"=="--whole-market" (
+  set "DO_WHOLE_MARKET=1"
+  set "GROUP_SPECIFIED=1"
+  shift
+  goto parse_args
 )
 
+if /I "%~1"=="--trusted-ai" (
+  set "DO_TRUSTED_AI=1"
+  set "GROUP_SPECIFIED=1"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="--all" (
+  set "DO_WHOLE_MARKET=1"
+  set "DO_TRUSTED_AI=1"
+  set "GROUP_SPECIFIED=1"
+  shift
+  goto parse_args
+)
+
+if /I "%~1"=="--live" (
+  set "IS_LIVE=1"
+  shift
+  goto parse_args
+)
+
+echo [ERROR] Unknown argument: %~1
+exit /b 1
+
+:args_done
+
+REM Default behavior if no release group is specified: run both (--all)
 if "%GROUP_SPECIFIED%"=="0" (
   set "DO_WHOLE_MARKET=1"
   set "DO_TRUSTED_AI=1"
@@ -128,7 +147,11 @@ if "%DO_TRUSTED_AI%"=="1" (
   echo ============================================================
   echo TRUSTED-SUBSET RELEASE (publish_release.py)
   echo ============================================================
-  "%STOCK_LOOKUP_PYTHON%" "%STOCK_LOOKUP_PRODUCER_DIR%\tools\publish_release.py" --source "%STOCK_LOOKUP_BACKEND_DIR%" --destination "%STOCK_LOOKUP_WEB_DIR%"%PYTHON_ARGS%
+  if "%IS_LIVE%"=="1" (
+    "%STOCK_LOOKUP_PYTHON%" "%STOCK_LOOKUP_PRODUCER_DIR%\tools\publish_release.py" --source "%STOCK_LOOKUP_BACKEND_DIR%" --destination "%STOCK_LOOKUP_WEB_DIR%" --live
+  ) else (
+    "%STOCK_LOOKUP_PYTHON%" "%STOCK_LOOKUP_PRODUCER_DIR%\tools\publish_release.py" --source "%STOCK_LOOKUP_BACKEND_DIR%" --destination "%STOCK_LOOKUP_WEB_DIR%"
+  )
   if errorlevel 1 (
     echo [ERROR] Trusted-subset release publisher failed. Aborting publish.
     exit /b 1
@@ -153,7 +176,11 @@ if "%DO_WHOLE_MARKET%"=="1" (
   echo ============================================================
   echo WHOLE-MARKET DASHBOARD RELEASE (publish_dashboard.py)
   echo ============================================================
-  "%STOCK_LOOKUP_PYTHON%" "%STOCK_LOOKUP_WEB_DIR%\publish_dashboard.py"%PYTHON_ARGS%
+  if "%IS_LIVE%"=="1" (
+    "%STOCK_LOOKUP_PYTHON%" "%STOCK_LOOKUP_WEB_DIR%\publish_dashboard.py" --live
+  ) else (
+    "%STOCK_LOOKUP_PYTHON%" "%STOCK_LOOKUP_WEB_DIR%\publish_dashboard.py"
+  )
   if errorlevel 1 (
     echo [ERROR] Whole-market publisher failed with exit code %errorlevel%.
     exit /b 1
