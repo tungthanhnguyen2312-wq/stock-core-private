@@ -98,15 +98,19 @@ class FakeGit:
 
 class _PublishDashboardTestBase(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="publish_dashboard_test_"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="publish_dashboard_web_test_"))
+        self.backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_test_"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.backend, ignore_errors=True)
+
         _write_min_fixture(self.tmp)
+        _write_min_fixture(self.backend)
 
         self._orig_web = pd.WEB_ROOT
         self._orig_backend = pd.BACKEND_ROOT
         self._orig_live = pd.LIVE_MODE
         pd.WEB_ROOT = self.tmp
-        pd.BACKEND_ROOT = self.tmp  # backend == web -> copy step is a documented no-op
+        pd.BACKEND_ROOT = self.backend
         pd.LIVE_MODE = False
         self.addCleanup(self._restore_globals)
 
@@ -220,15 +224,20 @@ class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
             order.append("version")
             return real_version(build_id)
 
+        def spy_smoke():
+            order.append("smoke")
+            return 0
+
         with mock.patch.object(pd, "copy_public_artifacts", side_effect=spy_copy), \
              mock.patch.object(pd, "write_build_manifest", side_effect=spy_manifest), \
              mock.patch.object(pd, "update_asset_versions", side_effect=spy_version), \
+             mock.patch.object(pd, "run_release_smoke_tests", side_effect=spy_smoke), \
              mock.patch.object(pd, "publish_live", return_value=0) as m_publish:
             rc = self._run(["publish_dashboard.py", "--live"])
 
         self.assertEqual(rc, 0)
-        self.assertEqual(order, ["copy", "manifest", "version"],
-                          "Thứ tự apply phải đúng: copy -> manifest -> version")
+        self.assertEqual(order, ["copy", "manifest", "version", "smoke"],
+                          "Thứ tự apply phải đúng: copy -> manifest -> version -> smoke")
         m_publish.assert_called_once()
         # publish_live() itself was mocked out, so no add/commit/push should ever fire.
         mutating = {"add", "commit", "push"}
@@ -238,7 +247,8 @@ class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
 
     def test_live_actually_writes_files_only_inside_sandbox(self):
         self.fake_git.status_output = " M dashboard.html\n"
-        with mock.patch.object(pd, "publish_live", return_value=0):
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd, "publish_live", return_value=0):
             rc = self._run(["publish_dashboard.py", "--live"])
         self.assertEqual(rc, 0)
         self.assertTrue((self.tmp / "data" / "build_info.json").exists())
@@ -251,7 +261,7 @@ class ValidationFailureStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
     def setUp(self):
         super().setUp()
         # Xoá cột bắt buộc -> validate_snapshot() phải raise trước khi chạm bước ghi nào.
-        (self.tmp / "screen_snapshot.csv").write_text("ticker,date\nHPG,2026-07-17\n", encoding="utf-8")
+        (self.backend / "screen_snapshot.csv").write_text("ticker,date\nHPG,2026-07-17\n", encoding="utf-8")
 
     def test_invalid_snapshot_stops_before_any_write_even_with_live(self):
         # exclude_logs=True: một lời gọi --live hợp lệ (dù validation thất bại) vẫn được
@@ -298,18 +308,23 @@ class SessionMismatchStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
         # The exact repro: bundle_manifest.json (already in WEB_ROOT from an earlier,
         # separate publish_release.py run) disagrees with WEB_ROOT's own stale
         # screen_snapshot.csv — BACKEND_ROOT == WEB_ROOT because no override was set.
-        (self.tmp / "bundle_manifest.json").write_text(json.dumps({
-            "freshness": {"reference_session": "2026-08-04", "blocked": False, "status": "fresh"},
-        }), encoding="utf-8")
-        before = self._all_files(exclude_logs=True)
-        with mock.patch.object(pd, "copy_public_artifacts") as m_copy, \
-             mock.patch.object(pd, "write_build_manifest") as m_manifest:
-            rc = self._run(["publish_dashboard.py"])
-        self.assertEqual(rc, 1)
-        m_copy.assert_not_called()
-        m_manifest.assert_not_called()
-        after = self._all_files(exclude_logs=True)
-        self.assertEqual(before, after)
+        orig_b = pd.BACKEND_ROOT
+        pd.BACKEND_ROOT = self.tmp
+        try:
+            (self.tmp / "bundle_manifest.json").write_text(json.dumps({
+                "freshness": {"reference_session": "2026-08-04", "blocked": False, "status": "fresh"},
+            }), encoding="utf-8")
+            before = self._all_files(exclude_logs=True)
+            with mock.patch.object(pd, "copy_public_artifacts") as m_copy, \
+                 mock.patch.object(pd, "write_build_manifest") as m_manifest:
+                rc = self._run(["publish_dashboard.py"])
+            self.assertEqual(rc, 1)
+            m_copy.assert_not_called()
+            m_manifest.assert_not_called()
+            after = self._all_files(exclude_logs=True)
+            self.assertEqual(before, after)
+        finally:
+            pd.BACKEND_ROOT = orig_b
 
     def test_cross_root_stale_web_copy_does_not_mask_fresh_backend_mismatch_report(self):
         backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
