@@ -7,6 +7,7 @@ tests/test_selftest.py imports stock_analyzer — it only works on a machine tha
 real file on disk, which is the intended/only environment this script ever runs in.
 """
 
+import hashlib
 import json
 import shutil
 import sys
@@ -220,15 +221,25 @@ class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
             order.append("version")
             return real_version(build_id)
 
+        def spy_smoke():
+            order.append("smoke")
+            return 0
+
+        def spy_publish(whitelist, branch):
+            order.append("publish_live")
+            return 0
+
         with mock.patch.object(pd, "copy_public_artifacts", side_effect=spy_copy), \
              mock.patch.object(pd, "write_build_manifest", side_effect=spy_manifest), \
              mock.patch.object(pd, "update_asset_versions", side_effect=spy_version), \
-             mock.patch.object(pd, "publish_live", return_value=0) as m_publish:
+             mock.patch.object(pd, "run_release_smoke_tests", side_effect=spy_smoke), \
+             mock.patch.object(pd, "publish_live", side_effect=spy_publish) as m_publish:
             rc = self._run(["publish_dashboard.py", "--live"])
 
         self.assertEqual(rc, 0)
-        self.assertEqual(order, ["copy", "manifest", "version"],
-                          "Thứ tự apply phải đúng: copy -> manifest -> version")
+        self.assertEqual(order, ["copy", "manifest", "version", "smoke", "publish_live"],
+                          "Thứ tự apply phải đúng: copy -> manifest -> version -> "
+                          "release-smoke -> publish_live (smoke phải chạy TRƯỚC git add/commit/push)")
         m_publish.assert_called_once()
         # publish_live() itself was mocked out, so no add/commit/push should ever fire.
         mutating = {"add", "commit", "push"}
@@ -238,7 +249,8 @@ class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
 
     def test_live_actually_writes_files_only_inside_sandbox(self):
         self.fake_git.status_output = " M dashboard.html\n"
-        with mock.patch.object(pd, "publish_live", return_value=0):
+        with mock.patch.object(pd, "publish_live", return_value=0), \
+             mock.patch.object(pd, "run_release_smoke_tests", return_value=0):
             rc = self._run(["publish_dashboard.py", "--live"])
         self.assertEqual(rc, 0)
         self.assertTrue((self.tmp / "data" / "build_info.json").exists())
@@ -365,6 +377,104 @@ class PathResolutionReadsFreshBackendTests(_PublishDashboardTestBase):
         self.assertEqual(pd.source_root("analysis_bundle.json"), pd.WEB_ROOT)
         rc = self._run(["publish_dashboard.py"])
         self.assertEqual(rc, 0)
+
+
+class AtomicTrustedSubsetReleaseTests(_PublishDashboardTestBase):
+    """Reproduces commit fbaf1fe (2026-08-05) at the publish_dashboard.py level: a fresh
+    analysis_bundle.json copied from BACKEND_ROOT must never reach git add/commit/push
+    while WEB_ROOT's own bundle_manifest.json (tools/publish_release.py's domain) still
+    names a different session's hash for it."""
+
+    def setUp(self):
+        super().setUp()
+        self.fake_git.status_output = " M dashboard.html\n"
+        self.backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, self.backend, ignore_errors=True)
+        _write_backend_fixture(self.backend, "2026-08-04")
+        pd.BACKEND_ROOT = self.backend
+
+    def test_mixed_release_is_blocked_before_any_git_mutation(self):
+        # WEB_ROOT already holds a bundle_manifest.json (from an earlier, independent
+        # publish_release.py run) naming the PREVIOUS session's analysis_bundle.json hash —
+        # the exact state a served checkout is in right before a publish_dashboard.py
+        # --live run repeats the fbaf1fe mistake.
+        (self.tmp / "bundle_manifest.json").write_text(json.dumps({
+            "trusted_subset": {
+                "session_identity": "2026-08-03",
+                "required_artifacts": [{"file": "analysis_bundle.json", "sha256": "0" * 64}],
+                "expected_artifact_filenames": ["analysis_bundle.json", "bundle_manifest.json"],
+            },
+        }), encoding="utf-8")
+
+        with mock.patch.object(pd, "run_release_smoke_tests") as m_smoke, \
+             mock.patch.object(pd, "publish_live") as m_publish:
+            rc = self._run(["publish_dashboard.py", "--live"])
+
+        self.assertEqual(rc, 1)
+        # analysis_bundle.json WAS copied (that's the point — it happens before the gate
+        # fires, matching the real incident), but nothing downstream of the gate ran.
+        self.assertTrue((self.tmp / "analysis_bundle.json").exists())
+        m_smoke.assert_not_called()
+        m_publish.assert_not_called()
+        mutating = {"add", "commit", "push"}
+        used = {call[0] for call in self.fake_git.calls if call}
+        self.assertFalse(used & mutating, "Mixed release phải bị chặn trước mọi git mutation")
+
+    def test_complete_consistent_release_reaches_publish_live(self):
+        # No bundle_manifest.json in WEB_ROOT at all (e.g. tools/publish_release.py has
+        # never run against this checkout) -> vacuously nothing to verify, and the
+        # unrelated screener-data commit must still be allowed to proceed.
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd, "publish_live", return_value=0) as m_publish:
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 0)
+        m_publish.assert_called_once()
+
+    def test_matching_manifest_reaches_publish_live(self):
+        # WEB_ROOT's manifest was correctly published (by tools/publish_release.py) to
+        # match the analysis_bundle.json bytes that copy_public_artifacts() is about to
+        # place — the intended, fixed sequencing.
+        bundle_path = self.backend / "analysis_bundle.json"
+        digest = hashlib.sha256(bundle_path.read_bytes()).hexdigest()
+        (self.tmp / "bundle_manifest.json").write_text(json.dumps({
+            "trusted_subset": {
+                "session_identity": "2026-08-04",
+                "required_artifacts": [{"file": "analysis_bundle.json", "sha256": digest}],
+                "expected_artifact_filenames": ["analysis_bundle.json", "bundle_manifest.json"],
+            },
+        }), encoding="utf-8")
+
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd, "publish_live", return_value=0) as m_publish:
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 0)
+        m_publish.assert_called_once()
+
+    def test_release_smoke_failure_blocks_before_git_mutation(self):
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=1), \
+             mock.patch.object(pd, "publish_live") as m_publish:
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 1)
+        m_publish.assert_not_called()
+        mutating = {"add", "commit", "push"}
+        used = {call[0] for call in self.fake_git.calls if call}
+        self.assertFalse(used & mutating)
+
+    def test_dry_run_never_calls_release_smoke_or_mutates_anything(self):
+        """A dry-run has not copied anything yet — there is no post-copy worktree for
+        release-smoke to test, and no mutation of any kind may occur."""
+        (self.tmp / "bundle_manifest.json").write_text(json.dumps({
+            "trusted_subset": {"session_identity": "2026-08-03",
+                               "required_artifacts": [{"file": "analysis_bundle.json", "sha256": "0" * 64}],
+                               "expected_artifact_filenames": ["analysis_bundle.json", "bundle_manifest.json"]},
+        }), encoding="utf-8")
+        before = self._all_files(exclude_logs=True)
+        with mock.patch.object(pd, "run_release_smoke_tests") as m_smoke:
+            rc = self._run(["publish_dashboard.py"])
+        self.assertEqual(rc, 0)
+        m_smoke.assert_not_called()
+        after = self._all_files(exclude_logs=True)
+        self.assertEqual(before, after)
 
 
 if __name__ == "__main__":
