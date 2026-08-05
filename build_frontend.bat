@@ -38,14 +38,21 @@ REM stale/broken CSS file.
 REM ============================================================
 
 set "SCRIPT_DIR=%~dp0"
-set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 set "TAILWIND_EXE=%SCRIPT_DIR%\tools\tailwind\tailwindcss.exe"
 set "TAILWIND_CONFIG=%SCRIPT_DIR%\tailwind.config.js"
 set "TAILWIND_INPUT=%SCRIPT_DIR%\assets\css\tailwind.src.css"
 set "TAILWIND_OUTPUT=%SCRIPT_DIR%\assets\css\tailwind.generated.css"
+set "TEMP_OUTPUT=%TEMP%\tailwind_tmp_%RANDOM%_%TIME:~6,2%.css"
+
+set "IS_LIVE=0"
+for %%A in (%*) do (
+  if /I "%%~A"=="--live" set "IS_LIVE=1"
+)
 
 echo ============================================================
 echo BUILD FRONTEND - Tailwind CSS (standalone CLI v3.4.19)
+echo Mode    : %*
 echo ============================================================
 
 if not exist "%TAILWIND_EXE%" (
@@ -67,18 +74,26 @@ if not exist "%TAILWIND_INPUT%" (
   exit /b 1
 )
 
-echo Building: %TAILWIND_INPUT% -^> %TAILWIND_OUTPUT%
-"%TAILWIND_EXE%" -i "%TAILWIND_INPUT%" -o "%TAILWIND_OUTPUT%" -c "%TAILWIND_CONFIG%" --minify
+echo Building Tailwind CSS to temporary target...
+"%TAILWIND_EXE%" -i "%TAILWIND_INPUT%" -o "%TEMP_OUTPUT%" -c "%TAILWIND_CONFIG%" --minify >nul 2>&1
 set "RC=%errorlevel%"
 if not "%RC%"=="0" (
   echo [ERROR] Tailwind build failed with exit code %RC%.
+  if exist "%TEMP_OUTPUT%" del /f /q "%TEMP_OUTPUT%"
   exit /b %RC%
 )
 
-if not exist "%TAILWIND_OUTPUT%" (
-  echo [ERROR] Build reported success but output file is missing.
+if not exist "%TEMP_OUTPUT%" (
+  echo [ERROR] Build reported success but temp output file is missing.
   exit /b 1
 )
 
-echo [OK] Frontend build complete: %TAILWIND_OUTPUT%
+if "%IS_LIVE%"=="1" (
+  copy /y "%TEMP_OUTPUT%" "%TAILWIND_OUTPUT%" >nul
+  del /f /q "%TEMP_OUTPUT%"
+  echo [OK] Frontend build complete (LIVE updated): %TAILWIND_OUTPUT%
+) else (
+  del /f /q "%TEMP_OUTPUT%"
+  echo [OK] Frontend build check complete (DRY-RUN zero-mutation): %TAILWIND_OUTPUT% remains unchanged.
+)
 exit /b 0

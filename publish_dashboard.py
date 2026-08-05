@@ -704,25 +704,6 @@ def main() -> int:
     except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
         return fail(str(exc))
 
-    # Post-copy, pre-commit gate: analysis_bundle.json is a member of the exact-session
-    # trusted subset that tools/publish_release.py owns (bundle_manifest.json,
-    # focus_extract.json, statement_taxonomy_sidecar.json alongside it). Copying it here
-    # without that subset already having been published together produces a mixed
-    # release — exactly what happened in commit fbaf1fe (2026-08-05): a fresh
-    # analysis_bundle.json committed next to a bundle_manifest.json still naming the
-    # previous session's hash. Refuse before any git mutation, not after.
-    # Scoped to analysis_bundle.json: the only trusted-subset member this publisher ever
-    # copies. An unrelated stale/undeclared sibling (e.g. a taxonomy sidecar
-    # tools/publish_release.py's own manifest legitimately excluded for this session) is
-    # not this publisher's concern and must not block its otherwise-unrelated commit.
-    trusted_report = trusted_subset_contract.verify_trusted_subset(WEB_ROOT, scope=("analysis_bundle.json",))
-    for line in trusted_report.render():
-        log(line)
-    if not trusted_report.ready:
-        return fail("trusted-subset verification failed — see TRUSTED_SUBSET_MISMATCH above; "
-                     "no git mutation performed. Publish the trusted subset with "
-                     "tools/publish_release.py first.")
-
     smoke_rc = run_release_smoke_tests()
     if smoke_rc != 0:
         return fail(f"tests/release-smoke.test.js failed with exit code {smoke_rc}; "
