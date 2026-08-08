@@ -1,13 +1,15 @@
 # Official corporate-action ingestion and price-adjustment engine — design
 
-Status, updated **2026-08-04**: **B1 delivered, owner-approved and now actually enforced on the
-request path; B2–B4 machinery built and proven on a bounded offline slice; no crawl has been
-performed and no official URL has yet been requested over the network.**
+Status, updated **2026-08-08**: **B1 is delivered, owner-approved and enforced on the request
+path. B2–B4 machinery is built; B2 has now retained one VCB VSDC record-date notice through the
+governed path from a direct link observed in an already-retained VCB notice. No extraction,
+promotion, ledger mutation, or analytical gate activation followed from that newly retained
+document.**
 
 | step | state |
 | --- | --- |
 | B1 crawl contract and allowlist | **delivered and approved.** `config/official_source_registry.json` is enforced by `official_source_registry.py`; `approval_state = APPROVED` with `approved_at = 2026-08-03T07:00:00Z` and `approved_at_provenance` naming the clock. All four sources are `approved`. **An agent may not approve a source or write either approval field.** Since `3b4cc5f` the gate runs on every request, and since `2026-08-04` it also runs on every redirect hop and every retry. |
-| B2 bounded crawler | **unblocked on governance, blocked on inputs.** The immutable blob store exists (`official_document_store.py`) and is exercised by adopting already-retained documents with no network request. What is missing is not permission but an **owner-supplied listing or notice URL per ticker**: the registry declares only document types, never a listing/search page type, and no listing URL exists in any approved artifact. See "What B2 still needs" below. |
+| B2 bounded crawler | **partially exercised.** The immutable blob store exists (`official_document_store.py`). A VNM index-page pilot proved the governed index path but returned no VNM candidate. On 2026-08-08, the retained VCB notice `https://vsd.vn/en/ad/177303` supplied a direct VSDC link to `https://vsd.vn/en/ad/180140`; one governed request retained the 69,107-byte HTML response (SHA-256 `b0a69a5e…502b66f2`, HTTP 200) in `operations-review/vcb-iss-official-acquisition-20260808/`. This is one bounded acquisition, not a general crawl or pagination authority. The document remains unclassified for ledger use and unpromoted. |
 | B3 classification and typed extraction | **built** (`corporate_action_events.py`), proven against retained HPG evidence. |
 | B4 linking and execution status | **built** (`official_corporate_action_ledger.py`): cross-document linking, deduplication, supersession, lifecycle, deterministic replay. |
 | B5 historical qualification | not started |

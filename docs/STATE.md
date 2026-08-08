@@ -429,9 +429,13 @@ at `not_ready`. B6 remains the only route to a qualified price basis now that EO
 and it is what unblocks market capitalisation and therefore EV, EV/EBITDA, P/E and P/B.
 
 The first acquisition target is the ex-right date for the two `ISS` events already retained
-without one (VCB, SSI). They are the only two tickers whose share count is withheld for a reason
-a single document would resolve, so they measure the acquisition path end to end at minimum
-cost.
+without one (VCB, SSI). The VCB source path has now been exercised once, from a direct VSDC link
+observed in an already-retained VCB notice: `https://vsd.vn/en/ad/180140` was retained on
+2026-08-08 (69,107-byte HTML, SHA-256 `b0a69a5e…502b66f2`, HTTP 200). Its own text states
+`Record date: 13/03/2025` and a 495-new-per-1,000 execution rate, but no explicit official
+ex-date. It is retained source evidence only: no date is substituted, no factor/share authority
+is promoted, and no ledger or valuation gate changes. The next bounded use of this evidence is
+classification and typed extraction; SSI has not been requested.
 
 Running second, and independent of it: qualify `issuer_entity_type` for the 1,218 tickers
 where it is unresolved, from an authoritative source (exchange/issuer registration data).
