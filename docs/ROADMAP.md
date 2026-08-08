@@ -21,6 +21,12 @@ every P-gate below is now reached through one of them.
   observation. The existing promotion path now exposes its dedicated financial-identity sidecar
   and preserves the annual year-end-to-Q4 alias only for supported stock identities. This is an
   **unpromoted local proposal**: runtime qualified-counts and downstream readiness do not change.
+  **PAN FY2024 financial-identity evidence qualification advanced 2026-08-08**: one retained,
+  issuer-hosted audited statement directly supports `net_income=1,167,068,107,309`
+  (consolidated, VND, for the year ended 2024-12-31) and exactly matches a retained annual VCI
+  observation with the same total-profit-after-tax identity. `net_income` is an income-statement
+  flow, so this proposal deliberately creates no annual-to-Q4 alias. This is an **unpromoted local
+  proposal**: runtime qualified-counts and downstream readiness do not change.
 - **Pillar B — official corporate-action ingestion and price-adjustment engine** — `docs/official_corporate_action_ingestion_design.md`.
   **Step B1 approved and activated 2026-08-03 via P1G**: official source registry activated by owner approval; bounded document store, corporate-action event ledger, dated shares timeline, and price adjustment factor policies fully connected into Producer bundle, Consumer context pass-through, and top-level operator dry run.
   **P1H Valuation Readiness Activation shipped 2026-08-03**: resolved current effective shares and session prices to reconstruct current market capitalization and unblock P/E, P/B, EV, and EV/EBITDA readiness fail-closed across Producer, Consumer, and post-close operator.

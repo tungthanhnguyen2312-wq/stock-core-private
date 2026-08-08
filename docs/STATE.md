@@ -206,6 +206,14 @@ hash-verified issuer-hosted SSI audited FY2024 document has a direct consolidate
 retained provider 2024-Q4 observation. Its manifest/citation proposal is dry-run admissible,
 but it is not an active citation or readiness unlock until an explicitly authorised promotion.
 
+**PAN FY2024 pre-promotion qualification (2026-08-08).** A retained issuer-hosted audited
+statement directly supports consolidated VND `net_income=1,167,068,107,309` for the year ended
+2024-12-31. The retained annual VCI observation has the same total-profit-after-tax identity,
+period, scope, unit, sign, and value. It is a flow identity, not a stock observation: no
+year-end-to-Q4 alias was created. Its manifest/citation proposal is dry-run admissible only; no
+runtime evidence sidecar, canonical fact, qualified count, readiness, valuation, Consumer, or
+Dashboard output changes until an explicitly authorised promotion.
+
 ### Calculation readiness, 1,492 tickers
 
 | capability | ready | note |

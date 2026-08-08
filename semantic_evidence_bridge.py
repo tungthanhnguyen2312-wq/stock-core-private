@@ -1166,6 +1166,7 @@ FINANCIAL_IDENTITY_RELATIVE = Path("data") / "official-evidence" / "financial_id
 _FINANCIAL_IDENTITY_STATEMENT_FAMILIES = {
     "current_liabilities": "balance_sheet",
     "retained_earnings": "balance_sheet",
+    "net_income": "income_statement",
 }
 _SUPPORTED_FINANCIAL_IDENTITIES = frozenset(_FINANCIAL_IDENTITY_STATEMENT_FAMILIES)
 _REQUIRED_FINANCIAL_IDENTITY_FIELDS = ("citation_id", "ticker", "metric", "reporting_frequency", "reporting_period",
