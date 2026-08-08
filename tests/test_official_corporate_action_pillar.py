@@ -297,8 +297,10 @@ class VcbB2TypedExtractionTests(unittest.TestCase):
         if not manifest_path.is_file():
             self.skipTest("retained B2 VCB acquisition is not present")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["records"]), 1)
-        self.record = manifest["records"][0]
+        self.record = next((record for record in manifest["records"]
+                            if record["canonical_url"] == "https://vsd.vn/en/ad/180140"), None)
+        if self.record is None:
+            self.skipTest("retained B2 VCB record-date acquisition is not present")
         self.payload = (self.RETAINED / self.record["relative_path"]).read_bytes()
         self.typed = events.classify_retained_document(self.record, self.payload)
         self.text = events.extract_text(self.payload, self.typed["media_type"])
@@ -339,6 +341,94 @@ class VcbB2TypedExtractionTests(unittest.TestCase):
         self.assertIsNone(observation["stock_ratio"])
         self.assertEqual(observation["absent_fields"]["stock_ratio"],
                          "execution_rate_wordings_conflict")
+
+    def test_repeat_run_is_deterministic(self):
+        first = events.extract_event_observation(self.typed, self.text)
+        second = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(first, second)
+
+
+class VcbListingChangeCertificateTests(unittest.TestCase):
+    """The supplied VSDC certificate is exercised offline from its governed B2 retention."""
+
+    RETAINED = (ROOT.parent / "operations-review" / "vcb-iss-official-acquisition-20260808")
+    URL = "https://vsd.vn/en/ad/181754"
+
+    def setUp(self):
+        manifest_path = self.RETAINED / "official_document_acquisition_manifest.json"
+        if not manifest_path.is_file():
+            self.skipTest("retained VCB listing-change candidate is not present")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.record = next((record for record in manifest["records"]
+                            if record["canonical_url"] == self.URL), None)
+        if self.record is None:
+            self.skipTest("retained VCB listing-change candidate is not present")
+        self.payload = (self.RETAINED / self.record["relative_path"]).read_bytes()
+        self.typed = events.classify_retained_document(self.record, self.payload)
+        self.text = events.extract_text(self.payload, self.typed["media_type"])
+
+    def test_retained_acquisition_hash_and_discovery_provenance_are_carried(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(self.record["source_id"], "vsdc")
+        self.assertEqual(observation["document_id"], self.record["document_id"])
+        self.assertEqual(observation["content_sha256"], self.record["sha256"])
+        self.assertEqual(observation["source_url"], self.URL)
+        self.assertEqual(observation["discovery_provenance"], self.record["discovery_provenance"])
+        self.assertEqual(observation["discovery_provenance"]["listing_url"],
+                         "https://vsd.vn/en/ad/177303")
+
+    def test_exact_registered_securities_certificate_fields_are_extracted(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(observation["document_type"], "corporate_action_notice")
+        self.assertEqual(observation["event_type"], None)
+        self.assertEqual(observation["lifecycle_state"], "announced")
+        self.assertEqual(observation["registration_effective_date"], "2025-04-15")
+        self.assertEqual(observation["depository_acceptance_date"], "2025-04-17")
+        self.assertEqual(observation["registered_securities_added"], 2_766_583_832)
+        self.assertEqual(observation["registered_securities_total"], 8_355_675_094)
+        self.assertEqual(observation["isin"], "VN000000VCB4")
+
+    def test_listing_trading_and_corporate_action_fields_remain_unknown(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        for field in ("ex_date", "record_date", "payment_date", "listing_effective_date",
+                      "trading_date", "shares_before", "shares_issued", "shares_after",
+                      "stock_ratio"):
+            self.assertIsNone(observation[field], field)
+        self.assertIn("never substituted", observation["absent_fields"]["ex_date"])
+
+    def test_date_roles_are_separate(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertNotEqual(observation["registration_effective_date"],
+                            observation["depository_acceptance_date"])
+        self.assertIsNone(observation["listing_effective_date"])
+        self.assertIsNone(observation["trading_date"])
+
+    def test_ambiguous_or_conflicting_inputs_are_refused_fail_closed(self):
+        with self.assertRaisesRegex(ValueError, "document_type_conflicts"):
+            events.classify_retained_document(dict(self.record,
+                                                    document_type="last_registration_date_notice"),
+                                             self.payload)
+        duplicate_total = self.text + " Total quantity of registered securities: 8,355,675,095"
+        observation = events.extract_event_observation(self.typed, duplicate_total)
+        self.assertIsNone(observation["registered_securities_total"])
+        self.assertEqual(observation["absent_fields"]["registered_securities_total"],
+                         "direct_label_missing_or_ambiguous")
+
+    def test_record_date_notice_is_not_cross_linked_without_a_direct_identifier(self):
+        other_record = next((record for record in json.loads(
+            (self.RETAINED / "official_document_acquisition_manifest.json").read_text())["records"]
+            if record["canonical_url"] == "https://vsd.vn/en/ad/180140"), None)
+        if other_record is None:
+            self.skipTest("retained VCB record-date notice is not present")
+        other_payload = (self.RETAINED / other_record["relative_path"]).read_bytes()
+        other_typed = events.classify_retained_document(other_record, other_payload)
+        other = events.extract_event_observation(
+            other_typed, events.extract_text(other_payload, other_typed["media_type"]))
+        self.assertEqual(other["isin"], events.extract_event_observation(self.typed, self.text)["isin"])
+        self.assertEqual(events.assess_direct_event_cross_link(other,
+                                                                events.extract_event_observation(self.typed, self.text)),
+                         {"state": "not_linked",
+                          "reason": "direct_cross_document_event_identifier_absent"})
 
     def test_repeat_run_is_deterministic(self):
         first = events.extract_event_observation(self.typed, self.text)

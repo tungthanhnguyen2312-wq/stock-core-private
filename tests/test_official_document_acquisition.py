@@ -31,6 +31,12 @@ class AcquisitionTests(unittest.TestCase):
    first=acquire([self.spec()],self.root,fetcher=self.fetch); second=acquire([self.spec()],self.root,fetcher=lambda *_a,**_k:self.fail("network"))
   self.assertEqual(first["outcomes"][0]["state"],"retained"); self.assertEqual(second["outcomes"][0]["state"],"cached_valid")
   self.assertEqual(json.loads((self.root/MANIFEST).read_text())["records"][0]["final_url"],"https://cdn.example/f.pdf")
+ def test_retains_governed_source_and_discovery_provenance(self):
+  provenance={"listing_url":"https://issuer.example/notices","link_text":"Official notice","page_index":1}
+  acquire([self.spec(discovery_provenance=provenance)],self.root,fetcher=self.fetch)
+  record=json.loads((self.root/MANIFEST).read_text())["records"][0]
+  self.assertEqual(record["source_id"],"issuer_ir")
+  self.assertEqual(record["discovery_provenance"],provenance)
  def test_timeout_then_success_and_two_timeouts(self):
   calls=[]
   def retry(*_a,**_k):

@@ -45,6 +45,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from html.parser import HTMLParser
 from typing import Any, Iterable, Mapping, Sequence
 
 VERSION = "1.0.0"
@@ -99,6 +100,7 @@ _MAX_SHARES = 100_000_000_000
 _NUMBER_RE = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?")
 _DATE_RE = re.compile(r"(\d{1,2})[/.](\d{1,2})[/.](\d{4})")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+_ENGLISH_GROUPED_INTEGER_RE = re.compile(r"\d{1,3}(?:,\d{3})+")
 
 #: Field cues, Vietnamese first because that is what the official documents are written in.
 _CUES = {
@@ -187,6 +189,19 @@ def parse_vietnamese_date(text: str) -> str | None:
     if not (1 <= month <= 12 and 1 <= day <= 31 and 1900 <= year <= 2200):
         return None
     return f"{year:04d}-{month:02d}-{day:02d}"
+
+
+def _parse_explicit_share_count(token: str) -> int | None:
+    """Parse a directly labelled Vietnamese or English grouped integer, never a decimal."""
+    value = str(token).strip()
+    if _ENGLISH_GROUPED_INTEGER_RE.fullmatch(value):
+        parsed = int(value.replace(",", ""))
+    else:
+        parsed_float = parse_vietnamese_number(value)
+        if parsed_float is None or not parsed_float.is_integer():
+            return None
+        parsed = int(parsed_float)
+    return parsed if _MIN_SHARES <= parsed <= _MAX_SHARES else None
 
 
 def _window(text: str, cue: str, width: int = 160) -> str | None:
@@ -382,32 +397,51 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
 
     normalized = extract_text(payload, media_type)
     lowered = normalized.lower()
-    record_notice_cue = "would like to announce the record date as follows"
-    if not (authority == "Vietnam Securities Depository and Clearing Corporation"
-            and record_notice_cue in lowered and "record date:" in lowered):
+    if authority != "Vietnam Securities Depository and Clearing Corporation":
         raise ValueError("document_classification_unsupported_or_ambiguous")
 
+    record_notice_cue = "would like to announce the record date as follows"
+    certificate_cue = "would like to announce certification of the"
+    adjustment_cue = "adjustment of the number of the registered shares"
     declared_type = str(document.get("document_type") or "")
-    if declared_type and declared_type != "last_registration_date_notice":
+    document_type: str
+    basis: str
+    cue: str
+    if record_notice_cue in lowered and "record date:" in lowered:
+        document_type = "last_registration_date_notice"
+        basis = "document_internal_vsd_record_date_notice_cues"
+        cue = record_notice_cue
+    elif (certificate_cue in lowered and adjustment_cue in lowered
+          and "has additionally registered securities at vsdc from" in lowered):
+        # This is deliberately not a listing-change classification: registration at VSDC and
+        # later depository acceptance do not themselves say that listed trading changed.
+        document_type = "corporate_action_notice"
+        basis = "document_internal_vsd_registered_securities_adjustment_certificate_cues"
+        cue = certificate_cue
+    else:
+        raise ValueError("document_classification_unsupported_or_ambiguous")
+    if declared_type and declared_type != document_type:
         raise ValueError("document_type_conflicts_with_document_text")
 
-    index = lowered.index(record_notice_cue)
+    index = lowered.index(cue)
     return {
         "document_id": document_id,
         "ticker": ticker,
-        "document_type": "last_registration_date_notice",
+        "document_type": document_type,
         "source_authority": authority,
+        "source_id": document.get("source_id"),
         "source_url": source_url,
         "content_sha256": expected_sha,
         "published_at": document.get("published_at"),
         "observed_at": document.get("observed_at"),
         "media_type": media_type,
+        "discovery_provenance": document.get("discovery_provenance"),
         "document_classification": {
             "state": "classified",
-            "document_type": "last_registration_date_notice",
+            "document_type": document_type,
             "acquisition_document_class": document.get("document_class"),
-            "basis": "document_internal_vsd_record_date_notice_cues",
-            "citation": {"cue": record_notice_cue, "excerpt": normalized[index:index + 180]},
+            "basis": basis,
+            "citation": {"cue": cue, "excerpt": normalized[index:index + 180]},
         },
     }
 
@@ -439,6 +473,76 @@ def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
                          f"for every {wording_matches[0][1]} shares")},
         ],
     }
+
+
+def extract_explicit_registered_securities_adjustment(text: str) -> dict[str, Any]:
+    """Read only directly labelled VSDC registered-securities certificate facts.
+
+    These are registration facts, not issued-share, listing, or trading facts.  They therefore
+    remain separate from the share-transition fields and cannot create a ratio by arithmetic.
+    """
+    normalized = normalize_text(text)
+    patterns = {
+        "registered_securities_added": (
+            r"quantity of additionally registered securities\s*:\s*"
+            r"([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,3}(?:\.[0-9]{3})+)",
+            "Quantity of additionally registered securities"),
+        "registered_securities_total": (
+            r"total quantity of registered securities\s*:\s*"
+            r"([0-9]{1,3}(?:,[0-9]{3})+|[0-9]{1,3}(?:\.[0-9]{3})+)",
+            "Total quantity of registered securities"),
+        "registration_effective_date": (
+            r"has additionally registered securities at vsdc from\s*"
+            r"(\d{1,2}[/.]\d{1,2}[/.]\d{4})",
+            "Has additionally registered securities at VSDC from"),
+        "depository_acceptance_date": (
+            r"from\s*(\d{1,2}[/.]\d{1,2}[/.]\d{4})\s*,?\s*"
+            r"vsdc will receive depository of (?:the )?above additionally registered securit(?:ies|es)",
+            "VSDC will receive depository from"),
+        "isin": (r"isin\s*:\s*([A-Z0-9]{6,20})", "ISIN"),
+    }
+    values: dict[str, Any] = {}
+    citations: list[dict[str, str]] = []
+    absent: dict[str, str] = {}
+    for field, (pattern, label) in patterns.items():
+        matches = re.findall(pattern, normalized, flags=re.I)
+        if len(matches) != 1:
+            absent[field] = "direct_label_missing_or_ambiguous"
+            continue
+        raw = matches[0]
+        if field in {"registered_securities_added", "registered_securities_total"}:
+            parsed = _parse_explicit_share_count(raw)
+        elif field.endswith("_date"):
+            parsed = parse_vietnamese_date(raw)
+        else:
+            parsed = raw.upper()
+        if parsed is None:
+            absent[field] = "direct_label_value_unparseable_or_out_of_bounds"
+            continue
+        values[field] = parsed
+        citations.append({"field": field, "cue": label, "excerpt": f"{label}: {raw}"})
+    return {"values": values, "citations": citations, "absent": absent}
+
+
+def assess_direct_event_cross_link(left: Mapping[str, Any], right: Mapping[str, Any]) -> dict[str, str]:
+    """Allow a cross-document event link only on the same explicit event reference.
+
+    Dates, counts, ratios, issuer names, and ISINs are deliberately not identity keys: any of
+    them may be shared by distinct lifecycle notices.  This helper is pure and returns no
+    ledger entry; a future extractor may supply ``direct_event_reference`` only where its own
+    retained document states one.
+    """
+    left_ticker = str(left.get("ticker") or "").upper()
+    right_ticker = str(right.get("ticker") or "").upper()
+    if not left_ticker or not right_ticker or left_ticker != right_ticker:
+        return {"state": "not_linked", "reason": "ticker_missing_or_conflicts"}
+    left_reference = str(left.get("direct_event_reference") or "").strip()
+    right_reference = str(right.get("direct_event_reference") or "").strip()
+    if not left_reference or not right_reference:
+        return {"state": "not_linked", "reason": "direct_cross_document_event_identifier_absent"}
+    if left_reference != right_reference:
+        return {"state": "not_linked", "reason": "direct_cross_document_event_identifier_conflicts"}
+    return {"state": "linked", "reason": "matching_direct_cross_document_event_identifier"}
 
 
 def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[str, Any]:
@@ -487,6 +591,11 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
                 continue
             fields[field] = int(value)
             citations.append({"field": field, "cue": cue, "excerpt": window[:180]})
+
+    registered_adjustment = extract_explicit_registered_securities_adjustment(normalized)
+    fields.update(registered_adjustment["values"])
+    citations.extend(registered_adjustment["citations"])
+    absent.update(registered_adjustment["absent"])
 
     for field in ("approval_date", "ex_date", "record_date", "payment_date", "listing_effective_date",
                   "trading_date"):
@@ -559,8 +668,10 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
         "document_id": document.get("document_id"),
         "document_type": document_type,
         "source_authority": document.get("source_authority"),
+        "source_id": document.get("source_id"),
         "source_url": document.get("source_url"),
         "content_sha256": document.get("content_sha256"),
+        "discovery_provenance": document.get("discovery_provenance"),
         "document_classification": document.get("document_classification"),
         "published_at": document.get("published_at"),
         "observed_at": document.get("observed_at"),
@@ -573,9 +684,14 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
         "payment_or_execution_date": (fields.get("payment_date")
                                       or fields.get("listing_effective_date")),
         "trading_date": fields.get("trading_date"),
+        "registration_effective_date": fields.get("registration_effective_date"),
+        "depository_acceptance_date": fields.get("depository_acceptance_date"),
         "shares_before": fields.get("shares_before"),
         "shares_issued": fields.get("shares_issued"),
         "shares_after": fields.get("shares_after"),
+        "registered_securities_added": fields.get("registered_securities_added"),
+        "registered_securities_total": fields.get("registered_securities_total"),
+        "isin": fields.get("isin"),
         "cash_amount_per_share": fields.get("cash_amount"),
         "stock_ratio": stock_ratio,
         "ratio_basis": ratio_basis,
@@ -610,15 +726,48 @@ def _lifecycle_for(document_type: str, fields: Mapping[str, Any],
     return {"state": observed, "reason": reason}
 
 
+class _VsdNoticeBody(HTMLParser):
+    """Capture a VSDC notice body without its navigation or related-news sidebar."""
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.depth = 0
+        self.text: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        classes = dict(attrs).get("class", "") or ""
+        if self.depth:
+            if tag not in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "wbr"}:
+                self.depth += 1
+        elif tag == "div" and "content-category" in classes.split():
+            self.depth = 1
+
+    def handle_endtag(self, _tag: str) -> None:
+        if self.depth:
+            self.depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self.depth:
+            self.text.append(data)
+
+
+def _html_notice_text(raw_html: str) -> str:
+    """Prefer a page's named VSDC content body; otherwise retain generic HTML behaviour."""
+    parser = _VsdNoticeBody()
+    parser.feed(raw_html)
+    scoped = normalize_text(" ".join(parser.text))
+    if scoped:
+        return scoped
+    stripped = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", raw_html, flags=re.S | re.I)
+    return normalize_text(re.sub(r"<[^>]+>", " ", stripped))
+
+
 def extract_text(payload: bytes, media_type: str) -> str:
     """Plain text from retained bytes. HTML is stripped; PDF goes through pypdf."""
     if media_type == "text/html":
         text = payload.decode("utf-8", errors="replace")
-        text = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", text, flags=re.S | re.I)
-        text = re.sub(r"<[^>]+>", " ", text)
         import html as html_module
 
-        return normalize_text(html_module.unescape(text))
+        return _html_notice_text(html_module.unescape(text))
     if media_type == "application/pdf":
         import io
 

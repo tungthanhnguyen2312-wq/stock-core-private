@@ -277,7 +277,17 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
         if not path.exists(): os.replace(temporary, path)
         else: temporary.unlink(missing_ok=True)
         document_id, prior = _document_id(ticker, url, sha256), [r for r in records if r.get("ticker") == ticker and r.get("canonical_url") == url]
-        record = {"document_id": document_id, "ticker": ticker, "canonical_url": url, "final_url": final_url, "document_class": document_class, "reporting_period": period, "published_at": spec.get("published_at"), "observed_at": spec.get("observed_at") or observed_at or _now(), "source_authority": spec.get("source_authority"), "acquisition_status": "retained", "http_status": status, "content_type": _content_type(headers), "content_length": path.stat().st_size, "sha256": sha256, "relative_path": relative.as_posix(), "supersedes_document_id": spec.get("supersedes_document_id") or (prior[-1].get("document_id") if prior else None), "extraction_status": _extraction_state(path)}
+        record = {"document_id": document_id, "ticker": ticker, "source_id": source_id,
+                  "canonical_url": url, "final_url": final_url, "document_class": document_class,
+                  "reporting_period": period, "published_at": spec.get("published_at"),
+                  "observed_at": spec.get("observed_at") or observed_at or _now(),
+                  "source_authority": spec.get("source_authority"),
+                  "discovery_provenance": spec.get("discovery_provenance"),
+                  "acquisition_status": "retained", "http_status": status,
+                  "content_type": _content_type(headers), "content_length": path.stat().st_size,
+                  "sha256": sha256, "relative_path": relative.as_posix(),
+                  "supersedes_document_id": spec.get("supersedes_document_id") or (prior[-1].get("document_id") if prior else None),
+                  "extraction_status": _extraction_state(path)}
         records.append(record); outcomes.append({"ticker": ticker, "document_id": document_id, "state": "retained", "extraction_status": record["extraction_status"]})
     _write_manifest(manifest_path, records)
     return {"schema_version": VERSION, "manifest": str(manifest_path), "outcomes": outcomes}
