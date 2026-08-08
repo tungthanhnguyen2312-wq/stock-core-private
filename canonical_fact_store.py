@@ -65,6 +65,7 @@ from financial_entity_applicability import (
     evaluate_ticker,
     load_entity_profiles,
 )
+from semantic_evidence_bridge import financial_identity_is_stock_metric
 from raw_financial_store import (
     load_state as load_raw_state,
     observations_root,
@@ -208,7 +209,7 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
                 "scale": record.get("scale") or "units",
             }
             citations[(ticker, metric, period)] = entry
-            if metric in stock_metrics and period.isdigit():
+            if (metric in stock_metrics or financial_identity_is_stock_metric(metric)) and period.isdigit():
                 citations.setdefault((ticker, metric, f"{period}-Q4"),
                                      {**entry, "period_alias": "annual_year_end_is_q4_end"})
     return citations

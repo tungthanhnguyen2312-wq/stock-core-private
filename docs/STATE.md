@@ -199,6 +199,13 @@ absolute unit; VND-under-VAS is a convention, not evidence in these bytes. The o
 for HPG and VNM only — HPG's provider 2024-Q4 `undistributed_earnings` matches the audited
 FY2024 citation digit for digit (49,599,124,109,203), and VNM's likewise.
 
+**SSI FY2024 pre-promotion qualification (2026-08-08).** This paragraph describes the current
+runtime count and remains true: no runtime evidence sidecar was written. Separately, a
+hash-verified issuer-hosted SSI audited FY2024 document has a direct consolidated VND
+`current_liabilities` observation of `46,599,438,522,989` as at 2024-12-31, matching the one
+retained provider 2024-Q4 observation. Its manifest/citation proposal is dry-run admissible,
+but it is not an active citation or readiness unlock until an explicitly authorised promotion.
+
 ### Calculation readiness, 1,492 tickers
 
 | capability | ready | note |

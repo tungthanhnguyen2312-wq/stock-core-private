@@ -1163,9 +1163,24 @@ def reconcile_metric_identities(by_ticker: Mapping[str, list[dict[str, Any]]]) -
 # (ticker, metric, reporting_period). Fails closed otherwise.
 
 FINANCIAL_IDENTITY_RELATIVE = Path("data") / "official-evidence" / "financial_identity_citations.jsonl"
-_SUPPORTED_FINANCIAL_IDENTITIES = {"current_liabilities", "retained_earnings"}
+_FINANCIAL_IDENTITY_STATEMENT_FAMILIES = {
+    "current_liabilities": "balance_sheet",
+    "retained_earnings": "balance_sheet",
+}
+_SUPPORTED_FINANCIAL_IDENTITIES = frozenset(_FINANCIAL_IDENTITY_STATEMENT_FAMILIES)
 _REQUIRED_FINANCIAL_IDENTITY_FIELDS = ("citation_id", "ticker", "metric", "reporting_frequency", "reporting_period",
     "statement_scope", "currency", "unit_scale", "value", "evidence_id")
+
+
+def financial_identity_is_stock_metric(metric: str) -> bool:
+    """Whether a supported official financial identity describes a balance-sheet instant.
+
+    This is deliberately sourced from the financial-identity authority rather than the
+    canonical metric registry: the latter currently does not materialize every accepted
+    identity (notably ``current_liabilities``).  It permits only the existing annual
+    year-end -> Q4 alias; it never aliases flows or another quarter.
+    """
+    return _FINANCIAL_IDENTITY_STATEMENT_FAMILIES.get(str(metric)) == "balance_sheet"
 
 
 def _load_financial_identity_rows(runtime_root: Path) -> list[Any] | None:
