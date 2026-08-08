@@ -21,6 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import publish_dashboard as pd  # noqa: E402
+from tools.publish_release import RELEASE_ALLOWLIST as TRUSTED_AI_RELEASE_ALLOWLIST  # noqa: E402
 
 
 def _write_min_fixture(root: Path) -> None:
@@ -36,6 +37,13 @@ def _write_min_fixture(root: Path) -> None:
     (root / "market_breadth.csv").write_text("group,date,n_up\nALL,2026-07-17,1\n", encoding="utf-8")
     (root / "analysis_bundle.json").write_text(
         '{"reference_session_date": "2026-07-17"}\n', encoding="utf-8"
+    )
+    # date matches screen_snapshot.csv above for the same reason as analysis_bundle.json --
+    # analysis_latest.json is now a REQUIRED release-session artifact (see
+    # docs/dashboard_release_session_contract.md's "closing the publication gap" section).
+    (root / "analysis_latest.json").write_text(
+        '{"summary": {"session_date": "2026-07-17", "generated_at": "2026-07-17 16:00"}}\n',
+        encoding="utf-8",
     )
     for name in (
         "app.js", "style.css", "assets/js/value-format.js",
@@ -298,6 +306,8 @@ def _write_backend_fixture(root: Path, session: str, *, live_session: str | None
         f"ticker,exchange,date\nHPG,HSX,{live_session}\n", encoding="utf-8")
     (root / "analysis_bundle.json").write_text(
         json.dumps({"reference_session_date": session}), encoding="utf-8")
+    (root / "analysis_latest.json").write_text(
+        json.dumps({"summary": {"session_date": session}}), encoding="utf-8")
 
 
 class SessionMismatchStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
@@ -370,12 +380,17 @@ class PathResolutionReadsFreshBackendTests(_PublishDashboardTestBase):
     def test_backend_missing_optional_files_falls_back_to_web_root_gracefully(self):
         """BACKEND_ROOT lacking an optional artifact (e.g. analysis_bundle.json was never
         generated there) must not crash source_root() — it degrades to WEB_ROOT for that
-        one name, same as a single-root invocation would."""
+        one name, same as a single-root invocation would. analysis_latest.json is written
+        here (unlike analysis_bundle.json) only because it is now a REQUIRED session
+        artifact -- its presence is a fixture precondition for reaching the code path this
+        test actually exercises, not something this test is itself about."""
         backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
         self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
         (backend / "screen_snapshot.csv").write_text(
             "ticker,exchange,date\nHPG,HSX,2026-07-17\nABC,HNX,2026-07-17\n", encoding="utf-8")
         (backend / "market_breadth.csv").write_text("group,date,n_up\nALL,2026-07-17,1\n", encoding="utf-8")
+        (backend / "analysis_latest.json").write_text(
+            json.dumps({"summary": {"session_date": "2026-07-17"}}), encoding="utf-8")
         pd.BACKEND_ROOT = backend
 
         self.assertEqual(pd.source_root("analysis_bundle.json"), pd.WEB_ROOT)
@@ -454,6 +469,159 @@ class PublishedAtSeparationTests(_PublishDashboardTestBase):
         self.assertIsNone(manifest["published_at"],
                            "manifest cũ thiếu published_at -- build_id không đổi nên vẫn phải là "
                            "None, không được raise KeyError")
+
+
+class AnalysisLatestPublicationContractTests(_PublishDashboardTestBase):
+    """analysis_latest.json publication contract -- closes the confirmed BACKEND_ROOT <->
+    WEB_ROOT drift (operations-review/runtime_pipeline_publish_contract_audit_20260808.md;
+    milestone: "analysis_latest.json Publication Contract Repair"). See
+    docs/dashboard_release_session_contract.md's "closing the publication gap" section for
+    the design this proves."""
+
+    def test_included_in_whole_market_release_group_not_trusted_ai(self):
+        self.assertIn("analysis_latest.json", pd.COPY_ARTIFACTS)
+        self.assertIn("analysis_latest.json", pd.SAFE_WEB_ARTIFACTS)
+        self.assertIn("analysis_latest.json", pd.BACKEND_SOURCED)
+        self.assertIn("analysis_latest.json", pd.REQUIRED_SESSION_ARTIFACTS)
+        self.assertIn("analysis_latest.json", pd.release_session_contract.ARTIFACT_SESSION_RULES)
+        self.assertNotIn(
+            "analysis_latest.json", TRUSTED_AI_RELEASE_ALLOWLIST,
+            "belongs to the whole-market publisher (analysis.js/analysis.html consumer, "
+            "stock_analyzer.py producer), not the static trusted-ai allowlist "
+            "(analysis_bundle.json's own producer/consumer family)",
+        )
+
+    def test_source_to_destination_mapping(self):
+        """Same relative name in BACKEND_ROOT and WEB_ROOT -- exactly what analysis.js's
+        bare `ANALYSIS_URL = "analysis_latest.json"` fetch (no path prefix) requires."""
+        self.assertEqual(pd.source_root("analysis_latest.json"), self.backend,
+                          "must read the fresh BACKEND_ROOT generation, not a stale WEB_ROOT copy")
+        (self.backend / "analysis_latest.json").write_text(
+            json.dumps({"summary": {"session_date": "2026-07-17"}, "marker": "backend-fresh"}),
+            encoding="utf-8")
+        copied = pd.copy_public_artifacts()
+        self.assertIn("analysis_latest.json", copied)
+        self.assertEqual(
+            json.loads((self.tmp / "analysis_latest.json").read_text(encoding="utf-8"))["marker"],
+            "backend-fresh", "destination content must match the source that was just copied")
+
+    def test_allowlist_permits_it_while_rejecting_unrelated_file(self):
+        whitelist = pd.build_whitelist()
+        self.assertIn("analysis_latest.json", whitelist)
+        (self.tmp / "totally_unrelated_file.json").write_text("{}\n", encoding="utf-8")
+        whitelist_after = pd.build_whitelist()
+        self.assertIn("analysis_latest.json", whitelist_after)
+        self.assertNotIn(
+            "totally_unrelated_file.json", whitelist_after,
+            "a file not referenced by any HTML/JS and not in SAFE_WEB_ARTIFACTS must never "
+            "enter the whitelist merely by existing in WEB_ROOT")
+
+    def test_protected_staging_rejects_a_pre_staged_unexpected_file(self):
+        """publish_live()'s own guard: something already staged outside the whitelist before
+        it runs must refuse the whole publish -- proves analysis_latest.json's addition to
+        the whitelist did not loosen this pre-existing protection for anything else."""
+        calls: list[tuple[str, ...]] = []
+
+        def fake_git(*args, **kwargs):
+            calls.append(args)
+            if args == ("diff", "--cached", "--name-only"):
+                return True, "unexpected_unrelated_file.txt"
+            raise AssertionError(f"unexpected git call in this test: {args!r}")
+
+        with mock.patch.object(pd, "git", side_effect=fake_git):
+            rc = pd.publish_live(["analysis_latest.json", "dashboard.html"], "main")
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(calls, [("diff", "--cached", "--name-only")],
+                          "must stop at the pre-staged-file check -- never reach git add/commit")
+
+    def test_missing_source_fails_closed_before_any_write(self):
+        """Missing analysis_latest.json in BACKEND_ROOT must fail the whole publish, never
+        silently proceed and leave WEB_ROOT's existing (possibly stale) copy untouched but
+        unvalidated -- the required, not optional, half of the contract decision."""
+        backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
+        _write_backend_fixture(backend, "2026-08-07")
+        (backend / "analysis_latest.json").unlink()
+        pd.BACKEND_ROOT = backend
+
+        before = self._all_files(exclude_logs=True)
+        with mock.patch.object(pd, "copy_public_artifacts") as m_copy, \
+             mock.patch.object(pd, "write_build_manifest") as m_manifest:
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 1)
+        m_copy.assert_not_called()
+        m_manifest.assert_not_called()
+        after = self._all_files(exclude_logs=True)
+        self.assertEqual(before, after,
+                          "a required artifact missing from BACKEND_ROOT must fail closed, "
+                          "never silently publish with WEB_ROOT's stale existing copy")
+
+    def test_session_mismatched_source_fails_before_any_write(self):
+        """One artifact silently lagging the rest of BACKEND_ROOT's own session must fail
+        the publish before any copy/manifest/git write -- the exact shape a real partial or
+        interrupted pipeline run could produce."""
+        backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
+        _write_backend_fixture(backend, "2026-08-07")
+        (backend / "analysis_latest.json").write_text(
+            json.dumps({"summary": {"session_date": "2026-08-06"}}), encoding="utf-8")
+        pd.BACKEND_ROOT = backend
+
+        before = self._all_files(exclude_logs=True)
+        with mock.patch.object(pd, "copy_public_artifacts") as m_copy, \
+             mock.patch.object(pd, "write_build_manifest") as m_manifest:
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 1)
+        m_copy.assert_not_called()
+        m_manifest.assert_not_called()
+        after = self._all_files(exclude_logs=True)
+        self.assertEqual(before, after, "session mismatch must leave WEB_ROOT untouched, even with --live")
+
+    def test_stale_served_copy_is_replaced_with_source_equivalent_content_on_live_publish(self):
+        """Reproduces the confirmed defect directly: served (WEB_ROOT) analysis_latest.json
+        is old/stale; BACKEND_ROOT has newer valid content for a later session. Dry-run must
+        plan to copy it; a live publish must leave WEB_ROOT's copy byte-identical to
+        BACKEND_ROOT's -- the publisher copies, it does not reinterpret analysis content."""
+        backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
+        _write_backend_fixture(backend, "2026-08-07")
+        pd.BACKEND_ROOT = backend
+
+        stale = (self.tmp / "analysis_latest.json").read_bytes()
+        fresh = (backend / "analysis_latest.json").read_bytes()
+        self.assertNotEqual(stale, fresh, "fixture sanity: source and destination must start different")
+
+        self.assertIn("analysis_latest.json", pd.plan_copy_artifacts(),
+                       "dry-run plan must identify BACKEND_ROOT's fresher copy as the publish candidate")
+
+        self.fake_git.status_output = " M analysis_latest.json\n"
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd, "publish_live", return_value=0):
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 0)
+
+        self.assertEqual(
+            (self.tmp / "analysis_latest.json").read_bytes(), fresh,
+            "after a live publish, the served copy must be byte-equivalent to the validated source")
+
+    def test_identical_source_and_destination_is_a_noop(self):
+        backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
+        self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
+        _write_backend_fixture(backend, "2026-07-17")  # matches self.tmp's own fixture session
+        (backend / "analysis_latest.json").write_bytes((self.tmp / "analysis_latest.json").read_bytes())
+        pd.BACKEND_ROOT = backend
+
+        self.assertNotIn("analysis_latest.json", pd.plan_copy_artifacts(),
+                          "byte-identical source/destination must not be planned for copy")
+
+        before_bytes = (self.tmp / "analysis_latest.json").read_bytes()
+        before_mtime_ns = (self.tmp / "analysis_latest.json").stat().st_mtime_ns
+        copied = pd.copy_public_artifacts()
+        self.assertNotIn("analysis_latest.json", copied)
+        self.assertEqual((self.tmp / "analysis_latest.json").read_bytes(), before_bytes)
+        self.assertEqual((self.tmp / "analysis_latest.json").stat().st_mtime_ns, before_mtime_ns,
+                          "no-op republish must not even rewrite identical bytes")
 
 
 if __name__ == "__main__":

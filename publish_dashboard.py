@@ -80,6 +80,7 @@ _RUN_TIMESTAMP = f"{datetime.now(VN_TZ):%Y%m%d-%H%M%S}"
 
 COPY_ARTIFACTS = (
     "screen_snapshot.csv", "market_breadth.csv",
+    "analysis_latest.json",
     "ai_report_latest.md", "ai_report_latest.json",
     "data/macro_snapshot.json", "data/macro_snapshot.js",
     "data/candlestick_patterns.json", "data/candlestick_patterns.js",
@@ -103,12 +104,17 @@ ASSET_VERSION_ATTR_RE = re.compile(r'(?P<prefix>\b(?:src|href)=["\'])(?P<url>[^"
 # instead of a hardcoded WEB_ROOT is what makes the dry-run preview and a live write
 # agree on content/build_id, and what lets session validation see the fresh generation
 # instead of the previous publish's already-copied — possibly stale — file.
-BACKEND_SOURCED = {"screen_snapshot.csv", "market_breadth.csv",
+BACKEND_SOURCED = {"screen_snapshot.csv", "market_breadth.csv", "analysis_latest.json",
                    "ai_report_latest.md", "ai_report_latest.json"}
 # screen_snapshot_live.csv is not copied by this publisher (see COPY_ARTIFACTS) but is
 # generated alongside screen_snapshot.csv by the same vn_indicators.py run, so its
 # session is cross-checked here whenever it is present.
-REQUIRED_SESSION_ARTIFACTS = ("screen_snapshot.csv", "market_breadth.csv")
+# analysis_latest.json is required, not optional: analysis.js declares it its sole data
+# source (analysis.html has no other content path), so a missing/stale/session-mismatched
+# copy must fail the whole publish rather than silently leave a stale served copy in place
+# -- see operations-review/runtime_pipeline_publish_contract_audit_20260808.md's confirmed
+# drift finding and docs/dashboard_release_session_contract.md's analysis_latest.json section.
+REQUIRED_SESSION_ARTIFACTS = ("screen_snapshot.csv", "market_breadth.csv", "analysis_latest.json")
 OPTIONAL_SESSION_ARTIFACTS = ("screen_snapshot_live.csv",)
 
 
@@ -383,7 +389,7 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
     published_at = compute_published_at(existing, build_id, live)
     screener_js_content = screener_fallback_content(rows, breadth, market_session, generated_at)
     tracked_files = ["screen_snapshot.csv", "market_breadth.csv"]
-    tracked_files += [name for name in ("ai_report_latest.md", "ai_report_latest.json")
+    tracked_files += [name for name in ("analysis_latest.json", "ai_report_latest.md", "ai_report_latest.json")
                       if (source_root(name) / name).exists()]
     files: dict[str, object] = {name: file_entry(name) for name in tracked_files}
     files["data/screener_data.js"] = {

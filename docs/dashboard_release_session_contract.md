@@ -31,7 +31,7 @@ session among disagreeing files.
 | `screen_snapshot_live.csv` | Session-scoped | Live-universe subset of `screen_snapshot.csv` (`is_live == True` rows only), written by the same `vn_indicators.py` run. This is what `export_ai_bundle.py` itself uses as its session-scoped anchor (`DEFAULT_SESSION_SCOPED_CATEGORIES`) — not `screen_snapshot.csv`. |
 | `market_breadth.csv` | Session-scoped | Written by the same `vn_indicators.py` run as both snapshots; every row shares one `date`. |
 | `analysis_bundle.json` | Session-scoped | `reference_session_date` field, written by `export_ai_bundle.py`. |
-| `analysis_latest.json` | Session-scoped | `summary.session_date` field (not a top-level key), written by `stock_analyzer.py --strategy all`. |
+| `analysis_latest.json` | Session-scoped, **required** (2026-08-08) | `summary.session_date` field (not a top-level key), written by `stock_analyzer.py --strategy all`. See "`analysis_latest.json`: closing the publication gap" below. |
 | `screen_snapshot.csv` | **No — never release-session authority** | See "The screen_snapshot.csv decision" below. |
 | `financial_snapshot.csv` / `.parquet` | **Session-neutral** | Keyed by reporting period (quarter/year), not by market session. An older reporting period is normal and must never be read as staleness — callers pass these names via `session_neutral=` and the contract never compares them to `reference_session`. |
 
@@ -72,9 +72,9 @@ longer *trusts* it for session identity.
   already derives its session from `bundle_manifest.json.trusted_subset.session_identity` —
   it was never affected by this defect.
 * `publish_dashboard.py` (this contract) publishes the screener data layer
-  (`screen_snapshot.csv`, `market_breadth.csv`, `analysis_bundle.json`, the `ai_report_*`
-  files, and the `data/*.js` mirrors) and is invoked independently, typically via
-  `sync_and_publish.bat`.
+  (`screen_snapshot.csv`, `market_breadth.csv`, `analysis_bundle.json`, `analysis_latest.json`,
+  the `ai_report_*` files, and the `data/*.js` mirrors) and is invoked independently, typically
+  via `sync_and_publish.bat`.
 
 Because these two publishers run independently, a dashboard checkout can legitimately hold
 artifacts from two different publish cycles at once (e.g. `bundle_manifest.json` from a
@@ -178,6 +178,44 @@ an internally inconsistent release, and not something the module's own docstring
 (single-root invocations, or an optional file never generated in the backend). Every read of
 a copied artifact's content now goes through this one function, so the dry-run preview and
 a live write are computed from the same bytes.
+
+## `analysis_latest.json`: closing the publication gap
+
+Added 2026-08-08 (`operations-review/runtime_pipeline_publish_contract_audit_20260808.md`,
+"`analysis_latest.json` Publication Contract Repair" milestone). `analysis.js` declares
+`analysis_latest.json` its sole data source for `analysis.html` (`const ANALYSIS_URL =
+"analysis_latest.json";`), but until this change no publisher ever copied it from
+`BACKEND_ROOT` to `WEB_ROOT` — not `publish_dashboard.py`'s `COPY_ARTIFACTS`, not
+`publish_release.py`'s static trusted-ai allowlist. The two checkouts' copies could and did
+drift (confirmed live: ~26h apart, different content by hash), and nothing detected it —
+`analysis.html` silently served whatever a manual copy or pre-publish-topology mechanism had
+last placed there.
+
+The repair is additive, inside this contract's existing mechanism, not a new one:
+
+* `analysis_latest.json` added to `COPY_ARTIFACTS` (and `BACKEND_SOURCED`, so `source_root()`
+  reads the fresh `BACKEND_ROOT` copy the same way it already does for `screen_snapshot.csv`)
+  — it is now actively refreshed on every publish, byte-for-byte
+  (`atomic_copy_file`, sha256-compared, no content transformation), same as every other
+  `COPY_ARTIFACTS` member. A no-op republish (source and destination already byte-identical)
+  copies nothing, exactly like the rest of `COPY_ARTIFACTS`.
+* `analysis_latest.json` added to `REQUIRED_SESSION_ARTIFACTS`. Its session rule
+  (`ARTIFACT_SESSION_RULES["analysis_latest.json"] = ("json", ("summary", "session_date"))`)
+  already existed in `release_session_contract.py` — it was registered but never activated for
+  this publisher, because nothing had put the name in a `required` list yet. Required, not
+  optional: `analysis.html` has no other content path, so a missing or session-mismatched
+  source must fail the whole publish before any write, the same way a missing/mismatched
+  `screen_snapshot.csv` already does — silently leaving a stale served copy in place (what
+  "optional" would have allowed) is exactly the defect being closed here.
+* `analysis_latest.json` added to `compute_manifest()`'s conditionally-tracked file list
+  (alongside `ai_report_latest.md`/`.json`), so `data/build_info.json.files` records its
+  sha256/size/mtime like every other copied artifact.
+
+`analysis_latest.md` (the human-readable companion `stock_analyzer.py` also writes) is
+deliberately **not** included: no frontend file references it, and the served checkout does
+not currently have a copy, so adding it to the whitelist mechanism would fail the very next
+publish on a missing-file check for a file nothing actually consumes. Only the artifact the
+confirmed defect names is touched.
 
 ## Operator-facing behavior
 
