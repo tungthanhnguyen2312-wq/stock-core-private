@@ -98,6 +98,7 @@ _MAX_SHARES = 100_000_000_000
 
 _NUMBER_RE = re.compile(r"\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:,\d+)?")
 _DATE_RE = re.compile(r"(\d{1,2})[/.](\d{1,2})[/.](\d{4})")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 #: Field cues, Vietnamese first because that is what the official documents are written in.
 _CUES = {
@@ -111,19 +112,20 @@ _CUES = {
         "số lượng chứng khoán thay đổi"),
     "ex_date": ("ngày giao dịch không hưởng quyền", "ex-dividend date", "ex-rights date",
                 "ngày gdkhq"),
-    "record_date": ("ngày đăng ký cuối cùng", "record date", "ngày chốt danh sách"),
+    "record_date": ("record date:", "ngày đăng ký cuối cùng", "record date", "ngày chốt danh sách"),
     "payment_date": ("ngày thanh toán", "ngày chi trả", "payment date"),
     "listing_effective_date": ("ngày thay đổi niêm yết có hiệu lực",),
     "trading_date": ("ngày giao dịch của chứng khoán thay đổi niêm yết",),
     "cash_amount": ("số tiền", "đồng/cổ phiếu", "vnd/cổ phiếu", "vnd/share"),
     "subscription_price": ("giá phát hành", "giá chào bán", "subscription price"),
+    "approval_date": ("approval date",),
 }
 
 #: Event-type cues. Matched against normalised lower-case text.
 _TYPE_CUES = (
     ("stock_dividend", ("phát hành cổ phiếu để trả cổ tức", "trả cổ tức bằng cổ phiếu",
                         "cổ phiếu phát hành trả cổ tức", "stock dividend",
-                        "issuing shares to pay dividend")),
+                        "issuing shares to pay dividend", "share issuance for dividend payment")),
     ("bonus_shares", ("cổ phiếu thưởng", "phát hành cổ phiếu thưởng", "bonus share")),
     ("rights_issue", ("chào bán cho cổ đông hiện hữu", "quyền mua cổ phiếu", "rights issue")),
     ("stock_split", ("chia tách cổ phiếu", "stock split")),
@@ -357,6 +359,88 @@ def detect_event_type(text: str) -> tuple[str | None, str]:
     return hits[0], f"document text carries the {hits[0]} cue"
 
 
+def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> dict[str, Any]:
+    """Classify one hash-verified acquired record for the existing event extractor.
+
+    Acquisition manifests retain their discovery-time ``document_class`` unchanged.  This
+    returns an in-memory typed extraction record only after re-hashing the retained bytes and
+    finding an unambiguous document-internal cue; it never edits a manifest or promotes data.
+    """
+    expected_sha = str(document.get("content_sha256") or document.get("sha256") or "")
+    if not _SHA256_RE.fullmatch(expected_sha):
+        raise ValueError("retained_document_hash_missing_or_invalid")
+    if hashlib.sha256(payload).hexdigest() != expected_sha:
+        raise ValueError("retained_document_hash_mismatch")
+
+    document_id = str(document.get("document_id") or "")
+    ticker = str(document.get("ticker") or "").upper()
+    source_url = str(document.get("source_url") or document.get("canonical_url") or "")
+    authority = str(document.get("source_authority") or "")
+    media_type = str(document.get("media_type") or document.get("content_type") or "")
+    if not document_id or not ticker or not source_url.startswith(("http://", "https://")):
+        raise ValueError("retained_document_identity_incomplete")
+
+    normalized = extract_text(payload, media_type)
+    lowered = normalized.lower()
+    record_notice_cue = "would like to announce the record date as follows"
+    if not (authority == "Vietnam Securities Depository and Clearing Corporation"
+            and record_notice_cue in lowered and "record date:" in lowered):
+        raise ValueError("document_classification_unsupported_or_ambiguous")
+
+    declared_type = str(document.get("document_type") or "")
+    if declared_type and declared_type != "last_registration_date_notice":
+        raise ValueError("document_type_conflicts_with_document_text")
+
+    index = lowered.index(record_notice_cue)
+    return {
+        "document_id": document_id,
+        "ticker": ticker,
+        "document_type": "last_registration_date_notice",
+        "source_authority": authority,
+        "source_url": source_url,
+        "content_sha256": expected_sha,
+        "published_at": document.get("published_at"),
+        "observed_at": document.get("observed_at"),
+        "media_type": media_type,
+        "document_classification": {
+            "state": "classified",
+            "document_type": "last_registration_date_notice",
+            "acquisition_document_class": document.get("document_class"),
+            "basis": "document_internal_vsd_record_date_notice_cues",
+            "citation": {"cue": record_notice_cue, "excerpt": normalized[index:index + 180]},
+        },
+    }
+
+
+def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
+    """Return an entitlement ratio only when two explicit VSDC wordings agree."""
+    normalized = normalize_text(text)
+    rate_matches = re.findall(r"execution rate\s*:\s*([0-9.,]+)\s*:\s*([0-9.,]+)",
+                              normalized, flags=re.I)
+    wording_matches = re.findall(
+        r"shareholders are entitled to\s*([0-9.,]+)\s+new shares\s+for every\s*([0-9.,]+)\s+shares",
+        normalized, flags=re.I)
+    if len(rate_matches) != 1 or len(wording_matches) != 1:
+        return {"state": "unavailable", "reason": "execution_rate_missing_or_ambiguous"}
+    old, new = (parse_vietnamese_number(value) for value in rate_matches[0])
+    wording_new, wording_old = (parse_vietnamese_number(value) for value in wording_matches[0])
+    if (None in (old, new, wording_old, wording_new) or not old or not new
+            or old != wording_old or new != wording_new):
+        return {"state": "unavailable", "reason": "execution_rate_wordings_conflict"}
+    return {
+        "state": "available",
+        "stock_ratio": round(float(new) / float(old), 10),
+        "ratio_basis": "new_shares_per_existing_share",
+        "citations": [
+            {"field": "stock_ratio", "cue": "execution rate",
+             "excerpt": f"Execution rate: {rate_matches[0][0]}:{rate_matches[0][1]}"},
+            {"field": "stock_ratio", "cue": "explicit entitlement wording",
+             "excerpt": (f"Shareholders are entitled to {wording_matches[0][0]} new shares "
+                         f"for every {wording_matches[0][1]} shares")},
+        ],
+    }
+
+
 def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[str, Any]:
     """One typed, cited observation from one retained document.
 
@@ -404,7 +488,7 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
             fields[field] = int(value)
             citations.append({"field": field, "cue": cue, "excerpt": window[:180]})
 
-    for field in ("ex_date", "record_date", "payment_date", "listing_effective_date",
+    for field in ("approval_date", "ex_date", "record_date", "payment_date", "listing_effective_date",
                   "trading_date"):
         found = _field_window(normalized, field)
         if found is None:
@@ -418,7 +502,8 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
         fields[field] = parsed
         citations.append({"field": field, "cue": cue, "excerpt": window[:180]})
 
-    # A ratio is derived only from two independently extracted counts of the same document.
+    # Share-count arithmetic has priority. Otherwise an entitlement ratio needs two matching,
+    # explicit wordings; no date can open or orient the ratio.
     stock_ratio = None
     ratio_basis = None
     if "shares_issued" in fields and "shares_before" in fields and fields["shares_before"]:
@@ -433,9 +518,17 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
             stock_ratio = round(fields["shares_issued"] / before, 10)
             ratio_basis = "new_shares_per_existing_share"
             citations.append({"field": "stock_ratio", "cue": "derived",
-                              "excerpt": (f"{fields['shares_issued']} / "
-                                          f"({fields['shares_after']} - "
-                                          f"{fields['shares_issued']}) = {stock_ratio}")})
+                          "excerpt": (f"{fields['shares_issued']} / "
+                                      f"({fields['shares_after']} - "
+                                      f"{fields['shares_issued']}) = {stock_ratio}")})
+    else:
+        explicit_ratio = extract_explicit_stock_dividend_ratio(normalized)
+        if explicit_ratio["state"] == "available":
+            stock_ratio = explicit_ratio["stock_ratio"]
+            ratio_basis = explicit_ratio["ratio_basis"]
+            citations.extend(explicit_ratio["citations"])
+        else:
+            absent["stock_ratio"] = explicit_ratio["reason"]
 
     if "ex_date" not in fields:
         warnings.append("ex_date_absent")
@@ -468,12 +561,15 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
         "source_authority": document.get("source_authority"),
         "source_url": document.get("source_url"),
         "content_sha256": document.get("content_sha256"),
+        "document_classification": document.get("document_classification"),
         "published_at": document.get("published_at"),
         "observed_at": document.get("observed_at"),
         "approval_date": fields.get("approval_date"),
         "announcement_date": document.get("published_at"),
         "ex_date": fields.get("ex_date"),
         "record_date": fields.get("record_date"),
+        "payment_date": fields.get("payment_date"),
+        "listing_effective_date": fields.get("listing_effective_date"),
         "payment_or_execution_date": (fields.get("payment_date")
                                       or fields.get("listing_effective_date")),
         "trading_date": fields.get("trading_date"),

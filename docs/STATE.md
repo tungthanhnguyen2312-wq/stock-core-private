@@ -433,9 +433,12 @@ without one (VCB, SSI). The VCB source path has now been exercised once, from a 
 observed in an already-retained VCB notice: `https://vsd.vn/en/ad/180140` was retained on
 2026-08-08 (69,107-byte HTML, SHA-256 `b0a69a5e…502b66f2`, HTTP 200). Its own text states
 `Record date: 13/03/2025` and a 495-new-per-1,000 execution rate, but no explicit official
-ex-date. It is retained source evidence only: no date is substituted, no factor/share authority
-is promoted, and no ledger or valuation gate changes. The next bounded use of this evidence is
-classification and typed extraction; SSI has not been requested.
+ex-date. B3 classified it from its own VSDC record-date language and emitted one unpromoted
+typed observation: `stock_dividend`, `record_date=2025-03-13`, and
+`stock_ratio=0.495` only because the execution-rate notation and the explicit "495 new shares
+for every 1000" wording agree. Approval, ex-, payment, effective, and trading dates plus all
+share counts remain unavailable; no date is substituted, no factor/share authority is promoted,
+and no ledger or valuation gate changes. SSI has not been requested.
 
 Running second, and independent of it: qualify `issuer_entity_type` for the 1,218 tickers
 where it is unresolved, from an authoritative source (exchange/issuer registration data).

@@ -1,16 +1,17 @@
 # Official corporate-action ingestion and price-adjustment engine — design
 
 Status, updated **2026-08-08**: **B1 is delivered, owner-approved and enforced on the request
-path. B2–B4 machinery is built; B2 has now retained one VCB VSDC record-date notice through the
-governed path from a direct link observed in an already-retained VCB notice. No extraction,
-promotion, ledger mutation, or analytical gate activation followed from that newly retained
-document.**
+path. B2 retained one VCB VSDC record-date notice, and B3 now classifies it as a
+`last_registration_date_notice` and emits one unpromoted typed observation. The observation
+has a stock-dividend entitlement, record date, and explicit ratio, but no official ex-date,
+execution confirmation, or share counts; no ledger, promotion, or analytical gate activation
+followed.**
 
 | step | state |
 | --- | --- |
 | B1 crawl contract and allowlist | **delivered and approved.** `config/official_source_registry.json` is enforced by `official_source_registry.py`; `approval_state = APPROVED` with `approved_at = 2026-08-03T07:00:00Z` and `approved_at_provenance` naming the clock. All four sources are `approved`. **An agent may not approve a source or write either approval field.** Since `3b4cc5f` the gate runs on every request, and since `2026-08-04` it also runs on every redirect hop and every retry. |
-| B2 bounded crawler | **partially exercised.** The immutable blob store exists (`official_document_store.py`). A VNM index-page pilot proved the governed index path but returned no VNM candidate. On 2026-08-08, the retained VCB notice `https://vsd.vn/en/ad/177303` supplied a direct VSDC link to `https://vsd.vn/en/ad/180140`; one governed request retained the 69,107-byte HTML response (SHA-256 `b0a69a5e…502b66f2`, HTTP 200) in `operations-review/vcb-iss-official-acquisition-20260808/`. This is one bounded acquisition, not a general crawl or pagination authority. The document remains unclassified for ledger use and unpromoted. |
-| B3 classification and typed extraction | **built** (`corporate_action_events.py`), proven against retained HPG evidence. |
+| B2 bounded crawler | **partially exercised.** The immutable blob store exists (`official_document_store.py`). A VNM index-page pilot proved the governed index path but returned no VNM candidate. On 2026-08-08, the retained VCB notice `https://vsd.vn/en/ad/177303` supplied a direct VSDC link to `https://vsd.vn/en/ad/180140`; one governed request retained the 69,107-byte HTML response (SHA-256 `b0a69a5e…502b66f2`, HTTP 200) in `operations-review/vcb-iss-official-acquisition-20260808/`. This is one bounded acquisition, not a general crawl or pagination authority. B3 classified it for proposal only; it remains unlinked and unpromoted. |
+| B3 classification and typed extraction | **partially exercised.** `corporate_action_events.py` now hash-verifies the B2 acquisition record before creating an in-memory typed extraction record; the document's own VSDC record-date phrasing classifies it as `last_registration_date_notice`. Its proposal (`operations-review/vcb-iss-official-acquisition-20260808/event_observation_proposal.json`) is `stock_dividend`, `record_date=2025-03-13`, and `stock_ratio=0.495` from two matching direct wordings. `ex_date`, payment/effective/trading dates, share counts, and execution remain unavailable. It is not a ledger entry or promotion. |
 | B4 linking and execution status | **built** (`official_corporate_action_ledger.py`): cross-document linking, deduplication, supersession, lifecycle, deterministic replay. |
 | B5 historical qualification | not started |
 | B6 factors and dual price series | not started. One factor path exists and is fail-closed: the slice's event yields `not_ready` for want of an explicit official ex-date. |

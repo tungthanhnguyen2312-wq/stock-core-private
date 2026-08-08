@@ -287,6 +287,65 @@ class EventExtractionTests(unittest.TestCase):
             events.extract_text(b"x", "application/zip")
 
 
+class VcbB2TypedExtractionTests(unittest.TestCase):
+    """B3 uses only the one immutable B2 VCB acquisition, never a live request."""
+
+    RETAINED = (ROOT.parent / "operations-review" / "vcb-iss-official-acquisition-20260808")
+
+    def setUp(self):
+        manifest_path = self.RETAINED / "official_document_acquisition_manifest.json"
+        if not manifest_path.is_file():
+            self.skipTest("retained B2 VCB acquisition is not present")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(manifest["records"]), 1)
+        self.record = manifest["records"][0]
+        self.payload = (self.RETAINED / self.record["relative_path"]).read_bytes()
+        self.typed = events.classify_retained_document(self.record, self.payload)
+        self.text = events.extract_text(self.payload, self.typed["media_type"])
+
+    def test_exact_typed_fields_are_supported_by_the_retained_notice(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(observation["document_type"], "last_registration_date_notice")
+        self.assertEqual(observation["event_type"], "stock_dividend")
+        self.assertEqual(observation["lifecycle_state"], "record_date_confirmed")
+        self.assertEqual(observation["record_date"], "2025-03-13")
+        self.assertEqual(observation["stock_ratio"], 0.495)
+        self.assertEqual(observation["ratio_basis"], "new_shares_per_existing_share")
+
+    def test_missing_dates_and_share_counts_remain_unavailable(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        for field in ("approval_date", "ex_date", "payment_date", "listing_effective_date",
+                      "trading_date", "shares_before", "shares_issued", "shares_after"):
+            self.assertIsNone(observation[field], field)
+        self.assertIn("ex_date_absent", observation["warnings"])
+        self.assertIn("never substituted", observation["absent_fields"]["ex_date"])
+
+    def test_hash_and_document_provenance_are_carried_to_the_observation(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(observation["document_id"], self.record["document_id"])
+        self.assertEqual(observation["content_sha256"], self.record["sha256"])
+        self.assertEqual(observation["source_url"], self.record["canonical_url"])
+        self.assertEqual(observation["document_classification"]["acquisition_document_class"],
+                         "corporate_action_notice")
+        cited = {row["field"] for row in observation["citations"]}
+        self.assertTrue({"record_date", "stock_ratio"}.issubset(cited))
+
+    def test_conflicting_or_ambiguous_inputs_are_refused_fail_closed(self):
+        conflicting_type = dict(self.record, document_type="ex_right_notice")
+        with self.assertRaisesRegex(ValueError, "document_type_conflicts"):
+            events.classify_retained_document(conflicting_type, self.payload)
+        ambiguous_text = self.text.replace("495 new shares", "400 new shares", 1)
+        observation = events.extract_event_observation(self.typed, ambiguous_text)
+        self.assertIsNone(observation["stock_ratio"])
+        self.assertEqual(observation["absent_fields"]["stock_ratio"],
+                         "execution_rate_wordings_conflict")
+
+    def test_repeat_run_is_deterministic(self):
+        first = events.extract_event_observation(self.typed, self.text)
+        second = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(first, second)
+
+
 def _observation(event_type="stock_dividend", **overrides):
     record = {
         "observation_id": "o1", "ticker": "TST", "event_type": event_type,
