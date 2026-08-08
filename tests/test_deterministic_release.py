@@ -46,7 +46,7 @@ TICKERS = "HPG,VNM,SSI"
 #: the reporting period they valued (that is `financial_period`), so it belongs here.
 IDENTITY_KEYS = frozenset({
     "generated_at", "bundle_generated_at", "reference_at", "reference_time",
-    "source_generated_at", "downstream_generated_at", "upstream_generated_at",
+    "source_generated_at", "downstream_mtime", "upstream_mtime",
     "evaluated_at", "valuation_date", "mtime", "mtime_iso", "sha256", "bundle_sha256",
     "age_days", "age_hours", "age_sessions", "days_since", "seconds_since",
 })

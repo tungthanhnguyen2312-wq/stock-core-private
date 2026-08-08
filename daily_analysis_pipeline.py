@@ -77,6 +77,12 @@ def digest(path: Path) -> str:
     return h.hexdigest()
 
 def inspect(root: Path, names: Sequence[str] = REQUIRED) -> dict[str, dict]:
+    """`freshness_status` here is an artifact-presence + mtime-ordering build-dependency signal
+    (gates whether this pipeline run may proceed to the next step), never a claim about
+    market/business data freshness -- the only consumers are this module's own main() and its
+    own tests. `modified_time` is raw filesystem mtime, named honestly; `data_as_of`/session
+    identity for published artifacts comes from bundle_manifest.json's content-derived
+    freshness.reference_session (see release_session_contract.py), never from here."""
     report = {}
     for name in names:
         p = root / name

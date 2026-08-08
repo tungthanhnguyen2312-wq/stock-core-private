@@ -2094,7 +2094,13 @@ def check_artifact_order(root: Path, graph: dict[str, list[str]] | None = None) 
     sinh ra TRƯỚC lần chạy mới nhất của upstream (ví dụ thực tế: ta_signals.csv sinh trước lần
     vn_indicators.py rerun gần nhất -> rs_rating trong đó lệch canonical, xem reconcile_rs_rating).
     Chỉ so sánh các cặp mà CẢ HAI file đều tồn tại (file chưa từng sinh thì bỏ qua, không đánh giá
-    được thứ tự)."""
+    được thứ tự).
+
+    This is a build-ordering signal derived from filesystem mtime, never a generation timestamp
+    or data_as_of -- see release_session_contract.py's module docstring, which documents that
+    this function deliberately keeps mtime scoped to "was downstream generated after upstream"
+    and never uses it as a stand-in for session identity. The `*_mtime` fields below are raw
+    filesystem mtimes, not artifact generation instants."""
     graph = graph or ARTIFACT_DEPENDENCY_GRAPH
     violations = []
     for downstream, upstreams in graph.items():
@@ -2106,11 +2112,11 @@ def check_artifact_order(root: Path, graph: dict[str, list[str]] | None = None) 
             if u_mtime is None or u_mtime <= d_mtime:
                 continue
             violations.append({
-                "downstream": downstream, "downstream_generated_at": _mtime_iso(root / downstream),
-                "upstream": up, "upstream_generated_at": _mtime_iso(root / up),
+                "downstream": downstream, "downstream_mtime": _mtime_iso(root / downstream),
+                "upstream": up, "upstream_mtime": _mtime_iso(root / up),
                 "gap_seconds": round(u_mtime - d_mtime, 1),
-                "detail": (f"{downstream} được tạo lúc {_mtime_iso(root / downstream)}, TRƯỚC "
-                          f"{up} (tạo lúc {_mtime_iso(root / up)}) — {downstream} có thể đang chứa "
+                "detail": (f"{downstream} có mtime {_mtime_iso(root / downstream)}, TRƯỚC "
+                          f"{up} (mtime {_mtime_iso(root / up)}) — {downstream} có thể đang chứa "
                           f"số liệu cũ hơn chính nguồn của nó. Chạy lại bước sinh {downstream} SAU "
                           f"khi {up} đã cập nhật."),
             })
@@ -2175,7 +2181,7 @@ def build_data_quality_flags(tickers: list[str], entries: dict,
         ))
     for v in artifact_order_violations:
         flags.append(_make_flag(
-            scope="pipeline", ticker=None, code="artifact_created_before_upstream", severity="warning",
+            scope="pipeline", ticker=None, code="artifact_mtime_before_upstream", severity="warning",
             detail=v["detail"], evidence=v,
             consumer_action="Re-run the downstream script after its upstream dependency, then rebuild the bundle.",
         ))
