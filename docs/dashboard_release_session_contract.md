@@ -135,6 +135,33 @@ SESSION_MISMATCH:
 A `PUBLISH_READY=NO` report stops `main()` immediately (exit code 1) — no copy, no manifest
 write, no asset-version rewrite, no git add/commit/push, in both dry-run and `--live`.
 
+## `published_at`: separating "generated" from "actually published"
+
+Added 2026-08-08 (`operations-review/runtime_pipeline_publish_contract_audit_20260808.md`).
+`build_info.json` already had `market_session` (`data_as_of`) and `generated_at`, but nothing
+recording when a build was actually committed and pushed, as opposed to when its content was
+computed. A dry run computes `generated_at` for preview purposes; it must not be read as a
+publish that happened.
+
+`compute_published_at(existing, build_id, live)` (`publish_dashboard.py`):
+
+* Same `build_id` as the existing `data/build_info.json` → same content → returns the
+  *existing* `published_at` unchanged, whatever it was (including `None`, and including a
+  legacy manifest that predates this field and never had the key at all). This mirrors
+  `generated_at`'s own carry-forward rule and for the same reason: republishing an unchanged
+  release must stay a true no-op (see "How the promotion is atomic" in
+  `docs/release_publication_contract.md`) — a field that changed on every rerun regardless of
+  content would break that guarantee.
+* Different `build_id` (genuinely new content) and `live=False` (a dry run) → `None`. Nothing
+  was published; the field must not claim otherwise.
+* Different `build_id` and `live=True` → a fresh `datetime.now(VN_TZ)` timestamp, i.e. this
+  specific `--live` invocation is the publish event for this content.
+
+Only `publish_dashboard.py` / `build_info.json` (the whole-market layer) has this field so far.
+`publish_release.py` / `bundle_manifest.json` (the trusted-ai layer) has no equivalent yet —
+recorded as a natural, equally-bounded follow-up, deliberately not done in the same patch to
+keep this change to one authority and one publisher.
+
 ## `source_root()`: the other half of the fix
 
 Even with the gate in place, `validate_snapshot()`, `build_signature()`, and `file_entry()`

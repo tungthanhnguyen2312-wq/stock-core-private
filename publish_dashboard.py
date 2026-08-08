@@ -340,13 +340,34 @@ def file_entry(relative: str) -> dict[str, object]:
     }
 
 
+def compute_published_at(existing: dict[str, object], build_id: str, live: bool,
+                         now: datetime | None = None) -> str | None:
+    """None until a --live run actually commits this exact build_id for the first time.
+
+    Mirrors generated_at's carry-forward rule (unchanged build_id -> unchanged value), which
+    keeps republishing an unchanged release a true no-op (docs/release_publication_contract.md).
+    Unlike generated_at, this starts out None: a dry run previews the content that *would* be
+    generated, but must never claim a publish that did not happen, and new content that has not
+    yet been committed by a --live run has no publish instant yet either.
+
+    `now` is injectable (defaults to a real VN_TZ clock read) so callers -- currently only the
+    test suite -- can pin the instant instead of depending on wall-clock timing.
+    """
+    if existing.get("build_id") == build_id:
+        return existing.get("published_at")  # type: ignore[return-value]
+    if not live:
+        return None
+    return (now or datetime.now(VN_TZ)).isoformat(timespec="seconds")
+
+
 def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
-                     market_session: str, head: str) -> tuple[dict[str, object], str]:
+                     market_session: str, head: str, live: bool = False) -> tuple[dict[str, object], str]:
     """Pure: compute the manifest dict + the screener_data.js content it references.
 
     Reads existing on-disk files (screen_snapshot.csv, market_breadth.csv, the
     build-signature inputs, and the previous data/build_info.json if present)
-    but never writes anything. Safe to call in dry-run.
+    but never writes anything. Safe to call in dry-run. `live` only selects which value
+    published_at computes to (see compute_published_at) -- it never triggers I/O here.
     """
     signature = build_signature(market_session, head)
     build_id = f"{market_session}-{head[:7]}-{signature[:10]}"
@@ -359,6 +380,7 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
             existing = {}
     generated_at = (existing.get("generated_at") if existing.get("build_id") == build_id else None)
     generated_at = str(generated_at or datetime.now(VN_TZ).isoformat(timespec="seconds"))
+    published_at = compute_published_at(existing, build_id, live)
     screener_js_content = screener_fallback_content(rows, breadth, market_session, generated_at)
     tracked_files = ["screen_snapshot.csv", "market_breadth.csv"]
     tracked_files += [name for name in ("ai_report_latest.md", "ai_report_latest.json")
@@ -409,6 +431,7 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
         "schema_version": 1,
         "build_id": build_id,
         "generated_at": generated_at,
+        "published_at": published_at,
         "market_session": market_session,
         "git_commit": head,
         "row_counts": {"screen_snapshot": len(rows), "market_breadth": len(breadth)},
@@ -676,7 +699,7 @@ def main() -> int:
             head = current_head()
         rows, breadth, market_session = validate_snapshot()
         copy_plan = plan_copy_artifacts()
-        manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head)
+        manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
         validate_json_artifacts()
         whitelist = build_whitelist()

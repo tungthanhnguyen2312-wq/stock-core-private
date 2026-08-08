@@ -12,6 +12,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -380,6 +381,79 @@ class PathResolutionReadsFreshBackendTests(_PublishDashboardTestBase):
         self.assertEqual(pd.source_root("analysis_bundle.json"), pd.WEB_ROOT)
         rc = self._run(["publish_dashboard.py"])
         self.assertEqual(rc, 0)
+
+
+class PublishedAtSeparationTests(_PublishDashboardTestBase):
+    """published_at must track an actual --live publish of new content, never a dry-run
+    preview, and must never move on a republish of unchanged content -- the runtime/publish
+    contract audit (operations-review/runtime_pipeline_publish_contract_audit_20260808.md)
+    found no field anywhere distinguishing 'this artifact set was generated' from 'this
+    artifact set was actually committed and pushed'. See
+    docs/dashboard_release_session_contract.md for the field's contract."""
+
+    def test_dry_run_computes_generated_at_but_never_published_at(self):
+        rows, breadth, market_session = pd.validate_snapshot()
+        manifest, _content = pd.compute_manifest(rows, breadth, market_session, "0" * 40)
+        self.assertIsNotNone(manifest["generated_at"], "preview vẫn phải tính generated_at")
+        self.assertIsNone(manifest["published_at"],
+                           "dry-run không xuất bản gì -- published_at phải là None")
+
+    def test_live_new_content_gets_a_fresh_tz_aware_published_at(self):
+        rows, breadth, market_session = pd.validate_snapshot()
+        manifest, _content = pd.compute_manifest(rows, breadth, market_session, "0" * 40, live=True)
+        self.assertIsInstance(manifest["published_at"], str)
+        parsed = datetime.fromisoformat(manifest["published_at"])
+        self.assertIsNotNone(parsed.tzinfo, "published_at phải timezone-aware")
+
+    def test_market_session_is_unaffected_by_published_at(self):
+        rows, breadth, market_session = pd.validate_snapshot()
+        dry, _ = pd.compute_manifest(rows, breadth, market_session, "0" * 40, live=False)
+        live, _ = pd.compute_manifest(rows, breadth, market_session, "0" * 40, live=True)
+        self.assertEqual(dry["market_session"], market_session)
+        self.assertEqual(live["market_session"], market_session,
+                          "data_as_of không được đổi chỉ vì published_at khác")
+
+    def test_republish_of_unchanged_build_id_does_not_move_published_at(self):
+        rows, breadth, market_session = pd.validate_snapshot()
+        first, _ = pd.compute_manifest(rows, breadth, market_session, "0" * 40, live=True)
+        (self.tmp / "data" / "build_info.json").write_text(json.dumps(first), encoding="utf-8")
+
+        second, _ = pd.compute_manifest(rows, breadth, market_session, "0" * 40, live=True)
+
+        self.assertEqual(second["build_id"], first["build_id"],
+                          "fixture không đổi giữa 2 lần gọi -- build_id phải giống nhau")
+        self.assertEqual(second["published_at"], first["published_at"],
+                          "republish nội dung không đổi không được sinh published_at mới")
+        self.assertEqual(second["generated_at"], first["generated_at"])
+
+    def test_new_content_after_a_publish_gets_its_own_new_published_at(self):
+        # compute_published_at() directly, with two distinct injected clock readings --
+        # asserting on real datetime.now(VN_TZ) output at second precision would be flaky
+        # whenever both compute_manifest() calls land in the same wall-clock second.
+        first_at = pd.compute_published_at(
+            {}, "build-a", live=True, now=datetime(2026, 8, 7, 10, 0, 0, tzinfo=timezone.utc))
+        second_at = pd.compute_published_at(
+            {"build_id": "build-a", "published_at": first_at}, "build-b", live=True,
+            now=datetime(2026, 8, 8, 10, 0, 0, tzinfo=timezone.utc))
+
+        self.assertEqual(first_at, "2026-08-07T10:00:00+00:00")
+        self.assertNotEqual(second_at, first_at,
+                             "nội dung mới (build_id khác) phải được coi là một lần publish mới, "
+                             "có published_at riêng")
+
+    def test_legacy_manifest_without_published_at_key_fails_safe(self):
+        rows, breadth, market_session = pd.validate_snapshot()
+        first, _ = pd.compute_manifest(rows, breadth, market_session, "0" * 40)
+        legacy = dict(first)
+        legacy.pop("published_at", None)  # a build_info.json written before this patch existed
+        (self.tmp / "data" / "build_info.json").write_text(json.dumps(legacy), encoding="utf-8")
+
+        manifest, _ = pd.compute_manifest(rows, breadth, market_session, "0" * 40, live=True)
+
+        self.assertEqual(manifest["build_id"], legacy["build_id"])
+        self.assertIsNone(manifest["published_at"],
+                           "manifest cũ thiếu published_at -- build_id không đổi nên vẫn phải là "
+                           "None, không được raise KeyError")
 
 
 if __name__ == "__main__":
