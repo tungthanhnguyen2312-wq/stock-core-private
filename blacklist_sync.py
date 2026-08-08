@@ -4,6 +4,7 @@ import sqlite3
 import argparse
 from datetime import datetime
 import pandas as pd
+from vn_time import vn_now
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -84,7 +85,7 @@ def scan_trading_status(tickers):
 
 def build_auto_rows(status_by_ticker):
     """Sinh dòng blacklist tự động từ trạng thái Sở. Status VCI lạ -> warning + cảnh báo."""
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = vn_now().strftime("%Y-%m-%d")
     rows = []
     for tk, raw in sorted(status_by_ticker.items()):
         if raw == NORMAL_STATUS:

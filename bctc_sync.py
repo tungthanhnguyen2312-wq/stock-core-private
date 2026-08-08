@@ -17,6 +17,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Literal
+from vn_time import vn_now
 
 import pandas as pd
 
@@ -146,7 +147,7 @@ def normalize_report(
     out.insert(0, "ticker", ticker.upper())
     out.insert(1, "report_type", report_type)
     out.insert(2, "source", source)
-    out.insert(3, "scraped_at", datetime.now().strftime("%Y-%m-%d %H:%M"))
+    out.insert(3, "scraped_at", vn_now().strftime("%Y-%m-%d %H:%M"))
     return out
 
 
@@ -224,7 +225,7 @@ def upsert_meta(
         "start_period": start_period,
         "end_period": end_period,
         "source": source,
-        "updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "updated": vn_now().strftime("%Y-%m-%d %H:%M"),
     }
     mask = (
         (meta["ticker"] == row["ticker"]) & 

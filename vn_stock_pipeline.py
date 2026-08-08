@@ -14,6 +14,7 @@ import pandas as pd
 import requests
 from runtime_paths import runtime_root
 from market_data_lineage import build_ohlcv_lineage_records, init_ohlcv_lineage_schema, upsert_ohlcv_lineage
+from vn_time import vn_now
 
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
@@ -695,7 +696,7 @@ def set_meta(conn, ticker, status, rows):
     with conn:
         conn.execute("""INSERT INTO meta VALUES(?,?,?,?) ON CONFLICT(ticker) DO UPDATE SET
             status=excluded.status, rows=excluded.rows, updated=excluded.updated""",
-            (ticker, status, rows, datetime.now().strftime("%Y-%m-%d %H:%M")))
+            (ticker, status, rows, vn_now().strftime("%Y-%m-%d %H:%M")))
 
 CMDS = {"universe": load_full_universe, "backfill": cmd_backfill, "update": cmd_update,
         "status": cmd_status, "export": cmd_export}

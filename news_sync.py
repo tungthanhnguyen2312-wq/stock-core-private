@@ -8,6 +8,7 @@ import argparse
 import os
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from vn_time import vn_now
 import xml.etree.ElementTree as ET
 import requests
 import pandas as pd
@@ -112,7 +113,7 @@ def sync_feed(conn, region, source, url):
     if root is None:
         return 0, 0
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    fetched = datetime.now().strftime("%Y-%m-%d %H:%M")
+    fetched = vn_now().strftime("%Y-%m-%d %H:%M")
     rows = []
     for item in root.findall(".//item"):
         link = (item.findtext("link") or "").strip()

@@ -7,6 +7,7 @@ from datetime import datetime
 import pandas as pd
 
 from runtime_paths import runtime_root
+from vn_time import vn_now
 
 # Console Windows mặc định cp1252 -> vỡ khi in tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -203,7 +204,7 @@ def validate(report, sent_tickers):
 
 def render_md(report, model):
     """Đổ JSON ra Markdown cho người đọc."""
-    L = [f"# Báo cáo chiến lược cuối ngày — {datetime.now():%Y-%m-%d}",
+    L = [f"# Báo cáo chiến lược cuối ngày — {vn_now():%Y-%m-%d}",
          f"_Model: {model} | Sinh tự động bởi ai_analyzer.py — tham khảo cá nhân, không phải khuyến nghị đầu tư_",
          f"\n## Regime: **{report['market_regime'].upper()}** | Rủi ro danh mục: **{report['portfolio_risk']}**",
          report["regime_reason"],
@@ -246,7 +247,7 @@ def main():
     report, usage = call_llm(payload, args.model)
     validate(report, sent)
 
-    stamp = datetime.now().strftime("%Y%m%d")
+    stamp = vn_now().strftime("%Y%m%d")
     report_json_path = RUNTIME_ROOT / f"ai_report_{stamp}.json"
     report_md_path = RUNTIME_ROOT / f"ai_report_{stamp}.md"
     with open(report_json_path, "w", encoding="utf-8") as f:

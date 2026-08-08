@@ -153,7 +153,9 @@ class MetadataRegistryExportTests(unittest.TestCase):
     def test_transform_version_matches_pattern_and_current_meta_sync(self):
         version = adapter.compute_transform_version()
         self.assertRegex(version, r"^meta_sync\.py@sha256:[0-9a-f]{12}$")
-        self.assertEqual(version, "meta_sync.py@sha256:f110d22d1231")
+        # Pinned to meta_sync.py's current bytes -- update after any legitimate edit to that file
+        # (last updated for the vn_time.py sync-timestamp contract, commit e5ba186).
+        self.assertEqual(version, "meta_sync.py@sha256:af99418b031c")
 
     def test_default_registry_snapshot_dir_matches_spec(self):
         self.assertEqual(adapter.DEFAULT_REGISTRY_SNAPSHOT_DIR.parts[-2:], ("registry_snapshots", "metadata"))

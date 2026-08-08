@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime
 import pandas as pd
 from runtime_paths import runtime_root
+from vn_time import vn_now_iso
 
 # Console Windows mặc định cp1252 -> vỡ khi in tên ngành/cổ đông tiếng Việt
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -270,7 +271,7 @@ def sync_fundamentals(conn, tickers, refresh=False):
                 free_float_est=excluded.free_float_est, updated=excluded.updated""",
             (tk, vals["pe"], vals["pb"], vals["roe"], vals["dividend_yield"], vals["market_cap"],
              vals["shares_outstanding"], vals["free_float_est"],
-             datetime.now().strftime("%Y-%m-%d %H:%M")))
+             vn_now_iso()))
         conn.commit()
 
         def _f(v, nd=2):

@@ -8,6 +8,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
+from vn_time import vn_now
 import pandas as pd
 
 from shareholder_pipeline import (
@@ -77,7 +78,7 @@ def log(msg: str) -> None:
     try:
         os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
         with open(LOG_FILE, "a", encoding="utf-8") as fh:
-            fh.write(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}\n")
+            fh.write(f"[{vn_now():%Y-%m-%d %H:%M:%S}] {msg}\n")
     except OSError:
         pass
 
@@ -249,7 +250,7 @@ def normalize(df, ticker, source):
 
     out["ticker"] = ticker.upper()
     out["source"] = source
-    out["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    out["updated_at"] = vn_now().strftime("%Y-%m-%d %H:%M")
 
     out = out[out["shareholder_name"].notna() & (out["shareholder_name"] != "")]
     out = out.drop_duplicates(subset="shareholder_name", keep="first")
@@ -349,7 +350,7 @@ def set_progress(conn, ticker, status, rows):
     conn.execute("""INSERT INTO shareholders_progress VALUES(?,?,?,?)
         ON CONFLICT(ticker) DO UPDATE SET
         status=excluded.status, rows=excluded.rows, updated=excluded.updated""",
-        (ticker, status, rows, datetime.now().strftime("%Y-%m-%d %H:%M")))
+        (ticker, status, rows, vn_now().strftime("%Y-%m-%d %H:%M")))
 
 
 def apply_result(conn, ticker, df, status=DONE):
@@ -465,7 +466,7 @@ def persist_summary(conn, summary):
                 summary["parsed_record_count"], summary["deduplicated_record_count"],
                 summary["manual_override_count"], summary["latest_as_of_date"],
                 json.dumps(summary["freshness"], ensure_ascii=False, separators=(",", ":")),
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                vn_now().strftime("%Y-%m-%d %H:%M"),
             ),
         )
 
