@@ -3,6 +3,13 @@
 
 Authoritative Python CLI for orchestrating StockLookup dashboard releases.
 Replaces legacy batch file control planes with strict, fail-closed Python orchestration.
+
+This is the single supported live-publish entry point (both release groups). It assumes the
+trusted-ai analysis artifact set already exists and is valid; pass --generate to have it call
+tools/operate_stocklookup.py first (as a plain child process, no --publish/--live of its own)
+to rebuild and validate that set before publishing. tools/operate_stocklookup.py remains fully
+supported standalone for that same build/validate role, but its own --live flag is retired:
+this script is the only thing that may commit and push a release.
 """
 
 import argparse
@@ -107,6 +114,19 @@ def build_parser() -> argparse.ArgumentParser:
     parent_parser.add_argument("--web-dir", type=str, default=None, help="Override web directory")
     parent_parser.add_argument("--producer-dir", type=str, default=None, help="Override producer directory")
     parent_parser.add_argument("--python-exe", type=str, default=sys.executable, help="Python executable for child calls")
+    parent_parser.add_argument("--verify-live-url", type=str, default=None,
+                               help="With trusted-ai/all --live: after publish_release.py pushes, "
+                                    "re-fetch each artifact from this origin and compare hashes "
+                                    "before reporting success (passed through unchanged).")
+    parent_parser.add_argument("--generate", action="store_true",
+                               help="Before publishing, run tools/operate_stocklookup.py against "
+                                    "--backend-dir to rebuild and validate the trusted-ai analysis "
+                                    "artifact set (sidecar, bundle, manifest). No effect on the "
+                                    "whole-market group alone, which has nothing for it to build. "
+                                    "In live mode this passes --execute so the rebuild actually "
+                                    "writes; otherwise operate_stocklookup.py runs its own read-only "
+                                    "dry run. Never passes --publish/--live to the child: this "
+                                    "script remains the only thing that commits and pushes.")
 
     parser = argparse.ArgumentParser(
         prog="release_orchestrator.py",
@@ -173,13 +193,24 @@ def orchestrate(args: argparse.Namespace) -> int:
 
         # 5. Construct child argv plans
         trusted_ai_invoked = False
+        generate_invoked = False
         argv_plans = []
+
+        if group in ("trusted-ai", "all") and args.generate:
+            generate_invoked = True
+            cmd_generate = [python_exe, str(producer_dir / "tools" / "operate_stocklookup.py"),
+                            "--runtime-root", str(backend_dir)]
+            if live:
+                cmd_generate.append("--execute")
+            argv_plans.append(cmd_generate)
 
         if group in ("trusted-ai", "all"):
             trusted_ai_invoked = True
             cmd = [python_exe, str(producer_dir / "tools" / "publish_release.py"), "--source", str(backend_dir), "--destination", str(web_dir)]
             if live:
                 cmd.append("--live")
+                if args.verify_live_url:
+                    cmd += ["--verify-live-url", args.verify_live_url]
             argv_plans.append(cmd)
 
         if group in ("whole-market", "all"):
@@ -205,6 +236,7 @@ def orchestrate(args: argparse.Namespace) -> int:
         print(f"EXPECTED_SESSION      : {expected_session or 'N/A'}")
         print(f"ACTUAL_SESSION        : {actual_session}")
         print(f"TRUSTED_AI_INVOKED    : {'true' if trusted_ai_invoked else 'false'}")
+        print(f"GENERATE_INVOKED      : {'true' if generate_invoked else 'false'}")
         print(f"ZERO_MUTATION         : {'PASS' if not live else 'N/A (LIVE)'}")
         print("Execution Plans:")
         for idx, plan in enumerate(argv_plans, 1):

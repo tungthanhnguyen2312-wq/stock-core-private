@@ -7,6 +7,8 @@ the real pipeline.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import sqlite3
@@ -318,6 +320,26 @@ class InvocationTests(unittest.TestCase):
         with PipelineLock(self.root / "locks" / "pipeline.lock"):
             self.assertEqual(operate.main(["--runtime-root", str(self.root), "--execute"],
                                           runner=RecordingRunner()), 3)
+
+    def test_live_is_refused_here_with_a_migration_message_to_release_orchestrator(self):
+        """Single live-publish authority: this command builds/validates, it does not commit
+        or push. --live must fail closed, pointing the operator at release_orchestrator.py,
+        rather than silently doing nothing or (worse) still reaching publish_release.py."""
+        # --live is refused before any of --publish/--web-root's own validation runs, so
+        # neither needs to resolve to anything real here.
+        runner = RecordingRunner()
+        base = ["--runtime-root", str(self.root), "--execute", "--publish",
+               "--web-root", str(self.root / "nope-not-the-runtime-root"), "--live"]
+        # Redirecting stdout too (and discarding it) avoids main()'s unconditional
+        # sys.stderr.reconfigure() call, which only StringIO-backed streams don't support.
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+            exit_code = operate.main(base, runner=runner)
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(runner.calls, [])
+        message = stderr.getvalue()
+        self.assertIn("release_orchestrator.py", message)
+        self.assertIn("--live", message)
 
 
 if __name__ == "__main__":

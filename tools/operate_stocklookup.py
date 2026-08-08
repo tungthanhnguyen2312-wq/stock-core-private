@@ -23,20 +23,27 @@ MODES
                            write the operating report.
     --execute --publish --web-root <served checkout>
                            additionally run the release publisher in ITS dry-run mode.
-    --execute --publish --web-root <served checkout> --live
-                           additionally publish for real: stage, hash-verify, promote by
-                           atomic rename, and commit/push exactly the release allowlist.
 
-WHY --web-root IS REQUIRED
+WHY --web-root IS REQUIRED (for --publish)
     Publication is a promotion from the runtime root into the checkout that is actually
     served, and the runtime root is not that checkout: it routinely sits on a feature
     branch with unrelated generated-artifact drift. Publishing into it committed that drift
     to a branch nothing serves. Naming the served destination explicitly is what makes the
     release land where a reader will see it.
 
+LIVE PUBLISH IS NOT DONE HERE
+    --live is retired from this command. tools/release_orchestrator.py is the single
+    supported live-publish authority for both release groups (`trusted-ai`, `whole-market`,
+    `all`) — run `release_orchestrator.py trusted-ai --live`, adding `--generate` to have it
+    call this command's build+validate stage first. This command still builds, verifies and
+    Consumer-validates the trusted-ai artifact set exactly as before (--execute, optionally
+    --publish for a non-mutating dry-run preview of the release) — only the mutating
+    stage/commit/push path moved to release_orchestrator.py, so a live run only ever has one
+    lock, one attestation, and one place that can push.
+
 EXIT CODES
     0 success   1 a gate failed (artifacts restored where a rollback point existed)
-    2 bad invocation / unusable runtime root   3 another instance holds the lock
+    2 bad invocation / unusable runtime root / --live   3 another instance holds the lock
 """
 
 from __future__ import annotations
@@ -742,10 +749,13 @@ def parse_args(argv=None) -> argparse.Namespace:
                              " --publish; the release is promoted into it, never into the"
                              " runtime root.")
     parser.add_argument("--verify-live-url", default=None,
-                        help="With --publish --live: re-verify the published hashes over HTTP"
-                             " against the serving origin before reporting success.")
+                        help="[Not reachable via this CLI: --live is retired here, and this"
+                             " only ever applied with --live.] Use tools/release_orchestrator.py"
+                             " --verify-live-url for the same check on a real publish.")
     parser.add_argument("--live", action="store_true",
-                        help="With --publish: let the publisher promote, commit and push.")
+                        help="[RETIRED HERE] Live publish now happens only through "
+                             "tools/release_orchestrator.py; passing this flag fails with a "
+                             "migration message instead of publishing.")
     return parser.parse_args(argv)
 
 
@@ -758,16 +768,22 @@ def main(argv=None, runner=subprocess.run) -> int:
     if not root.is_dir():
         print(f"[operate] runtime root does not exist: {root}", file=sys.stderr)
         return 2
-    if args.live and not args.publish:
-        print("[operate] --live requires --publish", file=sys.stderr)
+    if args.live:
+        # Single-authority rule: exactly one command may commit and push a release. That is
+        # tools/release_orchestrator.py, which also holds the cross-release lock and the
+        # Dashboard-repo HEAD/upstream/staged-index checks a live publish needs. This command
+        # still builds and dry-run-validates the release (--execute, optionally --publish
+        # without --live) exactly as before.
+        print("[operate] --live is retired here. The single supported live-publish authority "
+              "is tools/release_orchestrator.py — run `release_orchestrator.py trusted-ai "
+              "--live` (add --generate to run this command's build+validate stage first). "
+              "Drop --live to build and dry-run-validate the release with this command.",
+              file=sys.stderr)
         return 2
     if args.refresh_metadata and not args.execute:
         # It writes vn_stock.db and reaches the network. A dry run that did either would not
         # be a dry run.
         print("[operate] --refresh-metadata requires --execute", file=sys.stderr)
-        return 2
-    if args.live and not args.execute:
-        print("[operate] --live requires --execute", file=sys.stderr)
         return 2
     tickers = [t.strip().upper() for t in args.tickers.split(",") if t.strip()]
     if not tickers:

@@ -5,6 +5,79 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-08 - Publish Orchestrator Authority Reconciliation
+
+- **`tools/release_orchestrator.py` is the single supported live-publish authority**, for
+  both release groups (`trusted-ai`, `whole-market`, `all`). `tools/operate_stocklookup.py`
+  remains fully supported as the build/generate + validate command for the trusted-ai
+  analysis artifact set (taxonomy sidecar, bundle, manifest), standalone or as
+  `release_orchestrator.py ... --generate`'s own child process. Its own `--live` flag is
+  retired: passing it now exits 2 with a message pointing here, so exactly one command in
+  the repository can commit or push. `local_runbook.md` and
+  `docs/release_publication_contract.md` previously named only `operate_stocklookup.py` as
+  "the one supported command" — both predated `release_orchestrator.py` (added 2026-08-05,
+  `cb0cd75`) and were never updated; this entry and the accompanying doc updates close that
+  gap. See `operations-review/runtime_pipeline_publish_contract_audit_20260808.md` for the
+  audit that first surfaced the conflict.
+
+- **The deciding fact, not age or naming: both orchestrators already delegate the actual
+  trusted-ai publish to the same `tools/publish_release.py`.** There was never a second
+  publish *implementation* to choose between — only a second *dispatcher* deciding when to
+  call it, and a generation stage deciding what to call it with. `release_orchestrator.py`
+  already dispatches both release groups and is what the deprecated `.bat` shims already
+  forward to; `operate_stocklookup.py` structurally only ever reaches the trusted-ai group
+  (its own docstring: "never fetches prices, macro series or news... consumes what \[the
+  daily chain\] already produced") and has no whole-market or Dashboard-repo-git-safety
+  capability to build on. Making it the outer authority would have meant growing a release-
+  group dispatcher and HEAD/upstream/staged-index checks it was never designed to have;
+  making `release_orchestrator.py` call it for generation only needed one child-process
+  call it already had the shape for (it already shells out to `publish_release.py`,
+  `build_frontend.py`, `publish_dashboard.py` the same way).
+
+- **Composition, not duplication: `--generate` runs the loser as a plain, non-publishing
+  child process.** `release_orchestrator.py trusted-ai/all --generate` calls
+  `operate_stocklookup.py --runtime-root <backend-dir>` (adding `--execute` only when the
+  outer run is itself `--live`, so a dry-run orchestration can't quietly write real files)
+  before its own existing plans — never with `--publish`/`--live`, so the child can only
+  build and validate, never publish. The existing per-child failure check
+  (`if res.returncode != 0: ... return res.returncode`) already stops the loop before
+  `publish_release.py` runs if the generate stage fails; no new failure-propagation logic
+  was needed. Zero lines of either script's core logic were copied into the other.
+
+- **One capability actually moved, and one had to be explicitly carried over.**
+  `operate_stocklookup.py`'s live path ran a `post_publish_smoke` gate whose live-only
+  block re-hashed the served checkout against the runtime root from a second process —
+  accepted as retired-by-redundancy: `publish_release.py` already re-hashes its own
+  promotion (`os.replace` then re-hash) and already verifies the pushed remote SHA via
+  `git ls-remote`, so this was a second confirmation of a check the publisher already makes
+  atomically, not independent coverage. `--verify-live-url` (an HTTP re-fetch from the
+  actual serving origin — genuinely independent of anything `publish_release.py` checks
+  about its own local git state) was **not** redundant and had no equivalent on
+  `release_orchestrator.py` before this milestone; it is now a pass-through flag there,
+  forwarded to `publish_release.py` exactly as `operate_stocklookup.py` used to forward it.
+
+- **Every other named safety property was preserved as-is, not reimplemented.** Expected-
+  session gating, the single-instance lock, the Dashboard HEAD/upstream/staged-index
+  checks, the whole-market allowlist rollback, and the trusted-ai release allowlist/hash/
+  Consumer-validation/atomic-promotion contract in `publish_release.py` are unchanged by
+  this milestone — confirmed by the existing focused suites passing unmodified alongside
+  the new composition tests (`tests/test_release_orchestrator.py`,
+  `tests/test_operate_stocklookup.py`).
+
+- **`tests/test_release_orchestrator.py` no longer depends on the live runtime.** Every
+  test there previously ran against the real `dashboard-runtime`/
+  `worktrees/market-dashboard-main` by default, including one that hardcoded the expected
+  session as `"2026-08-04"` — confirmed failing this session (`dashboard-runtime` had moved
+  to session `2026-08-07`), exactly the drift the milestone brief warned against "fixing"
+  by swapping in the new current date. Rewritten to build its own temp `--backend-dir`
+  (a minimal `screen_snapshot.csv`) and `--web-dir` (a freshly `git init`ed repo) per test,
+  so the suite's pass/fail no longer depends on which day it runs.
+
+- Evidence: this milestone's diff (`tools/release_orchestrator.py`,
+  `tools/operate_stocklookup.py`, both test files, this entry,
+  `docs/release_publication_contract.md`, `operations-review/local_runbook.md`,
+  `operations-review/PROJECT_STATE.md`). No production write, no publish, no push.
+
 ## 2026-08-04 - P0-Z.3 KBS Coverage Export Seam and Consumer Pass-Through
 
 - **KBS `va` has never been exported, and that is now recorded rather than assumed.** The

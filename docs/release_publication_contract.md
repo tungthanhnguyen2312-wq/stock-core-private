@@ -118,22 +118,53 @@ artifacts are pinned `-text` in the Dashboard repo's `.gitattributes`, and the p
 verifies the staged blob against the verified bytes before committing, so this cannot be
 reintroduced silently.
 
-## The one supported command
+## The one supported live-publish command
+
+This publisher (`tools/publish_release.py`) is never invoked directly by an operator. It is
+reached exactly two ways, and only one of them may commit or push:
+
+```
+python stock-core-private/tools/release_orchestrator.py trusted-ai \
+    [--generate] [--expected-session YYYY-MM-DD] \
+    [--live] [--verify-live-url https://tungthanhnguyen2312-wq.github.io/market-dashboard]
+```
+
+**`tools/release_orchestrator.py` is the single supported live-publish authority** — for this
+trusted-ai group, for the whole-market group (`whole-market`, via `publish_dashboard.py`), or
+both (`all`). It holds a single-instance lock and validates the Dashboard checkout's git state
+(HEAD vs. upstream, no pre-existing staged files) before calling this publisher. `--generate`
+has it call `tools/operate_stocklookup.py --execute` first, to rebuild and validate this
+release's trusted-ai artifacts from data already in the runtime. `--verify-live-url` is passed
+through unchanged to this publisher's own `--live` re-fetch-and-compare check.
 
 ```
 python stock-core-private/tools/operate_stocklookup.py \
     --runtime-root C:\Projects\StockLookup\dashboard-runtime \
     --execute \
-    --publish --web-root C:\Projects\StockLookup\worktrees\market-dashboard-main \
-    [--verify-live-url https://tungthanhnguyen2312-wq.github.io/market-dashboard] \
-    [--live]
+    --publish --web-root C:\Projects\StockLookup\worktrees\market-dashboard-main
 ```
 
-`--publish` requires `--web-root`, and `--web-root` may not be the runtime root: publishing
-into the runtime root is exactly the defect this argument exists to stop. Without `--live`
-the publisher runs its own dry run and reports the full plan — source, destination, exact
-files, current and incoming hashes, excluded modified paths, rollback source — while
-writing nothing.
+`tools/operate_stocklookup.py` composes the full generate-verify-Consumer-validate chain for
+the trusted-ai artifact set and remains fully supported for that role — including this
+non-mutating `--publish` form, which runs the publisher in **its own dry run** to preview the
+release as part of validating the chain that produced it. `--publish` requires `--web-root`,
+and `--web-root` may not be the runtime root: publishing into the runtime root is exactly the
+defect this argument exists to stop.
 
-After a live publish the operator command re-hashes all four artifacts in the served
-checkout and fails `post_publish_smoke` if any of them is absent or differs.
+**Its own `--live` flag is retired**: passing it exits 2 with a message pointing at
+`release_orchestrator.py`, so exactly one command in the repository can ever commit or push a
+release. Its `post_publish_smoke` gate's live-only block (re-hashing the served checkout
+against the runtime root from a second, independent process) therefore no longer runs on a
+real publish either — accepted as intentionally redundant with what this publisher already
+does internally before this gate ever existed (`git ls-remote` verification after push, plus
+the post-`os.replace` re-hash described below), not a capability silently dropped. Use
+`--verify-live-url` on `release_orchestrator.py` for the one piece of independent, live
+verification (an HTTP re-fetch from the actual serving origin) that check offered and this
+publisher does not already do on its own. See `docs/DECISIONS.md`'s 2026-08-08 "Publish
+Orchestrator Authority Reconciliation" entry for the full reasoning, and
+`operations-review/local_runbook.md` for the preflight → build → validate → publish command
+sequence.
+
+Without `--live`, both entry points run this publisher's own dry run and report the full plan
+— source, destination, exact files, current and incoming hashes, excluded modified paths,
+rollback source — while writing nothing.
