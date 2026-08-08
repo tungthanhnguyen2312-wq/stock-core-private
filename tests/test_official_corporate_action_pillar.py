@@ -436,6 +436,92 @@ class VcbListingChangeCertificateTests(unittest.TestCase):
         self.assertEqual(first, second)
 
 
+class VcbListingTransferNoticeTests(unittest.TestCase):
+    """One offline VSDC discovery candidate and its hash-verified B2/B3 result."""
+
+    RETAINED = (ROOT.parent / "operations-review" / "vcb-iss-official-acquisition-20260808")
+    URL = "https://vsd.vn/en/ad/182319"
+
+    def setUp(self):
+        manifest_path = self.RETAINED / "official_document_acquisition_manifest.json"
+        if not manifest_path.is_file():
+            self.skipTest("retained VCB listing-transfer notice is not present")
+        self.manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        self.record = next((record for record in self.manifest["records"]
+                            if record["canonical_url"] == self.URL), None)
+        if self.record is None:
+            self.skipTest("retained VCB listing-transfer notice is not present")
+        self.payload = (self.RETAINED / self.record["relative_path"]).read_bytes()
+        self.typed = events.classify_retained_document(self.record, self.payload)
+        self.text = events.extract_text(self.payload, self.typed["media_type"])
+
+    def test_one_offline_discovery_pass_exposes_the_approved_candidate(self):
+        source = next((record for record in self.manifest["records"]
+                       if record["canonical_url"] == "https://vsd.vn/en/ad/181754"), None)
+        if source is None:
+            self.skipTest("retained VCB registration certificate is not present")
+        from official_listing_page_parser import parse_index_page
+        from official_source_registry import load_registry
+        parsed = parse_index_page(
+            (self.RETAINED / source["relative_path"]).read_bytes(),
+            listing_url=source["canonical_url"], source_id="vsdc", ticker="VCB",
+            registry=load_registry())
+        candidate = next(row for row in parsed["links"] if row["canonical_url"] == self.URL)
+        self.assertEqual(candidate["page_facts"]["visible_date"], "2025-04-29")
+        self.assertEqual(candidate["inference"]["cue"], "listing change")
+
+    def test_hash_provenance_and_explicit_listing_semantics_are_retained(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(observation["document_id"], self.record["document_id"])
+        self.assertEqual(observation["content_sha256"], self.record["sha256"])
+        self.assertEqual(observation["source_id"], "vsdc")
+        self.assertEqual(observation["discovery_provenance"]["listing_url"],
+                         "https://vsd.vn/en/ad/181754")
+        self.assertEqual(observation["document_type"], "corporate_action_notice")
+        self.assertEqual(observation["event_type"], "stock_dividend")
+        self.assertEqual(observation["record_date"], "2025-03-13")
+        self.assertEqual(observation["trading_date"], "2025-05-09")
+
+    def test_direct_identity_reference_permits_only_the_supported_cross_link(self):
+        prior = next(record for record in self.manifest["records"]
+                     if record["canonical_url"] == "https://vsd.vn/en/ad/180140")
+        prior_payload = (self.RETAINED / prior["relative_path"]).read_bytes()
+        prior_typed = events.classify_retained_document(prior, prior_payload)
+        prior_observation = events.extract_event_observation(
+            prior_typed, events.extract_text(prior_payload, prior_typed["media_type"]))
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(observation["direct_event_reference"],
+                         prior_observation["direct_event_reference"])
+        self.assertEqual(events.assess_direct_event_cross_link(prior_observation, observation),
+                         {"state": "linked",
+                          "reason": "matching_direct_cross_document_event_identifier"})
+
+    def test_date_roles_and_unsupported_fields_remain_separate(self):
+        observation = events.extract_event_observation(self.typed, self.text)
+        self.assertNotEqual(observation["record_date"], observation["trading_date"])
+        for field in ("ex_date", "payment_date", "listing_effective_date", "shares_before",
+                      "shares_issued", "shares_after", "stock_ratio"):
+            self.assertIsNone(observation[field], field)
+        self.assertIn("never substituted", observation["absent_fields"]["ex_date"])
+        self.assertEqual(observation["lifecycle_state"], "announced")
+
+    def test_conflicts_and_ambiguous_identity_are_refused_fail_closed(self):
+        with self.assertRaisesRegex(ValueError, "document_type_conflicts"):
+            events.classify_retained_document(dict(self.record,
+                                                    document_type="last_registration_date_notice"),
+                                             self.payload)
+        ambiguous = self.text + " Issuing shares to pay dividends from remaining profit in 2018 and 2021"
+        observation = events.extract_event_observation(self.typed, ambiguous)
+        self.assertIsNone(observation["direct_event_reference"])
+        self.assertEqual(observation["absent_fields"]["direct_event_reference"],
+                         "direct_dividend_event_reference_missing_or_ambiguous")
+
+    def test_repeat_run_is_deterministic(self):
+        first = events.extract_event_observation(self.typed, self.text)
+        second = events.extract_event_observation(self.typed, self.text)
+        self.assertEqual(first, second)
+
+
 def _observation(event_type="stock_dividend", **overrides):
     record = {
         "observation_id": "o1", "ticker": "TST", "event_type": event_type,

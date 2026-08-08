@@ -117,7 +117,8 @@ _CUES = {
     "record_date": ("record date:", "ngày đăng ký cuối cùng", "record date", "ngày chốt danh sách"),
     "payment_date": ("ngày thanh toán", "ngày chi trả", "payment date"),
     "listing_effective_date": ("ngày thay đổi niêm yết có hiệu lực",),
-    "trading_date": ("ngày giao dịch của chứng khoán thay đổi niêm yết",),
+    "trading_date": ("ngày giao dịch của chứng khoán thay đổi niêm yết",
+                     "trading date official:"),
     "cash_amount": ("số tiền", "đồng/cổ phiếu", "vnd/cổ phiếu", "vnd/share"),
     "subscription_price": ("giá phát hành", "giá chào bán", "subscription price"),
     "approval_date": ("approval date",),
@@ -403,6 +404,7 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
     record_notice_cue = "would like to announce the record date as follows"
     certificate_cue = "would like to announce certification of the"
     adjustment_cue = "adjustment of the number of the registered shares"
+    listing_transfer_cue = "shares subject to listing change"
     declared_type = str(document.get("document_type") or "")
     document_type: str
     basis: str
@@ -418,6 +420,13 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
         document_type = "corporate_action_notice"
         basis = "document_internal_vsd_registered_securities_adjustment_certificate_cues"
         cue = certificate_cue
+    elif (listing_transfer_cue in lowered and "trading date official:" in lowered
+          and "would like to notify all depository members" in lowered):
+        # An official trading date is an announced listing/trading lifecycle date, not proof
+        # the trade or the corporate action completed. Keep the acquisition class ceiling.
+        document_type = "corporate_action_notice"
+        basis = "document_internal_vsd_listing_change_transfer_notice_cues"
+        cue = listing_transfer_cue
     else:
         raise ValueError("document_classification_unsupported_or_ambiguous")
     if declared_type and declared_type != document_type:
@@ -472,6 +481,34 @@ def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
              "excerpt": (f"Shareholders are entitled to {wording_matches[0][0]} new shares "
                          f"for every {wording_matches[0][1]} shares")},
         ],
+    }
+
+
+def extract_explicit_dividend_event_reference(text: str) -> dict[str, Any]:
+    """Build a cross-document key only from one direct dividend reason and one record date.
+
+    The key does not use issuer, ISIN, arithmetic, chronology, or an inferred ratio. It is
+    available solely for wording that explicitly identifies a dividend share issuance from the
+    2018 and 2021 remaining profits and names its record date.
+    """
+    normalized = normalize_text(text)
+    reason_matches = re.findall(
+        r"(?:share issuance for dividend payment|issuing shares to pay dividends)"
+        r".*?remaining profit.*?\b2018\b.*?\b2021\b", normalized, flags=re.I)
+    date_matches = re.findall(r"record date\s*:\s*(\d{1,2}[/.]\d{1,2}[/.]\d{4})",
+                              normalized, flags=re.I)
+    if len(reason_matches) != 1 or len(date_matches) != 1:
+        return {"state": "unavailable", "reason": "direct_dividend_event_reference_missing_or_ambiguous"}
+    record_date = parse_vietnamese_date(date_matches[0])
+    if record_date is None:
+        return {"state": "unavailable", "reason": "direct_dividend_event_reference_date_unparseable"}
+    return {
+        "state": "available",
+        "direct_event_reference": (
+            f"stock_dividend|record_date={record_date}|remaining_profit_2018_2021"),
+        "citation": {"field": "direct_event_reference",
+                     "cue": "explicit dividend reason and record date",
+                     "excerpt": f"{reason_matches[0]}; Record date: {date_matches[0]}"},
     }
 
 
@@ -611,6 +648,13 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
         fields[field] = parsed
         citations.append({"field": field, "cue": cue, "excerpt": window[:180]})
 
+    direct_reference = extract_explicit_dividend_event_reference(normalized)
+    if direct_reference["state"] == "available":
+        fields["direct_event_reference"] = direct_reference["direct_event_reference"]
+        citations.append(direct_reference["citation"])
+    else:
+        absent["direct_event_reference"] = direct_reference["reason"]
+
     # Share-count arithmetic has priority. Otherwise an entitlement ratio needs two matching,
     # explicit wordings; no date can open or orient the ratio.
     stock_ratio = None
@@ -684,6 +728,7 @@ def extract_event_observation(document: Mapping[str, Any], text: str) -> dict[st
         "payment_or_execution_date": (fields.get("payment_date")
                                       or fields.get("listing_effective_date")),
         "trading_date": fields.get("trading_date"),
+        "direct_event_reference": fields.get("direct_event_reference"),
         "registration_effective_date": fields.get("registration_effective_date"),
         "depository_acceptance_date": fields.get("depository_acceptance_date"),
         "shares_before": fields.get("shares_before"),

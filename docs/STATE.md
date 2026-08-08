@@ -440,6 +440,15 @@ for every 1000" wording agree. Approval, ex-, payment, effective, and trading da
 share counts remain unavailable; no date is substituted, no factor/share authority is promoted,
 and no ledger or valuation gate changes. SSI has not been requested.
 
+One bounded offline discovery pass over the retained VCB registered-securities certificate then
+observed `https://vsd.vn/en/ad/182319`; one VSDC request retained that 65,592-byte HTML notice
+(SHA-256 `b31e0e46…0eddfab3`). Its own body explicitly identifies the same dividend purpose and
+`record date: 13/03/2025` as the first notice, and states `Trading Date official: 09/05/2025`.
+The typed observations cross-link only through that document-stated composite reference, never
+issuer, ISIN, arithmetic, chronology, or ratio. The date is a scheduled trading semantic, not
+completion or an ex-date; `ex_date`, listing-effective date, share counts, current-share
+authority, factor, ledger, valuation, and production remain unavailable/untouched.
+
 Running second, and independent of it: qualify `issuer_entity_type` for the 1,218 tickers
 where it is unresolved, from an authoritative source (exchange/issuer registration data).
 Generated taxonomy cannot do this by construction — it may only withhold a model, never
