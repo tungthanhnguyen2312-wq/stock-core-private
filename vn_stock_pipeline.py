@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 from runtime_paths import runtime_root
 from market_data_lineage import build_ohlcv_lineage_records, init_ohlcv_lineage_schema, upsert_ohlcv_lineage
-from vn_time import vn_now
+from vn_time import vn_now, vn_today
 
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
@@ -549,7 +549,7 @@ def _result_exit_code(completed_count, failed_count, source_unavailable=False):
 
 
 def cmd_backfill(mode="pending"):
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = vn_today()
     universe = get_universe()
     with closing(sqlite3.connect(DB_PATH)) as conn:
         init_db(conn)
@@ -614,7 +614,7 @@ def cmd_backfill(mode="pending"):
     return _result_exit_code(success_count + empty_count_run, failed_count, source_unavailable)
 
 def cmd_update():
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = vn_today()
     with closing(sqlite3.connect(DB_PATH)) as conn:
         init_db(conn)
         last = dict(conn.execute("SELECT ticker, MAX(date) FROM ohlcv GROUP BY ticker").fetchall())

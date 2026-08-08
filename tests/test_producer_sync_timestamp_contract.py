@@ -259,13 +259,16 @@ class UntouchedDataAsOfIsWallClockIndependentTests(unittest.TestCase):
         self.assertListEqual(list(first["date"]), ["2026-08-01", "2026-08-02"])
         self.assertListEqual(list(first["date"]), list(second["date"]))
 
-    def test_vn_stock_pipeline_fetch_window_boundary_left_as_freshness_input_not_patched(self):
-        """cmd_backfill/cmd_update's `today` bounds the fetch window (FRESHNESS_INPUT), not an
-        operational generation timestamp -- deliberately not repointed at vn_time this
-        milestone (see CONTRACT in the final report). This just documents that the bare
-        pattern is still present exactly where expected, so a future milestone can find it."""
+    def test_vn_stock_pipeline_fetch_window_boundary_resolved_by_the_session_boundary_milestone(self):
+        """cmd_backfill/cmd_update's `today` was FRESHNESS_INPUT, deliberately left unpatched by
+        this milestone (a fetch-window boundary, not a cosmetic timestamp) and flagged as the
+        named next milestone. That milestone ("VN Stock Fetch-Window Session-Boundary Contract")
+        has since resolved it via vn_time.vn_today() (VN_CIVIL_DATE contract) -- superseding the
+        prior assertion that the bare pattern was still present. Full contract/safety coverage
+        lives in tests/test_vn_stock_pipeline_session_boundary_contract.py, not duplicated here."""
         source = inspect.getsource(vn_stock_pipeline.cmd_backfill) + inspect.getsource(vn_stock_pipeline.cmd_update)
-        self.assertRegex(source, BARE_NOW_RE)
+        self.assertNotRegex(source, BARE_NOW_RE)
+        self.assertIn("vn_today()", source)
 
     def test_macro_sync_untouched_entirely_no_diff_this_milestone(self):
         """macro_sync.py's freshness engine already separates content-derived `date` from

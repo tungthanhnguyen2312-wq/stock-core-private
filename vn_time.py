@@ -25,3 +25,10 @@ def vn_now() -> datetime:
 def vn_now_iso() -> str:
     """``vn_now()`` serialized ISO-8601 with the explicit Vietnam offset, seconds precision."""
     return vn_now().isoformat(timespec="seconds")
+
+
+def vn_today() -> str:
+    """Today's Asia/Ho_Chi_Minh civil date as an ISO ``YYYY-MM-DD`` string, independent of host
+    OS timezone. A civil-date boundary only -- callers needing a trading-session boundary
+    (market-open/close, holidays) must not treat this as one; no such calendar exists here."""
+    return vn_now().date().isoformat()
