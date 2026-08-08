@@ -199,20 +199,21 @@ absolute unit; VND-under-VAS is a convention, not evidence in these bytes. The o
 for HPG and VNM only — HPG's provider 2024-Q4 `undistributed_earnings` matches the audited
 FY2024 citation digit for digit (49,599,124,109,203), and VNM's likewise.
 
-**SSI FY2024 pre-promotion qualification (2026-08-08).** This paragraph describes the current
-runtime count and remains true: no runtime evidence sidecar was written. Separately, a
-hash-verified issuer-hosted SSI audited FY2024 document has a direct consolidated VND
-`current_liabilities` observation of `46,599,438,522,989` as at 2024-12-31, matching the one
-retained provider 2024-Q4 observation. Its manifest/citation proposal is dry-run admissible,
-but it is not an active citation or readiness unlock until an explicitly authorised promotion.
+**SSI FY2024 financial-identity evidence promotion (2026-08-08).** A hash-verified
+issuer-hosted SSI audited FY2024 document directly supports consolidated VND
+`current_liabilities=46,599,438,522,989` as at 2024-12-31. The approved manifest and citation
+are active in the runtime financial-identity sidecar. The retained VCI Q4 value is numerical
+corroboration only, not semantic provider qualification, because provider scope is unknown. This
+stock identity alone has the existing year-end-to-Q4 alias; no canonical-fact store rebuild,
+qualified-count change, readiness change, valuation, Consumer, or Dashboard output followed.
 
-**PAN FY2024 pre-promotion qualification (2026-08-08).** A retained issuer-hosted audited
+**PAN FY2024 financial-identity evidence promotion (2026-08-08).** A retained issuer-hosted audited
 statement directly supports consolidated VND `net_income=1,167,068,107,309` for the year ended
 2024-12-31. The retained annual VCI observation has the same total-profit-after-tax identity,
-period, scope, unit, sign, and value. It is a flow identity, not a stock observation: no
-year-end-to-Q4 alias was created. Its manifest/citation proposal is dry-run admissible only; no
-runtime evidence sidecar, canonical fact, qualified count, readiness, valuation, Consumer, or
-Dashboard output changes until an explicitly authorised promotion.
+period, scope, unit, sign, and value. Its approved manifest and citation are active in the runtime
+financial-identity sidecar. It is a flow identity, not a stock observation: no year-end-to-Q4
+alias exists. No canonical-fact store rebuild, qualified-count change, readiness change,
+valuation, Consumer, or Dashboard output followed.
 
 ### Calculation readiness, 1,492 tickers
 

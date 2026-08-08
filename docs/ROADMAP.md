@@ -15,18 +15,19 @@ every P-gate below is now reached through one of them.
   EBITDA ready for 231 tickers (was 2), ROE for 1,321 — with no new valuation model.
   **P1F Canonical Production Activation shipped 2026-08-03**: connected canonical fact store
   through Producer bundle (`--include-canonical-financial-facts`), Consumer context, and top-level operator dry run. Serves P2a, P3, P4.
-  **SSI FY2024 financial-identity evidence qualification advanced 2026-08-08**: one retained,
+  **SSI FY2024 financial-identity evidence promotion completed 2026-08-08**: one retained,
   issuer-hosted audited document directly supports `current_liabilities=46,599,438,522,989`
-  (consolidated, VND, as at 2024-12-31) and exactly matches the retained provider 2024-Q4
-  observation. The existing promotion path now exposes its dedicated financial-identity sidecar
-  and preserves the annual year-end-to-Q4 alias only for supported stock identities. This is an
-  **unpromoted local proposal**: runtime qualified-counts and downstream readiness do not change.
-  **PAN FY2024 financial-identity evidence qualification advanced 2026-08-08**: one retained,
+  (consolidated, VND, as at 2024-12-31). It is now an active financial-identity evidence citation;
+  the retained VCI Q4 value is numerical corroboration only because provider scope is unknown.
+  The annual year-end-to-Q4 alias remains limited to this supported stock identity. Canonical-fact
+  outputs, qualified-counts, and downstream readiness do not change in this promotion-only step.
+  **PAN FY2024 financial-identity evidence promotion completed 2026-08-08**: one retained,
   issuer-hosted audited statement directly supports `net_income=1,167,068,107,309`
   (consolidated, VND, for the year ended 2024-12-31) and exactly matches a retained annual VCI
   observation with the same total-profit-after-tax identity. `net_income` is an income-statement
-  flow, so this proposal deliberately creates no annual-to-Q4 alias. This is an **unpromoted local
-  proposal**: runtime qualified-counts and downstream readiness do not change.
+  flow, so it has no annual-to-Q4 alias. It is now an active financial-identity evidence citation;
+  canonical-fact outputs, qualified-counts, and downstream readiness do not change in this
+  promotion-only step.
 - **Pillar B — official corporate-action ingestion and price-adjustment engine** — `docs/official_corporate_action_ingestion_design.md`.
   **Step B1 approved and activated 2026-08-03 via P1G**: official source registry activated by owner approval; bounded document store, corporate-action event ledger, dated shares timeline, and price adjustment factor policies fully connected into Producer bundle, Consumer context pass-through, and top-level operator dry run.
   **P1H Valuation Readiness Activation shipped 2026-08-03**: resolved current effective shares and session prices to reconstruct current market capitalization and unblock P/E, P/B, EV, and EV/EBITDA readiness fail-closed across Producer, Consumer, and post-close operator.
