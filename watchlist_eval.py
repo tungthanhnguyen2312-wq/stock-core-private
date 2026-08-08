@@ -44,12 +44,12 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 
 from runtime_paths import runtime_root
+from vn_time import vn_now_iso
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -208,7 +208,7 @@ def build_report(evaluated: pd.DataFrame, horizons: tuple[int, ...]) -> dict:
 
     return {
         "schema_version": "1.0.0",
-        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "generated_at": vn_now_iso(),
         "horizons_sessions": list(horizons),
         "index_symbol": INDEX_SYMBOL,
         "no_lookahead_policy": (

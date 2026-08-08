@@ -52,6 +52,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from vn_time import vn_now_iso
+
 RESOLVER_VERSION = "2.0.0"
 
 #: Provider concept for `metadata.shares_outstanding`, proven in P1J workstream A.
@@ -426,7 +428,7 @@ def resolve_market_wide_shares(runtime_root: Path | str, session_date: str) -> d
     if not _as_date(session):
         raise ValueError(f"session_date must be an ISO date, got {session_date!r}")
 
-    measured_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    measured_at = vn_now_iso()
     try:
         store = _Store(runtime_root)
     except ShareStoreUnreadable as exc:
