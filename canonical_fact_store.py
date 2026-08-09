@@ -182,6 +182,9 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
         "shareholders_equity": "shareholders_equity",
         "revenue": "revenue",
         "net_income": "net_income",
+        "operating_cash_flow": "operating_cash_flow",
+        "cash_and_equivalents": "cash_and_equivalents",
+        "total_interest_bearing_debt": "total_interest_bearing_debt",
     }
     citations: dict[tuple, dict[str, Any]] = {}
     for name in ("ebitda_component_citations.jsonl", "financial_identity_citations.jsonl"):

@@ -1167,10 +1167,58 @@ _FINANCIAL_IDENTITY_STATEMENT_FAMILIES = {
     "current_liabilities": "balance_sheet",
     "retained_earnings": "balance_sheet",
     "net_income": "income_statement",
+    # Annual issuer statements can directly supply the complete, conservative
+    # corporate-research input set.  These identities remain document-cited; they
+    # are not inferred from provider payloads or quarterly aliases.
+    "operating_cash_flow": "cash_flow",
+    "cash_and_equivalents": "balance_sheet",
+    "total_interest_bearing_debt": "balance_sheet",
+    "shareholders_equity": "balance_sheet",
 }
 _SUPPORTED_FINANCIAL_IDENTITIES = frozenset(_FINANCIAL_IDENTITY_STATEMENT_FAMILIES)
 _REQUIRED_FINANCIAL_IDENTITY_FIELDS = ("citation_id", "ticker", "metric", "reporting_frequency", "reporting_period",
     "statement_scope", "currency", "unit_scale", "value", "evidence_id")
+
+
+def _valid_financial_extraction(citation: Mapping[str, Any]) -> bool:
+    """Validate optional page/line extraction metadata without invalidating legacy rows.
+
+    A direct annual line is retained as a document line item.  The only allowed
+    calculation is an explicit sum of documented components from that same annual
+    statement; it exists for interest-bearing debt where the report publishes
+    short- and long-term borrowing separately.  No synthetic balance-sheet or
+    cash-flow arithmetic is accepted.
+    """
+    extraction = citation.get("extraction")
+    if extraction is None:
+        return True
+    if not isinstance(extraction, Mapping):
+        return False
+    method = extraction.get("method")
+    pages = extraction.get("source_pages")
+    labels = extraction.get("raw_labels")
+    if method not in {"document_line_item", "document_line_item_sum"}:
+        return False
+    if not (isinstance(pages, list) and pages and all(isinstance(page, int) and page > 0 for page in pages)):
+        return False
+    if not (isinstance(labels, list) and labels and all(isinstance(label, str) and label.strip() for label in labels)):
+        return False
+    if method == "document_line_item":
+        return "components" not in extraction
+    components = extraction.get("components")
+    if not (isinstance(components, list) and len(components) >= 2):
+        return False
+    if not all(isinstance(component, Mapping) and isinstance(component.get("label"), str)
+               and component["label"].strip() for component in components):
+        return False
+    try:
+        total = sum(float(component["value"]) for component in components)
+    except (KeyError, TypeError, ValueError):
+        return False
+    try:
+        return total == float(citation["value"])
+    except (TypeError, ValueError):
+        return False
 
 
 def financial_identity_is_stock_metric(metric: str) -> bool:
@@ -1226,14 +1274,22 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
             continue
         citation = next(iter(unique_by_content.values()))
 
-        expected_id = _hash({"ticker": citation["ticker"], "metric": citation["metric"],
-                              "reporting_period": citation["reporting_period"], "evidence_id": citation["evidence_id"],
-                              "value": citation["value"]})
+        identity = {"ticker": citation["ticker"], "metric": citation["metric"],
+                    "reporting_period": citation["reporting_period"], "evidence_id": citation["evidence_id"],
+                    "value": citation["value"]}
+        # Old retained rows predate page/line metadata. New rows bind that metadata
+        # into their identity so a cited extraction cannot later be substituted.
+        if citation.get("extraction") is not None:
+            identity["extraction"] = citation["extraction"]
+        expected_id = _hash(identity)
         if citation["citation_id"] != expected_id:
             rejected.append({"key": key, "reason": "citation_id_not_deterministic"})
             continue
         if citation["metric"] not in _SUPPORTED_FINANCIAL_IDENTITIES:
             rejected.append({"key": key, "reason": "unsupported_metric"})
+            continue
+        if not _valid_financial_extraction(citation):
+            rejected.append({"key": key, "reason": "invalid_extraction_metadata"})
             continue
         if citation["statement_scope"] not in _SUPPORTED_SCOPES:
             rejected.append({"key": key, "reason": "unsupported_scope"})
@@ -1250,7 +1306,8 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
             "unit_scale": citation["unit_scale"], "value": citation["value"],
             "evidence_id": citation["evidence_id"], "citation_id": citation["citation_id"],
             "citation": citation.get("citation"), "qualification_version": VERSION,
-            "verified_at": citation.get("verified_at"),
+            "verified_at": citation.get("verified_at"), "extraction": citation.get("extraction"),
+            "document_sha256": evidence.get("sha256"),
         }
 
     return {"status": "available" if by_key else "unavailable", "version": VERSION, "by_key": by_key, "rejected": rejected}

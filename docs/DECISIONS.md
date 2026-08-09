@@ -5,6 +5,21 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - Canonical annual financial source authority selected
+
+- The authoritative scalable class is issuer IR **audited annual consolidated financial
+  statements**, not an exchange notice surface or VCI/KBS numerical response. The bounded PAN
+  FY2024 artifact is already hash-retained and carries issuer, publication date, source URL,
+  annual/consolidated scope, VND unit, page citation, and extraction metadata.
+- Four missing PAN identities were appended through the sole governed evidence writer; the
+  pre-existing net-income citation was preserved. The resulting five annual FY2024 facts are
+  an ephemeral evidence-to-research projection, not a new store or canonical-shard rewrite.
+  PAN becomes the one additional corporate research-eligible ticker; HPG/VNM trusted inputs
+  retain precedence. No market-data route or generic market capability changed.
+- Future external acquisition is not automatically enabled: the retained PAN provenance host
+  is not in the current issuer-IR registry host allowlist. An owner-approved registry route is
+  required before re-acquisition or scale-out. See `annual_financial_source_authority_decision.md`.
+
 ## 2026-08-09 - Pillar A qualification is evidence promotion, not numerical plausibility
 
 - `canonical_financial_qualification_policy` is the sole read-only promotion contract between

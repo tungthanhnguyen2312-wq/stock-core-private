@@ -3,6 +3,17 @@
 Last verified: **2026-08-03**, by an end-to-end production run of the supported operating
 command against `dashboard-runtime` (reference session `2026-07-30`).
 
+## Canonical annual financial source authority (2026-08-09)
+
+`CANONICAL_FINANCIAL_SOURCE_AUTHORITY_DECISION: PASS`. The selected authority is an issuer IR
+audited annual consolidated financial statement, proven in a bounded retained PAN FY2024 pilot.
+The governed artifact hash, manifest, page citations, VND unit, annual period, and consolidated
+scope verify five required metrics; PAN's read-only research projection is now available for
+FY2024. Four citations were append-promoted against the existing PAN artifact and the earlier
+net-income citation remains unchanged. No provider/network request, database mutation,
+canonical-shard mutation, or generated bundle publication occurred. Scale-out requires an
+owner-approved registry host route before any new external issuer acquisition.
+
 ## P1.5 capability matrix (2026-08-09)
 
 `P1_5_TICKER_CAPABILITY_MATRIX: PASS`. `export_ai_bundle.py` now attaches the additive,

@@ -1,5 +1,19 @@
 # Stock Lookup roadmap
 
+## Canonical financial source authority decision (complete 2026-08-09)
+
+`CANONICAL_FINANCIAL_SOURCE_AUTHORITY_DECISION: PASS`. Issuer IR audited annual consolidated
+statements are selected over exchange disclosure surfaces and provider numerical responses. A
+single retained PAN FY2024 audited consolidated report materializes all five required corporate
+research metrics under immutable-artifact, page-citation, observation, currency/unit, and
+consolidated-scope lineage. PAN is the first additional Pillar A research-eligible ticker;
+HPG/VNM trusted inputs still win their existing source-selection path. No provider was called,
+no database or canonical shard changed, and no generated bundle was published.
+
+Next independent Pillar A milestone: `BOUNDED_OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT`. It must
+start with owner-approved source-registry/allowlist coverage for any new issuer host; the PAN
+retained provenance host is not itself permission for an external re-fetch.
+
 ## P1.5 â€” Ticker capability / trusted-ticker matrix bundle attachment (complete 2026-08-09)
 
 The canonical analysis bundle now carries a deterministic, capability-specific
