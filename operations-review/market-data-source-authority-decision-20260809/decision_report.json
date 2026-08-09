@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0.0",
+  "milestone": "MARKET_DATA_SOURCE_AUTHORITY_DECISION_AND_BOUNDED_QUALIFICATION",
+  "milestone_state": "PASS",
+  "producer_head_before": "71dedd0",
+  "closed_routes_reused": [
+    "PUBLIC_HOSE_SUMMARY_ROUTE:CLOSED_NONCONFORMING",
+    "VCI_GENERIC_DAILY_OHLCV:ADJUSTED_PROVIDER_NAMESPACE_ONLY",
+    "KBS_EXISTING_CHART_PATH:ADJUSTED_PROVIDER_NAMESPACE_ONLY",
+    "EODHD:REJECTED_BY_OWNER"
+  ],
+  "candidate_shortlist": [
+    {
+      "id": "hose_licensed_market_data_feed",
+      "status": "documented_but_unverified",
+      "reason": "The official HOSE fee schedule names a paid Market Data Feed but does not publish the ticker/session raw and adjusted-field contract needed for qualification.",
+      "source_url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2406142/Bieu%20gia%20dich%20vu%20cung%20cap%20tin.pdf"
+    },
+    {
+      "id": "fiingroup_api_datafeed_hose_stock_v2",
+      "status": "preferred_pending_owner_acquisition_and_bounded_qualification",
+      "reason": "FiinGroup documents separate raw price, adjusted price and adjustment-rate fields plus ticker/date and order-matching/put-through totals.",
+      "source_url": "https://datafeed.fiingroup.vn/api-datafeed-en/api-trading/stock/stock/hose-stock-v2"
+    },
+    {
+      "id": "existing_integrated_vci_kbs_provider_paths",
+      "status": "rejected",
+      "reason": "Both active provider verdicts are adjusted and raw_as_traded_eligible=false; they are not re-tested."
+    }
+  ],
+  "selected_authority": {
+    "source_id": "fiingroup_api_datafeed_hose_stock_v2",
+    "role": "future market_history.raw authority candidate only",
+    "access_state": "commercial agreement and credentials absent from the repository",
+    "license_state": "production retention, internal use and redistribution boundaries must be contractually confirmed",
+    "why_materially_different": "The documented API explicitly distinguishes ClosePrice from ClosePriceAdjusted and RateAdjusted, unlike the installed VCI/KBS adjusted paths. It also names TotalMatchVolume, TotalDealVolume and TotalVolume.",
+    "not_yet_proven": [
+      "Contractual confirmation that unadjusted fields are raw/as-traded and non-rewritten.",
+      "Historical as-of/revision semantics and deterministic range-query contract.",
+      "Units/currency for the contracted product.",
+      "Odd-lot and auction treatment in TotalVolume.",
+      "Payload-level HPG/VNM anchor and event-window evidence."
+    ]
+  },
+  "hard_requirement_assessment": {
+    "hose_licensed_market_data_feed": {
+      "raw_as_traded_price": "documented_but_unverified",
+      "adjusted_raw_separation": "unavailable",
+      "ticker_session_identity": "unavailable",
+      "historical_depth": "unavailable",
+      "corporate_action_mutability": "unavailable",
+      "volume_unit": "unavailable",
+      "trade_scope": "unavailable",
+      "deterministic_retrieval": "documented_but_unverified",
+      "provenance_retention": "documented_but_unverified",
+      "license_production_usability": "documented_but_unverified",
+      "coverage": "documented_but_unverified",
+      "operational_stability": "documented_but_unverified"
+    },
+    "fiingroup_api_datafeed_hose_stock_v2": {
+      "raw_as_traded_price": "documented_but_unverified",
+      "adjusted_raw_separation": "documented_but_unverified",
+      "ticker_session_identity": "documented_but_unverified",
+      "historical_depth": "partially_qualified",
+      "corporate_action_mutability": "documented_but_unverified",
+      "volume_unit": "documented_but_unverified",
+      "trade_scope": "documented_but_unverified",
+      "deterministic_retrieval": "documented_but_unverified",
+      "provenance_retention": "documented_but_unverified",
+      "license_production_usability": "documented_but_unverified",
+      "coverage": "documented_but_unverified",
+      "operational_stability": "documented_but_unverified"
+    },
+    "existing_integrated_vci_kbs_provider_paths": {
+      "raw_as_traded_price": "rejected",
+      "adjusted_raw_separation": "rejected",
+      "ticker_session_identity": "partially_qualified",
+      "historical_depth": "partially_qualified",
+      "corporate_action_mutability": "rejected",
+      "volume_unit": "partially_qualified",
+      "trade_scope": "partially_qualified",
+      "deterministic_retrieval": "partially_qualified",
+      "provenance_retention": "partially_qualified",
+      "license_production_usability": "unavailable",
+      "coverage": "partially_qualified",
+      "operational_stability": "partially_qualified"
+    }
+  },
+  "raw_adjusted_architecture": {
+    "market_history_raw": "Reserved for licensed source responses plus immutable source/version/request/provenance retention; not implemented before access and pilot evidence.",
+    "market_history_adjusted": "Existing VCI/KBS provider-adjusted series remain intact, provider-namespaced and ineligible as a raw fallback.",
+    "corporate_action_role": "Qualified corporate actions validate reconciliation after both raw and adjusted observations coexist; they do not manufacture raw prices."
+  },
+  "valuation_readiness": [
+    {
+      "ticker": "HPG",
+      "date": "2024-12-31",
+      "raw_price": "partial: HOSE annual-report 26,650 VND/share exact observation",
+      "shares": "qualified FY2024 period-end shares: 6,396,250,200",
+      "financial_denominator": "qualified FY2024 canonical facts available",
+      "ca_lineage": "insufficient raw history for reconciliation",
+      "valuation_ready": false,
+      "binding_missing_prerequisite": "licensed raw market-history pilot with point-in-time/revision semantics"
+    },
+    {
+      "ticker": "VNM",
+      "date": "2024-12-31",
+      "raw_price": "unavailable",
+      "shares": "not qualified for this point-in-time use",
+      "financial_denominator": "qualified FY2024 canonical facts available",
+      "ca_lineage": "not paired with a raw history authority",
+      "valuation_ready": false,
+      "binding_missing_prerequisite": "licensed raw market-history pilot"
+    }
+  ],
+  "gates": {
+    "MARKET_DATA_SOURCE_AUTHORITY_DECISION": "PASS",
+    "PUBLIC_HOSE_SUMMARY_ROUTE": "CLOSED_NONCONFORMING",
+    "RAW_PRICE_AUTHORITY_SOURCE_SELECTED": "YES",
+    "RAW_PRICE_AUTHORITY": "PARTIAL",
+    "VOLUME_SCOPE_AUTHORITY_SOURCE_SELECTED": "NO",
+    "VOLUME_SCOPE_AUTHORITY": "BLOCKED",
+    "PROVIDER_ADJUSTED_AUTHORITY": "QUALIFIED",
+    "RAW_ADJUSTED_NAMESPACE_SEPARATION": "PASS",
+    "GENERIC_ACTIONABLE_PRICE_BASIS": "BLOCKED",
+    "GENERIC_ACTIONABLE_VOLUME_BASIS": "BLOCKED",
+    "HISTORICAL_VALUATION_UNLOCK": "BLOCKED",
+    "PROTECTED_RUNTIME_SAFE": "PASS"
+  },
+  "qualification_calls_or_artifacts": "No commercial endpoint was called and no credentials were used. This decision report and market_data_source_authority.py are policy artifacts only.",
+  "next_roadmap_milestone": "OWNER_SOURCE_ACQUISITION_DECISION",
+  "production_effect": "None. No runtime database, dashboard release, production bundle, provider refresh, valuation, backtest, ranking, or sizing path changed."
+}

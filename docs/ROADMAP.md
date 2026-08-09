@@ -64,6 +64,20 @@ capitalisation and therefore waits on pillar B.
   `OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY`; no raw daily
   observation, VCI reconciliation, valuation, or liquidity capability is opened. Evidence:
   `operations-review/official-daily-ticker-session-statistics-route-qualification-20260809/`.
+- **Pillar B market-data source-authority decision — PASS, owner acquisition required
+  (2026-08-09).** The public HOSE daily summary route is now terminally closed and VCI/KBS
+  remain provider-adjusted only. A bounded three-route comparison selected **FiinGroup API
+  Datafeed `/Market/GetHoseStockv2`** as the single preferred future raw-market-history
+  candidate: its public field documentation distinguishes `ClosePrice` from
+  `ClosePriceAdjusted`/`RateAdjusted`, names ticker/session identity and separately names
+  matching and put-through totals. This is a **source selection, not an activation** — no
+  FiinGroup credentials or endpoint are configured, no payload was requested, and its
+  contract must first confirm raw non-rewrite/as-of semantics, units, odd-lot/auction scope,
+  historical access, retention and production-use rights. The official HOSE Market Data Feed
+  remains a documented but schema-unverified alternative. Generic price, volume, valuation,
+  execution, and liquidity gates stay blocked. Next canonical milestone:
+  `OWNER_SOURCE_ACQUISITION_DECISION`. Evidence:
+  `operations-review/market-data-source-authority-decision-20260809/`.
 - **P0-Z KBS empirical basis and capability relaxation shipped 2026-08-04 — PARTIAL.** One
   previously closed lane reopened, and only one. Phase 1C was right that KBS publishes no
   semantic metadata and wrong to conclude the fields were unusable; the premise is retained,

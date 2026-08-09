@@ -953,3 +953,25 @@ Reopening requires an explicit owner decision.
   less precise “route unavailable” gap, but opens no capability: the one-date HPG annual-report
   raw observation remains separately namespaced, historical raw stability is blocked, and no
   raw/adjusted factor is inferred.
+
+## 2026-08-09 - Select a commercial raw-history candidate before more data probing
+
+- The bounded authority shortlist is: HOSE's licensed Market Data Feed, FiinGroup API
+  Datafeed `/Market/GetHoseStockv2`, and the already-integrated VCI/KBS paths. The third is
+  rejected for raw authority without a new request because both active verdicts are adjusted;
+  the public HOSE fee schedule proves a commercial product exists but not its required field
+  contract.
+- **Selected candidate: FiinGroup API Datafeed `/Market/GetHoseStockv2`, pending owner source
+  acquisition.** Its public field documentation explicitly distinguishes `ClosePrice` from
+  `ClosePriceAdjusted` and `RateAdjusted`, names `Ticker`/`TradingDate`, and separately names
+  total order-matching and put-through volumes/values. That is materially different evidence
+  from a broker series that happens to match an exchange number.
+- Documentation alone is not source activation. Before any pilot, the agreement must confirm
+  that the unadjusted fields are raw/as-traded and non-rewritten, document point-in-time/revision
+  semantics and units, specify auction/odd-lot treatment, and allow immutable evidence retention
+  plus the intended production-use boundary. No credentials were searched for beyond the local
+  environment-name check; none were present, and no commercial endpoint was called.
+- The selected route is for a future `market_history.raw` namespace. VCI/KBS stay separate
+  provider-adjusted history; qualified corporate actions reconcile the two only after a retained
+  raw pilot passes. `RAW_PRICE_AUTHORITY` remains `PARTIAL`, volume authority remains blocked,
+  and `OWNER_SOURCE_ACQUISITION_DECISION` is the next canonical milestone.

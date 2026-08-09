@@ -38,11 +38,12 @@ from __future__ import annotations
 from typing import Any, Mapping, Sequence
 
 import kbs_capability_matrix as kbs
+import market_data_source_authority as source_authority
 import market_volume_capability_matrix as vci_volume
 import provider_price_basis_registry as price_registry
 import vci_direct_basis_pilot as vci_pilot
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 PROVIDERS = ("KBS", "VCI")
 
@@ -471,12 +472,10 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
             "supply ticker/session history or an event-window route."
         ),
         "next_bounded_action": (
-            "Pillar B: qualify one deterministic official HOSE daily ticker/session "
-            "trading-statistics route whose retained bytes name the price and volume "
-            "categories. The bounded official daily-summary route was retained and is "
-            "nonconforming: it has no ticker closing-price field and only aggregate "
-            "order-matching/put-through volume. The precise present blocker is "
-            "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY."
+            "Pillar B source-authority decision: obtain the owner-approved commercial "
+            "FiinGroup API Datafeed qualification package, then run its bounded raw-price "
+            "pilot. The prior public HOSE daily-summary route is terminally nonconforming "
+            "and must not be re-probed."
         ),
     },
     {
@@ -678,6 +677,23 @@ OFFICIAL_DAILY_ROUTE_QUALIFICATION: dict[str, Any] = {
     "daily_raw_price_observations_added": 0,
     "historical_or_event_window_route": "not_demonstrated",
     "hpg_2024_12_31_crosscheck": "existing_annual_report_only; no_daily_summary_close_field",
+}
+
+#: Selection is intentionally distinct from qualification.  The commercial FiinGroup route
+#: has documented raw/adjusted field names, but no contract, credential, retained payload, or
+#: completed pilot exists in this repository.  It therefore cannot change the existing PARTIAL
+#: raw observation or open any generic gate.
+MARKET_DATA_SOURCE_AUTHORITY_SELECTION: dict[str, Any] = {
+    "decision": "PASS",
+    "selected_source_id": source_authority.PREFERRED_SOURCE_ID,
+    "selection_state": source_authority.OWNER_DECISION_REQUIRED,
+    "raw_price_authority_source_selected": True,
+    "raw_price_authority_after_selection": RAW_AS_TRADED_PRICE_AUTHORITY,
+    "volume_scope_authority_source_selected": False,
+    "generic_actionable_price_basis": "BLOCKED",
+    "generic_actionable_volume_basis": "BLOCKED",
+    "historical_valuation_unlock": "BLOCKED",
+    "non_effect": "selection_is_not_source_activation_or_capability_promotion",
 }
 
 # The sole official raw observation retained by the bounded milestone.  It is deliberately

@@ -24,6 +24,19 @@ historical stability, generic actionable price/volume, valuation, and liquidity 
 No runtime or production artifact changed. Evidence:
 `operations-review/official-daily-ticker-session-statistics-route-qualification-20260809/`.
 
+## Market-data source-authority decision (2026-08-09)
+
+`MARKET_DATA_SOURCE_AUTHORITY_DECISION: PASS`. The selected future raw-history candidate is
+**FiinGroup API Datafeed `/Market/GetHoseStockv2`**, because its documented schema separates
+unadjusted OHLC fields from `*Adjusted` fields and `RateAdjusted`, and names ticker/date plus
+order-matching and put-through totals. This is only an owner-level commercial acquisition
+decision: no credentials, contract, payload, raw namespace, or production integration exists
+yet. `RAW_PRICE_AUTHORITY_SOURCE_SELECTED: YES` while `RAW_PRICE_AUTHORITY: PARTIAL` remains
+the existing one-date HOSE HPG observation; `VOLUME_SCOPE_AUTHORITY_SOURCE_SELECTED: NO`, and
+all generic/actionable gates remain blocked. The next canonical milestone is
+`OWNER_SOURCE_ACQUISITION_DECISION`; see
+`operations-review/market-data-source-authority-decision-20260809/`.
+
 ## Operate it
 
 ```powershell
