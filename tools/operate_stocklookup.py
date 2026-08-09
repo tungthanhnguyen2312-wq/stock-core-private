@@ -69,6 +69,7 @@ import hashlib
 import json
 import os
 import shutil
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -160,6 +161,8 @@ class Operator:
                  include_historical_scaleout: bool = False,
                  include_qualified_research_brief: bool = False,
                  include_qualified_market_observations: bool = False,
+                 governed_official_evidence_root: Path | None = None,
+                 research_changes_v2_baseline: Path | None = None,
                  refresh_metadata: bool = False,
                  runner: Callable[..., Any] = subprocess.run):
         self.root = root
@@ -175,6 +178,8 @@ class Operator:
         self.include_historical_scaleout = include_historical_scaleout
         self.include_qualified_research_brief = include_qualified_research_brief
         self.include_qualified_market_observations = include_qualified_market_observations
+        self.governed_official_evidence_root = governed_official_evidence_root
+        self.research_changes_v2_baseline = research_changes_v2_baseline
         self.runner = runner
         self.steps: list[dict[str, Any]] = []
         self.rollback_dir: Path | None = None
@@ -525,6 +530,8 @@ class Operator:
                    "--include-analysis-lane-eligibility"]
         if self.include_canonical_financial_facts:
             command.append("--include-canonical-financial-facts")
+        if self.governed_official_evidence_root:
+            command += ["--include-canonical-financial-facts", "--include-pillar-a-research-projection", "--include-qualified-research-brief"]
         if self.include_historical_decision_analysis:
             command.append("--include-historical-decision-analysis")
         if self.include_portfolio_risk_analysis:
@@ -533,6 +540,8 @@ class Operator:
             command.append("--include-historical-scaleout")
         if self.include_qualified_research_brief:
             command.append("--include-qualified-research-brief")
+        if self.research_changes_v2_baseline:
+            command += ["--research-changes-v2-baseline", str(self.research_changes_v2_baseline)]
         if self.include_qualified_market_observations:
             command.append("--include-qualified-market-observations")
         self._run("export_analysis_bundle", command, ROOT)
@@ -749,6 +758,15 @@ class Operator:
             # the export, because the export binds the sidecar's bytes into the manifest's
             # required-artifact set and reads its taxonomy for the applicability gate.
             self.build_sidecar(session)
+            if self.governed_official_evidence_root:
+                source = self.governed_official_evidence_root / "data" / "official-evidence"
+                if not (source / "financial_identity_citations.jsonl").is_file():
+                    raise GateFailure("governed_official_evidence", "verified financial identity authority is missing")
+                target = self.root / "data" / "official-evidence"
+                target.mkdir(parents=True, exist_ok=True)
+                for item in source.iterdir():
+                    if item.is_file(): shutil.copy2(item, target / item.name)
+                self._run("ingest_governed_canonical_facts", [sys.executable, str(ROOT / "tools" / "ingest_canonical_financial_facts.py"), "--runtime-root", str(self.root), "--execute", "--ticker", "POW"], ROOT)
             if self.include_canonical_financial_facts:
                 self.verify_canonical_fact_store()
             self.export_bundle()
@@ -816,6 +834,8 @@ def parse_args(argv=None) -> argparse.Namespace:
                              " window (market_basis_capability_registry-gated). Independent of the"
                              " fundamental-evidence pilot set; always historical_only and"
                              " is_actionable=False.")
+    parser.add_argument("--governed-official-evidence-root", type=Path)
+    parser.add_argument("--research-changes-v2-baseline", type=Path)
     parser.add_argument("--publish", action="store_true",
                         help="Also run tools/publish_release.py (its own dry-run unless --live).")
     parser.add_argument("--web-root", default=None,
@@ -891,6 +911,8 @@ def main(argv=None, runner=subprocess.run) -> int:
                         include_historical_scaleout=args.include_historical_scaleout,
                         include_qualified_research_brief=args.include_qualified_research_brief,
                         include_qualified_market_observations=args.include_qualified_market_observations,
+                        governed_official_evidence_root=args.governed_official_evidence_root,
+                        research_changes_v2_baseline=args.research_changes_v2_baseline,
                         refresh_metadata=args.refresh_metadata,
                         runner=runner)
     try:

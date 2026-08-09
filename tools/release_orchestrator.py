@@ -127,6 +127,10 @@ def build_parser() -> argparse.ArgumentParser:
                                     "writes; otherwise operate_stocklookup.py runs its own read-only "
                                     "dry run. Never passes --publish/--live to the child: this "
                                     "script remains the only thing that commits and pushes.")
+    parent_parser.add_argument("--governed-official-evidence-root", type=Path,
+                               help="Explicit governed evidence root used only with --generate.")
+    parent_parser.add_argument("--research-changes-v2-baseline", type=Path,
+                               help="Explicit previous-served V2 snapshot used only with --generate.")
 
     parser = argparse.ArgumentParser(
         prog="release_orchestrator.py",
@@ -202,6 +206,10 @@ def orchestrate(args: argparse.Namespace) -> int:
                             "--runtime-root", str(backend_dir)]
             if live:
                 cmd_generate.append("--execute")
+            if args.governed_official_evidence_root:
+                cmd_generate += ["--governed-official-evidence-root", str(args.governed_official_evidence_root)]
+            if args.research_changes_v2_baseline:
+                cmd_generate += ["--research-changes-v2-baseline", str(args.research_changes_v2_baseline)]
             argv_plans.append(cmd_generate)
 
         if group in ("trusted-ai", "all"):
