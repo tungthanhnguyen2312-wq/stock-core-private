@@ -1,5 +1,10 @@
 # Stock Lookup roadmap
 
+## Qualified research change events (partial 2026-08-09)
+
+The Producer event adapter is complete and tested against canonical delta semantics. Product
+pass-through, rendering, and publication remain separate required work; no runtime changed here.
+
 ## QNS targeted OCR materialization (partial 2026-08-09)
 
 QNS's retained audited-consolidated filing now has a deterministic OCR sidecar for pages 7--10.

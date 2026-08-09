@@ -5,6 +5,13 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - Research change events adapt canonical deltas only
+
+- `qualified_research_change_events.py` is a pure adapter over `qualified_research_delta`; it
+  neither reads runtime state nor computes financial comparisons. Stable identities bind ticker,
+  semantic before/after state, canonical provenance reference, and source/destination snapshots.
+  `NO_CHANGE` is explicit and no event carries investment or market semantics.
+
 ## 2026-08-09 - QNS OCR is bounded before citation promotion
 
 - The new QNS PDF was rendered with the established local page-preserving Tesseract contract only

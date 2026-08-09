@@ -1,5 +1,12 @@
 # Stock Lookup state
 
+## Qualified research change events (2026-08-09)
+
+Producer now has a deterministic, presentation-safe adapter over canonical qualified-research
+deltas. It emits only semantic capability, analytic, and conclusion transitions with hash-derived
+event IDs and provenance references; identical or formatting-only briefs yield `NO_CHANGE`.
+Consumer, Dashboard, runtime generation, and release remain pending integration.
+
 ## QNS targeted OCR materialization (2026-08-09)
 
 The retained QNS FY2024 audited consolidated PDF was page-preserving OCR-materialized only on
