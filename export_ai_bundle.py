@@ -104,6 +104,8 @@ from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from qualified_market_observations import evaluate as evaluate_qualified_market_observations
 from analysis_lane_eligibility import evaluate_ticker_lanes
+from ticker_capability import build_ticker_capability_matrix
+from market_basis_capability_registry import MARKET_DATA_SOURCE_AUTHORITY_SELECTION
 from distribution_evidence import build_distribution_evidence_for_ticker
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
@@ -209,7 +211,9 @@ def context_package_reference(ticker: str) -> str:
     except ValueError:
         return path.as_posix()
 
-DEFAULT_TICKERS = ["POW", "SSI", "HPG", "EVF", "PAN"]
+# Canonical production cohort for the P1.5 capability-matrix attachment.  VCB remains
+# test-only here; it is intentionally not reintroduced into the live export universe.
+DEFAULT_TICKERS = ["POW", "SSI", "HPG", "EVF", "PAN", "PNJ", "FPT", "QNS", "VNM", "PVD", "NVL"]
 OHLCV_RECENT_N = 30
 MAX_TICKERS = 20
 
@@ -2992,6 +2996,22 @@ def attach_qualified_market_observations(bundle_entries: dict[str, dict], includ
     return bundle_entries
 
 
+def attach_ticker_capability_matrix(bundle_entries: dict[str, dict]) -> dict[str, dict]:
+    """Attach the P1.5 capability projection to every retained ticker entry.
+
+    This is deliberately unconditional once a bundle is being built: missing optional
+    upstream contracts are represented as unavailable by the projection rather than being
+    rerun or silently omitted.  It changes no legacy field and performs no provider, DB, or
+    evidence work.
+    """
+    for ticker, entry in bundle_entries.items():
+        if isinstance(entry, dict):
+            entry["ticker_capability_matrix"] = build_ticker_capability_matrix(
+                ticker, entry, market_authority=MARKET_DATA_SOURCE_AUTHORITY_SELECTION,
+            )
+    return bundle_entries
+
+
 # ==========================================================================
 # MAIN
 # ==========================================================================
@@ -3303,6 +3323,11 @@ def main() -> int:
     # computed this run -- unconditional so every invocation gets the same honest labeling.
     for entry in bundle_entries.values():
         reconcile_legacy_fundamental_quality_with_qualified_evidence(entry)
+
+    # P1.5 is a retained-contract projection.  Attach only after every optional Producer
+    # contract selected for this export has been attached, so no matrix field is computed
+    # twice or allowed to promote an omitted contract.
+    attach_ticker_capability_matrix(bundle_entries)
 
     # item F: bundle_entries[tk]["context_package"] only exists from this point on (it isn't
     # attached to the earlier `entries` build_data_quality_flags() already consumed above) —

@@ -5,6 +5,24 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - P1.5 capability matrix is a projection, not a new gate
+
+- `ticker_capability_matrix` is the canonical per-ticker integration surface for existing
+  Producer decisions. It carries lane-specific status, original authority status, retained
+  reason codes, authority, trust tier, descriptive-only marker, dependencies, and an always
+  false actionable flag. It does not calculate financial quality, market basis, liquidity,
+  research eligibility, or portfolio eligibility.
+- Provider-scoped adjusted market observations and generic actionable market claims stay in
+  different namespaces. An `available` provider observation is rendered `descriptive_only`;
+  it cannot unlock raw/as-traded price, current market cap/valuation, generic liquidity,
+  tradability, sizing, execution, or backtesting. Absence or malformed upstream contracts fail
+  closed as explicit `unavailable`/`unknown` records.
+- The production cohort is exactly `POW, SSI, HPG, EVF, PAN, PNJ, FPT, QNS, VNM, PVD, NVL`;
+  VCB remains a test-only archetype example. The FiinGroup authority stays
+  `WAITING_EXTERNAL_ACCESS`, `OWNER_ACQUISITION_REQUIRED`, and
+  `OWNER_CONFIRMATION_REQUIRED`. No source acquisition, adapter, runtime/DB mutation, or
+  publication is implied by this decision.
+
 ## 2026-08-08 - Publish Orchestrator Authority Reconciliation
 
 - **`tools/release_orchestrator.py` is the single supported live-publish authority**, for

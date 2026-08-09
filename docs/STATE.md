@@ -3,6 +3,21 @@
 Last verified: **2026-08-03**, by an end-to-end production run of the supported operating
 command against `dashboard-runtime` (reference session `2026-07-30`).
 
+## P1.5 capability matrix (2026-08-09)
+
+`P1_5_TICKER_CAPABILITY_MATRIX: PASS`. `export_ai_bundle.py` now attaches the additive,
+deterministic `ticker_capability_matrix` to every member of the canonical production cohort:
+`POW, SSI, HPG, EVF, PAN, PNJ, FPT, QNS, VNM, PVD, NVL`. It projects existing entity,
+financial, historical-decision, provider-scoped market, research, portfolio, and market-basis
+contracts without recomputing or promoting any result. Trust is lane-specific: qualified
+provider observations remain `descriptive_only`, while generic valuation, liquidity, sizing,
+execution, and backtest gates remain blocked.
+
+`MARKET_DATA_TRACK: WAITING_EXTERNAL_ACCESS`. The selected FiinGroup route remains
+`OWNER_ACQUISITION_REQUIRED` / `OWNER_CONFIRMATION_REQUIRED`; P1.5 made no provider call,
+adapter, DB/runtime/generated-artifact change, or publication. The next independent roadmap
+milestone is `CONNECT_PILLAR_A_MARKET_WIDE_CANONICAL_FACTS_TO_RESEARCH_ENGINE`.
+
 ## Canonical state lines
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.

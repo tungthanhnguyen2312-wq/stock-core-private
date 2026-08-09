@@ -1,5 +1,19 @@
 # Stock Lookup roadmap
 
+## P1.5 â€” Ticker capability / trusted-ticker matrix bundle attachment (complete 2026-08-09)
+
+The canonical analysis bundle now carries a deterministic, capability-specific
+`ticker_capability_matrix` for exactly `POW, SSI, HPG, EVF, PAN, PNJ, FPT, QNS, VNM, PVD, NVL`.
+It composes existing authorities only and records semantic status, retained reason codes,
+authority, trust tier, descriptive-only/actionable boundary, and dependencies for identity,
+fundamental, market descriptive/actionable, research, and portfolio lanes. It must not be read
+as a universal trusted/untrusted boolean.
+
+The market-data route remains `WAITING_EXTERNAL_ACCESS`: FiinGroup acquisition and licence
+confirmation are external dependencies; generic raw price, valuation, liquidity, sizing, and
+backtesting remain blocked. Next independent milestone (not started here):
+`CONNECT_PILLAR_A_MARKET_WIDE_CANONICAL_FACTS_TO_RESEARCH_ENGINE`.
+
 ## Active development: two pillars (2026-08-03)
 
 Development has moved off per-ticker financial pilots. Adding a third HPG/VNM-style
