@@ -5,6 +5,15 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - QNS exact audited consolidated filing is retained separately
+
+- One bounded official `qns.com.vn` financial-reports investigation located the 26-02-2025 issuer
+  disclosure and its exact 41-page FY2024 audited consolidated attachment. The PDF is separately
+  retained as `faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3`; its independent
+  audit identifies the consolidated balance sheet, income statement, and cash-flow statement.
+- Native text is degraded, so no value was guessed and no financial fact, qualification, research,
+  provider, DB, runtime, or publication state changed.
+
 ## 2026-08-09 - POW entity identity meets the existing manual-profile authority
 
 - `config/ticker_entity_profiles.csv` is the sole contract permitted to name an issuer type;

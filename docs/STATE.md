@@ -1,5 +1,13 @@
 # Stock Lookup state
 
+## QNS audited consolidated filing recovery (2026-08-09)
+
+One bounded official `qns.com.vn` financial-reports investigation retained the exact 41-page
+FY2024 audited consolidated filing separately from the insufficient annual-report package:
+`faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3`. Direct text is degraded,
+so five-metric materialization is deferred rather than guessed; no provider, DB, runtime, or
+publication change occurred.
+
 ## POW entity authority and QNS audited filing recovery (2026-08-09)
 
 `POW_ENTITY_AUTHORITY_AND_QNS_AUDITED_FILING_RECOVERY: PARTIAL`. The existing manual-profile

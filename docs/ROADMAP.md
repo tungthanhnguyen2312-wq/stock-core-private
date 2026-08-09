@@ -1,5 +1,11 @@
 # Stock Lookup roadmap
 
+## QNS audited consolidated filing recovery (2026-08-09)
+
+The exact issuer-controlled FY2024 audited consolidated financial statements are retained as
+`faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3`, distinct from the prior
+insufficient annual-report package. Its five-metric materialization is deferred; runtime remains deferred.
+
 ## POW entity authority and QNS audited filing recovery (partial 2026-08-09)
 
 POW is now manually profiled as the existing generic `corporate` archetype, supported by PV
