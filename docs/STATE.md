@@ -1,5 +1,30 @@
 # Stock Lookup state
 
+## Targeted multi-period official financial evidence pilot (2026-08-09)
+
+`TARGETED_MULTI_PERIOD_OFFICIAL_FINANCIAL_EVIDENCE_PILOT: PASS`. The fixed, two-ticker
+pilot is HPG (existing issuer-evidence control) and PVD (the existing scan/OCR issuer path).
+Each has an issuer-IR retained FY2022 and FY2023 audited consolidated filing; four immutable
+records and exactly twenty page-cited annual identities (operating cash flow, net income,
+cash and equivalents, total interest-bearing debt, and shareholders' equity) were appended
+through `evidence_promotion.py`. HPG's text-bearing pages and PVD's source-page-verified OCR
+sidecars bind every citation to its original PDF hash, reporting period, currency, and
+consolidated scope. PVD remains USD; no FX conversion or absolute cross-currency comparison
+was created.
+
+The existing historical analytics and scenario contract now report an available HPG/PVD
+comparison and ticker-local `trend_status=available`; both carry compatible annual periods
+through FY2024 where independently retained evidence exists. The output is historical-only,
+non-actionable, descriptive, and explicitly prohibits ranking, valuation, recommendation,
+liquidity, or market claims. The supported operator regenerated and Consumer-validated the
+two-ticker bundle (reference session 2026-08-07):
+`analysis_bundle.json` `8a76fc00b5a590eaeb50266f8c62b4f9b4a0ad723cce1916ad9d3330145cb8f5`,
+`bundle_manifest.json` `3eb1ff7cb08820f4b66f265e6066de93c34ef9ce321fb77eeb1ed3ba576eeb49`.
+An attempted canonical-financial bundle attachment stopped before generation because it would
+require a prohibited metadata refresh; the operator rolled back and the delivered run omits
+that unrelated lane. No provider call, market-data refresh, database mutation, or generic
+market capability change occurred.
+
 Last verified: **2026-08-03**, by an end-to-end production run of the supported operating
 command against `dashboard-runtime` (reference session `2026-07-30`).
 

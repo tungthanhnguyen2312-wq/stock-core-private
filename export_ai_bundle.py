@@ -3043,13 +3043,14 @@ def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include
             entry["historical_decision_analysis"] = evaluate_historical_decision_analysis(
                 ticker, research_entry, allow_scaleout=ticker not in PILOT_TICKERS,
             )
+    cohort_tickers = tuple(ticker for ticker in sorted(allowed) if isinstance(bundle_entries.get(ticker), dict))
     cohort = {
         ticker: (bundle_entries.get(ticker, {}).get("historical_decision_analysis") or {}).get("fundamental_analytics", {})
-        for ticker in sorted(PILOT_TICKERS) if isinstance(bundle_entries.get(ticker), dict)
+        for ticker in cohort_tickers
     }
-    if cohort:
+    if len(cohort_tickers) >= 2:
         comparative = build_comparative_matrix(cohort)
-        qualified_cohort = build_qualified_cohort_comparison(cohort)
+        qualified_cohort = build_qualified_cohort_comparison(cohort, cohort_tickers=cohort_tickers)
         for ticker in cohort:
             bundle_entries[ticker]["historical_fundamental_comparative_matrix"] = comparative
             bundle_entries[ticker]["qualified_cohort_comparison"] = qualified_cohort

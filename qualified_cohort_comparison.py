@@ -84,12 +84,21 @@ def _position(metric_name: str, ticker: str, rows: Mapping[str, Mapping[str, Any
     }
 
 
-def build(analyses: Mapping[str, Mapping[str, Any]] | None) -> dict[str, Any]:
-    """Build the fixed-cohort historical comparison, failing closed on an incomplete cohort."""
+def build(analyses: Mapping[str, Mapping[str, Any]] | None,
+          *, cohort_tickers: tuple[str, ...] = QUALIFIED_COHORT) -> dict[str, Any]:
+    """Build an explicit historical comparison, failing closed on an incomplete cohort.
+
+    ``QUALIFIED_COHORT`` remains the legacy default.  A caller may supply a smaller,
+    already-selected cohort for a bounded evidence pilot; it must still contain at least two
+    distinct tickers, so this never relabels a single-ticker observation as comparison.
+    """
     source = analyses if isinstance(analyses, Mapping) else {}
-    missing = [ticker for ticker in QUALIFIED_COHORT if ticker not in source]
+    cohort = tuple(dict.fromkeys(str(ticker).upper() for ticker in cohort_tickers if str(ticker).strip()))
+    if len(cohort) < 2:
+        raise ValueError("qualified_cohort_comparison_requires_at_least_two_tickers")
+    missing = [ticker for ticker in cohort if ticker not in source]
     rows: dict[str, dict[str, Any]] = {}
-    for ticker in QUALIFIED_COHORT:
+    for ticker in cohort:
         analysis = _map(source.get(ticker))
         metrics = _map(analysis.get("metrics"))
         rows[ticker] = {
@@ -107,6 +116,9 @@ def build(analyses: Mapping[str, Mapping[str, Any]] | None) -> dict[str, Any]:
             "sub_conclusions": _sub_conclusions(metrics),
         }
     available = not missing and all(row["status"] == "available" for row in rows.values())
+    multi_period_trend = "available" if available and all(
+        row["trend_status"] == "available" for row in rows.values()
+    ) else "insufficient_history"
     for ticker, row in rows.items():
         row["comparative_positions"] = {
             "debt_to_equity": _position("debt_to_equity", ticker, rows),
@@ -119,17 +131,19 @@ def build(analyses: Mapping[str, Mapping[str, Any]] | None) -> dict[str, Any]:
         }
     return {
         "schema_version": SCHEMA_VERSION, "status": "available" if available else "unavailable",
-        "cohort_name": "qualified_historical_fundamental_cohort", "cohort_tickers": list(QUALIFIED_COHORT),
+        "cohort_name": "qualified_historical_fundamental_cohort", "cohort_tickers": list(cohort),
         "historical_only": True, "market_dependent": False, "is_actionable": False,
         "cross_sectional_comparison": "available" if available else "unavailable",
-        "multi_period_trend": "insufficient_history",
+        "multi_period_trend": multi_period_trend,
         "ranking_prohibited": True, "fx_conversion_prohibited": True,
         "absolute_cross_currency_comparison_prohibited": True,
-        "rows": [rows[ticker] for ticker in QUALIFIED_COHORT],
+        "rows": [rows[ticker] for ticker in cohort],
         "blocking_reasons": ["qualified_cohort_incomplete:" + ",".join(missing)] if missing else [],
         "limitations": [
             "This is a qualified cohort comparison, not a peer group or investment ranking.",
-            "All current cohort rows have one complete qualified annual period; trends are unavailable.",
+            "All cohort rows must have at least two complete qualified annual periods before a cohort trend is available."
+            if multi_period_trend != "available" else
+            "Every selected cohort row has at least two complete qualified annual periods; trend availability remains ticker-local.",
             "PVD remains USD; absolute monetary amounts are excluded from cross-company comparisons.",
         ],
     }

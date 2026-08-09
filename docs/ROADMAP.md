@@ -1,5 +1,22 @@
 # Stock Lookup roadmap
 
+## Targeted multi-period official financial evidence pilot (complete 2026-08-09)
+
+`TARGETED_MULTI_PERIOD_OFFICIAL_FINANCIAL_EVIDENCE_PILOT: PASS`. The bounded fixed cohort is
+HPG and PVD: one existing issuer-evidence control plus one newer OCR materialization path.
+FY2022/FY2023 audited consolidated issuer filings were retained at exact issuer-IR locators,
+then converted to five hash-bound, page-cited metric identities per filing. The acquirer now
+enumerates FY2022 and the established debt vocabulary recognizes explicit short-/long-term
+*loans* as the same two required borrowing components; it does not admit generic liabilities
+or a one-line debt total. The existing research projection, scenarios, conclusions, Consumer
+context, and Dashboard-compatible two-ticker comparison all report available multi-period
+history while preserving USD/VND separation and non-actionability.
+
+No financial provider fallback, market-data acquisition, database write, valuation, ranking,
+recommendation, liquidity, execution, backtest, or ticker expansion occurred. The canonical
+market-data authority and DNSE owner-access dependency remain unchanged. The next independent
+milestone remains external to this completed evidence pilot.
+
 ## Official financial evidence scale-out Cohort 2 (partial 2026-08-09)
 
 `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_2: PARTIAL`. This bounded pass first resolved

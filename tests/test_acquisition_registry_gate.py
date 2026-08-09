@@ -145,6 +145,16 @@ class VocabularyTests(unittest.TestCase):
         self.assertEqual(fetcher.urls, [])
         self.assertEqual(result["outcomes"][0]["state"], "unsupported_request")
 
+    def test_fy2022_is_an_enumerated_annual_evidence_period(self) -> None:
+        result, fetcher = run([spec(
+            ticker="HPG", source_id="issuer_ir",
+            document_class="audited_annual_financial_statements",
+            reporting_period="2022",
+            canonical_url="https://file.hoaphat.com.vn/hoaphat-com-vn/2023/04/annual-report-2022-hpg.pdf",
+        )])
+        self.assertEqual(result["outcomes"][0]["state"], "retained")
+        self.assertEqual(fetcher.urls, ["https://file.hoaphat.com.vn/hoaphat-com-vn/2023/04/annual-report-2022-hpg.pdf"])
+
     def test_bounded_official_exchange_statistics_type_is_host_scoped(self) -> None:
         result, fetcher = run([
             spec(

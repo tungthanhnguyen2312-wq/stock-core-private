@@ -225,9 +225,9 @@ def verified_debt_extraction(materialization: Mapping[str, Any], *, components: 
     labels = {str(component["component_type"]): _normal(str(component.get("label", ""))) for component in components}
     short_label = labels["short_term_borrowings"]
     long_label = labels["long_term_borrowings_or_finance_leases"]
-    short_qualified = (("short" in short_label and "borrow" in short_label)
+    short_qualified = (("short" in short_label and ("borrow" in short_label or "loan" in short_label))
                        or ("vay" in short_label and "han" in short_label and "dai" not in short_label))
-    long_qualified = (("long" in long_label and "borrow" in long_label)
+    long_qualified = (("long" in long_label and ("borrow" in long_label or "loan" in long_label))
                       or "finance lease" in long_label or "lease liabilities" in long_label
                       or ("vay" in long_label and "dai" in long_label and "han" in long_label))
     if not (short_qualified and long_qualified):

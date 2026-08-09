@@ -5,6 +5,28 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - Targeted multi-period official evidence uses a fixed HPG/PVD cohort
+
+- The selected cohort is exactly HPG and PVD: HPG supplies an established issuer-document
+  control and PVD exercises the already governed scan/OCR materialization path. It is fixed
+  after selection; no fallback ticker, provider financial data, quarterly substitution, or
+  broad issuer crawl is authorized by this decision.
+- For each ticker, FY2022 and FY2023 use one issuer-owned audited consolidated filing per
+  period, retained under the existing source registry and immutable-document manifest. The
+  promotion writes exactly five annual identities per filing: operating cash flow, net income,
+  cash and equivalents, the explicitly summed short- and long-term borrowing components, and
+  shareholders' equity. PVD's USD is retained as reported; no exchange-rate conversion is a
+  permissible way to compare absolute values with HPG's VND.
+- `qualified_cohort_comparison` is now parameterized by an explicit selected cohort while its
+  previous five-ticker cohort remains the default. At least two distinct tickers are required.
+  It preserves ticker-local trend availability and descriptive ratio context, but remains
+  historical-only, non-actionable, and ranking-prohibited. This lets the Consumer/Dashboard
+  receive the bounded pilot rather than silently treating it as an incomplete legacy cohort.
+- The canonical-financial bundle flag was deliberately omitted from the final generation after
+  its freshness gate required a metadata refresh. That route is unrelated to the issuer filing
+  evidence and remains blocked rather than refreshed. No database, market provider, generic
+  price/volume/valuation gate, or serving deployment was changed by this decision.
+
 ## 2026-08-09 - Scan-only annual financial evidence is materialized only after source-page verification
 
 - The bounded path is local Tesseract 5.5.0 plus in-memory page rendering for only PNJ and

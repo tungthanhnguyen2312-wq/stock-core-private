@@ -25,7 +25,11 @@ TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN", "PNJ", "FPT", "PVD", "QN
 #: Retained for the storage-path vocabulary only. The gate on what may be requested comes
 #: from the registry (`declared_document_types`), never from this tuple.
 DOCUMENT_CLASSES = ("audited_annual_financial_statements", "reviewed_interim_financial_statements", "annual_report", "corporate_governance_report", "agm_document_or_resolution", "corporate_action_notice", "amendment_or_supersession_notice")
-PERIODS = frozenset({"2023", "2024", "2025", "2026"})
+# Annual evidence is retained only for explicitly reviewed reporting periods.  FY2022 is
+# required by the targeted multi-period issuer-document pilot; keeping this finite set
+# preserves the acquisition boundary while allowing the immediately preceding comparison
+# year to be requested.
+PERIODS = frozenset({"2022", "2023", "2024", "2025", "2026"})
 # The Novaland FY2024 audited consolidated PDF is 23,761,801 bytes.  The bounded
 # 32 MiB ceiling admits that known issuer filing without opening unbounded retention.
 CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 32 * 1024 * 1024

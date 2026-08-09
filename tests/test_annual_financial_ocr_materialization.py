@@ -96,6 +96,16 @@ class AnnualFinancialOcrMaterializationTests(unittest.TestCase):
             verified_debt_extraction(materialization, components=components[:1], unit="VND",
                                      statement="balance_sheet", reporting_period="2024")
 
+    def test_explicit_short_and_long_term_loans_are_debt_components(self):
+        materialization = self.materialization("Short-term loans 100 Long-term loans 200")
+        debt = verified_debt_extraction(materialization, components=[
+            {"component_type": "short_term_borrowings", "reporting_period": "2024", "page": 7,
+             "label": "Short-term loans", "raw_value": "100", "visual_source_page_verified": True},
+            {"component_type": "long_term_borrowings_or_finance_leases", "reporting_period": "2024", "page": 7,
+             "label": "Long-term loans", "raw_value": "200", "visual_source_page_verified": True},
+        ], unit="VND", statement="balance_sheet", reporting_period="2024")
+        self.assertEqual(debt["normalized_value"], 300)
+
 
 if __name__ == "__main__":
     unittest.main()

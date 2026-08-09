@@ -63,6 +63,20 @@ class QualifiedCohortComparisonTests(unittest.TestCase):
         row = next(row for row in build(missing_metric)["rows"] if row["ticker"] == "PVD")
         self.assertEqual(row["comparative_positions"]["debt_to_equity"]["status"], "unavailable")
 
+    def test_explicit_two_ticker_pilot_preserves_multi_period_availability(self):
+        pilot = {"HPG": self.analyses["HPG"], "PVD": self.analyses["PVD"]}
+        pilot["HPG"] = {**pilot["HPG"], "trend_status": "available", "qualified_annual_periods": ["2022", "2023"]}
+        pilot["PVD"] = {**pilot["PVD"], "trend_status": "available", "qualified_annual_periods": ["2022", "2023"]}
+        result = build(pilot, cohort_tickers=("HPG", "PVD"))
+        self.assertEqual(result["status"], "available")
+        self.assertEqual(result["cohort_tickers"], ["HPG", "PVD"])
+        self.assertEqual([row["trend_status"] for row in result["rows"]], ["available", "available"])
+        self.assertEqual(result["multi_period_trend"], "available")
+
+    def test_single_ticker_is_not_relabelled_as_a_comparison(self):
+        with self.assertRaisesRegex(ValueError, "requires_at_least_two_tickers"):
+            build({"HPG": self.analyses["HPG"]}, cohort_tickers=("HPG",))
+
 
 if __name__ == "__main__":
     unittest.main()
