@@ -5,6 +5,30 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - Pillar A qualification is evidence promotion, not numerical plausibility
+
+- `canonical_financial_qualification_policy` is the sole read-only promotion contract between
+  retained canonical facts and the Pillar A research projection. Qualification requires complete
+  semantic identity and period bounds, consolidated scope, provider/source hash/observation
+  lineage, a manifest-hash-verified official artifact and deterministic citation, evidenced
+  currency/unit, and no unresolved conflict. Agreement, arithmetic, or familiarity alone never
+  supplies missing evidence.
+- Restatement variants remain `RESTATEMENT_STATE_UNKNOWN` unless retained metadata identifies a
+  superseding document, supersession evidence, and its publication date. Ingest time is never a
+  supersession rule. Period/scope incompatibilities and arithmetic failures remain independent
+  fail-closed reasons. The established FY-to-Q4 alias is retained only for balance-sheet stock
+  identities; annual income/cash-flow values are never relabelled as Q4.
+- The corporate research gate remains five annual, consolidated, same-period qualified metrics.
+  Policy frontier is metadata only: values remain withheld until actually qualified, and trusted
+  `financial_canonical` retains strict HPG/VNM precedence. The capability matrix exposes the
+  qualification-frontier authority without widening research eligibility.
+- Current retained evidence yields 2 qualified facts, 0 safe promotions, and 0 frontier
+  facts/tickers. Every canonical fact is quarterly, so no annual corporate lane can be admitted;
+  195,550 facts lack a verified citation and 5,306 remain restatement-blocked. The next Pillar A
+  decision is `CANONICAL_FINANCIAL_SOURCE_AUTHORITY_DECISION`, not a broad filing crawl or an
+  acquisition pilot. DNSE remains a separate `PENDING_OWNER_ACCOUNT_ACTIVATION` market-data
+  dependency.
+
 ## 2026-08-09 - P1E conflict decomposition is an explanation, not a value-selection authority
 
 - Retained canonical conflicts are decomposed by the existing fact schema and conflict kind.

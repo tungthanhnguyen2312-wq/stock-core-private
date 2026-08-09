@@ -11,6 +11,11 @@ from collections import Counter
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from canonical_conflict_decomposition import decompose_facts
+from canonical_financial_qualification_policy import (
+    QUALIFIED as POLICY_QUALIFIED,
+    apply_policy,
+    inventory as qualification_inventory,
+)
 
 VERSION = "1.0.0"
 QUALIFIED = "qualified"
@@ -41,11 +46,16 @@ def _strings(value: Any) -> list[str]:
 
 def _fact_view(fact: Mapping[str, Any]) -> dict[str, Any]:
     """Retain identity/provenance for every fact while withholding non-qualified values."""
-    status = str(fact.get("status") or "unavailable")
+    canonical_status = str(fact.get("status") or "unavailable")
+    status = str(fact.get("qualification_status") or canonical_status)
+    qualification = _mapping(fact.get("qualification_policy"))
+    qualification_evidence = _mapping(fact.get("qualification_evidence"))
     return {
         "canonical_metric": fact.get("canonical_metric"),
         "status": status,
+        "canonical_status": canonical_status,
         "reason": fact.get("reason"),
+        "qualification_reason_codes": _strings(qualification.get("reason_codes")),
         "reporting_period": fact.get("reporting_period"),
         "period_type": fact.get("period_type"),
         "period_start": fact.get("period_start"),
@@ -67,7 +77,8 @@ def _fact_view(fact: Mapping[str, Any]) -> dict[str, Any]:
             "observed_at": fact.get("observed_at"), "fact_id": fact.get("fact_id"),
             "identity_key": fact.get("identity_key"), "contract_version": fact.get("contract_version"),
             "mapper_version": fact.get("mapper_version"), "resolver_version": fact.get("resolver_version"),
-            "citation_id": fact.get("citation_id"), "evidence_id": fact.get("evidence_id"),
+            "citation_id": qualification_evidence.get("citation_id") or fact.get("citation_id"),
+            "evidence_id": qualification_evidence.get("evidence_id") or fact.get("evidence_id"),
         },
     }
 
@@ -93,15 +104,19 @@ def _research_record(fact: Mapping[str, Any]) -> dict[str, Any]:
         # intentionally does not invent a citation identifier. Existing Phase 6A requires one,
         # so this adapter does not claim the earnings-quality submodel is eligible until that
         # lineage contract is extended explicitly.
-        "evidence": {"pillar_a_fact_id": fact.get("fact_id"), "citation_id": fact.get("citation_id"),
-                     "evidence_id": fact.get("evidence_id"), "source_sha256": fact.get("source_sha256")},
+        "evidence": {"pillar_a_fact_id": fact.get("fact_id"),
+                     "citation_id": _mapping(fact.get("qualification_evidence")).get("citation_id") or fact.get("citation_id"),
+                     "evidence_id": _mapping(fact.get("qualification_evidence")).get("evidence_id") or fact.get("evidence_id"),
+                     "source_sha256": fact.get("source_sha256")},
     }
 
 
 def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
-                     entity_type: str | None, entity_authority: str | None) -> dict[str, Any]:
+                     entity_type: str | None, entity_authority: str | None,
+                     evidence_index: Mapping[tuple, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Project one ticker's retained canonical records without resolving any fact anew."""
-    source_facts = [dict(fact) for fact in facts or [] if isinstance(fact, Mapping)]
+    source_facts = [apply_policy(fact, evidence_index=evidence_index)
+                    for fact in facts or [] if isinstance(fact, Mapping)]
     source_facts.sort(key=lambda fact: (str(fact.get("reporting_period") or ""),
                                         str(fact.get("canonical_metric") or ""),
                                         str(fact.get("fact_id") or "")))
@@ -125,7 +140,7 @@ def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
     else:
         by_period: dict[str, list[dict[str, Any]]] = {}
         for fact in source_facts:
-            if (fact.get("status") == QUALIFIED and fact.get("value") is not None
+            if (fact.get("qualification_status") == POLICY_QUALIFIED and fact.get("value") is not None
                     and fact.get("statement_scope") == "consolidated"
                     and fact.get("period_type") == "annual"):
                 by_period.setdefault(str(fact.get("reporting_period")), []).append(fact)
@@ -144,7 +159,7 @@ def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
                     all_by_metric.setdefault(str(fact.get("canonical_metric")), []).append(fact)
             conflicting_required_identity = any(
                 len(all_by_metric.get(metric, [])) != 1
-                or all_by_metric[metric][0].get("status") != QUALIFIED
+                or all_by_metric[metric][0].get("qualification_status") != POLICY_QUALIFIED
                 or bool(all_by_metric[metric][0].get("conflicts"))
                 for metric in CORPORATE_REQUIRED_METRICS if metric in all_by_metric
             )
@@ -154,7 +169,9 @@ def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
                     and all(len(by_metric[name]) == 1 for name in CORPORATE_REQUIRED_METRICS)):
                 selected_period = period
                 qualified_set = [by_metric[name][0] for name in sorted(CORPORATE_REQUIRED_METRICS)]
-                if all(fact.get("citation_id") and fact.get("evidence_id") and fact.get("source_observation_ids")
+                if all(_mapping(fact.get("qualification_evidence")).get("citation_id")
+                       and _mapping(fact.get("qualification_evidence")).get("evidence_id")
+                       and fact.get("source_observation_ids")
                        for fact in qualified_set):
                     admitted = [_research_record(fact) for fact in qualified_set]
                     break
@@ -187,6 +204,7 @@ def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
         "research_eligible": status == "available", "reason_codes": sorted(set(reasons)),
         "required_metrics": sorted(CORPORATE_REQUIRED_METRICS) if entity_type == SUPPORTED_CORPORATE else [],
         "selected_reporting_period": selected_period, "status_counts": dict(sorted(statuses.items())),
+        "qualification_inventory": qualification_inventory(source_facts, evidence_index=evidence_index)["counts"],
         "conflict_decomposition": conflict_decomposition,
         "facts": views, "research_financial_canonical": {
             "status": "available", "ticker": str(ticker).upper(), "records": admitted,
@@ -218,16 +236,19 @@ def select_research_source(entry: Mapping[str, Any], projection: Mapping[str, An
             "financial_canonical": None}
 
 
-def coverage_summary(records: Iterable[Mapping[str, Any]], read_facts: Callable[[str], Sequence[Mapping[str, Any]]]) -> dict[str, Any]:
+def coverage_summary(records: Iterable[Mapping[str, Any]], read_facts: Callable[[str], Sequence[Mapping[str, Any]]], *,
+                     evidence_index: Mapping[tuple, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Read-only, deterministic coverage across the existing store."""
     rows = [dict(record) for record in records if isinstance(record, Mapping)]
     counters = Counter()
     statuses = Counter()
+    all_facts: list[Mapping[str, Any]] = []
     for row in sorted(rows, key=lambda item: str(item.get("ticker") or "")):
         ticker = str(row.get("ticker") or "")
         facts = list(read_facts(ticker))
+        all_facts.extend(facts)
         projection = build_projection(ticker, facts, entity_type=row.get("issuer_entity_type"),
-                                      entity_authority=row.get("archetype_authority"))
+                                      entity_authority=row.get("archetype_authority"), evidence_index=evidence_index)
         counters["total_tickers"] += 1
         counters["entity_type_known_tickers"] += int(row.get("issuer_entity_type") not in (None, "unknown"))
         counters["tickers_with_at_least_one_canonical_fact"] += int(bool(facts))
@@ -243,4 +264,5 @@ def coverage_summary(records: Iterable[Mapping[str, Any]], read_facts: Callable[
         statuses[projection["status"]] += 1
     return {"schema_version": VERSION, "coverage": dict(sorted(counters.items())),
             "projection_status_counts": dict(sorted(statuses.items())),
+            "qualification_promotion": qualification_inventory(all_facts, evidence_index=evidence_index),
             "is_actionable": False}

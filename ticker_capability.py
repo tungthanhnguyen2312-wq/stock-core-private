@@ -57,7 +57,7 @@ def _string_list(value: Any) -> list[str]:
 def _reason_codes(record: Mapping[str, Any]) -> list[str]:
     """Retain reason-code fields exactly; do not replace them with prose."""
     values: list[str] = []
-    for key in ("reason_codes", "blocking_reasons", "missing_evidence", "required_inputs",
+    for key in ("reason_codes", "qualification_reason_codes", "blocking_reasons", "missing_evidence", "required_inputs",
                 "missing_or_unqualified_inputs"):
         values.extend(_string_list(record.get(key)))
     if record.get("reason"):
@@ -83,6 +83,7 @@ def _semantic_status(source_status: Any, *, absent: bool = False,
         "eligible_for_analysis": "available", "partially_eligible": "partial",
         "partial": "partial", "partially_qualified": "partial",
         "provider_reported": "partial", "provider_reported_only": "partial",
+        "promotion_frontier": "partial",
         "blocked": "blocked", "allocation_blocked": "blocked",
         "blocked_input": "blocked_input", "unavailable": "unavailable",
         "missing": "unavailable", "insufficient_evidence": "unavailable",
@@ -199,6 +200,13 @@ def build_ticker_capability_matrix(
     research = item.get("qualified_research_brief")
     pillar_projection = item.get("research_financial_fact_projection")
     pillar_projection_record = _as_mapping(pillar_projection)
+    qualification_inventory = _as_mapping(pillar_projection_record.get("qualification_inventory"))
+    frontier_count = int(qualification_inventory.get("promotion_frontier_facts") or 0)
+    frontier_record = {
+        "status": "promotion_frontier" if frontier_count else pillar_projection_record.get("status"),
+        "reason_codes": pillar_projection_record.get("reason_codes"),
+        "promotion_frontier_fact_count": frontier_count,
+    }
     portfolio_raw = item.get("portfolio_risk_analysis")
     portfolio = _as_mapping(portfolio_raw)
     allocation_raw = portfolio.get("allocation_eligibility") if isinstance(portfolio_raw, Mapping) else None
@@ -247,6 +255,10 @@ def build_ticker_capability_matrix(
                 authority="research_financial_fact_projection", record=pillar_projection,
                 status=pillar_projection_record.get("status"),
                 dependencies=["canonical_financial_facts", "entity_archetype"],
+                absent_reason="pillar_a_research_projection_not_attached"),
+            "pillar_a_qualification_frontier": _capability(
+                authority="canonical_financial_qualification_policy", record=frontier_record if pillar_projection is not None else None,
+                status=frontier_record["status"], dependencies=["canonical_financial_facts", "official_evidence"],
                 absent_reason="pillar_a_research_projection_not_attached"),
         },
         "market_descriptive": {

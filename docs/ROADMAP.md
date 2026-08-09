@@ -48,6 +48,27 @@ Next independent Pillar A milestone: `PILLAR_A_QUALIFICATION_EVIDENCE_PROMOTION_
 It defines the minimum scalable evidence/lineage path without acquiring filings. The separate
 DNSE HPG/VNM market-data pilot remains blocked on owner account activation.
 
+## Pillar A qualification evidence promotion policy (complete 2026-08-09)
+
+Completed as a read-only, deterministic policy projection, not another financial store. A fact
+needs its semantic identity and bounds, consolidated scope, provider/source hash and observation
+lineage, verified official document artifact/citation, unit/currency evidence, and no unresolved
+semantic, arithmetic, or restatement conflict before it is qualified. A restatement requires an
+explicit superseding document, supersession evidence, and publication date; ingest order cannot
+select a version. The existing annual-to-Q4 equivalence remains balance-sheet-stock-only.
+
+Research keeps the unchanged five-metric annual/consolidated/same-period gate. The policy adds
+reason-coded qualification detail to the read-only research projection and capability matrix;
+unqualified and promotion-frontier values remain withheld. Current inventory is 2 already
+qualified facts, 0 safe promotions, and 0 frontier facts/tickers. All 195,552 retained canonical
+facts are quarterly, 195,550 lack a verified citation, and no annual research admission can be
+created from retained evidence. Candidate output is a deterministic, no-value operations report.
+
+Next independent Pillar A milestone: `CANONICAL_FINANCIAL_SOURCE_AUTHORITY_DECISION` (not
+started). It is required because the current source cannot establish an annual canonical lane;
+this is distinct from the DNSE market-data track, which remains
+`PENDING_OWNER_ACCOUNT_ACTIVATION`.
+
 ## Active development: two pillars (2026-08-03)
 
 Development has moved off per-ticker financial pilots. Adding a third HPG/VNM-style

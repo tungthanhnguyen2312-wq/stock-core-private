@@ -62,6 +62,33 @@ production 11-ticker membership remain unchanged.
 financial-data milestone. It must define a scalable minimum evidence path; it does not authorize
 acquisition. DNSE remains separately `PENDING_OWNER_ACCOUNT_ACTIVATION`.
 
+## Pillar A qualification evidence promotion policy (2026-08-09)
+
+`PILLAR_A_QUALIFICATION_PROMOTION_POLICY: PASS`. The read-only
+`canonical_financial_qualification_policy` is now the explicit contract between retained
+canonical facts and the research projection. It requires semantic identity/bounds, consolidated
+scope, provider and source hash, observation lineage, a hash-verified official artifact with a
+deterministic citation, evidenced unit/currency, and no unresolved semantic, arithmetic, or
+restatement conflict. It preserves the existing narrow annual-year-end-to-Q4 alias for
+balance-sheet stock metrics only; it never aliases annual flow values to Q4. Explicit document,
+supersession-evidence, and publication-date metadata are the minimum retained route through a
+restatement; ingestion order is never a rule.
+
+The corporate research lane remains annual, consolidated, same-period, and requires its five
+fully-qualified metrics. The policy projects qualification reason codes and verified lineage
+into the research adapter and capability matrix without rewriting a shard or admitting a
+provider-reported value. Inventory over the current store: 195,552 facts; 2 already qualified;
+0 safe promotions; 0 promotion-frontier facts/tickers; 195,550 facts missing a verified citation;
+94,252 missing a source hash/artifact dimension; 5,306 restatement-blocked; 195,552 blocked from
+the annual corporate lane by period/scope; and 123 arithmetic-blocked. The deterministic,
+no-value candidate manifest is under `operations-review/`.
+
+No retained canonical fact is annual, so there is no bounded retained-evidence promotion
+frontier. The next canonical Pillar A milestone is
+`CANONICAL_FINANCIAL_SOURCE_AUTHORITY_DECISION`; it must decide the authoritative annual-source
+admission route before any bounded acquisition. DNSE remains separately
+`PENDING_OWNER_ACCOUNT_ACTIVATION` and is not part of this decision.
+
 ## Canonical state lines
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.

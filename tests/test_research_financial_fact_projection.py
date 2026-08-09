@@ -42,6 +42,9 @@ class ResearchFinancialFactProjectionTests(unittest.TestCase):
 
     def test_provider_reported_is_visible_but_never_promoted(self) -> None:
         facts = [_fact(metric, status="provider_reported") for metric in projection.CORPORATE_REQUIRED_METRICS]
+        for fact in facts:
+            fact.pop("citation_id")
+            fact.pop("evidence_id")
         result = projection.build_projection("NEW", facts, entity_type="corporate", entity_authority="manual_profile")
         self.assertEqual(result["status"], "provider_reported_only")
         self.assertFalse(result["research_eligible"])
@@ -96,12 +99,24 @@ class ResearchFinancialFactProjectionTests(unittest.TestCase):
 
     def test_projection_is_deterministic_and_matrix_never_promotes_provider_reported(self) -> None:
         facts = [_fact(metric, status="provider_reported") for metric in projection.CORPORATE_REQUIRED_METRICS]
+        for fact in facts:
+            fact.pop("citation_id")
+            fact.pop("evidence_id")
         first = projection.build_projection("NEW", facts, entity_type="corporate", entity_authority="manual_profile")
         second = projection.build_projection("NEW", copy.deepcopy(facts), entity_type="corporate", entity_authority="manual_profile")
         self.assertEqual(first, second)
         matrix = build_ticker_capability_matrix("NEW", {"entity_type": "corporate", "research_financial_fact_projection": first}, market_authority={})
         self.assertEqual(matrix["fundamental_data"]["pillar_a_research_projection"]["status"], "partial")
         self.assertFalse(matrix["is_actionable"])
+
+    def test_promotion_frontier_values_remain_withheld(self) -> None:
+        fact = _fact("net_income", status="provider_reported")
+        fact.pop("citation_id")
+        fact.pop("evidence_id")
+        result = projection.build_projection("NEW", [fact], entity_type="corporate", entity_authority="manual_profile")
+        self.assertEqual(result["facts"][0]["status"], "provider_reported")
+        self.assertTrue(result["facts"][0]["value_withheld"])
+        self.assertIsNone(result["facts"][0]["value"])
 
     def test_conflict_family_reason_is_exposed_to_the_capability_matrix(self) -> None:
         fact = _fact("net_income", status="conflicted", value=None, conflict=True)

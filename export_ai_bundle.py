@@ -111,6 +111,7 @@ from research_financial_fact_projection import (
     coverage_summary as research_financial_coverage_summary,
     select_research_source,
 )
+from canonical_financial_qualification_policy import load_evidence_index
 from canonical_conflict_decomposition import coverage_summary as canonical_conflict_coverage_summary
 from distribution_evidence import build_distribution_evidence_for_ticker
 from fundamental_quality_evidence import (
@@ -2717,18 +2718,21 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
     records = {str(record.get("ticker")): record for record in state.get("tickers") or []}
     if not records:
         return None
+    evidence_index = load_evidence_index(root)
     for ticker, entry in bundle_entries.items():
         record = records.get(str(ticker).upper())
         if record is None:
             continue
         projection = build_research_financial_fact_projection(
             ticker, read_facts(root, ticker), entity_type=record.get("issuer_entity_type"),
-            entity_authority=record.get("archetype_authority"),
+            entity_authority=record.get("archetype_authority"), evidence_index=evidence_index,
         )
         entry["research_financial_fact_projection"] = projection
         entry["research_financial_source_selection"] = select_research_source(entry, projection)
     records = state.get("tickers") or []
-    coverage = research_financial_coverage_summary(records, lambda ticker: read_facts(root, ticker))
+    coverage = research_financial_coverage_summary(
+        records, lambda ticker: read_facts(root, ticker), evidence_index=evidence_index,
+    )
     # A summary only: facts remain in their original shards and are never rewritten by export.
     coverage["conflict_decomposition"] = canonical_conflict_coverage_summary(
         records, lambda ticker: read_facts(root, ticker),
