@@ -1,5 +1,11 @@
 # Stock Lookup state
 
+## Production-universe qualified research snapshots v2 (2026-08-09)
+
+Legacy v1 HPG/VNM/VCB snapshots remain untouched. A deterministic v2 semantic snapshot now binds
+the fixed 11-ticker production universe, explicit per-ticker research state, capability/brief
+hashes, and source identity. It is source-only pending served-baseline integration and release.
+
 ## Qualified research change events (2026-08-09)
 
 Producer now has a deterministic, presentation-safe adapter over canonical qualified-research

@@ -5,6 +5,12 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - V2 research snapshots preserve the explicit production universe
+
+- The immutable v1 HPG/VNM/VCB contract is not widened or rewritten. V2 has its own semantic
+  identity and fixed eleven-ticker production universe; absent entries remain explicit `unknown`,
+  never inferred `blocked`. This makes a safe served-baseline adapter necessary before change events.
+
 ## 2026-08-09 - Research change events adapt canonical deltas only
 
 - `qualified_research_change_events.py` is a pure adapter over `qualified_research_delta`; it

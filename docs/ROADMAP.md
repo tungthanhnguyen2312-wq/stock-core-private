@@ -1,5 +1,10 @@
 # Stock Lookup roadmap
 
+## Production-universe qualified research snapshots v2 (partial 2026-08-09)
+
+V2 replaces no legacy artifact: it represents every fixed production ticker explicitly and has
+deterministic identity. Baseline extraction, event attachment, Dashboard presentation, and release remain pending.
+
 ## Qualified research change events (partial 2026-08-09)
 
 The Producer event adapter is complete and tested against canonical delta semantics. Product
