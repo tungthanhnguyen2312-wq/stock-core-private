@@ -37,6 +37,19 @@ all generic/actionable gates remain blocked. The next canonical milestone is
 `OWNER_SOURCE_ACQUISITION_DECISION`; see
 `operations-review/market-data-source-authority-decision-20260809/`.
 
+## FiinGroup raw-history access (2026-08-09)
+
+`FIINGROUP_SOURCE_ACQUISITION_MILESTONE: PASS` with
+`FIINGROUP_ACCESS_STATE: OWNER_ACQUISITION_REQUIRED` and
+`LICENSE_AUTHORITY: OWNER_CONFIRMATION_REQUIRED`. No configured FiinGroup access, credential
+reference, adapter, or agreement exists; no secret value or commercial endpoint was read or
+called. The acquisition package is complete for only `/Market/GetHoseStockv2`, HOSE HPG/VNM
+daily records from 2024-01-01 and the documented raw/adjusted/volume/provenance fields.
+`MARKET_DATA_TRACK: WAITING_EXTERNAL_ACCESS`; all authority and downstream gates remain
+blocked/partial exactly as before. While access is external, the parallel canonical work is
+`P1.5_TICKER_CAPABILITY_TRUSTED_TICKER_MATRIX_BUNDLE_ATTACHMENT`, which has no raw-market-data
+dependency. Evidence: `operations-review/fiingroup-raw-market-history-access-20260809/`.
+
 ## Operate it
 
 ```powershell

@@ -78,6 +78,20 @@ capitalisation and therefore waits on pillar B.
   execution, and liquidity gates stay blocked. Next canonical milestone:
   `OWNER_SOURCE_ACQUISITION_DECISION`. Evidence:
   `operations-review/market-data-source-authority-decision-20260809/`.
+- **Pillar B FiinGroup raw market-history access and bounded qualification — PASS, waiting
+  external access (2026-08-09).** A credential-safe access audit found no FiinGroup adapter,
+  configuration, secret-management reference, `FIIN`/`DATAFEED` environment key, or retained
+  agreement. Therefore `FIINGROUP_ACCESS_STATE: OWNER_ACQUISITION_REQUIRED` and
+  `LICENSE_AUTHORITY: OWNER_CONFIRMATION_REQUIRED`; no commercial endpoint was called and no
+  adapter or payload fixture was created. The complete minimum package is only FiinGroup API
+  Datafeed `/Market/GetHoseStockv2` for HOSE HPG/VNM daily history from 2024-01-01, with its
+  documented raw, adjusted, matching, put-through and provenance fields. Before a pilot, the
+  contract must confirm raw/non-rewrite/as-of semantics, units, volume treatment including
+  auctions/odd lots, and API/retention/analytics/production/Dashboard rights. The market-data
+  track is `WAITING_EXTERNAL_ACCESS`; its exact next action remains owner acquisition. The
+  independent, already-canonical parallel milestone is
+  `P1.5_TICKER_CAPABILITY_TRUSTED_TICKER_MATRIX_BUNDLE_ATTACHMENT`; it may proceed without any
+  market source. Evidence: `operations-review/fiingroup-raw-market-history-access-20260809/`.
 - **P0-Z KBS empirical basis and capability relaxation shipped 2026-08-04 — PARTIAL.** One
   previously closed lane reopened, and only one. Phase 1C was right that KBS publishes no
   semantic metadata and wrong to conclude the fields were unusable; the premise is retained,

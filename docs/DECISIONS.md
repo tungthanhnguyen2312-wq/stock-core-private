@@ -975,3 +975,25 @@ Reopening requires an explicit owner decision.
   provider-adjusted history; qualified corporate actions reconcile the two only after a retained
   raw pilot passes. `RAW_PRICE_AUTHORITY` remains `PARTIAL`, volume authority remains blocked,
   and `OWNER_SOURCE_ACQUISITION_DECISION` is the next canonical milestone.
+
+## 2026-08-09 - FiinGroup is an external dependency, not an adapter-shaped assumption
+
+- The configured-access audit checked only project configuration/adapters, credential naming
+  conventions, environment-variable names matching `FIIN`/`DATAFEED`, and source/license notes.
+  It found no FiinGroup access or agreement. No value of any secret was read or logged, and no
+  commercial request was made. `FIINGROUP_ACCESS_STATE` is therefore
+  `OWNER_ACQUISITION_REQUIRED`, not “unusable” and not implicit authorization.
+- `LICENSE_AUTHORITY` is `OWNER_CONFIRMATION_REQUIRED`. Public field documentation does not
+  establish historical API entitlement, local evidence retention/cache, derived analytics,
+  internal production, Dashboard display, or redistribution rights. Those rights, plus
+  raw/non-rewrite/as-of, units, auction and odd-lot semantics, are contract conditions before
+  the first payload can qualify.
+- The complete minimal request is FiinGroup API Datafeed `/Market/GetHoseStockv2` only, for
+  HOSE HPG/VNM daily history from 2024-01-01. It names no companion module and excludes
+  fundamentals/news. Its acceptance pilot starts with the 26,650 VND HPG 2024-12-31 official
+  anchor, adjacent dates and an existing corporate-action window; it retains redacted request
+  metadata and hashed bytes only after access is provisioned.
+- The market-data track is `WAITING_EXTERNAL_ACCESS`. Procurement does not block all work:
+  the already-canonical `P1.5_TICKER_CAPABILITY_TRUSTED_TICKER_MATRIX_BUNDLE_ATTACHMENT` is
+  the independent next implementation milestone. No valuation or market-data work starts
+  automatically from this decision.

@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0.0",
+  "milestone": "FIINGROUP_RAW_MARKET_HISTORY_ACCESS_AND_BOUNDED_QUALIFICATION",
+  "producer_head_before": "f216cfb",
+  "access_audit": {
+    "checked": [
+      "project configuration and existing provider adapters",
+      "project credential/configuration naming conventions",
+      "environment-variable names matching FIIN or DATAFEED",
+      "existing source/license documentation"
+    ],
+    "findings": [
+      "No FiinGroup provider adapter, endpoint configuration, secret-management reference, or FIIN/DATAFEED environment-variable name is present.",
+      "The only project .env.example credential convention is the retired EODHD token and it does not establish FiinGroup access.",
+      "No retained FiinGroup agreement confirms API access, historical data access, local retention/cache, derived analytics, internal production use, Dashboard display, or redistribution rights."
+    ],
+    "credentials_read_or_logged": false,
+    "network_called": false,
+    "production_adapter_created": false
+  },
+  "status": {
+    "FIINGROUP_SOURCE_ACQUISITION_MILESTONE": "PASS",
+    "FIINGROUP_ACCESS_STATE": "OWNER_ACQUISITION_REQUIRED",
+    "LICENSE_AUTHORITY": "OWNER_CONFIRMATION_REQUIRED",
+    "RAW_PRICE_AUTHORITY_SOURCE_SELECTED": "YES",
+    "OWNER_SOURCE_ACQUISITION_PACKAGE": "COMPLETE",
+    "MARKET_DATA_TRACK": "WAITING_EXTERNAL_ACCESS",
+    "FIINGROUP_RAW_PRICE_PILOT": "BLOCKED_EXTERNAL_ACCESS",
+    "HPG_RAW_PRICE_ANCHOR_CROSSCHECK": "BLOCKED",
+    "RAW_HISTORY_MUTABILITY": "UNKNOWN",
+    "FIINGROUP_ADJUSTED_NAMESPACE": "BLOCKED_EXTERNAL_ACCESS",
+    "FIINGROUP_VOLUME_SCOPE_AUTHORITY": "BLOCKED_EXTERNAL_ACCESS",
+    "VCI_TRADE_TYPE_COVERAGE": "BLOCKED_DATA",
+    "GENERIC_ACTIONABLE_PRICE_BASIS": "BLOCKED",
+    "GENERIC_ACTIONABLE_VOLUME_BASIS": "BLOCKED",
+    "HISTORICAL_VALUATION_UNLOCK": "BLOCKED",
+    "ACTIONABLE_LIQUIDITY_UNLOCK": "BLOCKED",
+    "PROTECTED_RUNTIME_SAFE": "PASS"
+  },
+  "exact_acquisition_checklist": {
+    "product": "FiinGroup API Datafeed",
+    "endpoint": "/Market/GetHoseStockv2",
+    "companion_endpoints": [],
+    "universe": "HOSE equities only for the first qualification: HPG and VNM",
+    "history": "2024-01-01 through the qualification date, covering HPG 2024-12-31, an adjacent session, and already-qualified 2025/2026 corporate-action windows; longer backtest history is a later request.",
+    "identity": ["Ticker", "TradingDate", "HOSE endpoint identity"],
+    "raw_price": ["ReferencePrice", "OpenPrice", "ClosePrice", "MatchPrice", "HighestPrice", "LowestPrice", "AveragePrice", "currency_or_price_unit"],
+    "adjusted_namespace": ["ReferencePriceAdjusted", "OpenPriceAdjusted", "ClosePriceAdjusted", "HighestPriceAdjusted", "LowestPriceAdjusted", "RateAdjusted"],
+    "volume": ["TotalMatchVolume", "TotalDealVolume", "TotalVolume", "TotalMatchValue", "TotalDealValue", "TotalValue"],
+    "provenance": ["HoseStockId", "Status", "CreateDate", "UpdateDate", "source_version_or_dataset_vintage"],
+    "contract_confirmations": [
+      "Unadjusted prices are raw/as-traded and not retrospectively rewritten for corporate actions.",
+      "Historical query, revision/as-of semantics, units/currency and retention period are documented.",
+      "Volume treatment of matching, opening/closing auctions, put-through and odd lots is documented.",
+      "Terms permit API use, historical retrieval, local immutable evidence retention/cache, derived analytics and internal production use.",
+      "Terms specify Dashboard display and redistribution/publication restrictions."
+    ],
+    "immediate_pilot_after_provisioning": [
+      "Retain redacted request metadata and raw response bytes with hashes for HPG and VNM only.",
+      "Verify HPG 2024-12-31 ClosePrice against the HOSE 26,650 VND/share anchor; preserve conflicts fail-closed.",
+      "Verify adjacent and corporate-action-window raw/adjusted observations with no adjusted fallback.",
+      "Validate documented matching/put-through/total relationship and leave auctions/odd lots blocked unless explicitly stated.",
+      "Test missing sessions, revisions, wrong units and source conflicts as failures before any adapter is introduced."
+    ],
+    "rejection_criteria": [
+      "Only adjusted history or no historical raw ClosePrice.",
+      "No ticker/session identity, raw/adjusted distinction, documented units or required history.",
+      "No point-in-time/revision semantics.",
+      "Terms do not allow the required internal retention/use."
+    ]
+  },
+  "valuation_readiness": [
+    {
+      "ticker": "HPG",
+      "date": "2024-12-31",
+      "raw_price": "partial official HOSE annual-report close 26,650 VND/share",
+      "shares": "qualified FY2024 period-end shares 6,396,250,200",
+      "financial_denominator": "qualified FY2024 canonical facts available",
+      "ca_lineage": "not paired with qualified raw history",
+      "valuation_ready": false,
+      "binding_prerequisite": "provisioned and qualified FiinGroup raw-history pilot with revision semantics"
+    },
+    {
+      "ticker": "VNM",
+      "date": "2024-12-31",
+      "raw_price": "unavailable",
+      "shares": "not qualified for this point-in-time use",
+      "financial_denominator": "qualified FY2024 canonical facts available",
+      "ca_lineage": "not paired with qualified raw history",
+      "valuation_ready": false,
+      "binding_prerequisite": "provisioned and qualified FiinGroup raw-history pilot"
+    }
+  ],
+  "backtesting_readiness": {
+    "execution_price_authority": "BLOCKED",
+    "corporate_action_history": "PARTIAL",
+    "tradeability_and_costs": "BLOCKED",
+    "volume_scope": "BLOCKED",
+    "verdict": "BLOCKED"
+  },
+  "parallel_unblocked_next_milestone": "P1.5_TICKER_CAPABILITY_TRUSTED_TICKER_MATRIX_BUNDLE_ATTACHMENT",
+  "next_external_action": "Owner acquires the exact FiinGroup API Datafeed package and confirms the listed contractual rights before any endpoint call or adapter implementation.",
+  "production_effect": "None. No vn_stock.db, production bundle, Dashboard release, provider refresh, valuation, backtest, ranking, sizing or bulk acquisition changed."
+}

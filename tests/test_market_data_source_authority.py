@@ -43,6 +43,21 @@ class SourceAuthorityDecisionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unqualified_commercial_source"):
             authority.assert_decision_policy(snap)
 
+    def test_absent_access_blocks_the_pilot_without_reading_a_secret(self):
+        snap = authority.access_snapshot()
+        self.assertEqual(snap["fiingroup_access_state"], "OWNER_ACQUISITION_REQUIRED")
+        self.assertEqual(snap["license_authority"], "OWNER_CONFIRMATION_REQUIRED")
+        self.assertEqual(snap["fiingroup_raw_price_pilot"], "BLOCKED_EXTERNAL_ACCESS")
+        self.assertFalse(snap["access_audit"]["credentials_read_or_logged"])
+        authority.assert_access_policy()
+
+    def test_acquisition_package_requests_only_hose_daily_history_fields(self):
+        package = authority.OWNER_ACQUISITION_PACKAGE["minimum_data_package"]
+        self.assertEqual(package["endpoint"], "/Market/GetHoseStockv2")
+        self.assertEqual(package["companion_endpoints"], [])
+        self.assertIn("Ticker", package["identity_fields"])
+        self.assertNotIn("fundamentals", str(package).lower())
+
 
 if __name__ == "__main__":
     unittest.main()

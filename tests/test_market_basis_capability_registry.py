@@ -281,6 +281,12 @@ class GenericMarketBasisUnlockMilestone(unittest.TestCase):
         self.assertEqual(selection["raw_price_authority_after_selection"], "PARTIAL")
         self.assertEqual(selection["generic_actionable_price_basis"], "BLOCKED")
 
+    def test_selected_source_records_external_access_without_promoting_authority(self):
+        selection = registry.MARKET_DATA_SOURCE_AUTHORITY_SELECTION
+        self.assertEqual(selection["fiingroup_access_state"], "OWNER_ACQUISITION_REQUIRED")
+        self.assertEqual(selection["license_authority"], "OWNER_CONFIRMATION_REQUIRED")
+        self.assertEqual(selection["market_data_track"], "WAITING_EXTERNAL_ACCESS")
+
     def test_official_raw_observation_carries_source_identity_and_unit(self):
         observation = registry.official_raw_price_observation("HPG", "2024-12-31")
         self.assertEqual(observation["source_id"], "HOSE")

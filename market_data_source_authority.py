@@ -20,6 +20,13 @@ STATUS_REJECTED = "rejected"
 
 PREFERRED_SOURCE_ID = "fiingroup_api_datafeed_hose_stock_v2"
 OWNER_DECISION_REQUIRED = "OWNER_SOURCE_ACQUISITION_DECISION"
+FIINGROUP_ACCESS_STATE = "OWNER_ACQUISITION_REQUIRED"
+LICENSE_AUTHORITY = "OWNER_CONFIRMATION_REQUIRED"
+MARKET_DATA_TRACK = "WAITING_EXTERNAL_ACCESS"
+# Existing canonical P1.5 work is implemented but deliberately not attached to the bundle.
+# Completing that attachment is independent of raw market-data procurement and uses no market
+# source.  This names the existing roadmap sub-item rather than inventing a new phase.
+PARALLEL_UNBLOCKED_NEXT_MILESTONE = "P1.5_TICKER_CAPABILITY_TRUSTED_TICKER_MATRIX_BUNDLE_ATTACHMENT"
 
 # Each status is field-specific.  The selection is not a score: a candidate with an
 # unavailable hard requirement cannot become the source merely because it has more positives.
@@ -111,8 +118,11 @@ OWNER_ACQUISITION_PACKAGE: dict[str, Any] = {
     "product": "FiinGroup API Datafeed /Market/GetHoseStockv2",
     "minimum_data_package": {
         "universe": "HOSE listed equities, beginning with HPG and VNM",
-        "history": "Daily historical records covering at least 2024-12-30 through the qualification date, plus one qualified corporate-action window per selected pilot ticker.",
-        "price_fields": ["Ticker", "TradingDate", "ReferencePrice", "OpenPrice", "ClosePrice", "MatchPrice", "HighestPrice", "LowestPrice", "AveragePrice", "currency_or_price_unit"],
+        "history": "Daily historical records from 2024-01-01 through the qualification date: enough for the 2024-12-31 HPG anchor, adjacent sessions, and already-qualified 2025/2026 event windows. Longer backtest history is a later, separately justified acquisition.",
+        "endpoint": "/Market/GetHoseStockv2",
+        "companion_endpoints": [],
+        "identity_fields": ["Ticker", "TradingDate", "HOSE endpoint identity"],
+        "price_fields": ["ReferencePrice", "OpenPrice", "ClosePrice", "MatchPrice", "HighestPrice", "LowestPrice", "AveragePrice", "currency_or_price_unit"],
         "raw_adjusted_fields": ["ReferencePriceAdjusted", "OpenPriceAdjusted", "ClosePriceAdjusted", "HighestPriceAdjusted", "LowestPriceAdjusted", "RateAdjusted"],
         "volume_fields": ["TotalMatchVolume", "TotalDealVolume", "TotalVolume", "TotalMatchValue", "TotalDealValue", "TotalValue"],
         "provenance_fields": ["HoseStockId", "Status", "CreateDate", "UpdateDate", "source_version_or_dataset_vintage"],
@@ -122,7 +132,8 @@ OWNER_ACQUISITION_PACKAGE: dict[str, Any] = {
         "Historical query semantics, revision policy, dataset vintage/as-of availability, and retention period are documented.",
         "Price unit/currency and volume unit are documented for the contracted product.",
         "TotalVolume treatment of continuous matching, opening/closing auctions, negotiated/put-through, and odd-lot trading is documented.",
-        "The agreement permits retained evidence, internal production use, and the intended redistribution/publication boundary.",
+        "The agreement permits API access, historical retrieval, local retained evidence/cache, derived analytics, and internal production use.",
+        "The agreement specifies allowed Dashboard display and any redistribution/publication restrictions.",
     ],
     "integration_design": "licensed response -> immutable evidence/provenance retention -> market_history.raw (new, source-namespaced) -> capability registry; VCI/KBS remain market_history.adjusted and are never overwritten or used as raw fallback",
     "acceptance_tests": [
@@ -141,6 +152,25 @@ OWNER_ACQUISITION_PACKAGE: dict[str, Any] = {
         "Terms prohibit the required evidence retention or intended production use.",
         "Ticker/session identity, price unit, or raw/adjusted distinction changes between documentation and contracted payload.",
     ],
+}
+
+FIINGROUP_ACCESS_AUDIT: dict[str, Any] = {
+    "access_state": FIINGROUP_ACCESS_STATE,
+    "license_authority": LICENSE_AUTHORITY,
+    "checked_locations": (
+        "project configuration and provider adapters",
+        "project credential/configuration naming conventions",
+        "environment-variable names matching FIIN or DATAFEED",
+        "documented source/license notes",
+    ),
+    "findings": (
+        "No FiinGroup adapter, configured endpoint, credential reference, or FIIN/DATAFEED environment-variable name exists.",
+        "The sole .env.example credential convention is the retired EODHD token and is not reusable for FiinGroup.",
+        "No retained FiinGroup agreement defines historical API, local retention, derived analytics, production, Dashboard, or redistribution rights.",
+    ),
+    "credentials_read_or_logged": False,
+    "network_called": False,
+    "production_adapter_created": False,
 }
 
 
@@ -174,6 +204,32 @@ def decision_snapshot() -> dict[str, Any]:
     }
 
 
+def access_snapshot() -> dict[str, Any]:
+    """Report the configured-access state without reading any secret value."""
+    return {
+        "fiingroup_source_acquisition_milestone": "PASS",
+        "fiingroup_access_state": FIINGROUP_ACCESS_STATE,
+        "license_authority": LICENSE_AUTHORITY,
+        "owner_source_acquisition_package": "COMPLETE",
+        "market_data_track": MARKET_DATA_TRACK,
+        "parallel_unblocked_next_milestone": PARALLEL_UNBLOCKED_NEXT_MILESTONE,
+        "raw_price_authority_source_selected": True,
+        "raw_price_authority": "PARTIAL",
+        "raw_history_mutability": "UNKNOWN",
+        "fiingroup_raw_price_pilot": "BLOCKED_EXTERNAL_ACCESS",
+        "hpg_raw_price_anchor_crosscheck": "BLOCKED",
+        "fiingroup_adjusted_namespace": "BLOCKED_EXTERNAL_ACCESS",
+        "fiingroup_volume_scope_authority": "BLOCKED_EXTERNAL_ACCESS",
+        "vci_trade_type_coverage": "BLOCKED_DATA",
+        "generic_actionable_price_basis": "BLOCKED",
+        "generic_actionable_volume_basis": "BLOCKED",
+        "historical_valuation_unlock": "BLOCKED",
+        "actionable_liquidity_unlock": "BLOCKED",
+        "access_audit": deepcopy(FIINGROUP_ACCESS_AUDIT),
+        "owner_acquisition_package": deepcopy(OWNER_ACQUISITION_PACKAGE),
+    }
+
+
 def assert_decision_policy(snapshot: Mapping[str, Any] | None = None) -> None:
     """Reject a decision that silently treats documentation as active source authority."""
     value = decision_snapshot() if snapshot is None else snapshot
@@ -190,3 +246,17 @@ def assert_decision_policy(snapshot: Mapping[str, Any] | None = None) -> None:
         raise ValueError("selected_raw_semantics_must_remain_documented_not_qualified")
     if not OWNER_ACQUISITION_PACKAGE["contractual_confirmations_required"]:
         raise ValueError("commercial_selection_requires_contractual_confirmations")
+
+
+def assert_access_policy(snapshot: Mapping[str, Any] | None = None) -> None:
+    """Access absence must block the pilot, not manufacture a raw authority or adapter."""
+    value = access_snapshot() if snapshot is None else snapshot
+    if value.get("fiingroup_access_state") != FIINGROUP_ACCESS_STATE:
+        raise ValueError("fiingroup_access_state_must_reflect_configured_access_only")
+    if value.get("license_authority") != LICENSE_AUTHORITY:
+        raise ValueError("license_authority_must_not_be_inferred_from_documentation")
+    if value.get("fiingroup_raw_price_pilot") != "BLOCKED_EXTERNAL_ACCESS":
+        raise ValueError("no_access_must_block_live_qualification")
+    audit = value.get("access_audit") or {}
+    if any(audit.get(key) for key in ("credentials_read_or_logged", "network_called", "production_adapter_created")):
+        raise ValueError("access_audit_claims_forbidden_activity")
