@@ -58,6 +58,15 @@ class SourceAuthorityDecisionTests(unittest.TestCase):
         self.assertIn("Ticker", package["identity_fields"])
         self.assertNotIn("fundamentals", str(package).lower())
 
+    def test_dnse_route_is_pending_and_does_not_change_any_gate(self):
+        snap = authority.access_snapshot()
+        self.assertEqual(snap["dnse_market_data_access"], "PENDING_OWNER_ACCOUNT_ACTIVATION")
+        route = snap["dnse_next_qualification_route"]
+        self.assertFalse(route["network_called"])
+        self.assertFalse(route["credentials_read_or_logged"])
+        self.assertEqual(route["market_basis_effect"], "none_until_retained_qualification_pilot_passes")
+        self.assertEqual(snap["fiingroup_fallback_candidate"], authority.PREFERRED_SOURCE_ID)
+
 
 if __name__ == "__main__":
     unittest.main()

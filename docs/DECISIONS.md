@@ -23,6 +23,25 @@
   `OWNER_CONFIRMATION_REQUIRED`. No source acquisition, adapter, runtime/DB mutation, or
   publication is implied by this decision.
 
+## 2026-08-09 - Pillar A reaches research through a qualification-aware projection
+
+- `research_financial_fact_projection.py` is the only new integration seam. It reads existing
+  canonical shards and projects their exact status, period identity, source/provider, hashes,
+  observation IDs, and any citation/evidence IDs. It does not create a persistent financial
+  store, resolve facts again, substitute periods, average conflicts, or turn null into zero.
+- Existing trusted `financial_canonical` has strict precedence. Pillar A can be selected only
+  for a supported corporate entity with one same-period, consolidated, fully-qualified set of
+  operating cash flow, net income, cash, total interest-bearing debt, and shareholders equity,
+  plus explicit citation/evidence/observation lineage. `provider_reported` stays non-research;
+  conflicts, missing inputs, unknown entities, and unsupported archetypes fail closed.
+- The actual retained store contains 1,493 tickers / 195,552 facts but only two qualified facts,
+  neither a complete existing research set. Therefore the safe additional eligibility result is
+  zero. HPG/VNM retain their trusted-lane behavior; no market gate or recommendation boundary
+  changed.
+- DNSE OpenAPI is documented as `PENDING_OWNER_ACCOUNT_ACTIVATION` for a future bounded HPG/VNM
+  qualification pilot. It is not an active authority and has no market-basis effect. FiinGroup
+  remains the fallback candidate; no provider was called in this decision.
+
 ## 2026-08-08 - Publish Orchestrator Authority Reconciliation
 
 - **`tools/release_orchestrator.py` is the single supported live-publish authority**, for

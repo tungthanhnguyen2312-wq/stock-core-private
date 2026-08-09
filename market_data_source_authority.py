@@ -23,10 +23,33 @@ OWNER_DECISION_REQUIRED = "OWNER_SOURCE_ACQUISITION_DECISION"
 FIINGROUP_ACCESS_STATE = "OWNER_ACQUISITION_REQUIRED"
 LICENSE_AUTHORITY = "OWNER_CONFIRMATION_REQUIRED"
 MARKET_DATA_TRACK = "WAITING_EXTERNAL_ACCESS"
+DNSE_MARKET_DATA_ACCESS = "PENDING_OWNER_ACCOUNT_ACTIVATION"
+DNSE_NEXT_QUALIFICATION_CANDIDATE = "dnse_openapi_market_history"
+# This is a documented future qualification route, not a selected or active authority.
+# FiinGroup remains the existing fallback candidate until an owner-enabled DNSE pilot passes.
+FIINGROUP_FALLBACK_CANDIDATE = PREFERRED_SOURCE_ID
 # P1.5 proved that qualification tiers can reach the bundle without promoting partial or
 # provider-scoped facts.  The next independent work is therefore the canonical-fact-store
 # connection, still bounded by the same fail-closed research rules and independent of access.
 PARALLEL_UNBLOCKED_NEXT_MILESTONE = "CONNECT_PILLAR_A_MARKET_WIDE_CANONICAL_FACTS_TO_RESEARCH_ENGINE"
+
+DNSE_QUALIFICATION_ROUTE: dict[str, Any] = {
+    "candidate_id": DNSE_NEXT_QUALIFICATION_CANDIDATE,
+    "status": DNSE_MARKET_DATA_ACCESS,
+    "source_class": "official_openapi_sdk_pending_owner_access",
+    "documented_capabilities": [
+        "historical_ohlc_by_ticker_resolution_from_to",
+        "historical_trade_by_ticker_board_date_range",
+        "realtime_board_specific_market_data",
+        "board_separation_G1_G4_T1_T3_T4_T6",
+        "closed_ohlc_candles",
+    ],
+    "next_permitted_action": "bounded_dnse_hpg_vnm_qualification_pilot_after_owner_account_activation",
+    "network_called": False,
+    "credentials_read_or_logged": False,
+    "market_basis_effect": "none_until_retained_qualification_pilot_passes",
+    "fiingroup_role": "fallback_source_authority_candidate_not_pursued_in_this_milestone",
+}
 
 # Each status is field-specific.  The selection is not a score: a candidate with an
 # unavailable hard requirement cannot become the source merely because it has more positives.
@@ -212,6 +235,9 @@ def access_snapshot() -> dict[str, Any]:
         "license_authority": LICENSE_AUTHORITY,
         "owner_source_acquisition_package": "COMPLETE",
         "market_data_track": MARKET_DATA_TRACK,
+        "dnse_market_data_access": DNSE_MARKET_DATA_ACCESS,
+        "dnse_next_qualification_route": deepcopy(DNSE_QUALIFICATION_ROUTE),
+        "fiingroup_fallback_candidate": FIINGROUP_FALLBACK_CANDIDATE,
         "parallel_unblocked_next_milestone": PARALLEL_UNBLOCKED_NEXT_MILESTONE,
         "raw_price_authority_source_selected": True,
         "raw_price_authority": "PARTIAL",
@@ -260,3 +286,10 @@ def assert_access_policy(snapshot: Mapping[str, Any] | None = None) -> None:
     audit = value.get("access_audit") or {}
     if any(audit.get(key) for key in ("credentials_read_or_logged", "network_called", "production_adapter_created")):
         raise ValueError("access_audit_claims_forbidden_activity")
+    dnse = value.get("dnse_next_qualification_route") or {}
+    if value.get("dnse_market_data_access") != DNSE_MARKET_DATA_ACCESS:
+        raise ValueError("dnse_access_state_must_remain_owner_pending")
+    if dnse.get("market_basis_effect") != "none_until_retained_qualification_pilot_passes":
+        raise ValueError("dnse_documentation_must_not_open_market_basis")
+    if dnse.get("network_called") or dnse.get("credentials_read_or_logged"):
+        raise ValueError("dnse_pending_route_must_not_call_network_or_read_credentials")

@@ -14,6 +14,19 @@ confirmation are external dependencies; generic raw price, valuation, liquidity,
 backtesting remain blocked. Next independent milestone (not started here):
 `CONNECT_PILLAR_A_MARKET_WIDE_CANONICAL_FACTS_TO_RESEARCH_ENGINE`.
 
+## Connect Pillar A market-wide canonical facts to the research engine (complete 2026-08-09)
+
+Completed as a fail-closed adapter rather than a whole-universe activation. The adapter projects
+existing canonical records into research only at the existing fully-qualified tier, retains
+period/scope/unit/provider/provenance identity, and sends its result through
+`ticker_capability_matrix`. Existing trusted pilot facts have precedence. The measured store
+has two qualified facts only and zero complete corporate research input sets, so no new ticker
+brief is activated. Provider-reported-only, conflicted, partial, missing, unknown, and known
+unsupported archetype states remain separately visible.
+
+DNSE OpenAPI is recorded as the next pending owner-access qualification route; FiinGroup is the
+fallback. Neither route changes generic market-basis gates before a legitimate retained pilot.
+
 ## Active development: two pillars (2026-08-03)
 
 Development has moved off per-ticker financial pilots. Adding a third HPG/VNM-style

@@ -1,4 +1,10 @@
-"""Deterministic Phase 5A bounded cohort selection and research-brief projection."""
+"""Legacy Phase 5A bounded cohort selection and research-brief projection.
+
+New Pillar A work must use ``research_financial_fact_projection`` plus the ticker capability
+matrix as its eligibility authority.  This module remains for explicit backward-compatible
+Phase 5A invocations; it is not called by the Pillar A adapter and must not become a second
+market-wide selection path.
+"""
 from __future__ import annotations
 from typing import Any, Mapping
 from historical_decision_analysis import PILOT_TICKERS, evaluate_historical_decision_analysis

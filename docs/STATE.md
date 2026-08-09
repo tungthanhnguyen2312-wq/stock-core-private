@@ -18,6 +18,27 @@ execution, and backtest gates remain blocked.
 adapter, DB/runtime/generated-artifact change, or publication. The next independent roadmap
 milestone is `CONNECT_PILLAR_A_MARKET_WIDE_CANONICAL_FACTS_TO_RESEARCH_ENGINE`.
 
+## Pillar A research-engine connection (2026-08-09)
+
+`PILLAR_A_RESEARCH_ENGINE_CONNECTION: PASS`. The new read-only
+`research_financial_fact_projection` composes the existing market-wide canonical fact shards
+into source-selection and capability-matrix input; it creates no persistent third store. A
+Pillar A fact can enter the existing historical research input only when the unchanged
+corporate metric set is fully `qualified`, same-period/consolidated, and carries explicit
+citation/evidence/observation lineage. `provider_reported`, `partial`, `conflicted`, null, and
+missing records remain distinct and fail closed. Existing trusted `financial_canonical` facts
+win whenever available, preserving HPG/VNM behavior.
+
+Actual read-only store state: 1,493 tickers, 195,552 facts, 1,492 tickers with facts, 15
+known entity types, and only two qualified facts (HPG/VNM retained earnings). No ticker meets
+the complete admissible Pillar A corporate research set, so additional full research eligibility
+is **0**; this is a successful safety result, not a fallback to provider-reported facts.
+
+Market gates remain unchanged. `DNSE_MARKET_DATA_ACCESS: PENDING_OWNER_ACCOUNT_ACTIVATION` is
+recorded as the documented next qualification route; no credentials, SDK/API/provider calls, or
+pilot occurred. FiinGroup remains a fallback candidate pending a future owner-enabled DNSE
+HPG/VNM qualification pilot.
+
 ## Canonical state lines
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.

@@ -82,6 +82,7 @@ def _semantic_status(source_status: Any, *, absent: bool = False,
         "available": "available", "eligible": "available",
         "eligible_for_analysis": "available", "partially_eligible": "partial",
         "partial": "partial", "partially_qualified": "partial",
+        "provider_reported": "partial", "provider_reported_only": "partial",
         "blocked": "blocked", "allocation_blocked": "blocked",
         "blocked_input": "blocked_input", "unavailable": "unavailable",
         "missing": "unavailable", "insufficient_evidence": "unavailable",
@@ -196,6 +197,8 @@ def build_ticker_capability_matrix(
     qmo_available = qmo_record.get("status") == "available"
     qmo_descriptive = qmo_available and qmo_record.get("descriptive_only") is True
     research = item.get("qualified_research_brief")
+    pillar_projection = item.get("research_financial_fact_projection")
+    pillar_projection_record = _as_mapping(pillar_projection)
     portfolio_raw = item.get("portfolio_risk_analysis")
     portfolio = _as_mapping(portfolio_raw)
     allocation_raw = portfolio.get("allocation_eligibility") if isinstance(portfolio_raw, Mapping) else None
@@ -240,6 +243,11 @@ def build_ticker_capability_matrix(
                 authority="historical_decision_analysis", record=item.get("historical_decision_analysis"),
                 status=historical_eligibility.get("status"), dependencies=["fundamental_quality", "historical_fundamental_brief"],
                 absent_reason="historical_decision_analysis_not_attached"),
+            "pillar_a_research_projection": _capability(
+                authority="research_financial_fact_projection", record=pillar_projection,
+                status=pillar_projection_record.get("status"),
+                dependencies=["canonical_financial_facts", "entity_archetype"],
+                absent_reason="pillar_a_research_projection_not_attached"),
         },
         "market_descriptive": {
             "provider_scoped_price_observations": _capability(
@@ -277,6 +285,11 @@ def build_ticker_capability_matrix(
                                                             status=generic_price["status"], dependencies=["qualified_raw_price", "qualified_volume_scope"]),
         },
         "research": {
+            "pillar_a_historical_research_eligibility": _capability(
+                authority="research_financial_fact_projection", record=pillar_projection,
+                status=pillar_projection_record.get("status"),
+                dependencies=["fully_qualified_corporate_metric_set"],
+                absent_reason="pillar_a_research_projection_not_attached"),
             "qualified_research_brief": _capability(authority="qualified_research_brief", record=research,
                                                       status="available" if isinstance(research, Mapping) else None,
                                                       dependencies=["historical_decision_analysis"],
@@ -302,6 +315,9 @@ def build_ticker_capability_matrix(
             "selected_source_id": authority.get("selected_source_id"),
             "fiingroup_access_state": authority.get("fiingroup_access_state"),
             "license_authority": authority.get("license_authority"),
+            "dnse_market_data_access": authority.get("dnse_market_data_access"),
+            "dnse_next_qualification_candidate": authority.get("dnse_next_qualification_candidate"),
+            "fiingroup_fallback_candidate": authority.get("fiingroup_fallback_candidate"),
         },
         "conflicts": conflicts,
         "summary": {

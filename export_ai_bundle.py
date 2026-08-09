@@ -76,7 +76,7 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
@@ -106,6 +106,11 @@ from qualified_market_observations import evaluate as evaluate_qualified_market_
 from analysis_lane_eligibility import evaluate_ticker_lanes
 from ticker_capability import build_ticker_capability_matrix
 from market_basis_capability_registry import MARKET_DATA_SOURCE_AUTHORITY_SELECTION
+from research_financial_fact_projection import (
+    build_projection as build_research_financial_fact_projection,
+    coverage_summary as research_financial_coverage_summary,
+    select_research_source,
+)
 from distribution_evidence import build_distribution_evidence_for_ticker
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
@@ -2696,6 +2701,36 @@ def attach_canonical_financial_facts(bundle_entries: dict[str, dict], root: Path
                   price_basis_verified=price_basis_verified)
 
 
+def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: Path,
+                                        include: bool) -> dict[str, Any] | None:
+    """Attach the read-only Pillar A research projection and deterministic coverage.
+
+    It uses the existing canonical shard store directly; no fact is copied into a new store,
+    no provider is queried, and no existing trusted ``financial_canonical`` input is replaced.
+    """
+    if not include:
+        return None
+    from canonical_fact_store import _load_state, read_facts
+
+    state = _load_state(root)
+    records = {str(record.get("ticker")): record for record in state.get("tickers") or []}
+    if not records:
+        return None
+    for ticker, entry in bundle_entries.items():
+        record = records.get(str(ticker).upper())
+        if record is None:
+            continue
+        projection = build_research_financial_fact_projection(
+            ticker, read_facts(root, ticker), entity_type=record.get("issuer_entity_type"),
+            entity_authority=record.get("archetype_authority"),
+        )
+        entry["research_financial_fact_projection"] = projection
+        entry["research_financial_source_selection"] = select_research_source(entry, projection)
+    return research_financial_coverage_summary(
+        state.get("tickers") or [], lambda ticker: read_facts(root, ticker),
+    )
+
+
 # ==========================================================================
 # Phase 6A — opt-in fundamental quality evidence wiring (disabled by default)
 # ==========================================================================
@@ -2713,7 +2748,8 @@ def build_fundamental_quality_evidence_for_ticker_safe(ticker: str, entry: Mappi
         return build_fundamental_quality_evidence_for_ticker(
             ticker,
             entity_type=entry.get("entity_type"),
-            financial_canonical=entry.get("financial_canonical"),
+            financial_canonical=((entry.get("research_financial_source_selection") or {}).get("financial_canonical")
+                                 or entry.get("financial_canonical")),
             financial_period_coverage=entry.get("financial_period_coverage"),
             runtime_root=root,
         )
@@ -2737,8 +2773,10 @@ def attach_fundamental_quality_evidence(
         result = build_fundamental_quality_evidence_for_ticker_safe(tk, entry, root)
         if result is not None:
             entry["fundamental_quality_evidence"] = result
+        research_financial = ((entry.get("research_financial_source_selection") or {}).get("financial_canonical")
+                              or entry.get("financial_canonical"))
         entry["historical_capital_structure"] = build_historical_capital_structure_analysis(
-            tk, entry.get("entity_type"), entry.get("financial_canonical"),
+            tk, entry.get("entity_type"), research_financial,
             entry.get("financial_period_coverage"), (entry.get("freshness") or {}).get("financial_statements"), root,
         )
         entry["historical_fundamental_brief"] = build_historical_fundamental_brief(
@@ -2957,7 +2995,8 @@ def attach_analysis_lane_eligibility(
     return bundle_entries
 
 
-def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include: bool) -> dict[str, dict]:
+def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include: bool,
+                                        additional_tickers: Iterable[str] = ()) -> dict[str, dict]:
     """Add Phase 4B's pure historical-only analysis for the three approved pilots.
 
     The feature is opt-in so legacy bundle bytes remain unchanged.  Only the pilot set is
@@ -2965,10 +3004,16 @@ def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include
     """
     if not include:
         return bundle_entries
-    for ticker in sorted(PILOT_TICKERS):
+    allowed = set(PILOT_TICKERS) | {str(ticker).upper() for ticker in additional_tickers}
+    for ticker in sorted(allowed):
         entry = bundle_entries.get(ticker)
         if isinstance(entry, dict):
-            entry["historical_decision_analysis"] = evaluate_historical_decision_analysis(ticker, entry)
+            selected = ((entry.get("research_financial_source_selection") or {}).get("financial_canonical")
+                        or entry.get("financial_canonical"))
+            research_entry = {**entry, "financial_canonical": selected}
+            entry["historical_decision_analysis"] = evaluate_historical_decision_analysis(
+                ticker, research_entry, allow_scaleout=ticker not in PILOT_TICKERS,
+            )
     return bundle_entries
 
 def attach_portfolio_risk_analysis(bundle_entries: dict[str, dict], price_basis: Mapping[str, Any], include: bool) -> dict[str, dict]:
@@ -3040,6 +3085,11 @@ def main() -> int:
                              "EV-EBITDA/P-E/P-B/ROE readiness. Additive only; no legacy field"
                              " is read or written. Not enabled in any default/production"
                              " invocation.")
+    parser.add_argument("--include-pillar-a-research-projection", action="store_true",
+                        help="Opt-in: project existing Pillar A canonical facts into the historical"
+                             " research source-selection contract. Requires no provider call and admits"
+                             " only the existing fully-qualified corporate metric set; provider_reported"
+                             " and conflicted facts remain non-research evidence.")
     parser.add_argument("--include-fundamental-quality-evidence", action="store_true",
                         help="Opt-in, disabled by default (Phase 6A): attach"
                              " tickers[ticker].fundamental_quality_evidence from"
@@ -3282,22 +3332,38 @@ def main() -> int:
             taxonomy_sidecar = None
     attach_distribution_evidence(bundle_entries, runtime_root(), args.include_analysis_lane_eligibility)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
-    attach_fundamental_quality_evidence(bundle_entries, runtime_root(), args.include_fundamental_quality_evidence,
-                                        taxonomy_sidecar=taxonomy_sidecar)
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default
     # bundle -- and therefore the exact-session proof that hash-binds it -- is unchanged.
     attach_canonical_financial_facts(bundle_entries, runtime_root(),
-                                     args.include_canonical_financial_facts,
+                                     args.include_canonical_financial_facts or args.include_pillar_a_research_projection,
                                      session_date=latest_session,
                                      price_basis_verified=price_basis.get("price_basis_verified") is True)
-    attach_historical_decision_analysis(bundle_entries, args.include_historical_decision_analysis)
+    pillar_a_research_coverage = attach_pillar_a_research_projection(
+        bundle_entries, runtime_root(), args.include_pillar_a_research_projection,
+    )
+    pillar_a_eligible_tickers = [
+        ticker for ticker, entry in bundle_entries.items()
+        if isinstance(entry, Mapping)
+        and isinstance(entry.get("research_financial_fact_projection"), Mapping)
+        and entry["research_financial_fact_projection"].get("research_eligible") is True
+    ]
+    attach_fundamental_quality_evidence(bundle_entries, runtime_root(),
+                                        args.include_fundamental_quality_evidence or args.include_pillar_a_research_projection,
+                                        taxonomy_sidecar=taxonomy_sidecar)
+    attach_historical_decision_analysis(bundle_entries,
+                                        args.include_historical_decision_analysis or args.include_pillar_a_research_projection,
+                                        additional_tickers=pillar_a_eligible_tickers)
     attach_portfolio_risk_analysis(bundle_entries, price_basis, args.include_portfolio_risk_analysis)
     attach_qualified_market_observations(bundle_entries, args.include_qualified_market_observations)
     scaleout_coverage = attach_historical_scaleout(bundle_entries, price_basis) if args.include_historical_scaleout else None
-    if args.include_qualified_research_brief or args.include_qualified_research_delta:
-        for ticker in sorted(PILOT_TICKERS):
-            if isinstance(bundle_entries.get(ticker),dict): bundle_entries[ticker]["qualified_research_brief"]=build_qualified_research_brief(ticker,bundle_entries[ticker])
+    if args.include_qualified_research_brief or args.include_qualified_research_delta or args.include_pillar_a_research_projection:
+        brief_tickers = (set(PILOT_TICKERS) | set(pillar_a_eligible_tickers)) & set(bundle_entries)
+        for ticker in sorted(brief_tickers):
+            entry = bundle_entries.get(ticker)
+            eligibility = ((entry or {}).get("historical_decision_analysis") or {}).get("eligibility", {})
+            if isinstance(entry, dict) and eligibility.get("status") in {"eligible", "partially_eligible"}:
+                entry["qualified_research_brief"] = build_qualified_research_brief(ticker, entry)
     if args.include_qualified_research_delta:
         if bool(args.qualified_research_delta_previous) == bool(args.previous_qualified_research_snapshot):
             parser.error("--include-qualified-research-delta requires exactly one explicit previous bundle or previous snapshot ID")
@@ -3357,6 +3423,8 @@ def main() -> int:
         "market_breadth_freshness": breadth_freshness,
         "macro_snapshot": macro_records,
         "macro_freshness": macro_freshness,
+        **({"pillar_a_research_coverage": pillar_a_research_coverage}
+           if pillar_a_research_coverage is not None else {}),
         **({"historical_scaleout_coverage": scaleout_coverage} if scaleout_coverage is not None else {}),
         "tickers": bundle_entries,
         "opportunity_ranking": opportunity_ranking,
