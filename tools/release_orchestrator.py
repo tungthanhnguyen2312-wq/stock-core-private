@@ -203,9 +203,7 @@ def orchestrate(args: argparse.Namespace) -> int:
         if group in ("trusted-ai", "all") and args.generate:
             generate_invoked = True
             cmd_generate = [python_exe, str(producer_dir / "tools" / "operate_stocklookup.py"),
-                            "--runtime-root", str(backend_dir)]
-            if live:
-                cmd_generate.append("--execute")
+                            "--runtime-root", str(backend_dir), "--execute"]
             if args.governed_official_evidence_root:
                 cmd_generate += ["--governed-official-evidence-root", str(args.governed_official_evidence_root)]
             if args.research_changes_v2_baseline:
