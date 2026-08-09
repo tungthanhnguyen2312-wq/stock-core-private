@@ -37,7 +37,8 @@ is **0**; this is a successful safety result, not a fallback to provider-reporte
 Market gates remain unchanged. `DNSE_MARKET_DATA_ACCESS: PENDING_OWNER_ACCOUNT_ACTIVATION` is
 recorded as the documented next qualification route; no credentials, SDK/API/provider calls, or
 pilot occurred. FiinGroup remains a fallback candidate pending a future owner-enabled DNSE
-HPG/VNM qualification pilot.
+HPG/VNM qualification pilot. The next canonical milestone is
+`DNSE_HPG_VNM_MARKET_DATA_QUALIFICATION_PILOT`, blocked on owner account activation.
 
 ## Canonical state lines
 

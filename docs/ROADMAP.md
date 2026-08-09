@@ -26,6 +26,8 @@ unsupported archetype states remain separately visible.
 
 DNSE OpenAPI is recorded as the next pending owner-access qualification route; FiinGroup is the
 fallback. Neither route changes generic market-basis gates before a legitimate retained pilot.
+The next canonical milestone is `DNSE_HPG_VNM_MARKET_DATA_QUALIFICATION_PILOT`, blocked until
+the owner activates legitimate DNSE API access.
 
 ## Active development: two pillars (2026-08-03)
 
