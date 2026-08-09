@@ -44,9 +44,10 @@
         "ex_right_notice",
         "listing_change_notice",
         "amendment_or_supersession_notice",
-        "official_exchange_annual_trading_statistics"
+        "official_exchange_annual_trading_statistics",
+        "official_exchange_daily_trading_summary"
       ],
-      "discovery_path": "operator-supplied finite listing or detail URLs only; no pagination, no search, no link following. One bounded official-search-engine locator may be retained when a milestone explicitly authorizes official exchange trading-statistics discovery; the retained official URL and bytes, never the search snippet, are the authority.",
+      "discovery_path": "operator-supplied finite listing or detail URLs only; no pagination, no search, no link following. One bounded official-search-engine locator may be retained when a milestone explicitly authorizes official exchange trading-statistics discovery, including a bounded daily-trading-summary route qualification; the retained official URL and bytes, never the search snippet, are the authority.",
       "requests_per_minute": 6,
       "min_request_interval_seconds": 10,
       "terms_considerations": "Public disclosure pages. Exchange notices are published for investor use; retention is for evidence provenance, not redistribution.",

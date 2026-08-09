@@ -249,8 +249,29 @@ class GenericMarketBasisUnlockMilestone(unittest.TestCase):
         self.assertEqual(registry.RAW_PRICE_NAMESPACE_INSPECTION["adjust_vocabulary_matches"], 0)
         self.assertEqual(
             registry.RAW_PRICE_NAMESPACE_INSPECTION["official_sources_with_price_bearing_document_types"],
-            ("hose:official_exchange_annual_trading_statistics",),
+            (
+                "hose:official_exchange_annual_trading_statistics",
+                "hose:official_exchange_daily_trading_summary",
+            ),
         )
+
+    def test_daily_summary_route_is_a_precise_terminal_schema_blocker(self):
+        self.assertEqual(registry.OFFICIAL_DAILY_TICKER_SESSION_ROUTE_MILESTONE, "TERMINAL_BLOCKER")
+        self.assertEqual(
+            registry.OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE,
+            "BLOCKED_NONCONFORMING_SUMMARY_ONLY",
+        )
+        route = registry.OFFICIAL_DAILY_ROUTE_QUALIFICATION
+        self.assertEqual(route["daily_raw_price_observations_added"], 0)
+        self.assertEqual(route["identity_fields"]["price"], "absent for individual equities; 'Closing value' is an index field")
+
+    def test_daily_summary_finding_does_not_reopen_generic_raw_price(self):
+        gap = {row["capability"]: row for row in registry.generic_unlock_gap_table()}["raw_as_traded_price"]
+        self.assertEqual(
+            gap["missing_evidence"],
+            "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY",
+        )
+        self.assertEqual(registry.RAW_AS_TRADED_PRICE_AUTHORITY, "PARTIAL")
 
     def test_official_raw_observation_carries_source_identity_and_unit(self):
         observation = registry.official_raw_price_observation("HPG", "2024-12-31")

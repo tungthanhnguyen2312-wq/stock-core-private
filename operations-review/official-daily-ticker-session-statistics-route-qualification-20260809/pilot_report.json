@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0.0",
+  "milestone": "PILLAR_B_OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_QUALIFICATION",
+  "milestone_state": "TERMINAL_BLOCKER",
+  "route": {
+    "source_id": "hose",
+    "authority": "Ho Chi Minh City Stock Exchange",
+    "document_type": "official_exchange_daily_trading_summary",
+    "route_status": "BLOCKED_NONCONFORMING_SUMMARY_ONLY",
+    "terminal_blocker": "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY",
+    "discovery_scope": "one bounded official-search-engine locator pass restricted to hsx.vn/staticfile.hsx.vn; retained official bytes are the authority",
+    "reproducibility": "date-labelled staticfile PDFs are retainable and content-addressed, but they are not a ticker/date query route"
+  },
+  "retained_documents": [
+    {
+      "ticker_request_label": "VNM",
+      "session_date": "2026-02-06",
+      "document_id": "a01f738c42cf2c5c3881c282e93b9b8613973dc197cbebcee66c855d20e83d3f",
+      "sha256": "b664b2eb670b82737fd3bce3116d598a0680ecf80561037e6576d3b0906b0b10",
+      "url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2437581/20260206%20Tong%20hop%20thong%20tin%20giao%20dich.pdf",
+      "raw_artifact": "documents/VNM/2026/official_exchange_daily_trading_summary/b664b2eb670b82737fd3bce3116d598a0680ecf80561037e6576d3b0906b0b10.pdf"
+    },
+    {
+      "ticker_request_label": "HPG",
+      "session_date": "2026-02-13",
+      "document_id": "4b7a3a354d432cb2a679f1b04a6c6defbb3875238f8d679f94ad1a469f3d4875",
+      "sha256": "ec3eb209d131e93f33fb0f202974dcaba6cd0dfd7952ddd2eee97a51fb395ddb",
+      "url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2439241/20260213%20Tong%20hop%20thong%20tin%20giao%20dich.pdf",
+      "raw_artifact": "documents/HPG/2026/official_exchange_daily_trading_summary/ec3eb209d131e93f33fb0f202974dcaba6cd0dfd7952ddd2eee97a51fb395ddb.pdf"
+    }
+  ],
+  "schema_findings": {
+    "identity": "Each PDF names HOSE and a Date, but identifies equities only in selective top-five tables; it is not a requested-ticker route.",
+    "price": "No named-equity close, last, reference, open, high, low, or average field exists. 'Closing value' is present only for indices and cannot be substituted for an equity close.",
+    "volume": "The PDF explicitly distinguishes market-wide Order matching, Put-through, and Total. The ticker tables expose top-five volume only, with no ticker-level matching/put-through/total decomposition.",
+    "HPG": "HPG is present in top-volume tables on both retained sessions, which confirms the selective volume-table semantics but provides no HPG price.",
+    "VNM": "The retained 2026-02-06 document contains no VNM equity ticker-session statistic; the visible VNM string occurs in a covered-warrant identifier, not a VNM equity price record."
+  },
+  "crosschecks": {
+    "HPG_2024_12_31": "Existing HOSE Annual Report 2024 observation remains 26,650 VND/share. The daily-summary surface has no HPG close field and no demonstrated 2024 historical URL, so it cannot independently cross-check that observation.",
+    "provider_adjusted": "No raw/adjusted factor or price reconciliation is performed from these summaries. The prior HPG official 26,650 versus frozen VCI 19,830 comparison remains separately namespaced only."
+  },
+  "gates": {
+    "raw_as_traded_price_authority": "PARTIAL_UNCHANGED",
+    "raw_price_historical_stability": "BLOCKED_NONCONFORMING_DAILY_SUMMARY",
+    "vci_trade_type_coverage": "BLOCKED_DATA_UNCHANGED",
+    "generic_actionable_price_basis": "BLOCKED",
+    "generic_actionable_volume_basis": "BLOCKED",
+    "historical_valuation_unlock": "BLOCKED",
+    "actionable_liquidity_unlock": "BLOCKED"
+  },
+  "production_effect": "None. No runtime database, bundle, Dashboard, provider refresh, valuation, backtest, ranking, sizing, or deployment path was modified."
+}

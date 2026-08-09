@@ -54,6 +54,16 @@ capitalisation and therefore waits on pillar B.
   price and volume gates remain blocked; KBS trade scope remains partial. No valuation,
   backtesting, ranking, sizing, runtime, or Dashboard output changed. Evidence:
   `operations-review/official-exchange-raw-price-volume-pilot-20260809/`.
+- **Pillar B official daily ticker/session statistics route qualification — TERMINAL BLOCKER
+  (2026-08-09).** Two first-party HOSE date-labelled `TỔNG HỢP THÔNG TIN GIAO DỊCH` / Trading
+  Summary PDFs were retained through the approved source registry (2026-02-06 and 2026-02-13).
+  They are reproducible official documents, but not a ticker/session EOD route: `Closing value`
+  is an index field; no named-equity close/last/reference/open/high/low/average exists; equity
+  data is only selective top-five volume. `Order matching`/`Put-through`/`Total` are explicit
+  only at market aggregate, not ticker/session scope. The precise blocker is
+  `OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY`; no raw daily
+  observation, VCI reconciliation, valuation, or liquidity capability is opened. Evidence:
+  `operations-review/official-daily-ticker-session-statistics-route-qualification-20260809/`.
 - **P0-Z KBS empirical basis and capability relaxation shipped 2026-08-04 — PARTIAL.** One
   previously closed lane reopened, and only one. Phase 1C was right that KBS publishes no
   semantic metadata and wrong to conclude the fields were unusable; the premise is retained,

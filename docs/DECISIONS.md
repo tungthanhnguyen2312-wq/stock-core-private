@@ -934,3 +934,22 @@ Reopening requires an explicit owner decision.
   ticker/session volume. It cannot be numerically reconciled to VCI daily `v`, so it changes
   no VCI category state. This is a source-granularity blocker, not a reason to infer an
   aggregate composition from a column position or approximate equality.
+
+## 2026-08-09 - A daily exchange summary is not automatically daily ticker statistics
+
+- A bounded official-only locator pass retained two HOSE `TỔNG HỢP THÔNG TIN GIAO DỊCH` / Trading
+  Summary PDFs. The retained bytes are authentic, stable, date-labelled first-party documents;
+  that establishes artifact reproducibility, not the requested data schema.
+- Both samples call their index figures `Closing value`. They contain no individual-equity
+  close/last/reference/open/high/low/average field. HPG appears in selective top-five volume
+  tables, but this supplies no price. The VNM-labelled retained sample contains no VNM equity
+  ticker-session observation; a covered-warrant code is not evidence for its underlying equity.
+- The reports explicitly label `Order matching`, `Put-through`, and `Total`, but only for the
+  full market. Their ticker tables are top-five volume lists without ticker-level trade-type
+  components. Do not allocate market totals to a ticker, infer the omitted ticker universe, or
+  compare those aggregates to VCI daily volume.
+- The correct terminal status is
+  `OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY`. It replaces the
+  less precise “route unavailable” gap, but opens no capability: the one-date HPG annual-report
+  raw observation remains separately namespaced, historical raw stability is blocked, and no
+  raw/adjusted factor is inferred.

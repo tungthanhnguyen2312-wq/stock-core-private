@@ -1,0 +1,47 @@
+{
+  "records": [
+    {
+      "acquisition_status": "retained",
+      "canonical_url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2439241/20260213%20Tong%20hop%20thong%20tin%20giao%20dich.pdf",
+      "content_length": 157219,
+      "content_type": "application/pdf",
+      "discovery_provenance": "bounded official-search-engine locator authorized for daily ticker/session route qualification",
+      "document_class": "official_exchange_daily_trading_summary",
+      "document_id": "4b7a3a354d432cb2a679f1b04a6c6defbb3875238f8d679f94ad1a469f3d4875",
+      "extraction_status": "ready_for_direct_citations",
+      "final_url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2439241/20260213%20Tong%20hop%20thong%20tin%20giao%20dich.pdf",
+      "http_status": 200,
+      "observed_at": "2026-08-09T06:00:00Z",
+      "published_at": "2026-02-13",
+      "relative_path": "documents/HPG/2026/official_exchange_daily_trading_summary/ec3eb209d131e93f33fb0f202974dcaba6cd0dfd7952ddd2eee97a51fb395ddb.pdf",
+      "reporting_period": "2026",
+      "sha256": "ec3eb209d131e93f33fb0f202974dcaba6cd0dfd7952ddd2eee97a51fb395ddb",
+      "source_authority": "Ho Chi Minh City Stock Exchange",
+      "source_id": "hose",
+      "supersedes_document_id": null,
+      "ticker": "HPG"
+    },
+    {
+      "acquisition_status": "retained",
+      "canonical_url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2437581/20260206%20Tong%20hop%20thong%20tin%20giao%20dich.pdf",
+      "content_length": 144023,
+      "content_type": "application/pdf",
+      "discovery_provenance": "bounded official-search-engine locator authorized for daily ticker/session route qualification",
+      "document_class": "official_exchange_daily_trading_summary",
+      "document_id": "a01f738c42cf2c5c3881c282e93b9b8613973dc197cbebcee66c855d20e83d3f",
+      "extraction_status": "ready_for_direct_citations",
+      "final_url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2437581/20260206%20Tong%20hop%20thong%20tin%20giao%20dich.pdf",
+      "http_status": 200,
+      "observed_at": "2026-08-09T06:00:00Z",
+      "published_at": "2026-02-06",
+      "relative_path": "documents/VNM/2026/official_exchange_daily_trading_summary/b664b2eb670b82737fd3bce3116d598a0680ecf80561037e6576d3b0906b0b10.pdf",
+      "reporting_period": "2026",
+      "sha256": "b664b2eb670b82737fd3bce3116d598a0680ecf80561037e6576d3b0906b0b10",
+      "source_authority": "Ho Chi Minh City Stock Exchange",
+      "source_id": "hose",
+      "supersedes_document_id": null,
+      "ticker": "VNM"
+    }
+  ],
+  "schema_version": "1.2.0"
+}

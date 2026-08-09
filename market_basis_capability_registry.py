@@ -463,7 +463,7 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
             "(semantic_evidence_bridge._SUPPORTED_ADJUSTMENT_STATUSES) is the legacy, "
             "already-superseded raw_as_quoted_no_adjustment_applied label."
         ),
-        "missing_evidence": "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_UNAVAILABLE",
+        "missing_evidence": "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY",
         "required_authority": (
             "A daily official exchange raw-tick/settlement-price route, or a documented "
             "first-party provider adjustment methodology. The retained HOSE annual report "
@@ -473,8 +473,10 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
         "next_bounded_action": (
             "Pillar B: qualify one deterministic official HOSE daily ticker/session "
             "trading-statistics route whose retained bytes name the price and volume "
-            "categories. The precise present blocker is "
-            "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_UNAVAILABLE."
+            "categories. The bounded official daily-summary route was retained and is "
+            "nonconforming: it has no ticker closing-price field and only aggregate "
+            "order-matching/put-through volume. The precise present blocker is "
+            "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY."
         ),
     },
     {
@@ -613,14 +615,67 @@ RAW_PRICE_NAMESPACE_INSPECTION: dict[str, Any] = {
     "official_sources_checked": ("hose", "hnx", "vsdc", "issuer_ir"),
     "official_sources_with_price_bearing_document_types": (
         "hose:official_exchange_annual_trading_statistics",
+        "hose:official_exchange_daily_trading_summary",
     ),
     "registered_future_candidates_with_a_locator": (),
     "conclusion": (
         "No installed provider adapter distinguishes raw from adjusted. A bounded official "
-        "HOSE annual-statistics artifact now supplies one explicitly dated closing-price "
-        "observation, but not a daily historical series or an event-window route. It proves "
-        "a partial official raw namespace, not a generic price authority."
+        "HOSE annual-statistics artifact supplies one explicitly dated closing-price "
+        "observation. A retained two-session HOSE daily Trading Summary surface has date, "
+        "aggregate market matched/put-through totals, and selective top-five ticker volumes, "
+        "but no ticker closing-price/last-price field and no ticker-level trade-type totals. "
+        "It is not a deterministic ticker/session statistics route. The annual artifact "
+        "therefore remains a partial official raw namespace, not a generic price authority."
     ),
+}
+
+#: Bounded qualification result for HOSE's retained ``TỔNG HỢP THÔNG TIN GIAO DỊCH``
+#: (Trading Summary) PDFs.  This is deliberately a terminal *schema* result, not a network
+#: error: the source is first-party, stable and date-labelled, but cannot identify a ticker's
+#: daily close.  The only prices called "Closing value" are index values.  HPG appears in the
+#: top-volume tables for both sampled sessions; VNM's retained summary is still not a VNM
+#: equity price observation (its VNM occurrence is a covered-warrant identifier).  Neither
+#: sample contains ``Giá đóng cửa`` / Close for a named equity.  Aggregate matched and
+#: put-through totals must not be projected onto any ticker.
+OFFICIAL_DAILY_TICKER_SESSION_ROUTE_MILESTONE = "TERMINAL_BLOCKER"
+OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE = "BLOCKED_NONCONFORMING_SUMMARY_ONLY"
+OFFICIAL_DAILY_TICKER_SESSION_ROUTE_BLOCKER = (
+    "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_NONCONFORMING_SUMMARY_ONLY"
+)
+OFFICIAL_DAILY_ROUTE_QUALIFICATION: dict[str, Any] = {
+    "source_id": "HOSE",
+    "authority": "Ho Chi Minh City Stock Exchange",
+    "document_type": "official_exchange_daily_trading_summary",
+    "route_state": OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE,
+    "blocker": OFFICIAL_DAILY_TICKER_SESSION_ROUTE_BLOCKER,
+    "stable_artifact_route": "retained_staticfile_pdf_by_published_session",
+    "sampled_sessions": (
+        {
+            "trading_session_date": "2026-02-06",
+            "document_id": "a01f738c42cf2c5c3881c282e93b9b8613973dc197cbebcee66c855d20e83d3f",
+            "sha256": "b664b2eb670b82737fd3bce3116d598a0680ecf80561037e6576d3b0906b0b10",
+        },
+        {
+            "trading_session_date": "2026-02-13",
+            "document_id": "4b7a3a354d432cb2a679f1b04a6c6defbb3875238f8d679f94ad1a469f3d4875",
+            "sha256": "ec3eb209d131e93f33fb0f202974dcaba6cd0dfd7952ddd2eee97a51fb395ddb",
+        },
+    ),
+    "identity_fields": {
+        "exchange": "HOSE publication heading",
+        "session_date": "Ngày / Date",
+        "ticker": "Top-five tables only; not a requested-ticker endpoint",
+        "price": "absent for individual equities; 'Closing value' is an index field",
+    },
+    "volume_fields": {
+        "market_total": ("Khớp lệnh / Order matching", "Thỏa thuận / Put-through", "Tổng / Total"),
+        "ticker_total": "top-five volume only",
+        "ticker_trade_type_breakdown": "absent",
+    },
+    "qualification_result": "reproducible_first_party_document_but_not_ticker_session_price_or_volume_schema",
+    "daily_raw_price_observations_added": 0,
+    "historical_or_event_window_route": "not_demonstrated",
+    "hpg_2024_12_31_crosscheck": "existing_annual_report_only; no_daily_summary_close_field",
 }
 
 # The sole official raw observation retained by the bounded milestone.  It is deliberately

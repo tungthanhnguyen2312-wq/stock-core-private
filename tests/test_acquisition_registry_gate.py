@@ -155,6 +155,16 @@ class VocabularyTests(unittest.TestCase):
         self.assertEqual(result["outcomes"][0]["state"], "retained")
         self.assertEqual(fetcher.urls, ["https://staticfile.hsx.vn/annual-statistics.pdf"])
 
+    def test_bounded_daily_trading_summary_type_is_host_scoped(self) -> None:
+        result, fetcher = run([
+            spec(
+                document_class="official_exchange_daily_trading_summary",
+                canonical_url="https://staticfile.hsx.vn/daily-trading-summary.pdf",
+            )
+        ])
+        self.assertEqual(result["outcomes"][0]["state"], "retained")
+        self.assertEqual(fetcher.urls, ["https://staticfile.hsx.vn/daily-trading-summary.pdf"])
+
 
 if __name__ == "__main__":
     unittest.main()
