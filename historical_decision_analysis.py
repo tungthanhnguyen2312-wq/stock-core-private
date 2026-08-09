@@ -260,7 +260,7 @@ def _scenarios(eligible: bool, facts: list[dict[str, Any]], dimensions: Mapping[
     return {"bear": bear, "base": base, "bull": bull}
 
 
-def evaluate_historical_decision_analysis(ticker: str, entry: Mapping[str, Any] | None) -> dict[str, Any]:
+def evaluate_historical_decision_analysis(ticker: str, entry: Mapping[str, Any] | None, *, allow_scaleout: bool = False) -> dict[str, Any]:
     """Build one deterministic historical decision-support result from a bundle entry."""
     ticker = str(ticker).upper()
     source = _mapping(entry)
@@ -272,7 +272,7 @@ def evaluate_historical_decision_analysis(ticker: str, entry: Mapping[str, Any] 
     capital = _mapping(source.get("historical_capital_structure"))
 
     blocking: list[str] = []
-    if ticker not in PILOT_TICKERS:
+    if ticker not in PILOT_TICKERS and not allow_scaleout:
         blocking.append("ticker_not_in_phase_4b_pilot")
     if entity_type not in {"corporate", "bank"}:
         blocking.append("entity_type_not_supported_for_historical_decision_engine")

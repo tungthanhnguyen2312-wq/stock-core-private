@@ -44,10 +44,10 @@ def _liquidity(basis:Mapping[str,Any])->dict[str,Any]:
             "missing_or_unqualified_inputs":[x for x in ("price_basis_verified" if not price_verified else None,"volume_basis_verified" if not volume_verified else None,"qualified_market_composition") if x],
             "reason_codes":reasons,"metrics":{},"unlock_conditions":["Qualified price basis, volume basis, and market-composition contract."]}
 
-def evaluate_portfolio_risk_analysis(ticker:str,entry:Mapping[str,Any]|None,price_basis:Mapping[str,Any]|None)->dict[str,Any]:
+def evaluate_portfolio_risk_analysis(ticker:str,entry:Mapping[str,Any]|None,price_basis:Mapping[str,Any]|None,*,allow_scaleout:bool=False)->dict[str,Any]:
     ticker=str(ticker).upper(); e=m(entry); phase=m(e.get("historical_decision_analysis")); basis=m(price_basis); entity=str(e.get("entity_type") or "unknown")
     blocked=[]
-    if ticker not in PILOTS: blocked.append("ticker_not_in_phase_4c_pilot")
+    if ticker not in PILOTS and not allow_scaleout: blocked.append("ticker_not_in_phase_4c_pilot")
     if phase.get("eligibility",{}).get("status") not in {"eligible","partially_eligible"}: blocked.append("phase_4b_not_eligible")
     if entity not in {"corporate","bank"}: blocked.append("entity_type_unsupported")
     fundamental=_fundamental(ticker,phase,entity) if not blocked else {"aggregate_posture":"insufficient_evidence","dimensions":{},"source_risk_ids":[],"missing_dimensions":[]}
