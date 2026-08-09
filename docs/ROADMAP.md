@@ -1,5 +1,15 @@
 # Stock Lookup roadmap
 
+## Bounded official financial evidence scale-out (partial 2026-08-09)
+
+`BOUNDED_OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT: PARTIAL`. PNJ and PVD FY2024 audited
+consolidated issuer artifacts were retained; FPT's exact issuer filing URL returned 404. The two
+retained PDFs are scanned/textless, so no metric-level citation, qualification, or research
+transition was fabricated. PAN remains qualified and HPG/VNM remain trusted controls. The
+issuer-host registry was tightened by enumerated, issuer-page-backed domains only.
+
+Next independent Pillar A milestone: `ANNUAL_FINANCIAL_EVIDENCE_MATERIALIZATION_HARDENING`.
+
 ## Canonical financial source authority decision (complete 2026-08-09)
 
 `CANONICAL_FINANCIAL_SOURCE_AUTHORITY_DECISION: PASS`. Issuer IR audited annual consolidated

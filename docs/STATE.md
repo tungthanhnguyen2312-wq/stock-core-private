@@ -3,6 +3,16 @@
 Last verified: **2026-08-03**, by an end-to-end production run of the supported operating
 command against `dashboard-runtime` (reference session `2026-07-30`).
 
+## Bounded official financial evidence scale-out (2026-08-09)
+
+`BOUNDED_OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT: PARTIAL`. Checkpoint `a0759e3` preserved the
+completed PAN source-authority vertical slice. PNJ and PVD then retained their issuer-owned
+FY2024 consolidated statements (PVD explicitly audited); FPT's exact issuer filing returned
+404. PNJ/PVD are scan-only `needs_ocr` artifacts, so no citations, qualified facts, or new
+research eligibility were created. The issuer registry contains only the demonstrated PAN,
+PNJ, FPT, and PVD domains/storage hosts, and the evidence bridge now refuses cross-ticker
+artifact reuse. No DB, provider, market gate, or generated runtime publication changed.
+
 ## Canonical annual financial source authority (2026-08-09)
 
 `CANONICAL_FINANCIAL_SOURCE_AUTHORITY_DECISION: PASS`. The selected authority is an issuer IR

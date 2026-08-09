@@ -125,9 +125,17 @@
         "www.vietcombank.com.vn",
         "vietcombank.com.vn",
         "www.ssi.com.vn",
-        "ssi.com.vn"
+        "ssi.com.vn",
+        "storage.thepangroup.vn",
+        "www.pnj.com.vn",
+        "pnj.com.vn",
+        "cdn.pnj.io",
+        "fpt.com",
+        "www.fpt.com",
+        "www.pvdrilling.com.vn",
+        "pvdrilling.com.vn"
       ],
-      "host_admission_rule": "An issuer host is admitted only when a retained official citation already evidences it, per docs/DECISIONS.md 2026-08-02 'Bounded official-event locator'. This list is exactly the set already evidenced by operations-review/official-document-acquisition-allowlist-20260730.json and the retained acquisition manifests.",
+      "host_admission_rule": "An issuer host is admitted only when retained official evidence, or a bounded issuer IR page that directly links the exact filing, evidences it. `storage.thepangroup.vn` is the existing retained PAN FY2024 filing host. PNJ's official financial-reports page directly links `cdn.pnj.io` FY2024 consolidated statements; FPT's official IR report page and attempted FY2024 issuer filing are on `fpt.com`; PV Drilling's official financial-statements page lists its FY2024 audited consolidated statement on `www.pvdrilling.com.vn`. This is an enumerated evidence relationship, not a wildcard for cloud/CDN hosts; see docs/annual_financial_source_authority_decision.md and the 2026-08-09 scale-out decision.",
       "document_types": [
         "corporate_action_notice",
         "agm_document_or_resolution",

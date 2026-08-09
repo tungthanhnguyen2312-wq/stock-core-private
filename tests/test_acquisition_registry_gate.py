@@ -166,5 +166,26 @@ class VocabularyTests(unittest.TestCase):
         self.assertEqual(fetcher.urls, ["https://staticfile.hsx.vn/daily-trading-summary.pdf"])
 
 
+class IssuerAnnualScaleoutGovernanceTests(unittest.TestCase):
+    def test_only_explicitly_attributed_pnj_and_fpt_hosts_are_admitted(self) -> None:
+        reg = registry.load_registry()
+        for ticker, url in (
+            ("PNJ", "https://cdn.pnj.io/images/quan-he-co-dong/2024/fy2024.pdf"),
+            ("FPT", "https://fpt.com/-/media/project/fpt-corporation/fpt/ir/fy2024.pdf"),
+            ("PVD", "https://www.pvdrilling.com.vn/Data/Sites/1/media/qhcd/bao-cao-tai-chinh/2024/fy2024.pdf"),
+        ):
+            result, fetcher = run([spec(ticker=ticker, source_id="issuer_ir",
+                                        document_class="audited_annual_financial_statements",
+                                        reporting_period="2024", canonical_url=url)], reg=reg)
+            self.assertEqual(result["outcomes"][0]["state"], "retained")
+            self.assertEqual(fetcher.urls, [url])
+        refused, fetcher = run([spec(ticker="PNJ", source_id="issuer_ir",
+                                     document_class="audited_annual_financial_statements",
+                                     reporting_period="2024",
+                                     canonical_url="https://unrelated-cloud.example/fy2024.pdf")], reg=reg)
+        self.assertEqual(fetcher.urls, [])
+        self.assertEqual(refused["outcomes"][0]["reason"], registry.REASON_HOST_NOT_ALLOWED)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,19 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - Bounded official annual-evidence scale-out is materialization-blocked
+
+- PAN's source-authority slice was checkpointed first as `a0759e3`. The bounded cohort then
+  considered PNJ, FPT, and PVD only. PNJ and PVD each supplied an issuer-attributed FY2024
+  consolidated statement, retained immutably under the governed evidence contract; FPT's exact
+  issuer statement URL returned 404 and was not retried through guessed variants.
+- PNJ and PVD have no direct text layer. Their visible covers confirm the intended annual,
+  consolidated identity (and PVD audit), but no values or citations were inferred. This is an
+  evidence-materialization blocker, not a provider fallback or a reason to weaken policy.
+- The issuer registry now enumerates PAN's existing storage host and the exact PNJ/FPT/PVD
+  issuer-linked hosts. It remains a closed host list. Financial-identity verification also
+  rejects cross-ticker artifact reuse. See `annual_financial_evidence_scaleout.md`.
+
 ## 2026-08-09 - Canonical annual financial source authority selected
 
 - The authoritative scalable class is issuer IR **audited annual consolidated financial

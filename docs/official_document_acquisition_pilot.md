@@ -1,6 +1,11 @@
 # Official corporate document acquisition pilot
 
-`official_document_acquisition.py` is a Producer-only, bounded intake contract for HPG, VNM, VCB, SSI, and PAN. It accepts an explicit caller-supplied finite URL list for FY2023–FY2026 only; it does not crawl, poll, infer URLs, or write a runtime root.
+The bounded FY2024 annual-evidence cohort extends the explicit ticker vocabulary to PNJ and FPT.
+Their requests remain finite operator-supplied URLs; the registry admits only issuer-attributed
+hosts (`www.pnj.com.vn` -> `cdn.pnj.io`, and `fpt.com` -> the specifically linked FPT storage
+host), never a wildcard CDN or generic cloud-storage domain.
+
+`official_document_acquisition.py` is a Producer-only, bounded intake contract for HPG, VNM, VCB, SSI, PAN, PNJ, and FPT. It accepts an explicit caller-supplied finite URL list for FY2023–FY2026 only; it does not crawl, poll, infer URLs, or write a runtime root.
 
 Each retained version records canonical URL, issuer authority, document class, period, publication/observation dates, HTTP metadata, SHA-256, and immutable hash-addressed relative path. Repeated URL/hash pairs are skipped. Changed bytes append a new record and can name a previous `supersedes_document_id`; no prior byte or manifest record is replaced.
 For governed, non-production retention, the canonical caller destination is `operations-review/governed-official-evidence-v1/` relative to the Producer repository. It is deliberately untracked, outside every runtime/database root, and is the only location where this pilot may retain downloaded PDF binaries. Its deterministic manifest and citation handoff are operational evidence, not Git-binary inputs.

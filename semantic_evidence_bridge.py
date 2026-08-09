@@ -924,6 +924,9 @@ def load_verified_ebitda_components(runtime_root: Path) -> dict[str, Any]:
         if evidence is None:
             rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
             continue
+        if str(evidence.get("ticker") or "").upper() != str(citation["ticker"]).upper():
+            rejected.append({"key": key, "reason": "evidence_ticker_mismatch"})
+            continue
 
         by_key[key] = {
             "ticker": citation["ticker"], "metric": citation["metric"],
@@ -1297,6 +1300,9 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
         evidence = evidence_by_id.get(citation["evidence_id"])
         if evidence is None:
             rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
+            continue
+        if str(evidence.get("ticker") or "").upper() != str(citation["ticker"]).upper():
+            rejected.append({"key": key, "reason": "evidence_ticker_mismatch"})
             continue
 
         by_key[key] = {
