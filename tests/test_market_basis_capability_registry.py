@@ -249,10 +249,11 @@ class GenericMarketBasisUnlockMilestone(unittest.TestCase):
         self.assertEqual(registry.RAW_PRICE_NAMESPACE_INSPECTION["adjust_vocabulary_matches"], 0)
         self.assertEqual(
             registry.RAW_PRICE_NAMESPACE_INSPECTION["official_sources_with_price_bearing_document_types"],
-            (
-                "hose:official_exchange_annual_trading_statistics",
-                "hose:official_exchange_daily_trading_summary",
-            ),
+            ("hose:official_exchange_annual_trading_statistics",),
+        )
+        self.assertEqual(
+            registry.RAW_PRICE_NAMESPACE_INSPECTION["official_sources_with_daily_statistics_candidates"],
+            ("hose:official_exchange_daily_trading_summary",),
         )
 
     def test_daily_summary_route_is_a_precise_terminal_schema_blocker(self):

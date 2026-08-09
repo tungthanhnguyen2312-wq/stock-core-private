@@ -615,6 +615,8 @@ RAW_PRICE_NAMESPACE_INSPECTION: dict[str, Any] = {
     "official_sources_checked": ("hose", "hnx", "vsdc", "issuer_ir"),
     "official_sources_with_price_bearing_document_types": (
         "hose:official_exchange_annual_trading_statistics",
+    ),
+    "official_sources_with_daily_statistics_candidates": (
         "hose:official_exchange_daily_trading_summary",
     ),
     "registered_future_candidates_with_a_locator": (),
