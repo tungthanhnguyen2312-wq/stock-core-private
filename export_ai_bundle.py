@@ -2726,6 +2726,12 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
         return None
     profiles = load_entity_profiles(Path(__file__).with_name("config") / "ticker_entity_profiles.csv")
     evidence_index = load_evidence_index(root)
+    def _facts_with_unstored_official(ticker: str) -> list[dict[str, Any]]:
+        """Avoid treating a governed canonical promotion as a conflicting duplicate."""
+        canonical = read_facts(root, ticker)
+        identities = {str(fact.get("fact_id")) for fact in canonical if fact.get("fact_id")}
+        return [*canonical, *(fact for fact in facts_for_ticker(root, ticker)
+                              if str(fact.get("fact_id")) not in identities)]
     for ticker, entry in bundle_entries.items():
         record = records.get(str(ticker).upper())
         if record is None:
@@ -2735,7 +2741,7 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
         if entity_type and entity_authority in (None, "unknown"):
             entity_authority = "manual_profile"
         projection = build_research_financial_fact_projection(
-            ticker, [*read_facts(root, ticker), *facts_for_ticker(root, ticker)], entity_type=entity_type,
+            ticker, _facts_with_unstored_official(ticker), entity_type=entity_type,
             entity_authority=entity_authority, evidence_index=evidence_index,
         )
         entry["research_financial_fact_projection"] = projection
@@ -2747,7 +2753,7 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
                              "manual_profile" if profiles.get(str(record.get("ticker")).upper()) else "unknown")}
                         for record in state.get("tickers") or []]
     coverage = research_financial_coverage_summary(
-        coverage_records, lambda ticker: [*read_facts(root, ticker), *facts_for_ticker(root, ticker)], evidence_index=evidence_index,
+        coverage_records, _facts_with_unstored_official, evidence_index=evidence_index,
     )
     # A summary only: facts remain in their original shards and are never rewritten by export.
     coverage["conflict_decomposition"] = canonical_conflict_coverage_summary(
