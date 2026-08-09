@@ -5,6 +5,24 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - Scan-only annual financial evidence is materialized only after source-page verification
+
+- The bounded path is local Tesseract 5.5.0 plus in-memory page rendering for only PNJ and
+  PVD. Its durable sidecar keeps PDF page boundaries and derives identity from source hash,
+  engine/version, OCR contract, page, and OCR text hash. The source PDF bytes stay immutable.
+- OCR text is a locator, never authority. A promoted metric needs exact raw label/value and unit
+  in the sidecar plus a recorded visual check of the original consolidated annual page. Numeric
+  ambiguity, missing page text, an unverified visual check, source-hash mismatch, or missing
+  debt component fails closed.
+- PNJ's four direct face-statement values are qualified. Its short-term borrowings are not
+  relabelled as total debt because no long-term-loan component appears on the face statement.
+  PVD's short- plus long-term loans legitimately sum to its five-metric complete set. The report
+  explicitly uses USD; preserving USD is correct, while manufacturing a VND FX conversion is not.
+- Existing entity-profile authority identifies PNJ and PVD as corporate when older canonical
+  shards lack that field. Research still becomes available only through the unchanged five-metric
+  qualification and matrix projection. Thus PVD, not PNJ, transitions to historical-only,
+  non-actionable research. FPT was not searched or repaired.
+
 ## 2026-08-09 - Bounded official annual-evidence scale-out is materialization-blocked
 
 - PAN's source-authority slice was checkpointed first as `a0759e3`. The bounded cohort then

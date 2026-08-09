@@ -128,5 +128,26 @@ class OfficialAnnualFinancialFactProjectionTests(unittest.TestCase):
                        "reason": "evidence_ticker_mismatch"},
                       bridge.load_verified_financial_identities(self.root)["rejected"])
 
+    def test_ocr_materialization_must_bind_the_manifest_source_hash(self) -> None:
+        extraction = {
+            "method": "document_line_item", "source_pages": [1], "raw_labels": ["Net income"],
+            "materialization": {
+                "contract": "annual_financial_ocr_materialization/v1", "document_sha256": "0" * 64,
+                "page": 1, "page_citation_id": "page-citation", "text_sha256": "text-sha",
+                "materialization_id": "materialization-id", "ocr_engine": "tesseract v5",
+                "verification": "source_page_visual",
+            },
+        }
+        citation = promotion.build_financial_identity_citation(
+            ticker="PAN", metric="net_income", reporting_period="2024", value=1,
+            evidence_id=self.evidence_id, citation="Original PDF page 1.", extraction=extraction,
+        )
+        promotion.promote(self.root, manifest_records=[self.manifest],
+                          citation_relative=promotion.FINANCIAL_IDENTITY_RELATIVE,
+                          citation_records=[citation], dry_run=False)
+        self.assertIn({"key": ("PAN", "net_income", "2024"),
+                       "reason": "materialization_source_hash_mismatch"},
+                      bridge.load_verified_financial_identities(self.root)["rejected"])
+
 if __name__ == "__main__":
     unittest.main()

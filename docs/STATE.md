@@ -3,6 +3,19 @@
 Last verified: **2026-08-03**, by an end-to-end production run of the supported operating
 command against `dashboard-runtime` (reference session `2026-07-30`).
 
+## Annual financial evidence materialization hardening (2026-08-09)
+
+`ANNUAL_FINANCIAL_EVIDENCE_MATERIALIZATION_HARDENING: PASS`. Local Tesseract 5.5.0
+materialized only the retained scan-only PNJ/PVD FY2024 issuer filings into deterministic,
+page-preserving sidecars, then promoted only source-page visually verified facts. PNJ is
+four-of-five because its face statement has no labelled long-term-loan component, so debt
+remains blocked. PVD is five-of-five in its explicitly reported USD and becomes an available,
+historical-only, non-actionable Pillar A research input. The existing entity-profile authority
+now covers PNJ/PVD as corporate for pre-profiled canonical shards; this does not set research
+availability manually. PAN remains five-of-five; HPG/VNM trusted source precedence and every
+generic market gate are unchanged. FPT remains `SOURCE_LOCATOR_REQUIRED`. No DB, provider,
+DNSE, market-data refresh, or generated bundle was changed. Next: `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_2`.
+
 ## Bounded official financial evidence scale-out (2026-08-09)
 
 `BOUNDED_OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT: PARTIAL`. Checkpoint `a0759e3` preserved the

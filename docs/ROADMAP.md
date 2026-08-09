@@ -1,5 +1,17 @@
 # Stock Lookup roadmap
 
+## Annual financial evidence materialization hardening (complete 2026-08-09)
+
+`ANNUAL_FINANCIAL_EVIDENCE_MATERIALIZATION_HARDENING: PASS`. The retained PNJ/PVD scanned
+issuer statements now have deterministic, local OCR sidecars tied to original document hashes,
+Tesseract version, contract, and PDF page. Every promoted figure was visually verified against
+its original page. PNJ closes four required metrics and remains blocked on the approved two-part
+debt derivation; PVD closes all five and is research-eligible only in the existing historical,
+non-actionable Pillar A lane. PVD's explicit USD is preserved rather than converted. PAN,
+HPG/VNM precedence, FPT's locator blocker, and generic market gates remain unchanged.
+
+Next independent Pillar A milestone: `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_2`.
+
 ## Bounded official financial evidence scale-out (partial 2026-08-09)
 
 `BOUNDED_OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT: PARTIAL`. PNJ and PVD FY2024 audited

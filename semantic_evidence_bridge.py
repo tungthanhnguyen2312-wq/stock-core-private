@@ -1206,6 +1206,34 @@ def _valid_financial_extraction(citation: Mapping[str, Any]) -> bool:
         return False
     if not (isinstance(labels, list) and labels and all(isinstance(label, str) and label.strip() for label in labels)):
         return False
+    materialization = extraction.get("materialization")
+    if materialization is not None:
+        # A scan-derived candidate binds its OCR sidecar to the immutable PDF.
+        # Old direct/manual rows deliberately remain valid without this optional
+        # v1 metadata, but malformed new metadata can never be silently ignored.
+        if not isinstance(materialization, Mapping):
+            return False
+        if method == "document_line_item":
+            required = ("contract", "document_sha256", "page", "page_citation_id", "text_sha256",
+                        "materialization_id", "ocr_engine", "verification")
+            if not all(materialization.get(field) for field in required):
+                return False
+            if materialization.get("verification") != "source_page_visual":
+                return False
+            if materialization.get("page") not in pages:
+                return False
+            if not (isinstance(materialization.get("document_sha256"), str)
+                    and len(materialization["document_sha256"]) == 64):
+                return False
+        elif method == "document_line_item_sum":
+            components_meta = materialization.get("components")
+            if (materialization.get("contract") != "annual_financial_ocr_materialization/v1"
+                    or materialization.get("verification") != "source_page_visual"
+                    or not isinstance(components_meta, list) or len(components_meta) < 2):
+                return False
+            if not all(isinstance(item, Mapping) and item.get("page_citation_id") and item.get("materialization_id")
+                       and item.get("document_sha256") for item in components_meta):
+                return False
     if method == "document_line_item":
         return "components" not in extraction
     components = extraction.get("components")
@@ -1301,6 +1329,16 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
         if evidence is None:
             rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
             continue
+        extraction = citation.get("extraction") or {}
+        materialization = extraction.get("materialization")
+        if isinstance(materialization, Mapping):
+            hashes = ([materialization.get("document_sha256")]
+                      if extraction.get("method") != "document_line_item_sum"
+                      else [item.get("document_sha256") for item in materialization.get("components", [])
+                            if isinstance(item, Mapping)])
+            if not hashes or any(value != evidence.get("sha256") for value in hashes):
+                rejected.append({"key": key, "reason": "materialization_source_hash_mismatch"})
+                continue
         if str(evidence.get("ticker") or "").upper() != str(citation["ticker"]).upper():
             rejected.append({"key": key, "reason": "evidence_ticker_mismatch"})
             continue
