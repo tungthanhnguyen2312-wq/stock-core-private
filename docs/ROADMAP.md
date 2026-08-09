@@ -1,5 +1,11 @@
 # Stock Lookup roadmap
 
+## QNS targeted OCR materialization (partial 2026-08-09)
+
+QNS's retained audited-consolidated filing now has a deterministic OCR sidecar for pages 7--10.
+No value has been promoted without the required citation construction and qualification pass;
+QNS research and live activation remain blocked.
+
 ## QNS audited consolidated filing recovery (2026-08-09)
 
 The exact issuer-controlled FY2024 audited consolidated financial statements are retained as

@@ -5,6 +5,13 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - QNS OCR is bounded before citation promotion
+
+- The new QNS PDF was rendered with the established local page-preserving Tesseract contract only
+  for statement pages 7--10. The result is a hash-bound sidecar, not a financial fact promotion:
+  each value still requires exact source-page citation and qualification. Runtime publication is
+  deferred rather than allowing OCR output alone to alter product state.
+
 ## 2026-08-09 - QNS exact audited consolidated filing is retained separately
 
 - One bounded official `qns.com.vn` financial-reports investigation located the 26-02-2025 issuer

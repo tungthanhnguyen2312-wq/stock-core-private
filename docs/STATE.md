@@ -1,5 +1,12 @@
 # Stock Lookup state
 
+## QNS targeted OCR materialization (2026-08-09)
+
+The retained QNS FY2024 audited consolidated PDF was page-preserving OCR-materialized only on
+pages 7--10 (balance sheet, income statement, cash-flow statement). The OCR sidecar is bound to
+SHA-256 `faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3`; QNS facts remain
+unpromoted pending source-page citation construction, so research and live publication stay blocked.
+
 ## QNS audited consolidated filing recovery (2026-08-09)
 
 One bounded official `qns.com.vn` financial-reports investigation retained the exact 41-page
