@@ -237,21 +237,58 @@ class GapTable(unittest.TestCase):
 
 
 class GenericMarketBasisUnlockMilestone(unittest.TestCase):
-    """2026-08-09: price-branch findings (installed-tooling inspection came up empty) and
-    the deterministic, capability-specific, no-fallback-merging authority-selection rule."""
+    """2026-08-09: bounded official raw-price pilot and no-fallback authority rule."""
 
-    def test_explicit_raw_adjusted_namespace_absent(self):
-        self.assertEqual(registry.EXPLICIT_RAW_ADJUSTED_NAMESPACE, "ABSENT")
+    def test_explicit_raw_adjusted_namespace_is_a_bounded_pilot(self):
+        self.assertEqual(registry.EXPLICIT_RAW_ADJUSTED_NAMESPACE, "PILOT_PARTIAL")
 
-    def test_raw_as_traded_price_authority_blocked(self):
-        self.assertEqual(registry.RAW_AS_TRADED_PRICE_AUTHORITY, "BLOCKED")
+    def test_raw_as_traded_price_authority_is_partial(self):
+        self.assertEqual(registry.RAW_AS_TRADED_PRICE_AUTHORITY, "PARTIAL")
 
-    def test_inspection_record_names_zero_adjust_matches(self):
+    def test_inspection_record_keeps_provider_search_negative_and_official_pilot_positive(self):
         self.assertEqual(registry.RAW_PRICE_NAMESPACE_INSPECTION["adjust_vocabulary_matches"], 0)
         self.assertEqual(
             registry.RAW_PRICE_NAMESPACE_INSPECTION["official_sources_with_price_bearing_document_types"],
-            (),
+            ("hose:official_exchange_annual_trading_statistics",),
         )
+
+    def test_official_raw_observation_carries_source_identity_and_unit(self):
+        observation = registry.official_raw_price_observation("HPG", "2024-12-31")
+        self.assertEqual(observation["source_id"], "HOSE")
+        self.assertEqual(observation["value_vnd_per_share"], 26650)
+        self.assertEqual(observation["namespace"], "official_raw_as_traded_pilot")
+        self.assertTrue(observation["sha256"])
+
+    def test_official_raw_observation_has_no_nearest_date_or_provider_fallback(self):
+        with self.assertRaises(registry.RegistryError):
+            registry.official_raw_price_observation("HPG", "2024-12-30")
+        result = registry.select_price_authority(
+            "raw_eod_observation", provider="VCI", ticker="HPG", trading_session_date="2024-12-30"
+        )
+        self.assertEqual(result["tier"], registry.AUTHORITY_TIER_BLOCKED)
+        self.assertIn("not_retained", result["reason"])
+
+    def test_raw_and_adjusted_namespaces_stay_explicitly_separate(self):
+        reconciliation = registry.reconcile_raw_and_provider_adjusted(
+            ticker="HPG", trading_session_date="2024-12-31",
+            provider_adjusted_value_vnd_per_share=19830, provider="VCI",
+        )
+        self.assertEqual(reconciliation["status"], "partial_distinct_namespaces")
+        self.assertEqual(reconciliation["official_raw"]["value_vnd_per_share"], 26650)
+        self.assertEqual(reconciliation["provider_adjusted"]["value_vnd_per_share"], 19830.0)
+        self.assertNotEqual(
+            reconciliation["official_raw"]["namespace"], reconciliation["provider_adjusted"]["namespace"]
+        )
+
+    def test_exact_official_raw_identity_selects_tier_one_only_for_raw_capability(self):
+        result = registry.select_price_authority(
+            "point_in_time_price", ticker="HPG", trading_session_date="2024-12-31"
+        )
+        self.assertEqual(result["tier"], registry.AUTHORITY_TIER_OFFICIAL_RAW)
+        valuation = registry.select_price_authority(
+            "current_valuation", ticker="HPG", trading_session_date="2024-12-31"
+        )
+        self.assertEqual(valuation["tier"], registry.AUTHORITY_TIER_BLOCKED)
 
     def test_kbs_gains_a_new_volume_composition_capability(self):
         record = registry.capability("KBS", "kbs_volume_composition_disclosure")

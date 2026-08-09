@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "milestone": "OFFICIAL_EXCHANGE_RAW_PRICE_AUTHORITY_AND_VOLUME_SCOPE_PILOT",
+  "retrieval": {
+    "source_id": "hose",
+    "authority": "Ho Chi Minh City Stock Exchange",
+    "locator_state": "QUALIFIED",
+    "discovery_path": "One bounded search-engine discovery restricted to official hsx.vn results; retained staticfile.hsx.vn PDF bytes are the evidence authority.",
+    "document_id": "42dbebe913beeebac997a7d1d3106bb2be1b0a27759c7ca872e65d683a206a17",
+    "url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/1896445/B%C3%81O%20C%C3%81O%20TH%C6%AF%E1%BB%9CNG%20NI%C3%8AN%20%28ANUAL%20REPORT%29%202024.pdf",
+    "retrieved_at": "2026-08-09T05:00:00Z",
+    "content_type": "application/pdf",
+    "content_length": 14708074,
+    "sha256": "0ae9f3095d3d021b063c3ffe27d698b58dae825c89e00e457ab92d83dbb03427",
+    "raw_artifact": "documents/HPG/2024/official_exchange_annual_trading_statistics/0ae9f3095d3d021b063c3ffe27d698b58dae825c89e00e457ab92d83dbb03427.pdf"
+  },
+  "price": {
+    "official_fields": {
+      "ticker": "Mã CK / Stock code",
+      "session_date": "Closing Price (31/12/2024)",
+      "price": "Giá đóng cửa / Closing Price",
+      "price_unit": "VND Thousand"
+    },
+    "official_observation": {
+      "ticker": "HPG",
+      "trading_session_date": "2024-12-31",
+      "closing_price_vnd_per_share": 26650,
+      "citation": "PDF printed pages 88-89 / PDF page 45"
+    },
+    "semantics": "The first-party table identifies a closing price for a named session and its VND-thousand scale. It gives no daily-history discovery route and no explicit non-revision policy, so authority is scoped to the retained observation only.",
+    "raw_as_traded_price_authority": "PARTIAL",
+    "provider_adjusted_comparison": {
+      "provider": "VCI",
+      "provider_observation_source": "archive/pipeline-backups/20260806_150831/vn_stock.db, read-only ohlcv row",
+      "ticker": "HPG",
+      "trading_session_date": "2024-12-31",
+      "provider_adjusted_close_vnd_per_share": 19830,
+      "official_raw_close_vnd_per_share": 26650,
+      "provider_adjusted_to_official_raw_ratio": 0.7440900562851784,
+      "verdict": "distinct_namespaces_demonstrated_not_merged"
+    },
+    "event_reconciliation": {
+      "status": "PARTIAL",
+      "known_qualified_event_with_ex_date": "VCB cash dividend, ex-date 2026-07-23, retained VCI pilot evidence",
+      "blocker": "The retained official HOSE annual report supplies only the 2024-12-31 HPG observation, not the VCB event's pre-event, ex-date, and subsequent daily official prices. No factor is inferred from a cross-ticker or non-identical-date comparison."
+    }
+  },
+  "volume": {
+    "official_fields": [
+      "KLGD / Trading volume (shares)",
+      "GTGD / Trading value (VND billion or VND thousand, table-specific)",
+      "Khớp lệnh / Order matching",
+      "Thỏa thuận / Put-through",
+      "Tổng cộng / Total"
+    ],
+    "semantics": "The report explicitly distinguishes order matching and put-through in annual aggregate tables, but the only such decomposition is foreign-investor activity by security type; it is not a ticker-session series matching the retained VCI daily-volume observations.",
+    "vci_comparison": "not_performed_fail_closed_nonconforming_granularity",
+    "vci_trade_type_coverage": "BLOCKED_DATA",
+    "category_state": {
+      "continuous": "unknown",
+      "opening_auction": "unknown",
+      "closing_auction": "unknown",
+      "negotiated_put_through": "unknown",
+      "odd_lot": "unknown"
+    }
+  },
+  "gates": {
+    "adjusted_price_authority": "QUALIFIED_PROVIDER_SCOPED",
+    "generic_actionable_price_basis": "BLOCKED",
+    "generic_actionable_volume_basis": "BLOCKED",
+    "historical_valuation_unlock": "PARTIAL",
+    "actionable_liquidity_unlock": "BLOCKED"
+  },
+  "share_basis_intersection": {
+    "available_pair": "HPG 2024-12-31: official raw pilot observation plus qualified FY2024 period-end shares (6,396,250,200)",
+    "not_enabled": "The partial one-date raw authority and absent complete official event lineage do not enable a historical valuation capability."
+  },
+  "production_effect": "None. No production database, live bundle, Dashboard artifact, provider refresh, valuation, backtest, ranking, or sizing path was modified."
+}

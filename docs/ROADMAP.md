@@ -40,6 +40,20 @@ capitalisation and therefore waits on pillar B.
 
 ## P0 — Market-data basis and lineage — ACTIVE, now routed through pillar B
 - Deliverables: provider/schema-version lineage; qualified corporate-action lineage; empirical active-path price test; volume semantics; source/version scale handling.
+- **P0 official-exchange raw-price and volume-scope pilot — PARTIAL (2026-08-09).** Pillar B's
+  one bounded HOSE route retained the official Annual Report 2024 (SHA-256
+  `0ae9f3095d3d021b063c3ffe27d698b58dae825c89e00e457ab92d83dbb03427`). Its named HPG
+  `Closing Price (31/12/2024) (VND Thousand)` field establishes one first-party session-close
+  observation (26,650 VND/share), hence an explicitly separate
+  `official_raw_as_traded_pilot` namespace. The document's one-date/ticker-table coverage and
+  absence of a first-party non-revision promise mean `RAW_AS_TRADED_PRICE_AUTHORITY: PARTIAL`,
+  not generic qualification. HPG's frozen VCI 19,830 comparison demonstrates the separate
+  provider-adjusted namespace; it does not produce an event factor. The report's explicit
+  `Order matching` / `Put-through` categories are aggregate foreign-investor tables, not
+  ticker-session data, so `VCI_TRADE_TYPE_COVERAGE: BLOCKED_DATA` persists. Generic actionable
+  price and volume gates remain blocked; KBS trade scope remains partial. No valuation,
+  backtesting, ranking, sizing, runtime, or Dashboard output changed. Evidence:
+  `operations-review/official-exchange-raw-price-volume-pilot-20260809/`.
 - **P0-Z KBS empirical basis and capability relaxation shipped 2026-08-04 — PARTIAL.** One
   previously closed lane reopened, and only one. Phase 1C was right that KBS publishes no
   semantic metadata and wrong to conclude the fields were unusable; the premise is retained,

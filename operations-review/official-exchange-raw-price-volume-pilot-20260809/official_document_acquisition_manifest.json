@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "acquisition_status": "retained",
+      "canonical_url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/1896445/B%C3%81O%20C%C3%81O%20TH%C6%AF%E1%BB%9CNG%20NI%C3%8AN%20%28ANUAL%20REPORT%29%202024.pdf",
+      "content_length": 14708074,
+      "content_type": "application/pdf",
+      "discovery_provenance": "One bounded search-engine discovery restricted to official hsx.vn results; retained bytes from staticfile.hsx.vn are the sole evidence authority.",
+      "document_class": "official_exchange_annual_trading_statistics",
+      "document_id": "42dbebe913beeebac997a7d1d3106bb2be1b0a27759c7ca872e65d683a206a17",
+      "extraction_status": "ready_for_direct_citations",
+      "final_url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/1896445/B%C3%81O%20C%C3%81O%20TH%C6%AF%E1%BB%9CNG%20NI%C3%8AN%20%28ANUAL%20REPORT%29%202024.pdf",
+      "http_status": 200,
+      "observed_at": "2026-08-09T05:00:00Z",
+      "published_at": null,
+      "relative_path": "documents/HPG/2024/official_exchange_annual_trading_statistics/0ae9f3095d3d021b063c3ffe27d698b58dae825c89e00e457ab92d83dbb03427.pdf",
+      "reporting_period": "2024",
+      "sha256": "0ae9f3095d3d021b063c3ffe27d698b58dae825c89e00e457ab92d83dbb03427",
+      "source_authority": "Ho Chi Minh City Stock Exchange",
+      "source_id": "hose",
+      "supersedes_document_id": null,
+      "ticker": "HPG"
+    }
+  ],
+  "schema_version": "1.2.0"
+}

@@ -42,7 +42,7 @@ import market_volume_capability_matrix as vci_volume
 import provider_price_basis_registry as price_registry
 import vci_direct_basis_pilot as vci_pilot
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 PROVIDERS = ("KBS", "VCI")
 
@@ -463,22 +463,18 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
             "(semantic_evidence_bridge._SUPPORTED_ADJUSTMENT_STATUSES) is the legacy, "
             "already-superseded raw_as_quoted_no_adjustment_applied label."
         ),
-        "missing_evidence": "RAW_AS_TRADED_PRICE_AUTHORITY_ABSENT",
+        "missing_evidence": "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_UNAVAILABLE",
         "required_authority": (
-            "An official exchange raw-tick/settlement-price feed, or a documented "
-            "first-party provider adjustment methodology. Neither exists today: "
-            "config/official_source_registry.json's four approved sources (hose, hnx, "
-            "vsdc, issuer_ir) declare only corporate-action/governance/financial-statement "
-            "document types -- none price-bearing -- and the one registered future "
-            "candidate (official_authority_candidates.HOSE_TRADING_STATISTICS) has no "
-            "locator and was scoped for volume composition, not price."
+            "A daily official exchange raw-tick/settlement-price route, or a documented "
+            "first-party provider adjustment methodology. The retained HOSE annual report "
+            "has one HPG 2024-12-31 official closing-price observation, but it does not "
+            "supply ticker/session history or an event-window route."
         ),
         "next_bounded_action": (
-            "Obtain an owner-supplied locator for an official raw/settlement price bulletin "
-            "(the same missing input that blocks average_daily_volume_and_tradability below "
-            "-- one HOSE trading-statistics acquisition could answer both). Pillar B B6 "
-            "(corporate-action ledger reconstruction of close_official_event_adjusted) "
-            "remains the fallback route if no raw source is ever obtained."
+            "Pillar B: qualify one deterministic official HOSE daily ticker/session "
+            "trading-statistics route whose retained bytes name the price and volume "
+            "categories. The precise present blocker is "
+            "OFFICIAL_DAILY_TICKER_SESSION_STATISTICS_ROUTE_UNAVAILABLE."
         ),
     },
     {
@@ -520,7 +516,7 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
             "P2a's HPG/VNM FY2024 multiples were computed, then correctly reopened as "
             "BLOCKED (2026-08-04) once the cited close was shown off the HOSE tick lattice."
         ),
-        "missing_evidence": "RAW_AS_TRADED_PRICE_AUTHORITY_ABSENT, at the specific cited date",
+        "missing_evidence": "OFFICIAL_DAILY_PRICE_COVERAGE_AND_EVENT_LINEAGE_INCOMPLETE, at the specific cited date",
         "required_authority": "Same as raw_as_traded_price and generic_adjusted_price, applied point-in-time.",
         "next_bounded_action": "Same as raw_as_traded_price: Pillar B B6.",
     },
@@ -601,8 +597,8 @@ def generic_unlock_gap_table() -> list[dict[str, str]]:
 # the precise, code-level record of that negative result -- not a re-statement of the
 # already-qualified adjusted verdicts above, which are unchanged.
 
-EXPLICIT_RAW_ADJUSTED_NAMESPACE = "ABSENT"
-RAW_AS_TRADED_PRICE_AUTHORITY = "BLOCKED"
+EXPLICIT_RAW_ADJUSTED_NAMESPACE = "PILOT_PARTIAL"
+RAW_AS_TRADED_PRICE_AUTHORITY = "PARTIAL"
 
 #: Every installed vnstock explorer checked, and what was found. Not a claim about anything
 #: unobserved -- see docs/DECISIONS.md 2026-08-09 for the exact commands run.
@@ -615,14 +611,92 @@ RAW_PRICE_NAMESPACE_INSPECTION: dict[str, Any] = {
         # provider_price_basis_registry.LEGACY_NO_LOCAL_ADJUSTMENT_LABEL
     ),
     "official_sources_checked": ("hose", "hnx", "vsdc", "issuer_ir"),
-    "official_sources_with_price_bearing_document_types": (),
+    "official_sources_with_price_bearing_document_types": (
+        "hose:official_exchange_annual_trading_statistics",
+    ),
     "registered_future_candidates_with_a_locator": (),
     "conclusion": (
-        "No installed provider adapter distinguishes raw from adjusted, and no approved or "
-        "candidate official source declares a price-bearing document type with a locator. "
-        "The blocker is the absence of a source, not unqualified semantics from a known one."
+        "No installed provider adapter distinguishes raw from adjusted. A bounded official "
+        "HOSE annual-statistics artifact now supplies one explicitly dated closing-price "
+        "observation, but not a daily historical series or an event-window route. It proves "
+        "a partial official raw namespace, not a generic price authority."
     ),
 }
+
+# The sole official raw observation retained by the bounded milestone.  It is deliberately
+# a record, not a provider value, and it must be queried by both security and session.  The
+# document says "Closing Price (31/12/2024) (VND Thousand)" for HPG and therefore identifies
+# a published session-close observation and its scale.  It does not promise a continuously
+# discoverable history or contain an event-window series, hence the PARTIAL authority verdict.
+OFFICIAL_RAW_PRICE_OBSERVATIONS: tuple[dict[str, Any], ...] = (
+    {
+        "source_id": "HOSE",
+        "authority": "Ho Chi Minh City Stock Exchange",
+        "ticker": "HPG",
+        "trading_session_date": "2024-12-31",
+        "field": "Closing Price (31/12/2024) (VND Thousand)",
+        "raw_value": 26.65,
+        "price_unit": "VND_thousand_per_share",
+        "value_vnd_per_share": 26650,
+        "namespace": "official_raw_as_traded_pilot",
+        "semantics": "officially_published_session_closing_price",
+        "retrospective_rewrite_status": "not_observed_for_single_retained_session",
+        "document_id": "42dbebe913beeebac997a7d1d3106bb2be1b0a27759c7ca872e65d683a206a17",
+        "sha256": "0ae9f3095d3d021b063c3ffe27d698b58dae825c89e00e457ab92d83dbb03427",
+        "source_location": "PDF printed pages 88-89 / PDF page 45",
+        "retrieved_at": "2026-08-09T05:00:00Z",
+        "evidence_path": (
+            "operations-review/official-exchange-raw-price-volume-pilot-20260809/"
+            "official_document_acquisition_manifest.json"
+        ),
+    },
+)
+
+
+def official_raw_price_observation(ticker: str, trading_session_date: str) -> dict[str, Any]:
+    """Return the one exact-match official raw observation, or fail closed.
+
+    This function intentionally has no nearest-date lookup and no adjusted-provider fallback.
+    An official raw observation is useful only at the exact session it identifies.
+    """
+    matches = [dict(record) for record in OFFICIAL_RAW_PRICE_OBSERVATIONS
+               if record["ticker"] == str(ticker).upper()
+               and record["trading_session_date"] == str(trading_session_date)]
+    if len(matches) != 1:
+        raise RegistryError(
+            f"official_raw_price_observation_unavailable:{str(ticker).upper()}:{trading_session_date}"
+        )
+    return matches[0]
+
+
+def reconcile_raw_and_provider_adjusted(*, ticker: str, trading_session_date: str,
+                                        provider_adjusted_value_vnd_per_share: float,
+                                        provider: str) -> dict[str, Any]:
+    """Preserve, rather than merge, a retained official raw and provider-adjusted value.
+
+    A non-equal pair is expected evidence of distinct namespaces; equality would not make the
+    namespaces interchangeable.  A non-VCI/KBS source and non-positive observations fail
+    closed so callers cannot manufacture an apparent reconciliation.
+    """
+    raw = official_raw_price_observation(ticker, trading_session_date)
+    named_provider = _normalize_provider(provider)
+    adjusted = float(provider_adjusted_value_vnd_per_share)
+    if adjusted <= 0:
+        raise RegistryError("provider_adjusted_price_must_be_positive")
+    return {
+        "ticker": raw["ticker"],
+        "trading_session_date": raw["trading_session_date"],
+        "status": "partial_distinct_namespaces",
+        "official_raw": raw,
+        "provider_adjusted": {
+            "provider": named_provider,
+            "namespace": "provider_adjusted",
+            "value_vnd_per_share": adjusted,
+            "price_basis": price_registry.active_verdict(named_provider)["price_basis"],
+        },
+        "relationship": "values_must_not_be_merged_or_used_as_fallbacks",
+        "ratio_provider_adjusted_to_official_raw": adjusted / raw["value_vnd_per_share"],
+    }
 
 
 # ---------------------------------------------------------------------------------
@@ -656,7 +730,9 @@ _TIER_3_ELIGIBLE_CAPABILITY_KINDS = frozenset(
 )
 
 
-def select_price_authority(capability_kind: str, *, provider: str | None = None) -> dict[str, Any]:
+def select_price_authority(capability_kind: str, *, provider: str | None = None,
+                           ticker: str | None = None,
+                           trading_session_date: str | None = None) -> dict[str, Any]:
     """The one place this repository decides which namespace answers a price/volume
     capability. Deterministic and capability-specific: the same ``capability_kind`` always
     resolves to the same tier given the same evidence state, and a capability ineligible for
@@ -666,7 +742,38 @@ def select_price_authority(capability_kind: str, *, provider: str | None = None)
     Never merges: when Tier 3 applies, the result names exactly one provider (the one
     passed in, defaulting to none selected) rather than picking "whichever is available".
     """
-    # Tier 1: no official raw source exists today (RAW_AS_TRADED_PRICE_AUTHORITY == BLOCKED).
+    # Tier 1: a narrowly-scoped official raw observation is available only by exact identity.
+    # It cannot satisfy a generic capability, and it never permits adjusted fallback.
+    if capability_kind in {"raw_eod_observation", "point_in_time_price"}:
+        if ticker is None or trading_session_date is None:
+            return {
+                "capability_kind": capability_kind,
+                "tier": AUTHORITY_TIER_BLOCKED,
+                "tier_name": AUTHORITY_TIER_NAMES[AUTHORITY_TIER_BLOCKED],
+                "provider": None,
+                "reason": "official_raw_price_requires_exact_ticker_and_trading_session_date",
+            }
+        try:
+            raw = official_raw_price_observation(ticker, trading_session_date)
+        except RegistryError:
+            return {
+                "capability_kind": capability_kind,
+                "tier": AUTHORITY_TIER_BLOCKED,
+                "tier_name": AUTHORITY_TIER_NAMES[AUTHORITY_TIER_BLOCKED],
+                "provider": None,
+                "reason": "official_raw_price_observation_not_retained_for_exact_identity",
+            }
+        return {
+            "capability_kind": capability_kind,
+            "tier": AUTHORITY_TIER_OFFICIAL_RAW,
+            "tier_name": AUTHORITY_TIER_NAMES[AUTHORITY_TIER_OFFICIAL_RAW],
+            "provider": None,
+            "source_id": raw["source_id"],
+            "namespace": raw["namespace"],
+            "observation": raw,
+            "descriptive_only": False,
+            "reason": "exact_retained_official_raw_observation",
+        }
     # Tier 2: neither provider has ever been qualified as raw -- both are
     # raw_as_traded_eligible == False in provider_price_basis_registry.py.
     if capability_kind not in _TIER_3_ELIGIBLE_CAPABILITY_KINDS:

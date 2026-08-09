@@ -914,3 +914,23 @@ Reopening requires an explicit owner decision.
   honestly: the price board's `PMQ`/`PMP` ("previous match qty/price") fields matched the
   put-through print's quantity and price exactly for HPG, only on price for VNM, and not at
   all for VCB. Inconsistent evidence is not evidence with caveats attached; it was not used.
+
+## 2026-08-09 - One official close is a namespace observation, not a historical series
+
+- The bounded official-only locator pass found and retained HOSE's Annual Report 2024 from
+  `staticfile.hsx.vn` through the approved acquisition path. Its own table labels make HPG's
+  31 December 2024 `Closing Price` and `VND Thousand` scale explicit: 26.65, i.e. 26,650
+  VND/share. That is enough to record a first-party, exact-session raw-price *pilot
+  observation*. It is not enough to claim an exchange-wide history: the report contains no
+  deterministic daily ticker route, no pre/ex/post event window, and no stated non-revision
+  policy. The verdict is deliberately `RAW_AS_TRADED_PRICE_AUTHORITY: PARTIAL`.
+- The read-only frozen VCI row for the same HPG date is 19,830 VND/share. The two values are
+  preserved as `official_raw_as_traded_pilot` and `provider_adjusted`, with their observed
+  ratio recorded but no transformation inferred. A non-equal pair proves that merging would
+  destroy information; it does not identify a corporate-action factor. The registry refuses
+  a nearest-date lookup and never falls back to VCI/KBS for a raw-required query.
+- The same first-party PDF explicitly labels `Order matching` and `Put-through`, but the
+  decomposed table is foreign-investor annual activity by security type, not all-market
+  ticker/session volume. It cannot be numerically reconciled to VCI daily `v`, so it changes
+  no VCI category state. This is a source-granularity blocker, not a reason to infer an
+  aggregate composition from a column position or approximate equality.

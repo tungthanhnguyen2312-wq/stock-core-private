@@ -465,6 +465,40 @@ a pass over the canonical fact store, which the operating command does not do.
 
 ## Next highest-value milestone
 
+## 2026-08-09 — Pillar B: OFFICIAL_EXCHANGE_RAW_PRICE_AUTHORITY_AND_VOLUME_SCOPE_PILOT — PARTIAL
+
+One bounded official HOSE locator route succeeded: the retained exchange Annual Report 2024
+at `staticfile.hsx.vn` (PDF SHA-256
+`0ae9f3095d3d021b063c3ffe27d698b58dae825c89e00e457ab92d83dbb03427`,
+14,708,074 bytes) names `Mã CK / Stock code`, `Giá đóng cửa / Closing Price
+(31/12/2024)`, and `VND Thousand`. Its HPG row is therefore one explicit official
+session-close observation: **2024-12-31, 26,650 VND/share**. The retained report is
+reproducible and first-party, but it supplies neither a daily ticker history nor a
+non-revision policy, so `RAW_AS_TRADED_PRICE_AUTHORITY = PARTIAL`, restricted to that
+exact HPG/session record. It is not a generic raw price source.
+
+The frozen VCI HPG row for that same session is 19,830 VND/share (ratio 0.7440900563 to
+the official observation). This demonstrates distinct official-raw and provider-adjusted
+namespaces; the two are preserved separately in `market_basis_capability_registry.py` and
+cannot merge or fall back. `RAW_ADJUSTED_RECONCILIATION = PARTIAL`: no retained official
+daily event window covers the already-qualified VCB 2026-07-23 cash-dividend ex-date, so a
+corporate-action factor is neither inferred nor claimed.
+
+The same report explicitly labels order matching and put-through, but only in annual
+aggregate/foreign-investor tables. It does not provide ticker-session category totals that
+can reconcile to VCI daily `v`; `VCI_TRADE_TYPE_COVERAGE = BLOCKED_DATA` and every VCI
+component remains unknown. KBS remains `PARTIAL` (continuous and combined auction included,
+put-through excluded, odd-lot unknown). Generic `price_basis_verified` and
+`volume_basis_verified` remain false; no runtime, database, bundle, dashboard, provider
+refresh, valuation, backtest, ranking, or sizing output changed. Full retained evidence and
+field citations: `operations-review/official-exchange-raw-price-volume-pilot-20260809/`.
+
+The only raw-price/share-basis intersection is HPG at 2024-12-31 (the official 26,650 VND
+pilot observation plus its qualified FY2024 period-end 6,396,250,200 shares). It makes a
+future bounded market-cap check conceivable but does not open valuation: date coverage,
+official event-window history, and complete lineage remain absent. Thus
+`HISTORICAL_VALUATION_UNLOCK = PARTIAL`; `ACTIONABLE_LIQUIDITY_UNLOCK = BLOCKED`.
+
 **Pillar B steps B2–B6 — official-document acquisition. Governed since 2026-08-04.** The
 registry admits, and `acquire()` now consults it before every request (it previously
 consulted nothing). The registry also supplies the requestable document vocabulary, so
