@@ -236,5 +236,80 @@ class GapTable(unittest.TestCase):
         self.assertNotEqual(registry.generic_unlock_gap_table()[0]["capability"], "mutated")
 
 
+class GenericMarketBasisUnlockMilestone(unittest.TestCase):
+    """2026-08-09: price-branch findings (installed-tooling inspection came up empty) and
+    the deterministic, capability-specific, no-fallback-merging authority-selection rule."""
+
+    def test_explicit_raw_adjusted_namespace_absent(self):
+        self.assertEqual(registry.EXPLICIT_RAW_ADJUSTED_NAMESPACE, "ABSENT")
+
+    def test_raw_as_traded_price_authority_blocked(self):
+        self.assertEqual(registry.RAW_AS_TRADED_PRICE_AUTHORITY, "BLOCKED")
+
+    def test_inspection_record_names_zero_adjust_matches(self):
+        self.assertEqual(registry.RAW_PRICE_NAMESPACE_INSPECTION["adjust_vocabulary_matches"], 0)
+        self.assertEqual(
+            registry.RAW_PRICE_NAMESPACE_INSPECTION["official_sources_with_price_bearing_document_types"],
+            (),
+        )
+
+    def test_kbs_gains_a_new_volume_composition_capability(self):
+        record = registry.capability("KBS", "kbs_volume_composition_disclosure")
+        self.assertEqual(record["availability"], kbs.AVAILABLE_UNDER_EXISTING_GATES)
+
+    def test_kbs_volume_trade_scope_reachable_through_matrix_snapshot(self):
+        snap = kbs.matrix_snapshot()
+        self.assertEqual(snap["volume_trade_scope"]["overall_composition_state"], "partial_composition_qualified")
+        # The pre-existing, separately-guarded field is untouched by this milestone.
+        self.assertEqual(snap["volume_market_scope"], "unknown")
+
+    def test_days_to_liquidate_still_unavailable_after_the_new_finding(self):
+        """Partial composition qualification must not, by itself, open a liquidity
+        capability -- odd_lot_inclusion is still unknown."""
+        record = registry.capability("KBS", "kbs_days_to_liquidate")
+        self.assertEqual(record["availability"], kbs.UNAVAILABLE_BY_CONTRACT)
+
+    def test_authority_tier_3_only_for_descriptive_capability_kinds(self):
+        result = registry.select_price_authority("descriptive_price", provider="VCI")
+        self.assertEqual(result["tier"], registry.AUTHORITY_TIER_PROVIDER_ADJUSTED_DESCRIPTIVE)
+
+    def test_authority_blocked_for_valuation_regardless_of_provider(self):
+        for provider in ("VCI", "KBS"):
+            result = registry.select_price_authority("current_valuation", provider=provider)
+            self.assertEqual(result["tier"], registry.AUTHORITY_TIER_BLOCKED)
+
+    def test_authority_blocked_when_no_provider_named(self):
+        """No implicit best-available-provider selection."""
+        result = registry.select_price_authority("descriptive_price", provider=None)
+        self.assertEqual(result["tier"], registry.AUTHORITY_TIER_BLOCKED)
+        self.assertIsNone(result["provider"])
+
+    def test_authority_result_names_exactly_one_provider_never_merges(self):
+        result = registry.select_price_authority("descriptive_price", provider="KBS")
+        self.assertEqual(result["provider"], "KBS")
+
+    def test_fallback_merging_across_providers_for_same_capability_raises(self):
+        with self.assertRaises(registry.RegistryError):
+            registry.assert_no_fallback_merging(
+                [
+                    {"capability_kind": "descriptive_price", "provider": "VCI"},
+                    {"capability_kind": "descriptive_price", "provider": "KBS"},
+                ]
+            )
+
+    def test_fallback_merging_guard_passes_distinct_capabilities(self):
+        registry.assert_no_fallback_merging(
+            [
+                {"capability_kind": "descriptive_price", "provider": "VCI"},
+                {"capability_kind": "descriptive_volume", "provider": "KBS"},
+            ]
+        )
+
+    def test_gap_table_average_daily_volume_reflects_kbs_partial_finding(self):
+        table = {row["capability"]: row for row in registry.generic_unlock_gap_table()}
+        row = table["average_daily_volume_and_tradability"]
+        self.assertIn("kbs_trade_scope_qualification", row["already_proven"])
+
+
 if __name__ == "__main__":
     unittest.main()

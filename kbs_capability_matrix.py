@@ -36,6 +36,7 @@ from typing import Any, Mapping
 
 import evidence_qualification_tiers as tiers
 import kbs_empirical_basis as basis
+import kbs_trade_scope_qualification as trade_scope
 
 VERSION = "1.0.0"
 
@@ -205,6 +206,18 @@ CAPABILITY_MATRIX: dict[str, dict[str, Any]] = {
         CLASS_DESCRIPTIVE,
         "Comparing KBS against another provider to detect divergence. Agreement is "
         "compatibility evidence and never raises either provider's authority.",
+    ),
+    "kbs_volume_composition_disclosure": _open(
+        "kbs_volume_composition_disclosure",
+        CLASS_DESCRIPTIVE,
+        "Stating which trade categories the daily volume figure demonstrably does and does "
+        "not include (see kbs_trade_scope_qualification.py) -- a disclosure about the "
+        "series' own composition, not a liquidity claim. Continuous matching and "
+        "auction-cleared trades are demonstrated included; negotiated/put-through trades "
+        "are demonstrated excluded; odd-lot inclusion remains unknown. Evidenced from one "
+        "session (2026-08-07), three tickers -- coverage_generalization stays "
+        "limited_to_tested_windows, and this does not by itself open any liquidity "
+        "capability below, all of which still require odd-lot resolution too.",
     ),
     # -- technical --------------------------------------------------------------------
     "kbs_moving_average": _open(
@@ -606,7 +619,15 @@ def matrix_snapshot() -> dict[str, Any]:
         "capabilities": {name: dict(record) for name, record in sorted(CAPABILITY_MATRIX.items())},
         "consumers": dict(sorted(CONSUMER_CLASSIFICATION.items())),
         "shadow_backtest_conditions": list(SHADOW_BACKTEST_CONDITIONS),
+        # Unchanged, deliberately: this is the data_day endpoint's own market-scope finding
+        # (genuinely "unknown" -- that endpoint carries no scope-distinguishing field) and
+        # assert_matrix_fail_closed still requires it to stay "unknown". It is a narrower,
+        # different measurement from volume_trade_scope below, not a stale duplicate of it.
         "volume_market_scope": basis.market_scope_contract()["volume_market_scope"],
+        # A separate, later, broader finding from two different endpoints (price board +
+        # intraday tape) never examined by kbs_empirical_basis.py -- see
+        # kbs_trade_scope_qualification.py. Additive: nothing above reads or gates on this.
+        "volume_trade_scope": trade_scope.active_contract(),
         "liquidity_actionable": False,
         "is_actionable_effect": "none",
     }

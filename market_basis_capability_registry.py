@@ -35,7 +35,7 @@ WHAT IT DOES NOT DO
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 import kbs_capability_matrix as kbs
 import market_volume_capability_matrix as vci_volume
@@ -455,17 +455,30 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
         "capability": "raw_as_traded_price",
         "already_proven": (
             "VCI and KBS both carry an active, evidenced price-basis verdict "
-            "(empirically_event_adjusted, empirically_deduced tier) -- not unknown."
+            "(empirically_event_adjusted, empirically_deduced tier) -- not unknown. "
+            "2026-08-09: every installed vnstock explorer (vci, kbs, msn, fmarket, misc) "
+            "was checked directly for an adjust/raw parameter or vocabulary -- zero matches "
+            "for 'adjust' anywhere in any quote/trading module; the only recognized "
+            "adjustment_status value anywhere in this repository "
+            "(semantic_evidence_bridge._SUPPORTED_ADJUSTMENT_STATUSES) is the legacy, "
+            "already-superseded raw_as_quoted_no_adjustment_applied label."
         ),
         "missing_evidence": "RAW_AS_TRADED_PRICE_AUTHORITY_ABSENT",
         "required_authority": (
-            "An official exchange raw-tick feed, or a documented first-party provider "
-            "adjustment methodology (neither exists today)."
+            "An official exchange raw-tick/settlement-price feed, or a documented "
+            "first-party provider adjustment methodology. Neither exists today: "
+            "config/official_source_registry.json's four approved sources (hose, hnx, "
+            "vsdc, issuer_ir) declare only corporate-action/governance/financial-statement "
+            "document types -- none price-bearing -- and the one registered future "
+            "candidate (official_authority_candidates.HOSE_TRADING_STATISTICS) has no "
+            "locator and was scoped for volume composition, not price."
         ),
         "next_bounded_action": (
-            "Pillar B B6: compute close_official_event_adjusted from the corporate-action "
-            "ledger; close_raw is the retained pre-ledger series once the ledger proves "
-            "which sessions it actually adjusted."
+            "Obtain an owner-supplied locator for an official raw/settlement price bulletin "
+            "(the same missing input that blocks average_daily_volume_and_tradability below "
+            "-- one HOSE trading-statistics acquisition could answer both). Pillar B B6 "
+            "(corporate-action ledger reconstruction of close_official_event_adjusted) "
+            "remains the fallback route if no raw source is ever obtained."
         ),
     },
     {
@@ -516,26 +529,44 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
         "already_proven": (
             "Volume unit qualified as shares for both providers; VCI's provider-internal "
             "accumulator reconciles exactly; one opening-auction-labelled quantity "
-            "demonstrated inside VCI's accumulator (demonstrated_for_observed_ato_field)."
+            "demonstrated inside VCI's accumulator (demonstrated_for_observed_ato_field). "
+            "2026-08-09, KBS only: three tickers (HPG/VNM/VCB), one session (2026-08-07), "
+            "exact zero-residual reconciliation of the full intraday trade tape against the "
+            "price board's volume_accumulated (the field already numerically identical to "
+            "the already-qualified daily v) proves continuous-matching and auction-cleared "
+            "trades are included, and separately-reported put_through_qty is excluded -- "
+            "see kbs_trade_scope_qualification.py. VCI's own composition is unchanged."
         ),
-        "missing_evidence": "TRADE_TYPE_COVERAGE_UNQUALIFIED",
+        "missing_evidence": (
+            "KBS: odd_lot_inclusion only (TRADE_TYPE_COVERAGE: PARTIAL). VCI: "
+            "TRADE_TYPE_COVERAGE_UNQUALIFIED, unchanged, not re-probed this pass."
+        ),
         "required_authority": (
-            "A source that states what a volume figure counts -- matched vs. negotiated, "
-            "auction vs. continuous. All 96 examined VCI fields and every reachable KBS "
-            "surface were exhausted and none carries this "
+            "For KBS's remaining gap: an odd-lot-distinguishing surface (none reachable in "
+            "the installed free-tier library) or more independent sessions to strengthen "
+            "the single-session finding. For VCI: a source that states what its volume "
+            "figure counts at all -- all 96 examined VCI fields and every reachable KBS "
+            "surface this repository can reach for free were exhausted for VCI specifically "
             "(see docs/DECISIONS.md 2026-08-04 'Ninety-six fields, and none of them says "
             "put-through')."
         ),
         "next_bounded_action": (
-            "Obtain the HOSE trading-statistics locator (official_authority_candidates."
-            "HOSE_TRADING_STATISTICS) -- owner-supplied URL, not composed; then answer its "
-            "8 open questions. Not another VCI/KBS probe."
+            "Not next: odd-lot and cross-session generalization are narrower, lower-value "
+            "gaps than what already-qualified KBS composition unlocks (see "
+            "ACTIONABLE_LIQUIDITY_UNLOCK). Obtain the HOSE trading-statistics locator "
+            "(official_authority_candidates.HOSE_TRADING_STATISTICS) -- owner-supplied URL, "
+            "not composed -- only if VCI's own composition specifically becomes the binding "
+            "constraint later."
         ),
     },
     {
         "capability": "liquidity_adjusted_position_sizing",
         "already_proven": "Same volume-unit evidence as average_daily_volume_and_tradability.",
-        "missing_evidence": "TRADE_TYPE_COVERAGE_UNQUALIFIED (downstream of the same gap)",
+        "missing_evidence": (
+            "Odd-lot inclusion (KBS) / full composition (VCI), plus a downstream "
+            "authority-selection rule and holdings/cash/risk-budget contract this milestone "
+            "does not build (see ACTIONABLE_LIQUIDITY_UNLOCK)."
+        ),
         "required_authority": "Same as average_daily_volume_and_tradability.",
         "next_bounded_action": "Not next on its own; downstream of the ADV route above.",
     },
@@ -558,3 +589,124 @@ GENERIC_UNLOCK_GAP_TABLE: tuple[dict[str, str], ...] = (
 
 def generic_unlock_gap_table() -> list[dict[str, str]]:
     return [dict(row) for row in GENERIC_UNLOCK_GAP_TABLE]
+
+
+# ---------------------------------------------------------------------------------
+# GENERIC_MARKET_BASIS_UNLOCK milestone (2026-08-09) -- price-branch findings
+# ---------------------------------------------------------------------------------
+#
+# The price branch of that milestone inspected every installed vnstock provider explorer
+# (vci, kbs, msn, fmarket, misc) and every approved official source's declared document
+# types for a raw/as-traded price namespace or authority. It found none. These constants are
+# the precise, code-level record of that negative result -- not a re-statement of the
+# already-qualified adjusted verdicts above, which are unchanged.
+
+EXPLICIT_RAW_ADJUSTED_NAMESPACE = "ABSENT"
+RAW_AS_TRADED_PRICE_AUTHORITY = "BLOCKED"
+
+#: Every installed vnstock explorer checked, and what was found. Not a claim about anything
+#: unobserved -- see docs/DECISIONS.md 2026-08-09 for the exact commands run.
+RAW_PRICE_NAMESPACE_INSPECTION: dict[str, Any] = {
+    "installed_explorers_checked": ("vci", "kbs", "msn", "fmarket", "misc"),
+    "adjust_vocabulary_matches": 0,
+    "raw_vocabulary_matches_relevant_to_price": 0,
+    "recognized_adjustment_status_values_repository_wide": (
+        "raw_as_quoted_no_adjustment_applied",  # legacy, already-superseded label; see
+        # provider_price_basis_registry.LEGACY_NO_LOCAL_ADJUSTMENT_LABEL
+    ),
+    "official_sources_checked": ("hose", "hnx", "vsdc", "issuer_ir"),
+    "official_sources_with_price_bearing_document_types": (),
+    "registered_future_candidates_with_a_locator": (),
+    "conclusion": (
+        "No installed provider adapter distinguishes raw from adjusted, and no approved or "
+        "candidate official source declares a price-bearing document type with a locator. "
+        "The blocker is the absence of a source, not unqualified semantics from a known one."
+    ),
+}
+
+
+# ---------------------------------------------------------------------------------
+# Deterministic, capability-specific authority-selection rule
+# ---------------------------------------------------------------------------------
+#
+# "If more than one qualified source/path exists, pick the strongest one, deterministically,
+# per capability -- never merge or silently fall back." Four tiers, evaluated in order; the
+# first tier with a real answer wins and the tier is always reported alongside the result.
+
+AUTHORITY_TIER_OFFICIAL_RAW = 1
+AUTHORITY_TIER_PROVIDER_RAW = 2
+AUTHORITY_TIER_PROVIDER_ADJUSTED_DESCRIPTIVE = 3
+AUTHORITY_TIER_BLOCKED = 4
+
+AUTHORITY_TIER_NAMES: Mapping[int, str] = {
+    AUTHORITY_TIER_OFFICIAL_RAW: "official_raw_as_traded_source",
+    AUTHORITY_TIER_PROVIDER_RAW: "qualified_provider_raw_namespace",
+    AUTHORITY_TIER_PROVIDER_ADJUSTED_DESCRIPTIVE: "qualified_provider_adjusted_namespace_descriptive_only",
+    AUTHORITY_TIER_BLOCKED: "blocked",
+}
+
+#: Capabilities for which Tier 3 (provider-adjusted, descriptive-only) is ever an admissible
+#: answer. Anything not listed here has no Tier 3 route and falls straight to Tier 4 --
+#: valuation, sizing, ranking and execution are never descriptive-only capabilities.
+_TIER_3_ELIGIBLE_CAPABILITY_KINDS = frozenset(
+    {
+        "descriptive_price", "descriptive_volume", "technical_indicator",
+        "provider_series_return", "volume_composition_disclosure",
+    }
+)
+
+
+def select_price_authority(capability_kind: str, *, provider: str | None = None) -> dict[str, Any]:
+    """The one place this repository decides which namespace answers a price/volume
+    capability. Deterministic and capability-specific: the same ``capability_kind`` always
+    resolves to the same tier given the same evidence state, and a capability ineligible for
+    Tier 3 (valuation, sizing, ranking, execution) can never land there no matter which
+    provider is asked.
+
+    Never merges: when Tier 3 applies, the result names exactly one provider (the one
+    passed in, defaulting to none selected) rather than picking "whichever is available".
+    """
+    # Tier 1: no official raw source exists today (RAW_AS_TRADED_PRICE_AUTHORITY == BLOCKED).
+    # Tier 2: neither provider has ever been qualified as raw -- both are
+    # raw_as_traded_eligible == False in provider_price_basis_registry.py.
+    if capability_kind not in _TIER_3_ELIGIBLE_CAPABILITY_KINDS:
+        return {
+            "capability_kind": capability_kind,
+            "tier": AUTHORITY_TIER_BLOCKED,
+            "tier_name": AUTHORITY_TIER_NAMES[AUTHORITY_TIER_BLOCKED],
+            "provider": None,
+            "reason": "capability_kind_has_no_tier_3_route_and_no_tier_1_or_2_source_exists",
+        }
+    if provider is None:
+        return {
+            "capability_kind": capability_kind,
+            "tier": AUTHORITY_TIER_BLOCKED,
+            "tier_name": AUTHORITY_TIER_NAMES[AUTHORITY_TIER_BLOCKED],
+            "provider": None,
+            "reason": "no_provider_named_and_no_implicit_best_available_provider_selection_exists",
+        }
+    named = _normalize_provider(provider)
+    return {
+        "capability_kind": capability_kind,
+        "tier": AUTHORITY_TIER_PROVIDER_ADJUSTED_DESCRIPTIVE,
+        "tier_name": AUTHORITY_TIER_NAMES[AUTHORITY_TIER_PROVIDER_ADJUSTED_DESCRIPTIVE],
+        "provider": named,
+        "reason": "only_admissible_route_today_is_the_named_providers_own_qualified_adjusted_series",
+        "namespace": "provider_scoped",
+        "descriptive_only": True,
+    }
+
+
+def assert_no_fallback_merging(results: Sequence[Mapping[str, Any]]) -> None:
+    """Refuse a caller that collapsed more than one provider's answer for the same
+    capability into one value -- the one shape this rule exists to prevent."""
+    by_capability: dict[str, set[str]] = {}
+    for result in results:
+        providers = by_capability.setdefault(str(result.get("capability_kind")), set())
+        if result.get("provider"):
+            providers.add(str(result["provider"]))
+    for capability_kind, providers in by_capability.items():
+        if len(providers) > 1:
+            raise RegistryError(
+                f"fallback_merging_forbidden:{capability_kind}:{sorted(providers)}"
+            )

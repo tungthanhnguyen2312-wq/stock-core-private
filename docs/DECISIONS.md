@@ -867,3 +867,50 @@ Reopening requires an explicit owner decision.
   Recorded here as a decision, not a gap: the next session doing Pillar B acquisition work
   should start from "acquire the SSI VSDC ex-date notice using the established B2/B3
   pattern", not re-derive the route.
+
+## 2026-08-09 - "Closed" described the evidence tested, not every surface a provider exposes
+
+- The 2026-08-04 finding that KBS "does not currently provide admissible scope evidence"
+  was correct for the one endpoint it tested (`data_day`, the daily chart) and was written,
+  and later cited, as if it covered KBS generally. It did not: KBS's price board
+  (`stock/iss`) and intraday trade tape (`trade/history/{symbol}`) are two different,
+  already-installed endpoints on the same host that nobody had examined. Both existed in
+  the installed `vnstock` 4.0.4 library the whole time; finding them cost zero new
+  dependencies and zero provider exploration beyond what was already integrated.
+- Testing them (three tickers, one session, 2026-08-07) found real, new, `empirically_
+  deduced` evidence: KBS's daily volume figure is now *decisively* known to exclude
+  put-through/negotiated trades and include continuous-matched and auction-cleared trades,
+  via an exact, zero-residual reconciliation of the full intraday tape against the price
+  board's accumulator, repeated identically for all three tickers.
+- **The lesson generalizes beyond this one finding.** A "provider has no admissible scope
+  evidence" verdict is only ever as broad as the surfaces actually tested. Before treating
+  such a verdict as closing a provider entirely, check what was tested, not just what the
+  verdict says. VCI's own composition finding (2026-08-04, "Ninety-six fields, and none of
+  them says put-through") is not affected by this correction — that finding already names
+  the specific surfaces it exhausted (all 96 fields across every VCI endpoint reachable),
+  which is the standard this KBS finding was held to as well before being written down.
+- See `kbs_trade_scope_qualification.py` and
+  `operations-review/kbs-trade-scope-qualification-20260809/`.
+
+## 2026-08-09 - A third-party library's time-window heuristic is not a first-party field
+
+- `vnstock`'s KBS intraday tape reports an empty `side` field on exactly the trades a call
+  auction produces (no directional aggressor, which is structurally why continuous trades
+  carry a side and auction-cleared trades do not). The library's own
+  `core.utils.transform.process_match_types` then labels the *first* such empty-side row
+  each day `ato` and the *last* `atc`, by matching against a fixed clock window
+  (9:13-9:17 / 14:43-14:47) — a heuristic the library author wrote, not a field KBS's API
+  returns.
+- The distinction mattered for a real decision: `kbs_trade_scope_qualification.py` qualifies
+  one combined `auction_inclusion` dimension, deliberately never splitting it into separate
+  `opening_auction_inclusion`/`closing_auction_inclusion` verdicts the way VCI's contract
+  does. The *inclusion* fact (side-less rows are part of the reconciled total) rests on
+  first-party field values (the raw `LC` field, genuinely empty) and needs no heuristic;
+  which specific auction a row belongs to would rest entirely on the library's guess, and
+  this repository's qualification tiers do not have a tier for "a third party's plausible
+  guess" (`evidence_qualification_tiers.classify_field_semantics`'s own doctrine: a
+  contextual or inferred reading does not qualify).
+- A second candidate corroboration was checked and set aside for the same reason applied
+  honestly: the price board's `PMQ`/`PMP` ("previous match qty/price") fields matched the
+  put-through print's quantity and price exactly for HPG, only on price for VNM, and not at
+  all for VCB. Inconsistent evidence is not evidence with caveats attached; it was not used.

@@ -1,0 +1,48 @@
+{
+  "url": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stock/iss",
+  "method": "GET",
+  "status": 200,
+  "request_params": {
+    "code": "HPG,VNM,VCB"
+  },
+  "request_headers_redacted": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Accept-Encoding": "gzip, deflate",
+    "Accept": "application/json, text/plain, */*",
+    "Connection": "keep-alive",
+    "Accept-Language": "en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7",
+    "Content-Type": "application/json",
+    "Cache-Control": "no-cache",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "DNT": "1",
+    "Pragma": "no-cache",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "sec-ch-ua-mobile": "?0",
+    "Content-Length": "23"
+  },
+  "response_headers_redacted": {
+    "Server": "KBSV",
+    "Date": "Sun, 09 Aug 2026 04:38:41 GMT",
+    "Content-Type": "application/json; charset=utf-8",
+    "Transfer-Encoding": "chunked",
+    "Connection": "keep-alive",
+    "X-Gravitee-Transaction-Id": "d0cf7820-292e-4d72-8f78-20292e7d7271, d0cf7820-292e-4d72-8f78-20292e7d7271",
+    "X-Gravitee-Request-Id": "d0cf7820-292e-4d72-8f78-20292e7d7271, d2a12210-2cab-43a5-a122-102cabe3a5d9",
+    "x-powered-by": "Express",
+    "access-control-allow-origin": "*",
+    "vary": "Accept-Encoding",
+    "x-cache-status": "MISS",
+    "content-encoding": "gzip",
+    "X-XSS-Protection": "1; mode=block",
+    "X-Frame-Options": "SAMEORIGIN",
+    "X-Content-Type-Options": "nosniff",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+    "Referrer-Policy": "same-origin",
+    "Feature-Policy": "geolocation 'self'; vibrate 'none'"
+  },
+  "retrieved_at": "2026-08-09T04:39:30.143674+00:00",
+  "raw_response_sha256": "4ca608084c184bcd49b5acc8c675f382bb818a4370e5b9b79629eea7876a29a7",
+  "body_bytes": 2063
+}

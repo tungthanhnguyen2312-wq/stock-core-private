@@ -1,0 +1,48 @@
+{
+  "url": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/trade/history/HPG?page=1&limit=20000",
+  "method": "GET",
+  "status": 200,
+  "request_params": {
+    "page": 1,
+    "limit": 20000
+  },
+  "request_headers_redacted": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Accept-Encoding": "gzip, deflate",
+    "Accept": "application/json, text/plain, */*",
+    "Connection": "keep-alive",
+    "Accept-Language": "en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7",
+    "Content-Type": "application/json",
+    "Cache-Control": "no-cache",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "DNT": "1",
+    "Pragma": "no-cache",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "sec-ch-ua-mobile": "?0"
+  },
+  "response_headers_redacted": {
+    "Server": "KBSV",
+    "Date": "Sun, 09 Aug 2026 04:38:42 GMT",
+    "Content-Type": "application/json; charset=utf-8",
+    "Transfer-Encoding": "chunked",
+    "Connection": "keep-alive",
+    "X-Gravitee-Transaction-Id": "88f85af4-2d3b-4cad-b85a-f42d3becad9b, 88f85af4-2d3b-4cad-b85a-f42d3becad9b",
+    "X-Gravitee-Request-Id": "88f85af4-2d3b-4cad-b85a-f42d3becad9b, b07dc909-4b78-4157-bdc9-094b7851573e",
+    "x-powered-by": "Express",
+    "access-control-allow-origin": "*",
+    "vary": "Accept-Encoding",
+    "x-cache-status": "MISS",
+    "content-encoding": "gzip",
+    "X-XSS-Protection": "1; mode=block",
+    "X-Frame-Options": "SAMEORIGIN",
+    "X-Content-Type-Options": "nosniff",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
+    "Referrer-Policy": "same-origin",
+    "Feature-Policy": "geolocation 'self'; vibrate 'none'"
+  },
+  "retrieved_at": "2026-08-09T04:39:32.101555+00:00",
+  "raw_response_sha256": "e7d03dd471469620966110a74b7a620bbdbb3a238dd3f32f36ff64e98ef4b337",
+  "body_bytes": 410335
+}

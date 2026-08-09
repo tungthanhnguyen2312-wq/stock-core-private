@@ -100,6 +100,13 @@ capitalisation and therefore waits on pillar B.
   - **KBS/VCI source probing is closed**, reaffirmed rather than reopened: the volume
     trade-scope question (brief-mandated one bounded check) required no new work, already
     settled by the 2026-08-04 "Ninety-six fields, and none of them says put-through" finding.
+    **Correction, 2026-08-09 (see the Generic Market Basis Unlock entry below):** this was
+    true of VCI and true of the one KBS *endpoint* (`data_day`) the P0-Z lane examined. It
+    was not, and could not have been, a claim about KBS endpoints nobody had examined yet —
+    "closed" described the evidence tested, not every surface the provider exposes. Two
+    different, already-installed KBS endpoints (the price board, the intraday tape) were
+    genuinely untested and yielded a real, new, bounded finding. VCI itself remains closed;
+    nothing there was re-probed.
   - **Pillar B is the corporate-action/source-authority continuation track**, unchanged — see
     below. Its concrete next input (an SSI VSDC ex-date notice) was named, not acquired: a
     live network request is a different class of action from this milestone's scope.
@@ -115,6 +122,38 @@ capitalisation and therefore waits on pillar B.
   85 new tests (73 Producer, 12 Consumer). See
   `operations-review/market-basis-capability-activation-20260809/` and
   `docs/qualified_market_observations_contract.md`.
+- **Generic Market Basis Unlock (raw price authority + volume trade-scope) shipped
+  2026-08-09 — PARTIAL, Producer-only, 11 bounded read-only requests to the already-qualified
+  KBS host.** Attacked the two remaining generic blockers directly instead of re-auditing
+  closed findings.
+  - **Price: `RAW_AS_TRADED_PRICE_AUTHORITY: BLOCKED`, `EXPLICIT_RAW_ADJUSTED_NAMESPACE:
+    ABSENT`.** Every installed `vnstock` provider explorer (vci, kbs, msn, fmarket, misc)
+    checked directly for a raw/adjusted distinction: zero `adjust` vocabulary anywhere.
+    `config/official_source_registry.json`'s four approved sources declare no price-bearing
+    document type; the one registered future candidate has no locator. The blocker is a
+    genuinely absent source — recorded as data in `market_basis_capability_registry.
+    RAW_PRICE_NAMESPACE_INSPECTION`, not left as prose. No document acquired: nothing
+    available would have closed a *price* reconciliation gap specifically.
+  - **Volume: a real, new, bounded, KBS-scoped finding.** Two KBS endpoints the closed P0-Z
+    lane never examined (price board, intraday tape — both already installed, same
+    qualified host) reconcile exactly, three tickers, one session, zero residual:
+    **KBS's daily reported volume demonstrably excludes negotiated/put-through trades** and
+    includes continuous-matched and auction-cleared trades. `odd_lot_inclusion` stays
+    unknown (Sponsor-tier endpoint, not installed, not probed). New
+    `kbs_trade_scope_qualification.py`; new `kbs_volume_composition_disclosure` capability;
+    new additive `volume_trade_scope` field alongside the pre-existing, unchanged,
+    still-`unknown` `volume_market_scope` field. **Does not affect the currently-served
+    production universe** — all 11 tickers remain 100% VCI-sourced; this matters for KBS as
+    the failover provider. No liquidity capability opens: odd-lot (KBS) and full composition
+    (VCI, unchanged) still block them, and one session is not a standing methodology.
+  - **New deterministic authority-selection rule** (`market_basis_capability_registry.
+    select_price_authority`, 4 tiers, `assert_no_fallback_merging`) — no implicit
+    best-available-provider behaviour, ever.
+  - `HISTORICAL_VALUATION_UNLOCK: BLOCKED` (raw price authority absent, unchanged binding
+    constraint). `ACTIONABLE_LIQUIDITY_UNLOCK: PARTIAL` (KBS-scoped, not yet
+    production-relevant).
+  74 new tests (49 registry, 25 trade-scope). See
+  `operations-review/kbs-trade-scope-qualification-20260809/`.
 - **Event-time historical mutability is only reachable prospectively.** A snapshot retained
   *before* a future corporate action plus a matching one after it. Re-requesting an
   already-post-event window is not a substitute at any interval, and no roadmap item may
