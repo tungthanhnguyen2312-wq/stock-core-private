@@ -98,6 +98,7 @@ from historical_decision_analysis import evaluate_historical_decision_analysis, 
 from portfolio_risk_analysis import evaluate_portfolio_risk_analysis
 from historical_scaleout import attach as attach_historical_scaleout
 from qualified_research_brief import build as build_qualified_research_brief
+from qualified_research_delta import attach as attach_qualified_research_delta
 from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from analysis_lane_eligibility import evaluate_ticker_lanes
@@ -2985,6 +2986,8 @@ def main() -> int:
     parser.add_argument("--include-portfolio-risk-analysis", action="store_true", help="Opt-in Phase 4C historical risk/liquidity/portfolio-fit gate for the three pilots; requires --include-historical-decision-analysis.")
     parser.add_argument("--include-historical-scaleout", action="store_true", help="Opt-in Phase 5A bounded deterministic qualified cohort scale-out.")
     parser.add_argument("--include-qualified-research-brief", action="store_true", help="Opt-in Phase 5B compact Producer-owned brief for HPG,VNM,VCB.")
+    parser.add_argument("--include-qualified-research-delta", action="store_true", help="Opt-in Phase 5D deterministic comparison against the explicit --qualified-research-delta-previous bundle; no live data or filesystem-time selection.")
+    parser.add_argument("--qualified-research-delta-previous", metavar="BUNDLE_PATH", help="Explicit frozen previous analysis_bundle.json used only with --include-qualified-research-delta.")
     parser.add_argument("--verify", metavar="MANIFEST_PATH",
                         help="KHÔNG xuất gì — chỉ so sha256 trong 1 bundle_manifest.json cũ với"
                              " file hiện tại trên đĩa ('checksum dependency'); exit 0 nếu khớp"
@@ -3214,9 +3217,20 @@ def main() -> int:
     attach_historical_decision_analysis(bundle_entries, args.include_historical_decision_analysis)
     attach_portfolio_risk_analysis(bundle_entries, price_basis, args.include_portfolio_risk_analysis)
     scaleout_coverage = attach_historical_scaleout(bundle_entries, price_basis) if args.include_historical_scaleout else None
-    if args.include_qualified_research_brief:
+    if args.include_qualified_research_brief or args.include_qualified_research_delta:
         for ticker in sorted(PILOT_TICKERS):
             if isinstance(bundle_entries.get(ticker),dict): bundle_entries[ticker]["qualified_research_brief"]=build_qualified_research_brief(ticker,bundle_entries[ticker])
+    if args.include_qualified_research_delta:
+        if not args.qualified_research_delta_previous:
+            parser.error("--include-qualified-research-delta requires --qualified-research-delta-previous BUNDLE_PATH")
+        previous_path = Path(args.qualified_research_delta_previous)
+        try:
+            previous_bundle = json.loads(previous_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            parser.error(f"cannot load explicit previous research snapshot: {exc}")
+        if not isinstance(previous_bundle, Mapping) or not isinstance(previous_bundle.get("tickers"), Mapping):
+            parser.error("explicit previous research snapshot is not an analysis bundle with tickers")
+        attach_qualified_research_delta(bundle_entries, previous_bundle, True)
     # Phase 6B: reconcile the legacy fundamental_quality.models.earnings_quality subsection
     # against fundamental_quality_evidence when both are present on the same entry. A no-op
     # (adds one informational limitation only) whenever the opt-in evidence contract was not
