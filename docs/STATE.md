@@ -1,5 +1,16 @@
 # Stock Lookup state
 
+## POW entity authority and QNS audited filing recovery (2026-08-09)
+
+`POW_ENTITY_AUTHORITY_AND_QNS_AUDITED_FILING_RECOVERY: PARTIAL`. The existing manual-profile
+contract is the minimum and sole naming authority for `issuer_entity_type`. PV Power's official
+company page identifies PetroVietnam Power Corporation as the POW listed share and a joint-stock
+corporation; its official FY2024 annual report identifies ordinary power-generation and related
+operating businesses. This supports the minimal `POW,corporate` manual profile without a new
+archetype or changed financial fact. POW's five existing qualified FY2024 consolidated VND facts
+now project to research eligibility; historical trend remains `insufficient_history` and generic
+market gates remain blocked. QNS recovery is pending its one bounded official-source investigation.
+
 ## QNS/POW official financial materialization and research activation (2026-08-09)
 
 `QNS_POW_OFFICIAL_FINANCIAL_MATERIALIZATION_AND_RESEARCH_ACTIVATION: PARTIAL`. QNS was

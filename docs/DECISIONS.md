@@ -5,6 +5,18 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - POW entity identity meets the existing manual-profile authority
+
+- `config/ticker_entity_profiles.csv` is the sole contract permitted to name an issuer type;
+  the supported generic non-financial archetype is `corporate`. PV Power's issuer-controlled
+  company page (`https://pvpower.vn/vi/page/gioi-thieu-chung`) identifies PetroVietnam Power
+  Corporation - JSC, its POW stock code, and its issued shares. Its official FY2024 annual
+  report, already issuer-hosted, records power generation and related operating businesses.
+  This is sufficient manual verification for `POW,corporate`; no sector/archetype was created.
+- The profile changes no document, fact value, citation, debt derivation, qualification rule, or
+  market gate. It only permits the existing five qualified annual consolidated facts to pass the
+  already-generic corporate research projection. Conflicting entity claims remain fail-closed.
+
 ## 2026-08-09 - QNS/POW annual evidence remains fail-closed at package and entity gates
 
 - QNS and POW were the only two artifacts inspected. QNS's retained report is text-bearing but

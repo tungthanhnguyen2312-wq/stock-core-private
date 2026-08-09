@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 
 import canonical_financial_qualification_policy as policy  # noqa: E402
 import evidence_promotion as promotion  # noqa: E402
+from financial_entity_applicability import load_entity_profiles, resolve_archetype  # noqa: E402
 import official_annual_financial_fact_projection as annual  # noqa: E402
 import qns_pow_official_financial_materialization as milestone  # noqa: E402
 import research_financial_fact_projection as research  # noqa: E402
@@ -81,12 +82,26 @@ class QnsPowOfficialFinancialMaterializationTests(unittest.TestCase):
         self.assertTrue(all(policy.evaluate_fact(fact, evidence_index=evidence)["status"] == "qualified" for fact in facts))
         blocked = research.build_projection("POW", facts, entity_type="unknown", entity_authority="unknown", evidence_index=evidence)
         self.assertFalse(blocked["research_eligible"])
-        available = research.build_projection("POW", facts, entity_type="corporate", entity_authority="fixture", evidence_index=evidence)
+        profiles = load_entity_profiles(ROOT / "config" / "ticker_entity_profiles.csv")
+        self.assertEqual(profiles["POW"], "corporate")
+        archetype = resolve_archetype("POW", manual_entity_type=profiles["POW"])
+        self.assertEqual(archetype["authority"], "manual_profile")
+        available = research.build_projection("POW", facts, entity_type=archetype["issuer_entity_type"],
+                                              entity_authority=archetype["authority"], evidence_index=evidence)
         self.assertTrue(available["research_eligible"])
         historical = build_historical("POW", available["research_financial_canonical"])
         self.assertEqual(historical["trend_status"], "insufficient_history")
         matrix = build_ticker_capability_matrix("POW", {"entity_type": "unknown", "research_financial_fact_projection": blocked}, market_authority={})
         self.assertFalse(matrix["is_actionable"])
+
+    def test_manual_pow_profile_conflicts_fail_closed_in_capability_matrix(self) -> None:
+        matrix = build_ticker_capability_matrix(
+            "POW",
+            {"entity_type": "corporate", "qualified_research_brief": {"entity_type": "bank"}},
+            market_authority={},
+        )
+        self.assertEqual(matrix["identity"]["status"], "blocked")
+        self.assertIn("entity_type_authority_conflict", matrix["identity"]["reason_codes"])
 
     def test_wrong_hash_and_cross_ticker_reuse_fail_closed(self) -> None:
         with patch.object(milestone, "POW_SHA256", "0" * 64):

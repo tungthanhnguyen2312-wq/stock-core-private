@@ -1,5 +1,14 @@
 # Stock Lookup roadmap
 
+## POW entity authority and QNS audited filing recovery (partial 2026-08-09)
+
+POW is now manually profiled as the existing generic `corporate` archetype, supported by PV
+Power's issuer-controlled identity and FY2024 annual-report disclosures. Its already-qualified
+five-fact FY2024 evidence flows unchanged through the annual projection and historical-only
+research path; it does not enter a fixed comparison cohort and its market gates remain blocked.
+The bounded QNS official audited-consolidated filing recovery remains to be completed or closed
+with its exact locator blocker; runtime publication remains deferred.
+
 ## QNS/POW official financial materialization and research activation (partial 2026-08-09)
 
 `QNS_POW_OFFICIAL_FINANCIAL_MATERIALIZATION_AND_RESEARCH_ACTIVATION: PARTIAL`. The fixed
