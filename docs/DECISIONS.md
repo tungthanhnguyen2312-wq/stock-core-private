@@ -767,3 +767,62 @@ Reopening requires an explicit owner decision.
 - **Real:** the pagination runner wrote a daily-bar raw artifact whose filename it never recorded, leaving 4 raw files reachable from no ledger. The runner now records `raw_artifact` and the existing ledgers were repaired by hash-matching. Every raw filename already embedded the first 16 hex of its own content hash, so the names are self-verifying and the repair could be done from the bytes.
 - **Phantom:** the secret scanner flagged 2 findings that were prose — "no cookie, **authorization** header … was sent" and "non-**secret** parameters", both sentences in a report *about* not leaking secrets. Textual matching cannot tell a secret from a discussion of one; the scan is now structural, requiring the marker as a JSON key with a value that is not the redaction sentinel.
 - **Nothing was deleted.** Three byte-identical groups exist because the lunch-halt tape was frozen, and each copy is its own run's reconciliation target; the one superseded in-directory attempt is now referenced as `superseded_attempt_artifacts` instead of removed. Deleting failure evidence to make a count look tidier is how the reason for a decision gets lost.
+
+## 2026-08-09 - Shipping the qualified research lane exposed two real defects and caused a third
+- **Goal:** the Phase 4B/4C/5A/5B/5D/5E qualified-research-lane commits (`7293f78`..`e98cd53`
+  Producer, `b024895`..`693b375` Consumer, `d93a2fa`/`bd2859f` Dashboard) had never actually
+  reached the served release — `worktrees/market-dashboard-main`/`main` carried no
+  `qualified_research_brief` for any ticker. Ship it there, at the real 11-ticker production
+  scope, additive-only, with no unrelated refresh.
+- **First real defect, pre-existing:** `tools/operate_stocklookup.py` — "the one supported
+  operator command" — never exposed `--include-historical-decision-analysis` /
+  `--include-portfolio-risk-analysis` / `--include-historical-scaleout` /
+  `--include-qualified-research-brief`, even though `export_ai_bundle.py` had supported all
+  four since the commits above. They were only reachable by invoking the exporter directly,
+  bypassing the supported command's verify/rollback/Consumer-validate gates. Fixed: the four
+  flags are now wired through, tested (19 `test_operate_stocklookup.py` cases unaffected,
+  still passing).
+- **Second real defect, pre-existing, and the direct cause of a scope mistake:**
+  `DEFAULT_TICKERS` also silently carried `VNINDEX`, contradicting its own comment ("kept
+  identical to what the last successful export actually shipped") — the actually-served
+  bundle's `tickers_requested` has never included it (`unproven_tickers: []`, not
+  `["VNINDEX"]`). Requesting it by default tripped `preflight_derived_session_inputs` on a
+  context package for a symbol outside both the shipped universe and this lane's target
+  population (an index has no issuer). That gate failure was answered, wrongly, by running
+  `--prepare-inputs` — which correctly rebuilt VNINDEX's package but also regenerated
+  technical signals, focus analysis, and every real ticker's context package, and upserted
+  `watchlist_history` in `vn_stock.db`, none of which the milestone authorized. **Fully
+  reverted before any publication**: `vn_stock.db` restored from the run's own hash-verified
+  pre-write backup (`181ebd7e…36a9`, matching the long-standing known-good hash), the four
+  release artifacts restored from the run's own rollback point (matching the pre-incident
+  hashes independently captured before any command ran). Root-caused and fixed at the source:
+  `DEFAULT_TICKERS` no longer carries `VNINDEX`. The corrected rebuild (11 tickers, no
+  `--prepare-inputs`) then passed `preflight_derived_session_inputs` on the first try,
+  proving the fix — the real production inputs had been fresh the entire time.
+- **Third defect, self-inflicted by the first mistake, caught before publication:** because
+  `prepare_context_packages` runs *before* `export_bundle` rewrites `analysis_bundle.json`,
+  and the runtime root's on-disk bundle was transiently a 3-ticker ad hoc pilot snapshot when
+  the over-broad `--prepare-inputs` ran, the Consumer's context builder found no legacy-bundle
+  entry for 9 of the 11 tickers and wrote every dependent section as
+  `*_not_in_legacy_bundle`/`missing` into their `context_package` sub-blob — a real content
+  regression, not a timestamp. Caught by a section-by-section diff against the live served
+  bundle before any publish. Remediated by rebuilding context packages once, directly, now
+  that the correct full-universe bundle was already on disk (not by widening scope again).
+  Verified afterward: the top-level, dashboard-rendered sections were unaffected throughout
+  (`financial_canonical` status identical for all 11 tickers across both mistakes); a
+  section-level diff against the served bundle, with wall-clock-only fields stripped, showed
+  zero remaining content differences beyond the intended additive research fields for HPG/VNM.
+  One incidental finding: 4 of the 11 tickers' `context_package` sub-blob in the
+  **already-shipped, currently-live** bundle carries this exact same `not_in_legacy_bundle`
+  pattern — a latent, pre-existing defect in the ordinary daily pipeline's own sequencing,
+  unrelated to this session, not investigated further here (out of scope; the corrected
+  candidate does not carry it forward for those 4 tickers, but nothing was done to fix the
+  live bundle's copy).
+- **Why this belongs in DECISIONS, not just as a fix:** the failure mode generalizes —
+  `--prepare-inputs` bundles five independent stages (candle scan, strategy, market scan,
+  focus analysis, context packages) with no way to run one without the others, and
+  `preflight_derived_session_inputs` checks freshness for whatever ticker list is passed,
+  including symbols outside the real target scope. A wrong or stale default ticker list turns
+  an unrelated symbol's staleness into an invitation to refresh everything. Before reaching
+  for `--prepare-inputs` to satisfy a freshness gate, check first whether the tickers actually
+  in scope are already fresh — this session's real ones always were.

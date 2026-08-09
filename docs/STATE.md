@@ -78,6 +78,64 @@ exact-session proof in `bundle_manifest.json`:
   renders no number; malformed subsection data cannot break the section and all output
   stays escaped.
 
+## Qualified research lane (product capability layer, live 2026-08-09)
+
+A separate numbering track from the Phase 0A-6E working-session labels in the P0-P5
+cross-reference table above (`ROADMAP.md`): this is a **product capability** built on top
+of the existing P3 evidence-qualified analysis, not a pillar-A/B market-data milestone. It
+consumes exactly the same `financial_canonical`/`fundamental_quality` sections P3 already
+produces; it adds no new evidence source and moves neither the price-basis nor volume-basis
+blocker below. Producer commits `7293f78`..`e98cd53` (2026-08-09): a historical decision
+contract (bear/base/bull, risks, catalysts, invalidation — all `historical_only`,
+`is_actionable: false`), a Phase-4C-style risk/liquidity/portfolio gate (liquidity refuses
+unconditionally on the unqualified price/volume basis above), a compact AI-facing brief, a
+bounded scale-out selector, a snapshot-delta comparator, and immutable snapshot retention.
+Consumer pass-through in `ai-core-private` (`b024895`..`693b375`) is generic per-ticker —
+verified to carry no hidden pilot-ticker restriction.
+
+**Shipped to the actual served production universe on 2026-08-09** — the previous
+"production-active" claim for this lane (referenced in prior handoffs) was only ever true
+against `dashboard-runtime` (the runtime root nothing serves); it had never reached
+`worktrees/market-dashboard-main`/`main`, where the live site actually renders from. Fixed
+via `tools/operate_stocklookup.py`, which previously exposed none of
+`--include-historical-decision-analysis` / `--include-portfolio-risk-analysis` /
+`--include-historical-scaleout` / `--include-qualified-research-brief` even though
+`export_ai_bundle.py` had supported them since the commits above — they were only reachable
+by invoking the exporter directly, bypassing the supported command's verify/rollback gates.
+`DEFAULT_TICKERS` also silently included `VNINDEX`, which the actually-shipped release has
+never carried (`unproven_tickers: []` in the live manifest, not `["VNINDEX"]`); requesting it
+by default tripped the context-package freshness gate for a symbol outside both the shipped
+universe and this lane's target population (an index has no issuer), inviting an unforced
+`--prepare-inputs` run. Both are corrected in `tools/operate_stocklookup.py`.
+
+Live scope: all 11 production tickers preserved (`POW SSI HPG EVF PAN PNJ FPT QNS VNM PVD
+NVL`); research is additive-only to `HPG`/`VNM` (both `eligible`/`historically_mixed`) via the
+existing `PILOT_TICKERS` gate. `VCB` was evaluated and deliberately **not** added — it sits
+outside the currently-shipped 11-ticker universe, and folding a new ticker into that universe
+is a separate scope decision from delivering the research lane, not a corrective one. The
+other 9 tickers correctly show no research section (`entity_type` unresolved or
+`financial_canonical` not yet qualified for them) and render the dashboard's existing
+"unavailable" fallback. `--include-historical-scaleout` was evaluated and deliberately **not**
+enabled for this release: under the current 15-row `config/ticker_entity_profiles.csv`
+ceiling it selects 0 additional tickers from this universe (`HPG`/`VNM` are its only
+eligible hits and both are already pilot-excluded), and its output key
+(`historical_research_brief`) isn't read by the dashboard renderer — enabling it would have
+added dead surface area, not delivered value. It remains an available, tested, opt-in flag
+for when entity-archetype coverage actually grows.
+
+**Why this matters for future sessions**: shipping this lane surfaced a real bug in
+`prepare_context_packages` — it runs before `export_bundle` rewrites `analysis_bundle.json`,
+so if the runtime root's on-disk bundle is transiently narrower than the ticker set being
+prepared (as it was here, from an earlier untracked pilot export), the Consumer context
+builder's `analysis_bundle.json` fallback logic marks every section it can't find as
+`*_not_in_legacy_bundle`/`missing` — a real content defect, not a stale timestamp, and
+present in 4 of the 11 tickers' embedded `context_package` sub-blob in the **already-shipped**
+release too (unrelated pre-existing issue, confirmed same pattern in the live bundle, not
+introduced by this delivery). Remediated by rebuilding context packages once the correct
+full-universe bundle was in place. Do not run `prepare_context_packages` (part of
+`--prepare-inputs`) while the runtime root's bundle is known to be narrower than the ticker
+set being prepared.
+
 ## What is blocked, and why
 
 - **Price basis `unknown`, `verified: false`. Volume basis `unknown`, `verified: false`.**

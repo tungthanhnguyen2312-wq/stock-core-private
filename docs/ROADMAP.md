@@ -151,6 +151,17 @@ capitalisation and therefore waits on pillar B.
 ## P3 — Evidence-qualified investment analysis — HISTORICAL-ONLY COMPLETE
 - FY2024 historical HPG/VNM work is complete; future catalysts, risks, and scenarios cannot enable market-dependent conclusions before P0/P1/P2.
 - Exit gate: `MARKET_DEPENDENT_ANALYSIS_REQUIRES_P0_P1_P2 = YES`.
+- **Product capability layer, shipped to production 2026-08-09** (`docs/STATE.md` §"Qualified
+  research lane"): a structured historical decision/risk/brief/delta/snapshot contract built
+  on this same historical-only P3 output, now live for HPG/VNM in the actual served release.
+  **Naming note — do not confuse with the table above**: its commits are internally labelled
+  "Phase 4B/4C/5A/5B/5D/5E", which collides with the *different*, already-closed 2026-08-01
+  Phase 4A-6E working-session labels in the "Cross-reference" table earlier in this file. That
+  table's own P4 row stays `DEFERRED` (ranking/scoring) — this is not that. Treat the two
+  numbering sequences as unrelated: the 2026-08-01 one is closed working-session history: the
+  2026-08-09 one is a live product capability, still growing (see STATE.md for current scope).
+  Exits the same gate above unchanged: still historical-only, still blocked from any
+  market-dependent conclusion by P0/P1/P2.
 
 ## P4 — Market Scan and ranking — DEFERRED
 - No universal score, ranking, or recommendation before valuation and current-market gates qualify.

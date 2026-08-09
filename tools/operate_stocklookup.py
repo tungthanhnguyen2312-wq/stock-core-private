@@ -17,6 +17,14 @@ WHAT IT DOES NOT DO
     market or financial data. Use `pipeline_scheduler.py` for the full daily market chain;
     this command consumes what that chain already produced.
 
+QUALIFIED HISTORICAL RESEARCH LANE (Phase 4B/4C/5A/5B, opt-in)
+    --include-historical-decision-analysis / --include-portfolio-risk-analysis /
+    --include-historical-scaleout / --include-qualified-research-brief forward the matching
+    export_ai_bundle.py flags. They were previously reachable only by invoking
+    export_ai_bundle.py directly, bypassing this command's verify/Consumer-validate/rollback
+    gates. Pass all four together for real brief content; each degrades to an honest
+    ineligible/insufficient-evidence result on its own rather than failing.
+
 MODES
     (default)              dry run. Reads and reports; writes nothing, publishes nothing.
     --execute              rebuild sidecar + bundle + manifest, verify, Consumer-validate,
@@ -95,10 +103,20 @@ DAILY_STAGE_ORDER = ("refresh_metadata", "prepare_inputs", "export_analysis_bund
                      "validate_consumer", "publish_release")
 #: The published production ticker set. Kept identical to what the last successful export
 #: actually shipped -- narrowing it would silently drop tickers the dashboard already
-#: presents. VNINDEX is deliberately included: it has no company snapshot, so it exercises
-#: the exact-session proof's `unproven_tickers` path in production.
+#: presents. Verified 2026-08-09 against the served bundle at
+#: worktrees/market-dashboard-main (analysis_bundle.json.tickers_requested): exactly these
+#: 11, no VNINDEX. VNINDEX was previously listed here as "deliberately included ... to
+#: exercise unproven_tickers in production", but the served release has never actually
+#: shipped it -- unproven_tickers is `[]` there, not `["VNINDEX"]`. That drift is what
+#: caused a real incident: VNINDEX's context package (an index has no issuer, so nothing
+#: about it is analysis-lane-eligible) went stale independently of the other 11 tickers,
+#: and requesting VNINDEX by default tripped `preflight_derived_session_inputs` for a
+#: symbol the shipped universe never included, inviting an unnecessary `--prepare-inputs`
+#: run to satisfy a gate for a ticker that was never part of what gets published. If
+#: exercising `unproven_tickers` in production is wanted again, add VNINDEX back
+#: deliberately with `--tickers` on a specific run, not silently via this default.
 DEFAULT_TICKERS = ("POW", "SSI", "HPG", "EVF", "PAN", "PNJ", "FPT", "QNS", "VNM",
-                   "PVD", "NVL", "VNINDEX")
+                   "PVD", "NVL")
 #: builders/build_ticker_context_config.json::max_batch_size
 CONTEXT_BATCH_SIZE = 10
 
@@ -129,6 +147,10 @@ class Operator:
                  live: bool, prepare: bool = False, web_root: Path | None = None,
                  verify_live_url: str | None = None,
                  include_canonical_financial_facts: bool = False,
+                 include_historical_decision_analysis: bool = False,
+                 include_portfolio_risk_analysis: bool = False,
+                 include_historical_scaleout: bool = False,
+                 include_qualified_research_brief: bool = False,
                  refresh_metadata: bool = False,
                  runner: Callable[..., Any] = subprocess.run):
         self.root = root
@@ -139,6 +161,10 @@ class Operator:
         self.web_root = web_root
         self.verify_live_url = verify_live_url
         self.include_canonical_financial_facts = include_canonical_financial_facts
+        self.include_historical_decision_analysis = include_historical_decision_analysis
+        self.include_portfolio_risk_analysis = include_portfolio_risk_analysis
+        self.include_historical_scaleout = include_historical_scaleout
+        self.include_qualified_research_brief = include_qualified_research_brief
         self.runner = runner
         self.steps: list[dict[str, Any]] = []
         self.rollback_dir: Path | None = None
@@ -489,6 +515,14 @@ class Operator:
                    "--include-analysis-lane-eligibility"]
         if self.include_canonical_financial_facts:
             command.append("--include-canonical-financial-facts")
+        if self.include_historical_decision_analysis:
+            command.append("--include-historical-decision-analysis")
+        if self.include_portfolio_risk_analysis:
+            command.append("--include-portfolio-risk-analysis")
+        if self.include_historical_scaleout:
+            command.append("--include-historical-scaleout")
+        if self.include_qualified_research_brief:
+            command.append("--include-qualified-research-brief")
         self._run("export_analysis_bundle", command, ROOT)
 
     # ------------------------------------------------------------------ 4. verify
@@ -624,6 +658,10 @@ class Operator:
             "web_root": str(self.web_root) if self.web_root else None,
             "tickers": self.tickers,
             "include_canonical_financial_facts": self.include_canonical_financial_facts,
+            "include_historical_decision_analysis": self.include_historical_decision_analysis,
+            "include_portfolio_risk_analysis": self.include_portfolio_risk_analysis,
+            "include_historical_scaleout": self.include_historical_scaleout,
+            "include_qualified_research_brief": self.include_qualified_research_brief,
             "started_at": self.started_at, "ended_at": _now(),
             "outcome": outcome,
             "failed_gate": failure.gate if failure else None,
@@ -662,6 +700,9 @@ class Operator:
                     + ("verify canonical fact store, " if self.include_canonical_financial_facts else "")
                     + "export the bundle + manifest"
                     + (" with canonical financials enabled" if self.include_canonical_financial_facts else "")
+                    + (" with the qualified historical research lane enabled"
+                       if (self.include_historical_decision_analysis or self.include_qualified_research_brief)
+                       else "")
                     + ", verify every declared artifact hash, run Consumer exact-session"
                     " validation, then "
                     + (f"publish live into {self.web_root}" if self.live
@@ -742,6 +783,20 @@ def parse_args(argv=None) -> argparse.Namespace:
                               "onto the current session. Requires --execute."))
     parser.add_argument("--include-canonical-financial-facts", action="store_true",
                         help="Opt-in (P1F): attach market-wide canonical financial facts and readiness to Producer bundle.")
+    parser.add_argument("--include-historical-decision-analysis", action="store_true",
+                        help="Opt-in (Phase 4B): attach the qualified historical decision-support"
+                             " analysis for whichever pilot tickers are in --tickers.")
+    parser.add_argument("--include-portfolio-risk-analysis", action="store_true",
+                        help="Opt-in (Phase 4C): attach the qualified risk/liquidity/portfolio-fit"
+                             " gate. Pair with --include-historical-decision-analysis; without it"
+                             " every ticker reports phase_4b_not_eligible.")
+    parser.add_argument("--include-historical-scaleout", action="store_true",
+                        help="Opt-in (Phase 5A): attach the deterministic bounded cohort"
+                             " scale-out coverage matrix beyond the fixed pilot set.")
+    parser.add_argument("--include-qualified-research-brief", action="store_true",
+                        help="Opt-in (Phase 5B): attach the compact AI-facing qualified research"
+                             " brief. Pair with --include-historical-decision-analysis and"
+                             " --include-portfolio-risk-analysis for it to carry real content.")
     parser.add_argument("--publish", action="store_true",
                         help="Also run tools/publish_release.py (its own dry-run unless --live).")
     parser.add_argument("--web-root", default=None,
@@ -812,6 +867,10 @@ def main(argv=None, runner=subprocess.run) -> int:
                         live=args.live, prepare=args.prepare_inputs, web_root=web_root,
                         verify_live_url=args.verify_live_url,
                         include_canonical_financial_facts=args.include_canonical_financial_facts,
+                        include_historical_decision_analysis=args.include_historical_decision_analysis,
+                        include_portfolio_risk_analysis=args.include_portfolio_risk_analysis,
+                        include_historical_scaleout=args.include_historical_scaleout,
+                        include_qualified_research_brief=args.include_qualified_research_brief,
                         refresh_metadata=args.refresh_metadata,
                         runner=runner)
     try:
