@@ -70,6 +70,17 @@ class AnnualFinancialOcrMaterializationTests(unittest.TestCase):
         self.assertEqual(extracted["materialization"]["extraction_method"], "pdf_text")
         self.assertEqual(extracted["normalized_value"], 1234567)
 
+    def test_source_label_is_preserved_while_the_ocr_anchor_stays_exact(self):
+        materialization = self.materialization("Tien va cac khoan tuong duong tien 1.234.567")
+        extracted = verified_extraction(
+            materialization, page=7, raw_label="Tien va cac khoan tuong duong tien",
+            raw_value="1.234.567", source_raw_label="Tiền và các khoản tương đương tiền",
+            source_raw_value="1.234.567", unit="VND", statement="balance_sheet",
+            visual_source_page_verified=True,
+        )
+        self.assertEqual(extracted["raw_labels"], ["Tiền và các khoản tương đương tiền"])
+        self.assertEqual(extracted["ocr_anchors"]["value"], "1.234.567")
+
     def test_debt_requires_both_labelled_same_period_components(self):
         materialization = self.materialization(
             "Short-term borrowings 100 Long-term borrowings 200 Other liabilities 300")
@@ -103,6 +114,18 @@ class AnnualFinancialOcrMaterializationTests(unittest.TestCase):
              "label": "Short-term loans", "raw_value": "100", "visual_source_page_verified": True},
             {"component_type": "long_term_borrowings_or_finance_leases", "reporting_period": "2024", "page": 7,
              "label": "Long-term loans", "raw_value": "200", "visual_source_page_verified": True},
+        ], unit="VND", statement="balance_sheet", reporting_period="2024")
+        self.assertEqual(debt["normalized_value"], 300)
+
+    def test_vietnamese_borrowing_labels_preserve_the_two_component_debt_gate(self):
+        materialization = self.materialization("Vay va no thue tai chinh ngan han 100 Vay va no thue tai chinh dai han 200")
+        debt = verified_debt_extraction(materialization, components=[
+            {"component_type": "short_term_borrowings", "reporting_period": "2024", "page": 7,
+             "label": "Vay và nợ thuê tài chính ngắn hạn", "ocr_label": "Vay va no thue tai chinh ngan han",
+             "raw_value": "100", "visual_source_page_verified": True},
+            {"component_type": "long_term_borrowings_or_finance_leases", "reporting_period": "2024", "page": 7,
+             "label": "Vay và nợ thuê tài chính dài hạn", "ocr_label": "Vay va no thue tai chinh dai han",
+             "raw_value": "200", "visual_source_page_verified": True},
         ], unit="VND", statement="balance_sheet", reporting_period="2024")
         self.assertEqual(debt["normalized_value"], 300)
 

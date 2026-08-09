@@ -1,5 +1,18 @@
 # Stock Lookup roadmap
 
+## QNS/POW official financial materialization and research activation (partial 2026-08-09)
+
+`QNS_POW_OFFICIAL_FINANCIAL_MATERIALIZATION_AND_RESEARCH_ACTIVATION: PARTIAL`. The fixed
+two-ticker pass did not acquire any new document. QNS's text-bearing retained annual-report
+package has only the financial-statement cover, not the audited consolidated statement pages, so
+its terminal blocker is `AUDITED_CONSOLIDATED_STATEMENT_SECTION_MISSING`. POW's four audited
+statement pages yielded five source-page-verified annual consolidated VND facts through the
+existing OCR/evidence/qualification path. The resulting research projection correctly remains
+blocked because POW has no established issuer entity-type authority; no manual profile or direct
+eligibility assignment was introduced. The validated five-ticker research cohort and generic
+market gates remain unchanged; runtime publication is deferred and no successor milestone is
+selected here.
+
 ## Bounded issuer filing locator qualification backlog (partial 2026-08-09)
 
 `BOUNDED_ISSUER_FILING_LOCATOR_QUALIFICATION_BACKLOG: PARTIAL`. The fixed three-ticker pass

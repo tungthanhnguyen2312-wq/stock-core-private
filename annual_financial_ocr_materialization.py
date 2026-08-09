@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import subprocess
+import unicodedata
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -62,6 +63,12 @@ def parse_accounting_integer(raw: str) -> tuple[int, str]:
 def _normal(text: str) -> str:
     """Normalize benign label typography only; numeric text remains exact."""
     return " ".join(str(text).replace("\u2019", "'").casefold().split())
+
+
+def _label_key(text: str) -> str:
+    """Fold diacritics only for the finite borrowing-label vocabulary."""
+    value = unicodedata.normalize("NFD", _normal(text)).replace("đ", "d")
+    return "".join(char for char in value if unicodedata.category(char) != "Mn")
 
 
 def materialization_id(*, document_sha256: str, page: int, engine: str, text_sha256: str) -> str:
@@ -164,7 +171,9 @@ def extract_pdf_text(record: Mapping[str, Any], *, root: Path, pages: Sequence[i
 
 
 def verified_extraction(materialization: Mapping[str, Any], *, page: int, raw_label: str, raw_value: str,
-                        unit: str, visual_source_page_verified: bool, statement: str) -> dict[str, Any]:
+                        unit: str, visual_source_page_verified: bool, statement: str,
+                        source_raw_label: str | None = None,
+                        source_raw_value: str | None = None) -> dict[str, Any]:
     """Return identity-bound extraction metadata only after exact source-page verification."""
     if not visual_source_page_verified:
         raise ValueError("CITATION_VERIFICATION_FAILED")
@@ -175,7 +184,9 @@ def verified_extraction(materialization: Mapping[str, Any], *, page: int, raw_la
     value, sign = parse_accounting_integer(raw_value)
     if _normal(raw_label) not in _normal(row.get("text", "")) or raw_value not in row.get("text", ""):
         raise ValueError("OCR_NUMERIC_AMBIGUITY")
-    return {"method": "document_line_item", "source_pages": [int(page)], "raw_labels": [raw_label],
+    source_label = str(source_raw_label or raw_label)
+    source_value = str(source_raw_value or raw_value)
+    return {"method": "document_line_item", "source_pages": [int(page)], "raw_labels": [source_label],
             "materialization": {"contract": CONTRACT, "document_sha256": materialization["document_sha256"],
                                 "page": int(page), "page_citation_id": row.get("citation_id") or citation_id(
                                     row["document_id"], row["document_sha256"], int(page), row["text"]),
@@ -184,7 +195,8 @@ def verified_extraction(materialization: Mapping[str, Any], *, page: int, raw_la
                                 **({"ocr_engine": row["ocr_engine"], "render_dpi": row["render_dpi"],
                                     "extraction_method": "ocr"} if row.get("status") == "ocr_available" else
                                    {"extraction_engine": row["extraction_engine"], "extraction_method": "pdf_text"})},
-            "raw_values": [raw_value], "unit": unit, "statement": statement,
+            "raw_values": [source_value], "ocr_anchors": {"label": raw_label, "value": raw_value},
+            "unit": unit, "statement": statement,
             "normalized_value": value, "sign": sign}
 
 
@@ -195,8 +207,11 @@ def verified_sum_extraction(materialization: Mapping[str, Any], *, components: S
         raise ValueError("REQUIRED_DEBT_COMPONENT_MISSING")
     rows = []
     for component in components:
-        rows.append(verified_extraction(materialization, page=int(component["page"]), raw_label=str(component["label"]),
-                                        raw_value=str(component["raw_value"]), unit=unit,
+        rows.append(verified_extraction(materialization, page=int(component["page"]),
+                                        raw_label=str(component.get("ocr_label") or component["label"]),
+                                        raw_value=str(component.get("ocr_raw_value") or component["raw_value"]),
+                                        source_raw_label=str(component.get("source_raw_label") or component["label"]),
+                                        source_raw_value=str(component.get("source_raw_value") or component["raw_value"]), unit=unit,
                                         visual_source_page_verified=bool(component.get("visual_source_page_verified")),
                                         statement=statement))
     values = [item["normalized_value"] for item in rows]
@@ -222,7 +237,7 @@ def verified_debt_extraction(materialization: Mapping[str, Any], *, components: 
         raise ValueError("REQUIRED_DEBT_COMPONENT_MISSING")
     if any(str(component.get("reporting_period", "")) != str(reporting_period) for component in components):
         raise ValueError("DEBT_COMPONENT_PERIOD_MISMATCH")
-    labels = {str(component["component_type"]): _normal(str(component.get("label", ""))) for component in components}
+    labels = {str(component["component_type"]): _label_key(str(component.get("label", ""))) for component in components}
     short_label = labels["short_term_borrowings"]
     long_label = labels["long_term_borrowings_or_finance_leases"]
     short_qualified = (("short" in short_label and ("borrow" in short_label or "loan" in short_label))

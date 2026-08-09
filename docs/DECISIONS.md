@@ -5,6 +5,24 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - QNS/POW annual evidence remains fail-closed at package and entity gates
+
+- QNS and POW were the only two artifacts inspected. QNS's retained report is text-bearing but
+  its 75th and final page is the financial-statement cover; the three audited consolidated
+  statement sections are absent. `ready_for_direct_citations` therefore describes the PDF text
+  layer, not adequate metric authority. QNS is blocked as
+  `AUDITED_CONSOLIDATED_STATEMENT_SECTION_MISSING` without OCR, new acquisition, or a substitute.
+- POW's already-retained audited consolidated filing supplied exactly five FY2024 VND facts from
+  visually verified pages 9--12. The existing OCR contract binds each page, engine/version,
+  source PDF hash, OCR anchor, displayed label/value, and debt's two explicit borrowing/finance
+  lease components. The qualification policy accepted all five; no provider-reported value was
+  promoted.
+- A five-fact POW preview remains research-blocked at `entity_type_unknown`. The current profile
+  authority has no POW classification, and this milestone does not create a ticker whitelist or
+  direct status override. Consequently the production eligible count remains five and runtime
+  publication is deferred. No DB, provider, market-data, valuation, backtest, or other-ticker
+  work changed.
+
 ## 2026-08-09 - Issuer filing locators remain a closed, per-ticker acquisition boundary
 
 - The investigation was exactly FPT, POW, and QNS, with one issuer-controlled disclosure route

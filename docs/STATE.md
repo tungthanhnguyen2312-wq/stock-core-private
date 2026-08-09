@@ -1,5 +1,20 @@
 # Stock Lookup state
 
+## QNS/POW official financial materialization and research activation (2026-08-09)
+
+`QNS_POW_OFFICIAL_FINANCIAL_MATERIALIZATION_AND_RESEARCH_ACTIVATION: PARTIAL`. QNS was
+inspected by native text only: its retained 75-page annual-report package ends at the financial
+statement cover and contains none of the audited consolidated balance-sheet, income-statement,
+or cash-flow pages. It is therefore `AUDITED_CONSOLIDATED_STATEMENT_SECTION_MISSING`; no OCR,
+metric, or provider fallback was used. POW's retained audited consolidated filing was materialized
+only on source pages 9--12 using the existing page-preserving Tesseract contract. Five exact VND
+FY2024 consolidated citations (cash, equity, net income, operating cash flow, and the explicit
+short- plus long-term borrowing/finance-lease sum) qualify under the existing policy. POW remains
+research-blocked at `entity_type_unknown`: it has no existing authoritative corporate profile, and
+none was assigned manually. The production eligible count therefore remains **5**
+(`HPG,VNM,PAN,PVD,NVL`); no historical analytics, capability-matrix promotion, runtime release,
+DB mutation, provider call, or market-gate change occurred.
+
 ## Bounded issuer filing locator qualification backlog (2026-08-09)
 
 `BOUNDED_ISSUER_FILING_LOCATOR_QUALIFICATION_BACKLOG: PARTIAL`. One bounded official-source
