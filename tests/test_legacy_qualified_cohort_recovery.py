@@ -88,6 +88,27 @@ class LegacyQualifiedCohortRecoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "LEGACY_TICKER_OUT_OF_SCOPE"):
                 recovery.retained_filing(self.root, "POW")
 
+    def test_remaining_contract_is_fixed_to_four_tickers_and_five_identity_shapes(self) -> None:
+        self.assertEqual(set(recovery.REMAINING_RETAINED_FILINGS), {
+            "HPG_FY2022", "HPG_FY2023", "HPG_FY2024", "PAN_FY2024_AUDITED",
+            "PAN_FY2024_ANNUAL_REPORT", "PVD_FY2022", "PVD_FY2023", "PVD_FY2024", "NVL_FY2024",
+        })
+        self.assertEqual(set(recovery.REMAINING_FY2024_SPECS), {"HPG", "PAN", "PVD", "NVL"})
+        for ticker, spec in recovery.REMAINING_FY2024_SPECS.items():
+            self.assertEqual({fact[0] for fact in spec["facts"]} | {"total_interest_bearing_debt"},
+                             research.CORPORATE_REQUIRED_METRICS, ticker)
+            self.assertEqual({item[-1] for item in spec["debt"]}, {
+                "short_term_borrowings", "long_term_borrowings_or_finance_leases"}, ticker)
+
+    def test_existing_evidence_id_with_changed_payload_fails_closed(self) -> None:
+        target = self.root / "data" / "official-evidence"
+        target.mkdir(parents=True)
+        (target / "manifest.json").write_text(json.dumps({"schema_version": "official_evidence_manifest/v1",
+                                                            "records": [{"evidence_id": "same", "value": 1}]}),
+                                             encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "LEGACY_PROMOTION_EXISTING_EVIDENCE_CONFLICT:same"):
+            recovery._assert_append_compatible(self.root, [{"evidence_id": "same", "value": 2}], [])
+
 
 if __name__ == "__main__":
     unittest.main()
