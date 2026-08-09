@@ -26,7 +26,11 @@ def entry(ticker="HPG", entity_type="corporate"):
     }
     return {
         "entity_type": entity_type,
-        "financial_canonical": {"status": "available", "records": [record("revenue", 100), record("net_income", 10)]},
+        "financial_canonical": {"status": "available", "records": [
+            record("revenue", 100), record("net_income", 10), record("operating_cash_flow", 15),
+            record("cash_and_equivalents", 10), record("total_interest_bearing_debt", 20),
+            record("shareholders_equity", 100),
+        ]},
         "fundamental_quality": {"schema_version": "1.0.0", "models": models},
         "fundamental_quality_evidence": {"status": "available", "metrics": {
             "operating_cash_flow_less_net_income": {"qualification_status": "qualified", "value": 5},
@@ -86,18 +90,26 @@ class HistoricalDecisionAnalysisTests(unittest.TestCase):
 
     def test_catalyst_is_explicitly_unavailable_when_no_dimension_is_qualified(self):
         source = entry("HPG")
+        source["financial_canonical"]["records"] = [record("net_income", 10)]
         source["fundamental_quality"] = {"models": {}}
         source["fundamental_quality_evidence"] = {"status": "unavailable", "metrics": {}}
         source["historical_capital_structure"] = {"status": "unavailable"}
         result = evaluate_historical_decision_analysis("HPG", source)
-        self.assertEqual(result["eligibility"]["status"], "partially_eligible")
+        self.assertEqual(result["eligibility"]["status"], "insufficient_evidence")
         self.assertEqual(result["catalysts"][0]["status"], "unavailable")
         self.assertEqual(result["historical_conclusion"]["status"], "insufficient_evidence")
 
     def test_export_attachment_is_pilot_only_and_additive(self):
-        entries = {"HPG": entry("HPG"), "ABC": entry("ABC")}
+        entries = {ticker: entry(ticker) for ticker in ("HPG", "VNM", "PAN", "PVD", "NVL")}
+        entries["PVD"]["financial_canonical"]["records"] = [
+            {**item, "currency": "USD"} for item in entries["PVD"]["financial_canonical"]["records"]
+        ]
+        entries["ABC"] = entry("ABC")
         attached = attach_historical_decision_analysis(entries, True)
-        self.assertIn("historical_decision_analysis", attached["HPG"])
+        for ticker in ("HPG", "VNM", "PAN", "PVD", "NVL"):
+            self.assertIn("historical_decision_analysis", attached[ticker])
+            self.assertIn("historical_fundamental_comparative_matrix", attached[ticker])
+        self.assertEqual(attached["PVD"]["historical_decision_analysis"]["fundamental_analytics"]["currency"], "USD")
         self.assertNotIn("historical_decision_analysis", attached["ABC"])
         self.assertEqual(attach_historical_decision_analysis({"HPG": entry("HPG")}, False)["HPG"].keys(), entry("HPG").keys())
 

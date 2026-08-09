@@ -193,6 +193,8 @@ def build_ticker_capability_matrix(
         canonical = item.get("financial_canonical")
     historical_decision = _as_mapping(item.get("historical_decision_analysis"))
     historical_eligibility = _as_mapping(historical_decision.get("eligibility"))
+    historical_analytics = _as_mapping(historical_decision.get("fundamental_analytics"))
+    comparative_matrix = item.get("historical_fundamental_comparative_matrix")
     qmo = item.get("qualified_market_observations")
     qmo_record = _as_mapping(qmo)
     qmo_available = qmo_record.get("status") == "available"
@@ -251,6 +253,15 @@ def build_ticker_capability_matrix(
                 authority="historical_decision_analysis", record=item.get("historical_decision_analysis"),
                 status=historical_eligibility.get("status"), dependencies=["fundamental_quality", "historical_fundamental_brief"],
                 absent_reason="historical_decision_analysis_not_attached"),
+            "qualified_historical_fundamental_analytics": _capability(
+                authority="qualified_historical_fundamental_analytics", record=historical_analytics if historical_analytics else None,
+                status=historical_analytics.get("status"), dependencies=["canonical_financial_facts", "qualified_annual_consolidated_provenance"],
+                absent_reason="qualified_historical_fundamental_analytics_not_attached"),
+            "descriptive_cohort_fundamental_comparison": _capability(
+                authority="qualified_historical_fundamental_analytics.build_comparative_matrix", record=comparative_matrix,
+                status=_as_mapping(comparative_matrix).get("status"), descriptive_only=True,
+                dependencies=["qualified_historical_fundamental_analytics"],
+                absent_reason="historical_fundamental_comparative_matrix_not_attached"),
             "pillar_a_research_projection": _capability(
                 authority="research_financial_fact_projection", record=pillar_projection,
                 status=pillar_projection_record.get("status"),

@@ -1139,3 +1139,14 @@ Reopening requires an explicit owner decision.
   the explicit `36,978,198,251,788 + 24,587,656,403,178` sum; the VND facts are historical-only
   and non-actionable. FPT was not revisited. HPG, VNM, PAN, PVD and all market-data authority
   boundaries are unchanged.
+
+## 2026-08-09 — Historical analytics are evidence projections, not market research activation
+
+- The HPG/VNM/PAN/PVD/NVL corporate cohort may receive deeper analytics only from the existing
+  qualified annual, consolidated canonical-fact path. Derived ratios retain source identities
+  and fail closed for incompatible scope, currency, unit, missing fields and denominators.
+- PVD's USD facts remain USD. The cohort artifact exposes local states and dimensionless ratios
+  only, forbids FX conversion, absolute monetary comparison, ranking and recommendation.
+- Consumer and dashboard publication are deferred because this milestone changes no market
+  authority and no runtime artifact. The next candidate is
+  `QUALIFIED_HISTORICAL_COMPARATIVE_RESEARCH_AND_AI_UX`, contingent on a Consumer audit.

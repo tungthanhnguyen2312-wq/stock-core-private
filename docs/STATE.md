@@ -751,3 +751,14 @@ Also not next: wiring the `canonical_financial_facts` section into the published
 Consumer. The section computes a current market cap from an unverified price basis and an
 `ISSUED_SHARES` count; publishing it into the AI context before B1 would put an unqualified
 number in front of a reader, which is the failure the fail-closed contract exists to prevent.
+
+## 2026-08-09 — Qualified historical fundamental analytic depth — DONE
+
+The Producer now projects annual, consolidated, provenance-carrying corporate facts into a
+pure historical analytics contract for HPG, VNM, PAN, PVD and NVL. It provides explicitly
+qualified earnings/OCF states, OCF/NI applicability gates, debt/equity, cash/debt, net debt,
+net-debt/equity, conditional scenarios and a descriptive no-ranking cohort matrix. PVD remains
+USD and no FX conversion or monetary cross-currency comparison is emitted. Trend remains
+`insufficient_history` until two complete qualified annual periods exist. Market gates, DNSE
+status, evidence backlog and runtime publication are unchanged. See
+`docs/qualified_historical_fundamental_analytics_contract.md`.

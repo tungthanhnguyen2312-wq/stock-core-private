@@ -95,6 +95,7 @@ from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
 from historical_decision_analysis import evaluate_historical_decision_analysis, PILOT_TICKERS
+from qualified_historical_fundamental_analytics import build_comparative_matrix, merge_official_annual_facts
 from portfolio_risk_analysis import evaluate_portfolio_risk_analysis
 from historical_scaleout import attach as attach_historical_scaleout
 from qualified_research_brief import build as build_qualified_research_brief
@@ -3016,30 +3017,44 @@ def attach_analysis_lane_eligibility(
     return bundle_entries
 
 
+PORTFOLIO_RISK_PILOT_TICKERS = frozenset({"HPG", "VNM", "VCB"})
+
+
 def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include: bool,
-                                        additional_tickers: Iterable[str] = ()) -> dict[str, dict]:
-    """Add Phase 4B's pure historical-only analysis for the three approved pilots.
+                                        additional_tickers: Iterable[str] = (), *,
+                                        runtime_root_path: Path | None = None) -> dict[str, dict]:
+    """Add qualified historical-only analysis for the approved corporate cohort.
 
     The feature is opt-in so legacy bundle bytes remain unchanged.  Only the pilot set is
     evaluated; non-pilot tickers receive no fabricated section.
     """
     if not include:
         return bundle_entries
+    from official_annual_financial_fact_projection import facts_for_ticker
     allowed = set(PILOT_TICKERS) | {str(ticker).upper() for ticker in additional_tickers}
     for ticker in sorted(allowed):
         entry = bundle_entries.get(ticker)
         if isinstance(entry, dict):
             selected = ((entry.get("research_financial_source_selection") or {}).get("financial_canonical")
                         or entry.get("financial_canonical"))
-            research_entry = {**entry, "financial_canonical": selected}
+            official = facts_for_ticker(runtime_root_path, ticker) if runtime_root_path is not None else []
+            research_entry = {**entry, "financial_canonical": merge_official_annual_facts(selected, official)}
             entry["historical_decision_analysis"] = evaluate_historical_decision_analysis(
                 ticker, research_entry, allow_scaleout=ticker not in PILOT_TICKERS,
             )
+    cohort = {
+        ticker: (bundle_entries.get(ticker, {}).get("historical_decision_analysis") or {}).get("fundamental_analytics", {})
+        for ticker in sorted(PILOT_TICKERS) if isinstance(bundle_entries.get(ticker), dict)
+    }
+    if cohort:
+        comparative = build_comparative_matrix(cohort)
+        for ticker in cohort:
+            bundle_entries[ticker]["historical_fundamental_comparative_matrix"] = comparative
     return bundle_entries
 
 def attach_portfolio_risk_analysis(bundle_entries: dict[str, dict], price_basis: Mapping[str, Any], include: bool) -> dict[str, dict]:
     if not include: return bundle_entries
-    for ticker in sorted(PILOT_TICKERS):
+    for ticker in sorted(PORTFOLIO_RISK_PILOT_TICKERS):
         if isinstance(bundle_entries.get(ticker),dict): bundle_entries[ticker]["portfolio_risk_analysis"]=evaluate_portfolio_risk_analysis(ticker,bundle_entries[ticker],price_basis)
     return bundle_entries
 
@@ -3374,7 +3389,8 @@ def main() -> int:
                                         taxonomy_sidecar=taxonomy_sidecar)
     attach_historical_decision_analysis(bundle_entries,
                                         args.include_historical_decision_analysis or args.include_pillar_a_research_projection,
-                                        additional_tickers=pillar_a_eligible_tickers)
+                                        additional_tickers=pillar_a_eligible_tickers,
+                                        runtime_root_path=runtime_root())
     attach_portfolio_risk_analysis(bundle_entries, price_basis, args.include_portfolio_risk_analysis)
     attach_qualified_market_observations(bundle_entries, args.include_qualified_market_observations)
     scaleout_coverage = attach_historical_scaleout(bundle_entries, price_basis) if args.include_historical_scaleout else None

@@ -10,10 +10,14 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from qualified_historical_fundamental_analytics import build as build_fundamental_analytics
 
-SCHEMA_VERSION = "1.0.0"
-ENGINE_VERSION = "phase-4b/1.0.0"
-PILOT_TICKERS = frozenset({"HPG", "VNM", "VCB"})
+
+SCHEMA_VERSION = "1.1.0"
+ENGINE_VERSION = "phase-4b/1.1.0"
+# VCB remains a regression fixture only; this corporate cohort is the production scope.
+PILOT_TICKERS = frozenset({"HPG", "VNM", "PAN", "PVD", "NVL"})
+REGRESSION_TICKERS = frozenset({"VCB"})
 _ELIGIBILITY = frozenset({"eligible", "partially_eligible", "insufficient_evidence", "blocked"})
 _DIMENSION_STATES = frozenset({"available", "unavailable", "not_applicable"})
 
@@ -58,6 +62,8 @@ def _qualified_facts(financial_canonical: Mapping[str, Any]) -> list[dict[str, A
         and record.get("quality_state") == "available"
         and record.get("value") is not None
         and record.get("canonical_metric")
+        and record.get("statement_scope") == "consolidated"
+        and _mapping(record.get("period_identity")).get("period_type") == "annual"
     ]
     return sorted(accepted, key=lambda item: (
         str(item.get("reporting_period") or ""), str(item.get("canonical_metric") or ""),
@@ -260,6 +266,41 @@ def _scenarios(eligible: bool, facts: list[dict[str, Any]], dimensions: Mapping[
     return {"bear": bear, "base": base, "bull": bull}
 
 
+def _analytics_dimension(analytics: Mapping[str, Any]) -> dict[str, Any]:
+    status = "available" if analytics.get("status") == "available" else "unavailable"
+    conclusion = _mapping(analytics.get("historical_conclusion"))
+    return _dimension(
+        "qualified_historical_fundamental_analytics", status,
+        supporting_facts=[{
+            "analysis_period": analytics.get("analysis_period"),
+            "historical_conclusion_code": conclusion.get("code"),
+            "trend_status": analytics.get("trend_status"),
+            "source_path": "qualified_historical_fundamental_analytics",
+        }] if status == "available" else [],
+        source_paths=["qualified_historical_fundamental_analytics"],
+        reason_codes=list(analytics.get("blocking_reasons") or []) if status == "unavailable" else [],
+        warnings=["trend_insufficient_history"] if analytics.get("trend_status") == "insufficient_history" else [],
+    )
+
+
+def _predicate_risks(analytics: Mapping[str, Any]) -> list[dict[str, Any]]:
+    output = []
+    for item in analytics.get("risk_predicates") or []:
+        if not isinstance(item, Mapping):
+            continue
+        predicate = str(item.get("predicate") or "historical_fundamental_risk")
+        output.append({
+            "risk_id": predicate,
+            "fact": {"predicate": predicate},
+            "inference": "A qualified annual fundamental predicate was observed.",
+            "uncertainty": "This is historical evidence only; it does not predict a future outcome.",
+            "provenance": ["qualified_historical_fundamental_analytics"],
+            "source_fact_identities": list(item.get("sources") or []),
+            "invalidation_or_mitigation": ["A later qualified annual fact changes the cited predicate."],
+        })
+    return sorted(output, key=lambda item: item["risk_id"])
+
+
 def evaluate_historical_decision_analysis(ticker: str, entry: Mapping[str, Any] | None, *, allow_scaleout: bool = False) -> dict[str, Any]:
     """Build one deterministic historical decision-support result from a bundle entry."""
     ticker = str(ticker).upper()
@@ -270,9 +311,15 @@ def evaluate_historical_decision_analysis(ticker: str, entry: Mapping[str, Any] 
     fundamental_quality = _mapping(source.get("fundamental_quality"))
     quality_evidence = _mapping(source.get("fundamental_quality_evidence"))
     capital = _mapping(source.get("historical_capital_structure"))
+    analytics = (build_fundamental_analytics(ticker, financial_canonical)
+                 if entity_type == "corporate" else {
+                     "status": "unavailable", "trend_status": "insufficient_history",
+                     "blocking_reasons": ["corporate_historical_fundamental_analytics_not_applicable_to_bank"],
+                     "historical_conclusion": {"code": "not_applicable"},
+                 })
 
     blocking: list[str] = []
-    if ticker not in PILOT_TICKERS and not allow_scaleout:
+    if ticker not in PILOT_TICKERS and ticker not in REGRESSION_TICKERS and not allow_scaleout:
         blocking.append("ticker_not_in_phase_4b_pilot")
     if entity_type not in {"corporate", "bank"}:
         blocking.append("entity_type_not_supported_for_historical_decision_engine")
@@ -280,24 +327,37 @@ def evaluate_historical_decision_analysis(ticker: str, entry: Mapping[str, Any] 
         blocking.append("canonical_financial_section_not_available")
     if not qualified_facts:
         blocking.append("qualified_canonical_facts_missing")
+    if ticker in PILOT_TICKERS and analytics.get("status") != "available":
+        blocking.append("qualified_historical_fundamental_analytics_unavailable")
 
     model = _model_dimension(str(entity_type), fundamental_quality)
     cash = _cash_conversion_dimension(quality_evidence, fundamental_quality)
     capital_dimension = _capital_dimension(str(entity_type), capital)
-    dimensions = {item["dimension"]: item for item in (model, cash, capital_dimension)}
+    analytics_dimension = _analytics_dimension(analytics)
+    dimensions = {item["dimension"]: item for item in (model, cash, capital_dimension, analytics_dimension)}
     available_count = sum(item["status"] == "available" for item in dimensions.values())
     if blocking:
-        eligibility_status = "blocked" if any(code != "qualified_canonical_facts_missing" for code in blocking) else "insufficient_evidence"
+        evidence_only = {"qualified_canonical_facts_missing", "qualified_historical_fundamental_analytics_unavailable"}
+        eligibility_status = "blocked" if any(code not in evidence_only for code in blocking) else "insufficient_evidence"
     elif available_count == 0:
         eligibility_status = "partially_eligible"
         blocking.append("qualified_analysis_dimensions_unavailable")
     else:
         eligibility_status = "eligible"
 
-    risks = _risks(dimensions)
+    risks = _predicate_risks(analytics) if analytics.get("status") == "available" else _risks(dimensions)
     catalysts = _catalysts(dimensions)
     scenarios = _scenarios(eligibility_status == "eligible", qualified_facts, dimensions, risks, catalysts)
-    conclusion_status = "historically_mixed" if eligibility_status == "eligible" else "insufficient_evidence"
+    if analytics.get("status") == "available":
+        for name, scenario in _mapping(analytics.get("scenarios")).items():
+            if name in scenarios and isinstance(scenario, Mapping):
+                scenarios[name].update({
+                    "historical_fundamental_conditions": list(scenario.get("required_conditions") or []),
+                    "market_claims": False,
+                })
+    conclusion_status = (_mapping(analytics.get("historical_conclusion")).get("code")
+                         if eligibility_status == "eligible" and analytics.get("status") == "available"
+                         else "historically_mixed" if eligibility_status == "eligible" else "insufficient_evidence")
     conclusion = {
         "status": conclusion_status,
         "rationale": (
@@ -332,6 +392,7 @@ def evaluate_historical_decision_analysis(ticker: str, entry: Mapping[str, Any] 
             "qualified_fact_references": qualified_facts,
         },
         "quality_assessment": dimensions,
+        "fundamental_analytics": analytics,
         "risks": risks,
         "catalysts": catalysts,
         "scenarios": scenarios,

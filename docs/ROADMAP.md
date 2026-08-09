@@ -405,6 +405,19 @@ capitalisation and therefore waits on pillar B.
   market-dependent conclusion by P0/P1/P2.
 
 ## P4 — Market Scan and ranking — DEFERRED
+
+### P3 extension — Qualified historical fundamental analytic depth — DONE 2026-08-09
+
+- Producer-only, historical-only analytic depth is complete for HPG, VNM, PAN, PVD and NVL:
+  qualified annual/consolidated OCF, earnings, cash and debt/equity observations are projected
+  into explicitly bounded metrics, risks, strengths, conditional scenarios and a descriptive
+  cohort comparison. No ranking, valuation, market basis, FX conversion or runtime publication
+  was enabled.
+- The exact next independent implementation milestone is
+  `QUALIFIED_HISTORICAL_COMPARATIVE_RESEARCH_AND_AI_UX`: retain the already-proven historical
+  research context for AI presentation only after a Consumer contract audit; dashboard work
+  remains deferred.
+
 - No universal score, ranking, or recommendation before valuation and current-market gates qualify.
 - Exit gate: `RANKING_INPUTS_QUALIFIED = YES`.
 
