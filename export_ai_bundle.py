@@ -848,6 +848,7 @@ def build_financial_freshness(
 # to VCB (or any other ticker the resolver already supports) is a future milestone's
 # decision, not a resolver limitation.
 _PHASE_5C_ENABLED_TICKERS = frozenset({"HPG", "VNM"})
+_LEGACY_QUALIFIED_RESEARCH_TICKERS = frozenset({"HPG", "VNM", "PAN", "PVD", "NVL"})
 
 
 def _financial_period_coverage_verified_override(
@@ -3402,13 +3403,13 @@ def main() -> int:
                                         taxonomy_sidecar=taxonomy_sidecar)
     attach_historical_decision_analysis(bundle_entries,
                                         args.include_historical_decision_analysis or args.include_pillar_a_research_projection,
-                                        additional_tickers=pillar_a_eligible_tickers,
+                                        additional_tickers=set(pillar_a_eligible_tickers) | _LEGACY_QUALIFIED_RESEARCH_TICKERS,
                                         runtime_root_path=runtime_root())
     attach_portfolio_risk_analysis(bundle_entries, price_basis, args.include_portfolio_risk_analysis)
     attach_qualified_market_observations(bundle_entries, args.include_qualified_market_observations)
     scaleout_coverage = attach_historical_scaleout(bundle_entries, price_basis) if args.include_historical_scaleout else None
     if args.include_qualified_research_brief or args.include_qualified_research_delta or args.include_pillar_a_research_projection:
-        brief_tickers = (set(PILOT_TICKERS) | set(pillar_a_eligible_tickers)) & set(bundle_entries)
+        brief_tickers = (set(_LEGACY_QUALIFIED_RESEARCH_TICKERS) | set(pillar_a_eligible_tickers)) & set(bundle_entries)
         for ticker in sorted(brief_tickers):
             entry = bundle_entries.get(ticker)
             eligibility = ((entry or {}).get("historical_decision_analysis") or {}).get("eligibility", {})
