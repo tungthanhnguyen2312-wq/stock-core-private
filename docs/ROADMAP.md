@@ -1,5 +1,17 @@
 # Stock Lookup roadmap
 
+## Official financial evidence scale-out Cohort 2 (partial 2026-08-09)
+
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_2: PARTIAL`. This bounded pass first resolved
+the PNJ debt question from retained evidence: Note 19 is a short-term-borrowing note only, and
+there is no labelled long-term-borrowing/finance-lease component. PNJ remains 4/5; no manual debt
+total was created. QNS's one exact issuer URL returned 404 and POW has no exact audited-statement
+locator, so both remain blocked without URL variations or a crawl. Novaland's enumerated issuer
+IR route retained one FY2024 audited consolidated filing and five page-verified VND facts;
+NVL becomes a historical-only, non-actionable corporate research input. FPT remains untouched.
+
+Next independent Pillar A milestone: `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3`.
+
 ## Annual financial evidence materialization hardening (complete 2026-08-09)
 
 `ANNUAL_FINANCIAL_EVIDENCE_MATERIALIZATION_HARDENING: PASS`. The retained PNJ/PVD scanned

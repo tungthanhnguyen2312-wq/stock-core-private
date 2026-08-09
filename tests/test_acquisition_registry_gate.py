@@ -186,6 +186,28 @@ class IssuerAnnualScaleoutGovernanceTests(unittest.TestCase):
         self.assertEqual(fetcher.urls, [])
         self.assertEqual(refused["outcomes"][0]["reason"], registry.REASON_HOST_NOT_ALLOWED)
 
+    def test_cohort_two_hosts_are_explicit_and_ticker_scoped(self) -> None:
+        reg = registry.load_registry()
+        for ticker, url in (
+            ("QNS", "https://www.qns.com.vn/storages/shareholders/files/qns-fy2024.pdf"),
+            ("NVL", "https://www.novaland.com.vn/Data/Sites/1/media/ir/nvl-fy2024.pdf"),
+        ):
+            result, fetcher = run([spec(ticker=ticker, source_id="issuer_ir",
+                                        document_class="audited_annual_financial_statements",
+                                        reporting_period="2024", canonical_url=url)], reg=reg)
+            self.assertEqual(result["outcomes"][0]["state"], "retained")
+            self.assertEqual(fetcher.urls, [url])
+        refused, fetcher = run([spec(ticker="QNS", source_id="issuer_ir",
+                                     document_class="audited_annual_financial_statements",
+                                     reporting_period="2024",
+                                     canonical_url="https://reports.qns.com.vn/fy2024.pdf")], reg=reg)
+        self.assertEqual(fetcher.urls, [])
+        self.assertEqual(refused["outcomes"][0]["reason"], registry.REASON_HOST_NOT_ALLOWED)
+
+    def test_known_large_novaland_filing_stays_bounded(self) -> None:
+        self.assertGreaterEqual(acquisition.MAX_RESPONSE_BYTES, 23_761_801)
+        self.assertLessEqual(acquisition.MAX_RESPONSE_BYTES, 32 * 1024 * 1024)
+
 
 if __name__ == "__main__":
     unittest.main()

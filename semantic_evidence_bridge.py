@@ -1215,8 +1215,10 @@ def _valid_financial_extraction(citation: Mapping[str, Any]) -> bool:
             return False
         if method == "document_line_item":
             required = ("contract", "document_sha256", "page", "page_citation_id", "text_sha256",
-                        "materialization_id", "ocr_engine", "verification")
+                        "materialization_id", "verification")
             if not all(materialization.get(field) for field in required):
+                return False
+            if not (materialization.get("ocr_engine") or materialization.get("extraction_engine")):
                 return False
             if materialization.get("verification") != "source_page_visual":
                 return False

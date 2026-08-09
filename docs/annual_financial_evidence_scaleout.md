@@ -1,8 +1,8 @@
 # Bounded official financial evidence scale-out
 
-Decision date: 2026-08-09. Cohort: PNJ, FPT, and PVD only. The cohort is evidence-leverage
-selected from the supported production corporates; HPG/VNM/PAN are controls and SSI/EVF remain
-outside the corporate research archetype. No provider financial endpoint was called.
+Decision date: 2026-08-09. Initial cohort: PNJ, FPT, and PVD. Cohort 2 then bounded new issuer
+work to POW, QNS, and NVL only. HPG/VNM/PAN are controls and SSI/EVF remain outside the corporate
+research archetype. No provider financial endpoint was called.
 
 ## Domain governance and acquisition results
 
@@ -38,6 +38,20 @@ five-for-five qualified; HPG/VNM trusted source precedence and all market gates 
 - `QUALIFIED_FACTS_PER_DOCUMENT = 0.0`;
 - `RESEARCH_ELIGIBLE_TICKERS_PER_DOCUMENT = 0.0`.
 
-The right next milestone is `ANNUAL_FINANCIAL_EVIDENCE_MATERIALIZATION_HARDENING`: use a bounded,
-reviewable extraction route for the two retained scanned statements and re-check FPT only from a
-new issuer-supplied exact locator. It must not broaden into a crawl or provider fallback.
+That follow-on materialization route completed before Cohort 2. FPT still requires a new
+issuer-supplied exact locator; it was not retried or broadened into a crawl/provider fallback.
+
+## Cohort 2 closeout
+
+| Ticker | Deterministic issuer result | Qualification result |
+| --- | --- | --- |
+| PNJ | Retained Note 19 labels only short-term borrowings of VND 3,341,542,016,760. It supplies no labelled long-term borrowing or finance-lease component. | 4/5; `REQUIRED_DEBT_COMPONENT_MISSING`. |
+| POW | Official material located was an audit-appraisal report, not the audited consolidated statements; no exact filing locator was acquired. | `ISSUER_FILING_LOCATOR_REQUIRED`. |
+| QNS | The one exact issuer-published FY2024 report URL was requested through the registry and returned HTTP 404. No variation was guessed. | `SOURCE_LOCATOR_REQUIRED`. |
+| NVL | Retained audited consolidated FY2024 issuer PDF; SHA-256 `078fe614549d6f139b3cd3e9bdcd9f99a533b03c067c5018a989166cb2eab3d3`; scan OCR materialized pages 8, 10--13. | 5/5; VND; historical-only/non-actionable. |
+
+NVL's five cited values are cash `4,607,601,921,683`, net income `(4,394,642,203,703)`,
+operating cash flow `(5,971,178,115,653)`, shareholders' equity `47,291,024,358,614`, and
+interest-bearing debt `61,565,854,654,966` (the only permitted component sum:
+`36,978,198,251,788 + 24,587,656,403,178`). The registry admits only `qns.com.vn` and
+`novaland.com.vn` plus their `www` forms; it adds no wildcard or mirror. FPT was not retried.

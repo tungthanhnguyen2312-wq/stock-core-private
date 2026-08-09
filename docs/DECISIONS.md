@@ -1123,3 +1123,19 @@ Reopening requires an explicit owner decision.
   the already-canonical `P1.5_TICKER_CAPABILITY_TRUSTED_TICKER_MATRIX_BUNDLE_ATTACHMENT` is
   the independent next implementation milestone. No valuation or market-data work starts
   automatically from this decision.
+
+## 2026-08-09 — Cohort 2 issuer evidence is a bounded annual-facts expansion
+
+- **Decision:** admit only the enumerated QNS and Novaland issuer domains (apex and `www`) for
+  the two locator-backed FY2024 requests. No cloud wildcard, mirror, pagination, or generic
+  issuer crawl is permitted. The known Novaland document size raises the response ceiling to a
+  still-bounded 32 MiB.
+- **PNJ:** retained Note 19 presents only short-term borrowings. The existing debt derivation
+  requires exactly labelled current and non-current borrowings/finance leases for the same
+  reporting period; liabilities, obligations, and a manually entered total cannot substitute.
+  PNJ remains 4/5.
+- **Outcome:** QNS's exact URL was a 404 and POW remains locator-blocked. NVL's one retained,
+  audited FY2024 consolidated issuer filing supplied all five verified annual facts. Its debt is
+  the explicit `36,978,198,251,788 + 24,587,656,403,178` sum; the VND facts are historical-only
+  and non-actionable. FPT was not revisited. HPG, VNM, PAN, PVD and all market-data authority
+  boundaries are unchanged.

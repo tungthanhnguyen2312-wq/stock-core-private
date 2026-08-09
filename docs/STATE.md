@@ -3,6 +3,20 @@
 Last verified: **2026-08-03**, by an end-to-end production run of the supported operating
 command against `dashboard-runtime` (reference session `2026-07-30`).
 
+## Official financial evidence scale-out Cohort 2 (2026-08-09)
+
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_2: PARTIAL`. PNJ's retained Note 19 confirms
+only `Short-term borrowings`; no labelled long-term borrowing or finance-lease component exists,
+so `REQUIRED_DEBT_COMPONENT_MISSING` remains a correctly preserved four-of-five blocker. Of the
+bounded new pool, QNS's exact issuer-published FY2024 report URL returned 404 and was not varied;
+POW has no exact audited-statement locator and remains `ISSUER_FILING_LOCATOR_REQUIRED`.
+Novaland's issuer IR page directly linked one audited FY2024 consolidated PDF, retained as
+SHA-256 `078fe614549d6f139b3cd3e9bdcd9f99a533b03c067c5018a989166cb2eab3d3`. Its five source-page
+verified VND facts are complete, including debt only as `36,978,198,251,788 +
+24,587,656,403,178 = 61,565,854,654,966`; NVL is therefore historical-only and non-actionable.
+No provider, database, generated bundle, FPT route, or market gate changed. Next independent
+Pillar A milestone: `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3`.
+
 ## Annual financial evidence materialization hardening (2026-08-09)
 
 `ANNUAL_FINANCIAL_EVIDENCE_MATERIALIZATION_HARDENING: PASS`. Local Tesseract 5.5.0

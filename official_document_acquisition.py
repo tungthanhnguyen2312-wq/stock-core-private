@@ -21,12 +21,14 @@ from official_source_registry import ADMITTED, admit, load_registry
 VERSION = "1.2.0"
 MANIFEST = "official_document_acquisition_manifest.json"
 EVENTS = "official_price_test_events.jsonl"
-TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN", "PNJ", "FPT", "PVD"})
+TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN", "PNJ", "FPT", "PVD", "QNS", "NVL"})
 #: Retained for the storage-path vocabulary only. The gate on what may be requested comes
 #: from the registry (`declared_document_types`), never from this tuple.
 DOCUMENT_CLASSES = ("audited_annual_financial_statements", "reviewed_interim_financial_statements", "annual_report", "corporate_governance_report", "agm_document_or_resolution", "corporate_action_notice", "amendment_or_supersession_notice")
 PERIODS = frozenset({"2023", "2024", "2025", "2026"})
-CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 20 * 1024 * 1024
+# The Novaland FY2024 audited consolidated PDF is 23,761,801 bytes.  The bounded
+# 32 MiB ceiling admits that known issuer filing without opening unbounded retention.
+CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 32 * 1024 * 1024
 MAX_REDIRECTS = 5
 REQUEST_HEADERS = {"Accept": "application/pdf,text/html;q=0.9", "User-Agent": "StockLookupOfficialEvidence/1.1"}
 
