@@ -95,6 +95,7 @@ from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
 from historical_decision_analysis import evaluate_historical_decision_analysis, PILOT_TICKERS
+from portfolio_risk_analysis import evaluate_portfolio_risk_analysis
 from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from analysis_lane_eligibility import evaluate_ticker_lanes
@@ -2933,6 +2934,12 @@ def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include
             entry["historical_decision_analysis"] = evaluate_historical_decision_analysis(ticker, entry)
     return bundle_entries
 
+def attach_portfolio_risk_analysis(bundle_entries: dict[str, dict], price_basis: Mapping[str, Any], include: bool) -> dict[str, dict]:
+    if not include: return bundle_entries
+    for ticker in sorted(PILOT_TICKERS):
+        if isinstance(bundle_entries.get(ticker),dict): bundle_entries[ticker]["portfolio_risk_analysis"]=evaluate_portfolio_risk_analysis(ticker,bundle_entries[ticker],price_basis)
+    return bundle_entries
+
 
 # ==========================================================================
 # MAIN
@@ -2973,6 +2980,7 @@ def main() -> int:
                         help="Opt-in, disabled by default (Phase 4B): attach deterministic historical-only"
                              " decision analysis for HPG, VNM, and VCB from existing qualified/canonical"
                              " bundle sections. No valuation, recommendation, ranking, or market claim.")
+    parser.add_argument("--include-portfolio-risk-analysis", action="store_true", help="Opt-in Phase 4C historical risk/liquidity/portfolio-fit gate for the three pilots; requires --include-historical-decision-analysis.")
     parser.add_argument("--verify", metavar="MANIFEST_PATH",
                         help="KHÔNG xuất gì — chỉ so sha256 trong 1 bundle_manifest.json cũ với"
                              " file hiện tại trên đĩa ('checksum dependency'); exit 0 nếu khớp"
@@ -3200,6 +3208,7 @@ def main() -> int:
                                      session_date=latest_session,
                                      price_basis_verified=price_basis.get("price_basis_verified") is True)
     attach_historical_decision_analysis(bundle_entries, args.include_historical_decision_analysis)
+    attach_portfolio_risk_analysis(bundle_entries, price_basis, args.include_portfolio_risk_analysis)
     # Phase 6B: reconcile the legacy fundamental_quality.models.earnings_quality subsection
     # against fundamental_quality_evidence when both are present on the same entry. A no-op
     # (adds one informational limitation only) whenever the opt-in evidence contract was not
