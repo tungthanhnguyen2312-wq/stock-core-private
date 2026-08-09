@@ -73,6 +73,8 @@ from raw_financial_store import (
     state_index as raw_state_index,
 )
 from statement_taxonomy_classifier import classify_statement_taxonomy
+from official_annual_financial_fact_projection import facts_for_ticker as official_annual_facts
+from canonical_financial_qualification_policy import QUALIFIED as POLICY_QUALIFIED, apply_policy, load_evidence_index
 
 STORE_SCHEMA_VERSION = "1.0.0"
 
@@ -259,21 +261,57 @@ def build_ticker_facts(runtime_root: Path | str, ticker: str, *,
     return built
 
 
+def _promoted_official_facts(runtime_root: Path | str, ticker: str, *,
+                             profiles: Mapping[str, str]) -> dict[str, Any] | None:
+    """One governed fallback input: retained, qualified POW annual issuer facts only.
+
+    This is intentionally not a second evidence framework.  It accepts the existing
+    verified promotion projection only when there is no raw shard, and binds every
+    emitted fact to its citation/evidence/document hashes before canonicalizing it.
+    """
+    if ticker.upper() != "POW":
+        return None
+    evidence_index = load_evidence_index(runtime_root)
+    facts = []
+    for fact in official_annual_facts(str(runtime_root), ticker):
+        promoted = apply_policy(fact, evidence_index=evidence_index)
+        if promoted.get("qualification_status") != POLICY_QUALIFIED:
+            return None
+        promoted["status"] = STATUS_QUALIFIED
+        promoted["canonical_input_kind"] = "qualified_official_promotion_v1"
+        facts.append(promoted)
+    required = {"operating_cash_flow", "net_income", "cash_and_equivalents",
+                "total_interest_bearing_debt", "shareholders_equity"}
+    if len(facts) != 5 or {str(item.get("canonical_metric")) for item in facts} != required:
+        return None
+    facts.sort(key=lambda item: (str(item["reporting_period"]), str(item["canonical_metric"]), str(item["fact_id"])))
+    applicability = _applicability_for(ticker, [], profiles)
+    source = [{key: fact.get(key) for key in ("fact_id", "citation_id", "evidence_id", "document_sha256",
+                                               "source_sha256", "canonical_metric", "reporting_period", "value",
+                                               "qualification_status")} for fact in facts]
+    return {"facts": facts, "applicability": applicability,
+            "status_counts": {STATUS_QUALIFIED: len(facts)}, "reporting_periods": ["2024"],
+            "payload_dialects": {"official_document": len(facts)},
+            "cumulative_state": {"cumulative_state": "not_applicable"},
+            "source_kind": "qualified_official_promotion_v1",
+            "source_sha256": _fingerprint({"input_kind": "qualified_official_promotion_v1", "facts": source})}
+
+
 def ingest(runtime_root: Path | str, *, generated_at: str, execute: bool = False,
            tickers: Iterable[str] | None = None) -> dict[str, Any]:
     """Build canonical facts for every ticker with a raw shard, rebuilding only what changed."""
     runtime_root = Path(runtime_root)
     raw_state = raw_state_index(load_raw_state(runtime_root))
-    if not raw_state:
-        return {"executed": False, "ok": False,
-                "reason": "raw observation store is missing or has an unsupported schema",
-                "counts": {}}
-
     profiles = load_entity_profiles(Path(__file__).with_name("config") / "ticker_entity_profiles.csv")
     official_citations = load_official_citations(runtime_root)
     previous = {str(record["ticker"]): dict(record)
                 for record in (_load_state(runtime_root).get("tickers") or [])}
     wanted = {ticker.upper() for ticker in tickers} if tickers is not None else None
+    official_only = _promoted_official_facts(runtime_root, "POW", profiles=profiles) if "POW" not in raw_state else None
+    if not raw_state and official_only is None:
+        return {"executed": False, "ok": False,
+                "reason": "raw observation store is missing or has an unsupported schema",
+                "counts": {}}
 
     records: list[dict[str, Any]] = []
     rebuilt: list[str] = []
@@ -281,19 +319,23 @@ def ingest(runtime_root: Path | str, *, generated_at: str, execute: bool = False
     skipped: list[str] = []
     all_facts: list[dict[str, Any]] = []
 
-    for ticker in sorted(raw_state):
+    for ticker in sorted(set(raw_state) | ({"POW"} if official_only is not None else set())):
         source_path = observations_root(runtime_root) / f"{ticker}{_SHARD_SUFFIX}"
-        if not source_path.exists():
-            continue
         if wanted is not None and ticker not in wanted:
             if ticker in previous:
                 records.append(previous[ticker])
                 skipped.append(ticker)
             continue
 
-        source_sha = str(raw_state[ticker].get("shard_sha256") or "")
-        built = build_ticker_facts(runtime_root, ticker, profiles=profiles,
-                                   official_citations=official_citations)
+        if ticker in raw_state:
+            if not source_path.exists():
+                continue
+            source_sha = str(raw_state[ticker].get("shard_sha256") or "")
+            built = build_ticker_facts(runtime_root, ticker, profiles=profiles,
+                                       official_citations=official_citations)
+        else:
+            built = official_only
+            source_sha = str(built["source_sha256"])
         fingerprint = _inputs_fingerprint(source_sha, built["applicability"])
         path = shard_path(runtime_root, ticker)
         prior = previous.get(ticker)
@@ -383,6 +425,7 @@ def _shard_record(ticker: str, built: Mapping[str, Any], shard_bytes: bytes,
         "shard_bytes": len(shard_bytes),
         "inputs_fingerprint": fingerprint,
         "source_shard_sha256": source_sha256,
+        "source_kind": built.get("source_kind", "raw_observation_shard"),
         "fact_count": len(built["facts"]),
         "status_counts": built["status_counts"],
         "reporting_periods": built["reporting_periods"],
@@ -531,8 +574,14 @@ def verify(runtime_root: Path | str) -> dict[str, Any]:
             findings.append({"ticker": ticker, "finding": "shard_sha256_mismatch",
                              "recorded": record.get("shard_sha256"), "actual": actual})
             continue
-        built = build_ticker_facts(runtime_root, ticker, profiles=profiles,
-                                   official_citations=official_citations)
+        if ticker == "POW" and record.get("source_shard_sha256") and not (observations_root(runtime_root) / f"{ticker}{_SHARD_SUFFIX}").exists():
+            built = _promoted_official_facts(runtime_root, ticker, profiles=profiles)
+            if built is None or built["source_sha256"] != record.get("source_shard_sha256"):
+                findings.append({"ticker": ticker, "finding": "official_promoted_input_mismatch"})
+                continue
+        else:
+            built = build_ticker_facts(runtime_root, ticker, profiles=profiles,
+                                       official_citations=official_citations)
         if hashlib.sha256(encode_shard(built["facts"])).hexdigest() != actual:
             findings.append({"ticker": ticker, "finding": "not_byte_reproducible"})
             continue
