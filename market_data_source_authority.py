@@ -23,10 +23,10 @@ OWNER_DECISION_REQUIRED = "OWNER_SOURCE_ACQUISITION_DECISION"
 FIINGROUP_ACCESS_STATE = "OWNER_ACQUISITION_REQUIRED"
 LICENSE_AUTHORITY = "OWNER_CONFIRMATION_REQUIRED"
 MARKET_DATA_TRACK = "WAITING_EXTERNAL_ACCESS"
-# Existing canonical P1.5 work is implemented but deliberately not attached to the bundle.
-# Completing that attachment is independent of raw market-data procurement and uses no market
-# source.  This names the existing roadmap sub-item rather than inventing a new phase.
-PARALLEL_UNBLOCKED_NEXT_MILESTONE = "P1.5_TICKER_CAPABILITY_TRUSTED_TICKER_MATRIX_BUNDLE_ATTACHMENT"
+# P1.5 proved that qualification tiers can reach the bundle without promoting partial or
+# provider-scoped facts.  The next independent work is therefore the canonical-fact-store
+# connection, still bounded by the same fail-closed research rules and independent of access.
+PARALLEL_UNBLOCKED_NEXT_MILESTONE = "CONNECT_PILLAR_A_MARKET_WIDE_CANONICAL_FACTS_TO_RESEARCH_ENGINE"
 
 # Each status is field-specific.  The selection is not a score: a candidate with an
 # unavailable hard requirement cannot become the source merely because it has more positives.
