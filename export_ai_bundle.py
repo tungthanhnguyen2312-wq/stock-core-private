@@ -102,6 +102,8 @@ from historical_scaleout import attach as attach_historical_scaleout
 from qualified_research_brief import build as build_qualified_research_brief
 from qualified_research_delta import attach as attach_qualified_research_delta
 from qualified_research_snapshot import snapshot_as_bundle
+from qualified_research_snapshot_v2 import build as build_research_snapshot_v2
+from qualified_research_change_events import build_v2 as build_research_change_events_v2
 from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from qualified_market_observations import evaluate as evaluate_qualified_market_observations
@@ -3147,6 +3149,7 @@ def main() -> int:
     parser.add_argument("--include-qualified-research-delta", action="store_true", help="Opt-in Phase 5D deterministic comparison against the explicit --qualified-research-delta-previous bundle; no live data or filesystem-time selection.")
     parser.add_argument("--qualified-research-delta-previous", metavar="BUNDLE_PATH", help="Explicit frozen previous analysis_bundle.json used only with --include-qualified-research-delta.")
     parser.add_argument("--previous-qualified-research-snapshot", metavar="SNAPSHOT_ID", help="Explicit immutable Phase 5E previous snapshot ID; never selects a latest snapshot.")
+    parser.add_argument("--research-changes-v2-baseline", metavar="PATH", help="Explicit previous-served V2 snapshot; attaches only deterministic Producer research changes.")
     parser.add_argument("--include-qualified-market-observations", action="store_true",
                         help="Opt-in: attach provider-scoped descriptive/technical price and volume"
                              " observations (qualified_market_observations) for every ticker with a"
@@ -3436,6 +3439,16 @@ def main() -> int:
     # twice or allowed to promote an omitted contract.
     attach_ticker_capability_matrix(bundle_entries)
 
+    research_changes = None
+    if args.research_changes_v2_baseline:
+        try:
+            previous_v2 = json.loads(Path(args.research_changes_v2_baseline).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            parser.error(f"cannot load V2 research-change baseline: {exc}")
+        current_v2 = build_research_snapshot_v2({"tickers": bundle_entries}, source_identity={
+            "reference_session_date": latest_session, "bundle_generation": "export_ai_bundle"})
+        research_changes = build_research_change_events_v2(previous_v2, current_v2)
+
     # item F: bundle_entries[tk]["context_package"] only exists from this point on (it isn't
     # attached to the earlier `entries` build_data_quality_flags() already consumed above) —
     # this is the correct, and only correct, place to promote context-package-embedded
@@ -3464,6 +3477,7 @@ def main() -> int:
         "market_breadth_freshness": breadth_freshness,
         "macro_snapshot": macro_records,
         "macro_freshness": macro_freshness,
+        **({"research_changes": research_changes} if research_changes is not None else {}),
         **({"pillar_a_research_coverage": pillar_a_research_coverage}
            if pillar_a_research_coverage is not None else {}),
         **({"historical_scaleout_coverage": scaleout_coverage} if scaleout_coverage is not None else {}),
