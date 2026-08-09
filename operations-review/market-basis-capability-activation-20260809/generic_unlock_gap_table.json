@@ -1,0 +1,51 @@
+[
+  {
+    "already_proven": "VCI and KBS both carry an active, evidenced price-basis verdict (empirically_event_adjusted, empirically_deduced tier) -- not unknown.",
+    "capability": "raw_as_traded_price",
+    "missing_evidence": "RAW_AS_TRADED_PRICE_AUTHORITY_ABSENT",
+    "next_bounded_action": "Pillar B B6: compute close_official_event_adjusted from the corporate-action ledger; close_raw is the retained pre-ledger series once the ledger proves which sessions it actually adjusted.",
+    "required_authority": "An official exchange raw-tick feed, or a documented first-party provider adjustment methodology (neither exists today)."
+  },
+  {
+    "already_proven": "Two independent provider-scoped adjusted series are qualified (kbs.empirically_event_adjusted, vci.empirically_event_adjusted), each from its own bounded lane.",
+    "capability": "generic_adjusted_price",
+    "missing_evidence": "GENERIC_PROVIDER_PROMOTION_NOT_AUTHORIZED",
+    "next_bounded_action": "Same as raw_as_traded_price: Pillar B B6.",
+    "required_authority": "No rule in this repository promotes a provider-scoped verdict to a generic one, and none should without a documented methodology or an independent official ledger -- two undocumented sources agreeing is compatibility, not authority (evidence_qualification_tiers.may_claim_official_semantics)."
+  },
+  {
+    "already_proven": "EV balance-sheet components ready for 1,338 tickers (P1E); current effective shares qualified_official for exactly 1 of 1,683 tickers (HPG, B1.1).",
+    "capability": "current_market_cap",
+    "missing_evidence": "POINT_IN_TIME_SHARE_BASIS_INCOMPLETE + generic price basis (above)",
+    "next_bounded_action": "Pillar B B2-B6 acquisition scale-out. Concrete next input: an official VSDC ex-date notice for SSI (already-retained ISS event has no ex-date; VCB was acquired 2026-08-08 the same way).",
+    "required_authority": "Corporate-action ledger coverage per ticker (currently 250 rows across 5 of 1,683 tickers, partial_unqualified_50_row_cap) plus a generic price basis."
+  },
+  {
+    "already_proven": "P2a's HPG/VNM FY2024 multiples were computed, then correctly reopened as BLOCKED (2026-08-04) once the cited close was shown off the HOSE tick lattice.",
+    "capability": "historical_point_in_time_valuation",
+    "missing_evidence": "RAW_AS_TRADED_PRICE_AUTHORITY_ABSENT, at the specific cited date",
+    "next_bounded_action": "Same as raw_as_traded_price: Pillar B B6.",
+    "required_authority": "Same as raw_as_traded_price and generic_adjusted_price, applied point-in-time."
+  },
+  {
+    "already_proven": "Volume unit qualified as shares for both providers; VCI's provider-internal accumulator reconciles exactly; one opening-auction-labelled quantity demonstrated inside VCI's accumulator (demonstrated_for_observed_ato_field).",
+    "capability": "average_daily_volume_and_tradability",
+    "missing_evidence": "TRADE_TYPE_COVERAGE_UNQUALIFIED",
+    "next_bounded_action": "Obtain the HOSE trading-statistics locator (official_authority_candidates.HOSE_TRADING_STATISTICS) -- owner-supplied URL, not composed; then answer its 8 open questions. Not another VCI/KBS probe.",
+    "required_authority": "A source that states what a volume figure counts -- matched vs. negotiated, auction vs. continuous. All 96 examined VCI fields and every reachable KBS surface were exhausted and none carries this (see docs/DECISIONS.md 2026-08-04 'Ninety-six fields, and none of them says put-through')."
+  },
+  {
+    "already_proven": "Same volume-unit evidence as average_daily_volume_and_tradability.",
+    "capability": "liquidity_adjusted_position_sizing",
+    "missing_evidence": "TRADE_TYPE_COVERAGE_UNQUALIFIED (downstream of the same gap)",
+    "next_bounded_action": "Not next on its own; downstream of the ADV route above.",
+    "required_authority": "Same as average_daily_volume_and_tradability."
+  },
+  {
+    "already_proven": "KBS shadow-backtest eligibility is defined (8 conditions in SHADOW_BACKTEST_CONDITIONS) but ELIGIBILITY_DEFINED_NOT_IMPLEMENTED; no provider's price or volume series authorizes execution semantics.",
+    "capability": "production_execution_backtest",
+    "missing_evidence": "TRADE_TYPE_COVERAGE_UNQUALIFIED + point-in-time signal infrastructure absent",
+    "next_bounded_action": "Not next; downstream of the ADV route and a separate signal-storage milestone.",
+    "required_authority": "Trade-scope qualification (above) plus point-in-time signal storage and execution-lag/cost modelling (docs/risk_liquidity_backtesting_contract.md)."
+  }
+]

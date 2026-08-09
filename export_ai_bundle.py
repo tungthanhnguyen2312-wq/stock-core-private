@@ -102,6 +102,7 @@ from qualified_research_delta import attach as attach_qualified_research_delta
 from qualified_research_snapshot import snapshot_as_bundle
 from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
+from qualified_market_observations import evaluate as evaluate_qualified_market_observations
 from analysis_lane_eligibility import evaluate_ticker_lanes
 from distribution_evidence import build_distribution_evidence_for_ticker
 from fundamental_quality_evidence import (
@@ -1568,6 +1569,32 @@ def load_ohlcv_recent(conn: sqlite3.Connection, ticker: str, n: int = OHLCV_RECE
     return [{c: clean(v) for c, v in zip(cols, r)} for r in reversed(rows)]
 
 
+def load_ohlcv_provider_purity(conn: sqlite3.Connection, ticker: str, n: int = OHLCV_RECENT_N) -> dict:
+    """Which provider retained the same window ``load_ohlcv_recent`` returns, or an explicit
+    refusal when it is not one provider.
+
+    ``ohlcv.source`` is never added to ``ohlcv_recent`` itself -- that field's shape is
+    depended on elsewhere and stays untouched. This is a separate, compact provenance
+    summary for callers (``qualified_market_observations.py``) that need to know whether a
+    provider-scoped verdict may be applied to the retained window at all. A window with more
+    than one source, or no rows, is not "pure" -- it is refused rather than assigned to
+    whichever provider happened to source the most rows.
+    """
+    # Same window-selection as load_ohlcv_recent (most recent n by date) so the provenance
+    # this returns always describes the exact rows that function returned.
+    rows = conn.execute(
+        "SELECT source FROM ohlcv WHERE ticker=? ORDER BY date DESC LIMIT ?", (ticker, n)).fetchall()
+    sources = sorted({str(r[0]).strip().upper() for r in rows if r[0] is not None})
+    pure = len(rows) > 0 and len(sources) == 1
+    return {
+        "ticker": ticker,
+        "session_count": len(rows),
+        "sources_seen": sources,
+        "pure": pure,
+        "provider": sources[0] if pure else None,
+    }
+
+
 # ===========================================================================
 # CORPORATE INTELLIGENCE (read-only, source-scoped snapshot export)
 # ===========================================================================
@@ -2446,6 +2473,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
     ohlcv = load_ohlcv_recent(conn, tk)
     if not ohlcv:
         warnings.append("khong_co_du_lieu_ohlcv")
+    ohlcv_provider_provenance = load_ohlcv_provider_purity(conn, tk)
     rs_reconciliation = reconcile_rs_rating(tk, snapshot_rows, ta_rows, snapshot_info, ta_info)
     corporate = load_corporate_intelligence(conn, tk)
     snapshot_row = snapshot_rows.get(tk) or {}
@@ -2511,6 +2539,7 @@ def build_ticker_entry(tk, conn, snapshot_rows, ta_rows, score_rows, score_sessi
         "share_basis_identities": build_share_basis_identities_contract(tk, snapshot_rows.get(tk), runtime_root()),
         "ohlcv_recent": ohlcv,
         "ohlcv_recent_count": len(ohlcv),
+        "ohlcv_provider_provenance": ohlcv_provider_provenance,
         "corporate_intelligence": corporate,
         "freshness": freshness,
         "analysis_readiness": evaluate_analysis_readiness(freshness=freshness, corporate_intelligence=corporate, reference_at=reference_at, price_basis_provenance=price_basis),
@@ -2945,6 +2974,24 @@ def attach_portfolio_risk_analysis(bundle_entries: dict[str, dict], price_basis:
     return bundle_entries
 
 
+def attach_qualified_market_observations(bundle_entries: dict[str, dict], include: bool) -> dict[str, dict]:
+    """Add provider-scoped descriptive/technical market observations for every ticker.
+
+    Unlike the historical-decision/portfolio-risk lane above, this is **not** restricted to
+    ``PILOT_TICKERS``: it depends only on a single-provider retained OHLCV window (see
+    ``load_ohlcv_provider_purity``), which every production ticker has, not on the
+    fundamental-evidence pilot set. Opt-in so legacy bundle bytes remain unchanged; a ticker
+    whose window is missing, mixed-provider or too short gets an explicit ``unavailable``
+    record from ``qualified_market_observations.evaluate`` rather than no key at all.
+    """
+    if not include:
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        if isinstance(entry, dict):
+            entry["qualified_market_observations"] = evaluate_qualified_market_observations(ticker, entry)
+    return bundle_entries
+
+
 # ==========================================================================
 # MAIN
 # ==========================================================================
@@ -2990,6 +3037,13 @@ def main() -> int:
     parser.add_argument("--include-qualified-research-delta", action="store_true", help="Opt-in Phase 5D deterministic comparison against the explicit --qualified-research-delta-previous bundle; no live data or filesystem-time selection.")
     parser.add_argument("--qualified-research-delta-previous", metavar="BUNDLE_PATH", help="Explicit frozen previous analysis_bundle.json used only with --include-qualified-research-delta.")
     parser.add_argument("--previous-qualified-research-snapshot", metavar="SNAPSHOT_ID", help="Explicit immutable Phase 5E previous snapshot ID; never selects a latest snapshot.")
+    parser.add_argument("--include-qualified-market-observations", action="store_true",
+                        help="Opt-in: attach provider-scoped descriptive/technical price and volume"
+                             " observations (qualified_market_observations) for every ticker with a"
+                             " single-provider retained OHLCV window, gated through"
+                             " market_basis_capability_registry. Always historical_only,"
+                             " is_actionable=False, liquidity_actionable=False; never a generic price"
+                             " or volume basis claim. Not restricted to the fundamental-evidence pilot set.")
     parser.add_argument("--qualified-research-snapshot-store-root", metavar="PATH", help="Store root required only with --previous-qualified-research-snapshot.")
     parser.add_argument("--verify", metavar="MANIFEST_PATH",
                         help="KHÔNG xuất gì — chỉ so sha256 trong 1 bundle_manifest.json cũ với"
@@ -3219,6 +3273,7 @@ def main() -> int:
                                      price_basis_verified=price_basis.get("price_basis_verified") is True)
     attach_historical_decision_analysis(bundle_entries, args.include_historical_decision_analysis)
     attach_portfolio_risk_analysis(bundle_entries, price_basis, args.include_portfolio_risk_analysis)
+    attach_qualified_market_observations(bundle_entries, args.include_qualified_market_observations)
     scaleout_coverage = attach_historical_scaleout(bundle_entries, price_basis) if args.include_historical_scaleout else None
     if args.include_qualified_research_brief or args.include_qualified_research_delta:
         for ticker in sorted(PILOT_TICKERS):

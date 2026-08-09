@@ -826,3 +826,44 @@ Reopening requires an explicit owner decision.
   an unrelated symbol's staleness into an invitation to refresh everything. Before reaching
   for `--prepare-inputs` to satisfy a freshness gate, check first whether the tickers actually
   in scope are already fresh — this session's real ones always were.
+
+## 2026-08-09 - A new capability gets a new section, not a retrofit of a load-bearing gate
+
+- `risk_liquidity.py::evaluate_market_risk()` computes `realized_volatility`,
+  `downside_volatility` and `maximum_drawdown` from the retained OHLCV series, but only
+  inside a branch gated on the **generic** `price_adjustment == "qualified"` flag — which is
+  always false market-wide, so these three fields have been `unavailable` in every
+  production bundle since they were written. VCI's own price series (100% of every
+  production ticker's retained window, verified against `dashboard-runtime/vn_stock.db`)
+  carries a real, evidenced, provider-scoped verdict that already authorizes exactly this —
+  `vci_direct_basis_pilot.SHADOW_PRICE_CAPABILITIES` names `vci_namespaced_historical_
+  returns`/`vci_namespaced_technical_indicators` as available under a required label.
+- The safe fix was not to change `risk_liquidity.py`'s gate. Retrofitting a load-bearing,
+  already-shipped section's branching logic to key off a provider-scoped verdict instead of
+  the generic one carries real regression risk for every existing consumer of `market_risk`'s
+  exact shape, for a gain the alternative already provides: a new, separately namespaced,
+  additive `qualified_market_observations` section computes the same class of statistic
+  (return, volatility, drawdown) over the same data, correctly labelled provider-scoped and
+  non-actionable, with zero risk to the existing section's output. `risk_liquidity.py` is
+  unmodified by this milestone.
+- **Corollary: this is not permission to widen the generic gate.** `price_basis_verified`/
+  `volume_basis_verified` stay exactly what they were. The new section's `is_actionable`/
+  `liquidity_actionable` are hardcoded `false` constants, never derived from either the
+  generic flag or the provider-scoped one — see `market_basis_capability_registry.py` and
+  `docs/qualified_market_observations_contract.md`.
+
+## 2026-08-09 - The generic-unlock route is named, not executed, in a capability-activation milestone
+
+- Pillar B (official corporate-action lineage expansion) was selected as the highest-leverage
+  next generic-unlock route, unchanged from the existing roadmap: it is already owner-approved
+  and active (B1), with a concrete next bounded input already on record — an official VSDC
+  ex-date notice for SSI, the same acquisition pattern already exercised for VCB on
+  2026-08-08.
+- **That acquisition was not performed in this milestone.** A live external network request
+  is a materially different class of action from the source/test/documentation work this
+  milestone otherwise consists of, and identifying a legitimate entry URL first requires its
+  own bounded offline discovery pass over already-retained SSI evidence — a distinct,
+  separately-scoped piece of work, not a byproduct of capability-registry construction.
+  Recorded here as a decision, not a gap: the next session doing Pillar B acquisition work
+  should start from "acquire the SSI VSDC ex-date notice using the established B2/B3
+  pattern", not re-derive the route.

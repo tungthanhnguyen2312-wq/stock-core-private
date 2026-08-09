@@ -25,6 +25,14 @@ QUALIFIED HISTORICAL RESEARCH LANE (Phase 4B/4C/5A/5B, opt-in)
     gates. Pass all four together for real brief content; each degrades to an honest
     ineligible/insufficient-evidence result on its own rather than failing.
 
+QUALIFIED MARKET OBSERVATIONS (opt-in, independent of the lane above)
+    --include-qualified-market-observations forwards the matching export_ai_bundle.py flag.
+    A different lane from the one above: it is gated on a single-provider retained OHLCV
+    window through market_basis_capability_registry.py, not on the fundamental-evidence
+    pilot set, so it applies to every production ticker, not just HPG/VNM/VCB. Always
+    historical_only, is_actionable=False, liquidity_actionable=False -- it never touches the
+    generic price_basis_verified/volume_basis_verified gate.
+
 MODES
     (default)              dry run. Reads and reports; writes nothing, publishes nothing.
     --execute              rebuild sidecar + bundle + manifest, verify, Consumer-validate,
@@ -151,6 +159,7 @@ class Operator:
                  include_portfolio_risk_analysis: bool = False,
                  include_historical_scaleout: bool = False,
                  include_qualified_research_brief: bool = False,
+                 include_qualified_market_observations: bool = False,
                  refresh_metadata: bool = False,
                  runner: Callable[..., Any] = subprocess.run):
         self.root = root
@@ -165,6 +174,7 @@ class Operator:
         self.include_portfolio_risk_analysis = include_portfolio_risk_analysis
         self.include_historical_scaleout = include_historical_scaleout
         self.include_qualified_research_brief = include_qualified_research_brief
+        self.include_qualified_market_observations = include_qualified_market_observations
         self.runner = runner
         self.steps: list[dict[str, Any]] = []
         self.rollback_dir: Path | None = None
@@ -523,6 +533,8 @@ class Operator:
             command.append("--include-historical-scaleout")
         if self.include_qualified_research_brief:
             command.append("--include-qualified-research-brief")
+        if self.include_qualified_market_observations:
+            command.append("--include-qualified-market-observations")
         self._run("export_analysis_bundle", command, ROOT)
 
     # ------------------------------------------------------------------ 4. verify
@@ -662,6 +674,7 @@ class Operator:
             "include_portfolio_risk_analysis": self.include_portfolio_risk_analysis,
             "include_historical_scaleout": self.include_historical_scaleout,
             "include_qualified_research_brief": self.include_qualified_research_brief,
+            "include_qualified_market_observations": self.include_qualified_market_observations,
             "started_at": self.started_at, "ended_at": _now(),
             "outcome": outcome,
             "failed_gate": failure.gate if failure else None,
@@ -797,6 +810,12 @@ def parse_args(argv=None) -> argparse.Namespace:
                         help="Opt-in (Phase 5B): attach the compact AI-facing qualified research"
                              " brief. Pair with --include-historical-decision-analysis and"
                              " --include-portfolio-risk-analysis for it to carry real content.")
+    parser.add_argument("--include-qualified-market-observations", action="store_true",
+                        help="Opt-in: attach provider-scoped descriptive/technical price and volume"
+                             " observations for every ticker with a single-provider retained OHLCV"
+                             " window (market_basis_capability_registry-gated). Independent of the"
+                             " fundamental-evidence pilot set; always historical_only and"
+                             " is_actionable=False.")
     parser.add_argument("--publish", action="store_true",
                         help="Also run tools/publish_release.py (its own dry-run unless --live).")
     parser.add_argument("--web-root", default=None,
@@ -871,6 +890,7 @@ def main(argv=None, runner=subprocess.run) -> int:
                         include_portfolio_risk_analysis=args.include_portfolio_risk_analysis,
                         include_historical_scaleout=args.include_historical_scaleout,
                         include_qualified_research_brief=args.include_qualified_research_brief,
+                        include_qualified_market_observations=args.include_qualified_market_observations,
                         refresh_metadata=args.refresh_metadata,
                         runner=runner)
     try:

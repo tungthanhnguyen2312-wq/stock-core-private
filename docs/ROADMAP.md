@@ -82,6 +82,39 @@ capitalisation and therefore waits on pillar B.
   (`gtgd20_ty`, relabelled not disabled) and the `va` consumer register named consumers that
   read no `va`. No schema bumped. 561 tests across both trees against one frozen fixture.
   `operations-review/kbs-coverage-pass-through-20260804/KBS_COVERAGE_PASS_THROUGH.md`.
+- **Market Basis Capability Activation and Generic Unlock Gap Closure shipped 2026-08-09 —
+  PASS, network-free.** Reconciles the roadmap's own framing rather than re-qualifying
+  anything: "price/volume basis unknown, therefore nothing market-related is usable" was
+  always too coarse, since P0-Y/P0-Z/P0-Z.1-3 above had already qualified two provider-scoped
+  bases. The correction is now explicit and canonical:
+  - **Provider-scoped basis: `QUALIFIED / CAPABILITY-LIMITED`.** `market_basis_capability_
+    registry.py` composes `kbs_capability_matrix.py` (unchanged) and
+    `market_volume_capability_matrix.py` (unchanged) with 8 new VCI price-capability records
+    built from `provider_price_basis_registry.py`'s already-established facts — the one real
+    gap, since VCI never had a price matrix shaped like KBS's. 32 capabilities available
+    across both providers, 29 `unavailable_by_contract`, all evidence-cited, none re-derived.
+  - **Generic actionable basis: `BLOCKED / SOURCE-AUTHORITY + MARKET-SCOPE + LINEAGE`.**
+    Unchanged — `price_basis_verified`/`volume_basis_verified` stay `false` at the bundle
+    root. A 7-row generic-unlock gap table (`generic_unlock_gap_table()`) now names the exact
+    missing evidence per blocked capability instead of leaving it as "more evidence needed".
+  - **KBS/VCI source probing is closed**, reaffirmed rather than reopened: the volume
+    trade-scope question (brief-mandated one bounded check) required no new work, already
+    settled by the 2026-08-04 "Ninety-six fields, and none of them says put-through" finding.
+  - **Pillar B is the corporate-action/source-authority continuation track**, unchanged — see
+    below. Its concrete next input (an SSI VSDC ex-date notice) was named, not acquired: a
+    live network request is a different class of action from this milestone's scope.
+  - **Provider-scoped descriptive market analytics now proceed independently of pilot-ticker
+    restriction.** New `qualified_market_observations.py` + bundle section (opt-in
+    `--include-qualified-market-observations`), covering every ticker with a single-provider
+    retained OHLCV window (verified: all 11 production tickers, 100% VCI), not just
+    HPG/VNM/VCB. Descriptive price/volume statistics plus label-gated provider-series
+    return/volatility/drawdown; `is_actionable`/`liquidity_actionable` hardcoded `false`.
+  - **Valuation/ranking/sizing/backtesting remain fail-closed**, unchanged — this milestone
+    added no path to any of them; every Level 4/5 capability on the new ladder
+    (`market_basis_capability_registry.LADDER_LEVELS`) stays `unavailable_by_contract`.
+  85 new tests (73 Producer, 12 Consumer). See
+  `operations-review/market-basis-capability-activation-20260809/` and
+  `docs/qualified_market_observations_contract.md`.
 - **Event-time historical mutability is only reachable prospectively.** A snapshot retained
   *before* a future corporate action plus a matching one after it. Re-requesting an
   already-post-event window is not a substitute at any interval, and no roadmap item may

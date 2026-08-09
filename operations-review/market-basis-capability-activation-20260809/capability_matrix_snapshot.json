@@ -1,0 +1,1348 @@
+{
+  "available_capabilities": [
+    "KBS:kbs_anomaly_detection",
+    "KBS:kbs_bollinger_bands",
+    "KBS:kbs_cross_provider_corroboration",
+    "KBS:kbs_descriptive_price_statistics",
+    "KBS:kbs_descriptive_trading_value_statistics",
+    "KBS:kbs_descriptive_volume_statistics",
+    "KBS:kbs_historical_chart",
+    "KBS:kbs_macd",
+    "KBS:kbs_moving_average",
+    "KBS:kbs_ohlcv_display",
+    "KBS:kbs_provider_price_momentum",
+    "KBS:kbs_provider_relative_volume",
+    "KBS:kbs_provider_series_return",
+    "KBS:kbs_provider_series_technical_continuity",
+    "KBS:kbs_rsi",
+    "KBS:kbs_shadow_analytics",
+    "KBS:kbs_technical_pattern_research",
+    "VCI:provider_relative_volume",
+    "VCI:provider_volume_anomaly_detection",
+    "VCI:provider_volume_history_display",
+    "VCI:provider_volume_moving_average",
+    "VCI:provider_volume_trend_indicator",
+    "VCI:research_only_volume_technical_indicator",
+    "VCI:source_labeled_volume_comparison",
+    "VCI:turnover_tier_screening_score",
+    "VCI:vci_anomaly_detection",
+    "VCI:vci_controlled_source_comparison",
+    "VCI:vci_isolated_shadow_evaluation",
+    "VCI:vci_namespaced_historical_returns",
+    "VCI:vci_namespaced_price_display",
+    "VCI:vci_namespaced_technical_indicators",
+    "VCI:volume_confirmation_signal"
+  ],
+  "available_count": 32,
+  "capabilities": {
+    "KBS:kbs_anomaly_detection": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_anomaly_detection",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Outliers within the same provider series. Cross-provider anomaly detection is a different capability and is not this one.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_bollinger_bands": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_bollinger_bands",
+      "capability_class": "technical_provider_scoped",
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "Dispersion around a mean of the same series.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_cross_provider_corroboration": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_cross_provider_corroboration",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Comparing KBS against another provider to detect divergence. Agreement is compatibility evidence and never raises either provider's authority.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_days_to_liquidate": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_days_to_liquidate",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Divides a position by daily volume. If that volume includes negotiated blocks that were never available to a screen order, the answer is wrong in the optimistic direction, which is the direction that loses money.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_descriptive_price_statistics": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_descriptive_price_statistics",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Range, mean, dispersion over the KBS series. Descriptive of the series.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_descriptive_trading_value_statistics": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_descriptive_trading_value_statistics",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "va is present on only part of the retained history. In the tested windows its absence is perfectly associated with the empirically adjusted / off-lattice row group; the mechanism is unknown and the association is not generalised beyond those windows. Coverage is enforced by kbs_trading_value_coverage, not by this note: an aggregate claiming a whole window must prove the window is covered.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_descriptive_volume_statistics": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_descriptive_volume_statistics",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Same series on both sides, so an unknown constant composition cancels.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_executable_capacity_claim": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_executable_capacity_claim",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Capacity is days-to-liquidate integrated over a book.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_historical_chart": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_historical_chart",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "A chart of one provider's series, labelled as that provider's series.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_liquidity_adjusted_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_liquidity_adjusted_sizing",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Sizing against a figure whose executable fraction is unknown.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_liquidity_dependent_ranking": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_liquidity_dependent_ranking",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Ranking or recommending on volume presented as qualified market liquidity.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_macd": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_macd",
+      "capability_class": "technical_provider_scoped",
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "A shape in one series.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_market_impact_estimation": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_market_impact_estimation",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Impact models are calibrated against matched continuous volume.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_moving_average": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_moving_average",
+      "capability_class": "technical_provider_scoped",
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "A mean over the KBS series.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_negotiated_flow_analysis": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_negotiated_flow_analysis",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Requires a split no observed KBS surface carries.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_odd_lot_analysis": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_odd_lot_analysis",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "odd_lot_inclusion is unknown for KBS.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_official_exchange_price_claim": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_official_exchange_price_claim",
+      "capability_class": "point_in_time_dependent",
+      "ladder_level": 5,
+      "ladder_level_name": "generic_raw_as_traded_authoritative_market_basis",
+      "note": "An observed web endpoint with no published schema is not the exchange.",
+      "provider": "KBS",
+      "reason": "kbs_price_series_is_provider_restated_by_an_undocumented_method",
+      "reopen_condition": "first_party_methodology_or_a_point_in_time_immutable_source",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_official_total_return_claim": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_official_total_return_claim",
+      "capability_class": "point_in_time_dependent",
+      "ladder_level": 5,
+      "ladder_level_name": "generic_raw_as_traded_authoritative_market_basis",
+      "note": "Total return requires a known distribution treatment. The method is undocumented.",
+      "provider": "KBS",
+      "reason": "kbs_price_series_is_provider_restated_by_an_undocumented_method",
+      "reopen_condition": "first_party_methodology_or_a_point_in_time_immutable_source",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_ohlcv_display": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_ohlcv_display",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Showing the retained daily series as the provider reported it. This was never a claim about adjustment or composition, and blocking it bought nothing.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_participation_rate_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_participation_rate_sizing",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "A participation rate is a fraction of executable matched volume.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_point_in_time_valuation": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_point_in_time_valuation",
+      "capability_class": "point_in_time_dependent",
+      "ladder_level": 5,
+      "ladder_level_name": "generic_raw_as_traded_authoritative_market_basis",
+      "note": "The value the series reports for a past date is not the value that was quoted on that date, so it cannot support a claim about what was knowable then.",
+      "provider": "KBS",
+      "reason": "kbs_price_series_is_provider_restated_by_an_undocumented_method",
+      "reopen_condition": "first_party_methodology_or_a_point_in_time_immutable_source",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_production_backtest": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_production_backtest",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "A production backtest reports a capacity it cannot support, over a price series that is restated after the fact.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "KBS:kbs_provider_price_momentum": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_provider_price_momentum",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Direction of the KBS series over time, not a claim about realisable return.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_provider_relative_volume": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_provider_relative_volume",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Today's KBS volume against its own trailing mean: a ratio within one series.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_provider_series_return": {
+      "availability": "available_with_required_label",
+      "capability": "kbs_provider_series_return",
+      "capability_class": "conditional_labelled_provider_series",
+      "forbidden_labels": [
+        "official_exchange_return",
+        "raw_as_traded_return",
+        "total_shareholder_return"
+      ],
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "The series is event-adjusted by an undocumented method, so a return computed over it is neither an as-traded return nor a total shareholder return. It is the return of this provider's series, and it must say so.",
+      "provider": "KBS",
+      "required_label": "provider_series_return",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_provider_series_technical_continuity": {
+      "availability": "available_with_required_label",
+      "capability": "kbs_provider_series_technical_continuity",
+      "capability_class": "conditional_labelled_provider_series",
+      "corporate_action_factors_reapplication": "forbidden_without_a_compatible_contract",
+      "forbidden_labels": [
+        "official_exchange_return",
+        "raw_as_traded_return",
+        "total_shareholder_return"
+      ],
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "An already-adjusted series is continuous across an ex-date, which is what makes it usable for indicator continuity. Reapplying a corporate-action factor to it would adjust it twice.",
+      "provider": "KBS",
+      "required_label": "provider_series_return",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_rsi": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_rsi",
+      "capability_class": "technical_provider_scoped",
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "A shape in one series.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_shadow_analytics": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_shadow_analytics",
+      "capability_class": "technical_provider_scoped",
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "Analytics that claim no official, raw or executable-market semantics.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_shadow_backtest": {
+      "availability": "eligibility_defined_not_implemented",
+      "capability": "kbs_shadow_backtest",
+      "capability_class": "shadow_only_eligibility",
+      "ladder_level": 0,
+      "ladder_level_name": "generic_basis_unknown_no_market_derived_capability",
+      "note": "Eligibility only. This milestone implements no backtest, and the eligibility conditions in SHADOW_BACKTEST_CONDITIONS are all required together.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_technical_pattern_research": {
+      "availability": "available_under_existing_gates",
+      "capability": "kbs_technical_pattern_research",
+      "capability_class": "technical_provider_scoped",
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "Research scope. It may not be presented as a liquidity or executability finding.",
+      "provider": "KBS",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_kbs_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "KBS:kbs_volume_derived_actionability_upgrade": {
+      "availability": "unavailable_by_contract",
+      "capability": "kbs_volume_derived_actionability_upgrade",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "No KBS finding may raise is_actionable. The unit being shares is true and is not an actionability input.",
+      "provider": "KBS",
+      "reason": "kbs_volume_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract_defining_what_the_volume_figure_counts",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "VCI:auction_versus_continuous_decomposition": {
+      "availability": "unavailable_by_contract",
+      "capability": "auction_versus_continuous_decomposition",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "One opening-auction quantity was demonstrated to sit inside the accumulator. That is one leg of one session boundary, not a decomposition -- the closing leg is unknown and the continuous remainder is a subtraction against unknowns.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:average_daily_volume_portfolio_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "average_daily_volume_portfolio_sizing",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Averaging an undifferentiated total does not differentiate it.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:capacity_estimation": {
+      "availability": "unavailable_by_contract",
+      "capability": "capacity_estimation",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Strategy capacity is days-to-liquidate integrated over a book.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:days_to_liquidate": {
+      "availability": "unavailable_by_contract",
+      "capability": "days_to_liquidate",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Divides a position by daily volume. If that volume includes put-through blocks that were never available to a screen order, the answer is wrong in the optimistic direction, which is the direction that loses money.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:execution_simulation": {
+      "availability": "unavailable_by_contract",
+      "capability": "execution_simulation",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Any fill model that treats the volume field as all executable matched liquidity.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:liquidity_adjusted_position_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "liquidity_adjusted_position_sizing",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Sizing against a figure whose executable fraction is unknown.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:market_impact_estimation": {
+      "availability": "unavailable_by_contract",
+      "capability": "market_impact_estimation",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Impact models are calibrated against matched continuous volume. Feeding an undifferentiated total in overstates depth.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:negotiated_versus_matched_flow_analysis": {
+      "availability": "unavailable_by_contract",
+      "capability": "negotiated_versus_matched_flow_analysis",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Requires the split the closeout proved is absent from every observed VCI surface.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:odd_lot_analysis": {
+      "availability": "unavailable_by_contract",
+      "capability": "odd_lot_analysis",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "odd_lot_inclusion is unavailable_from_observed_vci_surfaces.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:participation_rate_sizing": {
+      "availability": "unavailable_by_contract",
+      "capability": "participation_rate_sizing",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "A participation rate is a fraction of *executable matched* volume.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:production_backtest_liquidity_constraint": {
+      "availability": "unavailable_by_contract",
+      "capability": "production_backtest_liquidity_constraint",
+      "capability_class": "execution_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "A backtest that caps fills by VCI `v` reports a capacity it cannot support.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:provider_relative_volume": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_relative_volume",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Today's provider volume against its own trailing mean -- a ratio within one series, so an unknown constant composition cancels.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:provider_volume_anomaly_detection": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_anomaly_detection",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Outliers *within the same provider series*. Cross-provider anomaly detection is not this capability.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:provider_volume_history_display": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_history_display",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Showing the retained daily volume series as the provider reported it.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:provider_volume_moving_average": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_moving_average",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "A mean over the same provider series. Same composition on both sides.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:provider_volume_trend_indicator": {
+      "availability": "available_under_existing_gates",
+      "capability": "provider_volume_trend_indicator",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Direction of the provider series over time, not a claim about market share.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:research_only_volume_technical_indicator": {
+      "availability": "available_under_existing_gates",
+      "capability": "research_only_volume_technical_indicator",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "OBV, MFI, Chaikin and similar, whose interpretation is a shape in one series and does not require knowing the market's complete composition. Research scope: they may not be presented as a liquidity or executability finding.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:source_labeled_volume_comparison": {
+      "availability": "available_under_existing_gates",
+      "capability": "source_labeled_volume_comparison",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Comparison that names VCI as the source in the output, not in a footnote.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:turnover_tier_screening_score": {
+      "availability": "available_under_existing_gates",
+      "capability": "turnover_tier_screening_score",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "Coarse close x volume banding used to rank screening candidates. Retained because it is a relative screen over one provider series, not a tradable-size estimate; it must never be labelled or exported as qualified market liquidity.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:vci_anomaly_detection": {
+      "availability": "available_under_existing_gates",
+      "capability": "vci_anomaly_detection",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Outliers within the same provider series.",
+      "provider": "VCI",
+      "reason": null,
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_vci_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "VCI:vci_controlled_source_comparison": {
+      "availability": "available_under_existing_gates",
+      "capability": "vci_controlled_source_comparison",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Comparing VCI against another provider to detect divergence. Agreement is compatibility evidence and never raises either provider's authority.",
+      "provider": "VCI",
+      "reason": null,
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_vci_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "VCI:vci_isolated_shadow_evaluation": {
+      "availability": "available_under_existing_gates",
+      "capability": "vci_isolated_shadow_evaluation",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Research-scope evaluation confined to the VCI-namespaced shadow lane.",
+      "provider": "VCI",
+      "reason": null,
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_vci_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "VCI:vci_namespaced_historical_returns": {
+      "availability": "available_with_required_label",
+      "capability": "vci_namespaced_historical_returns",
+      "capability_class": "conditional_labelled_provider_series",
+      "forbidden_labels": [
+        "official_exchange_return",
+        "raw_as_traded_return",
+        "total_shareholder_return"
+      ],
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "The series is event-adjusted, so a return computed over it is neither an as-traded return nor a total shareholder return -- it is this provider's series return, and it must say so. VCI's active price verdict ('empirically_event_adjusted') is a real, evidenced value -- not unknown or conflicted -- so a statement about the VCI series itself (its own shape, its own return, its own technical indicators) is supportable. It is not raw as-traded and must never be presented as one.",
+      "provider": "VCI",
+      "reason": null,
+      "required_label": "provider_series_return",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_vci_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "VCI:vci_namespaced_price_display": {
+      "availability": "available_under_existing_gates",
+      "capability": "vci_namespaced_price_display",
+      "capability_class": "descriptive_provider_scoped",
+      "ladder_level": 1,
+      "ladder_level_name": "provider_scoped_descriptive_basis",
+      "namespace": "provider_scoped",
+      "note": "Showing the retained VCI daily series as this repository normalised it. VCI's active price verdict ('empirically_event_adjusted') is a real, evidenced value -- not unknown or conflicted -- so a statement about the VCI series itself (its own shape, its own return, its own technical indicators) is supportable. It is not raw as-traded and must never be presented as one.",
+      "provider": "VCI",
+      "reason": null,
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_vci_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "VCI:vci_namespaced_technical_indicators": {
+      "availability": "available_with_required_label",
+      "capability": "vci_namespaced_technical_indicators",
+      "capability_class": "conditional_labelled_provider_series",
+      "forbidden_labels": [
+        "official_exchange_return",
+        "raw_as_traded_return",
+        "total_shareholder_return"
+      ],
+      "ladder_level": 2,
+      "ladder_level_name": "provider_scoped_adjusted_price_analytics",
+      "namespace": "provider_scoped",
+      "note": "An already-adjusted series is continuous across an ex-date, which is what makes it usable for indicator continuity. VCI's active price verdict ('empirically_event_adjusted') is a real, evidenced value -- not unknown or conflicted -- so a statement about the VCI series itself (its own shape, its own return, its own technical indicators) is supportable. It is not raw as-traded and must never be presented as one.",
+      "provider": "VCI",
+      "reason": null,
+      "required_label": "provider_series_return",
+      "required_provenance_fields": [
+        "provider",
+        "source_authority",
+        "price_basis_qualification",
+        "volume_unit_qualification",
+        "volume_market_scope",
+        "provider_methodology",
+        "scope_limitations"
+      ],
+      "required_warnings": [
+        "provider_scoped_vci_series",
+        "source_authority_observed_public_web_endpoint",
+        "documented_semantics_absent",
+        "price_basis_empirically_deduced_not_documented",
+        "price_series_event_adjusted_by_an_unknown_method",
+        "volume_market_composition_unresolved",
+        "not_an_official_exchange_contract"
+      ]
+    },
+    "VCI:vci_official_exchange_price_claim": {
+      "availability": "unavailable_by_contract",
+      "capability": "vci_official_exchange_price_claim",
+      "capability_class": "point_in_time_dependent",
+      "ladder_level": 5,
+      "ladder_level_name": "generic_raw_as_traded_authoritative_market_basis",
+      "note": "An observed web endpoint with no published schema is not the exchange.",
+      "provider": "VCI",
+      "reason": "provider_series_retrospectively_rewritten",
+      "reopen_condition": "documented_first_party_methodology_or_a_point_in_time_immutable_source",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "VCI:vci_official_total_return_claim": {
+      "availability": "unavailable_by_contract",
+      "capability": "vci_official_total_return_claim",
+      "capability_class": "point_in_time_dependent",
+      "ladder_level": 5,
+      "ladder_level_name": "generic_raw_as_traded_authoritative_market_basis",
+      "note": "Total return requires a known distribution treatment. The method is undocumented.",
+      "provider": "VCI",
+      "reason": "provider_series_retrospectively_rewritten",
+      "reopen_condition": "documented_first_party_methodology_or_a_point_in_time_immutable_source",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "VCI:vci_point_in_time_valuation": {
+      "availability": "unavailable_by_contract",
+      "capability": "vci_point_in_time_valuation",
+      "capability_class": "point_in_time_dependent",
+      "ladder_level": 5,
+      "ladder_level_name": "generic_raw_as_traded_authoritative_market_basis",
+      "note": "The value the series reports for a past date is not necessarily the value that was quoted on that date (historical_mutability='retrospectively_rewritten'), so it cannot support a claim about what was knowable then.",
+      "provider": "VCI",
+      "reason": "provider_series_retrospectively_rewritten",
+      "reopen_condition": "documented_first_party_methodology_or_a_point_in_time_immutable_source",
+      "required_provenance_fields": [],
+      "required_warnings": []
+    },
+    "VCI:volume_based_ranking_or_recommendation": {
+      "availability": "unavailable_by_contract",
+      "capability": "volume_based_ranking_or_recommendation",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "Ranking or recommending on volume presented as qualified market liquidity.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    },
+    "VCI:volume_confirmation_signal": {
+      "availability": "available_under_existing_gates",
+      "capability": "volume_confirmation_signal",
+      "capability_class": "analytical_not_liquidity_dependent",
+      "ladder_level": 3,
+      "ladder_level_name": "qualified_volume_unit_descriptive_analytics",
+      "namespace": "provider_scoped",
+      "note": "'Did today's bar come with more volume than usual for this ticker' -- a within-series comparison. It says nothing about how much could have been traded.",
+      "provider": "VCI",
+      "required_warnings": [
+        "market_composition_unresolved",
+        "corporate_action_adjustment_unresolved",
+        "value_is_provider_scoped",
+        "not_an_official_exchange_volume_contract"
+      ]
+    },
+    "VCI:volume_derived_actionability_upgrade": {
+      "availability": "unavailable_by_contract",
+      "capability": "volume_derived_actionability_upgrade",
+      "capability_class": "liquidity_dependent",
+      "ladder_level": 4,
+      "ladder_level_name": "market_scope_qualified_liquidity",
+      "note": "No volume finding may raise is_actionable. The unit being shares and the accumulator reconciling are both true and neither is an actionability input.",
+      "provider": "VCI",
+      "reason": "complete_market_composition_not_qualified",
+      "reopen_condition": "new_authoritative_source_contract",
+      "reopen_note": "Not reopenable by further VCI pagination, further VCI endpoint probing, or by verifying the volume unit or basis. Only a source that publishes what its volume figure counts -- matched versus negotiated, auction versus continuous -- can reopen these, and no such source is active.",
+      "required_warnings": []
+    }
+  },
+  "is_actionable_effect": "none",
+  "kbs_source_snapshot_version": "1.0.0",
+  "ladder_levels": {
+    "0": "generic_basis_unknown_no_market_derived_capability",
+    "1": "provider_scoped_descriptive_basis",
+    "2": "provider_scoped_adjusted_price_analytics",
+    "3": "qualified_volume_unit_descriptive_analytics",
+    "4": "market_scope_qualified_liquidity",
+    "5": "generic_raw_as_traded_authoritative_market_basis"
+  },
+  "liquidity_actionable": false,
+  "providers": [
+    "KBS",
+    "VCI"
+  ],
+  "schema_version": "1.0.0",
+  "unavailable_capabilities": [
+    "KBS:kbs_days_to_liquidate",
+    "KBS:kbs_executable_capacity_claim",
+    "KBS:kbs_liquidity_adjusted_sizing",
+    "KBS:kbs_liquidity_dependent_ranking",
+    "KBS:kbs_market_impact_estimation",
+    "KBS:kbs_negotiated_flow_analysis",
+    "KBS:kbs_odd_lot_analysis",
+    "KBS:kbs_official_exchange_price_claim",
+    "KBS:kbs_official_total_return_claim",
+    "KBS:kbs_participation_rate_sizing",
+    "KBS:kbs_point_in_time_valuation",
+    "KBS:kbs_production_backtest",
+    "KBS:kbs_volume_derived_actionability_upgrade",
+    "VCI:auction_versus_continuous_decomposition",
+    "VCI:average_daily_volume_portfolio_sizing",
+    "VCI:capacity_estimation",
+    "VCI:days_to_liquidate",
+    "VCI:execution_simulation",
+    "VCI:liquidity_adjusted_position_sizing",
+    "VCI:market_impact_estimation",
+    "VCI:negotiated_versus_matched_flow_analysis",
+    "VCI:odd_lot_analysis",
+    "VCI:participation_rate_sizing",
+    "VCI:production_backtest_liquidity_constraint",
+    "VCI:vci_official_exchange_price_claim",
+    "VCI:vci_official_total_return_claim",
+    "VCI:vci_point_in_time_valuation",
+    "VCI:volume_based_ranking_or_recommendation",
+    "VCI:volume_derived_actionability_upgrade"
+  ],
+  "unavailable_count": 29,
+  "universal_prohibited_capabilities": [
+    "adjustment_factors_for_another_source",
+    "generic_adjusted_return_fields",
+    "is_actionable",
+    "official_exchange_claims",
+    "portfolio_sizing",
+    "price_targets",
+    "production_artifact_replacement",
+    "production_backtesting",
+    "ranking",
+    "recommendations"
+  ],
+  "vci_price_verdict": {
+    "coverage_generalization": "not_authorized",
+    "established_at": "2026-08-04",
+    "evidence": [
+      "operations-review/vci-direct-basis-pilot-20260804/pilot_summary.json",
+      "operations-review/vci-direct-basis-pilot-20260804/VCI_DIRECT_BASIS_PILOT.md"
+    ],
+    "historical_mutability": "retrospectively_rewritten",
+    "limitations": [
+      "Three qualified events across three tickers, all in 2026. Older history, rights issues and par-value changes are untested.",
+      "No first-party methodology exists, so which events the provider adjusts for -- and which it silently does not -- is unknown."
+    ],
+    "observed_adjustment_dimensions": [
+      "cash_distribution",
+      "share_related_event"
+    ],
+    "official_exchange_price": false,
+    "price_basis": "empirically_event_adjusted",
+    "provider": "VCI",
+    "provider_methodology": "unknown",
+    "raw_as_traded_eligible": false,
+    "source_field_identity": "observed",
+    "status": "active",
+    "unobserved_event_types": "unknown"
+  },
+  "vci_volume_source_snapshot_version": "1.0.0"
+}
