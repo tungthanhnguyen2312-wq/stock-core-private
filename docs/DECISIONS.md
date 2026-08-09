@@ -24,8 +24,10 @@
   receive the bounded pilot rather than silently treating it as an incomplete legacy cohort.
 - The canonical-financial bundle flag was deliberately omitted from the final generation after
   its freshness gate required a metadata refresh. That route is unrelated to the issuer filing
-  evidence and remains blocked rather than refreshed. No database, market provider, generic
-  price/volume/valuation gate, or serving deployment was changed by this decision.
+  evidence and remains blocked rather than refreshed. No database, market provider, or generic
+  price/volume/valuation gate changed. After the supported build and Consumer validation passed,
+  the sanctioned trusted-AI publisher released only its four manifest-bound artifacts at serving
+  commit `bf00185d78cb79e875b8bba2e17ce0111c966882`.
 
 ## 2026-08-09 - Scan-only annual financial evidence is materialized only after source-page verification
 

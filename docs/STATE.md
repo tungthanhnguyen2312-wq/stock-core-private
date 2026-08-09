@@ -20,6 +20,9 @@ liquidity, or market claims. The supported operator regenerated and Consumer-val
 two-ticker bundle (reference session 2026-08-07):
 `analysis_bundle.json` `8a76fc00b5a590eaeb50266f8c62b4f9b4a0ad723cce1916ad9d3330145cb8f5`,
 `bundle_manifest.json` `3eb1ff7cb08820f4b66f265e6066de93c34ef9ce321fb77eeb1ed3ba576eeb49`.
+The sanctioned trusted-AI publisher then released those four allowlisted artifacts at serving
+commit `bf00185d78cb79e875b8bba2e17ce0111c966882`; its exact-session, staged-hash, destination,
+and remote-push checks passed, with zero unrelated serving-path drift.
 An attempted canonical-financial bundle attachment stopped before generation because it would
 require a prohibited metadata refresh; the operator rolled back and the delivered run omits
 that unrelated lane. No provider call, market-data refresh, database mutation, or generic
