@@ -10,6 +10,7 @@ isolation replaces.
 """
 
 import csv
+import json
 import os
 import sys
 import tempfile
@@ -19,6 +20,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ORCHESTRATOR = ROOT / "tools" / "release_orchestrator.py"
+
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tools"))
+
+import release_orchestrator  # noqa: E402
+from qualified_research_snapshot_v2 import from_served_bundle  # noqa: E402
 
 FIXTURE_SESSION = "2026-08-04"
 GIT_IDENTITY_ENV = {
@@ -233,6 +240,87 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("Session mismatch", res.stderr)
         self.assertNotIn("[INFO] Executing child process:", res.stdout)
+
+    # ------------------------------------------------------------------ V2 served baseline
+    def test_generate_plan_auto_resolves_baseline_from_served_bundle(self):
+        """The exact defect this milestone fixes: a served --web-dir must feed its own
+        currently-served bundle into the next release's comparison baseline, not a stale
+        hand-picked file left over from an earlier release."""
+        served_bundle = {
+            "reference_session_date": "2026-08-07",
+            "tickers": {"POW": {"ticker_capability_matrix": {
+                "research": {"qualified_research_brief": {"status": "available"}}}}},
+        }
+        (self.web_dir / "analysis_bundle.json").write_text(json.dumps(served_bundle), encoding="utf-8")
+        res = self.run_fixture(["trusted-ai", "--generate"])
+        # Checked against the actually-executed line (plain joined argv, no repr escaping) —
+        # not the pre-execution "Plan 1:" preview, which prints the argv list via repr() and
+        # doubles every backslash on Windows (see test_canonical_whole_market_plan_isolation).
+        self.assertTrue(self._executed(res, "--research-changes-v2-baseline"), res.stdout)
+        baseline_path = self.backend_dir / "reports" / "research_changes_v2_served_baseline.json"
+        self.assertTrue(self._executed(res, str(baseline_path)), res.stdout)
+        self.assertTrue(baseline_path.is_file())
+        recorded = json.loads(baseline_path.read_text(encoding="utf-8"))
+        self.assertEqual(recorded, from_served_bundle(served_bundle))
+        pow_row = next(row for row in recorded["tickers"] if row["ticker"] == "POW")
+        self.assertEqual(pow_row["research_status"], "available")
+
+    def test_generate_plan_has_no_baseline_when_nothing_is_served_yet(self):
+        """A fresh --web-dir with no analysis_bundle.json (first-ever release) legitimately
+        yields no baseline — never a fabricated or guessed one."""
+        res = self.run_fixture(["trusted-ai", "--generate"])
+        self.assertFalse(self._executed(res, "--research-changes-v2-baseline"), res.stdout)
+
+    def test_explicit_baseline_overrides_auto_resolution(self):
+        """An operator-supplied --research-changes-v2-baseline still wins over whatever is
+        currently served — the auto-resolution is a default, not a forced behavior."""
+        served_bundle = {"reference_session_date": "2026-08-07", "tickers": {}}
+        (self.web_dir / "analysis_bundle.json").write_text(json.dumps(served_bundle), encoding="utf-8")
+        override = self.backend_dir / "explicit-baseline.json"
+        override.write_text(json.dumps({"schema_version": "2.0.0", "snapshot_id": "qrs2-forced", "tickers": []}),
+                            encoding="utf-8")
+        res = self.run_fixture(["trusted-ai", "--generate", "--research-changes-v2-baseline", str(override)])
+        self.assertTrue(self._executed(res, str(override)), res.stdout)
+        self.assertFalse(self._executed(res, "research_changes_v2_served_baseline.json"), res.stdout)
+
+
+class ResolveResearchChangesV2BaselineTests(unittest.TestCase):
+    """Direct unit tests of the resolution function, isolated from subprocess/CLI concerns."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        base = Path(tmp.name)
+        self.web_dir = base / "web"
+        self.web_dir.mkdir()
+        self.backend_dir = base / "backend"
+        self.backend_dir.mkdir()
+
+    def test_no_served_bundle_yields_no_baseline(self):
+        result = release_orchestrator.resolve_research_changes_v2_baseline(self.web_dir, self.backend_dir, ROOT)
+        self.assertIsNone(result)
+
+    def test_served_bundle_is_reconstructed_deterministically(self):
+        served_bundle = {
+            "reference_session_date": "2026-08-07",
+            "tickers": {
+                "POW": {"ticker_capability_matrix": {"research": {"qualified_research_brief": {"status": "available"}}}},
+                "HPG": {"ticker_capability_matrix": {"research": {"qualified_research_brief": {"status": "unavailable"}}}},
+            },
+        }
+        (self.web_dir / "analysis_bundle.json").write_text(json.dumps(served_bundle), encoding="utf-8")
+        result = release_orchestrator.resolve_research_changes_v2_baseline(self.web_dir, self.backend_dir, ROOT)
+        self.assertIsNotNone(result)
+        recorded = json.loads(result.read_text(encoding="utf-8"))
+        self.assertEqual(recorded, from_served_bundle(served_bundle))
+        statuses = {row["ticker"]: row["research_status"] for row in recorded["tickers"]}
+        self.assertEqual(statuses["POW"], "available")
+        self.assertEqual(statuses["HPG"], "unavailable")
+
+    def test_malformed_served_bundle_yields_no_baseline_not_a_crash(self):
+        (self.web_dir / "analysis_bundle.json").write_text("{not valid json", encoding="utf-8")
+        result = release_orchestrator.resolve_research_changes_v2_baseline(self.web_dir, self.backend_dir, ROOT)
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

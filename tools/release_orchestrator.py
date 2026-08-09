@@ -105,6 +105,35 @@ def restore_allowlist_state(web_dir: Path, state: dict[str, bytes]):
         p.write_bytes(content)
 
 
+def resolve_research_changes_v2_baseline(web_dir: Path, backend_dir: Path, producer_dir: Path) -> Path | None:
+    """Derive the V2 research-change comparison baseline from what is actually served.
+
+    The correct comparison baseline for the next release is the immediately previous SERVED
+    state, not a fixed file picked once and reused release after release. `web_dir` is the
+    live-served checkout this orchestrator already validated above; if it is currently serving
+    an analysis bundle, this reconstructs -- deterministically, from that bundle's own retained
+    content -- the exact V2 snapshot `export_ai_bundle.py` computed for it at serve time (the
+    same pure function, run again). No snapshot or event ID is ever hardcoded here: an unserved
+    (first-ever) checkout legitimately yields no baseline, and callers may still force a
+    specific baseline via --research-changes-v2-baseline.
+    """
+    served_bundle_path = web_dir / "analysis_bundle.json"
+    if not served_bundle_path.is_file():
+        return None
+    try:
+        served_bundle = json.loads(served_bundle_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    sys.path.insert(0, str(producer_dir))
+    from qualified_research_snapshot_v2 import from_served_bundle
+    baseline = from_served_bundle(served_bundle)
+    baseline_dir = backend_dir / "reports"
+    baseline_dir.mkdir(parents=True, exist_ok=True)
+    baseline_path = baseline_dir / "research_changes_v2_served_baseline.json"
+    baseline_path.write_text(json.dumps(baseline, ensure_ascii=True, sort_keys=True), encoding="utf-8")
+    return baseline_path
+
+
 def build_parser() -> argparse.ArgumentParser:
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("--live", action="store_true", help="cho phép ghi file, commit/push thật")
@@ -130,7 +159,9 @@ def build_parser() -> argparse.ArgumentParser:
     parent_parser.add_argument("--governed-official-evidence-root", type=Path,
                                help="Explicit governed evidence root used only with --generate.")
     parent_parser.add_argument("--research-changes-v2-baseline", type=Path,
-                               help="Explicit previous-served V2 snapshot used only with --generate.")
+                               help="Explicit previous-served V2 snapshot used only with --generate. "
+                                    "Overrides the automatic baseline this orchestrator otherwise "
+                                    "reconstructs from --web-dir's currently served analysis bundle.")
 
     parser = argparse.ArgumentParser(
         prog="release_orchestrator.py",
@@ -206,8 +237,10 @@ def orchestrate(args: argparse.Namespace) -> int:
                             "--runtime-root", str(backend_dir), "--execute"]
             if args.governed_official_evidence_root:
                 cmd_generate += ["--governed-official-evidence-root", str(args.governed_official_evidence_root)]
-            if args.research_changes_v2_baseline:
-                cmd_generate += ["--research-changes-v2-baseline", str(args.research_changes_v2_baseline)]
+            research_changes_v2_baseline = (args.research_changes_v2_baseline
+                                            or resolve_research_changes_v2_baseline(web_dir, backend_dir, producer_dir))
+            if research_changes_v2_baseline:
+                cmd_generate += ["--research-changes-v2-baseline", str(research_changes_v2_baseline)]
             argv_plans.append(cmd_generate)
 
         if group in ("trusted-ai", "all"):

@@ -50,8 +50,12 @@ def build(previous: Mapping[str, Any] | None, current: Mapping[str, Any] | None)
 def build_v2(previous: Mapping[str, Any], current: Mapping[str, Any]) -> dict[str, Any]:
     """Adapt compatible V2 capability states without claiming absent prior authority.
 
-    `unknown -> available` is an availability newly established transition, not a claim that
-    the previously served ticker was blocked or unavailable.
+    An event fires whenever a ticker becomes newly `available` from any non-`available` real
+    prior state -- `unknown` (no capability-matrix result at all in the previous snapshot) or
+    `unavailable` (the matrix evaluated the ticker and found no brief). The event's `previous`
+    value is always that real prior status, never a fixed label: this is what lets a served
+    baseline that actually recorded the more specific `unavailable` say so truthfully, instead
+    of a blanket `unknown` overclaiming that the ticker was never evaluated.
     """
     if previous.get("schema_version") != "2.0.0" or current.get("schema_version") != "2.0.0":
         raise ValueError("research_snapshot_v2_required")
@@ -60,9 +64,12 @@ def build_v2(previous: Mapping[str, Any], current: Mapping[str, Any]) -> dict[st
     for item in current.get("tickers", []):
         if not isinstance(item, Mapping):
             continue
-        ticker, before = str(item.get("ticker")), prior.get(str(item.get("ticker")))
-        if before and before.get("research_status") == "unknown" and item.get("research_status") == "available":
-            events.append(_event(ticker, "research_availability_established", "unknown", "available",
+        ticker = str(item.get("ticker"))
+        before = prior.get(ticker)
+        previous_status = str(before.get("research_status")) if before else "unknown"
+        current_status = item.get("research_status")
+        if previous_status != "available" and current_status == "available":
+            events.append(_event(ticker, "research_availability_established", previous_status, "available",
                                  ["v2.tickers.%s.semantic_sha256" % ticker], previous.get("snapshot_id"), current.get("snapshot_id")))
     events.sort(key=lambda event: event["event_id"])
     return {"schema_version": SCHEMA_VERSION, "snapshot_version": "2.0.0",
