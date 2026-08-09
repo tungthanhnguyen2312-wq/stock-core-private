@@ -96,6 +96,7 @@ from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
 from historical_decision_analysis import evaluate_historical_decision_analysis, PILOT_TICKERS
 from qualified_historical_fundamental_analytics import build_comparative_matrix, merge_official_annual_facts
+from qualified_cohort_comparison import build as build_qualified_cohort_comparison
 from portfolio_risk_analysis import evaluate_portfolio_risk_analysis
 from historical_scaleout import attach as attach_historical_scaleout
 from qualified_research_brief import build as build_qualified_research_brief
@@ -3048,8 +3049,10 @@ def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include
     }
     if cohort:
         comparative = build_comparative_matrix(cohort)
+        qualified_cohort = build_qualified_cohort_comparison(cohort)
         for ticker in cohort:
             bundle_entries[ticker]["historical_fundamental_comparative_matrix"] = comparative
+            bundle_entries[ticker]["qualified_cohort_comparison"] = qualified_cohort
     return bundle_entries
 
 def attach_portfolio_risk_analysis(bundle_entries: dict[str, dict], price_basis: Mapping[str, Any], include: bool) -> dict[str, dict]:

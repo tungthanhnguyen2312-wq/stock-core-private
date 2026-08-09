@@ -109,6 +109,7 @@ class HistoricalDecisionAnalysisTests(unittest.TestCase):
         for ticker in ("HPG", "VNM", "PAN", "PVD", "NVL"):
             self.assertIn("historical_decision_analysis", attached[ticker])
             self.assertIn("historical_fundamental_comparative_matrix", attached[ticker])
+            self.assertIn("qualified_cohort_comparison", attached[ticker])
         self.assertEqual(attached["PVD"]["historical_decision_analysis"]["fundamental_analytics"]["currency"], "USD")
         self.assertNotIn("historical_decision_analysis", attached["ABC"])
         self.assertEqual(attach_historical_decision_analysis({"HPG": entry("HPG")}, False)["HPG"].keys(), entry("HPG").keys())

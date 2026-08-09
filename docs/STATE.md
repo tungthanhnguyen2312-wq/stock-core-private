@@ -762,3 +762,13 @@ USD and no FX conversion or monetary cross-currency comparison is emitted. Trend
 `insufficient_history` until two complete qualified annual periods exist. Market gates, DNSE
 status, evidence backlog and runtime publication are unchanged. See
 `docs/qualified_historical_fundamental_analytics_contract.md`.
+
+## 2026-08-09 — Qualified historical comparative research and AI UX — DONE
+
+The fixed HPG/VNM/PAN/PVD/NVL cohort now has a Producer-owned, provenance-carrying qualified
+cohort comparison. It distinguishes cross-sectional context from unavailable multi-period
+trends, adds bounded cash-conversion and historical-stress sub-conclusions, and preserves PVD
+as USD without absolute cross-currency comparison. Consumer pass-through and Dashboard rendering
+remain non-actionable: no valuation, ranking, recommendation, liquidity, or market gate changes.
+Evidence scale-out remains paused; PNJ/POW/QNS/FPT backlog and DNSE pending activation remain
+unchanged. See `docs/qualified_cohort_comparison_contract.md`.

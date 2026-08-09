@@ -418,6 +418,14 @@ capitalisation and therefore waits on pillar B.
   research context for AI presentation only after a Consumer contract audit; dashboard work
   remains deferred.
 
+### P3 extension — Qualified historical comparative research and AI UX — DONE 2026-08-09
+
+- The exact five-ticker qualified cohort now has descriptive cross-sectional research context,
+  Producer-grounded AI instructions, Consumer pass-through, and a small Dashboard renderer. It
+  does not create a peer group, investment score, market claim, or currency conversion; every
+  ticker remains single-period for trend purposes.
+- Next canonical capability decision: `HISTORICAL_RESEARCH_PRODUCT_CLOSEOUT_AND_NEXT_DECISION_CAPABILITY`.
+
 - No universal score, ranking, or recommendation before valuation and current-market gates qualify.
 - Exit gate: `RANKING_INPUTS_QUALIFIED = YES`.
 

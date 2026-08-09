@@ -32,6 +32,8 @@ def _qualified_entry(entity_type: str = "corporate") -> dict:
         "fundamental_quality": {"models": {"financial_strength": {"status": "available", "blocking_reasons": []}}},
         "historical_fundamental_brief": {"status": "available", "reason_codes": ["qualified_financial_facts"]},
         "historical_decision_analysis": {"eligibility": {"status": "eligible", "reason_codes": []}},
+        "qualified_cohort_comparison": {"status": "available", "historical_only": True, "market_dependent": False,
+                                          "is_actionable": False, "ranking_prohibited": True, "rows": []},
         "qualified_market_observations": {
             "status": "available", "descriptive_only": True, "is_actionable": False,
             "reason_codes": ["provider_scoped_only"],
@@ -50,6 +52,7 @@ class CapabilityMatrixTests(unittest.TestCase):
         matrix = build_ticker_capability_matrix("HPG", _qualified_entry(), market_authority=AUTHORITY)
         self.assertEqual(matrix["fundamental_data"]["canonical_financial_facts"]["status"], "available")
         self.assertEqual(matrix["fundamental_data"]["historical_decision_analysis"]["status"], "available")
+        self.assertEqual(matrix["fundamental_data"]["qualified_cohort_comparison"]["status"], "descriptive_only")
         self.assertEqual(matrix["market_descriptive"]["qualified_market_observations"]["status"], "descriptive_only")
         self.assertEqual(matrix["market_actionable"]["current_valuation"]["status"], "blocked")
         self.assertEqual(matrix["market_actionable"]["generic_liquidity"]["status"], "blocked")

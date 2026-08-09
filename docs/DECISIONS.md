@@ -1150,3 +1150,14 @@ Reopening requires an explicit owner decision.
 - Consumer and dashboard publication are deferred because this milestone changes no market
   authority and no runtime artifact. The next candidate is
   `QUALIFIED_HISTORICAL_COMPARATIVE_RESEARCH_AND_AI_UX`, contingent on a Consumer audit.
+
+## 2026-08-09 — Comparative research is a qualified-cohort observation, not a ranking
+
+- HPG, VNM, PAN, PVD and NVL are a fixed **qualified cohort**, not an assumed peer group. The
+  comparison projects existing qualified analytics, source identities, and deterministic
+  positions without calculating another fundamental formula or introducing a weighting model.
+- Cross-sectional historical comparison is available; multi-period trend remains insufficient.
+  PVD remains USD, and the contract excludes absolute monetary comparison and FX conversion.
+- Consumer and Dashboard may present the Producer section verbatim only. AI may explain an
+  exact supported comparison but may not create recommendation, valuation, target-price,
+  liquidity, expected-return, sizing, allocation, or investment-ranking claims.

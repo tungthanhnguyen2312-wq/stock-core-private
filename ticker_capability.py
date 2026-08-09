@@ -195,6 +195,8 @@ def build_ticker_capability_matrix(
     historical_eligibility = _as_mapping(historical_decision.get("eligibility"))
     historical_analytics = _as_mapping(historical_decision.get("fundamental_analytics"))
     comparative_matrix = item.get("historical_fundamental_comparative_matrix")
+    qualified_cohort_comparison = item.get("qualified_cohort_comparison")
+    scenario_synthesis = historical_decision.get("scenarios")
     qmo = item.get("qualified_market_observations")
     qmo_record = _as_mapping(qmo)
     qmo_available = qmo_record.get("status") == "available"
@@ -262,6 +264,16 @@ def build_ticker_capability_matrix(
                 status=_as_mapping(comparative_matrix).get("status"), descriptive_only=True,
                 dependencies=["qualified_historical_fundamental_analytics"],
                 absent_reason="historical_fundamental_comparative_matrix_not_attached"),
+            "qualified_cohort_comparison": _capability(
+                authority="qualified_cohort_comparison", record=qualified_cohort_comparison,
+                status=_as_mapping(qualified_cohort_comparison).get("status"), descriptive_only=True,
+                dependencies=["qualified_historical_fundamental_analytics", "fixed_qualified_cohort"],
+                absent_reason="qualified_cohort_comparison_not_attached"),
+            "historical_scenario_synthesis": _capability(
+                authority="historical_decision_analysis.scenarios", record=scenario_synthesis if isinstance(scenario_synthesis, Mapping) else None,
+                status="available" if isinstance(scenario_synthesis, Mapping) and set(scenario_synthesis) == {"bear", "base", "bull"} else None,
+                dependencies=["qualified_historical_fundamental_analytics"],
+                absent_reason="historical_scenarios_not_attached"),
             "pillar_a_research_projection": _capability(
                 authority="research_financial_fact_projection", record=pillar_projection,
                 status=pillar_projection_record.get("status"),

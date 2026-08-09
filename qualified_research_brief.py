@@ -50,6 +50,7 @@ def build(ticker: str, entry: Mapping[str, Any]) -> dict[str, Any]:
             "Trend interpretation is unavailable until two complete qualified annual periods exist.",
         ],
         "comparative_research_context": entry.get("historical_fundamental_comparative_matrix", {}),
+        "qualified_cohort_context": entry.get("qualified_cohort_comparison", {}),
         "portfolio_risk_boundary": {
             "liquidity": portfolio.get("liquidity", {}),
             "portfolio_context": _map(portfolio.get("portfolio_considerations")).get("actual_portfolio_fit", {}),
