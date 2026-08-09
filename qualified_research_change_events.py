@@ -45,3 +45,27 @@ def build(previous: Mapping[str, Any] | None, current: Mapping[str, Any] | None)
             "destination_snapshot": delta["current_snapshot"], "comparison_status": delta["comparison_status"],
             "events": events, "status": "events_available" if events else "NO_CHANGE",
             "historical_only": True, "is_actionable": False}
+
+
+def build_v2(previous: Mapping[str, Any], current: Mapping[str, Any]) -> dict[str, Any]:
+    """Adapt compatible V2 capability states without claiming absent prior authority.
+
+    `unknown -> available` is an availability newly established transition, not a claim that
+    the previously served ticker was blocked or unavailable.
+    """
+    if previous.get("schema_version") != "2.0.0" or current.get("schema_version") != "2.0.0":
+        raise ValueError("research_snapshot_v2_required")
+    prior = {str(item.get("ticker")): item for item in previous.get("tickers", []) if isinstance(item, Mapping)}
+    events = []
+    for item in current.get("tickers", []):
+        if not isinstance(item, Mapping):
+            continue
+        ticker, before = str(item.get("ticker")), prior.get(str(item.get("ticker")))
+        if before and before.get("research_status") == "unknown" and item.get("research_status") == "available":
+            events.append(_event(ticker, "research_availability_established", "unknown", "available",
+                                 ["v2.tickers.%s.semantic_sha256" % ticker], previous.get("snapshot_id"), current.get("snapshot_id")))
+    events.sort(key=lambda event: event["event_id"])
+    return {"schema_version": SCHEMA_VERSION, "snapshot_version": "2.0.0",
+            "source_snapshot": previous.get("snapshot_id"), "destination_snapshot": current.get("snapshot_id"),
+            "events": events, "status": "events_available" if events else "NO_CHANGE",
+            "historical_only": True, "is_actionable": False}
