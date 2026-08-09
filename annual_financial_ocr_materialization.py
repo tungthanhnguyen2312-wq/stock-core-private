@@ -22,6 +22,9 @@ VERSION = "1.0.0"
 CONTRACT = "annual_financial_ocr_materialization/v1"
 DEFAULT_ENGINE = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
 DEBT_COMPONENT_TYPES = frozenset({"short_term_borrowings", "long_term_borrowings_or_finance_leases"})
+#: The literal nil marker this project's audited filings use for a reported-and-zero cell.
+#: Blank/missing text never belongs here -- only a character actually printed on the page.
+MATURITY_ZERO_MARKERS = frozenset({"-"})
 
 
 def _canonical(value: Any) -> str:
@@ -69,6 +72,31 @@ def _label_key(text: str) -> str:
     """Fold diacritics only for the finite borrowing-label vocabulary."""
     value = unicodedata.normalize("NFD", _normal(text)).replace("đ", "d")
     return "".join(char for char in value if unicodedata.category(char) != "Mn")
+
+
+def _maturity_population_qualified(label_key: str) -> bool:
+    """Whether a maturity-table row names the borrowings/finance-lease population.
+
+    Deliberately has no short/long qualifier -- a maturity note's row spans both
+    buckets by construction.  Reuses the same finite borrowing vocabulary the
+    direct-statement short/long checks already trust; a generic liabilities or
+    "other payables" row does not qualify.
+    """
+    return (("borrow" in label_key or "loan" in label_key)
+            or "finance lease" in label_key or "lease liabilit" in label_key
+            or ("vay" in label_key and "thue tai chinh" in label_key))
+
+
+def _maturity_window(lines: Sequence[str], start: int, *, count: int) -> list[str]:
+    """The next `count` non-blank lines at or after `start`, preserving order."""
+    window: list[str] = []
+    index = start
+    while index < len(lines) and len(window) < count:
+        stripped = lines[index].strip()
+        if stripped:
+            window.append(stripped)
+        index += 1
+    return window
 
 
 def materialization_id(*, document_sha256: str, page: int, engine: str, text_sha256: str) -> str:
@@ -191,13 +219,95 @@ def verified_extraction(materialization: Mapping[str, Any], *, page: int, raw_la
                                 "page": int(page), "page_citation_id": row.get("citation_id") or citation_id(
                                     row["document_id"], row["document_sha256"], int(page), row["text"]),
                                 "text_sha256": row["text_sha256"], "materialization_id": row["materialization_id"],
-                                "verification": "source_page_visual",
+                                "verification": "source_page_visual", "qualification_method": "direct_statement_line",
                                 **({"ocr_engine": row["ocr_engine"], "render_dpi": row["render_dpi"],
                                     "extraction_method": "ocr"} if row.get("status") == "ocr_available" else
                                    {"extraction_engine": row["extraction_engine"], "extraction_method": "pdf_text"})},
             "raw_values": [source_value], "ocr_anchors": {"label": raw_label, "value": raw_value},
             "unit": unit, "statement": statement,
             "normalized_value": value, "sign": sign}
+
+
+def verified_maturity_zero_extraction(materialization: Mapping[str, Any], *, page: int, row_label: str,
+                                      short_term_bucket_raw_value: str, long_term_bucket_raw_value: str,
+                                      total_raw_value: str, unit: str, statement: str,
+                                      visual_source_page_verified: bool,
+                                      source_row_label: str | None = None) -> dict[str, Any]:
+    """Return an explicit long-term-zero debt component from an audited maturity note.
+
+    Accepts only a literal nil marker (``MATURITY_ZERO_MARKERS``) for the long-term bucket --
+    never an absent, blank, or inferred cell -- and only when the source page's own text shows
+    the row label immediately followed by the short-term bucket, the nil marker, and a total
+    equal to the short-term bucket alone. The row label must itself name the borrowings/
+    finance-lease population; a generic liabilities or "other payables" maturity row is
+    refused. This function proves the page is internally self-consistent; it does not know
+    whether the row's population matches a sibling short-term component -- callers (see
+    ``verified_debt_extraction``) must cross-check that independently.
+    """
+    if not visual_source_page_verified:
+        raise ValueError("CITATION_VERIFICATION_FAILED")
+    rows = [row for row in materialization.get("pages", []) if int(row.get("page", 0)) == int(page)]
+    if len(rows) != 1 or rows[0].get("status") not in {"ocr_available", "text_available"}:
+        raise ValueError("DOCUMENT_TEXT_EXTRACTION_FAILED")
+    row = rows[0]
+    text = str(row.get("text", ""))
+    if _normal(row_label) not in _normal(text):
+        raise ValueError("OCR_NUMERIC_AMBIGUITY")
+    if not _maturity_population_qualified(_label_key(row_label)):
+        raise ValueError("MATURITY_POPULATION_LABEL_UNQUALIFIED")
+    nil_token = str(long_term_bucket_raw_value).strip()
+    if nil_token not in MATURITY_ZERO_MARKERS:
+        raise ValueError("MATURITY_ZERO_MARKER_UNRECOGNIZED")
+    short_value, _ = parse_accounting_integer(short_term_bucket_raw_value)
+    total_value, _ = parse_accounting_integer(total_raw_value)
+    if total_value != short_value:
+        raise ValueError("MATURITY_ZERO_ARITHMETIC_MISMATCH")
+    lines = text.splitlines()
+    matches = []
+    for index, line in enumerate(lines):
+        if _normal(line.strip()) != _normal(row_label):
+            continue
+        window = _maturity_window(lines, index + 1, count=3)
+        if len(window) < 3:
+            continue
+        try:
+            window_short, _ = parse_accounting_integer(window[0])
+            window_total, _ = parse_accounting_integer(window[2])
+        except ValueError:
+            continue
+        if window_short == short_value and window[1] in MATURITY_ZERO_MARKERS and window_total == total_value:
+            matches.append(index)
+    if len(matches) != 1:
+        raise ValueError("MATURITY_TABLE_STRUCTURE_NOT_VERIFIED")
+    source_label = str(source_row_label or row_label)
+    return {"method": "maturity_note_explicit_zero", "source_pages": [int(page)], "raw_labels": [source_label],
+            "materialization": {"contract": CONTRACT, "document_sha256": materialization["document_sha256"],
+                                "page": int(page), "page_citation_id": row.get("citation_id") or citation_id(
+                                    row["document_id"], row["document_sha256"], int(page), row["text"]),
+                                "text_sha256": row["text_sha256"], "materialization_id": row["materialization_id"],
+                                "verification": "source_page_visual",
+                                "qualification_method": "maturity_note_explicit_zero",
+                                "maturity_short_term_bucket_raw_value": str(short_term_bucket_raw_value),
+                                "maturity_long_term_bucket_raw_value": nil_token,
+                                "maturity_total_raw_value": str(total_raw_value),
+                                **({"ocr_engine": row["ocr_engine"], "render_dpi": row["render_dpi"],
+                                    "extraction_method": "ocr"} if row.get("status") == "ocr_available" else
+                                   {"extraction_engine": row["extraction_engine"], "extraction_method": "pdf_text"})},
+            "raw_values": [nil_token], "ocr_anchors": {"label": row_label, "value": nil_token},
+            "unit": unit, "statement": statement, "normalized_value": 0, "sign": "positive",
+            "maturity_short_term_bucket_value": short_value}
+
+
+def _sum_rows(rows: Sequence[Mapping[str, Any]], *, unit: str, statement: str) -> dict[str, Any]:
+    """Build the existing approved debt-sum shape from already independently verified rows."""
+    values = [item["normalized_value"] for item in rows]
+    return {"method": "document_line_item_sum", "source_pages": sorted({item["source_pages"][0] for item in rows}),
+            "raw_labels": [item["raw_labels"][0] for item in rows],
+            "components": [{"label": item["raw_labels"][0], "value": item["normalized_value"]} for item in rows],
+            "materialization": {"contract": CONTRACT, "components": [item["materialization"] for item in rows],
+                                "verification": "source_page_visual"},
+            "raw_values": [item["raw_values"][0] for item in rows], "unit": unit, "statement": statement,
+            "normalized_value": sum(values), "sign": "negative" if sum(values) < 0 else "positive"}
 
 
 def verified_sum_extraction(materialization: Mapping[str, Any], *, components: Sequence[Mapping[str, Any]],
@@ -214,14 +324,7 @@ def verified_sum_extraction(materialization: Mapping[str, Any], *, components: S
                                         source_raw_value=str(component.get("source_raw_value") or component["raw_value"]), unit=unit,
                                         visual_source_page_verified=bool(component.get("visual_source_page_verified")),
                                         statement=statement))
-    values = [item["normalized_value"] for item in rows]
-    return {"method": "document_line_item_sum", "source_pages": sorted({item["source_pages"][0] for item in rows}),
-            "raw_labels": [item["raw_labels"][0] for item in rows],
-            "components": [{"label": item["raw_labels"][0], "value": item["normalized_value"]} for item in rows],
-            "materialization": {"contract": CONTRACT, "components": [item["materialization"] for item in rows],
-                                "verification": "source_page_visual"},
-            "raw_values": [item["raw_values"][0] for item in rows], "unit": unit, "statement": statement,
-            "normalized_value": sum(values), "sign": "negative" if sum(values) < 0 else "positive"}
+    return _sum_rows(rows, unit=unit, statement=statement)
 
 
 def verified_debt_extraction(materialization: Mapping[str, Any], *, components: Sequence[Mapping[str, Any]],
@@ -231,17 +334,54 @@ def verified_debt_extraction(materialization: Mapping[str, Any], *, components: 
     This is the existing two-line debt vocabulary made explicit: current borrowings
     plus non-current borrowings/finance leases.  Generic liabilities, duplicate
     components, cross-period rows and hand-entered totals are intentionally refused.
+
+    The long-term component may instead be a qualified explicit zero from an audited
+    maturity/liquidity note (``component["qualification_method"] ==
+    "maturity_note_explicit_zero"``): a face-statement balance sheet never carries a line
+    for a balance that is nil, so that population can be genuinely absent from the direct
+    two-line vocabulary above while still being an audited, explicitly disclosed zero
+    elsewhere in the same filing. That path is accepted only when the maturity note's own
+    short-term bucket for the row is numerically identical to this same call's
+    independently verified short-term component -- proving the maturity row is the same
+    borrowing population, not merely a same-shaped table -- and only through
+    ``verified_maturity_zero_extraction``'s own fail-closed structural checks. It never
+    loosens the short-term component's existing label qualification.
     """
     types = [str(component.get("component_type", "")) for component in components]
     if set(types) != DEBT_COMPONENT_TYPES or len(types) != len(DEBT_COMPONENT_TYPES):
         raise ValueError("REQUIRED_DEBT_COMPONENT_MISSING")
     if any(str(component.get("reporting_period", "")) != str(reporting_period) for component in components):
         raise ValueError("DEBT_COMPONENT_PERIOD_MISMATCH")
-    labels = {str(component["component_type"]): _label_key(str(component.get("label", ""))) for component in components}
-    short_label = labels["short_term_borrowings"]
-    long_label = labels["long_term_borrowings_or_finance_leases"]
+    by_type = {str(component["component_type"]): component for component in components}
+    short_component = by_type["short_term_borrowings"]
+    long_component = by_type["long_term_borrowings_or_finance_leases"]
+    short_label = _label_key(str(short_component.get("label", "")))
     short_qualified = (("short" in short_label and ("borrow" in short_label or "loan" in short_label))
                        or ("vay" in short_label and "han" in short_label and "dai" not in short_label))
+    if long_component.get("qualification_method") == "maturity_note_explicit_zero":
+        if not short_qualified:
+            raise ValueError("DEBT_COMPONENT_LABEL_UNQUALIFIED")
+        if "unit" in long_component and str(long_component["unit"]) != str(unit):
+            raise ValueError("DEBT_COMPONENT_CURRENCY_MISMATCH")
+        short_row = verified_extraction(
+            materialization, page=int(short_component["page"]),
+            raw_label=str(short_component.get("ocr_label") or short_component["label"]),
+            raw_value=str(short_component.get("ocr_raw_value") or short_component["raw_value"]),
+            source_raw_label=str(short_component.get("source_raw_label") or short_component["label"]),
+            source_raw_value=str(short_component.get("source_raw_value") or short_component["raw_value"]),
+            unit=unit, visual_source_page_verified=bool(short_component.get("visual_source_page_verified")),
+            statement=statement)
+        long_row = verified_maturity_zero_extraction(
+            materialization, page=int(long_component["page"]), row_label=str(long_component["label"]),
+            short_term_bucket_raw_value=str(long_component["short_term_bucket_raw_value"]),
+            long_term_bucket_raw_value=str(long_component["long_term_bucket_raw_value"]),
+            total_raw_value=str(long_component["total_raw_value"]), unit=unit, statement=statement,
+            visual_source_page_verified=bool(long_component.get("visual_source_page_verified")),
+            source_row_label=long_component.get("source_raw_label"))
+        if long_row["maturity_short_term_bucket_value"] != short_row["normalized_value"]:
+            raise ValueError("MATURITY_POPULATION_MISMATCH")
+        return _sum_rows([short_row, long_row], unit=unit, statement=statement)
+    long_label = _label_key(str(long_component.get("label", "")))
     long_qualified = (("long" in long_label and ("borrow" in long_label or "loan" in long_label))
                       or "finance lease" in long_label or "lease liabilities" in long_label
                       or ("vay" in long_label and "dai" in long_label and "han" in long_label))

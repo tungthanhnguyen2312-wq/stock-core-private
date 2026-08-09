@@ -1,9 +1,13 @@
 """Bounded FY2024 issuer-financial materialization for QNS and POW only.
 
 This module never acquires a document, calls a provider, changes a database, or writes a
-runtime.  QNS is inspected by native text only.  POW's four cited pages use the established,
-page-preserving OCR contract; promotion requests are returned for an isolated review root and
-remain subject to the existing sole writer.
+runtime.  POW's four cited pages use the established, page-preserving OCR contract.  QNS has
+two distinct retained documents: ``QNS_SHA256`` is the issuer "annual report" package, which
+``inspect_qns`` (native text only, no OCR) correctly found missing its audited consolidated
+statement pages; ``QNS_AUDITED_CONSOLIDATED_SHA256`` is a separate, complete, issuer-published
+audited consolidated filing, retained later, that QNS's own five-fact promotion is built from.
+Promotion requests are returned for an isolated review root and remain subject to the existing
+sole writer.
 """
 from __future__ import annotations
 
@@ -31,6 +35,50 @@ QNS_REQUIRED_STATEMENT_HEADINGS = (
     "BẢNG CÂN ĐỐI KẾ TOÁN HỢP NHẤT",
     "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH HỢP NHẤT",
     "BÁO CÁO LƯU CHUYỂN TIỀN TỆ HỢP NHẤT",
+)
+
+# Separate, later-retained, genuinely complete QNS audited consolidated filing (41 pages).
+# Distinct from QNS_SHA256 above (the 75-page annual-report package, still correctly blocked
+# by inspect_qns): see docs/STATE.md, 2026-08-09, "QNS exact audited consolidated filing is
+# retained separately".
+QNS_AUDITED_CONSOLIDATED_SHA256 = "faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3"
+QNS_VERIFIED_AT = "2026-08-10T00:00:00Z"
+
+# Every value below was checked on the original source page, the same discipline POW_FACTS
+# uses.  Pages 7-10 (the primary statements) were already OCR-materialized in a prior
+# milestone (qns-fy2024.json); page 39 (the liquidity-risk maturity note) is native
+# text -- see materialize_qns_liquidity_note.
+QNS_FACTS = (
+    ("cash_and_equivalents", 539_202_757_999, 7,
+     "Tién va cdc khoan twong dwong tién", "539.202.757.999",
+     "Tiền và các khoản tương đương tiền", "539.202.757.999", "balance_sheet"),
+    ("shareholders_equity", 10_001_517_079_259, 8,
+     "VON CHU SO HUU", "10.001.517.079.259",
+     "VỐN CHỦ SỞ HỮU", "10.001.517.079.259", "balance_sheet"),
+    ("net_income", 2_376_694_252_532, 9,
+     "Loi nhudn sau thué TNDN", "2.376.694.252.532",
+     "Lợi nhuận sau thuế TNDN", "2.376.694.252.532", "income_statement"),
+    ("operating_cash_flow", 2_032_605_724_809, 10,
+     "Luu chuyén tién thuan tir hoat dong kinh doanh", "2.032.605.724.809",
+     "Lưu chuyển tiền thuần từ hoạt động kinh doanh", "2.032.605.724.809", "cash_flow"),
+)
+# The balance sheet's own "II. No dai han" (long-term liabilities) section lists exactly two
+# unrelated line items that reconcile the section total exactly, and Note 21 ("Vay va no thue
+# tai chinh") has only a short-term subsection -- unlike Note 20 immediately before it, which
+# has both. The liquidity-risk maturity note (page 39) goes further: it states the long-term
+# ("Tren 1 nam") column for this exact row as an explicit dash at both period-ends, with the
+# short-term column and total both equal to the same short-term borrowings figure already on
+# the balance sheet. See docs/DECISIONS.md for the generic explicit-zero contract this proves.
+QNS_DEBT = (
+    {"page": 8, "component_type": "short_term_borrowings", "reporting_period": "2024",
+     "label": "Vay và nợ thuê tài chính ngắn hạn", "raw_value": "2.713.580.820.203",
+     "ocr_label": "Vay va ng thué tai chinh ngan han", "ocr_raw_value": "2.713.580.820.203",
+     "visual_source_page_verified": True},
+    {"page": 39, "component_type": "long_term_borrowings_or_finance_leases", "reporting_period": "2024",
+     "qualification_method": "maturity_note_explicit_zero", "unit": "VND",
+     "label": "Vay và nợ thuê tài chính", "source_raw_label": "Vay và nợ thuê tài chính",
+     "short_term_bucket_raw_value": "2.713.580.820.203", "long_term_bucket_raw_value": "-",
+     "total_raw_value": "2.713.580.820.203", "visual_source_page_verified": True},
 )
 
 # Every value below was checked on the original source page.  ``ocr_label``/``ocr_raw_value``
@@ -134,5 +182,72 @@ def build_pow_promotion(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> tuple[li
         ticker="POW", metric="total_interest_bearing_debt", reporting_period="2024", value=debt["normalized_value"],
         evidence_id=evidence_id, currency="VND", citation="Issuer PDF page 10; exact short- and long-term borrowing/finance-lease components; audited consolidated FY2024.",
         verified_at=VERIFIED_AT, extraction=debt,
+    ))
+    return [manifest], citations
+
+
+def materialize_qns_liquidity_note(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> dict[str, Any]:
+    """Extract only QNS's liquidity-risk maturity-note page (39) natively; no OCR.
+
+    Kept as its own sidecar, distinct from the existing qns-fy2024.json statement sidecar
+    (pages 7-10, materialized in a prior milestone) -- the same one-sidecar-per-note pattern
+    already used for PNJ's Note 19 review. build_qns_promotion merges the two in memory.
+    """
+    root = Path(evidence_root)
+    record = _record(root, "QNS", QNS_AUDITED_CONSOLIDATED_SHA256)
+    materialization = extract_pdf_text(record, root=root, pages=(39,))
+    write_materialization(root / MATERIALIZATION_ROOT / "qns-fy2024-liquidity-note.json", materialization)
+    return materialization
+
+
+def build_qns_promotion(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Build the five exact QNS promotion records without touching a runtime root.
+
+    total_interest_bearing_debt is the new market-wide explicit-zero maturity-note path:
+    the short-term component is the ordinary direct balance-sheet line (page 8, already
+    OCR-materialized), and the long-term component is the qualified explicit zero from the
+    liquidity-risk maturity note (page 39). See annual_financial_ocr_materialization.py's
+    verified_maturity_zero_extraction for the generic, ticker-agnostic acceptance rule.
+    """
+    root = Path(evidence_root)
+    record = _record(root, "QNS", QNS_AUDITED_CONSOLIDATED_SHA256)
+    statement_sidecar = root / MATERIALIZATION_ROOT / "qns-fy2024.json"
+    liquidity_sidecar = root / MATERIALIZATION_ROOT / "qns-fy2024-liquidity-note.json"
+    if not statement_sidecar.is_file() or not liquidity_sidecar.is_file():
+        raise ValueError("QNS_MATERIALIZATION_REQUIRED")
+    statements = json.loads(statement_sidecar.read_text(encoding="utf-8"))
+    liquidity = json.loads(liquidity_sidecar.read_text(encoding="utf-8"))
+    if statements.get("document_sha256") != record["sha256"] or liquidity.get("document_sha256") != record["sha256"]:
+        raise ValueError("QNS_SIDECAR_DOCUMENT_MISMATCH")
+    materialization = {**statements, "pages": [*statements["pages"], *liquidity["pages"]]}
+    evidence_id = promotion._hash({"ticker": "QNS", "document_sha256": record["sha256"], "document_id": record["document_id"]})
+    manifest = promotion.build_manifest_record(
+        evidence_id=evidence_id, archive_document_path=root / record["relative_path"], sha256=record["sha256"],
+        filename=Path(record["relative_path"]).name, ticker="QNS", issuer="Quang Ngai Sugar Joint Stock Company",
+        authority="Quang Ngai Sugar Joint Stock Company investor relations", authority_domain="qns.com.vn",
+        evidence_type="audited_consolidated_financial_statements", source_url=record["canonical_url"],
+        document_title="Quang Ngai Sugar audited consolidated financial statements FY2024", document_id=record["document_id"],
+        document_class=record["document_class"], reporting_period="2024", published_at=record["published_at"],
+        observed_at=record["observed_at"], statement_scope="consolidated", audit_status="audited", source_id=record["source_id"],
+    )
+    citations = []
+    for metric, value, page, ocr_label, ocr_value, source_label, source_value, statement in QNS_FACTS:
+        extraction = verified_extraction(
+            materialization, page=page, raw_label=ocr_label, raw_value=ocr_value,
+            source_raw_label=source_label, source_raw_value=source_value, unit="VND", statement=statement,
+            visual_source_page_verified=True,
+        )
+        citations.append(promotion.build_financial_identity_citation(
+            ticker="QNS", metric=metric, reporting_period="2024", value=value, evidence_id=evidence_id,
+            currency="VND", citation=f"Issuer PDF page {page}; {source_label}; audited consolidated FY2024.",
+            verified_at=QNS_VERIFIED_AT, extraction=extraction,
+        ))
+    debt = verified_debt_extraction(materialization, components=QNS_DEBT, unit="VND", statement="balance_sheet", reporting_period="2024")
+    citations.append(promotion.build_financial_identity_citation(
+        ticker="QNS", metric="total_interest_bearing_debt", reporting_period="2024", value=debt["normalized_value"],
+        evidence_id=evidence_id, currency="VND",
+        citation=("Issuer PDF page 8 (short-term borrowings, Note 21) and page 39 (liquidity-risk maturity note, "
+                  "explicit long-term nil); audited consolidated FY2024."),
+        verified_at=QNS_VERIFIED_AT, extraction=debt,
     ))
     return [manifest], citations
