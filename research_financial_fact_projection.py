@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
+from canonical_conflict_decomposition import decompose_facts
+
 VERSION = "1.0.0"
 QUALIFIED = "qualified"
 PROVIDER_REPORTED = "provider_reported"
@@ -105,6 +107,7 @@ def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
                                         str(fact.get("fact_id") or "")))
     views = [_fact_view(fact) for fact in source_facts]
     statuses = Counter(str(fact.get("status") or "unavailable") for fact in source_facts)
+    conflict_decomposition = decompose_facts(source_facts)
     reasons: list[str] = []
     selected_period = None
     admitted: list[dict[str, Any]] = []
@@ -173,6 +176,10 @@ def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
             status = "unavailable"
             reasons.append("qualified_corporate_research_metric_set_missing")
 
+    # This exposes canonical conflict-family authority to the matrix without re-resolving a
+    # source value. It deliberately does not alter the canonical fact status.
+    reasons.extend(conflict_decomposition["reason_codes"])
+
     return {
         "schema_version": VERSION, "ticker": str(ticker).upper(),
         "source": "canonical_financial_facts", "entity_type": entity_type or "unknown",
@@ -180,6 +187,7 @@ def build_projection(ticker: str, facts: Sequence[Mapping[str, Any]] | None, *,
         "research_eligible": status == "available", "reason_codes": sorted(set(reasons)),
         "required_metrics": sorted(CORPORATE_REQUIRED_METRICS) if entity_type == SUPPORTED_CORPORATE else [],
         "selected_reporting_period": selected_period, "status_counts": dict(sorted(statuses.items())),
+        "conflict_decomposition": conflict_decomposition,
         "facts": views, "research_financial_canonical": {
             "status": "available", "ticker": str(ticker).upper(), "records": admitted,
             "source_selection": "pillar_a_qualified_projection",

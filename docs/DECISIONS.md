@@ -5,6 +5,25 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - P1E conflict decomposition is an explanation, not a value-selection authority
+
+- Retained canonical conflicts are decomposed by the existing fact schema and conflict kind.
+  The projection preserves period identity, statement and consolidation scope, provider, source
+  hash, all available observation IDs, and the original conflict detail. It can label a blocker;
+  it cannot select a competing value, average values, infer a unit, or use ingestion time as a
+  supersession rule.
+- The actual 12,619 records contain only four families: 7,190 cross-statement period/scope
+  incompatibilities, 5,306 differing duplicate period columns with no restatement authority,
+  120 balance-sheet arithmetic violations, and 3 unreconciled revenue identities. No current
+  conflict is duplicate-equivalent, explicitly unit-normalizable, or authority-resolved provider
+  disagreement. Therefore every actual conflict remains blocked and
+  `AUTO_RESOLVED_CONFLICTS = 0`.
+- The canonical fact status is not promoted by conflict explanation. In particular,
+  `provider_reported` remains provider-reported and a later restatement cannot appear in an
+  earlier as-of view without an explicit retained supersession contract. Matrix reason codes are
+  additive diagnostics only; generic market gates and trusted HPG/VNM research authority remain
+  unchanged.
+
 ## 2026-08-09 - P1.5 capability matrix is a projection, not a new gate
 
 - `ticker_capability_matrix` is the canonical per-ticker integration surface for existing

@@ -29,6 +29,25 @@ fallback. Neither route changes generic market-basis gates before a legitimate r
 The next canonical milestone is `DNSE_HPG_VNM_MARKET_DATA_QUALIFICATION_PILOT`, blocked until
 the owner activates legitimate DNSE API access.
 
+## P1E canonical financial facts â€” conflict decomposition and safe promotion (complete 2026-08-09)
+
+The retained canonical-fact queue is now exposed through a deterministic, read-only conflict
+decomposition projection. It retains the full semantic identity, all source observation IDs and
+hashes, conflict detail, the governing no-selection rule, and a precise reason code; the result
+feeds the existing research projection and `ticker_capability_matrix`, not a second scale-out
+selector. No source fact, raw shard, or runtime artifact was rewritten.
+
+Actual population: 12,619 conflict records across 12,481 identities / 1,145 tickers. They are
+7,190 cross-statement period-or-scope incompatibilities, 5,306 ambiguous differing restatement
+columns, 120 balance-sheet arithmetic violations, and 3 unreconciled revenue identities.
+There are no deterministic retained-evidence transitions: `AUTO_RESOLVED_CONFLICTS: 0` and
+conflicted tickers remain 1,145. Thus the two qualified facts, six provider-reported-only
+tickers, zero additional research-eligible tickers, and trusted HPG/VNM precedence are unchanged.
+
+Next independent Pillar A milestone: `PILLAR_A_QUALIFICATION_EVIDENCE_PROMOTION_POLICY`.
+It defines the minimum scalable evidence/lineage path without acquiring filings. The separate
+DNSE HPG/VNM market-data pilot remains blocked on owner account activation.
+
 ## Active development: two pillars (2026-08-03)
 
 Development has moved off per-ticker financial pilots. Adding a third HPG/VNM-style

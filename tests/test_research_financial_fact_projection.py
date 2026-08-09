@@ -103,6 +103,18 @@ class ResearchFinancialFactProjectionTests(unittest.TestCase):
         self.assertEqual(matrix["fundamental_data"]["pillar_a_research_projection"]["status"], "partial")
         self.assertFalse(matrix["is_actionable"])
 
+    def test_conflict_family_reason_is_exposed_to_the_capability_matrix(self) -> None:
+        fact = _fact("net_income", status="conflicted", value=None, conflict=True)
+        fact["conflicts"] = [{"kind": "cash_flow_period_attribution_unverified"}]
+        projected = projection.build_projection("NEW", [fact], entity_type="corporate", entity_authority="manual_profile")
+        matrix = build_ticker_capability_matrix(
+            "NEW", {"entity_type": "corporate", "research_financial_fact_projection": projected}, market_authority={},
+        )
+        capability = matrix["research"]["pillar_a_historical_research_eligibility"]
+        self.assertIn("CANONICAL_CASH_FLOW_PERIOD_OR_SCOPE_UNVERIFIED", projected["reason_codes"])
+        self.assertIn("CANONICAL_CASH_FLOW_PERIOD_OR_SCOPE_UNVERIFIED", capability["reason_codes"])
+        self.assertFalse(matrix["is_actionable"])
+
 
 if __name__ == "__main__":
     unittest.main()

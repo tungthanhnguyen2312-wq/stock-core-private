@@ -111,6 +111,7 @@ from research_financial_fact_projection import (
     coverage_summary as research_financial_coverage_summary,
     select_research_source,
 )
+from canonical_conflict_decomposition import coverage_summary as canonical_conflict_coverage_summary
 from distribution_evidence import build_distribution_evidence_for_ticker
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
@@ -2726,9 +2727,13 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
         )
         entry["research_financial_fact_projection"] = projection
         entry["research_financial_source_selection"] = select_research_source(entry, projection)
-    return research_financial_coverage_summary(
-        state.get("tickers") or [], lambda ticker: read_facts(root, ticker),
+    records = state.get("tickers") or []
+    coverage = research_financial_coverage_summary(records, lambda ticker: read_facts(root, ticker))
+    # A summary only: facts remain in their original shards and are never rewritten by export.
+    coverage["conflict_decomposition"] = canonical_conflict_coverage_summary(
+        records, lambda ticker: read_facts(root, ticker),
     )
+    return coverage
 
 
 # ==========================================================================

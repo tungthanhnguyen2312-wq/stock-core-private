@@ -40,6 +40,28 @@ pilot occurred. FiinGroup remains a fallback candidate pending a future owner-en
 HPG/VNM qualification pilot. The next canonical milestone is
 `DNSE_HPG_VNM_MARKET_DATA_QUALIFICATION_PILOT`, blocked on owner account activation.
 
+## P1E canonical-fact conflict decomposition and safe promotion (2026-08-09)
+
+`PILLAR_A_CONFLICT_DECOMPOSITION: PASS`. The new read-only
+`canonical_conflict_decomposition` projects canonical conflict records using the retained
+semantic identity (ticker, metric, period/bounds/type, statement/scope, currency/scale,
+provider, identity key, source hash, and observation IDs). It does not rewrite raw evidence,
+choose a value, infer units, or promote a qualification tier. Its precise reason codes flow
+through `research_financial_fact_projection` into `ticker_capability_matrix`.
+
+Measured retained population: 1,145 conflicted tickers; 12,481 conflicted fact identities and
+12,619 conflict records. Families are 7,190 cross-statement period/scope incompatibilities,
+5,306 ambiguous differing restatement columns, 120 balance-sheet arithmetic violations, and
+3 unreconciled revenue identities. All 5,306 restatement pairs have one provider/source hash
+but different values and `restatement_state=unknown`, so no supersession can be selected. No
+duplicate-equivalent, explicit unit/scale, or authority-resolved provider conflict is present:
+`AUTO_RESOLVED_CONFLICTS: 0`; qualification, fact-status totals, research eligibility, and the
+production 11-ticker membership remain unchanged.
+
+`PILLAR_A_QUALIFICATION_EVIDENCE_PROMOTION_POLICY` is the next independent canonical
+financial-data milestone. It must define a scalable minimum evidence path; it does not authorize
+acquisition. DNSE remains separately `PENDING_OWNER_ACCOUNT_ACTIVATION`.
+
 ## Canonical state lines
 
 `tools/handoff.py` parses these three lines by prefix. Keep the prefixes exactly as written.
