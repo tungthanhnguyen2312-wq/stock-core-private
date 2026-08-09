@@ -94,6 +94,7 @@ from fundamental_quality import evaluate_fundamental_quality, reconcile_legacy_f
 from relative_valuation import evaluate_relative_valuation
 from intrinsic_valuation import evaluate_intrinsic_valuation
 from scenario_analysis import evaluate_scenario_analysis
+from historical_decision_analysis import evaluate_historical_decision_analysis, PILOT_TICKERS
 from opportunity_ranking import evaluate_opportunity, rank_opportunities
 from risk_liquidity import evaluate_market_risk
 from analysis_lane_eligibility import evaluate_ticker_lanes
@@ -2918,6 +2919,21 @@ def attach_analysis_lane_eligibility(
     return bundle_entries
 
 
+def attach_historical_decision_analysis(bundle_entries: dict[str, dict], include: bool) -> dict[str, dict]:
+    """Add Phase 4B's pure historical-only analysis for the three approved pilots.
+
+    The feature is opt-in so legacy bundle bytes remain unchanged.  Only the pilot set is
+    evaluated; non-pilot tickers receive no fabricated section.
+    """
+    if not include:
+        return bundle_entries
+    for ticker in sorted(PILOT_TICKERS):
+        entry = bundle_entries.get(ticker)
+        if isinstance(entry, dict):
+            entry["historical_decision_analysis"] = evaluate_historical_decision_analysis(ticker, entry)
+    return bundle_entries
+
+
 # ==========================================================================
 # MAIN
 # ==========================================================================
@@ -2953,6 +2969,10 @@ def main() -> int:
                              " per ticker. Distinct from the pre-existing, always-on"
                              " tickers[ticker].fundamental_quality field. Not enabled in any"
                              " default/production invocation.")
+    parser.add_argument("--include-historical-decision-analysis", action="store_true",
+                        help="Opt-in, disabled by default (Phase 4B): attach deterministic historical-only"
+                             " decision analysis for HPG, VNM, and VCB from existing qualified/canonical"
+                             " bundle sections. No valuation, recommendation, ranking, or market claim.")
     parser.add_argument("--verify", metavar="MANIFEST_PATH",
                         help="KHÔNG xuất gì — chỉ so sha256 trong 1 bundle_manifest.json cũ với"
                              " file hiện tại trên đĩa ('checksum dependency'); exit 0 nếu khớp"
@@ -3179,6 +3199,7 @@ def main() -> int:
                                      args.include_canonical_financial_facts,
                                      session_date=latest_session,
                                      price_basis_verified=price_basis.get("price_basis_verified") is True)
+    attach_historical_decision_analysis(bundle_entries, args.include_historical_decision_analysis)
     # Phase 6B: reconcile the legacy fundamental_quality.models.earnings_quality subsection
     # against fundamental_quality_evidence when both are present on the same entry. A no-op
     # (adds one informational limitation only) whenever the opt-in evidence contract was not
