@@ -1,5 +1,17 @@
 # Stock Lookup roadmap
 
+## Bounded issuer filing locator qualification backlog (partial 2026-08-09)
+
+`BOUNDED_ISSUER_FILING_LOCATOR_QUALIFICATION_BACKLOG: PARTIAL`. The fixed three-ticker pass
+used one issuer-controlled disclosure route per ticker. QNS retained one FY2024 annual report
+that contains the audited consolidated financial statements, while POW retained the exact
+audited-consolidated PDF directly linked by PV Power's official FY2024 disclosure page. The
+issuer registry admits only the demonstrated `pvpower.vn` apex/www hosts; no cloud wildcard or
+crawl was added. The QNS PDF is text-bearing and the POW PDF is scan-only; neither was
+materialized into metrics. FPT's exact official IR attachment returned 404, so the retained
+blocker is `ISSUER_FILING_LOCATOR_RETURNED_404` with no URL variation. No successor milestone is
+selected or started by this checkpoint.
+
 ## Targeted multi-period official financial evidence pilot (complete 2026-08-09)
 
 `TARGETED_MULTI_PERIOD_OFFICIAL_FINANCIAL_EVIDENCE_PILOT: PASS`. The bounded fixed cohort is

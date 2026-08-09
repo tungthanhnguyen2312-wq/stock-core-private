@@ -5,6 +5,21 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-09 - Issuer filing locators remain a closed, per-ticker acquisition boundary
+
+- The investigation was exactly FPT, POW, and QNS, with one issuer-controlled disclosure route
+  and one exact FY2024 audited-consolidated locator per ticker. QNS's issuer-hosted FY2024 annual
+  report and POW's issuer-linked audited consolidated PDF were acquired through the existing
+  immutable-document contract. POW is enumerated in the acquirer and `pvpower.vn`/`www.pvpower.vn`
+  are explicitly admitted because PV Power's disclosure page directly links that PDF.
+- QNS is `ready_for_direct_citations` and POW is `needs_ocr`; this decision authorizes neither
+  OCR nor fact/metric materialization. FPT's exact link on `fpt.com` returned 404. That terminal
+  result is recorded as `ISSUER_FILING_LOCATOR_RETURNED_404`; no guessed variant, mirror, crawl,
+  provider fallback, or retry route is authorized.
+- No database, runtime artifact, publication, market-data/provider boundary, or other issuer
+  changed. This is a completed bounded checkpoint, not selection or commencement of another
+  milestone.
+
 ## 2026-08-09 - Targeted multi-period official evidence uses a fixed HPG/PVD cohort
 
 - The selected cohort is exactly HPG and PVD: HPG supplies an established issuer-document

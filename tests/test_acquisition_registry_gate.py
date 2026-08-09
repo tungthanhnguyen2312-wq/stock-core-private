@@ -196,10 +196,11 @@ class IssuerAnnualScaleoutGovernanceTests(unittest.TestCase):
         self.assertEqual(fetcher.urls, [])
         self.assertEqual(refused["outcomes"][0]["reason"], registry.REASON_HOST_NOT_ALLOWED)
 
-    def test_cohort_two_hosts_are_explicit_and_ticker_scoped(self) -> None:
+    def test_cohort_two_and_pv_power_hosts_are_explicit_and_ticker_scoped(self) -> None:
         reg = registry.load_registry()
         for ticker, url in (
             ("QNS", "https://www.qns.com.vn/storages/shareholders/files/qns-fy2024.pdf"),
+            ("POW", "https://pvpower.vn/pow-media/to-ir/20250331---POW---BCTC-hop-nhat-nam-2024-sau-kiem-toan.pdf"),
             ("NVL", "https://www.novaland.com.vn/Data/Sites/1/media/ir/nvl-fy2024.pdf"),
         ):
             result, fetcher = run([spec(ticker=ticker, source_id="issuer_ir",

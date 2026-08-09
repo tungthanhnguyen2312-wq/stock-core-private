@@ -1,5 +1,20 @@
 # Stock Lookup state
 
+## Bounded issuer filing locator qualification backlog (2026-08-09)
+
+`BOUNDED_ISSUER_FILING_LOCATOR_QUALIFICATION_BACKLOG: PARTIAL`. One bounded official-source
+investigation was performed for exactly FPT, POW, and QNS. FPT's official IR reports page linked
+the exact FY2024 audited consolidated filing, but the current issuer URL
+`https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2025/march/20250314---fpt---audited-consolidated-financial-statements-for-2024.pdf`
+returned 404; it is preserved as `ISSUER_FILING_LOCATOR_RETURNED_404` and was not varied. QNS's
+issuer-published FY2024 annual report, containing the audited consolidated statements, was
+retained as SHA-256 `a43f5b274524e3c7f754e037ddf143793f8c26a41b826b74b53b56c380f3aa4a`
+(`ready_for_direct_citations`). PV Power's official FY2024 financial-statements page directly
+linked its audited consolidated filing; `pvpower.vn` was explicitly admitted and the artifact was
+retained as SHA-256 `e2f6e74e1702d406473a427c0036a543c5d49c57e3b9a03469fa97d597a9e1a3`
+(`needs_ocr`). No OCR, financial-metric materialization, provider call, DB mutation, runtime
+generation/publication, or other ticker investigation occurred.
+
 ## Targeted multi-period official financial evidence pilot (2026-08-09)
 
 `TARGETED_MULTI_PERIOD_OFFICIAL_FINANCIAL_EVIDENCE_PILOT: PASS`. The fixed, two-ticker
