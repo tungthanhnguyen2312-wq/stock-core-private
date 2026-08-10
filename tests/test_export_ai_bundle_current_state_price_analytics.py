@@ -16,12 +16,14 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import export_ai_bundle as bundle
 import dnse_current_state_price_analytics as price_analytics
 import dnse_market_risk_evidence_store as evidence_store
+from vn_time import VN_TZ
 
 _SESSION_DATES = [
     "2026-07-14", "2026-07-15", "2026-07-16", "2026-07-17", "2026-07-20",
@@ -37,7 +39,16 @@ _HPG_CLOSES = [
     28200.0, 28500.0, 28400.0, 28800.0,
 ]
 
-_EPOCHS = [1784010000 + i * 86400 for i in range(len(_SESSION_DATES))]
+# Derived from _SESSION_DATES (not a fixed +86400 stride) because the trading
+# calendar skips weekends -- a naive linear stride drifts off _SESSION_DATES
+# and silently decodes (via _epoch_to_session_date's VN_TZ conversion) to a
+# run of consecutive calendar days that no longer matches the real trading
+# calendar seeded into vn_stock.db below, tripping validate_session_sequence's
+# gap check even though every seeded date is genuinely present.
+_EPOCHS = [
+    int(datetime.fromisoformat(f"{d}T12:00:00").replace(tzinfo=VN_TZ).timestamp())
+    for d in _SESSION_DATES
+]
 
 
 def _make_raw_ohlc(closes: list[float]) -> dict[str, list]:
