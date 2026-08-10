@@ -240,16 +240,29 @@ def orchestrate(args: argparse.Namespace) -> int:
         if group in ("trusted-ai", "all") and args.generate:
             generate_invoked = True
             cmd_generate = [python_exe, str(producer_dir / "tools" / "operate_stocklookup.py"),
-                            "--runtime-root", str(backend_dir), "--execute",
-                            # The authoritative production release profile opts in the
-                            # qualified DNSE foreign-flow VALUE capability unconditionally.
-                            # The capability itself stays an explicit, independently
-                            # testable, default-off flag one layer down (operate_stocklookup.py
-                            # / export_ai_bundle.py) -- this is the one place that turns it on
-                            # for a real release, same status as every ticker already carries
-                            # this bundle: fail-closed to status="missing" when a ticker has no
-                            # retained observations, never a required input.
-                            "--include-dnse-foreign-flow"]
+                            "--runtime-root", str(backend_dir)]
+            if live:
+                # --execute is operate_stocklookup.py's own real-write gate (rebuild
+                # sidecar + bundle + manifest, verify, Consumer-validate -- see its
+                # module docstring). Only send it when this orchestrator itself is
+                # --live: a plain --generate preflight must fall through to
+                # operate_stocklookup.py's own already-implemented read-only dry run
+                # (real preflight/database/share-freshness/sidecar-consistency
+                # validation, zero artifact writes), never quietly perform real
+                # generation writes under a "preview" label. This was previously
+                # unconditional -- the exact defect test_generate_passes_execute_only_in_live_mode
+                # exists to catch.
+                cmd_generate.append("--execute")
+            # The authoritative production release profile opts in the
+            # qualified DNSE foreign-flow VALUE capability unconditionally (both
+            # preview and live), independent of the --execute gate above. The
+            # capability itself stays an explicit, independently testable,
+            # default-off flag one layer down (operate_stocklookup.py /
+            # export_ai_bundle.py) -- this is the one place that turns it on for a
+            # real release, same status as every ticker already carries this
+            # bundle: fail-closed to status="missing" when a ticker has no
+            # retained observations, never a required input.
+            cmd_generate.append("--include-dnse-foreign-flow")
             if args.governed_official_evidence_root:
                 cmd_generate += ["--governed-official-evidence-root", str(args.governed_official_evidence_root)]
             research_changes_v2_baseline = (args.research_changes_v2_baseline

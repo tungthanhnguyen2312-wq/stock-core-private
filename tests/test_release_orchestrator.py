@@ -251,6 +251,137 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         plan = next(l for l in res.stdout.splitlines() if l.strip().startswith("Plan 1:"))
         self.assertIn("--include-dnse-foreign-flow", plan)
 
+    def test_all_group_generate_dry_run_excludes_execute_but_includes_dnse_flag(self):
+        """The --execute fix and the DNSE opt-in are independent gates on the same
+        cmd_generate list -- both must hold for the 'all' group exactly as they do for
+        'trusted-ai' alone (same code path, no group-specific special case)."""
+        dry = self.run_fixture(["all", "--generate"])
+        live = self.run_fixture(["all", "--generate", "--live"])
+        dry_plan = next(l for l in dry.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        live_plan = next(l for l in live.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        self.assertNotIn("--execute", dry_plan)
+        self.assertIn("--include-dnse-foreign-flow", dry_plan)
+        self.assertIn("--execute", live_plan)
+        self.assertIn("--include-dnse-foreign-flow", live_plan)
+
+    def test_whole_market_live_gating_unaffected_by_the_execute_fix(self):
+        """whole-market's own child commands (build_frontend.py, publish_dashboard.py)
+        already gated --live correctly before this repair; the cmd_generate fix must not
+        have disturbed that unrelated code path."""
+        dry = self.run_fixture(["whole-market"])
+        live = self.run_fixture(["whole-market", "--live"])
+        dry_out = "\n".join(l for l in dry.stdout.splitlines() if l.strip().startswith("Plan"))
+        live_out = "\n".join(l for l in live.stdout.splitlines() if l.strip().startswith("Plan"))
+        self.assertIn("build_frontend.py", dry_out)
+        self.assertIn("publish_dashboard.py", dry_out)
+        self.assertNotIn("--live", dry_out)
+        self.assertIn("--live", live_out)
+
+    def test_publish_release_plan_never_receives_live_without_orchestrator_live(self):
+        """The publisher plan (Plan 2 when --generate is set) must only ever carry --live
+        when the orchestrator itself is --live -- --generate alone (the fixed preflight
+        mode) must not be able to reach the live publisher path at all."""
+        dry = self.run_fixture(["trusted-ai", "--generate"])
+        live = self.run_fixture(["trusted-ai", "--generate", "--live"])
+        dry_publish_plan = next(l for l in dry.stdout.splitlines()
+                                if l.strip().startswith("Plan") and "publish_release.py" in l)
+        live_publish_plan = next(l for l in live.stdout.splitlines()
+                                 if l.strip().startswith("Plan") and "publish_release.py" in l)
+        self.assertNotIn("--live", dry_publish_plan)
+        self.assertIn("--live", live_publish_plan)
+
+    def test_generate_and_publish_plans_do_not_share_flags(self):
+        """Generation flags (--execute, --include-dnse-foreign-flow) must never leak into
+        the publish_release.py plan, and publish-only concerns (--live on that specific
+        command) must never leak into the generate plan -- the two child commands stay
+        cleanly separated regardless of mode."""
+        live = self.run_fixture(["trusted-ai", "--generate", "--live"])
+        generate_plan = next(l for l in live.stdout.splitlines()
+                             if l.strip().startswith("Plan") and "operate_stocklookup.py" in l)
+        publish_plan = next(l for l in live.stdout.splitlines()
+                            if l.strip().startswith("Plan") and "publish_release.py" in l)
+        self.assertNotIn("--include-dnse-foreign-flow", publish_plan)
+        self.assertNotIn("--execute", publish_plan)
+        self.assertNotIn("--live", generate_plan)
+
+    def test_dry_run_generate_performs_no_backend_artifact_writes(self):
+        """The literal proof the milestone asks for: a real (non-mocked) --generate
+        subprocess call against a runtime root that is valid enough to reach
+        operate_stocklookup.py's own dry-run branch must leave every existing backend
+        artifact byte-identical -- not merely "the argv lacks --execute" but "nothing on
+        disk changed". This fixture is intentionally minimal (no release artifacts), so
+        Plan 2 (publish_release.py) legitimately fails its own, separate, pre-existing
+        missing-manifest gate -- that failure is expected and irrelevant to what this
+        test proves; test_generate_runs_before_trusted_ai_plan_and_its_failure_stops_publish
+        already covers plan-failure composition. This test only asserts Plan 1 itself: it
+        ran for real, in dry mode, and wrote nothing. Deliberately does not exercise the
+        served/web side (already covered by test_canonical_whole_market_plan_isolation and
+        the web-dir fixture staying untouched whenever the generate stage fails or stays
+        dry)."""
+        backend = self._make_valid_operate_backend_dir(self.backend_dir, FIXTURE_SESSION)
+        before = {p: (backend / p).read_bytes() for p in
+                 ("vn_stock.db", "screen_snapshot_live.csv", "market_breadth.csv",
+                  "ta_signals.csv", "analysis_latest.json", "macro_snapshot.csv",
+                  "Focus_Analysis.md")}
+        reports_dir = backend / "reports"
+        self.assertFalse(reports_dir.exists(), "fixture must start with no reports/ directory")
+
+        res = self.run_fixture(["trusted-ai", "--generate"], backend_dir=backend)
+
+        self.assertTrue(self._executed(res, "operate_stocklookup.py"), res.stdout + res.stderr)
+        self.assertIn("[operate] dry_run_plan: passed", res.stdout)
+        self.assertIn("[operate] rollback_point: skipped", res.stdout)
+        after = {p: (backend / p).read_bytes() for p in before}
+        self.assertEqual(before, after, "a dry-run --generate must not modify any backend artifact")
+        # capture_rollback_point() is itself skipped when execute=False (see
+        # operate_stocklookup.py); its absence is further proof no write-mode branch ran.
+        self.assertFalse((backend / "reports").exists(),
+                         "dry-run must not create reports/ (rollback point / operating report)")
+        self.assertFalse((backend / "analysis_bundle.json").exists(),
+                         "dry-run must not create a new analysis_bundle.json")
+
+    @staticmethod
+    def _make_valid_operate_backend_dir(path: Path, session: str) -> Path:
+        """Enough of a runtime root for operate_stocklookup.py's OWN dry-run branch to
+        reach `return 0` for real (preflight, database, share-freshness) without ever
+        needing --execute's write path -- mirrors tests/test_operate_stocklookup.py's
+        `_runtime()` fixture, trimmed to exactly what the dry-run code path reads.
+        No sidecar file is pre-created: build_sidecar() skips cleanly (not a write) when
+        none exists yet, so this stays the minimal valid fixture, not a maximal one."""
+        import sqlite3
+
+        path.mkdir(parents=True, exist_ok=True)
+        (path / "data_bctc").mkdir(parents=True, exist_ok=True)
+        (path / "data_bctc" / "AAA_balance_sheet_quarter.parquet").write_bytes(b"payload")
+        for name in ("screen_snapshot_live.csv", "market_breadth.csv", "ta_signals.csv",
+                     "analysis_latest.json", "macro_snapshot.csv"):
+            (path / name).write_text("upstream", encoding="utf-8")
+        (path / "Focus_Analysis.md").write_text(
+            f"# Phan tich sau\n\n*phiên snapshot mới nhất: **{session}***\n\n## HPG\n\n## VNM\n",
+            encoding="utf-8")
+        evidence = path / "data" / "official-evidence"
+        evidence.mkdir(parents=True, exist_ok=True)
+        (evidence / "share_basis_citations.jsonl").write_text("", encoding="utf-8")
+
+        connection = sqlite3.connect(path / "vn_stock.db")
+        connection.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT)")
+        connection.execute("INSERT INTO ohlcv VALUES ('HPG', ?)", (session,))
+        connection.execute("CREATE TABLE metadata (ticker TEXT, shares_outstanding REAL, updated TEXT)")
+        connection.executemany("INSERT INTO metadata VALUES (?, ?, ?)",
+                               [(t, 1000.0, f"{session} 17:00") for t in ("HPG", "VNM")])
+        connection.execute("CREATE TABLE corporate_event_records "
+                           "(ticker TEXT, event_code TEXT, exright_date TEXT, coverage_status TEXT)")
+        connection.commit()
+        connection.close()
+
+        # release_orchestrator.py's OWN session anchor (get_runtime_session), separate
+        # from operate_stocklookup.py's REQUIRED_UPSTREAM screen_snapshot_live.csv.
+        with (path / "screen_snapshot.csv").open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["ticker", "exchange", "date"])
+            writer.writerow(["HPG", "HOSE", session])
+        return path
+
     def test_no_generate_means_no_operate_stocklookup_invocation_at_all(self):
         """Without --generate, the trusted-ai group only publishes an already-built
         artifact set -- operate_stocklookup.py (and therefore the DNSE flag) never appears."""
