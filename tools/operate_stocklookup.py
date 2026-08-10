@@ -44,6 +44,18 @@ DNSE FOREIGN-FLOW VALUE (opt-in, independent of both lanes above)
     --include-* flag here; tools/release_orchestrator.py's --generate step is the
     authoritative production release profile that opts it in for a real release.
 
+CURRENT-STATE MARKET RISK (opt-in, independent of every lane above)
+    --include-current-state-market-risk forwards the matching export_ai_bundle.py flag.
+    Attaches tickers[ticker].current_state_market_risk (HPG-vs-VNINDEX current-state, never
+    point-in-time, beta/correlation) from the durable
+    dnse_market_risk_evidence_store.py -- currently qualified for HPG only; every other
+    ticker reports status="not_qualified", never a fabricated beta/correlation, and
+    research eligibility for every ticker is unaffected either way. Always
+    pit_backtest_eligible=False and is_actionable=False. This command's own default keeps
+    it off, same as every other --include-* flag here; tools/release_orchestrator.py's
+    --generate step is the authoritative production release profile that opts it in for a
+    real release.
+
 MODES
     (default)              dry run. Reads and reports; writes nothing, publishes nothing.
     --execute              rebuild sidecar + bundle + manifest, verify, Consumer-validate,
@@ -173,6 +185,7 @@ class Operator:
                  include_qualified_research_brief: bool = False,
                  include_qualified_market_observations: bool = False,
                  include_dnse_foreign_flow: bool = False,
+                 include_current_state_market_risk: bool = False,
                  governed_official_evidence_root: Path | None = None,
                  research_changes_v2_baseline: Path | None = None,
                  refresh_metadata: bool = False,
@@ -191,6 +204,7 @@ class Operator:
         self.include_qualified_research_brief = include_qualified_research_brief
         self.include_qualified_market_observations = include_qualified_market_observations
         self.include_dnse_foreign_flow = include_dnse_foreign_flow
+        self.include_current_state_market_risk = include_current_state_market_risk
         self.governed_official_evidence_root = governed_official_evidence_root
         self.research_changes_v2_baseline = research_changes_v2_baseline
         self.runner = runner
@@ -559,6 +573,8 @@ class Operator:
             command.append("--include-qualified-market-observations")
         if self.include_dnse_foreign_flow:
             command.append("--include-dnse-foreign-flow")
+        if self.include_current_state_market_risk:
+            command.append("--include-current-state-market-risk")
         self._run("export_analysis_bundle", command, ROOT)
 
     # ------------------------------------------------------------------ 4. verify
@@ -700,6 +716,7 @@ class Operator:
             "include_qualified_research_brief": self.include_qualified_research_brief,
             "include_qualified_market_observations": self.include_qualified_market_observations,
             "include_dnse_foreign_flow": self.include_dnse_foreign_flow,
+            "include_current_state_market_risk": self.include_current_state_market_risk,
             "started_at": self.started_at, "ended_at": _now(),
             "outcome": outcome,
             "failed_gate": failure.gate if failure else None,
@@ -859,6 +876,16 @@ def parse_args(argv=None) -> argparse.Namespace:
                              " research eligibility. Off by default here -- the authoritative"
                              " production release profile (tools/release_orchestrator.py"
                              " --generate) is what turns this on for a real release.")
+    parser.add_argument("--include-current-state-market-risk", action="store_true",
+                        help="Opt-in: attach tickers[ticker].current_state_market_risk"
+                             " (HPG-vs-VNINDEX current-state, never point-in-time,"
+                             " beta/correlation) from the durable"
+                             " dnse_market_risk_evidence_store.py. Currently qualified for HPG"
+                             " only; every other ticker reports status=\"not_qualified\"."
+                             " Independent of every other lane; never affects research"
+                             " eligibility. Off by default here -- the authoritative production"
+                             " release profile (tools/release_orchestrator.py --generate) is"
+                             " what turns this on for a real release.")
     parser.add_argument("--governed-official-evidence-root", type=Path)
     parser.add_argument("--research-changes-v2-baseline", type=Path)
     parser.add_argument("--publish", action="store_true",
@@ -937,6 +964,7 @@ def main(argv=None, runner=subprocess.run) -> int:
                         include_qualified_research_brief=args.include_qualified_research_brief,
                         include_qualified_market_observations=args.include_qualified_market_observations,
                         include_dnse_foreign_flow=args.include_dnse_foreign_flow,
+                        include_current_state_market_risk=args.include_current_state_market_risk,
                         governed_official_evidence_root=args.governed_official_evidence_root,
                         research_changes_v2_baseline=args.research_changes_v2_baseline,
                         refresh_metadata=args.refresh_metadata,

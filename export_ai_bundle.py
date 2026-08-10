@@ -119,7 +119,7 @@ from canonical_financial_qualification_policy import load_evidence_index
 from canonical_conflict_decomposition import coverage_summary as canonical_conflict_coverage_summary
 from distribution_evidence import build_distribution_evidence_for_ticker
 from dnse_foreign_flow_store import build_series as build_dnse_foreign_flow_series
-from dnse_current_state_market_risk import build_current_state_market_risk_from_retained_evidence
+from dnse_current_state_market_risk import build_current_state_market_risk_from_evidence_store
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
     build_historical_fundamental_brief,
@@ -2742,23 +2742,31 @@ def attach_dnse_foreign_flow(
 # -- this attach layer never recomputes a formula, only shapes the already-
 # complete contract result and adds a bundle-common "status" convenience
 # field (available/not_qualified), the same vocabulary used elsewhere in this
-# module. Offline: reads the two already-retained DNSE probe-evidence files
-# via build_current_state_market_risk_from_retained_evidence(), never a live
-# network call. Deliberately a separate top-level key from
+# module. Offline: reads ONLY the durable, runtime-root-backed
+# dnse_market_risk_evidence_store.py via
+# build_current_state_market_risk_from_evidence_store() -- never the
+# workspace-relative operations-review/ path, never a live network call, so
+# this reproduces identically wherever the runtime root travels (including a
+# clean release checkout that never had operations-review/ as a sibling).
+# Deliberately a separate top-level key from
 # tickers[ticker].risk_analysis.market_risk (risk_liquidity.py's
 # point-in-time-labelled section, untouched) -- current_state_market_risk
 # uses a different name specifically so PIT=false is unambiguous.
 
 def build_current_state_market_risk_for_ticker_safe(
-    ticker: str, root: Path,
+    ticker: str, root: Path, reference_session_date: str | None = None,
 ) -> dict[str, Any] | None:
     """Fail-closed wrapper: a local build failure for this ticker returns None
     (so no current_state_market_risk key is attached for it) and never raises
     into the caller's per-ticker loop or corrupts any other field on this or
-    any other ticker's entry."""
+    any other ticker's entry. In practice
+    build_current_state_market_risk_from_evidence_store() itself already
+    never raises (missing/malformed durable evidence resolves to an explicit
+    not-qualified result) -- this try/except is defense in depth, matching
+    every sibling attach-layer wrapper in this module."""
     try:
-        result = build_current_state_market_risk_from_retained_evidence(
-            ticker, "VNINDEX", runtime_root=root,
+        result = build_current_state_market_risk_from_evidence_store(
+            ticker, "VNINDEX", runtime_root=root, reference_session_date=reference_session_date,
         )
         result["status"] = (
             "available" if result.get("qualification_status") == "CURRENT_STATE_BETA_CORRELATION_QUALIFIED"
@@ -2786,6 +2794,7 @@ def build_current_state_market_risk_for_ticker_safe(
 
 def attach_current_state_market_risk(
     bundle_entries: dict[str, dict], root: Path, include: bool,
+    reference_session_date: str | None = None,
 ) -> dict[str, dict]:
     """Disabled-by-default opt-in (default include=False): when include is
     False, dnse_current_state_market_risk.py is never called and no
@@ -2796,11 +2805,18 @@ def attach_current_state_market_risk(
     resolves status="not_qualified" (the underlying contract's own honest
     fail-closed result -- never a fabricated zero beta/correlation). A ticker
     whose build raises unexpectedly is skipped entirely (key absent), never
-    corrupting any other ticker's fields."""
+    corrupting any other ticker's fields.
+
+    `reference_session_date` is this export's own already-resolved exact
+    session identity (the same value that becomes the bundle's
+    `reference_session_date`, and the same one `attach_dnse_foreign_flow`
+    already receives), passed straight through so `current_state_market_risk`
+    freshness compares against the release actually being built -- never a
+    wall-clock read, never invented."""
     if not include:
         return bundle_entries
     for tk, entry in bundle_entries.items():
-        result = build_current_state_market_risk_for_ticker_safe(tk, root)
+        result = build_current_state_market_risk_for_ticker_safe(tk, root, reference_session_date)
         if result is not None:
             entry["current_state_market_risk"] = result
     return bundle_entries
@@ -3534,7 +3550,8 @@ def main() -> int:
                              reference_session_date=latest_session)
     # Own dedicated flag; order relative to the others does not matter since
     # nothing else reads tickers[ticker].current_state_market_risk.
-    attach_current_state_market_risk(bundle_entries, runtime_root(), args.include_current_state_market_risk)
+    attach_current_state_market_risk(bundle_entries, runtime_root(), args.include_current_state_market_risk,
+                                     reference_session_date=latest_session)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default

@@ -264,6 +264,33 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         self.assertIn("--execute", live_plan)
         self.assertIn("--include-dnse-foreign-flow", live_plan)
 
+    def test_generate_plan_always_includes_current_state_market_risk_for_trusted_ai(self):
+        """Same status as the DNSE foreign-flow capability immediately above: the
+        authoritative production release profile opts current-state market risk in
+        unconditionally whenever it generates the trusted-ai artifact set -- no separate
+        orchestrator-level flag needed. The lower-level builder keeps its own independent,
+        explicit, default-off flag (see test_operate_stocklookup.py's forwarding tests)."""
+        dry = self.run_fixture(["trusted-ai", "--generate"])
+        dry_plan = next(l for l in dry.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        self.assertIn("--include-current-state-market-risk", dry_plan)
+        live = self.run_fixture(["trusted-ai", "--generate", "--live"])
+        live_plan = next(l for l in live.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        self.assertIn("--include-current-state-market-risk", live_plan)
+
+    def test_generate_plan_includes_current_state_market_risk_for_all_group_too(self):
+        res = self.run_fixture(["all", "--generate"])
+        plan = next(l for l in res.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        self.assertIn("--include-current-state-market-risk", plan)
+
+    def test_current_state_market_risk_flag_never_leaks_into_publish_plan(self):
+        live = self.run_fixture(["trusted-ai", "--generate", "--live"])
+        generate_plan = next(l for l in live.stdout.splitlines()
+                             if l.strip().startswith("Plan") and "operate_stocklookup.py" in l)
+        publish_plan = next(l for l in live.stdout.splitlines()
+                            if l.strip().startswith("Plan") and "publish_release.py" in l)
+        self.assertIn("--include-current-state-market-risk", generate_plan)
+        self.assertNotIn("--include-current-state-market-risk", publish_plan)
+
     def test_whole_market_live_gating_unaffected_by_the_execute_fix(self):
         """whole-market's own child commands (build_frontend.py, publish_dashboard.py)
         already gated --live correctly before this repair; the cmd_generate fix must not

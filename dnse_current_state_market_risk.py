@@ -43,6 +43,19 @@ SESSION ALIGNMENT
     Exact-date inner join only. No forward fill, no interpolation, no
     nearest-date matching. Every dropped, unmatched session is reported,
     never hidden.
+
+PRODUCTION AUTHORITY -- RUNTIME-ROOT-BACKED, NOT WORKSPACE-RELATIVE
+    ``build_current_state_market_risk_from_evidence_store`` is the
+    production/bundle-attachment entry point (``export_ai_bundle.py`` calls
+    it). It depends only on ``dnse_market_risk_evidence_store.py`` -- a
+    durable store under the runtime root (``data/dnse-market-risk-evidence/``)
+    -- and never on the workspace-level ``operations-review/`` directory,
+    which is qualification-milestone evidence, not guaranteed present in
+    every environment that can build a release.
+    ``build_current_state_market_risk_from_retained_evidence`` (the older,
+    ``operations-review/``-backed function below) remains for shadow/
+    qualification-validation tooling only; production wiring does not call
+    it.
 """
 from __future__ import annotations
 
@@ -53,6 +66,8 @@ from typing import Any, Mapping, Sequence
 
 import dnse_current_state_price_analytics as price_analytics
 import dnse_index_return_series_capability as index_capability
+import dnse_market_risk_evidence_store as evidence_store
+import dnse_ohlc_price_basis_capability as stock_price_basis
 
 VERSION = "1.0.0"
 
@@ -500,17 +515,29 @@ def build_current_state_market_risk_from_retained_evidence(
     stock_evidence_path: Path = DEFAULT_STOCK_EVIDENCE_PATH,
     benchmark_evidence_path: Path = DEFAULT_BENCHMARK_EVIDENCE_PATH,
 ) -> dict[str, Any]:
-    """Offline, network-free entry point for bundle attachment (Step 8 of the
-    integration milestone): reads raw OHLC directly from the two probe
-    evidence files already retained by the prior DNSE qualification
-    milestones -- never fetches anything live, never reads secrets.env.
-    Delegates all qualification and math to
+    """Offline, network-free entry point for shadow/qualification validation
+    (the tooling used by ``tools/dnse_current_state_market_risk_shadow.py``):
+    reads raw OHLC directly from the two probe evidence files already
+    retained under the workspace-level ``operations-review/`` by the prior
+    DNSE qualification milestones -- never fetches anything live, never reads
+    secrets.env. Delegates all qualification and math to
     ``build_current_state_market_risk_report`` /
     ``compute_current_state_beta_correlation`` -- nothing here recomputes a
     formula. A ticker/benchmark absent from its evidence file (e.g. every
     non-HPG production ticker) simply resolves ``raw_ohlc=None``, which the
     downstream contract already handles as an expected, fail-closed
     "no payload" case -- not an error here.
+
+    NOT the production bundle-attachment path. ``operations-review/`` is
+    workspace-relative, not guaranteed present in every environment that can
+    build a release (see the module-level ``PRODUCTION AUTHORITY`` note) --
+    ``export_ai_bundle.py`` calls
+    ``build_current_state_market_risk_from_evidence_store`` instead, which
+    depends only on the runtime-root-backed
+    ``dnse_market_risk_evidence_store.py``. This function remains for the
+    shadow-validation workflow that qualified the evidence in the first
+    place; kept unmodified so the prior milestone's own shadow tests and CLI
+    stay exactly as they were.
     """
     stock_raw = _load_raw_ohlc_from_evidence(stock_evidence_path, ticker)
     benchmark_raw = _load_raw_ohlc_from_evidence(benchmark_evidence_path, benchmark_id)
@@ -521,6 +548,211 @@ def build_current_state_market_risk_from_retained_evidence(
             "benchmark_evidence_path": str(benchmark_evidence_path),
         },
     )
+
+
+
+# --------------------------------------------------------------------- freshness contract
+
+# Step 9's vocabulary, reused verbatim from dnse_foreign_flow_store.py's own
+# freshness convention -- not invented here.
+FRESHNESS_CURRENT = "current"
+FRESHNESS_STALE = "stale"
+FRESHNESS_NOT_APPLICABLE = "not_applicable"
+FRESHNESS_UNKNOWN = "unknown"
+
+
+def _hpg_trading_dates(runtime_root: Any) -> set[str]:
+    """Calendar dates ``vn_stock.db``'s own OHLCV table has a row for HPG --
+    used only to count real trading-session lag for the freshness verdict
+    below, never to read a price/volume value. Read-only
+    (``mode=ro`` + ``PRAGMA query_only``); independent copy of the same
+    technique already established in ``dnse_current_state_price_analytics.py``
+    / ``dnse_index_return_series_capability.py`` / ``dnse_foreign_flow_store.py``."""
+    import sqlite3
+
+    db_path = Path(runtime_root) / "vn_stock.db"
+    if not db_path.exists():
+        return set()
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    try:
+        conn.execute("PRAGMA query_only = 1")
+        rows = conn.execute("SELECT DISTINCT date FROM ohlcv WHERE ticker = 'HPG'").fetchall()
+        return {row[0] for row in rows}
+    finally:
+        conn.close()
+
+
+def compute_freshness(
+    record: Mapping[str, Any], reference_session_date: str | None, *, runtime_root: Any,
+) -> dict[str, Any]:
+    """Compares the aligned window's own latest paired session against the
+    release's exact reference session -- mirrors
+    ``dnse_foreign_flow_store.py``'s own freshness convention exactly
+    (current/stale/not_applicable/unknown, ``sessions_behind`` counted in
+    real retained trading sessions, never calendar days, never a wall-clock
+    read). Never fills, guesses, or backdates a missing current session; a
+    lag is reported, never hidden."""
+    aligned_pairs = ((record.get("aligned_sessions") or {}).get("aligned_pairs")) or []
+    latest_qualified_session_date = aligned_pairs[-1]["session_date"] if aligned_pairs else None
+
+    base = {
+        "reference_session_date": reference_session_date,
+        "latest_qualified_session_date": latest_qualified_session_date,
+        "sessions_behind": None,
+    }
+    if reference_session_date is None:
+        return {**base, "status": FRESHNESS_UNKNOWN, "reason": "no_reference_session_date_provided"}
+    if latest_qualified_session_date is None:
+        return {**base, "status": FRESHNESS_NOT_APPLICABLE,
+                "reason": "no_qualified_aligned_session_available"}
+    if latest_qualified_session_date == reference_session_date:
+        return {**base, "status": FRESHNESS_CURRENT, "sessions_behind": 0, "reason": None}
+    if latest_qualified_session_date > reference_session_date:
+        # Not expected under the documented offline/bounded materialization
+        # pipeline -- fail closed rather than assume what an out-of-order
+        # retained session means.
+        return {**base, "status": FRESHNESS_UNKNOWN,
+                "reason": "latest_qualified_session_is_after_the_reference_session"}
+    trading_dates = _hpg_trading_dates(runtime_root)
+    if not trading_dates:
+        return {**base, "status": FRESHNESS_STALE,
+                "reason": "retained market-risk evidence predates the reference session; exact "
+                          "trading-session lag could not be verified against vn_stock.db"}
+    sessions_behind = len(sorted(d for d in trading_dates
+                                 if latest_qualified_session_date < d <= reference_session_date))
+    return {**base, "status": FRESHNESS_STALE, "sessions_behind": sessions_behind,
+            "reason": f"retained market-risk evidence is {sessions_behind} trading session(s) "
+                      "behind the reference session"}
+
+
+# --------------------------------------------------------------------- production entry point
+
+_NOT_RETAINED_REASON = "durable_market_risk_evidence_store_has_no_retained_record_for_this_symbol"
+
+
+def _safe_read_store(reader: Any, runtime_root: Any, symbol: str) -> dict[str, Any] | None:
+    """Collapses "no record" and "record present but malformed" (e.g. corrupt
+    JSON) into the same safe ``None`` -- both mean no usable durable record,
+    handled identically by the eligible-but-absent branches below. A missing
+    file already returns ``None`` from ``dnse_market_risk_evidence_store``'s
+    own reader; this only additionally catches a read/parse failure on a
+    present-but-invalid file."""
+    try:
+        return reader(runtime_root, symbol)
+    except Exception:
+        return None
+
+
+def _not_retained_stock_report(ticker: str) -> dict[str, Any]:
+    """Explicit not-qualified stub for an evidence-eligible ticker (currently
+    only HPG/VCB) whose durable store record is absent. Constructed directly
+    rather than passing ``raw_ohlc=None`` into
+    ``price_analytics.build_shadow_report`` for an eligible ticker, which
+    would reach ``normalize_bars()`` on an empty payload and raise, by that
+    module's own documented contract -- this keeps "durable evidence missing"
+    an explicit, typed outcome (Step 6: ``missing/not_qualified``, never a
+    release crash) instead of an incidentally-caught exception."""
+    return {
+        "ticker": ticker, "source": price_analytics.PROVIDER,
+        "eligibility": {
+            "eligible_for_current_state_price_analytics": False,
+            "reason": _NOT_RETAINED_REASON,
+        },
+        "coverage": {"status": "not_qualified", "reason": _NOT_RETAINED_REASON},
+        "returns": {"status": "incomplete", "returns": [], "reason": "no_retained_evidence"},
+        "pit_backtest_eligible": price_analytics.PIT_BACKTEST_ELIGIBLE,
+        "analysis_time_semantics": price_analytics.ANALYSIS_TIME_SEMANTICS,
+        "price_basis": None, "price_basis_contract_version": None, "qualification_scope": None,
+        "provenance": {},
+    }
+
+
+def _not_retained_benchmark_series(benchmark_id: str) -> dict[str, Any]:
+    """Symmetric stub for the benchmark side -- VNINDEX is
+    ``benchmark_current_state_eligible`` today, so a missing durable record
+    for it would hit the same eligible-but-empty-payload raise inside
+    ``build_index_return_series`` / ``normalize_bars()`` unless short-circuited
+    here first."""
+    return {
+        "benchmark_id": benchmark_id, "source": index_capability.PROVIDER,
+        "eligibility": {
+            "eligible_for_current_state_return_series": False,
+            "reason": _NOT_RETAINED_REASON,
+        },
+        "coverage": {"status": "not_qualified", "reason": _NOT_RETAINED_REASON},
+        "current_state_qualified": False,
+        "pit_backtest_eligible": index_capability.PIT_BACKTEST_ELIGIBLE,
+        "analysis_time_semantics": index_capability.ANALYSIS_TIME_SEMANTICS,
+        "index_level_unit": index_capability.INDEX_LEVEL_UNIT_UNQUALIFIED,
+        "source_contract_version": None,
+        "provenance": {},
+    }
+
+
+def build_current_state_market_risk_from_evidence_store(
+    ticker: str,
+    benchmark_id: str = "VNINDEX",
+    *,
+    runtime_root: Any,
+    reference_session_date: str | None = None,
+) -> dict[str, Any]:
+    """The production bundle-attachment entry point. Reads raw OHLC ONLY from
+    the durable, runtime-root-backed ``dnse_market_risk_evidence_store.py`` --
+    no ``operations-review/`` dependency, no network call, no secrets.env.
+    Delegates all qualification and math to
+    ``compute_current_state_beta_correlation`` -- nothing here recomputes a
+    formula. Always returns a dict; never raises, including for an
+    evidence-eligible ticker whose durable record is missing (see
+    ``_not_retained_stock_report``). Additively attaches a ``freshness``
+    verdict; a stale result also gains a standing warning, but its
+    beta/correlation are never suppressed or replaced -- they remain visible
+    as a bounded, dated, current-state descriptive statistic (Step 9), never
+    silently relabelled as current.
+    """
+    normalized_ticker = str(ticker).strip().upper()
+    normalized_benchmark = str(benchmark_id).strip().upper()
+
+    stock_record = _safe_read_store(evidence_store.read_stock_ohlc, runtime_root, normalized_ticker)
+    benchmark_record = _safe_read_store(evidence_store.read_benchmark_ohlc, runtime_root, normalized_benchmark)
+    stock_raw = stock_record.get("raw_ohlc") if stock_record else None
+    benchmark_raw = benchmark_record.get("raw_ohlc") if benchmark_record else None
+
+    stock_evidence_source = "dnse_market_risk_evidence_store" if stock_record else "not_retained_or_malformed"
+    benchmark_evidence_source = "dnse_market_risk_evidence_store" if benchmark_record else "not_retained_or_malformed"
+
+    if stock_price_basis.ticker_current_state_eligible(normalized_ticker) and stock_record is None:
+        stock_report = _not_retained_stock_report(normalized_ticker)
+    else:
+        try:
+            stock_report = price_analytics.build_shadow_report(
+                normalized_ticker, stock_raw, runtime_root=runtime_root, include_technical_indicators=False,
+                fetch_provenance={"evidence_source": stock_evidence_source},
+            )
+        except Exception:
+            # A present-but-structurally-invalid durable record (partial,
+            # version-incompatible, hand-corrupted) reaches normalize_bars()
+            # and raises there -- collapsed into the same explicit
+            # not-qualified outcome as a missing record, never a crash.
+            stock_report = _not_retained_stock_report(normalized_ticker)
+
+    if index_capability.benchmark_current_state_eligible(normalized_benchmark) and benchmark_record is None:
+        benchmark_series = _not_retained_benchmark_series(normalized_benchmark)
+    else:
+        try:
+            benchmark_series = index_capability.build_index_return_series(
+                normalized_benchmark, benchmark_raw, runtime_root=runtime_root,
+                fetch_provenance={"evidence_source": benchmark_evidence_source},
+            )
+        except Exception:
+            benchmark_series = _not_retained_benchmark_series(normalized_benchmark)
+
+    result = compute_current_state_beta_correlation(stock_report, benchmark_series)
+    result["freshness"] = compute_freshness(result, reference_session_date, runtime_root=runtime_root)
+    if result["freshness"]["status"] == FRESHNESS_STALE:
+        result["warnings"] = list(result.get("warnings") or []) + [
+            "retained_market_risk_evidence_is_stale_relative_to_the_release_reference_session"
+        ]
+    return result
 
 
 def serialize(record: Mapping[str, Any]) -> str:

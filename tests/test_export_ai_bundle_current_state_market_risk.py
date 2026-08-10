@@ -89,7 +89,7 @@ class MockedAttachLayerTests(unittest.TestCase):
     tests/test_dnse_current_state_market_risk.py."""
 
     def test_qualified_ticker_gets_status_available_and_is_actionable_false(self):
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    return_value=_qualified_result("HPG")):
             result = build_current_state_market_risk_for_ticker_safe("HPG", RUNTIME_ROOT)
         self.assertEqual("available", result["status"])
@@ -97,7 +97,7 @@ class MockedAttachLayerTests(unittest.TestCase):
         self.assertIs(False, result["pit_backtest_eligible"])
 
     def test_not_qualified_ticker_gets_status_not_qualified_never_a_fabricated_value(self):
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    return_value=_not_qualified_result("VNM")):
             result = build_current_state_market_risk_for_ticker_safe("VNM", RUNTIME_ROOT)
         self.assertEqual("not_qualified", result["status"])
@@ -106,7 +106,7 @@ class MockedAttachLayerTests(unittest.TestCase):
         self.assertIs(False, result["is_actionable"])
 
     def test_top_level_convenience_fields_are_copies_not_recomputed(self):
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    return_value=_qualified_result("HPG")):
             result = build_current_state_market_risk_for_ticker_safe("HPG", RUNTIME_ROOT)
         self.assertEqual(18, result["stock_return_count"])
@@ -117,18 +117,18 @@ class MockedAttachLayerTests(unittest.TestCase):
         self.assertEqual(18, result["paired_return_count"])
 
     def test_build_failure_returns_none_without_raising(self):
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    side_effect=RuntimeError("boom")):
             result = build_current_state_market_risk_for_ticker_safe("HPG", RUNTIME_ROOT)
         self.assertIsNone(result)
 
     def test_one_tickers_build_failure_does_not_break_the_bundle_or_other_tickers(self):
-        def flaky(ticker, benchmark_id, *, runtime_root):
+        def flaky(ticker, benchmark_id, *, runtime_root, reference_session_date=None):
             if ticker == "BROKEN":
                 raise RuntimeError("boom")
             return _qualified_result(ticker)
 
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    side_effect=flaky):
             entries = {"HPG": {}, "BROKEN": {}}
             attach_current_state_market_risk(entries, RUNTIME_ROOT, True)
@@ -139,7 +139,7 @@ class MockedAttachLayerTests(unittest.TestCase):
         entry = {"ticker_capability_matrix": {"research": {"research_eligible": True}},
                  "snapshot": {"date": "2026-08-07"}}
         before = json.loads(json.dumps(entry))
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    return_value=_qualified_result("HPG")):
             entries = {"HPG": entry}
             attach_current_state_market_risk(entries, RUNTIME_ROOT, True)
@@ -147,7 +147,7 @@ class MockedAttachLayerTests(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_deterministic_serialization_across_repeated_attach_calls(self):
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    return_value=_qualified_result("HPG")):
             first = {"HPG": {}}
             attach_current_state_market_risk(first, RUNTIME_ROOT, True)
@@ -157,7 +157,7 @@ class MockedAttachLayerTests(unittest.TestCase):
                          json.dumps(second, sort_keys=True, default=str))
 
     def test_no_secret_or_credential_like_value_in_the_attached_entry(self):
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    return_value=_qualified_result("HPG")):
             entries = {"HPG": {}}
             attach_current_state_market_risk(entries, RUNTIME_ROOT, True)
@@ -167,7 +167,7 @@ class MockedAttachLayerTests(unittest.TestCase):
             self.assertNotIn(forbidden, dumped)
 
     def test_no_volume_field_anywhere_in_the_attached_entry(self):
-        with patch("export_ai_bundle.build_current_state_market_risk_from_retained_evidence",
+        with patch("export_ai_bundle.build_current_state_market_risk_from_evidence_store",
                    return_value=_qualified_result("HPG")):
             entries = {"HPG": {}}
             attach_current_state_market_risk(entries, RUNTIME_ROOT, True)
@@ -188,7 +188,7 @@ class NoMetricRecomputationTests(unittest.TestCase):
     def test_attach_layer_calls_the_authoritative_module_not_a_local_reimplementation(self):
         import export_ai_bundle
         source = inspect.getsource(export_ai_bundle.build_current_state_market_risk_for_ticker_safe)
-        self.assertIn("build_current_state_market_risk_from_retained_evidence", source)
+        self.assertIn("build_current_state_market_risk_from_evidence_store", source)
 
 
 class VcbNeverEntersProductionUniverseTests(unittest.TestCase):

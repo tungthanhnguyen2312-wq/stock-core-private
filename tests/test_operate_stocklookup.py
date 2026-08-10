@@ -300,6 +300,25 @@ class OperatorTests(unittest.TestCase):
         report = json.loads((self.root / "reports" / "operate_stocklookup_latest.json").read_text(encoding="utf-8"))
         self.assertIs(True, report["include_dnse_foreign_flow"])
 
+    # ---------------------------------------------------------------- current-state market risk
+    def test_current_state_market_risk_flag_is_off_by_default(self):
+        runner = RecordingRunner()
+        self.assertEqual(self._operator(runner).run(), 0)
+        export_call = next(c for c in runner.calls if "export_ai_bundle.py" in " ".join(c))
+        self.assertNotIn("--include-current-state-market-risk", export_call)
+
+    def test_current_state_market_risk_flag_forwards_when_explicitly_enabled(self):
+        runner = RecordingRunner()
+        self.assertEqual(self._operator(runner, include_current_state_market_risk=True).run(), 0)
+        export_call = next(c for c in runner.calls if "export_ai_bundle.py" in " ".join(c))
+        self.assertIn("--include-current-state-market-risk", export_call)
+
+    def test_current_state_market_risk_flag_is_recorded_in_the_report(self):
+        runner = RecordingRunner()
+        self.assertEqual(self._operator(runner, include_current_state_market_risk=True).run(), 0)
+        report = json.loads((self.root / "reports" / "operate_stocklookup_latest.json").read_text(encoding="utf-8"))
+        self.assertIs(True, report["include_current_state_market_risk"])
+
     # ---------------------------------------------------------------- report
     def test_the_operating_report_records_every_artifact_hash_and_no_absolute_path(self):
         self.assertEqual(self._operator(RecordingRunner()).run(), 0)
