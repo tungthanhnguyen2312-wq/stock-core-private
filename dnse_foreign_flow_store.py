@@ -59,6 +59,7 @@ _STANDING_WARNINGS: tuple[str, ...] = (
     "dnse_ohlc_price_basis_and_market_volume_basis_remain_unqualified_separately",
     "a_single_session_net_value_is_an_observation_not_a_trend_evaluate_the_full_observations_sequence",
     "no_score_ranking_or_bullish_bearish_label_is_computed_or_implied_by_this_contract",
+    "foreign_value_flow_is_not_evidence_that_foreign_investors_caused_any_price_movement",
 )
 _STANDING_LIMITATIONS: tuple[str, ...] = (
     "is_actionable is always false; this contract carries qualified foreign-value flow "
@@ -234,10 +235,66 @@ def _window_summary(
     }
 
 
-def build_series(runtime_root: Path | str, ticker: str) -> dict[str, Any]:
+FRESHNESS_CURRENT = "current"
+FRESHNESS_STALE = "stale"
+FRESHNESS_NOT_APPLICABLE = "not_applicable"
+FRESHNESS_UNKNOWN = "unknown"
+
+
+def _freshness(
+    latest_qualified_session_date: str | None,
+    reference_session_date: str | None,
+    trading_dates: set[str],
+) -> dict[str, Any]:
+    """Compare the latest retained foreign-flow session against the release's own exact
+    reference trading session -- never calendar-day arithmetic, and never a wall-clock read.
+
+    `reference_session_date` is the caller's already-resolved exact session identity (for
+    `export_ai_bundle.py`, the same `latest_session` bound into the bundle's own
+    `reference_session_date`). `trading_dates` is the same vn_stock.db-derived set
+    `_window_summary`/`_streaks_and_counts` already use, so "how many sessions behind" is
+    counted in real retained trading sessions, not elapsed calendar days. This never fills,
+    guesses, or backdates a missing current session -- a lag is reported, never hidden."""
+    base = {
+        "reference_session_date": reference_session_date,
+        "latest_qualified_session_date": latest_qualified_session_date,
+        "sessions_behind": None,
+    }
+    if reference_session_date is None:
+        return {**base, "status": FRESHNESS_UNKNOWN, "reason": "no_reference_session_date_provided"}
+    if latest_qualified_session_date is None:
+        return {**base, "status": FRESHNESS_NOT_APPLICABLE,
+                "reason": "no_qualified_foreign_flow_session_retained"}
+    if latest_qualified_session_date == reference_session_date:
+        return {**base, "status": FRESHNESS_CURRENT, "sessions_behind": 0, "reason": None}
+    if latest_qualified_session_date > reference_session_date:
+        # Not expected under the documented offline/bounded ingestion pipeline (it never
+        # writes a session ahead of the market data chain) -- fail closed rather than assume
+        # what an out-of-order retained session means.
+        return {**base, "status": FRESHNESS_UNKNOWN,
+                "reason": "latest_qualified_session_is_after_the_reference_session"}
+    if not trading_dates:
+        return {**base, "status": FRESHNESS_STALE,
+                "reason": "retained foreign-flow data predates the reference session; exact "
+                          "trading-session lag could not be verified against vn_stock.db"}
+    sessions_behind = len(sorted(d for d in trading_dates
+                                 if latest_qualified_session_date < d <= reference_session_date))
+    return {**base, "status": FRESHNESS_STALE, "sessions_behind": sessions_behind,
+            "reason": f"retained foreign-flow data is {sessions_behind} trading session(s) "
+                      "behind the reference session"}
+
+
+def build_series(
+    runtime_root: Path | str, ticker: str, *, reference_session_date: str | None = None,
+) -> dict[str, Any]:
     """The canonical per-ticker foreign_flow contract: raw session observations plus
     bounded, fail-closed deterministic summaries. Generic across tickers -- identical
-    code path regardless of which ticker is passed."""
+    code path regardless of which ticker is passed.
+
+    `reference_session_date` is optional and defaults to None (freshness reports
+    "unknown") so every existing caller/test that does not pass it keeps its prior
+    behavior unchanged; a production caller (export_ai_bundle.py) always supplies the
+    bundle's own already-resolved exact session identity."""
     raw_observations = read_observations(runtime_root, ticker)
     observations = [_value_observation(raw) for raw in raw_observations]
     observations.sort(key=lambda o: o["session_date"])
@@ -251,6 +308,10 @@ def build_series(runtime_root: Path | str, ticker: str) -> dict[str, Any]:
         "5_session": _window_summary(qualified_with_net, window_size=5, trading_dates=trading_dates),
         "10_session": _window_summary(qualified_with_net, window_size=10, trading_dates=trading_dates),
     }
+    freshness = _freshness(
+        observations[-1]["session_date"] if observations else None,
+        reference_session_date, trading_dates,
+    )
 
     limitations = list(_STANDING_LIMITATIONS)
     if not trading_dates:
@@ -280,6 +341,7 @@ def build_series(runtime_root: Path | str, ticker: str) -> dict[str, Any]:
         },
         **counts,
         "window_summaries": window_summaries,
+        "freshness": freshness,
         "warnings": list(_STANDING_WARNINGS),
         "limitations": limitations,
         "is_actionable": False,

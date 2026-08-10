@@ -233,6 +233,30 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         self.assertIn(url, live_plan)
         self.assertNotIn(url, dry_plan)
 
+    def test_generate_plan_always_includes_dnse_foreign_flow_for_trusted_ai(self):
+        """The authoritative production release profile opts DNSE foreign-flow value in
+        unconditionally whenever it generates the trusted-ai artifact set -- no separate
+        orchestrator-level flag is needed to turn it on for a real release. The lower-level
+        builder keeps its own independent, explicit, default-off flag (see
+        test_operate_stocklookup.py's forwarding tests)."""
+        dry = self.run_fixture(["trusted-ai", "--generate"])
+        dry_plan = next(l for l in dry.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        self.assertIn("--include-dnse-foreign-flow", dry_plan)
+        live = self.run_fixture(["trusted-ai", "--generate", "--live"])
+        live_plan = next(l for l in live.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        self.assertIn("--include-dnse-foreign-flow", live_plan)
+
+    def test_generate_plan_includes_dnse_foreign_flow_for_all_group_too(self):
+        res = self.run_fixture(["all", "--generate"])
+        plan = next(l for l in res.stdout.splitlines() if l.strip().startswith("Plan 1:"))
+        self.assertIn("--include-dnse-foreign-flow", plan)
+
+    def test_no_generate_means_no_operate_stocklookup_invocation_at_all(self):
+        """Without --generate, the trusted-ai group only publishes an already-built
+        artifact set -- operate_stocklookup.py (and therefore the DNSE flag) never appears."""
+        res = self.run_fixture(["trusted-ai"])
+        self.assertNotIn("operate_stocklookup.py", res.stdout)
+
     def test_session_gate_blocks_generate_same_as_publish(self):
         """'expected session is preserved through the call chain': a session mismatch must
         fail before ANY child process runs, generate stage included — not just before publish."""

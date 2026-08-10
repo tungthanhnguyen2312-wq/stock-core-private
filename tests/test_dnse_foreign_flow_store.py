@@ -216,5 +216,80 @@ class BuildSeriesTests(unittest.TestCase):
             self.assertEqual(STATUS_AVAILABLE, result["status"])
 
 
+class FreshnessTests(unittest.TestCase):
+    """The production freshness contract: exact trading-session comparison against the
+    caller's own reference session, never calendar-day arithmetic and never a fabricated
+    current value for a session that was never retained."""
+
+    def test_no_reference_session_date_reports_unknown_not_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_observations(tmp, "HPG", [_normalized("2026-08-07")])
+            result = build_series(tmp, "HPG")  # existing 2-arg call form, unchanged
+            self.assertEqual("unknown", result["freshness"]["status"])
+            self.assertIsNone(result["freshness"]["sessions_behind"])
+
+    def test_missing_ticker_with_reference_session_is_not_applicable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_series(tmp, "NOPE", reference_session_date="2026-08-07")
+            self.assertEqual("not_applicable", result["freshness"]["status"])
+            self.assertIsNone(result["freshness"]["latest_qualified_session_date"])
+
+    def test_latest_session_equal_to_reference_is_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dates = ["2026-08-03", "2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07"]
+            _make_runtime_with_ohlcv(tmp, "HPG", dates)
+            write_observations(tmp, "HPG", [_normalized(d) for d in dates])
+            result = build_series(tmp, "HPG", reference_session_date="2026-08-07")
+            freshness = result["freshness"]
+            self.assertEqual("current", freshness["status"])
+            self.assertEqual(0, freshness["sessions_behind"])
+            self.assertEqual("2026-08-07", freshness["reference_session_date"])
+            self.assertEqual("2026-08-07", freshness["latest_qualified_session_date"])
+            self.assertIsNone(freshness["reason"])
+
+    def test_stale_lag_is_counted_in_exact_trading_sessions_not_calendar_days(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # 2026-08-08/09 are a real weekend -- only 2026-08-10 is a further trading day,
+            # so a naive calendar-day count (3 days) must NOT be what sessions_behind reports.
+            dates = ["2026-08-03", "2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07",
+                     "2026-08-10"]
+            _make_runtime_with_ohlcv(tmp, "HPG", dates)
+            write_observations(tmp, "HPG", [_normalized(d) for d in dates if d != "2026-08-10"])
+            result = build_series(tmp, "HPG", reference_session_date="2026-08-10")
+            freshness = result["freshness"]
+            self.assertEqual("stale", freshness["status"])
+            self.assertEqual(1, freshness["sessions_behind"])
+            self.assertEqual("2026-08-07", freshness["latest_qualified_session_date"])
+
+    def test_stale_without_a_trading_date_reference_still_reports_stale_not_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # No vn_stock.db ohlcv rows retained for this ticker at all.
+            write_observations(tmp, "HPG", [_normalized("2026-08-05")])
+            result = build_series(tmp, "HPG", reference_session_date="2026-08-07")
+            freshness = result["freshness"]
+            self.assertEqual("stale", freshness["status"])
+            self.assertIsNone(freshness["sessions_behind"])
+
+    def test_retained_session_after_reference_fails_closed_as_unknown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dates = ["2026-08-03", "2026-08-04"]
+            _make_runtime_with_ohlcv(tmp, "HPG", dates)
+            write_observations(tmp, "HPG", [_normalized(d) for d in dates])
+            result = build_series(tmp, "HPG", reference_session_date="2026-08-03")
+            self.assertEqual("unknown", result["freshness"]["status"])
+
+    def test_freshness_never_fabricates_a_value_for_the_reference_session(self):
+        """A stale result must still expose only the actually-retained latest session --
+        never a synthesized observation for the reference date itself."""
+        with tempfile.TemporaryDirectory() as tmp:
+            dates = ["2026-08-03", "2026-08-06", "2026-08-07"]
+            _make_runtime_with_ohlcv(tmp, "HPG", dates)
+            write_observations(tmp, "HPG", [_normalized("2026-08-03")])
+            result = build_series(tmp, "HPG", reference_session_date="2026-08-07")
+            self.assertEqual(1, len(result["observations"]))
+            self.assertEqual("2026-08-03", result["observations"][0]["session_date"])
+            self.assertEqual("stale", result["freshness"]["status"])
+
+
 if __name__ == "__main__":
     unittest.main()

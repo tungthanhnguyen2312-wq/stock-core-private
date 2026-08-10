@@ -33,6 +33,17 @@ QUALIFIED MARKET OBSERVATIONS (opt-in, independent of the lane above)
     historical_only, is_actionable=False, liquidity_actionable=False -- it never touches the
     generic price_basis_verified/volume_basis_verified gate.
 
+DNSE FOREIGN-FLOW VALUE (opt-in, independent of both lanes above)
+    --include-dnse-foreign-flow forwards the matching export_ai_bundle.py flag. Attaches
+    tickers[ticker].foreign_flow from the retained DNSE foreign-investor VALUE store
+    (buy/sell/net VND per session plus fail-closed multi-session window summaries and an
+    exact-trading-session freshness verdict) for whichever tickers have retained
+    observations -- every other ticker reports status="missing", never a fabricated value,
+    and research eligibility for every ticker is unaffected either way. Always
+    is_actionable=False. This command's own default keeps it off, same as every other
+    --include-* flag here; tools/release_orchestrator.py's --generate step is the
+    authoritative production release profile that opts it in for a real release.
+
 MODES
     (default)              dry run. Reads and reports; writes nothing, publishes nothing.
     --execute              rebuild sidecar + bundle + manifest, verify, Consumer-validate,
@@ -161,6 +172,7 @@ class Operator:
                  include_historical_scaleout: bool = False,
                  include_qualified_research_brief: bool = False,
                  include_qualified_market_observations: bool = False,
+                 include_dnse_foreign_flow: bool = False,
                  governed_official_evidence_root: Path | None = None,
                  research_changes_v2_baseline: Path | None = None,
                  refresh_metadata: bool = False,
@@ -178,6 +190,7 @@ class Operator:
         self.include_historical_scaleout = include_historical_scaleout
         self.include_qualified_research_brief = include_qualified_research_brief
         self.include_qualified_market_observations = include_qualified_market_observations
+        self.include_dnse_foreign_flow = include_dnse_foreign_flow
         self.governed_official_evidence_root = governed_official_evidence_root
         self.research_changes_v2_baseline = research_changes_v2_baseline
         self.runner = runner
@@ -544,6 +557,8 @@ class Operator:
             command += ["--research-changes-v2-baseline", str(self.research_changes_v2_baseline)]
         if self.include_qualified_market_observations:
             command.append("--include-qualified-market-observations")
+        if self.include_dnse_foreign_flow:
+            command.append("--include-dnse-foreign-flow")
         self._run("export_analysis_bundle", command, ROOT)
 
     # ------------------------------------------------------------------ 4. verify
@@ -684,6 +699,7 @@ class Operator:
             "include_historical_scaleout": self.include_historical_scaleout,
             "include_qualified_research_brief": self.include_qualified_research_brief,
             "include_qualified_market_observations": self.include_qualified_market_observations,
+            "include_dnse_foreign_flow": self.include_dnse_foreign_flow,
             "started_at": self.started_at, "ended_at": _now(),
             "outcome": outcome,
             "failed_gate": failure.gate if failure else None,
@@ -834,6 +850,15 @@ def parse_args(argv=None) -> argparse.Namespace:
                              " window (market_basis_capability_registry-gated). Independent of the"
                              " fundamental-evidence pilot set; always historical_only and"
                              " is_actionable=False.")
+    parser.add_argument("--include-dnse-foreign-flow", action="store_true",
+                        help="Opt-in: attach tickers[ticker].foreign_flow (qualified DNSE"
+                             " foreign-investor VALUE per session, multi-session summaries, and an"
+                             " exact-trading-session freshness verdict) for whichever tickers have"
+                             " a retained observation store; every other ticker reports"
+                             " status=\"missing\". Independent of every other lane; never affects"
+                             " research eligibility. Off by default here -- the authoritative"
+                             " production release profile (tools/release_orchestrator.py"
+                             " --generate) is what turns this on for a real release.")
     parser.add_argument("--governed-official-evidence-root", type=Path)
     parser.add_argument("--research-changes-v2-baseline", type=Path)
     parser.add_argument("--publish", action="store_true",
@@ -911,6 +936,7 @@ def main(argv=None, runner=subprocess.run) -> int:
                         include_historical_scaleout=args.include_historical_scaleout,
                         include_qualified_research_brief=args.include_qualified_research_brief,
                         include_qualified_market_observations=args.include_qualified_market_observations,
+                        include_dnse_foreign_flow=args.include_dnse_foreign_flow,
                         governed_official_evidence_root=args.governed_official_evidence_root,
                         research_changes_v2_baseline=args.research_changes_v2_baseline,
                         refresh_metadata=args.refresh_metadata,

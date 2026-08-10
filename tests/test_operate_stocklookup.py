@@ -281,6 +281,25 @@ class OperatorTests(unittest.TestCase):
         self.assertEqual(self._operator(runner).run(), 1)
         self.assertFalse((self.root / operate.SIDECAR_FILENAME).exists())
 
+    # ---------------------------------------------------------------- dnse foreign-flow
+    def test_dnse_foreign_flow_flag_is_off_by_default(self):
+        runner = RecordingRunner()
+        self.assertEqual(self._operator(runner).run(), 0)
+        export_call = next(c for c in runner.calls if "export_ai_bundle.py" in " ".join(c))
+        self.assertNotIn("--include-dnse-foreign-flow", export_call)
+
+    def test_dnse_foreign_flow_flag_forwards_when_explicitly_enabled(self):
+        runner = RecordingRunner()
+        self.assertEqual(self._operator(runner, include_dnse_foreign_flow=True).run(), 0)
+        export_call = next(c for c in runner.calls if "export_ai_bundle.py" in " ".join(c))
+        self.assertIn("--include-dnse-foreign-flow", export_call)
+
+    def test_dnse_foreign_flow_flag_is_recorded_in_the_report(self):
+        runner = RecordingRunner()
+        self.assertEqual(self._operator(runner, include_dnse_foreign_flow=True).run(), 0)
+        report = json.loads((self.root / "reports" / "operate_stocklookup_latest.json").read_text(encoding="utf-8"))
+        self.assertIs(True, report["include_dnse_foreign_flow"])
+
     # ---------------------------------------------------------------- report
     def test_the_operating_report_records_every_artifact_hash_and_no_absolute_path(self):
         self.assertEqual(self._operator(RecordingRunner()).run(), 0)

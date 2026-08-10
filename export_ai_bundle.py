@@ -2692,20 +2692,25 @@ def attach_distribution_evidence(
 # is never called unless the flag is set, and this section never derives an
 # ownership/free-float percentage, a flow/trading-value ratio, or promotes foreign
 # volume/room -- those stay unqualified by contract (see dnse_foreign_flow_capability.py
-# and dnse_foreign_flow_store.py). The complete builder result is attached unmodified.
+# and dnse_foreign_flow_store.py). The complete builder result -- including its
+# per-ticker freshness verdict against this export's own reference session -- is
+# attached unmodified.
 
-def build_dnse_foreign_flow_for_ticker_safe(ticker: str, root: Path) -> dict[str, Any] | None:
+def build_dnse_foreign_flow_for_ticker_safe(
+    ticker: str, root: Path, reference_session_date: str | None,
+) -> dict[str, Any] | None:
     """Fail-closed wrapper: a local build failure for this ticker returns None (so no
     foreign_flow key is attached for it) and never raises into the caller's per-ticker
     loop or corrupts any other field on this or any other ticker's entry."""
     try:
-        return build_dnse_foreign_flow_series(root, ticker)
+        return build_dnse_foreign_flow_series(root, ticker, reference_session_date=reference_session_date)
     except Exception:
         return None
 
 
 def attach_dnse_foreign_flow(
     bundle_entries: dict[str, dict], root: Path, include: bool,
+    reference_session_date: str | None = None,
 ) -> dict[str, dict]:
     """Disabled-by-default opt-in (default include=False): when include is False,
     build_dnse_foreign_flow_series() is never called and no foreign_flow key is ever
@@ -2713,11 +2718,16 @@ def attach_dnse_foreign_flow(
     the complete builder result per ticker (status="missing" for a ticker with no
     retained DNSE observations, not an absent key -- the caller can always tell
     "not asked" (key absent, include=False) from "asked, nothing retained yet"
-    (key present, status="missing"))."""
+    (key present, status="missing")).
+
+    `reference_session_date` is this export's own already-resolved exact session
+    identity (the same value that becomes the bundle's `reference_session_date`), passed
+    straight through so each ticker's `foreign_flow.freshness` compares against the
+    release session actually being built -- never a wall-clock read, never invented."""
     if not include:
         return bundle_entries
     for tk, entry in bundle_entries.items():
-        result = build_dnse_foreign_flow_for_ticker_safe(tk, root)
+        result = build_dnse_foreign_flow_for_ticker_safe(tk, root, reference_session_date)
         if result is not None:
             entry["foreign_flow"] = result
     return bundle_entries
@@ -3434,7 +3444,8 @@ def main() -> int:
     # Own dedicated flag, not reused from an unrelated concept -- unlike distribution_evidence
     # this does not need to run before any other attach step; order relative to the others
     # does not matter since nothing else reads tickers[ticker].foreign_flow.
-    attach_dnse_foreign_flow(bundle_entries, runtime_root(), args.include_dnse_foreign_flow)
+    attach_dnse_foreign_flow(bundle_entries, runtime_root(), args.include_dnse_foreign_flow,
+                             reference_session_date=latest_session)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default

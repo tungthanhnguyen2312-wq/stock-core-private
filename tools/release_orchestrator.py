@@ -10,6 +10,12 @@ tools/operate_stocklookup.py first (as a plain child process, no --publish/--liv
 to rebuild and validate that set before publishing. tools/operate_stocklookup.py remains fully
 supported standalone for that same build/validate role, but its own --live flag is retired:
 this script is the only thing that may commit and push a release.
+
+--generate's trusted-ai/all child command always passes --include-dnse-foreign-flow: this is
+the authoritative production release profile, so a qualified, production-enabled capability
+reaches every real release without an operator having to remember an extra flag. The
+capability itself stays an explicit, default-off, independently testable flag one layer down
+(operate_stocklookup.py, export_ai_bundle.py) -- only this orchestrator forces it on.
 """
 
 import argparse
@@ -234,7 +240,16 @@ def orchestrate(args: argparse.Namespace) -> int:
         if group in ("trusted-ai", "all") and args.generate:
             generate_invoked = True
             cmd_generate = [python_exe, str(producer_dir / "tools" / "operate_stocklookup.py"),
-                            "--runtime-root", str(backend_dir), "--execute"]
+                            "--runtime-root", str(backend_dir), "--execute",
+                            # The authoritative production release profile opts in the
+                            # qualified DNSE foreign-flow VALUE capability unconditionally.
+                            # The capability itself stays an explicit, independently
+                            # testable, default-off flag one layer down (operate_stocklookup.py
+                            # / export_ai_bundle.py) -- this is the one place that turns it on
+                            # for a real release, same status as every ticker already carries
+                            # this bundle: fail-closed to status="missing" when a ticker has no
+                            # retained observations, never a required input.
+                            "--include-dnse-foreign-flow"]
             if args.governed_official_evidence_root:
                 cmd_generate += ["--governed-official-evidence-root", str(args.governed_official_evidence_root)]
             research_changes_v2_baseline = (args.research_changes_v2_baseline
