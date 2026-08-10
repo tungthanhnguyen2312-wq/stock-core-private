@@ -90,15 +90,15 @@ class ExportAiBundleCurrentStatePriceAnalyticsTests(unittest.TestCase):
             entries, self.root, include=True, reference_session_date="2026-08-07"
         )
         analytics = result["HPG"]["current_state_price_analytics"]
-        
+
         # Observation count
         self.assertEqual(19, len(analytics["observations"]))
-        
+
         # Returns pass-through
         ret = analytics["returns"]
         self.assertEqual("complete", ret["status"])
         self.assertEqual(18, ret["return_count"])
-        
+
         # Cumulative return exact pass-through
         expected_cum = 28800.0 / 26000.0 - 1.0
         self.assertAlmostEqual(expected_cum, ret["cumulative_return"], places=6)
@@ -109,7 +109,7 @@ class ExportAiBundleCurrentStatePriceAnalyticsTests(unittest.TestCase):
             entries, self.root, include=True, reference_session_date="2026-08-07"
         )
         analytics = result["HPG"]["current_state_price_analytics"]
-        
+
         # Realized volatility exact pass-through
         vol = analytics["volatility"]
         self.assertEqual("available", vol["status"])
@@ -126,7 +126,7 @@ class ExportAiBundleCurrentStatePriceAnalyticsTests(unittest.TestCase):
         self.assertEqual("available", tech["status"])
         self.assertEqual("available", tech["rsi_14"]["status"])
         self.assertIsInstance(tech["rsi_14"]["value"], float)
-        
+
         self.assertEqual("unavailable", tech["sma_20"]["status"])
         self.assertIsNone(tech["sma_20"]["value"])
 
@@ -136,7 +136,7 @@ class ExportAiBundleCurrentStatePriceAnalyticsTests(unittest.TestCase):
             entries, self.root, include=True, reference_session_date="2026-08-07"
         )
         analytics = result["HPG"]["current_state_price_analytics"]
-        
+
         self.assertFalse(analytics["pit_backtest_eligible"])
         self.assertFalse(analytics["is_actionable"])
         self.assertEqual(
@@ -150,7 +150,7 @@ class ExportAiBundleCurrentStatePriceAnalyticsTests(unittest.TestCase):
             entries, self.root, include=True, reference_session_date="2026-08-07"
         )
         analytics = result["HPG"]["current_state_price_analytics"]
-        
+
         self.assertIn("provenance", analytics)
         self.assertIn("warnings", analytics)
         self.assertIsInstance(analytics["warnings"], list)
