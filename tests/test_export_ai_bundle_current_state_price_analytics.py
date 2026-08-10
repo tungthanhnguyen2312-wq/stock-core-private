@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import copy
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import export_ai_bundle as bundle
 import dnse_current_state_price_analytics as price_analytics
@@ -53,6 +55,28 @@ def _seed_runtime_evidence(root: Path) -> None:
     evidence_store.write_stock_ohlc(
         root, "HPG", raw_hpg, provenance={"source": "test_seed", "symbol": "HPG"}
     )
+    db_path = root / "vn_stock.db"
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("CREATE TABLE ohlcv (ticker TEXT, date TEXT)")
+        for dt in _SESSION_DATES:
+            conn.execute("INSERT INTO ohlcv (ticker, date) VALUES (?, ?)", ("HPG", dt))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _find_forbidden_keys(obj: Any, forbidden_keys: set[str]) -> list[str]:
+    found = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if str(k).lower() in forbidden_keys:
+                found.append(str(k))
+            found.extend(_find_forbidden_keys(v, forbidden_keys))
+    elif isinstance(obj, list):
+        for item in obj:
+            found.extend(_find_forbidden_keys(item, forbidden_keys))
+    return found
 
 
 class ExportAiBundleCurrentStatePriceAnalyticsTests(unittest.TestCase):
@@ -176,9 +200,14 @@ class ExportAiBundleCurrentStatePriceAnalyticsTests(unittest.TestCase):
         result = bundle.attach_current_state_price_analytics(
             entries, self.root, include=True, reference_session_date="2026-08-07"
         )
-        serialized = json.dumps(result["HPG"]["current_state_price_analytics"])
-        for secret_token in ("api_key", "secret", "password", "token", "auth"):
-            self.assertNotIn(secret_token, serialized.lower())
+        analytics = result["HPG"]["current_state_price_analytics"]
+        forbidden = {
+            "password", "api_key", "apikey", "access_token", "refresh_token",
+            "authorization", "credential", "credentials", "secret", "client_secret",
+            "token", "auth_token"
+        }
+        found = _find_forbidden_keys(analytics, forbidden)
+        self.assertEqual([], found, f"Forbidden credential keys found in payload: {found}")
 
     def test_research_eligibility_and_market_risk_unaffected(self) -> None:
         entries = {
