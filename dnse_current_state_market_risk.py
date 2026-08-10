@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import dnse_current_state_price_analytics as price_analytics
@@ -441,6 +442,85 @@ def build_current_state_market_risk_report(
         benchmark_id, benchmark_raw_ohlc, runtime_root=runtime_root, fetch_provenance=fetch_provenance,
     )
     return compute_current_state_beta_correlation(stock_report, benchmark_series)
+
+
+# --------------------------------------------------------------------- offline bundle-attachment entry point
+
+# Evidence lives in the workspace-level operations-review/ directory (a sibling
+# of this repo checkout), not under STOCK_LOOKUP_RUNTIME_ROOT -- the same two
+# files already retained by the DNSE current-state price-analytics and index
+# return-series qualification milestones, reused here rather than re-fetched.
+# This is a known, deliberate characteristic (not a network dependency): if
+# that evidence is ever archived/moved, callers here fail closed (a missing
+# file yields raw_ohlc=None, which flows into the normal ineligible/no-payload
+# path -- see build_shadow_report / build_index_return_series), they do not
+# crash and never fall back to a live DNSE fetch.
+_WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_STOCK_EVIDENCE_PATH = (
+    _WORKSPACE_ROOT / "operations-review" / "dnse-current-state-price-analytics-20260810"
+    / "probe_results.json"
+)
+DEFAULT_BENCHMARK_EVIDENCE_PATH = (
+    _WORKSPACE_ROOT / "operations-review" / "dnse-index-return-series-qualification-20260810"
+    / "probe_results.json"
+)
+
+
+def _find_ohlc_result(evidence: Mapping[str, Any], symbol: str) -> dict[str, Any] | None:
+    """The first ok `ohlc` result in `evidence` whose requested symbol matches
+    `symbol` (case-insensitive). Independent, root-level copy of the same
+    logic already established in `tools/dnse_current_state_market_risk_shadow.py`
+    -- kept separate rather than imported so this module (and anything
+    importing it, e.g. `export_ai_bundle.py`) never depends on `tools/`."""
+    normalized = str(symbol).strip().upper()
+    for result in evidence.get("results", []):
+        if result.get("capability") != "ohlc" or not result.get("ok"):
+            continue
+        query_symbol = str((result.get("query_sent") or {}).get("symbol", "")).strip().upper()
+        if query_symbol == normalized:
+            return result
+    return None
+
+
+def _load_raw_ohlc_from_evidence(evidence_path: Path, symbol: str) -> dict[str, Any] | None:
+    """Read-only, no network: returns the raw OHLC payload for `symbol` from a
+    retained probe-evidence JSON file, or None if the file/symbol is absent."""
+    if not evidence_path.exists():
+        return None
+    evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    ohlc_result = _find_ohlc_result(evidence, symbol)
+    return ohlc_result.get("body_redacted") if ohlc_result else None
+
+
+def build_current_state_market_risk_from_retained_evidence(
+    ticker: str,
+    benchmark_id: str = "VNINDEX",
+    *,
+    runtime_root: Any,
+    stock_evidence_path: Path = DEFAULT_STOCK_EVIDENCE_PATH,
+    benchmark_evidence_path: Path = DEFAULT_BENCHMARK_EVIDENCE_PATH,
+) -> dict[str, Any]:
+    """Offline, network-free entry point for bundle attachment (Step 8 of the
+    integration milestone): reads raw OHLC directly from the two probe
+    evidence files already retained by the prior DNSE qualification
+    milestones -- never fetches anything live, never reads secrets.env.
+    Delegates all qualification and math to
+    ``build_current_state_market_risk_report`` /
+    ``compute_current_state_beta_correlation`` -- nothing here recomputes a
+    formula. A ticker/benchmark absent from its evidence file (e.g. every
+    non-HPG production ticker) simply resolves ``raw_ohlc=None``, which the
+    downstream contract already handles as an expected, fail-closed
+    "no payload" case -- not an error here.
+    """
+    stock_raw = _load_raw_ohlc_from_evidence(stock_evidence_path, ticker)
+    benchmark_raw = _load_raw_ohlc_from_evidence(benchmark_evidence_path, benchmark_id)
+    return build_current_state_market_risk_report(
+        ticker, benchmark_id, stock_raw, benchmark_raw, runtime_root=runtime_root,
+        fetch_provenance={
+            "stock_evidence_path": str(stock_evidence_path),
+            "benchmark_evidence_path": str(benchmark_evidence_path),
+        },
+    )
 
 
 def serialize(record: Mapping[str, Any]) -> str:

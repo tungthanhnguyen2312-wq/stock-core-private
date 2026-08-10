@@ -119,6 +119,7 @@ from canonical_financial_qualification_policy import load_evidence_index
 from canonical_conflict_decomposition import coverage_summary as canonical_conflict_coverage_summary
 from distribution_evidence import build_distribution_evidence_for_ticker
 from dnse_foreign_flow_store import build_series as build_dnse_foreign_flow_series
+from dnse_current_state_market_risk import build_current_state_market_risk_from_retained_evidence
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
     build_historical_fundamental_brief,
@@ -2734,6 +2735,78 @@ def attach_dnse_foreign_flow(
 
 
 # ==========================================================================
+# Current-state market risk (HPG x VNINDEX) — opt-in (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-current-state-market-risk). Delegates all
+# qualification and beta/correlation math to dnse_current_state_market_risk.py
+# -- this attach layer never recomputes a formula, only shapes the already-
+# complete contract result and adds a bundle-common "status" convenience
+# field (available/not_qualified), the same vocabulary used elsewhere in this
+# module. Offline: reads the two already-retained DNSE probe-evidence files
+# via build_current_state_market_risk_from_retained_evidence(), never a live
+# network call. Deliberately a separate top-level key from
+# tickers[ticker].risk_analysis.market_risk (risk_liquidity.py's
+# point-in-time-labelled section, untouched) -- current_state_market_risk
+# uses a different name specifically so PIT=false is unambiguous.
+
+def build_current_state_market_risk_for_ticker_safe(
+    ticker: str, root: Path,
+) -> dict[str, Any] | None:
+    """Fail-closed wrapper: a local build failure for this ticker returns None
+    (so no current_state_market_risk key is attached for it) and never raises
+    into the caller's per-ticker loop or corrupts any other field on this or
+    any other ticker's entry."""
+    try:
+        result = build_current_state_market_risk_from_retained_evidence(
+            ticker, "VNINDEX", runtime_root=root,
+        )
+        result["status"] = (
+            "available" if result.get("qualification_status") == "CURRENT_STATE_BETA_CORRELATION_QUALIFIED"
+            else "not_qualified"
+        )
+        # Unconditional, never derived from qualification: this is a descriptive
+        # analytical capability, never a trading signal, regardless of whether a
+        # real beta/correlation was computed for this ticker.
+        result["is_actionable"] = False
+        # Top-level convenience copies of values already present inside
+        # aligned_sessions/beta -- re-exposed, never recomputed, so a bundle
+        # reader does not have to know the shadow contract's own nesting to
+        # find paired_return_count's companions or the shared sample_adequacy
+        # verdict (identical on beta and correlation by construction).
+        aligned = result.get("aligned_sessions") or {}
+        result["stock_return_count"] = aligned.get("stock_return_count")
+        result["benchmark_return_count"] = aligned.get("benchmark_return_count")
+        result["dropped_stock_sessions"] = aligned.get("dropped_stock_sessions")
+        result["dropped_benchmark_sessions"] = aligned.get("dropped_benchmark_sessions")
+        result["sample_adequacy"] = (result.get("beta") or {}).get("sample_adequacy")
+        return result
+    except Exception:
+        return None
+
+
+def attach_current_state_market_risk(
+    bundle_entries: dict[str, dict], root: Path, include: bool,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False): when include is
+    False, dnse_current_state_market_risk.py is never called and no
+    current_state_market_risk key is ever added -- current default bundle
+    behavior is preserved exactly. When True, attaches a
+    current_state_market_risk entry to every ticker: HPG resolves
+    status="available" with real beta/correlation; every other ticker
+    resolves status="not_qualified" (the underlying contract's own honest
+    fail-closed result -- never a fabricated zero beta/correlation). A ticker
+    whose build raises unexpectedly is skipped entirely (key absent), never
+    corrupting any other ticker's fields."""
+    if not include:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_current_state_market_risk_for_ticker_safe(tk, root)
+        if result is not None:
+            entry["current_state_market_risk"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # P1E — opt-in market-wide canonical financial facts (disabled by default)
 # ==========================================================================
 # New dedicated flag (--include-canonical-financial-facts). Reads the layer-3 store under
@@ -3186,6 +3259,19 @@ def main() -> int:
                              " contract). Currently retained for HPG,VNM,QNS only; other"
                              " tickers report status=\"missing\". Not enabled in any"
                              " default/production invocation.")
+    parser.add_argument("--include-current-state-market-risk", action="store_true",
+                        help="Opt-in, disabled by default: attach"
+                             " tickers[ticker].current_state_market_risk from"
+                             " dnse_current_state_market_risk.py -- HPG-vs-VNINDEX"
+                             " current-state (never point-in-time) beta/correlation,"
+                             " reusing the two already-retained DNSE probe-evidence"
+                             " files (no live network call, no formula recomputed"
+                             " here). Currently qualified for HPG only; every other"
+                             " ticker reports status=\"not_qualified\", never a"
+                             " fabricated beta/correlation. Distinct from the"
+                             " pre-existing tickers[ticker].risk_analysis.market_risk"
+                             " (point-in-time). Not enabled in any default/production"
+                             " invocation.")
     parser.add_argument("--include-canonical-financial-facts", action="store_true",
                         help="Opt-in, disabled by default (P1E): attach"
                              " tickers[ticker].canonical_financial_facts from the market-wide"
@@ -3446,6 +3532,9 @@ def main() -> int:
     # does not matter since nothing else reads tickers[ticker].foreign_flow.
     attach_dnse_foreign_flow(bundle_entries, runtime_root(), args.include_dnse_foreign_flow,
                              reference_session_date=latest_session)
+    # Own dedicated flag; order relative to the others does not matter since
+    # nothing else reads tickers[ticker].current_state_market_risk.
+    attach_current_state_market_risk(bundle_entries, runtime_root(), args.include_current_state_market_risk)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default

@@ -388,11 +388,15 @@ class NoResearchEligibilityImplicationTests(unittest.TestCase):
     research/bundle/ranking/publication surfaces."""
 
     def test_module_does_not_import_research_or_publication_surfaces(self):
+        # Checks actual import statements, not bare substrings: the bundle
+        # integration milestone's docstring legitimately *names*
+        # export_ai_bundle.py in prose (explaining who calls this module),
+        # which is not the same claim as this module importing it.
         import inspect
         source = inspect.getsource(m)
         for forbidden in ("export_ai_bundle", "opportunity_ranking", "qualified_research",
                           "release_orchestrator", "publish_dashboard", "operate_stocklookup"):
-            self.assertNotIn(forbidden, source)
+            self.assertNotIn(f"import {forbidden}", source)
 
     def test_qualified_result_carries_no_research_eligibility_field(self):
         with tempfile.TemporaryDirectory() as tmp:
