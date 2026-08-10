@@ -12,8 +12,11 @@ from unittest.mock import patch
 from dnse_market_data import MARKET_DATA_ENDPOINTS
 from tools.dnse_market_data_probe import (
     CREDENTIAL_INJECTION_REQUIRED,
+    CURRENT_STATE_TICKER,
+    CURRENT_STATE_WINDOW,
     PRICE_BASIS_EVENTS,
     build_call_plan,
+    build_current_state_call_plan,
     build_price_basis_call_plan,
     main,
     run,
@@ -77,6 +80,72 @@ class BuildPriceBasisCallPlanTests(unittest.TestCase):
         tickers_called = {e["query"]["symbol"] for e in ohlc_entries}
         self.assertEqual({event["ticker"] for event in PRICE_BASIS_EVENTS}, tickers_called)
         self.assertEqual(len(PRICE_BASIS_EVENTS), len(ohlc_entries))
+
+
+class BuildCurrentStateCallPlanTests(unittest.TestCase):
+    """DNSE current-state price-analytics milestone (2026-08-10): exactly one
+    bounded HPG ohlc call, resolution="1D", not overlapping the price-basis
+    qualification's own HPG event window."""
+
+    def test_every_planned_capability_is_on_the_allowlist(self):
+        for entry in build_current_state_call_plan():
+            self.assertIn(entry["capability"], MARKET_DATA_ENDPOINTS)
+
+    def test_plan_is_bounded_exactly_one_auth_plus_one_ohlc_call(self):
+        plan = build_current_state_call_plan()
+        self.assertEqual(2, len(plan))
+
+    def test_resolution_is_exactly_1D_never_the_broken_D_token(self):
+        ohlc_entries = [e for e in build_current_state_call_plan() if e["capability"] == "ohlc"]
+        self.assertEqual(1, len(ohlc_entries))
+        self.assertEqual("1D", ohlc_entries[0]["query"]["resolution"])
+        self.assertNotEqual("D", ohlc_entries[0]["query"]["resolution"])
+
+    def test_ticker_is_hpg_only(self):
+        ohlc_entries = [e for e in build_current_state_call_plan() if e["capability"] == "ohlc"]
+        self.assertEqual({CURRENT_STATE_TICKER}, {e["query"]["symbol"] for e in ohlc_entries})
+        self.assertEqual("HPG", CURRENT_STATE_TICKER)
+
+    def test_window_does_not_overlap_the_price_basis_hpg_event_window(self):
+        # The price-basis qualification's HPG window is 2026-05-15..2026-06-03
+        # (the 10% stock dividend ex-date). This milestone's window must be a
+        # separate, uneventful window, not a re-run of that qualification.
+        price_basis_hpg_window = next(e for e in PRICE_BASIS_EVENTS if e["ticker"] == "HPG")
+        self.assertGreater(CURRENT_STATE_WINDOW["from"], price_basis_hpg_window["window_to"])
+
+    def test_plan_is_deterministic_in_shape_across_calls(self):
+        first = [(e["capability"], e.get("symbol"), e.get("query")) for e in build_current_state_call_plan()]
+        second = [(e["capability"], e.get("symbol"), e.get("query")) for e in build_current_state_call_plan()]
+        self.assertEqual(first, second)
+
+    def test_window_stays_under_the_evidence_redaction_truncation_cap(self):
+        """Real trap hit during this milestone: dnse_market_data._bound_large_lists()
+        replaces any response list longer than 20 items with a
+        {"list_truncated": True, ...} summary in the *retained* evidence file
+        (the live response itself is unaffected) -- a first attempt at a
+        37-session window silently produced unusable truncated evidence. A
+        calendar-day span alone cannot prove the session count stays under
+        that cap (trading sessions are a subset of calendar days), so this
+        checks the actual real vn_stock.db-confirmed session count for this
+        exact window, not just that the dates look "modest"."""
+        import sqlite3
+
+        from runtime_paths import runtime_root
+
+        db_path = runtime_root() / "vn_stock.db"
+        if not db_path.exists():
+            self.skipTest("vn_stock.db not available in this environment")
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        try:
+            conn.execute("PRAGMA query_only = 1")
+            count = conn.execute(
+                "SELECT COUNT(DISTINCT date) FROM ohlcv WHERE ticker = ? AND date BETWEEN ? AND ?",
+                (CURRENT_STATE_TICKER, CURRENT_STATE_WINDOW["from"], CURRENT_STATE_WINDOW["to"]),
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        self.assertGreater(count, 0, "expected at least one retained HPG session in this window")
+        self.assertLessEqual(count, 20, "window session count must stay at/under the redaction truncation cap")
 
 
 class DryRunTests(unittest.TestCase):
@@ -144,6 +213,22 @@ class LiveModeTests(unittest.TestCase):
         self.assertEqual(len(build_call_plan()), len(calls))
         self.assertEqual(len(build_call_plan()), report["call_count"])
         self.assertEqual(report["call_count"], report["ok_count"])
+
+    def test_current_state_probe_makes_exactly_two_calls_auth_plus_ohlc(self):
+        calls = []
+
+        def fake_get(*_a, **_k):
+            calls.append(1)
+            return _FakeResponse(200, {"date": "2026-08-10", "o": [1], "h": [1], "l": [1],
+                                        "c": [1], "t": [1786000000], "v": [1]})
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"DNSE_API_KEY": "k", "DNSE_API_SECRET": "s"}, clear=True
+        ), patch("dnse_market_data._default_request_get", side_effect=fake_get):
+            report = run("current-state", out_dir=Path(tmp))
+        self.assertEqual(len(build_current_state_call_plan()), len(calls))
+        self.assertEqual(2, report["call_count"])
+        self.assertEqual("DNSE_AUTHENTICATION_PASS", report["status"])
 
     def test_evidence_file_never_contains_the_api_secret(self):
         def fake_get(*_a, **_k):

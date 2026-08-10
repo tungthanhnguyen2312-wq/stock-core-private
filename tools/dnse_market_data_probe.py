@@ -37,6 +37,18 @@ Three probe modes:
                    window of trading sessions before/at/after the event's own
                    ex-date. Its own evidence subdirectory. Read-only OHLC only;
                    no trading/account endpoint is reachable from this module.
+  --probe current-state
+                   DNSE current-state price-only analytics milestone: the auth
+                   check, then exactly 1 bounded resolution="1D" ohlc call for
+                   HPG (the only production-universe ticker with its own
+                   retained DNSE price-basis evidence event -- see
+                   dnse_ohlc_price_basis_capability.EVIDENCE_QUALIFIED_TICKERS),
+                   spanning a modest ~19-session window (2026-07-14 to
+                   2026-08-07, deliberately under the 20-item redaction-cap
+                   threshold -- see CURRENT_STATE_WINDOW) that excludes the
+                   2026-05-25 stock dividend event window already used for
+                   qualification, so this is a plain, uneventful current-state
+                   window. Its own evidence subdirectory. Read-only OHLC only.
 
 A failed auth check stops any mode before further authenticated calls.
 Without --live, prints the call plan and makes no network request at all.
@@ -72,6 +84,7 @@ DEFAULT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-market-data-qualific
 PIT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-bid-ask-foreign-flow-qualification-20260810"
 FOREIGN_VALUE_OUT_DIR = ROOT.parent / "operations-review" / "dnse-foreign-value-integration-20260810"
 PRICE_BASIS_OUT_DIR = ROOT.parent / "operations-review" / "dnse-ohlc-price-basis-qualification-20260810"
+CURRENT_STATE_OUT_DIR = ROOT.parent / "operations-review" / "dnse-current-state-price-analytics-20260810"
 
 _AUTH_CHECK_CALL = {"capability": "working_dates", "symbol": None, "query": {}}
 
@@ -297,6 +310,42 @@ def build_price_basis_call_plan() -> list[dict[str, Any]]:
     return plan
 
 
+# DNSE current-state price-only analytics milestone (2026-08-10). HPG is the only
+# production-universe ticker with its own retained DNSE OHLC price-basis evidence
+# event (dnse_ohlc_price_basis_capability.EVIDENCE_QUALIFIED_TICKERS) -- VCB also
+# qualifies but is not a Stock Lookup production-universe ticker, and this
+# milestone's own evidence needs no new VCB call (the already-retained
+# price-basis evidence is reused directly by the offline shadow-report step).
+# window_from/window_to are real vn_stock.db trading dates (19 sessions,
+# confirmed gap-free for HPG) chosen to deliberately NOT overlap the
+# 2026-05-25 stock-dividend event window already used for price-basis
+# qualification, so this is a plain, uneventful current-state window -- not a
+# re-run of that qualification. Deliberately kept under 20 sessions: a wider
+# window's o/h/l/c/t/v arrays each exceed dnse_market_data._bound_large_lists()'s
+# 20-item cap and get replaced with a {"list_truncated": True, ...} summary in
+# the *retained* evidence file (the live response itself is unaffected) --
+# confirmed empirically during this milestone (a first attempt at a 37-session
+# window produced unusable truncated evidence).
+CURRENT_STATE_TICKER = "HPG"
+CURRENT_STATE_WINDOW = {"from": "2026-07-14", "to": "2026-08-07"}
+
+
+def build_current_state_call_plan() -> list[dict[str, Any]]:
+    """Exactly 1 bounded ohlc call beyond the mandatory auth check -- HPG only,
+    resolution="1D" (the only working daily-bar token), CURRENT_STATE_WINDOW.
+    No sweep, no other ticker: VCB's already-retained price-basis evidence is
+    reused offline instead of being re-fetched."""
+    from_ts, to_ts = _date_window_epoch(CURRENT_STATE_WINDOW["from"], CURRENT_STATE_WINDOW["to"])
+    return [
+        dict(_AUTH_CHECK_CALL, family_note="calendar"),
+        {"capability": "ohlc", "symbol": None,
+         "query": {"type": "STOCK", "symbol": CURRENT_STATE_TICKER, "resolution": "1D",
+                   "from": from_ts, "to": to_ts},
+         "pit_label": f"current_state_{CURRENT_STATE_TICKER}_{CURRENT_STATE_WINDOW['from'].replace('-', '_')}"
+                      f"_{CURRENT_STATE_WINDOW['to'].replace('-', '_')}"},
+    ]
+
+
 def _run_one(entry: dict[str, Any], api_key: str, api_secret: str) -> dict[str, Any]:
     result = request_capability(
         entry["capability"], api_key=api_key, api_secret=api_secret,
@@ -314,6 +363,7 @@ _PLAN_BY_MODE = {
     "pit": build_point_in_time_call_plan,
     "foreign-value": build_foreign_value_call_plan,
     "price-basis": build_price_basis_call_plan,
+    "current-state": build_current_state_call_plan,
 }
 
 
@@ -406,6 +456,7 @@ _DEFAULT_OUT_DIR_BY_MODE = {
     "pit": PIT_OUT_DIR,
     "foreign-value": FOREIGN_VALUE_OUT_DIR,
     "price-basis": PRICE_BASIS_OUT_DIR,
+    "current-state": CURRENT_STATE_OUT_DIR,
 }
 
 
@@ -413,7 +464,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true",
                          help="Actually call the network. Without this, only the call plan is printed.")
-    parser.add_argument("--probe", choices=("auth", "matrix", "pit", "foreign-value", "price-basis"), default="auth")
+    parser.add_argument("--probe",
+                         choices=("auth", "matrix", "pit", "foreign-value", "price-basis", "current-state"),
+                         default="auth")
     parser.add_argument("--out-dir", default=None)
     args = parser.parse_args(argv)
     out_dir = Path(args.out_dir) if args.out_dir else _DEFAULT_OUT_DIR_BY_MODE[args.probe]

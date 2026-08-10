@@ -8,6 +8,7 @@ from dnse_ohlc_price_basis_capability import (
     ADJUSTED_PATTERN,
     CONDITIONALLY_ADJUSTED,
     EVIDENCE_EVENTS,
+    EVIDENCE_QUALIFIED_TICKERS,
     INCONCLUSIVE,
     INCONCLUSIVE_PATTERN,
     PRICE_BASIS_VERDICTS,
@@ -23,8 +24,10 @@ from dnse_ohlc_price_basis_capability import (
     classify_cross_reference_ratio,
     classify_internal_transition,
     combine_event_verdicts,
+    current_state_eligibility,
     field_ratios,
     serialize,
+    ticker_current_state_eligible,
 )
 
 # Shape-matched to the real retained corporate_event_records rows
@@ -302,6 +305,77 @@ class ActiveContractReproducesRealEvidenceTests(unittest.TestCase):
         reproduced = combine_event_verdicts([hpg_pattern, vcb_pattern])
         self.assertEqual(ADJUSTED_CONFIRMED, reproduced)
         self.assertEqual(reproduced, active_capability_contract()["price_basis"])
+
+
+class CurrentStateTickerEligibilityTests(unittest.TestCase):
+    """DNSE current-state price-analytics milestone (2026-08-10), Step 2/11: the
+    contract is evidence-bounded to the tickers actually tested, not source-wide
+    by action type -- a ticker must have its OWN retained evidence event."""
+
+    def test_evidence_qualified_tickers_matches_evidence_events_exactly(self):
+        self.assertEqual({"HPG", "VCB"}, set(EVIDENCE_QUALIFIED_TICKERS))
+        self.assertEqual(
+            {event["ticker"] for event in EVIDENCE_EVENTS}, set(EVIDENCE_QUALIFIED_TICKERS)
+        )
+
+    def test_hpg_is_eligible(self):
+        self.assertTrue(ticker_current_state_eligible("HPG"))
+
+    def test_vcb_is_eligible_as_evidence_ticker(self):
+        # VCB qualifies on the price-basis axis; production-universe membership
+        # is a separate, independent axis this module does not decide.
+        self.assertTrue(ticker_current_state_eligible("VCB"))
+
+    def test_eligibility_is_case_and_whitespace_insensitive(self):
+        self.assertTrue(ticker_current_state_eligible(" hpg "))
+
+    def test_unevidenced_production_ticker_is_not_eligible(self):
+        for ticker in ("VNM", "QNS", "POW", "SSI", "EVF", "PAN", "PNJ", "FPT", "PVD", "NVL"):
+            self.assertFalse(
+                ticker_current_state_eligible(ticker),
+                f"{ticker} has no retained DNSE OHLC price-basis evidence event",
+            )
+
+    def test_a_qualified_action_type_alone_does_not_imply_ticker_eligibility(self):
+        # The trap this gate exists to prevent: VNM could in principle undergo a
+        # cash_dividend (a QUALIFIED_ACTION_TYPES member) without thereby
+        # inheriting HPG/VCB's evidence.
+        self.assertTrue(action_type_qualified("cash_dividend"))
+        self.assertFalse(ticker_current_state_eligible("VNM"))
+
+    def test_eligibility_fails_closed_if_current_analysis_safety_flag_is_false(self):
+        import dnse_ohlc_price_basis_capability as module
+
+        original = module.CURRENT_ANALYSIS_PRICE_BASIS_SAFE
+        module.CURRENT_ANALYSIS_PRICE_BASIS_SAFE = False
+        try:
+            self.assertFalse(ticker_current_state_eligible("HPG"))
+        finally:
+            module.CURRENT_ANALYSIS_PRICE_BASIS_SAFE = original
+
+    def test_current_state_eligibility_record_for_hpg(self):
+        record = current_state_eligibility("hpg")
+        self.assertEqual("HPG", record["ticker"])
+        self.assertTrue(record["eligible_for_current_state_price_analytics"])
+        self.assertEqual("QUALIFIED_FOR_DNSE_CURRENT_STATE_PRICE_ANALYTICS", record["status"])
+        self.assertEqual("stock_dividend_bonus_issue", record["evidence_action_type"])
+        self.assertIsNone(record["reason"])
+
+    def test_current_state_eligibility_record_for_unqualified_ticker(self):
+        record = current_state_eligibility("VNM")
+        self.assertFalse(record["eligible_for_current_state_price_analytics"])
+        self.assertEqual("NOT_QUALIFIED_FOR_DNSE_PRICE_ANALYTICS", record["status"])
+        self.assertEqual(
+            "no_retained_evidence_event_for_this_ticker_coverage_generalization_not_authorized",
+            record["reason"],
+        )
+        self.assertIsNone(record["evidence_action_type"])
+
+    def test_eligibility_record_is_json_serializable_and_secret_free(self):
+        dumped = serialize(current_state_eligibility("HPG")).lower()
+        for forbidden in ("token", "secret", "signature", "authorization", "x-api-key",
+                          "cookie", "api_key", "api_secret", "bearer"):
+            self.assertNotIn(forbidden, dumped)
 
 
 if __name__ == "__main__":

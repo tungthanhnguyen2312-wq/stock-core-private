@@ -169,6 +169,14 @@ EVIDENCE_EVENTS: tuple[dict[str, Any], ...] = (
     },
 )
 
+# Ticker-level half of the evidence-bounded contract, derived from EVIDENCE_EVENTS so
+# it cannot drift from what was actually tested. QUALIFIED_ACTION_TYPES alone answers
+# "which event types were tested"; it is not a ticker-level eligibility gate -- this
+# module's own WARNINGS are explicit that coverage does not generalize beyond the two
+# tickers actually evidenced, even for another ticker's own qualified-shaped action
+# (DNSE current-state price-analytics milestone, 2026-08-10, Step 2).
+EVIDENCE_QUALIFIED_TICKERS = frozenset(event["ticker"] for event in EVIDENCE_EVENTS)
+
 
 class DnseOhlcPriceBasisError(ValueError):
     """Fail-closed rejection for an out-of-vocabulary or unearned price-basis claim."""
@@ -327,6 +335,67 @@ def action_type_qualified(action_type: str) -> bool:
     explicitly in QUALIFIED_ACTION_TYPES -- no inference, no partial credit,
     no generalization from a similarly-shaped event type."""
     return action_type in QUALIFIED_ACTION_TYPES
+
+
+# --------------------------------------------------------------------- current-state eligibility
+
+def ticker_current_state_eligible(ticker: str) -> bool:
+    """Fail-closed ticker-level gate for DNSE current-state price analytics
+    (returns, volatility, drawdown, technical indicators over the currently
+    queryable adjusted series -- never a PIT/backtest claim).
+
+    True only when BOTH hold: (1) CURRENT_ANALYSIS_PRICE_BASIS_SAFE is still
+    True, and (2) `ticker` has its own retained evidence event in
+    EVIDENCE_EVENTS. This is deliberately narrower than `action_type_qualified()`:
+    a ticker undergoing a qualified-shaped action type (e.g. some other
+    ticker's own stock dividend) does NOT thereby qualify -- this module's own
+    WARNINGS explicitly forbid generalizing coverage beyond the two tickers
+    actually evidenced. A caller must not bypass this by calling
+    `action_type_qualified()` alone and skipping the ticker check.
+    """
+    if not CURRENT_ANALYSIS_PRICE_BASIS_SAFE:
+        return False
+    return str(ticker).strip().upper() in EVIDENCE_QUALIFIED_TICKERS
+
+
+def current_state_eligibility(ticker: str) -> dict[str, Any]:
+    """The single, centralized eligibility record for "can DNSE current-state
+    price analytics run for this ticker" -- callers should read this rather
+    than re-deriving ticker scope in analytical code (no scattered per-ticker
+    exceptions). Always returns a record; never raises for an ineligible
+    ticker, since "not qualified" is an expected, common outcome, not an
+    error."""
+    normalized = str(ticker).strip().upper()
+    eligible = ticker_current_state_eligible(normalized)
+    record: dict[str, Any] = {
+        "ticker": normalized,
+        "eligible_for_current_state_price_analytics": eligible,
+        "qualification_scope": "evidence_bounded_ticker_and_action_type",
+        "price_basis_contract_version": SOURCE_CONTRACT_VERSION,
+    }
+    if eligible:
+        event = next(e for e in EVIDENCE_EVENTS if e["ticker"] == normalized)
+        record.update(
+            status="QUALIFIED_FOR_DNSE_CURRENT_STATE_PRICE_ANALYTICS",
+            reason=None,
+            evidence_action_type=event["event_type"],
+            evidence_exright_date=event["exright_date"],
+            evidence_record_id=event["record_id"],
+        )
+    else:
+        reason = (
+            "current_analysis_price_basis_safe_is_false"
+            if not CURRENT_ANALYSIS_PRICE_BASIS_SAFE
+            else "no_retained_evidence_event_for_this_ticker_coverage_generalization_not_authorized"
+        )
+        record.update(
+            status="NOT_QUALIFIED_FOR_DNSE_PRICE_ANALYTICS",
+            reason=reason,
+            evidence_action_type=None,
+            evidence_exright_date=None,
+            evidence_record_id=None,
+        )
+    return record
 
 
 def serialize(record: Mapping[str, Any]) -> str:
