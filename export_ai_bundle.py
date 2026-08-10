@@ -120,6 +120,7 @@ from canonical_conflict_decomposition import coverage_summary as canonical_confl
 from distribution_evidence import build_distribution_evidence_for_ticker
 from dnse_foreign_flow_store import build_series as build_dnse_foreign_flow_series
 from dnse_current_state_market_risk import build_current_state_market_risk_from_evidence_store
+from dnse_current_state_price_analytics import build_current_state_price_analytics_from_evidence_store
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
     build_historical_fundamental_brief,
@@ -2822,6 +2823,38 @@ def attach_current_state_market_risk(
     return bundle_entries
 
 
+def build_current_state_price_analytics_for_ticker_safe(
+    ticker: str, root: Path, reference_session_date: str | None = None,
+) -> dict[str, Any] | None:
+    try:
+        result = build_current_state_price_analytics_from_evidence_store(
+            ticker, runtime_root=root, reference_session_date=reference_session_date,
+        )
+        if result is None:
+            return None
+        result["status"] = (
+            "available" if result.get("status") == "QUALIFIED_FOR_DNSE_CURRENT_STATE_PRICE_ANALYTICS"
+            else "not_qualified"
+        )
+        result["is_actionable"] = False
+        return result
+    except Exception:
+        return None
+
+
+def attach_current_state_price_analytics(
+    bundle_entries: dict[str, dict], root: Path, include: bool,
+    reference_session_date: str | None = None,
+) -> dict[str, dict]:
+    if not include:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_current_state_price_analytics_for_ticker_safe(tk, root, reference_session_date)
+        if result is not None:
+            entry["current_state_price_analytics"] = result
+    return bundle_entries
+
+
 # ==========================================================================
 # P1E — opt-in market-wide canonical financial facts (disabled by default)
 # ==========================================================================
@@ -3288,6 +3321,14 @@ def main() -> int:
                              " pre-existing tickers[ticker].risk_analysis.market_risk"
                              " (point-in-time). Not enabled in any default/production"
                              " invocation.")
+    parser.add_argument("--include-current-state-price-analytics", action="store_true",
+                        help="Opt-in, disabled by default: attach"
+                             " tickers[ticker].current_state_price_analytics from"
+                             " dnse_current_state_price_analytics.py -- standalone"
+                             " current-state price/technical analytics (returns,"
+                             " volatility, drawdown, RSI14, SMA20), reusing the"
+                             " durable retained DNSE OHLC store. Qualified for HPG"
+                             " only; every other ticker reports status=\"not_qualified\".")
     parser.add_argument("--include-canonical-financial-facts", action="store_true",
                         help="Opt-in, disabled by default (P1E): attach"
                              " tickers[ticker].canonical_financial_facts from the market-wide"
@@ -3552,6 +3593,8 @@ def main() -> int:
     # nothing else reads tickers[ticker].current_state_market_risk.
     attach_current_state_market_risk(bundle_entries, runtime_root(), args.include_current_state_market_risk,
                                      reference_session_date=latest_session)
+    attach_current_state_price_analytics(bundle_entries, runtime_root(), args.include_current_state_price_analytics,
+                                         reference_session_date=latest_session)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default

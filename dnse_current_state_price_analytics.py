@@ -478,3 +478,54 @@ def serialize(report: Mapping[str, Any]) -> str:
     """Deterministic JSON serialization -- same input always produces the
     same bytes, so a caller can hash/compare/replay a retained report."""
     return json.dumps(report, sort_keys=True, default=str)
+
+
+def build_current_state_price_analytics_from_evidence_store(
+    ticker: str,
+    *,
+    runtime_root: Path | str | None = None,
+    reference_session_date: str | None = None,
+    include_technical_indicators: bool = True,
+) -> dict[str, Any]:
+    """Pure canonical builder for exporter/bundle layers: reads durable retained
+    OHLC evidence from the evidence store beneath `runtime_root` and runs
+    `build_shadow_report()`.
+
+    Never makes a live network call, never reads secrets.env, never calls a CLI
+    or shadow wrapper module.
+    """
+    normalized_ticker = str(ticker).strip().upper()
+    if not price_basis.ticker_current_state_eligible(normalized_ticker):
+        return build_shadow_report(
+            normalized_ticker, None, runtime_root=runtime_root,
+            fetch_provenance={"evidence_source": "not_qualified_ticker"},
+            include_technical_indicators=include_technical_indicators,
+        )
+
+    if runtime_root is None:
+        return build_shadow_report(
+            normalized_ticker, None, runtime_root=None,
+            fetch_provenance={"evidence_source": "no_runtime_root_provided"},
+            include_technical_indicators=include_technical_indicators,
+        )
+
+    import dnse_market_risk_evidence_store as evidence_store
+    stock_record = None
+    try:
+        stock_record = evidence_store.read_stock_ohlc(runtime_root, normalized_ticker)
+    except Exception:
+        stock_record = None
+
+    raw_ohlc = stock_record.get("raw_ohlc") if stock_record else None
+    evidence_source = "dnse_market_risk_evidence_store" if stock_record else "not_retained_or_malformed"
+
+    report = build_shadow_report(
+        normalized_ticker, raw_ohlc, runtime_root=runtime_root,
+        fetch_provenance={"evidence_source": evidence_source},
+        include_technical_indicators=include_technical_indicators,
+    )
+    if reference_session_date and report.get("as_of_session") and report["as_of_session"] != reference_session_date:
+        report["warnings"] = list(report.get("warnings") or []) + [
+            "retained_price_analytics_evidence_as_of_session_mismatch_with_release_reference_session"
+        ]
+    return report
