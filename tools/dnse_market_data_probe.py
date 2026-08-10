@@ -7,14 +7,22 @@ milestone this supports. This tool never reads `secrets.env`; it consumes
 from the process environment only (see `dnse_access.py`), and every response
 it writes or prints is redacted first (see `dnse_market_data.py`).
 
-Two probe modes:
+Three probe modes:
   --probe auth    Phase C: the single smallest authenticated read-only call
                    (`/market/working-dates`). Stops here regardless of result.
   --probe matrix  Phase D: the auth check, then -- only if it passes -- the
                    full bounded capability plan across HPG/VNM/QNS and
                    VNINDEX/VN30. A failed auth check stops the run before any
                    further authenticated call is attempted.
+  --probe pit     Bid-ask/foreign-flow follow-on milestone: the auth check,
+                   then a small bounded set of calls specifically aimed at
+                   testing point-in-time semantics (does a historical-window
+                   query return genuinely different, correctly-scoped data,
+                   or always just the current state?) and T-board depth
+                   existence. Writes to its own evidence subdirectory so it
+                   never overwrites the general-qualification evidence.
 
+A failed auth check stops any mode before further authenticated calls.
 Without --live, prints the call plan and makes no network request at all.
 """
 from __future__ import annotations
@@ -45,12 +53,30 @@ INDEX_SYMBOLS: tuple[str, ...] = ("VNINDEX", "VN30")
 # above this Producer repo's own root, not the untracked same-named folder
 # that has accumulated inside stock-core-private itself.
 DEFAULT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-market-data-qualification-20260810"
+PIT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-bid-ask-foreign-flow-qualification-20260810"
 
 _AUTH_CHECK_CALL = {"capability": "working_dates", "symbol": None, "query": {}}
+
+# The general qualification pass (2026-08-10) found a fully closed prior session
+# at 2026-08-07 with real vn_stock.db-cross-checked data -- reused here as the
+# fixed "past session" reference point for point-in-time testing, rather than
+# re-deriving a new one, so this stays a small bounded addition to that pass.
+PAST_SESSION_DATE = "2026-08-07"
 
 
 def _epoch(dt) -> int:
     return int(dt.timestamp())
+
+
+def _session_window_epoch(date_str: str) -> tuple[int, int]:
+    """The [00:00, 23:59:59] Asia/Ho_Chi_Minh window for a calendar date, as
+    epoch seconds -- a same-day-sized window, which is what every history
+    endpoint accepted in the general qualification pass."""
+    from datetime import datetime
+
+    start = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=vn_time.VN_TZ)
+    end = start + timedelta(days=1) - timedelta(seconds=1)
+    return _epoch(start), _epoch(end)
 
 
 def build_call_plan() -> list[dict[str, Any]]:
@@ -119,6 +145,54 @@ def build_call_plan() -> list[dict[str, Any]]:
     return plan
 
 
+def build_point_in_time_call_plan() -> list[dict[str, Any]]:
+    """A small, fixed, bounded plan answering exactly two open questions from
+    the general qualification pass: (1) does a "historical" quotes/foreign-
+    trading query genuinely return a different, correctly-scoped past state,
+    or always just today's current state relabelled; (2) does bid/ask depth
+    exist on a T-board (the put-through/negotiated hypothesis's boards), or
+    only on G-boards. Reuses PAST_SESSION_DATE as the one prior closed
+    session already cross-checked against vn_stock.db in the prior milestone.
+    """
+    now = vn_time.vn_now()
+    to_recent, from_recent = _epoch(now), _epoch(now - timedelta(minutes=90))
+    from_early, to_early = _epoch(
+        now.replace(hour=9, minute=0, second=0, microsecond=0)
+    ), _epoch(now.replace(hour=10, minute=30, second=0, microsecond=0))
+    from_past, to_past = _session_window_epoch(PAST_SESSION_DATE)
+
+    plan: list[dict[str, Any]] = [dict(_AUTH_CHECK_CALL, family_note="calendar")]
+
+    # (2) T-board depth existence -- explicit boardId, never tried in the
+    # general pass (which only ever omitted boardId).
+    plan.append({"capability": "quotes_latest", "symbol": "HPG", "query": {"boardId": "T1"}})
+
+    # (1) point-in-time: three quotes-history windows for the same ticker --
+    # "recent" (last 90 min), "early-today" (session open), and "past-session"
+    # (the fully closed 2026-08-07 day). If early-today and recent return
+    # different book contents, same-day time-scoping is real. If past-session
+    # returns 2026-08-07-shaped data (not today's), cross-session point-in-time
+    # is real; if it 400s, errors, or silently returns today's book, it is not.
+    plan.append({"capability": "quotes_history", "symbol": "HPG",
+                 "query": {"limit": 5, "order": "DESC", "from": from_recent, "to": to_recent},
+                 "pit_label": "recent_90min"})
+    plan.append({"capability": "quotes_history", "symbol": "HPG",
+                 "query": {"limit": 5, "order": "ASC", "from": from_early, "to": to_early},
+                 "pit_label": "early_today"})
+    plan.append({"capability": "quotes_history", "symbol": "HPG",
+                 "query": {"limit": 5, "order": "DESC", "from": from_past, "to": to_past},
+                 "pit_label": "past_session_2026_08_07"})
+
+    # (1) same test for foreign-trading, all three tickers, past session only
+    # -- the general pass already has today's window for all three, so only
+    # the past-session leg is new.
+    for symbol in TICKERS:
+        plan.append({"capability": "foreign_trading", "symbol": symbol,
+                     "query": {"limit": 5, "order": "DESC", "from": from_past, "to": to_past},
+                     "pit_label": "past_session_2026_08_07"})
+    return plan
+
+
 def _run_one(entry: dict[str, Any], api_key: str, api_secret: str) -> dict[str, Any]:
     result = request_capability(
         entry["capability"], api_key=api_key, api_secret=api_secret,
@@ -126,7 +200,12 @@ def _run_one(entry: dict[str, Any], api_key: str, api_secret: str) -> dict[str, 
     )
     if result.get("ok") and "body_redacted" in result:
         result["schema"] = top_level_schema(result["body_redacted"])
+    if "pit_label" in entry:
+        result["pit_label"] = entry["pit_label"]
     return result
+
+
+_PLAN_BY_MODE = {"matrix": build_call_plan, "pit": build_point_in_time_call_plan}
 
 
 def run(mode: str, *, out_dir: Path) -> dict[str, Any]:
@@ -157,9 +236,10 @@ def run(mode: str, *, out_dir: Path) -> dict[str, Any]:
         _write_evidence(out_dir, report)
         return report
 
-    # mode == "matrix": auth already passed above; run the rest of the bounded plan.
+    # mode in {"matrix", "pit"}: auth already passed above; run the rest of
+    # the selected bounded plan ([0] is the same working_dates call already run).
     results = [auth_result]
-    for entry in build_call_plan()[1:]:  # [0] is the same working_dates call already run
+    for entry in _PLAN_BY_MODE[mode]()[1:]:
         results.append(_run_one(entry, api_key, api_secret))
 
     ok_count = sum(1 for r in results if r.get("ok"))
@@ -186,11 +266,17 @@ def _write_evidence(out_dir: Path, report: dict[str, Any]) -> None:
 def _summary(report: dict[str, Any]) -> dict[str, Any]:
     """The compact, always-safe-to-print form -- full bodies stay in the evidence file."""
     by_family: dict[str, dict[str, int]] = {}
+    by_pit_label: dict[str, dict[str, Any]] = {}
     for r in report.get("results", []):
         fam = r.get("family", "auth")
         bucket = by_family.setdefault(fam, {"ok": 0, "failed": 0})
         bucket["ok" if r.get("ok") else "failed"] += 1
-    return {
+        if "pit_label" in r:
+            by_pit_label[f'{r["pit_label"]}:{r["capability"]}:{r.get("endpoint")}'] = {
+                "ok": r.get("ok"), "http_status": r.get("http_status"),
+                "error_code": r.get("error_code"),
+            }
+    summary = {
         "status": report["status"],
         "generated_at": report.get("generated_at"),
         "call_count": report.get("call_count", len(report.get("results", []))),
@@ -200,26 +286,34 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "auth_http_status": report.get("auth_check", {}).get("http_status"),
         "auth_error_code": report.get("auth_check", {}).get("error_code"),
     }
+    if by_pit_label:
+        summary["by_pit_label"] = by_pit_label
+    return summary
+
+
+_DEFAULT_OUT_DIR_BY_MODE = {"auth": DEFAULT_OUT_DIR, "matrix": DEFAULT_OUT_DIR, "pit": PIT_OUT_DIR}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true",
                          help="Actually call the network. Without this, only the call plan is printed.")
-    parser.add_argument("--probe", choices=("auth", "matrix"), default="auth")
-    parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR))
+    parser.add_argument("--probe", choices=("auth", "matrix", "pit"), default="auth")
+    parser.add_argument("--out-dir", default=None)
     args = parser.parse_args(argv)
+    out_dir = Path(args.out_dir) if args.out_dir else _DEFAULT_OUT_DIR_BY_MODE[args.probe]
 
     if not args.live:
+        plan = _PLAN_BY_MODE.get(args.probe, lambda: [dict(_AUTH_CHECK_CALL)])()
         print(json.dumps({"dry_run": True, "probe": args.probe,
-                          "call_plan": build_call_plan()}, indent=2, sort_keys=True, default=str))
+                          "call_plan": plan}, indent=2, sort_keys=True, default=str))
         return 0
 
     if credential_status()["configured"] is False:
         print(CREDENTIAL_INJECTION_REQUIRED)
         return 2
 
-    report = run(args.probe, out_dir=Path(args.out_dir))
+    report = run(args.probe, out_dir=out_dir)
     print(json.dumps(_summary(report), indent=2, sort_keys=True))
     if report["status"] == CREDENTIAL_INJECTION_REQUIRED:
         return 2
