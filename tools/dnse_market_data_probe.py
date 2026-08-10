@@ -27,6 +27,16 @@ Three probe modes:
                    the same 5 already-cross-checked trading sessions) feeding
                    tools/ingest_dnse_foreign_flow.py. Its own evidence
                    subdirectory.
+  --probe price-basis
+                   OHLC corporate-action price-basis qualification milestone:
+                   the auth check, then exactly 2 bounded resolution="1D" ohlc
+                   calls, one per already-qualified corporate-action event
+                   (HPG 2026-05-25 10% stock dividend, VCB 2026-07-23 450 VND
+                   cash dividend -- both from the retained corporate_event_records
+                   store, not discovered here), each spanning a small fixed
+                   window of trading sessions before/at/after the event's own
+                   ex-date. Its own evidence subdirectory. Read-only OHLC only;
+                   no trading/account endpoint is reachable from this module.
 
 A failed auth check stops any mode before further authenticated calls.
 Without --live, prints the call plan and makes no network request at all.
@@ -61,6 +71,7 @@ INDEX_SYMBOLS: tuple[str, ...] = ("VNINDEX", "VN30")
 DEFAULT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-market-data-qualification-20260810"
 PIT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-bid-ask-foreign-flow-qualification-20260810"
 FOREIGN_VALUE_OUT_DIR = ROOT.parent / "operations-review" / "dnse-foreign-value-integration-20260810"
+PRICE_BASIS_OUT_DIR = ROOT.parent / "operations-review" / "dnse-ohlc-price-basis-qualification-20260810"
 
 _AUTH_CHECK_CALL = {"capability": "working_dates", "symbol": None, "query": {}}
 
@@ -235,6 +246,57 @@ def build_foreign_value_call_plan() -> list[dict[str, Any]]:
     return plan
 
 
+# DNSE OHLC corporate-action price-basis qualification milestone (2026-08-10). Both
+# events are already retained under qualified corporate-action authority
+# (vn_stock.db's corporate_event_records, provider VCI, revision_status="observed")
+# and independently cited by the closed VCI price-basis investigation
+# (docs/DECISIONS.md, "The VCI historical series is not the as-quoted series") --
+# reused as-is, not discovered from provider data. window_from/window_to are
+# real vn_stock.db trading dates spanning 5+ sessions before and after each
+# ticker's own exright_date, read once from vn_stock.db (never inferred).
+PRICE_BASIS_EVENTS: tuple[dict[str, str], ...] = (
+    {
+        "ticker": "HPG", "event_code": "ISS", "exright_date": "2026-05-25",
+        "exercise_ratio": "0.1",  # 10% stock dividend: new_shares = old_shares * 1.1
+        "window_from": "2026-05-15", "window_to": "2026-06-03",
+    },
+    {
+        "ticker": "VCB", "event_code": "DIV", "exright_date": "2026-07-23",
+        "value_per_share_vnd": "450.0",  # cash dividend, absolute VND/share
+        "window_from": "2026-07-13", "window_to": "2026-07-31",
+    },
+)
+
+
+def _date_window_epoch(date_from: str, date_to: str) -> tuple[int, int]:
+    """[00:00 date_from, 23:59:59 date_to] Asia/Ho_Chi_Minh, as epoch seconds --
+    the same multi-day-window shape already proven to work for ohlc's
+    resolution="1D" token (unlike the same-day-only history endpoints)."""
+    from datetime import datetime
+
+    start = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=vn_time.VN_TZ)
+    end = (datetime.strptime(date_to, "%Y-%m-%d").replace(tzinfo=vn_time.VN_TZ)
+          + timedelta(days=1) - timedelta(seconds=1))
+    return _epoch(start), _epoch(end)
+
+
+def build_price_basis_call_plan() -> list[dict[str, Any]]:
+    """Exactly 2 bounded ohlc calls beyond the mandatory auth check -- one per
+    PRICE_BASIS_EVENTS entry, resolution="1D" (the only working daily-bar
+    token; "D" is accepted but returns null/empty per the general
+    qualification pass). No sweep, no per-session calls, no ticker or event
+    added beyond the fixed two already selected under qualified corporate-
+    action authority."""
+    plan: list[dict[str, Any]] = [dict(_AUTH_CHECK_CALL, family_note="calendar")]
+    for event in PRICE_BASIS_EVENTS:
+        from_ts, to_ts = _date_window_epoch(event["window_from"], event["window_to"])
+        plan.append({"capability": "ohlc", "symbol": None,
+                     "query": {"type": "STOCK", "symbol": event["ticker"], "resolution": "1D",
+                               "from": from_ts, "to": to_ts},
+                     "pit_label": f"price_basis_{event['ticker']}_{event['exright_date'].replace('-', '_')}"})
+    return plan
+
+
 def _run_one(entry: dict[str, Any], api_key: str, api_secret: str) -> dict[str, Any]:
     result = request_capability(
         entry["capability"], api_key=api_key, api_secret=api_secret,
@@ -251,6 +313,7 @@ _PLAN_BY_MODE = {
     "matrix": build_call_plan,
     "pit": build_point_in_time_call_plan,
     "foreign-value": build_foreign_value_call_plan,
+    "price-basis": build_price_basis_call_plan,
 }
 
 
@@ -342,6 +405,7 @@ _DEFAULT_OUT_DIR_BY_MODE = {
     "matrix": DEFAULT_OUT_DIR,
     "pit": PIT_OUT_DIR,
     "foreign-value": FOREIGN_VALUE_OUT_DIR,
+    "price-basis": PRICE_BASIS_OUT_DIR,
 }
 
 
@@ -349,7 +413,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true",
                          help="Actually call the network. Without this, only the call plan is printed.")
-    parser.add_argument("--probe", choices=("auth", "matrix", "pit", "foreign-value"), default="auth")
+    parser.add_argument("--probe", choices=("auth", "matrix", "pit", "foreign-value", "price-basis"), default="auth")
     parser.add_argument("--out-dir", default=None)
     args = parser.parse_args(argv)
     out_dir = Path(args.out_dir) if args.out_dir else _DEFAULT_OUT_DIR_BY_MODE[args.probe]

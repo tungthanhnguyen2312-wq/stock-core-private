@@ -10,7 +10,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from dnse_market_data import MARKET_DATA_ENDPOINTS
-from tools.dnse_market_data_probe import CREDENTIAL_INJECTION_REQUIRED, build_call_plan, main, run
+from tools.dnse_market_data_probe import (
+    CREDENTIAL_INJECTION_REQUIRED,
+    PRICE_BASIS_EVENTS,
+    build_call_plan,
+    build_price_basis_call_plan,
+    main,
+    run,
+)
 
 
 class _FakeResponse:
@@ -35,6 +42,41 @@ class BuildCallPlanTests(unittest.TestCase):
         first = [(e["capability"], e.get("symbol"), sorted(e.get("query", {}).keys())) for e in build_call_plan()]
         second = [(e["capability"], e.get("symbol"), sorted(e.get("query", {}).keys())) for e in build_call_plan()]
         self.assertEqual(first, second)
+
+
+class BuildPriceBasisCallPlanTests(unittest.TestCase):
+    def test_every_planned_capability_is_on_the_allowlist(self):
+        for entry in build_price_basis_call_plan():
+            self.assertIn(entry["capability"], MARKET_DATA_ENDPOINTS)
+
+    def test_plan_is_bounded_exactly_one_auth_plus_one_call_per_event(self):
+        plan = build_price_basis_call_plan()
+        self.assertEqual(1 + len(PRICE_BASIS_EVENTS), len(plan))
+
+    def test_resolution_is_exactly_1D_never_the_broken_D_token(self):
+        """"D" is accepted by the endpoint but returns null/empty arrays
+        (observed in the general qualification pass) -- an HTTP-200 silent
+        failure, not an error. Every ohlc entry in this plan must use "1D",
+        the only daily-bar token confirmed to return real rows."""
+        ohlc_entries = [e for e in build_price_basis_call_plan() if e["capability"] == "ohlc"]
+        self.assertEqual(len(PRICE_BASIS_EVENTS), len(ohlc_entries))
+        for entry in ohlc_entries:
+            self.assertEqual("1D", entry["query"]["resolution"])
+            self.assertNotEqual("D", entry["query"]["resolution"])
+
+    def test_plan_is_deterministic_in_shape_across_calls(self):
+        first = [(e["capability"], e.get("symbol"), e.get("query")) for e in build_price_basis_call_plan()]
+        second = [(e["capability"], e.get("symbol"), e.get("query")) for e in build_price_basis_call_plan()]
+        self.assertEqual(first, second)
+
+    def test_each_event_window_is_a_single_bounded_call_not_a_sweep(self):
+        """One call per event covers its whole window (ohlc accepts a wide
+        from/to range, unlike the same-day-only history endpoints) -- never
+        one call per session."""
+        ohlc_entries = [e for e in build_price_basis_call_plan() if e["capability"] == "ohlc"]
+        tickers_called = {e["query"]["symbol"] for e in ohlc_entries}
+        self.assertEqual({event["ticker"] for event in PRICE_BASIS_EVENTS}, tickers_called)
+        self.assertEqual(len(PRICE_BASIS_EVENTS), len(ohlc_entries))
 
 
 class DryRunTests(unittest.TestCase):
