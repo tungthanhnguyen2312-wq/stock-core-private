@@ -49,6 +49,18 @@ Three probe modes:
                    2026-05-25 stock dividend event window already used for
                    qualification, so this is a plain, uneventful current-state
                    window. Its own evidence subdirectory. Read-only OHLC only.
+  --probe index-return-series
+                   DNSE index return-series qualification milestone: the auth
+                   check, then exactly 2 bounded resolution="1D" ohlc calls for
+                   VNINDEX (type="INDEX"), both requesting the *same* 19-session
+                   window already used for HPG (2026-07-14 to 2026-08-07) --
+                   deliberately identical, not two different windows, so the
+                   two responses can be compared byte-for-byte as a direct
+                   empirical test of whether DNSE's index history is
+                   deterministic across repeated queries. Its own evidence
+                   subdirectory. Read-only OHLC only; VN30 is not queried here
+                   (structural evidence for it already exists from the general
+                   qualification pass).
 
 A failed auth check stops any mode before further authenticated calls.
 Without --live, prints the call plan and makes no network request at all.
@@ -85,6 +97,7 @@ PIT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-bid-ask-foreign-flow-qua
 FOREIGN_VALUE_OUT_DIR = ROOT.parent / "operations-review" / "dnse-foreign-value-integration-20260810"
 PRICE_BASIS_OUT_DIR = ROOT.parent / "operations-review" / "dnse-ohlc-price-basis-qualification-20260810"
 CURRENT_STATE_OUT_DIR = ROOT.parent / "operations-review" / "dnse-current-state-price-analytics-20260810"
+INDEX_RETURN_SERIES_OUT_DIR = ROOT.parent / "operations-review" / "dnse-index-return-series-qualification-20260810"
 
 _AUTH_CHECK_CALL = {"capability": "working_dates", "symbol": None, "query": {}}
 
@@ -346,6 +359,35 @@ def build_current_state_call_plan() -> list[dict[str, Any]]:
     ]
 
 
+# DNSE index return-series qualification milestone (2026-08-10). VNINDEX only
+# (Step 3: one qualified benchmark is sufficient; VN30 is not queried here).
+# Deliberately reuses CURRENT_STATE_WINDOW's exact dates so the same
+# vn_stock.db-confirmed 19-session, gap-free, sub-20-item calendar already
+# proven for HPG applies here too, without re-deriving a second window.
+INDEX_RETURN_SERIES_BENCHMARK = "VNINDEX"
+INDEX_RETURN_SERIES_WINDOW = dict(CURRENT_STATE_WINDOW)
+
+
+def build_index_return_series_call_plan() -> list[dict[str, Any]]:
+    """Auth check, then exactly 2 *identical* bounded ohlc calls for VNINDEX --
+    same window requested twice, deliberately, to empirically test whether
+    DNSE's index history is deterministic across repeated queries (Step 5
+    item 8), not to compare two different periods."""
+    from_ts, to_ts = _date_window_epoch(
+        INDEX_RETURN_SERIES_WINDOW["from"], INDEX_RETURN_SERIES_WINDOW["to"]
+    )
+    query = {"type": "INDEX", "symbol": INDEX_RETURN_SERIES_BENCHMARK, "resolution": "1D",
+             "from": from_ts, "to": to_ts}
+    label = (f"index_return_series_{INDEX_RETURN_SERIES_BENCHMARK}_"
+             f"{INDEX_RETURN_SERIES_WINDOW['from'].replace('-', '_')}_"
+             f"{INDEX_RETURN_SERIES_WINDOW['to'].replace('-', '_')}")
+    return [
+        dict(_AUTH_CHECK_CALL, family_note="calendar"),
+        {"capability": "ohlc", "symbol": None, "query": dict(query), "pit_label": f"{label}_call_1"},
+        {"capability": "ohlc", "symbol": None, "query": dict(query), "pit_label": f"{label}_call_2"},
+    ]
+
+
 def _run_one(entry: dict[str, Any], api_key: str, api_secret: str) -> dict[str, Any]:
     result = request_capability(
         entry["capability"], api_key=api_key, api_secret=api_secret,
@@ -364,6 +406,7 @@ _PLAN_BY_MODE = {
     "foreign-value": build_foreign_value_call_plan,
     "price-basis": build_price_basis_call_plan,
     "current-state": build_current_state_call_plan,
+    "index-return-series": build_index_return_series_call_plan,
 }
 
 
@@ -457,6 +500,7 @@ _DEFAULT_OUT_DIR_BY_MODE = {
     "foreign-value": FOREIGN_VALUE_OUT_DIR,
     "price-basis": PRICE_BASIS_OUT_DIR,
     "current-state": CURRENT_STATE_OUT_DIR,
+    "index-return-series": INDEX_RETURN_SERIES_OUT_DIR,
 }
 
 
@@ -465,7 +509,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--live", action="store_true",
                          help="Actually call the network. Without this, only the call plan is printed.")
     parser.add_argument("--probe",
-                         choices=("auth", "matrix", "pit", "foreign-value", "price-basis", "current-state"),
+                         choices=("auth", "matrix", "pit", "foreign-value", "price-basis", "current-state",
+                                  "index-return-series"),
                          default="auth")
     parser.add_argument("--out-dir", default=None)
     args = parser.parse_args(argv)

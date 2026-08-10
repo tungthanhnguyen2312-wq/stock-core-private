@@ -14,9 +14,12 @@ from tools.dnse_market_data_probe import (
     CREDENTIAL_INJECTION_REQUIRED,
     CURRENT_STATE_TICKER,
     CURRENT_STATE_WINDOW,
+    INDEX_RETURN_SERIES_BENCHMARK,
+    INDEX_RETURN_SERIES_WINDOW,
     PRICE_BASIS_EVENTS,
     build_call_plan,
     build_current_state_call_plan,
+    build_index_return_series_call_plan,
     build_price_basis_call_plan,
     main,
     run,
@@ -148,6 +151,48 @@ class BuildCurrentStateCallPlanTests(unittest.TestCase):
         self.assertLessEqual(count, 20, "window session count must stay at/under the redaction truncation cap")
 
 
+class BuildIndexReturnSeriesCallPlanTests(unittest.TestCase):
+    """DNSE index return-series qualification milestone (2026-08-10): exactly
+    2 *identical* bounded VNINDEX ohlc calls beyond the auth check -- same
+    window requested twice, to test data-source determinism, not two
+    different periods."""
+
+    def test_every_planned_capability_is_on_the_allowlist(self):
+        for entry in build_index_return_series_call_plan():
+            self.assertIn(entry["capability"], MARKET_DATA_ENDPOINTS)
+
+    def test_plan_is_bounded_exactly_one_auth_plus_two_ohlc_calls(self):
+        plan = build_index_return_series_call_plan()
+        self.assertEqual(3, len(plan))
+
+    def test_resolution_is_exactly_1D_never_the_broken_D_token(self):
+        ohlc_entries = [e for e in build_index_return_series_call_plan() if e["capability"] == "ohlc"]
+        self.assertEqual(2, len(ohlc_entries))
+        for entry in ohlc_entries:
+            self.assertEqual("1D", entry["query"]["resolution"])
+            self.assertNotEqual("D", entry["query"]["resolution"])
+
+    def test_benchmark_is_vnindex_only_type_index(self):
+        ohlc_entries = [e for e in build_index_return_series_call_plan() if e["capability"] == "ohlc"]
+        self.assertEqual({INDEX_RETURN_SERIES_BENCHMARK}, {e["query"]["symbol"] for e in ohlc_entries})
+        self.assertEqual("VNINDEX", INDEX_RETURN_SERIES_BENCHMARK)
+        for entry in ohlc_entries:
+            self.assertEqual("INDEX", entry["query"]["type"])
+
+    def test_the_two_ohlc_calls_are_identical_by_design(self):
+        ohlc_entries = [e for e in build_index_return_series_call_plan() if e["capability"] == "ohlc"]
+        self.assertEqual(ohlc_entries[0]["query"], ohlc_entries[1]["query"])
+        self.assertNotEqual(ohlc_entries[0]["pit_label"], ohlc_entries[1]["pit_label"])
+
+    def test_window_matches_the_current_state_window_deliberately(self):
+        self.assertEqual(CURRENT_STATE_WINDOW, INDEX_RETURN_SERIES_WINDOW)
+
+    def test_plan_is_deterministic_in_shape_across_calls(self):
+        first = [(e["capability"], e.get("symbol"), e.get("query")) for e in build_index_return_series_call_plan()]
+        second = [(e["capability"], e.get("symbol"), e.get("query")) for e in build_index_return_series_call_plan()]
+        self.assertEqual(first, second)
+
+
 class DryRunTests(unittest.TestCase):
     def test_dry_run_makes_no_request_and_needs_no_credentials(self):
         output = io.StringIO()
@@ -228,6 +273,22 @@ class LiveModeTests(unittest.TestCase):
             report = run("current-state", out_dir=Path(tmp))
         self.assertEqual(len(build_current_state_call_plan()), len(calls))
         self.assertEqual(2, report["call_count"])
+        self.assertEqual("DNSE_AUTHENTICATION_PASS", report["status"])
+
+    def test_index_return_series_probe_makes_exactly_three_calls_auth_plus_two_ohlc(self):
+        calls = []
+
+        def fake_get(*_a, **_k):
+            calls.append(1)
+            return _FakeResponse(200, {"date": "2026-08-10", "o": [1], "h": [1], "l": [1],
+                                        "c": [1], "t": [1786000000], "v": [1]})
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(
+            os.environ, {"DNSE_API_KEY": "k", "DNSE_API_SECRET": "s"}, clear=True
+        ), patch("dnse_market_data._default_request_get", side_effect=fake_get):
+            report = run("index-return-series", out_dir=Path(tmp))
+        self.assertEqual(len(build_index_return_series_call_plan()), len(calls))
+        self.assertEqual(3, report["call_count"])
         self.assertEqual("DNSE_AUTHENTICATION_PASS", report["status"])
 
     def test_evidence_file_never_contains_the_api_secret(self):
