@@ -21,6 +21,12 @@ Three probe modes:
                    or always just the current state?) and T-board depth
                    existence. Writes to its own evidence subdirectory so it
                    never overwrites the general-qualification evidence.
+  --probe foreign-value
+                   Foreign-value pipeline integration milestone: the auth
+                   check, then 15 bounded foreign_trading calls (3 tickers x
+                   the same 5 already-cross-checked trading sessions) feeding
+                   tools/ingest_dnse_foreign_flow.py. Its own evidence
+                   subdirectory.
 
 A failed auth check stops any mode before further authenticated calls.
 Without --live, prints the call plan and makes no network request at all.
@@ -54,6 +60,7 @@ INDEX_SYMBOLS: tuple[str, ...] = ("VNINDEX", "VN30")
 # that has accumulated inside stock-core-private itself.
 DEFAULT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-market-data-qualification-20260810"
 PIT_OUT_DIR = ROOT.parent / "operations-review" / "dnse-bid-ask-foreign-flow-qualification-20260810"
+FOREIGN_VALUE_OUT_DIR = ROOT.parent / "operations-review" / "dnse-foreign-value-integration-20260810"
 
 _AUTH_CHECK_CALL = {"capability": "working_dates", "symbol": None, "query": {}}
 
@@ -193,6 +200,41 @@ def build_point_in_time_call_plan() -> list[dict[str, Any]]:
     return plan
 
 
+# The same 5 consecutive trading sessions already exactly cross-checked against
+# vn_stock.db's VCI-sourced OHLCV series for HPG in the general qualification pass
+# (2026-08-03 through 2026-08-07) -- reused here rather than picking a new window,
+# so the foreign-value pilot lands on dates already independently proven to be 5
+# real, consecutive, gap-free HOSE trading sessions.
+FOREIGN_VALUE_SESSION_DATES: tuple[str, ...] = (
+    "2026-08-03", "2026-08-04", "2026-08-05", "2026-08-06", "2026-08-07",
+)
+
+
+def build_foreign_value_call_plan() -> list[dict[str, Any]]:
+    """Foreign-flow-value integration milestone: one bounded `foreign_trading`
+    call per (ticker, session) pair -- 3 tickers x 5 sessions = 15 calls, each
+    scoped to a single closed trading day (the only window size the general
+    pass found the endpoint accepts for a past date). Not a sweep: every date
+    is one of the 5 fixed FOREIGN_VALUE_SESSION_DATES, every ticker one of the
+    3 fixed TICKERS -- nothing here expands from a prior response.
+
+    order="DESC" is deliberate, not arbitrary: order="ASC" was tried first
+    (2026-08-10) and returned zero rows, HTTP 200, for all 15 calls including
+    a session (2026-08-07) that returns real rows under DESC -- an observed
+    DNSE API quirk, not a data-absence finding. DESC also happens to be what
+    this milestone needs anyway: the first (most recent) row in a DESC page
+    carries that session's final, most-complete cumulative total* fields.
+    """
+    plan: list[dict[str, Any]] = [dict(_AUTH_CHECK_CALL, family_note="calendar")]
+    for session_date in FOREIGN_VALUE_SESSION_DATES:
+        from_ts, to_ts = _session_window_epoch(session_date)
+        for symbol in TICKERS:
+            plan.append({"capability": "foreign_trading", "symbol": symbol,
+                         "query": {"limit": 5, "order": "DESC", "from": from_ts, "to": to_ts},
+                         "pit_label": f"session_{session_date.replace('-', '_')}"})
+    return plan
+
+
 def _run_one(entry: dict[str, Any], api_key: str, api_secret: str) -> dict[str, Any]:
     result = request_capability(
         entry["capability"], api_key=api_key, api_secret=api_secret,
@@ -205,7 +247,11 @@ def _run_one(entry: dict[str, Any], api_key: str, api_secret: str) -> dict[str, 
     return result
 
 
-_PLAN_BY_MODE = {"matrix": build_call_plan, "pit": build_point_in_time_call_plan}
+_PLAN_BY_MODE = {
+    "matrix": build_call_plan,
+    "pit": build_point_in_time_call_plan,
+    "foreign-value": build_foreign_value_call_plan,
+}
 
 
 def run(mode: str, *, out_dir: Path) -> dict[str, Any]:
@@ -291,14 +337,19 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
-_DEFAULT_OUT_DIR_BY_MODE = {"auth": DEFAULT_OUT_DIR, "matrix": DEFAULT_OUT_DIR, "pit": PIT_OUT_DIR}
+_DEFAULT_OUT_DIR_BY_MODE = {
+    "auth": DEFAULT_OUT_DIR,
+    "matrix": DEFAULT_OUT_DIR,
+    "pit": PIT_OUT_DIR,
+    "foreign-value": FOREIGN_VALUE_OUT_DIR,
+}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true",
                          help="Actually call the network. Without this, only the call plan is printed.")
-    parser.add_argument("--probe", choices=("auth", "matrix", "pit"), default="auth")
+    parser.add_argument("--probe", choices=("auth", "matrix", "pit", "foreign-value"), default="auth")
     parser.add_argument("--out-dir", default=None)
     args = parser.parse_args(argv)
     out_dir = Path(args.out_dir) if args.out_dir else _DEFAULT_OUT_DIR_BY_MODE[args.probe]

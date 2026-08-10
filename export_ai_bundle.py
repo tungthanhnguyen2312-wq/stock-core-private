@@ -118,6 +118,7 @@ from research_financial_fact_projection import (
 from canonical_financial_qualification_policy import load_evidence_index
 from canonical_conflict_decomposition import coverage_summary as canonical_conflict_coverage_summary
 from distribution_evidence import build_distribution_evidence_for_ticker
+from dnse_foreign_flow_store import build_series as build_dnse_foreign_flow_series
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
     build_historical_fundamental_brief,
@@ -2684,6 +2685,45 @@ def attach_distribution_evidence(
 
 
 # ==========================================================================
+# DNSE foreign-flow VALUE integration — opt-in (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-dnse-foreign-flow): unrelated to lane eligibility,
+# so it does not reuse --include-analysis-lane-eligibility. dnse_foreign_flow_store.py
+# is never called unless the flag is set, and this section never derives an
+# ownership/free-float percentage, a flow/trading-value ratio, or promotes foreign
+# volume/room -- those stay unqualified by contract (see dnse_foreign_flow_capability.py
+# and dnse_foreign_flow_store.py). The complete builder result is attached unmodified.
+
+def build_dnse_foreign_flow_for_ticker_safe(ticker: str, root: Path) -> dict[str, Any] | None:
+    """Fail-closed wrapper: a local build failure for this ticker returns None (so no
+    foreign_flow key is attached for it) and never raises into the caller's per-ticker
+    loop or corrupts any other field on this or any other ticker's entry."""
+    try:
+        return build_dnse_foreign_flow_series(root, ticker)
+    except Exception:
+        return None
+
+
+def attach_dnse_foreign_flow(
+    bundle_entries: dict[str, dict], root: Path, include: bool,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False): when include is False,
+    build_dnse_foreign_flow_series() is never called and no foreign_flow key is ever
+    added -- current default bundle behavior is preserved exactly. When True, attaches
+    the complete builder result per ticker (status="missing" for a ticker with no
+    retained DNSE observations, not an absent key -- the caller can always tell
+    "not asked" (key absent, include=False) from "asked, nothing retained yet"
+    (key present, status="missing"))."""
+    if not include:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_dnse_foreign_flow_for_ticker_safe(tk, root)
+        if result is not None:
+            entry["foreign_flow"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # P1E — opt-in market-wide canonical financial facts (disabled by default)
 # ==========================================================================
 # New dedicated flag (--include-canonical-financial-facts). Reads the layer-3 store under
@@ -3126,6 +3166,16 @@ def main() -> int:
                              " tickers[ticker].analysis_lane_eligibility from"
                              " analysis_lane_eligibility.evaluate_ticker_lanes() per ticker."
                              " Not enabled in any default/production invocation.")
+    parser.add_argument("--include-dnse-foreign-flow", action="store_true",
+                        help="Opt-in, disabled by default: attach tickers[ticker].foreign_flow"
+                             " from the retained DNSE foreign-investor VALUE store"
+                             " (dnse_foreign_flow_store.build_series()) -- qualified"
+                             " foreign_buy_value_vnd/foreign_sell_value_vnd/foreign_net_value_vnd"
+                             " per session, plus fail-closed multi-session summaries. Foreign"
+                             " volume and foreign room are never included (unqualified by"
+                             " contract). Currently retained for HPG,VNM,QNS only; other"
+                             " tickers report status=\"missing\". Not enabled in any"
+                             " default/production invocation.")
     parser.add_argument("--include-canonical-financial-facts", action="store_true",
                         help="Opt-in, disabled by default (P1E): attach"
                              " tickers[ticker].canonical_financial_facts from the market-wide"
@@ -3381,6 +3431,10 @@ def main() -> int:
             )]
             taxonomy_sidecar = None
     attach_distribution_evidence(bundle_entries, runtime_root(), args.include_analysis_lane_eligibility)
+    # Own dedicated flag, not reused from an unrelated concept -- unlike distribution_evidence
+    # this does not need to run before any other attach step; order relative to the others
+    # does not matter since nothing else reads tickers[ticker].foreign_flow.
+    attach_dnse_foreign_flow(bundle_entries, runtime_root(), args.include_dnse_foreign_flow)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default
