@@ -222,21 +222,22 @@ def build_ticker_capability_matrix(
     # Market gates are deliberately read from the global authority selection, never from
     # a provider-adjusted observation.  That keeps the two namespaces visibly separate.
     raw_state = authority.get("raw_price_authority_after_selection", authority.get("raw_price_authority"))
+    market_authority_reason = authority.get("market_authority_reason", "NO_ACTIVE_QUALIFIED_RAW_PRICE_SOURCE")
     raw_reasons = {
         "status": raw_state,
-        "reason_codes": [authority.get("fiingroup_access_state"), authority.get("license_authority")],
+        "reason_codes": [market_authority_reason],
     }
     generic_price = {
         "status": authority.get("generic_actionable_price_basis", "BLOCKED"),
-        "reason_codes": ["generic_actionable_price_basis", authority.get("fiingroup_access_state")],
+        "reason_codes": ["generic_actionable_price_basis", market_authority_reason],
     }
     generic_volume = {
         "status": authority.get("generic_actionable_volume_basis", "BLOCKED"),
-        "reason_codes": ["generic_actionable_volume_basis", authority.get("fiingroup_access_state")],
+        "reason_codes": ["generic_actionable_volume_basis", market_authority_reason],
     }
     valuation = {
         "status": authority.get("historical_valuation_unlock", "BLOCKED"),
-        "reason_codes": ["historical_valuation_unlock", authority.get("fiingroup_access_state")],
+        "reason_codes": ["historical_valuation_unlock", market_authority_reason],
     }
 
     matrix = {

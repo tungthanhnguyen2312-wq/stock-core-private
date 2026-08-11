@@ -14,10 +14,9 @@ from ticker_capability import build_ticker_capability_matrix  # noqa: E402
 
 
 AUTHORITY = {
-    "market_data_track": "WAITING_EXTERNAL_ACCESS",
-    "selected_source_id": "fiingroup_api_datafeed_hose_stock_v2",
-    "fiingroup_access_state": "OWNER_ACQUISITION_REQUIRED",
-    "license_authority": "OWNER_CONFIRMATION_REQUIRED",
+    "market_data_track": "OFFICIAL_PILLAR_B_LINEAGE_EXPANSION",
+    "selected_source_id": None,
+    "market_authority_reason": "NO_ACTIVE_QUALIFIED_RAW_PRICE_SOURCE",
     "raw_price_authority_after_selection": "PARTIAL",
     "generic_actionable_price_basis": "BLOCKED",
     "generic_actionable_volume_basis": "BLOCKED",
@@ -95,7 +94,7 @@ class CapabilityMatrixTests(unittest.TestCase):
         for ticker in tickers:
             self.assertEqual(result[ticker]["legacy"], ticker)
             self.assertEqual(result[ticker]["ticker_capability_matrix"]["ticker"], ticker)
-            self.assertEqual(result[ticker]["ticker_capability_matrix"]["market_data_authority"]["market_data_track"], "WAITING_EXTERNAL_ACCESS")
+            self.assertEqual(result[ticker]["ticker_capability_matrix"]["market_data_authority"]["market_data_track"], "OFFICIAL_PILLAR_B_LINEAGE_EXPANSION")
 
 
 if __name__ == "__main__":

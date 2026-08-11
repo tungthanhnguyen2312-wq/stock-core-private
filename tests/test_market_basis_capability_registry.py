@@ -276,16 +276,17 @@ class GenericMarketBasisUnlockMilestone(unittest.TestCase):
 
     def test_source_authority_selection_is_not_a_capability_transition(self):
         selection = registry.MARKET_DATA_SOURCE_AUTHORITY_SELECTION
-        self.assertEqual(selection["selection_state"], "OWNER_SOURCE_ACQUISITION_DECISION")
-        self.assertTrue(selection["raw_price_authority_source_selected"])
+        self.assertEqual(selection["selection_state"], "NO_ACTIVE_PAID_PROVIDER_ACQUISITION_PATH")
+        self.assertFalse(selection["raw_price_authority_source_selected"])
+        self.assertEqual(selection["next_pillar_b_milestone"], "PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION")
         self.assertEqual(selection["raw_price_authority_after_selection"], "PARTIAL")
         self.assertEqual(selection["generic_actionable_price_basis"], "BLOCKED")
 
     def test_selected_source_records_external_access_without_promoting_authority(self):
         selection = registry.MARKET_DATA_SOURCE_AUTHORITY_SELECTION
-        self.assertEqual(selection["fiingroup_access_state"], "OWNER_ACQUISITION_REQUIRED")
-        self.assertEqual(selection["license_authority"], "OWNER_CONFIRMATION_REQUIRED")
-        self.assertEqual(selection["market_data_track"], "WAITING_EXTERNAL_ACCESS")
+        self.assertEqual(selection["fiingroup_access_state"], "NOT_OWNER_AUTHORIZED_NO_CONFIGURED_ACCESS")
+        self.assertEqual(selection["license_authority"], "NO_LEGITIMATE_ACCESS_OR_CONTRACTUAL_RIGHTS")
+        self.assertEqual(selection["market_data_track"], "OFFICIAL_PILLAR_B_LINEAGE_EXPANSION")
 
     def test_official_raw_observation_carries_source_identity_and_unit(self):
         observation = registry.official_raw_price_observation("HPG", "2024-12-31")

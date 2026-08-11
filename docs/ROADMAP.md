@@ -1,5 +1,17 @@
 # Stock Lookup roadmap
 
+## Market-source authority reconciliation (complete 2026-08-11)
+
+`MARKET_SOURCE_AUTHORITY_RECONCILIATION: PASS`. The 2026-08-09 FiinGroup commercial-candidate
+selection is superseded: FiinGroup has no owner authorization, configuration, legitimate access,
+agreement, or rights and is not an acquisition path. No paid provider may become canonical
+without a new explicit owner decision. DNSE foreign-flow VALUE is production-enabled for
+HPG/VNM/QNS; DNSE OHLC remains adjusted/non-point-in-time and DNSE market-volume basis remains
+unqualified. EODHD remains owner-rejected. The correct next Pillar-B milestone is
+`PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION`; it uses the already-approved official VSDC
+route but requires explicit task authorization before its bounded external request. It was not
+executed in this reconciliation.
+
 ## Production-universe qualified research snapshots v2 (partial 2026-08-09)
 
 V2 replaces no legacy artifact: it represents every fixed production ticker explicitly and has

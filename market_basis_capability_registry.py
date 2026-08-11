@@ -679,21 +679,28 @@ OFFICIAL_DAILY_ROUTE_QUALIFICATION: dict[str, Any] = {
     "hpg_2024_12_31_crosscheck": "existing_annual_report_only; no_daily_summary_close_field",
 }
 
-#: Selection is intentionally distinct from qualification.  The commercial FiinGroup route
-#: has documented raw/adjusted field names, but no contract, credential, retained payload, or
-#: completed pilot exists in this repository.  It therefore cannot change the existing PARTIAL
-#: raw observation or open any generic gate.
+#: No commercial provider is selected.  FiinGroup is a documented but unapproved candidate,
+#: not a pending acquisition path.  DNSE foreign-flow VALUE remains production-enabled only in
+#: its own contract; DNSE OHLC is adjusted/non-point-in-time and DNSE market volume remains
+#: unqualified.  None of those facts changes the existing PARTIAL raw observation or a generic
+#: gate.
 MARKET_DATA_SOURCE_AUTHORITY_SELECTION: dict[str, Any] = {
     "decision": "PASS",
-    "selected_source_id": source_authority.PREFERRED_SOURCE_ID,
-    "selection_state": source_authority.OWNER_DECISION_REQUIRED,
+    "selected_source_id": source_authority.ACTIVE_RAW_PRICE_SOURCE_ID,
+    "selection_state": "NO_ACTIVE_PAID_PROVIDER_ACQUISITION_PATH",
     "fiingroup_access_state": source_authority.FIINGROUP_ACCESS_STATE,
     "license_authority": source_authority.LICENSE_AUTHORITY,
     "market_data_track": source_authority.MARKET_DATA_TRACK,
     "dnse_market_data_access": source_authority.DNSE_MARKET_DATA_ACCESS,
     "dnse_next_qualification_candidate": source_authority.DNSE_NEXT_QUALIFICATION_CANDIDATE,
     "fiingroup_fallback_candidate": source_authority.FIINGROUP_FALLBACK_CANDIDATE,
-    "raw_price_authority_source_selected": True,
+    "dnse_foreign_flow_value_authority": source_authority.DNSE_FOREIGN_FLOW_VALUE_AUTHORITY,
+    "dnse_ohlc_price_basis": source_authority.DNSE_OHLC_PRICE_BASIS,
+    "dnse_market_volume_basis": source_authority.DNSE_MARKET_VOLUME_BASIS,
+    "next_pillar_b_milestone": source_authority.NEXT_PILLAR_B_MILESTONE,
+    "next_pillar_b_execution_gate": source_authority.NEXT_PILLAR_B_EXECUTION_GATE,
+    "market_authority_reason": "NO_ACTIVE_QUALIFIED_RAW_PRICE_SOURCE",
+    "raw_price_authority_source_selected": False,
     "raw_price_authority_after_selection": RAW_AS_TRADED_PRICE_AUTHORITY,
     "volume_scope_authority_source_selected": False,
     "generic_actionable_price_basis": "BLOCKED",

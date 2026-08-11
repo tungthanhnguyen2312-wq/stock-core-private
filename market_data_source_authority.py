@@ -1,16 +1,18 @@
-"""Decision-only authority policy for the next raw market-history source.
+"""Decision-only market-source authority reconciliation.
 
 This module deliberately contains no client, credential lookup, or network call.  It records
-the bounded source-authority decision made after the public HOSE daily summary was shown not to
-be ticker/session market history.  A commercial agreement and a retained qualification pilot
-are still required before any source becomes an active raw authority.
+the bounded source-authority reconciliation after a 2026-08-09 decision-only comparison
+incorrectly promoted an unapproved FiinGroup commercial candidate to a preferred route.
+FiinGroup is retained only as a
+documented, inactive candidate; no paid-provider acquisition is a roadmap route without a new
+explicit owner decision.
 """
 from __future__ import annotations
 
 from copy import deepcopy
 from typing import Any, Mapping
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 STATUS_QUALIFIED = "qualified"
 STATUS_PARTIAL = "partially_qualified"
@@ -18,25 +20,29 @@ STATUS_DOCUMENTED = "documented_but_unverified"
 STATUS_UNAVAILABLE = "unavailable"
 STATUS_REJECTED = "rejected"
 
-PREFERRED_SOURCE_ID = "fiingroup_api_datafeed_hose_stock_v2"
-OWNER_DECISION_REQUIRED = "OWNER_SOURCE_ACQUISITION_DECISION"
-FIINGROUP_ACCESS_STATE = "OWNER_ACQUISITION_REQUIRED"
-LICENSE_AUTHORITY = "OWNER_CONFIRMATION_REQUIRED"
-MARKET_DATA_TRACK = "WAITING_EXTERNAL_ACCESS"
-DNSE_MARKET_DATA_ACCESS = "PENDING_OWNER_ACCOUNT_ACTIVATION"
-DNSE_NEXT_QUALIFICATION_CANDIDATE = "dnse_openapi_market_history"
-# This is a documented future qualification route, not a selected or active authority.
-# FiinGroup remains the existing fallback candidate until an owner-enabled DNSE pilot passes.
-FIINGROUP_FALLBACK_CANDIDATE = PREFERRED_SOURCE_ID
+ACTIVE_RAW_PRICE_SOURCE_ID = None
+FIINGROUP_CANDIDATE_ID = "fiingroup_api_datafeed_hose_stock_v2"
+OWNER_DECISION_REQUIRED = "NEW_EXPLICIT_OWNER_DECISION_REQUIRED_FOR_ANY_PAID_PROVIDER"
+FIINGROUP_ACCESS_STATE = "NOT_OWNER_AUTHORIZED_NO_CONFIGURED_ACCESS"
+LICENSE_AUTHORITY = "NO_LEGITIMATE_ACCESS_OR_CONTRACTUAL_RIGHTS"
+MARKET_DATA_TRACK = "OFFICIAL_PILLAR_B_LINEAGE_EXPANSION"
+DNSE_MARKET_DATA_ACCESS = "PARTIALLY_QUALIFIED_EXISTING_DNSE_CONTRACT"
+DNSE_NEXT_QUALIFICATION_CANDIDATE = "DNSE_OHLC_PRICE_AND_MARKET_VOLUME_BASIS_BACKLOG"
+FIINGROUP_FALLBACK_CANDIDATE = None
+DNSE_FOREIGN_FLOW_VALUE_AUTHORITY = "PRODUCTION_ENABLED_HPG_VNM_QNS"
+DNSE_OHLC_PRICE_BASIS = "ADJUSTED_CONFIRMED_NON_RAW_NON_POINT_IN_TIME"
+DNSE_MARKET_VOLUME_BASIS = "UNQUALIFIED_BACKLOG"
+NEXT_PILLAR_B_MILESTONE = "PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION"
+NEXT_PILLAR_B_EXECUTION_GATE = "EXPLICIT_TASK_AUTHORIZATION_FOR_BOUNDED_VSDC_SSI_NOTICE_ACQUISITION"
 # P1.5 proved that qualification tiers can reach the bundle without promoting partial or
 # provider-scoped facts.  The next independent work is therefore the canonical-fact-store
 # connection, still bounded by the same fail-closed research rules and independent of access.
 PARALLEL_UNBLOCKED_NEXT_MILESTONE = "CONNECT_PILLAR_A_MARKET_WIDE_CANONICAL_FACTS_TO_RESEARCH_ENGINE"
 
 DNSE_QUALIFICATION_ROUTE: dict[str, Any] = {
-    "candidate_id": DNSE_NEXT_QUALIFICATION_CANDIDATE,
+    "candidate_id": "dnse_openapi_market_history",
     "status": DNSE_MARKET_DATA_ACCESS,
-    "source_class": "official_openapi_sdk_pending_owner_access",
+    "source_class": "existing_dnse_provider_contract",
     "documented_capabilities": [
         "historical_ohlc_by_ticker_resolution_from_to",
         "historical_trade_by_ticker_board_date_range",
@@ -44,11 +50,14 @@ DNSE_QUALIFICATION_ROUTE: dict[str, Any] = {
         "board_separation_G1_G4_T1_T3_T4_T6",
         "closed_ohlc_candles",
     ],
-    "next_permitted_action": "bounded_dnse_hpg_vnm_qualification_pilot_after_owner_account_activation",
+    "foreign_flow_value_authority": DNSE_FOREIGN_FLOW_VALUE_AUTHORITY,
+    "ohlc_price_basis": DNSE_OHLC_PRICE_BASIS,
+    "market_volume_basis": DNSE_MARKET_VOLUME_BASIS,
+    "next_permitted_action": "no_provider_refresh_without_explicit_contract_authorization",
     "network_called": False,
     "credentials_read_or_logged": False,
     "market_basis_effect": "none_until_retained_qualification_pilot_passes",
-    "fiingroup_role": "fallback_source_authority_candidate_not_pursued_in_this_milestone",
+    "fiingroup_role": "unapproved_commercial_candidate_not_an_acquisition_path",
 }
 
 # Each status is field-specific.  The selection is not a score: a candidate with an
@@ -88,11 +97,11 @@ CANDIDATES: tuple[dict[str, Any], ...] = (
         "hard_failure": "Public product listing alone cannot qualify the required raw ticker/session contract.",
     },
     {
-        "candidate_id": PREFERRED_SOURCE_ID,
+        "candidate_id": FIINGROUP_CANDIDATE_ID,
         "source_class": "established_market_data_vendor_commercial_api",
         "product": "FiinGroup API Datafeed /Market/GetHoseStockv2",
         "source_url": _FIIN_DOC,
-        "selection_state": "preferred_pending_owner_acquisition_and_bounded_qualification",
+        "selection_state": "documented_commercial_candidate_not_owner_authorized",
         "requirements": {
             "raw_as_traded_price": STATUS_DOCUMENTED,
             "adjusted_raw_separation": STATUS_DOCUMENTED,
@@ -135,8 +144,8 @@ CANDIDATES: tuple[dict[str, Any], ...] = (
     },
 )
 
-OWNER_ACQUISITION_PACKAGE: dict[str, Any] = {
-    "selected_source_id": PREFERRED_SOURCE_ID,
+UNAPPROVED_COMMERCIAL_CANDIDATE_REVIEW: dict[str, Any] = {
+    "candidate_id": FIINGROUP_CANDIDATE_ID,
     "decision": OWNER_DECISION_REQUIRED,
     "product": "FiinGroup API Datafeed /Market/GetHoseStockv2",
     "minimum_data_package": {
@@ -158,7 +167,7 @@ OWNER_ACQUISITION_PACKAGE: dict[str, Any] = {
         "The agreement permits API access, historical retrieval, local retained evidence/cache, derived analytics, and internal production use.",
         "The agreement specifies allowed Dashboard display and any redistribution/publication restrictions.",
     ],
-    "integration_design": "licensed response -> immutable evidence/provenance retention -> market_history.raw (new, source-namespaced) -> capability registry; VCI/KBS remain market_history.adjusted and are never overwritten or used as raw fallback",
+    "status": "NOT_AN_APPROVED_ACQUISITION_OR_INTEGRATION_PATH",
     "acceptance_tests": [
         "HPG 2024-12-31 raw ClosePrice exactly matches the retained HOSE 26,650 VND/share anchor.",
         "HPG adjacent session and VNM sessions preserve ticker/date/OHLC/unit identity with no nearest-session fallback.",
@@ -169,7 +178,7 @@ OWNER_ACQUISITION_PACKAGE: dict[str, Any] = {
         "Missing session, conflicting revision, wrong unit, or absent raw field fails closed.",
         "No generic valuation, liquidity, execution, or backtest gate opens until the pilot data and contract both pass.",
     ],
-    "rejection_conditions": [
+    "requirements_for_any_future_owner_review": [
         "Only adjusted historical prices are supplied, or unadjusted field semantics are not contractually confirmed.",
         "No historical point-in-time/revision semantics are supplied.",
         "Terms prohibit the required evidence retention or intended production use.",
@@ -210,9 +219,10 @@ def decision_snapshot() -> dict[str, Any]:
         "schema_version": VERSION,
         "market_data_source_authority_decision": "PASS",
         "public_hose_summary_route": "CLOSED_NONCONFORMING",
-        "raw_price_authority_source_selected": True,
-        "selected_source_id": PREFERRED_SOURCE_ID,
+        "raw_price_authority_source_selected": False,
+        "selected_source_id": ACTIVE_RAW_PRICE_SOURCE_ID,
         "raw_price_authority": "PARTIAL",  # existing annual-report observation only
+        "market_authority_reason": "NO_ACTIVE_QUALIFIED_RAW_PRICE_SOURCE",
         "volume_scope_authority_source_selected": False,
         "volume_scope_authority": "BLOCKED",
         "provider_adjusted_authority": "QUALIFIED",
@@ -220,58 +230,63 @@ def decision_snapshot() -> dict[str, Any]:
         "generic_actionable_price_basis": "BLOCKED",
         "generic_actionable_volume_basis": "BLOCKED",
         "historical_valuation_unlock": "BLOCKED",
-        "next_roadmap_milestone": OWNER_DECISION_REQUIRED,
+        "next_roadmap_milestone": NEXT_PILLAR_B_MILESTONE,
         "network_or_credentials_used": False,
         "candidates": [candidate(item["candidate_id"]) for item in CANDIDATES],
-        "owner_acquisition_package": deepcopy(OWNER_ACQUISITION_PACKAGE),
+        "unapproved_commercial_candidate_review": deepcopy(UNAPPROVED_COMMERCIAL_CANDIDATE_REVIEW),
     }
 
 
 def access_snapshot() -> dict[str, Any]:
     """Report the configured-access state without reading any secret value."""
     return {
-        "fiingroup_source_acquisition_milestone": "PASS",
+        "fiingroup_source_acquisition_milestone": "NOT_AUTHORIZED_NOT_EXECUTED",
         "fiingroup_access_state": FIINGROUP_ACCESS_STATE,
         "license_authority": LICENSE_AUTHORITY,
-        "owner_source_acquisition_package": "COMPLETE",
+        "owner_source_acquisition_package": "NOT_ACTIVE",
         "market_data_track": MARKET_DATA_TRACK,
         "dnse_market_data_access": DNSE_MARKET_DATA_ACCESS,
         "dnse_next_qualification_route": deepcopy(DNSE_QUALIFICATION_ROUTE),
         "fiingroup_fallback_candidate": FIINGROUP_FALLBACK_CANDIDATE,
         "parallel_unblocked_next_milestone": PARALLEL_UNBLOCKED_NEXT_MILESTONE,
-        "raw_price_authority_source_selected": True,
+        "raw_price_authority_source_selected": False,
         "raw_price_authority": "PARTIAL",
+        "market_authority_reason": "NO_ACTIVE_QUALIFIED_RAW_PRICE_SOURCE",
         "raw_history_mutability": "UNKNOWN",
-        "fiingroup_raw_price_pilot": "BLOCKED_EXTERNAL_ACCESS",
+        "fiingroup_raw_price_pilot": "NOT_AUTHORIZED_NOT_EXECUTED",
         "hpg_raw_price_anchor_crosscheck": "BLOCKED",
-        "fiingroup_adjusted_namespace": "BLOCKED_EXTERNAL_ACCESS",
-        "fiingroup_volume_scope_authority": "BLOCKED_EXTERNAL_ACCESS",
+        "fiingroup_adjusted_namespace": "NOT_AUTHORIZED_NOT_EXECUTED",
+        "fiingroup_volume_scope_authority": "NOT_AUTHORIZED_NOT_EXECUTED",
         "vci_trade_type_coverage": "BLOCKED_DATA",
         "generic_actionable_price_basis": "BLOCKED",
         "generic_actionable_volume_basis": "BLOCKED",
         "historical_valuation_unlock": "BLOCKED",
         "actionable_liquidity_unlock": "BLOCKED",
         "access_audit": deepcopy(FIINGROUP_ACCESS_AUDIT),
-        "owner_acquisition_package": deepcopy(OWNER_ACQUISITION_PACKAGE),
+        "unapproved_commercial_candidate_review": deepcopy(UNAPPROVED_COMMERCIAL_CANDIDATE_REVIEW),
+        "next_pillar_b_milestone": NEXT_PILLAR_B_MILESTONE,
+        "next_pillar_b_execution_gate": NEXT_PILLAR_B_EXECUTION_GATE,
     }
 
 
 def assert_decision_policy(snapshot: Mapping[str, Any] | None = None) -> None:
     """Reject a decision that silently treats documentation as active source authority."""
     value = decision_snapshot() if snapshot is None else snapshot
-    if value.get("selected_source_id") != PREFERRED_SOURCE_ID:
-        raise ValueError("unexpected_preferred_source")
+    if value.get("selected_source_id") is not ACTIVE_RAW_PRICE_SOURCE_ID:
+        raise ValueError("unapproved_candidate_must_not_be_selected_source")
+    if value.get("raw_price_authority_source_selected") is not False:
+        raise ValueError("unapproved_candidate_must_not_activate_raw_authority")
     if value.get("raw_price_authority") != "PARTIAL":
         raise ValueError("unqualified_commercial_source_must_not_change_existing_raw_authority")
     if value.get("volume_scope_authority") != "BLOCKED":
         raise ValueError("undocumented_odd_lot_scope_must_not_open_volume_authority")
     if value.get("network_or_credentials_used") is not False:
         raise ValueError("decision_only_policy_must_not_claim_network_or_credentials")
-    selected = candidate(PREFERRED_SOURCE_ID)
-    if selected["requirements"]["raw_as_traded_price"] != STATUS_DOCUMENTED:
-        raise ValueError("selected_raw_semantics_must_remain_documented_not_qualified")
-    if not OWNER_ACQUISITION_PACKAGE["contractual_confirmations_required"]:
-        raise ValueError("commercial_selection_requires_contractual_confirmations")
+    fiingroup = candidate(FIINGROUP_CANDIDATE_ID)
+    if fiingroup["selection_state"] != "documented_commercial_candidate_not_owner_authorized":
+        raise ValueError("fiingroup_candidate_must_remain_unapproved")
+    if value.get("next_roadmap_milestone") != NEXT_PILLAR_B_MILESTONE:
+        raise ValueError("next_pillar_b_milestone_must_follow_approved_official_route")
 
 
 def assert_access_policy(snapshot: Mapping[str, Any] | None = None) -> None:
@@ -281,15 +296,19 @@ def assert_access_policy(snapshot: Mapping[str, Any] | None = None) -> None:
         raise ValueError("fiingroup_access_state_must_reflect_configured_access_only")
     if value.get("license_authority") != LICENSE_AUTHORITY:
         raise ValueError("license_authority_must_not_be_inferred_from_documentation")
-    if value.get("fiingroup_raw_price_pilot") != "BLOCKED_EXTERNAL_ACCESS":
-        raise ValueError("no_access_must_block_live_qualification")
+    if value.get("fiingroup_raw_price_pilot") != "NOT_AUTHORIZED_NOT_EXECUTED":
+        raise ValueError("no_authorization_must_block_live_qualification")
     audit = value.get("access_audit") or {}
     if any(audit.get(key) for key in ("credentials_read_or_logged", "network_called", "production_adapter_created")):
         raise ValueError("access_audit_claims_forbidden_activity")
     dnse = value.get("dnse_next_qualification_route") or {}
     if value.get("dnse_market_data_access") != DNSE_MARKET_DATA_ACCESS:
-        raise ValueError("dnse_access_state_must_remain_owner_pending")
+        raise ValueError("dnse_access_state_must_reflect_existing_contract")
     if dnse.get("market_basis_effect") != "none_until_retained_qualification_pilot_passes":
         raise ValueError("dnse_documentation_must_not_open_market_basis")
+    if dnse.get("foreign_flow_value_authority") != DNSE_FOREIGN_FLOW_VALUE_AUTHORITY:
+        raise ValueError("dnse_foreign_flow_authority_must_remain_production_enabled")
+    if dnse.get("ohlc_price_basis") != DNSE_OHLC_PRICE_BASIS or dnse.get("market_volume_basis") != DNSE_MARKET_VOLUME_BASIS:
+        raise ValueError("dnse_price_and_volume_gaps_must_remain_fail_closed")
     if dnse.get("network_called") or dnse.get("credentials_read_or_logged"):
         raise ValueError("dnse_pending_route_must_not_call_network_or_read_credentials")

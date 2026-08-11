@@ -1,5 +1,22 @@
 # Stock Lookup state
 
+## Market-source authority reconciliation (2026-08-11)
+
+`MARKET_SOURCE_AUTHORITY_RECONCILIATION: PASS`. Commit `f216cfb` incorrectly promoted the
+documented FiinGroup commercial candidate to `PREFERRED_SOURCE_ID` and made
+`OWNER_SOURCE_ACQUISITION_DECISION` canonical. That designation is superseded: FiinGroup has no
+owner authorization, configuration, legitimate access, agreement, or rights, and is not an
+approved acquisition/integration path. No paid provider may become canonical without a new
+explicit owner decision.
+
+DNSE foreign-flow VALUE is production-enabled for HPG/VNM/QNS under its retained,
+provider-scoped contract. DNSE OHLC is `ADJUSTED_CONFIRMED` but raw-as-traded and point-in-time
+unsafe; DNSE market-volume basis remains unqualified. EODHD remains `REJECTED_BY_OWNER`. Generic
+price, volume, valuation, liquidity, sizing, execution, and backtest gates remain blocked. The
+correct next Pillar-B milestone is `PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION`, using the
+already-approved official VSDC route; its bounded external acquisition requires explicit task
+authorization and was not performed here.
+
 ## HPG evidence manifest restoration and Pillar-A performance closeout (2026-08-11)
 
 `HPG_EVIDENCE_MANIFEST_AND_SHARED_LOADER_REPAIR: PASS`. The existing qualified HPG FY2024

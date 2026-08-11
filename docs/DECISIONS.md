@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-08-11 - Reconcile market-source authority with closed owner decisions and implemented DNSE contracts
+
+- Commit `f216cfb` made a decision-only comparison of commercial candidates but incorrectly
+  represented FiinGroup API Datafeed as `PREFERRED_SOURCE_ID` and made
+  `OWNER_SOURCE_ACQUISITION_DECISION` the next canonical milestone. That designation is
+  superseded. FiinGroup has never been owner-authorized or configured, has no legitimate access
+  or retained rights agreement, and is not an approved acquisition or integration path.
+- No paid provider may become a canonical market-data route without a new explicit owner
+  decision. EODHD remains `REJECTED_BY_OWNER`; it is not a fallback, qualification route, or
+  investigation target.
+- The implemented DNSE authority is field-specific: foreign-flow VALUE is production-enabled
+  for HPG/VNM/QNS; DNSE OHLC is adjusted and retrospective/non-point-in-time; DNSE market-volume
+  basis remains unqualified. These do not open generic raw-price, market-volume, valuation,
+  liquidity, sizing, execution, or backtest gates.
+- The next Pillar-B milestone remains the already-approved official-source path:
+  `PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION`. It requires explicit task authorization
+  for the bounded external VSDC acquisition; naming it here does not authorize executing it.
+
 ## 2026-08-11 - HPG manifest authority restoration preserves the existing fail-closed valuation boundary
 
 - The existing HPG FY2024 audited-consolidated evidence identity
