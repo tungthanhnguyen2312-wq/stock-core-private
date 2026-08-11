@@ -1,5 +1,28 @@
 # Stock Lookup state
 
+## Official financial evidence scale-out Cohort 3 (2026-08-11)
+
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3: PARTIAL`, closed to its owner-fixed scope of
+exactly FPT, PNJ, and PVD. PVD's already-retained FY2024 issuer-IR audited consolidated PDF
+(`e03146183ffecb8cc94c5302edca1d8b5010e2121a00d18ae74e284cf0c306cb`, SHA-256
+`ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14`) hash-verifies against
+the qualified manifest and its five existing annual consolidated USD citations. It remains the
+existing historical-only, non-actionable research input; no duplicate registration was made.
+
+PNJ's retained FY2024 issuer-IR PDF hash-verifies as
+`71eb69f97fab83a36ed3dca032193cfc24754f416d24d4ad136f198ab2a73099`, but its qualified
+review supplies only the labelled short-term borrowing component. The required labelled
+long-term borrowing or finance-lease component is absent, so PNJ remains
+`REQUIRED_DEBT_COMPONENT_MISSING` and no total-debt citation was inferred. FPT's existing exact
+audited-statement locator and the two exact FY2024 annual-report locators supplied by its
+official IR route all returned HTTP 404; no FPT bytes, hash, citation, or manifest record exist.
+No URL variation, crawl, provider fallback, runtime mutation, or ticker expansion occurred.
+
+This is a completed bounded pass, not a standing acquisition authorization. Further work needs a
+new owner-scoped official-evidence decision: an FPT locator that yields retained audited
+consolidated bytes and/or an official PNJ source that explicitly supplies the required debt
+component.
+
 ## SSI/VSDC B2 evidence disposition (2026-08-11)
 
 `PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION` is
@@ -17,9 +40,9 @@ substitutes. The typed observation therefore remains `record_date_confirmed`, wi
 No SSI/VSDC request is actionable unless new official evidence independently supplies the
 missing fields.
 
-The next recorded independent milestone is `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3`,
-but its governing scale-out contract names no remaining fixed ticker set or exact official
-filing locator. It is `AWAITING_OWNER_SCOPE_DECISION`; no new issuer acquisition is authorized.
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3` is closed as recorded above. No subsequent
+Producer-only milestone is authorized by the current roadmap; the next gate is the new
+owner-scoped official-evidence decision stated above.
 
 ## Market-source authority reconciliation (2026-08-11)
 

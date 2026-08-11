@@ -1,5 +1,27 @@
 # Bounded official financial evidence scale-out
 
+## Cohort 3 closeout (2026-08-11)
+
+The owner-fixed Cohort 3 set is exactly FPT, PNJ, and PVD. This closeout does not reopen the
+earlier bounded work, acquire a fourth ticker, or create a general locator crawl.
+
+| Ticker | Minimum official evidence result | Qualification / registration result |
+| --- | --- | --- |
+| FPT | The previous exact audited-consolidated locator and two exact FY2024 annual-report locators identified from the official FPT IR route each returned HTTP 404. No URL variants were attempted and no bytes were retained. | `ISSUER_FILING_LOCATOR_RETURNED_404`; no hash, citation, or manifest registration. |
+| PNJ | The retained FY2024 issuer-IR PDF remains hash-verified as `71eb69f97fab83a36ed3dca032193cfc24754f416d24d4ad136f198ab2a73099`. Its reviewed debt evidence names only the short-term component. | `REQUIRED_DEBT_COMPONENT_MISSING`; no inferred debt total or registration. |
+| PVD | The retained FY2024 issuer-IR audited consolidated PDF remains hash-verified as `ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14`, document ID `e03146183ffecb8cc94c5302edca1d8b5010e2121a00d18ae74e284cf0c306cb`. | Existing qualified manifest identity `8135440eea7f02bdfe52571488ec8a3f2590db4c4c48132f5b2615315afe8bb5` and five annual FY2024 USD citations re-verified; no duplicate registration. |
+
+FPT's three exact issuer-IR locator identities, retained only as failed acquisition diagnostics,
+are `https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2025/march/20250314---fpt---audited-consolidated-financial-statements-for-2024.pdf`,
+`https://fpt.com/-/media/project/fpt-corporation/fpt/ir/information-disclosures/year-report/2025/april/20250402---fpt---annual-report-2024.pdf`,
+and `https://fpt.com/-/media/project/fpt-corporation/fpt/ir/general-meetings-of-shareholders/fpt_annual_report_2024.pdf`.
+Each returned HTTP 404. They are not retained source evidence and have no evidence hash or
+manifest identity.
+
+This Cohort 3 pass is `PARTIAL` and closed. Any continuation requires a separate owner-scoped
+official-evidence decision for the exact missing FPT or PNJ source; it does not authorize another
+attempt under this cohort.
+
 Decision date: 2026-08-09. Initial cohort: PNJ, FPT, and PVD. Cohort 2 then bounded new issuer
 work to POW, QNS, and NVL only. HPG/VNM/PAN are controls and SSI/EVF remain outside the corporate
 research archetype. No provider financial endpoint was called.

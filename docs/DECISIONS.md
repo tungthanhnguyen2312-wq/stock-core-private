@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-08-11 - Cohort 3 closes fail-closed to its owner-fixed FPT/PNJ/PVD scope
+
+- `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3` was authorized for exactly FPT, PNJ, and
+  PVD. It does not authorize any fourth ticker, a crawl, URL variation, a provider fallback, or
+  a new source authority.
+- PVD's FY2024 issuer-IR audited consolidated filing
+  (`e03146183ffecb8cc94c5302edca1d8b5010e2121a00d18ae74e284cf0c306cb`; SHA-256
+  `ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14`) and its five annual
+  consolidated USD citations were already qualified and manifest-registered. Re-verification
+  confirmed the immutable artifact and all five facts; append-only authority forbids a duplicate.
+- PNJ's retained FY2024 issuer filing remains hash-verified but has no labelled long-term
+  borrowing or finance-lease component. The known short-term amount cannot stand in for total
+  interest-bearing debt; its result remains `REQUIRED_DEBT_COMPONENT_MISSING`.
+- FPT's prior exact audited-statement locator and two exact official-IR FY2024 annual-report
+  locators returned HTTP 404. Since no source bytes were retained, no FPT identity, citation, or
+  manifest record was created. A reissued official locator, not an inferred variant, is required.
+- The cohort is `PARTIAL` and closed. Any follow-up must be separately owner-scoped to the exact
+  missing official evidence; no current roadmap entry authorizes more acquisition.
+
 ## 2026-08-11 - SSI/VSDC B2 is deferred pending new official evidence
 
 - The one authorized VSDC notice (`https://vsd.vn/en/ad/198728`; SHA-256

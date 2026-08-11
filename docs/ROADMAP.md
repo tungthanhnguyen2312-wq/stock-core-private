@@ -1,5 +1,23 @@
 # Stock Lookup roadmap
 
+## Official financial evidence scale-out Cohort 3 (partial, closed 2026-08-11)
+
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3: PARTIAL`. The owner-fixed set was exactly
+FPT, PNJ, and PVD. PVD's pre-existing FY2024 issuer-IR audited-consolidated document
+(`e03146183ffecb8cc94c5302edca1d8b5010e2121a00d18ae74e284cf0c306cb`, SHA-256
+`ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14`) and five annual
+consolidated USD citations re-verified cleanly through the governed manifest and existing
+projection; it was already registered, so no duplicate write was permitted. PNJ's retained
+FY2024 issuer PDF hash-verifies, but it contains only a labelled short-term debt component;
+its five-metric lane remains `REQUIRED_DEBT_COMPONENT_MISSING`. FPT produced no retained bytes:
+its prior exact audited-statement route and two exact FY2024 official-IR annual-report locators
+returned HTTP 404. No locator variation, crawl, provider, or substitute evidence was used.
+
+The cohort is closed rather than repeatedly actionable. The next gate is
+`OWNER_OFFICIAL_FINANCIAL_EVIDENCE_SCOPE_DECISION`: authorize a new bounded scope only if it
+supplies an FPT issuer locator that returns audited-consolidated bytes and/or a PNJ official
+source that explicitly identifies the missing long-term borrowing or finance-lease component.
+
 ## SSI/VSDC B2 evidence disposition (deferred 2026-08-11)
 
 `PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION` is
@@ -11,9 +29,8 @@ and 500,219,550 planned shares. It does not state an official ex-date or execute
 change, so it is not a price-adjustment event and may not be re-acquired absent new official
 evidence.
 
-The next independent recorded candidate is `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3`.
-It is `AWAITING_OWNER_SCOPE_DECISION`: the governing contract has no remaining enumerated ticker
-set or exact official filing locator, so no external acquisition is authorized.
+The Cohort 3 decision has now been executed and closed as recorded above. No further issuer
+acquisition is authorized without the new owner-scoped evidence decision.
 
 ## Market-source authority reconciliation (complete 2026-08-11)
 
@@ -109,7 +126,8 @@ locator, so both remain blocked without URL variations or a crawl. Novaland's en
 IR route retained one FY2024 audited consolidated filing and five page-verified VND facts;
 NVL becomes a historical-only, non-actionable corporate research input. FPT remains untouched.
 
-Next independent Pillar A milestone: `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3`.
+The Cohort 3 pass is closed as recorded at the top of this roadmap; no successor is selected
+without new owner-scoped official evidence.
 
 ## Annual financial evidence materialization hardening (complete 2026-08-09)
 
