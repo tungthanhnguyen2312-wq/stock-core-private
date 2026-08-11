@@ -406,15 +406,15 @@ class RealEvidenceIntegrationTests(unittest.TestCase):
         self.assertEqual(22_000.0, price["value_vnd"])
         self.assertEqual(22.0, price["raw_close"])
 
-    def test_hpg_current_shares_reflects_the_real_manifest_registration_gap(self):
+    def test_hpg_current_shares_preserve_stale_coverage_after_manifest_registration(self):
         shares = m.resolve_current_shares(RUNTIME_ROOT, "HPG", "2026-08-07")
-        self.assertEqual("blocked", shares["bridge_result"]["status"])
+        self.assertEqual("latest_historical_only", shares["bridge_result"]["status"])
         self.assertFalse(shares["bridge_result"]["current_shares"]["qualified"])
-        self.assertEqual("opening_identity_unqualified", shares["bridge_result"]["current_shares"]["reason"])
-        self.assertIsNotNone(shares["opening_identity_diagnostic"])
-        self.assertEqual("official_evidence_share_basis_unverifiable", shares["opening_identity_diagnostic"]["reason"])
-        # The one real, retained HPG event citation is still found and mapped correctly,
-        # even though the opening leg blocks the overall result first.
+        self.assertEqual("coverage_through_target_not_proven", shares["bridge_result"]["current_shares"]["reason"])
+        self.assertEqual("qualified", shares["opening_identity"]["qualification"])
+        self.assertIsNone(shares["opening_identity_diagnostic"])
+        # The registered opening identity and one retained event remain insufficient to
+        # infer coverage beyond the independently evidenced 2026-07-30 observation.
         self.assertEqual(1, shares["raw_event_citation_count"])
         self.assertEqual(1, shares["mapped_event_count"])
 

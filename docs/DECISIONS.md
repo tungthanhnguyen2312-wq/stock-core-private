@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-08-11 - HPG manifest authority restoration preserves the existing fail-closed valuation boundary
+
+- The existing HPG FY2024 audited-consolidated evidence identity
+  `a7c3711d1b02c131a87fef4a0f5bd4d5fbd780bbb0c07665111a358a2ddcd2a8` is restored through
+  the sole append-only manifest writer, with its previously qualified SHA-256, source metadata,
+  and an explicit retained-document path. No citation row, source document, or database row was
+  added or changed.
+- The generic manifest archive-path resolver and cited-financial adapter were already shipped in
+  `1302ef0`; this milestone verified that existing path contract, including unregistered and
+  hash-mismatched fail-closed controls, rather than creating a duplicate loader or fallback.
+- Registration qualifies HPG's FY2024 opening share identity and EBITDA components. It does not
+  qualify current shares for 2026-08-07: `coverage_through=2026-07-30` remains short of the DNSE
+  price session, so every current-state valuation method stays unavailable for the existing,
+  explicit `qualified_current_shares_outstanding_for_session` requirement.
+- The completed Pillar-A performance repair is recorded as a separate, closed Producer side-track:
+  request-scoped post-focus observability isolated global coverage, and the per-export official
+  fact index removed repeated verified-identity scans without changing bundle semantics.
+
 > **Superseded entries are marked in place.** The three 2026-08-03 P1H/P1I/P1J entries
 > below record counts and share anchors that were never measured or were wrong; each
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept

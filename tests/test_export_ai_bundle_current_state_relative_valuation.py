@@ -132,7 +132,7 @@ class RealEvidenceIntegrationTests(unittest.TestCase):
         if not RUNTIME_ROOT.exists():
             self.skipTest("dashboard-runtime runtime root not present")
 
-    def test_real_hpg_attach_reflects_the_real_blocker(self):
+    def test_real_hpg_attach_preserves_the_stale_coverage_blocker(self):
         from export_ai_bundle import load_financial_canonical
         canonical = load_financial_canonical(["HPG"])
         result = build_current_state_relative_valuation_for_ticker_safe(
@@ -141,7 +141,8 @@ class RealEvidenceIntegrationTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual("not_qualified", result["status"])
         self.assertTrue(result["current_price"]["qualified"])
-        self.assertEqual("blocked", result["current_shares"]["bridge_result"]["status"])
+        self.assertEqual("latest_historical_only", result["current_shares"]["bridge_result"]["status"])
+        self.assertEqual("2026-07-30", result["current_shares"]["coverage_through"])
         self.assertIs(False, result["is_actionable"])
 
 

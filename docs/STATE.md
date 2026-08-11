@@ -1,5 +1,25 @@
 # Stock Lookup state
 
+## HPG evidence manifest restoration and Pillar-A performance closeout (2026-08-11)
+
+`HPG_EVIDENCE_MANIFEST_AND_SHARED_LOADER_REPAIR: PASS`. The existing qualified HPG FY2024
+audited-consolidated identity `a7c3711d...` is now registered exactly once through the existing
+append-only `evidence_promotion.py` manifest authority. The record preserves its immutable PDF
+hash `304a93a...`, source provenance, and explicit Producer-relative retained-document path.
+The shared archive-document resolver was already repaired by `1302ef0`; this milestone verified
+that path contract rather than adding a second loader path. Missing, malformed, and hash-mismatched
+manifest evidence remains fail-closed.
+
+HPG's opening FY2024 share identity and its three EBITDA components now resolve as qualified, but
+current-state relative valuation remains `NOT_QUALIFIED`: evidence coverage ends on 2026-07-30,
+before the qualified DNSE price session 2026-08-07. No current-share validity is inferred across
+that gap and no valuation rule, runtime database, or published artifact changed.
+
+The completed Pillar-A request-scoped performance side-track is also closed: post-focus timing
+observability (`c6f54c6`) identified repeated verified-identity scans inside global coverage; the
+per-export official-fact index (`1272622`) reduced `pillar_a_coverage_conflict` from 404.777s to
+20.307s for HPG and 469.941s to 18.478s for VNM with byte-identical analytical bundles.
+
 ## HPG current-state relative valuation — built, wired, correctly not-yet-live (2026-08-11)
 
 New `current_state_relative_valuation.py`: current market cap/P-E/P-B/P-S/EV/EV-Sales/EV-EBITDA
