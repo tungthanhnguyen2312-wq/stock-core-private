@@ -1,5 +1,19 @@
 # Stock Lookup state
 
+## Research Snapshots v2 Producer completion (2026-08-11)
+
+`RESEARCH_SNAPSHOTS_V2_PRODUCER_COMPLETION: PASS`. The generated Producer bundle now retains
+`qualified_research_snapshot_v2`, a deterministic fixed-11-ticker baseline with stable identity.
+Each row carries only the already-produced historical-research, raw-as-traded-price,
+current-valuation, generic-liquidity, and foreign-flow-VALUE status/reason projections; it does
+not carry raw/PIT OHLCV, volume fields, targets, probabilities, or inferred corporate-action
+state. V2 change events continue to accept prior schema `2.0.0` baselines, so served-baseline
+replay remains compatible while new snapshots are `2.1.0`.
+
+The result is source-only: no runtime artifact was generated, no Consumer or Dashboard contract
+changed, and no release, publication, authority promotion, source acquisition, or DNSE probe
+occurred. Consumer/Dashboard pass-through and any publication remain separately owner-gated.
+
 ## Official financial evidence scale-out Cohort 4 (2026-08-11)
 
 `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_4: PARTIAL`, closed to its fixed SSI/QNS scope.

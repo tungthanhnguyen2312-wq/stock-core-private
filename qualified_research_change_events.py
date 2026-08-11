@@ -6,6 +6,7 @@ import json
 from typing import Any, Mapping
 
 from qualified_research_delta import compare
+from qualified_research_snapshot_v2 import COMPATIBLE_SCHEMA_VERSIONS
 
 SCHEMA_VERSION = "1.0.0"
 
@@ -57,7 +58,7 @@ def build_v2(previous: Mapping[str, Any], current: Mapping[str, Any]) -> dict[st
     baseline that actually recorded the more specific `unavailable` say so truthfully, instead
     of a blanket `unknown` overclaiming that the ticker was never evaluated.
     """
-    if previous.get("schema_version") != "2.0.0" or current.get("schema_version") != "2.0.0":
+    if previous.get("schema_version") not in COMPATIBLE_SCHEMA_VERSIONS or current.get("schema_version") not in COMPATIBLE_SCHEMA_VERSIONS:
         raise ValueError("research_snapshot_v2_required")
     prior = {str(item.get("ticker")): item for item in previous.get("tickers", []) if isinstance(item, Mapping)}
     events = []
@@ -72,7 +73,7 @@ def build_v2(previous: Mapping[str, Any], current: Mapping[str, Any]) -> dict[st
             events.append(_event(ticker, "research_availability_established", previous_status, "available",
                                  ["v2.tickers.%s.semantic_sha256" % ticker], previous.get("snapshot_id"), current.get("snapshot_id")))
     events.sort(key=lambda event: event["event_id"])
-    return {"schema_version": SCHEMA_VERSION, "snapshot_version": "2.0.0",
+    return {"schema_version": SCHEMA_VERSION, "snapshot_version": current.get("schema_version"),
             "source_snapshot": previous.get("snapshot_id"), "destination_snapshot": current.get("snapshot_id"),
             "events": events, "status": "events_available" if events else "NO_CHANGE",
             "historical_only": True, "is_actionable": False}

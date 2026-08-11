@@ -61,10 +61,18 @@ unqualified. EODHD remains owner-rejected. The former next Pillar-B milestone is
 as recorded above: its exact retained notice lacks the required official ex-date and execution
 evidence.
 
-## Production-universe qualified research snapshots v2 (partial 2026-08-09)
+## Production-universe qualified research snapshots v2 (Producer complete, publication pending 2026-08-11)
 
 V2 replaces no legacy artifact: it represents every fixed production ticker explicitly and has
-deterministic identity. Baseline extraction, event attachment, Dashboard presentation, and release remain pending.
+deterministic identity. The Producer now retains the current V2 baseline in its generated bundle,
+replays the prior served bundle deterministically for change comparison, and attaches only
+historical/non-actionable research availability plus existing capability statuses and reason
+codes. Raw/PIT price, market-volume/liquidity, target-price, probability, and inferred
+corporate-action semantics are excluded. Existing V2 baselines remain compatible for event
+comparison.
+
+Consumer pass-through, Dashboard presentation, release, and publication remain separate work
+requiring their own owner authorization; none occurs in this Producer-only milestone.
 
 ## Qualified research change events (partial 2026-08-09)
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from qualified_research_change_events import build, build_v2
+from qualified_research_snapshot_v2 import SCHEMA_VERSION, build as build_snapshot_v2
 from tests.test_qualified_research_delta import brief
 
 
@@ -96,6 +97,19 @@ class ChangeEventsTests(unittest.TestCase):
         result = build_v2(previous, current)
         self.assertEqual(len(result["events"]), 1)
         self.assertEqual(result["events"][0]["previous"], "unknown")
+
+    def test_v2_legacy_baseline_remains_event_compatible_with_current_snapshot(self):
+        previous = {"schema_version": "2.0.0", "snapshot_id": "qrs2-served",
+                    "tickers": [{"ticker": "HPG", "research_status": "unavailable"}]}
+        current = build_snapshot_v2(
+            {"tickers": {"HPG": {"ticker_capability_matrix": {
+                "research": {"qualified_research_brief": {"status": "available"}}}}}},
+            source_identity={"reference_session_date": "2026-08-07"},
+        )
+        result = build_v2(previous, current)
+        self.assertEqual(result["snapshot_version"], SCHEMA_VERSION)
+        self.assertEqual([(item["ticker"], item["previous"], item["current"])
+                          for item in result["events"]], [("HPG", "unavailable", "available")])
 
 
 if __name__ == "__main__": unittest.main()

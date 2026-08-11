@@ -3397,6 +3397,24 @@ def attach_ticker_capability_matrix(bundle_entries: dict[str, dict]) -> dict[str
     return bundle_entries
 
 
+def build_qualified_research_snapshot_v2_for_bundle(
+    bundle_entries: Mapping[str, Mapping[str, Any]], reference_session_date: str,
+) -> dict[str, Any]:
+    """Build the current Producer-side V2 baseline after all capabilities are attached.
+
+    This pure boundary is intentionally separate from release orchestration: it records the
+    current analytical state in the bundle, while a later authorized Consumer/Dashboard release
+    may choose how (or whether) to consume that state.
+    """
+    return build_research_snapshot_v2(
+        {"tickers": bundle_entries},
+        source_identity={
+            "reference_session_date": reference_session_date,
+            "bundle_generation": "export_ai_bundle",
+        },
+    )
+
+
 # ==========================================================================
 # MAIN
 # ==========================================================================
@@ -3829,15 +3847,14 @@ def main() -> int:
     # twice or allowed to promote an omitted contract.
     attach_ticker_capability_matrix(bundle_entries)
 
+    research_snapshot_v2 = build_qualified_research_snapshot_v2_for_bundle(bundle_entries, latest_session)
     research_changes = None
     if args.research_changes_v2_baseline:
         try:
             previous_v2 = json.loads(Path(args.research_changes_v2_baseline).read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             parser.error(f"cannot load V2 research-change baseline: {exc}")
-        current_v2 = build_research_snapshot_v2({"tickers": bundle_entries}, source_identity={
-            "reference_session_date": latest_session, "bundle_generation": "export_ai_bundle"})
-        research_changes = build_research_change_events_v2(previous_v2, current_v2)
+        research_changes = build_research_change_events_v2(previous_v2, research_snapshot_v2)
 
     # item F: bundle_entries[tk]["context_package"] only exists from this point on (it isn't
     # attached to the earlier `entries` build_data_quality_flags() already consumed above) —
@@ -3867,6 +3884,7 @@ def main() -> int:
         "market_breadth_freshness": breadth_freshness,
         "macro_snapshot": macro_records,
         "macro_freshness": macro_freshness,
+        "qualified_research_snapshot_v2": research_snapshot_v2,
         **({"research_changes": research_changes} if research_changes is not None else {}),
         **({"pillar_a_research_coverage": pillar_a_research_coverage}
            if pillar_a_research_coverage is not None else {}),
