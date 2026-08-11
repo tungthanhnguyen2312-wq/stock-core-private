@@ -364,12 +364,17 @@ def detect_event_type(text: str) -> tuple[str | None, str]:
     lowered = normalize_text(text).lower()
     hits = [event_type for event_type, cues in _TYPE_CUES
             if any(cue in lowered for cue in cues)]
+    if ("share issuance for raising share capital from owner's equity" in lowered
+            and "bonus_shares" not in hits):
+        hits.append("bonus_shares")
     if not hits:
         return None, "no event-type cue found in the document text"
     # `stock_dividend` and `cash_dividend` cues can co-occur in a document that recites both;
     # the more specific share-issuing cue wins, and the ambiguity is reported.
     if len(hits) > 1 and "stock_dividend" in hits:
         return "stock_dividend", f"multiple cues ({', '.join(hits)}); share-issuance cue preferred"
+    if len(hits) > 1 and "bonus_shares" in hits:
+        return "bonus_shares", f"multiple cues ({', '.join(hits)}); share-issuance cue preferred"
     if len(hits) > 1:
         return hits[0], f"multiple cues ({', '.join(hits)}); first in declaration order used"
     return hits[0], f"document text carries the {hits[0]} cue"
@@ -401,7 +406,10 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
     if authority != "Vietnam Securities Depository and Clearing Corporation":
         raise ValueError("document_classification_unsupported_or_ambiguous")
 
-    record_notice_cue = "would like to announce the record date as follows"
+    # VSDC's current English template includes the corporate-action-processing qualifier
+    # between "record date" and "as follows".  Both forms identify the same directly
+    # stated record-date notice; do not require an exact presentation string.
+    record_notice_cue = "would like to announce the record date"
     certificate_cue = "would like to announce certification of the"
     adjustment_cue = "adjustment of the number of the registered shares"
     listing_transfer_cue = "shares subject to listing change"
@@ -409,7 +417,8 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
     document_type: str
     basis: str
     cue: str
-    if record_notice_cue in lowered and "record date:" in lowered:
+    if (record_notice_cue in lowered and "as follows" in lowered
+            and "record date:" in lowered):
         document_type = "last_registration_date_notice"
         basis = "document_internal_vsd_record_date_notice_cues"
         cue = record_notice_cue
@@ -458,10 +467,11 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
 def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
     """Return an entitlement ratio only when two explicit VSDC wordings agree."""
     normalized = normalize_text(text)
-    rate_matches = re.findall(r"execution rate\s*:\s*([0-9.,]+)\s*:\s*([0-9.,]+)",
+    rate_matches = re.findall(r"(?:execution|payment) rate\s*:\s*([0-9.,]+)\s*:\s*([0-9.,]+)",
                               normalized, flags=re.I)
     wording_matches = re.findall(
-        r"shareholders are entitled to\s*([0-9.,]+)\s+new shares\s+for every\s*([0-9.,]+)\s+shares",
+        r"shareholders (?:are )?entitled to\s*([0-9.,]+)\s+new shares?\s+for every\s*"
+        r"([0-9.,]+)\s+shares?",
         normalized, flags=re.I)
     if len(rate_matches) != 1 or len(wording_matches) != 1:
         return {"state": "unavailable", "reason": "execution_rate_missing_or_ambiguous"}
@@ -475,8 +485,8 @@ def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
         "stock_ratio": round(float(new) / float(old), 10),
         "ratio_basis": "new_shares_per_existing_share",
         "citations": [
-            {"field": "stock_ratio", "cue": "execution rate",
-             "excerpt": f"Execution rate: {rate_matches[0][0]}:{rate_matches[0][1]}"},
+            {"field": "stock_ratio", "cue": "explicit entitlement rate",
+             "excerpt": f"Rate: {rate_matches[0][0]}:{rate_matches[0][1]}"},
             {"field": "stock_ratio", "cue": "explicit entitlement wording",
              "excerpt": (f"Shareholders are entitled to {wording_matches[0][0]} new shares "
                          f"for every {wording_matches[0][1]} shares")},
@@ -777,17 +787,24 @@ class _VsdNoticeBody(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.depth = 0
         self.text: list[str] = []
+        self._open_tags: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         classes = dict(attrs).get("class", "") or ""
         if self.depth:
             if tag not in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "wbr"}:
                 self.depth += 1
+                self._open_tags.append(tag)
         elif tag == "div" and "content-category" in classes.split():
             self.depth = 1
+            self._open_tags.append(tag)
 
-    def handle_endtag(self, _tag: str) -> None:
-        if self.depth:
+    def handle_startendtag(self, _tag: str, _attrs: list[tuple[str, str | None]]) -> None:
+        """A self-closing HTML tag does not close the scoped notice body."""
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.depth and self._open_tags and self._open_tags[-1] == tag:
+            self._open_tags.pop()
             self.depth -= 1
 
     def handle_data(self, data: str) -> None:

@@ -239,6 +239,44 @@ _HOSE_NOTICE = (
 
 
 class EventExtractionTests(unittest.TestCase):
+    def test_vsdc_html_body_keeps_content_after_self_closing_breaks(self):
+        payload = (b'<div class="content-category"><p>Record date: 18/08/2026<br />'
+                   b'Payment rate: 5:1 (Shareholders are entitled to 1 new share '
+                   b'for every 5 shares they own);<br />- planned number of shares to be '
+                   b'issued: 500,219,550 shares</p></div>')
+        extracted = events.extract_text(payload, "text/html")
+        self.assertIn("Record date: 18/08/2026", extracted)
+        self.assertIn("Payment rate: 5:1", extracted)
+        self.assertIn("planned number of shares to be issued: 500,219,550", extracted)
+
+    def test_vsdc_record_date_template_accepts_its_current_direct_wording(self):
+        payload = (b'<div class="content-category">VSDC would like to announce the record '
+                   b'date of corporate action processing as follows: Record date: 18/08/2026 '
+                   b'Reason: Payment of 2025 cash dividend; Share issuance for raising share '
+                   b'capital from owner\'s equity. Payment rate: 5:1 (Shareholders are '
+                   b'entitled to 1 new share for every 5 shares they own)'
+                   b'</div>')
+        import hashlib
+
+        record = _document(document_type="last_registration_date_notice", ticker="SSI",
+                           source_authority="Vietnam Securities Depository and Clearing Corporation",
+                           source_url="https://vsd.vn/en/ad/test",
+                           content_sha256=hashlib.sha256(payload).hexdigest())
+        typed = events.classify_retained_document(record, payload)
+        observation = events.extract_event_observation(
+            typed, events.extract_text(payload, typed["media_type"]))
+        self.assertEqual(typed["document_type"], "last_registration_date_notice")
+        self.assertEqual(observation["record_date"], "2026-08-18")
+        self.assertEqual(observation["event_type"], "bonus_shares")
+        self.assertEqual(observation["stock_ratio"], 0.2)
+        self.assertIsNone(observation["shares_issued"])
+        self.assertIsNone(observation["ex_date"])
+        self.assertIn("ex_date_absent", observation["warnings"])
+        built = ledger.build_ledger([observation])
+        self.assertEqual(built["entry_count"], 0)
+        self.assertEqual(built["unlinked_observations"][0]["reason"],
+                         "no share-change identity; cannot be linked to an event")
+
     def test_hose_style_notice_extracts_a_complete_executed_event(self):
         observation = events.extract_event_observation(
             _document("listing_change_notice"), _HOSE_NOTICE)
