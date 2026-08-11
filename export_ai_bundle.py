@@ -2972,12 +2972,28 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
         return None
     profiles = load_entity_profiles(Path(__file__).with_name("config") / "ticker_entity_profiles.csv")
     evidence_index = load_evidence_index(root)
+    canonical_facts_by_ticker: dict[str, list[dict[str, Any]]] = {}
+    combined_facts_by_ticker: dict[str, list[dict[str, Any]]] = {}
+
+    def _canonical_facts(ticker: str) -> list[dict[str, Any]]:
+        """Read one immutable canonical shard at most once per export request."""
+        normalized = str(ticker).upper()
+        if normalized not in canonical_facts_by_ticker:
+            canonical_facts_by_ticker[normalized] = read_facts(root, normalized)
+        return canonical_facts_by_ticker[normalized]
+
     def _facts_with_unstored_official(ticker: str) -> list[dict[str, Any]]:
         """Avoid treating a governed canonical promotion as a conflicting duplicate."""
-        canonical = read_facts(root, ticker)
-        identities = {str(fact.get("fact_id")) for fact in canonical if fact.get("fact_id")}
-        return [*canonical, *(fact for fact in facts_for_ticker(root, ticker)
-                              if str(fact.get("fact_id")) not in identities)]
+        normalized = str(ticker).upper()
+        if normalized not in combined_facts_by_ticker:
+            canonical = _canonical_facts(normalized)
+            identities = {str(fact.get("fact_id")) for fact in canonical if fact.get("fact_id")}
+            combined_facts_by_ticker[normalized] = [
+                *canonical,
+                *(fact for fact in facts_for_ticker(root, normalized)
+                  if str(fact.get("fact_id")) not in identities),
+            ]
+        return list(combined_facts_by_ticker[normalized])
     for ticker, entry in bundle_entries.items():
         record = records.get(str(ticker).upper())
         if record is None:
@@ -3003,7 +3019,7 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
     )
     # A summary only: facts remain in their original shards and are never rewritten by export.
     coverage["conflict_decomposition"] = canonical_conflict_coverage_summary(
-        records, lambda ticker: read_facts(root, ticker),
+        records, _canonical_facts,
     )
     return coverage
 
