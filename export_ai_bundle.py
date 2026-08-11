@@ -121,6 +121,10 @@ from distribution_evidence import build_distribution_evidence_for_ticker
 from dnse_foreign_flow_store import build_series as build_dnse_foreign_flow_series
 from dnse_current_state_market_risk import build_current_state_market_risk_from_evidence_store
 from dnse_current_state_price_analytics import build_current_state_price_analytics_from_evidence_store
+from current_state_relative_valuation import (
+    STATUS_QUALIFIED as CURRENT_STATE_RELATIVE_VALUATION_STATUS_QUALIFIED,
+    evaluate_current_state_relative_valuation,
+)
 from fundamental_quality_evidence import (
     build_fundamental_quality_evidence_for_ticker,
     build_historical_fundamental_brief,
@@ -2856,6 +2860,75 @@ def attach_current_state_price_analytics(
 
 
 # ==========================================================================
+# Current-state relative valuation (HPG) — opt-in (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-current-state-relative-valuation). Delegates all
+# qualification, current-price/current-share resolution, and formula math to
+# current_state_relative_valuation.py -- current market cap/P-E/P-B/P-S/EV/EV-Sales/
+# EV-EBITDA computed from the qualified DNSE current-state price times official-evidence
+# current shares outstanding, against already-qualified historical financial
+# denominators. Distinct from relative_valuation.py's own historical point-in-time
+# multiples (tickers[ticker].relative_valuation, untouched) -- this milestone's own
+# result is fed that section verbatim, read-only, purely to compute a comparability
+# verdict; it never recomputes or overwrites it.
+
+def build_current_state_relative_valuation_for_ticker_safe(
+    ticker: str, root: Path, financial_canonical: dict[str, dict], relative_valuation_entry: dict | None,
+    reference_session_date: str | None = None,
+) -> dict[str, Any] | None:
+    """Fail-closed wrapper: a local build failure for this ticker returns None (no key
+    attached), matching every sibling attach-layer wrapper in this module. In practice
+    evaluate_current_state_relative_valuation() itself already never raises (an
+    ineligible ticker or any missing input resolves to an explicit not-qualified
+    result) -- this try/except is defense in depth, same as every sibling."""
+    try:
+        entity_type = get_default_registry().entity_type_for(ticker)
+        financial = _financial_input(financial_canonical.get(ticker))
+        result = evaluate_current_state_relative_valuation(
+            ticker, runtime_root=root, financial=financial, entity_type=entity_type,
+            reference_session_date=reference_session_date,
+            historical_relative_valuation=relative_valuation_entry,
+        )
+        result["status"] = (
+            "available" if result.get("status") == CURRENT_STATE_RELATIVE_VALUATION_STATUS_QUALIFIED
+            else "not_qualified"
+        )
+        # Unconditional, never derived from qualification: a valuation multiple is
+        # exactly the kind of number most likely to be misread as an actionable
+        # signal, matching the newer DNSE current-state family's own convention
+        # (current_state_market_risk, qualified_market_observations).
+        result["is_actionable"] = False
+        return result
+    except Exception:
+        return None
+
+
+def attach_current_state_relative_valuation(
+    bundle_entries: dict[str, dict], root: Path, include: bool, financial_canonical: dict[str, dict],
+    reference_session_date: str | None = None,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False): when include is False,
+    evaluate_current_state_relative_valuation() is never called and no
+    current_state_relative_valuation key is ever added -- current default bundle
+    behavior is preserved exactly. When True, attaches an entry for every ticker; only a
+    ticker carrying its own DNSE current-state price evidence AND a retained official
+    share-transition event AND qualified canonical financial facts can resolve any
+    method to status="available" -- every other ticker (and, today, every method for
+    every ticker, since HPG's own official share-transition coverage does not yet reach
+    its DNSE price session -- see current_state_relative_valuation.py's module
+    docstring) resolves status="not_qualified", never a fabricated multiple."""
+    if not include:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_current_state_relative_valuation_for_ticker_safe(
+            tk, root, financial_canonical, entry.get("relative_valuation"), reference_session_date,
+        )
+        if result is not None:
+            entry["current_state_relative_valuation"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # P1E — opt-in market-wide canonical financial facts (disabled by default)
 # ==========================================================================
 # New dedicated flag (--include-canonical-financial-facts). Reads the layer-3 store under
@@ -3329,6 +3402,19 @@ def main() -> int:
                              " volatility, drawdown, RSI14, SMA20), reusing the"
                              " durable retained DNSE OHLC store. Qualified for HPG"
                              " only; every other ticker reports status=\"not_qualified\".")
+    parser.add_argument("--include-current-state-relative-valuation", action="store_true",
+                        help="Opt-in, disabled by default: attach"
+                             " tickers[ticker].current_state_relative_valuation from"
+                             " current_state_relative_valuation.py -- current market"
+                             " capitalization/P-E/P-B/P-S/EV/EV-Sales/EV-EBITDA computed"
+                             " from the qualified DNSE current-state price times"
+                             " official-evidence current shares outstanding"
+                             " (share_transition_bridge.py), against already-qualified"
+                             " historical financial denominators. Distinct from the"
+                             " pre-existing tickers[ticker].relative_valuation (historical"
+                             " point-in-time multiples, untouched). Every method is"
+                             " is_actionable=false always. Not enabled in any"
+                             " default/production invocation.")
     parser.add_argument("--include-canonical-financial-facts", action="store_true",
                         help="Opt-in, disabled by default (P1E): attach"
                              " tickers[ticker].canonical_financial_facts from the market-wide"
@@ -3595,6 +3681,11 @@ def main() -> int:
                                      reference_session_date=latest_session)
     attach_current_state_price_analytics(bundle_entries, runtime_root(), args.include_current_state_price_analytics,
                                          reference_session_date=latest_session)
+    # Own dedicated flag; must run after relative_valuation is already present on each
+    # entry (set inside build_ticker_entry, well before this attach-sequence block) so
+    # its own historical-comparability check has something real to read.
+    attach_current_state_relative_valuation(bundle_entries, runtime_root(), args.include_current_state_relative_valuation,
+                                            financial_canonical, reference_session_date=latest_session)
     attach_analysis_lane_eligibility(bundle_entries, price_basis, args.include_analysis_lane_eligibility)
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default

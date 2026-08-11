@@ -5,6 +5,49 @@
 > carries a SUPERSEDED note pointing at the P1J.1 entry that corrects it. They are kept
 > rather than deleted so the record of what was believed, and when, stays intact.
 
+## 2026-08-11 - Current-state relative valuation: strict share coverage over a permissive one, and three discovered-not-fixed evidence-loader gaps
+
+- `share_transition_bridge.resolve_share_transition` was chosen over `market_wide_current_shares_resolver.py`
+  for current shares, even though the latter's `qualified_official` lane already reports HPG
+  qualified for a session as late as 2026-08-07. That lane extrapolates a single vendor
+  corroboration (dated 2026-07-30) forward to any later session indefinitely, with no requirement
+  that the corroboration itself reach the target date — exactly the "infer continued validity
+  beyond proven event/coverage dates" pattern this milestone was told not to do. The stricter
+  bridge (`coverage_through` must itself reach `target_date`) was the one this milestone was
+  explicitly told to reuse, and its real result for HPG's own 2026-08-07 DNSE session is
+  `latest_historical_only`, not `current_qualified` — reported honestly, not patched around.
+- One current share count feeds every method (`market_cap`, `pe`, `pb`, `ps`, `enterprise_value`,
+  `ev_sales`, `ev_ebitda`), not `relative_valuation.py`'s period-end/weighted-average split. That
+  split exists because a historical checkpoint relates one *completed* period's price to that same
+  period's flow/stock figures; a current price has no completed "current period" to weight a share
+  count across, so a single current-shares-outstanding figure is both simpler and the standard
+  real-world convention for a current trailing multiple.
+- `current_state_relative_valuation` is deliberately not named `current_valuation`:
+  `ticker_capability_matrix.market_actionable.current_valuation` already exists as an unrelated,
+  market-wide generic capability-status slot (`market_basis_capability_registry.py`). Reusing that
+  string for a different, evidence-bounded, ticker-specific concept would have made two unrelated
+  "current_valuation" claims sit side by side in the same bundle.
+- Three real, pre-existing evidence-loader gaps were found while wiring this contract and are
+  deliberately not fixed here: (1) `data/official-evidence/manifest.json`'s 11 records omit
+  `evidence_id a7c3711d1b02c131a87fef4a0f5bd4d5fbd780bbb0c07665111a358a2ddcd2a8`
+  (`hpg-consolidated-fy2024-audited.pdf`), so `load_verified_share_basis`/`load_verified_ebitda_components`
+  reject every HPG/VNM/VCB row referencing it with `evidence_missing_or_hash_mismatch`; (2)
+  `official_evidence.load_cited_financial_records` resolves each manifest record's document at a
+  flat `data/official-evidence/<filename>` path instead of using that record's own
+  `archive_document_path`, so HPG's newer, correctly-manifest-registered `financial_identity_citations.jsonl`
+  facts (shareholders_equity, net_income, revenue, cash, debt; evidence_id `e52eeb95...`) never
+  reach `canonical["records"]`, and `_financial_input`'s rigor-ranked dedup silently falls back to
+  lower-rigor `financial_snapshot`/`financial_observation_store` rows instead. Repairing either is
+  a registry/loader-level fix touching every other qualified-share/financial-fact consumer in this
+  repository (Net-Net, the historical relative-valuation snapshot, `corporate_action_ledger.py`),
+  not a one-ticker valuation-lane change; each is reported here as a real finding, not silently
+  worked around with a locally-weaker re-verification.
+- Every method's `is_actionable` is hardcoded `false` regardless of qualification state, matching
+  the newer `current_state_market_risk`/`qualified_market_observations` convention (a descriptive-
+  fact signal) rather than `relative_valuation.py`'s own usage of the same field name as a plain
+  data-quality flag — a valuation multiple is exactly the number most likely to be misread as an
+  actionable signal, so the more conservative, more recent convention was preferred.
+
 ## 2026-08-09 - V2 research snapshots preserve the explicit production universe
 
 - The immutable v1 HPG/VNM/VCB contract is not widened or rewritten. V2 has its own semantic

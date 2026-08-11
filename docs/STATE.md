@@ -1,5 +1,66 @@
 # Stock Lookup state
 
+## HPG current-state relative valuation — built, wired, correctly not-yet-live (2026-08-11)
+
+New `current_state_relative_valuation.py`: current market cap/P-E/P-B/P-S/EV/EV-Sales/EV-EBITDA
+from the qualified DNSE current-state price (`dnse_current_state_price_analytics.py`, reused
+verbatim) times official-evidence current common shares outstanding
+(`share_transition_bridge.resolve_share_transition`, wired to production for the first time —
+previously it had no caller anywhere in this repository), against already-qualified historical
+canonical financial denominators. Every result explicitly carries
+`as_of_semantics = "current_market_price_on_qualified_historical_fundamentals"` — never "TTM",
+"forward", or "current earnings" — since it deliberately mixes a current price with an older
+qualified period; uses one current share count for every metric (not the historical
+period-end/weighted-average split, which does not apply to a still-open current period). Opt-in
+via `export_ai_bundle.py --include-current-state-relative-valuation` (disabled by default),
+attached as `tickers[ticker].current_state_relative_valuation` — distinct from the pre-existing
+`relative_valuation` (historical point-in-time, untouched) and from
+`ticker_capability_matrix.market_actionable.current_valuation` (an unrelated, market-wide generic
+capability-status slot). Consumer pass-through (`apply_bundle_current_state_relative_valuation_contract`)
+and a minimal `prompts/ai_analysis_templates.md` extension (one new paragraph, three new
+prohibited-claims items) both added.
+
+**Real result today: `NOT_QUALIFIED` for every method, for two independently-sufficient, evidenced
+reasons — not a code defect in this new module.** (1) HPG's DNSE current price qualifies cleanly
+(session 2026-08-07, 22,000 VND, `ADJUSTED_CONFIRMED`), but official current-share coverage
+(`resolve_share_transition`, fed only by `share_basis_citations.jsonl` + the one real
+`current_shares_outstanding_after_event` citation) reaches only 2026-07-30 — 8 days short of the
+DNSE session, via the strictest, non-inferring reading of "coverage" this milestone was told to
+use (deliberately *not* `market_wide_current_shares_resolver.py`'s more permissive
+`qualified_official` lane, which extrapolates a stale vendor corroboration forward indefinitely —
+exactly the "infer continued validity beyond proven coverage" pattern this project's rules
+forbid). (2) Independently: `evidence_id a7c3711d1b02c131a87fef4a0f5bd4d5fbd780bbb0c07665111a358a2ddcd2a8`
+(`hpg-consolidated-fy2024-audited.pdf`, backing HPG's period-end/weighted-average share citations
+*and* its EBITDA-component citations) is absent from `data/official-evidence/manifest.json`'s 11
+records entirely — `semantic_evidence_bridge.load_verified_share_basis`/`load_verified_ebitda_components`
+both reject every HPG/VNM/VCB row with `evidence_missing_or_hash_mismatch`, confirmed by running
+both loaders directly against the real runtime root. A related, third gap: `official_evidence.load_cited_financial_records`
+reconstructs a flat `data/official-evidence/<filename>` path rather than using each manifest
+record's own `archive_document_path`, so HPG's newer `financial_identity_citations.jsonl` facts
+(shareholders_equity, net_income, revenue, cash, debt — all hash-verifiable, evidence_id
+`e52eeb95...` *is* correctly manifest-registered) never reach `canonical["records"]` either; the
+`_financial_input` dedup silently falls back to lower-rigor `financial_snapshot`/
+`financial_observation_store` rows (`quality_state="unknown"`), which this module's reused
+`relative_valuation._qualified()` correctly refuses. None of these three gaps are fixed here
+(out of this milestone's scope — they are pre-existing, cross-cutting evidence-loader issues,
+not part of this new module, and fixing them touches shared infrastructure other qualified-share/
+financial consumers already depend on). The mechanism itself is proven correct and complete via
+34 synthetic-input unit tests (real formulas, real numbers, once coverage/manifest gaps are
+hypothetically closed) plus a real-evidence integration test that locks in today's exact blocker.
+
+Historical comparability (`historical_comparison`) is separately `incomparable` today for its own
+reason: the only existing historical HPG valuation checkpoint (`historical_relative_valuation_snapshot.md`,
+`pe=10.55` etc.) has been `BLOCKED` since 2026-08-04 (see below) — confirmed live in production
+(`relative_valuation.methods.*.state == "unavailable"` for HPG today).
+
+Full shadow E2E run against the real `dashboard-runtime` (no network, no provider refresh, no DB
+mutation, no publish): isolated Producer bundle build → Consumer ticker context → hand-authored
+multi-angle synthesis response → `multi_angle_synthesis_boundary.accept_multi_angle_synthesis` —
+**accepted**, zero rejection reasons, byte-identical across two independent end-to-end rebuilds.
+`vn_stock.db` untouched by this milestone (its mtime-instability-on-read is a separately
+pre-existing, already-test-documented environmental property, confirmed via `git stash` baseline
+comparison, not caused by this work).
+
 ## Production-universe qualified research snapshots v2 (2026-08-09)
 
 Legacy v1 HPG/VNM/VCB snapshots remain untouched. A deterministic v2 semantic snapshot now binds
