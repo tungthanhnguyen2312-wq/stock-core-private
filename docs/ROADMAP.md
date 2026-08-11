@@ -1,5 +1,23 @@
 # Stock Lookup roadmap
 
+## Official financial evidence scale-out Cohort 4 (partial, closed 2026-08-11)
+
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_4: PARTIAL` was fixed to exactly SSI and QNS.
+SSI's pre-retained issuer FY2024 audited consolidated PDF hash-verifies and now contributes one
+new source-page-verified annual consolidated VND `current_liabilities` identity through the sole
+append-only writer. The issuer's financial-services funding lines were not recast as corporate
+debt; SSI stays `not_applicable` to the corporate five-metric research projection. This annual
+financial-evidence result is independent of the deferred SSI/VSDC corporate-action branch.
+
+QNS's pre-retained issuer FY2024 audited consolidated PDF and its five citations were already
+manifest-qualified. Its explicit page-39 long-term-nil maturity evidence, paired with page-8
+short-term borrowings, qualifies debt without an inferred zero. Real-evidence replay is clean and
+adds no duplicate: QNS remains an available historical-only, non-actionable corporate research
+input. No third ticker, provider, source authority, or external acquisition occurred.
+
+The cohort is closed. The next gate remains a separately owner-scoped official-evidence decision;
+it is not executed here.
+
 ## Official financial evidence scale-out Cohort 3 (partial, closed 2026-08-11)
 
 `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3: PARTIAL`. The owner-fixed set was exactly

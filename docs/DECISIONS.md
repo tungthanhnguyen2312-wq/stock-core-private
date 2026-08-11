@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-08-11 - Cohort 4 closes partial: SSI direct identity, QNS corporate set
+
+- The owner fixed `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_4` to exactly SSI and QNS.
+  No third ticker, source host, provider, crawl, FPT/PNJ retry, or substitute was authorized.
+- SSI's retained issuer FY2024 audited consolidated PDF directly and hash-verifiably supports
+  `current_liabilities = 46,599,438,522,989` VND as at 2024-12-31. It is promoted once through
+  `evidence_promotion.py` with page-10 OCR lineage. The securities-sector contract remains
+  authoritative: short-term borrowings and financial leases are not relabelled as corporate
+  total interest-bearing debt, and no corporate five-metric research eligibility is inferred.
+- QNS's issuer FY2024 audited consolidated document and five financial identities were already
+  present in the governed manifest. The source-page and explicit maturity-zero debt path
+  re-verified; append-only replay correctly added neither a duplicate manifest record nor a
+  citation. Its existing historical-only, non-actionable corporate research result stands.
+- SSI annual financial evidence is strictly independent of the SSI/VSDC corporate-action/ex-date
+  branch, which remains deferred pending its separately specified official facts.
+
 ## 2026-08-11 - Cohort 3 closes fail-closed to its owner-fixed FPT/PNJ/PVD scope
 
 - `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3` was authorized for exactly FPT, PNJ, and

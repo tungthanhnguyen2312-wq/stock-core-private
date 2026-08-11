@@ -1,5 +1,20 @@
 # Bounded official financial evidence scale-out
 
+## Cohort 4 closeout (2026-08-11)
+
+The owner-fixed Cohort 4 set is exactly SSI and QNS. The existing approved issuer paths are
+`ssi.com.vn` and `qns.com.vn`; no third ticker, source-authority expansion, provider, crawl,
+FPT/PNJ retry, or substitute occurred.
+
+| Ticker | Retained official filing / qualification | Registration and projection |
+| --- | --- | --- |
+| SSI | FY2024 issuer audited consolidated filing, source URL `https://www.ssi.com.vn/upload/files/IR/20250320_SSI_Bao_cao_tai_chinh_hop_nhat_nam_2024_EN.pdf`, document ID `3fd72890fe43b78071d641b8d89523d4aa28e340d4f1904a90667f8c1d794bf0`, SHA-256 `38e5b9ba2fc951120be813b09df05fa2d8b152b3b95443c6cd108de8abf03b74`, published 2025-03-20 and observed 2026-07-30T00:00:00Z. Page 10 explicitly states consolidated VND current liabilities of `46,599,438,522,989` at 2024-12-31. | Added one manifest record and one page-verified `current_liabilities` citation. SSI remains `not_applicable` to the corporate five-metric projection: its securities funding is not corporate debt. |
+| QNS | FY2024 issuer audited consolidated filing, source URL `https://qns.com.vn/upload/product/qns-cong-bo-bao-cao-tai-chinh-nam-2024-da-qua-kiem-toan-1740555452-17405559121.pdf`, document ID `5c264f4eaa4dd484299f49a71f9c8632e22ce4b017ae82e8619fed4237e7668f`, SHA-256 `faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3`. | Existing manifest and five citations re-verified. Cash, equity, net income, operating cash flow, and debt (short-term borrowing plus explicit long-term nil) all qualify; no duplicate was added. |
+
+SSI annual financial evidence is independent of the deferred SSI/VSDC corporate-action/ex-date
+branch. Cohort 4 is `PARTIAL` and closed; a new owner-scoped evidence decision is required before
+any further scale-out.
+
 ## Cohort 3 closeout (2026-08-11)
 
 The owner-fixed Cohort 3 set is exactly FPT, PNJ, and PVD. This closeout does not reopen the

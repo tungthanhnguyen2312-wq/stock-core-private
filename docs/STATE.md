@@ -1,5 +1,32 @@
 # Stock Lookup state
 
+## Official financial evidence scale-out Cohort 4 (2026-08-11)
+
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_4: PARTIAL`, closed to its fixed SSI/QNS scope.
+The two minimum issuer documents were already retained through the approved `ssi.com.vn` and
+`qns.com.vn` paths, so no external retry or discovery occurred. SSI's FY2024 audited
+consolidated PDF (`3fd72890fe43b78071d641b8d89523d4aa28e340d4f1904a90667f8c1d794bf0`, SHA-256
+`38e5b9ba2fc951120be813b09df05fa2d8b152b3b95443c6cd108de8abf03b74`) now has one newly
+registered, source-page-verified annual consolidated VND identity: `current_liabilities =
+46,599,438,522,989` at 2024-12-31. Its manifest identity is
+`7a0e4853f1a837ecea71e764789181efdb00c1c916609a790c9688ebe74a8286`; citation identity is
+`af35883a2028970cc100d168dd9965be38ff8a1d1d98d510faa2d72cfae695ad`.
+
+SSI remains outside the corporate five-metric research contract: its securities-sector semantics
+prohibit treating its funding lines as corporate `total_interest_bearing_debt` or inferring a
+corporate research/valuation input set. This is a correct `not_applicable`, not a missing-value
+substitute. It is independent of, and does not alter, the deferred SSI/VSDC corporate-action
+notice. QNS's retained FY2024 audited consolidated PDF (SHA-256
+`faaa54465d1d6a3ca98bebf2a47a45096e21ee6ac3d1cfe3c95db3b1c0bae3e3`) already had a qualified
+manifest identity and all five annual consolidated VND facts, including the explicit-zero
+long-term borrowing maturity-note component. Re-validation produced five qualified facts and an
+available historical-only, non-actionable corporate research projection; append-only replay
+added nothing.
+
+No third ticker, provider, source authority, FPT/PNJ retry, runtime mutation, Consumer/Dashboard
+change, or corporate-action/ex-date work occurred. Any further scale-out needs a separately
+owner-scoped official-evidence decision.
+
 ## Official financial evidence scale-out Cohort 3 (2026-08-11)
 
 `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3: PARTIAL`, closed to its owner-fixed scope of
