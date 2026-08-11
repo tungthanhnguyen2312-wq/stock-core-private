@@ -1,5 +1,13 @@
 # ADR-005: EODHD private-shadow market-data authority
 
+> **SUPERSEDED — 2026-08-03.** The approval recorded below was withdrawn one day after this ADR
+> was written. Current authority: `docs/DECISIONS.md`'s 2026-08-03 EODHD closure entry
+> (`EODHD_ROUTE_STATUS: REJECTED_BY_OWNER`), reconfirmed by its 2026-08-11 reconciliation entry —
+> "EODHD remains `REJECTED_BY_OWNER`; it is not a fallback, qualification route, or investigation
+> target." No retest is authorized; the "Retest conditions" section below is inert. Kept for the
+> historical record of the original, later-withdrawn approval — do not act on it and do not
+> propose reopening EODHD on the strength of this file alone.
+
 ## Decision
 
 The owner approved EODHD on 2026-08-02 as the candidate source authority for a
