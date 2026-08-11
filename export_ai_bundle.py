@@ -2984,7 +2984,7 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
     if not include:
         return None
     from canonical_fact_store import _load_state, read_facts
-    from official_annual_financial_fact_projection import facts_for_ticker
+    from official_annual_financial_fact_projection import facts_by_ticker
     from financial_entity_applicability import load_entity_profiles
 
     state = _load_state(root)
@@ -2993,6 +2993,7 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
         return None
     profiles = load_entity_profiles(Path(__file__).with_name("config") / "ticker_entity_profiles.csv")
     evidence_index = load_evidence_index(root)
+    official_facts_by_ticker = facts_by_ticker(root)
     canonical_facts_by_ticker: dict[str, list[dict[str, Any]]] = {}
     combined_facts_by_ticker: dict[str, list[dict[str, Any]]] = {}
 
@@ -3011,7 +3012,7 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
             identities = {str(fact.get("fact_id")) for fact in canonical if fact.get("fact_id")}
             combined_facts_by_ticker[normalized] = [
                 *canonical,
-                *(fact for fact in facts_for_ticker(root, normalized)
+                *(fact for fact in official_facts_by_ticker.get(normalized, [])
                   if str(fact.get("fact_id")) not in identities),
             ]
         return list(combined_facts_by_ticker[normalized])

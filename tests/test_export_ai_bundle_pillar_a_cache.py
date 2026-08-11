@@ -37,7 +37,7 @@ class PillarARequestScopedCacheTests(unittest.TestCase):
         observed_stages: list[tuple[str, str | None]] = []
         with patch("canonical_fact_store._load_state", return_value=state), \
              patch("canonical_fact_store.read_facts", side_effect=read_facts), \
-             patch("official_annual_financial_fact_projection.facts_for_ticker", return_value=[]), \
+             patch("official_annual_financial_fact_projection.facts_by_ticker", return_value={}) as official_index, \
              patch("financial_entity_applicability.load_entity_profiles", return_value={}), \
              patch.object(exporter, "load_evidence_index", return_value={}), \
              patch.object(exporter, "build_research_financial_fact_projection", side_effect=projection), \
@@ -49,6 +49,7 @@ class PillarARequestScopedCacheTests(unittest.TestCase):
             )
 
         self.assertEqual(reads, ["VNM", "HPG"])
+        official_index.assert_called_once_with(Path("runtime"))
         self.assertEqual(entries["VNM"]["research_financial_fact_projection"]["fact_ids"], ["VNM-canonical"])
         self.assertEqual(result["coverage"]["VNM"], ["VNM-canonical"])
         self.assertEqual(result["conflict_decomposition"]["conflicts"]["HPG"], ["HPG-canonical"])

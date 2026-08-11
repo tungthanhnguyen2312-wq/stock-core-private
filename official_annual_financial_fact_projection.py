@@ -28,16 +28,16 @@ def _hash(value: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
-def facts_for_ticker(runtime_root: str, ticker: str) -> list[dict[str, Any]]:
-    """Return annual consolidated issuer facts for one ticker, sorted deterministically.
+def facts_by_ticker(runtime_root: str) -> dict[str, list[dict[str, Any]]]:
+    """Build the verified annual issuer facts once for one export request.
 
     A malformed or unverified citation produces no fact.  This never reads a provider
     payload and never writes canonical shards, the database, or a generated bundle.
     """
-    ticker = str(ticker).upper()
     verified = load_verified_financial_identities(runtime_root).get("by_key") or {}
-    result: list[dict[str, Any]] = []
+    result: dict[str, list[dict[str, Any]]] = {}
     for (entry_ticker, metric, period), entry in sorted(verified.items()):
+        ticker = str(entry_ticker).upper()
         if entry_ticker != ticker or metric not in _METADATA:
             continue
         if entry.get("reporting_frequency") != "annual" or entry.get("statement_scope") != "consolidated":
@@ -50,7 +50,7 @@ def facts_for_ticker(runtime_root: str, ticker: str) -> list[dict[str, Any]]:
         fact_identity = {"ticker": ticker, "metric": metric, "period": period,
                          "citation_id": entry["citation_id"], "evidence_id": entry["evidence_id"]}
         fact_id = _hash(fact_identity)
-        result.append({
+        result.setdefault(ticker, []).append({
             "ticker": ticker, "canonical_metric": metric, "status": "official_reported",
             "value": entry["value"], "reporting_period": period, "period_type": "annual",
             "period_start": f"{period}-01-01", "period_end": f"{period}-12-31",
@@ -69,3 +69,8 @@ def facts_for_ticker(runtime_root: str, ticker: str) -> list[dict[str, Any]]:
                 entry.get("extraction") or {}).get("components") if isinstance(entry.get("extraction"), Mapping) else None,
         })
     return result
+
+
+def facts_for_ticker(runtime_root: str, ticker: str) -> list[dict[str, Any]]:
+    """Return annual consolidated issuer facts for one ticker, sorted deterministically."""
+    return list(facts_by_ticker(runtime_root).get(str(ticker).upper(), []))

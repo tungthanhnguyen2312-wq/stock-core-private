@@ -76,9 +76,11 @@ class OfficialAnnualFinancialFactProjectionTests(unittest.TestCase):
     def test_five_hash_verified_annual_facts_qualify_for_corporate_research(self) -> None:
         self._promote()
         facts = annual.facts_for_ticker(self.root, "PAN")
+        indexed = annual.facts_by_ticker(self.root)
         result = research.build_projection("PAN", facts, entity_type="corporate", entity_authority="issuer_profile")
 
         self.assertEqual(len(facts), 5)
+        self.assertEqual(indexed, {"PAN": facts})
         self.assertEqual(result["status"], "available")
         self.assertTrue(result["research_eligible"])
         debt = next(fact for fact in facts if fact["canonical_metric"] == "total_interest_bearing_debt")
