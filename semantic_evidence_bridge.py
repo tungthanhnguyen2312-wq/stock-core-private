@@ -201,6 +201,38 @@ def _manifest_acceptance_ok(record: Mapping[str, Any]) -> bool:
         and acceptance.get("direct_document_url_status") == "unavailable_recorded"
     )
 
+def _resolve_manifest_document(manifest_path: Path, record: Mapping[str, Any]) -> Path | None:
+    """Resolve one manifest-declared document without directory searching.
+
+    Older retained evidence keeps the document flat beside ``manifest.json`` via
+    ``filename``.  Governed retained artifacts instead declare an explicit
+    ``archive_document_path`` relative to this Producer checkout.  The latter is
+    authoritative when present: a missing archive document must not fall back to
+    a same-named flat file.
+    """
+    archive_document_path = record.get("archive_document_path")
+    if archive_document_path is not None:
+        if not isinstance(archive_document_path, str) or not archive_document_path.strip():
+            return None
+        document = Path(archive_document_path)
+        if not document.is_absolute():
+            if ".." in document.parts:
+                return None
+            producer_root = Path(__file__).resolve().parent
+            document = producer_root / document
+        return document
+
+    filename = record.get("filename")
+    if not isinstance(filename, str) or not filename.strip():
+        return None
+    flat_document = Path(filename)
+    # ``filename`` is deliberately a flat manifest representation.  Never turn
+    # it into a search key or permit it to escape the evidence directory.
+    if flat_document.is_absolute() or len(flat_document.parts) != 1:
+        return None
+    return manifest_path.parent / flat_document
+
+
 def _load_manifest(runtime_root: Path) -> dict[str, dict[str, Any]] | None:
     """Return {evidence_id: record} restricted to hash-verified, qualified evidence.
 
@@ -221,17 +253,35 @@ def _load_manifest(runtime_root: Path) -> dict[str, dict[str, Any]] | None:
     for record in manifest.get("records", []):
         if not isinstance(record, dict):
             continue
-        evidence_id, filename = record.get("evidence_id"), record.get("filename")
-        if not evidence_id or not filename or record.get("qualification_state") != "qualified":
+        evidence_id = record.get("evidence_id")
+        if not evidence_id or record.get("qualification_state") != "qualified":
             continue
         if not _manifest_acceptance_ok(record):
             continue
-        archive_path = record.get("archive_document_path")
-        document = Path(str(archive_path)) if archive_path else path.parent / str(filename)
+        document = _resolve_manifest_document(path, record)
+        if document is None:
+            continue
         if not document.is_file() or _sha256_file(document) != record.get("sha256"):
             continue
         verified[evidence_id] = record
     return verified
+
+
+def _manifest_declares_evidence_id(runtime_root: Path, evidence_id: Any) -> bool:
+    """Whether the authority manifest declares an ID, regardless of verification.
+
+    This intentionally does not make a document usable.  It only lets callers
+    distinguish a registration absence from a declared document that then fails
+    qualification, path resolution, or hash verification.
+    """
+    path = runtime_root / MANIFEST_RELATIVE
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (isinstance(manifest, dict) and manifest.get("schema_version") == MANIFEST_SCHEMA_VERSION
+            and any(isinstance(record, dict) and record.get("evidence_id") == evidence_id
+                    for record in manifest.get("records", [])))
 
 
 def _load_citation_rows(runtime_root: Path) -> list[Any] | None:
@@ -1329,7 +1379,13 @@ def load_verified_financial_identities(runtime_root: Path) -> dict[str, Any]:
             continue
         evidence = evidence_by_id.get(citation["evidence_id"])
         if evidence is None:
-            rejected.append({"key": key, "reason": "evidence_missing_or_hash_mismatch"})
+            rejected.append({
+                "key": key,
+                "reason": "evidence_missing_or_hash_mismatch",
+                "authority_status": ("declared_document_failed_verification"
+                                     if _manifest_declares_evidence_id(runtime_root, citation["evidence_id"])
+                                     else "document_not_registered_in_authority"),
+            })
             continue
         extraction = citation.get("extraction") or {}
         materialization = extraction.get("materialization")
