@@ -43,6 +43,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from atomic_io import atomic_write_json
 try:
     from observability_events import (
@@ -76,7 +77,7 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 import pandas as pd
 from shareholder_pipeline import DONE, calculate_major_shareholder_delta
@@ -315,6 +316,24 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def emit_post_focus_stage_observability(*, output_dir: Path, run_identity: str,
+                                        ticker: str | None, stage: str,
+                                        elapsed_seconds: float) -> None:
+    """Record bounded post-focus timing outside the analytical bundle payload."""
+    emit_observability_event(build_observability_event(
+        EventStage.POST_FOCUS_STAGE,
+        EventOutcome.SUCCESS,
+        artifact_filename="analysis_bundle.json",
+        target_path=output_dir,
+        provenance={
+            "run_identity": run_identity,
+            "ticker": ticker,
+            "post_focus_stage": stage,
+            "elapsed_seconds": round(elapsed_seconds, 6),
+        },
+    ), output_dir / "observability_events.jsonl")
 
 
 def build_trusted_subset_proof(tickers: list[str], session_identity: str | None,
@@ -2954,7 +2973,9 @@ def attach_canonical_financial_facts(bundle_entries: dict[str, dict], root: Path
 
 
 def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: Path,
-                                        include: bool) -> dict[str, Any] | None:
+                                        include: bool, *,
+                                        stage_observer: Callable[[str, str | None, float], None] | None = None
+                                        ) -> dict[str, Any] | None:
     """Attach the read-only Pillar A research projection and deterministic coverage.
 
     It uses the existing canonical shard store directly; no fact is copied into a new store,
@@ -3002,18 +3023,23 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
         entity_authority = record.get("archetype_authority")
         if entity_type and entity_authority in (None, "unknown"):
             entity_authority = "manual_profile"
+        projection_started = time.perf_counter()
         projection = build_research_financial_fact_projection(
             ticker, _facts_with_unstored_official(ticker), entity_type=entity_type,
             entity_authority=entity_authority, evidence_index=evidence_index,
         )
         entry["research_financial_fact_projection"] = projection
         entry["research_financial_source_selection"] = select_research_source(entry, projection)
+        if stage_observer is not None:
+            stage_observer("pillar_a_projection", str(ticker).upper(),
+                           time.perf_counter() - projection_started)
     records = state.get("tickers") or []
     coverage_records = [{**record,
                          "issuer_entity_type": record.get("issuer_entity_type") or profiles.get(str(record.get("ticker")).upper()),
                          "archetype_authority": record.get("archetype_authority") or (
                              "manual_profile" if profiles.get(str(record.get("ticker")).upper()) else "unknown")}
                         for record in state.get("tickers") or []]
+    coverage_started = time.perf_counter()
     coverage = research_financial_coverage_summary(
         coverage_records, _facts_with_unstored_official, evidence_index=evidence_index,
     )
@@ -3021,6 +3047,9 @@ def attach_pillar_a_research_projection(bundle_entries: dict[str, dict], root: P
     coverage["conflict_decomposition"] = canonical_conflict_coverage_summary(
         records, _canonical_facts,
     )
+    if stage_observer is not None:
+        stage_observer("pillar_a_coverage_conflict", None,
+                       time.perf_counter() - coverage_started)
     return coverage
 
 
@@ -3620,6 +3649,17 @@ def main() -> int:
     }
     output_dir = resolve_output_dir(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    post_focus_run_identity = f"{generated_at}:{','.join(tickers)}:{output_dir.name}"
+
+    def observe_post_focus_stage(stage: str, ticker: str | None, started_at: float) -> None:
+        emit_post_focus_stage_observability(
+            output_dir=output_dir,
+            run_identity=post_focus_run_identity,
+            ticker=ticker,
+            stage=stage,
+            elapsed_seconds=time.perf_counter() - started_at,
+        )
+
     out_path = output_dir / 'focus_extract.json'
     atomic_write_json(out_path, focus_extract)
     emit_observability_event(build_observability_event(
@@ -3636,6 +3676,7 @@ def main() -> int:
 
     # ---------------------------------------------------------- analysis_bundle.json (đầy đủ)
     bundle_entries = {}
+    context_loading_started = time.perf_counter()
     for tk in tickers:
         entry = dict(entries[tk])  # copy nông — không sửa entries gốc (focus_extract vẫn nhỏ)
         context_package = load_context_package_full(tk)
@@ -3662,6 +3703,7 @@ def main() -> int:
                 "khong_co_context_package (chưa build_ticker_context.py cho mã này -> thiếu"
                 " news_related/shareholder/valuation_inputs chi tiết)")
         bundle_entries[tk] = entry
+    observe_post_focus_stage("context_loading", ",".join(tickers), context_loading_started)
 
     # Generated statement-taxonomy sidecar: read-only, and optional by construction. A
     # missing, malformed, or session-mismatched sidecar yields no taxonomy evidence at all,
@@ -3706,12 +3748,25 @@ def main() -> int:
     # P1E: opt-in market-wide canonical financial facts, disabled by default. With the flag
     # unset nothing is read from the canonical fact store and no key is added, so the default
     # bundle -- and therefore the exact-session proof that hash-binds it -- is unchanged.
+    canonical_assembly_started = time.perf_counter()
     attach_canonical_financial_facts(bundle_entries, runtime_root(),
                                      args.include_canonical_financial_facts or args.include_pillar_a_research_projection,
                                      session_date=latest_session,
                                      price_basis_verified=price_basis.get("price_basis_verified") is True)
+    observe_post_focus_stage("canonical_fact_assembly", ",".join(tickers), canonical_assembly_started)
+
+    def observe_pillar_a_stage(stage: str, ticker: str | None, elapsed_seconds: float) -> None:
+        emit_post_focus_stage_observability(
+            output_dir=output_dir,
+            run_identity=post_focus_run_identity,
+            ticker=ticker,
+            stage=stage,
+            elapsed_seconds=elapsed_seconds,
+        )
+
     pillar_a_research_coverage = attach_pillar_a_research_projection(
         bundle_entries, runtime_root(), args.include_pillar_a_research_projection,
+        stage_observer=observe_pillar_a_stage,
     )
     pillar_a_eligible_tickers = [
         ticker for ticker, entry in bundle_entries.items()
@@ -3719,16 +3774,21 @@ def main() -> int:
         and isinstance(entry.get("research_financial_fact_projection"), Mapping)
         and entry["research_financial_fact_projection"].get("research_eligible") is True
     ]
+    fundamental_started = time.perf_counter()
     attach_fundamental_quality_evidence(bundle_entries, runtime_root(),
                                         args.include_fundamental_quality_evidence or args.include_pillar_a_research_projection,
                                         taxonomy_sidecar=taxonomy_sidecar)
+    observe_post_focus_stage("fundamental_attachment", ",".join(tickers), fundamental_started)
+    decision_historical_started = time.perf_counter()
     attach_historical_decision_analysis(bundle_entries,
                                         args.include_historical_decision_analysis or args.include_pillar_a_research_projection,
                                         additional_tickers=set(pillar_a_eligible_tickers) | _LEGACY_QUALIFIED_RESEARCH_TICKERS,
                                         runtime_root_path=runtime_root())
+    observe_post_focus_stage("decision_historical_attachment", ",".join(tickers), decision_historical_started)
     attach_portfolio_risk_analysis(bundle_entries, price_basis, args.include_portfolio_risk_analysis)
     attach_qualified_market_observations(bundle_entries, args.include_qualified_market_observations)
     scaleout_coverage = attach_historical_scaleout(bundle_entries, price_basis) if args.include_historical_scaleout else None
+    research_brief_started = time.perf_counter()
     if args.include_qualified_research_brief or args.include_qualified_research_delta or args.include_pillar_a_research_projection:
         brief_tickers = (set(_LEGACY_QUALIFIED_RESEARCH_TICKERS) | set(pillar_a_eligible_tickers)) & set(bundle_entries)
         for ticker in sorted(brief_tickers):
@@ -3736,6 +3796,7 @@ def main() -> int:
             eligibility = ((entry or {}).get("historical_decision_analysis") or {}).get("eligibility", {})
             if isinstance(entry, dict) and eligibility.get("status") in {"eligible", "partially_eligible"}:
                 entry["qualified_research_brief"] = build_qualified_research_brief(ticker, entry)
+    observe_post_focus_stage("research_brief_attachment", ",".join(tickers), research_brief_started)
     if args.include_qualified_research_delta:
         if bool(args.qualified_research_delta_previous) == bool(args.previous_qualified_research_snapshot):
             parser.error("--include-qualified-research-delta requires exactly one explicit previous bundle or previous snapshot ID")
@@ -3826,7 +3887,9 @@ def main() -> int:
         ],
     }
     bundle_path = output_dir / 'analysis_bundle.json'
+    serialization_started = time.perf_counter()
     atomic_write_json(bundle_path, analysis_bundle)
+    observe_post_focus_stage("analysis_bundle_serialization", ",".join(tickers), serialization_started)
     emit_observability_event(build_observability_event(
         EventStage.ARTIFACT_GENERATION,
         EventOutcome.SUCCESS,

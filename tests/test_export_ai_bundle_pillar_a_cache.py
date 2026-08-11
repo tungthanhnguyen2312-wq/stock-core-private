@@ -34,6 +34,7 @@ class PillarARequestScopedCacheTests(unittest.TestCase):
             return {"conflicts": {record["ticker"]: [fact["fact_id"] for fact in facts_for(record["ticker"])] for record in records}}
 
         entries = {"VNM": {"financial_canonical": {"status": "available"}}}
+        observed_stages: list[tuple[str, str | None]] = []
         with patch("canonical_fact_store._load_state", return_value=state), \
              patch("canonical_fact_store.read_facts", side_effect=read_facts), \
              patch("official_annual_financial_fact_projection.facts_for_ticker", return_value=[]), \
@@ -42,12 +43,19 @@ class PillarARequestScopedCacheTests(unittest.TestCase):
              patch.object(exporter, "build_research_financial_fact_projection", side_effect=projection), \
              patch.object(exporter, "research_financial_coverage_summary", side_effect=coverage_summary), \
              patch.object(exporter, "canonical_conflict_coverage_summary", side_effect=conflict_summary):
-            result = exporter.attach_pillar_a_research_projection(entries, Path("runtime"), True)
+            result = exporter.attach_pillar_a_research_projection(
+                entries, Path("runtime"), True,
+                stage_observer=lambda stage, ticker, _elapsed: observed_stages.append((stage, ticker)),
+            )
 
         self.assertEqual(reads, ["VNM", "HPG"])
         self.assertEqual(entries["VNM"]["research_financial_fact_projection"]["fact_ids"], ["VNM-canonical"])
         self.assertEqual(result["coverage"]["VNM"], ["VNM-canonical"])
         self.assertEqual(result["conflict_decomposition"]["conflicts"]["HPG"], ["HPG-canonical"])
+        self.assertEqual(observed_stages, [
+            ("pillar_a_projection", "VNM"),
+            ("pillar_a_coverage_conflict", None),
+        ])
 
 
 if __name__ == "__main__":

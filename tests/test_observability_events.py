@@ -88,6 +88,18 @@ class ObservabilityEventsTests(unittest.TestCase):
         json2 = emit_observability_event(ev)
         self.assertEqual(json1, json2)
 
+    def test_post_focus_stage_event_uses_explicit_provenance(self):
+        event = build_observability_event(
+            EventStage.POST_FOCUS_STAGE,
+            EventOutcome.SUCCESS,
+            artifact_filename="analysis_bundle.json",
+            provenance={"run_identity": "run-1", "ticker": "HPG",
+                        "post_focus_stage": "context_loading", "elapsed_seconds": 1.25},
+            timestamp="2026-08-11T00:00:00Z",
+        )
+        self.assertEqual(event["stage"], "post_focus_stage")
+        self.assertEqual(event["provenance"]["ticker"], "HPG")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,6 +18,7 @@ SCHEMA_VERSION = "1.0.0"
 
 class EventStage(str, Enum):
     ARTIFACT_GENERATION = "artifact_generation"
+    POST_FOCUS_STAGE = "post_focus_stage"
     PRE_PROMOTION_VALIDATION = "pre_promotion_validation"
     ATOMIC_PROMOTION = "atomic_promotion"
     MANIFEST_VERIFICATION = "manifest_verification"
