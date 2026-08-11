@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-08-11 - Adopt market-wide ingest-first feature-store architecture
+
+- The owner authorizes the market-wide architecture pivot. The active chain is market universe → raw lake → data quality → canonical/semantic/PIT → vectorized feature store → feature-level qualification/capability → polymorphic strategy engine → portfolio/risk/leverage → AI research/counter-thesis → dashboard/human decision.
+- `SUPERSEDED_AS_DEFAULT_WORKFLOW`: individual-ticker qualification before raw ingestion. This changes no historical passed evidence, provider authority, or use gate. The historical 11-ticker set is now golden/regression coverage, not the production universe.
+- Raw records are immutable and provenance-bearing. Unknown semantics are retained; an anomaly routes to a dispositioned exception queue and is never automatically deleted. Qualification governs a field/feature/use, not a whole ticker.
+- Formalizable calculations and eligibility are deterministic Python authority. AI is limited to semantic research, candidate evidence extraction, explanation, counter-thesis, and anomaly surfacing; it cannot fabricate numerical inputs, status, probabilities, targets, or authority.
+- No provider adoption, source-authority promotion, bulk crawl, runtime mutation, publication, deployment, commit, or push is authorized by this decision. The next milestone is `UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1`.
+
 ## 2026-08-11 - Next official financial evidence cohort resolves the FPT blocker and preserves PNJ fail-closed
 
 - The owner-bounded follow-up selected only the already identified FPT and PNJ Cohort 3 blocker

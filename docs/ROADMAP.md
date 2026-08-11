@@ -1,5 +1,22 @@
 # Stock Lookup roadmap
 
+## Active roadmap — market-wide ingest-first architecture (2026-08-11)
+
+The former ticker-centric qualification-first sequence is **SUPERSEDED_AS_DEFAULT_WORKFLOW**. Historical milestones below remain a preserved record; they are not reopened by this pivot. The active sequence is:
+
+| Phase | Active outcome | Exit boundary |
+|---|---|---|
+| 0 — Architecture & Governance Pivot | ADR, doctrine, contracts, dictionary and vectorized foundation | This bounded milestone |
+| 1 — Universal Market Data Lake | Runtime security master for HOSE/HNX/UPCoM; immutable source/dataset raw retention | No bulk crawl is started here |
+| 2 — Canonical / Data Quality / PIT | Semantic registry, exception queue, canonical records, availability/revision semantics | No look-ahead feature use |
+| 3 — Universal Vectorized Feature Store | Polars/Parquet historical and cross-sectional feature representations | Feature-level status/lineage gates |
+| 4 — Polymorphic Strategy Engine | Declarative strategy plugins and automatic eligibility | No strategy weakens evidence requirements |
+| 5 — Portfolio / Risk / AI / Product | Portfolio/risk contracts, AI research/counter-thesis, dashboard decision support | No publication without separate authority |
+
+The historical 11 tickers are the golden/regression corpus. Existing ticker-specific blockers remain known evidence exceptions/backlog items, not the active production-universe definition. Next milestone: `UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1`.
+
+## Historical roadmap record
+
 ## Next official financial evidence cohort (partial 2026-08-11)
 
 `NEXT_OFFICIAL_FINANCIAL_EVIDENCE_COHORT: PARTIAL`. The new owner-bounded scope was limited to

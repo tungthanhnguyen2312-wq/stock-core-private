@@ -3,7 +3,7 @@
 1. Codex is the implementation executor.
 2. Read [STATE.md](STATE.md), [ROADMAP.md](ROADMAP.md), and [DECISIONS.md](DECISIONS.md) before proposing work.
 3. One session is one substantial bounded milestone; avoid chains of tiny audit/design/shadow prompts.
-4. A normal milestone inspects, patches, runs focused tests, performs one real/frozen validation when needed, commits, and pushes.
+4. A normal milestone inspects, patches, runs focused tests, performs one real/frozen validation when needed, commits, and pushes when explicitly authorized.
 5. Do not reopen a passed gate without regression evidence.
 6. Never treat metadata, ordering, missing data, or fallback behavior as investment signals.
 7. Price basis, volume basis, and current shares are persistent blockers until explicitly qualified.
@@ -47,3 +47,7 @@
 9. Write detailed diagnostics locally; keep final chat output compact.
 10. Do not run full suites unless a real cross-cutting source regression justifies it.
 11. Do not publish or deploy unless explicitly requested.
+12. **MARKET-WIDE INGEST-FIRST:** retain immutable, provenance-bearing raw observations before semantics are complete. `SUPERSEDED_AS_DEFAULT_WORKFLOW`: whole-ticker qualification before raw ingestion.
+13. Qualification is field/feature/use-case level. Missing or suspect evidence blocks only dependent features; raw evidence and unrelated features remain visible with their own status and lineage.
+14. Python/deterministic engines own formalizable numerical calculation and strategy eligibility. AI may research semantics, extract candidate facts, explain outputs, identify counter-theses, and surface anomalies; it may not fabricate values, probabilities, target prices, statuses, or numerical authority.
+15. A fallback is a separately named `DERIVED_PROXY` method, never an exact canonical metric. Strategy use must declare and validate accepted feature status, price basis, PIT semantics, and sector/instrument applicability.

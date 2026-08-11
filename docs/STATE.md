@@ -1,5 +1,11 @@
 # Stock Lookup state
 
+## Market-wide ingest-first architecture pivot (2026-08-11)
+
+`STOCK_LOOKUP_MARKET_WIDE_INGEST_FIRST_PIVOT: PASS_FOUNDATION`. The active architecture is now market universe → immutable raw lake → quality/exception queue → canonical/semantic/PIT → vectorized feature store → feature-level qualification → declarative strategies → portfolio/risk → AI research/counter-thesis → human decision. The older per-ticker qualification-first workflow is **SUPERSEDED_AS_DEFAULT_WORKFLOW**, while its passed evidence remains historical truth and the 11 historical tickers are golden/regression cases.
+
+This source-only foundation adds `market_data_contracts.py`, `market_feature_store.py`, `config/feature_dictionary.json`, and focused tests. It does not ingest a universal universe, acquire a provider, mutate runtime data, promote source authority, publish, deploy, commit, or push. Existing raw financial retention is retained as a compatible precedent. See `docs/adr/ADR-20260811-market-wide-ingest-first-feature-store.md` and `docs/market_wide_ingest_first_architecture.md`.
+
 ## Next official financial evidence cohort (2026-08-11)
 
 `NEXT_OFFICIAL_FINANCIAL_EVIDENCE_COHORT: PARTIAL`. Under the new owner-bounded follow-up to
