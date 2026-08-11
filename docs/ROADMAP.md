@@ -1,5 +1,20 @@
 # Stock Lookup roadmap
 
+## SSI/VSDC B2 evidence disposition (deferred 2026-08-11)
+
+`PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION` is
+`BLOCKED/DEFERRED_PENDING_NEW_OFFICIAL_EVIDENCE`. The single authorized notice,
+`https://vsd.vn/en/ad/198728`, is retained hash-verified as
+`bd7d4054613ae6f9c5ee1ddc6b787bf706ac6a18f551aff3c9683a85bcc06dad`; it directly supports
+SSI / `VN000000SSI1`, the dividend terms, 2026-08-18 record date, 5:1 prospective bonus ratio,
+and 500,219,550 planned shares. It does not state an official ex-date or executed/actual share
+change, so it is not a price-adjustment event and may not be re-acquired absent new official
+evidence.
+
+The next independent recorded candidate is `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3`.
+It is `AWAITING_OWNER_SCOPE_DECISION`: the governing contract has no remaining enumerated ticker
+set or exact official filing locator, so no external acquisition is authorized.
+
 ## Market-source authority reconciliation (complete 2026-08-11)
 
 `MARKET_SOURCE_AUTHORITY_RECONCILIATION: PASS`. The 2026-08-09 FiinGroup commercial-candidate
@@ -7,10 +22,9 @@ selection is superseded: FiinGroup has no owner authorization, configuration, le
 agreement, or rights and is not an acquisition path. No paid provider may become canonical
 without a new explicit owner decision. DNSE foreign-flow VALUE is production-enabled for
 HPG/VNM/QNS; DNSE OHLC remains adjusted/non-point-in-time and DNSE market-volume basis remains
-unqualified. EODHD remains owner-rejected. The correct next Pillar-B milestone is
-`PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION`; it uses the already-approved official VSDC
-route but requires explicit task authorization before its bounded external request. It was not
-executed in this reconciliation.
+unqualified. EODHD remains owner-rejected. The former next Pillar-B milestone is now deferred
+as recorded above: its exact retained notice lacks the required official ex-date and execution
+evidence.
 
 ## Production-universe qualified research snapshots v2 (partial 2026-08-09)
 

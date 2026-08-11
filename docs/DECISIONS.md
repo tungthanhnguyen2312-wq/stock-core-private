@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-08-11 - SSI/VSDC B2 is deferred pending new official evidence
+
+- The one authorized VSDC notice (`https://vsd.vn/en/ad/198728`; SHA-256
+  `bd7d4054613ae6f9c5ee1ddc6b787bf706ac6a18f551aff3c9683a85bcc06dad`) is retained once and
+  directly supports SSI identity, cash-dividend terms, record date, the 5:1 prospective bonus
+  ratio, and planned share count.
+- It states neither an explicit official ex-date nor execution/actual share-change evidence.
+  `PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION` is therefore
+  `BLOCKED/DEFERRED_PENDING_NEW_OFFICIAL_EVIDENCE`. Record date, planned shares, payment date,
+  and a calculated trading date are prohibited substitutes; no repeat acquisition or promotion
+  is authorized until independent official evidence supplies the missing facts.
+- `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_3` is the next independent recorded candidate,
+  but it has no owner-approved fixed target set or exact filing locators. It requires an owner
+  scope decision before any issuer acquisition may start.
+
 ## 2026-08-11 - Reconcile market-source authority with closed owner decisions and implemented DNSE contracts
 
 - Commit `f216cfb` made a decision-only comparison of commercial candidates but incorrectly
@@ -14,9 +29,8 @@
   for HPG/VNM/QNS; DNSE OHLC is adjusted and retrospective/non-point-in-time; DNSE market-volume
   basis remains unqualified. These do not open generic raw-price, market-volume, valuation,
   liquidity, sizing, execution, or backtest gates.
-- The next Pillar-B milestone remains the already-approved official-source path:
-  `PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION`. It requires explicit task authorization
-  for the bounded external VSDC acquisition; naming it here does not authorize executing it.
+- The former next Pillar-B milestone, `PILLAR_B_B2_SSI_VSDC_EX_DATE_NOTICE_ACQUISITION`, is
+  superseded by the deferred evidence disposition above.
 
 ## 2026-08-11 - HPG manifest authority restoration preserves the existing fail-closed valuation boundary
 
