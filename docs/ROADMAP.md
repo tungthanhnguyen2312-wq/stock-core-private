@@ -1,5 +1,27 @@
 # Stock Lookup roadmap
 
+## Next official financial evidence cohort (partial 2026-08-11)
+
+`NEXT_OFFICIAL_FINANCIAL_EVIDENCE_COHORT: PARTIAL`. The new owner-bounded scope was limited to
+the two already-identified Cohort 3 blocker issuers, FPT and PNJ; it is not a Cohort 5 or a
+new-issuer expansion. FPT's official Information Disclosures route now supplied an audited
+consolidated FY2025 statement, retained through the existing approved `fpt.com` proxy as document
+`7c7ec0a1e76045bbb655f46f807165962516f3b16833a005a57af59a0e6bce32`, SHA-256
+`630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4`. Its page-verified VND
+cash, equity, net income, operating cash flow, and explicit short- plus long-term borrowing/
+finance-lease components are registered through the sole evidence writer. FPT consequently joins
+the existing historical-only, non-actionable corporate research lane; no current valuation,
+target, probability, price, liquidity, sizing, or DNSE gate changes.
+
+PNJ's new official FY2025 audited consolidated filing is also retained (document
+`d838e40adfa470cab934840ce579d8c7690a9e4bee98a93ca020a2b8292c749b`, SHA-256
+`2a0f8591ed1acacb4a14849ccf807e596020c162fe7ed6adee999acaffd8b551`), but its balance sheet
+still names only `Short-term borrowings`; its non-current liabilities contain other long-term
+payables and provisions, not an explicit long-term borrowing or finance-lease component. PNJ
+therefore remains `REQUIRED_DEBT_COMPONENT_MISSING` with no inferred debt total or research
+admission. Cohorts 3 and 4 remain closed. The next evidence acquisition requires a new
+`OWNER_OFFICIAL_FINANCIAL_EVIDENCE_SCOPE_DECISION` with an exact qualifying issuer source.
+
 ## Official financial evidence scale-out Cohort 4 (partial, closed 2026-08-11)
 
 `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_4: PARTIAL` was fixed to exactly SSI and QNS.

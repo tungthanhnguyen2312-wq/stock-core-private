@@ -1,5 +1,26 @@
 # Stock Lookup state
 
+## Next official financial evidence cohort (2026-08-11)
+
+`NEXT_OFFICIAL_FINANCIAL_EVIDENCE_COHORT: PARTIAL`. Under the new owner-bounded follow-up to
+the closed Cohort 3 FPT/PNJ blockers, FPT's official `fpt.com` disclosure proxy retained an
+audited consolidated FY2025 filing as document
+`7c7ec0a1e76045bbb655f46f807165962516f3b16833a005a57af59a0e6bce32`, SHA-256
+`630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4`. Five source-page-
+verified VND annual/consolidated identities are registered: cash, shareholders' equity, net
+income, operating cash flow, and debt only as the explicit `19,169,697,497,955 +
+1,903,789,988,184` borrowing/finance-lease component sum. FPT is historical-only and
+non-actionable; no market, DNSE, valuation, target, probability, liquidity, sizing, release, or
+Dashboard state changed.
+
+PNJ's new official FY2025 audited consolidated filing is retained as document
+`d838e40adfa470cab934840ce579d8c7690a9e4bee98a93ca020a2b8292c749b`, SHA-256
+`2a0f8591ed1acacb4a14849ccf807e596020c162fe7ed6adee999acaffd8b551`, but its explicit balance-
+sheet debt evidence remains short-term only. Generic non-current liabilities are not debt or a
+finance lease, so PNJ remains `REQUIRED_DEBT_COMPONENT_MISSING` and non-eligible. No previously
+closed issuer cohort was reopened. The next acquisition gate is a new
+`OWNER_OFFICIAL_FINANCIAL_EVIDENCE_SCOPE_DECISION` tied to an exact qualifying official source.
+
 ## Research Snapshots v2 Producer completion (2026-08-11)
 
 `RESEARCH_SNAPSHOTS_V2_PRODUCER_COMPLETION: PASS`. The generated Producer bundle now retains

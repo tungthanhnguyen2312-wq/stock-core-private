@@ -1,5 +1,21 @@
 # Bounded official financial evidence scale-out
 
+## Next official financial evidence cohort closeout (2026-08-11)
+
+The newly owner-bounded follow-up is exactly FPT and PNJ, the two unresolved Cohort 3 issuer
+blockers. It is a finite blocker-resolution cohort, not a re-run of Cohort 3/4 or an arbitrary
+new issuer cohort.
+
+| Ticker | Retained official filing | Qualification result |
+| --- | --- | --- |
+| FPT | FY2025 audited consolidated statement through the approved `fpt.com` disclosure proxy; document ID `7c7ec0a1e76045bbb655f46f807165962516f3b16833a005a57af59a0e6bce32`, SHA-256 `630f61f6ef9f07d5c593c3bf8f65bad1d56ecbb091921296ed5c4e830ea070a4`. | Five VND annual/consolidated facts qualify from visually verified statement pages 8, 10--13. Debt is exactly `19,169,697,497,955 + 1,903,789,988,184 = 21,073,487,486,139`; FPT is historical-only/non-actionable research eligible. |
+| PNJ | FY2025 audited consolidated statement directly linked by PNJ IR; document ID `d838e40adfa470cab934840ce579d8c7690a9e4bee98a93ca020a2b8292c749b`, SHA-256 `2a0f8591ed1acacb4a14849ccf807e596020c162fe7ed6adee999acaffd8b551`. | `REQUIRED_DEBT_COMPONENT_MISSING`: page 7 labels short-term borrowings only; page 7's non-current-liability rows are other long-term payables/provisions, not debt. No total is inferred and PNJ stays non-eligible. |
+
+FPT uses the existing page-preserving OCR and append-only promotion contracts. The retained PDFs
+and sidecars remain governed operational evidence, not Git-binary inputs. No market-data, DNSE,
+Consumer, Dashboard, release, provider, target, probability, price, liquidity, or sizing contract
+is changed. Further issuer acquisition requires a new explicit scope decision.
+
 ## Cohort 4 closeout (2026-08-11)
 
 The owner-fixed Cohort 4 set is exactly SSI and QNS. The existing approved issuer paths are

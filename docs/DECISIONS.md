@@ -1,5 +1,22 @@
 # Decisions
 
+## 2026-08-11 - Next official financial evidence cohort resolves the FPT blocker and preserves PNJ fail-closed
+
+- The owner-bounded follow-up selected only the already identified FPT and PNJ Cohort 3 blocker
+  scope. It does not reopen closed Cohorts 3 or 4, admit a random issuer, add a provider, or
+  expand source authority.
+- FPT's official disclosure proxy on the already approved `fpt.com` host supplied retained,
+  audited consolidated FY2025 bytes. The hash-bound document and five exact source-page citations
+  support the existing annual corporate research projection, including debt only as its visible
+  short- and long-term borrowing/finance-lease component sum. This creates a historical-only,
+  non-actionable FPT research input and changes no market or valuation authority.
+- PNJ's official FY2025 filing is retained but still has only a labelled `Short-term borrowings`
+  line. Its non-current liabilities do not identify a borrowing or finance lease. The existing
+  two-component debt contract therefore remains `REQUIRED_DEBT_COMPONENT_MISSING`; neither a
+  debt total nor research eligibility is inferred.
+- Any further official financial-evidence acquisition again needs an explicit
+  `OWNER_OFFICIAL_FINANCIAL_EVIDENCE_SCOPE_DECISION` for a finite qualifying issuer source.
+
 ## 2026-08-11 - Cohort 4 closes partial: SSI direct identity, QNS corporate set
 
 - The owner fixed `OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT_COHORT_4` to exactly SSI and QNS.
