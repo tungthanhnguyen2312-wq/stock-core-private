@@ -17,7 +17,8 @@ class DatasetInventoryTests(unittest.TestCase):
 
     def test_ready_datasets_preserve_unknown_analytical_semantics(self):
         ready = inventory.inventory_by_classification()[inventory.READY_FOR_RAW_INGEST]
-        self.assertEqual({"instruments", "ohlc", "working_dates"}, {entry["capability"] for entry in ready})
+        self.assertEqual({"foreign_trading", "instruments", "ohlc", "working_dates"},
+                         {entry["capability"] for entry in ready})
         self.assertTrue(all("not_promoted" in entry["raw_semantics"] for entry in ready))
 
 

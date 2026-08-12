@@ -68,10 +68,12 @@ def dataset_inventory() -> list[dict[str, Any]]:
                instrument_types=["per symbol/board"], request_behavior="observed narrow range and nextPageToken pagination",
                time_dimensions="intraday quote time", existing_support="dnse_market_data_probe.py",
                note="Need bounded pagination and board/request-contract rules."),
-        _entry("foreign_trading", "foreign_trading", REQUIRES_REQUEST_CONTRACT_FIX,
-               instrument_types=["per symbol/board"], request_behavior="observed narrow date range and pagination",
-               time_dimensions="session/date", existing_support="dnse_market_data_probe.py",
-               note="Raw collection must not expand foreign-flow VALUE analytical authority."),
+        _entry("foreign_trading", "foreign_trading", READY_FOR_RAW_INGEST,
+               instrument_types=["ST/EQUITY for the current dynamic stock universe"],
+               request_behavior="one Vietnam-local session per symbol; DESC; optional boardId; nextPageToken exhausted page by page",
+               time_dimensions="provider row time/trading session plus requested session date",
+               existing_support="bulk_ingest_dnse_foreign_trading_raw.py",
+               note="Raw page retention is ready; board IDs are preserved and foreign-flow VALUE authority is unchanged."),
     ]
     for capability, dataset in (("trades_latest", "trades_latest"), ("quotes_latest", "quotes_latest"),
                                 ("expected_price", "expected_price"), ("close_price", "close_price")):

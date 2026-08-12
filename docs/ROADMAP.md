@@ -1,5 +1,18 @@
 # Stock Lookup roadmap
 
+## Market-wide foreign-trading raw ingest V1 (partial 2026-08-12)
+
+`MARKET_WIDE_FOREIGN_TRADING_INGEST_V1 = PARTIAL_LIVE`. The foreign-trading raw collector now
+uses the retained DNSE request contract for the full dynamic `ST/EQUITY` universe: one
+Vietnam-local session, `DESC`, optional `boardId`, and per-page `nextPageToken` exhaustion.
+Its first 2026-08-11 live batch completed 100 of 1,660 applicable instruments with 169 retained
+raw pages, 8,098 raw records, 80 successful empty responses, and zero failures; 1,560 planned
+units remain untouched in the deterministic checkpoint. Provider board IDs and raw response
+payloads are retained as observed, not combined. This is immutable raw collection only: foreign
+flow, price/volume semantics, canonical propagation, and strategy eligibility remain unchanged.
+Next gate: `RESUME_MARKET_WIDE_FOREIGN_TRADING_20260811`; coverage review follows only after
+the existing checkpointed session scope has been resumed.
+
 ## Current active gate - market-wide raw expansion V2 (2026-08-12)
 
 `UNIVERSAL_MARKET_DATA_LAKE_EXPANSION_V2 = PARTIAL_LIVE_BACKFILL` is the active implementation direction. A fresh dynamic DNSE security master is the universe authority; only its directly evidenced ST/EQUITY subset is currently applicable to the `type=STOCK` daily-OHLC request contract. Unknown security groups and raw exchange metadata are retained, never guessed or deleted. The active annual 1D OHLC checkpoint covers 2025-08-12..2026-08-11 and can continue its remaining units without redesign. The next gate is `MARKET_WIDE_DATA_COVERAGE_REVIEW`, not Phase 2 canonicalization or strategy work.

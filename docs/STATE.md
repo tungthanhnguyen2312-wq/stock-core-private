@@ -1,5 +1,21 @@
 # Stock Lookup state
 
+## Market-wide DNSE foreign-trading raw ingest V1 (2026-08-12)
+
+`MARKET_WIDE_FOREIGN_TRADING_INGEST_V1: PARTIAL_LIVE`. A fresh dynamic DNSE security-master
+snapshot retained 3,250 distinct instruments (3,252 declared, two duplicate identities), of
+which 1,660 directly evidenced `ST/EQUITY` instruments are applicable to the foreign-trading
+request contract; 1,590 unknown-security-group instruments remain retained and unguessed. The
+implemented contract is `/price/{symbol}/foreign-trading`, one Vietnam-local session per symbol,
+`DESC`, optional provider `boardId`, and exhaustive `nextPageToken` pagination. The first bounded
+live execution for 2026-08-11 completed 100 of 1,660 planned units: 169 immutable raw page files,
+8,098 raw records, 80 successful empty responses, no provider failures, and 1,560 untouched
+checkpointed units. Observed response board IDs (`G1`, `G4`) and raw provider payloads are
+preserved without board normalization or aggregation. Coverage is raw-only and partial; it does
+not establish price, volume, foreign-flow value, canonical, PIT, feature, or strategy authority.
+Runtime evidence is outside source control under
+`operations-review/dnse-foreign-trading-v1-20260812/`.
+
 ## Universal market data lake expansion V2 (2026-08-12)
 
 `UNIVERSAL_MARKET_DATA_LAKE_EXPANSION_V2 = PARTIAL_LIVE_BACKFILL`. Market-wide raw acquisition is the active direction. DNSE's fresh dynamic security-master snapshot retained 3,250 distinct instruments from 3,252 declared records (two duplicate identities): 1,660 directly evidenced `ST/EQUITY` records are applicable to the current `type=STOCK` OHLC request contract, while all 1,590 `UNKNOWN_SECURITY_GROUP` records and their raw exchange/security-group metadata remain retained, not guessed or deleted. The dataset inventory records `instruments`, daily `ohlc_1D`, and global `working_dates` as ready for immutable raw ingest; current snapshots are deferred and intraday/foreign-history endpoints require a bounded request-contract fix. This is collection readiness, not analytical authority.
