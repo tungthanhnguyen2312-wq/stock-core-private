@@ -2,19 +2,33 @@
 
 ## Market-wide DNSE foreign-trading raw ingest V1 (2026-08-12)
 
-`MARKET_WIDE_FOREIGN_TRADING_INGEST_V1: PARTIAL_LIVE`. A fresh dynamic DNSE security-master
+`MARKET_WIDE_FOREIGN_TRADING_INGEST_V1: COMPLETE`. A fresh dynamic DNSE security-master
 snapshot retained 3,250 distinct instruments (3,252 declared, two duplicate identities), of
 which 1,660 directly evidenced `ST/EQUITY` instruments are applicable to the foreign-trading
 request contract; 1,590 unknown-security-group instruments remain retained and unguessed. The
 implemented contract is `/price/{symbol}/foreign-trading`, one Vietnam-local session per symbol,
 `DESC`, optional provider `boardId`, and exhaustive `nextPageToken` pagination. The first bounded
-live execution for 2026-08-11 completed 100 of 1,660 planned units: 169 immutable raw page files,
-8,098 raw records, 80 successful empty responses, no provider failures, and 1,560 untouched
-checkpointed units. Observed response board IDs (`G1`, `G4`) and raw provider payloads are
+execution for 2026-08-11 completed all 1,660 planned units: 1,657 successful, three retained
+`http_status_500` failures, zero untouched, 1,346 successful empty responses, 2,894 logical
+checkpoint/manifest pages, and 142,210 raw records. The physical runtime retains 2,895 Parquet
+pages because one immutable page from an interrupted path remains preserved; it is not rewritten
+to force a logical-page match. Observed response board IDs (`G1`, `G4`, `T1`, `T3`) and raw provider payloads are
 preserved without board normalization or aggregation. Coverage is raw-only and partial; it does
 not establish price, volume, foreign-flow value, canonical, PIT, feature, or strategy authority.
 Runtime evidence is outside source control under
 `operations-review/dnse-foreign-trading-v1-20260812/`.
+
+`DNSE_INTRADAY_HISTORY_PAGINATION_CONTRACT_V1: PARTIAL`. Shared raw-only contracts and a
+readiness-gated collector exist for `/price/{symbol}/trades` and `/price/{symbol}/quotes`. First
+party probes prove same-session request shape and `nextPageToken` continuation with original
+bounds/order/limit repeated. Bounded sub-session termination probes observed
+`nextPageToken: null`: trades produced a complete five-page chain (`100,100,100,100,10`) and is
+`MARKET_WIDE_ACQUISITION_READY`; quotes separately proved continuation and a null terminal but
+does not yet have one complete continuation-to-terminal chain, so remains `PARTIAL` and refused
+by the bulk CLI. Timestamp ordering remains unqualified/non-monotonic observed and does not alter
+raw retention. No quantity, volume, board, price-basis, PIT, canonical, or strategy authority is
+promoted. The next high-volume acquisition is one session × the dynamic EQUITY universe for
+trades, after a source checkpoint.
 
 ## Universal market data lake expansion V2 (2026-08-12)
 

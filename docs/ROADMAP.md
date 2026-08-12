@@ -2,16 +2,19 @@
 
 ## Market-wide foreign-trading raw ingest V1 (partial 2026-08-12)
 
-`MARKET_WIDE_FOREIGN_TRADING_INGEST_V1 = PARTIAL_LIVE`. The foreign-trading raw collector now
+`MARKET_WIDE_FOREIGN_TRADING_INGEST_V1 = COMPLETE`. The foreign-trading raw collector now
 uses the retained DNSE request contract for the full dynamic `ST/EQUITY` universe: one
 Vietnam-local session, `DESC`, optional `boardId`, and per-page `nextPageToken` exhaustion.
-Its first 2026-08-11 live batch completed 100 of 1,660 applicable instruments with 169 retained
-raw pages, 8,098 raw records, 80 successful empty responses, and zero failures; 1,560 planned
-units remain untouched in the deterministic checkpoint. Provider board IDs and raw response
-payloads are retained as observed, not combined. This is immutable raw collection only: foreign
-flow, price/volume semantics, canonical propagation, and strategy eligibility remain unchanged.
-Next gate: `RESUME_MARKET_WIDE_FOREIGN_TRADING_20260811`; coverage review follows only after
-the existing checkpointed session scope has been resumed.
+Its 2026-08-11 session completed all 1,660 applicable instruments: 1,657 successful, three
+retained HTTP 500 failures, zero untouched, 1,346 successful-empty roots, 2,894 logical raw
+pages, and 142,210 raw records. One extra physical Parquet page remains immutable evidence from
+an interrupted path. Provider board IDs and raw response payloads are retained as observed, not
+combined. This is immutable raw collection only: foreign flow, price/volume semantics, canonical
+propagation, and strategy eligibility remain unchanged. Deeper history is
+`PRACTICAL_WITH_BOUNDED_DEPTH`. Intraday trades-history continuation and null termination are now
+proven for raw retention, making `trades_history` ready for a one-session market-wide run after a
+source checkpoint; quotes-history remains partial pending a single full continuation-to-terminal
+chain. Next gate: `OWNER_SOURCE_CHECKPOINT_APPROVAL`.
 
 ## Current active gate - market-wide raw expansion V2 (2026-08-12)
 
