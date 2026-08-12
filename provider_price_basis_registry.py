@@ -18,7 +18,15 @@ series, and every production and actionability gate stays where it was.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping
+from datetime import date
+from typing import Any, Iterable, Mapping, Sequence
+
+from dnse_ohlc_price_basis_capability import (
+    CURRENT_ANALYSIS_PRICE_BASIS_SAFE,
+    EVIDENCE_EVENTS as DNSE_EVIDENCE_EVENTS,
+    PROVIDER as DNSE_PROVIDER,
+    SOURCE_CONTRACT_VERSION as DNSE_SOURCE_CONTRACT_VERSION,
+)
 
 VERSION = "1.0.0"
 
@@ -153,7 +161,126 @@ _ACTIVE: dict[str, dict[str, Any]] = {
             "cannot be made testable by re-requesting an already-post-event window.",
         ],
     },
+    # This is intentionally a provider-level *unknown* verdict.  The two DNSE
+    # observations below are exposed only through bounded_price_basis_for();
+    # adding DNSE here must never be read as a provider-wide inference.
+    "DNSE": {
+        "provider": "DNSE",
+        "status": "active_bounded_authority_only",
+        "source_field_identity": "observed",
+        "historical_mutability": "retrospectively_rewritten_in_bounded_windows",
+        "price_basis": "unknown",
+        "coverage_generalization": "not_authorized",
+        "raw_as_traded_eligible": False,
+        "official_exchange_price": False,
+        "bounded_authority_route": "bounded_price_basis_for",
+        "evidence": [
+            "dnse_ohlc_price_basis_capability.py",
+            "operations-review/dnse-ohlc-price-basis-qualification-20260810/probe_results.json",
+        ],
+        "limitations": [
+            "Only the explicitly qualified instrument/date/event windows may return a known basis.",
+            "All other DNSE OHLC rows remain unknown.",
+        ],
+    },
 }
+
+
+def _normalized_date(value: str) -> date | None:
+    """Return a session date without guessing malformed timestamps."""
+    try:
+        return date.fromisoformat(str(value).strip()[:10])
+    except ValueError:
+        return None
+
+
+def active_bounded_authorities() -> tuple[dict[str, Any], ...]:
+    """Materialize the only DNSE price-basis scopes admitted for canonical use.
+
+    The evidence capability module owns event identity and comparison windows.  This registry
+    adds the canonical dataset identity and is deliberately unable to manufacture a broader
+    ticker, exchange, provider, or action-type scope.
+    """
+    if not CURRENT_ANALYSIS_PRICE_BASIS_SAFE:
+        return ()
+    records: list[dict[str, Any]] = []
+    for event in DNSE_EVIDENCE_EVENTS:
+        window = event["window"]
+        records.append(
+            {
+                "authority_id": (
+                    f"DNSE:ohlc_1D:{event['ticker']}:{event['event_code']}:"
+                    f"{event['exright_date']}"
+                ),
+                "provider": DNSE_PROVIDER,
+                "dataset": "ohlc_1D",
+                # Raw-lake observations use ``ohlc`` while the provider request names 1D.
+                # Both spellings identify this exact daily OHLC dataset, and no other dataset.
+                "dataset_aliases": ("ohlc", "ohlc_1d"),
+                "instrument": event["ticker"],
+                "effective_from": window["from"],
+                "effective_to": window["to"],
+                "price_basis": "ADJUSTED_RETROSPECTIVE",
+                "event_code": event["event_code"],
+                "event_type": event["event_type"],
+                "exright_date": event["exright_date"],
+                "evidence_record_id": event["record_id"],
+                "evidence_contract_version": DNSE_SOURCE_CONTRACT_VERSION,
+                "coverage_generalization": "not_authorized",
+            }
+        )
+    return tuple(records)
+
+
+def bounded_price_basis_for(
+    provider: str,
+    dataset: str,
+    instrument: str,
+    session: str,
+    *,
+    authorities: Sequence[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Resolve a price basis only inside retained, instrument/date-scoped authority.
+
+    If scopes overlap, the narrowest applicable window wins.  Equal-specificity scopes that
+    disagree fail closed rather than depending on declaration order.
+    """
+    requested_session = _normalized_date(session)
+    if requested_session is None:
+        return {"price_basis": "UNKNOWN", "reason": "invalid_price_basis_session"}
+    requested_provider = str(provider).strip().upper()
+    requested_dataset = str(dataset).strip().lower()
+    requested_instrument = str(instrument).strip().upper()
+    candidates: list[tuple[int, Mapping[str, Any]]] = []
+    for authority in authorities if authorities is not None else active_bounded_authorities():
+        start = _normalized_date(str(authority.get("effective_from", "")))
+        end = _normalized_date(str(authority.get("effective_to", "")))
+        aliases = {str(authority.get("dataset", "")).lower(), *(
+            str(item).lower() for item in authority.get("dataset_aliases", ())
+        )}
+        if (
+            start is None
+            or end is None
+            or requested_provider != str(authority.get("provider", "")).upper()
+            or requested_dataset not in aliases
+            or requested_instrument != str(authority.get("instrument", "")).upper()
+            or not start <= requested_session <= end
+        ):
+            continue
+        candidates.append(((end - start).days, authority))
+    if not candidates:
+        return {"price_basis": "UNKNOWN", "reason": "no_bounded_price_basis_authority_for_provider_dataset_instrument_session"}
+    narrowest = min(width for width, _ in candidates)
+    best = [authority for width, authority in candidates if width == narrowest]
+    bases = {str(authority.get("price_basis", "UNKNOWN")) for authority in best}
+    if len(bases) != 1:
+        return {"price_basis": "UNKNOWN", "reason": "conflicting_equally_specific_bounded_price_basis_authority"}
+    selected = min(best, key=lambda authority: str(authority.get("authority_id", "")))
+    return {
+        "price_basis": bases.pop(),
+        "reason": f"bounded_price_basis_authority:{selected['authority_id']}",
+        "authority": dict(selected),
+    }
 
 # --- Supersession history ----------------------------------------------------------
 

@@ -1,5 +1,19 @@
 # Stock Lookup state
 
+## Bounded DNSE price-basis qualification propagation (2026-08-12)
+
+`BOUNDED_DNSE_PRICE_BASIS_QUALIFICATION_V1: PASS`. Active canonical authority is limited to
+two retained DNSE daily-OHLC event windows: HPG `2026-05-15..2026-06-03` for the 2026-05-25
+stock-dividend event, and VCB `2026-07-13..2026-07-31` for the 2026-07-23 cash-dividend event.
+Only those instrument/date/dataset scopes resolve to `ADJUSTED_RETROSPECTIVE`; every other DNSE
+row remains `UNKNOWN`, including the final 2026-08-11 Phase 3 snapshot rows. No provider-wide,
+exchange-wide, ticker-history-wide, or other-action-type authority was created. The retained HPG
+2026-05-11 and VNM 2026-06-26 cash-dividend candidates have no retained DNSE candidate-window
+comparison, so both are `UNKNOWN/INSUFFICIENT_EVIDENCE`, not newly qualified. Fresh Phase 2, 3,
+and Momentum output roots are retained under `operations-review`; Momentum remains fail-closed at
+0 eligible out of 1,321 latest-snapshot candidates because that latest snapshot contains no
+known price basis.
+
 ## Universal market universe & bulk DNSE ingestion live milestone (2026-08-11)
 
 `UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1: PARTIAL_LIVE`. The approved credential

@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from market_data_contracts import ExceptionDisposition, FeatureStatus, PriceBasis, stable_id
+from provider_price_basis_registry import active_bounded_authorities, bounded_price_basis_for
 
 
 QUALITY_RULE_VERSION = "1.0.0"
@@ -47,18 +48,24 @@ def semantic_registry() -> list[dict[str, Any]]:
          "normalized_meaning": PriceBasis.UNKNOWN.value, "status": "UNQUALIFIED", "evidence_reference": authority,
          "effective_from": None, "effective_to": None, "version": SEMANTIC_REGISTRY_VERSION,
          "reason": "HPG/VCB evidence is bounded and is not generalized to the bulk corpus."},
-        {"semantic_key": "DNSE.price_basis.HPG_VCB_historical", "provider": "DNSE", "raw_field": "ohlc", "raw_code": None,
-         "normalized_meaning": PriceBasis.ADJUSTED_RETROSPECTIVE.value, "status": "EVIDENCED_BOUNDED",
-         "evidence_reference": "dnse_ohlc_price_basis_capability.py", "effective_from": None, "effective_to": None,
-         "version": SEMANTIC_REGISTRY_VERSION, "reason": "Limited to the previously validated HPG/VCB historical scope."},
     ])
+    for authority_record in active_bounded_authorities():
+        entries.append({
+            "semantic_key": f"DNSE.price_basis.{authority_record['authority_id'].replace(':', '_')}",
+            "provider": authority_record["provider"], "raw_field": "ohlc", "raw_code": None,
+            "normalized_meaning": authority_record["price_basis"], "status": "EVIDENCED_BOUNDED",
+            "evidence_reference": "dnse_ohlc_price_basis_capability.py",
+            "effective_from": authority_record["effective_from"], "effective_to": authority_record["effective_to"],
+            "version": SEMANTIC_REGISTRY_VERSION,
+            "reason": "Instrument/date/event-scoped DNSE authority; no provider-wide generalization.",
+        })
     return entries
 
 
 def price_basis_for(provider: str, dataset: str, instrument: str, session: str) -> tuple[str, str]:
-    """Bulk raw rows stay UNKNOWN; a narrower registry can be consulted by later features."""
-    del provider, dataset, instrument, session
-    return PriceBasis.UNKNOWN.value, "bulk_scope_not_covered_by_bounded_price_basis_evidence"
+    """Return a known basis only when the exact bounded authority covers this row."""
+    resolved = bounded_price_basis_for(provider, dataset, instrument, session)
+    return str(resolved["price_basis"]), str(resolved["reason"])
 
 
 def canonical_instrument_identity(provider: str, symbol: str, universe: Mapping[str, Any]) -> dict[str, Any]:
