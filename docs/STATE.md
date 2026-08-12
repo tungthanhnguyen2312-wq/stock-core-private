@@ -1,5 +1,28 @@
 # Stock Lookup state
 
+## Current-regime DNSE price-basis qualification (2026-08-12)
+
+`CURRENT_SNAPSHOT_DNSE_PRICE_BASIS_QUALIFICATION_V1: PASS`. Deterministic current-regime
+cohort machinery selected four retained, explicit-exright-date ST/EQUITY cases through
+2026-08-11 and retained a bounded DNSE daily-OHLC comparison for each missing window. The two
+already-active cases remain regression evidence only: HPG's 2026-05-25 stock-dividend event and
+VCB's 2026-07-23 cash-dividend event retain their existing, narrow
+`ADJUSTED_RETROSPECTIVE` scopes. The newly probed HPG 2026-05-11 and VNM 2026-06-26 cash-dividend
+cases each remain `UNKNOWN/INSUFFICIENT_EVIDENCE`: one current historical window cannot
+deterministically distinguish a cash-dividend basis without an independent reference or a
+pre-event snapshot. No new event-level authority was proven.
+
+Reconciliation is exact (4 = 2 retained adjusted regressions + 0 raw + 2 insufficient + 0
+request failures + 0 other). The qualified regressions cover two instruments, two supported
+event types, and one retained raw exchange group (`STO`); no contradictions were observed, but
+the unresolved cases, absence of a new qualification, and lack of a second exchange group yield
+`PROMOTION_REVIEW / NO_BROADER_PROMOTION_SUPPORTED`, not a promotion candidate or authority.
+The 2026-08-11 Phase 3 snapshot remains 1,321 candidates with 0 known basis and 1,321 `UNKNOWN`
+under active authority. Momentum policy and output remain unchanged and fail closed. Runtime
+evidence is retained outside the repository under
+`operations-review/dnse-current-regime-price-basis-20260812*`; no Dashboard, production DB,
+registry, Phase 2 authority, or strategy eligibility was changed.
+
 ## Bounded DNSE price-basis qualification propagation (2026-08-12)
 
 `BOUNDED_DNSE_PRICE_BASIS_QUALIFICATION_V1: PASS`. Active canonical authority is limited to
