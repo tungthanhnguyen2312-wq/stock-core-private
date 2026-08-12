@@ -1,5 +1,91 @@
 # Decisions
 
+## 2026-08-11 - Live Phase 1 DNSE collection preserves eligibility and failure boundaries
+
+- The corrected approved credential-file default is `C:\Users\tungt\.stocklookup\secrets.env`.
+  The loader's live check confirmed configuration and authentication without returning, logging,
+  or printing a credential value.
+- Live unfiltered discovery is an immutable security-master fact, not a ticker qualification
+  result: 3,252 declared records yielded 3,250 distinct records, with two duplicate identities
+  and zero malformed records. Only directly observed `securityGroupId="ST"` records are
+  `EQUITY` for the current `type=STOCK` OHLC adapter (1,660 records). The remaining 1,590
+  records are retained as `UNKNOWN_SECURITY_GROUP`; they are neither deleted nor guessed to be
+  eligible stocks.
+- A first unfiltered five-symbol smoke returned HTTP 400 for five unknown-class records. Its raw
+  manifests/checkpoints are retained. The subsequent `EQUITY`-only smoke succeeded for all five
+  symbols and a same-scope restart refetched none. This establishes a selector correction, not a
+  source-authority or semantic promotion.
+- The 30-day daily OHLC sweep was checkpoint-resumed after an execution timeout: 1,527 of 1,660
+  eligible records were retained, 133 isolated `http_status_400` failures remain, and no eligible
+  symbol was never requested. The command host's timeout report overlapped a still-running first
+  process with the resume for 330 units; those immutable historical observations are retained,
+  not deleted, and coverage remains based on 1,527 unique successful symbols. The bulk adapter
+  now uses a same-scope exclusive checkpoint lock to fail closed before a concurrent refetch.
+  The content-addressed coverage report and linked manifest are retained under
+  `operations-review/dnse-phase1-live-20260811/data/market_raw_lake/`. These outcomes are
+  raw-retention/coverage facts only; they do not create canonical, PIT, feature, provider,
+  database, dashboard, deployment, or publication authority. A disposition of the failed and
+  unknown instrument classes, and any Phase 2 scope, requires a new owner decision.
+
+## 2026-08-11 - Bulk DNSE raw ingestion needs its own non-truncating fetch layer and its own credential loader
+
+- `dnse_market_data.request_capability` is the established DNSE qualification-probe fetch
+  function, and it deliberately truncates any response array over 20 items
+  (`_bound_large_lists`) so a probe result is always safe to print or drop into a Markdown
+  evidence file. Reusing it directly for bulk raw ingestion would have silently thrown away
+  most of a paginated `/market/instruments` page or an OHLC window before it ever reached the
+  raw lake -- the same class of bug this project already named once as the "20-item
+  evidence-redaction truncation trap." `dnse_bulk_market_data.fetch_capability_raw` is a new,
+  separate function sharing the exact same allowlist (`MARKET_DATA_ENDPOINTS`, imported not
+  duplicated), auth, and GET-only, zero-retry contract, but returning the complete untruncated
+  body under a different key name (`body`, not `body_redacted`) so the two are never
+  accidentally interchangeable.
+- Every existing DNSE tool in this repository documents "never reads secrets.env" and assumes
+  an external launcher already populated the process environment before it runs. That
+  assumption does not hold for a bulk, potentially long-running ingestion process, so
+  `dnse_secrets_env.py` is the first module here allowed to read the approved credential file
+  itself. It only injects the exact known credential key names
+  (`dnse_access.CREDENTIAL_ENV_PAIRS`), never overrides an already-set environment variable, and never
+  returns, logs, or prints a value -- the same discipline `dnse_access.credential_status()`
+  already uses, extended to the one new place secrets actually get read from disk.
+- Raw persistence uses one immutable Parquet file per fetched unit
+  (`market_raw_lake.write_raw_observation`), not a periodic batched flush. A unit's checkpoint
+  entry is only ever marked `success` after its file is durably written; batching would force a
+  choice between checkpointing before the flush (claiming success for data that was never made
+  durable) or after it (losing already-fetched work on a crash). The resulting many-small-files
+  layout is a deliberate simplicity/correctness trade for this foundation milestone, not an
+  oversight -- a future batched-flush optimization can layer on top without changing the
+  contract.
+- Instrument classification is populated only from directly observed evidence: the sole
+  confirmed `securityGroupId` value is `"ST"` (10 examples, all common stock) -> `EQUITY`.
+  Every other or unseen code is explicit `UNKNOWN_SECURITY_GROUP`, never a plausible-looking
+  guess at WARRANT/BOND/ETF/RIGHT/DERIVATIVE. `marketId` (`"STO"`, `"UPX"`, ...) is retained
+  verbatim as `exchange_raw`; mapping it to a HOSE/HNX/UPCoM display label from two data points
+  would itself have been exactly the kind of guess AI_RULES.md 8a/8g/8i forbids, so that mapping
+  is left as documented future semantic work rather than inferred here.
+- Polars was not added as a dependency despite the architecture doc naming
+  "Polars + Parquet/Arrow" as the preferred market-wide direction: it is not installed in this
+  environment and adding it was not itself authorized by this milestone. Parquet persistence
+  uses pandas + pyarrow (both already in `requirements.txt` and already used elsewhere in this
+  repository), matching `market_feature_store.py`'s own stated precedent of using pandas now
+  and migrating to Polars later once the contract is executable.
+- Bulk request handling stays deliberately sequential, not concurrent: DNSE's actual rate limits
+  are not documented anywhere in this repository's retained evidence, so introducing concurrent
+  requests would not be "bounded... if supported safely" -- it would be a guess about a
+  production API's tolerance. Bounded exponential-backoff retry plus a fixed politeness delay
+  between requests is the conservative choice; `authentication_failed` still aborts the whole
+  run immediately, matching `tools/dnse_market_data_probe.py`'s already-established convention
+  that retrying with rejected credentials cannot succeed.
+- This execution environment has no access to the owner-approved credential file
+  (`C:\Users\tungt\.stocklookup\secrets.env` does not exist on this machine, and no
+  `DNSE_API_KEY`/`LIVESPEED_API_KEY`-shaped environment variable is set), even though this same
+  workspace's `operations-review/dnse-credential-auth-probe-20260811/probe_results.json` shows
+  a real `DNSE_AUTHENTICATION_PASS` earlier the same day from a different execution context.
+  Both new CLI tools attempt the approved mechanism and fail closed correctly
+  (`DNSE_CREDENTIAL_INJECTION_REQUIRED`, exit code 2); no live DNSE request, universe discovery,
+  or raw retention occurred in this session. This is recorded as a session/environment
+  limitation, not a defect in the credential mechanism or the milestone's implementation.
+
 ## 2026-08-11 - Adopt market-wide ingest-first feature-store architecture
 
 - The owner authorizes the market-wide architecture pivot. The active chain is market universe → raw lake → data quality → canonical/semantic/PIT → vectorized feature store → feature-level qualification/capability → polymorphic strategy engine → portfolio/risk/leverage → AI research/counter-thesis → dashboard/human decision.

@@ -13,7 +13,28 @@ The former ticker-centric qualification-first sequence is **SUPERSEDED_AS_DEFAUL
 | 4 — Polymorphic Strategy Engine | Declarative strategy plugins and automatic eligibility | No strategy weakens evidence requirements |
 | 5 — Portfolio / Risk / AI / Product | Portfolio/risk contracts, AI research/counter-thesis, dashboard decision support | No publication without separate authority |
 
-The historical 11 tickers are the golden/regression corpus. Existing ticker-specific blockers remain known evidence exceptions/backlog items, not the active production-universe definition. Next milestone: `UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1`.
+The historical 11 tickers are the golden/regression corpus. Existing ticker-specific blockers remain known evidence exceptions/backlog items, not the active production-universe definition. `UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1` is now `PARTIAL_LIVE`: live discovery retained a 3,250-instrument security master (3,252 declared; two duplicate identities), and the bounded 30-day OHLC sweep retained 1,527 of 1,660 evidence-classified equities (91.99%), with 133 isolated HTTP 400 failures and no never-requested eligible symbols. The unknown-class 1,590-instrument remainder is preserved in the security master, not guessed eligible. Phase 1's raw collection is therefore evidenced but not complete. Next gate: an owner decision on the failed/unknown-instrument disposition and the Phase 2 Canonical / Data Quality / PIT scope; no Phase 2 work starts from this record.
+
+## Historical roadmap record
+
+## Universal market universe & bulk DNSE ingestion foundation (partial 2026-08-11)
+
+`UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1: PARTIAL`. The dynamic security-master
+discovery (`dnse_instrument_universe.py`, paginated `/market/instruments`, no hardcoded ticker
+list or count) and the generic immutable raw lake with per-unit checkpoint/restart and
+per-run manifests (`market_raw_lake.py`) are built and tested, plus the first concrete dataset
+adapter (`tools/bulk_ingest_dnse_raw.py`, OHLC, bounded retry/backoff, immediate auth-abort,
+per-symbol failure isolation) and its paired universe-discovery CLI
+(`tools/discover_market_universe.py`). Instrument classification stays strictly
+evidence-driven (`securityGroupId="ST"` only known code -> `EQUITY`; everything else explicit
+`UNKNOWN_SECURITY_GROUP`); `marketId` is retained verbatim, not labelled HOSE/HNX/UPCoM.
+
+106 new tests plus the full existing Phase 0 and DNSE suites (128 tests) pass with zero
+regressions and zero pre-existing files touched. The one gap: this execution environment has
+no access to the approved `secrets.env` credential file, so both new CLI tools correctly fail
+closed at the credential gate and no live DNSE request, universe discovery, or raw retention
+actually occurred. See `docs/STATE.md` for the full account. Next: execute both tools `--live`
+from an environment with real credential access.
 
 ## Historical roadmap record
 

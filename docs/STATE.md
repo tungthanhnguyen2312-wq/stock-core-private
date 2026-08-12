@@ -1,5 +1,90 @@
 # Stock Lookup state
 
+## Universal market universe & bulk DNSE ingestion live milestone (2026-08-11)
+
+`UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1: PARTIAL_LIVE`. The approved credential
+loader found the approved credential file and authenticated without exposing a credential value.
+Live, unfiltered DNSE discovery completed at 3,252 declared instruments and 3,250 distinct
+instruments (two duplicate identities, zero malformed records), retaining 33 immutable raw
+instrument-page observations and snapshot
+`b2f0e33c3788b9f4a8fa52248e42514dab11ffad44b075df5b7d94630cbee4e7` under
+`operations-review/dnse-phase1-live-20260811/data/market_raw_lake/universe/`. Raw market IDs
+are retained as observed: `DVX=8`, `HCX=203`, `STO=1785`, `STX=312`, `UPX=942`. Classification
+remains evidence-driven: `EQUITY=1660`, `UNKNOWN_SECURITY_GROUP=1590`.
+
+The initial five-symbol smoke selected records without respecting the stock eligibility boundary
+and received five HTTP 400 responses; those manifests/checkpoints are retained as evidence. The
+selector was corrected to choose only directly observed `EQUITY` records for `type=STOCK`, never
+to guess that unknown security groups are stocks. The corrected `A32, AAA, AAH, AAM, AAN` smoke
+completed five raw OHLC retentions, and its same-scope restart performed zero refetches.
+
+The bounded 30-day, 1D OHLC sweep then requested all 1,660 eligible equities. A process timeout
+was resumed from its deterministic checkpoint rather than restarted: 1,527 instruments retained
+successfully and 133 received isolated `http_status_400` failures, for 91.99% eligible-universe
+coverage; there were no never-requested eligible symbols. The durable report is
+`operations-review/dnse-phase1-live-20260811/data/market_raw_lake/coverage/DNSE__ohlc__phase1-live-ohlc-equity-20260811-resume1__0539c97f8548aafb.json`;
+the associated manifest and checkpoint remain under the same runtime root. This is raw,
+retrospective collection only: it promotes no canonical, PIT, feature, provider, database,
+dashboard, deployment, or publication authority. Phase 2 remains owner-gated.
+
+The command host reported a timeout while its first full-sweep process was still completing; the
+subsequent resume consequently overlapped it for 330 units. All 1,862 retained OHLC raw files
+(including the successful five-symbol smoke) are immutable and preserved, while coverage is based
+on the 1,527 unique successful eligible symbols. A same-scope exclusive checkpoint lock now makes
+any future concurrent invocation fail closed rather than refetch completed work.
+
+## Universal market universe & bulk DNSE ingestion foundation (2026-08-11)
+
+`UNIVERSAL_MARKET_UNIVERSE_BULK_DNSE_INGESTION_V1: PARTIAL`. Phase 1's first concrete
+deliverables now exist. `dnse_instrument_universe.py` discovers the DNSE security master by
+paginating `/market/instruments` with no filter, no hardcoded ticker list, and no assumed
+total -- termination is driven entirely by the provider's own `total`/`page`/`pageSize`
+fields, falling back to "stop on an empty page" when they are absent. `market_raw_lake.py` is a
+new, generic, provider/dataset-agnostic immutable raw store: one Parquet file per fetched unit
+under `data/market_raw_lake/`, a checkpoint rewritten atomically after every unit (resumable,
+duplicate-avoiding), and a manifest per run. `tools/bulk_ingest_dnse_raw.py` is the first
+concrete dataset adapter, bulk-ingesting OHLC (`resolution="1D"`, the only working daily-bar
+token -- reused verbatim from `tools/dnse_market_data_probe.py`'s own documented finding) with
+bounded exponential-backoff retry on transient failures, immediate whole-run abort on
+`authentication_failed`, and per-symbol failure isolation for everything else.
+`tools/discover_market_universe.py` is the paired universe-discovery CLI.
+
+Two new supporting modules exist because reusing the established qualification-probe path
+directly would have silently corrupted bulk data: `dnse_bulk_market_data.py` is a
+non-truncating twin of `dnse_market_data.request_capability` (that function's
+`_bound_large_lists` reduces any response array over 20 items to a 7-item sample -- correct for
+a safe-to-print evidence file, wrong for raw retention, and the exact class of bug already
+named once before as the "20-item evidence-redaction truncation trap"). `dnse_secrets_env.py`
+is the first module in this repository allowed to read `secrets.env` itself -- every existing
+DNSE tool instead assumes an external launcher already populated the process environment,
+which a long-running bulk run cannot assume; it only injects the exact known credential key
+names, never overrides an already-set variable, and never returns, logs, or prints a value.
+
+Instrument classification is strictly evidence-driven: only `securityGroupId="ST"` (10 observed
+examples, all common stock) maps to `EQUITY`; every other or unseen code is explicit
+`UNKNOWN_SECURITY_GROUP` with the raw code retained -- never a guessed WARRANT/BOND/ETF/RIGHT/
+DERIVATIVE. `marketId` (`"STO"`, `"UPX"`, ...) is carried verbatim as `exchange_raw` rather than
+labelled HOSE/HNX/UPCOM, which is not yet first-party documented. 106 new focused tests cover
+pagination/termination, classification including UNKNOWN, deterministic raw identity,
+immutable/append-only semantics, checkpoint/restart, idempotent re-runs, partial provider
+failure, retry/backoff, mid-run auth-abort, credential redaction, and coverage-report
+composition; all pass, alongside the full existing Phase 0 foundation suite
+(`test_market_wide_foundation.py`) and every DNSE-related suite (128 tests, 8 subtests) with
+zero regressions and zero pre-existing files modified.
+
+The one thing this milestone could not do from its execution environment: a real network sweep
+against DNSE. Both new CLI tools correctly attempt the approved `secrets.env` mechanism at
+`C:\Users\tungt\.stocklookup\secrets.env` and fail closed with `DNSE_CREDENTIAL_INJECTION_
+REQUIRED` -- that path, and the Windows user profile it lives under, do not exist in this
+sandboxed session, even though this same workspace's `operations-review/dnse-credential-auth-
+probe-20260811/probe_results.json` shows a real `DNSE_AUTHENTICATION_PASS` earlier the same day
+from a different execution context. No DNSE request was made, no universe was actually
+discovered, and no raw OHLC observation was actually retained -- `dnse_bulk_market_data.py`'s
+allowlist and signing are exercised only by mocked responses in tests. Next:
+`tools/discover_market_universe.py --live` then `tools/bulk_ingest_dnse_raw.py --live
+--universe-snapshot <path>` from an environment with real access to the approved credential
+file, to produce the first live universe snapshot, raw OHLC retention, and coverage report.
+
 ## Market-wide ingest-first architecture pivot (2026-08-11)
 
 `STOCK_LOOKUP_MARKET_WIDE_INGEST_FIRST_PIVOT: PASS_FOUNDATION`. The active architecture is now market universe → immutable raw lake → quality/exception queue → canonical/semantic/PIT → vectorized feature store → feature-level qualification → declarative strategies → portfolio/risk → AI research/counter-thesis → human decision. The older per-ticker qualification-first workflow is **SUPERSEDED_AS_DEFAULT_WORKFLOW**, while its passed evidence remains historical truth and the 11 historical tickers are golden/regression cases.
