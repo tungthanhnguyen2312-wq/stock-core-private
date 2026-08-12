@@ -25,6 +25,7 @@ def plugin(**changes):
         "accepted_pit_statuses": ("HISTORICAL_ONLY",), "accepted_price_bases": ("UNKNOWN",),
         "accepted_volume_bases": ("UNKNOWN",), "applicable_instrument_classes": ("EQUITY",),
         "applicable_sectors": ("ALL",), "eligibility_rules": ("TEST_CONTRACT",),
+        "scoring_handler": None, "scoring_contract": {"formula_version": "test"},
         "suspect_input_policy": SuspectInputPolicy.ALLOW_WITH_WARNING,
         "lineage_version": "1.0.0", "scoring_hook": lambda row: row["market.close"],
     }

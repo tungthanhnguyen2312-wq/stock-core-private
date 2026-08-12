@@ -6,7 +6,7 @@ qualification status and no ineligible result is assigned a synthetic score.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from hashlib import sha256
 import json
@@ -20,6 +20,7 @@ REGISTRY_PATH = Path(__file__).with_name("config") / "strategy_registry.json"
 
 
 class RegistryState(StrEnum):
+    IMPLEMENTED = "IMPLEMENTED"
     IMPLEMENTATION_READY_FRAMEWORK = "IMPLEMENTATION_READY_FRAMEWORK"
     DECLARED_NON_EXECUTABLE = "DECLARED_NON_EXECUTABLE"
 
@@ -58,6 +59,8 @@ class StrategyPlugin:
     applicable_instrument_classes: tuple[str, ...]
     applicable_sectors: tuple[str, ...]
     eligibility_rules: tuple[str, ...]
+    scoring_handler: str | None
+    scoring_contract: Mapping[str, Any]
     suspect_input_policy: SuspectInputPolicy
     lineage_version: str
     scoring_hook: ScoreHook | None = field(default=None, compare=False, repr=False)
@@ -73,8 +76,10 @@ class StrategyPlugin:
             raise ValueError(f"{self.strategy_id}: feature and PIT status contracts are required")
         if not self.applicable_instrument_classes or not self.applicable_sectors or not self.eligibility_rules:
             raise ValueError(f"{self.strategy_id}: applicability must be explicit")
-        if self.execution_enabled and self.scoring_hook is None:
-            raise ValueError(f"{self.strategy_id}: executable strategies require a scoring hook")
+        if self.execution_enabled and self.scoring_hook is None and not self.scoring_handler:
+            raise ValueError(f"{self.strategy_id}: executable strategies require a scoring hook or handler")
+        if self.execution_enabled and not self.scoring_contract:
+            raise ValueError(f"{self.strategy_id}: executable strategies require a scoring contract")
         if not self.execution_enabled and not self.execution_blocker:
             raise ValueError(f"{self.strategy_id}: non-executable strategies require an explicit blocker")
 
@@ -94,6 +99,8 @@ class StrategyPlugin:
             "instrument_classes": self.applicable_instrument_classes,
             "sectors": self.applicable_sectors,
             "eligibility_rules": self.eligibility_rules,
+            "scoring_handler": self.scoring_handler,
+            "scoring_contract": self.scoring_contract,
             "suspect_input_policy": self.suspect_input_policy.value,
         }
         return sha256(_stable_json(contract).encode("utf-8")).hexdigest()
@@ -148,7 +155,7 @@ def _feature_reason(row: Mapping[str, Any], feature: str) -> str | None:
     return None if _missing(value) else str(value)
 
 
-def evaluate_strategy(plugin: StrategyPlugin, row: Mapping[str, Any]) -> StrategyResult:
+def evaluate_eligibility(plugin: StrategyPlugin, row: Mapping[str, Any]) -> StrategyResult:
     """Apply one plugin's dependency contract to one Phase 3 feature row.
 
     Phase 3 status columns use ``<feature_id>__status`` and ``<feature_id>__reason``.  The
@@ -207,16 +214,9 @@ def evaluate_strategy(plugin: StrategyPlugin, row: Mapping[str, Any]) -> Strateg
             blockers.append("FEATURE_STATUS_NOT_ACCEPTED")
             reasons.append(f"feature:{feature}:status:{status}")
 
-    if not plugin.execution_enabled:
-        blockers.append("STRATEGY_NOT_EXECUTABLE")
-        reasons.append(plugin.execution_blocker or "strategy_execution_disabled")
-
     blockers = list(dict.fromkeys(blockers))
     reasons = list(dict.fromkeys(reasons))
     eligible = not blockers
-    score = None
-    if eligible and plugin.scoring_hook is not None:
-        score = float(plugin.scoring_hook(row))
     strategy_lineage = {
         "framework_version": FRAMEWORK_VERSION,
         "strategy_id": plugin.strategy_id,
@@ -230,7 +230,7 @@ def evaluate_strategy(plugin: StrategyPlugin, row: Mapping[str, Any]) -> Strateg
         instrument_id=str(row.get("canonical_instrument_id", row.get("instrument_id", "UNKNOWN"))),
         as_of=str(row.get("as_of", row.get("session", "UNKNOWN"))), eligible=eligible,
         status="ELIGIBLE" if eligible else "INELIGIBLE", blockers=tuple(blockers), reasons=tuple(reasons),
-        score=score, rank=None, component_values=components, component_statuses=statuses,
+        score=None, rank=None, component_values=components, component_statuses=statuses,
         quality_metadata={"quality_status": row.get("quality_status", "UNKNOWN"),
                           "warnings": tuple(quality_warnings)},
         pit_metadata={"pit_status": pit_status, "pit_reason": row.get("pit_reason")},
@@ -239,6 +239,25 @@ def evaluate_strategy(plugin: StrategyPlugin, row: Mapping[str, Any]) -> Strateg
                          "raw_observation_id": row.get("raw_observation_id")},
         strategy_lineage=strategy_lineage,
     )
+
+
+def evaluate_strategy(plugin: StrategyPlugin, row: Mapping[str, Any]) -> StrategyResult:
+    """Evaluate dependencies then invoke a bound scalar hook where one is declared."""
+    base = evaluate_eligibility(plugin, row)
+    blockers = list(base.blockers)
+    reasons = list(base.reasons)
+    if not plugin.execution_enabled:
+        blockers.append("STRATEGY_NOT_EXECUTABLE")
+        reasons.append(plugin.execution_blocker or "strategy_execution_disabled")
+    elif plugin.scoring_hook is None:
+        blockers.append("SCORING_HOOK_NOT_BOUND")
+        reasons.append(plugin.scoring_handler or "scoring_handler_not_bound")
+    blockers = list(dict.fromkeys(blockers))
+    reasons = list(dict.fromkeys(reasons))
+    eligible = not blockers
+    score = float(plugin.scoring_hook(row)) if eligible and plugin.scoring_hook is not None else None
+    return replace(base, eligible=eligible, status="ELIGIBLE" if eligible else "INELIGIBLE",
+                   blockers=tuple(blockers), reasons=tuple(reasons), score=score)
 
 
 def _plugin_from_record(record: Mapping[str, Any]) -> StrategyPlugin:
@@ -254,6 +273,7 @@ def _plugin_from_record(record: Mapping[str, Any]) -> StrategyPlugin:
         applicable_instrument_classes=tuple(record["applicable_instrument_classes"]),
         applicable_sectors=tuple(record["applicable_sectors"]),
         eligibility_rules=tuple(record["eligibility_rules"]),
+        scoring_handler=record.get("scoring_handler"), scoring_contract=record.get("scoring_contract", {}),
         suspect_input_policy=SuspectInputPolicy(record["suspect_input_policy"]),
         lineage_version=str(record["lineage_version"]),
     )
@@ -284,8 +304,10 @@ def validate_registry(registry: Mapping[str, StrategyPlugin]) -> None:
             raise ValueError("strategy registry key does not match strategy identifier")
         if plugin.registry_state == RegistryState.DECLARED_NON_EXECUTABLE and plugin.execution_enabled:
             raise ValueError(f"{strategy_id}: declared non-executable strategy cannot execute")
-        if plugin.registry_state == RegistryState.IMPLEMENTATION_READY_FRAMEWORK and plugin.scoring_hook is not None:
+        if plugin.registry_state == RegistryState.IMPLEMENTATION_READY_FRAMEWORK and (plugin.execution_enabled or plugin.scoring_hook is not None):
             raise ValueError(f"{strategy_id}: Phase 4A framework entry cannot include scoring logic")
+        if plugin.registry_state == RegistryState.IMPLEMENTED and (not plugin.execution_enabled or not plugin.scoring_handler):
+            raise ValueError(f"{strategy_id}: implemented strategy requires executable handler")
 
 
 def registry_records(registry: Mapping[str, StrategyPlugin] | None = None) -> list[dict[str, Any]]:
@@ -303,6 +325,7 @@ def registry_records(registry: Mapping[str, StrategyPlugin] | None = None) -> li
         "applicable_instrument_classes": list(plugin.applicable_instrument_classes),
         "applicable_sectors": list(plugin.applicable_sectors),
         "eligibility_rules": list(plugin.eligibility_rules),
+        "scoring_handler": plugin.scoring_handler, "scoring_contract": dict(plugin.scoring_contract),
         "suspect_input_policy": plugin.suspect_input_policy.value,
         "lineage_version": plugin.lineage_version, "contract_lineage_id": plugin.contract_lineage_id,
     } for _, plugin in sorted(source.items())]
