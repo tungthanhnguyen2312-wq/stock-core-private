@@ -1,5 +1,11 @@
 # Stock Lookup roadmap
 
+## Current active gate - market-wide raw expansion V2 (2026-08-12)
+
+`UNIVERSAL_MARKET_DATA_LAKE_EXPANSION_V2 = PARTIAL_LIVE_BACKFILL` is the active implementation direction. A fresh dynamic DNSE security master is the universe authority; only its directly evidenced ST/EQUITY subset is currently applicable to the `type=STOCK` daily-OHLC request contract. Unknown security groups and raw exchange metadata are retained, never guessed or deleted. The active annual 1D OHLC checkpoint covers 2025-08-12..2026-08-11 and can continue its remaining units without redesign. The next gate is `MARKET_WIDE_DATA_COVERAGE_REVIEW`, not Phase 2 canonicalization or strategy work.
+
+Price-basis prospective qualification is deferred/backlog. The bounded HPG/VCB authority and the `NO_DOCUMENTED_PRICE_BASIS_CONTRACT` finding remain regression evidence only. Momentum and other strategy eligibility remains fail-closed on unknown price basis; raw collection does not alter that policy.
+
 ## Active roadmap — market-wide ingest-first architecture (2026-08-11)
 
 The former ticker-centric qualification-first sequence is **SUPERSEDED_AS_DEFAULT_WORKFLOW**. Historical milestones below remain a preserved record; they are not reopened by this pivot. The active sequence is:

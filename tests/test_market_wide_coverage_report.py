@@ -73,6 +73,27 @@ class BuildCoverageReportTests(unittest.TestCase):
         self.assertIsNone(entry["coverage_ratio_of_requested"])
         self.assertIsNone(entry["coverage_ratio_of_universe"])
 
+    def test_chunked_manifest_reports_full_and_partial_symbols_separately(self):
+        report = coverage.build_coverage_report(
+            generated_at="t", universe_status="COMPLETE", universe_declared_total=2,
+            universe_discovered_count=2, universe_by_exchange={},
+            universe_by_instrument_class={"EQUITY": 2}, universe_symbols=["HPG", "VNM"],
+            dataset_manifests=[_manifest(
+                requested_units=["HPG__20260801__20260803", "HPG__20260804__20260806",
+                                 "VNM__20260801__20260803", "VNM__20260804__20260806"],
+                successful_units=["HPG__20260801__20260803", "HPG__20260804__20260806",
+                                  "VNM__20260801__20260803"],
+                failed_units=[{"unit_id": "VNM__20260804__20260806", "error_code": "http_status_400"}],
+                planned_date_chunks=[{"date_from": "2026-08-01", "date_to": "2026-08-03"},
+                                     {"date_from": "2026-08-04", "date_to": "2026-08-06"}],
+                requested_instruments=["HPG", "VNM"], date_from="2026-08-01", date_to="2026-08-06",
+            )],
+        )
+        entry = report["dataset_coverage"][0]
+        self.assertEqual(["HPG"], entry["fully_covered_symbols"])
+        self.assertEqual(["VNM"], entry["partial_symbols"])
+        self.assertEqual(["VNM"], entry["failed_symbols"])
+
     def test_no_dataset_manifests_still_reports_universe(self):
         report = coverage.build_coverage_report(
             generated_at="t", universe_status="COMPLETE", universe_declared_total=2,

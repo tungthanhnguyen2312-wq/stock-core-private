@@ -32,6 +32,10 @@ def _ohlc_body(symbol):
            "c": [1, 2, 3], "v": [100, 200, 300]}
 
 
+def _unit(symbol, date_from="2026-08-01", date_to="2026-08-10"):
+    return bulk.chunk_unit_id(symbol, date_from, date_to)
+
+
 class PureHelperTests(unittest.TestCase):
     def test_date_window_epoch_spans_full_days(self):
         start, end = bulk.date_window_epoch("2026-08-01", "2026-08-03")
@@ -51,6 +55,13 @@ class PureHelperTests(unittest.TestCase):
         b = bulk.compute_run_scope_id(dataset="ohlc", symbols=["HPG"], date_from="2026-08-02",
                                       date_to="2026-08-10", resolution="1D", instrument_type="STOCK")
         self.assertNotEqual(a, b)
+
+    def test_chunk_planning_is_inclusive_and_deterministic(self):
+        self.assertEqual([
+            {"date_from": "2026-08-01", "date_to": "2026-08-03"},
+            {"date_from": "2026-08-04", "date_to": "2026-08-06"},
+            {"date_from": "2026-08-07", "date_to": "2026-08-08"},
+        ], bulk.plan_date_chunks("2026-08-01", "2026-08-08", chunk_days=3))
 
     def test_stock_snapshot_selection_excludes_unknown_security_groups_without_dropping_master_context(self):
         import pandas as pd
@@ -83,12 +94,73 @@ class RunAllSuccessTests(unittest.TestCase):
                              run_id="run-1", request_get=fake_get, sleep=lambda _s: None)
         self.assertEqual("COMPLETE", result["status"])
         manifest = result["manifest"]
-        self.assertEqual(["HPG", "QNS", "VNM"], manifest["successful_units"])
+        self.assertEqual([_unit("HPG"), _unit("QNS"), _unit("VNM")], manifest["successful_units"])
         self.assertEqual(0, manifest["failed_unit_count"])
         self.assertEqual(3, len(calls))
 
 
 class CheckpointRestartTests(unittest.TestCase):
+    def test_dead_pid_lock_is_recovered_without_rewriting_completed_units(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            scope_id = bulk.compute_run_scope_id(
+                dataset="ohlc", symbols=["HPG"], date_from="2026-08-01", date_to="2026-08-10",
+                resolution="1D", instrument_type="STOCK",
+            )
+            lock_path = bulk._run_scope_lock_path(root, scope_id)
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            lock_path.write_text(f"run_scope_id={scope_id}\npid=99999999\n", encoding="utf-8")
+            result = bulk.run(runtime_root=root, api_key="k", api_secret="s", symbols=["HPG"],
+                              date_from="2026-08-01", date_to="2026-08-10", run_id="run-1",
+                              request_get=lambda _url, *, params, **_kwargs: _FakeResponse(200, _ohlc_body(params["symbol"])),
+                              sleep=lambda _s: None)
+        self.assertEqual("COMPLETE", result["status"])
+
+    def test_partial_date_range_completion_resumes_only_missing_chunk(self):
+        calls = []
+
+        def first_get(url, *, params, headers, timeout):
+            calls.append((params["symbol"], params["from"], params["to"]))
+            if len(calls) == 2:
+                return _FakeResponse(500, {"message": "temporary"})
+            return _FakeResponse(200, _ohlc_body(params["symbol"]))
+
+        with TemporaryDirectory() as tmp:
+            first = bulk.run(runtime_root=Path(tmp), api_key="k", api_secret="s", symbols=["HPG"],
+                             date_from="2026-08-01", date_to="2026-08-06", chunk_days=3,
+                             run_id="run-1", request_get=first_get, sleep=lambda _s: None, max_retries=0)
+            self.assertEqual("COMPLETE_WITH_FAILURES", first["status"])
+            self.assertEqual([_unit("HPG", "2026-08-01", "2026-08-03")], first["manifest"]["successful_units"])
+
+            resumed_calls = []
+            def second_get(url, *, params, headers, timeout):
+                resumed_calls.append(params["symbol"])
+                return _FakeResponse(200, _ohlc_body(params["symbol"]))
+
+            second = bulk.run(runtime_root=Path(tmp), api_key="k", api_secret="s", symbols=["HPG"],
+                              date_from="2026-08-01", date_to="2026-08-06", chunk_days=3,
+                              run_id="run-2", request_get=second_get, sleep=lambda _s: None)
+        self.assertEqual(["HPG"], resumed_calls)
+        self.assertEqual([_unit("HPG", "2026-08-01", "2026-08-03"),
+                          _unit("HPG", "2026-08-04", "2026-08-06")], second["manifest"]["successful_units"])
+        self.assertEqual([_unit("HPG", "2026-08-01", "2026-08-03")], second["manifest"]["skipped_units"])
+
+    def test_bounded_continuation_can_advance_past_preserved_failures(self):
+        with TemporaryDirectory() as tmp:
+            first = bulk.run(runtime_root=Path(tmp), api_key="k", api_secret="s", symbols=["AAA", "BBB"],
+                             date_from="2026-08-01", date_to="2026-08-03", run_id="run-1", max_retries=0,
+                             request_get=lambda _url, *, params, **_kwargs: _FakeResponse(
+                                 400 if params["symbol"] == "AAA" else 200, _ohlc_body(params["symbol"])),
+                             sleep=lambda _s: None, max_units_per_invocation=1, retry_failed=False)
+            calls = []
+            second = bulk.run(runtime_root=Path(tmp), api_key="k", api_secret="s", symbols=["AAA", "BBB"],
+                              date_from="2026-08-01", date_to="2026-08-03", run_id="run-2",
+                              request_get=lambda _url, *, params, **_kwargs: (calls.append(params["symbol"]) or _FakeResponse(200, _ohlc_body(params["symbol"]))),
+                              sleep=lambda _s: None, max_units_per_invocation=1, retry_failed=False)
+        self.assertEqual("IN_PROGRESS", first["status"])
+        self.assertEqual(["BBB"], calls)
+        self.assertEqual("COMPLETE_WITH_FAILURES", second["status"])
+
     def test_active_scope_lock_prevents_concurrent_refetch(self):
         calls = []
 
@@ -125,8 +197,8 @@ class CheckpointRestartTests(unittest.TestCase):
             first = bulk.run(runtime_root=Path(tmp), api_key="k", api_secret="s",
                             symbols=["HPG", "VNM", "QNS"], date_from="2026-08-01", date_to="2026-08-10",
                             run_id="run-1", request_get=fake_get, sleep=lambda _s: None, max_retries=0)
-            self.assertEqual(["HPG", "VNM"], first["manifest"]["successful_units"])
-            self.assertEqual(["QNS"], [f["unit_id"] for f in first["manifest"]["failed_units"]])
+            self.assertEqual([_unit("HPG"), _unit("VNM")], first["manifest"]["successful_units"])
+            self.assertEqual([_unit("QNS")], [f["unit_id"] for f in first["manifest"]["failed_units"]])
             calls_after_first = len(calls)
             self.assertEqual(3, calls_after_first)
 
@@ -145,8 +217,8 @@ class CheckpointRestartTests(unittest.TestCase):
         # HPG/VNM from run-1, untouched this time); skipped_units is *this
         # invocation's* skip list -- HPG/VNM were skipped again here because the
         # checkpoint already had them, which is the correct, desired behavior.
-        self.assertEqual(["HPG", "QNS", "VNM"], second["manifest"]["successful_units"])
-        self.assertEqual(["HPG", "VNM"], second["manifest"]["skipped_units"])
+        self.assertEqual([_unit("HPG"), _unit("QNS"), _unit("VNM")], second["manifest"]["successful_units"])
+        self.assertEqual([_unit("HPG"), _unit("VNM")], second["manifest"]["skipped_units"])
         self.assertEqual(1, second["manifest"]["attempted_unit_count"])
 
     def test_a_third_identical_run_makes_zero_network_calls(self):
@@ -167,7 +239,7 @@ class CheckpointRestartTests(unittest.TestCase):
                              date_from="2026-08-01", date_to="2026-08-10", run_id="run-2",
                              request_get=counting_get, sleep=lambda _s: None)
         self.assertEqual([], calls)
-        self.assertEqual(["HPG", "VNM"], result["manifest"]["skipped_units"])
+        self.assertEqual([_unit("HPG"), _unit("VNM")], result["manifest"]["skipped_units"])
         self.assertEqual(0, result["manifest"]["attempted_unit_count"])
 
     def test_raw_files_from_prior_run_are_preserved_not_rewritten(self):
@@ -180,7 +252,7 @@ class CheckpointRestartTests(unittest.TestCase):
                             request_get=fake_get, sleep=lambda _s: None)
             raw_path = Path(first["manifest"]["successful_units"] and
                            lake.load_checkpoint(Path(tmp), "DNSE", "ohlc",
-                                               first["run_scope_id"])["units"]["HPG"]["raw_file"])
+                                               first["run_scope_id"])["units"][_unit("HPG")]["raw_file"])
             before = raw_path.read_bytes()
             bulk.run(runtime_root=Path(tmp), api_key="k", api_secret="s", symbols=["HPG"],
                    date_from="2026-08-01", date_to="2026-08-10", run_id="run-2",
@@ -247,7 +319,7 @@ class PartialFailureTests(unittest.TestCase):
                              symbols=["HPG", "BAD", "VNM"], date_from="2026-08-01", date_to="2026-08-10",
                              run_id="run-1", request_get=fake_get, sleep=lambda _s: None)
         self.assertEqual("COMPLETE_WITH_FAILURES", result["status"])
-        self.assertEqual(["HPG", "VNM"], result["manifest"]["successful_units"])
+        self.assertEqual([_unit("HPG"), _unit("VNM")], result["manifest"]["successful_units"])
         self.assertEqual(1, result["manifest"]["failed_unit_count"])
 
 
@@ -270,8 +342,8 @@ class AuthAbortTests(unittest.TestCase):
                              sleep=lambda _s: None)
         self.assertEqual("AUTHENTICATION_FAILED_MID_RUN", result["status"])
         manifest = result["manifest"]
-        self.assertEqual(["CCC", "DDD"], manifest["skipped_units"])
-        self.assertEqual(["AAA"], manifest["successful_units"])
+        self.assertEqual([_unit("CCC"), _unit("DDD")], manifest["skipped_units"])
+        self.assertEqual([_unit("AAA")], manifest["successful_units"])
         self.assertEqual(["AAA", "BBB"], calls)  # CCC/DDD never even called
 
     def test_auth_aborted_symbols_are_retried_on_a_later_run_once_auth_recovers(self):
@@ -309,6 +381,15 @@ class CredentialRedactionTests(unittest.TestCase):
         dumped = json.dumps(result, default=str)
         self.assertNotIn("my-secret-api-key", dumped)
         self.assertNotIn("my-secret-api-secret", dumped)
+
+    def test_raw_observation_includes_deterministic_request_and_checkpoint_provenance(self):
+        response = {"body": _ohlc_body("HPG"), "endpoint": "/price/ohlc", "query_sent": {"symbol": "HPG"},
+                    "http_status": 200, "elapsed_ms": 1}
+        observation = bulk._ohlc_observation("HPG", response, retrieved_at="2026-08-12T00:00:00+07:00",
+                                             run_id="run-1", run_scope_id="scope-1", unit_id="HPG__x")
+        self.assertIn('"endpoint":"/price/ohlc"', observation.request_identity)
+        self.assertEqual("run-1", observation.provenance["ingestion_run_id"])
+        self.assertEqual("scope-1", observation.provenance["checkpoint_identity"])
 
 
 class CoverageReportIntegrationTests(unittest.TestCase):

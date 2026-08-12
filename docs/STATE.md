@@ -1,5 +1,13 @@
 # Stock Lookup state
 
+## Universal market data lake expansion V2 (2026-08-12)
+
+`UNIVERSAL_MARKET_DATA_LAKE_EXPANSION_V2 = PARTIAL_LIVE_BACKFILL`. Market-wide raw acquisition is the active direction. DNSE's fresh dynamic security-master snapshot retained 3,250 distinct instruments from 3,252 declared records (two duplicate identities): 1,660 directly evidenced `ST/EQUITY` records are applicable to the current `type=STOCK` OHLC request contract, while all 1,590 `UNKNOWN_SECURITY_GROUP` records and their raw exchange/security-group metadata remain retained, not guessed or deleted. The dataset inventory records `instruments`, daily `ohlc_1D`, and global `working_dates` as ready for immutable raw ingest; current snapshots are deferred and intraday/foreign-history endpoints require a bounded request-contract fix. This is collection readiness, not analytical authority.
+
+The V2 runtime root retains a checkpointed, annual `2025-08-12..2026-08-11` `ohlc_1D` backfill in `SYMBOL__FROM__TO` units. Its partial live execution has 1,003 retained observations (60.42% of the live applicable universe), 81 isolated provider HTTP 400 exceptions, and 576 untouched units remaining in the same deterministic checkpoint; the separate ready `working_dates` global observation completed. Raw OHLC remains `price_basis=UNKNOWN`; coverage does not qualify prices, volume, boards, foreign flow, or any strategy input. The prior 133 short-window HTTP 400s remain preserved as separate historical exceptions and are neither explained nor excluded.
+
+The bounded HPG and VCB `ADJUSTED_RETROSPECTIVE` authority remains exactly unchanged, the first-party DNSE price-basis result remains `NO_DOCUMENTED_PRICE_BASIS_CONTRACT`, and prospective price-basis qualification is backlog rather than active work. Phase 2/3/4B and Momentum policy are unchanged; Momentum remains fail-closed when its snapshot has unknown price basis. V2 source adds no provider, no canonical/semantic promotion, no dashboard/production change, and no strategy change. Runtime evidence is outside source control under `operations-review/dnse-market-data-lake-v2-20260812/`.
+
 ## Current-regime DNSE price-basis qualification (2026-08-12)
 
 `CURRENT_SNAPSHOT_DNSE_PRICE_BASIS_QUALIFICATION_V1: PASS`. Deterministic current-regime

@@ -68,6 +68,7 @@ PROVIDER = "DNSE"
 DATASET = "ohlc"
 RESOLUTION = "1D"
 DEFAULT_LOOKBACK_DAYS = 30
+DEFAULT_CHUNK_DAYS = 365
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_BACKOFF_SECONDS = 1.0
 DEFAULT_REQUEST_DELAY_SECONDS = 0.2
@@ -81,17 +82,47 @@ def _run_scope_lock_path(runtime_root: Path, run_scope_id: str) -> Path:
     return lake.checkpoint_path(runtime_root, PROVIDER, DATASET, run_scope_id).with_suffix(".lock")
 
 
+def _lock_owner_is_definitely_dead(path: Path) -> bool:
+    """Only recover locks carrying a dead local PID; legacy/opaque locks fail closed."""
+    try:
+        fields = dict(line.split("=", 1) for line in path.read_text(encoding="utf-8").splitlines()
+                      if "=" in line)
+        pid = int(fields["pid"])
+    except (OSError, ValueError, KeyError):
+        return False
+    if os.name == "nt":
+        import ctypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if handle:
+            kernel32.CloseHandle(handle)
+            return False
+        return ctypes.get_last_error() == 87  # ERROR_INVALID_PARAMETER: PID no longer exists.
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    return False
+
+
 @contextmanager
 def _exclusive_run_scope_lock(runtime_root: Path, run_scope_id: str):
     """Fail closed when another process owns the same checkpoint scope."""
     path = _run_scope_lock_path(runtime_root, run_scope_id)
     path.parent.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+            break
+        except FileExistsError as exc:
+            if _lock_owner_is_definitely_dead(path):
+                path.unlink()
+                continue
+            raise RunScopeLockedError(f"run scope is already active: {run_scope_id}") from exc
     try:
-        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
-    except FileExistsError as exc:
-        raise RunScopeLockedError(f"run scope is already active: {run_scope_id}") from exc
-    try:
-        os.write(fd, f"run_scope_id={run_scope_id}\n".encode("utf-8"))
+        os.write(fd, f"run_scope_id={run_scope_id}\npid={os.getpid()}\n".encode("utf-8"))
         yield
     finally:
         os.close(fd)
@@ -122,11 +153,38 @@ def default_date_range(lookback_days: int) -> tuple[str, str]:
     return (today - timedelta(days=lookback_days)).isoformat(), today.isoformat()
 
 
+def plan_date_chunks(date_from: str, date_to: str, *, chunk_days: int) -> list[dict[str, str]]:
+    """Plan deterministic, inclusive calendar-date request chunks.
+
+    A chunk is part of the logical unit identity, so an interrupted backfill
+    can resume only the missing symbol/range pairs without re-requesting
+    already retained provider responses.
+    """
+    if chunk_days <= 0:
+        raise ValueError("chunk_days must be positive")
+    start = datetime.strptime(date_from, "%Y-%m-%d").date()
+    end = datetime.strptime(date_to, "%Y-%m-%d").date()
+    if end < start:
+        raise ValueError("date_to must not be earlier than date_from")
+    chunks: list[dict[str, str]] = []
+    cursor = start
+    while cursor <= end:
+        chunk_end = min(cursor + timedelta(days=chunk_days - 1), end)
+        chunks.append({"date_from": cursor.isoformat(), "date_to": chunk_end.isoformat()})
+        cursor = chunk_end + timedelta(days=1)
+    return chunks
+
+
+def chunk_unit_id(symbol: str, date_from: str, date_to: str) -> str:
+    return f"{symbol.upper()}__{date_from.replace('-', '')}__{date_to.replace('-', '')}"
+
+
 def compute_run_scope_id(*, dataset: str, symbols: Sequence[str], date_from: str, date_to: str,
-                         resolution: str, instrument_type: str) -> str:
+                         resolution: str, instrument_type: str,
+                         chunk_days: int = DEFAULT_CHUNK_DAYS) -> str:
     identity = _canonical_json({
         "dataset": dataset, "symbols": sorted(set(symbols)), "from": date_from, "to": date_to,
-        "resolution": resolution, "type": instrument_type,
+        "resolution": resolution, "type": instrument_type, "chunk_days": chunk_days,
     })
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
 
@@ -169,16 +227,21 @@ def load_universe_context(path: Path | None, *, selected_symbols: Sequence[str] 
     }
 
 
-def _ohlc_observation(symbol: str, response: dict[str, Any], *, retrieved_at: str) -> RawObservation:
+def _ohlc_observation(symbol: str, response: dict[str, Any], *, retrieved_at: str,
+                      run_id: str, run_scope_id: str, unit_id: str) -> RawObservation:
     body = response.get("body") or {}
     payload_json = _canonical_json(body)
     return RawObservation(
         provider=PROVIDER, dataset=DATASET, instrument=symbol, retrieved_at=retrieved_at,
-        request_identity=_canonical_json(response.get("query_sent") or {}),
+        request_identity=_canonical_json({"provider": PROVIDER, "dataset": DATASET,
+                                          "endpoint": response.get("endpoint"),
+                                          "query": response.get("query_sent") or {}}),
         raw_payload_hash=hashlib.sha256(payload_json.encode("utf-8")).hexdigest(),
         schema_version="1.0.0", raw_payload=body,
-        provenance={"endpoint": response.get("endpoint"), "http_status": response.get("http_status"),
-                    "elapsed_ms": response.get("elapsed_ms")},
+        provenance={"endpoint": response.get("endpoint"), "request_parameters": response.get("query_sent") or {},
+                    "http_status": response.get("http_status"), "elapsed_ms": response.get("elapsed_ms"),
+                    "ingestion_run_id": run_id, "checkpoint_identity": run_scope_id,
+                    "checkpoint_unit_id": unit_id},
     )
 
 
@@ -205,12 +268,15 @@ def run(*, runtime_root: Path, api_key: str, api_secret: str, symbols: Sequence[
        request_delay_seconds: float = DEFAULT_REQUEST_DELAY_SECONDS,
        request_get: Callable[..., Any] | None = None,
        sleep: Callable[[float], None] = time.sleep,
-       universe_context: dict[str, Any] | None = None) -> dict[str, Any]:
+       universe_context: dict[str, Any] | None = None,
+       chunk_days: int = DEFAULT_CHUNK_DAYS,
+       max_units_per_invocation: int | None = None,
+       retry_failed: bool = True) -> dict[str, Any]:
     """Acquire exclusive ownership before checkpointed bulk OHLC ingestion."""
     normalized_symbols = sorted({symbol.upper() for symbol in symbols})
     run_scope_id = compute_run_scope_id(
         dataset=DATASET, symbols=normalized_symbols, date_from=date_from, date_to=date_to,
-        resolution=RESOLUTION, instrument_type=instrument_type,
+        resolution=RESOLUTION, instrument_type=instrument_type, chunk_days=chunk_days,
     )
     with _exclusive_run_scope_lock(runtime_root, run_scope_id):
         return _run_unlocked(
@@ -219,6 +285,8 @@ def run(*, runtime_root: Path, api_key: str, api_secret: str, symbols: Sequence[
             instrument_type=instrument_type, run_id=run_id, max_retries=max_retries,
             backoff_seconds=backoff_seconds, request_delay_seconds=request_delay_seconds,
             request_get=request_get, sleep=sleep, universe_context=universe_context,
+            chunk_days=chunk_days, max_units_per_invocation=max_units_per_invocation,
+            retry_failed=retry_failed,
         )
 
 
@@ -228,17 +296,22 @@ def _run_unlocked(*, runtime_root: Path, api_key: str, api_secret: str, symbols:
        request_delay_seconds: float = DEFAULT_REQUEST_DELAY_SECONDS,
        request_get: Callable[..., Any] | None = None,
        sleep: Callable[[float], None] = time.sleep,
-       universe_context: dict[str, Any] | None = None) -> dict[str, Any]:
+       universe_context: dict[str, Any] | None = None,
+       chunk_days: int = DEFAULT_CHUNK_DAYS,
+       max_units_per_invocation: int | None = None,
+       retry_failed: bool = True) -> dict[str, Any]:
     """Checkpointed bulk OHLC ingestion. Assumes valid credentials are
     already resolved by the caller -- this function performs no credential
     lookup, keeping it fully injectable for tests."""
     started_at = vn_time.vn_now_iso()
     symbols = sorted({s.upper() for s in symbols})
+    chunks = plan_date_chunks(date_from, date_to, chunk_days=chunk_days)
+    if max_units_per_invocation is not None and max_units_per_invocation <= 0:
+        raise ValueError("max_units_per_invocation must be positive when supplied")
     run_scope_id = compute_run_scope_id(dataset=DATASET, symbols=symbols, date_from=date_from,
-                                        date_to=date_to, resolution=RESOLUTION, instrument_type=instrument_type)
+                                        date_to=date_to, resolution=RESOLUTION, instrument_type=instrument_type,
+                                        chunk_days=chunk_days)
     checkpoint = lake.load_checkpoint(runtime_root, PROVIDER, DATASET, run_scope_id)
-
-    from_ts, to_ts = date_window_epoch(date_from, date_to)
 
     attempted: list[str] = []
     successful: list[str] = []
@@ -246,15 +319,23 @@ def _run_unlocked(*, runtime_root: Path, api_key: str, api_secret: str, symbols:
     skipped: list[str] = []
     auth_aborted = False
 
-    for symbol in symbols:
-        if lake.unit_status(checkpoint, symbol) == "success":
-            skipped.append(symbol)
+    units = [(symbol, chunk, chunk_unit_id(symbol, chunk["date_from"], chunk["date_to"]))
+             for symbol in symbols for chunk in chunks]
+    for symbol, chunk, unit_id in units:
+        if lake.unit_status(checkpoint, unit_id) == "success":
+            skipped.append(unit_id)
+            continue
+        if lake.unit_status(checkpoint, unit_id) == "failed" and not retry_failed:
+            skipped.append(unit_id)
             continue
         if auth_aborted:
-            skipped.append(symbol)
+            skipped.append(unit_id)
             continue
+        if max_units_per_invocation is not None and len(attempted) >= max_units_per_invocation:
+            break
 
-        attempted.append(symbol)
+        attempted.append(unit_id)
+        from_ts, to_ts = date_window_epoch(chunk["date_from"], chunk["date_to"])
         query = {"type": instrument_type, "symbol": symbol, "resolution": RESOLUTION,
                  "from": from_ts, "to": to_ts}
         response = _fetch_with_retry(symbol, query, api_key=api_key, api_secret=api_secret,
@@ -263,26 +344,27 @@ def _run_unlocked(*, runtime_root: Path, api_key: str, api_secret: str, symbols:
 
         if response.get("error_code") == "authentication_failed":
             auth_aborted = True
-            failed.append({"unit_id": symbol, "error_code": "authentication_failed"})
-            checkpoint = lake.record_unit_result(checkpoint, symbol, status="failed",
+            failed.append({"unit_id": unit_id, "error_code": "authentication_failed"})
+            checkpoint = lake.record_unit_result(checkpoint, unit_id, status="failed",
                                                  error_code="authentication_failed")
             lake.save_checkpoint(runtime_root, checkpoint)
             continue
 
         if response.get("ok"):
             retrieved_at = vn_time.vn_now_iso()
-            observation = _ohlc_observation(symbol, response, retrieved_at=retrieved_at)
+            observation = _ohlc_observation(symbol, response, retrieved_at=retrieved_at,
+                                            run_id=run_id, run_scope_id=run_scope_id, unit_id=unit_id)
             write_result = lake.write_raw_observation(runtime_root, observation, run_id=run_id)
-            checkpoint = lake.record_unit_result(checkpoint, symbol, status="success",
+            checkpoint = lake.record_unit_result(checkpoint, unit_id, status="success",
                                                  raw_file=write_result["path"],
                                                  observation_id=observation.observation_id)
             lake.save_checkpoint(runtime_root, checkpoint)
-            successful.append(symbol)
+            successful.append(unit_id)
         else:
             error_code = str(response.get("error_code"))
-            failed.append({"unit_id": symbol, "error_code": error_code,
+            failed.append({"unit_id": unit_id, "error_code": error_code,
                            "attempts": response.get("attempts", 1)})
-            checkpoint = lake.record_unit_result(checkpoint, symbol, status="failed", error_code=error_code)
+            checkpoint = lake.record_unit_result(checkpoint, unit_id, status="failed", error_code=error_code)
             lake.save_checkpoint(runtime_root, checkpoint)
 
         if request_delay_seconds > 0:
@@ -306,17 +388,27 @@ def _run_unlocked(*, runtime_root: Path, api_key: str, api_secret: str, symbols:
     )
     manifest = lake.build_manifest(
         provider=PROVIDER, dataset=DATASET, run_id=run_id, run_scope_id=run_scope_id,
-        started_at=started_at, ended_at=ended_at, requested_units=symbols, attempted_units=attempted,
+        started_at=started_at, ended_at=ended_at, requested_units=[item[2] for item in units], attempted_units=attempted,
         successful_units=cumulative_successful, failed_units=cumulative_failed, skipped_units=skipped,
         output_dir=output_dir, checkpoint_file=checkpoint_file,
         extra={"date_from": date_from, "date_to": date_to, "resolution": RESOLUTION,
               "instrument_type": instrument_type, "auth_aborted": auth_aborted,
-              "attempted_this_run_successful": sorted(successful), "attempted_this_run_failed": failed},
+              "chunk_days": chunk_days, "planned_date_chunks": chunks,
+              "requested_instruments": list(symbols),
+              "attempted_this_run_successful": sorted(successful), "attempted_this_run_failed": failed,
+              "max_units_per_invocation": max_units_per_invocation, "retry_failed": retry_failed,
+              "remaining_unit_count": len(set(item[2] for item in units) - lake.completed_units(checkpoint)),
+              "remaining_unattempted_unit_count": len(set(item[2] for item in units)
+                                                    - lake.completed_units(checkpoint)
+                                                    - lake.units_with_status(checkpoint, "failed"))},
     )
     lake.save_manifest(runtime_root, manifest)
 
+    remaining_unattempted = set(item[2] for item in units) - lake.completed_units(checkpoint) \
+        - lake.units_with_status(checkpoint, "failed")
     status = ("AUTHENTICATION_FAILED_MID_RUN" if auth_aborted
-             else "COMPLETE" if not failed else "COMPLETE_WITH_FAILURES")
+             else "IN_PROGRESS" if remaining_unattempted
+             else "COMPLETE" if not cumulative_failed else "COMPLETE_WITH_FAILURES")
 
     result: dict[str, Any] = {"status": status, "manifest": manifest, "run_scope_id": run_scope_id}
     context = universe_context or {}
@@ -354,6 +446,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--to", dest="date_to", default=None, help="YYYY-MM-DD.")
     parser.add_argument("--lookback-days", type=int, default=DEFAULT_LOOKBACK_DAYS,
                          help="Used only when --from/--to are not both given.")
+    parser.add_argument("--chunk-days", type=int, default=DEFAULT_CHUNK_DAYS,
+                        help="Inclusive calendar days per provider request; part of checkpoint scope.")
+    parser.add_argument("--max-units-per-invocation", type=int, default=None,
+                        help="Optional bounded continuation size; later invocations resume the same scope.")
+    parser.add_argument("--retry-failed", action="store_true",
+                        help="Re-attempt previously failed units before untouched units; disabled by default for continuation.")
     parser.add_argument("--instrument-type", default="STOCK", choices=("STOCK", "INDEX"))
     parser.add_argument("--max-retries", type=int, default=DEFAULT_MAX_RETRIES)
     parser.add_argument("--backoff-seconds", type=float, default=DEFAULT_BACKOFF_SECONDS)
@@ -382,7 +480,8 @@ def main(argv: list[str] | None = None) -> int:
             "dry_run": True, "capability": "ohlc", "endpoint": "/price/ohlc",
             "requested_unit_count": len(symbols), "symbols_sample": symbols[:10],
             "date_from": date_from, "date_to": date_to, "resolution": RESOLUTION,
-            "instrument_type": args.instrument_type,
+            "instrument_type": args.instrument_type, "chunk_days": args.chunk_days,
+            "planned_date_chunks": plan_date_chunks(date_from, date_to, chunk_days=args.chunk_days),
         }, indent=2, sort_keys=True))
         return 0
 
@@ -398,7 +497,9 @@ def main(argv: list[str] | None = None) -> int:
         result = run(runtime_root=runtime_root, api_key=api_key, api_secret=api_secret, symbols=symbols,
                      date_from=date_from, date_to=date_to, instrument_type=args.instrument_type, run_id=run_id,
                      max_retries=args.max_retries, backoff_seconds=args.backoff_seconds,
-                     request_delay_seconds=args.request_delay_seconds, universe_context=universe_context)
+                     request_delay_seconds=args.request_delay_seconds, universe_context=universe_context,
+                     chunk_days=args.chunk_days, max_units_per_invocation=args.max_units_per_invocation,
+                     retry_failed=args.retry_failed)
     except RunScopeLockedError as exc:
         print(json.dumps({"status": "RUN_SCOPE_LOCKED", "reason": str(exc)}))
         return 3

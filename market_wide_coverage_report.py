@@ -86,8 +86,25 @@ def _dataset_coverage(manifest: Mapping[str, Any], universe_symbols: set[str]) -
     failed_entries = list(manifest.get("failed_units") or [])
     failed_ids = {str(item.get("unit_id")) for item in failed_entries if isinstance(item, Mapping)}
     skipped = set(manifest.get("skipped_units") or [])
-    never_requested = universe_symbols - requested
-    not_yet_covered = sorted((universe_symbols - successful))
+    requested_instruments = set(manifest.get("requested_instruments") or requested)
+    chunked = bool(manifest.get("planned_date_chunks"))
+
+    def instrument_for_unit(unit_id: str) -> str:
+        return unit_id.split("__", 1)[0] if chunked else unit_id
+
+    requested_by_symbol: dict[str, set[str]] = {}
+    successful_by_symbol: dict[str, set[str]] = {}
+    for unit_id in requested:
+        requested_by_symbol.setdefault(instrument_for_unit(unit_id), set()).add(unit_id)
+    for unit_id in successful:
+        successful_by_symbol.setdefault(instrument_for_unit(unit_id), set()).add(unit_id)
+    fully_successful = {symbol for symbol, units in requested_by_symbol.items()
+                        if units and units.issubset(successful_by_symbol.get(symbol, set()))}
+    partial = {symbol for symbol, units in requested_by_symbol.items()
+               if successful_by_symbol.get(symbol, set()) and not units.issubset(successful_by_symbol[symbol])}
+    failed_symbols = {instrument_for_unit(unit_id) for unit_id in failed_ids}
+    never_requested = universe_symbols - requested_instruments
+    not_yet_covered = sorted(universe_symbols - fully_successful)
 
     return {
         "dataset": manifest.get("dataset"),
@@ -100,11 +117,19 @@ def _dataset_coverage(manifest: Mapping[str, Any], universe_symbols: set[str]) -
         "failed_unit_count": len(failed_ids),
         "skipped_unit_count": len(skipped),
         "coverage_ratio_of_requested": round(len(successful) / len(requested), 4) if requested else None,
-        "coverage_ratio_of_universe": (round(len(successful) / len(universe_symbols), 4)
+        "coverage_ratio_of_universe": (round(len(fully_successful) / len(universe_symbols), 4)
                                        if universe_symbols else None),
         "never_requested_count": len(never_requested),
         "never_requested_symbols": _sorted_list(never_requested),
-        "failed_symbols": sorted(failed_ids),
+        "failed_symbols": sorted(failed_symbols),
+        "fully_covered_symbol_count": len(fully_successful),
+        "fully_covered_symbols": sorted(fully_successful),
+        "partial_symbol_count": len(partial),
+        "partial_symbols": sorted(partial),
+        "missing_interval_unit_count": len(requested - successful),
+        "missing_interval_units": sorted(requested - successful),
+        "date_coverage": {"date_from": manifest.get("date_from"), "date_to": manifest.get("date_to"),
+                          "planned_chunks": manifest.get("planned_date_chunks", [])},
         "not_yet_covered_count": len(not_yet_covered),
         "not_yet_covered_symbols": not_yet_covered,
         "output_dir": manifest.get("output_dir"),
