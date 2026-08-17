@@ -1,5 +1,48 @@
 # Decisions
 
+## 2026-08-17 - P0-A.3B closed; P0-A.3C prospective WebSocket evidence gate opened
+
+`P0-A.3B_DNSE_PROSPECTIVE_PIT_PRICE_AUTHORITY_ARCHITECTURE_REVIEW = COMPLETE_READ_ONLY`.
+Architecture verdict: `SOURCE_SEMANTICS_BLOCKED`. No code, runtime, provider, registry, or
+price-basis authority changed.
+
+**Review findings:**
+- No current DNSE price source, feed, or field is authoritative `RAW_AS_TRADED`. The bounded
+  DNSE REST OHLC authority remains `ADJUSTED_RETROSPECTIVE`; other REST ticker/session price basis
+  remains `UNKNOWN` unless separately bounded-qualified.
+- The WebSocket `ohlc_closed` prospective lane remains an `EXPERIMENT/SHADOW`, semantically
+  unqualified, non-authoritative, and has zero real retained completed-event observations today.
+  Transport speed, first receipt, append-only retention, and timestamp proximity do not establish
+  raw/as-traded, adjustment, revision, session/calendar, or odd-lot/board semantics.
+- The shadow disposition is `DEFER`: do not reject, promote, port, or reimplement it. Its useful
+  future concepts (`logical_bar_identity`, first-observed retention, duplicate-identical handling,
+  append-only revision linkage) and identified retention gaps (additive logical/business identity,
+  revision linkage, streaming/session reconciliation) are not implementation authorization.
+- Prospective qualification cannot retroactively make historical REST OHLC PIT-safe. Raw/as-traded
+  price authority and corporate-action adjustment authority remain independent per-use gates.
+
+**Next gate:** `P0-A.3C` — **DNSE Prospective WebSocket Payload Semantic Evidence Acquisition**
+is `EVIDENCE_ACQUISITION_NEXT`, `NO_PRICE_BASIS_PROMOTION`, and
+`HUMAN_LIVE_EXECUTION_REQUIRED`. Its sole objective is first real retained, non-synthetic DNSE
+`ohlc_closed` completed-bar evidence: payload shape, field/symbol identity, units/scaling,
+provider/source and receipt timestamps, supplied session fields, and naturally observed
+duplicate/revision behavior. Same-day REST-vs-WS comparison may investigate correspondence only;
+matching values do not prove `RAW_AS_TRADED`, non-rewriting, or PIT safety.
+
+**Bounded capture and completion conditions:**
+- One human/PowerShell-owned bounded foreground launch at operator-selected live timing; no daemon,
+  unattended reconnect, polling, or AI-owned background process. Scope is two operator-selected
+  eligible liquid `EQUITY` symbols, one supported resolution, and at least one real completed-bar
+  payload retained for each symbol. Named tickers are regression examples only; no full session or
+  full-universe requirement is inferred.
+- Completion requires content/byte identity hash, receipt timestamp, supplied provider/session
+  fields retained without invented meaning, deterministic replay/readback, same-day comparison
+  recorded with its non-authority caveat, duplicate/revision retention without overwrite if naturally
+  observed, and no registry/source-authority promotion or `market_raw_lake` integration.
+- RawObservation changes, streaming integration, terminal-session reconciliation, price-basis
+  registry changes, corporate-action mutability qualification, `RAW_AS_TRADED`/PIT promotion, and
+  post-A.3C gate naming remain explicitly future and unauthorized until real evidence exists.
+
 ## 2026-08-17 - Future capability enrichment: macro, microstructure, forensics, and authority governance policy
 
 `FUTURE_CAPABILITY_ENRICHMENT_V2`. Documentation and policy synchronization only.
@@ -7,8 +50,9 @@ No code modified, no runtime execution, no data, source, or model authority prom
 
 **Durable policy decisions established:**
 1. **P0 Critical Path Unchanged**: Proposed analytical and foundation capabilities do not alter
-   the active critical path (`P0-A.3B` architecture review → bounded P0-A.3
-   implementation/validation → `P0-A.4`/`P0-B` → `P0-C.3`).
+   the active critical path (`P0-A.3C` prospective WebSocket payload semantic evidence
+   acquisition → subsequent bounded P0-A.3 evidence/implementation/validation gates determined
+   by actual A.3C evidence → `P0-A.4`/`P0-B` → `P0-C.3`).
 2. **Future Capability Placement without Premature Numbering**: Downstream requirements are
    documented without opening implementation; sub-milestone numbering remains intentionally TBD
    until the respective phase is authoritatively opened.
@@ -91,7 +135,8 @@ No network calls, no runtime/DB writes.
 
 **Status & Next Gate:**
 - `P0-A.3` is **IN PROGRESS** (sub-slice `P0-A.3A` complete on local main, `push = NO`).
-- Active next gate: `P0-A.3B` — **DNSE Prospective PIT Price Authority Architecture Review** (read-only review next, not started authoritatively; no live capture or implementation authorized).
+- Subsequent authority record: `P0-A.3B` closed `COMPLETE_READ_ONLY` / `SOURCE_SEMANTICS_BLOCKED`;
+  active next gate is `P0-A.3C` prospective WebSocket payload semantic evidence acquisition.
 
 ## 2026-08-17 - P0-A.2 corporate-action multi-event extraction integrated to local main (P0-A.2 COMPLETE)
 

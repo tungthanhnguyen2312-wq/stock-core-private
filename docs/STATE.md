@@ -25,7 +25,7 @@ Binding execution sequence:
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
   `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
   `A.2` corporate-action evidence scale-out (**complete** — document-authority coverage and multi-event extraction integrated at commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`),
-  `A.3` market-wide PIT price reconstruction (**in progress** — sub-slice `P0-A.3A` PIT reconstruction contract and full-universe fail-closed classifier complete on local main at commit `e360adbbc801650e6ca4c7e324f9ffcf2f32f85b`, `push = NO`; active next gate `P0-A.3B` architecture review), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
+  `A.3` market-wide PIT price reconstruction (**in progress** — sub-slices `P0-A.3A` contract and `P0-A.3B` read-only architecture review complete; active next gate `P0-A.3C` prospective WebSocket payload semantic evidence acquisition), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
   boundary work (`P0-C.1`/`P0-C.2`) is integrated on local main before further P0-A expansion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
@@ -116,9 +116,21 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`P0-A.3B` — **DNSE Prospective PIT Price Authority Architecture Review** (see `docs/ROADMAP.md`).
-STATUS: **READ-ONLY REVIEW NEXT; NOT STARTED AUTHORITATIVELY.**
-(This is NOT authorization to implement or run prospective capture).
+`P0-A.3B` — **DNSE Prospective PIT Price Authority Architecture Review** is
+**COMPLETE_READ_ONLY** with verdict **SOURCE_SEMANTICS_BLOCKED**. No current DNSE price source,
+feed, or field is authoritative `RAW_AS_TRADED`; bounded REST OHLC remains
+`ADJUSTED_RETROSPECTIVE`, other REST ticker/session basis remains `UNKNOWN` unless separately
+qualified, and the WebSocket `ohlc_closed` shadow remains deferred, semantically unqualified, and
+non-authoritative with zero real retained completed-event observations. Transport speed, first
+receipt, append-only retention, and timestamp proximity do not establish price semantics.
+
+`P0-A.3C` — **DNSE Prospective WebSocket Payload Semantic Evidence Acquisition**.
+STATUS: **EVIDENCE_ACQUISITION_NEXT; NO_PRICE_BASIS_PROMOTION; HUMAN_LIVE_EXECUTION_REQUIRED.**
+Capture scope is source/protocol evidence only: one human/PowerShell-owned bounded foreground
+launch, two operator-selected eligible liquid `EQUITY` symbols, one resolution supported by the
+current shadow collector, and at least one genuine completed-bar payload retained per symbol.
+Named tickers are regression examples only; a full session, full universe, daemon/reconnect
+operation, or market-coverage claim is not required or authorized.
 
 Precondition status:
 - `P0-A.1` is **COMPLETE** (1,528 success + 132 `PERMANENT` = 1,660).
@@ -130,20 +142,13 @@ Precondition status:
   - Negative proof over real 1,660 universe: 132 `BLOCKED`, 1,528 `UNKNOWN`, 0 `pit_backtest_eligible` — zero false PIT qualification under current unpromoted DNSE price basis.
   - Cash dividend additive boundary fail-closed without fabricating share-count ledger linkage or factors.
 
-Required P0-A.3B review questions:
-1. **RAW-AS-TRADED SEMANTICS**: Determine what exact DNSE feed/dataset could legitimately represent raw/as-traded prices. WebSocket delivery, fast receipt, first receipt, and immutable retention establish provenance/capture properties, not price-basis semantics.
-2. **PROSPECTIVE SHADOW PRIOR ART**: Read and reconcile `dnse_prospective_pit_shadow.py`, `tools/collect_dnse_prospective_pit_shadow.py`, and `tests/test_dnse_prospective_pit_shadow.py` (remain untracked/non-authoritative). Decide disposition (`PORT_SELECTED_PARTS`, `REIMPLEMENT_ON_CURRENT_AUTHORITY`, `DEFER`, `REJECT`, `SUPERSEDE`) without editing them or creating duplicate forward-capture subsystems.
-3. **EVENT TIME VS KNOWLEDGE TIME**: Specify authoritative treatment of trading session / bar timestamp, provider source timestamp, `first_observed_at` / receipt timestamp, later revisions, duplicate-identical observations, and market/session finality.
-4. **REVISION SEMANTICS**: Determine how first-observed prices and provider revisions coexist. `PIT_AS_KNOWN` preserves cutoff state without silent rewriting; `RETROSPECTIVE_RESTATED` may use revisions under explicit mode.
-5. **MARKET-WIDE DENOMINATOR**: Full-universe first (1,660 P0-A.1 candidates: 1,528 success + 132 permanent invalid). Named tickers are regression evidence only. Address invalid symbols, missing observations, inactive sessions, and listings/delistings without denominator drift.
-6. **AUTHORITY PROMOTION GATE**: Define exact empirical evidence required before any observed feed becomes `RAW_AS_TRADED` eligible and usable by `PIT_AS_KNOWN`. Code existence, successful capture, or passing tests do not equal authority without explicit owner promotion.
-7. **RETAINED OBSERVATION CONTRACT**: Review adequacy of `market_raw_lake`, `RawObservation`, content hashing, and shadow revision schemas. Prefer reuse over parallel storage.
-8. **BACKTEST HORIZON**: Prospective capture cannot create historical PIT authority prior to retention start (`earliest_valid_pit_as_known_time`). No backfilling PIT authority from current query responses.
-9. **OPERATIONAL EXECUTION**: Prospective collection is human/PowerShell owned; AI agents do not own daemon/background runs. Review must specify bounded execution contracts without launching them.
-
 ## EXACT NEXT BOUNDED ACTION
 
-Execute `P0-A.3B` (DNSE Prospective PIT Price Authority Architecture Review) as a read-only architecture/review session. Do not implement prospective capture, launch background collectors, or mutate source code.
+Human operator: choose live timing and make one bounded foreground `P0-A.3C` capture. Retain raw
+completed-bar payload bytes/content hash, receipt timestamp, provider/source timestamps and session
+fields exactly as supplied, then perform deterministic replay/readback and a same-day REST-vs-WS
+field comparison. That comparison may investigate field/unit/symbol/timestamp correspondence only;
+it does not establish `RAW_AS_TRADED`, non-rewriting, PIT safety, or any registry authority.
 
 ## ACTIVE RUNTIME LANES
 
@@ -397,8 +402,10 @@ Updated ordered chain:
    instrument — see `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION` and
    `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION` for exact scope and remaining blockers.
 4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
-   evidence scale-out, `P0-A.3` market-wide PIT price reconstruction, `P0-A.4` scoped price-basis
-   promotion, `P0-B` qualified volume/liquidity/turnover basis.
+   evidence scale-out and `P0-A.3` market-wide PIT reconstruction. `P0-A.3B` is closed
+   `SOURCE_SEMANTICS_BLOCKED`; `P0-A.3C` prospective WebSocket payload semantic evidence
+   acquisition is next, followed only by bounded P0-A.3 gates determined by that evidence, then
+   `P0-A.4` scoped price-basis promotion and `P0-B` qualified volume/liquidity/turnover basis.
 5. `P0-C.3` field-level freshness/as-of retrofit, as required for qualified market-wide
    consumption.
 6. First market-wide deterministic analysis/research artifact, after the necessary P0-A/P0-B/P0-C
