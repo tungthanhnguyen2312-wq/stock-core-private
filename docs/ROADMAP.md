@@ -17,7 +17,7 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P0-RECOVERY | Task 160 Trades Stage-B recovery/materialization | **Closed** — Stage-B and canonical Trades materialization both `TERMINAL_SUCCESS_QUALITY_RESTRICTED` |
 | P0-A | Qualified price basis + corporate-action + historical PIT authority | Active (independent of P0-RECOVERY) |
 | P0-A.1 | OHLC raw-coverage completion | **Complete** — 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected, 0 retryable, 0 unclassified, 0 untouched |
-| P0-A.2 | Corporate-action evidence scale-out | **Active next gate** — extend current-main corporate-action document-authority coverage (prior art `1183c72`→`d7b9bf3` disposition: `REJECT_AND_REIMPLEMENT`; current-main B3/B4 remain basis) |
+| P0-A.2 | Corporate-action evidence scale-out | **In progress on local main** — authority extension integrated (commit `8f1367667971858db640f1d194412e70918bebe2`, `push = NO`; `issuer_ir` `listing_change_notice` B3/B4 path, HPG validated, SSI fail-closed); NOT complete, remaining gap: multi-event document extraction |
 | P0-A.3 | Market-wide PIT price reconstruction | Not started; depends on A.1 + A.2 |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
 | P0-B | Qualified volume/liquidity basis + market-wide turnover | Not started authoritatively; reviewable prior art exists (`c05bec0`→`4480c3b`→`0d19e07`) |
@@ -39,11 +39,11 @@ artifact expansion — see `docs/STATE.md`'s `## CRITICAL PATH` for the full ord
 pushed to `origin`); that pass resolved ~99.6% of the `UNKNOWN_SECURITY_GROUP` population but left
 exchange and listing/active-status semantics unqualified, so `ACTIVE_UNIVERSE` remains fail-closed
 for every instrument — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification
-entries for exact scope, verified numbers, and remaining blockers. Active next gate: `P0-A.2`
-(extend current-main corporate-action document-authority coverage; scope: `issuer_ir` `listing_change_notice`
-support through existing B3/B4 path, validate retained SSI VSDC evidence, no network acquisition) →
-then `P0-A.3`/`P0-A.4`/`P0-B` → `P0-C.3` → first market-wide deterministic analysis artifact. P0-A.1 is
-complete and no longer on this chain.
+entries for exact scope, verified numbers, and remaining blockers. Active gate: `P0-A.2`
+(authority extension integrated on local main at commit `8f1367667971858db640f1d194412e70918bebe2`,
+`push = NO`; remaining gap: multi-event document extraction; P0-A.2 is NOT complete; do not choose/start
+P0-A.3) → then `P0-A.3`/`P0-A.4`/`P0-B` → `P0-C.3` → first market-wide deterministic analysis artifact.
+P0-A.1 is complete and no longer on this chain.
 `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains withdrawn from the immediate chain, a deferred
 future validation candidate only (see `docs/STATE.md`'s `## BOUNDED ANALYSIS OUTPUT CANDIDATE`).
 Opening P0-A.2/P0-B/P0-C.3 implementation, a push to `origin`, or any P1 work, requires its own

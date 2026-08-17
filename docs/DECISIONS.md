@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-08-17 - P0-A.2 corporate-action document-authority coverage extension integrated to local main
+
+`P0-A.2_CORPORATE_ACTION_AUTHORITY_COVERAGE_V1`. Integrated into local `stock-core-private`
+main via fast-forward (independent read-only audit `SAFE_TO_INTEGRATE_LOCALLY`, commit
+`8f1367667971858db640f1d194412e70918bebe2`, `push = NO`). Candidate branch
+`feature/p0a2-corporate-action-authority-coverage-v1` from worktree
+`stock-core-p0a2-corporate-action-authority-coverage-v1-20260817`. No network calls, no live acquisition.
+
+**Changes integrated:**
+1. **`corporate_action_events.py`:** Added a generic, `source_id == "issuer_ir"` branch in
+   `classify_retained_document()` using standard document-internal recital cues (`"thay đổi niêm yết"`,
+   `"tổ chức niêm yết:"`, `"mã chứng khoán:"`) and cross-checking the stated ticker code against
+   the caller's claim. Unmodified `is_vsdc` branch and `DOCUMENT_CLASS_CEILING` lifecycle contracts preserved.
+2. **`config/official_source_registry.json`:** Declared `"listing_change_notice"` under `"issuer_ir"`.
+   Admission remains host- and document-type-gated via `official_source_registry.py`.
+3. **`tests/test_official_corporate_action_pillar.py`:** Added 18 new regression tests covering
+   generic issuer-IR classification, HPG real notice validation, SSI real VSDC notice validation,
+   and registry admission. All 18 new tests run and pass (72 existing pass, 18 legacy VCB tests skipped
+   due to optional offline fixture absence).
+
+**Verified results:**
+- **HPG retained issuer-IR evidence:** Classifies via the generic `issuer_ir` path and reproduces
+  the existing qualified result (`stock_dividend`, executed, `shares_after=8,442,964,520`,
+  `adjustment_factor` `NOT_READY` for missing ex-date).
+- **SSI retained VSDC evidence:** Validated through the real pipeline, remains strictly fail-closed:
+  `record_date` (`2026-08-18`) != `ex_date` (`None`), planned bonus (`stock_ratio=0.2`) does not
+  become an executed share count, 0 ledger entries created, 0 price adjustment factors reachable.
+
+**P0-A.2 is NOT complete.**
+- **Remaining P0-A.2 gap:** The retained SSI document (`ssi-vsdc-198728`) contains both cash-dividend (10%)
+  and bonus-share (20%) facets, while the current single-event-per-document extraction model captures only
+  `bonus_shares`. Full multi-event extraction from single compound notices remains an open gap before
+  P0-A.2 can be considered complete.
+- **Do not start or choose P0-A.3.**
+
 ## 2026-08-17 - P0-A.2 corporate-action prior art review: REJECT_AND_REIMPLEMENT
 
 `P0-A.2_CORPORATE_ACTION_EVIDENCE_SCALE_OUT_REVIEW`. Reviewed prior art branch family
@@ -15,9 +50,9 @@
 
 **Main reasons:**
 1. **Document-class lifecycle ceiling already exists on main:** Current main already implements document-class
-   authority boundaries and life-cycle classification (`governed_document_classes.py`).
+   authority boundaries and life-cycle classification (`corporate_action_events.py` / `DOCUMENT_CLASS_CEILING`).
 2. **Official source registry gate already exists:** Current main enforces strict source registry gates
-   (`official_document_registry.py`).
+   (`official_source_registry.py` / `config/official_source_registry.json`).
 3. **N-way conflict / arithmetic / supersession handling already exists:** B3/B4 already provide robust
    event deduplication, ratio/cash arithmetic, and multi-source conflict reconciliation.
 4. **Real-evidence tests already exist:** Main has comprehensive regression suites against real VNM, HPG,
