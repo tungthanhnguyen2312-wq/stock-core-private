@@ -116,27 +116,41 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`CANONICAL_TRADES_MATERIALIZATION` (P0-RECOVERY's remaining step; supersedes
-`P0-A.1_TERMINAL_CLASSIFICATION`, which is complete — see `## ACTIVE LANE / MILESTONE`). P0-A.1 is
-closed; it is not the active gate.
+`CANONICAL_TRADES_MATERIALIZATION` — now `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION` (see
+`## ACTIVE RUNTIME LANES`; supersedes `P0-A.1_TERMINAL_CLASSIFICATION`, which is complete). This
+is P0-RECOVERY's remaining step; P0-A.1 is closed and is not the active gate.
 
 ## EXACT NEXT BOUNDED ACTION
 
-P0-A.1 is closed (see `## ACTIVE LANE / MILESTONE`). Task 160 Stage-B is terminal-validated and
-closed (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`; see `## ACTIVE RUNTIME LANES`); the remaining
-P0-RECOVERY gate is `CANONICAL_TRADES_MATERIALIZATION`, owner-gated like any authority-affecting
-action. Do not start P0-A.2/A.3/A.4, P0-B, or P0-C implementation, and do not start
-`HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION`, merely because P0-A.1 is done or P0-RECOVERY is close
-— each requires its own gate check and, for materialization, explicit owner authorization. See
-`## CRITICAL PATH`.
+`WAIT_FOR_CANONICAL_TRADES_MATERIALIZATION_TERMINAL_STATE`. The canonical Trades materialization
+run (`trades-canonical-materialization-v1-20260817`, PID `7408`) is
+`ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION` — see `## ACTIVE RUNTIME LANES`. No polling loop, no
+automatic retry, and no P0-C implementation while this gate is open. On terminal state, validate
+SUCCESS or FAILED from the run's own output artifacts/process state (not inferred) before closing
+P0-RECOVERY. Do not start P0-A.2/A.3/A.4, P0-B, P0-C.1/C.2, or
+`HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` merely because this run is in progress or close to
+done — each requires its own gate check and, for P0-C.1/C.2 specifically, its own
+review-for-promotion decision only after P0-RECOVERY closes. See `## CRITICAL PATH`.
 
 ## ACTIVE RUNTIME LANES
 
-Two PowerShell-owned, human-launched runtimes were tracked here. Neither was Claude-Code-managed
-or re-launched. Both reached a terminal state on 2026-08-17, independently verified read-only
-against their own output artifacts — a status below must not be trusted without checking it is
-still current if significant time has passed.
+One PowerShell-owned, human-launched runtime is currently active; two prior runtimes tracked here
+already reached terminal state on 2026-08-17 (historical, preserved below). None is
+Claude-Code-managed. A status below must not be trusted without checking it is still current if
+significant time has passed — do not inspect, poll, or interact with an active runtime directly.
 
+- **Canonical Trades materialization / P0-RECOVERY** —
+  `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`. Run ID `trades-canonical-materialization-v1-20260817`,
+  PID `7408`, process start `2026-08-17 11:47:23 +07:00`. Source worktree
+  `worktrees/stock-core-trades-canonical-shadow-v1-20260813`, source HEAD
+  `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02` (the validated Stage-B binding). Stage-B input
+  `operations-review/task-160-controlled-rerun-v1-20260817/composite/composite_cohort_manifest.json`.
+  Runtime root `operations-review/task-160-canonical-materialization-v1-20260817`; output shadow
+  root `<runtime-root>\shadow`. PowerShell/human-launched and controlled; PID verified alive
+  immediately after launch. `stdout`/`stderr` currently empty; `materialization_manifest.json` not
+  yet present — do not infer terminal success or failure from either fact alone. **No rerun/retry
+  is authorized while this runtime is active.** P0-RECOVERY remains open until this reaches a
+  terminal state and is validated from its own artifacts (see `## EXACT NEXT BOUNDED ACTION`).
 - **Task 160 / P0-RECOVERY Stage-B** — `TERMINAL_SUCCESS_QUALITY_RESTRICTED` (was
   `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`; verified 2026-08-17 against
   `task160_run_status.json` and all four required Stage-B artifacts). Source HEAD
@@ -213,7 +227,9 @@ Task 160 Stage-B and P0-A.1 are both closed (see `## ACTIVE RUNTIME LANES`). Cur
 policy is **market-wide/full-universe data foundation first**, not single-ticker artifact
 expansion. Updated ordered chain:
 
-1. `CANONICAL_TRADES_MATERIALIZATION` — closes P0-RECOVERY. Owner-gated; not started.
+1. `CANONICAL_TRADES_MATERIALIZATION` — closes P0-RECOVERY. `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`
+   (PID `7408`, launched 2026-08-17 11:47:23 +07:00 by PowerShell/human; see
+   `## ACTIVE RUNTIME LANES`).
 2. P0-RECOVERY close.
 3. Establish/reconcile the canonical market-wide universe boundary: `P0-C.1` instrument-master
    reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. Reviewable prior art exists
