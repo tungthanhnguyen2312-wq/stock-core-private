@@ -813,5 +813,250 @@ class BoundedVerticalSliceTests(unittest.TestCase):
                          ledger.build_ledger(observations)["replay_fingerprint"])
 
 
+# ==========================================================================
+# P0-A.2 document-authority coverage extension (2026-08-17):
+#   issuer_ir `listing_change_notice` support through the existing B3/B4 path,
+#   plus real-evidence validation for HPG (issuer_ir) and SSI (vsdc, already-supported).
+#   Prior art `1183c72`->`d7b9bf3` was reviewed and dispositioned REJECT_AND_REIMPLEMENT:
+#   this extends corporate_action_events.py/official_corporate_action_ledger.py directly,
+#   with no ticker-specific runtime branch and no second corporate-action pipeline.
+# ==========================================================================
+
+
+def _issuer_listing_change_html(ticker, org_name="CONG TY CO PHAN TEST", notice_no="999",
+                                shares_change="1.000.000", shares_after="11.000.000"):
+    """A synthetic issuer-IR recital of an exchange listing-change notice.
+
+    The shape (recital sentence, then a "Tổ chức niêm yết:" / "Mã chứng khoán:" labelled
+    list) is the exchange's own template wording, reused verbatim by whichever issuer's IR
+    site reprints it -- it names no company and no ticker by construction; the ticker is a
+    parameter like any other field.
+    """
+    return (
+        '<html><body><div class="content-detail default">'
+        '<h1>Thông báo về ngày giao dịch cổ phiếu phát hành trả cổ tức</h1>'
+        '<p class="clear time">01/01/2026</p>'
+        '<div class="detail css-content default">'
+        f'<p>Ngày 01/01/2026 Sở Giao dịch Chứng khoán ra Thông báo số {notice_no}/TB-SGDHCM '
+        'về việc giao dịch chứng khoán thay đổi niêm yết cụ thể như sau:</p>'
+        '<ul>'
+        f'<li>Tổ chức niêm yết: {org_name}</li>'
+        '<li>Loại chứng khoán: Cổ phiếu phổ thông</li>'
+        f'<li>Mã chứng khoán: {ticker}</li>'
+        f'<li>Số lượng chứng khoán thay đổi niêm yết: {shares_change} cổ phiếu</li>'
+        '<li>Lý do thay đổi niêm yết: Phát hành cổ phiếu để trả cổ tức.</li>'
+        f'<li>Số lượng chứng khoán sau khi thay đổi niêm yết: {shares_after} cổ phiếu</li>'
+        '<li>Ngày thay đổi niêm yết có hiệu lực: 15/01/2026</li>'
+        '</ul></div></div></body></html>'
+    ).encode("utf-8")
+
+
+def _issuer_ir_document(ticker, payload, **overrides):
+    import hashlib
+
+    record = {
+        "document_id": f"issuer-ir-{ticker.lower()}", "ticker": ticker,
+        "source_authority": f"{ticker} investor relations",
+        "source_id": "issuer_ir",
+        "source_url": f"https://www.example-issuer.vn/notice-{ticker.lower()}.html",
+        "content_sha256": hashlib.sha256(payload).hexdigest(),
+        "published_at": "2026-01-01", "observed_at": "2026-01-02T00:00:00Z",
+        "media_type": "text/html",
+    }
+    record.update(overrides)
+    return record
+
+
+class IssuerIrListingChangeClassificationTests(unittest.TestCase):
+    """`classify_retained_document` extended to issuer_ir, gated by source_id, not ticker."""
+
+    def test_generic_path_classifies_two_unrelated_tickers_identically(self):
+        for ticker in ("AAA", "ZZZ"):
+            payload = _issuer_listing_change_html(ticker)
+            typed = events.classify_retained_document(_issuer_ir_document(ticker, payload), payload)
+            self.assertEqual(typed["document_type"], "listing_change_notice")
+            self.assertEqual(typed["document_classification"]["basis"],
+                             "document_internal_issuer_listing_change_recital_cues")
+
+    def test_classification_dispatch_has_no_ticker_equality_check(self):
+        import inspect
+
+        source = inspect.getsource(events.classify_retained_document)
+        self.assertNotRegex(source, r'ticker[^\n]*==\s*["\']',
+                            "classification must stay document-class based, never ticker based")
+
+    def test_mismatched_declared_ticker_is_refused_fail_closed(self):
+        payload = _issuer_listing_change_html("AAA")
+        record = _issuer_ir_document("BBB", payload)
+        with self.assertRaisesRegex(ValueError, "document_ticker_conflicts_with_document_text"):
+            events.classify_retained_document(record, payload)
+
+    def test_issuer_ir_document_without_listing_change_cues_is_refused(self):
+        payload = b"<html><body><h1>Bao cao thuong nien 2025</h1><p>Annual report only.</p></body></html>"
+        record = _issuer_ir_document("AAA", payload)
+        with self.assertRaisesRegex(ValueError, "document_classification_unsupported_or_ambiguous"):
+            events.classify_retained_document(record, payload)
+
+    def test_unsupported_source_id_is_still_refused(self):
+        payload = _issuer_listing_change_html("AAA")
+        record = _issuer_ir_document("AAA", payload, source_id="some_other_source",
+                                     source_authority="Not VSDC and not issuer_ir")
+        with self.assertRaisesRegex(ValueError, "document_classification_unsupported_or_ambiguous"):
+            events.classify_retained_document(record, payload)
+
+
+class IssuerIrRealHpgListingChangeTests(unittest.TestCase):
+    """The already-retained HPG issuer-IR listing-change notice, classified from raw bytes."""
+
+    RETAINED = (ROOT / "operations-review" / "hpg-vnm-current-share-bridge-20260802"
+                / "documents" / "HPG" / "2026" / "corporate_action_notice")
+    HTML_NAME = "cb41c96ef78bed7654030e55bb06dea22d051b1c9fcf1a6cf024e9f964563c1c.html"
+
+    def setUp(self):
+        self.html = self.RETAINED / self.HTML_NAME
+        if not self.html.is_file():
+            self.skipTest("retained HPG issuer-IR listing-change notice is not present")
+        self.payload = self.html.read_bytes()
+        self.record = {
+            "document_id": "hpg-listing-change-2026", "ticker": "HPG",
+            "source_id": "issuer_ir",
+            "source_authority": ("Hoa Phat Group Joint Stock Company investor relations, "
+                                 "reciting HOSE notice 1475/TB-SGDHCM"),
+            "source_url": ("https://www.hoaphat.com.vn/tin-tuc/"
+                           "thong-bao-ve-ngay-giao-dich-co-phieu-phat-hanh-tra-co-tuc-nam-2025-1.html"),
+            "content_sha256": document_store.sha256_bytes(self.payload),
+            "published_at": "2026-07-07", "observed_at": "2026-08-02T08:10:00Z",
+            "media_type": "text/html",
+        }
+
+    def test_real_notice_classifies_via_the_generic_issuer_ir_path(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        self.assertEqual(typed["document_type"], "listing_change_notice")
+        self.assertEqual(typed["document_classification"]["basis"],
+                         "document_internal_issuer_listing_change_recital_cues")
+        self.assertEqual(typed["ticker"], "HPG")
+
+    def test_real_notice_end_to_end_matches_the_existing_qualified_result(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        observation = events.extract_event_observation(typed, text)
+        self.assertEqual(observation["event_type"], "stock_dividend")
+        self.assertEqual(observation["shares_issued"], 767_498_665)
+        self.assertEqual(observation["shares_after"], 8_442_964_520)
+        self.assertEqual(observation["lifecycle_state"], "executed")
+        self.assertIsNone(observation["ex_date"])
+        built = ledger.build_ledger([observation])
+        entry = built["entries"][0]
+        self.assertEqual(entry["qualification_state"], "qualified")
+        self.assertEqual(entry["adjustment_factor_status"], ledger.FACTOR_NOT_READY)
+        self.assertIn("missing_explicit_official_ex_date", entry["adjustment_factor_blocked_by"])
+
+    def test_real_notice_lifecycle_stays_under_the_shared_document_class_ceiling(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        observation = events.extract_event_observation(typed, text)
+        self.assertEqual(events.DOCUMENT_CLASS_CEILING["listing_change_notice"], "executed")
+        self.assertEqual(observation["lifecycle_ceiling"], "executed")
+        self.assertEqual(observation["lifecycle_state"], "executed")
+
+    def test_real_notice_wrong_ticker_claim_is_refused(self):
+        wrong = dict(self.record, ticker="VNM", document_id="wrong-ticker")
+        with self.assertRaisesRegex(ValueError, "document_ticker_conflicts_with_document_text"):
+            events.classify_retained_document(wrong, self.payload)
+
+    def test_repeat_classification_is_deterministic(self):
+        first = events.classify_retained_document(self.record, self.payload)
+        second = events.classify_retained_document(self.record, self.payload)
+        self.assertEqual(first, second)
+
+
+class SsiRealVsdcCorporateActionEvidenceTests(unittest.TestCase):
+    """The already-retained SSI VSDC notice, validated through the existing (unmodified)
+    vsdc classification path -- no new acquisition, no reopening of the deferred SSI
+    ex-date acquisition (docs/DECISIONS.md, 2026-08-11): only the record-date facts that
+    notice already states are exercised here.
+    """
+
+    RETAINED = (ROOT / "operations-review" / "ssi-vsdc-ex-date-notice-acquisition-20260811"
+                / "documents" / "SSI" / "2026" / "last_registration_date_notice")
+    HTML_NAME = "bd7d4054613ae6f9c5ee1ddc6b787bf706ac6a18f551aff3c9683a85bcc06dad.html"
+
+    def setUp(self):
+        self.html = self.RETAINED / self.HTML_NAME
+        if not self.html.is_file():
+            self.skipTest("retained SSI VSDC notice is not present")
+        self.payload = self.html.read_bytes()
+        self.record = {
+            "document_id": "ssi-vsdc-198728", "ticker": "SSI",
+            "document_type": "last_registration_date_notice",
+            "source_authority": "Vietnam Securities Depository and Clearing Corporation",
+            "source_id": "vsdc", "source_url": "https://vsd.vn/en/ad/198728",
+            "content_sha256": document_store.sha256_bytes(self.payload),
+            "published_at": "2026-07-29", "observed_at": "2026-08-11T00:00:00Z",
+            "media_type": "text/html",
+        }
+
+    def _observation(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        return events.extract_event_observation(typed, text)
+
+    def test_notice_still_classifies_via_the_unmodified_vsdc_path(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        self.assertEqual(typed["document_type"], "last_registration_date_notice")
+        self.assertEqual(typed["document_classification"]["basis"],
+                         "document_internal_vsd_record_date_notice_cues")
+
+    def test_record_date_and_ex_date_stay_separate_and_ex_date_is_explicit_and_absent(self):
+        observation = self._observation()
+        self.assertEqual(observation["record_date"], "2026-08-18")
+        self.assertIsNone(observation["ex_date"])
+        self.assertIn("ex_date_absent", observation["warnings"])
+        self.assertIn("never", observation["absent_fields"]["ex_date"])
+
+    def test_planned_bonus_issuance_does_not_become_an_executed_share_count(self):
+        observation = self._observation()
+        self.assertEqual(observation["event_type"], "bonus_shares")
+        self.assertEqual(observation["stock_ratio"], 0.2)
+        self.assertNotEqual(observation["lifecycle_state"], "executed")
+        self.assertEqual(observation["lifecycle_state"], "record_date_confirmed")
+        self.assertIsNone(observation["shares_after"])
+
+    def test_evidence_never_reaches_a_price_adjustment_factor(self):
+        built = ledger.build_ledger([self._observation()])
+        self.assertEqual(built["entry_count"], 0)
+        self.assertEqual(built["qualified_event_count"], 0)
+        self.assertEqual(built["adjustment_factor_counts"], {})
+        self.assertEqual(built["unlinked_observations"][0]["reason"],
+                         "no share-change identity; cannot be linked to an event")
+
+    def test_repeat_run_is_deterministic(self):
+        first = self._observation()
+        second = self._observation()
+        self.assertEqual(first, second)
+
+
+class IssuerIrRegistryAdmissionTests(unittest.TestCase):
+    """config/official_source_registry.json now declares `listing_change_notice` for
+    issuer_ir; admission stays host- and type-gated, not opened generally."""
+
+    def test_listing_change_notice_is_now_admitted_for_an_approved_issuer_host(self):
+        decision = registry.admit("issuer_ir", "https://www.hoaphat.com.vn/tin-tuc/a.html",
+                                  "listing_change_notice")
+        self.assertEqual(decision["decision"], registry.ADMITTED)
+
+    def test_listing_change_notice_still_refuses_an_unlisted_host(self):
+        decision = registry.admit("issuer_ir", "https://www.some-unapproved-issuer.vn/a.html",
+                                  "listing_change_notice")
+        self.assertEqual(decision["decision"], registry.REFUSED)
+        self.assertEqual(decision["reason"], registry.REASON_HOST_NOT_ALLOWED)
+
+    def test_issuer_ir_still_refuses_an_undeclared_document_type(self):
+        decision = registry.admit("issuer_ir", "https://www.hoaphat.com.vn/tin-tuc/a.html",
+                                  "quarterly_investor_call_transcript")
+        self.assertEqual(decision["decision"], registry.REFUSED)
+        self.assertEqual(decision["reason"], registry.REASON_DOCUMENT_TYPE)
+
+
 if __name__ == "__main__":
     unittest.main()

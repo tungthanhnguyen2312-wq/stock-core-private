@@ -386,6 +386,10 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
     Acquisition manifests retain their discovery-time ``document_class`` unchanged.  This
     returns an in-memory typed extraction record only after re-hashing the retained bytes and
     finding an unambiguous document-internal cue; it never edits a manifest or promotes data.
+
+    Two source families are supported, each gated on its own registry identity, never on a
+    ticker: VSDC notices (``source_authority`` is the depository's legal name) and issuer-IR
+    listing-change recitals (``source_id == "issuer_ir"``). Any other source is refused.
     """
     expected_sha = str(document.get("content_sha256") or document.get("sha256") or "")
     if not _SHA256_RE.fullmatch(expected_sha):
@@ -397,47 +401,74 @@ def classify_retained_document(document: Mapping[str, Any], payload: bytes) -> d
     ticker = str(document.get("ticker") or "").upper()
     source_url = str(document.get("source_url") or document.get("canonical_url") or "")
     authority = str(document.get("source_authority") or "")
+    source_id = str(document.get("source_id") or "")
     media_type = str(document.get("media_type") or document.get("content_type") or "")
     if not document_id or not ticker or not source_url.startswith(("http://", "https://")):
         raise ValueError("retained_document_identity_incomplete")
 
-    normalized = extract_text(payload, media_type)
-    lowered = normalized.lower()
-    if authority != "Vietnam Securities Depository and Clearing Corporation":
+    is_vsdc = authority == "Vietnam Securities Depository and Clearing Corporation"
+    is_issuer_ir = source_id == "issuer_ir"
+    if not is_vsdc and not is_issuer_ir:
         raise ValueError("document_classification_unsupported_or_ambiguous")
 
-    # VSDC's current English template includes the corporate-action-processing qualifier
-    # between "record date" and "as follows".  Both forms identify the same directly
-    # stated record-date notice; do not require an exact presentation string.
-    record_notice_cue = "would like to announce the record date"
-    certificate_cue = "would like to announce certification of the"
-    adjustment_cue = "adjustment of the number of the registered shares"
-    listing_transfer_cue = "shares subject to listing change"
+    normalized = extract_text(payload, media_type)
+    lowered = normalized.lower()
+
     declared_type = str(document.get("document_type") or "")
     document_type: str
     basis: str
     cue: str
-    if (record_notice_cue in lowered and "as follows" in lowered
-            and "record date:" in lowered):
-        document_type = "last_registration_date_notice"
-        basis = "document_internal_vsd_record_date_notice_cues"
-        cue = record_notice_cue
-    elif (certificate_cue in lowered and adjustment_cue in lowered
-          and "has additionally registered securities at vsdc from" in lowered):
-        # This is deliberately not a listing-change classification: registration at VSDC and
-        # later depository acceptance do not themselves say that listed trading changed.
-        document_type = "corporate_action_notice"
-        basis = "document_internal_vsd_registered_securities_adjustment_certificate_cues"
-        cue = certificate_cue
-    elif (listing_transfer_cue in lowered and "trading date official:" in lowered
-          and "would like to notify all depository members" in lowered):
-        # An official trading date is an announced listing/trading lifecycle date, not proof
-        # the trade or the corporate action completed. Keep the acquisition class ceiling.
-        document_type = "corporate_action_notice"
-        basis = "document_internal_vsd_listing_change_transfer_notice_cues"
-        cue = listing_transfer_cue
+    if is_vsdc:
+        # VSDC's current English template includes the corporate-action-processing qualifier
+        # between "record date" and "as follows".  Both forms identify the same directly
+        # stated record-date notice; do not require an exact presentation string.
+        record_notice_cue = "would like to announce the record date"
+        certificate_cue = "would like to announce certification of the"
+        adjustment_cue = "adjustment of the number of the registered shares"
+        listing_transfer_cue = "shares subject to listing change"
+        if (record_notice_cue in lowered and "as follows" in lowered
+                and "record date:" in lowered):
+            document_type = "last_registration_date_notice"
+            basis = "document_internal_vsd_record_date_notice_cues"
+            cue = record_notice_cue
+        elif (certificate_cue in lowered and adjustment_cue in lowered
+              and "has additionally registered securities at vsdc from" in lowered):
+            # This is deliberately not a listing-change classification: registration at VSDC
+            # and later depository acceptance do not themselves say that listed trading changed.
+            document_type = "corporate_action_notice"
+            basis = "document_internal_vsd_registered_securities_adjustment_certificate_cues"
+            cue = certificate_cue
+        elif (listing_transfer_cue in lowered and "trading date official:" in lowered
+              and "would like to notify all depository members" in lowered):
+            # An official trading date is an announced listing/trading lifecycle date, not
+            # proof the trade or the corporate action completed. Keep the acquisition ceiling.
+            document_type = "corporate_action_notice"
+            basis = "document_internal_vsd_listing_change_transfer_notice_cues"
+            cue = listing_transfer_cue
+        else:
+            raise ValueError("document_classification_unsupported_or_ambiguous")
     else:
-        raise ValueError("document_classification_unsupported_or_ambiguous")
+        # Issuer-IR sites recite an exchange listing-change notice in a standard three-part
+        # disclosure: the recital ("... về việc giao dịch chứng khoán thay đổi niêm yết"), a
+        # labelled "Tổ chức niêm yết:" (listed organisation) row, and a labelled
+        # "Mã chứng khoán:" (securities code) row. All three are the exchange's own template
+        # wording, not any one issuer's -- nothing here names a ticker or a company.
+        listing_change_cue = "thay đổi niêm yết"
+        organization_label = "tổ chức niêm yết:"
+        code_label = "mã chứng khoán:"
+        if (listing_change_cue in lowered and organization_label in lowered
+                and code_label in lowered):
+            document_type = "listing_change_notice"
+            basis = "document_internal_issuer_listing_change_recital_cues"
+            cue = listing_change_cue
+        else:
+            raise ValueError("document_classification_unsupported_or_ambiguous")
+        # The document's own stated code is the identity check here, not the caller's claim:
+        # refuse rather than file a listing-change notice under the wrong ticker.
+        code_match = re.search(re.escape(code_label) + r"\s*([a-z0-9]{2,10})", lowered)
+        stated_ticker = code_match.group(1).upper() if code_match else None
+        if stated_ticker and stated_ticker != ticker:
+            raise ValueError("document_ticker_conflicts_with_document_text")
     if declared_type and declared_type != document_type:
         raise ValueError("document_type_conflicts_with_document_text")
 
