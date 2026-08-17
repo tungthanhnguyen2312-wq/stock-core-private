@@ -2,14 +2,13 @@
 
 ## 2026-08-17 - P0-C universe semantic evidence qualification
 
-`P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1`. Precondition: the entry below
-("P0-C.1 and P0-C.2 canonical universe foundation implemented, local worktree only") was itself
-integrated into local `stock-core-private` main via fast-forward (independent read-only audit
-`SAFE_TO_INTEGRATE_LOCALLY`) before this milestone started; `main` HEAD was
-`5ea3b6a85f734bc299c64464bf4d8452881c9116` at this milestone's start, still not pushed to `origin`.
-Its own "local commit only, not merged to main" wording in `STATE.md`/`ROADMAP.md` was corrected as
-part of this milestone's state-sync precondition, not rewritten here. Sole writing agent: Claude
-Code, on branch `feature/canonical-universe-semantic-qualification-v1`. No live DNSE call.
+`P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1`. Integrated into local `stock-core-private`
+main via fast-forward (independent read-only audit `SAFE_TO_INTEGRATE_LOCALLY`, commit
+`0f29019da83e83144f4f7f3832f054e04be66a97`, `push = NO`). Precondition: the entry below ("P0-C.1
+and P0-C.2 canonical universe foundation implemented, local worktree only") was itself integrated
+into local main (commit `5ea3b6a85f734bc299c64464bf4d8452881c9116`) before this milestone started.
+Sole writing agent: Claude Code, on branch `feature/canonical-universe-semantic-qualification-v1`.
+No live DNSE call.
 
 **Exchange/market semantics: investigated, `UNKNOWN` (unqualified).** Re-examined `marketId`/
 `productGrpId` across three retained DNSE endpoints beyond `/market/instruments`:
@@ -60,10 +59,9 @@ correctly does not resolve it; the 1,660 `EQUITY` instruments still show exactly
 counts. 60 tests pass (43 existing + 17 new); `py_compile` and `git diff --check` clean.
 
 **Does not establish:** any exchange or listing-status authority; the 6 `MF` records' classification;
-any P0-A/P0-B status change; a push to `origin`. **No scoped next gate exists** for the remaining
-exchange/listing-status blockers — each needs its own owner-authorized evidence-sourcing decision.
-The pre-existing `P0-A.2`/`P0-B`/`P0-C.3` chain remains available by standing governance but is not
-started by this entry.
+any P0-A/P0-B status change; a push to `origin`. **Active next gate:** `P0-A.2 Corporate-action
+evidence scale-out` review-for-promotion (see `docs/ROADMAP.md`). Foundation and semantic
+qualification are integrated on local main (`0f29019da83e83144f4f7f3832f054e04be66a97`, `push = NO`).
 
 ## 2026-08-17 - P0-C.1 and P0-C.2 canonical universe foundation implemented, local worktree only
 

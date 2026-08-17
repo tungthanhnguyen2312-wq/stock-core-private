@@ -17,11 +17,11 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P0-RECOVERY | Task 160 Trades Stage-B recovery/materialization | **Closed** — Stage-B and canonical Trades materialization both `TERMINAL_SUCCESS_QUALITY_RESTRICTED` |
 | P0-A | Qualified price basis + corporate-action + historical PIT authority | Active (independent of P0-RECOVERY) |
 | P0-A.1 | OHLC raw-coverage completion | **Complete** — 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected, 0 retryable, 0 unclassified, 0 untouched |
-| P0-A.2 | Corporate-action evidence scale-out | Not started authoritatively; reviewable prior art exists (`1183c72`→`d7b9bf3`) |
+| P0-A.2 | Corporate-action evidence scale-out | **Active next gate** — review-for-promotion of existing prior art (`1183c72`→`d7b9bf3`); not started authoritatively |
 | P0-A.3 | Market-wide PIT price reconstruction | Not started; depends on A.1 + A.2 |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
 | P0-B | Qualified volume/liquidity basis + market-wide turnover | Not started authoritatively; reviewable prior art exists (`c05bec0`→`4480c3b`→`0d19e07`) |
-| P0-C | Canonical market universe + exclusion ledger + freshness semantics | Foundation (C.1/C.2) integrated to local main (not pushed); security-group semantics qualified for ~99.6% of `UNKNOWN_SECURITY_GROUP`; exchange and listing/active status remain unqualified so `ACTIVE_UNIVERSE` stays fail-closed; C.3 not started — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification entries |
+| P0-C | Canonical market universe + exclusion ledger + freshness semantics | Foundation (C.1/C.2) and semantic qualification integrated to local main (commit `0f29019da83e83144f4f7f3832f054e04be66a97`, not pushed); security-group semantics qualified for ~99.6% of `UNKNOWN_SECURITY_GROUP`; exchange and listing/active status remain unqualified so `ACTIVE_UNIVERSE` stays fail-closed; C.3 not started — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification entries |
 | P0-C.1 | Instrument-master reconciliation | **Promoted with bounded patch** (`b4e3c71` + patch); integrated to local main, not pushed |
 | P0-C.2 | Universe-tier hierarchy / exclusion ledger | **Promoted with bounded patch** (`3d9a2ab` + patch); integrated to local main, not pushed; `ACTIVE_UNIVERSE` fail-closed `UNKNOWN` pending listing-status/exchange evidence (both investigated, both remain unqualified — see `docs/STATE.md`) |
 | P0-C.3 | Field-level freshness/as-of retrofit | Not started |
@@ -34,14 +34,15 @@ execution focus is **market-wide/full-universe data foundation first**, not sing
 artifact expansion — see `docs/STATE.md`'s `## CRITICAL PATH` for the full ordered chain.
 `CANONICAL_TRADES_MATERIALIZATION` and P0-RECOVERY close are both **complete**
 (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`). Canonical universe boundary foundation
-(`P0-C.1`/`P0-C.2`, prior art promoted with its required bounded patch) is integrated to local
-`stock-core-private` main (fast-forward, not pushed to `origin`); a subsequent semantic-evidence
-qualification pass resolved ~99.6% of the `UNKNOWN_SECURITY_GROUP` population but left exchange and
-listing/active-status semantics unqualified, so `ACTIVE_UNIVERSE` remains fail-closed for every
-instrument — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification entries for
-exact scope, verified numbers, and remaining blockers. Next: `P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B`
-(each still requires its own gate/owner authorization) → `P0-C.3` → first market-wide deterministic
-analysis artifact. P0-A.1 is complete and no longer on this chain.
+(`P0-C.1`/`P0-C.2`) and semantic-evidence qualification are integrated to local
+`stock-core-private` main (commit `0f29019da83e83144f4f7f3832f054e04be66a97`, fast-forward, not
+pushed to `origin`); that pass resolved ~99.6% of the `UNKNOWN_SECURITY_GROUP` population but left
+exchange and listing/active-status semantics unqualified, so `ACTIVE_UNIVERSE` remains fail-closed
+for every instrument — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification
+entries for exact scope, verified numbers, and remaining blockers. Active next gate: `P0-A.2`
+(Corporate-action evidence scale-out review-for-promotion) → then `P0-A.3`/`P0-A.4`/`P0-B` →
+`P0-C.3` → first market-wide deterministic analysis artifact. P0-A.1 is complete and no longer on
+this chain.
 `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains withdrawn from the immediate chain, a deferred
 future validation candidate only (see `docs/STATE.md`'s `## BOUNDED ANALYSIS OUTPUT CANDIDATE`).
 Opening P0-A.2/P0-B/P0-C.3 implementation, a push to `origin`, or any P1 work, requires its own

@@ -116,27 +116,18 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1` is now **closed** (security-group ~99.6%
-qualified; exchange and listing/active status investigated and found genuinely unqualified — see
-`## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`). **No scoped next gate exists for the two
-remaining blockers** (exchange-label mapping, listing/active-status evidence): exchange has no
-path forward absent real DNSE documentation this workspace does not have; listing-status has
-candidate fields but needs a new, separately-scoped, owner-authorized evidence-sourcing decision
-before any milestone against it can be defined. Per standing governance
-(`## PROGRAM PRIORITY ORDER`), the pre-existing chain (`P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B`/`P0-C.3`)
-remains available as a parallel lane, but nothing here authorizes starting it automatically.
+`P0-A.2` — **Corporate-action evidence scale-out** (see `docs/ROADMAP.md`). Reviewable prior art
+exists (`1183c72`→`d7b9bf3`). Foundation and semantic qualification of the canonical universe
+boundary (`P0-C.1`/`P0-C.2`) are integrated on local main (commit `0f29019da83e83144f4f7f3832f054e04be66a97`,
+`push = NO`). This gate is not yet started; owner authorization is required.
 
 ## EXACT NEXT BOUNDED ACTION
 
-The `P0-C.1`/`P0-C.2` review-for-promotion gate is closed: the reviewed prior art (`b4e3c71`,
-`3d9a2ab`) was promoted with its required bounded patch and is now on local main (commit
-`5ea3b6a85f734bc299c64464bf4d8452881c9116`, integrated via fast-forward, not pushed) — see
-`## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`. The `P0-C_UNIVERSE_SEMANTIC_EVIDENCE_
-QUALIFICATION_V1` milestone subsequently qualified security-group classification for ~99.6% of
-the 1,590 `UNKNOWN_SECURITY_GROUP` population; exchange and listing/active-status semantics remain
-unqualified — see `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`. Neither closes P0-A.2/A.3/
-A.4, P0-B, P0-C.3, a push to `origin`, or `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` — each still
-requires its own gate check and owner authorization. See `## CRITICAL PATH`.
+Review-for-promotion of existing corporate-action prior art (`1183c72`→`d7b9bf3`) under
+milestone `P0-A.2` (Corporate-action evidence scale-out). Do not start implementation or live
+ingestion without explicit owner authorization. Step 3 (`P0-C.1`/`P0-C.2` foundation and
+semantic qualification) is complete and integrated on local main (commit
+`0f29019da83e83144f4f7f3832f054e04be66a97`, `push = NO`).
 
 ## ACTIVE RUNTIME LANES
 
@@ -277,7 +268,7 @@ this session):
   `RIGHT`/`BOND`/`DERIVATIVE`. C.2's new class-specific reason codes exist for when that mapping is
   eventually made, not because any instrument uses them today.
 - No P0-A or P0-B status changed. No ticker's research/analysis eligibility changed.
-- Not merged to `main`; this entry does not by itself authorize a merge.
+- Integrated into local main (commit `5ea3b6a85f734bc299c64464bf4d8452881c9116`, followed by semantic qualification `0f29019da83e83144f4f7f3832f054e04be66a97`, `push = NO`); this entry does not by itself authorize a push to `origin`.
 
 **Remaining universe-semantic blockers, explicit and currently unscoped:** (1) exchange-label
 mapping (DNSE `marketId` -> HOSE/HNX/UPCoM) remains unqualified market-wide — the same gap
@@ -295,7 +286,8 @@ own owner decision.
 `P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1` investigated the two semantic dimensions
 blocking `ACTIVE_UNIVERSE` (exchange, listing/active status) plus a bounded, secondary
 `UNKNOWN_SECURITY_GROUP` inventory, using only already-retained first-party DNSE evidence — no
-live DNSE call this milestone. Per-dimension result:
+live DNSE call this milestone. **Integrated into local `stock-core-private` main via fast-forward
+(commit `0f29019da83e83144f4f7f3832f054e04be66a97`, `push = NO`).** Per-dimension result:
 
 - **Exchange / market semantics: `UNKNOWN` (unqualified).** `marketId`/`productGrpId` were
   re-examined across three separate retained DNSE endpoints (`/market/instruments`,
