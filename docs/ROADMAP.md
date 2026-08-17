@@ -18,7 +18,7 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P0-A | Qualified price basis + corporate-action + historical PIT authority | Active (independent of P0-RECOVERY) |
 | P0-A.1 | OHLC raw-coverage completion | **Complete** — 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected, 0 retryable, 0 unclassified, 0 untouched |
 | P0-A.2 | Corporate-action evidence scale-out | **Complete** — document authority and multi-event extraction integrated to local main (commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`) |
-| P0-A.3 | Market-wide PIT price reconstruction | **Active next gate** — not started authoritatively; depends on A.1 + A.2 |
+| P0-A.3 | Market-wide PIT price reconstruction | **In progress** — sub-slice P0-A.3A complete on local main (commit `e360adbbc801650e6ca4c7e324f9ffcf2f32f85b`, `push = NO`); next gate P0-A.3B architecture review |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
 | P0-B | Qualified volume/liquidity basis + market-wide turnover | Not started authoritatively; reviewable prior art exists (`c05bec0`→`4480c3b`→`0d19e07`) |
 | P0-C | Canonical market universe + exclusion ledger + freshness semantics | Foundation (C.1/C.2) and semantic qualification integrated to local main (commit `0f29019da83e83144f4f7f3832f054e04be66a97`, not pushed); security-group semantics qualified for ~99.6% of `UNKNOWN_SECURITY_GROUP`; exchange and listing/active status remain unqualified so `ACTIVE_UNIVERSE` stays fail-closed; C.3 not started — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification entries |
@@ -39,10 +39,11 @@ artifact expansion — see `docs/STATE.md`'s `## CRITICAL PATH` for the full ord
 pushed to `origin`); that pass resolved ~99.6% of the `UNKNOWN_SECURITY_GROUP` population but left
 exchange and listing/active-status semantics unqualified, so `ACTIVE_UNIVERSE` remains fail-closed
 for every instrument — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification
-entries for exact scope, verified numbers, and remaining blockers. Active next gate: `P0-A.3`
-(Market-wide PIT price reconstruction — depends on complete P0-A.1 and P0-A.2; requires owner authorization)
-→ then `P0-A.4`/`P0-B` → `P0-C.3` → first market-wide deterministic analysis artifact. P0-A.1 and P0-A.2 are
-both complete and no longer on this chain.
+entries for exact scope, verified numbers, and remaining blockers. Active next gate: `P0-A.3B`
+(DNSE Prospective PIT Price Authority Architecture Review — read-only review next, not started authoritatively; depends on complete P0-A.1, P0-A.2, and P0-A.3A)
+→ bounded P0-A.3 implementation/validation gate(s) determined by that review
+→ `P0-A.4` / `P0-B` → `P0-C.3` → first market-wide deterministic analysis artifact. P0-A.1, P0-A.2, and
+P0-A.3A are complete and no longer on this chain.
 `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains withdrawn from the immediate chain, a deferred
 future validation candidate only (see `docs/STATE.md`'s `## BOUNDED ANALYSIS OUTPUT CANDIDATE`).
 Opening P0-A.2/P0-B/P0-C.3 implementation, a push to `origin`, or any P1 work, requires its own

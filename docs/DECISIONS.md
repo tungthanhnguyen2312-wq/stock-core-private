@@ -1,5 +1,52 @@
 # Decisions
 
+## 2026-08-17 - P0-A.3A PIT price reconstruction contract integrated to local main (P0-A.3 IN PROGRESS)
+
+`P0-A.3A_PIT_PRICE_RECONSTRUCTION_CONTRACT_V1`. Integrated into local `stock-core-private`
+main (commit `e360adbbc801650e6ca4c7e324f9ffcf2f32f85b`, parent `f65dc4cb07a28623523e4a9f3672f1d0537a902e`, `push = NO`).
+Independent read-only safety audit and narrow re-audit both completed (`P0A3A_SAFE_FOR_REAL_UNIVERSE_VALIDATION`).
+No network calls, no runtime/DB writes.
+
+**Committed files:**
+- `pit_price_reconstruction_contract.py`
+- `tests/test_pit_price_reconstruction_contract.py`
+
+**Key semantics established:**
+1. **Mechanical Mode Isolation & Explicit Actionability:**
+   - `PIT_AS_KNOWN` and `RETROSPECTIVE_RESTATED` are mechanically separated across output schemas and universe summaries.
+   - Every record explicitly carries `pit_backtest_eligible: bool`, true *only* when `mode == PIT_AS_KNOWN and verdict == QUALIFIED`.
+   - `RETROSPECTIVE_RESTATED` records strictly emit `pit_backtest_eligible = False`, even when `verdict == QUALIFIED` (e.g. bounded HPG/VCB retrospective evidence).
+   - `classify_universe()` replaces generic `qualified_tickers` with mechanically partitioned `pit_backtest_eligible_tickers` and `retrospective_qualified_tickers`.
+2. **Positive Semantic Authority Required First for PIT_AS_KNOWN:**
+   - Caller-supplied `retrieved_at` proximity can never self-authorize PIT eligibility.
+   - `_price_basis_state()` requires positive `RAW_AS_TRADED` price-basis authority from `provider_price_basis_registry.bounded_price_basis_for()` before any caller observation is evaluated.
+   - Only after `RAW_AS_TRADED` is authoritatively proven does the observation's shape (requiring all 7 `market_data_contracts.RawObservation` identity fields: `provider`, `dataset`, `instrument`, `retrieved_at`, `request_identity`, `raw_payload_hash`, `schema_version`), matching query identity, knowledge cutoff (`retrieved_at <= cutoff`), and temporal proximity act as supporting proof.
+   - Retrospectively rewritten DNSE current-query responses cannot qualify merely because they were retrieved close to a session.
+3. **Current Repository Authority Bounds Respected:**
+   - Current repository authority provides no real `RAW_AS_TRADED` market-wide price authority; every active DNSE bounded authority is `ADJUSTED_RETROSPECTIVE`.
+   - Real `PIT_AS_KNOWN` qualified count across the universe is correctly **0**. This is a verified negative proof of authority compliance, not an implementation failure.
+4. **Corporate-Action Knowledge-Time & Cash Dividend Safety:**
+   - Gating strictly uses `observed_at` (when Stock Lookup retained the bytes); `published_at` is ignored in knowledge-time cutoff comparisons.
+   - Late amendments/cancellations cannot alter earlier as-known state.
+   - Missing `ex_date` strictly fails closed (`REASON_MISSING_EXPLICIT_EX_DATE`); `record_date` is never substituted for `ex_date`.
+   - Planned non-executed issuances remain fail-closed.
+   - `official_corporate_action_ledger.event_key()` remains untouched.
+   - Pure cash-dividend observations are gated fail-closed (`REASON_CASH_DIVIDEND_NO_FACTOR_METHODOLOGY`) without fabricating share-count ledger linkage or portable factors.
+5. **Prospective Shadow Containment:**
+   - `dnse_prospective_pit_shadow.py` remains untracked, non-authoritative, and deferred (`DEFER_CONFIRMED`); no live acquisition or forward-capture logic was imported or duplicated.
+
+**Validation evidence:**
+- Independent audit initially caught one blocking fail-open (temporal proximity self-authorization); defect was bounded-fixed and verified via narrow re-audit (`RAW_OBSERVATION_GATE = SAFE`, `MODE_ISOLATION = SAFE`).
+- Full test suite post-fix: 320 passed, 0 failed, 0 error, 0 skipped.
+- Focused contract tests: 86 passed, 0 failed, 0 error.
+- Real retained P0-A.1 population validation over 1,660 instruments (1,528 success + 132 `PERMANENT` HTTP 400 `BAD_REQUEST` "invalid symbol"):
+  - `PIT_AS_KNOWN`: 132 `BLOCKED`, 1,528 `UNKNOWN`, 0 `pit_backtest_eligible`.
+  - `RETROSPECTIVE_RESTATED`: 132 `BLOCKED`, 1,528 `UNKNOWN`, 0 `pit_backtest_eligible`.
+
+**Status & Next Gate:**
+- `P0-A.3` is **IN PROGRESS** (sub-slice `P0-A.3A` complete on local main, `push = NO`).
+- Active next gate: `P0-A.3B` — **DNSE Prospective PIT Price Authority Architecture Review** (read-only review next, not started authoritatively; no live capture or implementation authorized).
+
 ## 2026-08-17 - P0-A.2 corporate-action multi-event extraction integrated to local main (P0-A.2 COMPLETE)
 
 `P0-A.2_CORPORATE_ACTION_MULTI_EVENT_EXTRACTION_V1`. Integrated into local `stock-core-private`
