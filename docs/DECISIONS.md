@@ -1,5 +1,38 @@
 # Decisions
 
+## 2026-08-17 - P0-A.2 corporate-action multi-event extraction integrated to local main (P0-A.2 COMPLETE)
+
+`P0-A.2_CORPORATE_ACTION_MULTI_EVENT_EXTRACTION_V1`. Integrated into local `stock-core-private`
+main via fast-forward (independent read-only audit `SAFE_TO_INTEGRATE_LOCALLY`, `P0A2_CAN_CLOSE_AFTER_INTEGRATION`,
+commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`). Candidate branch
+`feature/p0a2-multi-event-extraction-v1` from worktree
+`stock-core-p0a2-multi-event-extraction-v1-20260817`. No network calls, no live acquisition.
+
+**Changes integrated:**
+1. **`corporate_action_events.py`:**
+   - Added backward-compatible plural extraction boundary `extract_event_observations()` and facet detector `detect_event_facets()`.
+   - Delegates to unmodified `extract_event_observation()` when fewer than 2 facets are present (all single-event documents unchanged).
+   - Added `extract_explicit_cash_amount_per_share()`: extracts cash amount from explicit `"<amount> VND per share"` / `"đồng/cổ phiếu"` wording, never computed from a percentage rate.
+   - Preamble shared facts (`record_date`) carried cleanly onto each facet; quantities/ratios/amounts isolated strictly to each facet span.
+2. **`tests/test_official_corporate_action_pillar.py`:** Added 18 new regression tests (108 total, 90 passing, 18 legacy VCB fixture skips). All 18 new tests run and pass.
+
+**Verified results preserved:**
+- SSI retained notice (`ssi-vsdc-198728`) yields exactly two independent observations:
+  - `cash_dividend`: `cash_amount_per_share = 1000.0` VND (explicit text), `record_date = "2026-08-18"`, `ex_date = None`, `lifecycle_state = "record_date_confirmed"`.
+  - `bonus_shares`: `stock_ratio = 0.2` (explicit 5:1 rate), `record_date = "2026-08-18"`, `ex_date = None`, planned issuance remains non-executed (`shares_after = None`, `lifecycle_state = "record_date_confirmed"`).
+  - Both facets strictly enforce `record_date` != `ex_date` (`ex_date_absent` warning attached).
+  - Neither facet reaches an unqualified price adjustment factor.
+- HPG issuer-IR regression preserved (`stock_dividend`, executed, `shares_after = 8,442,964,520`, ex-date absent, factor `NOT_READY`).
+- Zero field leakage between facets, distinct deterministic observation hashes, shared provenance preserved.
+
+**Downstream ledger constraint (not a P0-A.2 blocker):**
+- Current `official_corporate_action_ledger.py` `event_key` is share-count-based (`shares_after` / `shares_issued` / `shares_before`).
+- Pure cash-dividend observations without share changes land in `unlinked_observations` with reason `"no share-change identity; cannot be linked to an event"`.
+- Downstream milestones `P0-A.3` / `P0-A.4` must not fabricate linkage or price factors from this limitation.
+
+**P0-A.2 is COMPLETE.**
+Next gate: `P0-A.3` — **Market-wide PIT price reconstruction** (not started; depends on A.1 + A.2).
+
 ## 2026-08-17 - P0-A.2 corporate-action document-authority coverage extension integrated to local main
 
 `P0-A.2_CORPORATE_ACTION_AUTHORITY_COVERAGE_V1`. Integrated into local `stock-core-private`

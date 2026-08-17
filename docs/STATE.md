@@ -24,8 +24,8 @@ Binding execution sequence:
   reopen general feature work.
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
   `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
-  `A.2` corporate-action evidence scale-out (**in progress on local main** — authority extension integrated at commit `8f1367667971858db640f1d194412e70918bebe2`, `push = NO`; P0-A.2 is NOT complete, remaining gap: multi-event extraction),
-  `A.3` market-wide PIT price reconstruction (not started), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
+  `A.2` corporate-action evidence scale-out (**complete** — document-authority coverage and multi-event extraction integrated at commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`),
+  `A.3` market-wide PIT price reconstruction (**active next gate** — not started, depends on A.1 + A.2), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
   boundary work (`P0-C.1`/`P0-C.2`) is integrated on local main before further P0-A expansion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
@@ -116,21 +116,23 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`P0-A.2` — **Corporate-action multi-event and document-authority completion** (see `docs/ROADMAP.md`).
-Current status:
-- Document-authority extension integrated on local main (commit `8f1367667971858db640f1d194412e70918bebe2`, `push = NO`).
-- `issuer_ir` `listing_change_notice` support now uses existing B3/B4 path (`corporate_action_events.py` + `official_corporate_action_ledger.py`), governed by `DOCUMENT_CLASS_CEILING` and admitted via `official_source_registry.py` / `config/official_source_registry.json`.
-- HPG retained issuer-IR evidence validated end-to-end.
-- SSI retained VSDC evidence validated through the real pipeline, strictly fail-closed (`record_date` != `ex_date`, planned bonus != executed shares, 0 ledger entries, 0 adjustment factors).
-- **P0-A.2 is NOT complete.** Remaining gap: the retained SSI document contains cash-dividend (10%) + bonus-share (20%) facets, while the current single-event-per-document model in B3 captures only `bonus_shares`.
-- **Do not choose or start P0-A.3.**
+`P0-A.3` — **Market-wide PIT price reconstruction** (see `docs/ROADMAP.md`).
+Not started; depends on P0-A.1 (complete) and P0-A.2 (complete). Owner authorization is required before starting execution.
+
+Precondition status:
+- `P0-A.2` is **COMPLETE** (integrated on local main at commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`, independent audit `SAFE_TO_INTEGRATE_LOCALLY` / `P0A2_CAN_CLOSE_AFTER_INTEGRATION`):
+  - `issuer_ir` `listing_change_notice` support uses existing B3/B4 path (`corporate_action_events.py` + `official_corporate_action_ledger.py`), governed by `DOCUMENT_CLASS_CEILING` and admitted via `official_source_registry.py` / `config/official_source_registry.json`.
+  - Multi-event extraction implemented via `extract_event_observations()` and `detect_event_facets()`.
+  - SSI retained notice (`ssi-vsdc-198728`) yields independent `cash_dividend` (1000 VND/share from explicit text) and `bonus_shares` (`stock_ratio = 0.2`, planned non-executed) observations.
+  - Core invariants preserved: `record_date` (`2026-08-18`) != `ex_date` (`None`), planned issuance != executed issuance, no unqualified adjustment factors.
+  - HPG issuer-IR regression preserved.
+- Downstream ledger constraint for P0-A.3/P0-A.4 (not a P0-A.2 blocker): current ledger `event_key` is share-count-based, so pure cash-dividend observations remain unlinked in `unlinked_observations`; downstream price reconstruction must not fabricate linkage or factors from this limitation.
 
 ## EXACT NEXT BOUNDED ACTION
 
-Address the remaining `P0-A.2` gap (compound / multi-event document extraction for notices carrying both cash-dividend
-and bonus-share facets) using current-main `corporate_action_events.py` and `official_corporate_action_ledger.py` as the
-implementation basis. Preserve core invariants: `record_date` != `ex_date`, planned issuance != executed issuance,
-no unqualified adjustment factor, SSI remains fail-closed. Do not start P0-A.3.
+Await explicit owner authorization for `P0-A.3` (Market-wide PIT price reconstruction). Do not start P0-A.3
+implementation or live execution automatically. Preceding foundational work (`P0-A.1`, `P0-A.2`, and `P0-C.1`/`P0-C.2`) is
+complete and integrated on local main (`a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`).
 
 ## ACTIVE RUNTIME LANES
 
@@ -431,8 +433,10 @@ FOUNDATION` and `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`.
 
 1. `AGENTS.md` and this file.
 2. [`docs/ROADMAP.md#active-ordered-workstreams`](ROADMAP.md#active-ordered-workstreams).
-3. [`docs/DECISIONS.md#2026-08-17---p0-a2-corporate-action-document-authority-coverage-extension-integrated-to-local-main`](DECISIONS.md#2026-08-17---p0-a2-corporate-action-document-authority-coverage-extension-integrated-to-local-main)
-   (P0-A.2 authority extension integrated to local main, SSI remaining gap),
+3. [`docs/DECISIONS.md#2026-08-17---p0-a2-corporate-action-multi-event-extraction-integrated-to-local-main-p0-a2-complete`](DECISIONS.md#2026-08-17---p0-a2-corporate-action-multi-event-extraction-integrated-to-local-main-p0-a2-complete)
+   (P0-A.2 complete — multi-event extraction integrated to local main),
+   [`docs/DECISIONS.md#2026-08-17---p0-a2-corporate-action-document-authority-coverage-extension-integrated-to-local-main`](DECISIONS.md#2026-08-17---p0-a2-corporate-action-document-authority-coverage-extension-integrated-to-local-main)
+   (P0-A.2 authority extension integrated to local main),
    [`docs/DECISIONS.md#2026-08-17---p0-a2-corporate-action-prior-art-review-reject_and_reimplement`](DECISIONS.md#2026-08-17---p0-a2-corporate-action-prior-art-review-reject_and_reimplement)
    (P0-A.2 prior art review: REJECT_AND_REIMPLEMENT, current-main B3/B4 basis),
    [`docs/DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success`](DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success)
