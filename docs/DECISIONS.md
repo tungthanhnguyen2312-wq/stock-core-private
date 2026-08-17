@@ -1,5 +1,60 @@
 # Decisions
 
+## 2026-08-17 - P0-C.1 and P0-C.2 canonical universe foundation implemented, local worktree only
+
+Executed the `P0-C.1_P0-C.2_CANONICAL_UNIVERSE_REVIEW_FOR_PROMOTION` gate recorded in the
+"Authority doc rebaseline" entry below and in `STATE.md`'s `## PRIOR-ART BRANCHES`. Sole writing
+agent: Claude Code, on a dedicated worktree/branch off this file's own then-current main HEAD
+`eebae8722793ee3a7c621d76c074af70492a1a12`
+(`feature/canonical-universe-foundation-promotion-v1`,
+`worktrees/stock-core-canonical-universe-foundation-v1-20260817`). **Local commit only — not
+merged to main, not pushed, no live DNSE call.**
+
+**Ported and bounded-patched, both `PROMOTE_WITH_BOUNDED_PATCH` per the prior review:**
+`canonical_instrument_reconciliation.py` (C.1, from `b4e3c71`) and `canonical_universe_tiers.py`
+(C.2, from `3d9a2ab`), plus their contract docs and 28 existing tests (all still passing
+unmodified). C.1's `COMPANY_PROFILE` `instrument_class` extraction now reads `qualified_fields`,
+matching `name`/`exchange` in the same function (two new direct tests: it previously read an
+unrelated top-level field, untested either way). C.2's membership and ledger-event rows now carry
+`instrument_class`/`exchange` as first-class fields, carried verbatim from C.1's own selected
+values — no new normalization. C.2's non-equity exclusion reasons are now class-specific
+(`instrument_type_etf`/`_warrant`/`_right`/`_bond`/`_derivative`, aligned with
+`dnse_instrument_universe.INSTRUMENT_CLASSES`) instead of one generic bucket; the `INDEX`/
+`SYNTHETIC` branch is explicitly relabelled `index_or_synthetic_reserved_unqualified`
+(`quality_status="unqualified"`) since no current classifier authority has ever emitted those
+values. New no-network integration adapter
+`tools/build_canonical_universe_from_retained_snapshot.py` wires an already-retained DNSE
+security-master snapshot through C.1 then C.2, binding every output to that snapshot's own
+path/`content_hash`/`snapshot_id`/`retrieved_at`; it never calls `discover_universe()`. 15 new
+tests added (43 total); `py_compile` and `git diff --check` clean.
+
+**Verified against the real, already-retained 2026-08-12 snapshot**
+(`operations-review/dnse-market-data-lake-v2-20260812/data/market_raw_lake/universe/
+5c61b853c6f806e7120c56646b2af64e241aa26e70cccd37b9ddf1288258c4d4.parquet`,
+`content_hash=965c4b30e003d5a1fa0f4963b102c605d8fc4485def3ccf98a153dec88a46af9`): `MASTER_OBSERVED`
+3,250; `LISTED_EQUITY_CANDIDATE` 1,660 `INCLUDED` / 1,590 `UNKNOWN` (`instrument_type_unknown`) / 0
+`EXCLUDED` / 0 `NOT_APPLICABLE` — exact match to this file's and `STATE.md`'s existing DNSE
+security-master facts; `ACTIVE_UNIVERSE` 0 `INCLUDED` / 3,250 `UNKNOWN`, the expected fail-closed
+result, not a defect. Independent cross-check: this run's C.1 artifact content-hash
+(`eb253a5a1a0601b90322265ee954bdb82f9751ab37994568c89d69a9ea16ba5d`) is byte-identical to a
+pre-existing dev-run artifact already retained at
+`operations-review/p0-c1-canonical-instrument-reconciliation-20260816/`, confirming the port
+preserved C.1's exact original behavior against the same real input.
+
+**Does not establish:** `P0-C` completion; `P0-C.3` (not started); `ACTIVE_UNIVERSE` qualification
+for any instrument (no listing-status or exchange-label evidence source exists anywhere in this
+codebase for any DNSE-only instrument); any finer classification of the 1,590
+`UNKNOWN_SECURITY_GROUP` population (still fully undifferentiated — no `securityGroupId` besides
+`"ST"` has ever been empirically mapped); any P0-A/P0-B status change; a main-branch merge.
+
+**Remaining universe-semantic blockers, explicit and unscoped:** exchange-label mapping (DNSE
+`marketId` -> HOSE/HNX/UPCoM, same gap the 2026-08-11 entry below already declined to guess from two
+data points); listing/active-status evidence (no qualified source exists); 1,590
+`UNKNOWN_SECURITY_GROUP` finer classification. None has a scoped milestone yet; each needs its own
+owner-authorized evidence-sourcing decision. Next gate for this thread is that scoping, not
+`P0-A.2`/`P0-B`/`P0-C.3` by default and not `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` or other
+single-ticker work.
+
 ## 2026-08-17 - P0-RECOVERY closed: canonical Trades materialization terminal success
 
 Canonical Trades materialization (run ID `trades-canonical-materialization-v1-20260817`, source

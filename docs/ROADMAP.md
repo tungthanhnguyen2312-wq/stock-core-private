@@ -21,9 +21,9 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P0-A.3 | Market-wide PIT price reconstruction | Not started; depends on A.1 + A.2 |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
 | P0-B | Qualified volume/liquidity basis + market-wide turnover | Not started authoritatively; reviewable prior art exists (`c05bec0`→`4480c3b`→`0d19e07`) |
-| P0-C | Canonical market universe + exclusion ledger + freshness semantics | **Active gate** — review-for-promotion of existing prior art; not started authoritatively, not promoted |
-| P0-C.1 | Instrument-master reconciliation | Reviewable prior art exists (`b4e3c71`); review-for-promotion active, not promoted |
-| P0-C.2 | Universe-tier hierarchy / exclusion ledger | Reviewable prior art exists (`3d9a2ab`); review-for-promotion active, not promoted |
+| P0-C | Canonical market universe + exclusion ledger + freshness semantics | Foundation (C.1/C.2) implemented on a local worktree/branch, not merged; `ACTIVE_UNIVERSE` not qualified for any instrument; C.3 not started — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation entry |
+| P0-C.1 | Instrument-master reconciliation | **Promoted with bounded patch** (`b4e3c71` + patch); local commit only, not merged to main |
+| P0-C.2 | Universe-tier hierarchy / exclusion ledger | **Promoted with bounded patch** (`3d9a2ab` + patch); local commit only, not merged to main; `ACTIVE_UNIVERSE` fail-closed `UNKNOWN` pending listing-status/exchange evidence |
 | P0-C.3 | Field-level freshness/as-of retrofit | Not started |
 | P1 | Foreign-flow scale-out; UFS/feature-authority normalization; Research Evidence Layer; market-internals | Deferred |
 | P2 | Sector/factor normalization; official multi-period fundamentals; operational robustness | Deferred |
@@ -33,13 +33,17 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 execution focus is **market-wide/full-universe data foundation first**, not single-ticker
 artifact expansion — see `docs/STATE.md`'s `## CRITICAL PATH` for the full ordered chain.
 `CANONICAL_TRADES_MATERIALIZATION` and P0-RECOVERY close are both **complete**
-(`TERMINAL_SUCCESS_QUALITY_RESTRICTED`). Active gate: canonical universe boundary
-(`P0-C.1`/`P0-C.2` review-for-promotion of existing prior art, not yet promoted) → then
-`P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B` → `P0-C.3` → first market-wide deterministic analysis artifact.
-P0-A.1 is complete and no longer on this chain. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains
-withdrawn from the immediate chain, a deferred future validation candidate only (see
-`docs/STATE.md`'s `## BOUNDED ANALYSIS OUTPUT CANDIDATE`). Opening P0-C implementation, or any P1
-work, requires its own explicit owner authorization — parallel-safe is not the same as "start now."
+(`TERMINAL_SUCCESS_QUALITY_RESTRICTED`). Canonical universe boundary foundation
+(`P0-C.1`/`P0-C.2`, prior art promoted with its required bounded patch) is implemented on a local
+worktree/branch, not merged to main and not authoritative until an owner merge decision — see
+`docs/STATE.md`'s P0-C.1/P0-C.2 foundation entry for exact scope, verified numbers, and remaining
+blockers. Next: `P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B` (each still requires its own gate/owner
+authorization) → `P0-C.3` → first market-wide deterministic analysis artifact. P0-A.1 is complete
+and no longer on this chain. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains withdrawn from the
+immediate chain, a deferred future validation candidate only (see `docs/STATE.md`'s `## BOUNDED
+ANALYSIS OUTPUT CANDIDATE`). Opening P0-A.2/P0-B/P0-C.3 implementation, a main-branch merge, or any
+P1 work, requires its own explicit owner authorization — parallel-safe is not the same as "start
+now."
 
 ### Canonical ID note — legacy "C. Research Evidence Layer" vs `P0-C`
 
@@ -202,6 +206,7 @@ calibrated probabilities, or override deterministic risk gates.
 - [DECISIONS — 2026-08-17 critical path revision](DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg) (market-wide foundation before HPG)
 - [DECISIONS — 2026-08-17 terminal closure](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage) (Task 160 Stage-B and P0-A.1 terminal results)
 - [DECISIONS — 2026-08-17 authority doc rebaseline](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition) (current priority order, canonical IDs, prior-art disposition)
+- [DECISIONS — 2026-08-17 P0-C.1/P0-C.2 foundation implemented](DECISIONS.md#2026-08-17---p0-c1-and-p0-c2-canonical-universe-foundation-implemented-local-worktree-only) (bounded-patch promotion, verified 3,250/1,660/1,590 reconciliation, remaining blockers)
 - [DECISIONS — 2026-08-12 governance rebaseline](DECISIONS.md#2026-08-12---one-time-governance-rebaseline) (retained technical facts)
 - [AI rules](AI_RULES.md)
 

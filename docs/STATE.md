@@ -116,18 +116,21 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`P0-C.1_P0-C.2_CANONICAL_UNIVERSE_REVIEW_FOR_PROMOTION` (P0-RECOVERY is closed — see
-`## ACTIVE RUNTIME LANES`; supersedes `CANONICAL_TRADES_MATERIALIZATION`, which is complete).
-Review only — this gate does not itself authorize promoting, merging, or implementing the
-existing `b4e3c71`/`3d9a2ab` prior art; see `## PRIOR-ART BRANCHES`.
+`P0-C.1_P0-C.2_CANONICAL_UNIVERSE_FOUNDATION_IMPLEMENTED` (supersedes
+`P0-C.1_P0-C.2_CANONICAL_UNIVERSE_REVIEW_FOR_PROMOTION`, which is closed — see
+`## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION` below). Foundation only: local worktree/branch,
+not merged to main, `ACTIVE_UNIVERSE` NOT qualified for any instrument. Read that section in full
+for exact scope and remaining blockers before scheduling further work.
 
 ## EXACT NEXT BOUNDED ACTION
 
-Review the existing P0-C.1/P0-C.2 prior art (`b4e3c71` instrument-master, `3d9a2ab`
-universe-tier/exclusion-ledger — both currently `PRIOR_ART_REVIEWABLE`/`REVIEW_FOR_PROMOTION`) for
-promotion. This is a review decision, not authorization to implement P0-C or promote either branch
-in this pass. Do not start P0-A.2/A.3/A.4, P0-B, or `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION`
-merely because P0-RECOVERY is closed — each requires its own gate check. See `## CRITICAL PATH`.
+The `P0-C.1`/`P0-C.2` review-for-promotion gate is closed: the reviewed prior art (`b4e3c71`,
+`3d9a2ab`) was promoted with its required bounded patch on branch
+`feature/canonical-universe-foundation-promotion-v1` (local commit only, not merged to main) — see
+`## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`. This closes the P0-C.1/C.2 review gate only. It
+does not itself authorize P0-A.2/A.3/A.4, P0-B, P0-C.3, a main-branch merge, or
+`HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` — each still requires its own gate check and owner
+authorization. See `## CRITICAL PATH`.
 
 ## ACTIVE RUNTIME LANES
 
@@ -202,11 +205,82 @@ cherry-pick, or extension. Full rationale: `docs/DECISIONS.md` (2026-08-17 entry
 | Branch family | Disposition | Roadmap relevance |
 | --- | --- | --- |
 | Corporate-action foundation (`1183c72`→`d7b9bf3`) | `PRIOR_ART_REVIEWABLE` / `REVIEW_FOR_PROMOTION` | P0-A.2 |
-| Canonical instrument-master / universe-tiers (`b4e3c71`, `3d9a2ab`) | `PRIOR_ART_REVIEWABLE` / `REVIEW_FOR_PROMOTION` | P0-C.1 / P0-C.2 |
+| Canonical instrument-master / universe-tiers (`b4e3c71`, `3d9a2ab`) | `PROMOTED_WITH_BOUNDED_PATCH` — foundation implemented on `feature/canonical-universe-foundation-promotion-v1`, local commit only, not merged to main | P0-C.1 / P0-C.2 |
 | Volume / turnover chain (`c05bec0`→`4480c3b`→`0d19e07`) | `HOLD_FOR_FUTURE_PHASE` | P0-B |
 | Research Evidence / informal "C3" chain (`01941ca`→`fc22e58`→`0fe604e`→`5487e5e`) | `HOLD_FOR_FUTURE_PHASE` | P1 / legacy "Research Evidence Layer" |
 | Pre-rebaseline OHLC/PIT stub chain (`504e718`, `cd05669`) | `SUPERSEDED` | — |
 | OHLC bounded pilot executor (`aac16db`) | `PORT_SELECTED_PARTS` candidate | P0-A.1 / A.3 |
+
+## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION (2026-08-17)
+
+Prior art `b4e3c71`/`3d9a2ab` was reviewed (`P0C1_P0C2_READY_FOR_BOUNDED_PROMOTION_IMPLEMENTATION`)
+and then promoted with its required bounded patch, on a dedicated worktree/branch off this file's
+own prior HEAD `eebae8722793ee3a7c621d76c074af70492a1a12`: branch
+`feature/canonical-universe-foundation-promotion-v1`, worktree
+`worktrees/stock-core-canonical-universe-foundation-v1-20260817`. **Local commit only — not
+merged, not pushed, not deployed.** Sole writing agent: Claude Code.
+
+Ported: `canonical_instrument_reconciliation.py` (C.1), `canonical_universe_tiers.py` (C.2), both
+contract docs, both existing test suites (28 tests, all still passing unmodified). Bounded patches
+applied: C.1's `COMPANY_PROFILE` `instrument_class` extraction now reads from `qualified_fields`,
+matching `name`/`exchange` in the same function (was previously reading an unrelated top-level
+field; now covered by two direct tests). C.2's membership and ledger-event rows now carry
+`instrument_class`/`exchange` as first-class fields, carried verbatim from C.1's own selected
+values — no new normalization or inferred semantics. C.2's non-equity exclusion reasons are now
+class-specific (`instrument_type_etf`/`_warrant`/`_right`/`_bond`/`_derivative`, aligned with
+`dnse_instrument_universe.INSTRUMENT_CLASSES`) instead of one generic bucket; the `INDEX`/
+`SYNTHETIC` branch is explicitly relabelled `index_or_synthetic_reserved_unqualified`
+(`quality_status="unqualified"`) since no current classifier authority has ever emitted those
+values. New no-network integration adapter
+`tools/build_canonical_universe_from_retained_snapshot.py` wires an already-retained DNSE
+security-master snapshot through C.1 then C.2, binding every output to that snapshot's own
+path/`content_hash`/`snapshot_id`/`retrieved_at`; it never calls `discover_universe()`. 15 new
+focused tests added (43 total); `py_compile` and `git diff --check` both clean.
+
+**Verified against the real, already-retained 2026-08-12 DNSE security-master snapshot**
+(`operations-review/dnse-market-data-lake-v2-20260812/data/market_raw_lake/universe/
+5c61b853c6f806e7120c56646b2af64e241aa26e70cccd37b9ddf1288258c4d4.parquet`, manifest
+`content_hash=965c4b30e003d5a1fa0f4963b102c605d8fc4485def3ccf98a153dec88a46af9`, no live DNSE call
+this session):
+
+- `MASTER_OBSERVED`: 3,250 total — exact match to this file's existing DNSE security-master fact.
+- `LISTED_EQUITY_CANDIDATE`: 1,660 `INCLUDED` / 1,590 `UNKNOWN` (`instrument_type_unknown`) / 0
+  `EXCLUDED` / 0 `NOT_APPLICABLE` — exact match to the existing `1,660`/`1,590` OHLC-eligible-scope
+  and `UNKNOWN_SECURITY_GROUP` facts elsewhere in this file.
+- `ACTIVE_UNIVERSE`: 0 `INCLUDED` / 3,250 `UNKNOWN` (1,660 `listing_status_unknown` + 1,590
+  inherited `instrument_type_unknown`) / 0 `EXCLUDED`. **This is the expected, fail-closed result,
+  not a defect** — no verified listing-status or exchange-label evidence source exists anywhere in
+  this codebase yet (see remaining blockers below).
+- Independent cross-check: this run's own C.1 artifact content-hash
+  (`eb253a5a1a0601b90322265ee954bdb82f9751ab37994568c89d69a9ea16ba5d`) is byte-identical to a
+  pre-existing dev-run artifact already retained at
+  `operations-review/p0-c1-canonical-instrument-reconciliation-20260816/`, confirming the port
+  preserved C.1's exact original behavior against the same real input.
+
+**What this foundation does NOT establish** (explicit, not to be silently assumed later):
+
+- `P0-C` is not complete. `P0-C.3` (field-level freshness/as-of retrofit) is not started.
+- `ACTIVE_UNIVERSE` is not qualified for any instrument, including the 1,660 `EQUITY`-classified
+  ones — no instrument currently has a usable listing-status or exchange-label observation
+  anywhere in this codebase. This is a structural fact about available evidence, not something a
+  code change alone can resolve.
+- The 1,590 `UNKNOWN_SECURITY_GROUP` population remains fully unresolved and undifferentiated: no
+  DNSE `securityGroupId` other than `"ST"` has ever been empirically mapped to `ETF`/`WARRANT`/
+  `RIGHT`/`BOND`/`DERIVATIVE`. C.2's new class-specific reason codes exist for when that mapping is
+  eventually made, not because any instrument uses them today.
+- No P0-A or P0-B status changed. No ticker's research/analysis eligibility changed.
+- Not merged to `main`; this entry does not by itself authorize a merge.
+
+**Remaining universe-semantic blockers, explicit and currently unscoped:** (1) exchange-label
+mapping (DNSE `marketId` -> HOSE/HNX/UPCoM) remains unqualified market-wide — the same gap
+`DECISIONS.md`'s 2026-08-11 entry already declined to guess from two data points; (2) listing/active
+status has no qualified source anywhere in this codebase for any DNSE-only instrument; (3) the
+1,590 `UNKNOWN_SECURITY_GROUP` population's finer classification is unresolved. None of the three
+has a scoped milestone yet; each needs its own owner-authorized evidence-sourcing decision before
+`ACTIVE_UNIVERSE`, `P0-C.3`, or a genuinely qualified research universe can advance. Do not treat
+`P0-A.2`/`P0-B`/`P0-C.3` as automatically next merely because this foundation is implemented, and
+do not treat this as authorization to source exchange-label or listing-status evidence without its
+own owner decision.
 
 ## BOUNDED ANALYSIS OUTPUT CANDIDATE
 
@@ -232,10 +306,10 @@ Updated ordered chain:
    (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`).
 2. P0-RECOVERY close. **Complete.**
 3. Establish/reconcile the canonical market-wide universe boundary: `P0-C.1` instrument-master
-   reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. **Active gate** —
-   review-for-promotion of existing prior art (`b4e3c71`, `3d9a2ab`, both
-   `PRIOR_ART_REVIEWABLE`/`REVIEW_FOR_PROMOTION` — see `## PRIOR-ART BRANCHES`); review only, not
-   yet promoted or implemented.
+   reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. **Foundation implemented** —
+   prior art (`b4e3c71`, `3d9a2ab`) promoted with its required bounded patch on a local
+   worktree/branch, not merged to main; `ACTIVE_UNIVERSE` not qualified for any instrument — see
+   `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION` for exact scope and remaining blockers.
 4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
    evidence scale-out, `P0-A.3` market-wide PIT price reconstruction, `P0-A.4` scoped price-basis
    promotion, `P0-B` qualified volume/liquidity/turnover basis.
@@ -250,8 +324,9 @@ PRIORITY ORDER`) once each is actually started. `HPG_BOUNDED_ANALYSIS_OUTPUT_VER
 withdrawn from this immediate chain — see `## BOUNDED ANALYSIS OUTPUT CANDIDATE`; it remains a
 documented future validation candidate, not the next milestone, and is not started now. Do not
 place P1 (including the Research Evidence Layer) or P3 ahead of this chain. Step 3 (P0-C.1/C.2
-review) is the active gate; opening step 4 or beyond, or promoting/implementing the P0-C.1/C.2
-prior art itself, requires its own explicit owner authorization.
+foundation) is implemented but local-only; opening step 4 or beyond, merging step 3's branch to
+main, or sourcing new exchange-label/listing-status evidence, each requires its own explicit owner
+authorization — see `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`.
 
 ## DO NOT DO
 
@@ -265,11 +340,14 @@ prior art itself, requires its own explicit owner authorization.
 - Do not automatically continue to the next milestone without owner authorization.
 - Do not blindly reprobe the 132 `PERMANENT` P0-A.1 OHLC failures without new evidence or a
   changed provider contract/request basis.
-- Do not start P0-A.2 before the P0-C.1/C.2 canonical-universe review-for-promotion gate.
+- Do not start P0-A.2 merely because the P0-C.1/C.2 canonical-universe foundation is now
+  implemented — P0-A.2 still requires its own separate gate check and owner authorization.
 - Do not treat `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` as the next milestone ahead of
   market-wide universe/data foundation (`P0-C.1`/`P0-C.2` review, `P0-A.2`-`P0-A.4`, `P0-B`).
-- Do not promote or implement the `b4e3c71`/`3d9a2ab` P0-C.1/C.2 prior art merely because it is
-  now the active review gate — review-for-promotion is a decision, not automatic promotion.
+- Do not merge the `feature/canonical-universe-foundation-promotion-v1` branch to main, treat
+  `ACTIVE_UNIVERSE` as qualified for any instrument, or treat the 1,590 `UNKNOWN_SECURITY_GROUP`
+  population as resolved, merely because the P0-C.1/C.2 foundation is implemented — see
+  `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`.
 
 ## MINIMUM REQUIRED READING FOR NEXT AGENT
 
@@ -282,7 +360,9 @@ prior art itself, requires its own explicit owner authorization.
    [`docs/DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage`](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage)
    (Task 160 Stage-B and P0-A.1 terminal results),
    [`docs/DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition`](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition)
-   (current priority order, prior-art disposition), and
+   (current priority order, prior-art disposition),
+   [`docs/DECISIONS.md#2026-08-17---p0-c1-and-p0-c2-canonical-universe-foundation-implemented-local-worktree-only`](DECISIONS.md#2026-08-17---p0-c1-and-p0-c2-canonical-universe-foundation-implemented-local-worktree-only)
+   (P0-C.1/P0-C.2 foundation implemented, verified reconciliation, remaining blockers), and
    [`docs/DECISIONS.md#2026-08-12---one-time-governance-rebaseline`](DECISIONS.md#2026-08-12---one-time-governance-rebaseline)
    (retained technical facts).
 4. Directly relevant raw-lake contracts, collector code, tests, manifests, and checkpoints for
