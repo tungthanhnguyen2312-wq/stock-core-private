@@ -19,11 +19,13 @@ Binding execution sequence:
 
 `P0-RECOVERY → P0-A → P0-B → P0-C → P1 → P2 → P3`
 
-- **P0-RECOVERY** — close the in-flight Task 160 Trades Stage-B recovery/materialization
-  exception. Bounded; does not reopen general feature work.
+- **P0-RECOVERY** — Task 160 Trades Stage-B recovery is closed
+  (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`); the remaining, still-open step is canonical Trades
+  materialization. Bounded; does not reopen general feature work.
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
-  `A.1` OHLC raw-coverage completion, `A.2` corporate-action evidence scale-out, `A.3` market-wide
-  PIT price reconstruction, `A.4` scoped price-basis promotion.
+  `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
+  `A.2` corporate-action evidence scale-out (next; not started), `A.3` market-wide PIT price
+  reconstruction, `A.4` scoped price-basis promotion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
   instrument-master reconciliation, `C.2` universe-tier hierarchy/exclusion ledger, `C.3`
@@ -54,29 +56,35 @@ an explicit owner decision; EODHD remains `REJECTED_BY_OWNER`.
 
 ## ACTIVE LANE / MILESTONE
 
-`UNIVERSAL_MARKET_DATA_LAKE_EXPANSION_V2 = COVERAGE_RECONCILED_PENDING_CLASSIFICATION` (supersedes
-`PARTIAL_LIVE_BACKFILL`; tracked as P0-A.1 going forward, see `## PROGRAM PRIORITY ORDER`).
+`UNIVERSAL_MARKET_DATA_LAKE_EXPANSION_V2 = P0-A.1_COMPLETE` (supersedes
+`COVERAGE_RECONCILED_PENDING_CLASSIFICATION` and `PARTIAL_LIVE_BACKFILL`; P0-A.1 is closed, see
+`## PROGRAM PRIORITY ORDER`).
 
 The dynamic DNSE security-master snapshot retains 3,250 distinct instruments from 3,252 declared
 records. The OHLC adapter's eligible `ST/EQUITY` scope is 1,660; 1,590 `UNKNOWN_SECURITY_GROUP`
 records remain retained separately and excluded without guessing. The annual 1D OHLC backfill is
-now fully reconciled: **1,528 successful + 132 failed + 0 untouched = 1,660** — 0 untouched
-supersedes the earlier 576-untouched figure. The 132 residual eligible failures were unclassified
-(retryable vs. permanent vs. unclassified) because provider diagnostic detail had not been
-retained; a bounded diagnostic-retention repair (commit
-`c5f6752a6c7a3ca8d5f6d92985d583d6d6e72bb9`, "retain deterministic, bounded, redacted DNSE OHLC
-failure diagnostics") landed 2026-08-17, validated by 52 relevant passing tests with no live
-provider call during implementation. A separately-owned, PowerShell-launched diagnostic re-probe
-(run ID `p0-a1-ohlc-v2-diagnostic-reprobe-20260817`, same source HEAD) is
-`ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION` against the 132 residual failures — see
-`## ACTIVE RUNTIME LANES`. This remains raw coverage/diagnostics only; it does not promote price,
-volume, PIT, canonical, feature, or strategy authority.
+fully reconciled and classified: **1,528 successful + 132 `PERMANENT` + 0 retryable + 0
+unclassified + 0 untouched = 1,660** (92.05% successful coverage). All 132 residual eligible
+failures carry the same structured DNSE provider diagnostic — HTTP 400,
+`diagnostic_source=json_body`, `provider_error_code=BAD_REQUEST`,
+`provider_error_message="invalid symbol"` — reproduced identically across 3-4 attempts per unit
+over 2026-08-12 through 2026-08-17. This is retained diagnostic evidence, not an inference from a
+bare HTTP 400: it supports `PERMANENT` (the exact current request/symbol combination should not be
+blindly retried), not any broader claim about why DNSE considers the symbols invalid, and does not
+reclassify them into `UNKNOWN_SECURITY_GROUP`. Diagnostic-retention source commit
+`c5f6752a6c7a3ca8d5f6d92985d583d6d6e72bb9` ("retain deterministic, bounded, redacted DNSE OHLC
+failure diagnostics"); the terminal diagnostic re-probe (run ID
+`p0-a1-ohlc-v2-diagnostic-reprobe-20260817`, same source HEAD) reached terminal state on
+2026-08-17 with the classification above. **P0-A.1 is closed.** Do not blindly reprobe the 132
+again absent new evidence or a changed provider contract/request basis. This remains raw
+coverage/diagnostics only; it does not promote price, volume, PIT, canonical, feature, or strategy
+authority.
 
 Adjacent verified lane: `MARKET_WIDE_FOREIGN_TRADING_INGEST_V1 = COMPLETE` for one 2026-08-11
 session across all 1,660 applicable instruments (1,657 success, three retained HTTP 500 failures,
 zero untouched). `DNSE_INTRADAY_HISTORY_PAGINATION_CONTRACT_V1` has trades ready for one-session
 market-wide raw acquisition after a source checkpoint; quotes remain `PARTIAL` pending a complete
-continuation-to-terminal proof. These facts do not displace the active `P0-A.1_TERMINAL_CLASSIFICATION` gate.
+continuation-to-terminal proof.
 
 ## CURRENT VERIFIED STATE
 
@@ -94,9 +102,10 @@ continuation-to-terminal proof. These facts do not displace the active `P0-A.1_T
 
 ## CURRENT BLOCKERS
 
-1. OHLC V2 coverage is fully reconciled (0 untouched) but 132 retained provider failures are not
-   yet classified retryable vs. permanent vs. unclassified; this is P0-A.1's current gate, pending
-   the diagnostic re-probe's terminal result (see `## ACTIVE RUNTIME LANES`).
+1. OHLC V2 coverage is fully reconciled and classified (1,528 success + 132 `PERMANENT` + 0
+   untouched = 1,660; 92.05% successful). The 132 `PERMANENT` failures are a closed, accepted
+   coverage ceiling for this universe/date-range as currently requested, not a pending
+   classification gate — do not blindly reprobe them without new evidence.
 2. DNSE unknown security groups are retained but not eligible for the current `type=STOCK`
    contract; do not guess their classifications.
 3. Trades has a bounded raw contract; quotes does not yet prove a full continuation-to-terminal
@@ -106,32 +115,47 @@ continuation-to-terminal proof. These facts do not displace the active `P0-A.1_T
 
 ## NEXT GATE
 
-`P0-A.1_TERMINAL_CLASSIFICATION` (supersedes `MARKET_WIDE_DATA_COVERAGE_REVIEW`, which is
-complete — see the reconciled 1,528/132/0 count above).
+`CANONICAL_TRADES_MATERIALIZATION` (P0-RECOVERY's remaining step; supersedes
+`P0-A.1_TERMINAL_CLASSIFICATION`, which is complete — see `## ACTIVE LANE / MILESTONE`). P0-A.1 is
+closed; it is not the active gate.
 
 ## EXACT NEXT BOUNDED ACTION
 
-Wait for the P0-A.1 diagnostic re-probe's terminal result (do not inspect or poll it). On terminal
-validation, classify the 132 residual failures retryable vs. permanent vs. unclassified from the
-retained diagnostics, and close P0-A.1. Do not start P0-A.2/A.3/A.4, P0-B, or P0-C implementation
-merely because A.1 is close to done — each requires its own gate check. See `## CRITICAL PATH`.
+P0-A.1 is closed (see `## ACTIVE LANE / MILESTONE`). Task 160 Stage-B is terminal-validated and
+closed (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`; see `## ACTIVE RUNTIME LANES`); the remaining
+P0-RECOVERY gate is `CANONICAL_TRADES_MATERIALIZATION`, owner-gated like any authority-affecting
+action. Do not start P0-A.2/A.3/A.4, P0-B, or P0-C implementation, and do not start
+`HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION`, merely because P0-A.1 is done or P0-RECOVERY is close
+— each requires its own gate check and, for materialization, explicit owner authorization. See
+`## CRITICAL PATH`.
 
 ## ACTIVE RUNTIME LANES
 
-Two PowerShell-owned, human-launched runtimes may be active. Neither is Claude-Code-managed. State
-is recorded here only from repository evidence — do not treat either as terminal without a later
-terminal-validation artifact, and do not inspect, poll, or interact with either runtime directly.
+Two PowerShell-owned, human-launched runtimes were tracked here. Neither was Claude-Code-managed
+or re-launched. Both reached a terminal state on 2026-08-17, independently verified read-only
+against their own output artifacts — a status below must not be trusted without checking it is
+still current if significant time has passed.
 
-- **Task 160 / P0-RECOVERY** — `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`. Controlled rerun,
-  source HEAD `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02` ("eliminate O(units x pages) rescan in
-  Task 160 selected-page resolution"; validated pre-rerun by focused tests and a bounded
-  before/after benchmark showing structural removal of the repeated-read pathology). Do not infer
-  terminal success or rerun it.
-- **P0-A.1 diagnostic re-probe** — `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`. Run ID
+- **Task 160 / P0-RECOVERY Stage-B** — `TERMINAL_SUCCESS_QUALITY_RESTRICTED` (was
+  `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`; verified 2026-08-17 against
+  `task160_run_status.json` and all four required Stage-B artifacts). Source HEAD
+  `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02`. 66,400 logical units reconciled: 66,373 successful,
+  27 `REMAINING_FAILED` retained fail-closed (not silently success); all 40 sessions `CONSISTENT`
+  (32 `QUALITY_HEALTHY`, 8 `QUALITY_DEGRADED_PROVIDER_FAILURES`); 209,193 selected-page/file
+  references reconcile across artifacts; zero duplicate logical-unit IDs. The 27 retained failures
+  match the prior, already owner-accepted disposition — downstream progression is allowed with
+  this explicit quality restriction; do not reopen targeted repair merely to chase the 27.
+  **Stage-B is closed.** P0-RECOVERY as a whole remains open pending
+  `CANONICAL_TRADES_MATERIALIZATION` (see `## NEXT GATE`) — do not treat P0-RECOVERY itself as
+  complete.
+- **P0-A.1 diagnostic re-probe** — `P0_A1_COMPLETE` (was `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`;
+  verified 2026-08-17 against the manifest, checkpoint, and coverage-report artifacts). Run ID
   `p0-a1-ohlc-v2-diagnostic-reprobe-20260817`, source HEAD
-  `c5f6752a6c7a3ca8d5f6d92985d583d6d6e72bb9`. Purpose: capture bounded failure diagnostics for the
-  132 residual eligible OHLC HTTP-400 failures. Do not treat the 132 as classified, or the run as
-  succeeded, until a terminal-validation artifact says so.
+  `c5f6752a6c7a3ca8d5f6d92985d583d6d6e72bb9`. All 132 residual eligible OHLC failures are
+  explicitly classified `PERMANENT` from retained diagnostic evidence (see
+  `## ACTIVE LANE / MILESTONE`); 0 retryable, 0 unclassified, 0 untouched. Further blind reprobes
+  of these 132 are not authorized absent new evidence or a changed provider contract/request
+  basis.
 
 **Executor boundary:** Claude Code performs architecture/correctness/documentation review; Codex
 performs bounded implementation, tests, and local code changes; long-running compute and any live
@@ -182,14 +206,19 @@ before it is treated as supported.
 
 ## CRITICAL PATH
 
-Ordered chain from now to the first market-wide-safe qualified analysis artifact:
+Task 160 Stage-B and P0-A.1 are both closed (see `## ACTIVE RUNTIME LANES`). Updated ordered
+chain:
 
-1. Task 160 terminal validation / P0-RECOVERY close-out.
-2. P0-A.1 terminal classification of the 132 residual OHLC failures / completion.
-3. P0-A.2 corporate-action evidence scale-out (review the existing prior-art branch first).
-4. P0-A.3 market-wide PIT price reconstruction.
-5. P0-A.4 scoped price-basis promotion.
-6. First market-wide-safe qualified analysis artifact.
+1. `CANONICAL_TRADES_MATERIALIZATION` — closes P0-RECOVERY. Owner-gated; not started.
+2. P0-RECOVERY close.
+3. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` — a bounded, product-facing proof that
+   already-qualified Stock Lookup inputs can produce a usable analysis artifact, without claiming
+   market-wide authority. Not started; requires its own gate check.
+4. P0-A.2 corporate-action evidence scale-out (review the existing prior-art branch first). **Not
+   authorized to start while P0-RECOVERY materialization is still the current critical-path
+   closeout.**
+5. P0-A.3 market-wide PIT price reconstruction.
+6. P0-A.4 scoped price-basis promotion.
 
 P0-B and P0-C remain valid, independently-startable parallel lanes by governance (see `## PROGRAM
 PRIORITY ORDER`), but execution focus stays critical-path-first (steps 1-6) unless the owner
@@ -206,13 +235,18 @@ Evidence Layer) or P3 ahead of this chain.
   market-wide data and feature coverage.
 - Do not add a provider or promote a shadow/experiment because code exists or tests pass.
 - Do not automatically continue to the next milestone without owner authorization.
+- Do not blindly reprobe the 132 `PERMANENT` P0-A.1 OHLC failures without new evidence or a
+  changed provider contract/request basis.
+- Do not start P0-A.2 while P0-RECOVERY's canonical Trades materialization remains outstanding.
 
 ## MINIMUM REQUIRED READING FOR NEXT AGENT
 
 1. `AGENTS.md` and this file.
 2. [`docs/ROADMAP.md#active-ordered-workstreams`](ROADMAP.md#active-ordered-workstreams).
-3. [`docs/DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition`](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition)
-   (current priority order, prior-art disposition) and
+3. [`docs/DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage`](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage)
+   (Task 160 Stage-B and P0-A.1 terminal results),
+   [`docs/DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition`](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition)
+   (current priority order, prior-art disposition), and
    [`docs/DECISIONS.md#2026-08-12---one-time-governance-rebaseline`](DECISIONS.md#2026-08-12---one-time-governance-rebaseline)
    (retained technical facts).
 4. Directly relevant raw-lake contracts, collector code, tests, manifests, and checkpoints for

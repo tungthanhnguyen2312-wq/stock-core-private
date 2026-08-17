@@ -14,9 +14,9 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 
 | ID | Milestone | Status |
 | --- | --- | --- |
-| P0-RECOVERY | Task 160 Trades Stage-B recovery/materialization | Active — pending terminal validation |
+| P0-RECOVERY | Task 160 Trades Stage-B recovery/materialization | Stage-B closed (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`); active pending canonical Trades materialization |
 | P0-A | Qualified price basis + corporate-action + historical PIT authority | Active (independent of P0-RECOVERY) |
-| P0-A.1 | OHLC raw-coverage completion | Coverage reconciled (1,528/132/0 of 1,660); 132 residual failures pending diagnostic-reprobe terminal classification |
+| P0-A.1 | OHLC raw-coverage completion | **Complete** — 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected, 0 retryable, 0 unclassified, 0 untouched |
 | P0-A.2 | Corporate-action evidence scale-out | Not started authoritatively; reviewable prior art exists (`1183c72`→`d7b9bf3`) |
 | P0-A.3 | Market-wide PIT price reconstruction | Not started; depends on A.1 + A.2 |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
@@ -30,9 +30,12 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P3 | Return/risk, calibrated scenarios, sizing, backtest | Deferred; fail-closed until P0-A + P0-B pass |
 
 `P0-A`, `P0-B`, and `P0-C` are independent, parallelizable lanes once started, but current
-execution focus is **critical-path-first**: P0-RECOVERY → P0-A.1 → P0-A.2 → P0-A.3 → P0-A.4 →
-first market-wide-safe qualified analysis artifact. Opening P0-B/P0-C implementation, or any P1
-work, requires its own explicit owner authorization — parallel-safe is not the same as "start now."
+execution focus is **critical-path-first**: `CANONICAL_TRADES_MATERIALIZATION` (closes
+P0-RECOVERY) → `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` → P0-A.2 → P0-A.3 → P0-A.4. P0-A.1 is
+complete and no longer on this chain. P0-A.2 is not authorized to start while P0-RECOVERY
+materialization is still the current critical-path closeout. Opening P0-B/P0-C implementation, or
+any P1 work, requires its own explicit owner authorization — parallel-safe is not the same as
+"start now."
 
 ### Canonical ID note — legacy "C. Research Evidence Layer" vs `P0-C`
 
@@ -54,9 +57,9 @@ unless the owner makes a new decision. This table is retained as P0-A.1-relevant
 | Order | Workstream | Current status / exit direction |
 | --- | --- | --- |
 | 1 | Dynamic market universe | Active and retained from DNSE security master; do not hard-code a small ticker list. |
-| 2 | Market-wide raw coverage | **Active priority.** OHLC V2 partial/resumable; foreign-trading V1 session complete. |
+| 2 | Market-wide raw coverage | OHLC V2 raw coverage **complete** (1,528/1,660 successful, 132 permanent provider-rejected, 0 untouched); foreign-trading V1 session complete. |
 | 3 | Generic acquisition, pagination, restart contracts | Active. Trades contract ready for one-session market-wide run after checkpoint; quotes contract partial. |
-| 4 | Coverage review and systemic exception discovery | **Complete** — reconciled 1,528 successful + 132 failed + 0 untouched = 1,660 (see `docs/STATE.md`). Current gate is `P0-A.1_TERMINAL_CLASSIFICATION` of the 132 residual failures, pending the P0-A.1 diagnostic re-probe's terminal result. |
+| 4 | Coverage review and systemic exception discovery | **Complete and classified** — reconciled 1,528 successful + 132 `PERMANENT` + 0 untouched = 1,660 (see `docs/STATE.md`). `P0-A.1_TERMINAL_CLASSIFICATION` is closed; no further blind reprobe without new evidence. |
 | 5 | Quality, canonicalization, semantics, PIT | Pending after sufficient raw contract/coverage evidence; feature/dataset-level status, never global ticker acceptance. |
 | 6 | Vectorized feature-store enrichment | Pending. Canonical columnar Parquet/Arrow-compatible datasets and vectorized Polars-oriented computation. |
 | 7 | Sector-aware semantic packs | Pending. Banking, securities, industrial, consumer, technology, and other proven packs define applicability and `NOT_APPLICABLE`. |
@@ -191,6 +194,7 @@ calibrated probabilities, or override deterministic risk gates.
 ## Governing decisions for this phase
 
 - [ADR-20260811 — Market-wide ingest-first feature-store architecture](adr/ADR-20260811-market-wide-ingest-first-feature-store.md)
+- [DECISIONS — 2026-08-17 terminal closure](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage) (Task 160 Stage-B and P0-A.1 terminal results)
 - [DECISIONS — 2026-08-17 authority doc rebaseline](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition) (current priority order, canonical IDs, prior-art disposition)
 - [DECISIONS — 2026-08-12 governance rebaseline](DECISIONS.md#2026-08-12---one-time-governance-rebaseline) (retained technical facts)
 - [AI rules](AI_RULES.md)

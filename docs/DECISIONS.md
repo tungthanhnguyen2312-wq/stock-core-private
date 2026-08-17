@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-08-17 - Terminal closure: Task 160 Stage-B and P0-A.1 OHLC coverage
+
+Read-only terminal validation of the two runtimes flagged
+`ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION` in the entry below. Both reached terminal state; this
+entry closes them. Neither result was inferred — both were independently verified against their
+own output artifacts.
+
+**Task 160 / P0-RECOVERY Stage-B — `TERMINAL_SUCCESS_QUALITY_RESTRICTED`.** Source HEAD
+`2b7b38772e16c434c8adf5288cbc46ef0f7f4c02`. 66,400 logical units reconciled: 66,373 successful, 27
+retained failures, fail-closed. Quality-restricted downstream progression remains accepted per the
+prior disposition — no further targeted repair merely to chase the 27. **Stage-B is closed.**
+P0-RECOVERY remains open; next gate is `CANONICAL_TRADES_MATERIALIZATION`.
+
+**P0-A.1 OHLC raw coverage — `P0_A1_COMPLETE`.** Source HEAD
+`c5f6752a6c7a3ca8d5f6d92985d583d6d6e72bb9`. 1,528/1,660 successful (92.05%); 132 permanent,
+provider-rejected (`HTTP 400` / `BAD_REQUEST` / `"invalid symbol"`, reproduced identically over
+3-4 attempts per unit, 2026-08-12 to 2026-08-17); 0 retryable, 0 unclassified, 0 untouched. No
+broader reason inferred for the rejections; not reclassified into `UNKNOWN_SECURITY_GROUP`. No
+further blind reprobe of these 132 without new evidence or a changed provider contract. **A.1 is
+closed.**
+
+Neither closure is a source/runtime/authority-promotion action by itself.
+
 ## 2026-08-17 - Authority doc rebaseline: P0 priority order, canonical roadmap IDs, prior-art disposition
 
 A read-only roadmap-consolidation review found that implementation across several isolated,
