@@ -1036,6 +1036,213 @@ class SsiRealVsdcCorporateActionEvidenceTests(unittest.TestCase):
         self.assertEqual(first, second)
 
 
+class SsiCompoundNoticeMultiEventExtractionTests(unittest.TestCase):
+    """`detect_event_facets` / `extract_event_observations` against the same already-retained
+    SSI VSDC notice as `SsiRealVsdcCorporateActionEvidenceTests` above -- no new acquisition.
+
+    That document states two independent facets under one shared record date: a cash dividend
+    (10%, stated as "1,000 VND per share") and a bonus share issuance (a 5:1 ratio). The
+    single-event model exercised above can only ever report the one its type-cue preference
+    order picks (`bonus_shares`); this is the multi-event extension that reports both.
+    """
+
+    RETAINED = (ROOT / "operations-review" / "ssi-vsdc-ex-date-notice-acquisition-20260811"
+                / "documents" / "SSI" / "2026" / "last_registration_date_notice")
+    HTML_NAME = "bd7d4054613ae6f9c5ee1ddc6b787bf706ac6a18f551aff3c9683a85bcc06dad.html"
+
+    def setUp(self):
+        self.html = self.RETAINED / self.HTML_NAME
+        if not self.html.is_file():
+            self.skipTest("retained SSI VSDC notice is not present")
+        self.payload = self.html.read_bytes()
+        self.record = {
+            "document_id": "ssi-vsdc-198728", "ticker": "SSI",
+            "document_type": "last_registration_date_notice",
+            "source_authority": "Vietnam Securities Depository and Clearing Corporation",
+            "source_id": "vsdc", "source_url": "https://vsd.vn/en/ad/198728",
+            "content_sha256": document_store.sha256_bytes(self.payload),
+            "published_at": "2026-07-29", "observed_at": "2026-08-11T00:00:00Z",
+            "media_type": "text/html",
+        }
+
+    def _observations(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        return events.extract_event_observations(typed, text)
+
+    def _by_type(self, observations):
+        return {observation["event_type"]: observation for observation in observations}
+
+    def test_compound_notice_yields_exactly_two_independent_observations(self):
+        observations = self._observations()
+        self.assertEqual(len(observations), 2)
+        self.assertEqual(sorted(observation["event_type"] for observation in observations),
+                         ["bonus_shares", "cash_dividend"])
+
+    def test_cash_dividend_facet_states_the_explicit_amount_and_shared_record_date(self):
+        cash = self._by_type(self._observations())["cash_dividend"]
+        self.assertEqual(cash["cash_amount_per_share"], 1000.0)
+        self.assertEqual(cash["record_date"], "2026-08-18")
+        self.assertIsNone(cash["ex_date"])
+        self.assertEqual(cash["lifecycle_state"], "record_date_confirmed")
+
+    def test_bonus_share_facet_states_the_explicit_ratio_and_stays_planned(self):
+        bonus = self._by_type(self._observations())["bonus_shares"]
+        self.assertEqual(bonus["stock_ratio"], 0.2)
+        self.assertEqual(bonus["record_date"], "2026-08-18")
+        self.assertIsNone(bonus["shares_after"])
+        self.assertEqual(bonus["lifecycle_state"], "record_date_confirmed")
+
+    def test_cash_amount_is_read_from_the_documents_actual_vnd_per_share_wording(self):
+        cash = self._by_type(self._observations())["cash_dividend"]
+        citation = next(c for c in cash["citations"] if c["field"] == "cash_amount_per_share")
+        self.assertIn("1,000", citation["excerpt"])
+        self.assertIn("VND per share", citation["excerpt"])
+
+    def test_cash_amount_is_not_derived_from_a_payment_rate_percentage_alone(self):
+        """The document states "Payment rate: 10%/share (1,000 VND per share)." -- a rewritten
+        facet span carrying only the percentage, with no VND figure, must report unavailable
+        rather than compute an amount from the rate."""
+        percentage_only_cash_span = (
+            "cash dividend - Payment rate: 10%/share. - Payment time: 14/9/2026")
+        result = events.extract_explicit_cash_amount_per_share(percentage_only_cash_span)
+        self.assertEqual(result["state"], "unavailable")
+
+    def test_no_field_leakage_between_facets(self):
+        by_type = self._by_type(self._observations())
+        cash, bonus = by_type["cash_dividend"], by_type["bonus_shares"]
+        self.assertIsNone(cash["stock_ratio"])
+        self.assertIsNone(cash["shares_issued"])
+        self.assertIsNone(cash["shares_after"])
+        self.assertIsNone(bonus["cash_amount_per_share"])
+
+    def test_both_facets_retain_the_same_document_provenance(self):
+        cash, bonus = self._observations()
+        for field in ("document_id", "content_sha256", "source_url", "source_authority",
+                      "ticker", "document_type"):
+            self.assertEqual(cash[field], bonus[field])
+
+    def test_facet_observation_ids_are_deterministic_and_mutually_distinct(self):
+        first = self._observations()
+        second = self._observations()
+        self.assertEqual([observation["observation_id"] for observation in first],
+                         [observation["observation_id"] for observation in second])
+        self.assertNotEqual(first[0]["observation_id"], first[1]["observation_id"])
+
+    def test_record_date_never_becomes_ex_date_for_either_facet(self):
+        for observation in self._observations():
+            self.assertEqual(observation["record_date"], "2026-08-18")
+            self.assertIsNone(observation["ex_date"])
+            self.assertIn("ex_date_absent", observation["warnings"])
+
+    def test_planned_bonus_shares_never_become_executed(self):
+        bonus = self._by_type(self._observations())["bonus_shares"]
+        self.assertIsNone(bonus["shares_after"])
+        self.assertNotEqual(bonus["lifecycle_state"], "executed")
+
+    def test_neither_facet_reaches_a_price_adjustment_factor(self):
+        built = ledger.build_ledger(self._observations())
+        self.assertEqual(built["qualified_event_count"], 0)
+        self.assertEqual(built["adjustment_factor_counts"], {})
+
+    def test_multiple_observations_from_one_document_are_not_deduplicated_as_corruption(self):
+        """Ledger verification: sharing a document hash is not treated as duplicate corruption,
+        and both facets stay distinguishable by their own typed event semantics -- even though
+        neither currently forms a ledger entry (see the class docstring on
+        `SsiRealVsdcCorporateActionEvidenceTests` for the pre-existing, share-count-only
+        `event_key` reason, which this milestone does not change)."""
+        built = ledger.build_ledger(self._observations())
+        self.assertEqual(built["duplicate_observations"], [])
+        self.assertEqual(built["entry_count"], 0)
+        self.assertEqual(len(built["unlinked_observations"]), 2)
+        observation_ids = {unlinked["observation_id"] for unlinked in built["unlinked_observations"]}
+        self.assertEqual(len(observation_ids), 2)
+        document_ids = {unlinked["document_id"] for unlinked in built["unlinked_observations"]}
+        self.assertEqual(document_ids, {"ssi-vsdc-198728"})
+
+    def test_existing_single_event_documents_are_returned_unchanged(self):
+        payload = _issuer_listing_change_html("AAA")
+        record = _issuer_ir_document("AAA", payload)
+        typed = events.classify_retained_document(record, payload)
+        text = events.extract_text(payload, typed["media_type"])
+        single = events.extract_event_observation(typed, text)
+        plural = events.extract_event_observations(typed, text)
+        self.assertEqual(plural, [single])
+
+    def test_ledger_replay_is_deterministic_regardless_of_observation_order(self):
+        observations = self._observations()
+        first = ledger.build_ledger(observations)["replay_fingerprint"]
+        second = ledger.build_ledger(list(reversed(observations)))["replay_fingerprint"]
+        self.assertEqual(first, second)
+
+
+class HpgIssuerIrMultiEventRegressionTests(unittest.TestCase):
+    """The retained HPG issuer-IR listing-change notice -- a single-facet document -- run
+    through the new plural entry point. Its meaning must stay exactly what
+    `IssuerIrRealHpgListingChangeTests` already established through the pre-existing singular
+    API: generic issuer_ir classification, an executed share-count transition, ex-date absent,
+    and the adjustment factor blocked on that missing ex-date. No ticker-specific branch is
+    involved anywhere in `detect_event_facets` or `extract_event_observations`.
+    """
+
+    RETAINED = (ROOT / "operations-review" / "hpg-vnm-current-share-bridge-20260802"
+                / "documents" / "HPG" / "2026" / "corporate_action_notice")
+    HTML_NAME = "cb41c96ef78bed7654030e55bb06dea22d051b1c9fcf1a6cf024e9f964563c1c.html"
+
+    def setUp(self):
+        self.html = self.RETAINED / self.HTML_NAME
+        if not self.html.is_file():
+            self.skipTest("retained HPG issuer-IR listing-change notice is not present")
+        self.payload = self.html.read_bytes()
+        self.record = {
+            "document_id": "hpg-listing-change-2026", "ticker": "HPG",
+            "source_id": "issuer_ir",
+            "source_authority": ("Hoa Phat Group Joint Stock Company investor relations, "
+                                 "reciting HOSE notice 1475/TB-SGDHCM"),
+            "source_url": ("https://www.hoaphat.com.vn/tin-tuc/"
+                           "thong-bao-ve-ngay-giao-dich-co-phieu-phat-hanh-tra-co-tuc-nam-2025-1.html"),
+            "content_sha256": document_store.sha256_bytes(self.payload),
+            "published_at": "2026-07-07", "observed_at": "2026-08-02T08:10:00Z",
+            "media_type": "text/html",
+        }
+
+    def test_hpg_notice_still_detects_as_exactly_one_facet(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        facets = events.detect_event_facets(events.normalize_text(text))
+        self.assertEqual(len(facets), 1)
+        self.assertEqual(facets[0]["event_type"], "stock_dividend")
+
+    def test_plural_entry_point_matches_the_existing_singular_result_exactly(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        single = events.extract_event_observation(typed, text)
+        plural = events.extract_event_observations(typed, text)
+        self.assertEqual(plural, [single])
+        self.assertEqual(plural[0]["event_type"], "stock_dividend")
+        self.assertEqual(plural[0]["shares_issued"], 767_498_665)
+        self.assertEqual(plural[0]["shares_after"], 8_442_964_520)
+        self.assertEqual(plural[0]["lifecycle_state"], "executed")
+        self.assertIsNone(plural[0]["ex_date"])
+
+    def test_plural_entry_point_still_blocks_the_adjustment_factor_on_missing_ex_date(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        observation = events.extract_event_observations(typed, text)[0]
+        built = ledger.build_ledger([observation])
+        entry = built["entries"][0]
+        self.assertEqual(entry["qualification_state"], "qualified")
+        self.assertEqual(entry["adjustment_factor_status"], ledger.FACTOR_NOT_READY)
+        self.assertIn("missing_explicit_official_ex_date", entry["adjustment_factor_blocked_by"])
+
+    def test_repeat_run_is_deterministic(self):
+        typed = events.classify_retained_document(self.record, self.payload)
+        text = events.extract_text(self.payload, typed["media_type"])
+        first = events.extract_event_observations(typed, text)
+        second = events.extract_event_observations(typed, text)
+        self.assertEqual(first, second)
+
+
 class IssuerIrRegistryAdmissionTests(unittest.TestCase):
     """config/official_source_registry.json now declares `listing_change_notice` for
     issuer_ir; admission stays host- and type-gated, not opened generally."""

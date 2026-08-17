@@ -525,6 +525,50 @@ def extract_explicit_stock_dividend_ratio(text: str) -> dict[str, Any]:
     }
 
 
+#: `_CUES["cash_amount"]`'s slash-only forms ("vnd/cổ phiếu") do not match the retained SSI
+#: notice's actual wording, "1,000 VND per share". This accepts either separator.
+_CASH_AMOUNT_PER_SHARE_RE = re.compile(
+    r"([0-9][0-9.,]*)\s*(?:vnd|đồng)\s*(?:/|per)\s*(?:share|cổ phiếu)", re.I)
+
+
+def _parse_currency_amount(token: str) -> float | None:
+    """A VND amount, English comma-grouped (`1,000`) or Vietnamese dot-grouped (`1.500`).
+
+    Unlike `_parse_explicit_share_count`, no share-count magnitude bound applies here -- a
+    per-share cash amount and a share count occupy unrelated, non-comparable ranges.
+    """
+    text = str(token).strip()
+    if _ENGLISH_GROUPED_INTEGER_RE.fullmatch(text):
+        return float(text.replace(",", ""))
+    value = parse_vietnamese_number(text)
+    return value if value is not None and value > 0 else None
+
+
+def extract_explicit_cash_amount_per_share(text: str) -> dict[str, Any]:
+    """A cash amount only from an explicit "<amount> VND per share" / "đồng/cổ phiếu" wording.
+
+    Never derived from a payment-rate percentage: a document stating only "10%/share" with no
+    directly stated currency amount reports unavailable rather than compute one from the rate.
+    """
+    normalized = normalize_text(text)
+    matches = list(_CASH_AMOUNT_PER_SHARE_RE.finditer(normalized))
+    if len(matches) != 1:
+        return {"state": "unavailable",
+                "reason": "explicit_cash_amount_per_share_missing_or_ambiguous"}
+    match = matches[0]
+    value = _parse_currency_amount(match.group(1))
+    if value is None:
+        return {"state": "unavailable",
+                "reason": "explicit_cash_amount_per_share_unparseable"}
+    return {
+        "state": "available",
+        "cash_amount_per_share": value,
+        "citation": {"field": "cash_amount_per_share",
+                     "cue": "explicit currency-per-share wording",
+                     "excerpt": normalized[match.start():match.end()]},
+    }
+
+
 def extract_explicit_dividend_event_reference(text: str) -> dict[str, Any]:
     """Build a cross-document key only from one direct dividend reason and one record date.
 
@@ -810,6 +854,307 @@ def _lifecycle_for(document_type: str, fields: Mapping[str, Any],
                 "reason": (f"{reason}, but a {document_type} may not assert beyond "
                            f"{ceiling!r}")}
     return {"state": observed, "reason": reason}
+
+
+# ==========================================================================
+# Multi-event extraction: one retained document, zero or more independent facets.
+#
+# `extract_event_observation` above returns exactly one observation and stays untouched --
+# every existing caller keeps its exact current behaviour. The retained SSI VSDC record-date
+# notice is the reason this exists: it states two independent facets, a cash dividend and a
+# bonus share issuance, under one shared record date, and the single-event model above can only
+# ever report the one its type-cue preference order picks (`detect_event_type`'s own comment
+# calls this out: "the more specific share-issuing cue wins, and the ambiguity is reported").
+#
+# `extract_event_observations` (plural) is the additive entry point: it detects how many
+# distinct event-type facets a document actually recites and, for two or more, extracts one
+# observation per facet instead of one for the whole document. A document with zero or one
+# facet is unaffected -- this delegates to `extract_event_observation` for that case, so it is
+# not a second, competing implementation of the single-event path.
+# ==========================================================================
+
+#: Must name the same phrase `detect_event_type` treats as an implicit `bonus_shares` cue.
+#: Kept as its own literal, rather than a shared constant, so this module's one single-event
+#: function stays completely unedited by this addition.
+_BONUS_SHARES_IMPLICIT_PHRASE = "share issuance for raising share capital from owner's equity"
+
+#: The date-type fields a facet may either inherit from a shared document preamble or restate
+#: itself. Order matches the inline loop in `extract_event_observation`.
+_DATE_FIELDS = ("approval_date", "ex_date", "record_date", "payment_date",
+                "listing_effective_date", "trading_date")
+
+
+def detect_event_facets(text: str) -> list[dict[str, Any]]:
+    """Every distinct event-type facet a document recites, each anchored to its own section.
+
+    A compound official notice -- the retained SSI VSDC record-date notice among them -- states
+    each facet twice: once in a shared "Reason:" summary and again as its own detailed section.
+    The **last** occurrence of a type's cue is used as that facet's anchor, because the first is
+    a preamble mention shared by every facet, not evidence belonging to one of them.
+
+    Facets are returned in document order. The span from one facet's anchor to the next (or to
+    the end of the document) is that facet's own scope; text before the first anchor belongs to
+    no single facet and is the shared preamble (see `extract_event_observations`).
+
+    A document with zero or one facet returns a list of that length -- callers use the length to
+    decide whether multi-event handling applies at all.
+    """
+    normalized = normalize_text(text)
+    lowered = normalized.lower()
+    anchors: dict[str, tuple[int, str]] = {}
+    for event_type, cues in _TYPE_CUES:
+        for cue in cues:
+            position = lowered.rfind(cue)
+            if position < 0:
+                continue
+            best = anchors.get(event_type)
+            if best is None or position > best[0]:
+                anchors[event_type] = (position, cue)
+    position = lowered.rfind(_BONUS_SHARES_IMPLICIT_PHRASE)
+    if position >= 0:
+        best = anchors.get("bonus_shares")
+        if best is None or position > best[0]:
+            anchors["bonus_shares"] = (position, _BONUS_SHARES_IMPLICIT_PHRASE)
+
+    ordered = sorted((position, event_type, cue) for event_type, (position, cue) in anchors.items())
+    facets: list[dict[str, Any]] = []
+    for index, (position, event_type, cue) in enumerate(ordered):
+        end = ordered[index + 1][0] if index + 1 < len(ordered) else len(normalized)
+        facets.append({"event_type": event_type, "cue": cue,
+                       "span_start": position, "span_end": end,
+                       "span_text": normalized[position:end]})
+    return facets
+
+
+def _extract_date_fields(text: str) -> tuple[dict[str, str], dict[str, dict[str, str]], dict[str, str]]:
+    """The same labelled-date extraction `extract_event_observation` performs inline (fields,
+    citations by field, absence reasons by field), factored out so `extract_event_observations`
+    can run it once over a shared preamble and again over each facet's own span."""
+    fields: dict[str, str] = {}
+    citations: dict[str, dict[str, str]] = {}
+    absent: dict[str, str] = {}
+    for field in _DATE_FIELDS:
+        found = _field_window(text, field)
+        if found is None:
+            absent[field] = "no field cue present in the document"
+            continue
+        cue, window = found
+        parsed = parse_vietnamese_date(window)
+        if parsed is None:
+            absent[field] = "field cue present but no parseable dd/mm/yyyy date follows it"
+            continue
+        fields[field] = parsed
+        citations[field] = {"field": field, "cue": cue, "excerpt": window[:180]}
+    return fields, citations, absent
+
+
+def _extract_facet_specific_fields(
+        span_text: str) -> tuple[dict[str, Any], list[dict[str, Any]], list[str], dict[str, str]]:
+    """Share-count, registered-adjustment, direct-reference, and cash-amount fields scoped to
+    one facet's own text span -- everything `extract_event_observation` extracts inline other
+    than the date fields, which `_extract_date_fields` handles separately because those may also
+    be inherited from a shared document preamble (see `extract_event_observations`)."""
+    fields: dict[str, Any] = {}
+    citations: list[dict[str, Any]] = []
+    warnings: list[str] = []
+    absent: dict[str, str] = {}
+
+    table = extract_share_change_table(span_text)
+    if table["state"] == "extracted":
+        for field, value in table["values"].items():
+            fields[field] = value
+            citations.append({"field": field, "cue": table["cue"],
+                              "excerpt": table["citations"][field]})
+        for field, reason in table["rejected"].items():
+            absent[field] = reason
+        warnings.extend(table["warnings"])
+    elif table["state"] == "share_change_form_unreadable":
+        for field in ("shares_before", "shares_after", "shares_issued"):
+            absent[field] = table["reason"]
+        warnings.append("share_change_form_numeric_extraction_refused")
+    else:
+        for field in ("shares_before", "shares_after", "shares_issued"):
+            found = _field_window(span_text, field)
+            if found is None:
+                absent[field] = table.get("reason") or "no field cue present in the document"
+                continue
+            cue, window = found
+            value, reason = _share_count_from(window)
+            if value is None:
+                absent[field] = reason or "unparseable"
+                if reason == "ocr_suspect_numeric":
+                    warnings.append(f"ocr_suspect_numeric:{field}")
+                continue
+            fields[field] = int(value)
+            citations.append({"field": field, "cue": cue, "excerpt": window[:180]})
+
+    registered_adjustment = extract_explicit_registered_securities_adjustment(span_text)
+    fields.update(registered_adjustment["values"])
+    citations.extend(registered_adjustment["citations"])
+    absent.update(registered_adjustment["absent"])
+
+    direct_reference = extract_explicit_dividend_event_reference(span_text)
+    if direct_reference["state"] == "available":
+        fields["direct_event_reference"] = direct_reference["direct_event_reference"]
+        citations.append(direct_reference["citation"])
+    else:
+        absent["direct_event_reference"] = direct_reference["reason"]
+
+    cash_amount = extract_explicit_cash_amount_per_share(span_text)
+    if cash_amount["state"] == "available":
+        fields["cash_amount"] = cash_amount["cash_amount_per_share"]
+        citations.append(cash_amount["citation"])
+    else:
+        absent["cash_amount"] = cash_amount["reason"]
+
+    return fields, citations, warnings, absent
+
+
+def extract_event_observations(document: Mapping[str, Any], text: str) -> list[dict[str, Any]]:
+    """One typed, cited observation per independent event-type facet in one retained document.
+
+    Almost every retained document states one corporate action and is handled unchanged by
+    `extract_event_observation`, which this wraps and returns as a single-item list for. A
+    minority -- the retained SSI VSDC notice among them -- recite two or more independent facets
+    (a cash dividend and a bonus share issuance) under one shared record date. That is the only
+    case this function changes: splitting a compound document into its own typed observations,
+    one per facet, each with its own event type and its own facet-scoped fields, plus the
+    document's shared provenance (ticker, document/content hash, source, classification) and any
+    shared preamble facts -- such as a record date stated once for the whole notice -- carried
+    onto every facet. A facet that restates its own value for one of those shared fields speaks
+    for itself; the shared preamble value is only a fallback.
+
+    Fields never cross between facets in the other direction: share counts, entitlement ratios,
+    and cash amounts are read only from each facet's own text span, never from the document as a
+    whole or from another facet's span.
+
+    Nothing here changes what `extract_event_observation` returns for a document with zero or
+    one facet -- this function delegates to it entirely in that case, so every existing caller
+    and every existing single-event document keeps its exact current behaviour.
+    """
+    normalized = normalize_text(text)
+    facets = detect_event_facets(normalized)
+    if len(facets) < 2:
+        return [extract_event_observation(document, text)]
+
+    ticker = str(document.get("ticker") or "").upper()
+    document_type = str(document.get("document_type") or "")
+    ceiling = DOCUMENT_CLASS_CEILING.get(document_type, "unknown")
+
+    preamble = normalized[:facets[0]["span_start"]]
+    shared_fields, shared_citations, shared_absent = _extract_date_fields(preamble)
+
+    observations: list[dict[str, Any]] = []
+    for index, facet in enumerate(facets):
+        facet_fields, facet_citations, facet_warnings, facet_absent = \
+            _extract_facet_specific_fields(facet["span_text"])
+        facet_dates, facet_date_citations, facet_date_absent = \
+            _extract_date_fields(facet["span_text"])
+
+        fields: dict[str, Any] = {**shared_fields, **facet_dates, **facet_fields}
+        citations_by_field: dict[str, dict[str, Any]] = {**shared_citations, **facet_date_citations}
+        for citation in facet_citations:
+            citations_by_field[str(citation["field"])] = citation
+        absent: dict[str, str] = {**shared_absent, **facet_date_absent, **facet_absent}
+        for field in fields:
+            absent.pop(field, None)
+
+        warnings = list(facet_warnings)
+        if "ex_date" not in fields:
+            warnings.append("ex_date_absent")
+            absent["ex_date"] = ("no explicit official ex-date in this document; a record, "
+                                 "payment, listing or trading date is never substituted for one")
+
+        stock_ratio = None
+        ratio_basis = None
+        if "shares_issued" in fields and "shares_before" in fields and fields["shares_before"]:
+            stock_ratio = round(fields["shares_issued"] / fields["shares_before"], 10)
+            ratio_basis = "new_shares_per_existing_share"
+            citations_by_field["stock_ratio"] = {
+                "field": "stock_ratio", "cue": "derived",
+                "excerpt": (f"{fields['shares_issued']} / {fields['shares_before']} "
+                            f"= {stock_ratio}")}
+        elif "shares_issued" in fields and "shares_after" in fields:
+            before = fields["shares_after"] - fields["shares_issued"]
+            if before > 0:
+                stock_ratio = round(fields["shares_issued"] / before, 10)
+                ratio_basis = "new_shares_per_existing_share"
+                citations_by_field["stock_ratio"] = {
+                    "field": "stock_ratio", "cue": "derived",
+                    "excerpt": (f"{fields['shares_issued']} / "
+                                f"({fields['shares_after']} - {fields['shares_issued']}) "
+                                f"= {stock_ratio}")}
+        else:
+            explicit_ratio = extract_explicit_stock_dividend_ratio(facet["span_text"])
+            if explicit_ratio["state"] == "available":
+                stock_ratio = explicit_ratio["stock_ratio"]
+                ratio_basis = explicit_ratio["ratio_basis"]
+                for citation in explicit_ratio["citations"]:
+                    citations_by_field[str(citation["field"])] = citation
+            else:
+                absent["stock_ratio"] = explicit_ratio["reason"]
+
+        lifecycle = _lifecycle_for(document_type, fields, ceiling)
+        event_type = facet["event_type"]
+        identity = {
+            "schema_version": SCHEMA_VERSION,
+            "ticker": ticker,
+            "event_type": event_type,
+            "document_id": document.get("document_id"),
+            "content_sha256": document.get("content_sha256"),
+        }
+        observations.append({
+            "schema_version": SCHEMA_VERSION,
+            "extractor_version": VERSION,
+            "observation_id": _fingerprint({**identity, "fields": fields}),
+            "ticker": ticker,
+            "event_type": event_type,
+            "event_type_reason": (f"document text carries the {event_type} cue in its own "
+                                  f"section; {len(facets)} independent event-type facets "
+                                  "detected in this document"),
+            "lifecycle_state": lifecycle["state"],
+            "lifecycle_reason": lifecycle["reason"],
+            "lifecycle_ceiling": ceiling,
+            "document_id": document.get("document_id"),
+            "document_type": document_type,
+            "source_authority": document.get("source_authority"),
+            "source_id": document.get("source_id"),
+            "source_url": document.get("source_url"),
+            "content_sha256": document.get("content_sha256"),
+            "discovery_provenance": document.get("discovery_provenance"),
+            "document_classification": document.get("document_classification"),
+            "published_at": document.get("published_at"),
+            "observed_at": document.get("observed_at"),
+            "approval_date": fields.get("approval_date"),
+            "announcement_date": document.get("published_at"),
+            "ex_date": fields.get("ex_date"),
+            "record_date": fields.get("record_date"),
+            "payment_date": fields.get("payment_date"),
+            "listing_effective_date": fields.get("listing_effective_date"),
+            "payment_or_execution_date": (fields.get("payment_date")
+                                          or fields.get("listing_effective_date")),
+            "trading_date": fields.get("trading_date"),
+            "direct_event_reference": fields.get("direct_event_reference"),
+            "registration_effective_date": fields.get("registration_effective_date"),
+            "depository_acceptance_date": fields.get("depository_acceptance_date"),
+            "shares_before": fields.get("shares_before"),
+            "shares_issued": fields.get("shares_issued"),
+            "shares_after": fields.get("shares_after"),
+            "registered_securities_added": fields.get("registered_securities_added"),
+            "registered_securities_total": fields.get("registered_securities_total"),
+            "isin": fields.get("isin"),
+            "cash_amount_per_share": fields.get("cash_amount"),
+            "stock_ratio": stock_ratio,
+            "ratio_basis": ratio_basis,
+            "rights_ratio": None,
+            "subscription_price": fields.get("subscription_price"),
+            "citations": sorted(citations_by_field.values(), key=lambda item: str(item["field"])),
+            "absent_fields": dict(sorted(absent.items())),
+            "warnings": sorted(set(warnings)),
+            "facet_index": index,
+            "facet_count": len(facets),
+        })
+    return observations
 
 
 class _VsdNoticeBody(HTMLParser):
