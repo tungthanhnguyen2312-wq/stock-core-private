@@ -1,13 +1,51 @@
 # Repository guardrails
 
-Active architecture: read `docs/market_wide_ingest_first_architecture.md` with the listed
-governance files. The former ticker-by-ticker qualification-first workflow is
-`SUPERSEDED_AS_DEFAULT_WORKFLOW`; qualification is now feature/use-level while raw provenance is
-retained.
+## Current direction
 
-Codex is the executor. Before work, read `docs/STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, and `docs/AI_RULES.md`; Producer owns P0 source qualification and canonical artifact authority. If this checkout is part of the full StockLookup workspace (siblings: `ai-core-private`, `dashboard-runtime`, `operations-review`, `archive`), also read `docs/WORKSPACE_GOVERNANCE.md` — it points to the workspace-level agent working contract and current project state, which take precedence over anything in this repo's own docs for cross-repo questions.
+**CURRENT DEVELOPMENT PRIORITY — MARKET-WIDE DATA EXPANSION.** Stock Lookup optimizes
+**coverage × provenance × reusable dataset contracts** from DNSE/Livespeed, not the number of
+individually qualified tickers. The active architecture is market universe → immutable raw lake
+→ quality/canonical/semantic/PIT → vectorized feature store → feature-level eligibility →
+strategy → portfolio/risk → AI research → dashboard/human decision.
+
+`SUPERSEDED_AS_DEFAULT_WORKFLOW`: ticker-by-ticker qualification before raw ingestion. Historical
+ticker cohorts remain golden/regression evidence; they are not the default development workflow.
+
+## Default lightweight bootstrap
+
+For a normal bounded implementation milestone:
+
+1. Read this file and [`docs/STATE.md`](docs/STATE.md) in full.
+2. Read only the roadmap, decision, and rule sections explicitly referenced by `STATE.md` or
+   directly required by the named milestone.
+3. Read directly relevant code, tests, and data contracts.
+4. Do **not** scan all handoffs, all decisions, or the full roadmap by default.
+
+Perform a full authority refresh (`AGENTS.md`, `STATE.md`, `ROADMAP.md`, `DECISIONS.md`,
+`AI_RULES.md`, and the current handoff) only when changing architecture, program priority,
+governance, or authority; entering a new major program; promoting/demoting a source or
+capability; resolving a conflict with/staleness in `STATE.md`; finding contradictory repository
+docs; or when the owner explicitly requests a rebaseline/governance audit. A new session, a new
+agent, or a normal bounded milestone is not by itself a trigger.
+
+`docs/STATE.md` is the Producer operational entrypoint and cached current truth. Operations
+reviews, handoffs, historical roadmaps, and Consumer/Dashboard notes are evidence/reference,
+not competing current authority. If a prompt conflicts with `STATE.md`, surface the conflict and
+request an explicit owner override; do not silently change architecture.
+
+## Repository boundaries
+
+Codex is the executor. Producer owns raw-source contracts, canonicalization, and artifact
+authority. For a cross-repository task, read the directly applicable sibling repository guardrail
+and the Producer `STATE.md`; do not reconstruct project truth from chat memory or old handoffs.
 
 - Work only inside this repository unless the task explicitly names another workspace location.
 - Use `STOCK_LOOKUP_RUNTIME_ROOT` for runtime data; do not infer or hard-code a runtime path.
 - Keep repository documentation portable, with relative repository links only. Put machine-specific procedures in local operator documentation.
 - Do not edit databases, generated artifacts, backups, credentials, or deploy outputs unless explicitly requested.
+- Preserve raw observations and provenance when semantics are unknown; mark the affected
+  field/feature `UNKNOWN` and fail closed only where that semantic is required.
+- Do not add a market-data provider without an explicit owner decision. DNSE/Livespeed is the
+  current direction; EODHD remains rejected.
+- Do not start a later milestone merely because the current one is ready. Owner authorization is
+  still required.

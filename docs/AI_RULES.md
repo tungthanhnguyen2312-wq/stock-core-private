@@ -1,53 +1,62 @@
-# Codex working rules
+# AI authority and safety rules
 
-1. Codex is the implementation executor.
-2. Read [STATE.md](STATE.md), [ROADMAP.md](ROADMAP.md), and [DECISIONS.md](DECISIONS.md) before proposing work.
-3. One session is one substantial bounded milestone; avoid chains of tiny audit/design/shadow prompts.
-4. A normal milestone inspects, patches, runs focused tests, performs one real/frozen validation when needed, commits, and pushes when explicitly authorized.
-5. Do not reopen a passed gate without regression evidence.
-6. Never treat metadata, ordering, missing data, or fallback behavior as investment signals.
-7. Price basis, volume basis, and current shares are persistent blockers until explicitly qualified.
-8. Do not enable valuation, ranking, recommendations, sizing, or backtesting from unqualified inputs.
-8a. Undocumented is not unusable. Qualify evidence on the ladder in
-    `evidence_qualification_tiers.py` and record the tier: an `empirically_deduced` verdict
-    keeps descriptive and provider-scoped technical use open while liquidity, execution and
-    point-in-time use stay closed. Only `documented_verified` may speak for a source.
-8b. An empirical verdict carries its scope. State the tested tickers, windows and fields,
-    keep `provider_methodology = unknown` unless a first-party source says otherwise, and
-    never quote a verdict outside the windows that produced it.
-8c. A verdict belongs to one provider. It never transfers to another provider and never
-    lands on a field that does not say whose number it is. A *magnitude* anchor borrowed
-    from another series is the one exception, and it carries nothing else — not composition,
-    not adjustment behaviour, not authority.
-8d. To test whether a source rewrites history at an event, you need a snapshot retained
-    **before** that event. Two snapshots taken after it measure post-event stability only,
-    and no amount of elapsed time between them changes that. Never propose re-requesting an
-    already-post-event window as a substitute; check the pair with
-    `kbs_empirical_basis.classify_snapshot_pair` before claiming an event-time result.
-8e. A derived quantity constrains only what its algebra constrains. A ratio identity fixes
-    a ratio; naming the absolute terms needs a separately identified anchor, and without one
-    the answer is `unresolved`, not the plausible-looking option.
-8f. A partial aggregate must say so in its own output. An operation claiming a whole window
-    needs `coverage_state = complete`; otherwise rename and restructure it as
-    `observed_rows_only` with its covered and excluded sessions. Never silently drop missing
-    rows and present the result as complete, and never impute a missing observation.
-8g. Keep the kinds of "no value" apart: field omitted, present-null, a real zero, malformed,
-    and a missing row are five different facts about a source. A zero is an observation.
-    Our own pipeline dropping a field is not evidence that the provider omitted it.
-8h. A correlation is not a mechanism, however clean. Record it as an observed association
-    with `causal_explanation = unknown` and scope it to the windows that produced it.
-8i. Trace a data path before writing a contract about it. Registers of consumers, fields and
-    capabilities must name things that exist and actually read what they claim to read; a
-    plausible-sounding identifier is not evidence that a consumer exists. When a trace finds
-    nothing, record the absence as data rather than leaving it inferred from silence.
-8j. Cross-repository verdicts pass through, they do not get recomputed. The downstream side
-    copies the counts, may narrow a verdict, may never widen one, and may never drop a
-    required warning. Pin shared warning text to one source with a fingerprint both sides
-    assert.
-9. Write detailed diagnostics locally; keep final chat output compact.
-10. Do not run full suites unless a real cross-cutting source regression justifies it.
-11. Do not publish or deploy unless explicitly requested.
-12. **MARKET-WIDE INGEST-FIRST:** retain immutable, provenance-bearing raw observations before semantics are complete. `SUPERSEDED_AS_DEFAULT_WORKFLOW`: whole-ticker qualification before raw ingestion.
-13. Qualification is field/feature/use-case level. Missing or suspect evidence blocks only dependent features; raw evidence and unrelated features remain visible with their own status and lineage.
-14. Python/deterministic engines own formalizable numerical calculation and strategy eligibility. AI may research semantics, extract candidate facts, explain outputs, identify counter-theses, and surface anomalies; it may not fabricate values, probabilities, target prices, statuses, or numerical authority.
-15. A fallback is a separately named `DERIVED_PROXY` method, never an exact canonical metric. Strategy use must declare and validate accepted feature status, price basis, PIT semantics, and sector/instrument applicability.
+## Bootstrap and authority
+
+1. Codex is the implementation executor. For a normal bounded milestone, read
+   [AGENTS.md](../AGENTS.md) and [STATE.md](STATE.md) in full, then only the sections/files
+   STATE names or the milestone directly needs, plus relevant code/tests/contracts.
+2. Do not scan all handoffs, all decisions, or the full roadmap by default. Full authority
+   refresh (AGENTS, STATE, ROADMAP, DECISIONS, AI_RULES, current handoff) is only for
+   architecture/program-priority/governance/authority changes, a new major program,
+   stale/ambiguous/conflicting state, or an owner-requested rebaseline.
+3. `STATE.md` is cached current truth. Do not reconstruct authority from chat memory. If a prompt
+   conflicts with state, identify the conflict and obtain explicit owner direction.
+4. One session is one substantial bounded milestone. `READY_FOR_NEXT_MILESTONE` does not authorize
+   its execution. Commit, push, publish, deploy, or an authority promotion requires explicit
+   authorization.
+
+## Market-data doctrine
+
+5. **MARKET-WIDE INGEST-FIRST:** retain immutable, provenance-bearing raw observations before
+   semantics are complete. `SUPERSEDED_AS_DEFAULT_WORKFLOW`: whole-ticker qualification before raw
+   ingestion. Historical ticker cohorts are golden/regression evidence, not a default work queue.
+6. Qualification is field/feature/use-case level. `UNKNOWN` is not rejection: preserve raw data
+   and provenance, mark the affected semantic unknown, and fail closed only where it is required.
+   Never turn a missing debt field or an unqualified price basis into global ticker rejection.
+7. Feature/strategy use must declare accepted feature status, method, quality, provenance,
+   freshness, PIT semantics, price/share basis, blockers, lineage, and sector/instrument
+   applicability. Python/deterministic engines own formalizable calculations and eligibility.
+8. DNSE/Livespeed is the provider direction. Do not add another provider without a new owner
+   decision; EODHD is rejected. Do not reopen arbitrary evidence cohorts or ticker-by-ticker
+   qualification merely to increase coverage.
+9. Price basis, volume basis, current shares, corporate-action timing, and PIT remain persistent
+   blockers only for dependent features. Resolve price basis at dataset/provider-contract/
+   representative-cohort/corporate-action level; never fabricate or over-generalize a verdict.
+10. Do not enable valuation, ranking, recommendations, sizing, execution, or backtesting from
+    unqualified inputs. A fallback is a separately named `DERIVED_PROXY`, never an exact canonical
+    metric.
+
+## Evidence and semantic discipline
+
+- `documented_verified` is the only tier that can speak for a source. An
+  `empirically_deduced` verdict is provider-, field-, ticker-, and window-scoped; preserve its
+  methods, alternatives, falsifications, retained artifacts, timestamps, and scope limits.
+- To test event-time rewriting, retain a snapshot from before the event. Two post-event snapshots
+  measure only post-event stability; re-requesting an old post-event window is not a substitute.
+- A ratio constrains only the ratio. Do not invent absolute terms without an independent anchor.
+  A cross-provider magnitude anchor carries no composition, adjustment, or authority claim.
+- Whole-window claims require `coverage_state = complete`. Otherwise expose
+  `observed_rows_only`, covered/excluded sessions, and no imputation. Keep field-omitted,
+  present-null, real-zero, malformed, and missing-row states distinct.
+- Correlation is an observed association, not a causal explanation. Trace an actual data path
+  before writing a consumer/capability contract; record absence when no consumer exists.
+- Consumers pass through Producer verdicts. They may narrow a verdict but never widen it or drop
+  a required warning.
+
+## AI boundary
+
+AI may research semantics, extract candidate evidence, explain deterministic outputs, identify
+counter-theses, and surface anomalies. AI may **not** invent facts, convert `UNKNOWN` to
+`QUALIFIED`, fabricate values/target prices/probabilities, infer source semantics from labels, or
+override deterministic risk gates. Strategy/portfolio/dashboard output must preserve the source
+status and lineage that bounds it.

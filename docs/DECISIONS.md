@@ -1,5 +1,170 @@
 # Decisions
 
+## 2026-08-17 - Authority doc rebaseline: P0 priority order, canonical roadmap IDs, prior-art disposition
+
+A read-only roadmap-consolidation review found that implementation across several isolated,
+un-merged, un-pushed local worktrees had drifted ahead of `AGENTS.md`/`STATE.md`/`ROADMAP.md`/
+this file since a 2026-08-16 rebaseline (`docs/project-authority-sync-v1-20260815` branch, commit
+`23d1e53`, itself not yet merged to `main`). This entry reconciles that drift directly into
+`main`'s own working tree without discarding the 2026-08-12 entry below or its still-valid
+`MARKET-WIDE DATA EXPANSION` technical facts.
+
+- **Program priority order**, binding: `P0-RECOVERY → P0-A → P0-B → P0-C → P1 → P2 → P3`. This
+  supersedes `MARKET-WIDE DATA EXPANSION` as the program-**sequencing** frame only; that program's
+  technical facts (dynamic security master, OHLC checkpoint mechanism, foreign-trading V1
+  completion) are retained and now feed specific P0-A/B/C sub-milestones. `P0-A`, `P0-B`, `P0-C`
+  are independent, parallelizable lanes once started; this is not authorization to start all three
+  at once — execution stays critical-path-first (below) absent explicit owner authorization
+  otherwise.
+- **P0-A sub-milestones:** `A.1` OHLC raw-coverage completion, `A.2` corporate-action evidence
+  scale-out, `A.3` market-wide PIT price reconstruction, `A.4` scoped price-basis promotion.
+- **P0-C sub-milestones:** `C.1` instrument-master reconciliation, `C.2` universe-tier hierarchy/
+  exclusion ledger, `C.3` field-level freshness/as-of retrofit.
+- **Canonical ID note.** `docs/ROADMAP.md` separately retains an older, pre-P0 lettered narrative
+  ("A. Market Data Foundation", "B. Universal Feature Foundation", "C. Research Evidence Layer").
+  That section's **"C" is not `P0-C`** — it is P1-scoped deterministic research-packet-generation
+  work, source-complete and gated by the Universal Feature Foundation section, explicitly
+  reordered to P1 in that same narrative. Informal local branch/worktree labels `C3C1`, `C3C2`,
+  `C3C2H`, `C3C3`, `C3C4` refer to this legacy "C. Research Evidence Layer" section, **not**
+  `P0-C`; they are not canonical roadmap IDs and must not be used in new work going forward.
+
+### P0-A.1 verified state (2026-08-17)
+
+Eligible `ST/EQUITY` OHLC scope: 1,660. Reconciled: **1,528 successful + 132 failed + 0 untouched
+= 1,660** (0 untouched supersedes the 2026-08-12 entry's 576-untouched figure). 1,590
+`UNKNOWN_SECURITY_GROUP` records remain retained separately and excluded without guessing, per
+existing doctrine. The 132 residual eligible failures were unclassified (retryable vs. permanent
+vs. unclassified) because provider diagnostic detail had not been retained. A bounded repair,
+commit `c5f6752a6c7a3ca8d5f6d92985d583d6d6e72bb9` ("retain deterministic, bounded, redacted DNSE
+OHLC failure diagnostics"), closes that retention gap — validated by 52 relevant passing tests, no
+live provider call during implementation. A separately-owned, PowerShell-launched diagnostic
+re-probe (run ID `p0-a1-ohlc-v2-diagnostic-reprobe-20260817`, same source HEAD) is
+`ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION` against the 132 residual failures as of this entry.
+P0-A.1 is **not** complete; it remains pending this run's terminal result and the resulting
+classification.
+
+### Task 160 / P0-RECOVERY verified state (2026-08-17)
+
+Commit `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02` ("eliminate O(units x pages) rescan in Task 160
+selected-page resolution") eliminates a pathological repeated-Parquet-read pattern in Stage-B
+selected-page construction and adds bounded runtime progress/status support. Validated before the
+full rerun: focused tests passed, and a bounded before/after benchmark demonstrated structural
+removal of the repeated-read pathology. The full controlled rerun is separately PowerShell-owned;
+its state is `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`. Do not infer terminal success from the
+pre-rerun validation alone.
+
+### Prior-art disposition (2026-08-17 audit)
+
+Real, tested code exists in several isolated worktrees branched from commit `23d1e53` (and one
+family that predates it), all local-only (not pushed), none reconciled into authority docs before
+this entry. None is current architecture authority. Disposition:
+
+| Branch family | Commits | Disposition | Relevance | Note |
+| --- | --- | --- | --- | --- |
+| Corporate-action foundation | `1183c72` → `d7b9bf3` | `PRIOR_ART_REVIEWABLE` / `REVIEW_FOR_PROMOTION` | P0-A.2 | Adds `official_ca_evidence_acquisition.py`, `qualified_corporate_action_foundation.py`; conceptually continues Pillar-B's already-named B2-B6 acquisition tail |
+| Canonical instrument-master / universe-tiers | `b4e3c71`, `3d9a2ab` | `PRIOR_ART_REVIEWABLE` / `REVIEW_FOR_PROMOTION` | P0-C.1 / P0-C.2 | Closest of all undocumented lanes to a literally-named roadmap sub-milestone |
+| Volume / turnover chain | `c05bec0` → `4480c3b` → `0d19e07` | `HOLD_FOR_FUTURE_PHASE` | P0-B | P0-B is not the current priority lane |
+| Research Evidence / informal "C3" chain | `01941ca` → `fc22e58` → `0fe604e` → `5487e5e` | `HOLD_FOR_FUTURE_PHASE` | P1 / legacy "Research Evidence Layer" | Two known open defects to fix before this lane reopens: the `c3_analysis_lane_eligibility.py` module's own dedicated test file (`tests/test_c3c3_analysis_lane_eligibility.py`) is a byte-for-byte duplicate of an unrelated Phase-4B/5D suite and gives the new module zero dedicated coverage; and its 3-state taxonomy (`ELIGIBLE`/`INELIGIBLE`/`UNKNOWN`) has no `NOT_APPLICABLE` state and has not been reconciled with the pre-existing, roadmap/decision-anchored `analysis_lane_eligibility.py` 5-lane taxonomy |
+| Pre-rebaseline OHLC/PIT stub chain | `504e718`, `cd05669` | `SUPERSEDED` | — | Two thin (~20-25 line) stub commits, superseded by the P0-A.1 diagnostics approach (`c5f6752`) |
+| OHLC bounded pilot executor | `aac16db` | `PORT_SELECTED_PARTS` candidate | P0-A.1 / A.3 | 594-line commit including an executable `tools/execute_dnse_ohlc_raw_basis_pilot.py`; worth a closer look before either promotion or discard |
+
+No branch above may be merged, cherry-picked, or extended without its own review. This table does
+not itself authorize any promotion.
+
+### Completed/historical work — do not reopen
+
+The following remain closed/historical and are not reopened by this entry: HPG-scoped Pillar-B
+official corporate-action evidence acquisition (VSDC announcement-index route, HPG executed-event
+notice); previously closed official financial-evidence cohorts; already-qualified HPG-scoped
+current-session OHLC price-basis, price/return/volatility analytics, beta/correlation, and
+market-risk capability. Market-wide authority remaining incomplete does not mean these HPG-scoped,
+current-session capabilities are unusable — see the bounded-output note below.
+
+### Bounded analysis output candidate
+
+A bounded, HPG-only research artifact appears possible today from already-qualified inputs (OHLC
+price-basis regression proof, current-state price/risk analytics, current-state beta/correlation,
+Pillar-B corporate-action evidence) combined with the existing deterministic
+`analysis_lane_eligibility.py` gate. This is recorded as a `BOUNDED_ANALYSIS_OUTPUT_CANDIDATE`,
+not a current supported output — it has not been separately, end-to-end verified, must use only
+already-qualified HPG-scoped inputs, and must not imply market-wide or historical-PIT authority. A
+separate bounded verification milestone is required before it is treated as supported.
+
+### Critical path
+
+`P0-RECOVERY terminal validation → P0-A.1 terminal classification → P0-A.2 corporate-action
+scale-out → P0-A.3 market-wide PIT price reconstruction → P0-A.4 scoped price-basis promotion →
+first market-wide-safe qualified analysis artifact.` P0-B and P0-C remain valid parallel lanes by
+governance but are not on this critical path; P1 (including the Research Evidence Layer) and P3
+stay behind it. Do not place either ahead of these gates without explicit owner authorization.
+
+### Executor / runtime policy (reconciled wording, not a new policy)
+
+Claude Code performs architecture/correctness/documentation review; Codex performs bounded
+implementation, tests, and local code changes; long-running compute and any live DNSE acquisition
+is PowerShell/human-launched only; after a runtime reaches a terminal state, AI's role is
+read-only validation, forensic analysis, and next-step preparation. No AI agent owns a live
+runtime.
+
+### Milestone completion governance
+
+A milestone that changes architecture, roadmap state, or authority is not closed merely because
+its code/tests/commit exist. Closure requires the corresponding `STATE.md`/`ROADMAP.md`/this
+file's update, in the same session or an explicit dedicated follow-up. The absence of this rule's
+enforcement between 2026-08-16 and 2026-08-17 is exactly what produced the prior-art backlog this
+entry now reconciles.
+
+> **Historical/reconciliation note.** This entry and `STATE.md` govern current work unless a later
+> explicit owner decision supersedes them. The 2026-08-12 entry below remains valid for its
+> retained technical facts (see "Program priority order" above); its program-sequencing framing is
+> superseded as stated.
+
+## 2026-08-12 - One-time governance rebaseline
+
+- **Current program:** `UNIVERSAL MARKET DATA & FEATURE FOUNDATION V1`. The active architecture
+  is dynamic market universe → market-wide raw ingestion → quality/canonicalization/semantics/PIT
+  → vectorized feature store → feature-level eligibility → polymorphic strategies →
+  portfolio/risk/leverage → AI research → dashboard/human decision.
+- **Current development priority:** `MARKET-WIDE DATA EXPANSION`. The optimization target is
+  `coverage × provenance × restartability × reusable dataset contracts`, not the count of
+  individually qualified tickers. DNSE/Livespeed is the current provider direction; EODHD remains
+  `REJECTED_BY_OWNER`; no FiinGroup, FiinRep, or other provider becomes active without a new owner
+  decision.
+- **Superseded as the default workflow:** qualification-first, ticker-by-ticker development.
+  Historical cohorts, official-evidence work, and price-basis investigations remain historical
+  truth, golden/regression corpus, or bounded provider-behavior evidence; they are not an active
+  default work queue.
+- **Ingestion and eligibility:** raw observations and provenance are retained even when semantics
+  are unknown. `UNKNOWN` blocks only a feature/use that requires that semantic. A missing debt
+  value may block EV/EV-EBITDA without blocking independent features. A strategy must declare its
+  dependencies and accepted statuses/bases/PIT and fail closed at feature level.
+- **Data fabric:** raw lake responsibility is immutable payloads, request identity, source,
+  retrieval timestamp, hash, schema/version, pagination, checkpoint/restart, manifests, and
+  audit/replay. The analytical core is canonical columnar Parquet/Arrow-compatible datasets and
+  vectorized computation; ticker-by-ticker loops are not the main architecture where a vectorized
+  implementation is viable.
+- **Price basis:** resolve at dataset/provider-contract/representative-cohort/corporate-action
+  level. Do not fabricate a basis, reopen an arbitrary ticker cohort, or generalize a bounded
+  verdict. Unknown basis blocks basis-dependent historical returns and backtests only.
+- **Downstream boundaries:** Strategy breadth, portfolio/risk/leverage, PIT backtesting,
+  AI expansion, and Dashboard expansion are downstream of sufficient market-wide data and feature
+  coverage. AI may research/explain/counter-thesis, but may not invent facts, upgrade `UNKNOWN`,
+  fabricate targets/probabilities, or override deterministic risk gates.
+- **Bootstrap protocol:** normal bounded work reads `AGENTS.md`, `STATE.md`, only the references
+  named there or directly needed by the milestone, and relevant code/tests/contracts. Full authority
+  refresh is exceptional: architecture, priority, governance, source/capability
+  promotion/demotion, major program entry, stale/ambiguous/conflicting state, or owner-requested
+  rebaseline. New session/agent/bounded milestone alone is not a trigger.
+- **Authority lifecycle:** `IDEA / PROPOSAL → EXPERIMENT / SHADOW → VALIDATED → PROMOTION REVIEW
+  → AUTHORITATIVE`; `BLOCKED`, `DEFERRED`, `REJECTED`, and `SUPERSEDED` remain explicit states.
+  Code, passing tests, a commit/push, or an agent recommendation are not authority without owner
+  approval.
+
+> **Historical/reconciliation note.** Entries below are retained as dated decision records. Where
+> they name a prior active priority, next milestone, provider candidate, or ticker-first workflow,
+> this 2026-08-12 rebaseline and `STATE.md` govern current work unless a later explicit owner
+> decision supersedes them.
+
 ## 2026-08-11 - Live Phase 1 DNSE collection preserves eligibility and failure boundaries
 
 - The corrected approved credential-file default is `C:\Users\tungt\.stocklookup\secrets.env`.
