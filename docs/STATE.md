@@ -24,8 +24,9 @@ Binding execution sequence:
   materialization. Bounded; does not reopen general feature work.
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
   `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
-  `A.2` corporate-action evidence scale-out (next; not started), `A.3` market-wide PIT price
-  reconstruction, `A.4` scoped price-basis promotion.
+  `A.2` corporate-action evidence scale-out (not started), `A.3` market-wide PIT price
+  reconstruction, `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
+  boundary work (`P0-C.1`/`P0-C.2`) is reviewed before further P0-A expansion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
   instrument-master reconciliation, `C.2` universe-tier hierarchy/exclusion ledger, `C.3`
@@ -202,28 +203,38 @@ existing deterministic `analysis_lane_eligibility.py` gate). This is a
 `BOUNDED_ANALYSIS_OUTPUT_CANDIDATE`, not a current supported output: it has not been separately
 verified end-to-end, must use only already-qualified HPG-scoped inputs, and must not imply
 market-wide or historical-PIT authority. A separate bounded verification milestone is required
-before it is treated as supported.
+before it is treated as supported. **It is a deferred future validation candidate, not on the
+current critical path** (see `## CRITICAL PATH`) — market-wide/full-universe data foundation is
+the current priority ahead of any single-ticker artifact.
 
 ## CRITICAL PATH
 
-Task 160 Stage-B and P0-A.1 are both closed (see `## ACTIVE RUNTIME LANES`). Updated ordered
-chain:
+Task 160 Stage-B and P0-A.1 are both closed (see `## ACTIVE RUNTIME LANES`). Current execution
+policy is **market-wide/full-universe data foundation first**, not single-ticker artifact
+expansion. Updated ordered chain:
 
 1. `CANONICAL_TRADES_MATERIALIZATION` — closes P0-RECOVERY. Owner-gated; not started.
 2. P0-RECOVERY close.
-3. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` — a bounded, product-facing proof that
-   already-qualified Stock Lookup inputs can produce a usable analysis artifact, without claiming
-   market-wide authority. Not started; requires its own gate check.
-4. P0-A.2 corporate-action evidence scale-out (review the existing prior-art branch first). **Not
-   authorized to start while P0-RECOVERY materialization is still the current critical-path
-   closeout.**
-5. P0-A.3 market-wide PIT price reconstruction.
-6. P0-A.4 scoped price-basis promotion.
+3. Establish/reconcile the canonical market-wide universe boundary: `P0-C.1` instrument-master
+   reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. Reviewable prior art exists
+   (`b4e3c71`, `3d9a2ab`, both `PRIOR_ART_REVIEWABLE`/`REVIEW_FOR_PROMOTION` — see
+   `## PRIOR-ART BRANCHES`); this is the next bounded implementation decision after P0-RECOVERY
+   closes, not an authorization to promote it now.
+4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
+   evidence scale-out, `P0-A.3` market-wide PIT price reconstruction, `P0-A.4` scoped price-basis
+   promotion, `P0-B` qualified volume/liquidity/turnover basis.
+5. `P0-C.3` field-level freshness/as-of retrofit, as required for qualified market-wide
+   consumption.
+6. First market-wide deterministic analysis/research artifact, after the necessary P0-A/P0-B/P0-C
+   gates above pass.
 
-P0-B and P0-C remain valid, independently-startable parallel lanes by governance (see `## PROGRAM
-PRIORITY ORDER`), but execution focus stays critical-path-first (steps 1-6) unless the owner
-explicitly authorizes an additional parallel lane. Do not place P1 (including the Research
-Evidence Layer) or P3 ahead of this chain.
+This numbered sequence is current execution *focus*, not a rewritten dependency graph: `P0-A`,
+`P0-B`, and `P0-C` remain independent, parallelizable lanes by governance (see `## PROGRAM
+PRIORITY ORDER`) once each is actually started. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` is
+withdrawn from this immediate chain — see `## BOUNDED ANALYSIS OUTPUT CANDIDATE`; it remains a
+documented future validation candidate, not the next milestone, and is not started now. Do not
+place P1 (including the Research Evidence Layer) or P3 ahead of this chain. Opening any step
+beyond materialization requires its own explicit owner authorization.
 
 ## DO NOT DO
 
@@ -238,12 +249,16 @@ Evidence Layer) or P3 ahead of this chain.
 - Do not blindly reprobe the 132 `PERMANENT` P0-A.1 OHLC failures without new evidence or a
   changed provider contract/request basis.
 - Do not start P0-A.2 while P0-RECOVERY's canonical Trades materialization remains outstanding.
+- Do not treat `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` as the next milestone ahead of
+  market-wide universe/data foundation (`P0-C.1`/`P0-C.2` review, `P0-A.2`-`P0-A.4`, `P0-B`).
 
 ## MINIMUM REQUIRED READING FOR NEXT AGENT
 
 1. `AGENTS.md` and this file.
 2. [`docs/ROADMAP.md#active-ordered-workstreams`](ROADMAP.md#active-ordered-workstreams).
-3. [`docs/DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage`](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage)
+3. [`docs/DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg`](DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg)
+   (critical-path revision — market-wide foundation before HPG),
+   [`docs/DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage`](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage)
    (Task 160 Stage-B and P0-A.1 terminal results),
    [`docs/DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition`](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition)
    (current priority order, prior-art disposition), and
@@ -278,4 +293,6 @@ approval is required for an authority promotion. A milestone that changes archit
 state, or authority is not closed merely because its code/tests/commit exist — closure requires
 the corresponding `STATE.md`/`ROADMAP.md`/`DECISIONS.md` update, in the same session or an
 explicit dedicated follow-up. Unenforced, this is exactly what produced the 2026-08-17 prior-art
-backlog reconciled above.
+backlog reconciled above. **Operating lifecycle per milestone:** document current gate → execute
+→ terminal validate → update authority/state → local commit → next milestone. Do not let
+implementation outrun this file.

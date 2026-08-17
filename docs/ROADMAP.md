@@ -30,12 +30,15 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P3 | Return/risk, calibrated scenarios, sizing, backtest | Deferred; fail-closed until P0-A + P0-B pass |
 
 `P0-A`, `P0-B`, and `P0-C` are independent, parallelizable lanes once started, but current
-execution focus is **critical-path-first**: `CANONICAL_TRADES_MATERIALIZATION` (closes
-P0-RECOVERY) → `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` → P0-A.2 → P0-A.3 → P0-A.4. P0-A.1 is
-complete and no longer on this chain. P0-A.2 is not authorized to start while P0-RECOVERY
-materialization is still the current critical-path closeout. Opening P0-B/P0-C implementation, or
-any P1 work, requires its own explicit owner authorization — parallel-safe is not the same as
-"start now."
+execution focus is **market-wide/full-universe data foundation first**, not single-ticker
+artifact expansion — see `docs/STATE.md`'s `## CRITICAL PATH` for the full ordered chain:
+`CANONICAL_TRADES_MATERIALIZATION` (closes P0-RECOVERY) → canonical universe boundary
+(`P0-C.1`/`P0-C.2`, reviewing existing prior art first) → `P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B` →
+`P0-C.3` → first market-wide deterministic analysis artifact. P0-A.1 is complete and no longer on
+this chain. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` is withdrawn from the immediate chain and
+remains a deferred future validation candidate only (see `docs/STATE.md`'s
+`## BOUNDED ANALYSIS OUTPUT CANDIDATE`). Opening any step beyond materialization, or P1 work,
+requires its own explicit owner authorization — parallel-safe is not the same as "start now."
 
 ### Canonical ID note — legacy "C. Research Evidence Layer" vs `P0-C`
 
@@ -194,6 +197,7 @@ calibrated probabilities, or override deterministic risk gates.
 ## Governing decisions for this phase
 
 - [ADR-20260811 — Market-wide ingest-first feature-store architecture](adr/ADR-20260811-market-wide-ingest-first-feature-store.md)
+- [DECISIONS — 2026-08-17 critical path revision](DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg) (market-wide foundation before HPG)
 - [DECISIONS — 2026-08-17 terminal closure](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage) (Task 160 Stage-B and P0-A.1 terminal results)
 - [DECISIONS — 2026-08-17 authority doc rebaseline](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition) (current priority order, canonical IDs, prior-art disposition)
 - [DECISIONS — 2026-08-12 governance rebaseline](DECISIONS.md#2026-08-12---one-time-governance-rebaseline) (retained technical facts)

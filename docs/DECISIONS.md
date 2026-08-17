@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-08-17 - Critical path revision: market-wide universe foundation before HPG
+
+Amends the critical-path ordering in the terminal-closure entry below (Task 160 Stage-B and
+P0-A.1 terminal-closure facts themselves are unchanged). `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION`
+is withdrawn from the immediate chain after P0-RECOVERY close; it remains a documented
+`BOUNDED_ANALYSIS_OUTPUT_CANDIDATE` (deferred future validation), not the next milestone, and is
+not started now.
+
+**Revised immediate path:** `CANONICAL_TRADES_MATERIALIZATION` → P0-RECOVERY close → canonical
+market-wide universe boundary (`P0-C.1` instrument-master reconciliation, `P0-C.2` universe-tier
+hierarchy/exclusion ledger — reviewing existing prior art `b4e3c71`/`3d9a2ab`,
+`PRIOR_ART_REVIEWABLE` only, not promoted in this decision) → `P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B` →
+`P0-C.3` → first market-wide deterministic analysis artifact. `P0-A`, `P0-B`, `P0-C` remain
+independent, parallelizable lanes by governance once started; this sequence is current execution
+focus (market-wide/full-universe foundation first), not a new dependency contract.
+
+**Reinforced, not new:** every launched/active/terminal milestone updates `STATE.md`/`ROADMAP.md`/
+this file at the same execution checkpoint — document current gate → execute → terminal validate
+→ update authority/state → local commit → next milestone.
+
 ## 2026-08-17 - Terminal closure: Task 160 Stage-B and P0-A.1 OHLC coverage
 
 Read-only terminal validation of the two runtimes flagged
