@@ -203,6 +203,105 @@ calibrated probabilities, or override deterministic risk gates.
   and corporate-action reconciliation work. When the basis is unknown, retain data, block only
   basis-dependent historical returns/backtests, and continue independent valid capabilities.
 
+## Future capability placement
+
+> **Non-active future capabilities.** The placements below define technical requirements,
+> prerequisites, and semantic boundaries for downstream workstreams. They do NOT alter the
+> active P0 critical path, do not open implementation, and their sub-milestone numbering remains
+> intentionally TBD until each respective phase is authoritatively opened by owner decision.
+
+### P0-C — Official Exchange & Listing-Status Authority
+
+- **Purpose**: Acquire and qualify official HOSE/HNX/VSDC evidence sufficient to resolve
+  historically and as-of qualified: exchange identity, listing status, suspension/restriction
+  windows, delisting/listing transitions, and active-universe eligibility.
+- **Invariants**: Do not assume a current exchange snapshot is historically stable. Do not
+  promote `ACTIVE_UNIVERSE` merely from DNSE raw security-master fields. Current state remains
+  fail-closed (`ACTIVE_UNIVERSE = UNKNOWN`) until qualified official evidence is ingested and
+  verified. Sub-milestone numbering remains TBD.
+
+### P1 — Market Internals & Historical Market Breadth
+
+- **Scope**: Advance/decline series, percentage of universe above MA50/MA200, new 52-week
+  highs/lows, and market-wide breadth trend/deterioration/recovery indicators.
+- **Prerequisites**: Qualified PIT price history (P0-A), historical constituent/universe
+  semantics (P0-C), strict absence of survivor bias, and explicit treatment of
+  suspended/missing/no-trade names.
+- **Historical Weighting**: Cap-weighted sector or market analytics additionally require qualified
+  historical market-cap inputs; equal-weight, median, and dispersion research do not imply those
+  inputs are available.
+- **Operating Boundary**: A shadow research implementation may precede production authority only
+  when explicitly labelled non-authoritative. Retain existing P1 foreign-flow scale-out and
+  Research Evidence Packet release architecture.
+
+### P2 — Multi-Period Sector-Aware Fundamental Foundation
+
+- **Scope**: Systematic acquisition and qualification of 3–5 years of official financial
+  statements across the canonical EQUITY candidate universe (subject to issuer applicability and
+  coverage states; not a permanent hard-coded denominator).
+- **Requirements**: Official-document provenance, period identity, consolidated vs separate
+  statement identity, currency/unit identity, restatement/amendment handling, knowledge/as-of
+  semantics, and missing-field fail-closed behavior.
+- **Sector Semantic Packs**: Must distinguish at least ordinary corporates, banks, securities
+  companies, and insurance. Derived deterministic metrics (D/E, short/long borrowing structure,
+  OCF, FCF, earnings quality) must emit `NOT_APPLICABLE` where economically inapplicable (e.g.
+  where a sector-specific contract determines EBITDA or D/E is non-comparable), never forced into
+  a universal schema.
+
+### P2 / P3 — Sector-Aware Valuation Engine
+
+- **Scope**: Candidate model families subject to later qualification and sector/applicability
+  contracts; not generically a "DCF engine".
+- **Model Families**:
+  - Non-financial corporates: FCFF / FCFE / DCF where multi-period cash flow evidence is sufficient.
+  - Banks & financial institutions: Residual income, excess return, P/B–ROE-oriented methods, and
+    dividend/equity approaches where justified.
+  - Securities & insurance: Sector-specific valuation contracts appropriate to their financial
+    structure.
+- **Requirements**: Qualified multi-period financial inputs, deterministic assumptions, scenario
+  provenance, explicit model applicability, and fail-closed handling for missing inputs. Never
+  fabricate WACC, growth rates, or terminal assumptions.
+
+### P2 / P3 — Deterministic Factor and Score Attribution
+
+- **Scope**: Explicit decomposition of strategy/security scores into verifiable components
+  (momentum, quality, value, liquidity/flow, sector/context effects, idiosyncratic contribution).
+- **Invariants**: No post-hoc black-box explanations. Attribution must be derived directly from
+  the same deterministic inputs and weights that produced the score.
+
+### P3 — Portfolio Risk Budgeting & Position Sizing
+
+- **Candidate Methods**: Deterministic risk budgets, volatility sizing, ATR/range-based sizing
+  where qualified, and VaR/CVaR when return-distribution requirements are satisfied.
+- **Kelly Sizing Boundary**: Kelly sizing from assumed, LLM-generated, or uncalibrated
+  probabilities is strictly forbidden. Kelly may only become eligible when probability/distribution
+  estimates are empirically calibrated and validated out-of-sample under authoritative backtest
+  semantics.
+
+### P1 / Dashboard — Research Evidence Packet Consumption
+
+- **Architecture**: Dashboard evolution should consume immutable, deterministic Research
+  Evidence Packets and release contracts rather than recreate analytical truth from ad-hoc
+  SQLite/CSV/JS exports. Do not schedule a dashboard rewrite ahead of upstream feature/dataset
+  authority.
+
+### Cross-Cutting Invariants (Operational Requirements, Not Milestones)
+
+- **Restartability / Checkpointing**: Future ingestion and materialization pipelines must remain
+  resumable, idempotent, checkpointed, and manifest/reconciliation based. This is an existing
+  engineering invariant, not a missing milestone.
+- **Isolated / Shadow Execution**: New pipelines, candidate features, and materializations must
+  continue to use isolated worktrees, shadow outputs, and explicit promotion reviews without
+  production authority by side effect. This is standard operating doctrine, not a missing milestone.
+
+### Daily Screener Policy
+
+- **`SHADOW_RESEARCH_SCREENER`**: Permissible as research-only when provenance is explicit,
+  UNKNOWN/BLOCKED semantics remain visible, and no output is represented as authoritative or
+  actionable.
+- **`AUTHORITATIVE_LIVE_ANALYSIS`**: Remains blocked until required P0 price basis, volume/liquidity
+  basis, and universe authorities are fully qualified.
+
 ## Governing decisions for this phase
 
 - [ADR-20260811 — Market-wide ingest-first feature-store architecture](adr/ADR-20260811-market-wide-ingest-first-feature-store.md)

@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-08-17 - Future roadmap capability enrichment & gap reconciliation policy
+
+`FUTURE_ROADMAP_CAPABILITY_ENRICHMENT_V1`. Documentation and policy synchronization only.
+No code modified, no runtime execution, no data or implementation authority promoted.
+
+**Durable policy decisions established:**
+1. **P0 Critical Path Unchanged**: Proposed analytical and foundation capabilities (multi-period fundamentals, sector normalization, market breadth, DCF/intrinsic valuation, portfolio sizing) do not alter the active critical path (`P0-A.3B` architecture review → bounded P0-A.3 implementation/validation → `P0-A.4`/`P0-B` → `P0-C.3`).
+2. **Future Capability Placement without Premature Numbering**: Downstream capability requirements are recorded in `docs/ROADMAP.md` under `## Future capability placement` with sub-milestone numbering intentionally TBD until their respective phases are authoritatively opened.
+3. **Sector-Conforming Valuation (Rejection of Universal DCF)**: A generic, universal DCF model applied across all market sectors is rejected. Future candidate model families remain subject to later qualification and sector/applicability contracts (e.g. non-financial corporate FCFF/FCFE/DCF; banking P/B–ROE / residual income / excess returns; securities fee/asset-based contracts).
+4. **Rejection of Uncalibrated Kelly Sizing**: Kelly sizing from assumed, LLM-generated, or uncalibrated probabilities is rejected. Sizing defaults to deterministic risk budgets and volatility/ATR parity; Kelly is eligible only when backed by empirical, out-of-sample calibrated distributions under qualified P3 backtests.
+5. **Cross-Cutting Invariants vs Milestones**: Resumable checkpointing/manifests and isolated shadow execution/worktrees are reinforced as mandatory engineering invariants, not missing roadmap milestones.
+6. **Screener Authority Distinction**: `SHADOW_RESEARCH_SCREENER` (research-only, non-authoritative, explicit UNKNOWN/BLOCKED visibility) is distinguished from `AUTHORITATIVE_LIVE_ANALYSIS` (remains blocked until P0 price, volume, and universe authorities are fully qualified).
+
 ## 2026-08-17 - P0-A.3A PIT price reconstruction contract integrated to local main (P0-A.3 IN PROGRESS)
 
 `P0-A.3A_PIT_PRICE_RECONSTRUCTION_CONTRACT_V1`. Integrated into local `stock-core-private`
