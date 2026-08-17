@@ -116,21 +116,27 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`P0-C.1_P0-C.2_CANONICAL_UNIVERSE_FOUNDATION_IMPLEMENTED` (supersedes
-`P0-C.1_P0-C.2_CANONICAL_UNIVERSE_REVIEW_FOR_PROMOTION`, which is closed — see
-`## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION` below). Foundation only: local worktree/branch,
-not merged to main, `ACTIVE_UNIVERSE` NOT qualified for any instrument. Read that section in full
-for exact scope and remaining blockers before scheduling further work.
+`P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1` is now **closed** (security-group ~99.6%
+qualified; exchange and listing/active status investigated and found genuinely unqualified — see
+`## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`). **No scoped next gate exists for the two
+remaining blockers** (exchange-label mapping, listing/active-status evidence): exchange has no
+path forward absent real DNSE documentation this workspace does not have; listing-status has
+candidate fields but needs a new, separately-scoped, owner-authorized evidence-sourcing decision
+before any milestone against it can be defined. Per standing governance
+(`## PROGRAM PRIORITY ORDER`), the pre-existing chain (`P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B`/`P0-C.3`)
+remains available as a parallel lane, but nothing here authorizes starting it automatically.
 
 ## EXACT NEXT BOUNDED ACTION
 
 The `P0-C.1`/`P0-C.2` review-for-promotion gate is closed: the reviewed prior art (`b4e3c71`,
-`3d9a2ab`) was promoted with its required bounded patch on branch
-`feature/canonical-universe-foundation-promotion-v1` (local commit only, not merged to main) — see
-`## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`. This closes the P0-C.1/C.2 review gate only. It
-does not itself authorize P0-A.2/A.3/A.4, P0-B, P0-C.3, a main-branch merge, or
-`HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` — each still requires its own gate check and owner
-authorization. See `## CRITICAL PATH`.
+`3d9a2ab`) was promoted with its required bounded patch and is now on local main (commit
+`5ea3b6a85f734bc299c64464bf4d8452881c9116`, integrated via fast-forward, not pushed) — see
+`## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`. The `P0-C_UNIVERSE_SEMANTIC_EVIDENCE_
+QUALIFICATION_V1` milestone subsequently qualified security-group classification for ~99.6% of
+the 1,590 `UNKNOWN_SECURITY_GROUP` population; exchange and listing/active-status semantics remain
+unqualified — see `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`. Neither closes P0-A.2/A.3/
+A.4, P0-B, P0-C.3, a push to `origin`, or `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` — each still
+requires its own gate check and owner authorization. See `## CRITICAL PATH`.
 
 ## ACTIVE RUNTIME LANES
 
@@ -205,7 +211,7 @@ cherry-pick, or extension. Full rationale: `docs/DECISIONS.md` (2026-08-17 entry
 | Branch family | Disposition | Roadmap relevance |
 | --- | --- | --- |
 | Corporate-action foundation (`1183c72`→`d7b9bf3`) | `PRIOR_ART_REVIEWABLE` / `REVIEW_FOR_PROMOTION` | P0-A.2 |
-| Canonical instrument-master / universe-tiers (`b4e3c71`, `3d9a2ab`) | `PROMOTED_WITH_BOUNDED_PATCH` — foundation implemented on `feature/canonical-universe-foundation-promotion-v1`, local commit only, not merged to main | P0-C.1 / P0-C.2 |
+| Canonical instrument-master / universe-tiers (`b4e3c71`, `3d9a2ab`) | `PROMOTED_WITH_BOUNDED_PATCH` — foundation integrated to local main (commit `5ea3b6a85f734bc299c64464bf4d8452881c9116`, fast-forward, not pushed); security-group semantics subsequently qualified for ~99.6% of `UNKNOWN_SECURITY_GROUP` | P0-C.1 / P0-C.2 |
 | Volume / turnover chain (`c05bec0`→`4480c3b`→`0d19e07`) | `HOLD_FOR_FUTURE_PHASE` | P0-B |
 | Research Evidence / informal "C3" chain (`01941ca`→`fc22e58`→`0fe604e`→`5487e5e`) | `HOLD_FOR_FUTURE_PHASE` | P1 / legacy "Research Evidence Layer" |
 | Pre-rebaseline OHLC/PIT stub chain (`504e718`, `cd05669`) | `SUPERSEDED` | — |
@@ -216,9 +222,11 @@ cherry-pick, or extension. Full rationale: `docs/DECISIONS.md` (2026-08-17 entry
 Prior art `b4e3c71`/`3d9a2ab` was reviewed (`P0C1_P0C2_READY_FOR_BOUNDED_PROMOTION_IMPLEMENTATION`)
 and then promoted with its required bounded patch, on a dedicated worktree/branch off this file's
 own prior HEAD `eebae8722793ee3a7c621d76c074af70492a1a12`: branch
-`feature/canonical-universe-foundation-promotion-v1`, worktree
-`worktrees/stock-core-canonical-universe-foundation-v1-20260817`. **Local commit only — not
-merged, not pushed, not deployed.** Sole writing agent: Claude Code.
+`feature/canonical-universe-foundation-promotion-v1`, commit
+`5ea3b6a85f734bc299c64464bf4d8452881c9116`. **This was subsequently integrated into local
+`stock-core-private` main via fast-forward** (independent read-only audit result
+`SAFE_TO_INTEGRATE_LOCALLY`) — `main` HEAD is `5ea3b6a85f734bc299c64464bf4d8452881c9116`. **Not
+pushed to `origin`, not deployed.** Sole writing agent: Claude Code.
 
 Ported: `canonical_instrument_reconciliation.py` (C.1), `canonical_universe_tiers.py` (C.2), both
 contract docs, both existing test suites (28 tests, all still passing unmodified). Bounded patches
@@ -282,6 +290,75 @@ has a scoped milestone yet; each needs its own owner-authorized evidence-sourcin
 do not treat this as authorization to source exchange-label or listing-status evidence without its
 own owner decision.
 
+## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION (2026-08-17)
+
+`P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1` investigated the two semantic dimensions
+blocking `ACTIVE_UNIVERSE` (exchange, listing/active status) plus a bounded, secondary
+`UNKNOWN_SECURITY_GROUP` inventory, using only already-retained first-party DNSE evidence — no
+live DNSE call this milestone. Per-dimension result:
+
+- **Exchange / market semantics: `UNKNOWN` (unqualified).** `marketId`/`productGrpId` were
+  re-examined across three separate retained DNSE endpoints (`/market/instruments`,
+  `/price/{symbol}/secdef`, `/market/trading-session` — the 2026-08-10 qualification pass,
+  `operations-review/dnse-market-data-qualification-20260810/probe_results.json`). Every endpoint
+  retains `marketId` as an opaque code (`STO`/`UPX`/`HCX`/`STX`/`DVX`) with no accompanying
+  human-readable label anywhere. No first-party DNSE documentation or SDK spec is retained
+  anywhere in this workspace. The only available corroboration remains 2-3 familiar tickers per
+  code (e.g. `STO`↔HPG/VNM, `UPX`↔QNS) — explicitly insufficient under this project's own doctrine
+  (a sample correlation is not a documented mapping; `DECISIONS.md`'s 2026-08-11 entry already
+  declined this exact inference). **No mapping implemented.** `exchange` stays
+  `provider_raw_only_mapping_unknown` for every marketId code, confirmed by direct test.
+- **Listing / active-status semantics: `UNKNOWN` (unqualified), candidate fields identified.**
+  `/price/{symbol}/secdef` (not currently integrated into any bulk pipeline) carries genuinely
+  promising per-symbol fields — `finalTradeDate`, `symbolAdminStatusCode`,
+  `symbolTradingMethodStatusCode`, `symbolTradingSanctionStatusCode`, `securityStatus` — but the
+  only retained evidence (HPG/VNM/QNS, 2026-08-10) shows all three in an identical
+  all-normal/all-null state (`symbolAdminStatusCode="NRM"`, `securityStatus="NO_HALT"`,
+  `finalTradeDate=null`), with **zero contrasting (suspended/delisted) example** to confirm what
+  those fields actually distinguish. A live probe was deliberately not attempted: no
+  reliably-evidenced delisted/suspended DNSE symbol exists in this workspace to test against, and
+  `security_definition` is a per-symbol endpoint — even a fully qualified semantic would still
+  need its own market-wide bulk-ingestion milestone (1,660 individual calls) before it could
+  populate `ACTIVE_UNIVERSE` at all, which is out of this milestone's bounded scope. **No mapping
+  implemented.** `listing_status` stays `UNKNOWN` for every instrument.
+- **`UNKNOWN_SECURITY_GROUP` (secondary, bounded inventory): `PARTIAL` — ~99.6% resolved.** The
+  1,590-record population partitions exhaustively by raw `securityGroupId`: `EW`=1,346,
+  `BS`=203, `EF`=21, `FU`=8, `MF`=6, and 6 with no code at all. Direct inspection of every
+  populated `name` field (not sampled) found unanimous first-party evidence for four codes —
+  `EW`→`WARRANT` (697/697 named records begin "Chứng quyền"), `BS`→`BOND` (~57/67 begin "Trái
+  phiếu", remainder consistent), `EF`→`ETF` (20/21 explicitly contain "ETF"), `FU`→`DERIVATIVE`
+  (8/8 begin "HĐTL", independently corroborated by `symbol_type_raw`) — plus all 6 no-code records
+  individually confirmed `→INDEX` ("Chỉ số ..." matching known index names exactly). **`MF` (6
+  records) was deliberately left `UNKNOWN`**: its own name evidence mixes a generic "Quỹ đầu tư"
+  phrase with "Quỹ ETF" phrasing for what should be one consistent class — evidence against
+  qualification, not for it. New module `dnse_security_group_semantics.py`
+  (`dnse_security_group_semantics/v1`) implements this as a strictly additive refinement,
+  never modifying `dnse_instrument_universe.py`'s own `"ST"`→`EQUITY` classification. See
+  `docs/dnse_security_group_semantics_contract.md` for the full evidence record.
+
+**Re-run against the same real 2026-08-12 snapshot** (`content_hash=965c4b30...`):
+
+| Tier | Before (foundation only) | After (semantic qualification) |
+| --- | --- | --- |
+| `MASTER_OBSERVED` | 3,250 total | 3,250 total (unchanged) |
+| `LISTED_EQUITY_CANDIDATE` | 1,660 INCLUDED / 1,590 UNKNOWN / 0 EXCLUDED / 0 NOT_APPLICABLE | 1,660 INCLUDED / 6 UNKNOWN / 1,578 EXCLUDED / 6 NOT_APPLICABLE |
+| `ACTIVE_UNIVERSE` | 0 INCLUDED / 3,250 UNKNOWN / 0 EXCLUDED / 0 NOT_APPLICABLE | 0 INCLUDED / 1,666 UNKNOWN / 1,578 EXCLUDED / 6 NOT_APPLICABLE |
+
+`ACTIVE_UNIVERSE.included` is unchanged at **0** — this is the correct, expected PASS condition,
+not a shortfall: security-group evidence says nothing about listing/active status, and correctly
+does not resolve it. The 1,660 `EQUITY`-classified instruments still show exactly
+`listing_status_unknown` in `ACTIVE_UNIVERSE`, byte-identical to before this milestone; only the
+population *below* `LISTED_EQUITY_CANDIDATE` changed (1,590 UNKNOWN narrowed to 1,578 EXCLUDED + 6
+NOT_APPLICABLE + 6 still-UNKNOWN). One qualified dimension did not fabricate another, confirmed by
+direct test (`test_qualified_instrument_class_never_fabricates_listing_status`).
+
+**Remaining blockers, explicit and still unscoped:** exchange-label mapping (no path forward
+without genuine DNSE documentation, which does not exist in this workspace); listing/active-status
+evidence (candidate fields identified at `/price/{symbol}/secdef`, but unconfirmed without a
+contrasting example, and would need its own market-wide bulk-ingestion milestone regardless); the
+6 `MF`-coded records. None has a scoped milestone. Do not start P0-A.2, P0-B, HPG work, or P1 as a
+consequence of this entry.
+
 ## BOUNDED ANALYSIS OUTPUT CANDIDATE
 
 A bounded, HPG-only research artifact appears possible today from already-qualified, current-
@@ -306,10 +383,11 @@ Updated ordered chain:
    (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`).
 2. P0-RECOVERY close. **Complete.**
 3. Establish/reconcile the canonical market-wide universe boundary: `P0-C.1` instrument-master
-   reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. **Foundation implemented** —
-   prior art (`b4e3c71`, `3d9a2ab`) promoted with its required bounded patch on a local
-   worktree/branch, not merged to main; `ACTIVE_UNIVERSE` not qualified for any instrument — see
-   `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION` for exact scope and remaining blockers.
+   reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. **Foundation integrated to
+   local main, security-group semantics qualified (~99.6%), exchange and listing/active status
+   investigated and found genuinely unqualified.** `ACTIVE_UNIVERSE` still not qualified for any
+   instrument — see `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION` and
+   `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION` for exact scope and remaining blockers.
 4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
    evidence scale-out, `P0-A.3` market-wide PIT price reconstruction, `P0-A.4` scoped price-basis
    promotion, `P0-B` qualified volume/liquidity/turnover basis.
@@ -324,9 +402,10 @@ PRIORITY ORDER`) once each is actually started. `HPG_BOUNDED_ANALYSIS_OUTPUT_VER
 withdrawn from this immediate chain — see `## BOUNDED ANALYSIS OUTPUT CANDIDATE`; it remains a
 documented future validation candidate, not the next milestone, and is not started now. Do not
 place P1 (including the Research Evidence Layer) or P3 ahead of this chain. Step 3 (P0-C.1/C.2
-foundation) is implemented but local-only; opening step 4 or beyond, merging step 3's branch to
-main, or sourcing new exchange-label/listing-status evidence, each requires its own explicit owner
-authorization — see `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`.
+foundation + semantic-evidence qualification) is complete on local main, not pushed; opening step 4
+or beyond, pushing to `origin`, or sourcing new exchange-label/listing-status evidence, each
+requires its own explicit owner authorization — see `## P0-C.1/P0-C.2 CANONICAL UNIVERSE
+FOUNDATION` and `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`.
 
 ## DO NOT DO
 
@@ -344,10 +423,15 @@ authorization — see `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`.
   implemented — P0-A.2 still requires its own separate gate check and owner authorization.
 - Do not treat `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` as the next milestone ahead of
   market-wide universe/data foundation (`P0-C.1`/`P0-C.2` review, `P0-A.2`-`P0-A.4`, `P0-B`).
-- Do not merge the `feature/canonical-universe-foundation-promotion-v1` branch to main, treat
-  `ACTIVE_UNIVERSE` as qualified for any instrument, or treat the 1,590 `UNKNOWN_SECURITY_GROUP`
-  population as resolved, merely because the P0-C.1/C.2 foundation is implemented — see
-  `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`.
+- Do not push local main to `origin`, treat `ACTIVE_UNIVERSE` as qualified for any instrument, or
+  treat exchange/listing-status as resolved, merely because P0-C.1/C.2 foundation and security-group
+  semantic qualification are both implemented — exchange and listing/active status were
+  specifically investigated and found genuinely unqualified, not merely unattempted. See
+  `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION` and
+  `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`.
+- Do not source new exchange-label or listing-status evidence (including a live DNSE probe) or
+  attempt to classify the remaining 6 `MF`-coded `UNKNOWN_SECURITY_GROUP` records without its own
+  explicit owner-authorized scope.
 
 ## MINIMUM REQUIRED READING FOR NEXT AGENT
 
@@ -362,7 +446,10 @@ authorization — see `## P0-C.1/P0-C.2 CANONICAL UNIVERSE FOUNDATION`.
    [`docs/DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition`](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition)
    (current priority order, prior-art disposition),
    [`docs/DECISIONS.md#2026-08-17---p0-c1-and-p0-c2-canonical-universe-foundation-implemented-local-worktree-only`](DECISIONS.md#2026-08-17---p0-c1-and-p0-c2-canonical-universe-foundation-implemented-local-worktree-only)
-   (P0-C.1/P0-C.2 foundation implemented, verified reconciliation, remaining blockers), and
+   (P0-C.1/P0-C.2 foundation implemented, verified reconciliation, remaining blockers),
+   [`docs/DECISIONS.md#2026-08-17---p0-c-universe-semantic-evidence-qualification`](DECISIONS.md#2026-08-17---p0-c-universe-semantic-evidence-qualification)
+   (security-group ~99.6% resolved; exchange and listing status investigated and found
+   unqualified), and
    [`docs/DECISIONS.md#2026-08-12---one-time-governance-rebaseline`](DECISIONS.md#2026-08-12---one-time-governance-rebaseline)
    (retained technical facts).
 4. Directly relevant raw-lake contracts, collector code, tests, manifests, and checkpoints for

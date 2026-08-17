@@ -88,6 +88,18 @@ class CanonicalInstrumentReconciliationTests(unittest.TestCase):
         self.assertIsNone(exchange["normalized_value"])
         self.assertEqual("provider_raw_only_mapping_unknown", exchange["semantic_status"])
 
+    def test_no_marketid_exchange_mapping_after_2026_08_17_semantic_qualification(self):
+        # The P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1 milestone investigated exchange
+        # semantics and explicitly found no first-party documentation or explicit semantic field
+        # for any of STO/UPX/HCX/STX/DVX beyond ticker correlation, which this project's own
+        # evidence doctrine does not accept -- every observed marketId code stays raw-only-unknown,
+        # not just STO. This is a deliberate, investigated result, not an oversight.
+        for market_id in ("STO", "UPX", "HCX", "STX", "DVX"):
+            result = reconciliation.reconcile({"DNSE": [dnse("X", exchange_raw=market_id)], "VCI": []})
+            exchange = next(row for row in result["canonical_instrument_field_observations"] if row["field"] == "exchange")
+            self.assertIsNone(exchange["normalized_value"], f"marketId={market_id} must not be mapped")
+            self.assertEqual("provider_raw_only_mapping_unknown", exchange["semantic_status"])
+
     def test_company_profile_instrument_class_uses_nested_qualified_fields(self):
         result = reconciliation.reconcile({"COMPANY_PROFILE": [company_profile("HPG")]})
         observed = next(row for row in result["canonical_instrument_field_observations"] if row["field"] == "instrument_class")

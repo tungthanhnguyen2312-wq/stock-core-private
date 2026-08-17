@@ -40,13 +40,22 @@ these five strings; the mapping exists so the reason vocabulary is ready the day
 class string outside this table, the equity/unknown buckets, and the index/synthetic bucket below
 still fails closed to the generic `instrument_type_not_equity`.
 
-`INDEX`/`SYNTHETIC`/`INDEX_OR_SYNTHETIC` inputs are `NOT_APPLICABLE/index_or_synthetic_reserved_unqualified`
-for the equity-candidate tier, with `quality_status = "unqualified"` (never `provider_reported`).
-**This branch is reserved/future-only, not a proven classification**: no current classifier
-authority (`dnse_instrument_universe.INSTRUMENT_CLASSES`) has ever emitted any of these three
-values -- the real production classifier's only confirmed mapping is `securityGroupId="ST"`
--> `EQUITY`. Do not read this branch's presence as evidence that index instruments are
-distinguished from `UNKNOWN_SECURITY_GROUP` today; they are not.
+`INDEX`/`SYNTHETIC`/`INDEX_OR_SYNTHETIC` inputs are all `NOT_APPLICABLE` for the equity-candidate
+tier, but the two families are evidenced differently and get distinct reason codes as of the
+2026-08-17 semantic-evidence qualification:
+
+- **`INDEX`** -> `NOT_APPLICABLE/index_confirmed_not_applicable`, `quality_status =
+  "provider_reported"`. Evidenced: `dnse_security_group_semantics.py` only ever emits literal
+  `INDEX` for a no-`securityGroupId` record whose own `name` field was individually confirmed to
+  start with the Vietnamese word for "index" (`"Chỉ số"`) against known market index names — see
+  `docs/dnse_security_group_semantics_contract.md`. This is a real classification, not a
+  placeholder.
+- **`SYNTHETIC`/`INDEX_OR_SYNTHETIC`** -> `NOT_APPLICABLE/index_or_synthetic_reserved_unqualified`,
+  `quality_status = "unqualified"` (never `provider_reported`). **Still reserved/future-only, not a
+  proven classification**: no current classifier authority
+  (`dnse_instrument_universe.INSTRUMENT_CLASSES`, nor `dnse_security_group_semantics.py`) has ever
+  emitted either of these two specific values. Do not read this branch's presence as evidence that
+  a synthetic instrument class is distinguished from `UNKNOWN_SECURITY_GROUP` today; it is not.
 
 **`ACTIVE_UNIVERSE` -- and every tier downstream of it (`FRESH_DATA_UNIVERSE`,
 `FEATURE_QUALIFIED_UNIVERSE`, `STRATEGY_ELIGIBLE_UNIVERSE`, `RESEARCH_QUALIFIED_UNIVERSE`) --

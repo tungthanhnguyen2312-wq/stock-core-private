@@ -16,6 +16,15 @@ NEVER calls ``dnse_instrument_universe.discover_universe()`` or any other live p
 Reads only an already-retained snapshot Parquet and its already-retained manifest JSON, both
 already written earlier by ``tools/discover_market_universe.py``.
 
+Since the 2026-08-17 semantic-evidence qualification, every DNSE record read from the snapshot is
+also passed through ``dnse_security_group_semantics.refine_records()`` before C.1 reconciliation --
+a deterministic, evidence-scoped narrowing of ``UNKNOWN_SECURITY_GROUP`` into ``WARRANT``/``BOND``/
+``ETF``/``DERIVATIVE``/``INDEX`` where (and only where) direct first-party evidence supports it (see
+``docs/dnse_security_group_semantics_contract.md``); this adapter does not call C.1's file-based
+``build_from_retained_files`` convenience wrapper for that reason, since it offers no hook to
+transform records between reading the Parquet and reconciling -- it reads the Parquet directly,
+refines, then calls C.1's pure ``reconcile()``/``write_artifact()`` primitives itself.
+
 Neither ``3,250``, ``1,660``, nor ``1,590`` is hardcoded anywhere in this module: every count in the
 output summary is read back from the C.2 artifact this run itself produced from whatever snapshot
 it was given. They are architecture-independent facts about one specific retained snapshot, not a
@@ -39,6 +48,7 @@ if str(ROOT) not in sys.path:
 from atomic_io import atomic_write_json  # noqa: E402
 import canonical_instrument_reconciliation as c1  # noqa: E402
 import canonical_universe_tiers as c2  # noqa: E402
+import dnse_security_group_semantics as security_group_semantics  # noqa: E402
 
 SCHEMA_VERSION = "1.0.0"
 STORE_RELATIVE = Path("data") / "canonical_universe_retained_snapshot_integration" / "runs"
@@ -110,6 +120,14 @@ def bind_snapshot_provenance(snapshot_path: Path, manifest_path: Path) -> dict[s
     }
 
 
+def _records_from_snapshot_parquet(snapshot_path: Path) -> list[dict[str, Any]]:
+    """Read one retained dnse_instrument_universe.build_snapshot_frame()-shaped Parquet snapshot
+    into plain records -- the same read C.1's own Parquet path performs internally, duplicated
+    here (not imported from C.1) so this adapter can refine records before reconciliation."""
+    frame = pd.read_parquet(snapshot_path)
+    return list(frame.where(pd.notna(frame), None).to_dict(orient="records"))
+
+
 def _tier_snapshot(c2_result: Mapping[str, Any], tier: str) -> Mapping[str, Any]:
     return next(item for item in c2_result["snapshots"] if item["universe_tier"] == tier and item["tier_scope"] is None)
 
@@ -136,9 +154,15 @@ def build_from_retained_snapshot(
     manifest_path = Path(dnse_universe_manifest)
     provenance = bind_snapshot_provenance(snapshot_path, manifest_path)
 
-    c1_built = c1.build_from_retained_files(dnse_input=snapshot_path, output_root=output_root)
+    raw_records = _records_from_snapshot_parquet(snapshot_path)
+    refined_records = security_group_semantics.refine_records(raw_records)
+    before_summary = security_group_semantics.refinement_summary(raw_records)
+    after_summary = security_group_semantics.refinement_summary(refined_records)
+
+    c1_result = c1.reconcile({"DNSE": refined_records})
+    c1_artifact = c1.write_artifact(output_root, c1_result)
     c2_built = c2.build_from_explicit_artifacts(
-        c1_artifact_path=Path(c1_built["artifact"]["path"]), output_root=output_root,
+        c1_artifact_path=Path(c1_artifact["path"]), output_root=output_root,
         as_of_session=as_of_session, generated_at=generated_at,
     )
     c2_result = c2_built["result"]
@@ -147,9 +171,14 @@ def build_from_retained_snapshot(
         "schema_version": SCHEMA_VERSION,
         "artifact_kind": "canonical_universe_retained_snapshot_integration",
         "source_snapshot_provenance": provenance,
-        "c1_artifact_id": c1_built["result"]["artifact_id"],
-        "c1_content_hash": c1_built["result"]["content_hash"],
-        "c1_artifact_path": c1_built["artifact"]["path"],
+        "security_group_refinement": {
+            "rule_version": security_group_semantics.RULE_VERSION,
+            "instrument_class_before": before_summary,
+            "instrument_class_after": after_summary,
+        },
+        "c1_artifact_id": c1_result["artifact_id"],
+        "c1_content_hash": c1_result["content_hash"],
+        "c1_artifact_path": c1_artifact["path"],
         "c2_artifact_id": c2_result["artifact_id"],
         "c2_content_hash": c2_result["content_hash"],
         "c2_artifact_path": c2_built["artifact"]["path"],
@@ -165,7 +194,7 @@ def build_from_retained_snapshot(
     result = {**payload, "content_hash": content_hash,
              "artifact_id": f"canonical-universe-retained-snapshot-integration:{content_hash}"}
     return {"result": result, "artifact": write_integration_summary(output_root, result),
-           "c1": c1_built, "c2": c2_built}
+           "c1": {"result": c1_result, "artifact": c1_artifact}, "c2": c2_built}
 
 
 def artifact_path(output_root: Path | str, content_hash: str) -> Path:

@@ -47,8 +47,11 @@ def _write_snapshot(tmp: Path, raw_records: list[dict], *, retrieved_at: str = "
 
 class BuildCanonicalUniverseFromRetainedSnapshotTests(unittest.TestCase):
     def test_end_to_end_reproduces_exact_split_for_this_snapshot(self):
+        # "XX"/"ZZ" are deliberately unevidenced codes -- as of the 2026-08-17 semantic
+        # qualification, "FU" is a real, evidenced code (DERIVATIVE; see
+        # dnse_security_group_semantics.py) and would no longer stay UNKNOWN here.
         raw = [_raw_instrument("EQ1", "ST"), _raw_instrument("EQ2", "ST"), _raw_instrument("EQ3", "ST"),
-               _raw_instrument("UNK1", "XX"), _raw_instrument("UNK2", "FU")]
+               _raw_instrument("UNK1", "XX"), _raw_instrument("UNK2", "ZZ")]
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             snapshot_path, manifest_path, _ = _write_snapshot(root, raw)
@@ -188,7 +191,12 @@ REAL_RETAINED_MANIFEST = REAL_RETAINED_SNAPSHOT.with_suffix("").with_suffix(".ma
 
 
 class RealRetainedSnapshotReconciliationTest(unittest.TestCase):
-    def test_3250_denominator_and_1660_1590_split_for_the_reviewed_snapshot(self):
+    def test_3250_denominator_and_security_group_qualified_split_for_the_reviewed_snapshot(self):
+        # As of the 2026-08-17 semantic-evidence qualification, security-group refinement narrows
+        # 1,584 of the 1,590 UNKNOWN_SECURITY_GROUP records (99.6%) into WARRANT/BOND/ETF/
+        # DERIVATIVE/INDEX; only the 6 MF-coded records stay genuinely UNKNOWN. Exchange and
+        # listing-status remain unqualified regardless, so ACTIVE_UNIVERSE still legitimately
+        # stays 0 INCLUDED -- qualifying one dimension must never fabricate another.
         if not (REAL_RETAINED_SNAPSHOT.is_file() and REAL_RETAINED_MANIFEST.is_file()):
             self.skipTest(f"real retained snapshot not present on this machine: {REAL_RETAINED_SNAPSHOT}")
         with tempfile.TemporaryDirectory() as tmp:
@@ -196,15 +204,29 @@ class RealRetainedSnapshotReconciliationTest(unittest.TestCase):
                 dnse_universe_snapshot=REAL_RETAINED_SNAPSHOT, dnse_universe_manifest=REAL_RETAINED_MANIFEST,
                 output_root=Path(tmp), as_of_session="2026-08-12", generated_at="2026-08-17T13:00:00+07:00",
             )
+            refinement = built["result"]["security_group_refinement"]
+            self.assertEqual({"EQUITY": 1660, "UNKNOWN_SECURITY_GROUP": 1590}, refinement["instrument_class_before"])
+            self.assertEqual(
+                {"BOND": 203, "DERIVATIVE": 8, "EQUITY": 1660, "ETF": 21, "INDEX": 6,
+                 "UNKNOWN_SECURITY_GROUP": 6, "WARRANT": 1346},
+                refinement["instrument_class_after"],
+            )
+
             summary = built["result"]["reconciliation_summary"]
             self.assertEqual(3250, summary["master_observed"]["total"])
             self.assertEqual(
-                {"included": 1660, "excluded": 0, "unknown": 1590, "not_applicable": 0, "total": 3250,
-                 "excluded_by_reason": {}, "unknown_by_reason": {"instrument_type_unknown": 1590}},
+                {"included": 1660, "excluded": 1578, "unknown": 6, "not_applicable": 6, "total": 3250,
+                 "excluded_by_reason": {"instrument_type_bond": 203, "instrument_type_derivative": 8,
+                                        "instrument_type_etf": 21, "instrument_type_warrant": 1346},
+                 "unknown_by_reason": {"instrument_type_unknown": 6}},
                 summary["listed_equity_candidate"],
             )
+            # ACTIVE_UNIVERSE: still fail-closed for every instrument -- security-group evidence
+            # does not and must not resolve listing-status/exchange evidence it says nothing about.
             self.assertEqual(0, summary["active_universe"]["included"])
-            self.assertEqual(3250, summary["active_universe"]["unknown"])
+            self.assertEqual(1578, summary["active_universe"]["excluded"])  # inherited from LISTED_EQUITY_CANDIDATE
+            self.assertEqual(1666, summary["active_universe"]["unknown"])  # 1,660 listing_status_unknown + 6 instrument_type_unknown
+            self.assertEqual(6, summary["active_universe"]["not_applicable"])  # inherited INDEX
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ REASON_REGISTRY = frozenset({
     "observed_in_c1", "instrument_type_equity", "instrument_type_unknown",
     "instrument_type_not_equity", "instrument_type_etf", "instrument_type_warrant",
     "instrument_type_right", "instrument_type_bond", "instrument_type_derivative",
-    "index_or_synthetic_reserved_unqualified", "listing_status_unknown",
+    "index_confirmed_not_applicable", "index_or_synthetic_reserved_unqualified", "listing_status_unknown",
     "listing_inactive_or_delisted", "listing_exchange_not_active", "exchange_unknown",
     "exchange_not_eligible", "missing_price", "stale_price", "price_basis_unqualified",
     "volume_basis_unqualified", "feature_missing", "feature_unqualified",
@@ -177,11 +177,18 @@ def _listed_equity(candidate: Mapping[str, Any]) -> dict[str, Any]:
         return _membership(candidate, LISTED_EQUITY_CANDIDATE, INCLUDED, "instrument_type_equity", quality_status="provider_reported")
     if instrument_class in {None, "UNKNOWN", "UNKNOWN_SECURITY_GROUP"}:
         return _membership(candidate, LISTED_EQUITY_CANDIDATE, UNKNOWN, "instrument_type_unknown")
-    if instrument_class in {"INDEX", "SYNTHETIC", "INDEX_OR_SYNTHETIC"}:
-        # Reserved/future-only: no current classifier authority (dnse_instrument_universe.
-        # INSTRUMENT_CLASSES) has ever emitted any of these values, so this branch is not a proven
-        # mapping -- quality_status stays the "unqualified" default rather than claiming
-        # provider_reported for a classification no provider has actually reported.
+    if instrument_class == "INDEX":
+        # Evidenced (2026-08-17 semantic qualification, dnse_security_group_semantics.py): every
+        # no-securityGroupId record whose own name field starts "Chi so" (index) was individually
+        # confirmed against known Vietnamese market index names -- a real classification, not a
+        # placeholder, so this gets the same quality_status as instrument_type_equity.
+        return _membership(candidate, LISTED_EQUITY_CANDIDATE, NOT_APPLICABLE, "index_confirmed_not_applicable",
+                           quality_status="provider_reported")
+    if instrument_class in {"SYNTHETIC", "INDEX_OR_SYNTHETIC"}:
+        # Still reserved/future-only: no current classifier authority has ever emitted either of
+        # these two values, so this branch remains an unproven mapping -- quality_status stays the
+        # "unqualified" default rather than claiming provider_reported for a classification no
+        # provider has actually reported.
         return _membership(candidate, LISTED_EQUITY_CANDIDATE, NOT_APPLICABLE, "index_or_synthetic_reserved_unqualified")
     reason_code = NON_EQUITY_CLASS_REASONS.get(instrument_class, "instrument_type_not_equity")
     return _membership(candidate, LISTED_EQUITY_CANDIDATE, EXCLUDED, reason_code, quality_status="provider_reported")

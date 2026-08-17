@@ -1,5 +1,70 @@
 # Decisions
 
+## 2026-08-17 - P0-C universe semantic evidence qualification
+
+`P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1`. Precondition: the entry below
+("P0-C.1 and P0-C.2 canonical universe foundation implemented, local worktree only") was itself
+integrated into local `stock-core-private` main via fast-forward (independent read-only audit
+`SAFE_TO_INTEGRATE_LOCALLY`) before this milestone started; `main` HEAD was
+`5ea3b6a85f734bc299c64464bf4d8452881c9116` at this milestone's start, still not pushed to `origin`.
+Its own "local commit only, not merged to main" wording in `STATE.md`/`ROADMAP.md` was corrected as
+part of this milestone's state-sync precondition, not rewritten here. Sole writing agent: Claude
+Code, on branch `feature/canonical-universe-semantic-qualification-v1`. No live DNSE call.
+
+**Exchange/market semantics: investigated, `UNKNOWN` (unqualified).** Re-examined `marketId`/
+`productGrpId` across three retained DNSE endpoints beyond `/market/instruments`:
+`/price/{symbol}/secdef` and `/market/trading-session` (both already retained from the 2026-08-10
+qualification pass, `operations-review/dnse-market-data-qualification-20260810/probe_results.json`
+— no new fetch). All three retain `marketId` as an opaque code with no human-readable label
+anywhere; no first-party DNSE documentation or SDK spec exists in this workspace. Corroboration
+remains 2-3 familiar tickers per code, which this project's own doctrine already treats as
+insufficient (see the 2026-08-11 entry below). No mapping implemented.
+
+**Listing/active-status semantics: investigated, `UNKNOWN` (unqualified), candidate fields found.**
+`/price/{symbol}/secdef`'s already-retained HPG/VNM/QNS responses carry `finalTradeDate`,
+`symbolAdminStatusCode`, `symbolTradingMethodStatusCode`, `symbolTradingSanctionStatusCode`, and
+`securityStatus` — genuinely promising fields by name, but all three retained examples show an
+identical all-normal state with zero contrasting (suspended/delisted) example to confirm what they
+distinguish. No live probe was attempted: no reliably-evidenced delisted/suspended DNSE symbol
+exists in this workspace, and `security_definition` is per-symbol, so even a confirmed semantic
+would still need its own market-wide bulk-ingestion milestone (1,660 calls) before it could
+populate `ACTIVE_UNIVERSE` — out of this milestone's bounded scope regardless. No mapping
+implemented; `listing_status` stays `UNKNOWN`.
+
+**`UNKNOWN_SECURITY_GROUP` (secondary, bounded): `PARTIAL`, ~99.6% resolved.** The 1,590-record
+population partitions exhaustively by raw `securityGroupId` (`EW`=1,346, `BS`=203, `EF`=21, `FU`=8,
+`MF`=6, no-code=6). Every populated `name` field (not a sample) was inspected: `EW`→`WARRANT`
+(697/697 unanimous, "Chứng quyền"), `BS`→`BOND` (~57/67 explicit "Trái phiếu", remainder
+consistent), `EF`→`ETF` (20/21 explicit "ETF"), `FU`→`DERIVATIVE` (8/8 "HĐTL", corroborated by
+`symbol_type_raw`), no-code→`INDEX` (6/6 individually confirmed "Chỉ số ..."). `MF` (6 records) was
+deliberately left `UNKNOWN` — its own evidence mixes generic "Quỹ đầu tư" with "Quỹ ETF" phrasing,
+evidence against folding it into `ETF`. New module `dnse_security_group_semantics.py`
+(`dnse_security_group_semantics/v1`) implements this as a strictly additive refinement; never
+modifies `dnse_instrument_universe.py`'s own `"ST"`→`EQUITY` classification, which uses the same
+generalize-from-named-sample method this new mapping reuses, not a looser one.
+
+**`canonical_universe_tiers.py` updated only where necessary to consume this**: `INDEX` now gets
+its own reason code (`index_confirmed_not_applicable`, `quality_status="provider_reported"`),
+split from `SYNTHETIC`/`INDEX_OR_SYNTHETIC` (still `index_or_synthetic_reserved_unqualified`,
+still genuinely unevidenced). Tier DAG unchanged.
+
+**Real 2026-08-12 snapshot re-run** (same snapshot as the entry below, `content_hash=965c4b30...`):
+`MASTER_OBSERVED` unchanged at 3,250. `LISTED_EQUITY_CANDIDATE`: 1,660 INCLUDED (unchanged) / 1,590
+UNKNOWN → now 6 UNKNOWN + 1,578 EXCLUDED (`instrument_type_warrant`=1,346,
+`instrument_type_bond`=203, `instrument_type_etf`=21, `instrument_type_derivative`=8) + 6
+NOT_APPLICABLE (`index_confirmed_not_applicable`). `ACTIVE_UNIVERSE.included` **unchanged at 0** —
+the correct, expected result: security-group evidence says nothing about listing/active status and
+correctly does not resolve it; the 1,660 `EQUITY` instruments still show exactly
+`listing_status_unknown`, byte-identical to before. Confirmed by a direct new test
+(`test_qualified_instrument_class_never_fabricates_listing_status`), not just by the aggregate
+counts. 60 tests pass (43 existing + 17 new); `py_compile` and `git diff --check` clean.
+
+**Does not establish:** any exchange or listing-status authority; the 6 `MF` records' classification;
+any P0-A/P0-B status change; a push to `origin`. **No scoped next gate exists** for the remaining
+exchange/listing-status blockers — each needs its own owner-authorized evidence-sourcing decision.
+The pre-existing `P0-A.2`/`P0-B`/`P0-C.3` chain remains available by standing governance but is not
+started by this entry.
+
 ## 2026-08-17 - P0-C.1 and P0-C.2 canonical universe foundation implemented, local worktree only
 
 Executed the `P0-C.1_P0-C.2_CANONICAL_UNIVERSE_REVIEW_FOR_PROMOTION` gate recorded in the

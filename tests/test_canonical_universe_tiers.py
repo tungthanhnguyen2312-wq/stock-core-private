@@ -66,6 +66,34 @@ class CanonicalUniverseTierTests(unittest.TestCase):
         self.assertEqual(tiers.NOT_APPLICABLE, states["candidate:INDEX"])
         self.assertNotIn(tiers.EXCLUDED, states.values())
 
+    def test_index_is_evidenced_but_synthetic_stays_reserved(self):
+        # 2026-08-17 semantic qualification: literal INDEX is now backed by direct per-record
+        # name-field evidence (dnse_security_group_semantics.py), so it gets a distinct reason
+        # code and provider_reported quality -- but SYNTHETIC/INDEX_OR_SYNTHETIC remain reserved,
+        # since nothing has ever evidenced those two specifically.
+        artifact = built(candidate("IDX", "INDEX"), candidate("SYN", "SYNTHETIC"))
+        rows = {row["instrument_candidate_id"]: row for row in snapshot(artifact, tiers.LISTED_EQUITY_CANDIDATE)["memberships"]}
+        self.assertEqual((tiers.NOT_APPLICABLE, "index_confirmed_not_applicable", "provider_reported"),
+                         (rows["candidate:IDX"]["state"], rows["candidate:IDX"]["reason_code"], rows["candidate:IDX"]["quality_status"]))
+        self.assertEqual((tiers.NOT_APPLICABLE, "index_or_synthetic_reserved_unqualified", "unqualified"),
+                         (rows["candidate:SYN"]["state"], rows["candidate:SYN"]["reason_code"], rows["candidate:SYN"]["quality_status"]))
+
+    def test_qualified_instrument_class_never_fabricates_listing_status(self):
+        # 2026-08-17 semantic qualification: instrument_class can now be confidently WARRANT/BOND/
+        # ETF/DERIVATIVE/INDEX for real DNSE records -- but that evidence says nothing about
+        # listing/active status, which must stay exactly as unresolved as it was before. Even a
+        # WARRANT candidate that happens to carry an ACTIVE listing_status and a real exchange
+        # (implausible for DNSE today, but tested for the invariant) is EXCLUDED at
+        # LISTED_EQUITY_CANDIDATE -- not_applicable/unknown does not leak between dimensions, and
+        # a non-equity class never reaches ACTIVE_UNIVERSE=INCLUDED regardless of listing evidence.
+        artifact = built(candidate("WAR1", "WARRANT", listing="ACTIVE", exchange="HOSE"))
+        listed = snapshot(artifact, tiers.LISTED_EQUITY_CANDIDATE)["memberships"][0]
+        active = snapshot(artifact, tiers.ACTIVE_UNIVERSE)["memberships"][0]
+        self.assertEqual((tiers.EXCLUDED, "instrument_type_warrant"), (listed["state"], listed["reason_code"]))
+        # ACTIVE_UNIVERSE inherits the EXCLUDED state/reason from its parent tier -- it does not
+        # independently re-evaluate listing_status for an already-excluded candidate.
+        self.assertEqual((tiers.EXCLUDED, "instrument_type_warrant"), (active["state"], active["reason_code"]))
+
     def test_explicit_non_equity_classes_get_class_specific_exclusion_reasons(self):
         # Aligned with dnse_instrument_universe.INSTRUMENT_CLASSES -- each known non-equity class
         # gets its own reason code instead of a single undifferentiated "not equity" bucket.
