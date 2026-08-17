@@ -19,9 +19,9 @@ Binding execution sequence:
 
 `P0-RECOVERY → P0-A → P0-B → P0-C → P1 → P2 → P3`
 
-- **P0-RECOVERY** — Task 160 Trades Stage-B recovery is closed
-  (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`); the remaining, still-open step is canonical Trades
-  materialization. Bounded; does not reopen general feature work.
+- **P0-RECOVERY** — **closed.** Task 160 Trades Stage-B and canonical Trades materialization are
+  both `TERMINAL_SUCCESS_QUALITY_RESTRICTED` — see `## ACTIVE RUNTIME LANES`. Bounded; did not
+  reopen general feature work.
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
   `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
   `A.2` corporate-action evidence scale-out (not started), `A.3` market-wide PIT price
@@ -116,41 +116,42 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`CANONICAL_TRADES_MATERIALIZATION` — now `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION` (see
-`## ACTIVE RUNTIME LANES`; supersedes `P0-A.1_TERMINAL_CLASSIFICATION`, which is complete). This
-is P0-RECOVERY's remaining step; P0-A.1 is closed and is not the active gate.
+`P0-C.1_P0-C.2_CANONICAL_UNIVERSE_REVIEW_FOR_PROMOTION` (P0-RECOVERY is closed — see
+`## ACTIVE RUNTIME LANES`; supersedes `CANONICAL_TRADES_MATERIALIZATION`, which is complete).
+Review only — this gate does not itself authorize promoting, merging, or implementing the
+existing `b4e3c71`/`3d9a2ab` prior art; see `## PRIOR-ART BRANCHES`.
 
 ## EXACT NEXT BOUNDED ACTION
 
-`WAIT_FOR_CANONICAL_TRADES_MATERIALIZATION_TERMINAL_STATE`. The canonical Trades materialization
-run (`trades-canonical-materialization-v1-20260817`, PID `7408`) is
-`ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION` — see `## ACTIVE RUNTIME LANES`. No polling loop, no
-automatic retry, and no P0-C implementation while this gate is open. On terminal state, validate
-SUCCESS or FAILED from the run's own output artifacts/process state (not inferred) before closing
-P0-RECOVERY. Do not start P0-A.2/A.3/A.4, P0-B, P0-C.1/C.2, or
-`HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` merely because this run is in progress or close to
-done — each requires its own gate check and, for P0-C.1/C.2 specifically, its own
-review-for-promotion decision only after P0-RECOVERY closes. See `## CRITICAL PATH`.
+Review the existing P0-C.1/P0-C.2 prior art (`b4e3c71` instrument-master, `3d9a2ab`
+universe-tier/exclusion-ledger — both currently `PRIOR_ART_REVIEWABLE`/`REVIEW_FOR_PROMOTION`) for
+promotion. This is a review decision, not authorization to implement P0-C or promote either branch
+in this pass. Do not start P0-A.2/A.3/A.4, P0-B, or `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION`
+merely because P0-RECOVERY is closed — each requires its own gate check. See `## CRITICAL PATH`.
 
 ## ACTIVE RUNTIME LANES
 
-One PowerShell-owned, human-launched runtime is currently active; two prior runtimes tracked here
-already reached terminal state on 2026-08-17 (historical, preserved below). None is
-Claude-Code-managed. A status below must not be trusted without checking it is still current if
-significant time has passed — do not inspect, poll, or interact with an active runtime directly.
+No runtime is currently active. Three PowerShell-owned, human-launched runtimes were tracked here;
+all three reached terminal state on 2026-08-17 (historical, preserved below), each independently
+verified read-only against its own output artifacts. None was Claude-Code-managed or re-launched.
+A status below must not be trusted without checking it is still current if significant time has
+passed.
 
-- **Canonical Trades materialization / P0-RECOVERY** —
-  `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`. Run ID `trades-canonical-materialization-v1-20260817`,
-  PID `7408`, process start `2026-08-17 11:47:23 +07:00`. Source worktree
-  `worktrees/stock-core-trades-canonical-shadow-v1-20260813`, source HEAD
-  `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02` (the validated Stage-B binding). Stage-B input
-  `operations-review/task-160-controlled-rerun-v1-20260817/composite/composite_cohort_manifest.json`.
-  Runtime root `operations-review/task-160-canonical-materialization-v1-20260817`; output shadow
-  root `<runtime-root>\shadow`. PowerShell/human-launched and controlled; PID verified alive
-  immediately after launch. `stdout`/`stderr` currently empty; `materialization_manifest.json` not
-  yet present — do not infer terminal success or failure from either fact alone. **No rerun/retry
-  is authorized while this runtime is active.** P0-RECOVERY remains open until this reaches a
-  terminal state and is validated from its own artifacts (see `## EXACT NEXT BOUNDED ACTION`).
+- **Canonical Trades materialization / P0-RECOVERY** — `TERMINAL_SUCCESS_QUALITY_RESTRICTED` (was
+  `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`; verified 2026-08-17 against
+  `materialization_manifest.json` — its stored aggregate matches an independent re-sum from its
+  own 40 per-session records exactly, and all 40 output Parquet files exist on disk with
+  byte-exact matching sizes). Run ID `trades-canonical-materialization-v1-20260817`, source HEAD
+  `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02`, `rerun_behavior: MATERIALIZED`. 18,109,141 source
+  records → 18,109,141 canonical rows (0 missing, 0 quarantined, 0 duplicate identities, 0
+  invalid prices/quantities, 0 timestamp violations, 0 null key fields); 40 output files,
+  823,751,112 bytes. The 27 Stage-B `REMAINING_FAILED` units remain structurally absent from this
+  output — they were never present in the selected raw files this step consumed, not filtered at
+  materialization time. One unknown board code retained across 38/40 sessions: `G3` — an
+  unresolved downstream semantic restriction, not to be guessed, and not a reason to rerun
+  materialization. `semantic_limitations: RAW_PRESERVING; DIRECTIONAL_SEMANTICS_NOT_CREATED;
+  SHADOW_ONLY` — shadow/raw-preserving canonical authority only, no directional (buy/sell/side)
+  semantics created. **P0-RECOVERY is closed.**
 - **Task 160 / P0-RECOVERY Stage-B** — `TERMINAL_SUCCESS_QUALITY_RESTRICTED` (was
   `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`; verified 2026-08-17 against
   `task160_run_status.json` and all four required Stage-B artifacts). Source HEAD
@@ -160,9 +161,8 @@ significant time has passed — do not inspect, poll, or interact with an active
   references reconcile across artifacts; zero duplicate logical-unit IDs. The 27 retained failures
   match the prior, already owner-accepted disposition — downstream progression is allowed with
   this explicit quality restriction; do not reopen targeted repair merely to chase the 27.
-  **Stage-B is closed.** P0-RECOVERY as a whole remains open pending
-  `CANONICAL_TRADES_MATERIALIZATION` (see `## NEXT GATE`) — do not treat P0-RECOVERY itself as
-  complete.
+  **Stage-B is closed.** Canonical Trades materialization (above) subsequently also closed
+  terminal-success — **P0-RECOVERY as a whole is now closed.**
 - **P0-A.1 diagnostic re-probe** — `P0_A1_COMPLETE` (was `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`;
   verified 2026-08-17 against the manifest, checkpoint, and coverage-report artifacts). Run ID
   `p0-a1-ohlc-v2-diagnostic-reprobe-20260817`, source HEAD
@@ -223,19 +223,19 @@ the current priority ahead of any single-ticker artifact.
 
 ## CRITICAL PATH
 
-Task 160 Stage-B and P0-A.1 are both closed (see `## ACTIVE RUNTIME LANES`). Current execution
-policy is **market-wide/full-universe data foundation first**, not single-ticker artifact
-expansion. Updated ordered chain:
+Task 160 Stage-B, P0-A.1, and canonical Trades materialization are all closed — P0-RECOVERY is
+closed (see `## ACTIVE RUNTIME LANES`). Current execution policy remains
+**market-wide/full-universe data foundation first**, not single-ticker artifact expansion.
+Updated ordered chain:
 
-1. `CANONICAL_TRADES_MATERIALIZATION` — closes P0-RECOVERY. `ACTIVE_RUNTIME_PENDING_TERMINAL_VALIDATION`
-   (PID `7408`, launched 2026-08-17 11:47:23 +07:00 by PowerShell/human; see
-   `## ACTIVE RUNTIME LANES`).
-2. P0-RECOVERY close.
+1. `CANONICAL_TRADES_MATERIALIZATION` — closes P0-RECOVERY. **Complete**
+   (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`).
+2. P0-RECOVERY close. **Complete.**
 3. Establish/reconcile the canonical market-wide universe boundary: `P0-C.1` instrument-master
-   reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. Reviewable prior art exists
-   (`b4e3c71`, `3d9a2ab`, both `PRIOR_ART_REVIEWABLE`/`REVIEW_FOR_PROMOTION` — see
-   `## PRIOR-ART BRANCHES`); this is the next bounded implementation decision after P0-RECOVERY
-   closes, not an authorization to promote it now.
+   reconciliation, `P0-C.2` universe-tier hierarchy/exclusion ledger. **Active gate** —
+   review-for-promotion of existing prior art (`b4e3c71`, `3d9a2ab`, both
+   `PRIOR_ART_REVIEWABLE`/`REVIEW_FOR_PROMOTION` — see `## PRIOR-ART BRANCHES`); review only, not
+   yet promoted or implemented.
 4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
    evidence scale-out, `P0-A.3` market-wide PIT price reconstruction, `P0-A.4` scoped price-basis
    promotion, `P0-B` qualified volume/liquidity/turnover basis.
@@ -249,8 +249,9 @@ This numbered sequence is current execution *focus*, not a rewritten dependency 
 PRIORITY ORDER`) once each is actually started. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` is
 withdrawn from this immediate chain — see `## BOUNDED ANALYSIS OUTPUT CANDIDATE`; it remains a
 documented future validation candidate, not the next milestone, and is not started now. Do not
-place P1 (including the Research Evidence Layer) or P3 ahead of this chain. Opening any step
-beyond materialization requires its own explicit owner authorization.
+place P1 (including the Research Evidence Layer) or P3 ahead of this chain. Step 3 (P0-C.1/C.2
+review) is the active gate; opening step 4 or beyond, or promoting/implementing the P0-C.1/C.2
+prior art itself, requires its own explicit owner authorization.
 
 ## DO NOT DO
 
@@ -264,15 +265,19 @@ beyond materialization requires its own explicit owner authorization.
 - Do not automatically continue to the next milestone without owner authorization.
 - Do not blindly reprobe the 132 `PERMANENT` P0-A.1 OHLC failures without new evidence or a
   changed provider contract/request basis.
-- Do not start P0-A.2 while P0-RECOVERY's canonical Trades materialization remains outstanding.
+- Do not start P0-A.2 before the P0-C.1/C.2 canonical-universe review-for-promotion gate.
 - Do not treat `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` as the next milestone ahead of
   market-wide universe/data foundation (`P0-C.1`/`P0-C.2` review, `P0-A.2`-`P0-A.4`, `P0-B`).
+- Do not promote or implement the `b4e3c71`/`3d9a2ab` P0-C.1/C.2 prior art merely because it is
+  now the active review gate — review-for-promotion is a decision, not automatic promotion.
 
 ## MINIMUM REQUIRED READING FOR NEXT AGENT
 
 1. `AGENTS.md` and this file.
 2. [`docs/ROADMAP.md#active-ordered-workstreams`](ROADMAP.md#active-ordered-workstreams).
-3. [`docs/DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg`](DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg)
+3. [`docs/DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success`](DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success)
+   (P0-RECOVERY closed — canonical Trades materialization terminal result),
+   [`docs/DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg`](DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg)
    (critical-path revision — market-wide foundation before HPG),
    [`docs/DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage`](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage)
    (Task 160 Stage-B and P0-A.1 terminal results),

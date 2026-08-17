@@ -14,16 +14,16 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 
 | ID | Milestone | Status |
 | --- | --- | --- |
-| P0-RECOVERY | Task 160 Trades Stage-B recovery/materialization | Stage-B closed (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`); active pending canonical Trades materialization |
+| P0-RECOVERY | Task 160 Trades Stage-B recovery/materialization | **Closed** — Stage-B and canonical Trades materialization both `TERMINAL_SUCCESS_QUALITY_RESTRICTED` |
 | P0-A | Qualified price basis + corporate-action + historical PIT authority | Active (independent of P0-RECOVERY) |
 | P0-A.1 | OHLC raw-coverage completion | **Complete** — 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected, 0 retryable, 0 unclassified, 0 untouched |
 | P0-A.2 | Corporate-action evidence scale-out | Not started authoritatively; reviewable prior art exists (`1183c72`→`d7b9bf3`) |
 | P0-A.3 | Market-wide PIT price reconstruction | Not started; depends on A.1 + A.2 |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
 | P0-B | Qualified volume/liquidity basis + market-wide turnover | Not started authoritatively; reviewable prior art exists (`c05bec0`→`4480c3b`→`0d19e07`) |
-| P0-C | Canonical market universe + exclusion ledger + freshness semantics | Not started authoritatively |
-| P0-C.1 | Instrument-master reconciliation | Reviewable prior art exists (`b4e3c71`) |
-| P0-C.2 | Universe-tier hierarchy / exclusion ledger | Reviewable prior art exists (`3d9a2ab`) |
+| P0-C | Canonical market universe + exclusion ledger + freshness semantics | **Active gate** — review-for-promotion of existing prior art; not started authoritatively, not promoted |
+| P0-C.1 | Instrument-master reconciliation | Reviewable prior art exists (`b4e3c71`); review-for-promotion active, not promoted |
+| P0-C.2 | Universe-tier hierarchy / exclusion ledger | Reviewable prior art exists (`3d9a2ab`); review-for-promotion active, not promoted |
 | P0-C.3 | Field-level freshness/as-of retrofit | Not started |
 | P1 | Foreign-flow scale-out; UFS/feature-authority normalization; Research Evidence Layer; market-internals | Deferred |
 | P2 | Sector/factor normalization; official multi-period fundamentals; operational robustness | Deferred |
@@ -31,14 +31,15 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 
 `P0-A`, `P0-B`, and `P0-C` are independent, parallelizable lanes once started, but current
 execution focus is **market-wide/full-universe data foundation first**, not single-ticker
-artifact expansion — see `docs/STATE.md`'s `## CRITICAL PATH` for the full ordered chain:
-`CANONICAL_TRADES_MATERIALIZATION` (closes P0-RECOVERY) → canonical universe boundary
-(`P0-C.1`/`P0-C.2`, reviewing existing prior art first) → `P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B` →
-`P0-C.3` → first market-wide deterministic analysis artifact. P0-A.1 is complete and no longer on
-this chain. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` is withdrawn from the immediate chain and
-remains a deferred future validation candidate only (see `docs/STATE.md`'s
-`## BOUNDED ANALYSIS OUTPUT CANDIDATE`). Opening any step beyond materialization, or P1 work,
-requires its own explicit owner authorization — parallel-safe is not the same as "start now."
+artifact expansion — see `docs/STATE.md`'s `## CRITICAL PATH` for the full ordered chain.
+`CANONICAL_TRADES_MATERIALIZATION` and P0-RECOVERY close are both **complete**
+(`TERMINAL_SUCCESS_QUALITY_RESTRICTED`). Active gate: canonical universe boundary
+(`P0-C.1`/`P0-C.2` review-for-promotion of existing prior art, not yet promoted) → then
+`P0-A.2`/`P0-A.3`/`P0-A.4`/`P0-B` → `P0-C.3` → first market-wide deterministic analysis artifact.
+P0-A.1 is complete and no longer on this chain. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains
+withdrawn from the immediate chain, a deferred future validation candidate only (see
+`docs/STATE.md`'s `## BOUNDED ANALYSIS OUTPUT CANDIDATE`). Opening P0-C implementation, or any P1
+work, requires its own explicit owner authorization — parallel-safe is not the same as "start now."
 
 ### Canonical ID note — legacy "C. Research Evidence Layer" vs `P0-C`
 
@@ -197,6 +198,7 @@ calibrated probabilities, or override deterministic risk gates.
 ## Governing decisions for this phase
 
 - [ADR-20260811 — Market-wide ingest-first feature-store architecture](adr/ADR-20260811-market-wide-ingest-first-feature-store.md)
+- [DECISIONS — 2026-08-17 P0-RECOVERY closed](DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success) (canonical Trades materialization terminal result)
 - [DECISIONS — 2026-08-17 critical path revision](DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg) (market-wide foundation before HPG)
 - [DECISIONS — 2026-08-17 terminal closure](DECISIONS.md#2026-08-17---terminal-closure-task-160-stage-b-and-p0-a1-ohlc-coverage) (Task 160 Stage-B and P0-A.1 terminal results)
 - [DECISIONS — 2026-08-17 authority doc rebaseline](DECISIONS.md#2026-08-17---authority-doc-rebaseline-p0-priority-order-canonical-roadmap-ids-prior-art-disposition) (current priority order, canonical IDs, prior-art disposition)

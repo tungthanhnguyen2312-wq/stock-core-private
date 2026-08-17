@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-08-17 - P0-RECOVERY closed: canonical Trades materialization terminal success
+
+Canonical Trades materialization (run ID `trades-canonical-materialization-v1-20260817`, source
+HEAD `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02`) reached terminal state. Independently verified
+read-only against `materialization_manifest.json`: its stored aggregate matches an independent
+re-sum from its own 40 per-session records exactly, and all 40 output Parquet files exist on disk
+with byte-exact matching sizes.
+
+**Result — `TERMINAL_SUCCESS_QUALITY_RESTRICTED`.** 18,109,141 source records → 18,109,141
+canonical rows; 0 missing, 0 quarantined, 0 duplicate identities, 0 invalid prices/quantities, 0
+timestamp violations, 0 null key fields; 40 output files, 823,751,112 bytes; `rerun_behavior:
+MATERIALIZED`. The 27 Stage-B `REMAINING_FAILED` units remain structurally absent — they were
+never present in the selected raw files this step consumed, not filtered at materialization time.
+One unknown board code retained: `G3`, present in 38/40 sessions — an unresolved downstream
+semantic restriction, not inferred or guessed, and not a reason to rerun materialization. Output
+carries `semantic_limitations: RAW_PRESERVING; DIRECTIONAL_SEMANTICS_NOT_CREATED; SHADOW_ONLY` —
+shadow/raw-preserving canonical authority only, no directional (buy/sell/side) semantics created.
+
+**P0-RECOVERY is closed.** Both its steps — Task 160 Stage-B (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`,
+prior entry) and this materialization — are terminal-validated and quality-restricted-accepted,
+not reopened.
+
+**Next gate: `P0-C.1_P0-C.2_CANONICAL_UNIVERSE_REVIEW_FOR_PROMOTION`.** Review only, of existing
+prior art `b4e3c71` (instrument-master) and `3d9a2ab` (universe-tier/exclusion-ledger), both
+`PRIOR_ART_REVIEWABLE`/`REVIEW_FOR_PROMOTION` (see `## PRIOR-ART BRANCHES` in `STATE.md`). Not
+promoted or implemented in this closure. `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains off
+the immediate critical path.
+
 ## 2026-08-17 - Critical path revision: market-wide universe foundation before HPG
 
 Amends the critical-path ordering in the terminal-closure entry below (Task 160 Stage-B and
