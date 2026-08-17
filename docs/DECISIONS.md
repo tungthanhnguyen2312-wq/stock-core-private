@@ -1,17 +1,50 @@
 # Decisions
 
-## 2026-08-17 - Future roadmap capability enrichment & gap reconciliation policy
+## 2026-08-17 - Future capability enrichment: macro, microstructure, forensics, and authority governance policy
 
-`FUTURE_ROADMAP_CAPABILITY_ENRICHMENT_V1`. Documentation and policy synchronization only.
-No code modified, no runtime execution, no data or implementation authority promoted.
+`FUTURE_CAPABILITY_ENRICHMENT_V2`. Documentation and policy synchronization only.
+No code modified, no runtime execution, no data, source, or model authority promoted.
 
 **Durable policy decisions established:**
-1. **P0 Critical Path Unchanged**: Proposed analytical and foundation capabilities (multi-period fundamentals, sector normalization, market breadth, DCF/intrinsic valuation, portfolio sizing) do not alter the active critical path (`P0-A.3B` architecture review → bounded P0-A.3 implementation/validation → `P0-A.4`/`P0-B` → `P0-C.3`).
-2. **Future Capability Placement without Premature Numbering**: Downstream capability requirements are recorded in `docs/ROADMAP.md` under `## Future capability placement` with sub-milestone numbering intentionally TBD until their respective phases are authoritatively opened.
-3. **Sector-Conforming Valuation (Rejection of Universal DCF)**: A generic, universal DCF model applied across all market sectors is rejected. Future candidate model families remain subject to later qualification and sector/applicability contracts (e.g. non-financial corporate FCFF/FCFE/DCF; banking P/B–ROE / residual income / excess returns; securities fee/asset-based contracts).
-4. **Rejection of Uncalibrated Kelly Sizing**: Kelly sizing from assumed, LLM-generated, or uncalibrated probabilities is rejected. Sizing defaults to deterministic risk budgets and volatility/ATR parity; Kelly is eligible only when backed by empirical, out-of-sample calibrated distributions under qualified P3 backtests.
-5. **Cross-Cutting Invariants vs Milestones**: Resumable checkpointing/manifests and isolated shadow execution/worktrees are reinforced as mandatory engineering invariants, not missing roadmap milestones.
-6. **Screener Authority Distinction**: `SHADOW_RESEARCH_SCREENER` (research-only, non-authoritative, explicit UNKNOWN/BLOCKED visibility) is distinguished from `AUTHORITATIVE_LIVE_ANALYSIS` (remains blocked until P0 price, volume, and universe authorities are fully qualified).
+1. **P0 Critical Path Unchanged**: Proposed analytical and foundation capabilities do not alter
+   the active critical path (`P0-A.3B` architecture review → bounded P0-A.3
+   implementation/validation → `P0-A.4`/`P0-B` → `P0-C.3`).
+2. **Future Capability Placement without Premature Numbering**: Downstream requirements are
+   documented without opening implementation; sub-milestone numbering remains intentionally TBD
+   until the respective phase is authoritatively opened.
+3. **Sector-Conforming Valuation (Rejection of Universal DCF)**: A universal cross-sector DCF is
+   rejected. Candidate valuation model families remain subject to later qualification and
+   sector/applicability contracts.
+4. **Rejection of Uncalibrated Kelly Sizing**: Kelly sizing from assumed, LLM-generated, or
+   uncalibrated probabilities is rejected; it requires empirical, out-of-sample calibrated
+   distributions under qualified backtest semantics.
+5. **Cross-Cutting Invariants vs Milestones**: Resumable checkpointing/manifests and isolated
+   shadow execution/worktrees remain mandatory engineering invariants, not missing milestones.
+6. **Three Distinct Authority Classes (Measurement vs Interpretation vs Causal Claim)**:
+   - **Measurement**: Observed or deterministically-derived values from qualified inputs (e.g. `VN30F1M_basis = -12.4`, basis percentile).
+   - **Interpretation / Hypothesis**: Analytical explanations of what a measurement may mean (e.g. `negative basis may be consistent with hedging demand`). This is an analytical hypothesis, never automatically a deterministic system fact.
+   - **Causal / Predictive Claim**: Claims of forward predictive power (e.g. `SBV net injection predicts equities in 2–4 weeks` or `basis predicts market decline`). Requires qualified empirical validation and backtesting.
+   - *Rule*: The system must never silently promote measurement → interpretation → causality.
+7. **Canonical AI Research Handoff (Research Evidence Packet)**:
+   - The canonical governed handoff to the AI research layer remains the **Research Evidence Packet (REP)**; no parallel canonical object called "Research Evidence Bundle" is created.
+   - The REP evolves by carrying optional qualified facets (`market_price_context`, `volume_liquidity_context`, `foreign_flow_context`, `market_breadth_context`, `macro_monetary_context`, `derivatives_microstructure_context`, `financial_evidence`, `financial_forensics`, `valuation_context`, `portfolio_risk_context`, `thesis_evidence`, `counter_thesis_evidence`).
+   - Each facet preserves its own provenance, freshness/knowledge time, PIT semantics, eligibility state, and reason codes. One BLOCKED facet does not invalidate an unrelated valid use case.
+8. **Governed Deterministic Engines as Numerical Authority**:
+   - Governed deterministic engines are the **numerical authority** for formalizable production and research metrics (avoiding simplistic statements like "AI does not do math").
+   - AI may reason over numbers, compare values, perform exploratory calculations, synthesize evidence, identify contradictions, and generate thesis/counter-thesis arguments.
+   - An AI-generated calculation does *not* become an authoritative Stock Lookup fact unless produced or verified through the governed deterministic pipeline. AI must never fabricate target prices, calibrated probabilities, adjustment factors, WACC, growth rates, or causal coefficients.
+9. **Per-Use Authority & Readiness (No Global "100% Complete" Blocker)**:
+   - Stock Lookup authority is per-use and per-capability, not a single global "100% complete" flag.
+   - Each capability is independently eligible when the dependencies required by that specific use case are qualified.
+   - Fail-closed behavior is enforced locally at the dependent boundary (e.g. current fundamental facts may be qualified while PIT backtesting is blocked; shadow screening may operate non-authoritatively while portfolio sizing is unavailable) without globally freezing unrelated valid capabilities.
+10. **Future Analytical Signals (P1 Macro/Derivatives, P2 Financial Forensics)**:
+   - SBV monetary/liquidity context, VN30 derivatives microstructure, and forensic accounting-risk signals (cash conversion, unusual receivables concentration, Altman/Piotroski health scores) are recorded as non-active future capabilities and do not alter the active P0 critical path.
+   - Neutral terminology is required for forensics (`accounting_risk_signal`, `other_receivables_asset_concentration`); pejorative or legalistic claims ("rút ruột doanh nghiệp", fraud, manipulation) are strictly forbidden without authoritative legal proof.
+11. **Screener Authority Classes**:
+   - `SHADOW_RESEARCH_SCREENER` operates for research with explicit provenance, visible UNKNOWN/BLOCKED semantics, and no claim of authoritative actionability.
+   - `AUTHORITATIVE_LIVE_ANALYSIS` remains blocked until required P0 price, volume/liquidity, and
+     universe authorities are qualified; a later opened capability must also satisfy its
+     output-specific gates.
 
 ## 2026-08-17 - P0-A.3A PIT price reconstruction contract integrated to local main (P0-A.3 IN PROGRESS)
 

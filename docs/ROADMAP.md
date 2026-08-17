@@ -234,6 +234,37 @@ calibrated probabilities, or override deterministic risk gates.
   when explicitly labelled non-authoritative. Retain existing P1 foreign-flow scale-out and
   Research Evidence Packet release architecture.
 
+### P1 — Macro & Monetary Liquidity Context
+
+- **Scope**: Candidate deterministic evidence/features subject to official source qualification:
+  SBV Open Market Operations (OMO), SBV bill issuance and maturities, deterministic net-liquidity
+  measures over explicit windows, interbank overnight and other qualified money-market rate series,
+  qualified USD/VND exchange-rate series, and rolling rate/change/regime indicators.
+- **Critical Semantic Boundary**: Do NOT encode empirical hypotheses (e.g. "SBV net injection
+  predicts equities in 2–4 weeks", "FX depreciation causes foreign selling", "low interbank rates
+  guarantee risk-on behavior") as system facts. The deterministic engine emits observed values,
+  deltas, rolling statistics, and formal regime classifications only. Predictive or causal
+  claims require separate qualified empirical validation.
+
+### P1 — VN30 Derivatives & Market Microstructure Context
+
+- **Scope**: Candidate deterministic features: VN30 futures minus VN30 spot basis, normalized /
+  annualized basis where contract semantics support it, basis percentile / z-score under explicit
+  lookback rules, futures volume, open interest (OI), change in OI, expiry-calendar context,
+  contract roll context, and qualified ETF/index rebalance event context where official evidence
+  exists.
+- **Critical Semantic Boundary**: Observed market microstructure data must NOT automatically become
+  inferred actor intent. A basis level or historical basis z-score is an observed/derived fact;
+  claims such as "institutions are short hedging", "positive basis indicates a bull trap", "expiry
+  week proves index manipulation", or single-name moves in large caps establish "kéo/đạp trụ" intent
+  are unevidenced hypotheses. AI may discuss competing hypotheses with provenance and uncertainty,
+  but these must never be stored as deterministic facts.
+- **Basis Qualification Contract**: A future basis contract must define the futures price field
+  (last, close, settlement, or another qualified field), spot/index observation type,
+  timestamp/session alignment, trading calendar, contract identity, expiry/roll boundary, and
+  stale/missing-observation treatment. A numerical difference between asynchronous or semantically
+  incompatible observations is not automatically a qualified basis.
+
 ### P2 — Multi-Period Sector-Aware Fundamental Foundation
 
 - **Scope**: Systematic acquisition and qualification of 3–5 years of official financial
@@ -247,6 +278,28 @@ calibrated probabilities, or override deterministic risk gates.
   OCF, FCF, earnings quality) must emit `NOT_APPLICABLE` where economically inapplicable (e.g.
   where a sector-specific contract determines EBITDA or D/E is non-comparable), never forced into
   a universal schema.
+
+### P2 — Financial Forensics & Accounting-Risk Features
+
+- **Scope**: Deterministic accounting-risk signals and financial statement anomalies. This
+  capability identifies risk signals; it does NOT determine fraud, manipulation, tunneling, or
+  illegal conduct.
+- **Cash Conversion / Earnings Quality**: CFO / Net Income (where denominator semantics are valid),
+  operating cash flow trends, accrual-related measures, multi-period cash conversion consistency,
+  and earnings/cash-flow divergence. Signed observations remain retained: sector/model
+  inapplicability emits `NOT_APPLICABLE`; missing facts fail closed; near-zero denominators are
+  blocked or explicitly handled by the metric contract; negative numerators/denominators require
+  metric-specific interpretation and eligibility, not automatic `NOT_APPLICABLE` or deletion.
+- **Receivables / Advances / Asset-Concentration Risk**: Advances / total assets, other short-term
+  receivables / total assets, combined unusual-receivable concentration, growth in unusual
+  receivables, related-party disclosure exposure, and receivable aging where officially disclosed.
+  Terminology must remain neutral (e.g. `other_receivables_asset_concentration`,
+  `accounting_risk_signal`); pejorative or legalistic labels ("rút ruột doanh nghiệp", fraud,
+  manipulation) are strictly forbidden without authoritative legal/evidentiary proof.
+- **Deterministic Financial Health Scores**: Altman Z-family models, Piotroski F-Score (with explicit
+  formula/version identity, source facts, sector applicability, deterministic calculation, and
+  fail-closed missing-data behavior). Not treated as calibrated probabilities of bankruptcy or
+  future returns unless separately empirically qualified.
 
 ### P2 / P3 — Sector-Aware Valuation Engine
 
@@ -280,10 +333,18 @@ calibrated probabilities, or override deterministic risk gates.
 
 ### P1 / Dashboard — Research Evidence Packet Consumption
 
-- **Architecture**: Dashboard evolution should consume immutable, deterministic Research
-  Evidence Packets and release contracts rather than recreate analytical truth from ad-hoc
-  SQLite/CSV/JS exports. Do not schedule a dashboard rewrite ahead of upstream feature/dataset
-  authority.
+- **Architecture**: The canonical governed handoff to the AI research layer and dashboard release
+  pipeline remains the **Research Evidence Packet (REP)** (no parallel canonical object called
+  "Research Evidence Bundle" exists). Dashboard evolution consumes immutable, deterministic REPs
+  and release contracts rather than recreating analytical truth from ad-hoc SQLite/CSV/JS exports.
+  Do not schedule a dashboard rewrite ahead of upstream feature/dataset authority.
+- **REP Optional Qualified Facets**: The REP evolves by carrying optional qualified facets, each
+  preserving its own provenance, knowledge time, PIT semantics, eligibility state, and reason codes:
+  `market_price_context`, `volume_liquidity_context`, `foreign_flow_context`,
+  `market_breadth_context`, `macro_monetary_context`, `derivatives_microstructure_context`,
+  `financial_evidence`, `financial_forensics`, `valuation_context`, `portfolio_risk_context`,
+  `thesis_evidence`, `counter_thesis_evidence`. One BLOCKED facet does not invalidate an
+  independent valid use case.
 
 ### Cross-Cutting Invariants (Operational Requirements, Not Milestones)
 
@@ -299,8 +360,10 @@ calibrated probabilities, or override deterministic risk gates.
 - **`SHADOW_RESEARCH_SCREENER`**: Permissible as research-only when provenance is explicit,
   UNKNOWN/BLOCKED semantics remain visible, and no output is represented as authoritative or
   actionable.
-- **`AUTHORITATIVE_LIVE_ANALYSIS`**: Remains blocked until required P0 price basis, volume/liquidity
-  basis, and universe authorities are fully qualified.
+- **`AUTHORITATIVE_LIVE_ANALYSIS`**: Currently remains blocked until required P0 price basis,
+  volume/liquidity basis, and universe authorities are qualified. A later opened capability must
+  additionally satisfy the specific authority gates for its exposed outputs; unrelated blocked
+  facets do not freeze an otherwise qualified independent use case.
 
 ## Governing decisions for this phase
 
