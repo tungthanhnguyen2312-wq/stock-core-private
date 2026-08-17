@@ -1,5 +1,42 @@
 # Decisions
 
+## 2026-08-17 - P0-A.2 corporate-action prior art review: REJECT_AND_REIMPLEMENT
+
+`P0-A.2_CORPORATE_ACTION_EVIDENCE_SCALE_OUT_REVIEW`. Reviewed prior art branch family
+`1183c72`→`d7b9bf3` ("feat(core): scaffold official corporate actions foundation").
+
+**Disposition: `REJECT_AND_REIMPLEMENT`.**
+
+**Meaning of disposition:**
+- Reject the duplicate/weaker prior-art pipeline scaffolding;
+- **DO NOT** rebuild current B3/B4 architecture.
+- Current-main `corporate_action_events.py` (B3 event materialization) + `official_corporate_action_ledger.py`
+  (B4 official ledger) remain the authoritative implementation basis.
+
+**Main reasons:**
+1. **Document-class lifecycle ceiling already exists on main:** Current main already implements document-class
+   authority boundaries and life-cycle classification (`governed_document_classes.py`).
+2. **Official source registry gate already exists:** Current main enforces strict source registry gates
+   (`official_document_registry.py`).
+3. **N-way conflict / arithmetic / supersession handling already exists:** B3/B4 already provide robust
+   event deduplication, ratio/cash arithmetic, and multi-source conflict reconciliation.
+4. **Real-evidence tests already exist:** Main has comprehensive regression suites against real VNM, HPG,
+   and other official documents.
+5. **Prior art is ticker-specific and duplicates these contracts:** Branch `1183c72`→`d7b9bf3` introduced
+   ticker-specific scaffolding that duplicates and weakens the contracts already established on main.
+
+**Preserved core invariants:**
+- `record_date` != `ex_date` (ex-date is not inferred from record date).
+- Planned issuance != executed issuance (distribution execution requires distinct evidence).
+- No unqualified adjustment factors (ratios remain pure until explicit adjustment authority is qualified).
+- SSI VSDC notice evidence remains fail-closed until validated through the canonical pipeline.
+
+**Next gate: `P0-A.2 — extend current-main corporate-action document-authority coverage`.**
+Scope:
+- `issuer_ir` `listing_change_notice` support through the existing B3/B4 path;
+- Validate already-retained SSI VSDC evidence through the real pipeline;
+- No network acquisition.
+
 ## 2026-08-17 - P0-C universe semantic evidence qualification
 
 `P0-C_UNIVERSE_SEMANTIC_EVIDENCE_QUALIFICATION_V1`. Integrated into local `stock-core-private`

@@ -24,9 +24,9 @@ Binding execution sequence:
   reopen general feature work.
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
   `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
-  `A.2` corporate-action evidence scale-out (not started), `A.3` market-wide PIT price
-  reconstruction, `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
-  boundary work (`P0-C.1`/`P0-C.2`) is reviewed before further P0-A expansion.
+  `A.2` corporate-action evidence scale-out (**active next gate** — extend current-main document-authority coverage),
+  `A.3` market-wide PIT price reconstruction, `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
+  boundary work (`P0-C.1`/`P0-C.2`) is integrated on local main before further P0-A expansion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
   instrument-master reconciliation, `C.2` universe-tier hierarchy/exclusion ledger, `C.3`
@@ -116,18 +116,21 @@ continuation-to-terminal proof.
 
 ## NEXT GATE
 
-`P0-A.2` — **Corporate-action evidence scale-out** (see `docs/ROADMAP.md`). Reviewable prior art
-exists (`1183c72`→`d7b9bf3`). Foundation and semantic qualification of the canonical universe
-boundary (`P0-C.1`/`P0-C.2`) are integrated on local main (commit `0f29019da83e83144f4f7f3832f054e04be66a97`,
-`push = NO`). This gate is not yet started; owner authorization is required.
+`P0-A.2` — **Extend current-main corporate-action document-authority coverage** (see `docs/ROADMAP.md`).
+Scope:
+- `issuer_ir` `listing_change_notice` support through existing B3/B4 path (`corporate_action_events.py` + `official_corporate_action_ledger.py`);
+- Validate already-retained SSI VSDC evidence through the real pipeline;
+- No network acquisition.
+
+Prior art `1183c72`→`d7b9bf3` was reviewed 2026-08-17: disposition `REJECT_AND_REIMPLEMENT` (reject duplicate/weaker prior-art pipeline; DO NOT rebuild current B3/B4; current-main `corporate_action_events.py` + `official_corporate_action_ledger.py` remain the implementation basis).
 
 ## EXACT NEXT BOUNDED ACTION
 
-Review-for-promotion of existing corporate-action prior art (`1183c72`→`d7b9bf3`) under
-milestone `P0-A.2` (Corporate-action evidence scale-out). Do not start implementation or live
-ingestion without explicit owner authorization. Step 3 (`P0-C.1`/`P0-C.2` foundation and
-semantic qualification) is complete and integrated on local main (commit
-`0f29019da83e83144f4f7f3832f054e04be66a97`, `push = NO`).
+Execute `P0-A.2` (extend current-main corporate-action document-authority coverage) using current-main
+`corporate_action_events.py` and `official_corporate_action_ledger.py` as the implementation basis.
+Scope: add `issuer_ir` `listing_change_notice` support through the existing B3/B4 path and validate
+already-retained SSI VSDC evidence; no network acquisition. Preserve core invariants: `record_date` !=
+`ex_date`, planned issuance != executed issuance, no unqualified adjustment factor, SSI remains fail-closed.
 
 ## ACTIVE RUNTIME LANES
 
@@ -201,7 +204,7 @@ cherry-pick, or extension. Full rationale: `docs/DECISIONS.md` (2026-08-17 entry
 
 | Branch family | Disposition | Roadmap relevance |
 | --- | --- | --- |
-| Corporate-action foundation (`1183c72`→`d7b9bf3`) | `PRIOR_ART_REVIEWABLE` / `REVIEW_FOR_PROMOTION` | P0-A.2 |
+| Corporate-action foundation (`1183c72`→`d7b9bf3`) | `REJECT_AND_REIMPLEMENT` — reviewed 2026-08-17; reject duplicate/weaker prior-art pipeline; DO NOT rebuild current B3/B4; current-main `corporate_action_events.py` + `official_corporate_action_ledger.py` remain basis | P0-A.2 |
 | Canonical instrument-master / universe-tiers (`b4e3c71`, `3d9a2ab`) | `PROMOTED_WITH_BOUNDED_PATCH` — foundation integrated to local main (commit `5ea3b6a85f734bc299c64464bf4d8452881c9116`, fast-forward, not pushed); security-group semantics subsequently qualified for ~99.6% of `UNKNOWN_SECURITY_GROUP` | P0-C.1 / P0-C.2 |
 | Volume / turnover chain (`c05bec0`→`4480c3b`→`0d19e07`) | `HOLD_FOR_FUTURE_PHASE` | P0-B |
 | Research Evidence / informal "C3" chain (`01941ca`→`fc22e58`→`0fe604e`→`5487e5e`) | `HOLD_FOR_FUTURE_PHASE` | P1 / legacy "Research Evidence Layer" |
@@ -411,8 +414,7 @@ FOUNDATION` and `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`.
 - Do not automatically continue to the next milestone without owner authorization.
 - Do not blindly reprobe the 132 `PERMANENT` P0-A.1 OHLC failures without new evidence or a
   changed provider contract/request basis.
-- Do not start P0-A.2 merely because the P0-C.1/C.2 canonical-universe foundation is now
-  implemented — P0-A.2 still requires its own separate gate check and owner authorization.
+- Do not rebuild B3/B4 corporate-action contracts during P0-A.2 — prior art `1183c72`→`d7b9bf3` was rejected (`REJECT_AND_REIMPLEMENT`); current-main `corporate_action_events.py` and `official_corporate_action_ledger.py` remain the authoritative implementation basis.
 - Do not treat `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` as the next milestone ahead of
   market-wide universe/data foundation (`P0-C.1`/`P0-C.2` review, `P0-A.2`-`P0-A.4`, `P0-B`).
 - Do not push local main to `origin`, treat `ACTIVE_UNIVERSE` as qualified for any instrument, or
@@ -429,7 +431,9 @@ FOUNDATION` and `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION`.
 
 1. `AGENTS.md` and this file.
 2. [`docs/ROADMAP.md#active-ordered-workstreams`](ROADMAP.md#active-ordered-workstreams).
-3. [`docs/DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success`](DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success)
+3. [`docs/DECISIONS.md#2026-08-17---p0-a2-corporate-action-prior-art-review-reject_and_reimplement`](DECISIONS.md#2026-08-17---p0-a2-corporate-action-prior-art-review-reject_and_reimplement)
+   (P0-A.2 prior art review: REJECT_AND_REIMPLEMENT, current-main B3/B4 basis),
+   [`docs/DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success`](DECISIONS.md#2026-08-17---p0-recovery-closed-canonical-trades-materialization-terminal-success)
    (P0-RECOVERY closed — canonical Trades materialization terminal result),
    [`docs/DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg`](DECISIONS.md#2026-08-17---critical-path-revision-market-wide-universe-foundation-before-hpg)
    (critical-path revision — market-wide foundation before HPG),
