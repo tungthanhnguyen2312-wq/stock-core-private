@@ -166,6 +166,27 @@ No daemon/unattended collector, inferred ex-date, or fabricated event evidence i
 `OFFICIAL_CLOSED_BAR_FINALITY_DOES_NOT_BY_ITSELF_PROVE_RAW_AS_TRADED` remain binding.
 `NO_REVISION_OBSERVED != IMMUTABLE`; never infer an ex-date from a record date.
 
+`P0-B.2A_B2B` — **DNSE Daily Volume Composition Reconciliation V1** is **BLOCKED** on C1–C4 candidates.
+Terminal verification (1 day, 944 sessions): 60 discriminating sessions; 0 exact matches for all C1–C4
+compositions; 60 `CONFLICTING`, 884 `INSUFFICIENT_DISCRIMINATION`, 0 `EXACT_RECONCILED`.
+Full 40-session corpus (35,231 symbol-sessions): C1 exact=0/35231, C2 exact=2/35231, C3 exact=1/35231,
+C4 exact=2/35231. Root cause: unit-scale mismatch (C1–C4 missing ×10 factor) plus composition mismatch
+on C2–C4 (include boards contributing nothing to daily_v).
+
+`P0-B.2B1` — **Scaled-G1 Candidate Validation + Residual Classification V1** is
+**VALIDATED_SHADOW_SCALE_RELATION_WITH_UNRESOLVED_RESIDUALS**.
+Full 40-session corpus (35,231 eligible symbol-sessions): C5 = 10 × board_G1 quantity matches
+35,164/35,231 = **99.8098%** exactly. Determinism verified: two independent runs yield identical
+content hash `ac5942913291c9ac8efb73d77a3b97dbb9068f111c8c6996422b66ef4e2b183d`.
+Residuals (67/35,231 = 0.19%): 62 POSITIVE_DELTA_MULTIPLE_OF_100 (53 symbols), 5 NEGATIVE_DELTA_MINUS_4
+(SHB, VIX only), 0 OTHER. Zero overlap with Task-160's 27 known REMAINING_FAILED units.
+Scale recorded as `EMPIRICAL_CANDIDATE` only; `semantic_unit_interpretation = UNKNOWN`;
+no semantic unit promotion. Canonical Trades source commit `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02`
+is `SOURCE_GENERATOR_NOT_IN_CURRENT_MAIN_ANCESTRY` — provenance gap visible for promotion review.
+**This does NOT equal QUALIFIED_VOLUME_COMPOSITION or QUALIFIED_LIQUIDITY_INPUTS.**
+Volume authority promotion remains a separate P0-B.2D review. P0-B is NOT closed.
+P0-B.2C (va/turnover) is NOT implemented. `qualified_liquidity_inputs = False` unconditionally.
+
 Precondition status:
 - `P0-A.1` is **COMPLETE** (1,528 success + 132 `PERMANENT` = 1,660).
 - `P0-A.2` is **COMPLETE** (commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`).

@@ -1,5 +1,45 @@
 # Decisions
 
+## 2026-08-18 - P0-B.2B1 VALIDATED_SHADOW result; C1-C4 BLOCKED confirmed on full corpus
+
+`P0-B.2B1 = VALIDATED_SHADOW_SCALE_RELATION_WITH_UNRESOLVED_RESIDUALS`.
+
+1. **C1-C4 confirmed BLOCKED on full corpus**: All four original candidates fail across the complete
+   40-session / 35,231-symbol-session corpus (C1 exact=0/35,231 = 0.0000%; C2=2; C3=1; C4=2).
+   Root cause is exclusively unit-scale mismatch (C1-C4 are missing a ×10 factor) plus composition
+   mismatch for C2-C4 (include boards that contribute nothing to daily_v).
+
+2. **C5 = 10 × board_G1_quantity** matches 35,164/35,231 = **99.8098%** exactly over the full
+   40-session retained corpus. Determinism verified: two independent runs produce identical content
+   hash `ac5942913291c9ac8efb73d77a3b97dbb9068f111c8c6996422b66ef4e2b183d`.
+
+3. **Scale is EMPIRICAL_CANDIDATE only.** The ×10 factor must NOT be encoded as "Trades quantity
+   unit = 10 shares". `semantic_unit_interpretation = UNKNOWN` is binding.
+   `scale_status = EMPIRICAL_CANDIDATE`. No authority promotion from this milestone.
+
+4. **67 residuals remain unresolved** (0.19% of eligible sessions):
+   - 62 `POSITIVE_DELTA_MULTIPLE_OF_100` across 53 symbols — consistent with a small number of G1
+     executions present in OHLC daily_v but absent from the canonical Trades corpus; true root cause
+     NOT established.
+   - 5 `NEGATIVE_DELTA_MINUS_4` confined to SHB and VIX only across 5 trading dates.
+   - 0 `OTHER`.
+   - Zero overlap with Task-160's 27 known REMAINING_FAILED units — that hypothesis ruled out.
+
+5. **Provenance gap recorded**: canonical Trades source commit
+   `2b7b38772e16c434c8adf5288cbc46ef0f7f4c02` is `SOURCE_GENERATOR_NOT_IN_CURRENT_MAIN_ANCESTRY`.
+   This does not invalidate the retained evidence but must remain visible for any promotion review.
+
+6. **Not QUALIFIED_VOLUME_COMPOSITION and not QUALIFIED_LIQUIDITY_INPUTS.**
+   `qualified_liquidity_inputs = False` unconditionally from this milestone.
+   P0-B.2C (va/turnover) is NOT implemented. P0-B.2D promotion review is the required next step.
+   P0-B is NOT closed. `P0-A.3E = ACTIVE_MULTI_SESSION_COLLECTION` is preserved and untouched.
+
+## 2026-08-18 - P0-B.2A_B2B terminal verification complete; P0-B blocked
+
+`P0-B.2A_B2B` (DNSE Daily Volume Composition Reconciliation V1) is **BLOCKED**.
+Terminal verification on a real 1-day canonical trades vs OHLC corpus (944 eligible symbol-sessions) found 60 discriminating sessions. Of these 60, zero yielded an exact daily `v` match across all candidate compositions (`C1`-`C4`). The result was 60 `CONFLICTING` and 884 `INSUFFICIENT_DISCRIMINATION` sessions.
+Volume semantics are completely unpromoted. P0-B is NOT closed. `QUALIFIED_LIQUIDITY_INPUTS` are NOT emitted. `P0-B.2C` (va/turnover) was explicitly scoped out and not implemented.
+
 ## 2026-08-18 - Isolated Bulk Acquisition Framework V1 completed; independence from P0-B confirmed
 
 `ISOLATED_BULK_ACQUISITION_FRAMEWORK_V1 = COMPLETE_LOCAL` (branch `feature/isolated-bulk-acquisition-framework-v1`).
