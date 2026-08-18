@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-08-18 - Isolated Bulk Acquisition Framework V1 completed; independence from P0-B confirmed
+
+`ISOLATED_BULK_ACQUISITION_FRAMEWORK_V1 = COMPLETE_LOCAL` (branch `feature/isolated-bulk-acquisition-framework-v1`).
+
+1. **Independent Lanes**: `ISOLATED_BULK_ACQUISITION_FRAMEWORK_V1` for official documents and `P0-B` market-volume reconciliation are independent lanes. The document acquisition framework is not a prerequisite for P0-B.
+2. **Acquisition vs Qualification Separation**: Raw document acquisition (`data-landing/`) never promotes evidence to financial-fact, observation, feature, or provider authority. `RawDocumentRecord.qualification_state = "unknown"` remains unconditionally assigned.
+3. **No Cross-Talk with Existing Pillar-B**: The framework operates in strict path and logical isolation from existing `official_document_acquisition.py` / `official_document_store.py` production infrastructure; it does not replace, wrap, or modify them.
+
+## 2026-08-18 - Cross-Sectional Deterministic Reconciliation approved for P0-B market-volume semantics
+
+`P0-B_QUALIFIED_VOLUME_LIQUIDITY_QUALIFICATION_DESIGN`.
+
+1. **Approved Qualification Method**: Cross-Sectional Deterministic Reconciliation across complete eligible cohorts and discriminating sessions (sessions with distinct continuous, put-through, and odd-lot activity) is the approved qualification method for unresolved DNSE daily `v`/`va` market-composition semantics.
+2. **Single-Ticker / Single-Session Insufficiency**: A single ticker/session coincidence is explicitly insufficient for authority promotion.
+3. **Exchange/Regime Awareness**: Trading-phase classification must be exchange/instrument/regime aware, not a universal hard-coded clock assumption.
+4. **Missing Observation Treatment**: Known missing observations remain explicit and are never imputed as zero.
+5. **Closeout Boundary**: P0-B closeout emits `QUALIFIED_LIQUIDITY_INPUTS` (volume, trading value, turnover, participation basis). It explicitly does **NOT** establish `POSITION_SIZING_IS_SAFE`.
+
 ## 2026-08-18 - A.3D keepalive correction live-validated; A.3E Session 1 acquired
 
 `P0-A.3D = COMPLETE_LOCAL_NO_PUSH` remains governed `EXPERIMENT_SHADOW_ONLY`. Corrective commit

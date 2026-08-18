@@ -87,6 +87,13 @@ zero untouched). `DNSE_INTRADAY_HISTORY_PAGINATION_CONTRACT_V1` has trades ready
 market-wide raw acquisition after a source checkpoint; quotes remain `PARTIAL` pending a complete
 continuation-to-terminal proof.
 
+Side acquisition program: `ISOLATED_BULK_ACQUISITION_FRAMEWORK_V1 = COMPLETE_LOCAL` (branch `feature/isolated-bulk-acquisition-framework-v1`).
+- Implementation PASS (9 new modules, crash-safe atomic retention, path-isolated landing under `data-landing/official-financial-filings-v1/`, 45 isolated tests passing).
+- Bounded real HPG/VNM/VCB replay PASS (5 real official filings replayed from governed evidence corpus with exact SHA-256 preservation; 0 source mutations).
+- Independent review PASS_WITH_MINOR with portable isolation test fixture corrective applied.
+- Qualification remains strictly separate from acquisition (`qualification_state = "unknown"` unconditionally assigned).
+- No production/runtime authority promotion; production DB/runtimes untouched. Active core product gate remains `P0-A.3E = ACTIVE_MULTI_SESSION_COLLECTION`.
+
 ## CURRENT VERIFIED STATE
 
 - Raw ingestion is ingestion-first: immutable payload, request identity, source/provider,

@@ -217,7 +217,15 @@ calibrated probabilities, or override deterministic risk gates.
   expansion or provider-wide semantic inference.
 - Price-basis resolution should be dataset-level, provider-contract-level, representative-cohort,
   and corporate-action reconciliation work. When the basis is unknown, retain data, block only
-  basis-dependent historical returns/backtests, and continue independent valid capabilities.
+## Side acquisition program
+
+### ISOLATED_BULK_ACQUISITION_FRAMEWORK_V1 — Official Financial Filings Foundation
+
+- **Status**: **COMPLETE_LOCAL** (branch `feature/isolated-bulk-acquisition-framework-v1`).
+- **Scope**: Reusable, domain-agnostic foundation for bounded, resumable, provenance-preserving bulk document acquisition and immutable retention (`data-landing/`). First supported domain: official financial filings (replayed from Stock Lookup's existing governed evidence corpus with exact SHA-256 preservation).
+- **Architecture**: 7 separated concerns across 9 small modules; content-addressed immutable retention (`raw/blobs/`); crash-safe atomic manifest and per-run checkpointing; first-class isolated quarantine store (`quarantine/`); fail-closed production isolation guard (`assert_write_allowed`); zero network or LLM dependencies in core retention modules.
+- **Qualification Boundary**: Acquisition and qualification remain strictly separated. Every document record carries `qualification_state = "unknown"` unconditionally. No analytical, financial-fact, or provider authority is promoted.
+- **Future official document bulk acquisition**: Completed foundation for future document domains. Corporate-action bulk acquisition is explicitly NOT started or implemented in this milestone.
 
 ## Future capability placement
 
@@ -225,6 +233,31 @@ calibrated probabilities, or override deterministic risk gates.
 > prerequisites, and semantic boundaries for downstream workstreams. They do NOT alter the
 > active P0 critical path, do not open implementation, and their sub-milestone numbering remains
 > intentionally TBD until each respective phase is authoritatively opened by owner decision.
+
+### P0-B — Qualified Volume/Liquidity Basis & Market-Wide Turnover (Formalized Design, Non-Active)
+
+Formalized design for the P0-B volume/liquidity lane. Not marked active; implementation not started.
+
+- **Sub-milestones**:
+  - `P0-B.2a` — Daily Volume/Value Semantic Registry
+  - `P0-B.2b` — Board + Session Cross-Sectional Reconciliation
+  - `P0-B.2c` — Trading-Value Reconciliation
+  - `P0-B.2d` — Scoped Promotion Review
+- **`P0-B.2b` Invariants**:
+  - `G1`/`G4`/`T1`/`T3`/`T4`/`T6` candidate reconciliation against official board semantics;
+  - Discriminating sessions are required (sessions with distinct continuous, put-through, and odd-lot activity);
+  - Trading-phase classification must be exchange/instrument/regime aware, not a universal hard-coded clock assumption;
+  - Evaluate complete eligible cohorts rather than ad-hoc individual tickers;
+  - Known missing observations remain explicit and are never imputed as zero;
+  - Verdicts must support concepts equivalent to:
+    - `EXACT_RECONCILED`
+    - `COVERAGE_RESTRICTED_RECONCILED`
+    - `CONFLICTING`
+    - `INSUFFICIENT_DISCRIMINATION`
+    - `UNAVAILABLE`
+- **P0-B Closeout Output**:
+  - Emits `QUALIFIED_LIQUIDITY_INPUTS` (volume, trading value, turnover, participation basis).
+  - Explicitly **NOT**: `POSITION_SIZING_IS_SAFE` (position sizing and portfolio leverage remain downstream at P3 and fail-closed until all required price, volume, and risk authorities pass).
 
 ### P0-C — Official Exchange & Listing-Status Authority
 
