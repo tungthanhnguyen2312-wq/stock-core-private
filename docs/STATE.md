@@ -25,7 +25,7 @@ Binding execution sequence:
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
   `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
   `A.2` corporate-action evidence scale-out (**complete** — document-authority coverage and multi-event extraction integrated at commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`),
-  `A.3` market-wide PIT price reconstruction (**in progress** — sub-slices `P0-A.3A` contract and `P0-A.3B` read-only architecture review complete; active next gate `P0-A.3C` prospective WebSocket payload semantic evidence acquisition), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
+  `A.3` market-wide PIT price reconstruction (**in progress** — `P0-A.3A` contract, `P0-A.3B` read-only architecture review, `P0-A.3C` evidence acquisition, and `P0-A.3D` governed shadow collector hardening complete locally; active next gate `P0-A.3E` bounded prospective multi-session/event-window price-basis qualification), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
   boundary work (`P0-C.1`/`P0-C.2`) is integrated on local main before further P0-A expansion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
@@ -124,13 +124,30 @@ qualified, and the WebSocket `ohlc_closed` shadow remains deferred, semantically
 non-authoritative with zero real retained completed-event observations. Transport speed, first
 receipt, append-only retention, and timestamp proximity do not establish price semantics.
 
-`P0-A.3C` — **DNSE Prospective WebSocket Payload Semantic Evidence Acquisition**.
-STATUS: **EVIDENCE_ACQUISITION_NEXT; NO_PRICE_BASIS_PROMOTION; HUMAN_LIVE_EXECUTION_REQUIRED.**
-Capture scope is source/protocol evidence only: one human/PowerShell-owned bounded foreground
-launch, two operator-selected eligible liquid `EQUITY` symbols, one resolution supported by the
-current shadow collector, and at least one genuine completed-bar payload retained per symbol.
-Named tickers are regression examples only; a full session, full universe, daemon/reconnect
-operation, or market-coverage claim is not required or authorized.
+`P0-A.3C` — **DNSE Prospective WebSocket Payload Semantic Evidence Acquisition** is
+**COMPLETE_EVIDENCE_ACQUIRED**. Live evidence run
+`C:\Projects\StockLookup\operations-review\p0-a3c-live-20260818-090834` retained genuine
+HPG and VCB `ohlc_closed` `bc` payloads over WebSocket at resolution `1`, linked to their
+collector execution IDs and verified by deterministic replay/readback. The first attempts
+honestly remained `BLOCKED_NO_COMPLETED_EVENT`; no observations were fabricated. The real
+payloads reconcile the documented required fields while `tradingDate` and `tradingSessionId`
+remain optional/absent as observed. This is source/protocol evidence only: `RAW_AS_TRADED` and
+all price-basis/PIT/registry authority remain **NOT PROMOTED**.
+
+`P0-A.3D` — **Governed Prospective Collector Integration & Hardening** is
+**COMPLETE_LOCAL_NO_PUSH** at commit `3291ed8afda3c6aba8100f77bf5c88a2915801fd`. The tracked
+collector remains `EXPERIMENT_SHADOW_ONLY`; it now fails closed on requested
+symbol/resolution/channel/`bc` correspondence, refuses pre-existing collector evidence output,
+retains bounded non-secret control/ignored-message/timeout metadata, separates bounded control
+and non-`bc` budgets, and applies a bounded total session timeout. It is not a daemon, raw lake,
+provider registry, or production/PIT authority.
+
+`P0-A.3E` — **Prospective Multi-Session / Event-Window Price-Basis Qualification** is the active
+next gate. STATUS: **EVIDENCE_ACQUISITION_NEXT; NO_PRICE_BASIS_PROMOTION;
+HUMAN_LIVE_EXECUTION_REQUIRED.** It must separate bounded prospective evidence collection from
+event-window qualification. No daemon/unattended collector, inferred ex-date, or fabricated
+event evidence is authorized; if qualifying official corporate-action event evidence is absent,
+the event-window portion must fail closed/block.
 
 Precondition status:
 - `P0-A.1` is **COMPLETE** (1,528 success + 132 `PERMANENT` = 1,660).
@@ -144,11 +161,11 @@ Precondition status:
 
 ## EXACT NEXT BOUNDED ACTION
 
-Human operator: choose live timing and make one bounded foreground `P0-A.3C` capture. Retain raw
-completed-bar payload bytes/content hash, receipt timestamp, provider/source timestamps and session
-fields exactly as supplied, then perform deterministic replay/readback and a same-day REST-vs-WS
-field comparison. That comparison may investigate field/unit/symbol/timestamp correspondence only;
-it does not establish `RAW_AS_TRADED`, non-rewriting, PIT safety, or any registry authority.
+Human operator: define and execute only a bounded foreground `P0-A.3E` evidence plan. Keep
+prospective multi-session collection bounded and separately determine whether a qualifying,
+officially evidenced corporate-action ex-date event window exists. Retain and replay governed
+shadow evidence exactly as supplied. Any REST/WS comparison may investigate correspondence only;
+it does not establish `RAW_AS_TRADED`, non-rewriting, PIT safety, or registry authority.
 
 ## ACTIVE RUNTIME LANES
 
@@ -403,9 +420,10 @@ Updated ordered chain:
    `## P0-C UNIVERSE SEMANTIC EVIDENCE QUALIFICATION` for exact scope and remaining blockers.
 4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
    evidence scale-out and `P0-A.3` market-wide PIT reconstruction. `P0-A.3B` is closed
-   `SOURCE_SEMANTICS_BLOCKED`; `P0-A.3C` prospective WebSocket payload semantic evidence
-   acquisition is next, followed only by bounded P0-A.3 gates determined by that evidence, then
-   `P0-A.4` scoped price-basis promotion and `P0-B` qualified volume/liquidity/turnover basis.
+   `SOURCE_SEMANTICS_BLOCKED`; `P0-A.3C` evidence acquisition and `P0-A.3D` governed shadow
+   hardening are complete locally. `P0-A.3E` prospective multi-session/event-window price-basis
+   qualification is next, then `P0-A.4` scoped price-basis promotion and `P0-B` qualified
+   volume/liquidity/turnover basis.
 5. `P0-C.3` field-level freshness/as-of retrofit, as required for qualified market-wide
    consumption.
 6. First market-wide deterministic analysis/research artifact, after the necessary P0-A/P0-B/P0-C

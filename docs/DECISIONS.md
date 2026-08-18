@@ -1,5 +1,40 @@
 # Decisions
 
+## 2026-08-18 - P0-A.3C evidence acquired; P0-A.3D governed prospective collector integrated locally
+
+`P0-A.3C_DNSE_PROSPECTIVE_WEBSOCKET_PAYLOAD_SEMANTIC_EVIDENCE_ACQUISITION =
+COMPLETE_EVIDENCE_ACQUIRED`. The retained human-run evidence package at
+`C:\Projects\StockLookup\operations-review\p0-a3c-live-20260818-090834` independently validates
+`PASS_EVIDENCE_ACQUIRED` on HPG attempt 2 and VCB attempt 2, with final state
+`PASS_EVIDENCE_ACQUIRED_BOTH_SYMBOLS`. Both records are real WebSocket `ohlc_closed.1.json`
+completed-bar payloads with `T = "bc"`, requested symbol/resolution correspondence, collector
+execution-ID linkage, deterministic hash/replay verification, and no source-baseline mutation.
+Attempt 1 for each symbol is correctly retained as `BLOCKED_NO_COMPLETED_EVENT`; no observation
+was fabricated.
+
+The HPG/VCB payloads contain the documented OHLC-Closed required fields and empirically reconcile
+that `tradingDate` and `tradingSessionId` are optional/absent in these messages. This verifies
+current protocol/payload shape only. It does **not** establish `RAW_AS_TRADED`, non-revision,
+corporate-action behavior, board/lot semantics, historical REST PIT safety, source registry
+authority, or any provider/production authority. `RAW_AS_TRADED = NOT_PROMOTED` remains binding.
+
+`P0-A.3D_GOVERNED_PROSPECTIVE_COLLECTOR_INTEGRATION = COMPLETE_LOCAL_NO_PUSH` at local commit
+`3291ed8afda3c6aba8100f77bf5c88a2915801fd` (parent
+`77bfe95f203ea87aa80ffbc5918215234f3fcbc7`). It moved only the byte-baselined A.3C shadow
+collector/test prior art into tracked source and preserved `EXPERIMENT_SHADOW_ONLY`. The bounded
+hardening is limited to request/payload correspondence rejection, evidence-output collision
+refusal, non-secret control/ignored-type/timeout observability, separated bounded receive budgets,
+and a total wall-clock cap. No live call, credentials, daemon, reconnect, raw-lake integration,
+RawObservation redesign, database write, registry change, or authority promotion occurred.
+
+**Next gate:** `P0-A.3E` — **Prospective Multi-Session / Event-Window Price-Basis Qualification**.
+It must explicitly separate (A) bounded, human-owned prospective evidence collection from (B)
+event-window qualification, which can proceed only when a qualifying official corporate-action
+ex-date is actually evidenced. It may not infer an ex-date, require a future event to exist, or
+fabricate event evidence. Without that evidence, the event-window portion is blocked/fail-closed.
+No daemon or unattended collector is authorized. Critical path: `P0-A.3D` → `P0-A.3E` →
+`P0-A.4` / `P0-B` → `P0-C.3`.
+
 ## 2026-08-17 - P0-A.3B closed; P0-A.3C prospective WebSocket evidence gate opened
 
 `P0-A.3B_DNSE_PROSPECTIVE_PIT_PRICE_AUTHORITY_ARCHITECTURE_REVIEW = COMPLETE_READ_ONLY`.
@@ -50,9 +85,8 @@ No code modified, no runtime execution, no data, source, or model authority prom
 
 **Durable policy decisions established:**
 1. **P0 Critical Path Unchanged**: Proposed analytical and foundation capabilities do not alter
-   the active critical path (`P0-A.3C` prospective WebSocket payload semantic evidence
-   acquisition → subsequent bounded P0-A.3 evidence/implementation/validation gates determined
-   by actual A.3C evidence → `P0-A.4`/`P0-B` → `P0-C.3`).
+   the active critical path (`P0-A.3D` governed prospective collector integration → `P0-A.3E`
+   prospective multi-session/event-window qualification → `P0-A.4`/`P0-B` → `P0-C.3`).
 2. **Future Capability Placement without Premature Numbering**: Downstream requirements are
    documented without opening implementation; sub-milestone numbering remains intentionally TBD
    until the respective phase is authoritatively opened.
@@ -135,8 +169,9 @@ No network calls, no runtime/DB writes.
 
 **Status & Next Gate:**
 - `P0-A.3` is **IN PROGRESS** (sub-slice `P0-A.3A` complete on local main, `push = NO`).
-- Subsequent authority record: `P0-A.3B` closed `COMPLETE_READ_ONLY` / `SOURCE_SEMANTICS_BLOCKED`;
-  active next gate is `P0-A.3C` prospective WebSocket payload semantic evidence acquisition.
+- Subsequent authority records: `P0-A.3B` closed `COMPLETE_READ_ONLY` / `SOURCE_SEMANTICS_BLOCKED`;
+  `P0-A.3C` is `COMPLETE_EVIDENCE_ACQUIRED`, `P0-A.3D` is `COMPLETE_LOCAL_NO_PUSH`, and active
+  next gate is `P0-A.3E` prospective multi-session/event-window price-basis qualification.
 
 ## 2026-08-17 - P0-A.2 corporate-action multi-event extraction integrated to local main (P0-A.2 COMPLETE)
 
