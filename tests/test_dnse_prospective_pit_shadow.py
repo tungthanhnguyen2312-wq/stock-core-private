@@ -149,16 +149,19 @@ class RetentionTests(unittest.TestCase):
 
 
 class _FakeSocket:
-    def __init__(self, messages):
+    def __init__(self, messages, *, repeat_ping=False):
         self.messages = list(messages)
         self.sent = []
+        self.repeat_ping = repeat_ping
 
     async def recv(self):
         if self.messages:
             value = self.messages.pop(0)
             if isinstance(value, BaseException):
                 raise value
-            return json.dumps(value)
+            return value if isinstance(value, str) else json.dumps(value)
+        if self.repeat_ping:
+            return json.dumps({"action": "ping"})
         await asyncio.sleep(60)
         return "{}"  # pragma: no cover - sleep is cancelled by timeout
 
@@ -178,8 +181,8 @@ class _FakeConnection:
 
 
 class CollectorTests(unittest.TestCase):
-    def _collect(self, messages, **kwargs):
-        socket = _FakeSocket(messages)
+    def _collect(self, messages, *, repeat_ping=False, **kwargs):
+        socket = _FakeSocket(messages, repeat_ping=repeat_ping)
         fake_websockets = SimpleNamespace(connect=lambda *args, **ignored: _FakeConnection(socket))
         defaults = {
             "ticker": "HPG", "resolution": "1", "timeout_seconds": 1,
@@ -190,13 +193,45 @@ class CollectorTests(unittest.TestCase):
              patch.dict(sys.modules, {"websockets": fake_websockets}):
             return asyncio.run(collector.collect_once(**defaults))
 
-    def test_subscribed_control_ack_does_not_consume_closed_content_opportunity(self):
+    def test_bc_immediately_after_subscribed_is_retained(self):
         result = self._collect([
             {"action": "welcome"}, {"action": "auth_success"}, {"action": "subscribed"}, payload(),
         ])
         self.assertEqual("COMPLETED_EVENT_OBSERVED", result["status"])
         self.assertEqual({"subscribed": 1}, result["observability"]["control_message_counts"])
         self.assertEqual({}, result["observability"]["ignored_message_types"])
+
+    def test_subscribed_ping_then_bc_does_not_exhaust_semantic_budget(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "subscribed"},
+            {"action": "ping"}, payload(),
+        ])
+        self.assertEqual("COMPLETED_EVENT_OBSERVED", result["status"])
+        self.assertEqual({"subscribed": 1, "ping": 1}, result["observability"]["control_message_counts"])
+
+    def test_subscribed_two_pings_then_bc_does_not_exhaust_semantic_budget(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "subscribed"},
+            {"action": "ping"}, {"action": "ping"}, payload(),
+        ])
+        self.assertEqual("COMPLETED_EVENT_OBSERVED", result["status"])
+        self.assertEqual({"subscribed": 1, "ping": 2}, result["observability"]["control_message_counts"])
+
+    def test_multiple_pings_are_observable_but_not_semantic_frames(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "subscribed"},
+            *({"action": "ping"} for _ in range(5)), payload(),
+        ])
+        self.assertEqual("COMPLETED_EVENT_OBSERVED", result["status"])
+        self.assertEqual(5, result["observability"]["control_message_counts"]["ping"])
+
+    def test_pings_only_are_bounded_by_absolute_session_deadline(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"},
+        ], repeat_ping=True, timeout_seconds=5, total_session_timeout_seconds=0.01)
+        self.assertEqual("BLOCKED_NO_COMPLETED_EVENT_OBSERVED", result["status"])
+        self.assertGreater(result["observability"]["control_message_counts"]["ping"], 1)
+        self.assertEqual("post_subscribe_message", result["observability"]["timeout_stage"])
 
     def test_ignored_non_bc_metadata_is_retained_without_body(self):
         result = self._collect([
@@ -207,12 +242,52 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual({"b": 1}, result["observability"]["ignored_message_types"])
         self.assertNotIn("token", json.dumps(result["observability"]))
 
-    def test_wrong_closed_payload_correspondence_fails_closed(self):
+    def test_unknown_control_flood_remains_bounded_and_fail_closed(self):
         result = self._collect([
-            {"action": "welcome"}, {"action": "auth_success"}, payload(symbol="VCB"),
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "subscribed"},
+            {"action": "unknown_control"}, {"action": "unknown_control"}, payload(),
+        ])
+        self.assertEqual("BLOCKED_NO_COMPLETED_EVENT_OBSERVED", result["status"])
+        self.assertEqual({"subscribed": 1, "unknown_control": 1},
+                         result["observability"]["control_message_counts"])
+
+    def test_ignored_non_bc_content_flood_remains_bounded(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "subscribed"},
+            {"T": "b"}, {"T": "b"}, payload(),
+        ])
+        self.assertEqual("BLOCKED_NO_COMPLETED_EVENT_OBSERVED", result["status"])
+        self.assertEqual({"b": 2}, result["observability"]["ignored_message_types"])
+
+    def test_wrong_symbol_after_pings_fails_closed(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "ping"},
+            payload(symbol="VCB"),
         ])
         self.assertEqual("CONNECTION_OR_PROTOCOL_FAIL", result["status"])
         self.assertEqual("requested_symbol_mismatch", result["error_code"])
+
+    def test_wrong_resolution_after_pings_fails_closed(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "ping"},
+            payload(resolution="5"),
+        ])
+        self.assertEqual("CONNECTION_OR_PROTOCOL_FAIL", result["status"])
+        self.assertEqual("requested_resolution_mismatch", result["error_code"])
+
+    def test_malformed_frame_after_pings_fails_closed(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"}, {"action": "ping"}, "{bad-json",
+        ])
+        self.assertEqual("CONNECTION_OR_PROTOCOL_FAIL", result["status"])
+
+    def test_secret_shaped_keepalive_fields_are_not_retained(self):
+        result = self._collect([
+            {"action": "welcome"}, {"action": "auth_success"},
+            {"action": "ping", "token": "not-retained"}, payload(),
+        ])
+        self.assertEqual("COMPLETED_EVENT_OBSERVED", result["status"])
+        self.assertNotIn("token", json.dumps(result["observability"]))
 
     def test_timeout_stage_is_deterministic(self):
         result = self._collect([

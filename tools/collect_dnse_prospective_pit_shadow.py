@@ -101,22 +101,31 @@ async def collect_once(*, ticker: str, resolution: str, timeout_seconds: float,
                 await socket.send(canonical_json({"action": "subscribe", "channels": [
                     {"name": channel, "symbols": [ticker]}
                 ]}))
-                control_count = ignored_count = total_received = 0
-                while (total_received < MAX_TOTAL_RECEIVE_BUDGET and
+                control_count = ignored_count = semantic_received = 0
+                # `ping` is transport keepalive, not a semantic frame.  It is
+                # observable and answered, but it cannot exhaust any receive
+                # budget; the enclosing asyncio.timeout remains the absolute
+                # wall-clock bound even under a keepalive flood.
+                while (semantic_received < MAX_TOTAL_RECEIVE_BUDGET and
                        control_count < MAX_CONTROL_MESSAGE_BUDGET and
                        ignored_count < MAX_IGNORED_MESSAGE_BUDGET):
                     timeout_stage = "post_subscribe_message"
                     observability["timeout_stage"] = timeout_stage
                     raw = await asyncio.wait_for(socket.recv(), timeout=timeout_seconds)
-                    total_received += 1
                     received = datetime.now(timezone.utc)
                     data = json.loads(raw)
                     action = data.get("action") or data.get("a")
+                    if action == "ping":
+                        _record_count(control_message_counts, "ping")
+                        await socket.send(canonical_json({"action": "pong"}))
+                        # Fake/immediate transports must still yield so the
+                        # absolute timeout can expire under a keepalive flood.
+                        await asyncio.sleep(0)
+                        continue
+                    semantic_received += 1
                     if action:
                         control_count += 1
                         _record_count(control_message_counts, str(action))
-                        if action == "ping":
-                            await socket.send(canonical_json({"action": "pong"}))
                         continue
                     if data.get("T") != "bc":
                         ignored_count += 1
