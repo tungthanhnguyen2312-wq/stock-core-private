@@ -1,5 +1,30 @@
 # Decisions
 
+## 2026-08-18 - A.3D keepalive correction live-validated; A.3E Session 1 acquired
+
+`P0-A.3D = COMPLETE_LOCAL_NO_PUSH` remains governed `EXPERIMENT_SHADOW_ONLY`. Corrective commit
+`ecb2c6c17039f123e7e8fe5b7dd53604c2893f58` fixed the verified defect where routine `ping`
+keepalive/control traffic could exhaust the semantic receive budget before a closed-bar content
+opportunity. `ping` remains non-secret observable and receives `pong`, but consumes no semantic
+control, ignored-non-`bc`, or total semantic-frame budget; the absolute session deadline remains
+the boundedness authority. This is an implementation safety property, not production or price
+authority.
+
+The subsequent human-governed A.3E session
+`2026-08-18-postfix-ecb2c6c` is `SESSION_EVIDENCE_ACQUIRED`, with accepted HPG and VCB evidence
+at the corrective source lineage. This validates the bounded post-fix capture path only. It does
+not promote `RAW_AS_TRADED`, official closed-bar finality, revision immutability, PIT safety, or
+registry/provider authority. `OFFICIAL_CLOSED_BAR_FINALITY_DOES_NOT_BY_ITSELF_PROVE_RAW_AS_TRADED`
+and `NO_REVISION_OBSERVED != IMMUTABLE` remain binding.
+
+`P0-A.3E = ACTIVE_MULTI_SESSION_COLLECTION`, with two separate substreams:
+
+- **A. `PROSPECTIVE_MULTI_SESSION_COLLECTION`** — `OPERATIONAL / SESSION_1_ACQUIRED`.
+- **B. `EVENT_WINDOW_PRICE_BASIS_QUALIFICATION`** — `BLOCKED_PENDING_QUALIFIED_EX_DATE`.
+
+No ex-date may be inferred from record date. Until a qualifying official ex-date exists, the
+event-window component remains fail-closed; no A.3E result opens `P0-A.4` or `P0-B`.
+
 ## 2026-08-18 - P0-A.3C evidence acquired; P0-A.3D governed prospective collector integrated locally
 
 `P0-A.3C_DNSE_PROSPECTIVE_WEBSOCKET_PAYLOAD_SEMANTIC_EVIDENCE_ACQUISITION =

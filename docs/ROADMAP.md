@@ -18,7 +18,7 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P0-A | Qualified price basis + corporate-action + historical PIT authority | Active (independent of P0-RECOVERY) |
 | P0-A.1 | OHLC raw-coverage completion | **Complete** — 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected, 0 retryable, 0 unclassified, 0 untouched |
 | P0-A.2 | Corporate-action evidence scale-out | **Complete** — document authority and multi-event extraction integrated to local main (commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`) |
-| P0-A.3 | Market-wide PIT price reconstruction | **In progress** — P0-A.3A contract, P0-A.3B read-only review, P0-A.3C evidence acquisition, and P0-A.3D governed shadow hardening complete locally; next gate P0-A.3E prospective multi-session/event-window price-basis qualification, with no price-basis promotion |
+| P0-A.3 | Market-wide PIT price reconstruction | **In progress** — P0-A.3A contract, P0-A.3B read-only review, P0-A.3C evidence acquisition, and P0-A.3D governed shadow hardening complete locally; P0-A.3E is active prospective multi-session collection (Session 1 acquired), while event-window price-basis qualification is blocked pending a qualified ex-date; no price-basis promotion |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
 | P0-B | Qualified volume/liquidity basis + market-wide turnover | Not started authoritatively; reviewable prior art exists (`c05bec0`→`4480c3b`→`0d19e07`) |
 | P0-C | Canonical market universe + exclusion ledger + freshness semantics | Foundation (C.1/C.2) and semantic qualification integrated to local main (commit `0f29019da83e83144f4f7f3832f054e04be66a97`, not pushed); security-group semantics qualified for ~99.6% of `UNKNOWN_SECURITY_GROUP`; exchange and listing/active status remain unqualified so `ACTIVE_UNIVERSE` stays fail-closed; C.3 not started — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification entries |
@@ -44,13 +44,22 @@ PIT Price Authority Architecture Review) is **COMPLETE_READ_ONLY** with verdict
 `SOURCE_SEMANTICS_BLOCKED`: no current DNSE source/feed/field is authoritative `RAW_AS_TRADED`.
 `P0-A.3C` is **COMPLETE_EVIDENCE_ACQUIRED** from the retained real HPG/VCB WebSocket `bc` payload
 run; its result does not promote price basis. `P0-A.3D` is **COMPLETE_LOCAL_NO_PUSH** as governed
-`EXPERIMENT_SHADOW_ONLY` collector hardening. Active next gate: `P0-A.3E` — **Prospective
-Multi-Session / Event-Window Price-Basis Qualification** (`EVIDENCE_ACQUISITION_NEXT`,
-`NO_PRICE_BASIS_PROMOTION`, human live execution required) → `P0-A.4` / `P0-B` → `P0-C.3` → first
-market-wide deterministic analysis artifact. A.3E separates bounded prospective collection from
-optional qualifying official event-window evidence; it may not infer an ex-date or fabricate an
-event when evidence is unavailable. P0-A.1, P0-A.2, P0-A.3A, P0-A.3B, P0-A.3C, and P0-A.3D are
-complete and no longer on this chain.
+`EXPERIMENT_SHADOW_ONLY` collector hardening, including local commit `ecb2c6c` which corrected
+routine ping keepalive exhaustion of the semantic receive budget and was subsequently live
+validated through governed A.3E capture. Active gate: `P0-A.3E` — **Prospective Multi-Session /
+Event-Window Price-Basis Qualification** (`ACTIVE_MULTI_SESSION_COLLECTION`,
+`NO_PRICE_BASIS_PROMOTION`, human live execution required).
+
+- **A. PROSPECTIVE_MULTI_SESSION_COLLECTION** — `OPERATIONAL / SESSION_1_ACQUIRED`: session
+  `2026-08-18-postfix-ecb2c6c` is `SESSION_EVIDENCE_ACQUIRED` for HPG and VCB.
+- **B. EVENT_WINDOW_PRICE_BASIS_QUALIFICATION** — `BLOCKED_PENDING_QUALIFIED_EX_DATE`: no ex-date
+  may be inferred from record date, and unavailable event evidence remains fail-closed.
+
+`RAW_AS_TRADED_NOT_PROMOTED`,
+`OFFICIAL_CLOSED_BAR_FINALITY_DOES_NOT_BY_ITSELF_PROVE_RAW_AS_TRADED`, and
+`NO_REVISION_OBSERVED != IMMUTABLE` remain binding. A.3E → `P0-A.4` / `P0-B` → `P0-C.3` → first
+market-wide deterministic analysis artifact. P0-A.1, P0-A.2, P0-A.3A, P0-A.3B, P0-A.3C, and
+P0-A.3D are complete and no longer on this chain.
 `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains withdrawn from the immediate chain, a deferred
 future validation candidate only (see `docs/STATE.md`'s `## BOUNDED ANALYSIS OUTPUT CANDIDATE`).
 Opening P0-A.2/P0-B/P0-C.3 implementation, a push to `origin`, or any P1 work, requires its own
