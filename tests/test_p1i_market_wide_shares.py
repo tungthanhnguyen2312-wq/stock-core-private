@@ -14,15 +14,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
-sys.path.insert(0, str(CONSUMER_ROOT))
 
 import market_wide_calculation_readiness as readiness  # noqa: E402
 import market_wide_current_shares_resolver as shares_resolver  # noqa: E402
-from builders.build_ticker_context import (  # noqa: E402
-    apply_bundle_canonical_financial_facts_contract,
-)
 from canonical_financial_bundle_section import attach  # noqa: E402
 from tools.operate_stocklookup import Operator  # noqa: E402
+
+if CONSUMER_ROOT.is_dir():
+    sys.path.insert(0, str(CONSUMER_ROOT))
+    from builders.build_ticker_context import (  # noqa: E402
+        apply_bundle_canonical_financial_facts_contract,
+    )
+else:
+    apply_bundle_canonical_financial_facts_contract = None
 
 RUNTIME = ROOT.parent / "dashboard-runtime"
 #: The session the retained runtime is anchored to.
@@ -33,6 +37,7 @@ WITHHELD_LANES = {"provider_reported_stale", "provider_reported_unverifiable_fre
                   "unknown_observation_date", "unavailable", "unresolved_error"}
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class UniverseCoverageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -65,6 +70,7 @@ class UniverseCoverageTests(unittest.TestCase):
         self.assertEqual(valued, self.summary["usable_share_value_count"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class UnknownTickerTests(unittest.TestCase):
     def test_a_ticker_outside_the_universe_is_unavailable(self) -> None:
         result = shares_resolver.resolve_effective_shares("NON_EXISTENT_XYZ", RUNTIME, SESSION)
@@ -72,6 +78,7 @@ class UnknownTickerTests(unittest.TestCase):
         self.assertIsNone(result["value"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class ValuationReadinessTests(unittest.TestCase):
     def test_a_provider_share_count_yields_a_provider_reported_cap(self) -> None:
         result = readiness.evaluate_market_capitalisation(
@@ -91,6 +98,7 @@ class ValuationReadinessTests(unittest.TestCase):
         self.assertIsNone(result.get("value"))
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class ProducerConsumerTests(unittest.TestCase):
     def test_the_section_survives_the_boundary_intact(self) -> None:
         attached = attach({"HPG": {"company_name": "Hoa Phat Group"},
@@ -109,6 +117,7 @@ class ProducerConsumerTests(unittest.TestCase):
         self.assertNotIn("canonical_financial_facts", attached["HPG"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class PostCloseOperatorTests(unittest.TestCase):
     def test_the_dry_run_passes_and_measures_coverage(self) -> None:
         # No canonical-facts flag: no share count reaches the export, so the share

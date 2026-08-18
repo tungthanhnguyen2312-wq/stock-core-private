@@ -13,6 +13,11 @@ Repository này chứa mã nguồn phía Producer của Stock Look Up. Producer 
 
 ## Thiết lập phát triển
 
+**Yêu cầu hệ thống trên Windows**: Repository này chứa một số đường dẫn dài (đặc biệt trong thư mục `operations-review`). Người dùng Windows phải bật `core.longpaths` trước khi clone để tránh lỗi `Filename too long`:
+```powershell
+git config --global core.longpaths true
+```
+
 Chạy lệnh từ thư mục gốc của repository và cấu hình dashboard runtime trước các tác vụ đọc hoặc ghi dữ liệu vận hành.
 
 ```powershell

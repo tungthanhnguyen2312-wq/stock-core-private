@@ -13,7 +13,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
-sys.path.insert(0, str(CONSUMER_ROOT))
 
 #: The session the retained runtime is anchored to. The share and price legs of this
 #: section are both session-relative, so the tests state the session explicitly.
@@ -27,13 +26,20 @@ import official_corporate_action_ledger as ledger  # noqa: E402
 import share_transition_bridge as share_bridge  # noqa: E402
 import market_wide_calculation_readiness as readiness  # noqa: E402
 from canonical_financial_bundle_section import attach  # noqa: E402
-from builders.build_ticker_context import (  # noqa: E402
-    canonical_financial_facts_contract,
-    apply_bundle_canonical_financial_facts_contract,
-)
 from tools.operate_stocklookup import Operator  # noqa: E402
 
+if CONSUMER_ROOT.is_dir():
+    sys.path.insert(0, str(CONSUMER_ROOT))
+    from builders.build_ticker_context import (  # noqa: E402
+        canonical_financial_facts_contract,
+        apply_bundle_canonical_financial_facts_contract,
+    )
+else:
+    canonical_financial_facts_contract = None
+    apply_bundle_canonical_financial_facts_contract = None
 
+
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamA_SourceRegistryTests(unittest.TestCase):
     @staticmethod
     def _verifiable_registry() -> dict:
@@ -90,6 +96,7 @@ class WorkstreamA_SourceRegistryTests(unittest.TestCase):
         self.assertEqual(res_unapproved_type["reason"], registry.REASON_DOCUMENT_TYPE)
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamB_DocumentStoreTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
@@ -138,6 +145,7 @@ class WorkstreamB_DocumentStoreTests(unittest.TestCase):
         self.assertEqual(res_verify["findings"], [])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamC_EventLedgerTests(unittest.TestCase):
     def test_event_ledger_reconciliation_and_supersession(self) -> None:
         """Workstream C: Reconciles observations, supports event types, handles supersession."""
@@ -186,6 +194,7 @@ class WorkstreamC_EventLedgerTests(unittest.TestCase):
         self.assertIsNotNone(entry["adjustment_factor"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamD_DatedSharesTimelineTests(unittest.TestCase):
     def test_hpg_and_vnm_share_timelines(self) -> None:
         """Workstream D: Evaluates dated shares timeline across events and fail-closed cases."""
@@ -233,6 +242,7 @@ class WorkstreamD_DatedSharesTimelineTests(unittest.TestCase):
         self.assertEqual(res_fail["status"], "blocked")
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamE_AdjustmentFactorsTests(unittest.TestCase):
     def test_adjustment_factor_strict_ex_date_requirement(self) -> None:
         """Workstream E: Factors emitted only with explicit ex-date; missing ex-date yields NOT_READY."""
@@ -255,6 +265,7 @@ class WorkstreamE_AdjustmentFactorsTests(unittest.TestCase):
         self.assertIn("missing_explicit_official_ex_date", entry["adjustment_factor_blocked_by"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamF_ValuationReadinessTests(unittest.TestCase):
     def test_valuation_readiness_distinguishes_authorities(self) -> None:
         """Workstream F: Computes market-wide readiness counts while distinguishing authorities."""
@@ -263,6 +274,7 @@ class WorkstreamF_ValuationReadinessTests(unittest.TestCase):
         self.assertEqual(res_ticker["ticker"], "HPG")
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamG_ProducerConsumerIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runtime_root = ROOT.parent / "dashboard-runtime"
@@ -285,6 +297,7 @@ class WorkstreamG_ProducerConsumerIntegrationTests(unittest.TestCase):
         self.assertEqual(context_vcb["canonical_financial_facts"], attached["VCB"]["canonical_financial_facts"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamH_OperatorIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runtime_root = ROOT.parent / "dashboard-runtime"

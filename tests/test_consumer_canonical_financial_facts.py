@@ -9,7 +9,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
-sys.path.insert(0, str(CONSUMER_ROOT))
 
 #: The session the retained runtime is anchored to. The share and price legs of this
 #: section are both session-relative, so the tests state the session explicitly.
@@ -17,12 +16,19 @@ SESSION = "2026-07-30"
 
 
 from canonical_financial_bundle_section import attach  # noqa: E402
-from builders.build_ticker_context import (  # noqa: E402
-    canonical_financial_facts_contract,
-    apply_bundle_canonical_financial_facts_contract,
-)
+
+if CONSUMER_ROOT.is_dir():
+    sys.path.insert(0, str(CONSUMER_ROOT))
+    from builders.build_ticker_context import (  # noqa: E402
+        canonical_financial_facts_contract,
+        apply_bundle_canonical_financial_facts_contract,
+    )
+else:
+    canonical_financial_facts_contract = None
+    apply_bundle_canonical_financial_facts_contract = None
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class TestConsumerCanonicalFinancialFacts(unittest.TestCase):
     def setUp(self) -> None:
         self.runtime_root = ROOT.parent / "dashboard-runtime"

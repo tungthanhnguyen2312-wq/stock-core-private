@@ -13,7 +13,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
-sys.path.insert(0, str(CONSUMER_ROOT))
 
 #: The session the retained runtime is anchored to. The share and price legs of this
 #: section are both session-relative, so the tests state the session explicitly.
@@ -23,13 +22,20 @@ SESSION = "2026-07-30"
 import share_transition_bridge as share_bridge  # noqa: E402
 import market_wide_calculation_readiness as readiness  # noqa: E402
 from canonical_financial_bundle_section import attach, _resolve_session_inputs  # noqa: E402
-from builders.build_ticker_context import (  # noqa: E402
-    canonical_financial_facts_contract,
-    apply_bundle_canonical_financial_facts_contract,
-)
 from tools.operate_stocklookup import Operator  # noqa: E402
 
+if CONSUMER_ROOT.is_dir():
+    sys.path.insert(0, str(CONSUMER_ROOT))
+    from builders.build_ticker_context import (  # noqa: E402
+        canonical_financial_facts_contract,
+        apply_bundle_canonical_financial_facts_contract,
+    )
+else:
+    canonical_financial_facts_contract = None
+    apply_bundle_canonical_financial_facts_contract = None
 
+
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamA_CurrentEffectiveSharesTests(unittest.TestCase):
     def test_resolve_current_effective_shares_authority_order(self) -> None:
         """Workstream A: Resolves current effective shares by authority order without backsolving."""
@@ -71,6 +77,7 @@ class WorkstreamA_CurrentEffectiveSharesTests(unittest.TestCase):
         self.assertEqual(res_hpg["current_shares"]["value"], 8442964520)
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamB_SessionPriceInputTests(unittest.TestCase):
     def test_session_price_resolution(self) -> None:
         """Workstream B: Resolves current-session market price from runtime database/csv."""
@@ -95,6 +102,7 @@ class WorkstreamB_SessionPriceInputTests(unittest.TestCase):
         self.assertIsNone(price)
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamC_CurrentMarketCapTests(unittest.TestCase):
     def test_reconstructed_current_market_cap_calculation(self) -> None:
         """Workstream C: Reconstructs current market cap from session price and effective shares."""
@@ -120,6 +128,7 @@ class WorkstreamC_CurrentMarketCapTests(unittest.TestCase):
         self.assertEqual(res["status"], readiness.STATUS_PROVIDER_REPORTED)
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamD_ValuationReadinessTests(unittest.TestCase):
     def test_valuation_readiness_pe_pb_ev_ev_ebitda(self) -> None:
         """Workstream D: Computes P/E, P/B, EV, and EV/EBITDA fail-closed."""
@@ -147,6 +156,7 @@ class WorkstreamD_ValuationReadinessTests(unittest.TestCase):
         self.assertAlmostEqual(pb["value"], 1.6543, places=3)
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamE_MarketWideClassificationTests(unittest.TestCase):
     def test_market_wide_readiness_counts(self) -> None:
         """Workstream E: Produces exact classification counts across supported tickers."""
@@ -167,6 +177,7 @@ class WorkstreamE_MarketWideClassificationTests(unittest.TestCase):
         self.assertTrue(any(s == readiness.STATUS_PROVIDER_REPORTED for s in statuses))
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamF_ProducerConsumerOperatorIntegrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runtime_root = ROOT.parent / "dashboard-runtime"

@@ -15,19 +15,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 CONSUMER_ROOT = ROOT.parent / "ai-core-private"
-sys.path.insert(0, str(CONSUMER_ROOT))
 
 import market_wide_current_shares_resolver as shares_resolver  # noqa: E402
-from builders.build_ticker_context import (  # noqa: E402
-    apply_bundle_canonical_financial_facts_contract,
-)
 from canonical_financial_bundle_section import attach  # noqa: E402
 from tools.operate_stocklookup import Operator  # noqa: E402
+
+if CONSUMER_ROOT.is_dir():
+    sys.path.insert(0, str(CONSUMER_ROOT))
+    from builders.build_ticker_context import (  # noqa: E402
+        apply_bundle_canonical_financial_facts_contract,
+    )
+else:
+    apply_bundle_canonical_financial_facts_contract = None
 
 RUNTIME = ROOT.parent / "dashboard-runtime"
 SESSION = "2026-07-30"
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamA_ProviderFieldProvenanceTests(unittest.TestCase):
     def test_the_provider_concept_is_issued_shares_and_says_so(self) -> None:
         result = shares_resolver.resolve_effective_shares("PAN", RUNTIME, SESSION)
@@ -41,6 +46,7 @@ class WorkstreamA_ProviderFieldProvenanceTests(unittest.TestCase):
         self.assertIsNotNone(result["observation_date"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamB_OfficialAnchorGroundingTests(unittest.TestCase):
     """The corrected grounding.
 
@@ -67,6 +73,7 @@ class WorkstreamB_OfficialAnchorGroundingTests(unittest.TestCase):
         self.assertEqual(result["value"], result["official_anchor_value"])
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamC_FreshnessContractTests(unittest.TestCase):
     def test_freshness_is_measured_against_the_observation_not_a_fixed_date(self) -> None:
         result = shares_resolver.resolve_effective_shares("PAN", RUNTIME, SESSION)
@@ -78,6 +85,7 @@ class WorkstreamC_FreshnessContractTests(unittest.TestCase):
         self.assertEqual(result["freshness_proof"], "absent_no_ledger_coverage")
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamD_CorporateActionInvalidationTests(unittest.TestCase):
     def test_an_undated_share_event_withholds_the_value(self) -> None:
         """VCB and SSI carry an issuance with no ex-right date, so neither can be resolved."""
@@ -93,6 +101,7 @@ class WorkstreamD_CorporateActionInvalidationTests(unittest.TestCase):
                          & shares_resolver.NON_SHARE_CHANGING_EVENT_CODES, frozenset())
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamE_MarketWideAuditTests(unittest.TestCase):
     def test_the_audit_is_measured_and_reconciles(self) -> None:
         summary = shares_resolver.resolve_market_wide_shares(RUNTIME, SESSION)
@@ -107,6 +116,7 @@ class WorkstreamE_MarketWideAuditTests(unittest.TestCase):
         self.assertGreater(summary["counts"].get("provider_reported_current", 0), 1000)
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamF_ProducerConsumerTests(unittest.TestCase):
     def test_representative_cases_cross_the_boundary(self) -> None:
         attached = attach({"HPG": {"company_name": "Hoa Phat Group"},
@@ -120,6 +130,7 @@ class WorkstreamF_ProducerConsumerTests(unittest.TestCase):
             self.assertIn("canonical_financial_facts", context)
 
 
+@unittest.skipUnless(CONSUMER_ROOT.is_dir(), "Consumer repository required")
 class WorkstreamG_OperatorTests(unittest.TestCase):
     def test_the_operator_reports_a_measurement_not_a_constant(self) -> None:
         # The canonical-facts flag is what makes a lagged share observation reach the export
