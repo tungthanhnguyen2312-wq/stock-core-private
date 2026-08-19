@@ -10,7 +10,30 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
-## 2026-08-19 - Phase 2-C2 Bounded Financial Evidence Onboarding (GAS + VRE) Complete
+## 2026-08-19 - Phase 2-C2C Governed Evidence Lineage Correction (GAS + VRE) Complete
+
+`P2C2C_GOVERNED_EVIDENCE_LINEAGE_CORRECTION = COMPLETE_LOCAL` (`official_document_acquisition.py`, `official_document_qualification.py`, `governed_financial_evidence_extraction.py`, `tools/run_p2c2_corporate_evidence_onboarding.py`, `push = NO`).
+
+1. **Defect Remediation & Governed Lineage Architecture**:
+   - P2-C2 audit established `PRODUCTION_FACT_SOURCE = MANUALLY_EMBEDDED_FACTS` with 0/16 persisted citation lineage.
+   - P2-C2C established full governed pipeline: `admitted official route -> official_document_acquisition -> governed retained document -> persisted document qualification -> governed OCR sidecar -> persisted citation observations -> generic_financial_canonicalizer -> multi_period_financial_panel -> deterministic corrected P2-C2C artifact`.
+   - Replaced all manual fact embedding with dynamic verification and line-item extraction against persisted OCR sidecars (`derived/annual_financial_ocr_materialization_v1/`).
+
+2. **Generic PDF MIME Sniffing**:
+   - Added generic `%PDF` magic bytes sniffing to `official_document_acquisition.py` for `application/octet-stream` responses.
+   - Preserves `reported_content_type` and enforces strict registry, size, and hash validation gates without ticker-specific branches.
+
+3. **Standalone Persisted Document Qualification & Dynamic Extraction**:
+   - Created `official_document_qualification.py` establishing `DocumentQualificationRecord` and `QUALIFIED_RETAINED_FINANCIAL_STATEMENT`.
+   - Created `governed_financial_evidence_extraction.py` to scan OCR text, locate accounting line items, and run verified extraction without hardcoded production numbers.
+   - Added AST-based anti-regression test ensuring zero prohibited financial literals in `run_p2c2_corporate_evidence_onboarding.py`.
+
+4. **Multi-Period Panel & Semantic Labeling**:
+   - Re-verified multi-period panel integration for GAS and VRE. Explicitly labeled 2025 ROE derived proxy metric as `ENDING_EQUITY_ROE_PROXY` to distinguish from average-equity ROE.
+   - Historical commit `273445c5f4ed219ba4167c115b641006f18c2ab1` and old artifact `c8457f81fe104bb4` preserved as historical audit evidence and marked `SUPERSEDED_NONAUTHORITATIVE_MANUAL_LINEAGE_ARTIFACT`.
+   - Emitted deterministic corrected artifact to `operations-review/p2c2-governed-financial-evidence-onboarding-20260819/`.
+
+## 2026-08-19 - Phase 2-C2 Bounded Financial Evidence Onboarding (GAS + VRE) [SUPERSEDED BY P2-C2C]
 
 `P2C2_GAS_VRE_ONBOARDING = COMPLETE_LOCAL` (`tools/run_p2c2_corporate_evidence_onboarding.py`, `push = NO`).
 

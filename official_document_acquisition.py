@@ -55,7 +55,25 @@ def _safe(value: str) -> str: return re.sub(r"[^a-z0-9_]+", "_", value.lower()).
 def _now() -> str: return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 def _document_id(ticker: str, url: str, sha256: str) -> str: return hashlib.sha256(f"{ticker}|{url}|{sha256}".encode()).hexdigest()
 def _content_type(headers: Mapping[str, str]) -> str: return str(headers.get("Content-Type") or headers.get("content-type") or "").split(";", 1)[0].lower()
-def _supported(content_type: str, prefix: bytes) -> bool: return (content_type == "application/pdf" and prefix.startswith(b"%PDF")) or (content_type == "text/html" and b"<html" in prefix.lower())
+
+
+def _sniff_media_type(reported_content_type: str, prefix: bytes) -> tuple[str | None, str | None]:
+    raw = (reported_content_type or "").split(";", 1)[0].lower().strip()
+    if raw == "application/pdf":
+        return ("application/pdf", "declared_header") if prefix.startswith(b"%PDF") else (None, None)
+    if raw in {"text/html", "application/xhtml+xml"}:
+        return ("text/html", "declared_header") if (b"<html" in prefix.lower() or b"<!doctype html" in prefix.lower()) else (None, None)
+    if raw in {"application/octet-stream", "binary/octet-stream", ""}:
+        if prefix.startswith(b"%PDF"):
+            return "application/pdf", "magic_bytes_octet_stream"
+        if b"<html" in prefix.lower() or b"<!doctype html" in prefix.lower():
+            return "text/html", "html_tag_octet_stream"
+    return None, None
+
+
+def _supported(content_type: str, prefix: bytes) -> bool:
+    detected, _ = _sniff_media_type(content_type, prefix)
+    return detected is not None
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -156,10 +174,17 @@ def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TI
         if not 200 <= status < 300:
             for chunk in response.iter_content(chunk_size=1024): prefix.extend(chunk); break
             return status, headers, bytes(prefix), current
-        if _content_type(headers) not in {"application/pdf", "text/html"}: return status, headers, b"", current
-        total = 0
+        first_chunk = b""
+        for chunk in response.iter_content(chunk_size=1024):
+            first_chunk = chunk
+            prefix.extend(chunk[:1024])
+            break
+        detected_ct, _ = _sniff_media_type(_content_type(headers), bytes(prefix))
+        if detected_ct not in {"application/pdf", "text/html"}: return status, headers, bytes(prefix), current
+        total = len(first_chunk)
         try:
             with temporary_path.open("wb") as out:
+                out.write(first_chunk)
                 for chunk in response.iter_content(chunk_size=65536):
                     total += len(chunk)
                     if total > max_response_bytes: raise ValueError("response_size_limit")
@@ -183,7 +208,8 @@ def _response_failure(status: int, headers: Mapping[str, str], prefix: bytes, si
     text = prefix.lower()
     if status in {401, 403}: return "robots_or_anti_bot_block" if b"robot" in text or b"captcha" in text else "access_denied"
     if not 200 <= status < 300: return "access_denied" if status in {404, 410} else "network_error"
-    if _content_type(headers) not in {"application/pdf", "text/html"}: return "invalid_content_type"
+    detected_ct, _ = _sniff_media_type(_content_type(headers), prefix)
+    if detected_ct not in {"application/pdf", "text/html"}: return "invalid_content_type"
     if not size or not _supported(_content_type(headers), prefix): return "empty_or_truncated_document"
     return None
 
@@ -277,7 +303,9 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
                                  "state": "redirect_refused_by_source_registry", "reason": landing["reason"],
                                  "detail": landing["detail"], "http_status": status})
                 continue
-        sha256 = _sha_file(temporary); suffix = ".pdf" if _content_type(headers) == "application/pdf" else ".html"; relative = Path("documents") / ticker / period / _safe(document_class) / f"{sha256}{suffix}"; path = root / relative; path.parent.mkdir(parents=True, exist_ok=True)
+        raw_ct = _content_type(headers)
+        detected_ct, detection_rationale = _sniff_media_type(raw_ct, prefix)
+        sha256 = _sha_file(temporary); suffix = ".pdf" if detected_ct == "application/pdf" else ".html"; relative = Path("documents") / ticker / period / _safe(document_class) / f"{sha256}{suffix}"; path = root / relative; path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists() and _sha_file(path) != sha256:
             temporary.unlink(missing_ok=True); outcomes.append({"ticker": ticker, "canonical_url": url, "state": "hash_conflict", "http_status": status}); continue
         if not path.exists(): os.replace(temporary, path)
@@ -290,7 +318,10 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
                   "source_authority": spec.get("source_authority"),
                   "discovery_provenance": spec.get("discovery_provenance"),
                   "acquisition_status": "retained", "http_status": status,
-                  "content_type": _content_type(headers), "content_length": path.stat().st_size,
+                  "content_type": detected_ct or raw_ct,
+                  "reported_content_type": raw_ct,
+                  "media_type_detection_rationale": detection_rationale,
+                  "content_length": path.stat().st_size,
                   "sha256": sha256, "relative_path": relative.as_posix(),
                   "supersedes_document_id": spec.get("supersedes_document_id") or (prior[-1].get("document_id") if prior else None),
                   "extraction_status": _extraction_state(path)}

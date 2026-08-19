@@ -1,20 +1,22 @@
-"""Unit tests for Phase 2 / P2-C2: Bounded Financial Evidence Onboarding (GAS & VRE)."""
+"""Unit tests for Phase 2 / P2-C2C: Governed Corporate Financial Evidence Onboarding (GAS & VRE)."""
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 import unittest
 
 from tools.run_p2c2_corporate_evidence_onboarding import (
     ACTIVE_COHORT,
     CONTRACT_VERSION,
-    OFFICIAL_EVIDENCE_SPECS,
+    EXTRACTION_ORCHESTRATION_SPECS,
     PRESERVED_TERMINAL_COHORT,
     SCHEMA_VERSION,
     execute_p2c2_onboarding,
     generate_readiness_report,
 )
 from official_source_registry import ADMITTED, admit, load_registry
+from official_document_qualification import QUALIFICATION_SUCCESS_STATUS, qualify_retained_document
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -24,6 +26,8 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
     def setUp(self):
         self.repo_root = PROJECT_ROOT
         self.registry = load_registry(self.repo_root / "config" / "official_source_registry.json")
+        self.evidence_root = self.repo_root / "operations-review" / "governed-official-evidence-v1"
+        self.sidecar_dir = self.repo_root / "derived" / "annual_financial_ocr_materialization_v1"
 
     def test_bounded_cohort_and_preserved_terminal_states(self):
         """Active cohort is strictly GAS and VRE; MWG and VIC remain blocked."""
@@ -33,40 +37,94 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
 
     def test_official_source_admission(self):
         """GAS and VRE official routes are admitted under promoted authority."""
-        gas_spec = OFFICIAL_EVIDENCE_SPECS["GAS"]
         gas_adm = admit(
-            gas_spec["source_id"],
-            gas_spec["locator"],
-            gas_spec["document_class"],
+            "issuer_ir",
+            "https://www.pvgas.com.vn/DesktopModules/EasyDNNNews/DocumentDownload.ashx?portalid=0&moduleid=574&articleid=14454&documentid=3253",
+            "audited_annual_financial_statements",
             registry=self.registry,
         )
         self.assertEqual(gas_adm["decision"], ADMITTED)
         self.assertEqual(gas_adm["reason"], "admitted_by_registry")
 
-        vre_spec = OFFICIAL_EVIDENCE_SPECS["VRE"]
         vre_adm = admit(
-            vre_spec["source_id"],
-            vre_spec["locator"],
-            vre_spec["document_class"],
+            "issuer_ir",
+            "https://ir.vincom.com.vn/wp-content/uploads/2026/03/BCTC-hop-nhat-2025-1.pdf",
+            "audited_annual_financial_statements",
             registry=self.registry,
         )
         self.assertEqual(vre_adm["decision"], ADMITTED)
         self.assertEqual(vre_adm["reason"], "admitted_by_registry")
 
+    def test_anti_regression_no_embedded_production_financial_facts(self):
+        """Verify that runner source code contains ZERO hardcoded authoritative financial values."""
+        runner_path = self.repo_root / "tools" / "run_p2c2_corporate_evidence_onboarding.py"
+        source_code = runner_path.read_text(encoding="utf-8")
+
+        # Specific known financial values that previously appeared as hardcoded constants
+        prohibited_financial_literals = [
+            "135129055328395",
+            "11571631226008",
+            "13040237870138",
+            "93568198109790",
+            "67653389117937",
+            "6876468282085",
+            "20573719389418",
+            "2971690340782",
+            "8837380",
+            "6445924",
+            "-3262205",
+            "61279149",
+            "48368203",
+            "4434617",
+            "5173857",
+            "6401081",
+        ]
+
+        parsed_ast = ast.parse(source_code)
+        numeric_constants = [
+            node.value
+            for node in ast.walk(parsed_ast)
+            if isinstance(node, ast.Constant) and isinstance(node.value, (int, float))
+        ]
+
+        for lit in prohibited_financial_literals:
+            num_val = int(lit)
+            self.assertNotIn(
+                num_val,
+                numeric_constants,
+                f"Prohibited financial value {lit} found hardcoded in production runner!",
+            )
+
     def test_document_qualification_criteria(self):
-        """Financial statements meet strict audited annual consolidated criteria."""
+        """Retained official documents meet strict audited annual consolidated criteria."""
+        import json
+        manifest_path = self.evidence_root / "official_document_acquisition_manifest.json"
+        self.assertTrue(manifest_path.is_file())
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
         for ticker in ACTIVE_COHORT:
-            spec = OFFICIAL_EVIDENCE_SPECS[ticker]
-            self.assertEqual(spec["document_class"], "audited_annual_financial_statements")
-            self.assertEqual(spec["scope"], "consolidated")
-            self.assertEqual(spec["auditor"], "Deloitte Vietnam")
-            self.assertEqual(spec["reporting_period"], "2025")
-            self.assertTrue(len(spec["content_sha256"]) == 64)
-            self.assertGreater(spec["file_size_bytes"], 10_000_000)
+            recs = [r for r in manifest["records"] if r["ticker"] == ticker]
+            self.assertTrue(len(recs) >= 1)
+            rec = recs[-1]
+            qual = qualify_retained_document(
+                rec,
+                evidence_root=self.evidence_root,
+                registry=self.registry,
+            )
+            self.assertEqual(qual.qualification_status, QUALIFICATION_SUCCESS_STATUS)
+            self.assertEqual(qual.document_class, "audited_annual_financial_statements")
+            self.assertEqual(qual.statement_scope, "consolidated")
+            self.assertEqual(qual.audit_status, "audited")
+            self.assertEqual(qual.periodicity, "annual")
 
     def test_end_to_end_onboarding_and_zero_ticker_materializers(self):
         """End-to-end execution onboards GAS and VRE with zero ticker-specific materializers."""
-        result = execute_p2c2_onboarding(self.repo_root, generated_at="2026-08-19T13:30:00Z")
+        result = execute_p2c2_onboarding(
+            self.repo_root,
+            evidence_root=self.evidence_root,
+            sidecar_dir=self.sidecar_dir,
+            generated_at="2026-08-19T14:30:00Z",
+        )
 
         self.assertEqual(result["schema_version"], SCHEMA_VERSION)
         self.assertEqual(result["contract_version"], CONTRACT_VERSION)
@@ -75,6 +133,12 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
         self.assertEqual(result["end_to_end_onboarding_rate"], 1.0)
         self.assertEqual(result["new_ticker_specific_materializer_count"], 0)
         self.assertEqual(result["total_canonical_facts_emitted"], 16)
+        self.assertEqual(
+            result["governance_audit"]["production_fact_source"],
+            "PERSISTED_GOVERNED_OCR_EXTRACTION",
+        )
+        self.assertEqual(result["governance_audit"]["document_qualification_persisted"], "YES")
+        self.assertEqual(result["governance_audit"]["persisted_citation_lineage"], "16 / 16")
 
         gas_res = result["issuer_results"]["GAS"]
         self.assertEqual(gas_res["onboarding_status"], "ONBOARDING_SUCCESS")
@@ -90,9 +154,14 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
         self.assertEqual(result["issuer_results"]["MWG"]["terminal_state"], "NOT_READY_REDIRECT_CHAIN")
         self.assertEqual(result["issuer_results"]["VIC"]["terminal_state"], "NOT_READY_REPRODUCIBILITY")
 
-    def test_panel_derived_metrics(self):
-        """Multi-period panel derived ratios are properly computed."""
-        result = execute_p2c2_onboarding(self.repo_root, generated_at="2026-08-19T13:30:00Z")
+    def test_panel_derived_metrics_and_roe_proxy(self):
+        """Multi-period panel derived ratios are properly computed with ENDING_EQUITY_ROE_PROXY semantics."""
+        result = execute_p2c2_onboarding(
+            self.repo_root,
+            evidence_root=self.evidence_root,
+            sidecar_dir=self.sidecar_dir,
+            generated_at="2026-08-19T14:30:00Z",
+        )
 
         gas_panel = result["panels_by_issuer"]["GAS"]
         gas_derived = gas_panel["derived_metrics"]["2025"]
@@ -110,15 +179,22 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
 
     def test_readiness_report_generation(self):
         """Readiness report contains required tables, metrics, and invariant checks."""
-        result = execute_p2c2_onboarding(self.repo_root, generated_at="2026-08-19T13:30:00Z")
+        result = execute_p2c2_onboarding(
+            self.repo_root,
+            evidence_root=self.evidence_root,
+            sidecar_dir=self.sidecar_dir,
+            generated_at="2026-08-19T14:30:00Z",
+        )
         report = generate_readiness_report(result)
 
-        self.assertIn("# Phase 2 / P2-C2: Bounded Financial Evidence Onboarding Report (GAS & VRE)", report)
+        self.assertIn("# Phase 2 / P2-C2C: Governed Corporate Financial Evidence Onboarding Report (GAS & VRE)", report)
         self.assertIn("ONBOARDING_SUCCESS", report)
         self.assertIn("NOT_READY_REDIRECT_CHAIN", report)
         self.assertIn("NOT_READY_REPRODUCIBILITY", report)
         self.assertIn("ZERO ticker-specific Python modules", report)
         self.assertIn("STRICT INVARIANT MET", report)
+        self.assertIn("ENDING_EQUITY_ROE_PROXY", report)
+        self.assertIn("PERSISTED_GOVERNED_OCR_EXTRACTION", report)
 
 
 if __name__ == "__main__":
