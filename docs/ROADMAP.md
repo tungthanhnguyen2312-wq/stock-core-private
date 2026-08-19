@@ -67,7 +67,8 @@ Execution focus strictly follows the ordered critical path:
 4. **P0-A.3E** — Prospective Price Basis: Part A **COMPLETE**; Part B **BLOCKED FAIL-CLOSED**.
 5. **P0-B.2D / P0-B** — Volume/Liquidity Scoped Review: **CLOSED (NO_AUTHORITY_PROMOTION)**.
 6. **P0-C.3** — Field-Level Freshness & PIT Retrofit: **COMPLETE LOCALLY**.
-7. **First Market-Wide Deterministic Analysis/Research Artifact** — **CURRENT ACTIVE MILESTONE**.
+7. **First Market-Wide Deterministic Analysis/Research Artifact** — **COMPLETE LOCALLY** (`market_analysis_artifact.py`).
+8. **Phase 1 Feature Store Normalization & Multi-Session Export** — **CURRENT ACTIVE MILESTONE**.
 
 ---
 

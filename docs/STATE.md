@@ -53,10 +53,11 @@
 4. Prospective Price Evidence (`P0-A.3E` Part A) — **Complete**; Part B **Blocked Fail-Closed**.
 5. Volume/Liquidity Scoped Review (`P0-B.2D` / P0-B) — **Closed** (`NO_AUTHORITY_PROMOTION`).
 6. Field-Level Freshness & PIT Retrofit (`P0-C.3`) — **Complete Locally**.
-7. **First Market-Wide Deterministic Analysis/Research Artifact** — **CURRENT EXECUTION FOCUS**.
+7. **First Market-Wide Deterministic Analysis/Research Artifact** — **COMPLETE LOCALLY** (`market_analysis_artifact.py`, `09c662b20944d25e77671a2972e5d515345310f17b585c6fa293241db5eb995d`).
+8. **Phase 1 Feature Store Normalization & Multi-Session Export** — **CURRENT EXECUTION FOCUS**.
 
 ### Exact Next Bounded Action:
-Implement and verify the **First Market-Wide Deterministic Analysis/Research Artifact** using the completed local foundation (`P0-C.1`, `P0-C.2`, `P0-C.3`, `market_feature_store.py`, `field_temporal_contract.py`).
+Implement **Phase 1 Feature Store Normalization & Multi-Session Export** (P1 feature schemas, vectorized indicator pipelines, and export bundle contracts).
 
 ---
 

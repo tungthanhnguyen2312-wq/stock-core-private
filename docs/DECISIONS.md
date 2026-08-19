@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-08-19 - First Market-Wide Deterministic Analysis / Research Artifact V1 complete
+
+`FIRST_MARKET_WIDE_DETERMINISTIC_ANALYSIS_ARTIFACT = COMPLETE_LOCAL` (`market_analysis_artifact.py`, `push = NO`).
+
+1. **Artifact Foundation & Composition**:
+   - Implemented `market_analysis_artifact.py` and CLI generator `tools/generate_first_market_wide_research_artifact.py`.
+   - Composed the full C.1 candidate universe (3,250 candidates: 1,660 listed equity candidates, 1,590 unclassified security groups) with vectorized technical indicators (`market.close`, `market.return_1d`, `market.ma_3/5/20`, `market.volatility_3/20`, `market.volume_ratio`, `legacy.rel_vol`) and foreign flows (`dnse.foreign_net_value`).
+   - Bound field-level `TemporalField` envelopes across all 39,000 field instances.
+
+2. **Explicit Universe & Authority Invariants**:
+   - Emits for `CANONICAL_CANDIDATE_UNIVERSE` without falsely asserting `ACTIVE_UNIVERSE` authority (`ACTIVE_UNIVERSE = UNKNOWN` fail-closed across 100% of candidates).
+   - Price basis remains `RAW_AS_TRADED_NOT_PROMOTED`; unpromoted price fields fail closed as `pit_eligible=False` (`UNQUALIFIED_PRICE_BASIS`).
+   - Liquidity and sizing remain strictly blocked: `QUALIFIED_LIQUIDITY_INPUTS = NO`, `POSITION_SIZING_IS_SAFE = NO`, `market_liquidity_eligible = False`, `execution_sizing_eligible = False`.
+   - One missing field (e.g. unobserved market rows or missing foreign flow) isolates to `FreshnessState.MISSING` without invalidating the instrument candidate record or other features.
+
+3. **Deterministic Verification & Validation Report**:
+   - Artifact generated and validated with byte-stable SHA-256 content hash `09c662b20944d25e77671a2972e5d515345310f17b585c6fa293241db5eb995d`.
+   - Validation report retained in `operations-review/p1-first-market-wide-deterministic-analysis-artifact-20260819.md`.
+   - Test suite `tests/test_market_analysis_artifact.py` (7/7 passed).
+
+4. **Next Roadmap Gate**:
+   - With the first deterministic market-wide research artifact established, Phase 0 is complete and Phase 1 (Research Evidence Layer & Feature Store Normalization) is unlocked.
+   - Recommended next milestone: **Phase 1 Feature Store Normalization & Multi-Session Cross-Sectional Export Contract**.
+
 ## 2026-08-19 - P0-B.2D Scoped Promotion Review & P0-B Terminal Closeout
 
 `P0-B = TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION` (`push = NO`).
