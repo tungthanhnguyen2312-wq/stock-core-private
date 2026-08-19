@@ -1,0 +1,35 @@
+name: Bug report
+description: Report a reproducible problem in Stock Lookup
+title: "[Bug]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please do not include credentials, private data, or runtime databases.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest reproducible steps, inputs, or code sample.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Relevant OS, Python version, commit SHA, and configuration details with secrets removed.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and logs
+      description: Add sanitized logs, tracebacks, or provenance details that help reproduce the issue.
