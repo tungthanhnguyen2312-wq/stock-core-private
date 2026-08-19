@@ -10,6 +10,33 @@
 
 ## Active & Recent Decision Records (2026-08-17 to Present)
 
+## 2026-08-19 - Phase 2-A Multi-Period Financial Fact Panel & Sector Applicability Contract Complete
+
+`P2A_MULTI_PERIOD_FINANCIAL_FACT_PANEL = COMPLETE_LOCAL` (`multi_period_financial_panel.py`, `push = NO`).
+
+1. **Dimensional Provenance & Period Distinction**:
+   - Implemented `multi_period_financial_panel.py` and CLI generator `tools/generate_multi_period_financial_panel_artifact.py`.
+   - Distinctly models `instant` (balance sheet) vs `duration` (income statement, cash flow) facts and `annual` vs `quarterly` reporting frequencies.
+   - Preserves currency (`VND`, `USD`) and statement scope (`consolidated`, `separate`) without silent conversion or mixing.
+
+2. **Deterministic Sector Applicability Matrix**:
+   - Formalized entity archetypes: `corporate`, `bank`, `securities`, `insurance`, `finance_company`, `unknown`.
+   - Strictly blocks financial intermediaries (`bank`, `securities`) from inappropriate corporate debt ratios (`debt_to_equity`, `net_debt`) and EBITDA concepts (`NOT_APPLICABLE`).
+   - Integrates fail-closed Altman Z'-score applicability for manufacturing vs non-manufacturing corporates.
+
+3. **Bounded Derived Accounting Relationships**:
+   - Computes bounded accounting metrics (YoY Net Income and OCF growth, cash flow coverage of net income, debt/equity and net debt for corporates).
+   - Preserves strict fail-closed governance: missing inputs isolate to dependent metrics; valuation multiples, intrinsic value models, price targets, and strategy rankings remain strictly blocked.
+
+4. **Multi-Period Validation Artifact**:
+   - Composed 60 qualified facts across 10 representative issuers (`HPG`, `VNM`, `PVD`, `POW`, `FPT`, `NVL`, `PAN`, `QNS`, `SSI`, `VCB`) with content hash `33cfa0a4e5ee114e31b1a381aa63cd7e4d3943fd969ff6449596173271678aba`.
+   - Validation report retained in `operations-review/p2-multi-period-financial-panel-20260819/READINESS_REPORT.md`.
+   - Test suite `tests/test_multi_period_financial_panel.py` (12/12 passed).
+
+5. **Next Roadmap Gate**:
+   - Multi-period fundamental research panel verified as `READY_FOR_MULTI_PERIOD_FUNDAMENTAL_RESEARCH`.
+   - Recommended next milestone: **Phase 2-B Financial Statement Scale-Out & BCTC Canonicalization**.
+
 ## 2026-08-19 - Phase 1 Feature Store Normalization & Multi-Session Cross-Sectional Export Contract Complete
 
 `P1_MULTI_SESSION_CROSS_SECTIONAL_EXPORT = COMPLETE_LOCAL` (`cross_sectional_export.py`, `push = NO`).

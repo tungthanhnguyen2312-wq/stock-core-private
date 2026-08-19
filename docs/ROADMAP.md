@@ -51,7 +51,7 @@
 | **P0-C.1** | Canonical Instrument-Master Reconciliation | **COMPLETE** | Reconciled across 3,250 instruments (1,660 listed equity candidates, 1,590 unclassified). |
 | **P0-C.2** | Universe-Tier Hierarchy & Exclusion Ledger | **COMPLETE** | `ACTIVE_UNIVERSE` fails closed as `UNKNOWN` pending verified exchange/listing evidence. |
 | **P1** | Feature Store Normalization & Multi-Session Export | **COMPLETE** | `cross_sectional_export.py` normalized semantic taxonomy, multi-session export contract, fail-closed PIT/liquidity boundaries (`bb0cafa4417471b0`). |
-| **P2** | Multi-Period Fundamentals & Sector Normalization | **DEFERRED** | Official financial filings pipeline isolated under `data-landing/`. |
+| **P2** | Multi-Period Fundamentals & Sector Normalization | **IN PROGRESS (P2-A Complete)** | `multi_period_financial_panel.py` deterministic multi-period research panel, sector applicability matrix, bound temporal envelopes across 10 retained issuers (`33cfa0a4e5ee114e`). |
 | **P3** | Portfolio Sizing, Execution, Backtest | **FAIL-CLOSED** | Blocked until upstream price and liquidity qualifications are complete. |
 
 ---
