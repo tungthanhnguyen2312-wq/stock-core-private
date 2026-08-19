@@ -1,8 +1,10 @@
 # Stock Lookup — Producer Architecture & Governance
 
-**Stock Lookup** is an evidence-first, deterministic quantitative analytics and financial intelligence platform for Vietnamese equities (HOSE, HNX, UPCoM).
+**Stock Lookup** is actively developed, evidence-first open-source infrastructure for deterministic quantitative analytics and auditable financial intelligence on Vietnamese equities (HOSE, HNX, UPCoM). It is not an AI stock-prediction application.
 
 The platform enforces strict computational determinism, immutable provenance tracking, and explicit fail-closed semantic gating. Numerical authority, risk boundaries, and financial facts are computed exclusively by pure, deterministic Python/vectorized engines; AI systems provide explanation, research synthesis, and counter-theses without altering numerical authority.
+
+Contributions are welcome, especially reproducible bug reports, tests, documentation improvements, and bounded engineering changes. See the [MIT License](LICENSE), [CONTRIBUTING.md](CONTRIBUTING.md), and [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -65,6 +67,7 @@ The platform enforces strict computational determinism, immutable provenance tra
 - **Corporate Action Ledger & Multi-Event Extraction ([official_corporate_action_ledger.py](official_corporate_action_ledger.py))**: Additive and multiplicative factor trees from official filing authority (P0-A.2).
 - **Vectorized Market Feature Store ([market_feature_store.py](market_feature_store.py))**: Vectorized technical and statistical feature generation with bound temporal metadata.
 - **Fail-Closed Volume & Value Semantic Boundary ([market_volume_value_semantic_contract.py](market_volume_value_semantic_contract.py))**: Strict enforcement of permitted downstream uses.
+- **Market-Wide Research Artifacts ([market_analysis_artifact.py](market_analysis_artifact.py))**: Deterministic cross-sectional research artifact generator across candidate universes.
 
 ---
 
@@ -84,10 +87,13 @@ For development and governance, consult the following authoritative documents:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [docs/STATE.md](docs/STATE.md) | Current project phase, active blockers, completed gates, and immediate next action. | Human & AI Operators |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Architectural phase structure, milestone table, dependencies, and deferred tracks. | Human & AI Operators |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Architectural phase structure, milestone matrix, dependencies, and deferred tracks. | Human & AI Operators |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Chronological architectural decision records with formal rationales. | Human & AI Operators |
 | [AGENTS.md](AGENTS.md) | Agent working rules, scope boundaries, and execution protocols. | AI Executors |
 | [docs/AI_RULES.md](docs/AI_RULES.md) | Engineering safety policies, market data doctrine, and fail-closed rules. | AI Executors & Reviewers |
+| [LICENSE](LICENSE) | MIT Open Source License terms. | Public & Contributors |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution and maintainer guidelines. | Public & Contributors |
+| [SECURITY.md](SECURITY.md) | Security vulnerability reporting protocol. | Public & Contributors |
 | `operations-review/` | Retained forensic reports, closeout records, and empirical validation artifacts. | Reference & Audit |
 
 ---
@@ -101,10 +107,10 @@ For development and governance, consult the following authoritative documents:
 ### Running Deterministic Unit Tests
 ```powershell
 # Run core deterministic test suite:
-python -m pytest tests/test_field_temporal_contract.py tests/test_canonical_universe_tiers.py tests/test_market_volume_value_semantic_contract.py tests/test_official_corporate_action_pillar.py
+python -m pytest tests/test_market_analysis_artifact.py tests/test_field_temporal_contract.py tests/test_canonical_universe_tiers.py tests/test_market_volume_value_semantic_contract.py tests/test_official_corporate_action_pillar.py
 
 # Verify syntax & compilation:
-python -m py_compile field_temporal_contract.py market_data_contracts.py market_feature_store.py
+python -m py_compile market_analysis_artifact.py field_temporal_contract.py market_data_contracts.py market_feature_store.py
 
 # Check git formatting:
 git diff --check
