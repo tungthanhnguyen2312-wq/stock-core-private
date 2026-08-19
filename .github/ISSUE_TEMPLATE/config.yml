@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security reports
+    url: https://github.com/tungthanhnguyen2312-wq/stock-core-private/security
+    about: Please follow SECURITY.md and avoid posting secrets or sensitive data publicly.
