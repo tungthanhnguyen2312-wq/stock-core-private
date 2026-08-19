@@ -1,0 +1,26 @@
+name: Reproducibility report
+description: Report a result that cannot be reproduced from documented inputs or evidence
+title: "[Repro]: "
+labels: []
+body:
+  - type: textarea
+    id: claim
+    attributes:
+      label: Result or claim
+      description: Which documented result, command, or behavior could not be reproduced?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction attempt
+      description: Provide the exact sanitized steps, commit SHA, and inputs you used.
+    validations:
+      required: true
+  - type: textarea
+    id: difference
+    attributes:
+      label: Observed difference
+      description: What did you observe instead?
+    validations:
+      required: true
