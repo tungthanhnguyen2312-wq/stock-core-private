@@ -56,6 +56,13 @@ data/macro_snapshot.json
 data/macro_snapshot.js
 screen_snapshot_live.csv
 
+# Temporary scratch directories
+tmp/
+dev/
+
+# Local-only forensic evidence and milestone run archives (tracked files remain tracked)
+operations-review/
+
 # metadata_registry_export.py --registry-snapshot output: generated, immutable snapshot files,
 # not source. See docs/metadata_registry_snapshot_contract.md for the retention contract.
 registry_snapshots/

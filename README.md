@@ -94,6 +94,8 @@ For development and governance, consult the following authoritative documents:
 | [LICENSE](LICENSE) | MIT Open Source License terms. | Public & Contributors |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution and maintainer guidelines. | Public & Contributors |
 | [SECURITY.md](SECURITY.md) | Security vulnerability reporting protocol. | Public & Contributors |
+| [docs/internal/](docs/internal/) | Consolidated AI-agent context, workspace audits, and validation reports. | Internal & AI Agents |
+| [docs/archive/](docs/archive/) | Historical changelogs, manifests, and past decision archives. | Reference & Historical |
 | `operations-review/` | Retained forensic reports, closeout records, and empirical validation artifacts. | Reference & Audit |
 
 ---

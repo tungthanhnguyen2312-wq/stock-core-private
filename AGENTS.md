@@ -49,3 +49,4 @@ and the Producer `STATE.md`; do not reconstruct project truth from chat memory o
   current direction; EODHD remains rejected.
 - Do not start a later milestone merely because the current one is ready. Owner authorization is
   still required.
+- Detailed agent context, internal validation narratives, and workspace audit records are consolidated in [`docs/internal/`](docs/internal/); historical decision archives reside in [`docs/archive/decisions/`](docs/archive/decisions/).

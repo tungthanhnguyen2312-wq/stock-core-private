@@ -48,7 +48,7 @@ LOG_DIR = RUNTIME_DIR / "logs"
 # Output files
 CSV_OUT = RUNTIME_DIR / "financial_snapshot.csv"
 PARQUET_OUT = RUNTIME_DIR / "financial_snapshot.parquet"
-REPORT_OUT = ROOT_DIR / "docs" / "VALIDATION_REPORT.md"  # gộp 2026-07-12: chuyển vào docs/ (source-tracked)
+REPORT_OUT = ROOT_DIR / "docs" / "internal" / "VALIDATION_REPORT.md"  # consolidated 2026-08-19: moved to docs/internal/
 FINANCIAL_REGISTRY = get_default_registry()
 OCF_SOURCE_PROFILE_PATH = ROOT_DIR / "config" / "ocf_source_profiles.csv"
 PARQUET_ENGINE_AVAILABLE = bool(
