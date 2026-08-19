@@ -10,6 +10,48 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
+## 2026-08-19 - Phase 2-E Evidence-Backed Entity Classification Scale-Out Foundation Complete
+
+`P2E_ENTITY_CLASSIFICATION_FOUNDATION = COMPLETE_LOCAL` (`entity_classification_contract.py`, `evidence_backed_entity_classifier.py`, `tools/run_p2e_entity_classification_foundation.py`, `tests/test_evidence_backed_entity_classifier.py`, `push = NO`).
+
+1. **Canonical Classification Schema & Contract**:
+   - Defined `entity_classification_contract.py` declaring `EntityClass` (`corporate`, `bank`, `securities`, `insurance`, `finance_company`, `unknown`), `ClassificationStatus` (`QUALIFIED`, `UNKNOWN`, `AMBIGUOUS`, `NOT_APPLICABLE`, `CONFLICT`), and `EvidenceTier` (`documented_verified`, `exchange_security_master`, `statement_template`, `curated_seed_authority`).
+   - Immutable, provenance-bound `EntityClassificationRecord` containers bound with deterministic SHA-256 evidence payload hash (`compute_classification_evidence_id`).
+   - Preserves temporal semantics (`effective_from`, `knowledge_available_at`, `verified_at`).
+
+2. **Generic Evidence-Backed Classifier Engine**:
+   - Implemented `evidence_backed_entity_classifier.py` with multi-evidence positive authority fusion across:
+     - Legal charter & registered name descriptors (`ngan hang tmcp`, `ctcp chung khoan`, `ctcp bao hiem`, `ctcp tai chinh`, `ctcp / cong ty co phan`).
+     - Statement form codes (`B 01-DN`, `B 01-NH`, `B 01-CK`, `B 01-BH`).
+     - Exclusive line-item financial markers (Balance sheet and Income statement marker sets).
+     - Curated seed authority baseline (`config/ticker_entity_profiles.csv`).
+   - Zero hardcoded symbol logic in production classification rules (`TICKER_SPECIFIC_EXTRACTION_BRANCH_COUNT = 0`).
+   - Strict fail-closed semantics: absence of evidence remains `UNKNOWN_ENTITY_CLASS` (`ClassificationStatus.UNKNOWN`), never a silent default to corporate.
+   - Contradictory evidence across authoritative sources produces `ClassificationStatus.CONFLICT`.
+
+3. **Validation Corpus & Scale Denominators**:
+   - Evaluated 40 issuers:
+     - Part A: 20 existing known seed profiles (`PAN`, `HPG`, `FPT`, `PNJ`, `PVD`, `POW`, `QNS`, `NVL`, `VNM`, `MWG`, `GAS`, `VIC`, `VRE`, `SSI`, `VCB`, `BID`, `MBB`, `TCB`, `BVH`, `EVF`) — 100% verified consistent.
+     - Part B: 20 deterministically selected previously-UNKNOWN listed equities (`A32`, `AAA`, `AAH`, `AAM`, `AAN`, `AAS`, `AAT`, `AAV`, `ABB`, `ABC`, `ABI`, `ABR`, `ABS`, `ABT`, `ABW`, `ACB`, `ACC`, `ACE`, `ACG`, `ACL`) — correctly classified into 15 corporate, 2 bank (`ABB`, `ACB`), 2 securities (`AAS`, `ABW`), 1 insurance (`ABI`).
+   - Scale denominators tracked:
+     - `TOTAL_CANONICAL_CANDIDATES = 3,250`
+     - `LISTED_EQUITY_CANDIDATES = 1,660`
+     - `PREVIOUSLY_POSITIVELY_CLASSIFIED = 20`
+     - `PREVIOUSLY_UNKNOWN = 1,640`
+     - `VALIDATION_UNKNOWN_COHORT = 20`
+     - `NEWLY_QUALIFIED = 20`
+     - `REMAINING_MARKET_UNKNOWN = 1,620`
+     - `AMBIGUOUS_COUNT = 0`
+     - `CONFLICT_COUNT = 0`
+
+4. **Downstream Applicability Integration**:
+   - Validated against `financial_entity_applicability.py` and `multi_period_financial_panel.py`.
+   - Verified that banks, securities, and insurers fail closed on corporate debt / EBITDA metrics (`not_applicable` / `NOT_APPLICABLE`), while corporates retain standard debt-to-equity and net debt eligibility subject to inputs.
+
+5. **Governance & Authority Promotion Safety**:
+   - Output emitted to `operations-review/p2e-evidence-backed-entity-classification-20260819/` (`p2e_entity_classification_artifact.json`, `READINESS_REPORT.md`).
+   - Authority status marked as **`PROMOTION_REVIEW_READY`**. Baseline `config/ticker_entity_profiles.csv` remains un-overwritten pending owner promotion authorization.
+
 ## 2026-08-19 - Phase 2-D Generic Financial Statement Template Recognition and Extraction Complete
 
 `P2D_GENERIC_FINANCIAL_EXTRACTION = COMPLETE_LOCAL` (`financial_statement_template_recognizer.py`, `governed_financial_evidence_extraction.py`, `tools/run_p2c2_corporate_evidence_onboarding.py`, `tests/test_financial_statement_template_recognizer.py`, `push = NO`).
