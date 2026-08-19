@@ -190,9 +190,8 @@ class FinancialMappingRegistry:
     def _load_profiles(self) -> dict[str, str]:
         if not self.profiles_path or not self.profiles_path.exists():
             return {}
-        with self.profiles_path.open("r", encoding="utf-8-sig", newline="") as handle:
-            rows = csv.DictReader(handle)
-            profiles = {(row.get("ticker") or "").strip().upper(): (row.get("entity_type") or "").strip().lower() for row in rows}
+        from entity_classification_contract import load_layered_entity_profiles
+        profiles = load_layered_entity_profiles(seed_path=self.profiles_path)
         for ticker, entity_type in profiles.items():
             if not ticker or entity_type not in ENTITY_TYPES - {"*", "unknown"}:
                 raise ValueError(f"Invalid entity profile: {ticker!r} -> {entity_type!r}")

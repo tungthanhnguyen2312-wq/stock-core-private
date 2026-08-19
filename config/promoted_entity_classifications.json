@@ -1,0 +1,485 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "entity_classification_contract/v1",
+  "authority_type": "PROMOTED_ENTITY_CLASSIFICATION_REGISTRY",
+  "authority_scope": "CURRENT_STATE_ONLY",
+  "historical_pit_authority": "NOT_ESTABLISHED",
+  "source_artifact_id": "p2e_entity_classification:41594ec20971d7a01b6b8f9c993062f1b87f38938ed58005a42ea128dbdea66f",
+  "source_artifact_hash": "41594ec20971d7a01b6b8f9c993062f1b87f38938ed58005a42ea128dbdea66f",
+  "source_seed_authority": "config/ticker_entity_profiles.csv",
+  "promoted_at": "2026-08-19T15:45:00.000000+00:00",
+  "promoted_record_count": 20,
+  "class_breakdown": {
+    "corporate": 15,
+    "bank": 2,
+    "securities": 2,
+    "insurance": 1,
+    "finance_company": 0,
+    "unknown": 0
+  },
+  "promoted_records": {
+    "A32": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:94db43a03c25b9e57d5c875fce9e327c0fcc0bb619f39a76faf83b1dc924f97e",
+      "ticker": "A32",
+      "legal_name": "CTCP 32",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "def879e2819079b1c0ded5e9b6f360d8571786c5116a0e2fe20757b690c13ac8",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP 32"
+      }
+    },
+    "AAA": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:e76cf490fe3658199cbdfd2dbf75a00813bd9ec8e1a48e467eaf1d5b3822c8b2",
+      "ticker": "AAA",
+      "legal_name": "CTCP Nhựa An Phát Xanh",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "760e9963e6aed49c15d0617afdd80f2082ea7f8c28665847fb8d04294e8048f8",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Nhựa An Phát Xanh"
+      }
+    },
+    "AAH": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:25946f82325f605418a37f6c9d688f975f86d8cae5a6e28419107791f86a153b",
+      "ticker": "AAH",
+      "legal_name": "CTCP Hợp Nhất",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "b107d6a904edb82dcc9eb6889ed16d8aeb7c3539b2458425326d0654d916c6df",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Hợp Nhất"
+      }
+    },
+    "AAM": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:cd27b93bf66833db3de15ab502ffd50f404a0c1f47c4a23babaa62aca9724bc7",
+      "ticker": "AAM",
+      "legal_name": "CTCP Thủy sản MeKong",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "a7e61d28bd3046fffabec4840c731dfb885a2fe6b96634f0e5883eaa10137445",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Thủy sản MeKong"
+      }
+    },
+    "AAN": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:ce957d8b5858449acc3da8b5d19572d88df261cee443c8635182e1ea7cbf4a3d",
+      "ticker": "AAN",
+      "legal_name": "Công ty Cổ phần Lương thực A An",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "15290e0d482e7fc28d26da75c132014d4bda6aa01209755b24a62eb86bff1aa1",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "Công ty Cổ phần Lương thực A An"
+      }
+    },
+    "AAS": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:14e4823f3ba02618151507ffc8dc85fe86fb90d148605aa2459effa2c162c2cf",
+      "ticker": "AAS",
+      "legal_name": "CTCP Chứng khoán SmartInvest",
+      "entity_class": "securities",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "24c3ebc081c1243ed2a39b7c6ce0a3f941f0f639ff7653be1c6cb5f269e66618",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "charter_matches_securities_descriptor",
+      "supporting_evidence": {
+        "charter_markers": [
+          "ctcp chung khoan",
+          "chung khoan"
+        ],
+        "form_codes": [],
+        "marker_details": {
+          "bs_taxonomy": null,
+          "is_taxonomy": null
+        },
+        "seed_profile": null
+      }
+    },
+    "AAT": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:e9a9e8c3d7e0c3b862938330bea73f6a04411ae0b6e8a8ded743747ecae2b0a7",
+      "ticker": "AAT",
+      "legal_name": "CTCP Tập Đoàn Tiên Sơn Thanh Hóa",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "af0bc7adc5f6aec86d22894a95d59317fb77efaffd13ad38c12242aa36a63fbd",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Tập Đoàn Tiên Sơn Thanh Hóa"
+      }
+    },
+    "AAV": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:541bb19992cb4a9b2aa30aa678619cd2cade7736b11b06418b3b5f44b4da47a8",
+      "ticker": "AAV",
+      "legal_name": "Cổ phiếu Công ty cổ phần AAV Group",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "415e8d2608b1550744b76dc57d85f0d028b9d42744d61f1722f5da85fa069e21",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "Cổ phiếu Công ty cổ phần AAV Group"
+      }
+    },
+    "ABB": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:70e3b8aec55419021619b7e04a7cb1dac604e2041d2c677850a31db83cedd1c4",
+      "ticker": "ABB",
+      "legal_name": "Ngân hàng TMCP An Bình",
+      "entity_class": "bank",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "9771644fe6f50af9c9de54bd2997101ec07d8e8b3a1286761f6e52ccc1df5c84",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "charter_matches_bank_descriptor",
+      "supporting_evidence": {
+        "charter_markers": [
+          "ngan hang tmcp"
+        ],
+        "form_codes": [],
+        "marker_details": {
+          "bs_taxonomy": null,
+          "is_taxonomy": null
+        },
+        "seed_profile": null
+      }
+    },
+    "ABC": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:962664be78420df464368f0874c4bfd092d935e45ad4cb6a98c3cd702a0b8078",
+      "ticker": "ABC",
+      "legal_name": "CTCP Truyền thông VMG",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "945a6ed00753eee64352d8c31b2c1b9f5c4f6f88ba250acf82240480c5ef81f5",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Truyền thông VMG"
+      }
+    },
+    "ABI": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:3756adea7518c7407d4b5c3ecbd7fd0fe86f163abe4a644ca0ad2e725932e77f",
+      "ticker": "ABI",
+      "legal_name": "CTCP Bảo hiểm Ngân hàng Nông nghiệp Việt Nam",
+      "entity_class": "insurance",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "36af32dc632d6f5b652a3afd0e9f2f76422efc173dbffb4da69906b51e929f28",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "charter_matches_insurance_descriptor",
+      "supporting_evidence": {
+        "charter_markers": [
+          "ctcp bao hiem",
+          "bao hiem"
+        ],
+        "form_codes": [],
+        "marker_details": {
+          "bs_taxonomy": null,
+          "is_taxonomy": null
+        },
+        "seed_profile": null
+      }
+    },
+    "ABR": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:677a8fc6a8c8449c3adadc51b0b4334603e7536056b1636f58cdab8fb51a297c",
+      "ticker": "ABR",
+      "legal_name": "CTCP Đầu tư Nhãn hiệu Việt",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "d27cbb4ed4f5656c4725024778492a52a89f6c9de479c25ebd737d015766edc7",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Đầu tư Nhãn hiệu Việt"
+      }
+    },
+    "ABS": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:fc2b619a35aafa4f4635c0ba9d53a1ffe787598fd4a5baa2ccc949ac57cc5e91",
+      "ticker": "ABS",
+      "legal_name": "CTCP Dịch vụ Nông nghiệp Bình Thuận",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "fb164a40f7d600d0a000ff587da5e59d9f058076f56e51b8c817d6114c52ce74",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Dịch vụ Nông nghiệp Bình Thuận"
+      }
+    },
+    "ABT": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:8b1a828a3404eebdc42535e521e662dcdb172af5954704735912b445a870600b",
+      "ticker": "ABT",
+      "legal_name": "CTCP Xuất nhập khẩu Thủy sản Bến Tre",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "279faa1b1ebffca6dd5ee448c5dd2247811bc9bd1aab24ed2160b28eeb014f78",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Xuất nhập khẩu Thủy sản Bến Tre"
+      }
+    },
+    "ABW": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:6577462b465e18d0e046160764be654e2824d1fd9ada6e9f9c926b171ae00647",
+      "ticker": "ABW",
+      "legal_name": "CTCP Chứng khoán An Bình",
+      "entity_class": "securities",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "50a7b5ea1a724046dcbb489716b75bb395a2e02f94f6bdf90b26e9175e8d9c1d",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "charter_matches_securities_descriptor",
+      "supporting_evidence": {
+        "charter_markers": [
+          "ctcp chung khoan",
+          "chung khoan"
+        ],
+        "form_codes": [],
+        "marker_details": {
+          "bs_taxonomy": null,
+          "is_taxonomy": null
+        },
+        "seed_profile": null
+      }
+    },
+    "ACB": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:c6cab68a0ee3da39ec7ee996200bdb6682a580d925dc36cb456d67eec3dffde4",
+      "ticker": "ACB",
+      "legal_name": "Ngân hàng TMCP Á Châu",
+      "entity_class": "bank",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "38a9c8c177f9868c0bf34c124b9366436cfb3265d9aadd12865ccd22790d40cc",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "charter_matches_bank_descriptor",
+      "supporting_evidence": {
+        "charter_markers": [
+          "ngan hang tmcp"
+        ],
+        "form_codes": [],
+        "marker_details": {
+          "bs_taxonomy": null,
+          "is_taxonomy": null
+        },
+        "seed_profile": null
+      }
+    },
+    "ACC": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:f80f7faeeccae58e27b1f9072ecac2d899473a32d5856e37d11c8f7472a0452b",
+      "ticker": "ACC",
+      "legal_name": "CTCP Đầu tư và Xây dựng Bình Dương ACC",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "5eef8bff5ffe95da8fff9c278af85e02c1dc3ffe6f175af029a7567b9892b468",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Đầu tư và Xây dựng Bình Dương ACC"
+      }
+    },
+    "ACE": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:bbf7460c6c880b739ffaac44e693dababa0945ce43f5e9d54a5e3689c28d1591",
+      "ticker": "ACE",
+      "legal_name": "CTCP Bê tông Ly tâm An Giang",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "14d79d5ee591b96f07d784316bc22dc2090fe2b1f7a48c73f3145045ea2755cc",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Bê tông Ly tâm An Giang"
+      }
+    },
+    "ACG": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:7c78817151977a9d657ad11a0ac21ad85791d050a5a5b87f4bc1d1a6e4588411",
+      "ticker": "ACG",
+      "legal_name": "CTCP Gỗ An Cường",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "4cc2d5865027bf522bc035c5e34a4d5ecfc13781b2dc77e64b3b3a374fadae5e",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Gỗ An Cường"
+      }
+    },
+    "ACL": {
+      "schema_version": "1.0.0",
+      "contract_version": "entity_classification_contract/v1",
+      "issuer_identity": "candidate:834e0950a502d36d61b29cada56fd26d21865d65d07c7219e0b34bea6294a521",
+      "ticker": "ACL",
+      "legal_name": "CTCP Xuất nhập khẩu Thủy sản Cửu Long An Giang",
+      "entity_class": "corporate",
+      "classification_status": "QUALIFIED",
+      "confidence_semantics": "DETERMINISTIC_PROOF",
+      "evidence_tier": "exchange_security_master",
+      "classification_evidence_id": "4c97c1cce184c91f3db018643395700632f4f3e1777ccb3d83af5de89e322ebb",
+      "source_id": "canonical_instrument_reconciliation",
+      "source_record_id": null,
+      "effective_from": null,
+      "knowledge_available_at": null,
+      "verified_at": "2026-08-19T15:21:01.166052+00:00",
+      "classification_reason": "general_commercial_enterprise_charter_without_specialized_financial_license",
+      "supporting_evidence": {
+        "general_enterprise_name": "CTCP Xuất nhập khẩu Thủy sản Cửu Long An Giang"
+      }
+    }
+  }
+}

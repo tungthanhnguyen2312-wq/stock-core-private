@@ -125,6 +125,7 @@ SUBSTITUTE_METRICS = {
 }
 
 _AUTHORITY_MANUAL = "manual_profile"
+_AUTHORITY_PROMOTED = "promoted_record_authority"
 _AUTHORITY_GENERATED = "generated_statement_evidence"
 _AUTHORITY_UNKNOWN = "unknown"
 
@@ -133,19 +134,34 @@ _STATUS_APPLICABLE = "applicable_subject_to_inputs"
 _STATUS_INSUFFICIENT = "insufficient_evidence"
 
 
-def load_entity_profiles(path: Path | str) -> dict[str, str]:
-    """`config/ticker_entity_profiles.csv` -> {TICKER: entity_type}. Missing file -> {}."""
-    path = Path(path)
-    if not path.is_file():
-        return {}
-    profiles: dict[str, str] = {}
-    with path.open(encoding="utf-8-sig", newline="") as handle:
-        for row in csv.DictReader(handle):
-            ticker = str(row.get("ticker") or "").strip().upper()
-            entity_type = str(row.get("entity_type") or "").strip().lower()
-            if ticker and entity_type and entity_type not in {"unknown", "none", "null"}:
-                profiles[ticker] = entity_type
-    return profiles
+def load_entity_profiles(
+    path: Path | str | None = None,
+    promoted_path: Path | str | None = None,
+    *,
+    use_layered: bool = True,
+) -> dict[str, str]:
+    """`config/ticker_entity_profiles.csv` + promoted records -> {TICKER: entity_type}.
+
+    Under Layered Authority Topology B (use_layered=True), merges seed authority and
+    owner-approved promoted records from config/promoted_entity_classifications.json.
+    """
+    if not use_layered:
+        if not path:
+            return {}
+        p = Path(path)
+        if not p.is_file():
+            return {}
+        profiles: dict[str, str] = {}
+        with p.open(encoding="utf-8-sig", newline="") as handle:
+            for row in csv.DictReader(handle):
+                ticker = str(row.get("ticker") or "").strip().upper()
+                entity_type = str(row.get("entity_type") or "").strip().lower()
+                if ticker and entity_type and entity_type not in {"unknown", "none", "null"}:
+                    profiles[ticker] = entity_type
+        return profiles
+
+    from entity_classification_contract import load_layered_entity_profiles
+    return load_layered_entity_profiles(seed_path=path, promoted_path=promoted_path)
 
 
 def classify_income_statement(item_ids: Iterable[str]) -> dict[str, Any]:
@@ -189,6 +205,24 @@ def resolve_archetype(ticker: str, *, manual_entity_type: Any = None,
     """
     manual = str(manual_entity_type or "").strip().lower()
     manual = manual if manual and manual not in {"unknown", "none", "null"} else None
+
+    authority_override = None
+    reason_override = None
+    if manual:
+        authority_override = _AUTHORITY_MANUAL
+        reason_override = "manually verified entity profile takes precedence over generated evidence"
+    else:
+        from entity_classification_contract import resolve_layered_entity_classification
+        layered_res = resolve_layered_entity_classification(ticker)
+        if layered_res.is_positive_authority and layered_res.resolved_entity_class.value in CORPORATE_ENTITY_TYPES | FINANCIAL_ENTITY_TYPES:
+            manual = layered_res.resolved_entity_class.value
+            if layered_res.authority_tier == "promoted_record_authority":
+                authority_override = _AUTHORITY_PROMOTED
+                reason_override = f"approved promoted entity record takes precedence: {layered_res.reason}"
+            else:
+                authority_override = _AUTHORITY_MANUAL
+                reason_override = "manually verified entity profile takes precedence over generated evidence"
+
     bs_family = _balance_sheet_family(balance_sheet_taxonomy)
     is_family = str(income_statement_family or "").strip() or None
 
@@ -233,11 +267,11 @@ def resolve_archetype(ticker: str, *, manual_entity_type: Any = None,
         return {
             "ticker": str(ticker).upper(),
             "issuer_entity_type": manual,
-            "authority": _AUTHORITY_MANUAL,
+            "authority": authority_override or _AUTHORITY_MANUAL,
             "template_family": template_family,
             "generated_evidence": evidence,
             "evidence_agreement": agreement,
-            "reason": "manually verified entity profile takes precedence over generated evidence",
+            "reason": reason_override or "manually verified entity profile takes precedence over generated evidence",
         }
     if financial_evidence:
         return {
@@ -282,13 +316,13 @@ def metric_applicability(archetype: Mapping[str, Any], metric: str) -> dict[str,
     if entity_type in FINANCIAL_ENTITY_TYPES:
         family = template_family if template_family in SUBSTITUTE_METRICS else None
         return {
-            "metric": metric, "status": _STATUS_NOT_APPLICABLE, "authority": _AUTHORITY_MANUAL,
+            "metric": metric, "status": _STATUS_NOT_APPLICABLE, "authority": authority or _AUTHORITY_MANUAL,
             "reason": (f"issuer_entity_type={entity_type!r} is a financial filer; {metric} is "
                        "not defined for it and no input can make it computable"),
             "substitute_metrics": list(SUBSTITUTE_METRICS.get(family or "", ("p_b", "roe"))),
         }
     if entity_type in CORPORATE_ENTITY_TYPES:
-        return {"metric": metric, "status": _STATUS_APPLICABLE, "authority": _AUTHORITY_MANUAL,
+        return {"metric": metric, "status": _STATUS_APPLICABLE, "authority": authority or _AUTHORITY_MANUAL,
                 "reason": (f"issuer_entity_type={entity_type!r}; {metric} is defined and its "
                            "availability depends only on qualified inputs"),
                 "substitute_metrics": []}

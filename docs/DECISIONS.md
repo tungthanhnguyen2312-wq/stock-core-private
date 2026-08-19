@@ -10,6 +10,35 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
+## 2026-08-19 - Phase 2-E3 Bounded Current-State Entity Classification Authority Promotion Complete
+
+`P2E3_BOUNDED_ENTITY_CLASSIFICATION_PROMOTION = COMPLETE_LOCAL` (`config/promoted_entity_classifications.json`, `entity_classification_contract.py`, `financial_entity_applicability.py`, `financial_mapping.py`, `tools/run_p2e3_entity_classification_promotion.py`, `tests/test_layered_entity_classification.py`, `push = NO`).
+
+1. **Owner-Authorized Bounded Promotion**:
+   - Authorized promotion strictly bounded to the exact 20 reviewed P2-E validation records from artifact `p2e_entity_classification:41594ec20971d7a01b6b8f9c993062f1b87f38938ed58005a42ea128dbdea66f`.
+   - Stored in a separate, deterministic, provenance-preserving manifest: `config/promoted_entity_classifications.json` (`p2e3_entity_classification_promotion:f47d56819fc6c1668614338efc103c7eed1508159c8bae5f66f9a09f459680a9`).
+   - Baseline seed authority `config/ticker_entity_profiles.csv` remains 100% unmutated (`SEED_PROFILE_FILE_MODIFIED = NO`).
+
+2. **Layered Authority Topology B Adopted**:
+   - Precedence: `CURATED_SEED_AUTHORITY` > `APPROVED_QUALIFIED_CLASSIFICATION_RECORD` > `UNKNOWN`.
+   - Disagreement across seed and promoted records fails closed as `CONFLICT` (no positive authority).
+   - Promoted records with `AMBIGUOUS` or `CONFLICT` status never supply positive classification.
+   - Anti-Automatic Promotion Gate: Future classifier runs producing `status == QUALIFIED` do NOT confer authority without explicit owner promotion manifest update.
+
+3. **Authority Scope & Temporal Safety**:
+   - Promotion establishes `CURRENT_STATE_ONLY` entity classification authority.
+   - Historical PIT requests fail closed as `HISTORICAL_PIT_NOT_ESTABLISHED` (`HISTORICAL_PIT_PROMOTED = NO`).
+
+4. **Scale & Authority Census**:
+   - `CURATED_SEED_AUTHORITY_RECORDS = 20`
+   - `NEW_PROMOTED_RECORDS = 20` (15 corporate, 2 bank `ABB`/`ACB`, 2 securities `AAS`/`ABW`, 1 insurance `ABI`)
+   - `TOTAL_POSITIVE_CURRENT_STATE_RECORDS = 40`
+   - `REMAINING_UNKNOWN_LISTED_EQUITIES = 1,620` (out of 1,660 listed equities, 3,250 total candidates).
+
+5. **Downstream Applicability Integration**:
+   - Validated across `financial_entity_applicability.py`, `multi_period_financial_panel.py`, `financial_mapping.py`, `market_wide_financial_coverage.py`, and `export_ai_bundle.py`.
+   - Banks, securities companies, and insurers fail closed on corporate debt/EBITDA models.
+
 ## 2026-08-19 - Phase 2-E Evidence-Backed Entity Classification Scale-Out Foundation Complete
 
 `P2E_ENTITY_CLASSIFICATION_FOUNDATION = COMPLETE_LOCAL` (`entity_classification_contract.py`, `evidence_backed_entity_classifier.py`, `tools/run_p2e_entity_classification_foundation.py`, `tests/test_evidence_backed_entity_classifier.py`, `push = NO`).
