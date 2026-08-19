@@ -28,7 +28,7 @@
 | **P0-C.1** | Canonical Instrument-Master Reconciliation | **COMPLETE** | Reconciled across 3,250 instruments (1,660 listed equity candidates, 1,590 unclassified). |
 | **P0-C.2** | Universe-Tier Hierarchy & Exclusion Ledger | **COMPLETE** | `ACTIVE_UNIVERSE` fails closed as `UNKNOWN` pending verified exchange/listing-status evidence. |
 | **P0-C.3** | Field-Level Freshness / As-Of Retrofit | **COMPLETE** | Pure deterministic contract ([field_temporal_contract.py](field_temporal_contract.py)); 6 explicit states; bound `TemporalField` containers on `CanonicalRecord` and `market_feature_store`. |
-| **P1** | Foreign Flow Scale-Out & Feature Normalization | **DEFERRED** | Foreign trading V1 session retained; broader scale-out deferred. |
+| **P1** | Feature Store Normalization & Multi-Session Export | **COMPLETE** | `cross_sectional_export.py` normalized semantic taxonomy, multi-session export contract, fail-closed PIT/liquidity boundaries, validated across 10 retained sessions (`bb0cafa4417471b0`). |
 | **P2** | Multi-Period Fundamentals & Sector Normalization | **DEFERRED** | Official financial filings pipeline isolated under `data-landing/`. |
 | **P3** | Portfolio Sizing, Execution, Backtest | **FAIL-CLOSED** | Strictly blocked until upstream price/liquidity authorities pass. |
 
@@ -53,11 +53,12 @@
 4. Prospective Price Evidence (`P0-A.3E` Part A) — **Complete**; Part B **Blocked Fail-Closed**.
 5. Volume/Liquidity Scoped Review (`P0-B.2D` / P0-B) — **Closed** (`NO_AUTHORITY_PROMOTION`).
 6. Field-Level Freshness & PIT Retrofit (`P0-C.3`) — **Complete Locally**.
-7. **First Market-Wide Deterministic Analysis/Research Artifact** — **COMPLETE LOCALLY** (`market_analysis_artifact.py`, `09c662b20944d25e77671a2972e5d515345310f17b585c6fa293241db5eb995d`).
-8. **Phase 1 Feature Store Normalization & Multi-Session Export** — **CURRENT EXECUTION FOCUS**.
+7. First Market-Wide Deterministic Analysis/Research Artifact — **Complete Locally**.
+8. **Phase 1 Feature Store Normalization & Multi-Session Export** — **COMPLETE LOCALLY** (`cross_sectional_export.py`, `bb0cafa4417471b0`).
+9. **Phase 2 Fundamentals & Valuation Foundation** — **NEXT PRODUCT MILESTONE**.
 
 ### Exact Next Bounded Action:
-Implement **Phase 1 Feature Store Normalization & Multi-Session Export** (P1 feature schemas, vectorized indicator pipelines, and export bundle contracts).
+Implement **Phase 2 — Multi-Period Fundamentals & Sector Normalization** (structured financial statement analysis, BCTC canonicalization, and sector taxonomy packs).
 
 ---
 

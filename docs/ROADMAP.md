@@ -50,8 +50,7 @@
 | **P0-B** | Qualified Volume/Liquidity Basis & Turnover | **CLOSED** | `TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION`.<br>• $C_5 = 10 \times G_1$ shadow empirical candidate (99.81%), unit `UNKNOWN`.<br>• 67 residuals unresolved.<br>• Traded value `OBSERVED_ABSENT`.<br>• **`QUALIFIED_LIQUIDITY_INPUTS = NO`**, **`POSITION_SIZING_IS_SAFE = NO`**. |
 | **P0-C.1** | Canonical Instrument-Master Reconciliation | **COMPLETE** | Reconciled across 3,250 instruments (1,660 listed equity candidates, 1,590 unclassified). |
 | **P0-C.2** | Universe-Tier Hierarchy & Exclusion Ledger | **COMPLETE** | `ACTIVE_UNIVERSE` fails closed as `UNKNOWN` pending verified exchange/listing evidence. |
-| **P0-C.3** | Field-Level Freshness / As-Of Retrofit | **COMPLETE** | Pure deterministic contract ([field_temporal_contract.py](field_temporal_contract.py)); 6 explicit states; bound `TemporalField` on `CanonicalRecord` and `market_feature_store`. |
-| **P1** | Research Evidence Layer & Feature Normalization | **DEFERRED** | Requires first market-wide analysis artifact foundation. |
+| **P1** | Feature Store Normalization & Multi-Session Export | **COMPLETE** | `cross_sectional_export.py` normalized semantic taxonomy, multi-session export contract, fail-closed PIT/liquidity boundaries (`bb0cafa4417471b0`). |
 | **P2** | Multi-Period Fundamentals & Sector Normalization | **DEFERRED** | Official financial filings pipeline isolated under `data-landing/`. |
 | **P3** | Portfolio Sizing, Execution, Backtest | **FAIL-CLOSED** | Blocked until upstream price and liquidity qualifications are complete. |
 

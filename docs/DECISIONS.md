@@ -10,6 +10,28 @@
 
 ## Active & Recent Decision Records (2026-08-17 to Present)
 
+## 2026-08-19 - Phase 1 Feature Store Normalization & Multi-Session Cross-Sectional Export Contract Complete
+
+`P1_MULTI_SESSION_CROSS_SECTIONAL_EXPORT = COMPLETE_LOCAL` (`cross_sectional_export.py`, `push = NO`).
+
+1. **Semantic Feature Taxonomy Normalization**:
+   - Resolved the foreign flow taxonomy defect by strictly isolating `dnse.foreign_buy_value`, `dnse.foreign_sell_value`, and `dnse.foreign_net_value` under `foreign_flow_features` rather than misrepresenting them as financial statement features.
+   - Formalized semantic domains: `market_features`, `foreign_flow_features`, `financial_statement_features`, `corporate_action_features`, and `qualification_and_capabilities`.
+   - Maintained immutable field-level `TemporalField` envelopes attached to every feature record.
+
+2. **Deterministic Cross-Sectional & Multi-Session Export Contract**:
+   - Implemented pure, vectorized session and multi-session export builders (`build_cross_sectional_session_export`, `build_multi_session_cross_sectional_export`).
+   - Enforced zero lookahead and zero silent forward-fill: missing observations remain missing.
+   - Evaluated 3,250 canonical candidates across 10 retained market sessions (2026-07-29 to 2026-08-11), emitting 8,931 normalized observations with content hash `bb0cafa4417471b0c1657eebd3e9c6b16ce20be601aa00b7d9a64cfc3f499256`.
+
+3. **Strict Invariant Governance**:
+   - Preserved `RAW_AS_TRADED = NOT_PROMOTED`, `ACTIVE_UNIVERSE = UNKNOWN`, `QUALIFIED_LIQUIDITY_INPUTS = NO`, and `POSITION_SIZING_IS_SAFE = NO`.
+   - Verified that one unavailable feature isolates to `FreshnessState.MISSING` without corrupting candidate records or unrelated features.
+
+4. **Next Roadmap Gate**:
+   - Multi-session cross-sectional research dataset verified as `READY_FOR_SHADOW_CROSS_SECTIONAL_RESEARCH`.
+   - Recommended next milestone: **Phase 2 — Multi-Period Fundamentals & Sector Normalization**.
+
 ## 2026-08-19 - First Market-Wide Deterministic Analysis / Research Artifact V1 complete
 
 `FIRST_MARKET_WIDE_DETERMINISTIC_ANALYSIS_ARTIFACT = COMPLETE_LOCAL` (`market_analysis_artifact.py`, `push = NO`).
