@@ -1,6 +1,6 @@
 name: Security question (non-sensitive)
 description: Ask about the public security model without disclosing a vulnerability
- title: "[Security]: "
+title: "[Security]: "
 labels: []
 body:
   - type: markdown
