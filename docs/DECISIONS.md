@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-08-19 - P0-C.3 Field-Level Freshness / As-Of Retrofit V1 complete
+
+`P0-C.3 = COMPLETE_LOCAL` (`field_temporal_contract.py`, `push = NO`).
+
+1. **Pure Deterministic Field-Level Temporal Contract**:
+   - Implemented `field_temporal_contract.py` defining explicit `TemporalField` containers that bind `observed_at`, `as_of`, `freshness_status`, `pit_eligible`, `pit_status`, `stale_reason`, `domain`, and `lineage` directly to individual field values.
+   - Six explicit freshness states: `current`, `expiring`, `stale`, `historical`, `missing`, `unknown`. Cadence/grace is domain-driven (via `freshness_history.RULES`); naive `date < today => stale` is strictly forbidden.
+   - Four PIT states: `QUALIFIED`, `HISTORICAL_ONLY`, `LOOKAHEAD_VIOLATION`, `UNQUALIFIED_PRICE_BASIS`, `TIMESTAMP_MISSING_OR_INVALID`, `KNOWLEDGE_CUTOFF_MISSING`.
+
+2. **Authoritative Producer Boundary Retrofit**:
+   - `CanonicalRecord` in `market_data_contracts.py` now supports bound `temporal_fields` and `with_temporal_evaluation(reference_at=..., knowledge_cutoff=...)`.
+   - `canonicalize_market_record` deterministically evaluates field-level temporal envelopes when reference time is provided.
+   - `market_feature_store.py` provides `build_temporal_feature_records`, binding calculated feature columns to explicit field-level temporal envelopes.
+
+3. **No Promotion / Fail-Closed Invariants Preserved**:
+   - Price fields without positive `RAW_AS_TRADED` or `PIT_OBSERVED` authority remain strictly `pit_eligible=False` (`UNQUALIFIED_PRICE_BASIS`).
+   - Future/lookahead dates relative to `reference_at` or `knowledge_cutoff` are rejected with `LOOKAHEAD_VIOLATION` / `future_*_rejected`.
+   - Stale-but-valid data retains exact numeric values while setting `is_actionable=False` and recording explicit `stale_reason`.
+   - `RAW_AS_TRADED` remains **NOT_PROMOTED**; liquidity/volume authority remains unpromoted.
+
+4. **Next Roadmap Gate**:
+   - With `P0-C.1`, `P0-C.2`, and `P0-C.3` complete locally, the canonical universe boundary and freshness layer are established.
+   - Next actionable focus: `P0-B.2D` (volume authority promotion review) / first market-wide deterministic analysis artifact.
+
 ## 2026-08-19 - P0-A.3E prospective multi-session evidence collection complete; event-window qualification blocked
 
 `P0-A.3E = PART_A_COMPLETE_EVIDENCE_ACQUIRED; PART_B_BLOCKED_PENDING_QUALIFIED_EX_DATE`.

@@ -29,8 +29,8 @@ Binding execution sequence:
   boundary work (`P0-C.1`/`P0-C.2`) is integrated on local main before further P0-A expansion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
-  instrument-master reconciliation, `C.2` universe-tier hierarchy/exclusion ledger, `C.3`
-  field-level freshness/as-of retrofit.
+  instrument-master reconciliation (**complete**), `C.2` universe-tier hierarchy/exclusion ledger (**complete**), `C.3`
+  field-level freshness/as-of retrofit (**complete** — `field_temporal_contract.py` pure fail-closed contract, `TemporalField` on `CanonicalRecord` and `market_feature_store`, `push = NO`).
 - **P1** — DNSE foreign-flow value scale-out; universal feature-authority/store normalization; the
   *Research Evidence Layer* (see `## CANONICAL ROADMAP IDS`); market-internals/regime.
 - **P2** — sector normalization; factor attribution; official multi-period fundamental/valuation
@@ -198,7 +198,7 @@ Precondition status:
 
 ## EXACT NEXT BOUNDED ACTION
 
-`P0-A.3E` Part A (Prospective Multi-Session Collection) is complete (`COMPLETE_EVIDENCE_ACQUIRED`), no additional prospective acquisition is required, and Part B (`EVENT_WINDOW_PRICE_BASIS_QUALIFICATION`) remains fail-closed `BLOCKED_PENDING_QUALIFIED_EX_DATE`. `RAW_AS_TRADED` remains `NOT_PROMOTED`. `P0-B.2C` remains deferred. The exact next actionable roadmap gate is **`P0-C.3`** (field-level freshness/as-of retrofit).
+`P0-C.3` (field-level freshness/as-of retrofit) is **COMPLETE** (`field_temporal_contract.py`, pure deterministic fail-closed contract, `TemporalField` on `CanonicalRecord` and `market_feature_store`). Canonical universe boundary and freshness foundation (`P0-C.1`, `P0-C.2`, `P0-C.3`) are complete locally. The next actionable roadmap gate is **`P0-B.2D`** (volume authority promotion review) / preparing the first market-wide deterministic analysis artifact. `P0-A.3E` Part B remains safely fail-closed `BLOCKED_PENDING_QUALIFIED_EX_DATE`. `RAW_AS_TRADED` remains `NOT_PROMOTED`.
 
 ## ACTIVE RUNTIME LANES
 
@@ -329,7 +329,7 @@ this session):
 
 **What this foundation does NOT establish** (explicit, not to be silently assumed later):
 
-- `P0-C` is not complete. `P0-C.3` (field-level freshness/as-of retrofit) is not started.
+- `P0-C.3` (field-level freshness/as-of retrofit) is **COMPLETE** locally via `field_temporal_contract.py`.
 - `ACTIVE_UNIVERSE` is not qualified for any instrument, including the 1,660 `EQUITY`-classified
   ones — no instrument currently has a usable listing-status or exchange-label observation
   anywhere in this codebase. This is a structural fact about available evidence, not something a
@@ -455,10 +455,9 @@ Updated ordered chain:
    evidence scale-out and `P0-A.3` market-wide PIT reconstruction. `P0-A.3B` is closed
    `SOURCE_SEMANTICS_BLOCKED`; `P0-A.3C` evidence acquisition and `P0-A.3D` governed shadow
    hardening are complete locally. `P0-A.3E` Part A is complete (`COMPLETE_EVIDENCE_ACQUIRED`, Sessions 1–4 retained, no more prospective acquisition required); Part B event-window qualification remains `BLOCKED_PENDING_QUALIFIED_EX_DATE`; `RAW_AS_TRADED` remains `NOT_PROMOTED`; `P0-A.4` scoped price-basis promotion remains deferred; `P0-B.2B1` shadow scale relation validated with unresolved residuals and B.2C deferred.
-5. `P0-C.3` field-level freshness/as-of retrofit, as required for qualified market-wide
-   consumption.
+5. `P0-C.3` field-level freshness/as-of retrofit. **Complete** locally (`field_temporal_contract.py`, pure fail-closed contract, `TemporalField` on `CanonicalRecord` and `market_feature_store`).
 6. First market-wide deterministic analysis/research artifact, after the necessary P0-A/P0-B/P0-C
-   gates above pass.
+   gates above pass. (Next execution focus: `P0-B.2D` volume authority promotion review / analysis artifact preparation).
 
 This numbered sequence is current execution *focus*, not a rewritten dependency graph: `P0-A`,
 `P0-B`, and `P0-C` remain independent, parallelizable lanes by governance (see `## PROGRAM

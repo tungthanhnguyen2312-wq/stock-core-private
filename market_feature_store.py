@@ -72,6 +72,46 @@ def build_cross_sectional_snapshot(historical_features: pd.DataFrame, *, session
     return snapshot.sort_values("ticker", kind="stable").reset_index(drop=True)
 
 
+def build_temporal_feature_records(historical_features: pd.DataFrame, *,
+                                   reference_at: Any,
+                                   knowledge_cutoff: Any = None,
+                                   domain: str = "daily_market") -> list[dict[str, Any]]:
+    """Convert feature dataframe into deterministic records with field-level temporal envelopes."""
+    from field_temporal_contract import wrap_temporal_fields
+
+    frame = validate_market_frame(historical_features)
+    records = []
+    for row in frame.to_dict(orient="records"):
+        date_val = row["date"]
+        date_str = date_val.strftime("%Y-%m-%d") if hasattr(date_val, "strftime") else str(date_val)[:10]
+        ticker = str(row["ticker"])
+        price_basis = str(row.get("price_basis", PriceBasis.UNKNOWN.value))
+        raw_fields = {
+            k: v for k, v in row.items()
+            if k not in {"ticker", "date", "feature_status", "price_basis", "pit_status"}
+        }
+        temporal_fields = wrap_temporal_fields(
+            raw_fields,
+            observed_at=date_str,
+            as_of=date_str,
+            domain=domain,
+            reference_at=reference_at,
+            knowledge_cutoff=knowledge_cutoff,
+            price_basis=price_basis,
+            quality_status=row.get("feature_status", FeatureStatus.DERIVED.value),
+            source="market_feature_store",
+        )
+        records.append({
+            "ticker": ticker,
+            "date": date_str,
+            "feature_status": row.get("feature_status", FeatureStatus.DERIVED.value),
+            "price_basis": price_basis,
+            "pit_status": row.get("pit_status", FeatureStatus.HISTORICAL_ONLY.value),
+            "temporal_fields": {k: tf.record() for k, tf in temporal_fields.items()},
+        })
+    return records
+
+
 def quality_exceptions(records: Iterable[Mapping[str, Any]]) -> list[QualityException]:
     """Evaluate raw rows without deleting or rewriting them.
 

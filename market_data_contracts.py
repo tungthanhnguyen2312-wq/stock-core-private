@@ -85,6 +85,9 @@ class RawObservation:
         return {**asdict(self), "observation_id": self.observation_id}
 
 
+from field_temporal_contract import TemporalField, wrap_temporal_fields, extract_field_values
+
+
 @dataclass(frozen=True)
 class CanonicalRecord:
     """Standardized record; unresolved fields remain explicit rather than being invented."""
@@ -106,12 +109,56 @@ class CanonicalRecord:
     unit_multiplier: float = 1.0
     status: FeatureStatus = FeatureStatus.CANONICAL
     lineage: Mapping[str, Any] = field(default_factory=dict)
+    temporal_fields: Mapping[str, Any] = field(default_factory=dict)
 
     def record(self) -> dict[str, Any]:
         result = asdict(self)
         result["price_basis"] = self.price_basis.value
         result["status"] = self.status.value
+        if self.temporal_fields:
+            result["temporal_fields"] = {
+                key: (val.record() if hasattr(val, "record") else val)
+                for key, val in self.temporal_fields.items()
+            }
         return result
+
+    def with_temporal_evaluation(self, *, reference_at: Any, knowledge_cutoff: Any = None,
+                                 domain: str = "daily_market") -> CanonicalRecord:
+        """Evaluate field-level temporal envelopes for every field in this record."""
+        as_of = self.observed_at[:10] if self.observed_at and len(self.observed_at) >= 10 else self.observed_at
+        t_fields = wrap_temporal_fields(
+            self.fields,
+            observed_at=self.observed_at,
+            as_of=as_of,
+            domain=domain,
+            reference_at=reference_at,
+            knowledge_cutoff=knowledge_cutoff,
+            price_basis=self.price_basis.value,
+            quality_status=self.status.value,
+            source=self.exchange or "UNKNOWN",
+            lineage=dict(self.lineage),
+        )
+        return CanonicalRecord(
+            raw_observation_id=self.raw_observation_id,
+            instrument=self.instrument,
+            exchange=self.exchange,
+            board=self.board,
+            instrument_class=self.instrument_class,
+            observed_at=self.observed_at,
+            price_basis=self.price_basis,
+            corporate_action_basis=self.corporate_action_basis,
+            financial_statement_scope=self.financial_statement_scope,
+            reporting_period=self.reporting_period,
+            publication_date=self.publication_date,
+            effective_from=self.effective_from,
+            revision_state=self.revision_state,
+            quality_flags=self.quality_flags,
+            fields=self.fields,
+            unit_multiplier=self.unit_multiplier,
+            status=self.status,
+            lineage=self.lineage,
+            temporal_fields=t_fields,
+        )
 
 
 @dataclass(frozen=True)
@@ -148,7 +195,10 @@ def canonicalize_market_record(raw: RawObservation, *, exchange: str | None, boa
                                instrument_class: str, fields: Mapping[str, Any],
                                unit_multiplier: float = 1.0,
                                price_basis: PriceBasis = PriceBasis.UNKNOWN,
-                               quality_flags: Iterable[str] = ()) -> CanonicalRecord:
+                               quality_flags: Iterable[str] = (),
+                               reference_at: Any = None,
+                               knowledge_cutoff: Any = None,
+                               domain: str = "daily_market") -> CanonicalRecord:
     """Create a deterministic canonical projection while preserving the raw identity.
 
     The caller must supply a documented/evidenced multiplier.  This function never guesses one.
@@ -160,14 +210,32 @@ def canonicalize_market_record(raw: RawObservation, *, exchange: str | None, boa
               and isinstance(value, (int, float)) and not isinstance(value, bool) else value)
         for key, value in sorted(fields.items())
     }
+    temporal_fields = {}
+    if reference_at is not None:
+        obs_time = raw.source_event_time or raw.retrieved_at
+        as_of_time = (raw.source_event_time[:10] if raw.source_event_time and len(raw.source_event_time) >= 10
+                      else (raw.retrieved_at[:10] if raw.retrieved_at and len(raw.retrieved_at) >= 10 else None))
+        temporal_fields = wrap_temporal_fields(
+            normalized,
+            observed_at=obs_time,
+            as_of=as_of_time,
+            domain=domain,
+            reference_at=reference_at,
+            knowledge_cutoff=knowledge_cutoff,
+            price_basis=price_basis.value,
+            quality_status=FeatureStatus.CANONICAL.value,
+            source=raw.provider,
+            lineage={"raw_payload_hash": raw.raw_payload_hash, "contract_version": CONTRACT_VERSION},
+        )
     return CanonicalRecord(
         raw_observation_id=raw.observation_id, instrument=raw.instrument, exchange=exchange,
-        board=board, instrument_class=instrument_class, observed_at=raw.source_event_time,
+        board=board, instrument_class=instrument_class, observed_at=raw.source_event_time or raw.retrieved_at,
         price_basis=price_basis, corporate_action_basis="unknown", financial_statement_scope=None,
         reporting_period=None, publication_date=None, effective_from=None, revision_state="unknown",
         quality_flags=tuple(sorted(set(quality_flags))), fields=normalized,
         unit_multiplier=unit_multiplier, lineage={"raw_payload_hash": raw.raw_payload_hash,
                                                    "contract_version": CONTRACT_VERSION},
+        temporal_fields=temporal_fields,
     )
 
 
