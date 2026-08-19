@@ -10,6 +10,27 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
+## 2026-08-19 - Phase 2-C2 Bounded Financial Evidence Onboarding (GAS + VRE) Complete
+
+`P2C2_GAS_VRE_ONBOARDING = COMPLETE_LOCAL` (`tools/run_p2c2_corporate_evidence_onboarding.py`, `push = NO`).
+
+1. **Bounded Corporate Evidence Onboarding (GAS & VRE)**:
+   - Onboarded FY2025 audited consolidated annual financial statements for `GAS` (`www.pvgas.com.vn`, SHA-256 `b1cfb676...`) and `VRE` (`ir.vincom.com.vn`, SHA-256 `85b250e9...`).
+   - Sourced strictly via newly promoted and host-narrowed official-source routes under `issuer_ir`.
+   - Verified 100% document qualification (`QUALIFIED_RETAINED_FINANCIAL_STATEMENT`), audited by Deloitte Vietnam.
+
+2. **Zero Ticker-Specific Materializer Invariant**:
+   - `NEW_TICKER_SPECIFIC_MATERIALIZER_COUNT = 0`.
+   - Extracted 16 canonical facts (8 per issuer) using existing OCR sidecar primitives (`annual_financial_ocr_materialization.py`).
+   - Canonicalized 100% through generic dictionary pipeline (`generic_financial_canonicalizer.py`).
+   - Multi-period panel integration verified (`multi_period_financial_panel.py`) with complete derived financial ratios (ROE, Net Debt, Debt-to-Equity, Cash Flow/Net Income).
+
+3. **Preservation of Historical Negative Proof & Unpromoted Cohort**:
+   - Historical negative proof in `operations-review/p2c-financial-evidence-scale-out-20260819/` preserved intact.
+   - P2-C2 evidence and readiness report emitted to `operations-review/p2c2-financial-evidence-onboarding-20260819/` (`p2c2_gas_vre_onboarding:c8457f81fe104bb4d0fd198a21c73be6dfd17f35f18880074cdb264621328088`).
+   - `MWG` (`NOT_READY_REDIRECT_CHAIN`) and `VIC` (`NOT_READY_REPRODUCIBILITY`) remain fail-closed and unpromoted.
+
+
 ## 2026-08-19 - Phase 2-D2C Generic Per-Host Document Authority Scope Correction Complete
 
 `P2D2C_AUTHORITY_SCOPE_CORRECTION = COMPLETE_LOCAL` (`official_source_registry.py`, `config/official_source_registry.json`, `push = NO`).
