@@ -10,6 +10,39 @@
 
 ## Active & Recent Decision Records (2026-08-17 to Present)
 
+## 2026-08-19 - Phase 2-B Generic Financial Statement Canonicalization & Retained-Evidence Scale-Out Complete
+
+`P2B_GENERIC_FINANCIAL_CANONICALIZATION = COMPLETE_LOCAL` (`generic_financial_canonicalizer.py`, `push = NO`).
+
+1. **Ticker-Agnostic Canonicalization Engine**:
+   - Implemented `generic_financial_canonicalizer.py` and CLI generator `tools/generate_generic_canonicalization_artifact.py`.
+   - Replaces hardcoded per-ticker branching with dictionary-driven taxonomy normalization over Vietnamese VAS/IFRS circular 200 accounting line items.
+   - Emits canonical financial facts with immutable `TemporalField` envelopes, source document SHA-256, citation ID, and evidence ID.
+
+2. **Classification & Audit of Retained Document Corpus**:
+   - Inspected 21 retained official documents across all manifests.
+   - Categorized candidates: 13 `GENERICALLY_CANONICALIZABLE`, 3 `SECTOR_SPECIALIZED` (bank/securities statements), 3 `INSUFFICIENT_EVIDENCE` (AGM non-financial documents, incomplete annual report package), 2 `INSUFFICIENT_MAPPING` (PNJ debt note under review), 0 `TICKER_SPECIFIC_ONLY`.
+   - Achieved `GENERIC_CANONICALIZATION_RATE = 100.00%` (60/60 qualified facts across 8 corporate issuers).
+
+3. **Legacy Materializer Role Audit & Migration**:
+   - Formally audited historical per-ticker materializers:
+     - `fpt_fy2025_official_financial_materialization.py`: `GENERICALLY_SUPERSEDED`
+     - `qns_pow_official_financial_materialization.py`: `GENERICALLY_SUPERSEDED`
+     - `targeted_multi_period_official_financial_evidence.py`: `GENERICALLY_SUPERSEDED`
+     - `legacy_qualified_cohort_recovery.py`: `HISTORICAL_LEGACY`
+     - `ssi_official_financial_materialization.py`: `SECTOR_SPECIALIZED`
+     - `annual_financial_ocr_materialization.py`: `GEN_EXTRACTION_ENGINE`
+   - Retained backward compatibility and regression correctness without parallel authority paths.
+
+4. **Validation & Retained Artifact**:
+   - Emitted validation artifact with deterministic content hash `256f374c08df327b3759d027022ec2cefd40a4c8b8f82d2c33122c34b29e94bf` under `operations-review/p2b-generic-financial-canonicalization-20260819/`.
+   - Preserved 100% equivalence on regression cohort (HPG, PVD, VNM, FPT, QNS, POW, PAN, NVL, SSI, VCB).
+   - Test suite `tests/test_generic_financial_canonicalizer.py` (5/5 passed, bounded suite 130/130 passed).
+
+5. **Next Roadmap Gate**:
+   - Financial statement canonicalization engine verified as `READY_FOR_FINANCIAL_EVIDENCE_SCALE_OUT`.
+   - Recommended next milestone: **Phase 2-C Full Financial Evidence Corpus Scale-Out & BCTC Template Parser**.
+
 ## 2026-08-19 - Phase 2-A Multi-Period Financial Fact Panel & Sector Applicability Contract Complete
 
 `P2A_MULTI_PERIOD_FINANCIAL_FACT_PANEL = COMPLETE_LOCAL` (`multi_period_financial_panel.py`, `push = NO`).
