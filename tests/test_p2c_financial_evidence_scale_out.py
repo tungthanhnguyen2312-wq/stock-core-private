@@ -65,14 +65,14 @@ class TestP2CCorporateEvidenceScaleOut(unittest.TestCase):
         self.assertEqual(metrics["new_ticker_specific_materializer_count"], 0)
 
     def test_official_source_gate_fails_closed(self) -> None:
-        """Unapproved official IR hosts must fail closed as not admitted."""
+        """Promoted hosts are admitted while unapproved IR hosts fail closed as not admitted."""
         res_gas = admit(
             "issuer_ir",
             "https://www.pvgas.com.vn/quan-he-co-dong/bao-cao-tai-chinh/2024",
             "audited_annual_financial_statements",
             registry=self.registry,
         )
-        self.assertEqual(res_gas["decision"], REFUSED)
+        self.assertEqual(res_gas["decision"], ADMITTED)
 
         res_mwg = admit(
             "issuer_ir",
@@ -81,6 +81,14 @@ class TestP2CCorporateEvidenceScaleOut(unittest.TestCase):
             registry=self.registry,
         )
         self.assertEqual(res_mwg["decision"], REFUSED)
+
+        res_vic = admit(
+            "issuer_ir",
+            "https://vingroup.net/quan-he-co-dong/bao-cao-tai-chinh/2024",
+            "audited_annual_financial_statements",
+            registry=self.registry,
+        )
+        self.assertEqual(res_vic["decision"], REFUSED)
 
     def test_no_ticker_specific_materializer_modules_created(self) -> None:
         """Ensure zero per-ticker materializer Python modules exist for the cohort."""

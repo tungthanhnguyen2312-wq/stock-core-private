@@ -8,7 +8,24 @@
 
 ---
 
-## Active & Recent Decision Records (2026-08-17 to Present)
+## Active & Recent Decision Records (2026-08-19 to Present)
+
+## 2026-08-19 - Phase 2-D2 Bounded Official Source Registry Promotion (GAS + VRE) Complete
+
+`P2D2_BOUNDED_OFFICIAL_SOURCE_REGISTRY_PROMOTION = COMPLETE_LOCAL` (`config/official_source_registry.json`, `push = NO`).
+
+1. **Exact-Host Promotion (GAS & VRE)**:
+   - Promoted `www.pvgas.com.vn` (PV GAS) and `ir.vincom.com.vn` (Vincom Retail) to `issuer_ir.allowed_hosts` in `config/official_source_registry.json`.
+   - Permitted document class scoped strictly to `audited_annual_financial_statements`.
+   - Provenance recorded in `host_admission_rule` from first-party IR disclosure routes evaluated in P2-D1C.
+
+2. **Unpromoted Cohort Preserved**:
+   - `MWG`: Preserved as `NOT_READY_REDIRECT_CHAIN` (document delivery JS-rendered; PDF storage host unknown).
+   - `VIC`: Preserved as `NOT_READY_REPRODUCIBILITY` (HTTP 403 access denial on primary IR listing page).
+
+3. **Authority & Lifecycle Invariant**:
+   - Establishes official source route authority only; does not retain documents, extract facts, or canonicalize financial evidence.
+   - P2-C corporate evidence acquisition wave is not resumed.
 
 ## 2026-08-19 - Phase 2-C Official Financial Evidence Scale-Out / First Corporate Acquisition Wave Complete
 
