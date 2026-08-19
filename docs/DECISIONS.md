@@ -10,6 +10,32 @@
 
 ## Active & Recent Decision Records (2026-08-17 to Present)
 
+## 2026-08-19 - Phase 2-C Official Financial Evidence Scale-Out / First Corporate Acquisition Wave Complete
+
+`P2C_OFFICIAL_FINANCIAL_EVIDENCE_SCALE_OUT = COMPLETE_LOCAL` (`tools/run_p2c_corporate_evidence_scale_out.py`, `push = NO`).
+
+1. **Positive Entity Classification Enforcement**:
+   - Strictly enforced positive entity classification authority (`config/ticker_entity_profiles.csv`) per `financial_entity_applicability.py` and `docs/AI_RULES.md`.
+   - Out of 1,660 listed equity candidates in C.1, exactly 13 are positively profiled as `corporate`.
+   - Excluded 9 already-covered issuers in P2-A/P2-B (`FPT`, `HPG`, `NVL`, `PAN`, `PNJ`, `POW`, `PVD`, `QNS`, `VNM`) and 7 financial intermediaries (`BID`, `MBB`, `TCB`, `VCB`, `SSI`, `BVH`, `EVF`).
+   - Yielded an authority-safe uncovered cohort of 4 ordinary corporates: `GAS`, `MWG`, `VIC`, `VRE`.
+   - Quantified `COHORT_SHORTFALL_DUE_TO_ENTITY_CLASSIFICATION = 16` against the requested 20-issuer target. Preserved 1,640 `UNKNOWN_ENTITY_CLASS` listed equities as a future classification-coverage gap.
+
+2. **Governed Sourcing & Failure Taxonomy**:
+   - Evaluated official disclosure routes across official exchange and official IR sources for all 4 cohort issuers.
+   - Enforced closed-world registry gate (`official_source_registry.py`), classifying unadmitted IR hosts fail-closed under `SOURCE_DISCOVERY` blocker (`OFFICIAL_LOCATOR_NOT_FOUND`).
+
+3. **Zero Ticker-Specific Production Code Invariant**:
+   - `NEW_TICKER_SPECIFIC_MATERIALIZER_COUNT = 0`.
+   - Zero per-ticker Python materializers added to the repository.
+
+4. **Validation Artifact & Metrics**:
+   - Emitted deterministic artifact with content hash `f9ab8e98d2e691d80615990deba1e93272d351984a27f3eed5a6e67518db2c71` and `READINESS_REPORT.md` under `operations-review/p2c-financial-evidence-scale-out-20260819/`.
+   - All tests passing (`tests/test_p2c_financial_evidence_scale_out.py` 5/5, full bounded regression suite 131/131).
+
+5. **Next Roadmap Milestone**:
+   - **Phase 2-D BCTC Template Recognition & Governed Official Document Expansion**.
+
 ## 2026-08-19 - Phase 2-B Generic Financial Statement Canonicalization & Retained-Evidence Scale-Out Complete
 
 `P2B_GENERIC_FINANCIAL_CANONICALIZATION = COMPLETE_LOCAL` (`generic_financial_canonicalizer.py`, `push = NO`).
