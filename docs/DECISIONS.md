@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-08-19 - P0-B.2D Scoped Promotion Review & P0-B Terminal Closeout
+
+`P0-B = TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION` (`push = NO`).
+
+1. **Promotion Review Verdict: NO_AUTHORITY_PROMOTION**:
+   - The complete retained volume, value, board composition, and reconciliation evidence corpus across all candidate definitions ($C_1$–$C_5$), empirical scale relations, residual classes, and downstream use cases was evaluated.
+   - No daily volume or traded-value field qualifies for promotion to market-wide turnover, market liquidity, or execution/position sizing authority.
+
+2. **Explicit Fail-Closed Negative Proofs**:
+   - `QUALIFIED_LIQUIDITY_INPUTS = NO` (unconditionally assigned across all records).
+   - `POSITION_SIZING_IS_SAFE = NO` (unconditionally assigned across all records).
+   - $C_5 = 10 \times G_1$ remains strictly `ScaleStatus.EMPIRICAL_CANDIDATE` with `semantic_unit_interpretation = UNKNOWN`. The $\times 10$ factor is discovered from data clustering and is NOT authoritative provider or exchange specification. Correlation is not semantic authority.
+   - 67 residuals (62 positive multiples of 100, 5 negative deltas of -4) remain unresolved and prohibit mathematical equality certification.
+   - Daily traded value remains unevidenced and unpromoted (`OBSERVED_ABSENT` from DNSE daily OHLC 7-key shape). Missing independent measurement cannot be turned into evidence.
+
+3. **Preservation of Shadow / Descriptive Uses**:
+   - Within-series relative volume (`legacy.rel_vol`), provider-scoped display (`DISPLAY`), provider-scoped analytics (`PROVIDER_SCOPED_ANALYTICS`), and empirical shadow scale relation ($C_5$) remain valid for shadow/research analytics where `qualified_liquidity_inputs = False`.
+
+4. **P0-B Closeout & Next Roadmap Gate**:
+   - P0-B is formally closed at terminal state `TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION`.
+   - With P0-B closed, P0-C (`P0-C.1`, `P0-C.2`, `P0-C.3`) complete locally, and `P0-A.3E` Part A complete / Part B blocked, the exact next actionable roadmap milestone is **First Market-Wide Deterministic Analysis/Research Artifact**.
+
 ## 2026-08-19 - P0-C.3 Field-Level Freshness / As-Of Retrofit V1 complete
 
 `P0-C.3 = COMPLETE_LOCAL` (`field_temporal_contract.py`, `push = NO`).

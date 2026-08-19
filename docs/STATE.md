@@ -27,7 +27,7 @@ Binding execution sequence:
   `A.2` corporate-action evidence scale-out (**complete** — document-authority coverage and multi-event extraction integrated at commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`),
   `A.3` market-wide PIT price reconstruction (**in progress** — `P0-A.3A` contract, `P0-A.3B` read-only architecture review, `P0-A.3C` evidence acquisition, and `P0-A.3D` governed shadow collector hardening complete locally; `P0-A.3E` Part A prospective multi-session collection is `COMPLETE_EVIDENCE_ACQUIRED` across Sessions 1–4 with no further acquisition required, while Part B event-window qualification remains `BLOCKED_PENDING_QUALIFIED_EX_DATE`), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
   boundary work (`P0-C.1`/`P0-C.2`) is integrated on local main before further P0-A expansion.
-- **P0-B** — qualified volume/liquidity basis + market-wide turnover.
+- **P0-B** — qualified volume/liquidity basis + market-wide turnover (**closed — TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION**; C5=10×G1 validated as shadow empirical relation only; no authority promotion; QUALIFIED_LIQUIDITY_INPUTS=NO, POSITION_SIZING_IS_SAFE=NO).
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
   instrument-master reconciliation (**complete**), `C.2` universe-tier hierarchy/exclusion ledger (**complete**), `C.3`
   field-level freshness/as-of retrofit (**complete** — `field_temporal_contract.py` pure fail-closed contract, `TemporalField` on `CanonicalRecord` and `market_feature_store`, `push = NO`).
@@ -198,7 +198,7 @@ Precondition status:
 
 ## EXACT NEXT BOUNDED ACTION
 
-`P0-C.3` (field-level freshness/as-of retrofit) is **COMPLETE** (`field_temporal_contract.py`, pure deterministic fail-closed contract, `TemporalField` on `CanonicalRecord` and `market_feature_store`). Canonical universe boundary and freshness foundation (`P0-C.1`, `P0-C.2`, `P0-C.3`) are complete locally. The next actionable roadmap gate is **`P0-B.2D`** (volume authority promotion review) / preparing the first market-wide deterministic analysis artifact. `P0-A.3E` Part B remains safely fail-closed `BLOCKED_PENDING_QUALIFIED_EX_DATE`. `RAW_AS_TRADED` remains `NOT_PROMOTED`.
+`P0-B.2D` (scoped promotion review & P0-B closeout) is **COMPLETE**: `P0-B = TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION`. `QUALIFIED_LIQUIDITY_INPUTS = NO` and `POSITION_SIZING_IS_SAFE = NO` unconditionally; $C_5 = 10 \times G_1$ remains a shadow-only empirical candidate; traded value is unevidenced. With P0-B closed, P0-C (`P0-C.1`, `P0-C.2`, `P0-C.3`) complete locally, and `P0-A.3E` Part A complete / Part B blocked, the exact next actionable roadmap milestone is **First Market-Wide Deterministic Analysis/Research Artifact**.
 
 ## ACTIVE RUNTIME LANES
 
@@ -454,10 +454,10 @@ Updated ordered chain:
 4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
    evidence scale-out and `P0-A.3` market-wide PIT reconstruction. `P0-A.3B` is closed
    `SOURCE_SEMANTICS_BLOCKED`; `P0-A.3C` evidence acquisition and `P0-A.3D` governed shadow
-   hardening are complete locally. `P0-A.3E` Part A is complete (`COMPLETE_EVIDENCE_ACQUIRED`, Sessions 1–4 retained, no more prospective acquisition required); Part B event-window qualification remains `BLOCKED_PENDING_QUALIFIED_EX_DATE`; `RAW_AS_TRADED` remains `NOT_PROMOTED`; `P0-A.4` scoped price-basis promotion remains deferred; `P0-B.2B1` shadow scale relation validated with unresolved residuals and B.2C deferred.
+   hardening are complete locally. `P0-A.3E` Part A is complete (`COMPLETE_EVIDENCE_ACQUIRED`, Sessions 1–4 retained, no more prospective acquisition required); Part B event-window qualification remains `BLOCKED_PENDING_QUALIFIED_EX_DATE`; `RAW_AS_TRADED` remains `NOT_PROMOTED`; `P0-A.4` scoped price-basis promotion remains deferred; `P0-B` is closed (`TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION`, QUALIFIED_LIQUIDITY_INPUTS=NO, POSITION_SIZING_IS_SAFE=NO).
 5. `P0-C.3` field-level freshness/as-of retrofit. **Complete** locally (`field_temporal_contract.py`, pure fail-closed contract, `TemporalField` on `CanonicalRecord` and `market_feature_store`).
 6. First market-wide deterministic analysis/research artifact, after the necessary P0-A/P0-B/P0-C
-   gates above pass. (Next execution focus: `P0-B.2D` volume authority promotion review / analysis artifact preparation).
+   gates above pass. (Next actionable milestone: preparation/generation of the first market-wide deterministic analysis artifact).
 
 This numbered sequence is current execution *focus*, not a rewritten dependency graph: `P0-A`,
 `P0-B`, and `P0-C` remain independent, parallelizable lanes by governance (see `## PROGRAM
