@@ -76,8 +76,8 @@ Execution focus strictly follows the ordered critical path:
 14. **Phase 2-C2C Governed Financial Evidence Lineage Correction (GAS + VRE)** — **COMPLETE LOCALLY** (`tools/run_p2c2_corporate_evidence_onboarding.py`, `p2c2_governed_onboarding_report.json`).
 15. **Phase 2-D Generic Financial Statement Template Recognition & Extraction Contract** — **COMPLETE LOCALLY** (`financial_statement_template_recognizer.py`, `p2d_generic_onboarding_report.json`).
 16. **Phase 2-E Evidence-Backed Entity Classification Scale-Out Foundation** — **COMPLETE LOCALLY** (`evidence_backed_entity_classifier.py`, `p2e_entity_classification_artifact.json`).
-17. **Phase 2-E3 Bounded Current-State Entity Classification Authority Promotion** — **COMPLETE LOCALLY** (`config/promoted_entity_classifications.json`, `p2e3_entity_classification_promotion_artifact.json`).
-18. **Phase 2-F BCTC Note & Disclosure Parsing / Sector Taxonomy Expansion** — **NEXT PRODUCT MILESTONE**.
+18. **Phase 2-F1 Sector Financial Taxonomy & Disclosure Parsing Foundation** — **COMPLETE LOCALLY** (`sector_financial_taxonomy.py`, `financial_disclosure_recognizer.py`, `p2f1_sector_financial_taxonomy_artifact.json`).
+19. **Phase 2-F2 Sector Financial Authority Promotion Review & Integration** — **NEXT PRODUCT MILESTONE**.
 
 ---
 

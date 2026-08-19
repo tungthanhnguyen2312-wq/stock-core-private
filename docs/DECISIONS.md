@@ -10,6 +10,32 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
+## 2026-08-19 - Phase 2-F1 Sector Financial Taxonomy & Disclosure Parsing Foundation Complete
+
+`P2F1_SECTOR_FINANCIAL_TAXONOMY_FOUNDATION = COMPLETE_LOCAL` (`sector_financial_taxonomy.py`, `financial_disclosure_recognizer.py`, `tools/run_p2f1_sector_financial_taxonomy.py`, `tests/test_sector_financial_taxonomy.py`, `push = NO`).
+
+1. **Deterministic Sector Financial Taxonomy Contract**:
+   - Implemented `sector_financial_taxonomy.py` declaring `StatementFormFamily`, `SectorProofStatus`, `MetricApplicabilityState`, and `MetricDefinition` specifications for `bank`, `securities`, `corporate`, `insurance`, and `finance_company`.
+   - Mapped sector primary statement forms (`SECTOR_PRIMARY_STATEMENT_FORMS`) and explicit corporate metric inapplicabilities (`SECTOR_INAPPLICABLE_CORPORATE_METRICS`).
+   - Implemented `evaluate_metric_sector_applicability()` with strict fail-closed semantics across ordinary corporate vs intermediary semantics.
+
+2. **Generic Financial Disclosure & Note Recognition Engine**:
+   - Implemented `financial_disclosure_recognizer.py` supporting authoritative entity-class gating (`resolve_layered_entity_classification`), primary statement vs note section recognition, Vietnamese statutory form code detection (`B 02/TCTD-HN`, `B 01-CTCK/HN`, `B 09-CTCK`, etc.), note heading and cross-reference extraction, unit/scale discovery, and deterministic citation generation (`compute_sector_citation_id`).
+   - Enforced `TICKER_SPECIFIC_SECTOR_EXTRACTION_BRANCH_COUNT = 0`.
+
+3. **Real Proof Corpus vs Schema-Only Separation**:
+   - Real-data validated sectors: `bank` (VCB FY2024 consolidated, Circular 49/2014/TT-NHNN, 15 extracted facts) and `securities` (SSI FY2024 consolidated, Circular 334/2016/TT-BTC, 16 extracted facts).
+   - Schema-supported only sectors: `insurance` (Circular 199/2014/TT-BTC) and `finance_company` (Circular 49/2014/TT-NHNN) — extraction fails closed with `SCHEMA_SUPPORTED_BUT_NOT_REAL_DATA_VALIDATED` pending verified retained proof filings. Zero synthetic observations generated.
+   - Unclassified listed equities (1,620 issuers) fail closed with `ENTITY_CLASS_UNRESOLVED`.
+
+4. **Regression & Exact Semantic Matches**:
+   - VCB FY2024 extracted facts: Interest Income (`93,654,841,000,000` VND, Note 23), Interest Expense (`38,249,106,000,000` VND, Note 24), Net Interest Income (`55,405,735,000,000` VND), Profit Before Tax (`42,236,135,000,000` VND), Net Profit Parent (`33,831,386,000,000` VND), Total Assets (`2,085,873,522,000,000` VND), Customer Deposits (`1,514,664,850,000,000` VND), Customer Loans Net (`1,418,015,724,000,000` VND), Total Equity (`196,209,168,000,000` VND) — all classified `EXACT_SEMANTIC_MATCH`.
+   - SSI FY2024 extracted facts: Financial Assets FVTPL (`42,438,121,481,401` VND), Loans Balance (`21,998,601,885,375` VND), Total Assets (`73,507,302,559,722` VND), Current Liabilities (`46,599,438,522,989` VND), Short-Term Borrowings (`45,501,969,699,137` VND, Note 21), Total Equity (`26,826,650,611,768` VND, Note 29), Total Operating Revenue (`8,529,279,575,474` VND), Brokerage Revenue (`1,667,430,605,344` VND), FVTPL Gain (`4,021,594,603,243` VND), FVTPL Loss (`1,458,465,074,277` VND), Borrowing Costs (`1,505,764,783,295` VND), Profit After Tax Parent (`2,835,023,120,364` VND), Basic EPS (`1,554` VND), Ordinary Shares (`1,961,872,450`) — all classified `EXACT_SEMANTIC_MATCH`.
+
+5. **Authority Status & Process History**:
+   - Authority status: `PROMOTION_REVIEW_READY` (`operations-review/p2f1-sector-financial-taxonomy-foundation-20260819/p2f1_sector_financial_taxonomy_artifact.json`).
+   - Process History Correction: `PROCESS_VIOLATION_CURRENT_P2E3 = YES` recorded due to background `manage_task` usage during that milestone. P2-F1 was conducted with 100% synchronous terminal execution, no background tasks, and full invariant compliance.
+
 ## 2026-08-19 - Phase 2-E3 Bounded Current-State Entity Classification Authority Promotion Complete
 
 `P2E3_BOUNDED_ENTITY_CLASSIFICATION_PROMOTION = COMPLETE_LOCAL` (`config/promoted_entity_classifications.json`, `entity_classification_contract.py`, `financial_entity_applicability.py`, `financial_mapping.py`, `tools/run_p2e3_entity_classification_promotion.py`, `tests/test_layered_entity_classification.py`, `push = NO`).
