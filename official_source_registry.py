@@ -61,6 +61,7 @@ REASON_NOT_APPROVED = "source_declared_but_not_owner_approved"
 REASON_BAD_URL = "url_unparseable_or_unsupported_scheme"
 REASON_HOST_NOT_ALLOWED = "host_not_on_source_allowlist"
 REASON_DOCUMENT_TYPE = "document_type_not_declared_for_source"
+REASON_DOCUMENT_TYPE_NOT_ALLOWED_FOR_HOST = "document_type_not_allowed_for_host"
 REASON_RATE = "minimum_request_interval_not_elapsed"
 REASON_APPROVAL_TIMESTAMP = "approval_instant_not_verifiable"
 
@@ -85,6 +86,30 @@ def registry_path(root: Path | str | None = None) -> Path:
     return base / REGISTRY_FILENAME
 
 
+def _validate_registry(payload: Mapping[str, Any]) -> None:
+    sources = payload.get("sources")
+    if not isinstance(sources, list):
+        raise RegistryError("registry carries no source list")
+    for source in sources:
+        if not isinstance(source, Mapping):
+            raise RegistryError("source entry is not a mapping")
+        allowed_hosts = {str(h).lower() for h in source.get("allowed_hosts") or []}
+        admissible_types = admissible_document_types(source)
+        host_doc_types = source.get(HOST_DOCUMENT_TYPES_FIELD)
+        if host_doc_types is not None:
+            if not isinstance(host_doc_types, Mapping):
+                raise RegistryError(f"{HOST_DOCUMENT_TYPES_FIELD} must be a mapping in source {source.get('source_id')}")
+            for host_key, doc_types in host_doc_types.items():
+                canon_key = canonical_host(f"https://{host_key}")
+                if canon_key is None or canon_key not in allowed_hosts:
+                    raise RegistryError(f"host {host_key!r} in {HOST_DOCUMENT_TYPES_FIELD} is not on {source.get('source_id')} allowlist")
+                if not isinstance(doc_types, (list, tuple, set, frozenset)) or not doc_types:
+                    raise RegistryError(f"host {host_key!r} in {HOST_DOCUMENT_TYPES_FIELD} has empty or malformed document types")
+                for dt in doc_types:
+                    if str(dt) not in admissible_types:
+                        raise RegistryError(f"document type {dt!r} for host {host_key!r} is not in {source.get('source_id')} declared document_types")
+
+
 def load_registry(path: Path | str | None = None) -> dict[str, Any]:
     target = Path(path) if path is not None else registry_path()
     try:
@@ -95,8 +120,7 @@ def load_registry(path: Path | str | None = None) -> dict[str, Any]:
         raise RegistryError(f"registry malformed: {target}") from exc
     if not isinstance(payload, Mapping) or payload.get("schema_version") != VERSION:
         raise RegistryError("registry schema unsupported")
-    if not isinstance(payload.get("sources"), list):
-        raise RegistryError("registry carries no source list")
+    _validate_registry(payload)
     return dict(payload)
 
 
@@ -114,6 +138,7 @@ def source_index(registry: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
 #: listing page cannot reach the ledger, the resolver, `qualified_official` or
 #: `corroborated_period_end` even if some future caller asks it to.
 INDEX_DOCUMENT_TYPES_FIELD = "index_document_types"
+HOST_DOCUMENT_TYPES_FIELD = "host_document_types"
 
 
 def evidence_document_types(source: Mapping[str, Any]) -> frozenset[str]:
@@ -127,6 +152,21 @@ def index_document_types(source: Mapping[str, Any]) -> frozenset[str]:
 def admissible_document_types(source: Mapping[str, Any]) -> frozenset[str]:
     """Everything this source may be asked for: evidence documents and index pages alike."""
     return evidence_document_types(source) | index_document_types(source)
+
+
+def host_document_types(source: Mapping[str, Any], host: str) -> frozenset[str] | None:
+    """Returns the set of allowed document types for a specific host if configured, else None."""
+    mapping = source.get(HOST_DOCUMENT_TYPES_FIELD)
+    if not isinstance(mapping, Mapping):
+        return None
+    canonical = canonical_host(f"https://{host}") or str(host).lower().split(":", 1)[0]
+    for key, doc_types in mapping.items():
+        key_host = canonical_host(f"https://{key}") or str(key).lower().split(":", 1)[0]
+        if key_host == canonical:
+            if isinstance(doc_types, (list, tuple, set, frozenset)):
+                return frozenset(str(dt) for dt in doc_types)
+            return frozenset()
+    return None
 
 
 def all_index_document_types(registry: Mapping[str, Any] | None = None) -> frozenset[str]:
@@ -247,6 +287,10 @@ def admit(source_id: str, url: str, document_type: str, *,
     if str(document_type) not in admissible_document_types(source):
         return _decision(REFUSED, REASON_DOCUMENT_TYPE, source_id, url, document_type,
                          detail=f"{document_type!r} is not declared for {source_id}")
+    host_types = host_document_types(source, host)
+    if host_types is not None and str(document_type) not in host_types:
+        return _decision(REFUSED, REASON_DOCUMENT_TYPE_NOT_ALLOWED_FOR_HOST, source_id, url, document_type,
+                         detail=f"{document_type!r} is not allowed for host {host!r} under {source_id}")
     interval = float(source.get("min_request_interval_seconds") or 0.0)
     if (seconds_since_last_request is not None
             and float(seconds_since_last_request) < interval):

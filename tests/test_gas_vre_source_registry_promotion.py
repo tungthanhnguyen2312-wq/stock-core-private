@@ -52,6 +52,8 @@ def run(specs, *, reg=None, fetcher=None):
     return result, fetcher
 
 
+import copy
+
 class GasVreSourceRegistryPromotionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.reg = registry.load_registry()
@@ -66,6 +68,22 @@ class GasVreSourceRegistryPromotionTests(unittest.TestCase):
         result, fetcher = run([spec(ticker="GAS", canonical_url=url)], reg=self.reg)
         self.assertEqual(result["outcomes"][0]["state"], "retained")
         self.assertEqual(fetcher.urls, [url])
+
+    def test_gas_document_types_strictly_narrowed_to_audited_annual_fs_only(self) -> None:
+        url = "https://www.pvgas.com.vn/quan-he-co-%C4%91ong/tai-lieu-co-%C4%91ong/report.pdf"
+        other_issuer_ir_classes = [
+            "agm_document_or_resolution",
+            "amendment_or_supersession_notice",
+            "annual_report",
+            "corporate_action_notice",
+            "corporate_governance_report",
+            "listing_change_notice",
+            "reviewed_interim_financial_statements",
+        ]
+        for doc_class in other_issuer_ir_classes:
+            decision = registry.admit("issuer_ir", url, doc_class, registry=self.reg)
+            self.assertEqual(decision["decision"], registry.REFUSED)
+            self.assertEqual(decision["reason"], registry.REASON_DOCUMENT_TYPE_NOT_ALLOWED_FOR_HOST)
 
     def test_gas_unrelated_or_unadmitted_hosts_rejected(self) -> None:
         # Non-www pvgas.com.vn is not on allowed_hosts per P2-D2 scope
@@ -99,6 +117,22 @@ class GasVreSourceRegistryPromotionTests(unittest.TestCase):
         result, fetcher = run([spec(ticker="VRE", reporting_period="2025", canonical_url=url)], reg=self.reg)
         self.assertEqual(result["outcomes"][0]["state"], "retained")
         self.assertEqual(fetcher.urls, [url])
+
+    def test_vre_document_types_strictly_narrowed_to_audited_annual_fs_only(self) -> None:
+        url = "https://ir.vincom.com.vn/reports/notice.pdf"
+        other_issuer_ir_classes = [
+            "agm_document_or_resolution",
+            "amendment_or_supersession_notice",
+            "annual_report",
+            "corporate_action_notice",
+            "corporate_governance_report",
+            "listing_change_notice",
+            "reviewed_interim_financial_statements",
+        ]
+        for doc_class in other_issuer_ir_classes:
+            decision = registry.admit("issuer_ir", url, doc_class, registry=self.reg)
+            self.assertEqual(decision["decision"], registry.REFUSED)
+            self.assertEqual(decision["reason"], registry.REASON_DOCUMENT_TYPE_NOT_ALLOWED_FOR_HOST)
 
     def test_vre_unrelated_hosts_rejected(self) -> None:
         for rejected_url in (
@@ -150,10 +184,38 @@ class GasVreSourceRegistryPromotionTests(unittest.TestCase):
         decision = registry.admit("vsdc", "https://www.vsdc.vn/record.html", "last_registration_date_notice", registry=self.reg)
         self.assertEqual(decision["decision"], registry.ADMITTED)
 
-        # Existing issuer_ir hosts
+        # Existing unconstrained issuer_ir hosts retain multi-document capability
         for host in ("file.hoaphat.com.vn", "www.vinamilk.com.vn", "www.vietcombank.com.vn", "www.ssi.com.vn", "cdn.pnj.io", "fpt.com", "www.pvdrilling.com.vn", "www.qns.com.vn", "pvpower.vn", "www.novaland.com.vn"):
-            decision = registry.admit("issuer_ir", f"https://{host}/report.pdf", "audited_annual_financial_statements", registry=self.reg)
-            self.assertEqual(decision["decision"], registry.ADMITTED)
+            decision_fs = registry.admit("issuer_ir", f"https://{host}/report.pdf", "audited_annual_financial_statements", registry=self.reg)
+            self.assertEqual(decision_fs["decision"], registry.ADMITTED)
+
+            decision_ar = registry.admit("issuer_ir", f"https://{host}/report.pdf", "annual_report", registry=self.reg)
+            self.assertEqual(decision_ar["decision"], registry.ADMITTED)
+
+    def test_registry_validation_fails_closed_on_bad_host_document_types(self) -> None:
+        # 1. Host in host_document_types not in allowed_hosts
+        bad_reg1 = copy.deepcopy(self.reg)
+        bad_reg1["sources"][3]["host_document_types"]["unapproved.host.vn"] = ["audited_annual_financial_statements"]
+        with self.assertRaises(registry.RegistryError):
+            registry._validate_registry(bad_reg1)
+
+        # 2. Document type in host_document_types not declared in source
+        bad_reg2 = copy.deepcopy(self.reg)
+        bad_reg2["sources"][3]["host_document_types"]["www.pvgas.com.vn"] = ["invalid_unsupported_class"]
+        with self.assertRaises(registry.RegistryError):
+            registry._validate_registry(bad_reg2)
+
+        # 3. Non-mapping host_document_types
+        bad_reg3 = copy.deepcopy(self.reg)
+        bad_reg3["sources"][3]["host_document_types"] = ["not_a_mapping"]
+        with self.assertRaises(registry.RegistryError):
+            registry._validate_registry(bad_reg3)
+
+        # 4. Empty document types list for host
+        bad_reg4 = copy.deepcopy(self.reg)
+        bad_reg4["sources"][3]["host_document_types"]["www.pvgas.com.vn"] = []
+        with self.assertRaises(registry.RegistryError):
+            registry._validate_registry(bad_reg4)
 
 
 if __name__ == "__main__":

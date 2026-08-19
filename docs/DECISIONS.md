@@ -10,6 +10,20 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
+## 2026-08-19 - Phase 2-D2C Generic Per-Host Document Authority Scope Correction Complete
+
+`P2D2C_AUTHORITY_SCOPE_CORRECTION = COMPLETE_LOCAL` (`official_source_registry.py`, `config/official_source_registry.json`, `push = NO`).
+
+1. **Defect & Generic Correction**:
+   - P2-D2 verification discovered that the shared `issuer_ir` source model broadened document authority across all 8 declared `issuer_ir` document types for newly added hosts.
+   - P2-D2C implemented generic, data-driven per-host document narrowing via `host_document_types` in `official_source_registry.py`.
+   - Constrained `www.pvgas.com.vn` (GAS) and `ir.vincom.com.vn` (VRE) strictly to `audited_annual_financial_statements` only. All other `issuer_ir` document classes are refused with `document_type_not_allowed_for_host`.
+
+2. **Backward Compatibility & Invariants**:
+   - Existing unconstrained `issuer_ir` hosts without `host_document_types` entries preserve exact source-level behavior.
+   - `MWG` (`NOT_READY_REDIRECT_CHAIN`) and `VIC` (`NOT_READY_REPRODUCIBILITY`) remain unpromoted / refused.
+   - P2-C corporate evidence acquisition wave is not resumed; no financial PDFs retained, extracted, or canonicalized.
+
 ## 2026-08-19 - Phase 2-D2 Bounded Official Source Registry Promotion (GAS + VRE) Complete
 
 `P2D2_BOUNDED_OFFICIAL_SOURCE_REGISTRY_PROMOTION = COMPLETE_LOCAL` (`config/official_source_registry.json`, `push = NO`).
