@@ -25,7 +25,7 @@ Binding execution sequence:
 - **P0-A** — qualified price basis + corporate-action + historical PIT authority.
   `A.1` OHLC raw-coverage completion (**complete** — 1,528/1,660 successful, 132 `PERMANENT`),
   `A.2` corporate-action evidence scale-out (**complete** — document-authority coverage and multi-event extraction integrated at commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`),
-  `A.3` market-wide PIT price reconstruction (**in progress** — `P0-A.3A` contract, `P0-A.3B` read-only architecture review, `P0-A.3C` evidence acquisition, and `P0-A.3D` governed shadow collector hardening complete locally; `P0-A.3E` is active prospective multi-session collection with Session 1 acquired and event-window qualification blocked pending a qualified ex-date), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
+  `A.3` market-wide PIT price reconstruction (**in progress** — `P0-A.3A` contract, `P0-A.3B` read-only architecture review, `P0-A.3C` evidence acquisition, and `P0-A.3D` governed shadow collector hardening complete locally; `P0-A.3E` Part A prospective multi-session collection is `COMPLETE_EVIDENCE_ACQUIRED` across Sessions 1–4 with no further acquisition required, while Part B event-window qualification remains `BLOCKED_PENDING_QUALIFIED_EX_DATE`), `A.4` scoped price-basis promotion. See `## CRITICAL PATH` — canonical universe
   boundary work (`P0-C.1`/`P0-C.2`) is integrated on local main before further P0-A expansion.
 - **P0-B** — qualified volume/liquidity basis + market-wide turnover.
 - **P0-C** — canonical market universe + exclusion ledger + freshness semantics. `C.1`
@@ -154,11 +154,10 @@ and non-`bc` budgets, and applies a bounded total session timeout. It is not a d
 provider registry, or production/PIT authority.
 
 `P0-A.3E` — **Prospective Multi-Session / Event-Window Price-Basis Qualification** is
-**ACTIVE_MULTI_SESSION_COLLECTION; NO_PRICE_BASIS_PROMOTION; HUMAN_LIVE_EXECUTION_REQUIRED.**
-Session 1, `2026-08-18-postfix-ecb2c6c`, is `SESSION_EVIDENCE_ACQUIRED` with accepted governed
-evidence for HPG and VCB. It proves only the bounded post-fix capture path, not price authority.
+**PART_A_COMPLETE_EVIDENCE_ACQUIRED; PART_B_BLOCKED_PENDING_QUALIFIED_EX_DATE; NO_PRICE_BASIS_PROMOTION.**
+Sessions 1 through 4 have acquired distinct, multi-session governed evidence for HPG and VCB across two distinct execution lineages (`70a7904` and `4150f02c`), retaining all sessions including partial sessions (`SESSION_PARTIAL`) where honest expected `BLOCKED_NO_COMPLETED_EVENT` outcomes occurred without transport or integrity regression. No additional prospective acquisition is required. `RAW_AS_TRADED` remains **NOT_PROMOTED**.
 
-- **A. PROSPECTIVE_MULTI_SESSION_COLLECTION** — `OPERATIONAL / SESSION_1_ACQUIRED`.
+- **A. PROSPECTIVE_MULTI_SESSION_COLLECTION** — `COMPLETE_EVIDENCE_ACQUIRED`.
 - **B. EVENT_WINDOW_PRICE_BASIS_QUALIFICATION** — `BLOCKED_PENDING_QUALIFIED_EX_DATE`.
 
 No daemon/unattended collector, inferred ex-date, or fabricated event evidence is authorized.
@@ -185,7 +184,7 @@ no semantic unit promotion. Canonical Trades source commit `2b7b38772e16c434c8ad
 is `SOURCE_GENERATOR_NOT_IN_CURRENT_MAIN_ANCESTRY` — provenance gap visible for promotion review.
 **This does NOT equal QUALIFIED_VOLUME_COMPOSITION or QUALIFIED_LIQUIDITY_INPUTS.**
 Volume authority promotion remains a separate P0-B.2D review. P0-B is NOT closed.
-P0-B.2C (va/turnover) is NOT implemented. `qualified_liquidity_inputs = False` unconditionally.
+P0-B.2C (va/turnover) remains **DEFERRED / NOT_IMPLEMENTED**. `qualified_liquidity_inputs = False` unconditionally.
 
 Precondition status:
 - `P0-A.1` is **COMPLETE** (1,528 success + 132 `PERMANENT` = 1,660).
@@ -199,12 +198,7 @@ Precondition status:
 
 ## EXACT NEXT BOUNDED ACTION
 
-Human operator: continue only bounded foreground `P0-A.3E` prospective multi-session evidence
-collection. Separately determine whether a qualifying, officially evidenced corporate-action
-ex-date event window exists; without it, the event-window component remains blocked. Retain and
-replay governed shadow evidence exactly as supplied. Any REST/WS comparison may investigate
-correspondence only; it does not establish `RAW_AS_TRADED`, non-rewriting, PIT safety, or registry
-authority.
+`P0-A.3E` Part A (Prospective Multi-Session Collection) is complete (`COMPLETE_EVIDENCE_ACQUIRED`), no additional prospective acquisition is required, and Part B (`EVENT_WINDOW_PRICE_BASIS_QUALIFICATION`) remains fail-closed `BLOCKED_PENDING_QUALIFIED_EX_DATE`. `RAW_AS_TRADED` remains `NOT_PROMOTED`. `P0-B.2C` remains deferred. The exact next actionable roadmap gate is **`P0-C.3`** (field-level freshness/as-of retrofit).
 
 ## ACTIVE RUNTIME LANES
 
@@ -460,10 +454,7 @@ Updated ordered chain:
 4. Continue market-wide data authority over that canonical universe: `P0-A.2` corporate-action
    evidence scale-out and `P0-A.3` market-wide PIT reconstruction. `P0-A.3B` is closed
    `SOURCE_SEMANTICS_BLOCKED`; `P0-A.3C` evidence acquisition and `P0-A.3D` governed shadow
-   hardening are complete locally. `P0-A.3E` prospective multi-session evidence collection is
-   active (Session 1 acquired); its event-window qualification remains blocked pending a qualified
-   ex-date, then `P0-A.4` scoped price-basis promotion and `P0-B` qualified volume/liquidity/
-   turnover basis.
+   hardening are complete locally. `P0-A.3E` Part A is complete (`COMPLETE_EVIDENCE_ACQUIRED`, Sessions 1–4 retained, no more prospective acquisition required); Part B event-window qualification remains `BLOCKED_PENDING_QUALIFIED_EX_DATE`; `RAW_AS_TRADED` remains `NOT_PROMOTED`; `P0-A.4` scoped price-basis promotion remains deferred; `P0-B.2B1` shadow scale relation validated with unresolved residuals and B.2C deferred.
 5. `P0-C.3` field-level freshness/as-of retrofit, as required for qualified market-wide
    consumption.
 6. First market-wide deterministic analysis/research artifact, after the necessary P0-A/P0-B/P0-C

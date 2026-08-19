@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-08-19 - P0-A.3E prospective multi-session evidence collection complete; event-window qualification blocked
+
+`P0-A.3E = PART_A_COMPLETE_EVIDENCE_ACQUIRED; PART_B_BLOCKED_PENDING_QUALIFIED_EX_DATE`.
+
+1. **A3E Part A Prospective Multi-Session Collection is COMPLETE_EVIDENCE_ACQUIRED**:
+   - Distinct multi-session completed-bar (`bc`) evidence retained across Sessions 1–4 under lineages `70a7904` and `4150f02c`.
+   - Per-symbol evidence matrix: Session 1 (HPG PASS, VCB PASS); Session 2 (HPG BLOCKED, VCB PASS); Session 3 (HPG BLOCKED, VCB PASS); Session 4 (HPG PASS, VCB BLOCKED).
+   - Partial sessions (`SESSION_PARTIAL`) and honest `BLOCKED_NO_COMPLETED_EVENT` outcomes are verified contract-compliant and do not invalidate evidence or indicate defects.
+   - No further live prospective WebSocket acquisition is required for A.3E.
+
+2. **Part B Event-Window Price-Basis Qualification is BLOCKED_PENDING_QUALIFIED_EX_DATE**:
+   - Requires explicit official corporate-action ex-date evidence and executed distribution status.
+   - Inferring ex-date from record date or fabricating adjustment factors remains strictly forbidden.
+   - `RAW_AS_TRADED` remains **NOT_PROMOTED**.
+   - `OFFICIAL_CLOSED_BAR_FINALITY_DOES_NOT_BY_ITSELF_PROVE_RAW_AS_TRADED` and `NO_REVISION_OBSERVED != IMMUTABLE` remain binding.
+
+3. **Critical Path & Next Milestone**:
+   - With A.3E Part A complete and Part B safely fail-closed, the next actionable roadmap milestone is `P0-C.3` (field-level freshness/as-of retrofit) per critical path governance.
+
 ## 2026-08-18 - P0-B.2B1 VALIDATED_SHADOW result; C1-C4 BLOCKED confirmed on full corpus
 
 `P0-B.2B1 = VALIDATED_SHADOW_SCALE_RELATION_WITH_UNRESOLVED_RESIDUALS`.

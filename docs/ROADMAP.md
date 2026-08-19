@@ -18,13 +18,13 @@ from the relevant sub-milestone below. See `docs/STATE.md` for current runtime/g
 | P0-A | Qualified price basis + corporate-action + historical PIT authority | Active (independent of P0-RECOVERY) |
 | P0-A.1 | OHLC raw-coverage completion | **Complete** — 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected, 0 retryable, 0 unclassified, 0 untouched |
 | P0-A.2 | Corporate-action evidence scale-out | **Complete** — document authority and multi-event extraction integrated to local main (commit `a7e4a1ce7e8df1c24587c25f669393a5f0265b5e`, `push = NO`) |
-| P0-A.3 | Market-wide PIT price reconstruction | **In progress** — P0-A.3A contract, P0-A.3B read-only review, P0-A.3C evidence acquisition, and P0-A.3D governed shadow hardening complete locally; P0-A.3E is active prospective multi-session collection (Session 1 acquired), while event-window price-basis qualification is blocked pending a qualified ex-date; no price-basis promotion |
+| P0-A.3 | Market-wide PIT price reconstruction | **In progress** — P0-A.3A contract, P0-A.3B read-only review, P0-A.3C evidence acquisition, and P0-A.3D governed shadow hardening complete locally; P0-A.3E Part A prospective multi-session collection is complete (`COMPLETE_EVIDENCE_ACQUIRED`, Sessions 1–4 retained), while Part B event-window price-basis qualification is blocked pending a qualified ex-date; no price-basis promotion |
 | P0-A.4 | Scoped price-basis promotion | Not started; depends on A.3 |
-| P0-B | Qualified volume/liquidity basis + market-wide turnover | **In progress — not closed.** P0-B.2A_B2B: BLOCKED (C1–C4 fail across full 40-session/35,231-symbol-session corpus; root cause: ×10 scale mismatch + board composition mismatch). P0-B.2B1: `VALIDATED_SHADOW_SCALE_RELATION_WITH_UNRESOLVED_RESIDUALS` — C5=10×G1 matches 35,164/35,231=99.81% exactly (2× determinism confirmed, hash `ac5942913291c9ac8efb73d77a3b97dbb9068f111c8c6996422b66ef4e2b183d`); 67 residuals (62 POSITIVE_DELTA_MULTIPLE_OF_100, 5 NEGATIVE_DELTA_MINUS_4) unresolved; scale is EMPIRICAL_CANDIDATE only, semantic_unit=UNKNOWN, no authority promotion. P0-B.2C (va/turnover) NOT started. `QUALIFIED_LIQUIDITY_INPUTS` NOT emitted. P0-B.2D promotion review required before closing. |
+| P0-B | Qualified volume/liquidity basis + market-wide turnover | **In progress — not closed.** P0-B.2A_B2B: BLOCKED (C1–C4 fail across full 40-session/35,231-symbol-session corpus; root cause: ×10 scale mismatch + board composition mismatch). P0-B.2B1: `VALIDATED_SHADOW_SCALE_RELATION_WITH_UNRESOLVED_RESIDUALS` — C5=10×G1 matches 35,164/35,231=99.81% exactly (2× determinism confirmed, hash `ac5942913291c9ac8efb73d77a3b97dbb9068f111c8c6996422b66ef4e2b183d`); 67 residuals (62 POSITIVE_DELTA_MULTIPLE_OF_100, 5 NEGATIVE_DELTA_MINUS_4) unresolved; scale is EMPIRICAL_CANDIDATE only, semantic_unit=UNKNOWN, no authority promotion. P0-B.2C (va/turnover) NOT started / deferred. `QUALIFIED_LIQUIDITY_INPUTS` NOT emitted. P0-B.2D promotion review required before closing. |
 | P0-C | Canonical market universe + exclusion ledger + freshness semantics | Foundation (C.1/C.2) and semantic qualification integrated to local main (commit `0f29019da83e83144f4f7f3832f054e04be66a97`, not pushed); security-group semantics qualified for ~99.6% of `UNKNOWN_SECURITY_GROUP`; exchange and listing/active status remain unqualified so `ACTIVE_UNIVERSE` stays fail-closed; C.3 not started — see `docs/STATE.md`'s P0-C.1/P0-C.2 foundation and semantic-qualification entries |
 | P0-C.1 | Instrument-master reconciliation | **Promoted with bounded patch** (`b4e3c71` + patch); integrated to local main, not pushed |
 | P0-C.2 | Universe-tier hierarchy / exclusion ledger | **Promoted with bounded patch** (`3d9a2ab` + patch); integrated to local main, not pushed; `ACTIVE_UNIVERSE` fail-closed `UNKNOWN` pending listing-status/exchange evidence (both investigated, both remain unqualified — see `docs/STATE.md`) |
-| P0-C.3 | Field-level freshness/as-of retrofit | Not started |
+| P0-C.3 | Field-level freshness/as-of retrofit | Next actionable milestone |
 | P1 | Foreign-flow scale-out; UFS/feature-authority normalization; Research Evidence Layer; market-internals | Deferred |
 | P2 | Sector/factor normalization; official multi-period fundamentals; operational robustness | Deferred |
 | P3 | Return/risk, calibrated scenarios, sizing, backtest | Deferred; fail-closed until P0-A + P0-B pass |
@@ -47,17 +47,19 @@ run; its result does not promote price basis. `P0-A.3D` is **COMPLETE_LOCAL_NO_P
 `EXPERIMENT_SHADOW_ONLY` collector hardening, including local commit `ecb2c6c` which corrected
 routine ping keepalive exhaustion of the semantic receive budget and was subsequently live
 validated through governed A.3E capture. Active gate: `P0-A.3E` — **Prospective Multi-Session /
-Event-Window Price-Basis Qualification** (`ACTIVE_MULTI_SESSION_COLLECTION`,
-`NO_PRICE_BASIS_PROMOTION`, human live execution required).
+Event-Window Price-Basis Qualification** (`PART_A_COMPLETE_EVIDENCE_ACQUIRED`,
+`PART_B_BLOCKED_PENDING_QUALIFIED_EX_DATE`, `NO_PRICE_BASIS_PROMOTION`).
 
-- **A. PROSPECTIVE_MULTI_SESSION_COLLECTION** — `OPERATIONAL / SESSION_1_ACQUIRED`: session
-  `2026-08-18-postfix-ecb2c6c` is `SESSION_EVIDENCE_ACQUIRED` for HPG and VCB.
+- **A. PROSPECTIVE_MULTI_SESSION_COLLECTION** — `COMPLETE_EVIDENCE_ACQUIRED`:
+  Sessions 1 through 4 have acquired distinct, multi-session governed evidence for HPG and VCB
+  (including partial sessions with honest expected `BLOCKED_NO_COMPLETED_EVENT` outcomes without failure).
+  No additional prospective acquisition is required.
 - **B. EVENT_WINDOW_PRICE_BASIS_QUALIFICATION** — `BLOCKED_PENDING_QUALIFIED_EX_DATE`: no ex-date
   may be inferred from record date, and unavailable event evidence remains fail-closed.
 
 `RAW_AS_TRADED_NOT_PROMOTED`,
 `OFFICIAL_CLOSED_BAR_FINALITY_DOES_NOT_BY_ITSELF_PROVE_RAW_AS_TRADED`, and
-`NO_REVISION_OBSERVED != IMMUTABLE` remain binding. A.3E → `P0-A.4` / `P0-B` → `P0-C.3` → first
+`NO_REVISION_OBSERVED != IMMUTABLE` remain binding. A.3E Part A complete / Part B blocked → `P0-C.3` (freshness/as-of retrofit) / `P0-B` → first
 market-wide deterministic analysis artifact. P0-A.1, P0-A.2, P0-A.3A, P0-A.3B, P0-A.3C, and
 P0-A.3D are complete and no longer on this chain.
 `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` remains withdrawn from the immediate chain, a deferred
