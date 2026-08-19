@@ -10,6 +10,32 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
+## 2026-08-19 - Phase 2-D Generic Financial Statement Template Recognition and Extraction Complete
+
+`P2D_GENERIC_FINANCIAL_EXTRACTION = COMPLETE_LOCAL` (`financial_statement_template_recognizer.py`, `governed_financial_evidence_extraction.py`, `tools/run_p2c2_corporate_evidence_onboarding.py`, `tests/test_financial_statement_template_recognizer.py`, `push = NO`).
+
+1. **Generic Template Recognition Engine**:
+   - Implemented `financial_statement_template_recognizer.py` establishing pure, data-driven financial statement template recognition.
+   - Zero hardcoded issuer/ticker rules (`TICKER_SPECIFIC_EXTRACTION_BRANCH_COUNT = 0`).
+   - Automatically parses statement type (`BALANCE_SHEET`, `INCOME_STATEMENT`, `CASH_FLOW`) and accounts for continuation pages.
+   - Dynamically determines reporting unit and scale (`VND`, `triệu VND`, `tỷ VND`) and fails closed with `UNIT_SCALE_AMBIGUOUS` if absent.
+   - Discovers period-column semantic orientation (`Số cuối năm` / `Năm nay` vs `Số đầu năm` / `Năm trước`) and fails closed with `PERIOD_COLUMN_AMBIGUOUS` if ambiguous.
+
+2. **Net Income Semantic Contract & Mismatch Correction**:
+   - Strictly established `CANONICAL_NET_INCOME_SEMANTIC = "net_income_attributable_to_parent"` (Form B 02-DN Line Code 61).
+   - Distinguished Line 60 (`net_profit_after_tax_total`, consolidated total profit including non-controlling interest) from Line 61 (`net_income_attributable_to_parent`, equity holders of parent).
+   - Reconciled prior P2-C2C semantic mismatch: GAS FY2025 net income correctly extracted as Line 61 (`11,414,339,911,686` VND) instead of Line 60 (`11,571,631,226,008` VND).
+   - VRE FY2025 net income confirmed as Line 61 (`6,445,924` triệu VND = `6,445,924,000,000` VND).
+
+3. **Interest-Bearing Debt Component Aggregation**:
+   - Dynamically aggregates short-term borrowings (Line 320) + long-term borrowings (Line 338) into `total_interest_bearing_debt`.
+   - Fails closed with `DEBT_COMPONENT_MISSING` if either balance sheet component is missing.
+
+4. **Integration & Production Runner Generalization**:
+   - Refactored `governed_financial_evidence_extraction.py` and `tools/run_p2c2_corporate_evidence_onboarding.py` to remove issuer-specific extraction recipes (`EXTRACTION_ORCHESTRATION_SPECS`).
+   - All 16 facts (8 GAS + 8 VRE) extracted and canonicalized generically with 100% verified citation lineage.
+   - Emitted deterministic artifact to `operations-review/p2d-generic-financial-template-onboarding-20260819/`.
+
 ## 2026-08-19 - Phase 2-C2C Governed Evidence Lineage Correction (GAS + VRE) Complete
 
 `P2C2C_GOVERNED_EVIDENCE_LINEAGE_CORRECTION = COMPLETE_LOCAL` (`official_document_acquisition.py`, `official_document_qualification.py`, `governed_financial_evidence_extraction.py`, `tools/run_p2c2_corporate_evidence_onboarding.py`, `push = NO`).

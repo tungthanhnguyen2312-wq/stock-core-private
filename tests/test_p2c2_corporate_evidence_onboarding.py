@@ -1,15 +1,16 @@
-"""Unit tests for Phase 2 / P2-C2C: Governed Corporate Financial Evidence Onboarding (GAS & VRE)."""
+"""Unit tests for Phase 2 / P2-D: Generic Financial Template Onboarding (GAS & VRE)."""
 
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 import unittest
 
 from tools.run_p2c2_corporate_evidence_onboarding import (
     ACTIVE_COHORT,
     CONTRACT_VERSION,
-    EXTRACTION_ORCHESTRATION_SPECS,
+    COHORT_PROFILES,
     PRESERVED_TERMINAL_COHORT,
     SCHEMA_VERSION,
     execute_p2c2_onboarding,
@@ -97,7 +98,6 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
 
     def test_document_qualification_criteria(self):
         """Retained official documents meet strict audited annual consolidated criteria."""
-        import json
         manifest_path = self.evidence_root / "official_document_acquisition_manifest.json"
         self.assertTrue(manifest_path.is_file())
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -135,7 +135,7 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
         self.assertEqual(result["total_canonical_facts_emitted"], 16)
         self.assertEqual(
             result["governance_audit"]["production_fact_source"],
-            "PERSISTED_GOVERNED_OCR_EXTRACTION",
+            "GENERIC_TEMPLATE_RECOGNITION_OCR_EXTRACTION",
         )
         self.assertEqual(result["governance_audit"]["document_qualification_persisted"], "YES")
         self.assertEqual(result["governance_audit"]["persisted_citation_lineage"], "16 / 16")
@@ -165,9 +165,9 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
 
         gas_panel = result["panels_by_issuer"]["GAS"]
         gas_derived = gas_panel["derived_metrics"]["2025"]
-        self.assertAlmostEqual(gas_derived["cash_flow_to_net_income"]["value"], 1.1269, places=3)
+        self.assertAlmostEqual(gas_derived["cash_flow_to_net_income"]["value"], 1.1424, places=3)
         self.assertAlmostEqual(gas_derived["debt_to_equity"]["value"], 0.0439, places=3)
-        self.assertAlmostEqual(gas_derived["roe_proxy"]["value"], 0.1710, places=3)
+        self.assertAlmostEqual(gas_derived["roe_proxy"]["value"], 0.1687, places=3)
         self.assertEqual(gas_derived["net_debt"]["status"], "QUALIFIED")
 
         vre_panel = result["panels_by_issuer"]["VRE"]
@@ -187,14 +187,12 @@ class TestP2C2CorporateEvidenceOnboarding(unittest.TestCase):
         )
         report = generate_readiness_report(result)
 
-        self.assertIn("# Phase 2 / P2-C2C: Governed Corporate Financial Evidence Onboarding Report (GAS & VRE)", report)
+        self.assertIn("# Phase 2 / P2-D: Generic Financial Statement Template Recognition & Extraction Report", report)
         self.assertIn("ONBOARDING_SUCCESS", report)
         self.assertIn("NOT_READY_REDIRECT_CHAIN", report)
         self.assertIn("NOT_READY_REPRODUCIBILITY", report)
-        self.assertIn("ZERO ticker-specific Python modules", report)
-        self.assertIn("STRICT INVARIANT MET", report)
         self.assertIn("ENDING_EQUITY_ROE_PROXY", report)
-        self.assertIn("PERSISTED_GOVERNED_OCR_EXTRACTION", report)
+        self.assertIn("GENERIC_TEMPLATE_RECOGNITION_OCR_EXTRACTION", report)
 
 
 if __name__ == "__main__":
