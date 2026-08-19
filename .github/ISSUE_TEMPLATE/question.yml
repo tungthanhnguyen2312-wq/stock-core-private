@@ -1,0 +1,21 @@
+name: Question
+description: Ask a technical question about using or contributing to Stock Lookup
+title: "[Question]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please keep questions reproducible and avoid posting credentials, private data, or runtime databases.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to understand or accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include relevant commit SHA, code snippets, expected behavior, and sanitized logs where useful.
