@@ -10,6 +10,24 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - P3-B Sector-Aware Fundamental Quality & Research Readiness Complete
+
+`P3B_FUNDAMENTAL_RESEARCH_ENGINE = COMPLETE_LOCAL` (`fundamental_research_readiness.py`, `tools/run_p3b_fundamental_research_readiness.py`, `operations-review/p3b-fundamental-research-readiness-20260820/p3b_fundamental_research_readiness_artifact.json`, `push = NO`).
+
+1. **Activated Fundamental-Only Capability**:
+   - Consumes only the already-authoritative P2 financial-panel cohort (9 corporate issuers, VCB bank, SSI securities); no evidence acquisition, production database/runtime mutation, or market-data dependency.
+   - Emits deterministic per-metric values/methods, blocked reasons, input fact IDs, citation/document lineage, statement scope, currency, periods, and PIT eligibility.
+   - Calculates only sector-compatible metrics: corporate growth/margins/ROA-ROE/debt/cash-flow; bank ROA-ROE, loan-to-deposit, and credit cost; securities ROA-ROE, FVTPL-assets, and margin-loans. Average balances are exact derivations; ending balances are explicit `DERIVED_PROXY` values.
+
+2. **Preserved Fail-Closed Boundaries**:
+   - Conflicting, missing, non-positive-authority, non-PIT, scope-mismatched, currency-mismatched, and scale-mismatched inputs cannot feed a positive metric.
+   - Corporate debt/cash-flow semantics remain `NOT_APPLICABLE` for banks and securities; insurance, finance-company, unknown, and unpromoted classes fail closed.
+   - The artifact has no universal score, ranking, recommendation, valuation/DCF/target price, price/liquidity dependency, sizing, execution, or backtest authority.
+
+3. **Independent P3-A Status and Next Fundamental Gate**:
+   - `P3-A` remains terminal-blocked pending qualified explicit ex-date evidence; P3-B does not reopen, bypass, or alter it.
+   - The produced data-gap matrix identifies the next large fundamental gate: owner-authorized comparative financial evidence scale-out for multi-period bank/securities coverage and missing corporate income/balance identities. It is not started by this decision.
+
 ## 2026-08-20 - Phase 3-A Bounded Price Adjustment & Dividend Ex-Date Event Window Qualification (Terminal Blocker)
 
 `P3A_PRICE_ADJUSTMENT_EVENT_WINDOW_QUALIFICATION = BLOCKED_PENDING_QUALIFIED_EX_DATE` (`docs/STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `push = NO`).
