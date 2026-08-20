@@ -50,9 +50,32 @@
 4. **Temporal Freshness Invariant**: Freshness is determined by domain rules and market session calendars (`freshness_history.py`); naive `date < today => stale` is strictly prohibited.
 5. **No Speculative Inference**: Ex-dates must never be inferred from record dates; debt fields must never be invented; missing independent measurements cannot be turned into evidence.
 
+### 3.1 Global Readiness Rebaseline
+
+- **`MINIMUM_VIABLE_ANALYSIS_SHADOW`** is available only for deterministic, current descriptive research with retained lineage. Every MVA artifact must carry: `is_actionable_for_execution=false`, `pit_backtest_eligible=false`, `liquidity_sizing_authority=BLOCKED`, and `valuation_scope=CURRENT_DESCRIPTIVE_ONLY`. It may operate while historical PIT, liquidity, and sizing remain blocked.
+- **`FULL_DECISION_SUPPORT_READY`** requires all of the following, not merely an MVA artifact: current-share authority, canonical-universe authority, qualified volume/traded-value composition, historical RAW_AS_TRADED/PIT price and corporate-action authority, historical universe/entity PIT, liquidity/risk/sizing authority, and validated PIT backtesting.
+- Any empirical active cohort is a **derived shadow denominator**, never `ACTIVE_UNIVERSE` authority. It must declare as-of date, lookback/window, source completeness, inclusion rule, and deterministic identity; no fixed count is governance truth.
+- Current DNSE prices support bounded `CURRENT_DESCRIPTIVE_ONLY` use. Historical `RAW_AS_TRADED`/PIT remains unpromoted, and volume/traded-value composition remains insufficient for liquidity or sizing.
+- `interbank_on_rate`, `sbv_net_injection_20d`, and `vn30f1m_basis` are source-qualification backlog fields only. No source authority or acquisition path is activated here.
+
 ---
 
 ## 4. Current Critical Path & Exact Next Action
+
+### Rebaselined Active Gates
+
+1. **P3-F5 current-share source-promotion review** — review only `VCI.overview.issue_share` (`ISSUED_SHARES`, `AUTHORITY=NOT_PROMOTED`) for semantic, effective-date, freshness, corporate-action, retention, and permitted-use evidence; no side-effect promotion.
+2. **Minimum Viable Analysis shadow operating mode** — dual-mode artifact envelope and current descriptive research only.
+3. **Canonical-universe / empirical-active shadow denominator** — derive a documented denominator without promoting it to canonical-universe authority.
+4. **Volume/traded-value semantic authority** — establish market-composition semantics before any liquidity or sizing use.
+5. **Current relative valuation/scenario** — future P3-G remains reserved; preserve sector-aware applicability (industrial CapEx/FCFF/EV does not gate bank/securities, which require their own P/B-ROE/residual-income-style contracts).
+6. **Corporate-action plus historical RAW_AS_TRADED/PIT** — qualify event windows and historical price authority.
+7. **Historical universe/entity PIT** — establish point-in-time inclusion and classification authority.
+8. **Liquidity/risk/sizing** — only after volume/traded-value and PIT prerequisites qualify.
+9. **PIT backtesting** — only after historical price, universe, entity, and liquidity authorities qualify.
+10. **Deeper valuation/financial/sector/macro expansion** — subsequent bounded work; macro-liquidity fields remain qualification backlog.
+
+The detailed historical critical path below is retained as implementation history; the ordered gates above govern new work.
 
 ### Ordered Critical Path:
 1. `CANONICAL_TRADES_MATERIALIZATION` / P0-RECOVERY — **Closed** (`TERMINAL_SUCCESS_QUALITY_RESTRICTED`).

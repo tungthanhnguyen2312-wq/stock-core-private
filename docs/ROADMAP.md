@@ -64,6 +64,25 @@
 
 ---
 
+## Global Roadmap Rebaseline — Active Gates
+
+| Order | Gate | Current state and boundary |
+|---:|---|---|
+| 1 | Current-share source-authority decision | `VCI.overview.issue_share` is `ISSUED_SHARES`, `AUTHORITY=NOT_PROMOTED`; a separate bounded P3-F5 promotion review is the exact next technical gate. |
+| 2 | Minimum Viable Analysis shadow operating mode | `MINIMUM_VIABLE_ANALYSIS_SHADOW` may emit deterministic current descriptive artifacts while PIT/liquidity/sizing remain blocked. Mandatory envelope: `is_actionable_for_execution=false`; `pit_backtest_eligible=false`; `liquidity_sizing_authority=BLOCKED`; `valuation_scope=CURRENT_DESCRIPTIVE_ONLY`. |
+| 3 | Canonical-universe / empirical-active shadow denominator | `ACTIVE_UNIVERSE` remains unknown. Any empirical cohort is derived shadow-only and must carry as-of date, lookback/window, source completeness, inclusion rule, and deterministic identity; it is never a hardcoded canonical denominator. |
+| 4 | Volume/traded-value semantic authority | Market-composition authority is insufficient; liquidity, turnover, risk sizing, and execution sizing remain blocked. |
+| 5 | Current relative valuation/scenario | P3-G remains the future relative-valuation/scenario milestone. Preserve sector-aware applicability: industrial CapEx/FCFF/EV semantics do not gate banks/securities; their future contracts may use appropriate P/B-ROE/residual-income-style semantics. |
+| 6 | Corporate-action + historical RAW_AS_TRADED/PIT | Current DNSE price supports bounded current descriptive use; historical `RAW_AS_TRADED`/PIT remains unpromoted pending qualified corporate-action/event-window authority. |
+| 7 | Historical universe/entity PIT | Point-in-time listing inclusion and entity classification authority remains required. |
+| 8 | Liquidity/risk/sizing | Blocked until volume/traded-value and the required PIT authorities qualify. |
+| 9 | PIT backtesting | Blocked until historical price, corporate-action, universe/entity, and liquidity prerequisites qualify. |
+| 10 | Deeper valuation/financial/sector/macro expansion | Subsequent bounded work only. `interbank_on_rate`, `sbv_net_injection_20d`, and `vn30f1m_basis` are source-qualification backlog fields, not current authority. |
+
+`FULL_DECISION_SUPPORT_READY` requires every gate needed for canonical universe, current shares, volume/traded value, historical price/corporate-action PIT, historical universe/entity PIT, liquidity/risk/sizing, and PIT backtesting. It is not satisfied by MVA.
+
+---
+
 ## 3. Active Critical Path Sequence
 
 Execution focus strictly follows the ordered critical path:
