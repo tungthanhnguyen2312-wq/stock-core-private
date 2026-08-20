@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - P3-F10 Generic Fundamental Evidence Scale-Out
+
+`P3F10_GENERIC_FUNDAMENTAL_EVIDENCE_SCALEOUT = PARTIAL_LOCAL` (`p3f10_fundamental_evidence_scaleout.py`, `tools/run_p3f10_generic_fundamental_evidence_scaleout.py`, `push = NO`).
+
+1. **Generic retained-data coverage:** The current `COHORT_EMPIRICALLY_ACTIVE` is read from the P3-F9B bundle, not hardcoded: 523 members at 2026-08-20. Existing generic stores provide raw observation retention and canonical mappings for 520 members; three have an explicit `SOURCE_MISSING` disposition.
+2. **Qualification boundary preserved:** Provider VCI/KBS observations remain `RAW_OBSERVED`/`RETAINED`/`SEMANTICALLY_MAPPED` only. 509 mapped members are explicitly `STATEMENT_SCOPE_UNKNOWN` because scope, currency, and scale lack independent evidence. They are not promoted or discarded. The existing P3-E official-evidence panel remains 11 issuers / 130 qualified facts; rerunning P3-B confirms 94 exact-qualified metrics, 22 proxies, and 11 `PARTIAL` readiness results.
+3. **Sector boundary preserved:** Banks and securities retain their P3-B sector mappings and industrial FCFF/EV gates remain `NOT_APPLICABLE`; unknown, insurance, and finance-company records fail closed absent a real-data supported contract. A missing fact blocks only its dependent metric.
+4. **No authority expansion:** No provider, source registry, official-document acquisition, runtime database, price/share authority, liquidity lane, or P3-G scope changed. The highest-value next fundamental capability is generic approved evidence acquisition that preserves publication identity, period, statement scope, currency, and unit scale.
+
 ## 2026-08-20 - P3-F9B Market-Wide Exact-Session Snapshot Scale-Out Complete
 
 `P3F9B_MARKET_WIDE_EXACT_SESSION_SCALEOUT = COMPLETE_LOCAL` (`mva_exact_session_snapshot.py`, `tools/run_p3f9b_market_wide_exact_session_scaleout.py`, `tests/test_p3f9b_market_wide_exact_session_scaleout.py`, `operations-review/p3f9b-market-wide-exact-session-scaleout-20260820/p3f9b_market_wide_exact_session_scaleout_artifact.json`, `push = NO`).
