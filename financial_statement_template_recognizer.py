@@ -129,6 +129,7 @@ STATEMENT_PATTERNS = {
             "bao cao ket qua kinh doanh",
             "income statement",
             "consolidated income statement",
+            "consolidated statement of income",
         ),
         "form_codes": ("b 02-dn", "b 02 - dn", "b 02—dn", "b 02-dn/hn", "b 02 - dn/hn", "mau so b 02"),
         "key_anchors": ("doanh thu ban hang", "doanh thu thuan", "loi nhuan sau thue"),
@@ -139,6 +140,7 @@ STATEMENT_PATTERNS = {
             "bao cao luu chuyen tien te",
             "cash flow statement",
             "consolidated cash flow statement",
+            "consolidated statement of cash flows",
         ),
         "form_codes": ("b 03-dn", "b 03 - dn", "b 03—dn", "b 03-dn/hn", "b 03 - dn/hn", "mau so b 03"),
         "key_anchors": ("luu chuyen tien tu hoat dong kinh doanh", "luu chuyen tien thuan tu hoat dong kinh doanh"),
@@ -214,6 +216,13 @@ def recognize_unit_and_scale(page_text: str) -> RecognizedUnitScale | None:
                     unit_label="VND",
                     evidence_text=line.strip(),
                 )
+            if "usd" in l_norm or "u.s. dollar" in l_norm or "us dollar" in l_norm:
+                return RecognizedUnitScale(
+                    currency="USD",
+                    unit_scale=1,
+                    unit_label="USD",
+                    evidence_text=line.strip(),
+                )
     return None
 
 
@@ -276,9 +285,25 @@ def recognize_period_column_layout(
                     header_evidence=combined_header,
                 )
 
+        pos_closing = header_norm.find("closing balance")
+        pos_opening = header_norm.find("opening balance")
+        if pos_closing != -1 and pos_opening != -1:
+            return PeriodColumnLayout(
+                statement_type=statement_type,
+                target_period=target_period,
+                target_column_index=0 if pos_closing < pos_opening else 1,
+                current_period_label="Closing balance",
+                comparative_period_label="Opening balance",
+                header_evidence=combined_header,
+            )
+
         # Date based matching
         pos_target_date = max(header_norm.find(f"31/12/{target_year}"), header_norm.find(f"31/12/20{target_year[-2:]}"))
-        pos_prior_date = max(header_norm.find(f"31/12/{prior_year}"), header_norm.find(f"01/01/{target_year}"))
+        pos_prior_date = max(
+            header_norm.find(f"31/12/{prior_year}"),
+            header_norm.find(f"01/01/{target_year}"),
+            header_norm.find(f"1/1/{target_year}"),
+        )
         if pos_target_date != -1 and pos_prior_date != -1:
             col_idx = 0 if pos_target_date < pos_prior_date else 1
             return PeriodColumnLayout(
@@ -295,24 +320,28 @@ def recognize_period_column_layout(
         pos_current = header_norm.find("nam nay")
         pos_prior = header_norm.find("nam truoc")
         if pos_current != -1 and pos_prior != -1:
-            if pos_current < pos_prior:
-                return PeriodColumnLayout(
-                    statement_type=statement_type,
-                    target_period=target_period,
-                    target_column_index=0,
-                    current_period_label="Năm nay",
-                    comparative_period_label="Năm trước",
-                    header_evidence=combined_header,
-                )
-            else:
-                return PeriodColumnLayout(
-                    statement_type=statement_type,
-                    target_period=target_period,
-                    target_column_index=1,
-                    current_period_label="Năm nay",
-                    comparative_period_label="Năm trước",
-                    header_evidence=combined_header,
-                )
+            return PeriodColumnLayout(
+                statement_type=statement_type,
+                target_period=target_period,
+                target_column_index=0 if pos_current < pos_prior else 1,
+                current_period_label="Năm nay",
+                comparative_period_label="Năm trước",
+                header_evidence=combined_header,
+            )
+
+        pos_current = header_norm.find("current year")
+        pos_prior = header_norm.find("prior year")
+        if pos_prior == -1:
+            pos_prior = header_norm.find("previous year")
+        if pos_current != -1 and pos_prior != -1:
+            return PeriodColumnLayout(
+                statement_type=statement_type,
+                target_period=target_period,
+                target_column_index=0 if pos_current < pos_prior else 1,
+                current_period_label="Current year",
+                comparative_period_label="Prior year",
+                header_evidence=combined_header,
+            )
 
         # Year explicit matching
         pos_target_yr = header_norm.find(target_year)
@@ -339,6 +368,7 @@ GENERIC_METRIC_RULES: dict[str, dict[str, Any]] = {
         "label_anchors": (
             "doanh thu thuan ve ban hang va cung cap dich vu",
             "doanh thu thuan",
+            "net revenue",
         ),
         "source_label": "Doanh thu thuần về bán hàng và cung cấp dịch vụ",
     },
@@ -371,6 +401,8 @@ GENERIC_METRIC_RULES: dict[str, dict[str, Any]] = {
         "label_anchors": (
             "tong cong tai san",
             "tong tai san",
+            "total assets",
+            "total resources",
         ),
         "source_label": "TỔNG CỘNG TÀI SẢN",
     },
@@ -493,6 +525,7 @@ def extract_generic_financial_statement_facts(
     reporting_period: str,
     qualification_record: Mapping[str, Any] | None = None,
     verified_at: str | None = None,
+    required_metrics: Sequence[str] | None = None,
 ) -> list[ExtractedStatementFact]:
     """Pure generic financial statement template recognition and fact extraction.
     
@@ -505,6 +538,24 @@ def extract_generic_financial_statement_facts(
     raw_pages = sidecar.get("pages", [])
     if not raw_pages:
         raise ValueError("OCR_INSUFFICIENT: Materialization sidecar contains zero pages")
+
+    # Promotion manifests may carry a verified primary-statement transcription
+    # rather than a full OCR sidecar. Normalize its required materialization
+    # lineage fields generically before the governed verifier consumes it.
+    materialization = dict(sidecar)
+    materialization["pages"] = [
+        {
+            **dict(page),
+            "document_id": str(page.get("document_id") or sidecar.get("document_id") or ""),
+            "document_sha256": str(page.get("document_sha256") or doc_sha),
+            "status": str(page.get("status") or "text_available"),
+            "materialization_id": str(page.get("materialization_id") or f"statement-transcription:{doc_sha}"),
+            "text_sha256": str(page.get("text_sha256") or hashlib.sha256(str(page.get("text", "")).encode("utf-8")).hexdigest()),
+            "extraction_engine": str(page.get("extraction_engine") or "verified_transcription"),
+        }
+        for page in raw_pages
+    ]
+    raw_pages = materialization["pages"]
 
     # Step 1: Structure Recognition - Group pages by statement type
     statements_by_type: dict[StatementType, list[RecognizedStatementPage]] = {
@@ -581,7 +632,18 @@ def extract_generic_financial_statement_facts(
     # Step 4: Line Item Recognition and Verified Extraction
     extracted_facts: list[ExtractedStatementFact] = []
 
+    selected_metrics = (
+        set(required_metrics)
+        if required_metrics is not None
+        else set(GENERIC_METRIC_RULES) | {"total_interest_bearing_debt"}
+    )
+    unknown_metrics = selected_metrics.difference(GENERIC_METRIC_RULES).difference({"total_interest_bearing_debt"})
+    if unknown_metrics:
+        raise ValueError(f"UNKNOWN_REQUIRED_METRICS: {sorted(unknown_metrics)}")
+
     for metric_name, spec in GENERIC_METRIC_RULES.items():
+        if metric_name not in selected_metrics:
+            continue
         st_type = spec["statement_type"]
         target_code = spec["standard_line_code"]
         anchors = spec["label_anchors"]
@@ -605,7 +667,7 @@ def extract_generic_financial_statement_facts(
         # Formally verify extraction via governed contract
         # raw_label must be a substring present in the OCR page text
         ext = verified_extraction(
-            sidecar,
+            materialization,
             page=matched_page.page_number,
             raw_label=matched_line.strip(),
             raw_value=raw_val,
@@ -645,7 +707,11 @@ def extract_generic_financial_statement_facts(
             )
         )
 
-    # Step 5: Total Interest-Bearing Debt Extraction (Component Aggregation)
+    # Step 5: Total Interest-Bearing Debt Extraction (Component Aggregation).
+    # This is opt-in for bounded evidence waves that qualify a strict metric subset.
+    if "total_interest_bearing_debt" not in selected_metrics:
+        return extracted_facts
+
     bs_pages = statements_by_type[StatementType.BALANCE_SHEET]
     bs_col_layout = column_layouts[StatementType.BALANCE_SHEET]
     debt_components: list[dict[str, Any]] = []
@@ -673,7 +739,7 @@ def extract_generic_financial_statement_facts(
         })
 
     debt_extraction = verified_debt_extraction(
-        sidecar,
+        materialization,
         components=debt_components,
         unit=global_unit_scale.unit_label,
         statement="balance_sheet",

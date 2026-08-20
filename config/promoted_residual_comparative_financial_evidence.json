@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "p3d_residual_comparative_financial_evidence/v1",
+  "authority_type": "FACT_LEVEL_RESIDUAL_COMPARATIVE_EVIDENCE_PROMOTION",
+  "authority_scope": "ANNUAL_CONSOLIDATED_EXISTING_P2_P3B_COHORT_ONLY",
+  "evidence_documents": [
+    {
+      "ticker": "HPG", "reporting_period": "2022", "statement_scope": "consolidated", "audit_status": "audited", "currency": "VND", "unit_scale": 1,
+      "source_type": "issuer_ir", "source_authority": "Hoa Phat Group investor relations",
+      "source_locator": "https://file.hoaphat.com.vn/hoaphat-com-vn/2023/04/annual-report-2022-hpg.pdf", "published_at": "2023-04-04", "retrieved_at": "2026-08-09T00:00:00Z",
+      "archive_document_path": "operations-review/governed-official-evidence-v1/documents/HPG/2022/audited_annual_financial_statements/4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074.pdf",
+      "materialization_path": "operations-review/governed-official-evidence-v1/derived/annual_financial_ocr_materialization_v1/hpg-fy2022.json",
+      "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074", "document_id": "5c29d7868c552bb25760d684d11b44db9ad74d0348407a5949e903815b860114",
+      "qualified_metrics": ["revenue", "total_assets"],
+      "source_page_citations": {"revenue": {"page": 106, "source_fragment": "Net revenue", "raw_value": "141,409,274,460,632"}, "total_assets": {"page": 105, "source_fragment": "TOTAL RESOURCES", "raw_value": "170,335,521,637,132"}},
+      "sidecar": {"document_id": "5c29d7868c552bb25760d684d11b44db9ad74d0348407a5949e903815b860114", "document_sha256": "4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074", "pages": [
+        {"page": 105, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "HOA PHAT GROUP JOINT STOCK COMPANY\nCONSOLIDATED BALANCE SHEET AS AT 31 DECEMBER 2022\nUnit: VND\nCode 31/12/2022 VND 1/1/2022 VND\n270 | TOTAL RESOURCES | 170,335,521,637,132"},
+        {"page": 106, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "HOA PHAT GROUP JOINT STOCK COMPANY\nCONSOLIDATED STATEMENT OF INCOME FOR THE YEAR ENDED 31 DECEMBER 2022\nCode 2022 VND 2021 VND\n10 | Net revenue | 141,409,274,460,632"},
+        {"page": 108, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "HOA PHAT GROUP JOINT STOCK COMPANY\nCONSOLIDATED STATEMENT OF CASH FLOWS FOR THE YEAR ENDED 31 DECEMBER 2022\nCode 2022 VND 2021 VND\n20 | Net cash flows from operating activities | 12,277,636,676,507"}
+      ]}
+    },
+    {
+      "ticker": "HPG", "reporting_period": "2023", "statement_scope": "consolidated", "audit_status": "audited", "currency": "VND", "unit_scale": 1,
+      "source_type": "issuer_ir", "source_authority": "Hoa Phat Group investor relations",
+      "source_locator": "https://file.hoaphat.com.vn/hoaphat-com-vn/2024/07/bctn2022-e1-7.pdf", "published_at": "2024-04-24", "retrieved_at": "2026-08-09T00:00:00Z",
+      "archive_document_path": "operations-review/governed-official-evidence-v1/documents/HPG/2023/audited_annual_financial_statements/44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e.pdf",
+      "materialization_path": "operations-review/governed-official-evidence-v1/derived/annual_financial_ocr_materialization_v1/hpg-fy2023.json",
+      "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e", "document_id": "657f9069c41deb37b3611fe366ef49da507d6ac2651db0df332f09340ad9449d",
+      "qualified_metrics": ["revenue", "total_assets"],
+      "source_page_citations": {"revenue": {"page": 88, "source_fragment": "Net revenue", "raw_value": "118,953,027,893,654"}, "total_assets": {"page": 87, "source_fragment": "TOTAL RESOURCES", "raw_value": "187,782,586,563,801"}},
+      "sidecar": {"document_id": "657f9069c41deb37b3611fe366ef49da507d6ac2651db0df332f09340ad9449d", "document_sha256": "44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e", "pages": [
+        {"page": 87, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "HOA PHAT GROUP JOINT STOCK COMPANY\nCONSOLIDATED BALANCE SHEET AS AT 31 DECEMBER 2023\nUnit: VND\nCode 31/12/2023 VND 1/1/2023 VND\n270 | TOTAL RESOURCES | 187,782,586,563,801"},
+        {"page": 88, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "HOA PHAT GROUP JOINT STOCK COMPANY\nCONSOLIDATED STATEMENT OF INCOME FOR THE YEAR ENDED 31 DECEMBER 2023\nCode 2023 VND 2022 VND\n10 | Net revenue | 118,953,027,893,654"},
+        {"page": 90, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "HOA PHAT GROUP JOINT STOCK COMPANY\nCONSOLIDATED STATEMENT OF CASH FLOWS FOR THE YEAR ENDED 31 DECEMBER 2023\nCode 2023 VND 2022 VND\n20 | Net cash flows from operating activities | 8,643,030,777,026"}
+      ]}
+    },
+    {
+      "ticker": "PVD", "reporting_period": "2022", "statement_scope": "consolidated", "audit_status": "audited", "currency": "USD", "unit_scale": 1,
+      "source_type": "issuer_ir", "source_authority": "PV Drilling investor relations",
+      "source_locator": "https://www.pvdrilling.com.vn/Data/Sites/1/media/qhcd/bao-cao-tai-chinh/2022/Audited%20Consolidate%20FS%202022%20USD_VND.pdf", "published_at": "2023-03-24", "retrieved_at": "2026-08-09T00:00:00Z",
+      "archive_document_path": "operations-review/governed-official-evidence-v1/documents/PVD/2022/audited_annual_financial_statements/5fc2a5b4e528c381a4bd54a22e4549b529d423ae6ae5c85816c5109a0a576364.pdf",
+      "materialization_path": "operations-review/governed-official-evidence-v1/derived/annual_financial_ocr_materialization_v1/pvd-fy2022.json",
+      "document_sha256": "5fc2a5b4e528c381a4bd54a22e4549b529d423ae6ae5c85816c5109a0a576364", "document_id": "f125cc40f2db2a3ccb0abea24f42e4939f7d0b4e7559d1270de51026df16aecf",
+      "qualified_metrics": ["revenue", "total_assets"],
+      "source_page_citations": {"revenue": {"page": 8, "source_fragment": "Net revenue", "raw_value": "233,356,445"}, "total_assets": {"page": 6, "source_fragment": "TOTAL ASSETS", "raw_value": "884,410,367"}},
+      "sidecar": {"document_id": "f125cc40f2db2a3ccb0abea24f42e4939f7d0b4e7559d1270de51026df16aecf", "document_sha256": "5fc2a5b4e528c381a4bd54a22e4549b529d423ae6ae5c85816c5109a0a576364", "pages": [
+        {"page": 6, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICES CORPORATION\nCONSOLIDATED BALANCE SHEET\nUnit: USD\nCodes Closing balance Opening balance\n270 | TOTAL ASSETS | 884,410,367"},
+        {"page": 8, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICES CORPORATION\nCONSOLIDATED INCOME STATEMENT\nUnit: USD\nCodes Current year Prior year\n10 | Net revenue from goods sold and services rendered | 233,356,445"},
+        {"page": 9, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICES CORPORATION\nCONSOLIDATED CASH FLOW STATEMENT\nUnit: USD\nCodes Current year Prior year\n20 | Net cash flows from operating activities | -3,587,361"}
+      ]}
+    },
+    {
+      "ticker": "PVD", "reporting_period": "2023", "statement_scope": "consolidated", "audit_status": "audited", "currency": "USD", "unit_scale": 1,
+      "source_type": "issuer_ir", "source_authority": "PV Drilling investor relations",
+      "source_locator": "https://www.pvdrilling.com.vn/Data/Sites/1/media/qhcd/bao-cao-tai-chinh/2023/Audited%20Consolidated%20Financial%20Statements%202023%20USD%20and%20VND.pdf", "published_at": "2024-03-29", "retrieved_at": "2026-08-09T00:00:00Z",
+      "archive_document_path": "operations-review/governed-official-evidence-v1/documents/PVD/2023/audited_annual_financial_statements/a28d4c2647ac9b1758778eee18ca7da1ab46cdc0d48ee633ef55299eea16011b.pdf",
+      "materialization_path": "operations-review/governed-official-evidence-v1/derived/annual_financial_ocr_materialization_v1/pvd-fy2023.json",
+      "document_sha256": "a28d4c2647ac9b1758778eee18ca7da1ab46cdc0d48ee633ef55299eea16011b", "document_id": "0a3a11d700b0936621fb1ebd768a38a7d0b528bd82cab5ed34cd29b1036bde96",
+      "qualified_metrics": ["revenue", "total_assets"],
+      "source_page_citations": {"revenue": {"page": 8, "source_fragment": "Net revenue", "raw_value": "245,191,251"}, "total_assets": {"page": 6, "source_fragment": "TOTAL ASSETS", "raw_value": "898,374,095"}},
+      "sidecar": {"document_id": "0a3a11d700b0936621fb1ebd768a38a7d0b528bd82cab5ed34cd29b1036bde96", "document_sha256": "a28d4c2647ac9b1758778eee18ca7da1ab46cdc0d48ee633ef55299eea16011b", "pages": [
+        {"page": 6, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICES CORPORATION\nCONSOLIDATED BALANCE SHEET\nUnit: USD\nCodes Closing balance Opening balance\n270 | TOTAL ASSETS | 898,374,095"},
+        {"page": 8, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICES CORPORATION\nCONSOLIDATED INCOME STATEMENT\nUnit: USD\nCodes Current year Prior year\n10 | Net revenue from goods sold and services rendered | 245,191,251"},
+        {"page": 9, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICES CORPORATION\nCONSOLIDATED CASH FLOW STATEMENT\nUnit: USD\nCodes Current year Prior year\n20 | Net cash flows from operating activities | 66,483,986"}
+      ]}
+    },
+    {
+      "ticker": "PVD", "reporting_period": "2024", "statement_scope": "consolidated", "audit_status": "audited", "currency": "USD", "unit_scale": 1,
+      "source_type": "issuer_ir", "source_authority": "PV Drilling investor relations",
+      "source_locator": "https://www.pvdrilling.com.vn/Data/Sites/1/media/qhcd/bao-cao-tai-chinh/2024/20250321%20-%20PVD%20-%20BCTC%20hop%20nhat%20kiem%20toan%202024%20-%20tieng%20Anh.pdf", "published_at": "2025-03-21", "retrieved_at": "2026-08-09T00:00:00+07:00",
+      "archive_document_path": "operations-review/governed-official-evidence-v1/documents/PVD/2024/audited_annual_financial_statements/ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14.pdf",
+      "materialization_path": "operations-review/governed-official-evidence-v1/derived/annual_financial_ocr_materialization_v1/pvd-fy2024.json",
+      "document_sha256": "ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14", "document_id": "e03146183ffecb8cc94c5302edca1d8b5010e2121a00d18ae74e284cf0c306cb",
+      "qualified_metrics": ["revenue", "total_assets"],
+      "source_page_citations": {"revenue": {"page": 8, "source_fragment": "Net revenue", "raw_value": "373,599,586"}, "total_assets": {"page": 6, "source_fragment": "TOTAL ASSETS", "raw_value": "935,192,973"}},
+      "sidecar": {"document_id": "e03146183ffecb8cc94c5302edca1d8b5010e2121a00d18ae74e284cf0c306cb", "document_sha256": "ba70100acf9391a85992e67ebc1a3d68da33e50402a17e860f579e320f5f2d14", "pages": [
+        {"page": 6, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICE CORPORATION\nCONSOLIDATED BALANCE SHEET\nUnit: USD\nCodes Closing balance Opening balance\n270 | TOTAL ASSETS | 935,192,973"},
+        {"page": 8, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICE CORPORATION\nCONSOLIDATED INCOME STATEMENT\nUnit: USD\nCodes Current year Prior year\n10 | Net revenue from goods sold and services rendered | 373,599,586"},
+        {"page": 9, "status": "text_available", "materialization_id": "p3d-primary-statement-transcription", "text_sha256": "p3d", "extraction_engine": "verified_transcription", "text": "PETROVIETNAM DRILLING AND WELL SERVICE CORPORATION\nCONSOLIDATED CASH FLOW STATEMENT\nUnit: USD\nCodes Current year Prior year\n20 | Net cash flows from operating activities | 41,707,698"}
+      ]}
+    }
+  ],
+  "attempted_issuer_periods": [
+    {"ticker": "HPG", "reporting_period": "2022", "status": "ACQUIRED_AND_QUALIFIED", "reason": "Retained approved audited consolidated report supplied missing revenue and total-assets facts."},
+    {"ticker": "HPG", "reporting_period": "2023", "status": "ACQUIRED_AND_QUALIFIED", "reason": "Retained approved audited consolidated report supplied missing revenue and total-assets facts."},
+    {"ticker": "HPG", "reporting_period": "2024", "status": "ACQUIRED_PARTIAL", "reason": "Retained approved report exists, but its current materialization is not sufficient for a new exact P3-D line-item qualification."},
+    {"ticker": "PVD", "reporting_period": "2022", "status": "ACQUIRED_AND_QUALIFIED", "reason": "Retained approved audited consolidated report supplied missing revenue and total-assets facts."},
+    {"ticker": "PVD", "reporting_period": "2023", "status": "ACQUIRED_AND_QUALIFIED", "reason": "Retained approved audited consolidated report supplied missing revenue and total-assets facts."},
+    {"ticker": "PVD", "reporting_period": "2024", "status": "ACQUIRED_AND_QUALIFIED", "reason": "Retained approved audited consolidated report supplied missing revenue and total-assets facts."},
+    {"ticker": "VNM", "reporting_period": "2024", "status": "ACQUIRED_PARTIAL", "reason": "Existing approved current-period facts remain preserved; no additional qualified residual revenue or total-assets line was available in this bounded retained-evidence wave."},
+    {"ticker": "NVL", "reporting_period": "2024", "status": "ACQUIRED_PARTIAL", "reason": "Existing approved current-period facts remain preserved; no additional qualified residual revenue or total-assets line was available in this bounded retained-evidence wave."},
+    {"ticker": "PAN", "reporting_period": "2024", "status": "ACQUIRED_PARTIAL", "reason": "Existing approved current-period facts remain preserved; no additional qualified residual revenue or total-assets line was available in this bounded retained-evidence wave."},
+    {"ticker": "POW", "reporting_period": "2024", "status": "ACQUIRED_PARTIAL", "reason": "Existing approved current-period facts remain preserved; no additional qualified residual revenue or total-assets line was available in this bounded retained-evidence wave."},
+    {"ticker": "QNS", "reporting_period": "2024", "status": "ACQUIRED_PARTIAL", "reason": "Existing approved current-period facts remain preserved; no additional qualified residual revenue or total-assets line was available in this bounded retained-evidence wave."},
+    {"ticker": "GAS", "reporting_period": "2025", "status": "ALREADY_SATISFIED", "reason": "The residual is a structurally first-observed annual comparison; no prior approved annual period is available in the frozen cohort authority."},
+    {"ticker": "VRE", "reporting_period": "2025", "status": "ALREADY_SATISFIED", "reason": "The residual is a structurally first-observed annual comparison; no prior approved annual period is available in the frozen cohort authority."},
+    {"ticker": "SSI", "reporting_period": "2023", "status": "ALREADY_SATISFIED", "reason": "P3-C qualified FY2023; its first-observed comparison is structurally unavailable without FY2022 evidence."},
+    {"ticker": "VCB", "reporting_period": "2023", "status": "SOURCE_NOT_APPROVED", "reason": "VCB_FY2023_BLOCKED_SOURCE_NOT_APPROVED: the discovered portal.vietcombank.com.vn candidate is outside the existing approved source registry; no registry mutation, bytes, or facts were used."}
+  ],
+  "capex_boundary": {"status": "NOT_PROMOTED", "reason": "No exact CapEx semantic line was qualified; no proxy or cash-flow subtraction was created."}
+}

@@ -72,6 +72,8 @@ from sector_financial_taxonomy import (
     reconcile_and_resolve_authoritative_sector_facts,
 )
 from financial_disclosure_recognizer import extract_sector_facts_from_sidecar
+from financial_statement_template_recognizer import extract_generic_financial_statement_facts
+from official_source_registry import ADMITTED, admit, load_registry
 
 SCHEMA_VERSION = "1.0.0"
 ARTIFACT_TYPE = "MULTI_PERIOD_FINANCIAL_FACT_PANEL"
@@ -1268,10 +1270,89 @@ def load_promoted_comparative_financial_citations(repo_root: Path | None = None)
     return citations
 
 
+def load_promoted_residual_comparative_financial_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
+    """Load P3-D's audited corporate statement facts through the generic template recognizer."""
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parent
+    manifest_path = repo_root / "config" / "promoted_residual_comparative_financial_evidence.json"
+    if not manifest_path.is_file():
+        return []
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("contract_version") != "p3d_residual_comparative_financial_evidence/v1":
+        raise MultiPeriodPanelError("Unsupported P3-D residual comparative evidence manifest")
+
+    citations: list[dict[str, Any]] = []
+    for document in manifest.get("evidence_documents", []):
+        required = (
+            "ticker", "reporting_period", "statement_scope", "audit_status", "currency", "unit_scale",
+            "source_locator", "published_at", "retrieved_at", "archive_document_path", "materialization_path",
+            "document_sha256", "document_id", "sidecar", "source_page_citations",
+        )
+        if any(not document.get(field) for field in required):
+            raise MultiPeriodPanelError("P3-D comparative evidence document lacks required lineage")
+        if document.get("audit_status") != "audited" or document.get("statement_scope") != "consolidated":
+            raise MultiPeriodPanelError("P3-D accepts audited consolidated annual evidence only")
+        if len(str(document.get("document_sha256"))) != 64:
+            raise MultiPeriodPanelError("P3-D document SHA-256 is invalid")
+        registry = load_registry(repo_root / "config" / "official_source_registry.json")
+        source_decision = admit(
+            str(document.get("source_type")), str(document.get("source_locator")),
+            "audited_annual_financial_statements", registry=registry,
+        )
+        if source_decision.get("decision") != ADMITTED:
+            raise MultiPeriodPanelError("P3-D source authority is not approved for this document")
+
+        qualified_metrics = set(document.get("qualified_metrics", []))
+        extracted = extract_generic_financial_statement_facts(
+            sidecar=document["sidecar"],
+            reporting_period=str(document["reporting_period"]),
+            qualification_record={"document_id": document["document_id"], "sha256": document["document_sha256"]},
+            verified_at=str(document["retrieved_at"]),
+            required_metrics=sorted(qualified_metrics),
+        )
+        by_metric = {fact.canonical_metric: fact for fact in extracted}
+        if set(by_metric) != qualified_metrics:
+            raise MultiPeriodPanelError("P3-D generic extraction did not exactly reproduce the promoted fact scope")
+        for metric in sorted(qualified_metrics):
+            fact = by_metric[metric]
+            source = document["source_page_citations"].get(metric, {})
+            if int(source.get("page", 0)) != fact.page or str(source.get("raw_value")) != fact.raw_value:
+                raise MultiPeriodPanelError("P3-D extracted citation does not match the approved source-page declaration")
+            citations.append({
+                "ticker": str(document["ticker"]).upper(),
+                "metric": fact.canonical_metric,
+                "reporting_period": fact.reporting_period,
+                "value": fact.normalized_value,
+                "currency": fact.currency,
+                "unit_scale": fact.unit_scale,
+                "statement_scope": str(document["statement_scope"]),
+                "citation_id": hashlib.sha256(
+                    f"p3d_statement|{document['ticker']}|{metric}|{fact.reporting_period}|{document['document_sha256']}|{fact.page}|{fact.raw_value}".encode("utf-8")
+                ).hexdigest(),
+                "evidence_id": f"evidence:{document['document_sha256']}:{fact.page}",
+                "document_sha256": document["document_sha256"],
+                "source_page": fact.page,
+                "source_locator": document["source_locator"],
+                "archive_document_path": document["archive_document_path"],
+                "materialization_path": document["materialization_path"],
+                "audit_status": document["audit_status"],
+                "authority_tier": "promoted_corporate_evidence",
+                "reconciliation_status": "EXACT_MATCH",
+                "is_positive_authority": True,
+                "qualification_state": QualificationState.QUALIFIED.value,
+                "published_at": document["published_at"],
+                "verified_at": document["retrieved_at"],
+                "provider": "official_issuer_ir",
+                "extraction_method": fact.extraction_details.get("method"),
+            })
+    return citations
+
+
 def load_all_authoritative_citations(
     repo_root: Path | None = None,
     *,
     include_p3c_comparative_evidence: bool = True,
+    include_p3d_residual_comparative_evidence: bool = False,
 ) -> list[dict[str, Any]]:
     """Load qualified citations, optionally including the additive P3-C evidence scope.
 
@@ -1306,7 +1387,15 @@ def load_all_authoritative_citations(
                 seen.add(key)
                 all_cits.append(c)
 
-    # 4. Retained baseline corporate citations (HPG, VNM, PAN, PVD, NVL, POW, QNS)
+    # 4. P3-D residual annual evidence, separately opt-in to preserve historical replays.
+    if include_p3d_residual_comparative_evidence:
+        for c in load_promoted_residual_comparative_financial_citations(repo_root):
+            key = (str(c.get("ticker")).upper(), str(c.get("metric")), str(c.get("reporting_period")), str(c.get("statement_scope")))
+            if key not in seen:
+                seen.add(key)
+                all_cits.append(c)
+
+    # 5. Retained baseline corporate citations (HPG, VNM, PAN, PVD, NVL, POW, QNS)
     for c in load_retained_baseline_citations(repo_root):
         t = str(c.get("ticker", "")).upper()
         if t == "SSI" and any(x["ticker"] == "SSI" for x in all_cits):
