@@ -1348,11 +1348,77 @@ def load_promoted_residual_comparative_financial_citations(repo_root: Path | Non
     return citations
 
 
+def load_promoted_fundamental_coverage_closeout_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
+    """Load P3-E's final retained annual revenue/assets evidence through generic recognition."""
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parent
+    manifest_path = repo_root / "config" / "promoted_fundamental_coverage_closeout_evidence.json"
+    if not manifest_path.is_file():
+        return []
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("contract_version") != "p3e_fundamental_coverage_closeout/v1":
+        raise MultiPeriodPanelError("Unsupported P3-E fundamental coverage evidence manifest")
+
+    registry = load_registry(repo_root / "config" / "official_source_registry.json")
+    citations: list[dict[str, Any]] = []
+    for document in manifest.get("evidence_documents", []):
+        required = (
+            "ticker", "reporting_period", "statement_scope", "audit_status", "currency", "unit_scale", "source_type",
+            "source_document_class", "source_locator", "published_at", "retrieved_at", "archive_document_path",
+            "materialization_path", "document_sha256", "document_id", "sidecar", "source_page_citations",
+        )
+        if any(not document.get(field) for field in required):
+            raise MultiPeriodPanelError("P3-E coverage evidence document lacks required lineage")
+        if document.get("audit_status") != "audited" or document.get("statement_scope") != "consolidated":
+            raise MultiPeriodPanelError("P3-E accepts audited consolidated annual evidence only")
+        if len(str(document.get("document_sha256"))) != 64:
+            raise MultiPeriodPanelError("P3-E document SHA-256 is invalid")
+        source_decision = admit(
+            str(document["source_type"]), str(document["source_locator"]), str(document["source_document_class"]), registry=registry,
+        )
+        if source_decision.get("decision") != ADMITTED:
+            raise MultiPeriodPanelError("P3-E source authority is not approved for this document")
+
+        qualified_metrics = set(document.get("qualified_metrics", []))
+        extracted = extract_generic_financial_statement_facts(
+            sidecar=document["sidecar"], reporting_period=str(document["reporting_period"]),
+            qualification_record={"document_id": document["document_id"], "sha256": document["document_sha256"]},
+            verified_at=str(document["retrieved_at"]), required_metrics=sorted(qualified_metrics),
+        )
+        by_metric = {fact.canonical_metric: fact for fact in extracted}
+        if set(by_metric) != qualified_metrics:
+            raise MultiPeriodPanelError("P3-E generic extraction did not exactly reproduce the promoted fact scope")
+        for metric in sorted(qualified_metrics):
+            fact = by_metric[metric]
+            source = document["source_page_citations"].get(metric, {})
+            if int(source.get("page", 0)) != fact.page or str(source.get("raw_value")) != fact.raw_value:
+                raise MultiPeriodPanelError("P3-E extracted citation does not match its source-page declaration")
+            citations.append({
+                "ticker": str(document["ticker"]).upper(), "metric": fact.canonical_metric,
+                "reporting_period": fact.reporting_period, "value": fact.normalized_value,
+                "currency": fact.currency, "unit_scale": fact.unit_scale,
+                "statement_scope": str(document["statement_scope"]),
+                "citation_id": hashlib.sha256(
+                    f"p3e_statement|{document['ticker']}|{metric}|{fact.reporting_period}|{document['document_sha256']}|{fact.page}|{fact.raw_value}".encode("utf-8")
+                ).hexdigest(),
+                "evidence_id": f"evidence:{document['document_sha256']}:{fact.page}",
+                "document_sha256": document["document_sha256"], "source_page": fact.page,
+                "source_locator": document["source_locator"], "archive_document_path": document["archive_document_path"],
+                "materialization_path": document["materialization_path"], "audit_status": document["audit_status"],
+                "authority_tier": "promoted_corporate_evidence", "reconciliation_status": "EXACT_MATCH",
+                "is_positive_authority": True, "qualification_state": QualificationState.QUALIFIED.value,
+                "published_at": document["published_at"], "verified_at": document["retrieved_at"],
+                "provider": "official_issuer_ir", "extraction_method": fact.extraction_details.get("method"),
+            })
+    return citations
+
+
 def load_all_authoritative_citations(
     repo_root: Path | None = None,
     *,
     include_p3c_comparative_evidence: bool = True,
     include_p3d_residual_comparative_evidence: bool = False,
+    include_p3e_fundamental_coverage_evidence: bool = False,
 ) -> list[dict[str, Any]]:
     """Load qualified citations, optionally including the additive P3-C evidence scope.
 
@@ -1395,7 +1461,15 @@ def load_all_authoritative_citations(
                 seen.add(key)
                 all_cits.append(c)
 
-    # 5. Retained baseline corporate citations (HPG, VNM, PAN, PVD, NVL, POW, QNS)
+    # 5. P3-E final bounded coverage evidence, separately opt-in for historical replay.
+    if include_p3e_fundamental_coverage_evidence:
+        for c in load_promoted_fundamental_coverage_closeout_citations(repo_root):
+            key = (str(c.get("ticker")).upper(), str(c.get("metric")), str(c.get("reporting_period")), str(c.get("statement_scope")))
+            if key not in seen:
+                seen.add(key)
+                all_cits.append(c)
+
+    # 6. Retained baseline corporate citations (HPG, VNM, PAN, PVD, NVL, POW, QNS)
     for c in load_retained_baseline_citations(repo_root):
         t = str(c.get("ticker", "")).upper()
         if t == "SSI" and any(x["ticker"] == "SSI" for x in all_cits):
