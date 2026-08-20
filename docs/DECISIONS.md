@@ -10,6 +10,14 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - P3-F14 Generic Official Financial Source Discovery & Registry Expansion
+
+`P3F14_OFFICIAL_SOURCE_DISCOVERY = PARTIAL_LOCAL` (`official_financial_source_discovery.py`, `p3f14_official_financial_source_discovery.py`, `push = NO`).
+
+1. The target cohort is derived solely from P3-F13 `NO_APPROVED_ROUTE_FOUND` dispositions: 510 issuers, each receiving exactly one closed-world discovery disposition.
+2. Existing retained inputs have no issuer-domain ownership or official exchange-detail signal for the target cohort. Discovery therefore produces zero authority recommendations and no registry mutation; candidate discovery remains distinct from approval.
+3. Next blocker is retained issuer-domain ownership or exchange-profile evidence. No filing acquisition, source promotion, or P3-G work occurred.
+
 ## 2026-08-20 - P3-F13 Generic Official Financial Evidence Operational Scale-Out
 
 `P3F13_OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT = COMPLETE_LOCAL` (`p3f13_official_financial_evidence_scaleout.py`, `tools/run_p3f13_official_financial_evidence_scaleout.py`, `tests/test_p3f13_official_financial_evidence_scaleout.py`, `operations-review/p3f13-official-financial-evidence-scaleout-20260820/p3f13_official_financial_evidence_scaleout_artifact.json`, `push = NO`).
