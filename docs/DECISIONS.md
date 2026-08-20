@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Strategy Research Eligibility Engine V1
+
+`STRATEGY_RESEARCH_ELIGIBILITY_V1 = READY_LOCAL` (`strategy_research_eligibility.py`, `run_strategy_research_eligibility.py`, `tests/test_strategy_research_eligibility.py`, `push = NO`).
+
+1. A versioned nine-lens registry now deterministically maps retained feature/evidence status to research eligibility. Eligibility is use-case sufficiency only, never signal quality, attractiveness, expected return, recommendation, trading safety, sizing, or historical performance.
+2. The full 523-record pilot shows isolation: trend/momentum is eligible for 523; descriptive fundamentals are 11 eligible / 512 lower-authority eligible; official fundamentals are 11 eligible; relative technical is 27 eligible; scenario research is 25 partial. Every record has usable current research despite unrelated blocked dependent lenses.
+3. Catalyst research is unavailable for all because no evidence-backed catalyst is retained. Liquidity-sensitive, valuation, and historical PIT research are blocked for all by their existing independent authorities. No provider descriptive state becomes official, and no comparison cohort is fabricated.
+4. A compact Review Pack overlay provides usable, partial, and materially blocked lenses with reason codes for all 25 existing review names. No ranking, signal, target, probability, portfolio action, source acquisition, or authority promotion occurs.
+
 ## 2026-08-20 - Evidence-Bound Expectations & Scenario Research V1
 
 `EXPECTATIONS_SCENARIO_RESEARCH_V1 = READY_LOCAL` (`expectations_scenario_research.py`, `run_expectations_scenario_research.py`, `tests/test_expectations_scenario_research.py`, `push = NO`).
