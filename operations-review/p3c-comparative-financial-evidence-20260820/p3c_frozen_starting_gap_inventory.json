@@ -1,0 +1,469 @@
+{
+  "artifact_type": "P3C_FROZEN_STARTING_GAP_INVENTORY",
+  "cohort": [
+    "GAS",
+    "HPG",
+    "NVL",
+    "PAN",
+    "POW",
+    "PVD",
+    "QNS",
+    "SSI",
+    "VCB",
+    "VNM",
+    "VRE"
+  ],
+  "contract_version": "p3c_comparative_financial_evidence/v1",
+  "frozen_from_artifact_identity": "p3b_fundamental_research_readiness:6958eba74f6887204ac6d0972adcb2ede1b6e32d88dc6700a308b3afa977d243",
+  "frozen_from_artifact_sha256": "6958eba74f6887204ac6d0972adcb2ede1b6e32d88dc6700a308b3afa977d243",
+  "gap_count": 55,
+  "gap_counts_by_reason": {
+    "MISSING_CONSECUTIVE_PRIOR_PERIOD": 29,
+    "MISSING_INPUTS:revenue": 15,
+    "MISSING_INPUTS:total_assets": 11
+  },
+  "gaps": [
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2025"
+      ],
+      "ticker": "GAS"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2025"
+      ],
+      "ticker": "GAS"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2025"
+      ],
+      "ticker": "GAS"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "NVL"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "NVL"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "NVL"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PAN"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PAN"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PAN"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "POW"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "POW"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "POW"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "QNS"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "QNS"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "QNS"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "SSI"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "VCB"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "VNM"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "VNM"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "VNM"
+    },
+    {
+      "metric_id": "earnings_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2025"
+      ],
+      "ticker": "VRE"
+    },
+    {
+      "metric_id": "operating_cash_flow_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2025"
+      ],
+      "ticker": "VRE"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_CONSECUTIVE_PRIOR_PERIOD",
+      "periods_used": [
+        "2025"
+      ],
+      "ticker": "VRE"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2023"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2023"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "NVL"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PAN"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "POW"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2023"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2023"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "revenue_growth_yoy",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "QNS"
+    },
+    {
+      "metric_id": "net_margin",
+      "missing_or_blocked_reason": "MISSING_INPUTS:revenue",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "VNM"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2023"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "HPG"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "NVL"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PAN"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "POW"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2022"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2023"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "PVD"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "QNS"
+    },
+    {
+      "metric_id": "return_on_assets",
+      "missing_or_blocked_reason": "MISSING_INPUTS:total_assets",
+      "periods_used": [
+        "2024"
+      ],
+      "ticker": "VNM"
+    }
+  ],
+  "inventory_sha256": "66daa65da84b252ebb05e9f329e40d181c8c8792a8962b36a621d4430bee81f0",
+  "schema_version": "1.0.0"
+}

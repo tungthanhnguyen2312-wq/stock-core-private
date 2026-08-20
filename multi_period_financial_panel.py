@@ -69,7 +69,9 @@ from sector_financial_taxonomy import (
     SectorAuthorityTier,
     evaluate_metric_sector_applicability,
     load_promoted_sector_extractions,
+    reconcile_and_resolve_authoritative_sector_facts,
 )
+from financial_disclosure_recognizer import extract_sector_facts_from_sidecar
 
 SCHEMA_VERSION = "1.0.0"
 ARTIFACT_TYPE = "MULTI_PERIOD_FINANCIAL_FACT_PANEL"
@@ -1193,8 +1195,89 @@ def load_retained_baseline_citations(repo_root: Path | None = None) -> list[dict
     return citations
 
 
-def load_all_authoritative_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
-    """Load all qualified/promoted citations across corporate, bank, and securities proof cohorts."""
+def load_promoted_comparative_financial_citations(repo_root: Path | None = None) -> list[dict[str, Any]]:
+    """Load P3-C fact-level annual comparative evidence through the generic sector recognizer.
+
+    The manifest carries a verified transcription of the exact primary-statement
+    lines; production extraction stays dictionary-driven and scope authorization
+    remains in the sector registry.  This loader intentionally accepts only the
+    explicit document/metric scopes declared by the P3-C promotion manifest.
+    """
+    if repo_root is None:
+        repo_root = Path(__file__).resolve().parent
+    manifest_path = repo_root / "config" / "promoted_comparative_financial_evidence.json"
+    if not manifest_path.is_file():
+        return []
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("contract_version") != "p3c_comparative_financial_evidence/v1":
+        raise MultiPeriodPanelError("Unsupported P3-C comparative evidence manifest")
+
+    citations: list[dict[str, Any]] = []
+    for document in manifest.get("evidence_documents", []):
+        required = ("ticker", "reporting_period", "statement_scope", "audit_status", "currency", "unit_scale", "source_locator", "published_at", "retrieved_at", "archive_document_path", "document_sha256", "document_id", "sidecar")
+        if any(not document.get(field) for field in required):
+            raise MultiPeriodPanelError("P3-C comparative evidence document lacks required lineage")
+        if document.get("audit_status") != "audited" or document.get("statement_scope") != "consolidated":
+            raise MultiPeriodPanelError("P3-C accepts audited consolidated annual evidence only")
+        if len(str(document.get("document_sha256"))) != 64:
+            raise MultiPeriodPanelError("P3-C document SHA-256 is invalid")
+
+        qualification = {
+            "sha256": document["document_sha256"],
+            "document_id": document["document_id"],
+        }
+        extracted = extract_sector_facts_from_sidecar(
+            ticker=str(document["ticker"]),
+            qualification=qualification,
+            sidecar=document["sidecar"],
+            reporting_period=str(document["reporting_period"]),
+            statement_scope=str(document["statement_scope"]),
+            verified_at=str(document["retrieved_at"]),
+        )
+        resolved = reconcile_and_resolve_authoritative_sector_facts(generic_facts=extracted)
+        qualified_metrics = set(document.get("qualified_metrics", []))
+        by_metric = {fact.canonical_metric: fact for fact in resolved if fact.is_positive_authority}
+        if set(by_metric) != qualified_metrics:
+            raise MultiPeriodPanelError("P3-C generic extraction did not exactly reproduce the promoted fact scope")
+        for metric in sorted(qualified_metrics):
+            fact = by_metric[metric]
+            citations.append({
+                "ticker": fact.ticker,
+                "metric": fact.canonical_metric,
+                "reporting_period": fact.reporting_period,
+                "value": fact.value,
+                "currency": fact.currency,
+                "unit_scale": fact.unit_scale,
+                "statement_scope": fact.statement_scope,
+                "citation_id": fact.citation_id,
+                "evidence_id": f"evidence:{fact.document_sha256}:{fact.source_page}",
+                "document_sha256": fact.document_sha256,
+                "source_page": fact.source_page,
+                "note_number": fact.note_number,
+                "source_locator": document["source_locator"],
+                "archive_document_path": document["archive_document_path"],
+                "audit_status": document["audit_status"],
+                "authority_tier": fact.authority_tier.value,
+                "reconciliation_status": fact.reconciliation_status.value,
+                "is_positive_authority": fact.is_positive_authority,
+                "qualification_state": QualificationState.QUALIFIED.value,
+                "published_at": document["published_at"],
+                "verified_at": document["retrieved_at"],
+                "provider": "official_issuer_ir",
+            })
+    return citations
+
+
+def load_all_authoritative_citations(
+    repo_root: Path | None = None,
+    *,
+    include_p3c_comparative_evidence: bool = True,
+) -> list[dict[str, Any]]:
+    """Load qualified citations, optionally including the additive P3-C evidence scope.
+
+    ``False`` preserves deterministic replay of the historical P2 closeout,
+    whose immutable 102-fact artifact is the P3-C before-state.
+    """
     if repo_root is None:
         repo_root = Path(__file__).resolve().parent
 
@@ -1215,7 +1298,15 @@ def load_all_authoritative_citations(repo_root: Path | None = None) -> list[dict
             seen.add(key)
             all_cits.append(c)
 
-    # 3. Retained baseline corporate citations (HPG, VNM, PAN, PVD, NVL, POW, QNS)
+    # 3. P3-C comparative annual evidence, replayed via the generic sector recognizer.
+    if include_p3c_comparative_evidence:
+        for c in load_promoted_comparative_financial_citations(repo_root):
+            key = (str(c.get("ticker")).upper(), str(c.get("metric")), str(c.get("reporting_period")), str(c.get("statement_scope")))
+            if key not in seen:
+                seen.add(key)
+                all_cits.append(c)
+
+    # 4. Retained baseline corporate citations (HPG, VNM, PAN, PVD, NVL, POW, QNS)
     for c in load_retained_baseline_citations(repo_root):
         t = str(c.get("ticker", "")).upper()
         if t == "SSI" and any(x["ticker"] == "SSI" for x in all_cits):

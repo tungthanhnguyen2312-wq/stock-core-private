@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "p3c_comparative_financial_evidence/v1",
+  "authority_type": "FACT_LEVEL_COMPARATIVE_EVIDENCE_PROMOTION",
+  "authority_scope": "ANNUAL_CONSOLIDATED_EXISTING_P2_P3B_COHORT_ONLY",
+  "evidence_documents": [
+    {
+      "ticker": "SSI",
+      "entity_class": "securities",
+      "reporting_period": "2023",
+      "statement_scope": "consolidated",
+      "audit_status": "audited",
+      "currency": "VND",
+      "unit_scale": 1,
+      "source_type": "issuer_ir",
+      "source_locator": "https://www.ssi.com.vn/upload/files/IR/Reports/SSI_BCTN2023.pdf",
+      "published_at": "2024-04-14",
+      "statement_signed_at": "2024-03-26",
+      "retrieved_at": "2026-08-20T05:16:53Z",
+      "archive_document_path": "operations-review/p3c-comparative-financial-evidence-20260820/documents/SSI/2023/SSI_BCTN2023.pdf",
+      "document_sha256": "eafcbccfea7d36e4e28e89a2b099ef7f7bbfaa0fe8e18ae898c21dc3c96c30e3",
+      "document_id": "ssi-fy2023-audited-consolidated-eafcbccfea7",
+      "qualified_metrics": [
+        "financial_assets_fvtpl",
+        "loans_balance",
+        "total_assets",
+        "total_equity",
+        "profit_after_tax_total",
+        "profit_after_tax_parent"
+      ],
+      "sidecar": {
+        "document_id": "ssi-fy2023-audited-consolidated-eafcbccfea7",
+        "document_sha256": "eafcbccfea7d36e4e28e89a2b099ef7f7bbfaa0fe8e18ae898c21dc3c96c30e3",
+        "pages": [
+          {
+            "page": 79,
+            "text": "Công ty Cổ phần Chứng khoán SSI\nBÁO CÁO TÌNH HÌNH TÀI CHÍNH HỢP NHẤT B01-CTCK/HN\ntại ngày 31 tháng 12 năm 2023\nĐơn vị tính: VND\n111 | Tài sản tài chính ghi nhận thông qua lãi/lỗ (FVTPL) | 44,072,153,174,688\n114 | Các khoản cho vay | 15,134,065,013,420\n"
+          },
+          {
+            "page": 80,
+            "text": "Công ty Cổ phần Chứng khoán SSI\nBÁO CÁO TÌNH HÌNH TÀI CHÍNH HỢP NHẤT (tiếp theo) B01-CTCK/HN\ntại ngày 31 tháng 12 năm 2023\nĐơn vị tính: VND\n270 | TỔNG CỘNG TÀI SẢN | 69,241,327,102,648\n400 | D. VỐN CHỦ SỞ HỮU | 23,240,892,110,813\n"
+          },
+          {
+            "page": 83,
+            "text": "Công ty Cổ phần Chứng khoán SSI\nBÁO CÁO KẾT QUẢ HOẠT ĐỘNG HỢP NHẤT (tiếp theo) B02-CTCK/HN\ncho năm tài chính kết thúc ngày 31 tháng 12 năm 2023\nĐơn vị tính: VND\n200 | XI. LỢI NHUẬN KẾ TOÁN SAU THUẾ TNDN | 2,294,472,821,558\n201 | 1. Lợi nhuận sau thuế phân bổ cho chủ sở hữu | 2,292,781,385,416\n"
+          }
+        ]
+      }
+    }
+  ],
+  "blocked_acquisition_attempts": [
+    {
+      "ticker": "VCB",
+      "reporting_period": "2023",
+      "statement_scope": "consolidated",
+      "status": "BLOCKED_SOURCE_REGISTRY_HOST_UNAPPROVED",
+      "reason": "A discovered portal.vietcombank.com.vn location is not an approved issuer-IR host in the current official source registry; no bytes or facts were acquired or promoted."
+    }
+  ],
+  "capex_boundary": {
+    "status": "NOT_PROMOTED",
+    "reason": "No exact generic CapEx semantic line was acquired in this bounded filing; no proxy mapping was created."
+  }
+}

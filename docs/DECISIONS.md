@@ -978,3 +978,12 @@ data points); listing/active-status evidence (no qualified source exists); 1,590
 owner-authorized evidence-sourcing decision. Next gate for this thread is that scoping, not
 `P0-A.2`/`P0-B`/`P0-C.3` by default and not `HPG_BOUNDED_ANALYSIS_OUTPUT_VERIFICATION` or other
 single-ticker work.
+
+## 2026-08-20 - P3-C Comparative Financial Evidence Scale-Out Partial Closeout
+
+`P3C_COMPARATIVE_EVIDENCE_SCALEOUT = PARTIAL_LOCAL` (`p3c_comparative_financial_evidence.py`, `tools/run_p3c_comparative_financial_evidence.py`, `config/promoted_comparative_financial_evidence.json`, `push = NO`).
+
+1. **Qualified bounded uplift:** An official SSI issuer-IR FY2023 audited consolidated annual report was retained at its immutable local path and SHA-256 verified (`eafcbccf…c30e3`). Six exact primary-statement facts were replayed through the generic sector recognizer: FVTPL assets, loans, total assets, total equity, and total/parent profit after tax. No new issuer was introduced.
+2. **Measured outcome:** The refreshed 11-issuer panel rises from 102 to 108 qualified facts. P3-B exact-qualified results rise from 70 to 75; SSI FY2024 return on assets and return on equity are upgraded from ending-balance proxies to exact average-denominator calculations. The aggregate proxy count remains 15 because FY2023 has no FY2022 average-balance evidence; this is disclosed rather than silently treated as an improvement.
+3. **Fail-closed boundary:** A discovered VCB FY2023 portal location was not used because its host is absent from the approved source registry. No VCB bytes/facts were acquired. CapEx was not mapped because no exact generic CapEx semantic line was acquired. Corporate residual gaps, P3-A’s explicit-ex-date block, price/liquidity, valuation, ranking, execution, and backtesting authorities are unchanged.
+4. **Next gate:** P3-D may acquire only registry-approved official comparative evidence for VCB FY2023 and residual corporate identity gaps, with the same fact-level provenance, immutable-byte hashing, and no proxy promotion.

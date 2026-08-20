@@ -689,7 +689,7 @@ SECURITIES_METRICS: dict[str, MetricDefinition] = {
         statement_family="income_statement",
         temporal_nature="duration",
         standard_line_code="70",
-        raw_label_aliases_vi=("lợi nhuận sau thuế thu nhập doanh nghiệp", "lợi nhuận sau thuế"),
+        raw_label_aliases_vi=("lợi nhuận kế toán sau thuế tndn", "lợi nhuận sau thuế thu nhập doanh nghiệp", "lợi nhuận sau thuế"),
         raw_label_aliases_en=("profit after tax", "total profit after tax"),
         description="Total profit after corporate income tax",
     ),
@@ -701,6 +701,7 @@ SECURITIES_METRICS: dict[str, MetricDefinition] = {
         standard_line_code="71",
         raw_label_aliases_vi=(
             "lợi nhuận sau thuế phân bổ cho chủ sở hữu công ty mẹ",
+            "lợi nhuận sau thuế phân bổ cho chủ sở hữu",
             "lợi nhuận sau thuế của công ty mẹ",
         ),
         raw_label_aliases_en=(
@@ -1236,34 +1237,35 @@ def evaluate_sector_extraction_authority_scope(
             f"Sector {e_class.value} has no promoted extraction scope",
         )
 
-    if clean_sym != sector_conf.get("proof_ticker"):
+    # The original proof scope remains the default.  Additional scopes are data
+    # declarations, not production ticker branches, and are individually bound
+    # to ticker, period, scope, and retained-document hash.
+    candidate_scopes = [sector_conf, *list(sector_conf.get("additional_promoted_scopes", []))]
+    issuer_scopes = [scope for scope in candidate_scopes if clean_sym == scope.get("proof_ticker")]
+    if not issuer_scopes:
         return (
             PromotedScopeEvaluationState.UNPROMOTED_ISSUER,
-            f"Issuer {clean_sym} is not the promoted proof ticker ({sector_conf.get('proof_ticker')}) for sector {e_class.value}",
+            f"Issuer {clean_sym} has no promoted proof scope for sector {e_class.value}",
         )
 
-    if (
-        str(reporting_period) != str(sector_conf.get("reporting_period"))
-        or str(statement_scope).lower() != str(sector_conf.get("statement_scope")).lower()
-    ):
-        return (
-            PromotedScopeEvaluationState.UNPROMOTED_PERIOD_OR_SCOPE,
-            f"Period {reporting_period} or scope {statement_scope} is not promoted",
-        )
-
-    if (
-        document_sha256
-        and sector_conf.get("document_sha256")
-        and document_sha256 != sector_conf.get("document_sha256")
-    ):
-        return (
-            PromotedScopeEvaluationState.UNPROMOTED_PERIOD_OR_SCOPE,
-            "Document SHA-256 does not match promoted proof document",
-        )
+    for candidate in issuer_scopes:
+        if (
+            str(reporting_period) == str(candidate.get("reporting_period"))
+            and str(statement_scope).lower() == str(candidate.get("statement_scope")).lower()
+            and (
+                not document_sha256
+                or not candidate.get("document_sha256")
+                or document_sha256 == candidate.get("document_sha256")
+            )
+        ):
+            return (
+                PromotedScopeEvaluationState.PROMOTED_PROOF_SCOPE,
+                f"Promoted proof scope authorized for {clean_sym} ({e_class.value})",
+            )
 
     return (
-        PromotedScopeEvaluationState.PROMOTED_PROOF_SCOPE,
-        f"Promoted proof scope authorized for {clean_sym} ({e_class.value})",
+        PromotedScopeEvaluationState.UNPROMOTED_PERIOD_OR_SCOPE,
+        "Period, scope, or document SHA-256 does not match a promoted proof document",
     )
 
 

@@ -62,7 +62,7 @@ def run_phase_2_closeout(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Ingest All Authoritative Scopes
-    citations = load_all_authoritative_citations(repo_root)
+    citations = load_all_authoritative_citations(repo_root, include_p3c_comparative_evidence=False)
 
     # Authorized proof issuers
     proof_issuers = sorted(set(c["ticker"] for c in citations))

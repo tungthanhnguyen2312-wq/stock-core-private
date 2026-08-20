@@ -59,6 +59,25 @@
         "profit_after_tax_parent",
         "basic_eps",
         "period_end_outstanding_ordinary_shares"
+      ],
+      "additional_promoted_scopes": [
+        {
+          "proof_ticker": "SSI",
+          "reporting_period": "2023",
+          "statement_scope": "consolidated",
+          "document_sha256": "eafcbccfea7d36e4e28e89a2b099ef7f7bbfaa0fe8e18ae898c21dc3c96c30e3",
+          "form_family": "circular_334_2016_btc",
+          "qualification_state": "QUALIFIED",
+          "promoted_fact_count": 6,
+          "promoted_metrics": [
+            "financial_assets_fvtpl",
+            "loans_balance",
+            "total_assets",
+            "total_equity",
+            "profit_after_tax_total",
+            "profit_after_tax_parent"
+          ]
+        }
       ]
     }
   },
