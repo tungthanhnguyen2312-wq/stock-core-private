@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Research Question Resolution & Evidence Tasking V1
+
+`RESEARCH_QUESTION_TASKING_V1 = READY_LOCAL` (`research_question_tasking.py`, `run_research_question_tasking.py`, `tests/test_research_question_tasking.py`, `push = NO`).
+
+1. Each retained dossier question and data gap now creates a stable, immutable research task keyed by ticker, task kind, and question semantics. Task versions retain originating/current dossier identity, session semantics, thesis/counter-thesis hashes, evidence paths, authority tier, status lineage, and an explicit expected-evidence/reopen contract.
+2. The real 2026-08-20 baseline has 1,046 tasks from all 523 dossiers: 523 `OPEN` issuer-context questions and 523 `DEFERRED_NO_CURRENT_EVIDENCE_ROUTE` liquidity tasks. The latter are deferred under `QUALIFIED_LIQUIDITY_INPUTS_NOT_AVAILABLE` and reopen only with qualified market-wide volume/traded-value composition evidence; no daily retry loop is created.
+3. Only an explicit existing-contract check can move a task to `RESOLVED_BY_QUALIFIED_EVIDENCE`; permitted lower-authority evidence can only become `RESOLVED_DESCRIPTIVELY`. Conflicts remain open, and a changed question creates a successor while the historical task becomes `SUPERSEDED_BY_NEW_QUESTION`. AI has no task-resolution authority.
+4. The deterministic 25-name AI research queue is preserved as 25 transparent human research tasks. No web/provider acquisition, historical PIT, share, liquidity/sizing, valuation, recommendation, target, probability, provider-semantic, or official-source authority was opened or promoted.
+
 ## 2026-08-20 - Persistent Research Dossier & Thesis Change Detection V1
 
 `PERSISTENT_RESEARCH_DOSSIER_V1 = READY_LOCAL` (`persistent_research_dossier.py`, `run_persistent_research_dossier.py`, `tests/test_persistent_research_dossier.py`, `push = NO`).
