@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Owner Research Journal & Human Feedback Overlay V1
+
+`OWNER_RESEARCH_JOURNAL_V1 = READY_LOCAL` (`owner_research_journal.py`, `run_owner_research_journal.py`, `tests/test_owner_research_journal.py`, `push = NO`).
+
+1. System research remains immutable: the journal is a separate append-only owner-event layer keyed to a specific review-pack identity, dossier identity, linked task identities, and reviewed research session. The latest-state projection is a view, not a mutation of the system pack, dossiers, tasks, or prospective snapshot.
+2. The 2026-08-20 baseline maps all 25 deterministic review names with `UNREVIEWED` owner workflow state and no fabricated owner note, evidence request, follow-up, or priority override. It preserves current system task status and authority tiers solely as references.
+3. A submitted owner edit creates a new hash-identified immutable event with prior-annotation lineage. Duplicate event bytes are idempotent; conflicting bytes fail closed. `HIGH`/`NORMAL`/`LOW` priority override affects only owner-view ordering, never deterministic AI queue membership or rank.
+4. Owner statuses and notes are workflow-only. They cannot confirm/break a thesis, establish evidence, resolve/open a task, retry a deferred lane, authorize acquisition, promote authority, recommend an action, create a target/probability, or participate in performance scoring. Future prospective review may compare owner state separately from frozen system state and later observations.
+
 ## 2026-08-20 - Human Research Review Pack V1
 
 `HUMAN_RESEARCH_REVIEW_PACK_V1 = READY_LOCAL` (`human_research_review_pack.py`, `run_human_research_review_pack.py`, `tests/test_human_research_review_pack.py`, `push = NO`).
