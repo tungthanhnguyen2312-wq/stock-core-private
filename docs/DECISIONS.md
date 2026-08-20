@@ -8,7 +8,36 @@
 
 ---
 
-## Active & Recent Decision Records (2026-08-19 to Present)
+## Active & Recent Decision Records (2026-08-20 to Present)
+
+## 2026-08-20 - Phase 2 Closeout & Market-Wide Financial Fact Panel Integration Complete
+
+`P2_CLOSEOUT_MARKET_WIDE_FINANCIAL_FACT_PANEL_INTEGRATION = COMPLETE_LOCAL` (`multi_period_financial_panel.py`, `tools/run_p2_closeout_financial_panel.py`, `tests/test_multi_period_financial_panel.py`, `operations-review/p2-closeout-financial-fact-panel-20260820/p2_closeout_financial_panel_artifact.json`, `push = NO`).
+
+1. **Unified Authoritative Fact Panel Integration**:
+   - Integrated all already-authoritative / already-promoted Phase 2 financial fact scopes into the unified `multi_period_financial_panel.py` contract:
+     - Governed Corporate Facts: `HPG`, `VNM`, `PAN`, `PVD`, `NVL`, `POW`, `QNS` (baseline citations) + `GAS`, `VRE` (P2-D / P2-C2C governed citations).
+     - Promoted Bank Scope: `VCB` FY2024 consolidated (15 facts, Circular 49/2014/TT-NHNN).
+     - Promoted Securities Scope: `SSI` FY2024 consolidated (16 facts, Circular 334/2016/TT-BTC).
+     - Layered Entity Classification: Integrated Topology B resolution (20 seed + 20 promoted = 40 positive current-state, 1,620 unpromoted fail-closed as UNKNOWN).
+   - Produced deterministic closeout artifact: `p2_closeout_financial_panel:46335e0b527ed39cbbcc8082508c85e86892f83137bf205f416e9d0bbbbc8eed` (11 proof issuers, 102 qualified facts, 0 synthetic observations).
+
+2. **Strict Sector Boundaries & Invariant Enforcement**:
+   - Intermediary debt ratios (`debt_to_equity`, `net_debt`, `total_interest_bearing_debt`), EBITDA, and working capital fail closed as `NOT_APPLICABLE` for `bank` and `securities`.
+   - `ENDING_EQUITY_ROE_PROXY` normalized across Corporate (`net_income / shareholders_equity`), Bank (`net_profit_parent / total_equity`), and Securities (`profit_after_tax_parent / total_equity`).
+   - Generic-vs-specialized disagreement fails closed as `CONFLICT` (positive authority denied, fact value suppressed).
+   - Zero silent forward-fill (unobserved periods remain `MISSING` with null values); zero statement scope mixing (`consolidated` vs `separate`); zero currency mixing (`VND` vs `USD`); zero lookahead.
+
+3. **Phase 3 Readiness & Independent Gate Review**:
+   - Fundamental accounting panel status: `PHASE2_COMPLETE`.
+   - Phase 3 strategy/backtesting entry status: `PHASE3_ENTRY_READY_FOR_BOUNDED_REVIEW`.
+   - Explicitly records negative gates:
+     - `RAW_AS_TRADED = NOT_PROMOTED` (P0-A.3E Part B blocked fail-closed pending qualified ex-dates).
+     - `QUALIFIED_LIQUIDITY_INPUTS = NO` (P0-B negative proof).
+     - `POSITION_SIZING_IS_SAFE = NO` (P0-B negative proof).
+     - `VALUATION_MULTIPLES_PERMITTED = NO`.
+     - `STRATEGY_RANKING_PERMITTED = NO`.
+   - Next critical path gate: **P3-A (Bounded Price Adjustment & Dividend Ex-Date Event Window Qualification)**.
 
 ## 2026-08-20 - Phase 2-F3 Bounded Generic Sector Extraction Authority Promotion Complete
 

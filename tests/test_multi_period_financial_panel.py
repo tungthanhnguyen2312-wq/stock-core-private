@@ -433,6 +433,184 @@ class TestMultiPeriodFinancialPanel(unittest.TestCase):
         self.assertEqual(g_2024["status"], "QUALIFIED")
         self.assertAlmostEqual(g_2024["value"], 0.7626, places=3)
 
+    # -------------------------------------------------------------------------
+    # P2-CLOSEOUT: Phase 2 Integration & Invariant Tests
+    # -------------------------------------------------------------------------
+
+    def test_eligible_corporate_promoted_facts_enter_panel(self):
+        """All eligible promoted corporate facts (GAS, VRE, HPG, etc.) enter the panel with full lineage."""
+        from multi_period_financial_panel import load_all_authoritative_citations
+        citations = load_all_authoritative_citations()
+        gas_cits = [c for c in citations if c.get("ticker") == "GAS"]
+        self.assertGreaterEqual(len(gas_cits), 8)
+
+        panel = build_multi_period_financial_panel(
+            issuers=["GAS", "HPG"],
+            citations=citations,
+            reference_at="2026-08-20T10:00:00+07:00",
+        )
+        gas_panel = next(p for p in panel["issuers"] if p["issuer_identity"]["ticker"] == "GAS")
+        self.assertEqual(gas_panel["issuer_identity"]["entity_type"], "corporate")
+        self.assertGreaterEqual(gas_panel["qualified_facts_count"], 8)
+
+    def test_vcb_promoted_bank_scope_enters_exact_boundary(self):
+        """VCB bank facts enter within the authorized FY2024 consolidated proof scope (15 facts)."""
+        from multi_period_financial_panel import load_promoted_sector_citations
+        vcb_cits = [c for c in load_promoted_sector_citations() if c.get("ticker") == "VCB"]
+        self.assertEqual(len(vcb_cits), 15)
+
+        panel = build_issuer_multi_period_panel(
+            ticker="VCB",
+            citations=vcb_cits,
+            reference_at="2026-08-20T10:00:00+07:00",
+        )
+        self.assertEqual(panel["issuer_identity"]["entity_type"], "bank")
+        self.assertEqual(panel["qualified_facts_count"], 15)
+        # Bank-specific metrics are qualified
+        q_metrics = {f["canonical_metric"] for f in panel["facts"] if f["qualification_state"] == "QUALIFIED"}
+        self.assertIn("customer_loans_net", q_metrics)
+        self.assertIn("customer_deposits", q_metrics)
+        self.assertIn("net_interest_income", q_metrics)
+        self.assertIn("net_profit_parent", q_metrics)
+
+    def test_ssi_promoted_securities_scope_enters_exact_boundary(self):
+        """SSI securities facts enter within the authorized FY2024 consolidated proof scope (16 facts)."""
+        from multi_period_financial_panel import load_promoted_sector_citations
+        ssi_cits = [c for c in load_promoted_sector_citations() if c.get("ticker") == "SSI"]
+        self.assertEqual(len(ssi_cits), 16)
+
+        panel = build_issuer_multi_period_panel(
+            ticker="SSI",
+            citations=ssi_cits,
+            reference_at="2026-08-20T10:00:00+07:00",
+        )
+        self.assertEqual(panel["issuer_identity"]["entity_type"], "securities")
+        self.assertEqual(panel["qualified_facts_count"], 16)
+        # Securities-specific metrics are qualified
+        q_metrics = {f["canonical_metric"] for f in panel["facts"] if f["qualification_state"] == "QUALIFIED"}
+        self.assertIn("financial_assets_fvtpl", q_metrics)
+        self.assertIn("loans_balance", q_metrics)
+        self.assertIn("brokerage_revenue", q_metrics)
+        self.assertIn("profit_after_tax_parent", q_metrics)
+
+    def test_unpromoted_issuer_and_sector_remain_unpromoted(self):
+        """Unpromoted issuers (XYZ_UNPROMOTED) and unpromoted sector extraction facts fail closed."""
+        from entity_classification_contract import resolve_layered_entity_classification
+        # Unpromoted entity classification fails closed as UNKNOWN
+        res_unpromoted = resolve_layered_entity_classification("XYZ_UNPROMOTED")
+        self.assertFalse(res_unpromoted.is_positive_authority)
+        self.assertEqual(res_unpromoted.resolved_entity_class.value, "unknown")
+
+        # Unpromoted extraction citations (e.g. unpromoted bank/securities facts) do not gain positive authority
+        raw_unpromoted_citation = {
+            "ticker": "XYZ_UNPROMOTED", "metric": "customer_loans_net", "reporting_period": "2024",
+            "value": 500000000000000, "currency": "VND", "statement_scope": "consolidated",
+        }
+        fact = construct_financial_fact(
+            ticker="XYZ_UNPROMOTED",
+            metric="customer_loans_net",
+            reporting_period="2024",
+            raw_citation=raw_unpromoted_citation,
+            entity_type="unknown",
+        )
+        self.assertNotEqual(fact.qualification_state, QualificationState.QUALIFIED.value)
+        self.assertFalse(fact.is_positive_authority)
+
+    def test_entity_applicability_remains_fail_closed(self):
+        """Corporate debt ratios and working capital fail closed as NOT_APPLICABLE for intermediaries."""
+        app_debt_vcb, _ = evaluate_sector_applicability(ticker="VCB", entity_type="bank", canonical_metric="debt_to_equity")
+        self.assertEqual(app_debt_vcb, ApplicabilityState.NOT_APPLICABLE)
+
+        app_wc_ssi, _ = evaluate_sector_applicability(ticker="SSI", entity_type="securities", canonical_metric="working_capital")
+        self.assertEqual(app_wc_ssi, ApplicabilityState.NOT_APPLICABLE)
+
+        app_ebitda_bank, _ = evaluate_sector_applicability(ticker="VCB", entity_type="bank", canonical_metric="ebitda")
+        self.assertEqual(app_ebitda_bank, ApplicabilityState.NOT_APPLICABLE)
+
+    def test_generic_specialized_conflict_state_fails_closed(self):
+        """Injected generic-vs-specialized conflict fails closed as CONFLICT and suppresses fact value."""
+        conflict_citation = {
+            "ticker": "VCB", "metric": "customer_loans_net", "reporting_period": "2024",
+            "value": 1418015724000000, "currency": "VND", "statement_scope": "consolidated",
+            "citation_id": "c_vcb_conflict", "evidence_id": "e_vcb_conflict",
+            "reconciliation_status": "CONFLICT",
+            "published_at": "2025-04-20", "verified_at": "2026-08-09T00:00:00Z",
+        }
+        fact = construct_financial_fact(
+            ticker="VCB",
+            metric="customer_loans_net",
+            reporting_period="2024",
+            raw_citation=conflict_citation,
+            entity_type="bank",
+        )
+        self.assertEqual(fact.qualification_state, QualificationState.CONFLICT.value)
+        self.assertIsNone(fact.value)
+        self.assertFalse(fact.is_positive_authority)
+        self.assertIn("CONFLICT_GENERIC_SPECIALIZED_DISAGREEMENT", fact.reason_codes)
+
+    def test_provenance_survives_panel_integration(self):
+        """Source document SHA, citation ID, authority tier, and temporal envelope survive panel construction."""
+        from multi_period_financial_panel import load_all_authoritative_citations
+        citations = load_all_authoritative_citations()
+        panel = build_multi_period_financial_panel(
+            issuers=["VCB", "SSI", "GAS"],
+            citations=citations,
+            reference_at="2026-08-20T10:00:00+07:00",
+        )
+        vcb_panel = next(p for p in panel["issuers"] if p["issuer_identity"]["ticker"] == "VCB")
+        for f in vcb_panel["facts"]:
+            if f["qualification_state"] == "QUALIFIED":
+                self.assertIsNotNone(f["source_lineage"]["document_sha256"])
+                self.assertIsNotNone(f["source_lineage"]["citation_id"])
+                self.assertEqual(f["authority_tier"], "generic_sector_taxonomy_promoted")
+                self.assertTrue(f["temporal_envelope"]["pit_eligible"])
+
+    def test_deterministic_ordering_and_identity_stability(self):
+        """Panel generation is purely deterministic with byte-stable hashes across identical inputs."""
+        from multi_period_financial_panel import load_all_authoritative_citations
+        cits = load_all_authoritative_citations()
+        p1 = build_multi_period_financial_panel(
+            issuers=["VCB", "HPG", "SSI"],
+            citations=cits,
+            reference_at="2026-08-20T10:00:00+07:00",
+            generated_at="2026-08-20T03:30:00.000000+00:00",
+        )
+        p2 = build_multi_period_financial_panel(
+            issuers=["SSI", "VCB", "HPG"],  # Inverted order
+            citations=list(reversed(cits)),  # Inverted citations
+            reference_at="2026-08-20T10:00:00+07:00",
+            generated_at="2026-08-20T03:30:00.000000+00:00",
+        )
+        self.assertEqual(p1["content_hash"], p2["content_hash"])
+        self.assertEqual(p1["issuers_represented"], ["HPG", "SSI", "VCB"])
+
+    def test_missing_facts_remain_missing_not_synthesized(self):
+        """Unobserved facts remain MISSING with null value and are never forward-filled or synthesized."""
+        panel = build_issuer_multi_period_panel(
+            ticker="HPG",
+            citations=self.hpg_citations,
+            entity_type="corporate",
+            target_periods=["2022", "2023", "2024", "2025"],  # 2025 has no citations for HPG in fixture
+        )
+        facts_2025 = [f for f in panel["facts"] if f["reporting_period"] == "2025"]
+        for f in facts_2025:
+            self.assertEqual(f["qualification_state"], QualificationState.MISSING.value)
+            self.assertIsNone(f["value"])
+
+    def test_phase3_readiness_preserves_independent_price_liquidity_gates(self):
+        """Phase 3 entry readiness report confirms negative gates on raw as-traded prices and liquidity."""
+        from tools.run_p2_closeout_financial_panel import run_phase_2_closeout
+        res = run_phase_2_closeout()
+        self.assertEqual(res["phase_2_verdict"], "P2_CLOSEOUT_COMPLETE")
+        p3_ready = res["phase_3_readiness"]
+        self.assertEqual(p3_ready["overall_status"], "PHASE3_ENTRY_READY_FOR_BOUNDED_REVIEW")
+        gates = p3_ready["independent_price_and_event_gates"]
+        self.assertEqual(gates["raw_as_traded"]["status"], "NOT_PROMOTED")
+        self.assertEqual(gates["qualified_liquidity_inputs"]["status"], "NO")
+        self.assertEqual(gates["position_sizing"]["status"], "POSITION_SIZING_IS_SAFE = NO")
+        self.assertEqual(gates["valuation_multiples"]["status"], "PROHIBITED")
+        self.assertEqual(gates["strategy_ranking"]["status"], "PROHIBITED")
+
 
 if __name__ == "__main__":
     unittest.main()
