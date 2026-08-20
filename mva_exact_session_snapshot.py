@@ -93,13 +93,30 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
         query = {"symbol": ticker, **query_base}
         response = fetcher("ohlc", api_key=api_key, api_secret=api_secret, symbol=None, query=query)
         if not response.get("ok"):
-            return ticker, {"status": "FETCH_FAILED", "reason": str(response.get("error_code", "FETCH_FAILED")), "observations": [], "request": query}
+            err = str(response.get("error_code", "FETCH_FAILED"))
+            if err == "rate_limited" or err.startswith("request_failed_"):
+                import time
+                time.sleep(0.2)
+                response = fetcher("ohlc", api_key=api_key, api_secret=api_secret, symbol=None, query=query)
+        if not response.get("ok"):
+            err = str(response.get("error_code", "FETCH_FAILED"))
+            disp = "TRANSPORT_FAILED" if (err == "rate_limited" or err.startswith("request_failed_")) else "PROVIDER_REJECTED"
+            return ticker, {"status": "FETCH_FAILED", "reason": err, "disposition": disp, "observations": [], "request": query}
         body = response.get("body")
         if not isinstance(body, Mapping):
-            return ticker, {"status": "MALFORMED_RESPONSE", "reason": "BODY_NOT_OBJECT", "observations": [], "request": query}
+            return ticker, {"status": "MALFORMED_RESPONSE", "reason": "BODY_NOT_OBJECT", "disposition": "MALFORMED", "observations": [], "request": query}
         rows, problem = _observation_rows(body, requested_session=target, query=query, retrieved_at=retrieved_at)
         payload_hash = hashlib.sha256(json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
-        return ticker, {"status": "OBSERVED" if problem is None else problem, "reason": problem, "observations": rows,
+        if problem is None:
+            disp = "EXACT_SESSION_RETAINED"
+            status = "OBSERVED"
+        elif problem == "EXACT_SESSION_MISSING":
+            disp = "SESSION_MISSING"
+            status = problem
+        else:
+            disp = "MALFORMED"
+            status = problem
+        return ticker, {"status": status, "reason": problem, "disposition": disp, "observations": rows,
                         "payload_hash": payload_hash, "request": query, "provider_endpoint": response.get("endpoint")}
 
     attempted = candidates if request_limit is None else candidates[:max(0, request_limit)]
@@ -110,7 +127,7 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
             ticker, result = future.result()
             records[ticker] = result
     for ticker in candidates:
-        records.setdefault(ticker, {"status": "NOT_ATTEMPTED_BOUNDED_PROVIDER_WINDOW", "reason": "EXPLICIT_PARTIAL_MATERIALIZATION", "observations": [], "request": None})
+        records.setdefault(ticker, {"status": "NOT_ATTEMPTED_BOUNDED_PROVIDER_WINDOW", "reason": "EXPLICIT_PARTIAL_MATERIALIZATION", "disposition": "NOT_ATTEMPTED", "observations": [], "request": None})
     records = {ticker: records[ticker] for ticker in sorted(records)}
     observed = sum(record["status"] == "OBSERVED" for record in records.values())
     session_counts: dict[str, int] = {}
@@ -121,14 +138,28 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
     sessions = sorted(session_counts, reverse=True)[:LOOKBACK_SESSIONS]
     sessions = list(reversed(sessions))
     complete = sum(record["status"] == "OBSERVED" and all(any(row["session"] == session for row in record["observations"]) for session in sessions) for record in records.values()) if len(sessions) == LOOKBACK_SESSIONS else 0
+    disposition_counts = {
+        "EXACT_SESSION_RETAINED": sum(r.get("disposition") == "EXACT_SESSION_RETAINED" for r in records.values()),
+        "SESSION_MISSING": sum(r.get("disposition") == "SESSION_MISSING" for r in records.values()),
+        "MALFORMED": sum(r.get("disposition") == "MALFORMED" for r in records.values()),
+        "PROVIDER_REJECTED": sum(r.get("disposition") == "PROVIDER_REJECTED" for r in records.values()),
+        "TRANSPORT_FAILED": sum(r.get("disposition") == "TRANSPORT_FAILED" for r in records.values()),
+        "INSTRUMENT_UNRESOLVED": 0,
+        "NOT_APPLICABLE": 0,
+        "NOT_ATTEMPTED": sum(r.get("disposition") == "NOT_ATTEMPTED" for r in records.values()),
+    }
     snapshot: dict[str, Any] = {
         "schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "artifact_type": "P3F9_MVA_EXACT_SESSION_SNAPSHOT",
         **REQUIRED_ENVELOPE,
         "resolved_completed_session": target, "retained_snapshot_session": target, "requested_at": retrieved_at,
         "canonical_identity": "runtime_metadata_ticker_sorted_v1", "candidate_count": len(candidates),
+        "candidate_pre_classification": {"ATTEMPT_ELIGIBLE": len(candidates), "NOT_APPLICABLE": 0, "INSTRUMENT_UNRESOLVED": 0, "EXPLICITLY_EXCLUDED_BY_EXISTING_CONTRACT": 0},
         "materialization_scope": "FULL_CANONICAL_CANDIDATE_SET" if request_limit is None else "EXPLICIT_PARTIAL_PROVIDER_WINDOW",
         "attempted_candidate_count": len(attempted), "exact_session_observed_count": observed, "empirical_20_session_complete_count": complete,
-        "missing_current_session_count": len(candidates) - observed, "sessions": sessions,
+        "missing_current_session_count": len(candidates) - observed,
+        "disposition_counts": disposition_counts,
+        "unattempted_without_explicit_disposition": 0,
+        "sessions": sessions,
         "source": {"provider": "DNSE", "endpoint": "/price/ohlc", "dataset": "DNSE_OHLC_1D", "request_contract": query_base,
                    "no_older_session_substitution": True, "intraday_observations_used": False},
         "records": records,

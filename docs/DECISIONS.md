@@ -10,6 +10,25 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - P3-F9B Market-Wide Exact-Session Snapshot Scale-Out Complete
+
+`P3F9B_MARKET_WIDE_EXACT_SESSION_SCALEOUT = COMPLETE_LOCAL` (`mva_exact_session_snapshot.py`, `tools/run_p3f9b_market_wide_exact_session_scaleout.py`, `tests/test_p3f9b_market_wide_exact_session_scaleout.py`, `operations-review/p3f9b-market-wide-exact-session-scaleout-20260820/p3f9b_market_wide_exact_session_scaleout_artifact.json`, `push = NO`).
+
+1. **Market-Wide Exact-Session Materialization & Coverage**:
+   - Scaled generic DNSE exact-session materialization across all 1,683 canonical candidates for completed session `2026-08-20`.
+   - Exact session equality confirmed: `resolved_completed_session == retained_snapshot_session == MVA_bundle_session == 2026-08-20`.
+   - Full candidate disposition reconciliation: 843 `EXACT_SESSION_RETAINED` (50.09%), 667 `SESSION_MISSING` (39.63%), 173 `PROVIDER_REJECTED` (10.28%), 0 `MALFORMED`, 0 `TRANSPORT_FAILED`, 0 unattempted without explicit disposition.
+
+2. **Refreshed 20-Session Empirical Active Cohort & Breadth**:
+   - Refreshed `COHORT_EMPIRICALLY_ACTIVE`: 523 members with complete 20-session observations (`2026-07-24` to `2026-08-20`); 1,160 excluded candidates fail closed for incomplete/missing observation coverage.
+   - Exact breadth reconciliation over the 523 denominator: 223 advancing, 187 declining, 113 unchanged, 0 missing (advance ratio 0.4264).
+   - Full technical features (close, 1d return, 20d momentum, 3/5/20 MA, 20d volatility, provider-scoped relative volume) available across 100% of empirical cohort.
+
+3. **Freshness Gate & Authority Boundaries**:
+   - `MVA_POST_CLOSE_MARKET_WIDE_SESSION_READY = YES`.
+   - Preserved strict fail-closed boundaries: `price_basis = CURRENT_MARKET` (descriptive use only), `RAW_AS_TRADED = NOT_PROMOTED`, `HISTORICAL_PIT = BLOCKED`, zero dashboard/runtime DB mutations, zero ticker-specific branches.
+   - Next operational gate: **P3-F10: Generic Fundamental Evidence Scale-Out**.
+
 ## 2026-08-20 - P3-B Sector-Aware Fundamental Quality & Research Readiness Complete
 
 `P3B_FUNDAMENTAL_RESEARCH_ENGINE = COMPLETE_LOCAL` (`fundamental_research_readiness.py`, `tools/run_p3b_fundamental_research_readiness.py`, `operations-review/p3b-fundamental-research-readiness-20260820/p3b_fundamental_research_readiness_artifact.json`, `push = NO`).
