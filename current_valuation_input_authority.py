@@ -16,6 +16,7 @@ from dnse_market_risk_evidence_store import read_stock_ohlc
 from field_temporal_contract import stable_id
 from freshness_history import latest_completed_market_day
 from current_state_relative_valuation import resolve_current_shares
+from current_share_authority import build_current_share_timeline
 
 VERSION = "1.0.0"
 CONTRACT_VERSION = "current_valuation_input_authority/v1"
@@ -148,35 +149,10 @@ def qualify_current_share_basis(instrument: Mapping[str, Any], candidates: Seque
     as semantically distinct candidates but cannot silently become current market
     capitalization shares.
     """
-    base = {"canonical_instrument": dict(instrument), "valuation_date": valuation_date,
-            "status": SHARE_BLOCKED, "qualification_state": "UNKNOWN", "identity": None,
-            "value": None, "reason_codes": [], "allowed_use": "current_market_capitalization_only"}
-    ticker = str(instrument.get("canonical_ticker") or "").upper()
-    applicable = [dict(row) for row in candidates if str(row.get("canonical_ticker") or ticker).upper() == ticker]
-    qualified = [row for row in applicable if row.get("identity") == COMMON_OUTSTANDING and
-                 row.get("qualification_state") == "QUALIFIED" and row.get("coverage_through") and
-                 str(row["coverage_through"]) >= valuation_date and isinstance(row.get("value"), int) and row["value"] > 0]
-    action_blockers = []
-    for action in corporate_actions:
-        if not action.get("potential_share_change"):
-            continue
-        effective = _date(action.get("effective_date"))
-        if effective is None:
-            action_blockers.append("CORPORATE_ACTION_TIMING_UNRESOLVED_NO_EX_DATE_INFERRED")
-        elif effective <= valuation_date and action.get("lifecycle") != "completed_with_resulting_common_shares":
-            action_blockers.append("CORPORATE_ACTION_INVALIDATES_CURRENT_SHARE_COVERAGE")
-    if action_blockers:
-        return {**base, "qualification_state": "BLOCKED", "reason_codes": sorted(set(action_blockers))}
-    if not qualified:
-        identity_reasons = sorted({str(row.get("identity") or "unknown") for row in applicable})
-        return {**base, "qualification_state": "STALE_OR_MISSING", "reason_codes": ["CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"], "observed_identities": identity_reasons}
-    values = {row["value"] for row in qualified}
-    if len(values) != 1:
-        return {**base, "qualification_state": "CONFLICT", "reason_codes": ["EQUALLY_QUALIFIED_CURRENT_SHARE_VALUES_CONFLICT"]}
-    chosen = sorted(qualified, key=lambda row: (str(row.get("coverage_through")), str(row.get("payload_identity") or "")))[-1]
-    return {**base, "status": SHARE_READY, "qualification_state": "QUALIFIED", "identity": COMMON_OUTSTANDING,
-            "value": chosen["value"], "effective_date": chosen.get("effective_date"),
-            "coverage_through": chosen["coverage_through"], "lineage": chosen}
+    timeline = build_current_share_timeline(
+        instrument, candidates, valuation_date=valuation_date, corporate_actions=corporate_actions,
+    )
+    return {"canonical_instrument": dict(instrument), "valuation_date": valuation_date, **timeline}
 
 
 def runtime_share_candidates(runtime_root: Path | str, instrument: Mapping[str, Any], valuation_date: str) -> list[dict[str, Any]]:
@@ -189,10 +165,14 @@ def runtime_share_candidates(runtime_root: Path | str, instrument: Mapping[str, 
         return [{"canonical_ticker": ticker, "identity": COMMON_OUTSTANDING, "value": current["value"],
                  "effective_date": valuation_date, "coverage_through": result.get("coverage_through"),
                  "qualification_state": "QUALIFIED", "source_authority": "official_evidence_share_transition_bridge",
+                 "evidence_ids": (result.get("bridge_result") or {}).get("latest_qualified_identity", {}).get("citation_ids", []),
                  "payload_identity": stable_id(result), "lineage": result}]
-    return [{"canonical_ticker": ticker, "identity": "period_end_shares", "value": None,
-             "coverage_through": result.get("coverage_through"), "qualification_state": "UNKNOWN",
-             "reason": current.get("reason"), "payload_identity": stable_id(result), "lineage": result}]
+    latest = (result.get("bridge_result") or {}).get("latest_qualified_identity") or {}
+    return [{"canonical_ticker": ticker, "identity": "period_end_shares", "value": latest.get("value"),
+             "effective_date": latest.get("effective_date"), "coverage_through": result.get("coverage_through"),
+             "qualification_state": "UNKNOWN", "source_authority": "official_evidence_share_transition_bridge",
+             "evidence_ids": latest.get("citation_ids", []), "reason": current.get("reason"),
+             "payload_identity": stable_id(result), "lineage": result}]
 
 
 def resolve_current_valuation_inputs(instrument: Mapping[str, Any], *, requested_at: str | datetime,

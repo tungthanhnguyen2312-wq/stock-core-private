@@ -1,0 +1,408 @@
+{
+  "artifact_identity": "p3f4_generic_current_share_authority:bfd48a162d6a826fa77a812b02d37433eedcb71d674ab405f28087351798849a",
+  "artifact_sha256": "bfd48a162d6a826fa77a812b02d37433eedcb71d674ab405f28087351798849a",
+  "artifact_type": "P3F4_GENERIC_CURRENT_SHARE_AUTHORITY",
+  "boundaries": {
+    "is_actionable": false,
+    "p3g": "RESERVED_NOT_STARTED",
+    "raw_as_traded": "NOT_PROMOTED"
+  },
+  "corporate_action_completeness": [
+    {
+      "event_type": "planned_issuance",
+      "notice": "VSDC notice 198728",
+      "record_date": "2026-08-18",
+      "rule": "no_ex_date_or_execution_inferred",
+      "status": "NON_EXECUTED_PLANNED_ISSUANCE_BLOCKED",
+      "ticker": "SSI"
+    },
+    {
+      "corroboration_date": "2026-07-30",
+      "event_type": "stock_dividend",
+      "execution_date": "2026-07-02",
+      "notice": "HOSE notice 1475/TB-SGDHCM",
+      "rule": "coverage_valid_through_2026-07-30_only",
+      "status": "COVERAGE_THROUGH_TARGET_NOT_PROVEN",
+      "ticker": "HPG"
+    }
+  ],
+  "coverage_before_after": {
+    "after": {
+      "BOTH_READY": 0,
+      "PRICE_BLOCKED": 0,
+      "PRICE_READY": 11,
+      "SHARE_BLOCKED": 11,
+      "SHARE_READY": 0
+    },
+    "before": {
+      "BOTH_READY": 0,
+      "PRICE_BLOCKED": 0,
+      "PRICE_READY": 11,
+      "SHARE_BLOCKED": 11,
+      "SHARE_READY": 0
+    }
+  },
+  "coverage_scan": {
+    "blocker_distribution": {
+      "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN": 11
+    },
+    "counts": {
+      "BOTH_NOT_READY": 11,
+      "PRICE_READY": 11,
+      "SHARE_BLOCKED": 11
+    },
+    "rows": [
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "GAS"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "HPG"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "NVL"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "PAN"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "POW"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "PVD"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "QNS"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "SSI"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "VCB"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "VNM"
+      },
+      {
+        "blockers": [
+          "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+        ],
+        "price": "PRICE_READY",
+        "shares": "SHARE_BLOCKED",
+        "ticker": "VRE"
+      }
+    ]
+  },
+  "effective_date_and_continuity": {
+    "eligible_only_when": "explicit_common_outstanding_and_valid_from_through_includes_valuation_date",
+    "reference_session": "2026-08-19",
+    "synthetic_forward_fill": "PROHIBITED"
+  },
+  "generic_implementation": {
+    "contract": "current_share_authority/v1",
+    "integration": "current_valuation_input_authority.qualify_current_share_basis",
+    "module": "current_share_authority.py",
+    "source_promotion": false,
+    "valuation_formula_change": false
+  },
+  "registration_hash_repairs": {
+    "reason": "citation_to_manifest remapping requires immutable linkage not present in legacy citation rows",
+    "repairs_made": [],
+    "unresolved": [
+      {
+        "diagnostic": {
+          "detail": "evidence_missing_or_hash_mismatch",
+          "note": "semantic_evidence_bridge.load_verified_share_basis could not hash-verify this ticker's period-end share-count citation against data/official-evidence/manifest.json -- a pre-existing evidence-registration gap this module discovered but does not fix (see module docstring, 'A REAL, PRE-EXISTING GAP').",
+          "reason": "official_evidence_share_basis_unverifiable"
+        },
+        "ticker": "VCB"
+      },
+      {
+        "diagnostic": {
+          "detail": "evidence_missing_or_hash_mismatch",
+          "note": "semantic_evidence_bridge.load_verified_share_basis could not hash-verify this ticker's period-end share-count citation against data/official-evidence/manifest.json -- a pre-existing evidence-registration gap this module discovered but does not fix (see module docstring, 'A REAL, PRE-EXISTING GAP').",
+          "reason": "official_evidence_share_basis_unverifiable"
+        },
+        "ticker": "VNM"
+      }
+    ]
+  },
+  "representative_proofs": {
+    "executed_transition": {
+      "bridge_result": {
+        "applied_events": [
+          {
+            "action_type": "stock_dividend",
+            "citation_id": "984a47fe87286adfd2f0ac46cb8b3649fe3c6ad3f5d21a14634fda76b861ac8e",
+            "effective_date": "2026-07-02",
+            "event_id": "b7a97e12cc2a1cba4ed6c0e4f0571702ea15e71bf5055d332dcf5069654ec58c",
+            "opening_shares": 6396250200,
+            "ratio": null,
+            "resulting_shares": 8442964520,
+            "source_hash": "cb41c96ef78bed7654030e55bb06dea22d051b1c9fcf1a6cf024e9f964563c1c"
+          }
+        ],
+        "blocked_events": [],
+        "coverage_through": "2026-07-30",
+        "current_shares": {
+          "qualified": false,
+          "reason": "coverage_through_target_not_proven",
+          "value": null
+        },
+        "latest_qualified_identity": {
+          "citation_ids": [
+            "28a108e51ab4663b1c7ef8979f18aeec61d57498279be6f9e166757aa21692f1",
+            "984a47fe87286adfd2f0ac46cb8b3649fe3c6ad3f5d21a14634fda76b861ac8e"
+          ],
+          "effective_date": "2026-07-02",
+          "identity_type": "latest_qualified_historical_shares_outstanding",
+          "record_id": "share-bridge-f7a17f2babe08d3068b1929d965ad403633a2b2dac4385a1867982f805314675",
+          "share_class": "common_outstanding",
+          "unit": "shares",
+          "value": 8442964520
+        },
+        "market_value_ready": false,
+        "status": "latest_historical_only",
+        "target_date": "2026-08-19",
+        "version": "1.0.0"
+      },
+      "coverage_through": "2026-07-30",
+      "mapped_event_count": 1,
+      "opening_identity": {
+        "citation_id": "28a108e51ab4663b1c7ef8979f18aeec61d57498279be6f9e166757aa21692f1",
+        "effective_date": "2024-12-31",
+        "identity_scope": "issuer",
+        "qualification": "qualified",
+        "share_class": "common_outstanding",
+        "source_hash": "a7c3711d1b02c131a87fef4a0f5bd4d5fbd780bbb0c07665111a358a2ddcd2a8",
+        "unit": "shares",
+        "value": 6396250200
+      },
+      "opening_identity_diagnostic": null,
+      "raw_event_citation_count": 1,
+      "target_date": "2026-08-19"
+    },
+    "fy2024_period_end_only": {
+      "allowed_use": "current_market_capitalization_only",
+      "canonical_instrument": {
+        "canonical_ticker": "GAS",
+        "provider_symbols": {
+          "DNSE": "GAS"
+        }
+      },
+      "contract_version": "current_share_authority/v1",
+      "identity": null,
+      "observed_identities": [
+        "period_end_shares"
+      ],
+      "qualification_state": "STALE_OR_MISSING",
+      "reason_codes": [
+        "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN"
+      ],
+      "status": "SHARE_BLOCKED",
+      "timeline": [
+        {
+          "blockers": [],
+          "corporate_action_ids": [],
+          "evidence_ids": [],
+          "instrument": "GAS",
+          "payload_identity": "b1375d51e02498f847810cbfe82fa82a1ef930066c33103755f6465dc8d9c1ed",
+          "qualification_state": "BLOCKED",
+          "share_count": null,
+          "share_identity": "period_end_shares",
+          "source_authority": "official_evidence_share_transition_bridge",
+          "valid_from": null,
+          "valid_through": "0001-01-01",
+          "valuation_use": "not_eligible",
+          "warnings": [
+            "SHARE_IDENTITY_NOT_CURRENT_COMMON_OUTSTANDING",
+            "CANDIDATE_NOT_QUALIFIED",
+            "SHARE_COUNT_INVALID_OR_ABSENT",
+            "EFFECTIVE_COVERAGE_NOT_EXPLICIT"
+          ]
+        }
+      ],
+      "valuation_date": "2026-08-19",
+      "value": null
+    },
+    "no_verified_current_citation": {
+      "bridge_result": {
+        "applied_events": [],
+        "blocked_events": [
+          {
+            "event_id": null,
+            "reason": "opening_identity_unqualified"
+          }
+        ],
+        "current_shares": {
+          "qualified": false,
+          "reason": "opening_identity_unqualified",
+          "value": null
+        },
+        "latest_qualified_identity": null,
+        "market_value_ready": false,
+        "status": "blocked",
+        "target_date": "2026-08-19",
+        "version": "1.0.0"
+      },
+      "coverage_through": "0001-01-01",
+      "mapped_event_count": 0,
+      "opening_identity": null,
+      "opening_identity_diagnostic": {
+        "detail": null,
+        "note": null,
+        "reason": "no_period_end_share_basis_citation_retained_for_ticker"
+      },
+      "raw_event_citation_count": 0,
+      "target_date": "2026-08-19"
+    },
+    "unresolved_planned_issuance": {
+      "event_type": "planned_issuance",
+      "notice": "VSDC notice 198728",
+      "record_date": "2026-08-18",
+      "rule": "no_ex_date_or_execution_inferred",
+      "status": "NON_EXECUTED_PLANNED_ISSUANCE_BLOCKED",
+      "ticker": "SSI"
+    }
+  },
+  "root_cause_matrix": {
+    "A_no_scalable_current_common_source": "present",
+    "B_unapproved_provider_candidate": "present",
+    "C_registration_linkage_defects": {
+      "present": true,
+      "repair": "NOT_SAFE_WITH_CURRENT_CITATION_LINEAGE"
+    },
+    "D_identity_insufficient": "present_for_period_end_and_issued_fields",
+    "E_effective_coverage_absent": "present",
+    "F_corporate_action_uncertainty": "present",
+    "G_resolver_defect": "not_dominant; existing resolver already fails closed and P3-F4 makes its timeline contract explicit",
+    "classification": "H_COMBINATION"
+  },
+  "schema_version": "1.0.0",
+  "share_semantic_contract": {
+    "distinct_identities": [
+      "common_shares_outstanding",
+      "diluted_shares",
+      "issued_shares",
+      "listed_shares",
+      "period_end_shares",
+      "treasury_shares",
+      "weighted_average_basic_shares"
+    ],
+    "numerical_equality_is_not_semantic_equivalence": true,
+    "required_for_market_cap": "common_shares_outstanding"
+  },
+  "source_artifacts": {
+    "p3f2": "p3f2_current_valuation_input_authority:d824e040ab11838d93c5fa5220c33adeebf21c88f46508390ed0144be5bb2862",
+    "p3f3": "p3f3_operational_valuation_input_scaleout:f162463992683090c6f23993cdf9ccd66a21710542f00b49bec361ae1bce96d2"
+  },
+  "source_authority_inventory": {
+    "dnse_current_market_ohlc": {
+      "authority_state": "NO_SHARE_FIELD_IN_EXISTING_CONTRACT",
+      "lineage": "DNSE_/price/ohlc",
+      "market_cap_allowed_only_when": "not_applicable",
+      "share_identities": []
+    },
+    "official_corporate_action_result": {
+      "authority_state": "APPROVED_EXISTING",
+      "lineage": "qualified_event_with_resulting_shares",
+      "market_cap_allowed_only_when": "executed_resulting_count_and_explicit_coverage",
+      "share_identities": [
+        "common_shares_outstanding"
+      ]
+    },
+    "official_retained_evidence": {
+      "authority_state": "APPROVED_EXISTING",
+      "lineage": "manifest_hash_verified_citation_or_qualified_event",
+      "market_cap_allowed_only_when": "explicit_common_outstanding_with_coverage_through_valuation_date",
+      "share_identities": [
+        "period_end_shares",
+        "weighted_average_basic_shares",
+        "common_shares_outstanding"
+      ]
+    },
+    "provider_metadata_issue_share": {
+      "authority_state": "NOT_PROMOTED",
+      "lineage": "VCI.overview.issue_share_retained_metadata",
+      "market_cap_allowed_only_when": "never_without_owner_source_promotion",
+      "share_identities": [
+        "issued_shares"
+      ]
+    }
+  },
+  "source_promotion_review": {
+    "AUTHORITY": "NOT_PROMOTED",
+    "candidate": "VCI.overview.issue_share retained provider metadata",
+    "comparison": "may corroborate but is not semantically interchangeable with official current common shares",
+    "exact_share_semantic": "ISSUED_SHARES, not proven common_shares_outstanding",
+    "proposed_bounded_allowed_use": "future descriptive candidate review only; never market-cap input until owner approval",
+    "provenance_retention": "vn_stock.db metadata row and update timestamp",
+    "risks": [
+      "issued_vs_outstanding",
+      "unknown_treasury_treatment",
+      "event freshness",
+      "no owner promotion"
+    ],
+    "scalability": "market-wide metadata field exists but authority does not scale by presence alone",
+    "temporal_semantics": "metadata updated timestamp; no approved effective-date or corporate-action completeness contract"
+  },
+  "ticker_specific_branch_audit": {
+    "matches": [],
+    "production_modules": [
+      "current_share_authority",
+      "current_valuation_input_authority"
+    ],
+    "ticker_specific_qualification_branches": 0
+  },
+  "valuation_reference": "2026-08-20T14:00:00+07:00",
+  "verdict": "P3F4_CURRENT_SHARE_FOUNDATION_COMPLETE"
+}
