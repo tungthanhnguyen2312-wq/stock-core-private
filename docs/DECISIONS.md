@@ -10,6 +10,30 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Phase 3-A Bounded Price Adjustment & Dividend Ex-Date Event Window Qualification (Terminal Blocker)
+
+`P3A_PRICE_ADJUSTMENT_EVENT_WINDOW_QUALIFICATION = BLOCKED_PENDING_QUALIFIED_EX_DATE` (`docs/STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `push = NO`).
+
+1. **Gate 1 Evaluation — Qualified Ex-Date Evidence Audit**:
+   - Comprehensive audit of all retained corporate action evidence, registries, manifests, citations, and official documents in the repository:
+     - `HPG`: HOSE notice `1475/TB-SGDHCM` (PDF: `8bbae21fbb3e6c11f925385ac35b290e86e3db8753188131acbbba3bad5b29b2.pdf`) and issuer IR notice (HTML: `cb41c96ef78bed7654030e55bb06dea22d051b1c9fcf1a6cf024e9f964563c1c.html`) state `shares_issued: 767,498,665`, `shares_after: 8,442,964,520`, and `trading_date: 2026-07-16`; `ex_date` is **absent** (`adjustment_factor_status = not_ready`).
+     - `SSI`: VSDC notice 198728 (HTML: `bd7d4054613ae6f9c5ee1ddc6b787bf706ac6a18f551aff3c9683a85bcc06dad.html`) states `record_date: 2026-08-18`, `cash_amount: 1,000 VND`, `stock_ratio: 0.2`; `ex_date` is **absent** (`ex_date_absent`), issuance is planned/unexecuted (`shares_after` absent).
+     - `VNM`: VSD notice 177392 (HTML: `vsdc-record-date-notice.html`) and Vinamilk 2024 Annual Report state `record_date: 2024-12-27`, `payment_date: 2025-02-28`, `cash_amount: 500 VND`; `ex_dividend_date` is explicitly omitted ("no direct official source ties 2024-12-26 to this event").
+     - `VCB`: VSDC listing change notice states share count transition; `ex_date` is **absent**.
+     - Vendor feeds in `corporate_event_records` (`vn_stock.db`) are third-party partial observations (`qualification = partial`, `citation_reason = partial_observation_no_qualified_citation`, `adjustment_provenance = not_generated`).
+
+2. **Mandatory Fail-Closed Enforcement**:
+   - Repository invariant strictly prohibits inferring ex-dates from record dates, payment dates, announcement dates, T+ settlement conventions, or price movements.
+   - Zero source-code authority changed; zero network evidence acquired; zero assumptions made.
+   - Gate 2 is **NOT REACHED**.
+   - Terminal verdict: `P3A_BLOCKED_PENDING_QUALIFIED_EX_DATE`.
+
+3. **Preserved Upstream Blockers**:
+   - `RAW_AS_TRADED = NOT_PROMOTED`
+   - `QUALIFIED_LIQUIDITY_INPUTS = NO`
+   - `POSITION_SIZING_IS_SAFE = NO`
+   - Valuation multiples and cross-sectional strategy ranking remain prohibited.
+
 ## 2026-08-20 - Phase 2 Closeout & Market-Wide Financial Fact Panel Integration Complete
 
 `P2_CLOSEOUT_MARKET_WIDE_FINANCIAL_FACT_PANEL_INTEGRATION = COMPLETE_LOCAL` (`multi_period_financial_panel.py`, `tools/run_p2_closeout_financial_panel.py`, `tests/test_multi_period_financial_panel.py`, `operations-review/p2-closeout-financial-fact-panel-20260820/p2_closeout_financial_panel_artifact.json`, `push = NO`).

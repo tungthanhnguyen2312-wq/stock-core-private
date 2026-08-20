@@ -30,7 +30,7 @@
 | **P0-C.3** | Field-Level Freshness / As-Of Retrofit | **COMPLETE** | Pure deterministic contract ([field_temporal_contract.py](field_temporal_contract.py)); 6 explicit states; bound `TemporalField` containers on `CanonicalRecord` and `market_feature_store`. |
 | **P1** | Feature Store Normalization & Multi-Session Export | **COMPLETE** | `cross_sectional_export.py` normalized semantic taxonomy, multi-session export contract, fail-closed PIT/liquidity boundaries, validated across 10 retained sessions (`bb0cafa4417471b0`). |
 | **P2** | Multi-Period Fundamentals & Sector Normalization | **COMPLETE (`P2_CLOSEOUT_COMPLETE`)** | `multi_period_financial_panel.py` deterministic panel & `generic_financial_canonicalizer.py` dictionary-driven scale-out.<br>• Integrates all authoritative Phase 2 financial fact cohorts: promoted corporate facts (`GAS`, `VRE`, `HPG`, `VNM`, `PAN`, `PVD`, `NVL`, `POW`, `QNS`), promoted VCB FY2024 bank scope (15 facts), promoted SSI FY2024 securities scope (16 facts), Layered Entity Classification Topology B (40 positive, 1,620 unpromoted fail-closed as UNKNOWN).<br>• Enforces strict sector boundaries, intermediary corporate debt ratio inapplicability (`NOT_APPLICABLE`), normalized `ENDING_EQUITY_ROE_PROXY`, zero synthetic observations, zero forward-fill, zero scope/currency mixing.<br>• Deterministic closeout artifact emitted: `p2_closeout_financial_panel_artifact.json` (`p2_closeout_financial_panel:46335e0b527ed39cbbcc8082508c85e86892f83137bf205f416e9d0bbbbc8eed`).<br>• Phase 3 entry evaluated: `PHASE3_ENTRY_READY_FOR_BOUNDED_REVIEW` with strict negative gates (`RAW_AS_TRADED = NOT_PROMOTED`, `QUALIFIED_LIQUIDITY_INPUTS = NO`, `POSITION_SIZING_IS_SAFE = NO`). |
-| **P3** | Portfolio Sizing, Execution, Backtest | **FAIL-CLOSED** | Strictly blocked until upstream price/liquidity authorities pass. |
+| **P3** | Portfolio Sizing, Execution, Backtest | **FAIL-CLOSED (`P3A_BLOCKED_PENDING_QUALIFIED_EX_DATE`)** | Strictly blocked until upstream price/liquidity authorities pass.<br>• `P3-A` evaluated: No retained official document in the corpus contains an explicit official ex-date (HPG, SSI, VCB, VNM state only record dates, payment dates, approval dates, or new-shares listing dates). Fail-closed invariant strictly prohibits inferring ex-dates from record dates or settlement rules.<br>• `RAW_AS_TRADED = NOT_PROMOTED`, `QUALIFIED_LIQUIDITY_INPUTS = NO`, `POSITION_SIZING_IS_SAFE = NO`. |
 
 ---
 
@@ -68,10 +68,10 @@
 19. **Phase 2-F2 Sector Financial Authority Promotion Review** — **COMPLETE LOCALLY** (`P2F2_PROMOTION_RECOMMENDED`).
 20. **Phase 2-F3 Bounded Generic Sector Extraction Authority Promotion** — **COMPLETE LOCALLY** (`config/promoted_sector_extractions.json`, `p2f3_sector_extraction_promotion_artifact.json`).
 21. **Phase 2 Closeout & Market-Wide Financial Fact Panel Integration** — **COMPLETE LOCALLY** (`p2_closeout_financial_panel_artifact.json`, `p2_closeout_financial_panel:46335e0b527ed39cbbcc8082508c85e86892f83137bf205f416e9d0bbbbc8eed`).
-22. **Phase 3-A Bounded Price Adjustment & Dividend Ex-Date Event Window Qualification** — **NEXT PRODUCT MILESTONE**.
+22. **Phase 3-A Bounded Price Adjustment & Dividend Ex-Date Event Window Qualification** — **BLOCKED FAIL-CLOSED (`P3A_BLOCKED_PENDING_QUALIFIED_EX_DATE`)**.
 
 ### Exact Next Bounded Action:
-Evaluate **Phase 3-A: Bounded Price Adjustment & Dividend Ex-Date Event Window Qualification** (resolve qualified dividend ex-date registry and event window price adjustments under explicit negative liquidity/sizing gates).
+Awaiting official ex-date notice acquisition or prospective unadjusted price stream capture; Phase 3 execution and strategy layers remain fail-closed.
 
 ---
 
