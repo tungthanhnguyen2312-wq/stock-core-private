@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Human Research Review Pack V1
+
+`HUMAN_RESEARCH_REVIEW_PACK_V1 = READY_LOCAL` (`human_research_review_pack.py`, `run_human_research_review_pack.py`, `tests/test_human_research_review_pack.py`, `push = NO`).
+
+1. The owner-facing review pack is a deterministic consumer of daily research, immutable dossiers, tasks, and prospective state. It provides a machine-readable identity-bound artifact plus a concise human rendering; no source dossier, task, or prospective artifact is changed by rendering.
+2. The retained 2026-08-20 pack reconciles 523 dossiers, 1,046 tasks, and all 25 deterministic review names. Each review entry keeps direct dossier/task/evidence lineage and separately displays `FACT`, `INFERENCE`, `DATA_GAP`, and `QUESTION_TO_VERIFY`; the prospective status remains `PENDING_FUTURE_OBSERVATION`.
+3. The 523 identical liquidity tasks are compressed into one deferred-blocker group with the exact affected population and per-task identities retained in the structured artifact. The 25 owner annotation schemas are deliberately unpopulated and separate from immutable research state.
+4. No AI, renderer, or owner-annotation contract may change deterministic queue membership, task status, factual authority, warnings, thesis/counter-thesis history, or create a recommendation, target, probability, execution, PIT, liquidity/sizing, share, valuation, provider-semantic, or official-source promotion.
+
 ## 2026-08-20 - Research Question Resolution & Evidence Tasking V1
 
 `RESEARCH_QUESTION_TASKING_V1 = READY_LOCAL` (`research_question_tasking.py`, `run_research_question_tasking.py`, `tests/test_research_question_tasking.py`, `push = NO`).
