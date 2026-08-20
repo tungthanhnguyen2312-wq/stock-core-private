@@ -1,0 +1,29 @@
+name: Feature request
+description: Propose a bounded improvement to Stock Lookup
+title: "[Feature]: "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What user, maintainer, or research problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the smallest useful change and its expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence / source semantics
+      description: If the proposal depends on market-data semantics, point-in-time behavior, or external sources, describe the available evidence and any unknowns.
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      description: What should explicitly remain out of scope?

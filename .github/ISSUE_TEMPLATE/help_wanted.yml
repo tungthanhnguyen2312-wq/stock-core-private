@@ -1,0 +1,19 @@
+name: Help / contribution idea
+description: Suggest a small, reviewable contribution or ask where help is useful
+title: "[Help]: "
+labels: []
+body:
+  - type: textarea
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repository are you interested in improving?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed contribution
+      description: Describe a small, bounded change you would like to make or ask the maintainer to help scope one.
+    validations:
+      required: true

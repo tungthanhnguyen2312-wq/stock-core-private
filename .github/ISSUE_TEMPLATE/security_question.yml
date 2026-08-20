@@ -1,0 +1,16 @@
+name: Security question (non-sensitive)
+description: Ask about the public security model without disclosing a vulnerability
+title: "[Security]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not disclose vulnerabilities, credentials, secrets, or sensitive reproduction details here. For vulnerability reports, follow SECURITY.md privately.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Ask only non-sensitive questions about the documented security model or contribution practices.
+    validations:
+      required: true

@@ -1,0 +1,19 @@
+name: Maintenance / technical debt
+description: Propose a bounded cleanup that improves maintainability without changing authority
+title: "[Maintenance]: "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Maintenance problem
+      description: Describe the duplication, drift, fragility, or developer-experience issue.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Safe boundary
+      description: What should remain behaviorally and semantically unchanged?
+    validations:
+      required: true

@@ -1,0 +1,19 @@
+name: Documentation improvement
+description: Report unclear, incomplete, or outdated developer documentation
+title: "[Docs]: "
+labels: []
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation location
+      description: Which file, section, or command needs improvement?
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is unclear or incorrect?
+      description: Explain the problem and, if possible, suggest a clearer wording or example.
+    validations:
+      required: true
