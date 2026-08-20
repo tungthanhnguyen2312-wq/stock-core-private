@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib, json
 from typing import Any, Mapping, Sequence
 
-TECHNICAL = ("close", "momentum_20d", "volatility_20d", "provider_relative_volume")
+TECHNICAL = ("close", "momentum_20d", "volatility_20d", "relative_volume_provider_scoped")
 SUPPORTED = frozenset(("CURRENT_OBSERVABLE_STATE", "RELATIVE_CONTEXT", "FUNDAMENTAL_EVIDENCE",
                        "RESEARCH_LENS_AVAILABILITY", "SCENARIO_COUNTER_THESIS", "EVIDENCE_QUALITY"))
 
@@ -25,7 +25,7 @@ def _cell(value: Any, authority: str, lineage: str, verdict: str = "COMPARABLE")
 def _technical(tickers: Sequence[str], daily: Mapping[str, Any]) -> list[dict[str, Any]]:
     rows=[]
     for metric in TECHNICAL:
-        cells={t:_cell(daily[t]["ai_ready_brief"]["facts"].get(metric), "DERIVED_PROXY" if metric=="provider_relative_volume" else "SHADOW_ONLY", f"daily_research.{t}.facts.{metric}", "MISSING_INPUT" if daily[t]["ai_ready_brief"]["facts"].get(metric) is None else "COMPARABLE") for t in tickers}
+        cells={t:_cell(daily[t]["ai_ready_brief"]["facts"].get(metric), "DERIVED_PROXY" if metric=="relative_volume_provider_scoped" else "SHADOW_ONLY", f"daily_research.{t}.facts.{metric}", "MISSING_INPUT" if daily[t]["ai_ready_brief"]["facts"].get(metric) is None else "COMPARABLE") for t in tickers}
         rows.append({"dimension":metric,"section":"CURRENT_OBSERVABLE_STATE","metric_identity":metric,"method":"retained_daily_research/v1","session":daily[tickers[0]]["ai_ready_brief"]["facts"]["session"],"unit":"VND" if metric=="close" else "DECIMAL_OR_STATE","cells":cells,"comparability":"COMPARABLE" if all(c["comparability"]=="COMPARABLE" for c in cells.values()) else "MISSING_INPUT"})
     trend={t:_cell(daily[t]["research_summary"]["trend_state"],"SHADOW_ONLY",f"daily_research.{t}.trend_state") for t in tickers}
     rows.append({"dimension":"trend_state","section":"CURRENT_OBSERVABLE_STATE","cells":trend,"comparability":"COMPARABLE"})
@@ -57,7 +57,7 @@ def _statements(tickers: Sequence[str], daily: Mapping[str, Any]) -> list[dict[s
                 relation="higher" if a>b else "lower"; out.append({"classification":"FACT","statement":f"{left} has {relation} {label} than {right}.","fields":[f"daily_research.{left}.facts.{metric}",f"daily_research.{right}.facts.{metric}"]})
     return out
 
-def build(request: Mapping[str, Any], *, product: Mapping[str, Any], relative: Mapping[str, Any], eligibility: Mapping[str, Any], scenarios: Mapping[str, Any], dossiers: Mapping[str, Any], tasks: Mapping[str, Any], events: Mapping[str, Any], screener: Mapping[str, Any], review_pack: Mapping[str, Any]) -> dict[str, Any]:
+def build(request: Mapping[str, Any], *, product: Mapping[str, Any], relative: Mapping[str, Any], eligibility: Mapping[str, Any], scenarios: Mapping[str, Any], dossiers: Mapping[str, Any], tasks: Mapping[str, Any], events: Mapping[str, Any], screener: Mapping[str, Any], review_pack: Mapping[str, Any], market_context: Mapping[str, Any]|None=None) -> dict[str, Any]:
     daily={x["ticker"]:x for x in product["stock_research"]}; tickers=validate_request(request,set(daily),product["daily_market_research"]["session"])
     contexts={x["ticker"]:x for x in relative["records"]}; lenses={x["ticker"]:x for x in eligibility["records"]}; scen={x["ticker"]:x for x in scenarios["scenarios"]}; ev={x["ticker"]:x for x in events["records"]}
     matrix=[]
@@ -70,7 +70,9 @@ def build(request: Mapping[str, Any], *, product: Mapping[str, Any], relative: M
         matrix.append({"dimension":"scenario_counter_thesis","section":"SCENARIO_COUNTER_THESIS","comparability":"COMPARABLE","cells":{t:_cell({"scenario_status":scen.get(t,{}).get("scenario_qualification_status","MISSING"),"counter_thesis":dossiers[t]["counter_thesis_hash"],"catalyst_status":ev[t]["catalyst_research_status"]},"RESEARCH_SHADOW",f"scenario_dossier_event.{t}","MISSING_INPUT" if t not in scen else "COMPARABLE") for t in tickers}})
     if "EVIDENCE_QUALITY" in dimensions:
         matrix.append({"dimension":"evidence_quality","section":"EVIDENCE_QUALITY","comparability":"COMPARABLE","cells":{t:_cell({"fundamental_authority":daily[t]["research_summary"]["fundamental_authority"],"warnings":daily[t]["warnings"],"open_task_count":sum(x["ticker"]==t for x in tasks.values())},daily[t]["research_summary"]["fundamental_authority"],f"dossier_task_daily.{t}") for t in tickers}})
-    sources={"daily_product":product["artifact_identity"],"relative":relative["artifact_identity"],"eligibility":eligibility["artifact_identity"],"scenario":scenarios["artifact_identity"],"event":events["artifact_identity"],"screener":screener["artifact_identity"],"review_pack":review_pack["artifact_identity"]}
+    if market_context:
+        matrix.append({"dimension":"shared_market_context","section":"MARKET_CONTEXT","comparability":"COMPARABLE","shared_context":True,"value":{"trend_descriptor":market_context['breadth']['trend']['descriptor']['descriptor'],"momentum_descriptor":market_context['breadth']['momentum']['descriptor']['descriptor'],"positive_trend_research_count":market_context['research_participation']['positive_trend_research_count'],"cohort_authority":market_context['cohort']['authority']},"authority_tier":"EMPIRICAL_ACTIVE_SHADOW_ONLY","evidence_lineage":market_context['artifact_identity']})
+    sources={"daily_product":product["artifact_identity"],"relative":relative["artifact_identity"],"eligibility":eligibility["artifact_identity"],"scenario":scenarios["artifact_identity"],"event":events["artifact_identity"],"screener":screener["artifact_identity"],"review_pack":review_pack["artifact_identity"],"market_context":market_context.get('artifact_identity') if market_context else None}
     output={"schema_version":"1.0.0","contract_version":"evidence_aware_candidate_comparison/v1","comparison_request":dict(request),"research_session":request["research_session"],"ordered_tickers":list(tickers),"source_artifact_identities":sources,"matrix":matrix,"pairwise_observable_statements":_statements(tickers,daily),"questions_requiring_human_judgment":["Evidence provenance and missing capability are not measures of company quality or investment attractiveness."],"authority_boundary":{"not_ranking_or_recommendation":True,"no_composite_score_or_winner":True,"no_mutation_of_source_artifacts":True,"historical_pit_liquidity_sizing_valuation":"NOT_PROMOTED"}}
     output["comparison_identity"]="candidate_comparison:"+_hash({"request":request,"sources":sources,"matrix":matrix}); output["output_identity"]="candidate_comparison_output:"+_hash(output)
     return output

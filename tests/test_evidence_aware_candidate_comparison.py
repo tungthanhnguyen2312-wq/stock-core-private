@@ -22,6 +22,7 @@ def test_real_pilots_are_deterministic_and_do_not_force_semantic_comparison():
     assert [item['output_identity'] for item in first] == [item['output_identity'] for item in second]
     assert len(first[0]['ordered_tickers']) == 25
     assert all(item['authority_boundary']['not_ranking_or_recommendation'] for item in first)
+    assert all(any(row['section'] == 'MARKET_CONTEXT' for row in item['matrix']) for item in first)
     for item in first:
         fundamental = next(row for row in item['matrix'] if row['dimension'] == 'individual_like_for_like_fundamental_values')
         assert fundamental['comparability'] == 'COMPARISON_UNAVAILABLE'
