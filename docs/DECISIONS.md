@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Persistent Research Dossier & Thesis Change Detection V1
+
+`PERSISTENT_RESEARCH_DOSSIER_V1 = READY_LOCAL` (`persistent_research_dossier.py`, `run_persistent_research_dossier.py`, `tests/test_persistent_research_dossier.py`, `push = NO`).
+
+1. The daily research product is now retained as immutable, per-ticker dossier versions. Each version binds the deterministic research state and source artifact identities to attention descriptors, authority tiers, thesis/counter-thesis hashes, open questions, data gaps, warnings, and evidence-field paths.
+2. Initial retained 2026-08-20 state is honestly `NEW_RESEARCH_STATE` for all 523 empirical-active records. The 25-name deterministic AI research queue is preserved as a human follow-up queue, with explicit queue-membership reason and no Buy/Sell interpretation.
+3. Comparing identical daily input to the retained versions yields 523 `NO_MATERIAL_CHANGE` outcomes. A changed future state can emit only named deterministic categories (`DETERMINISTIC_EVIDENCE_CHANGED`, attention, authority, data-gap, thesis, counter-thesis, question, and `HUMAN_REVIEW_REQUIRED`); this does not let AI rewrite past dossiers, decide authority, or judge a thesis true/false.
+4. No historical PIT/backtest, RAW_AS_TRADED, liquidity/sizing, current-share, valuation, recommendation, target, probability, or provider/official semantic authority was promoted. The next product prerequisite is a genuinely later exact-session daily observation, which may then be compared prospectively without fabricating history.
+
 ## 2026-08-20 - P3-F14 Generic Official Financial Source Discovery & Registry Expansion
 
 `P3F14_OFFICIAL_SOURCE_DISCOVERY = PARTIAL_LOCAL` (`official_financial_source_discovery.py`, `p3f14_official_financial_source_discovery.py`, `push = NO`).
