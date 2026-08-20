@@ -25,7 +25,11 @@ def build(product:Mapping[str,Any], context:Mapping[str,Any], scenarios:Mapping[
   trend_ok=all(f.get(k) is not None for k in ('close','momentum_20d','volatility_20d')) and r['research_summary']['trend_state'] is not None
   lenses={
    'TREND_MOMENTUM_RESEARCH':_v('TREND_MOMENTUM_RESEARCH','ELIGIBLE' if trend_ok else 'UNAVAILABLE','SHADOW_ONLY',[] if trend_ok else ['TECHNICAL_INPUT_MISSING'],{'exact_session':f.get('session'),'trend_state':r['research_summary']['trend_state']}),
-   'RELATIVE_TECHNICAL_RESEARCH':_v('RELATIVE_TECHNICAL_RESEARCH','ELIGIBLE' if c['context_status']=='AVAILABLE' else 'BLOCKED','SHADOW_ONLY',[] if c['context_status']=='AVAILABLE' else ['QUALIFIED_COMPARISON_COHORT_UNAVAILABLE'],{'relative_context_status':c['context_status'],'cohort_identity':c['cohort']['cohort_identity'] if c['cohort'] else None}),
+   'RELATIVE_TECHNICAL_RESEARCH':_v('RELATIVE_TECHNICAL_RESEARCH',
+      'ELIGIBLE' if c['context_status']=='AVAILABLE' and c.get('relative_context_authority')=='QUALIFIED_CLASSIFICATION' else
+      'ELIGIBLE_LOWER_AUTHORITY' if c['context_status']=='AVAILABLE' and c.get('relative_context_authority')=='PROVIDER_DESCRIPTIVE_CLASSIFICATION' else 'BLOCKED',
+      'SHADOW_ONLY', [] if c['context_status']=='AVAILABLE' else ['QUALIFIED_COMPARISON_COHORT_UNAVAILABLE'],
+      {'relative_context_status':c['context_status'],'relative_context_authority':c.get('relative_context_authority','UNAVAILABLE'),'cohort_identity':c['cohort']['cohort_identity'] if c['cohort'] else None}),
    'DESCRIPTIVE_FUNDAMENTAL_RESEARCH':_v('DESCRIPTIVE_FUNDAMENTAL_RESEARCH','ELIGIBLE' if a=='OFFICIAL_QUALIFIED' else 'ELIGIBLE_LOWER_AUTHORITY' if a=='PROVIDER_RESEARCH' else 'UNAVAILABLE',a,['PROVIDER_FUNDAMENTALS_DESCRIPTIVE_ONLY'] if a=='PROVIDER_RESEARCH' else [],{'fundamental_authority':a}),
    'OFFICIAL_FUNDAMENTAL_RESEARCH':_v('OFFICIAL_FUNDAMENTAL_RESEARCH','ELIGIBLE' if a=='OFFICIAL_QUALIFIED' else 'UNAVAILABLE','OFFICIAL_QUALIFIED',[] if a=='OFFICIAL_QUALIFIED' else ['OFFICIAL_QUALIFIED_FUNDAMENTAL_CONTEXT_MISSING'],{'fundamental_authority':a}),
    'SCENARIO_RESEARCH':_v('SCENARIO_RESEARCH','PARTIAL' if s else 'UNAVAILABLE','RESEARCH_SHADOW',['SCENARIO_PARTIAL_EVIDENCE_BOUND'] if s else ['SCENARIO_OBJECT_NOT_RETAINED'],{'scenario_identity':s['scenario_content_identity'] if s else None}),

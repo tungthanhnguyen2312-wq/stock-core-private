@@ -19,3 +19,23 @@ def test_relative_context_is_deterministic_and_preserves_cohort_and_review_linea
             else:
                 assert metric["missing_or_exclusion_reason"]
     assert first["authority_boundary"]["ranking"] == "NOT_EMITTED"
+
+
+def test_provider_descriptive_classification_is_source_local_and_never_promoted():
+    context, overlay = run()
+    coverage = context["coverage"]
+    assert coverage["qualified_classification_count"] == 33
+    assert coverage["provider_descriptive_classification_count"] == 490
+    assert coverage["qualified_relative_context_available_count"] == 27
+    assert coverage["provider_descriptive_relative_context_available_count"] == 486
+    provider = [row for row in context["records"]
+                if row.get("relative_context_authority") == "PROVIDER_DESCRIPTIVE_CLASSIFICATION"]
+    assert len(provider) == 486
+    for row in provider:
+        classification = row["classification"]
+        assert classification["classification_authority"] == "PROVIDER_DESCRIPTIVE_CLASSIFICATION"
+        assert classification["source_provider"] == "VCI"
+        assert classification["classification_namespace"] == "VCI.symbols_by_industries/retained-20260728"
+        assert row["cohort"]["member_count"] >= 5
+    assert sum(x["relative_context_authority"] == "PROVIDER_DESCRIPTIVE_CLASSIFICATION"
+               for x in overlay["review_entries"]) == 18

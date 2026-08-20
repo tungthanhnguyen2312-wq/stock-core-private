@@ -44,6 +44,36 @@ def load_qualified_entity_classes(root: Path) -> dict[str, dict[str, Any]]:
     return classes
 
 
+def load_provider_descriptive_industry_classes(root: Path,
+                                               qualified: Mapping[str, Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Read a retained VCI taxonomy as descriptive-only, never as qualified identity."""
+    snapshot = root / "registry_snapshots/metadata/vnstock_metadata_snapshot_20260728T122548Z_16fe54ee3497.jsonl"
+    provider = "vnstock:Listing(source=VCI).symbols_by_industries"
+    candidates: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for line in snapshot.read_text(encoding="utf-8").splitlines():
+        row = json.loads(line)
+        if row.get("provider") == provider and row.get("field") == "industry" and isinstance(row.get("value"), str) and row["value"].strip():
+            candidates[str(row.get("ticker") or "").upper()].append(row)
+    classes: dict[str, dict[str, Any]] = {}
+    for ticker, rows in candidates.items():
+        if ticker in qualified:
+            continue
+        labels = {" ".join(str(row["value"]).split()) for row in rows}
+        if len(labels) != 1:
+            continue  # same-source disagreement fails closed
+        row = rows[0]
+        raw_label = next(iter(labels))
+        classes[ticker] = {"raw_label": raw_label, "safe_normalized_label": raw_label.casefold(),
+                           "classification_namespace": "VCI.symbols_by_industries/retained-20260728",
+                           "classification_level": "PROVIDER_INDUSTRY",
+                           "classification_authority": "PROVIDER_DESCRIPTIVE_CLASSIFICATION",
+                           "source_provider": "VCI", "source_artifact": snapshot.name,
+                           "as_of": row["timestamps"]["observed_at"],
+                           "provider_qualification_status": row.get("qualification_status"),
+                           "conflict_or_missing_reason": None}
+    return classes
+
+
 def _bucket(percentile: float) -> str:
     if percentile < .25:
         return "LOWER_QUARTILE"
@@ -101,46 +131,54 @@ def _trend_context(subject: Mapping[str, Any], peers: list[Mapping[str, Any]], c
 def build(product: Mapping[str, Any], dossiers: Mapping[str, Mapping[str, Any]],
           classifications: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     records = []
-    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    grouped: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     for record in product["stock_research"]:
         ticker = record["ticker"]
         classification = classifications.get(ticker)
         normalized = {"ticker": ticker, "facts": record["ai_ready_brief"]["facts"],
                       "trend_state": record["research_summary"]["trend_state"], "classification": classification}
         if classification:
-            grouped[classification["entity_class"]].append(normalized)
+            key = (classification.get("classification_authority", "QUALIFIED_CLASSIFICATION"),
+                   classification.get("classification_namespace", "QUALIFIED_ENTITY_CLASS"),
+                   classification.get("entity_class") or classification.get("safe_normalized_label"))
+            grouped[key].append(normalized)
         records.append(normalized)
     cohorts: dict[str, dict[str, Any]] = {}
-    for entity_class, members in grouped.items():
+    for key, members in grouped.items():
+        authority, namespace, label = key
         tickers = sorted(member["ticker"] for member in members)
-        cohort = {"cohort_type": "QUALIFIED_ENTITY_CLASS_ARCHETYPE", "entity_class": entity_class,
+        cohort = {"cohort_type": "QUALIFIED_ENTITY_CLASS_ARCHETYPE" if authority == "QUALIFIED_CLASSIFICATION" else "PROVIDER_DESCRIPTIVE_INDUSTRY",
+                  "classification_authority": authority, "classification_namespace": namespace, "classification_label": label,
                   "research_session": product["daily_market_research"]["session"], "member_count": len(members),
                   "member_tickers": tickers, "minimum_member_requirement": MIN_COHORT_MEMBERS,
                   "status": "AVAILABLE" if len(members) >= MIN_COHORT_MEMBERS else "UNAVAILABLE_INSUFFICIENT_MEMBERS"}
         cohort["cohort_identity"] = "sector_relative_cohort:" + _hash(cohort)
-        cohorts[entity_class] = cohort
+        cohorts["|".join(key)] = cohort
     contexts = []
     for subject in sorted(records, key=lambda row: row["ticker"]):
         classification = subject["classification"]
         base = {"ticker": subject["ticker"], "research_session": subject["facts"]["session"],
                 "dossier_identity": dossiers[subject["ticker"]]["dossier_identity"],
-                "classification": classification or {"status": "UNAVAILABLE", "reason": "NO_QUALIFIED_ENTITY_CLASS"},
+                "classification": classification or {"status": "UNAVAILABLE", "reason": "NO_CLASSIFICATION_AVAILABLE"},
                 "fundamental_relative_context": {"status": "UNAVAILABLE", "reason": "NO_INDIVIDUAL_LIKE_FOR_LIKE_FUNDAMENTAL_METRIC_RETAINED_IN_DAILY_RESEARCH"}}
         if not classification:
-            reason = "NO_QUALIFIED_ENTITY_CLASS"
+            reason = "NO_CLASSIFICATION_AVAILABLE"
             base.update({"context_status": "UNAVAILABLE", "cohort": None,
                          "relative_metrics": [_unavailable(metric, reason, authority) for metric, authority in NUMERIC_METRICS] +
                                              [_unavailable("trend_state", reason, "SHADOW_ONLY")]})
         else:
-            cohort = cohorts[classification["entity_class"]]
+            key = (classification.get("classification_authority", "QUALIFIED_CLASSIFICATION"),
+                   classification.get("classification_namespace", "QUALIFIED_ENTITY_CLASS"),
+                   classification.get("entity_class") or classification.get("safe_normalized_label"))
+            cohort = cohorts["|".join(key)]
             if cohort["status"] != "AVAILABLE":
-                reason = "QUALIFIED_ARCHETYPE_COHORT_TOO_SMALL"
+                reason = "QUALIFIED_ARCHETYPE_COHORT_TOO_SMALL" if cohort["classification_authority"] == "QUALIFIED_CLASSIFICATION" else "PROVIDER_DESCRIPTIVE_COHORT_TOO_SMALL"
                 base.update({"context_status": "UNAVAILABLE", "cohort": cohort,
                              "relative_metrics": [_unavailable(metric, reason, authority) for metric, authority in NUMERIC_METRICS] +
                                                  [_unavailable("trend_state", reason, "SHADOW_ONLY")]})
             else:
-                peers = grouped[classification["entity_class"]]
-                base.update({"context_status": "AVAILABLE", "cohort": cohort,
+                peers = grouped[key]
+                base.update({"context_status": "AVAILABLE", "relative_context_authority": cohort["classification_authority"], "cohort": cohort,
                              "relative_metrics": [_numeric_context(metric, authority, subject, peers, cohort) for metric, authority in NUMERIC_METRICS] +
                                                  [_trend_context(subject, peers, cohort)]})
         contexts.append(base)
@@ -151,7 +189,10 @@ def build(product: Mapping[str, Any], dossiers: Mapping[str, Mapping[str, Any]],
                                                 "classification_collection": "qualified_entity_classes:" + _hash(classifications)},
                 "cohorts": cohorts, "records": contexts,
                 "coverage": {"full_cohort_records": len(contexts), "qualified_classification_count": sum(context["classification"].get("entity_class") is not None for context in contexts),
-                             "relative_context_available_count": sum(context["context_status"] == "AVAILABLE" for context in contexts),
+                              "provider_descriptive_classification_count": sum(context["classification"].get("classification_authority") == "PROVIDER_DESCRIPTIVE_CLASSIFICATION" for context in contexts),
+                              "relative_context_available_count": sum(context["context_status"] == "AVAILABLE" for context in contexts),
+                              "qualified_relative_context_available_count": sum(context["context_status"] == "AVAILABLE" and context.get("relative_context_authority") == "QUALIFIED_CLASSIFICATION" for context in contexts),
+                              "provider_descriptive_relative_context_available_count": sum(context["context_status"] == "AVAILABLE" and context.get("relative_context_authority") == "PROVIDER_DESCRIPTIVE_CLASSIFICATION" for context in contexts),
                              "relative_context_unavailable_count": sum(context["context_status"] != "AVAILABLE" for context in contexts),
                              "available_metric_count": available_metrics,
                              "unavailable_fundamental_relative_count": len(contexts)},
@@ -170,7 +211,8 @@ def review_pack_overlay(review_pack: Mapping[str, Any], context: Mapping[str, An
         record = by_ticker[review["ticker"]]
         available = [metric for metric in record["relative_metrics"] if metric["status"] == "AVAILABLE"]
         entries.append({"ticker": review["ticker"], "dossier_identity": review["dossier_identity"],
-                        "relative_context_status": record["context_status"], "relative_metrics": available,
+                        "relative_context_status": record["context_status"], "relative_context_authority": record.get("relative_context_authority", "UNAVAILABLE"),
+                        "classification": record["classification"], "relative_metrics": available,
                         "unavailable_metric_reasons": [metric["missing_or_exclusion_reason"] for metric in record["relative_metrics"] if metric["status"] == "UNAVAILABLE"],
                         "source_lineage": {"review_pack": review_pack["artifact_identity"], "relative_context": context["artifact_identity"]}})
     overlay = {"schema_version": "1.0.0", "contract_version": "sector_relative_review_pack_overlay/v1",
@@ -188,9 +230,9 @@ def markdown_overlay(overlay: Mapping[str, Any]) -> str:
         lines.append(f"## {entry['ticker']}")
         for metric in entry["relative_metrics"]:
             if metric["metric_identity"] == "trend_state":
-                lines.append(f"- FACT: trend state matches {metric['matching_peer_count']}/{metric['valid_observation_count']} qualified-archetype peers.")
+                lines.append(f"- FACT: trend state matches {metric['matching_peer_count']}/{metric['valid_observation_count']} peers ({entry['relative_context_authority']}).")
             else:
-                lines.append(f"- FACT: {metric['metric_identity']} is {metric['descriptive_bucket']} within the retained qualified-archetype cohort (n={metric['valid_observation_count']}).")
+                lines.append(f"- FACT: {metric['metric_identity']} is {metric['descriptive_bucket']} within the retained cohort (n={metric['valid_observation_count']}; {entry['relative_context_authority']}).")
         if not entry["relative_metrics"]:
             lines.append(f"- DATA_GAP: relative context unavailable ({', '.join(sorted(set(entry['unavailable_metric_reasons'])))}).")
     return "\n".join(lines) + "\n"
