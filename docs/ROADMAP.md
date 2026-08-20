@@ -77,7 +77,9 @@ Execution focus strictly follows the ordered critical path:
 15. **Phase 2-D Generic Financial Statement Template Recognition & Extraction Contract** — **COMPLETE LOCALLY** (`financial_statement_template_recognizer.py`, `p2d_generic_onboarding_report.json`).
 16. **Phase 2-E Evidence-Backed Entity Classification Scale-Out Foundation** — **COMPLETE LOCALLY** (`evidence_backed_entity_classifier.py`, `p2e_entity_classification_artifact.json`).
 18. **Phase 2-F1 Sector Financial Taxonomy & Disclosure Parsing Foundation** — **COMPLETE LOCALLY** (`sector_financial_taxonomy.py`, `financial_disclosure_recognizer.py`, `p2f1_sector_financial_taxonomy_artifact.json`).
-19. **Phase 2-F2 Sector Financial Authority Promotion Review & Integration** — **NEXT PRODUCT MILESTONE**.
+19. **Phase 2-F2 Sector Financial Authority Promotion Review** — **COMPLETE LOCALLY** (`P2F2_PROMOTION_RECOMMENDED`).
+20. **Phase 2-F3 Bounded Generic Sector Extraction Authority Promotion** — **COMPLETE LOCALLY** (`config/promoted_sector_extractions.json`, `p2f3_sector_extraction_promotion_artifact.json`).
+21. **Phase 2 Closeout & Market-Wide Financial Fact Panel Integration** — **NEXT PRODUCT MILESTONE**.
 
 ---
 

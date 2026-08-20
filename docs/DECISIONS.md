@@ -10,6 +10,30 @@
 
 ## Active & Recent Decision Records (2026-08-19 to Present)
 
+## 2026-08-20 - Phase 2-F3 Bounded Generic Sector Extraction Authority Promotion Complete
+
+`P2F3_BOUNDED_GENERIC_SECTOR_EXTRACTION_PROMOTION = COMPLETE_LOCAL` (`config/promoted_sector_extractions.json`, `sector_financial_taxonomy.py`, `generic_financial_canonicalizer.py`, `tools/run_p2f3_sector_extraction_promotion.py`, `tests/test_sector_extraction_promotion.py`, `push = NO`).
+
+1. **Owner-Authorized Bounded Promotion**:
+   - Promoted the generic sector taxonomy extraction path strictly for the proven real-data scopes:
+     - **BANK**: Bounded strictly to VCB FY2024 consolidated audited statements (`9deccc3518e23302d00353b4d371a9dd251b67b12f9fe58a4da4ad3c727e99f8`), Circular 49/2014/TT-NHNN, 15 authoritative facts.
+     - **SECURITIES**: Bounded strictly to SSI FY2024 consolidated audited statements (`38e5b9ba2fc951120be813b09df05fa2d8b152b3b95443c6cd108de8abf03b74`), Circular 334/2016/TT-BTC, 16 authoritative facts.
+   - Declarative registry persisted in `config/promoted_sector_extractions.json` (`p2f3_sector_extraction_promotion:1b0a94b7f0c0e9ea00948b3f3f6370152d7681535d64f3069099cf26fa1f2eff`).
+
+2. **Explicit Layered Precedence & Reconciliation Contract**:
+   - Precedence: `GENERIC_QUALIFIED_SECTOR_FACT` > `SPECIALIZED_LEGACY_RECORD` > `UNKNOWN`.
+   - Legacy specialized implementations (`test_vcb_banking_identity_qualification.py`, `ssi_official_financial_materialization.py`) preserved as reference corroboration and regression authority.
+   - `generic_financial_canonicalizer.py` updated: `ssi_official_financial_materialization.py` transitioned to role `GENERICALLY_SUPERSEDED` and status `SUPERSEDED_BY_GENERIC_SECTOR_TAXONOMY_RETAINED_FOR_REFERENCE`.
+   - Disagreement between generic and specialized evidence fails closed as `CONFLICT` (positive authority denied, value suppressed).
+
+3. **Strict Boundary Gating**:
+   - Insurance (`BVH`) and Finance Company (`EVF`) extraction attempts fail closed as `UNPROMOTED_SECTOR` (`SCHEMA_SUPPORTED_BUT_NOT_REAL_DATA_VALIDATED`).
+   - Additional bank tickers (`ABB`, `ACB`) and securities tickers (`AAS`, `ABW`) fail closed as `UNPROMOTED_ISSUER`.
+   - Unclassified listed equities (1,620 tickers) fail closed as `UNRESOLVED_ENTITY_CLASS`.
+   - Historical PIT entity-classification authority remains `NOT_ESTABLISHED`.
+   - `config/ticker_entity_profiles.csv` (20 seed records) and `config/promoted_entity_classifications.json` (20 promoted records) remain 100% unmutated.
+   - `TICKER_SPECIFIC_SECTOR_EXTRACTION_BRANCH_COUNT = 0`.
+
 ## 2026-08-19 - Phase 2-F1 Sector Financial Taxonomy & Disclosure Parsing Foundation Complete
 
 `P2F1_SECTOR_FINANCIAL_TAXONOMY_FOUNDATION = COMPLETE_LOCAL` (`sector_financial_taxonomy.py`, `financial_disclosure_recognizer.py`, `tools/run_p2f1_sector_financial_taxonomy.py`, `tests/test_sector_financial_taxonomy.py`, `push = NO`).

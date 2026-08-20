@@ -134,7 +134,7 @@ class TestGenericFinancialCanonicalizer(unittest.TestCase):
         roles = classify_legacy_materializers()
         self.assertIn("fpt_fy2025_official_financial_materialization.py", roles)
         self.assertEqual(roles["fpt_fy2025_official_financial_materialization.py"]["role"], LegacyModuleRole.GENERICALLY_SUPERSEDED.value)
-        self.assertEqual(roles["ssi_official_financial_materialization.py"]["role"], LegacyModuleRole.SECTOR_SPECIALIZED.value)
+        self.assertEqual(roles["ssi_official_financial_materialization.py"]["role"], LegacyModuleRole.GENERICALLY_SUPERSEDED.value)
         self.assertEqual(roles["annual_financial_ocr_materialization.py"]["role"], LegacyModuleRole.GENERIC_EXTRACTION_ENGINE.value)
 
     def test_generic_canonicalization_execution_and_hashing(self):

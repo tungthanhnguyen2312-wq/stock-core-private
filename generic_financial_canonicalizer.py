@@ -425,9 +425,9 @@ def classify_legacy_materializers() -> dict[str, dict[str, Any]]:
             "migration_status": "HISTORICAL_RECOVERY_RETAINED_FOR_REFERENCE",
         },
         "ssi_official_financial_materialization.py": {
-            "role": LegacyModuleRole.SECTOR_SPECIALIZED.value,
-            "reason": "Securities intermediary current liabilities and sector semantics require specialized non-corporate handling.",
-            "migration_status": "RETAINED_SECTOR_SPECIALIZED",
+            "role": LegacyModuleRole.GENERICALLY_SUPERSEDED.value,
+            "reason": "Securities intermediary current liabilities and sector disclosures are fully represented under generic sector taxonomy extraction (sector_financial_taxonomy.py); retained for reference and regression.",
+            "migration_status": "SUPERSEDED_BY_GENERIC_SECTOR_TAXONOMY_RETAINED_FOR_REFERENCE",
         },
         "annual_financial_ocr_materialization.py": {
             "role": LegacyModuleRole.GENERIC_EXTRACTION_ENGINE.value,

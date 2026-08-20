@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "sector_financial_taxonomy/v1",
+  "authority_type": "PROMOTED_SECTOR_EXTRACTION_REGISTRY",
+  "authority_scope": "BOUNDED_PROOF_CORPUS_ONLY",
+  "historical_pit_authority": "NOT_ESTABLISHED",
+  "source_artifact_id": "p2f1_sector_financial_taxonomy:02f1afdf74a11cd93dda87d7bc232a6aa6ee7cfa1e3eb0cfb8d22d00a903eb18",
+  "source_artifact_hash": "02f1afdf74a11cd93dda87d7bc232a6aa6ee7cfa1e3eb0cfb8d22d00a903eb18",
+  "promoted_at": "2026-08-20T10:15:00.000000+00:00",
+  "promoted_sectors": {
+    "bank": {
+      "proof_ticker": "VCB",
+      "reporting_period": "2024",
+      "statement_scope": "consolidated",
+      "document_sha256": "9deccc3518e23302d00353b4d371a9dd251b67b12f9fe58a4da4ad3c727e99f8",
+      "form_family": "circular_49_2014_nhnn",
+      "qualification_state": "QUALIFIED",
+      "promoted_fact_count": 15,
+      "promoted_metrics": [
+        "customer_loans_net",
+        "total_assets",
+        "customer_deposits",
+        "total_liabilities",
+        "total_equity",
+        "minority_interest",
+        "interest_income",
+        "interest_expense",
+        "net_interest_income",
+        "operating_expenses",
+        "operating_profit_before_provision_for_credit_losses",
+        "provision_for_credit_losses",
+        "profit_before_tax",
+        "net_profit_total",
+        "net_profit_parent"
+      ]
+    },
+    "securities": {
+      "proof_ticker": "SSI",
+      "reporting_period": "2024",
+      "statement_scope": "consolidated",
+      "document_sha256": "38e5b9ba2fc951120be813b09df05fa2d8b152b3b95443c6cd108de8abf03b74",
+      "form_family": "circular_334_2016_btc",
+      "qualification_state": "QUALIFIED",
+      "promoted_fact_count": 16,
+      "promoted_metrics": [
+        "financial_assets_fvtpl",
+        "loans_balance",
+        "total_assets",
+        "current_liabilities",
+        "short_term_borrowings_and_financial_leases",
+        "total_equity",
+        "share_capital",
+        "total_operating_revenue",
+        "brokerage_revenue",
+        "fvtpl_gain",
+        "fvtpl_loss",
+        "borrowing_costs",
+        "profit_after_tax_total",
+        "profit_after_tax_parent",
+        "basic_eps",
+        "period_end_outstanding_ordinary_shares"
+      ]
+    }
+  },
+  "unpromoted_sectors": {
+    "insurance": {
+      "status": "SCHEMA_SUPPORTED_BUT_NOT_REAL_DATA_VALIDATED",
+      "reason": "Schema definitions only; zero real proof filings retained or authorized"
+    },
+    "finance_company": {
+      "status": "SCHEMA_SUPPORTED_BUT_NOT_REAL_DATA_VALIDATED",
+      "reason": "Schema definitions only; zero real proof filings retained or authorized"
+    }
+  }
+}

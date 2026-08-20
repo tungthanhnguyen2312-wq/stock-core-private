@@ -25,10 +25,14 @@ from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 import hashlib
 import json
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 import unicodedata
 
-from entity_classification_contract import EntityClass
+from entity_classification_contract import (
+    EntityClass,
+    resolve_layered_entity_classification,
+)
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "sector_financial_taxonomy/v1"
@@ -54,6 +58,73 @@ class MetricApplicabilityState(StrEnum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
     UNSUPPORTED_SECTOR_METRIC = "UNSUPPORTED_SECTOR_METRIC"
     UNKNOWN_ENTITY_CLASS = "UNKNOWN_ENTITY_CLASS"
+
+
+class SectorAuthorityTier(StrEnum):
+    GENERIC_SECTOR_TAXONOMY_PROMOTED = "generic_sector_taxonomy_promoted"
+    SPECIALIZED_REFERENCE_CORROBORATION = "specialized_reference_corroboration"
+    UNPROMOTED_SHADOW = "unpromoted_shadow"
+    CONFLICT_UNRESOLVED = "conflict_unresolved"
+
+
+class PromotedScopeEvaluationState(StrEnum):
+    PROMOTED_PROOF_SCOPE = "PROMOTED_PROOF_SCOPE"
+    UNPROMOTED_SECTOR = "UNPROMOTED_SECTOR"
+    UNPROMOTED_ISSUER = "UNPROMOTED_ISSUER"
+    UNPROMOTED_PERIOD_OR_SCOPE = "UNPROMOTED_PERIOD_OR_SCOPE"
+    UNRESOLVED_ENTITY_CLASS = "UNRESOLVED_ENTITY_CLASS"
+
+
+class ReconciliationStatus(StrEnum):
+    EXACT_MATCH = "EXACT_MATCH"
+    GENERIC_EVIDENCED_PROMOTED = "GENERIC_EVIDENCED_PROMOTED"
+    CONFLICT = "CONFLICT"
+    UNPROMOTED = "UNPROMOTED"
+
+
+@dataclass(frozen=True)
+class AuthoritativeSectorFact:
+    """One authoritative sector financial fact after explicit proof scope gating and reconciliation."""
+    issuer_identity: str
+    ticker: str
+    entity_class: EntityClass
+    canonical_metric: str
+    reporting_period: str
+    statement_scope: str
+    value: int | float | None
+    currency: str
+    unit_scale: int
+    authority_tier: SectorAuthorityTier
+    reconciliation_status: ReconciliationStatus
+    citation_id: str
+    document_sha256: str
+    source_page: int
+    note_number: str | None
+    specialized_corroboration: bool
+    is_positive_authority: bool
+    reason_codes: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "issuer_identity": self.issuer_identity,
+            "ticker": self.ticker,
+            "entity_class": self.entity_class.value,
+            "canonical_metric": self.canonical_metric,
+            "reporting_period": self.reporting_period,
+            "statement_scope": self.statement_scope,
+            "value": self.value,
+            "currency": self.currency,
+            "unit_scale": self.unit_scale,
+            "authority_tier": self.authority_tier.value,
+            "reconciliation_status": self.reconciliation_status.value,
+            "citation_id": self.citation_id,
+            "document_sha256": self.document_sha256,
+            "source_page": self.source_page,
+            "note_number": self.note_number,
+            "specialized_corroboration": self.specialized_corroboration,
+            "is_positive_authority": self.is_positive_authority,
+            "reason_codes": list(self.reason_codes),
+        }
 
 
 @dataclass(frozen=True)
@@ -1112,3 +1183,238 @@ def evaluate_metric_sector_applicability(
         reason_codes=(f"UNSUPPORTED_SECTOR_METRIC_FOR_{e_class.value.upper()}",),
         is_ordinary_corporate_metric=False,
     )
+
+
+def load_promoted_sector_extractions(config_path: Path | None = None) -> dict[str, Any]:
+    """Load promoted sector extraction registry config."""
+    if config_path is None:
+        config_path = Path(__file__).resolve().parent / "config" / "promoted_sector_extractions.json"
+    if not config_path.is_file():
+        return {}
+    return json.loads(config_path.read_text(encoding="utf-8"))
+
+
+def evaluate_sector_extraction_authority_scope(
+    *,
+    ticker: str,
+    entity_class: EntityClass | str,
+    reporting_period: str = "2024",
+    statement_scope: str = "consolidated",
+    document_sha256: str = "",
+    config_path: Path | None = None,
+) -> tuple[PromotedScopeEvaluationState, str]:
+    """Evaluate whether a candidate sector extraction is within the owner-promoted proof scope.
+
+    Enforces:
+    1. Entity classification must resolve to positive authority (Layered Topology B).
+    2. Sector must be real-data validated (bank, securities); insurance and finance company fail closed.
+    3. Ticker, period, scope, and document SHA must match the promoted scope manifest.
+    4. Ticker-specific production branching is 0: evaluation reads from promoted manifest.
+    """
+    clean_sym = str(ticker).strip().upper()
+    layered_res = resolve_layered_entity_classification(clean_sym)
+    if not layered_res.is_positive_authority or layered_res.resolved_entity_class == EntityClass.UNKNOWN:
+        return (
+            PromotedScopeEvaluationState.UNRESOLVED_ENTITY_CLASS,
+            f"Entity class unresolved ({layered_res.resolved_entity_class.value}); extraction fails closed",
+        )
+
+    e_class = layered_res.resolved_entity_class
+    if e_class.value in SCHEMA_ONLY_SECTORS:
+        return (
+            PromotedScopeEvaluationState.UNPROMOTED_SECTOR,
+            f"Sector {e_class.value} is schema-only; real-data proof not authorized",
+        )
+
+    registry = load_promoted_sector_extractions(config_path)
+    promoted_sectors = registry.get("promoted_sectors", {})
+    sector_conf = promoted_sectors.get(e_class.value)
+
+    if not sector_conf:
+        return (
+            PromotedScopeEvaluationState.UNPROMOTED_SECTOR,
+            f"Sector {e_class.value} has no promoted extraction scope",
+        )
+
+    if clean_sym != sector_conf.get("proof_ticker"):
+        return (
+            PromotedScopeEvaluationState.UNPROMOTED_ISSUER,
+            f"Issuer {clean_sym} is not the promoted proof ticker ({sector_conf.get('proof_ticker')}) for sector {e_class.value}",
+        )
+
+    if (
+        str(reporting_period) != str(sector_conf.get("reporting_period"))
+        or str(statement_scope).lower() != str(sector_conf.get("statement_scope")).lower()
+    ):
+        return (
+            PromotedScopeEvaluationState.UNPROMOTED_PERIOD_OR_SCOPE,
+            f"Period {reporting_period} or scope {statement_scope} is not promoted",
+        )
+
+    if (
+        document_sha256
+        and sector_conf.get("document_sha256")
+        and document_sha256 != sector_conf.get("document_sha256")
+    ):
+        return (
+            PromotedScopeEvaluationState.UNPROMOTED_PERIOD_OR_SCOPE,
+            "Document SHA-256 does not match promoted proof document",
+        )
+
+    return (
+        PromotedScopeEvaluationState.PROMOTED_PROOF_SCOPE,
+        f"Promoted proof scope authorized for {clean_sym} ({e_class.value})",
+    )
+
+
+def reconcile_and_resolve_authoritative_sector_facts(
+    *,
+    generic_facts: Sequence[Any],
+    specialized_observations: Mapping[str, int | float] | None = None,
+    config_path: Path | None = None,
+) -> list[AuthoritativeSectorFact]:
+    """Reconcile generic sector extracted facts against specialized legacy evidence and resolve authority.
+
+    Guarantees:
+    1. Positive authority is granted ONLY for promoted proof scopes (VCB bank FY2024, SSI securities FY2024).
+    2. Overlaps with legacy specialized facts are compared:
+       - Match -> EXACT_MATCH, positive authority granted, specialized recorded as reference corroboration.
+       - Disagreement -> CONFLICT, value suppressed (None), positive authority denied (fails closed).
+    3. Facts without specialized overlap but within promoted scope -> GENERIC_EVIDENCED_PROMOTED, positive authority granted.
+    4. Unpromoted scopes / tickers -> UNPROMOTED, positive authority denied.
+    """
+    specialized = dict(specialized_observations or {})
+    resolved_facts: list[AuthoritativeSectorFact] = []
+
+    for f in generic_facts:
+        sym = str(getattr(f, "issuer_identity", "") or "").upper()
+        metric = str(getattr(f, "normalized_metric", "") or "")
+        period = str(getattr(f, "reporting_period", "2024") or "2024")
+        scope = str(getattr(f, "statement_scope", "consolidated") or "consolidated")
+        doc_sha = str(getattr(f, "document_sha256", "") or "")
+        val = getattr(f, "value", None)
+        curr = str(getattr(f, "currency", "VND") or "VND")
+        scale = int(getattr(f, "unit_scale", 1) or 1)
+        cit_id = str(getattr(f, "citation_id", "") or "")
+        page = int(getattr(f, "source_page", 0) or 0)
+        note_num = getattr(f, "note_number", None)
+        e_class_str = str(getattr(f, "entity_class", "") or "").lower()
+
+        try:
+            e_class = EntityClass(e_class_str)
+        except ValueError:
+            e_class = EntityClass.UNKNOWN
+
+        scope_state, scope_msg = evaluate_sector_extraction_authority_scope(
+            ticker=sym,
+            entity_class=e_class,
+            reporting_period=period,
+            statement_scope=scope,
+            document_sha256=doc_sha,
+            config_path=config_path,
+        )
+
+        if scope_state != PromotedScopeEvaluationState.PROMOTED_PROOF_SCOPE:
+            resolved_facts.append(
+                AuthoritativeSectorFact(
+                    issuer_identity=sym,
+                    ticker=sym,
+                    entity_class=e_class,
+                    canonical_metric=metric,
+                    reporting_period=period,
+                    statement_scope=scope,
+                    value=None,
+                    currency=curr,
+                    unit_scale=scale,
+                    authority_tier=SectorAuthorityTier.UNPROMOTED_SHADOW,
+                    reconciliation_status=ReconciliationStatus.UNPROMOTED,
+                    citation_id=cit_id,
+                    document_sha256=doc_sha,
+                    source_page=page,
+                    note_number=note_num,
+                    specialized_corroboration=False,
+                    is_positive_authority=False,
+                    reason_codes=(scope_msg,),
+                )
+            )
+            continue
+
+        # Check if specialized value exists for this metric
+        spec_val = specialized.get(metric)
+        if spec_val is not None:
+            # Reconcile values
+            if val is not None and val == spec_val:
+                resolved_facts.append(
+                    AuthoritativeSectorFact(
+                        issuer_identity=sym,
+                        ticker=sym,
+                        entity_class=e_class,
+                        canonical_metric=metric,
+                        reporting_period=period,
+                        statement_scope=scope,
+                        value=val,
+                        currency=curr,
+                        unit_scale=scale,
+                        authority_tier=SectorAuthorityTier.GENERIC_SECTOR_TAXONOMY_PROMOTED,
+                        reconciliation_status=ReconciliationStatus.EXACT_MATCH,
+                        citation_id=cit_id,
+                        document_sha256=doc_sha,
+                        source_page=page,
+                        note_number=note_num,
+                        specialized_corroboration=True,
+                        is_positive_authority=True,
+                        reason_codes=("EXACT_MATCH_WITH_SPECIALIZED_EVIDENCE", "PROMOTED_AUTHORITY"),
+                    )
+                )
+            else:
+                # Disagreement -> fail closed as CONFLICT
+                resolved_facts.append(
+                    AuthoritativeSectorFact(
+                        issuer_identity=sym,
+                        ticker=sym,
+                        entity_class=e_class,
+                        canonical_metric=metric,
+                        reporting_period=period,
+                        statement_scope=scope,
+                        value=None,
+                        currency=curr,
+                        unit_scale=scale,
+                        authority_tier=SectorAuthorityTier.CONFLICT_UNRESOLVED,
+                        reconciliation_status=ReconciliationStatus.CONFLICT,
+                        citation_id=cit_id,
+                        document_sha256=doc_sha,
+                        source_page=page,
+                        note_number=note_num,
+                        specialized_corroboration=False,
+                        is_positive_authority=False,
+                        reason_codes=(
+                            f"CONFLICT: generic value {val} != specialized value {spec_val}; fails closed",
+                        ),
+                    )
+                )
+        else:
+            # Promoted generic fact without legacy specialized counterpart
+            resolved_facts.append(
+                AuthoritativeSectorFact(
+                    issuer_identity=sym,
+                    ticker=sym,
+                    entity_class=e_class,
+                    canonical_metric=metric,
+                    reporting_period=period,
+                    statement_scope=scope,
+                    value=val,
+                    currency=curr,
+                    unit_scale=scale,
+                    authority_tier=SectorAuthorityTier.GENERIC_SECTOR_TAXONOMY_PROMOTED,
+                    reconciliation_status=ReconciliationStatus.GENERIC_EVIDENCED_PROMOTED,
+                    citation_id=cit_id,
+                    document_sha256=doc_sha,
+                    source_page=page,
+                    note_number=note_num,
+                    specialized_corroboration=False,
+                    is_positive_authority=(val is not None),
+                    reason_codes=("PROMOTED_GENERIC_SECTOR_FACT",),
+                )
+            )
+
+    return resolved_facts
