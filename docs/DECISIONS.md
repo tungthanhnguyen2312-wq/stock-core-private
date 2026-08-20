@@ -10,6 +10,27 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - P3-F13 Generic Official Financial Evidence Operational Scale-Out
+
+`P3F13_OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT = COMPLETE_LOCAL` (`p3f13_official_financial_evidence_scaleout.py`, `tools/run_p3f13_official_financial_evidence_scaleout.py`, `tests/test_p3f13_official_financial_evidence_scaleout.py`, `operations-review/p3f13-official-financial-evidence-scaleout-20260820/p3f13_official_financial_evidence_scaleout_artifact.json`, `push = NO`).
+
+1. **Target Cohort & Approved Route Execution**:
+   - Programmatically derived target cohort: 512 blocked instruments from the 523-member empirical-active research cohort.
+   - Evaluated discovery and acquisition through approved official source routes (HOSE, HNX, VSDC, approved issuer IR).
+   - Zero unattempted candidates (`UNATTEMPTED_WITHOUT_DISPOSITION = 0`). 2 issuers with retained filings (PNJ, FPT) resolved `FILING_ALREADY_RETAINED`; 510 issuers without approved routes in registry resolved `NO_APPROVED_ROUTE_FOUND`.
+
+2. **Metadata & Value Qualification**:
+   - P3-F11 metadata qualification verified explicit hash-bound spans for PNJ (FY2024 consolidated annual) and FPT (FY2025 consolidated annual).
+   - P3-F12 value reconciliation exactly matched 8 new canonical facts (`total_assets`, `total_liabilities`, `shareholders_equity`, `cash_and_equivalents`) against provider observations with zero fuzzy matching or tolerance.
+   - Duration statements for FPT/PNJ failed closed on `PERIOD_MISMATCH` / `PROVIDER_OBSERVATION_MISSING` preserving integrity.
+
+3. **Readiness & Gate Evolution**:
+   - Qualified financial cohort expanded 11→13 issuers; qualified facts expanded 130→138.
+   - P3-B fundamental research readiness expanded from 11 to 13 `PARTIAL` issuers (510 `BLOCKED`).
+   - Scaleout gate: `OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT_PARTIAL`.
+   - Preserved all fail-closed boundaries: zero production database mutations, zero new providers, zero unpromoted source authority, zero ticker-specific production branches.
+   - Next recommended gate: **P3-F14: Generic Issuer IR and Exchange Disclosure Source Registry Expansion**.
+
 ## 2026-08-20 - P3-F12 Generic Value-Level Financial Evidence Qualification Foundation
 
 `P3F12_VALUE_LEVEL_FINANCIAL_EVIDENCE = COMPLETE_LOCAL` (`official_financial_value_evidence.py`, `p3f12_value_level_financial_evidence.py`, `push = NO`).
