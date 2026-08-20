@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Sector-Relative Research Context V1
+
+`SECTOR_RELATIVE_RESEARCH_CONTEXT_V1 = READY_LOCAL` (`sector_relative_research_context.py`, `run_sector_relative_research_context.py`, `tests/test_sector_relative_research_context.py`, `push = NO`).
+
+1. The relative-comparison contract is restricted to the same 2026-08-20 empirical-active shadow cohort and existing qualified entity-class archetypes. It does not infer broad sector/industry membership: 33/523 have qualified classification, with only corporate (n=21) and bank (n=6) satisfying the minimum five-member comparison cohort.
+2. The pilot emits labelled relative facts for 20-day momentum, volatility, provider-scoped relative volume, and trend-state distribution across 27 records (108 metric contexts). Each result retains session, cohort identity/members, subject field/value, peer statistic/bucket, authority tier, and source lineage. Provider relative volume remains `DERIVED_PROXY`; technical context remains `SHADOW_ONLY`.
+3. The separate Review Pack overlay preserves the base Review Pack identity and adds relative context for 6/25 review names. The other 19 receive explicit missing/small-cohort reasons. Fundamental relative context remains unavailable for all 523 because the daily product has no individual like-for-like retained financial metric values; no provider cross-metric calculation is introduced.
+4. No authoritative active-universe, ranking, recommendation, valuation, target, expected return, alpha, causal, PIT, liquidity/sizing, share, provider-semantic, official-acquisition, or sector-membership authority is promoted.
+
 ## 2026-08-20 - Owner Research Journal & Human Feedback Overlay V1
 
 `OWNER_RESEARCH_JOURNAL_V1 = READY_LOCAL` (`owner_research_journal.py`, `run_owner_research_journal.py`, `tests/test_owner_research_journal.py`, `push = NO`).
