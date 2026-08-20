@@ -9,8 +9,8 @@ from mva_daily_research_bundle import build_mva_daily_research_bundle
 from runtime_paths import runtime_root
 DEFAULT_OUTPUT_DIR = ROOT / "operations-review" / "p3f7-mva-daily-research-bundle-20260820"
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--runtime-root", default=None); parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR)); args = parser.parse_args(argv)
-    artifact = build_mva_daily_research_bundle(runtime_root(args.runtime_root), root=ROOT)
+    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--runtime-root", default=None); parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR)); parser.add_argument("--snapshot-path", default=None); args = parser.parse_args(argv)
+    artifact = build_mva_daily_research_bundle(runtime_root(args.runtime_root), root=ROOT, snapshot_path=Path(args.snapshot_path) if args.snapshot_path else None)
     output = Path(args.output_dir); output.mkdir(parents=True, exist_ok=True)
     (output / "p3f7_mva_daily_research_bundle_artifact.json").write_text(json.dumps(artifact, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(artifact["artifact_identity"]); return 0

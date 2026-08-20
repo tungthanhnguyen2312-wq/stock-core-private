@@ -34,6 +34,7 @@ def evaluate_mva_operational_run(
     *,
     root: Path = ROOT,
     requested_at: datetime | str | None = None,
+    bundle: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Execute MVA daily research pipeline and build deterministic validation artifact."""
     req_time = (
@@ -44,7 +45,7 @@ def evaluate_mva_operational_run(
     resolved_completed = latest_completed_market_day(req_time).isoformat()
 
     # Generate MVA bundle
-    bundle = mva_bundle.build_mva_daily_research_bundle(runtime_root, root=root)
+    bundle = bundle if bundle is not None else mva_bundle.build_mva_daily_research_bundle(runtime_root, root=root)
     frozen_session = bundle["frozen_session"]["session"]
 
     # Session & freshness state

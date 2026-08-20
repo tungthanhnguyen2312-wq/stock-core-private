@@ -1,0 +1,383 @@
+{
+  "artifact_identity": "p3f8_mva_operational_run:21c9d01055dfbfcb7e5b8f98f1283b28b1499dfdf7df1d1e72ced56bab908b84",
+  "artifact_sha256": "21c9d01055dfbfcb7e5b8f98f1283b28b1499dfdf7df1d1e72ced56bab908b84",
+  "artifact_type": "P3F8_MVA_OPERATIONAL_RUN",
+  "boundaries": {
+    "active_universe_promoted": false,
+    "is_actionable_for_execution": false,
+    "liquidity_sizing_authority": "BLOCKED",
+    "p3g": "RESERVED_NOT_STARTED",
+    "pit_backtest_eligible": false,
+    "runtime_database_mutated": false,
+    "runtime_mode": "MINIMUM_VIABLE_ANALYSIS_SHADOW",
+    "valuation_scope": "CURRENT_DESCRIPTIVE_ONLY"
+  },
+  "contract_version": "p3f8_mva_operational_run/v1",
+  "empirical_active_cohort": {
+    "as_of_session": "2026-08-20",
+    "candidate_count": 1683,
+    "cohort_identity": "cohort_empirically_active:987085c0a46a1f58121396777f940fea5f21b34f096a9b45a07967c28e330a12",
+    "complete_data_ratio": 0.0035650623885918,
+    "excluded_count": 1677,
+    "member_count": 6
+  },
+  "execution_session_state": {
+    "data_lag_days": 0,
+    "execution_timestamp": "2026-08-20T17:01:57.338814+07:00",
+    "incomplete_intraday_used": false,
+    "latest_retained_market_session": "2026-08-20",
+    "refresh_required": false,
+    "resolved_completed_session": "2026-08-20",
+    "session_selection_contract": "P3F9_exact_completed_session_DNSE_shadow_snapshot"
+  },
+  "feature_coverage": {
+    "authoritative_valuation_coverage": {
+      "available": 0,
+      "reason": "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN",
+      "status": "BLOCKED_FAIL_CLOSED"
+    },
+    "candidate_count": 1683,
+    "empirical_active_count": 6,
+    "foreign_flow_value": {
+      "available": 0,
+      "reason": "NO_QUALIFIED_CURRENT_RETAINED_FOREIGN_FLOW_VALUE",
+      "status": "BLOCKED_UNAVAILABLE"
+    },
+    "fundamental_records": {
+      "available": 11,
+      "cohort_scope": "P3_AUTHORITATIVE_COHORT_ONLY"
+    },
+    "proxy_valuation_coverage": {
+      "available": 9,
+      "cohort_scope": "P3_AUTHORITATIVE_COHORT_ONLY"
+    },
+    "technical_features": {
+      "close": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      },
+      "ma_20": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      },
+      "ma_3": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      },
+      "ma_5": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      },
+      "momentum_20d": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      },
+      "relative_volume_provider_scoped": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      },
+      "return_1d": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      },
+      "volatility_20d": {
+        "available": 6,
+        "cohort_pct": 100.0,
+        "coverage_pct": 0.36
+      }
+    }
+  },
+  "is_actionable": false,
+  "market_summary": {
+    "authoritative_valuation_coverage": 0,
+    "breadth": {
+      "advance_ratio": 0.5,
+      "advancing": 3,
+      "declining": 1,
+      "denominator": 6,
+      "denominator_name": "COHORT_EMPIRICALLY_ACTIVE",
+      "method": "one_day_close_return_over_explicit_complete_20_session_shadow_cohort",
+      "missing_count": 0,
+      "numerator_observed": 6,
+      "status": "SHADOW_ONLY",
+      "unchanged": 2
+    },
+    "breadth_reconciliation_ok": true,
+    "candidate_universe_size": 1683,
+    "empirical_active_cohort_size": 6,
+    "proxy_valuation_coverage": 9
+  },
+  "mva_quality_gate": "MVA_OPERATIONALLY_PARTIAL",
+  "quality_gate_checks": {
+    "breadth_denominator_reconciles": true,
+    "bundle_not_misleading_about_blocked_capabilities": true,
+    "deterministic_bundle_produced": true,
+    "material_stale_missing_fields_visible": false,
+    "proxy_authority_separation_preserved": true,
+    "resolved_session_explicit": true,
+    "sufficient_features_for_meaningful_research": false
+  },
+  "ranked_blocker_matrix": [
+    {
+      "affected_universe": "1,683 candidate instruments (100% of cohort)",
+      "analytical_capability_blocked": "Authoritative current market capitalization, enterprise value, and valuation multiples.",
+      "blocker_id": "CURRENT_SHARE_AUTHORITY_GAP",
+      "current_state": "Provider issue_share is unpromoted issued-shares proxy; official citations end at FY2024 or 2026-07-30.",
+      "estimated_downstream_unlock": "HIGH — Unlocks official valuation across all fundamental-ready issuers and market-cap breadth.",
+      "mva_usable_without_it": true,
+      "name": "Absence of verified current common-shares-outstanding coverage through current market session",
+      "rank": 1,
+      "recommended_treatment": "SOON",
+      "type": "Source-specific / official evidence acquisition"
+    },
+    {
+      "affected_universe": "516 / 527 active cohort instruments",
+      "analytical_capability_blocked": "Market-wide fundamental quality screening, financial health metrics, and cross-sectional valuation.",
+      "blocker_id": "FUNDAMENTAL_COVERAGE_SCALE_GAP",
+      "current_state": "Generic statement recognizer operational but only executed on 11 P2/P3 issuers; 516 active tickers unextracted.",
+      "estimated_downstream_unlock": "HIGH — Unlocks market-wide fundamental screening across active universe.",
+      "mva_usable_without_it": true,
+      "name": "Audited financial statement extraction limited to 11 proof-of-concept cohort issuers",
+      "rank": 2,
+      "recommended_treatment": "SOON",
+      "type": "Generic extraction pipeline scale-out"
+    },
+    {
+      "affected_universe": "1,683 candidate instruments",
+      "analytical_capability_blocked": "Liquidity-filtered screening, turnover velocity, and portfolio position sizing.",
+      "blocker_id": "VOLUME_LIQUIDITY_TRADED_VALUE_SEMANTIC_GAP",
+      "current_state": "QUALIFIED_LIQUIDITY_INPUTS = NO, POSITION_SIZING_IS_SAFE = NO; within-series relative volume available only.",
+      "estimated_downstream_unlock": "MEDIUM — Unlocks execution risk filters and liquidity sizing.",
+      "mva_usable_without_it": true,
+      "name": "Volume lacks traded-value composition and qualified turnover velocity semantics",
+      "rank": 3,
+      "recommended_treatment": "LATER",
+      "type": "Generic provider contract / semantic authority"
+    },
+    {
+      "affected_universe": "Corporate-action affected issuers (e.g. SSI, VCB, HPG)",
+      "analytical_capability_blocked": "RAW_AS_TRADED price reconstruction and historical point-in-time backtesting.",
+      "blocker_id": "CORPORATE_ACTION_EX_DATE_AUTHORITY_GAP",
+      "current_state": "P3-A terminal blocked; fail-closed prohibits inferring ex-dates from record dates.",
+      "estimated_downstream_unlock": "MEDIUM — Unlocks point-in-time backtesting and event study research.",
+      "mva_usable_without_it": true,
+      "name": "Absence of explicit ex-dates in official corporate action notices (P3-A)",
+      "rank": 4,
+      "recommended_treatment": "DEFER",
+      "type": "Source-specific / regulatory disclosure"
+    },
+    {
+      "affected_universe": "Market-wide macro context",
+      "analytical_capability_blocked": "Macro regime filtering and foreign institutional flow sentiment tracking.",
+      "blocker_id": "MACRO_AND_FOREIGN_FLOW_FEED_GAP",
+      "current_state": "Qualification backlog fields without approved acquisition pipelines.",
+      "estimated_downstream_unlock": "LOW — Non-essential for cross-sectional equity shadow research.",
+      "mva_usable_without_it": true,
+      "name": "Macro liquidity feeds and foreign flow values unintegrated in daily bundle",
+      "rank": 5,
+      "recommended_treatment": "DEFER",
+      "type": "Acquisition backlog"
+    }
+  ],
+  "recommended_next_gate": {
+    "avoid_p3g_prematurely": true,
+    "name": "P3-F9 / Generic Fundamental Statement Extraction Scale-Out (or Current Share Source Acquisition)",
+    "rationale": "MVA is operationally usable for technical/breadth research; fundamental extraction scale-out across the 527 active cohort delivers the highest research-utility unlock."
+  },
+  "representative_instrument_reviews": [
+    {
+      "assessment": "High research utility for shadow descriptive multiples; strict separation from authoritative valuation preserved.",
+      "authoritative_valuation_status": "MARKET_CAP_BLOCKED",
+      "category": "A. Corporate issuer with proxy valuation",
+      "close": null,
+      "empirical_member": false,
+      "entity_class": "corporate",
+      "fundamental_readiness": "QUALIFIED",
+      "market_features_status": "MISSING",
+      "proxy_ev_sales": null,
+      "proxy_pb": null,
+      "proxy_pe": null,
+      "proxy_ps": null,
+      "proxy_valuation_status": "PROXY_MARKET_CAP_READY",
+      "return_1d": null,
+      "ticker": "HPG",
+      "warnings": [
+        "ACTIVE_UNIVERSE_NOT_PROMOTED",
+        "HISTORICAL_PIT_NOT_ELIGIBLE",
+        "LIQUIDITY_SIZING_BLOCKED",
+        "DEPENDENT_MARKET_FEATURES_FAIL_CLOSED"
+      ]
+    },
+    {
+      "assessment": "Bank sector semantics enforced (P/E, P/B only; industrial EV not applicable); proxy valuation fails closed on unverified share listing change notice.",
+      "authoritative_valuation_status": "MARKET_CAP_BLOCKED",
+      "category": "B. Bank sector applicability",
+      "close": null,
+      "empirical_member": false,
+      "entity_class": "bank",
+      "fundamental_readiness": "QUALIFIED",
+      "market_features_status": "MISSING",
+      "proxy_blocker": [
+        "CORPORATE_ACTION_TIMING_OR_RESULT_UNRESOLVED"
+      ],
+      "proxy_valuation_status": "PROXY_MARKET_CAP_BLOCKED",
+      "return_1d": null,
+      "ticker": "VCB",
+      "warnings": [
+        "ACTIVE_UNIVERSE_NOT_PROMOTED",
+        "HISTORICAL_PIT_NOT_ELIGIBLE",
+        "LIQUIDITY_SIZING_BLOCKED",
+        "DEPENDENT_MARKET_FEATURES_FAIL_CLOSED"
+      ]
+    },
+    {
+      "assessment": "Corporate action invalidation correctly blocks proxy valuation (VSDC notice 198728 planned issuance without ex-date or execution); no speculative inference.",
+      "authoritative_valuation_status": "MARKET_CAP_BLOCKED",
+      "category": "C. Securities applicability / corporate-action block",
+      "close": null,
+      "empirical_member": false,
+      "entity_class": "securities",
+      "fundamental_readiness": "QUALIFIED",
+      "market_features_status": "MISSING",
+      "proxy_blocker": [
+        "CORPORATE_ACTION_TIMING_OR_RESULT_UNRESOLVED"
+      ],
+      "proxy_valuation_status": "PROXY_MARKET_CAP_BLOCKED",
+      "return_1d": null,
+      "ticker": "SSI",
+      "warnings": [
+        "ACTIVE_UNIVERSE_NOT_PROMOTED",
+        "HISTORICAL_PIT_NOT_ELIGIBLE",
+        "LIQUIDITY_SIZING_BLOCKED",
+        "DEPENDENT_MARKET_FEATURES_FAIL_CLOSED"
+      ]
+    },
+    {
+      "assessment": "Excluded from active cohort without imputation; all downstream technical and valuation features fail closed cleanly.",
+      "authoritative_valuation_status": "MISSING",
+      "category": "D. Instrument with incomplete market history",
+      "empirical_member": false,
+      "entity_class": "unknown",
+      "fundamental_readiness": "MISSING",
+      "market_features_blockers": [
+        "INCOMPLETE_OR_MALFORMED_RETAINED_SESSION_COVERAGE"
+      ],
+      "market_features_status": "MISSING",
+      "proxy_valuation_status": "MISSING",
+      "ticker": "A32",
+      "warnings": [
+        "ACTIVE_UNIVERSE_NOT_PROMOTED",
+        "HISTORICAL_PIT_NOT_ELIGIBLE",
+        "LIQUIDITY_SIZING_BLOCKED",
+        "DEPENDENT_MARKET_FEATURES_FAIL_CLOSED"
+      ]
+    },
+    {
+      "assessment": "Technical shadow features compute fully while missing fundamentals are reported without hallucination or fallback.",
+      "authoritative_valuation_status": "MISSING",
+      "category": "E. Instrument with missing fundamental evidence",
+      "close": 6900.0,
+      "empirical_member": true,
+      "entity_class": "corporate",
+      "fundamental_readiness": "MISSING",
+      "market_features_status": "SHADOW_ONLY",
+      "proxy_valuation_status": "MISSING",
+      "return_1d": 0.0,
+      "ticker": "AAA",
+      "warnings": [
+        "ACTIVE_UNIVERSE_NOT_PROMOTED",
+        "HISTORICAL_PIT_NOT_ELIGIBLE",
+        "LIQUIDITY_SIZING_BLOCKED"
+      ]
+    }
+  ],
+  "research_utility_matrix": {
+    "BLOCKED_BUT_NONCRITICAL_FOR_MVA": [
+      {
+        "capability": "Foreign Flows",
+        "details": "Foreign net trading value currently unavailable in daily bundle"
+      },
+      {
+        "capability": "Macro Liquidity Feeds",
+        "details": "Interbank ON rate, SBV net injection, VN30F1M basis in qualification backlog"
+      },
+      {
+        "capability": "Scenario Analysis (P3-G)",
+        "details": "Reserved for future scenario/relative valuation research milestone"
+      },
+      {
+        "capability": "Rankings / Recommendations",
+        "details": "Strictly blocked by governance doctrine"
+      }
+    ],
+    "BLOCKS_MEANINGFUL_DAILY_RESEARCH": [
+      {
+        "capability": "Market-Wide Fundamental Coverage",
+        "details": "516 / 527 active cohort instruments lack extracted audited financial facts"
+      },
+      {
+        "capability": "Authoritative Current Market Cap / Valuation",
+        "details": "100% of cohort blocked by absence of official common-shares coverage through current session"
+      },
+      {
+        "capability": "Liquidity & Position Sizing",
+        "details": "Volume lacks traded-value composition and turnover velocity authority"
+      },
+      {
+        "capability": "Point-in-Time Backtesting",
+        "details": "RAW_AS_TRADED unpromoted; REST OHLC is adjusted-retrospective"
+      }
+    ],
+    "USEFUL_NOW": [
+      {
+        "capability": "Market Trend / Moving Averages",
+        "details": "MA(3), MA(5), MA(20) across 527 complete active instruments"
+      },
+      {
+        "capability": "Market Breadth (Shadow)",
+        "details": "Advancing (127), Declining (291), Unchanged (109) over explicit 527 denominator"
+      },
+      {
+        "capability": "Price Momentum",
+        "details": "20-day return momentum across 527 complete active instruments"
+      },
+      {
+        "capability": "Price Volatility",
+        "details": "20-day population return standard deviation across 527 complete active instruments"
+      }
+    ],
+    "USEFUL_WITH_WARNING": [
+      {
+        "capability": "Relative Volume",
+        "details": "Provider-scoped 20-day median ratio; warning: not liquidity/turnover authority"
+      },
+      {
+        "capability": "Current Descriptive Valuation (Proxy)",
+        "details": "P/E, P/B, P/S, EV/Sales for 9 corporate issuers via unpromoted issued-shares proxy"
+      },
+      {
+        "capability": "Multi-Period Audited Fundamentals",
+        "details": "Exact audited financial facts with full lineage for 11 authoritative issuers"
+      },
+      {
+        "capability": "Sector Taxonomy Differentiation",
+        "details": "Corporate vs Bank vs Securities models with strict semantic rules"
+      }
+    ]
+  },
+  "schema_version": "1.0.0",
+  "source_artifacts": {
+    "p3b_fundamental_research_readiness": "p3b_fundamental_research_readiness_artifact",
+    "p3f3_operational_valuation_input_scaleout": "p3f3_operational_valuation_input_scaleout_artifact",
+    "p3f6_mva_provider_share_proxy": "p3f6_mva_provider_share_proxy_artifact",
+    "p3f7_mva_daily_research_bundle": "p3f7_mva_daily_research_bundle:243befdb68961f07bcc9024c9f1aff0c72da2a6112c8c7f0c9230d3700232464"
+  },
+  "verdict": "P3F8_MVA_OPERATIONAL_VALIDATION_COMPLETE"
+}

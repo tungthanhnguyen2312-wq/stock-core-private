@@ -1,0 +1,101 @@
+{
+  "artifact_identity": "p3f9_exact_session_mva_materialization:e520c1fd23e8c543e8e1c06c402dc600d48b8adc81c2356344a8b0e45718e0d6",
+  "artifact_sha256": "e520c1fd23e8c543e8e1c06c402dc600d48b8adc81c2356344a8b0e45718e0d6",
+  "artifact_type": "P3F9_EXACT_SESSION_MVA_MATERIALIZATION",
+  "authority_boundary": {
+    "CURRENT_MARKET": "DESCRIPTIVE_QUALIFIED_ONLY",
+    "HISTORICAL_PIT": "BLOCKED",
+    "RAW_AS_TRADED": "NOT_PROMOTED",
+    "runtime_database_mutated": false
+  },
+  "cohort_before_after": {
+    "after_member_count": 6,
+    "after_members_identity": "cohort_empirically_active:987085c0a46a1f58121396777f940fea5f21b34f096a9b45a07967c28e330a12",
+    "before_member_count": 527,
+    "comparison_basis": "P3F8 retained artifact exposed count only; P3F9 member set is a refreshed derived shadow denominator, not canonical listing membership.",
+    "listing_change_claimed": false,
+    "membership_delta_known": false
+  },
+  "contract_version": "p3f9_exact_session_mva_materialization/v1",
+  "coverage": {
+    "attempted_candidate_count": 8,
+    "candidate_count": 1683,
+    "empirical_20_session_complete_count": 6,
+    "exact_session_observed_count": 6,
+    "materialization_scope": "EXPLICIT_PARTIAL_PROVIDER_WINDOW",
+    "missing_current_session_count": 1677
+  },
+  "exact_session_equality": {
+    "equal": true,
+    "mva_bundle_session": "2026-08-20",
+    "resolved_completed_session": "2026-08-20",
+    "retained_snapshot_session": "2026-08-20"
+  },
+  "execution_timestamp": "2026-08-20T17:01:57.338814+07:00",
+  "market_summary_before_after": {
+    "after": {
+      "authoritative_valuation_coverage": 0,
+      "blocked_capability_counts": {
+        "liquidity_sizing": 1683,
+        "macro_liquidity": 1683,
+        "pit_backtest": 1683
+      },
+      "breadth": {
+        "advance_ratio": 0.5,
+        "advancing": 3,
+        "declining": 1,
+        "denominator": 6,
+        "denominator_name": "COHORT_EMPIRICALLY_ACTIVE",
+        "method": "one_day_close_return_over_explicit_complete_20_session_shadow_cohort",
+        "missing_count": 0,
+        "numerator_observed": 6,
+        "status": "SHADOW_ONLY",
+        "unchanged": 2
+      },
+      "candidate_universe_size": 1683,
+      "empirical_active_cohort_size": 6,
+      "feature_availability": {
+        "foreign_flow_value_blocked": 1683,
+        "fundamental_records_available": 11,
+        "market_features_shadow_only": 6
+      },
+      "missing_or_excluded_count": 1677,
+      "observed_market_candidates": 6,
+      "proxy_valuation_coverage": 9
+    },
+    "before": {
+      "authoritative_valuation_coverage": 0,
+      "breadth": {
+        "advance_ratio": 0.2409867172675522,
+        "advancing": 127,
+        "declining": 291,
+        "denominator": 527,
+        "denominator_name": "COHORT_EMPIRICALLY_ACTIVE",
+        "method": "one_day_close_return_over_explicit_complete_20_session_shadow_cohort",
+        "missing_count": 0,
+        "numerator_observed": 527,
+        "status": "SHADOW_ONLY",
+        "unchanged": 109
+      },
+      "breadth_reconciliation_ok": true,
+      "candidate_universe_size": 1683,
+      "empirical_active_cohort_size": 527,
+      "proxy_valuation_coverage": 9
+    }
+  },
+  "mva_bundle_identity": "p3f7_mva_daily_research_bundle:243befdb68961f07bcc9024c9f1aff0c72da2a6112c8c7f0c9230d3700232464",
+  "schema_version": "1.0.0",
+  "snapshot_identity": "p3f9_exact_session_snapshot:85ccee55bbdc58f0d04ba6ee772577cb3ea095f7a00a09779baff43898f21b42",
+  "source_artifacts": {
+    "p3f7_exact_session": "p3f7_mva_daily_research_bundle:243befdb68961f07bcc9024c9f1aff0c72da2a6112c8c7f0c9230d3700232464",
+    "p3f8_before": "p3f8_mva_operational_run:a0ce65814b4edf00618fcf068c8d70ed792e5cd9338617264eda51856e991143",
+    "p3f8_exact_session": "p3f8_mva_operational_run:21c9d01055dfbfcb7e5b8f98f1283b28b1499dfdf7df1d1e72ced56bab908b84",
+    "p3f9_snapshot": "p3f9_exact_session_snapshot:85ccee55bbdc58f0d04ba6ee772577cb3ea095f7a00a09779baff43898f21b42"
+  },
+  "ticker_specific_branch_audit": {
+    "canonical_mapping": "runtime_metadata_ticker_sorted_v1",
+    "status": "PASS",
+    "ticker_specific_branches": []
+  },
+  "verdict": "P3F9_EXACT_SESSION_MVA_MATERIALIZATION_COMPLETE"
+}

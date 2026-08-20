@@ -108,14 +108,37 @@ def _maps(root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     return fundamentals, authoritative, proxies
 
 
-def build_mva_daily_research_bundle(runtime_root: Path, *, root: Path, envelope: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def _load_snapshot_market(snapshot_path: Path) -> tuple[list[str], dict[str, list[dict[str, Any]]], list[str], str]:
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    frozen = str(snapshot["retained_snapshot_session"])
+    if snapshot.get("resolved_completed_session") != frozen or snapshot.get("source", {}).get("intraday_observations_used") is not False:
+        raise ValueError("EXACT_COMPLETED_SESSION_SNAPSHOT_REQUIRED")
+    sessions = list(snapshot.get("sessions", []))
+    if len(sessions) != LOOKBACK_SESSIONS or sessions[-1] != frozen:
+        raise ValueError("EXACT_SESSION_SNAPSHOT_WINDOW_INSUFFICIENT")
+    candidates = sorted(snapshot.get("records", {}).keys())
+    grouped = {ticker: [{"date": row["session"], "close": row["close"], "volume": row["volume"], "source": "DNSE_SHADOW_SNAPSHOT"}
+                        for row in record.get("observations", []) if row.get("session") in sessions]
+               for ticker, record in snapshot["records"].items() if record.get("status") == "OBSERVED"}
+    return candidates, grouped, sessions, frozen
+
+
+def build_mva_daily_research_bundle(runtime_root: Path, *, root: Path, envelope: Mapping[str, Any] | None = None,
+                                    snapshot_path: Path | None = None) -> dict[str, Any]:
     """Read retained data and compose the bounded daily MVA research artifact."""
     use_envelope = dict(REQUIRED_ENVELOPE if envelope is None else envelope)
     if not _valid_envelope(use_envelope):
         raise ValueError("MVA_SHADOW_ENVELOPE_REQUIRED")
     p3f3 = json.loads((root / "operations-review/p3f3-operational-valuation-input-scaleout-20260820/p3f3_operational_valuation_input_scaleout_artifact.json").read_text(encoding="utf-8"))
-    frozen = p3f3["valuation_session"]["valuation_session"]
-    candidates, rows_by_ticker, sessions = _load_runtime_market(runtime_root, frozen_session=frozen)
+    if snapshot_path is None:
+        frozen = p3f3["valuation_session"]["valuation_session"]
+        candidates, rows_by_ticker, sessions = _load_runtime_market(runtime_root, frozen_session=frozen)
+        snapshot_identity = None
+        selection_contract = "P3F3_latest_completed_vietnam_weekday_with_exact_retained_observation"
+    else:
+        candidates, rows_by_ticker, sessions, frozen = _load_snapshot_market(snapshot_path)
+        snapshot_identity = json.loads(snapshot_path.read_text(encoding="utf-8")).get("snapshot_identity")
+        selection_contract = "P3F9_exact_completed_session_DNSE_shadow_snapshot"
     cohort = derive_empirical_active_cohort(rows_by_ticker, sessions=sessions, candidate_tickers=candidates)
     fundamentals, authoritative, proxies = _maps(root)
     member_set = set(cohort["members"])
@@ -143,7 +166,7 @@ def build_mva_daily_research_bundle(runtime_root: Path, *, root: Path, envelope:
     proxy_ready = sum(row.get("mva_provider_proxy_valuation", {}).get("market_cap_provider_issued_share_proxy", {}).get("status") == "PROXY_MARKET_CAP_READY" for row in records)
     artifact: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION, "artifact_type": ARTIFACT_TYPE,
                                 "verdict": "P3F7_MVA_DAILY_BUNDLE_COMPLETE", **use_envelope,
-                                "frozen_session": {"session": frozen, "selection_contract": "P3F3_latest_completed_vietnam_weekday_with_exact_retained_observation", "incomplete_intraday_used": False},
+                                "frozen_session": {"session": frozen, "selection_contract": selection_contract, "incomplete_intraday_used": False},
                                 "empirical_active_cohort": {key: value for key, value in cohort.items() if key != "exclusions"},
                                 "market_summary": {"candidate_universe_size": len(candidates), "observed_market_candidates": len(rows_by_ticker), "empirical_active_cohort_size": len(active_rows), "missing_or_excluded_count": len(candidates) - len(active_rows), "breadth": breadth,
                                                    "feature_availability": {"market_features_shadow_only": len(active_rows), "foreign_flow_value_blocked": len(records), "fundamental_records_available": len(fundamentals)},
@@ -151,7 +174,7 @@ def build_mva_daily_research_bundle(runtime_root: Path, *, root: Path, envelope:
                                                    "blocked_capability_counts": {"liquidity_sizing": len(records), "pit_backtest": len(records), "macro_liquidity": len(records)}},
                                 "records": records,
                                 "blocked_capabilities": {"liquidity_sizing": "BLOCKED", "execution": "BLOCKED", "historical_pit": "BLOCKED", "macro_liquidity": "BLOCKED_UNAVAILABLE", "ranking_recommendation": "BLOCKED", "p3g": "RESERVED_NOT_STARTED"},
-                                "source_artifacts": {"p3f3": p3f3.get("artifact_identity"), "p3b": "p3b_fundamental_research_readiness_artifact", "p3f6": "p3f6_mva_provider_share_proxy_artifact"},
+                                "source_artifacts": {"p3f3": p3f3.get("artifact_identity"), "p3b": "p3b_fundamental_research_readiness_artifact", "p3f6": "p3f6_mva_provider_share_proxy_artifact", "p3f9_snapshot": snapshot_identity},
                                 "ticker_specific_branch_audit": {"status": "PASS", "branch_violations": [], "production_modules": ["mva_daily_research_bundle.py"]},
                                 "boundaries": {"active_universe_promoted": False, "source_authority_promoted": False, "runtime_database_mutated": False, "p3g": "RESERVED_NOT_STARTED"}}
     artifact["artifact_sha256"] = stable_id(artifact)
