@@ -22,14 +22,14 @@ def _instruments(p3e: dict) -> list[dict]:
 
 
 def _reference_at(root: Path, instruments: list[dict]) -> str:
-    timestamps = []
+    """Freeze the scan at the latest retained daily session, not wall-clock now."""
+    sessions = []
     for instrument in instruments:
         evidence = authority.dnse_current_market_observations(root, instrument)
-        if isinstance(evidence.get("retrieved_at"), str):
-            timestamps.append(evidence["retrieved_at"])
-    if not timestamps:
-        raise ValueError("P3F2_NO_RETAINED_DNSE_RETRIEVAL_TIME")
-    return max(timestamps)
+        sessions.extend(str(row["session"]) for row in evidence.get("observations", []) if row.get("session"))
+    if not sessions:
+        raise ValueError("P3F2_NO_RETAINED_DNSE_SESSION")
+    return f"{max(sessions)}T16:00:00+07:00"
 
 
 def _hpg_positive_proof(root: Path, instruments: list[dict]) -> dict:
@@ -57,7 +57,6 @@ def build_p3f2_artifact(*, runtime_root: Path) -> dict:
     reference_at = _reference_at(runtime_root, instruments)
     coverage = authority.scan_current_valuation_input_coverage(instruments, runtime_root=runtime_root, requested_at=reference_at)
     hpg_proof = _hpg_positive_proof(runtime_root, instruments)
-    candidate = hpg_proof.get("shares", {}).get("lineage")
     hpg_share_rows = authority.runtime_share_candidates(runtime_root, authority.canonical_instrument("HPG"), hpg_proof["valuation_session"])
     invalidation = authority.qualify_current_share_basis(
         authority.canonical_instrument("HPG"), hpg_share_rows, valuation_date=hpg_proof["valuation_session"],
