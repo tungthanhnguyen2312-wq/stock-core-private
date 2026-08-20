@@ -174,8 +174,10 @@ def _evaluate_issuer(issuer: Mapping[str, Any], *, price: Mapping[str, Any], sha
     ticker, entity = str(identity.get("ticker")), str(identity.get("entity_type"))
     market_blockers = list(price.get("reason_codes") or []) + list(shares.get("reason_codes") or [])
     market_cap = None
-    if not market_blockers:
-        market_cap = price["observed_value"] * shares["value"]
+    price_val = price.get("observed_value") if price.get("observed_value") is not None else price.get("value")
+    share_val = shares.get("value")
+    if not market_blockers and price_val is not None and share_val is not None:
+        market_cap = price_val * share_val
     facts = {name: _latest_qualified_fact(issuer, name) for name in (
         "net_income", "shareholders_equity", "revenue", "cash_and_equivalents", "total_interest_bearing_debt",
         "ebitda", "net_profit_parent", "profit_after_tax_parent", "total_equity",
@@ -227,8 +229,9 @@ def _evaluate_issuer(issuer: Mapping[str, Any], *, price: Mapping[str, Any], sha
             financial_readiness[name] = "FINANCIAL_INPUT_PARTIAL"
         else:
             financial_readiness[name] = "FINANCIAL_INPUT_READY"
+    valuation_date = price.get("valuation_date") or price.get("session")
     return {
-        "ticker": ticker, "entity_class": entity, "valuation_date": price["valuation_date"],
+        "ticker": ticker, "entity_class": entity, "valuation_date": valuation_date,
         "price_input": dict(price), "share_basis_input": dict(shares), "market_cap": market_cap,
         "financial_readiness_by_method": financial_readiness,
         "methods": methods, "is_actionable": False,
@@ -287,3 +290,8 @@ def market_cap_from_authority_resolver(resolved_inputs: Mapping[str, Any]) -> di
     return {"status": "MARKET_CAP_READY", "value": resolved_inputs.get("market_cap"),
             "price_input": resolved_inputs.get("price"), "share_basis_input": resolved_inputs.get("shares"),
             "is_actionable": False}
+
+
+def evaluate_issuer_from_resolved_inputs(issuer: Mapping[str, Any], resolved_inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """P3-F valuation evaluation through generic P3-F2 resolved inputs."""
+    return _evaluate_issuer(issuer, price=resolved_inputs["price"], shares=resolved_inputs["shares"])
