@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - P3-F12 Generic Value-Level Financial Evidence Qualification Foundation
+
+`P3F12_VALUE_LEVEL_FINANCIAL_EVIDENCE = COMPLETE_LOCAL` (`official_financial_value_evidence.py`, `p3f12_value_level_financial_evidence.py`, `push = NO`).
+
+1. The read-only engine requires exact hash-bound official spans, canonical metric identity, documented period/scope/currency/scale, and integer-only normalization. It permits no tolerance, fuzzy magnitude match, generic absolute value, or scope inference.
+2. Retained HPG, VCB, and SSI total-assets proof records reconcile exactly to retained provider observations. The established FY/Q4 balance-sheet alias is the only period bridge; VCB's match records its explicitly declared million-VND filing scale. A malformed numeric span blocks.
+3. The output is an ephemeral canonical qualification projection: no canonical store, database, source/provider authority, or document inventory changed. P3-B readiness is unchanged because those facts were already represented in the qualified cohort.
+4. Next exact gate: P3-F13 Generic Official Financial Evidence Operational Scale-Out. It is not started.
+
 ## 2026-08-20 - P3-F11 Generic Official Financial Filing Evidence & Statement-Metadata Qualification Foundation
 
 `P3F11_FINANCIAL_EVIDENCE_FOUNDATION = PARTIAL_LOCAL` (`official_financial_filing_evidence.py`, `p3f11_official_financial_filing_evidence.py`, `tools/run_p3f11_official_financial_filing_evidence.py`, `push = NO`).
