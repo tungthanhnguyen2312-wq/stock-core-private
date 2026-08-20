@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Evidence-Bound Expectations & Scenario Research V1
+
+`EXPECTATIONS_SCENARIO_RESEARCH_V1 = READY_LOCAL` (`expectations_scenario_research.py`, `run_expectations_scenario_research.py`, `tests/test_expectations_scenario_research.py`, `push = NO`).
+
+1. The scenario contract is a deterministic research overlay over the 25-name owner-review cohort. Each immutable scenario version binds the existing dossier, thesis/counter-thesis, task, evidence authority, current observable state, and supported relative-context identity to three labelled Bear/Base/Bull lanes. It makes no forecast or recommendation.
+2. All 25 cases are `PARTIAL_EVIDENCE_BOUND_SCENARIO`: drivers retain only `FACT`, `INFERENCE`, or `DATA_GAP` classification with source references. `probability_status=UNQUALIFIED`; explicit external expectations, market-implied expectations, and variant hypotheses are `UNAVAILABLE` rather than asserted. No catalyst has qualified retained evidence, so every lane reports `NO_EVIDENCE_BACKED_CATALYST`.
+3. The invalidation contract only signals human review: 17 cases have a conditional `STATE_DETERIORATION` condition from an above-MA20 state; the other eight are `UNRESOLVED`. Every case also records a future-only `QUESTION_RESOLVED_AGAINST_THESIS` condition tied to its existing open task. No thesis can be automatically marked broken.
+4. Relative context enters only 6/25 cases under its existing qualified-archetype contract. No probability, target, intrinsic value, expected return, consensus, market-pricing claim, ranking, portfolio action, alpha, causal attribution, PIT, liquidity/sizing, share, valuation, provider-semantic, official-acquisition, or authority promotion occurs.
+
 ## 2026-08-20 - Sector-Relative Research Context V1
 
 `SECTOR_RELATIVE_RESEARCH_CONTEXT_V1 = READY_LOCAL` (`sector_relative_research_context.py`, `run_sector_relative_research_context.py`, `tests/test_sector_relative_research_context.py`, `push = NO`).
