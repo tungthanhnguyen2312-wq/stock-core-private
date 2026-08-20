@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - P3-F11 Generic Official Financial Filing Evidence & Statement-Metadata Qualification Foundation
+
+`P3F11_FINANCIAL_EVIDENCE_FOUNDATION = PARTIAL_LOCAL` (`official_financial_filing_evidence.py`, `p3f11_official_financial_filing_evidence.py`, `tools/run_p3f11_official_financial_filing_evidence.py`, `push = NO`).
+
+1. **Fail-closed evidence envelope:** Required filing metadata—period, periodicity, consolidated/separate scope, currency, and unit scale—now needs an explicit hash-bound source span and a SHA-256 match to retained bytes. Audit/review and publication date remain optional metadata and are recorded only where evidenced.
+2. **Representative retained pilot:** One corporate, one bank, and one securities filing qualify document metadata generically; a P3-F10 `SOURCE_MISSING` case stays blocked. The selection is data-driven by existing retained evidence and entity metadata, without ticker-specific production branches, source/provider changes, document acquisition, PDF value extraction, or runtime mutation.
+3. **No fact promotion by metadata alone:** The envelope creates zero provider observations and cannot satisfy canonical-fact qualification on its own. Existing exact official value-level citation and exact provider-match requirements remain unchanged; P3-B readiness and all 523 cohort dispositions are unchanged.
+4. **Next exact gate:** `VALUE_LEVEL_FINANCIAL_EVIDENCE_QUALIFICATION_FOUNDATION`. P3-G is not started.
+
 ## 2026-08-20 - P3-F10 Generic Fundamental Evidence Scale-Out
 
 `P3F10_GENERIC_FUNDAMENTAL_EVIDENCE_SCALEOUT = PARTIAL_LOCAL` (`p3f10_fundamental_evidence_scaleout.py`, `tools/run_p3f10_generic_fundamental_evidence_scaleout.py`, `push = NO`).
