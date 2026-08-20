@@ -80,6 +80,7 @@
 | **Strategy Research Eligibility Engine V1** | Use-case-level research eligibility | **COMPLETE** | A versioned registry maps retained feature/evidence states to independent lens eligibility. It reports requirements, observed state, authority ceiling and blockers per ticker without creating signals, recommendations, rankings, execution, or performance claims. |
 | **Evidence-Aware Research Screener V1** | Research discovery query contract | **COMPLETE** | Validated composable predicates filter retained research fields, authority and lens states with deterministic identities and explainable match/exclusion lineage. It is discovery-only: no scoring, ranking, recommendation, target, probability, or universe authority is created. |
 | **Evidence-Bound Classification & Relative Context Scale-Out V1** | Provider-descriptive industry relative context | **COMPLETE** | Retained VCI industry metadata scales source-local same-session technical context to 486 lower-authority records while preserving the original 27 qualified records and filters. The next meaningful product gap is evidence-backed catalysts/events, not renewed classification qualification. |
+| **Catalyst & Event Research Context V1** | Evidence-backed issuer-event research | **COMPLETE** | A versioned event context preserves event facts separately from linked, bounded catalyst interpretations. Retained coverage is one completed official HPG corporate-action event and no review-pack event; broader useful coverage requires a governed generic issuer-event feed, not manual URL work. |
 
 ---
 

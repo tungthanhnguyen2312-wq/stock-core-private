@@ -1240,3 +1240,11 @@ single-ticker work.
 2. The 33 prior qualified classifications are unchanged and take precedence. Provider groups are isolated to the single VCI namespace and require at least five members. This yields 486 lower-authority contexts; the four-name provider telecom group fails closed, as do the pre-existing small qualified classes.
 3. Relative output remains same-session technical context only: 20-day momentum, volatility, provider-scoped relative volume, and trend-state distribution. It excludes cross-metric provider fundamentals, valuation, ranking, recommendation, sizing, execution, historical PIT, and liquidity authority.
 4. `RELATIVE_CONTEXT_AVAILABLE` remains qualified-only. New explicit provider-descriptive and any-relative screen filters, eligibility states, and Review Pack labels prevent consumers from conflating the two authority tiers.
+## 2026-08-20 - Catalyst & Event Research Context V1
+
+`CATALYST_EVENT_RESEARCH_CONTEXT_V1 = READY_LOCAL` (`catalyst_event_research_context.py`, `run_catalyst_event_research_context.py`, `push = NO`).
+
+1. An event is a source-linked `FACT`; a catalyst interpretation is a distinct `INFERENCE` carrying the event identity, scenario/dossier linkage, thesis/counter-thesis hashes, open question, and invalidation relevance. AI is prohibited from creating event facts or factual dates.
+2. The retained official corporate-action ledger produces one eligible HPG stock-dividend/listing-change event. It is `COMPLETED`; the original ledger's absent ex-date and record date remain unknown, and no record/payment/listing date is substituted. Its research impact remains ambiguous/unknown rather than positive or negative.
+3. Catalyst eligibility requires at least one evidence-backed event. It is therefore HPG-only (1/523); all other records retain `NO_EVIDENCE_BACKED_EVENT`. The 25-name Review Pack and its scenario cases receive no upgrade because HPG is not in that queue.
+4. This consumer context creates no corporate-action price adjustment, historical PIT/backtest, recommendation, scoring, probability, target, expected return, liquidity, sizing, or new authority. Broader event coverage needs a separately governed generic event source, not a manual ticker campaign.
