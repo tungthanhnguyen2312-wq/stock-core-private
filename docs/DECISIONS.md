@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-20 - Evidence-Aware Research Screener V1
+
+`EVIDENCE_AWARE_RESEARCH_SCREENER_V1 = READY_LOCAL` (`evidence_aware_research_screener.py`, `run_evidence_aware_research_screener.py`, `tests/test_evidence_aware_research_screener.py`, `push = NO`).
+
+1. The deterministic screener consumes the existing 523-record empirical-active shadow cohort and unmodified eligibility verdicts. Its constrained field/lens/relative predicates compose only through explicit AND/OR/NOT nodes; unsupported fields, operators, lenses, and missing values fail closed rather than executing arbitrary code or coercing a match.
+2. Real transparent preset coverage: positive trend 193, weak trend 320, retained fundamental context 523, higher-authority fundamentals 11, qualified relative context 27, partial scenario cohort 25, and researchable-but-execution-blocked 523. These are discovery filters, not rankings or investment conclusions.
+3. Every matching row retains deterministic values, lens state, authority, warnings, dossier identity, matched predicate explanation and source artifact identities. The Review Pack overlay attaches only matched preset/query identities to its existing 25 names; it does not mutate queue membership, owner state, dossiers, tasks, scenarios, or authority.
+4. The shadow cohort remains neither a market-wide nor executable universe. No signal, recommendation, target, probability, expected return, portfolio action, PIT, liquidity/sizing, valuation, share, provider-semantic, official-acquisition, or authority promotion occurs.
+
 ## 2026-08-20 - Strategy Research Eligibility Engine V1
 
 `STRATEGY_RESEARCH_ELIGIBILITY_V1 = READY_LOCAL` (`strategy_research_eligibility.py`, `run_strategy_research_eligibility.py`, `tests/test_strategy_research_eligibility.py`, `push = NO`).
