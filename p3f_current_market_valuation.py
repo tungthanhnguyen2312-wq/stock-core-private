@@ -271,3 +271,19 @@ def build_p3f_valuation_artifact(*, p3e_artifact: Mapping[str, Any], runtime_roo
 
 def serialize(artifact: Mapping[str, Any]) -> str:
     return json.dumps(artifact, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def market_cap_from_authority_resolver(resolved_inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """P3-F2 integration seam: consume qualified generic inputs without formulas.
+
+    P3-F remains the owner of multiple calculations.  This small adapter only
+    validates the authority resolver's market-cap readiness and carries its
+    exact price/share lineage forward for a P3-F evaluation caller.
+    """
+    if resolved_inputs.get("market_cap_readiness") != "MARKET_CAP_READY":
+        return {"status": "MARKET_CAP_BLOCKED", "value": None,
+                "blockers": list(resolved_inputs.get("blocker_codes") or []),
+                "is_actionable": False}
+    return {"status": "MARKET_CAP_READY", "value": resolved_inputs.get("market_cap"),
+            "price_input": resolved_inputs.get("price"), "share_basis_input": resolved_inputs.get("shares"),
+            "is_actionable": False}
