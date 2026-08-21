@@ -10,6 +10,25 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Official Financial Source Route Discovery V1
+
+`OFFICIAL_SOURCE_ROUTE_DISCOVERY_V1 = READY_LOCAL` (`official_financial_source_route_discovery.py`, `tools/run_official_financial_source_route_discovery.py`, `tests/test_official_financial_source_route_discovery.py`, `operations-review/official-financial-source-route-discovery-v1-20260821/official_financial_source_route_discovery_artifact.json`, `push = NO`).
+
+1. **Deterministic Multi-Route Discovery Boundary**:
+   - Implemented route discovery and ownership verification across 3 allowed source classes: `exchange_disclosure` (HOSE/HNX official listing security master charter), `issuer_ir` (corporate/IR portals with statutory charter registration evidence), and `regulator_statutory` (VSDC/SSC).
+   - Evaluated 34 candidate routes across the 17-issuer validation cohort (5 Commercial Banks: `ABB`, `ACB`, `BID`, `MBB`, `TCB`; 2 Securities: `AAS`, `ABW`; 10 Corporate: `AAA`, `AAH`, `AAN`, `AAT`, `AAV`, `ABS`, `ABT`, `ACC`, `MWG`, `VIC`).
+
+2. **Ownership Qualification & Technical Rejection Results**:
+   - 28 routes deterministically achieved `OWNERSHIP_QUALIFIED`: 17/17 exchange disclosure routes (backed by official exchange listing records) and 11/17 issuer IR routes (`AAA`, `AAT`, `ABS`, `ABT`, `ABW`, `ACB`, `BID`, `MBB`, `MWG`, `TCB`, `VIC`) with verified business registration / tax code / banking license evidence.
+   - 6 candidate IR routes failed closed and were `REJECTED`: `AAH` (DNS resolution failed), `AAN` (DNS resolution failed), `AAS` (SSL certificate hostname mismatch), `AAV` (connection refused), `ABB` (timeout), `ACC` (DNS resolution failed).
+   - Strictly prohibited third-party portals, aggregators, search result pages, brokers, and unverified document mirrors from establishing source authority.
+
+3. **Strict Separation of Discovery from Activation**:
+   - Route discovery produced 11 proposed `governed_registry_candidates` (`PENDING_OWNER_PROMOTION_REVIEW`).
+   - Closed-world source registry (`config/official_source_registry.json`) was not mutated.
+   - Zero financial documents downloaded, zero OCR performed, zero financial facts created, zero P3-B fundamental readiness mutated.
+   - Next operational gate: `GOVERNED_OFFICIAL_SOURCE_REGISTRY_ACTIVATION_REVIEW`.
+
 ## 2026-08-21 - Wave 2 Official Financial Evidence Scale-Out
 
 `OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT_WAVE2 = PARTIAL_LOCAL` (`wave2_official_financial_evidence_scaleout.py`, `tools/run_official_financial_evidence_scaleout_wave2.py`, `tests/test_official_financial_evidence_scaleout_wave2.py`, `operations-review/official-financial-evidence-scaleout-wave2-20260821/wave2_official_financial_evidence_scaleout_artifact.json`, `push = NO`).
