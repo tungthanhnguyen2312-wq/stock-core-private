@@ -10,6 +10,24 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Bounded Official Route Evidence Enrichment V1
+
+`BOUNDED_OFFICIAL_ROUTE_EVIDENCE_ENRICHMENT_V1 = COMPLETE_LOCAL` (`bounded_official_route_evidence_enrichment.py`, `tools/run_bounded_official_route_evidence_enrichment.py`, `tests/test_bounded_official_route_evidence_enrichment.py`, `operations-review/bounded-official-route-evidence-enrichment-v1-20260821/bounded_official_route_evidence_enrichment_artifact.json`, `push = NO`).
+
+1. **Fixed-Route Synchronous Acquisition & Budget Enforcement**:
+   - Executed synchronous foreground-only acquisition with strict hard request budgets across the four non-ready validation issuers: AAA (1 request: `https://anphatbioplastics.com/ve-chung-toi/`), BID (1 request: `https://www.bidv.com.vn/vn/quan-he-nha-dau-tu`), AAT (1 request: `https://tiensonaus.com/gioi-thieu/`), ABT (2 requests: `/cong/` and `/investors-copy/`).
+   - Total network requests: 5 requests (below the 7 first-party ceiling and 11 total ceiling). No secondary request was made for BID or AAT once sufficient evidence was established.
+   - Retain-on-acquisition: all 5 response HTML objects were immediately saved to disk with SHA-256 addresses (`operations-review/bounded-official-route-evidence-enrichment-v1-20260821/evidence/`).
+2. **Byte-Derived Review Outcomes**:
+   - `AAA` (`anphatbioplastics.com`): Retained bytes contain `"Công ty CP Nhựa An Phát Xanh"` and `"Công ty Cổ phần Nhựa An Phát Xanh"`, matching expected issuer `CTCP Nhựa An Phát Xanh` under existing legal-form normalization -> `OWNER_REVIEW_READY`.
+   - `BID` (`bidv.com.vn`): Retained bytes contain `"Ngân hàng TMCP Đầu tư và Phát triển Việt Nam"`, with redirect chain recorded (`www.bidv.com.vn` -> `bidv.com.vn`) -> `OWNER_REVIEW_READY`.
+   - `AAT` (`tiensonaus.com`): Retained bytes on the new domain contain `"CTCP TẬP ĐOÀN TIÊN SƠN THANH HÓA"`, matching expected legal name -> `OWNER_REVIEW_READY` on the independent new route. The historical `tienson.vn` conflict record is preserved unmodified as `IDENTITY_CONFLICT` (`REJECTED`).
+   - `ABT` (`aquatexbentre.com`): Retained bytes contain English company name and `"CTCP XNK thủy sản Bến Tre"`. In compliance with governance doctrine, unsupported abbreviation `XNK` != `Xuất nhập khẩu` and cross-language matching fail closed without contract expansion -> `INSUFFICIENT_IDENTITY_EVIDENCE`.
+3. **Governance & Separation of Activation**:
+   - 3 new candidate issuer IR routes (`anphatbioplastics.com`, `bidv.com.vn`, `tiensonaus.com`) emitted as `PENDING_OWNER_PROMOTION_REVIEW` (total candidate pool across Wave 2: 9 issuers).
+   - `config/official_source_registry.json` remains completely unmutated; zero financial documents acquired, zero facts created, zero readiness mutated.
+
+
 ## 2026-08-21 - Prospective Route Ownership Review Contract V1
 
 `PROSPECTIVE_ROUTE_OWNERSHIP_REVIEW_CONTRACT_V1 = COMPLETE_LOCAL` (`prospective_route_ownership_review.py`, `tools/run_prospective_route_ownership_review.py`, `tests/test_prospective_route_ownership_review.py`, `operations-review/prospective-route-ownership-review-v1-20260821/prospective_route_ownership_review_artifact.json`, `push = NO`).
