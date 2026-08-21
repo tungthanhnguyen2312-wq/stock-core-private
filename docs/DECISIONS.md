@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Prospective Research Cohort Diagnostics V1
+
+`PROSPECTIVE_RESEARCH_COHORT_DIAGNOSTICS_V1 = READY_LOCAL` (`prospective_research_cohort_diagnostics.py`, `run_prospective_research_cohort_diagnostics.py`, `tests/test_prospective_research_cohort_diagnostics.py`, `push = NO`).
+
+1. The first deterministic cohort diagnostics engine over the prospective learning ledger maps 1,047 prospective observations across two retained research sessions (2026-08-20 and 2026-08-21) to 87 versioned cohort summaries across 10 discovered descriptor dimensions (overall, attention_descriptor, setup_classification, queue_membership, downside_context, price_structure_context, market_regime, relative_classification_authority, evidence_authority, thesis_continuity) and 3 horizons (H1, H3, H5).
+2. The real single observed H1 transition (2026-08-20 → 2026-08-21: 521 observed, 2 missing) is explicitly classified as `OBSERVED_IMMATURE_SAMPLE` and supports descriptive statistics only (mean, median, min, max, positive/negative/zero counts, quartiles). Missing observations (BRS, CCS) remain explicitly missing and are never replaced with zero or imputed.
+3. Horizons H3 and H5, along with the 2026-08-21 T-state H1, are 100% `PENDING_OUTCOMES` because insufficient subsequent exact-session observations exist. The engine emits structured data accumulation needs highlighting low-sample descriptors (n < 30) and pending horizon requirements.
+4. Strictly preserves negative boundaries: no backtest, no alpha/Sharpe/significance/p-values, no hit-rate skill, no recommendation authority, no sizing/liquidity authority, and zero promotion of RAW_AS_TRADED or historical PIT price basis.
+
 ## 2026-08-21 - Prospective Daily Rollforward & Learning Ledger V1
 
 `PROSPECTIVE_DAILY_ROLLFORWARD_V1 = READY_LOCAL` (`prospective_daily_rollforward.py`, `run_prospective_daily_rollforward.py`, `push = NO`).

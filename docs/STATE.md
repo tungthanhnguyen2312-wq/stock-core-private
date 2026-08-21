@@ -17,10 +17,12 @@
 
 ## 2. Program Priority & Foundation Status
 
-**Prospective daily rollforward V1:** the immutable 2026-08-20 → 2026-08-21 H1 observation is retained in an append-only descriptive ledger. A new independent 2026-08-21 shadow T-state is sealed at 524 members before a later exact observation; it is pending H1/H3/H5. Missing 2026-08-21 analytical components are explicit rather than substituted from 2026-08-20. This does not promote PIT, RAW_AS_TRADED, backtest, strategy, or recommendation authority.
+**Prospective research cohort diagnostics V1:** the first deterministic cohort diagnostics engine over the prospective learning ledger maps 1,047 prospective observations across two retained research sessions (2026-08-20 and 2026-08-21) to 87 versioned cohort summaries across 10 discovered descriptor dimensions and 3 horizons (H1, H3, H5). The single observed H1 transition (521 observed, 2 missing) is explicitly classified as `OBSERVED_IMMATURE_SAMPLE` and descriptive only. H3/H5 remain 100% `PENDING_OUTCOMES`. Zero promotion of PIT, RAW_AS_TRADED, alpha, backtest, or recommendation authority.
 
 | Program / Milestone | Description | Status | Key Governance Constraints |
 |---------------------|-------------|--------|----------------------------|
+| **Prospective Research Cohort Diagnostics V1** | Deterministic cohort diagnostics & sample maturity across prospective learning horizons | **COMPLETE LOCALLY** | Maps 1,047 observations across 2 retained sessions to 87 cohort summaries over 10 descriptor dimensions. Real H1 transition (521 observed, 2 missing) is classified as `OBSERVED_IMMATURE_SAMPLE` (descriptive only); H3/H5 remain 100% `PENDING_OUTCOMES`. Zero alpha/backtest/predictive/recommendation/sizing authority; no RAW_AS_TRADED/PIT promotion. |
+| **Prospective Daily Rollforward V1** | Offline immutable T-state sealing and append-only prospective learning ledger | **COMPLETE LOCALLY** | Preserves the first 2026-08-20 → 2026-08-21 descriptive H1 attribution, seals an independent 524-member 2026-08-21 shadow cohort before a later exact session, and retains H1/H3/H5 maturity explicitly. Missing same-session analytical components are unavailable, never silently carried forward. No backtest/PIT/RAW_AS_TRADED/alpha/recommendation authority. |
 | **P0-RECOVERY** | Canonical Trades Materialization & Task 160 | **CLOSED** | `TERMINAL_SUCCESS_QUALITY_RESTRICTED`. 18,109,141 canonical trades across 40 sessions. |
 | **P0-A.1** | Market-Wide OHLC Raw Ingestion | **COMPLETE** | 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected failures classified. |
 | **P0-A.2** | Corporate Action Evidence Scale-Out | **COMPLETE** | Document-authority coverage & multi-event extraction integrated locally (`official_corporate_action_ledger.py`). |
@@ -151,7 +153,7 @@ The detailed historical critical path below is retained as implementation histor
 40. **Phase 3-F13 Generic Official Financial Evidence Operational Scale-Out** — **COMPLETE LOCALLY** (`p3f13_official_financial_evidence_scaleout.py`, `tools/run_p3f13_official_financial_evidence_scaleout.py`, `operations-review/p3f13-official-financial-evidence-scaleout-20260820/`). `OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT_PARTIAL` confirmed (13 issuers, 138 qualified facts; 510 issuers blocked on unapproved official source routes).
 
 ### Exact Next Bounded Action:
-**First genuine later-session prospective attribution** is the next data-dependent action: once the normal pipeline retains an exact completed session strictly later than 2026-08-20, join it to the immutable original snapshot plus supplemental context extension for descriptive cohort review only. It must remain non-PIT/non-backtest, non-ranking, non-recommendation, non-sizing, and must not use a same-session substitute.
+**Prospective Research Cohort Diagnostics V1** is complete locally: 87 cohort summaries across 10 descriptor dimensions and 3 horizons (H1/H3/H5) generated from the retained learning ledger. The next bounded action is offline data accumulation as subsequent exact completed sessions become retained through normal operational pipelines (allowing H3/H5 progression and multi-session descriptive sample maturity). It remains strictly descriptive, non-PIT/non-backtest, non-ranking, non-recommendation, and non-sizing.
 
 ---
 
