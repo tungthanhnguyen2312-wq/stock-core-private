@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - FHSC Historical Price Semantics Qualification V1
+
+`FHSC_HISTORICAL_PRICE_SEMANTICS_QUALIFICATION_V1 = COMPLETE_LOCAL_SEMANTICS_PARTIAL` (`fhsc_historical_price_semantics.py`, `tools/run_fhsc_historical_price_semantics_qualification.py`, `tests/test_fhsc_historical_price_semantics.py`, `operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/fhsc_historical_price_semantics_qualification_artifact.json`, `push = NO`).
+
+1. **Official documentation is retained and capability-scoped:** four official FHSC documentation objects, including the current machine-readable OpenAPI, are byte-retained with URL, timestamp, MIME, size, and SHA-256. The current `/market/quotes/stocks/{symbol}/history` contract names OHLCV and a currency field, while realtime is a separate capability. It does not document the retained legacy `/market/price-histories-chart` columnar route or state its numeric price scale, adjustment basis, or finalization. Therefore `PRICE_UNIT = UNDOCUMENTED`, `ADJUSTMENT_BASIS = UNDOCUMENTED`, and `FINALIZATION = UNDOCUMENTED` for the retained legacy capability.
+2. **Empirical experiment rejects a generic transform:** ten cross-sector/price-level tickers with ten retained completed DNSE sessions each produced 400 field-by-field comparisons. 282 are exact 1:1 (principally open/high/low), 94 exact DNSE/FHSC ×1,000 (principally close), and 24 are non-exact SSI rows across six sessions. The candidate ratio is not invariant across fields, issuers, or sessions; maximum residual under a global ×1,000 candidate is 218,181.6. No raw source value was changed.
+3. **No empirical shadow transform is earned:** `NO_TRANSFORM_QUALIFIED` is the maximum result—not `EMPIRICALLY_CALIBRATED_SHADOW_TRANSFORM`. No legacy FHSC price normalization is permitted for reconciliation, anomaly detection, or any downstream use. The capability warning remains `PROVIDER_UNIT_UNDOCUMENTED`; volume is deliberately `BASIS_UNRESOLVED` and financial/foreign lanes remain out of scope.
+4. **Negative boundaries:** FHSC remains `SHADOW_REFERENCE_PROVIDER`; DNSE authority is unchanged. No RAW_AS_TRADED, adjustment-basis, liquidity/sizing, provider-fundamental, canonical fact, valuation/recommendation, runtime/database, merge, deployment, or push action occurred.
+
 ## 2026-08-21 - FHSC DNSE Retained Live Reconciliation V1
 
 `FHSC_DNSE_RETAINED_LIVE_RECONCILIATION_V1 = COMPLETE_LOCAL_PARTIAL` (`fhsc_retained_live_reconciliation.py`, `tools/run_fhsc_dnse_retained_live_reconciliation.py`, `tests/test_fhsc_retained_live_reconciliation.py`, `operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/fhsc_dnse_retained_live_reconciliation_artifact.json`, `push = NO`).
