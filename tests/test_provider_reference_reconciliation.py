@@ -127,7 +127,9 @@ def test_offline_replay_is_deterministic_and_authority_neutral() -> None:
     first = build_offline_artifact()
     second = build_offline_artifact()
     assert first == second
-    assert first["fhsc_credential_state"]["credential_configured"] is False
+    # The offline artifact is deterministic for a fixed local credential state;
+    # it must not assume an operator-approved secret file stays unconfigured.
+    assert first["fhsc_credential_state"]["secrets_file_consulted"] is True
     assert first["real_probe"]["network_requests"] == 0
     assert len(first["dnse_retained_observations"]) == 3
     assert all(row["verdict"] == MISSING_SOURCE_OBSERVATION for row in first["reconciliation_rows"])

@@ -1,0 +1,490 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "provider_reference_observation/v1",
+  "artifact_type": "FHSC_DNSE_RETAINED_LIVE_RECONCILIATION",
+  "session_target": "2026-08-20",
+  "request_budget": {
+    "per_ticker_max": 6,
+    "total_max": 18,
+    "used": 6
+  },
+  "official_contract": {
+    "base_url": "https://open-api.fhsc.com.vn",
+    "endpoint": "/market/price-histories-chart",
+    "documented_response_key": "data",
+    "documented_shape": "columnar_ohlcv",
+    "published_price_unit": "UNSPECIFIED",
+    "published_finalization": "UNSPECIFIED",
+    "current_only_endpoint": "/market/stock-realtime"
+  },
+  "request_records": [
+    {
+      "symbol": "HPG",
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=HPG&resolution=1D&from=1787184000&to=1787270400",
+      "request_parameters": {
+        "symbol": "HPG",
+        "resolution": "1D",
+        "from": "1787184000",
+        "to": "1787270400"
+      },
+      "retrieval_time": "2026-08-21T14:03:01.461800+00:00",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "successful": true,
+      "raw_response_retained": true,
+      "raw_sha256": "98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+      "endpoint_capability": "price_histories_chart_1d",
+      "raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/HPG_price_histories_chart_98185ce45cf97724.json"
+    },
+    {
+      "symbol": "VCB",
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VCB&resolution=1D&from=1787184000&to=1787270400",
+      "request_parameters": {
+        "symbol": "VCB",
+        "resolution": "1D",
+        "from": "1787184000",
+        "to": "1787270400"
+      },
+      "retrieval_time": "2026-08-21T14:03:01.808115+00:00",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "successful": true,
+      "raw_response_retained": true,
+      "raw_sha256": "8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+      "endpoint_capability": "price_histories_chart_1d",
+      "raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/VCB_price_histories_chart_8aade9bf1c34485a.json"
+    },
+    {
+      "symbol": "SSI",
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=SSI&resolution=1D&from=1787184000&to=1787270400",
+      "request_parameters": {
+        "symbol": "SSI",
+        "resolution": "1D",
+        "from": "1787184000",
+        "to": "1787270400"
+      },
+      "retrieval_time": "2026-08-21T14:03:02.382713+00:00",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "successful": true,
+      "raw_response_retained": true,
+      "raw_sha256": "299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+      "endpoint_capability": "price_histories_chart_1d",
+      "raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/SSI_price_histories_chart_299e9ad1df529a29.json"
+    },
+    {
+      "symbol": "HPG",
+      "endpoint_capability": "stock_realtime",
+      "request_url": "https://open-api.fhsc.com.vn/market/stock-realtime?symbol=HPG",
+      "request_parameters": {
+        "symbol": "HPG"
+      },
+      "retrieval_time": "2026-08-21T14:04:12.958056+00:00",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "successful": true,
+      "raw_response_retained": true,
+      "raw_sha256": "f210e6bd661b14ebadcd139f6c6a41e8cc214cae86416c28f8079e4ff76e505c",
+      "raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/HPG_stock_realtime_f210e6bd661b14eb.json"
+    },
+    {
+      "symbol": "VCB",
+      "endpoint_capability": "stock_realtime",
+      "request_url": "https://open-api.fhsc.com.vn/market/stock-realtime?symbol=VCB",
+      "request_parameters": {
+        "symbol": "VCB"
+      },
+      "retrieval_time": "2026-08-21T14:04:13.135225+00:00",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "successful": true,
+      "raw_response_retained": true,
+      "raw_sha256": "26c5a37d155d449cbe900efad523d51d2a173562fabe3574633007b4393d7ddf",
+      "raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/VCB_stock_realtime_26c5a37d155d449c.json"
+    },
+    {
+      "symbol": "SSI",
+      "endpoint_capability": "stock_realtime",
+      "request_url": "https://open-api.fhsc.com.vn/market/stock-realtime?symbol=SSI",
+      "request_parameters": {
+        "symbol": "SSI"
+      },
+      "retrieval_time": "2026-08-21T14:04:13.270010+00:00",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "successful": true,
+      "raw_response_retained": true,
+      "raw_sha256": "d80f82e6796d9fcc84f5d3038d7873ff43a44ccdac21616df007b63e35f27835",
+      "raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/SSI_stock_realtime_d80f82e6796d9fcc.json"
+    }
+  ],
+  "parsed_records": [
+    {
+      "parse_status": "PARSED",
+      "symbol": "HPG",
+      "resolution": "1D",
+      "rows": [
+        {
+          "session": "2026-08-20",
+          "event_time": "2026-08-20T00:00:00+00:00",
+          "open": 21.25,
+          "high": 21.45,
+          "low": 21.15,
+          "close": 21.15,
+          "volume": 15156400
+        },
+        {
+          "session": "2026-08-21",
+          "event_time": "2026-08-21T00:00:00+00:00",
+          "open": 21.15,
+          "high": 21.75,
+          "low": 21.05,
+          "close": 21.7,
+          "volume": 25138400
+        }
+      ]
+    },
+    {
+      "parse_status": "PARSED",
+      "symbol": "VCB",
+      "resolution": "1D",
+      "rows": [
+        {
+          "session": "2026-08-20",
+          "event_time": "2026-08-20T00:00:00+00:00",
+          "open": 57.8,
+          "high": 58.1,
+          "low": 57.3,
+          "close": 57.8,
+          "volume": 3006600
+        },
+        {
+          "session": "2026-08-21",
+          "event_time": "2026-08-21T00:00:00+00:00",
+          "open": 57.8,
+          "high": 59.1,
+          "low": 57.5,
+          "close": 59.1,
+          "volume": 4695200
+        }
+      ]
+    },
+    {
+      "parse_status": "PARSED",
+      "symbol": "SSI",
+      "resolution": "1D",
+      "rows": [
+        {
+          "session": "2026-08-20",
+          "event_time": "2026-08-20T00:00:00+00:00",
+          "open": 19.6,
+          "high": 19.7,
+          "low": 19.4,
+          "close": 19.4,
+          "volume": 11042500
+        },
+        {
+          "session": "2026-08-21",
+          "event_time": "2026-08-21T00:00:00+00:00",
+          "open": 19.7,
+          "high": 20.75,
+          "low": 19.65,
+          "close": 20.75,
+          "volume": 38706800
+        }
+      ]
+    },
+    {
+      "parse_status": "PARSED_CURRENT_SESSION_ONLY",
+      "symbol": "HPG",
+      "name": "Công ty Cổ phần Tập đoàn Hòa Phát",
+      "exchange": "HOSE",
+      "stock_type": "STOCK",
+      "total_volume": 25138400,
+      "volume": 1302600,
+      "foreign_bought": 1921281,
+      "foreign_sold": 3288324,
+      "foreign_remain": 2305848014,
+      "provider_session_qualification": "NOT_ATTEMPTED_CURRENT_ENDPOINT"
+    },
+    {
+      "parse_status": "PARSED_CURRENT_SESSION_ONLY",
+      "symbol": "VCB",
+      "name": "Ngân hàng Thương mại Cổ phần Ngoại Thương Việt Nam",
+      "exchange": "HOSE",
+      "stock_type": "STOCK",
+      "total_volume": 4695200,
+      "volume": 276800,
+      "foreign_bought": 527101,
+      "foreign_sold": 1841300,
+      "foreign_remain": 826364639,
+      "provider_session_qualification": "NOT_ATTEMPTED_CURRENT_ENDPOINT"
+    },
+    {
+      "parse_status": "PARSED_CURRENT_SESSION_ONLY",
+      "symbol": "SSI",
+      "name": "Công ty Cổ phần Chứng khoán SSI",
+      "exchange": "HOSE",
+      "stock_type": "STOCK",
+      "total_volume": 38706800,
+      "volume": 202900,
+      "foreign_bought": 6093099,
+      "foreign_sold": 2621541,
+      "foreign_remain": 1743251982,
+      "provider_session_qualification": "NOT_ATTEMPTED_CURRENT_ENDPOINT"
+    }
+  ],
+  "reconciliation_rows": [
+    {
+      "contract_version": "provider_reference_observation/v1",
+      "comparison_key": {
+        "instrument": "HPG",
+        "session": "2026-08-20",
+        "field": "close"
+      },
+      "primary_provider": "DNSE",
+      "challenger_provider": "FHSC",
+      "observations": [
+        {
+          "provider": "DNSE",
+          "provider_interface": "dnse_openapi_retained_shadow",
+          "endpoint_capability": "ohlc_1d",
+          "instrument": "HPG",
+          "exchange": null,
+          "session": "2026-08-20",
+          "event_time": null,
+          "retrieval_time": "2026-08-20T17:20:44.267667+07:00",
+          "field": "close",
+          "raw_value": 21150.0,
+          "normalized_value": 21150.0,
+          "unit": "VND_PER_SHARE",
+          "basis": "ADJUSTED_RETROSPECTIVE",
+          "semantic_status": "SEMANTICS_RESOLVED",
+          "finalization_status": "CLOSED_SESSION_OBSERVATION",
+          "source_payload_identity": "mva_daily_investment_research:9f4089d1a7ed4fd30126fd158a40b764aa7a8b26355bcece203f5d3eb4675942",
+          "source_payload_sha256": null,
+          "missing_disposition": "OBSERVED",
+          "provenance": {
+            "retained_artifact_path": "operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json",
+            "retained_artifact_file_sha256": "f892ac3c63d2b58e5e1ecf0315e1b42485235e6364fcd4a9b58a0fc156d889b3",
+            "raw_payload_identity_available": false,
+            "raw_as_traded": "NOT_PROMOTED"
+          },
+          "source_role": "PRIMARY_CANDIDATE"
+        },
+        {
+          "provider": "FHSC",
+          "provider_interface": "fhsc_open_api_tier1",
+          "endpoint_capability": "price_histories_chart_1d",
+          "instrument": "HPG",
+          "exchange": null,
+          "session": "2026-08-20",
+          "event_time": "2026-08-20T00:00:00+00:00",
+          "retrieval_time": "2026-08-21T14:03:01.461800+00:00",
+          "field": "close",
+          "raw_value": 21.15,
+          "normalized_value": null,
+          "unit": "UNSPECIFIED_PRICE_UNIT",
+          "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+          "semantic_status": "BASIS_UNRESOLVED",
+          "finalization_status": "FINALIZATION_STATUS_UNKNOWN",
+          "source_payload_identity": "fhsc_retained:98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+          "source_payload_sha256": "98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+          "missing_disposition": "OBSERVED",
+          "provenance": {
+            "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/HPG_price_histories_chart_98185ce45cf97724.json",
+            "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=HPG&resolution=1D&from=1787184000&to=1787270400",
+            "request_parameters": {
+              "symbol": "HPG",
+              "resolution": "1D",
+              "from": "1787184000",
+              "to": "1787270400"
+            },
+            "http_status": 200,
+            "mime_type": "application/json",
+            "parsed_from_retained_bytes": true,
+            "published_endpoint": "/market/price-histories-chart"
+          },
+          "source_role": "SHADOW_REFERENCE_PROVIDER"
+        }
+      ],
+      "authority_effect": "NONE",
+      "provider_majority_creates_authority": false,
+      "selected_provider": null,
+      "authoritative_value": null,
+      "verdict": "UNIT_MISMATCH",
+      "missing_providers": []
+    },
+    {
+      "contract_version": "provider_reference_observation/v1",
+      "comparison_key": {
+        "instrument": "SSI",
+        "session": "2026-08-20",
+        "field": "close"
+      },
+      "primary_provider": "DNSE",
+      "challenger_provider": "FHSC",
+      "observations": [
+        {
+          "provider": "DNSE",
+          "provider_interface": "dnse_openapi_retained_shadow",
+          "endpoint_capability": "ohlc_1d",
+          "instrument": "SSI",
+          "exchange": null,
+          "session": "2026-08-20",
+          "event_time": null,
+          "retrieval_time": "2026-08-20T17:20:44.267667+07:00",
+          "field": "close",
+          "raw_value": 19400.0,
+          "normalized_value": 19400.0,
+          "unit": "VND_PER_SHARE",
+          "basis": "ADJUSTED_RETROSPECTIVE",
+          "semantic_status": "SEMANTICS_RESOLVED",
+          "finalization_status": "CLOSED_SESSION_OBSERVATION",
+          "source_payload_identity": "mva_daily_investment_research:9f4089d1a7ed4fd30126fd158a40b764aa7a8b26355bcece203f5d3eb4675942",
+          "source_payload_sha256": null,
+          "missing_disposition": "OBSERVED",
+          "provenance": {
+            "retained_artifact_path": "operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json",
+            "retained_artifact_file_sha256": "f892ac3c63d2b58e5e1ecf0315e1b42485235e6364fcd4a9b58a0fc156d889b3",
+            "raw_payload_identity_available": false,
+            "raw_as_traded": "NOT_PROMOTED"
+          },
+          "source_role": "PRIMARY_CANDIDATE"
+        },
+        {
+          "provider": "FHSC",
+          "provider_interface": "fhsc_open_api_tier1",
+          "endpoint_capability": "price_histories_chart_1d",
+          "instrument": "SSI",
+          "exchange": null,
+          "session": "2026-08-20",
+          "event_time": "2026-08-20T00:00:00+00:00",
+          "retrieval_time": "2026-08-21T14:03:02.382713+00:00",
+          "field": "close",
+          "raw_value": 19.4,
+          "normalized_value": null,
+          "unit": "UNSPECIFIED_PRICE_UNIT",
+          "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+          "semantic_status": "BASIS_UNRESOLVED",
+          "finalization_status": "FINALIZATION_STATUS_UNKNOWN",
+          "source_payload_identity": "fhsc_retained:299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+          "source_payload_sha256": "299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+          "missing_disposition": "OBSERVED",
+          "provenance": {
+            "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/SSI_price_histories_chart_299e9ad1df529a29.json",
+            "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=SSI&resolution=1D&from=1787184000&to=1787270400",
+            "request_parameters": {
+              "symbol": "SSI",
+              "resolution": "1D",
+              "from": "1787184000",
+              "to": "1787270400"
+            },
+            "http_status": 200,
+            "mime_type": "application/json",
+            "parsed_from_retained_bytes": true,
+            "published_endpoint": "/market/price-histories-chart"
+          },
+          "source_role": "SHADOW_REFERENCE_PROVIDER"
+        }
+      ],
+      "authority_effect": "NONE",
+      "provider_majority_creates_authority": false,
+      "selected_provider": null,
+      "authoritative_value": null,
+      "verdict": "UNIT_MISMATCH",
+      "missing_providers": []
+    },
+    {
+      "contract_version": "provider_reference_observation/v1",
+      "comparison_key": {
+        "instrument": "VCB",
+        "session": "2026-08-20",
+        "field": "close"
+      },
+      "primary_provider": "DNSE",
+      "challenger_provider": "FHSC",
+      "observations": [
+        {
+          "provider": "DNSE",
+          "provider_interface": "dnse_openapi_retained_shadow",
+          "endpoint_capability": "ohlc_1d",
+          "instrument": "VCB",
+          "exchange": null,
+          "session": "2026-08-20",
+          "event_time": null,
+          "retrieval_time": "2026-08-20T17:20:44.267667+07:00",
+          "field": "close",
+          "raw_value": 57800.0,
+          "normalized_value": 57800.0,
+          "unit": "VND_PER_SHARE",
+          "basis": "ADJUSTED_RETROSPECTIVE",
+          "semantic_status": "SEMANTICS_RESOLVED",
+          "finalization_status": "CLOSED_SESSION_OBSERVATION",
+          "source_payload_identity": "mva_daily_investment_research:9f4089d1a7ed4fd30126fd158a40b764aa7a8b26355bcece203f5d3eb4675942",
+          "source_payload_sha256": null,
+          "missing_disposition": "OBSERVED",
+          "provenance": {
+            "retained_artifact_path": "operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json",
+            "retained_artifact_file_sha256": "f892ac3c63d2b58e5e1ecf0315e1b42485235e6364fcd4a9b58a0fc156d889b3",
+            "raw_payload_identity_available": false,
+            "raw_as_traded": "NOT_PROMOTED"
+          },
+          "source_role": "PRIMARY_CANDIDATE"
+        },
+        {
+          "provider": "FHSC",
+          "provider_interface": "fhsc_open_api_tier1",
+          "endpoint_capability": "price_histories_chart_1d",
+          "instrument": "VCB",
+          "exchange": null,
+          "session": "2026-08-20",
+          "event_time": "2026-08-20T00:00:00+00:00",
+          "retrieval_time": "2026-08-21T14:03:01.808115+00:00",
+          "field": "close",
+          "raw_value": 57.8,
+          "normalized_value": null,
+          "unit": "UNSPECIFIED_PRICE_UNIT",
+          "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+          "semantic_status": "BASIS_UNRESOLVED",
+          "finalization_status": "FINALIZATION_STATUS_UNKNOWN",
+          "source_payload_identity": "fhsc_retained:8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+          "source_payload_sha256": "8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+          "missing_disposition": "OBSERVED",
+          "provenance": {
+            "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/VCB_price_histories_chart_8aade9bf1c34485a.json",
+            "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VCB&resolution=1D&from=1787184000&to=1787270400",
+            "request_parameters": {
+              "symbol": "VCB",
+              "resolution": "1D",
+              "from": "1787184000",
+              "to": "1787270400"
+            },
+            "http_status": 200,
+            "mime_type": "application/json",
+            "parsed_from_retained_bytes": true,
+            "published_endpoint": "/market/price-histories-chart"
+          },
+          "source_role": "SHADOW_REFERENCE_PROVIDER"
+        }
+      ],
+      "authority_effect": "NONE",
+      "provider_majority_creates_authority": false,
+      "selected_provider": null,
+      "authoritative_value": null,
+      "verdict": "UNIT_MISMATCH",
+      "missing_providers": []
+    }
+  ],
+  "authority_boundaries": {
+    "fhsc_promoted": false,
+    "dnse_replaced": false,
+    "raw_as_traded_promoted": false,
+    "liquidity_sizing_promoted": false,
+    "provider_fundamentals_promoted": false,
+    "canonical_facts_created": 0,
+    "runtime_or_database_mutated": false
+  },
+  "artifact_sha256": "53e9e1d57e14aff62986fd711da6e1d59e4607f4de82192bf46ab8b4e2301523",
+  "artifact_identity": "fhsc_dnse_retained_live_reconciliation:53e9e1d57e14aff62986fd711da6e1d59e4607f4de82192bf46ab8b4e2301523"
+}

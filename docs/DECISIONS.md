@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - FHSC DNSE Retained Live Reconciliation V1
+
+`FHSC_DNSE_RETAINED_LIVE_RECONCILIATION_V1 = COMPLETE_LOCAL_PARTIAL` (`fhsc_retained_live_reconciliation.py`, `tools/run_fhsc_dnse_retained_live_reconciliation.py`, `tests/test_fhsc_retained_live_reconciliation.py`, `operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/fhsc_dnse_retained_live_reconciliation_artifact.json`, `push = NO`).
+
+1. **Bounded retained acquisition:** with the operator-approved `FINHAY_API_KEY`, exactly six synchronous Tier-1 `GET` responses were acquired and byte-retained before parsing: one documented `/market/price-histories-chart` daily response and one `/market/stock-realtime` response for each of HPG, VCB, and SSI. Each response carries request URL/parameters, retrieval timestamp, HTTP/MIME metadata, SHA-256, and raw artifact path; no authorization header or secret was retained.
+2. **Closed-history result remains fail-closed:** FHSC's 2026-08-20 close values (HPG 21.15, VCB 57.8, SSI 19.4) exhibit an exact empirical ×1,000 relationship with the retained DNSE anchors (21,150; 57,800; 19,400). The published FHSC history contract supplies no price-unit, adjustment-basis, or finalization declaration. Accordingly the reconciliation contract records `UNSPECIFIED_PRICE_UNIT`, leaves normalization null, and returns `UNIT_MISMATCH` for all three rows. The ratio is evidence, not a unit conversion or source-authority result.
+3. **Current payloads are not historical qualification:** the documented realtime endpoint returned present issuer name/exchange/type, total-volume, generic volume, and foreign fields. It is explicitly `PARSED_CURRENT_SESSION_ONLY`; no exact retained DNSE same-session volume or foreign-flow overlap exists, volume decomposition is unresolved, and no listing identity or foreign-flow authority is created.
+4. **Negative boundaries:** FHSC remains `SHADOW_REFERENCE_PROVIDER`; DNSE is not replaced. No RAW_AS_TRADED, liquidity/sizing, provider fundamentals, canonical fact, valuation/recommendation, runtime/database, merge, deployment, or push action occurred.
+
 ## 2026-08-21 - FHSC Reference Reconciliation Foundation V1
 
 `FHSC_REFERENCE_RECONCILIATION_FOUNDATION_V1 = COMPLETE_LOCAL` (`provider_reference_reconciliation.py`, `tools/run_fhsc_reference_reconciliation.py`, `tests/test_provider_reference_reconciliation.py`, `operations-review/fhsc-reference-reconciliation-foundation-v1-20260821/fhsc_reference_reconciliation_artifact.json`, `push = NO`).
