@@ -18,3 +18,7 @@
 *.pdf binary
 *.parquet binary
 *.db binary
+
+# Retained provider/documentation bytes are hash-bound evidence, never source text.
+operations-review/**/raw/* -text
+operations-review/**/official-documentation/* -text

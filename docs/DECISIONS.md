@@ -10,6 +10,16 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - DNSE Closed OHLC Provider-Native Semantics V1
+
+`DNSE_CLOSED_OHLC_PROVIDER_NATIVE_SEMANTICS_V1 = COMPLETE_LOCAL_BOUNDED_REPRESENTATION_SAFE_USES` (`dnse_provider_native_closed_ohlc.py`, `tools/run_dnse_provider_native_closed_ohlc_semantics.py`, `tests/test_dnse_provider_native_closed_ohlc.py`, `operations-review/dnse-provider-native-closed-ohlc-semantics-v1-20260821/dnse_provider_native_closed_ohlc_semantics_artifact.json`, `push = NO`).
+
+1. **Official capability documentation is retained:** the current official DNSE `/price/ohlc` and `/price/:symbol/close` documentation pages are retained with requested/final URL, retrieval time, MIME, bytes, and SHA-256. They establish the OHLC-history and symbol-close endpoint capabilities only; they contain no explicit numeric price unit, adjustment-basis, or bar-finalization declaration.
+2. **Narrow semantic result:** the three byte-retained DNSE 2026-08-20 anchors pass a completed-historical-session gate because each one-day OHLC payload was retained after its session date. Their four identity-transformed fields qualify as `PROVIDER_NATIVE_CLOSED_OHLC_REPRESENTATION` for reconciliation, field consistency, anomaly detection, and scale-invariant transformations only within the same representation and an independently confirmed compatible interval.
+3. **Persistent unknowns and prohibitions:** `FORMAL_PRICE_UNIT = UNRESOLVED`, `ADJUSTMENT_BASIS = UNRESOLVED`, and `RAW_AS_TRADED = NOT_QUALIFIED`. The contract cannot qualify market capitalization, monetary valuation, VND sizing, traded-value liquidity, absolute targets, RAW_AS_TRADED backtests, corporate-action factor inference, or basis-sensitive history. A cross-representation return or unknown corporate-action/basis continuity interval fails closed.
+4. **Cross-provider support is non-authoritative:** the retained HPG/VCB/SSI matrix has 12/12 exact raw-to-raw values against FHSC. It is recorded as `CROSS_PROVIDER_NATIVE_REPRESENTATION_AGREEMENT` with authority effect `NONE`; FHSC remains `SHADOW_REFERENCE_PROVIDER` and the generic reconciliation status remains `BASIS_UNRESOLVED`.
+5. **Negative boundaries:** no RAW_AS_TRADED, adjustment/finalization, FHSC, financial-fact, volume, foreign-flow, provider replacement, runtime/database, merge, deployment, or push authority changed.
+
 ## 2026-08-21 - DNSE Uniform OHLC Anchor Qualification V1
 
 `DNSE_UNIFORM_OHLC_ANCHOR_QUALIFICATION_V1 = COMPLETE_LOCAL_REPRESENTATION_READY` (`dnse_closed_session_ohlc_representation.py`, `mva_exact_session_snapshot.py`, `tools/run_dnse_uniform_ohlc_anchor_qualification.py`, `tests/test_dnse_closed_session_ohlc_representation.py`, `operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/dnse_uniform_ohlc_anchor_qualification_artifact.json`, `push = NO`).

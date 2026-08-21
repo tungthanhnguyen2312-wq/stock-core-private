@@ -1,0 +1,1195 @@
+{
+  "artifact_identity": "dnse_provider_native_closed_ohlc_semantics:1ad8ce32f0a84f9a919c7d112c1960b567a429972e3b6088c3bc4205eb0db622",
+  "artifact_sha256": "1ad8ce32f0a84f9a919c7d112c1960b567a429972e3b6088c3bc4205eb0db622",
+  "artifact_type": "DNSE_PROVIDER_NATIVE_CLOSED_OHLC_SEMANTICS",
+  "authority_boundaries": {
+    "adjustment_basis_qualified": false,
+    "authority_effect": "NONE",
+    "dnse_replaced": false,
+    "fhsc_promoted": false,
+    "formal_price_unit_qualified": false,
+    "raw_as_traded_promoted": false,
+    "runtime_or_database_mutated": false
+  },
+  "contract_version": "dnse_provider_native_closed_ohlc_representation/v1",
+  "dnse_fhsc_agreement": {
+    "authority_effect": "NONE",
+    "exact_raw_to_raw_field_count": 12,
+    "fhsc_role": "SHADOW_REFERENCE_PROVIDER",
+    "replay_rows": [
+      {
+        "field": "open",
+        "instrument": "HPG",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "open",
+            "instrument": "HPG",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "open",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/HPG_price_histories_chart_98185ce45cf97724.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 21.25,
+              "retrieval_time": "2026-08-21T14:03:01.461800+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_payload_sha256": "98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "open",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 21.25,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/HPG_ohlc_5b51229b76a60015.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 21.25,
+              "retrieval_time": "2026-08-21T15:05:17.225712+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_payload_sha256": "5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "high",
+        "instrument": "HPG",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "high",
+            "instrument": "HPG",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "high",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/HPG_price_histories_chart_98185ce45cf97724.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 21.45,
+              "retrieval_time": "2026-08-21T14:03:01.461800+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_payload_sha256": "98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "high",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 21.45,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/HPG_ohlc_5b51229b76a60015.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 21.45,
+              "retrieval_time": "2026-08-21T15:05:17.225712+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_payload_sha256": "5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "low",
+        "instrument": "HPG",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "low",
+            "instrument": "HPG",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "low",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/HPG_price_histories_chart_98185ce45cf97724.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 21.15,
+              "retrieval_time": "2026-08-21T14:03:01.461800+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_payload_sha256": "98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "low",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 21.15,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/HPG_ohlc_5b51229b76a60015.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 21.15,
+              "retrieval_time": "2026-08-21T15:05:17.225712+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_payload_sha256": "5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "close",
+        "instrument": "HPG",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "close",
+            "instrument": "HPG",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "close",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/HPG_price_histories_chart_98185ce45cf97724.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 21.15,
+              "retrieval_time": "2026-08-21T14:03:01.461800+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_payload_sha256": "98185ce45cf97724f3e123cd89e3daf4a3f14aee10d59a27b4c6f0296e4a6dbf",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "close",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "HPG",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 21.15,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/HPG_ohlc_5b51229b76a60015.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 21.15,
+              "retrieval_time": "2026-08-21T15:05:17.225712+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_payload_sha256": "5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "open",
+        "instrument": "VCB",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "open",
+            "instrument": "VCB",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "open",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/VCB_price_histories_chart_8aade9bf1c34485a.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 57.8,
+              "retrieval_time": "2026-08-21T14:03:01.808115+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_payload_sha256": "8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "open",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 57.8,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/VCB_ohlc_9f6a3a7e95f88b23.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 57.8,
+              "retrieval_time": "2026-08-21T15:05:17.620719+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_payload_sha256": "9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "high",
+        "instrument": "VCB",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "high",
+            "instrument": "VCB",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "high",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/VCB_price_histories_chart_8aade9bf1c34485a.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 58.1,
+              "retrieval_time": "2026-08-21T14:03:01.808115+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_payload_sha256": "8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "high",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 58.1,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/VCB_ohlc_9f6a3a7e95f88b23.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 58.1,
+              "retrieval_time": "2026-08-21T15:05:17.620719+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_payload_sha256": "9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "low",
+        "instrument": "VCB",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "low",
+            "instrument": "VCB",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "low",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/VCB_price_histories_chart_8aade9bf1c34485a.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 57.3,
+              "retrieval_time": "2026-08-21T14:03:01.808115+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_payload_sha256": "8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "low",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 57.3,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/VCB_ohlc_9f6a3a7e95f88b23.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 57.3,
+              "retrieval_time": "2026-08-21T15:05:17.620719+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_payload_sha256": "9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "close",
+        "instrument": "VCB",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "close",
+            "instrument": "VCB",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "close",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/VCB_price_histories_chart_8aade9bf1c34485a.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 57.8,
+              "retrieval_time": "2026-08-21T14:03:01.808115+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_payload_sha256": "8aade9bf1c34485ae0f998223a4a05a9e4954362b19cefc3dd0acb0e373f648c",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "close",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "VCB",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 57.8,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/VCB_ohlc_9f6a3a7e95f88b23.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 57.8,
+              "retrieval_time": "2026-08-21T15:05:17.620719+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_payload_sha256": "9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "open",
+        "instrument": "SSI",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "open",
+            "instrument": "SSI",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "open",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/SSI_price_histories_chart_299e9ad1df529a29.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 19.6,
+              "retrieval_time": "2026-08-21T14:03:02.382713+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_payload_sha256": "299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "open",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 19.6,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/SSI_ohlc_6df8a9602de59f35.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 19.6,
+              "retrieval_time": "2026-08-21T15:05:18.017269+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_payload_sha256": "6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "high",
+        "instrument": "SSI",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "high",
+            "instrument": "SSI",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "high",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/SSI_price_histories_chart_299e9ad1df529a29.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 19.7,
+              "retrieval_time": "2026-08-21T14:03:02.382713+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_payload_sha256": "299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "high",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 19.7,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/SSI_ohlc_6df8a9602de59f35.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 19.7,
+              "retrieval_time": "2026-08-21T15:05:18.017269+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_payload_sha256": "6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "low",
+        "instrument": "SSI",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "low",
+            "instrument": "SSI",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "low",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/SSI_price_histories_chart_299e9ad1df529a29.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 19.4,
+              "retrieval_time": "2026-08-21T14:03:02.382713+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_payload_sha256": "299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "low",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 19.4,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/SSI_ohlc_6df8a9602de59f35.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 19.4,
+              "retrieval_time": "2026-08-21T15:05:18.017269+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_payload_sha256": "6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      },
+      {
+        "field": "close",
+        "instrument": "SSI",
+        "normalized_to_normalized_available": false,
+        "provider_reference_reconciliation": {
+          "authoritative_value": null,
+          "authority_effect": "NONE",
+          "challenger_provider": "FHSC",
+          "comparison_key": {
+            "field": "close",
+            "instrument": "SSI",
+            "session": "2026-08-20"
+          },
+          "contract_version": "provider_reference_observation/v1",
+          "missing_providers": [],
+          "observations": [
+            {
+              "basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+              "endpoint_capability": "price_histories_chart_1d",
+              "event_time": "2026-08-20T00:00:00+00:00",
+              "exchange": null,
+              "field": "close",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": null,
+              "provenance": {
+                "retained_raw_path": "operations-review/fhsc-dnse-retained-live-reconciliation-v1-20260821/raw/SSI_price_histories_chart_299e9ad1df529a29.json"
+              },
+              "provider": "FHSC",
+              "provider_interface": "fhsc_open_api_tier1",
+              "raw_value": 19.4,
+              "retrieval_time": "2026-08-21T14:03:02.382713+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "fhsc_retained:299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_payload_sha256": "299e9ad1df529a29af46f44f03ebf51987f9e37b76c7f75b1a86e5939d9e47ba",
+              "source_role": "SHADOW_REFERENCE_PROVIDER",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            },
+            {
+              "basis": "ADJUSTMENT_BASIS_UNDOCUMENTED_FOR_THIS_ANCHOR",
+              "endpoint_capability": "ohlc_1d",
+              "event_time": null,
+              "exchange": null,
+              "field": "close",
+              "finalization_status": "CLOSED_SESSION_OBSERVATION",
+              "instrument": "SSI",
+              "missing_disposition": "OBSERVED",
+              "normalized_value": 19.4,
+              "provenance": {
+                "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/SSI_ohlc_6df8a9602de59f35.json",
+                "transformation_identity": "identity_provider_numeric_ohlc/v1"
+              },
+              "provider": "DNSE",
+              "provider_interface": "dnse_openapi_retained_raw",
+              "raw_value": 19.4,
+              "retrieval_time": "2026-08-21T15:05:18.017269+00:00",
+              "semantic_status": "BASIS_UNRESOLVED",
+              "session": "2026-08-20",
+              "source_payload_identity": "dnse_retained_raw:6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_payload_sha256": "6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+              "source_role": "PRIMARY_CANDIDATE",
+              "unit": "UNSPECIFIED_PRICE_UNIT"
+            }
+          ],
+          "primary_provider": "DNSE",
+          "provider_majority_creates_authority": false,
+          "selected_provider": null,
+          "verdict": "BASIS_UNRESOLVED"
+        },
+        "raw_to_raw_numeric_equal": true,
+        "session": "2026-08-20"
+      }
+    ],
+    "status": "CROSS_PROVIDER_NATIVE_REPRESENTATION_AGREEMENT",
+    "total_field_count": 12
+  },
+  "dnse_native_ohlc_matrix": [
+    {
+      "instrument": "HPG",
+      "raw_values": {
+        "close": 21.15,
+        "high": 21.45,
+        "low": 21.15,
+        "open": 21.25
+      },
+      "session": "2026-08-20",
+      "source_payload_identity": "dnse_retained_raw:5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129"
+    },
+    {
+      "instrument": "VCB",
+      "raw_values": {
+        "close": 57.8,
+        "high": 58.1,
+        "low": 57.3,
+        "open": 57.8
+      },
+      "session": "2026-08-20",
+      "source_payload_identity": "dnse_retained_raw:9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3"
+    },
+    {
+      "instrument": "SSI",
+      "raw_values": {
+        "close": 19.4,
+        "high": 19.7,
+        "low": 19.4,
+        "open": 19.6
+      },
+      "session": "2026-08-20",
+      "source_payload_identity": "dnse_retained_raw:6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20"
+    }
+  ],
+  "documentation_verdict": {
+    "adjustment_basis": "UNRESOLVED",
+    "bar_finalization": "UNRESOLVED",
+    "numeric_unit": "UNRESOLVED",
+    "records": [
+      {
+        "endpoint": "/price/ohlc",
+        "endpoint_literal_present": true,
+        "http_status": 200,
+        "verdict": "OFFICIAL_DNSE_DOCUMENTATION_RETAINED_ENDPOINT_CAPABILITY_ONLY"
+      },
+      {
+        "endpoint": "/price/:symbol/close",
+        "endpoint_literal_present": true,
+        "http_status": 200,
+        "verdict": "OFFICIAL_DNSE_DOCUMENTATION_RETAINED_ENDPOINT_CAPABILITY_ONLY"
+      }
+    ]
+  },
+  "official_dnse_documentation": [
+    {
+      "bytes": 25437,
+      "endpoint": "/price/ohlc",
+      "final_url": "https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/",
+      "http_status": 200,
+      "mime_type": "text/html",
+      "name": "ohlc_history",
+      "raw_path": "operations-review/dnse-provider-native-closed-ohlc-semantics-v1-20260821/official-documentation/ohlc_history_882ea0f0d2e37a9b.html",
+      "raw_sha256": "882ea0f0d2e37a9bf307b9e1980c5e51a4eed4d0e1cb2f8e02c7a4f44231ea6e",
+      "requested_url": "https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/",
+      "retrieved_at": "2026-08-21T15:16:38.157336+00:00"
+    },
+    {
+      "bytes": 25166,
+      "endpoint": "/price/:symbol/close",
+      "final_url": "https://developers.dnse.com.vn/docs/dnse/get-price-symbol-close/",
+      "http_status": 200,
+      "mime_type": "text/html",
+      "name": "symbol_close",
+      "raw_path": "operations-review/dnse-provider-native-closed-ohlc-semantics-v1-20260821/official-documentation/symbol_close_9c858755dfe17ff5.html",
+      "raw_sha256": "9c858755dfe17ff557ec0a33d94b37fabbf322815ff0009a10a698a975fa3abc",
+      "requested_url": "https://developers.dnse.com.vn/docs/dnse/get-price-symbol-close/",
+      "retrieved_at": "2026-08-21T15:16:38.566028+00:00"
+    }
+  ],
+  "qualified_provider_native_closed_ohlc": [
+    {
+      "authority_effect": "NONE",
+      "closed_session_gate": {
+        "retrieved_at": "2026-08-21T15:05:17.225712+00:00",
+        "session": "2026-08-20",
+        "session_completion": "RETAINED_AFTER_SESSION_DATE",
+        "status": "PASS"
+      },
+      "contract_version": "dnse_provider_native_closed_ohlc_representation/v1",
+      "eligible_use_classes": [
+        "SOURCE_RECONCILIATION",
+        "FIELD_CONSISTENCY_VALIDATION",
+        "ANOMALY_DETECTION",
+        "SCALE_INVARIANT_TECHNICAL_TRANSFORMATIONS_WITHIN_SAME_REPRESENTATION"
+      ],
+      "field_representation": {
+        "close": "identity_provider_numeric_ohlc/v1",
+        "high": "identity_provider_numeric_ohlc/v1",
+        "low": "identity_provider_numeric_ohlc/v1",
+        "open": "identity_provider_numeric_ohlc/v1"
+      },
+      "instrument": "HPG",
+      "known_semantics": {
+        "deterministic_replayable": true,
+        "field_specific_hidden_scaling": false,
+        "raw_values_preserved": true,
+        "same_dnse_ohlc_capability": true,
+        "uniform_numeric_representation": true
+      },
+      "prohibited_use_classes": [
+        "MARKET_CAPITALIZATION",
+        "MONETARY_VALUATION",
+        "VND_POSITION_SIZING",
+        "TRADED_VALUE_LIQUIDITY",
+        "ABSOLUTE_TARGET_PRICE",
+        "RAW_AS_TRADED_BACKTEST",
+        "CORPORATE_ACTION_FACTOR_INFERENCE",
+        "HISTORICAL_BASIS_SENSITIVE_ANALYTICS"
+      ],
+      "representation_class": "PROVIDER_NATIVE_CLOSED_OHLC_REPRESENTATION",
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "http_status": 200,
+        "mime_type": "application/json; charset=UTF-8",
+        "query": {
+          "from": 1787158800,
+          "resolution": "1D",
+          "symbol": "HPG",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/HPG_ohlc_5b51229b76a60015.json",
+        "raw_sha256": "5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+        "retrieved_at": "2026-08-21T15:05:17.225712+00:00",
+        "source_payload_identity": "dnse_retained_raw:5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+        "ticker": "HPG"
+      },
+      "status": "QUALIFIED_FOR_BOUNDED_REPRESENTATION_SAFE_USES",
+      "unknown_semantics": {
+        "adjustment_basis": "UNRESOLVED",
+        "formal_price_unit": "UNRESOLVED",
+        "raw_as_traded": "NOT_QUALIFIED"
+      }
+    },
+    {
+      "authority_effect": "NONE",
+      "closed_session_gate": {
+        "retrieved_at": "2026-08-21T15:05:17.620719+00:00",
+        "session": "2026-08-20",
+        "session_completion": "RETAINED_AFTER_SESSION_DATE",
+        "status": "PASS"
+      },
+      "contract_version": "dnse_provider_native_closed_ohlc_representation/v1",
+      "eligible_use_classes": [
+        "SOURCE_RECONCILIATION",
+        "FIELD_CONSISTENCY_VALIDATION",
+        "ANOMALY_DETECTION",
+        "SCALE_INVARIANT_TECHNICAL_TRANSFORMATIONS_WITHIN_SAME_REPRESENTATION"
+      ],
+      "field_representation": {
+        "close": "identity_provider_numeric_ohlc/v1",
+        "high": "identity_provider_numeric_ohlc/v1",
+        "low": "identity_provider_numeric_ohlc/v1",
+        "open": "identity_provider_numeric_ohlc/v1"
+      },
+      "instrument": "VCB",
+      "known_semantics": {
+        "deterministic_replayable": true,
+        "field_specific_hidden_scaling": false,
+        "raw_values_preserved": true,
+        "same_dnse_ohlc_capability": true,
+        "uniform_numeric_representation": true
+      },
+      "prohibited_use_classes": [
+        "MARKET_CAPITALIZATION",
+        "MONETARY_VALUATION",
+        "VND_POSITION_SIZING",
+        "TRADED_VALUE_LIQUIDITY",
+        "ABSOLUTE_TARGET_PRICE",
+        "RAW_AS_TRADED_BACKTEST",
+        "CORPORATE_ACTION_FACTOR_INFERENCE",
+        "HISTORICAL_BASIS_SENSITIVE_ANALYTICS"
+      ],
+      "representation_class": "PROVIDER_NATIVE_CLOSED_OHLC_REPRESENTATION",
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "http_status": 200,
+        "mime_type": "application/json; charset=UTF-8",
+        "query": {
+          "from": 1787158800,
+          "resolution": "1D",
+          "symbol": "VCB",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/VCB_ohlc_9f6a3a7e95f88b23.json",
+        "raw_sha256": "9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+        "retrieved_at": "2026-08-21T15:05:17.620719+00:00",
+        "source_payload_identity": "dnse_retained_raw:9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+        "ticker": "VCB"
+      },
+      "status": "QUALIFIED_FOR_BOUNDED_REPRESENTATION_SAFE_USES",
+      "unknown_semantics": {
+        "adjustment_basis": "UNRESOLVED",
+        "formal_price_unit": "UNRESOLVED",
+        "raw_as_traded": "NOT_QUALIFIED"
+      }
+    },
+    {
+      "authority_effect": "NONE",
+      "closed_session_gate": {
+        "retrieved_at": "2026-08-21T15:05:18.017269+00:00",
+        "session": "2026-08-20",
+        "session_completion": "RETAINED_AFTER_SESSION_DATE",
+        "status": "PASS"
+      },
+      "contract_version": "dnse_provider_native_closed_ohlc_representation/v1",
+      "eligible_use_classes": [
+        "SOURCE_RECONCILIATION",
+        "FIELD_CONSISTENCY_VALIDATION",
+        "ANOMALY_DETECTION",
+        "SCALE_INVARIANT_TECHNICAL_TRANSFORMATIONS_WITHIN_SAME_REPRESENTATION"
+      ],
+      "field_representation": {
+        "close": "identity_provider_numeric_ohlc/v1",
+        "high": "identity_provider_numeric_ohlc/v1",
+        "low": "identity_provider_numeric_ohlc/v1",
+        "open": "identity_provider_numeric_ohlc/v1"
+      },
+      "instrument": "SSI",
+      "known_semantics": {
+        "deterministic_replayable": true,
+        "field_specific_hidden_scaling": false,
+        "raw_values_preserved": true,
+        "same_dnse_ohlc_capability": true,
+        "uniform_numeric_representation": true
+      },
+      "prohibited_use_classes": [
+        "MARKET_CAPITALIZATION",
+        "MONETARY_VALUATION",
+        "VND_POSITION_SIZING",
+        "TRADED_VALUE_LIQUIDITY",
+        "ABSOLUTE_TARGET_PRICE",
+        "RAW_AS_TRADED_BACKTEST",
+        "CORPORATE_ACTION_FACTOR_INFERENCE",
+        "HISTORICAL_BASIS_SENSITIVE_ANALYTICS"
+      ],
+      "representation_class": "PROVIDER_NATIVE_CLOSED_OHLC_REPRESENTATION",
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "http_status": 200,
+        "mime_type": "application/json; charset=UTF-8",
+        "query": {
+          "from": 1787158800,
+          "resolution": "1D",
+          "symbol": "SSI",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/SSI_ohlc_6df8a9602de59f35.json",
+        "raw_sha256": "6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+        "retrieved_at": "2026-08-21T15:05:18.017269+00:00",
+        "source_payload_identity": "dnse_retained_raw:6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+        "ticker": "SSI"
+      },
+      "status": "QUALIFIED_FOR_BOUNDED_REPRESENTATION_SAFE_USES",
+      "unknown_semantics": {
+        "adjustment_basis": "UNRESOLVED",
+        "formal_price_unit": "UNRESOLVED",
+        "raw_as_traded": "NOT_QUALIFIED"
+      }
+    }
+  ],
+  "retained_dnse_anchor_artifact": {
+    "identity": "dnse_uniform_ohlc_anchor_qualification:374bcae8680e79cbebd68f9fcc917a0a62c30855ae35d9262ac27dae208c954f",
+    "path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/dnse_uniform_ohlc_anchor_qualification_artifact.json",
+    "sha256": "c482edc8654a5ce139d08fc4d50d78ebb32dcbe69c9ffa3eb69a7675956a2a3e"
+  },
+  "schema_version": "1.0.0"
+}
