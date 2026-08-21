@@ -84,6 +84,7 @@
 | **Price Structure & Breakout Research Context V1** | Current descriptive close-level context | **COMPLETE (`PRICE_STRUCTURE_BREAKOUT_RESEARCH_V1_READY`)** | The 523-record exact-session cohort has a deterministic close-only prior-19-session structure overlay: 19 above prior resistance, 54 near resistance, 315 in range, 115 near support, and 20 below prior support; range state is 47 compressed/331 expanded/145 stable. Retained high/low fields are scale-incompatible with close and are explicitly unused; 50-session history is unavailable. Levels are descriptive candidates, current bar excluded, and all authority remains `SHADOW_ONLY` / adjusted-retrospective—not PIT, raw-as-traded, backtest, liquidity, or recommendation authority. |
 | **Evidence-Aware Research Setup Classification V1** | Multi-label current setup context | **COMPLETE (`RESEARCH_SETUP_CLASSIFICATION_V1_READY`)** | A source-identity-bound 523-record setup registry evaluates ten small deterministic contexts independently, without a score or exclusive class. Real coverage: 278 multi-label, 167 single-label, and 78 `NO_DISTINCT_SETUP`; relative strength is 7 qualified-classification and 122 provider-descriptive lower-authority cases, with 10 unavailable. Setup-at-T content identities and Market Context are frozen for later prospective joins; no strategy edge, forecast, performance, ranking, or recommendation authority is emitted. |
 | **Prospective Research Context Extension V1 successor** | Immutable supplemental 2026-08-20 T-state | **COMPLETE (`PROSPECTIVE_CONTEXT_SUCCESSOR_SAFE`)** | The original snapshot remains unchanged. Legacy extension `prospective_research_context_extension:1248d909c9ffd204d9bbcfbf3c886a4621e690c6739b5c8736fcab3bf7f58339` is immutable but superseded for attribution because it embedded the 382-member semantic drift. The successor links restored V1 core and separate V2 price structure across all 523 records; it exposes unambiguous `downside:*_V1` and `price_structure:*` keys and is the only adapter-accepted input for a later strict-future descriptive join. |
+| **Capability-First Data Foundation Rebaseline V1 Phase 1** | Canonical semantic-identity capability registry + explicit price representation contract | **COMPLETE LOCALLY (`CAPABILITY_FIRST_REBASELINE_PHASE_1_READY`)** | `market_capability_taxonomy.py` (43 records; PRICE/VOLUME/TRADED_VALUE/FOREIGN/PROPRIETARY/MICROSTRUCTURE/REFERENCE across DNSE/FHSC/VCI, delegating to existing provider-scoped registries rather than re-deriving them) and `price_representation_contract.py` (explicit `(source, capability, instrument_class)` K-VND→VND contract, applied uniformly to O/H/L/C; see Invariant 6). Neither promotes RAW_AS_TRADED, PIT, liquidity, valuation, sizing, execution, or recommendation authority; every record/contract carries `authority_effect: "NONE"`. Does not implement the unified EOD collector. |
 
 ---
 
@@ -94,6 +95,14 @@
 3. **Active Universe Invariant**: `ACTIVE_UNIVERSE` remains `UNKNOWN` for all instruments because DNSE feeds do not carry official exchange or listing-status proof.
 4. **Temporal Freshness Invariant**: Freshness is determined by domain rules and market session calendars (`freshness_history.py`); naive `date < today => stale` is strictly prohibited.
 5. **No Speculative Inference**: Ex-dates must never be inferred from record dates; debt fields must never be invented; missing independent measurements cannot be turned into evidence.
+6. **Price Representation vs Price Basis Invariant** (2026-08-21): K-VND→VND unit representation
+   (`price_representation_contract.py`, `contract_basis_tier = owner_directed_contractual_assumption`)
+   is independent of adjustment/RAW_AS_TRADED/PIT price basis (Invariant 1,
+   `provider_price_basis_registry.py`). A capability may be `RESEARCH_USABLE` for its canonical VND
+   representation while remaining `NOT_QUALIFIED`/`NOT_PROMOTED` for RAW_AS_TRADED or PIT; converting
+   a unit never promotes either, and neither may be inferred from the other. The K-VND→VND factor is
+   always resolved by an explicit `(source, capability, instrument_class)` contract lookup, never by
+   the numeric magnitude of the value being converted.
 
 ### 3.1 Global Readiness Rebaseline
 

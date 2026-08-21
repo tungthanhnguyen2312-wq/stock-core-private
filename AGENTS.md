@@ -11,6 +11,19 @@ strategy → portfolio/risk → AI research → dashboard/human decision.
 `SUPERSEDED_AS_DEFAULT_WORKFLOW`: ticker-by-ticker qualification before raw ingestion. Historical
 ticker cohorts remain golden/regression evidence; they are not the default development workflow.
 
+**Default sequence (2026-08-21 capability-first rebaseline):** `CAPABILITY-FIRST DATA EXPANSION`
+→ `TAXONOMY MAPPING` → `USABILITY` → `DETERMINISTIC RESEARCH` → `EVIDENCE ACCUMULATION` →
+`AUTHORITY HARDENING WHERE REQUIRED`. Route each capability to whichever source(s) actually
+expose it; there is no single winning provider to select market-wide. Provider parity is not a
+prerequisite for ingestion or for a capability's own registry presence: a genuinely one-source-only
+capability (see `market_capability_taxonomy.py`) must not be blocked merely for lacking a second
+source. Overlapping sources are useful for calibration and conflict detection and are never
+mandatory. Authority (RAW_AS_TRADED, PIT, liquidity, valuation, sizing, execution) stays
+use-case-specific and is never granted merely because a capability entered a registry or gained a
+canonical representation — see `docs/STATE.md` Invariant 6. A rebaselined architecture does not by
+itself reopen a completed historical milestone, and existing retained evidence is reused, not
+recreated, wherever it already answers a question.
+
 ## Default lightweight bootstrap
 
 For a normal bounded implementation milestone:
