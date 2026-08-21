@@ -10,6 +10,14 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Official Source Registry Owner Promotion V1
+
+`OFFICIAL_SOURCE_REGISTRY_OWNER_PROMOTION_V1 = COMPLETE_LOCAL` (`official_source_registry_owner_promotion.py`, `tools/run_official_source_registry_owner_promotion.py`, `tests/test_official_source_registry_owner_promotion.py`, `operations-review/official-source-registry-owner-promotion-v1-20260821/official_source_registry_owner_promotion_artifact.json`, `push = NO`).
+
+1. **Explicit bounded owner authorization:** The owner approved source-route activation for downstream official-document acquisition only for exactly nine `issuer_ir` hosts: `ABS`/`bitagco.com`, `ABW`/`abs.vn`, `ACB`/`www.acb.com.vn`, `MBB`/`www.mbbank.com.vn`, `MWG`/`mwg.vn`, `TCB`/`techcombank.com`, `AAA`/`anphatbioplastics.com`, `AAT`/`tiensonaus.com`, and `BID`/`bidv.com.vn`.
+2. **Evidence-bound activated replay:** `config/official_source_registry.json` adds exactly those hosts. The offline replay independently re-hashes each retained object, carries its source-artifact identity and URL provenance, and returns 9/9 `ROUTE_OWNERSHIP_QUALIFIED`. BID is activated only as final host `bidv.com.vn`, backed by the retained `www.bidv.com.vn` → `bidv.com.vn` lineage permitted by `redirect_domain_authority/v1`. AAT activates only `tiensonaus.com`; the historical `tienson.vn` conflict remains preserved and rejected.
+3. **Negative boundaries:** `ABT` / `aquatexbentre.com` are not approved. No other host was added. This owner decision does not acquire a document or change financial facts, provider fundamentals, RAW_AS_TRADED, readiness, liquidity/sizing, valuation, recommendations, runtime, deployment, merge, or push authority.
+
 ## 2026-08-21 - Official Route Redirect-Domain Authority Correction V1
 
 `OFFICIAL_ROUTE_REDIRECT_DOMAIN_AUTHORITY_CORRECTION_V1 = COMPLETE_LOCAL` (`bounded_official_route_evidence_enrichment.py`, `tests/test_official_route_redirect_domain_authority.py`, `operations-review/bounded-official-route-evidence-enrichment-v1-20260821/bounded_official_route_evidence_enrichment_artifact.json`, `push = NO`).

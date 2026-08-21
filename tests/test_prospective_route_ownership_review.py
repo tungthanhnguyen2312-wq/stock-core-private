@@ -77,14 +77,14 @@ def test_static_catalog_identity_alone_cannot_produce_owner_review_ready() -> No
     assert _record("ABT")["prospective_owner_review_status"] == INSUFFICIENT_IDENTITY_EVIDENCE
 
 
-def test_prospective_review_does_not_require_preapproved_host() -> None:
+def test_prospective_review_remains_byte_derived_after_owner_activation() -> None:
     registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     allowed = next(source for source in registry["sources"] if source["source_id"] == "issuer_ir")["allowed_hosts"]
-    assert "bitagco.com" not in allowed
+    assert "bitagco.com" in allowed
     assert _record("ABS")["prospective_owner_review_status"] == OWNER_REVIEW_READY
 
 
-def test_activated_route_qualification_still_requires_explicit_approved_host() -> None:
+def test_activated_route_qualification_accepts_explicitly_approved_host() -> None:
     record = _record("ABS")
     evidence = {
         "canonical_instrument": "ABS",
@@ -95,7 +95,7 @@ def test_activated_route_qualification_still_requires_explicit_approved_host() -
         "ownership_evidence": "retained_official_document_locator",
     }
     registry = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
-    assert not qualify(evidence, registry)["route_approval_eligible"]
+    assert qualify(evidence, registry)["route_approval_eligible"]
 
 
 def test_registry_candidates_are_only_genuine_owner_review_ready_records() -> None:
