@@ -1,0 +1,8 @@
+from pathlib import Path
+import json
+from price_structure_breakout_context import build,daily_overlay,review_overlay,scenario_overlay
+ROOT=Path(__file__).resolve().parent;OUT=ROOT/'operations-review/price-structure-breakout-context-v1-20260820'
+def run():
+ s=json.loads((ROOT/'operations-review/p3f9b-market-wide-exact-session-scaleout-20260820/p3f9b_mva_exact_session_snapshot.json').read_text(encoding='utf8'));p=json.loads((ROOT/'operations-review/mva-daily-investment-research-20260820/mva_daily_investment_research_artifact.json').read_text(encoding='utf8'));r=json.loads((ROOT/'operations-review/human-research-review-pack-v1-20260820/human_research_review_pack_artifact.json').read_text(encoding='utf8'));q=json.loads((ROOT/'operations-review/expectations-scenario-research-v1-20260820/expectations_scenario_research_artifact.json').read_text(encoding='utf8'));x=build(s,p,r);return x,daily_overlay(x),review_overlay(x,r),scenario_overlay(x,q)
+if __name__=='__main__':
+ OUT.mkdir(parents=True,exist_ok=True);x,d,o,sc=run();(OUT/'price_structure_breakout_context_artifact.json').write_text(json.dumps(x,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf8');(OUT/'price_structure_daily_research_overlay.json').write_text(json.dumps(d,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf8');(OUT/'price_structure_review_pack_overlay.json').write_text(json.dumps(o,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf8');(OUT/'price_structure_scenario_fact_overlay.json').write_text(json.dumps(sc,ensure_ascii=False,indent=2,sort_keys=True)+'\n',encoding='utf8');print(x['artifact_identity'])

@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 REGISTRY = {
  "TREND_MOMENTUM_RESEARCH": {"requires": ["close", "trend_state", "momentum_20d", "volatility_20d"], "ceiling": "SHADOW_ONLY"},
+ "PRICE_STRUCTURE_BREAKOUT_RESEARCH": {"requires": ["prior_close_levels", "current_exact_session_close"], "ceiling": "SHADOW_ONLY"},
  "RELATIVE_TECHNICAL_RESEARCH": {"requires": ["TREND_MOMENTUM_RESEARCH", "qualified_same_session_cohort"], "ceiling": "SHADOW_ONLY"},
  "DESCRIPTIVE_FUNDAMENTAL_RESEARCH": {"requires": ["fundamental_context", "descriptive_only_contract"], "ceiling": "PROVIDER_RESEARCH"},
  "OFFICIAL_FUNDAMENTAL_RESEARCH": {"requires": ["OFFICIAL_QUALIFIED_fundamental_context"], "ceiling": "OFFICIAL_QUALIFIED"},
@@ -18,13 +19,14 @@ REGISTRY = {
 def _hash(x:Any): return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def _v(lens,status,ceiling,reasons,inputs): return {"lens_identity":f"{lens}/v1","eligibility":status,"authority_ceiling":ceiling,"reason_codes":reasons,"observed_input_statuses":inputs}
 
-def build(product:Mapping[str,Any], context:Mapping[str,Any], scenarios:Mapping[str,Any], event_context:Mapping[str,Any]|None=None)->dict[str,Any]:
- ctx={x['ticker']:x for x in context['records']}; sc={x['ticker']:x for x in scenarios['scenarios']}; ev={x['ticker']:x for x in (event_context or {'records':[]})['records']}; rows=[]
+def build(product:Mapping[str,Any], context:Mapping[str,Any], scenarios:Mapping[str,Any], event_context:Mapping[str,Any]|None=None, price_context:Mapping[str,Any]|None=None)->dict[str,Any]:
+ ctx={x['ticker']:x for x in context['records']}; sc={x['ticker']:x for x in scenarios['scenarios']}; ev={x['ticker']:x for x in (event_context or {'records':[]})['records']}; price={x['ticker']:x for x in (price_context or {'records':[]})['records']}; rows=[]
  for r in sorted(product['stock_research'],key=lambda x:x['ticker']):
-  t=r['ticker']; f=r['ai_ready_brief']['facts']; a=r['research_summary']['fundamental_authority']; c=ctx[t]; s=sc.get(t); event=ev.get(t)
+  t=r['ticker']; f=r['ai_ready_brief']['facts']; a=r['research_summary']['fundamental_authority']; c=ctx[t]; s=sc.get(t); event=ev.get(t); structure=price.get(t)
   trend_ok=all(f.get(k) is not None for k in ('close','momentum_20d','volatility_20d')) and r['research_summary']['trend_state'] is not None
   lenses={
    'TREND_MOMENTUM_RESEARCH':_v('TREND_MOMENTUM_RESEARCH','ELIGIBLE' if trend_ok else 'UNAVAILABLE','SHADOW_ONLY',[] if trend_ok else ['TECHNICAL_INPUT_MISSING'],{'exact_session':f.get('session'),'trend_state':r['research_summary']['trend_state']}),
+   'PRICE_STRUCTURE_BREAKOUT_RESEARCH':_v('PRICE_STRUCTURE_BREAKOUT_RESEARCH','ELIGIBLE' if structure and structure.get('structure_status')!='INSUFFICIENT_HISTORY' else 'UNAVAILABLE','SHADOW_ONLY',[] if structure and structure.get('structure_status')!='INSUFFICIENT_HISTORY' else ['PRICE_STRUCTURE_HISTORY_INSUFFICIENT'],{'structure_state':structure.get('structure_status') if structure else None,'price_structure_identity':price_context.get('artifact_identity') if price_context else None}),
    'RELATIVE_TECHNICAL_RESEARCH':_v('RELATIVE_TECHNICAL_RESEARCH',
       'ELIGIBLE' if c['context_status']=='AVAILABLE' and c.get('relative_context_authority')=='QUALIFIED_CLASSIFICATION' else
       'ELIGIBLE_LOWER_AUTHORITY' if c['context_status']=='AVAILABLE' and c.get('relative_context_authority')=='PROVIDER_DESCRIPTIVE_CLASSIFICATION' else 'BLOCKED',
@@ -43,7 +45,7 @@ def build(product:Mapping[str,Any], context:Mapping[str,Any], scenarios:Mapping[
  for row in rows:
   for lens,v in row['lenses'].items():
    counts.setdefault(lens,Counter())[v['eligibility']]+=1; reasons.update(v['reason_codes'])
- artifact={'schema_version':'1.0.0','contract_version':'strategy_research_eligibility/v1','registry':REGISTRY,'research_session':product['daily_market_research']['session'],'cohort_scope':'EMPIRICAL_ACTIVE_SHADOW_ONLY','source_event_context_identity':event_context.get('artifact_identity') if event_context else None,'records':rows,'coverage':{'records':len(rows),'per_lens_status_counts':{k:dict(v) for k,v in counts.items()},'top_reason_counts':dict(reasons),'at_least_one_usable':sum(any(v['eligibility'] in ('ELIGIBLE','ELIGIBLE_LOWER_AUTHORITY','PARTIAL') for v in r['lenses'].values()) for r in rows),'multiple_complementary_lenses':sum(sum(v['eligibility'] in ('ELIGIBLE','ELIGIBLE_LOWER_AUTHORITY') for v in r['lenses'].values())>=2 for r in rows),'fully_blocked':sum(not any(v['eligibility'] in ('ELIGIBLE','ELIGIBLE_LOWER_AUTHORITY','PARTIAL') for v in r['lenses'].values()) for r in rows)},'authority_boundary':{'not_a_signal_or_recommendation':True,'ranking':'NOT_EMITTED','portfolio_execution':'NOT_EMITTED'},'verdict':'STRATEGY_RESEARCH_ELIGIBILITY_V1_READY'}; artifact['artifact_sha256']=_hash(artifact);artifact['artifact_identity']='strategy_research_eligibility:'+artifact['artifact_sha256'];return artifact
+ artifact={'schema_version':'1.0.0','contract_version':'strategy_research_eligibility/v1','registry':REGISTRY,'research_session':product['daily_market_research']['session'],'cohort_scope':'EMPIRICAL_ACTIVE_SHADOW_ONLY','source_event_context_identity':event_context.get('artifact_identity') if event_context else None,'source_price_structure_identity':price_context.get('artifact_identity') if price_context else None,'records':rows,'coverage':{'records':len(rows),'per_lens_status_counts':{k:dict(v) for k,v in counts.items()},'top_reason_counts':dict(reasons),'at_least_one_usable':sum(any(v['eligibility'] in ('ELIGIBLE','ELIGIBLE_LOWER_AUTHORITY','PARTIAL') for v in r['lenses'].values()) for r in rows),'multiple_complementary_lenses':sum(sum(v['eligibility'] in ('ELIGIBLE','ELIGIBLE_LOWER_AUTHORITY') for v in r['lenses'].values())>=2 for r in rows),'fully_blocked':sum(not any(v['eligibility'] in ('ELIGIBLE','ELIGIBLE_LOWER_AUTHORITY','PARTIAL') for v in r['lenses'].values()) for r in rows)},'authority_boundary':{'not_a_signal_or_recommendation':True,'ranking':'NOT_EMITTED','portfolio_execution':'NOT_EMITTED'},'verdict':'STRATEGY_RESEARCH_ELIGIBILITY_V1_READY'}; artifact['artifact_sha256']=_hash(artifact);artifact['artifact_identity']='strategy_research_eligibility:'+artifact['artifact_sha256'];return artifact
 def review_overlay(pack:Mapping[str,Any], artifact:Mapping[str,Any])->dict[str,Any]:
  by={r['ticker']:r for r in artifact['records']}; entries=[]
  for q in pack['owner_review_queue']:

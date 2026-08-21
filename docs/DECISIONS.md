@@ -1280,3 +1280,12 @@ single-ticker work.
 2. The real cohort has 210 negative 20-day momentum records, 304 at/below MA20, and 131 above the same-session p75 volatility threshold. These are observed contemporaneous states, not predictions of price decline. The technical domain is adverse for 378 records; a review flag applies to 389 with the exact technical and/or scenario reason list retained.
 3. Evidence uncertainty is explicitly not business/economic risk; no event evidence is explicitly not no event risk. All 523 execution states are `EXECUTION_RISK_NOT_ASSESSABLE`, never illiquid/safe/high risk, because qualified liquidity/traded-value semantics remain unavailable. Scenario downside is available for 25 Review Pack cases and unavailable for 498 others.
 4. Candidate Comparison receives the full independent vector as a non-ranking section and the review overlay preserves 25 source-linked blocks. The artifact can later be frozen at T and joined only to genuinely later observations; no calibration or outcome/hit-rate evaluation is implemented.
+
+## 2026-08-21 - Price Structure & Breakout Research Context V1
+
+`PRICE_STRUCTURE_BREAKOUT_RESEARCH_V1 = READY_LOCAL` (`price_structure_breakout_context.py`, `push = NO`).
+
+1. The exact-session 523-record source exposes only 20 retained observations. V1 therefore uses current close against a prior 19-session close-only support/resistance candidate, explicitly excluding the current bar. The retained high/low fields are scale-incompatible with close and are not used; a 50-session structure is explicitly unavailable rather than synthesized.
+2. The real deterministic distribution is 19 `BREAKOUT_CONFIRMED_BY_RULE`, 54 `NEAR_RECENT_RESISTANCE`, 315 `IN_RANGE`, 115 `NEAR_RECENT_SUPPORT`, and 20 `BREAKDOWN_CONFIRMED_BY_RULE`; range state is 47 compression, 331 expansion, and 145 stable. These state names describe a rule match only—not an expected move, recommendation, or successful breakout.
+3. The `SHADOW_ONLY` context has a compact daily overlay, 523-eligible bounded price-structure lens, transparent Screener presets, a Scenario `FACT` overlay, downside reason linkage, Candidate Comparison cells, and 25 Review Pack blocks. Provider-relative-volume can only qualify an elevated proxy (87 records); it is never liquidity, tradability, institutional activity, or execution capacity.
+4. This establishes current descriptive technical research only. `RAW_AS_TRADED`, historical PIT/backtest, corporate-action event adjustment, valuation, liquidity/sizing, and recommendation authority remain unpromoted.

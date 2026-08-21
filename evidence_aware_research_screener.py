@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib,json
 from typing import Any,Mapping
 
-ALLOWED_FIELDS={'momentum_20d','volatility_20d','trend_state','fundamental_authority'}
+ALLOWED_FIELDS={'momentum_20d','volatility_20d','trend_state','fundamental_authority','price_structure_state','range_state'}
 def _hash(x:Any):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 def _eval(p:Mapping[str,Any],r:Mapping[str,Any])->tuple[bool,dict]:
  t=p.get('type')
@@ -30,6 +30,14 @@ def _eval(p:Mapping[str,Any],r:Mapping[str,Any])->tuple[bool,dict]:
   v=r['upcoming_event'];return v is True,{'predicate':p,'value':v,'reason':'MATCHED' if v else 'NO_UPCOMING_EVIDENCED_EVENT'}
  if t=='negative_event':
   v=r['negative_event'];return v is True,{'predicate':p,'value':v,'reason':'MATCHED' if v else 'NO_NEGATIVE_EVENT_CONTEXT'}
+ if t=='price_structure_state':
+  states=p.get('states');v=r['values'].get('price_structure_state')
+  if not isinstance(states,list) or v is None:return False,{'predicate':p,'reason':'PRICE_STRUCTURE_UNAVAILABLE'}
+  return v in states,{'predicate':p,'value':v,'reason':'MATCHED' if v in states else 'STATE_NOT_MATCHED'}
+ if t=='range_state':
+  states=p.get('states');v=r['values'].get('range_state')
+  if not isinstance(states,list) or v is None:return False,{'predicate':p,'reason':'PRICE_STRUCTURE_UNAVAILABLE'}
+  return v in states,{'predicate':p,'value':v,'reason':'MATCHED' if v in states else 'STATE_NOT_MATCHED'}
  if t=='and':
   x=[_eval(c,r) for c in p.get('clauses',[])];return bool(x) and all(i[0] for i in x),{'predicate':p,'children':[i[1] for i in x]}
  if t=='or':
@@ -58,12 +66,17 @@ def _specs(session):return [
  {'name':'CATALYST_RESEARCH_AVAILABLE','research_session':session,'predicate':{'type':'lens','lens':'CATALYST_RESEARCH','states':['ELIGIBLE']}},
  {'name':'SCENARIO_REVIEW_COHORT','research_session':session,'predicate':{'type':'lens','lens':'SCENARIO_RESEARCH','states':['PARTIAL','ELIGIBLE']}},
  {'name':'RESEARCHABLE_BUT_EXECUTION_BLOCKED','research_session':session,'predicate':{'type':'and','clauses':[{'type':'lens','lens':'TREND_MOMENTUM_RESEARCH','states':['ELIGIBLE']},{'type':'lens','lens':'LIQUIDITY_SENSITIVE_RESEARCH','states':['BLOCKED']}]}}
+ ,{'name':'NEAR_RECENT_RESISTANCE','research_session':session,'predicate':{'type':'price_structure_state','states':['NEAR_RECENT_RESISTANCE']}}
+ ,{'name':'BREAKOUT_RESEARCH_CONTEXT','research_session':session,'predicate':{'type':'price_structure_state','states':['BREAKOUT_CONFIRMED_BY_RULE']}}
+ ,{'name':'NEAR_RECENT_SUPPORT','research_session':session,'predicate':{'type':'price_structure_state','states':['NEAR_RECENT_SUPPORT']}}
+ ,{'name':'BREAKDOWN_RESEARCH_CONTEXT','research_session':session,'predicate':{'type':'price_structure_state','states':['BREAKDOWN_CONFIRMED_BY_RULE']}}
+ ,{'name':'RANGE_COMPRESSION_CONTEXT','research_session':session,'predicate':{'type':'range_state','states':['RANGE_COMPRESSION']}}
  ]
-def build(product:Mapping[str,Any],eligibility:Mapping[str,Any],context:Mapping[str,Any],dossiers:Mapping[str,Any],event_context:Mapping[str,Any]|None=None)->dict:
- er={x['ticker']:x for x in eligibility['records']};cr={x['ticker']:x for x in context['records']};ev={x['ticker']:x for x in (event_context or {'records':[]})['records']}; rows=[]
+def build(product:Mapping[str,Any],eligibility:Mapping[str,Any],context:Mapping[str,Any],dossiers:Mapping[str,Any],event_context:Mapping[str,Any]|None=None,price_context:Mapping[str,Any]|None=None)->dict:
+ er={x['ticker']:x for x in eligibility['records']};cr={x['ticker']:x for x in context['records']};ev={x['ticker']:x for x in (event_context or {'records':[]})['records']};price={x['ticker']:x for x in (price_context or {'records':[]})['records']}; rows=[]
  for r in product['stock_research']:
-  t=r['ticker']; authority=cr[t].get('relative_context_authority'); event=ev.get(t,{}); facts=event.get('event_facts',[]);rows.append({'ticker':t,'dossier_identity':dossiers[t]['dossier_identity'],'values':{'momentum_20d':r['ai_ready_brief']['facts']['momentum_20d'],'volatility_20d':r['ai_ready_brief']['facts']['volatility_20d'],'trend_state':r['research_summary']['trend_state'],'fundamental_authority':r['research_summary']['fundamental_authority']},'lenses':er[t]['lenses'],'relative_available':cr[t]['context_status']=='AVAILABLE' and authority=='QUALIFIED_CLASSIFICATION','relative_provider_descriptive_available':cr[t]['context_status']=='AVAILABLE' and authority=='PROVIDER_DESCRIPTIVE_CLASSIFICATION','relative_any_available':cr[t]['context_status']=='AVAILABLE','relative_context_authority':authority,'event_available':bool(facts),'upcoming_event':any(x['temporal_state']=='ANNOUNCED_FUTURE' for x in facts),'negative_event':any(x.get('research_direction')=='NEGATIVE' for x in event.get('catalyst_interpretations',[])),'event_context_identity':event.get('event_context_identity'),'warnings':r['warnings']})
- sources={'daily_product':product['artifact_identity'],'eligibility':eligibility['artifact_identity'],'relative_context':context['artifact_identity'],'event_context':event_context.get('artifact_identity') if event_context else None}; presets=[query(rows,s,sources) for s in _specs(product['daily_market_research']['session'])];a={'schema_version':'1.0.0','contract_version':'evidence_aware_research_screener/v1','research_session':product['daily_market_research']['session'],'cohort_scope':'EMPIRICAL_ACTIVE_SHADOW_ONLY','source_artifact_identities':sources,'records':rows,'presets':presets,'verdict':'EVIDENCE_AWARE_RESEARCH_SCREENER_V1_READY'};a['artifact_sha256']=_hash(a);a['artifact_identity']='evidence_aware_research_screener:'+a['artifact_sha256'];return a
+  t=r['ticker']; authority=cr[t].get('relative_context_authority'); event=ev.get(t,{}); facts=event.get('event_facts',[]); structure=price.get(t,{});rows.append({'ticker':t,'dossier_identity':dossiers[t]['dossier_identity'],'values':{'momentum_20d':r['ai_ready_brief']['facts']['momentum_20d'],'volatility_20d':r['ai_ready_brief']['facts']['volatility_20d'],'trend_state':r['research_summary']['trend_state'],'fundamental_authority':r['research_summary']['fundamental_authority'],'price_structure_state':structure.get('structure_status'),'range_state':structure.get('range_state')},'lenses':er[t]['lenses'],'relative_available':cr[t]['context_status']=='AVAILABLE' and authority=='QUALIFIED_CLASSIFICATION','relative_provider_descriptive_available':cr[t]['context_status']=='AVAILABLE' and authority=='PROVIDER_DESCRIPTIVE_CLASSIFICATION','relative_any_available':cr[t]['context_status']=='AVAILABLE','relative_context_authority':authority,'event_available':bool(facts),'upcoming_event':any(x['temporal_state']=='ANNOUNCED_FUTURE' for x in facts),'negative_event':any(x.get('research_direction')=='NEGATIVE' for x in event.get('catalyst_interpretations',[])),'event_context_identity':event.get('event_context_identity'),'warnings':r['warnings']})
+ sources={'daily_product':product['artifact_identity'],'eligibility':eligibility['artifact_identity'],'relative_context':context['artifact_identity'],'event_context':event_context.get('artifact_identity') if event_context else None,'price_structure_context':price_context.get('artifact_identity') if price_context else None}; presets=[query(rows,s,sources) for s in _specs(product['daily_market_research']['session'])];a={'schema_version':'1.0.0','contract_version':'evidence_aware_research_screener/v1','research_session':product['daily_market_research']['session'],'cohort_scope':'EMPIRICAL_ACTIVE_SHADOW_ONLY','source_artifact_identities':sources,'records':rows,'presets':presets,'verdict':'EVIDENCE_AWARE_RESEARCH_SCREENER_V1_READY'};a['artifact_sha256']=_hash(a);a['artifact_identity']='evidence_aware_research_screener:'+a['artifact_sha256'];return a
 def review_overlay(pack:Mapping[str,Any],screen:Mapping[str,Any])->dict:
  matches={t:[] for t in [x['ticker'] for x in pack['owner_review_queue']]}
  for p in screen['presets']:
