@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Official Source Route Evidence-Binding Correction V1
+
+`OFFICIAL_SOURCE_ROUTE_EVIDENCE_BINDING_CORRECTION_V1 = COMPLETE_LOCAL` (`official_financial_source_route_discovery.py`, `tools/run_official_source_route_evidence_binding_correction.py`, `push = NO`).
+
+1. `OFFICIAL_SOURCE_ROUTE_DISCOVERY_V1 = IMPLEMENTATION_PRESENT_BUT_QUALIFICATION_INVALIDATED`. Its historical 28 `OWNERSHIP_QUALIFIED` claims (17 exchange and 11 issuer) were generated from static legal/domain/proof assertions and exchange URL templates rather than retained evidence. The historical V1 artifact remains byte-preserved and is explicitly superseded only for qualification claims.
+2. The corrected offline contract enforces `NO_RETAINED_OWNERSHIP_EVIDENCE_MEANS_NO_OWNERSHIP_QUALIFIED_VERDICT`. It requires ticker/legal identity, locator, retained SHA-256, evidence type/provenance, candidate route, and a deterministic qualifier result. Issuer routes reuse `official_route_ownership_evidence.qualify`; generic exchange hosts or templates never establish a ticker-specific route.
+3. Real replay over the original Wave-2 17-issuer cohort consumes zero retained ownership evidence objects and produces 34 `OWNERSHIP_EVIDENCE_MISSING` routes, zero qualified routes, and zero governed registry candidates. The upstream Wave-2 `OWNERSHIP_EVIDENCE_MISSING` blocker remains controlling.
+4. The correction makes no registry, runtime, document, OCR, financial-fact, readiness, provider, PIT, liquidity/sizing, valuation, recommendation, or promotion change. Future owner review is unavailable until retained content-addressed issuer-domain or ticker-specific exchange-profile evidence exists.
+
 ## 2026-08-21 - Official Financial Source Route Discovery V1
 
 `OFFICIAL_SOURCE_ROUTE_DISCOVERY_V1 = READY_LOCAL` (`official_financial_source_route_discovery.py`, `tools/run_official_financial_source_route_discovery.py`, `tests/test_official_financial_source_route_discovery.py`, `operations-review/official-financial-source-route-discovery-v1-20260821/official_financial_source_route_discovery_artifact.json`, `push = NO`).

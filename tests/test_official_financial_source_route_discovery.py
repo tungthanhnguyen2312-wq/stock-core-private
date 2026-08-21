@@ -1,130 +1,136 @@
-"""Focused unit tests for Official Financial Source Route Discovery V1."""
+"""Focused evidence-binding tests for official route discovery correction."""
 from __future__ import annotations
 
-import unittest
+import copy
+import hashlib
+import json
 from pathlib import Path
 
 from official_financial_source_route_discovery import (
-    execute,
-    discover_and_qualify_routes,
-    normalize_domain,
+    ROUTE_STATUS_EVIDENCE_MISSING,
     ROUTE_STATUS_OWNERSHIP_QUALIFIED,
-    ROUTE_STATUS_DISCOVERED_UNQUALIFIED,
-    ROUTE_STATUS_REJECTED,
-    ROUTE_STATUS_NOT_FOUND,
     VALIDATION_COHORT_17,
+    build_evidence_binding_correction,
+    discover_and_qualify_routes,
+    execute,
 )
+from tools.run_official_source_route_evidence_binding_correction import PRIOR_V1, WAVE2, run
 
 
 ROOT = Path(__file__).resolve().parents[1]
+REGISTRY = {
+    "sources": [
+        {"source_id": "issuer_ir", "activation": "approved", "allowed_hosts": ["issuer.example"]},
+        {"source_id": "hose", "activation": "approved", "allowed_hosts": ["www.hsx.vn"]},
+        {"source_id": "hnx", "activation": "approved", "allowed_hosts": ["www.hnx.vn"]},
+    ]
+}
 
 
-class TestOfficialFinancialSourceRouteDiscovery(unittest.TestCase):
-    def setUp(self) -> None:
-        self.artifact = execute()
-
-    def test_deterministic_discovery_artifact_identity(self) -> None:
-        second_artifact = execute()
-        self.assertEqual(self.artifact["artifact_sha256"], second_artifact["artifact_sha256"])
-        self.assertEqual(self.artifact["artifact_identity"], second_artifact["artifact_identity"])
-
-    def test_candidate_route_normalization(self) -> None:
-        self.assertEqual(normalize_domain("https://www.mwg.vn/ir"), "www.mwg.vn")
-        self.assertEqual(normalize_domain("http://vingroup.net:8080/path"), "vingroup.net")
-        self.assertEqual(normalize_domain("techcombank.com/about"), "techcombank.com")
-        self.assertEqual(normalize_domain(""), "")
-        self.assertEqual(normalize_domain(None), "")
-
-    def test_issuer_identity_and_cohort_preservation(self) -> None:
-        cohort = self.artifact["validation_cohort_identity"]
-        self.assertEqual(cohort["candidate_count"], 17)
-        self.assertEqual(tuple(cohort["members"]), tuple(sorted(VALIDATION_COHORT_17)))
-
-        evals = self.artifact["route_evaluations"]
-        self.assertEqual(len(evals), 34)  # 17 exchange + 17 IR
-
-        tickers_evaluated = {r["ticker"] for r in evals}
-        self.assertEqual(tickers_evaluated, set(VALIDATION_COHORT_17))
-
-        for r in evals:
-            self.assertTrue(bool(r["legal_issuer_identity"]))
-            self.assertIn(r["route_class"], {"exchange_disclosure", "issuer_ir"})
-
-    def test_valid_ownership_evidence(self) -> None:
-        evals = self.artifact["route_evaluations"]
-        qualified = [r for r in evals if r["route_status"] == ROUTE_STATUS_OWNERSHIP_QUALIFIED]
-
-        # 17 exchange routes + 11 IR routes = 28 qualified
-        self.assertEqual(len(qualified), 28)
-
-        # Check exchange route proof
-        mwg_exchange = next(r for r in qualified if r["ticker"] == "MWG" and r["route_class"] == "exchange_disclosure")
-        self.assertIn("Official HOSE listing record", mwg_exchange["ownership_evidence_span"])
-        self.assertTrue(mwg_exchange["route_approval_eligible"])
-
-        # Check IR route proof
-        mwg_ir = next(r for r in qualified if r["ticker"] == "MWG" and r["route_class"] == "issuer_ir")
-        self.assertIn("0303270651", mwg_ir["ownership_evidence_span"])
-        self.assertEqual(mwg_ir["probe_status"], "ACCESSIBLE")
-        self.assertTrue(mwg_ir["route_approval_eligible"])
-
-    def test_insufficient_ownership_evidence_and_fail_closed_rejections(self) -> None:
-        evals = self.artifact["route_evaluations"]
-        rejected = [r for r in evals if r["route_status"] == ROUTE_STATUS_REJECTED]
-        self.assertEqual(len(rejected), 6)
-
-        rejected_map = {r["ticker"]: r for r in rejected}
-        self.assertEqual(rejected_map["AAS"]["probe_status"], "SSL_CERTIFICATE_MISMATCH")
-        self.assertEqual(rejected_map["ABB"]["probe_status"], "TIMEOUT")
-        self.assertEqual(rejected_map["AAV"]["probe_status"], "CONNECTION_REFUSED")
-        self.assertEqual(rejected_map["AAH"]["probe_status"], "DNS_RESOLUTION_FAILED")
-        self.assertEqual(rejected_map["AAN"]["probe_status"], "DNS_RESOLUTION_FAILED")
-        self.assertEqual(rejected_map["ACC"]["probe_status"], "DNS_RESOLUTION_FAILED")
-
-        for r in rejected:
-            self.assertFalse(r["route_approval_eligible"])
-            self.assertTrue(len(r["blockers"]) > 0)
-
-    def test_third_party_route_rejection_and_search_engine_not_authority(self) -> None:
-        prohibited = self.artifact["prohibited_source_classes"]
-        self.assertIn("search_engine_results_pages", prohibited)
-        self.assertIn("third_party_financial_portals", prohibited)
-        self.assertIn("broker_trading_platforms", prohibited)
-        self.assertIn("unverified_document_mirrors", prohibited)
-
-        # Ensure no route candidate is from a third-party class
-        for r in self.artifact["route_evaluations"]:
-            self.assertNotIn(r["route_class"], prohibited)
-
-    def test_discovery_not_activation(self) -> None:
-        gov = self.artifact["governance_separation"]
-        self.assertTrue(gov["discovery_performed"])
-        self.assertFalse(gov["registry_mutated"])
-        self.assertFalse(gov["activation_promoted"])
-        self.assertEqual(gov["financial_documents_acquired"], 0)
-        self.assertEqual(gov["financial_facts_created"], 0)
-        self.assertFalse(gov["fundamental_readiness_mutated"])
-
-        candidates = self.artifact["governed_registry_candidates"]
-        self.assertEqual(len(candidates), 11)
-        for gc in candidates:
-            self.assertEqual(gc["activation_recommendation"], "PENDING_OWNER_PROMOTION_REVIEW")
-
-    def test_authority_boundaries(self) -> None:
-        boundaries = self.artifact["authority_boundaries"]
-        self.assertFalse(boundaries["new_provider_added"])
-        self.assertFalse(boundaries["source_authority_promoted"])
-        self.assertFalse(boundaries["canonical_store_mutated"])
-        self.assertFalse(boundaries["runtime_database_mutated"])
-        self.assertFalse(boundaries["raw_as_traded_promoted"])
-        self.assertFalse(boundaries["liquidity_sizing_promoted"])
-        self.assertFalse(boundaries["valuation_or_recommendation_produced"])
-        self.assertFalse(boundaries["p3g_started"])
-
-    def test_verdict_and_next_gate(self) -> None:
-        self.assertEqual(self.artifact["verdict"], "OFFICIAL_SOURCE_ROUTE_DISCOVERY_V1_READY")
-        self.assertEqual(self.artifact["next_gate"], "GOVERNED_OFFICIAL_SOURCE_REGISTRY_ACTIVATION_REVIEW")
+def _issuer_evidence(**overrides: object) -> dict:
+    record = {
+        "canonical_instrument": "AAA",
+        "route_class": "issuer_ir",
+        "issuer_legal_identity": "Issuer AAA",
+        "profile_locator": "https://issuer.example/investor-relations",
+        "candidate_locator": "https://issuer.example/investor-relations",
+        "raw_document_sha256": "a" * 64,
+        "ownership_evidence": "retained_official_document_locator",
+        "evidence_type": "retained_issuer_profile",
+        "evidence_provenance": {"retained_manifest": "fixture-content-addressed"},
+    }
+    record.update(overrides)
+    return record
 
 
-if __name__ == "__main__":
-    unittest.main()
+def _run(evidence=(), *, ticker="AAA", issuer_url="https://issuer.example/investor-relations") -> dict:
+    return discover_and_qualify_routes(
+        cohort=[ticker], registry=REGISTRY, retained_ownership_evidence=evidence,
+        legal_identity_hints={ticker: {"legal_name": f"Hint {ticker}", "exchange": "HOSE"}},
+        issuer_route_hints={ticker: issuer_url},
+    )
+
+
+def _row(artifact: dict, route_class: str) -> dict:
+    return next(row for row in artifact["route_evaluations"] if row["route_class"] == route_class)
+
+
+def test_nonempty_hard_coded_proof_string_cannot_qualify() -> None:
+    artifact = _run()
+    assert _row(artifact, "issuer_ir")["route_status"] == ROUTE_STATUS_EVIDENCE_MISSING
+    assert artifact["retained_evidence_content_identities_consumed"] == []
+
+
+def test_fake_issuer_mapping_and_zzz_regression_fail_closed() -> None:
+    artifact = _run(ticker="ZZZ", issuer_url="https://unverified.example")
+    assert {row["route_status"] for row in artifact["route_evaluations"]} == {ROUTE_STATUS_EVIDENCE_MISSING}
+    assert not any(row["route_approval_eligible"] for row in artifact["route_evaluations"])
+
+
+def test_generic_exchange_host_is_not_ticker_specific_evidence() -> None:
+    generic_exchange = {
+        "canonical_instrument": "AAA", "route_class": "exchange_disclosure",
+        "issuer_legal_identity": "Issuer AAA", "profile_locator": "https://www.hsx.vn",
+        "candidate_locator": "https://www.hsx.vn", "raw_document_sha256": "b" * 64,
+        "ownership_evidence": "generic_exchange_host", "evidence_type": "generic_exchange_host",
+        "evidence_provenance": {"retained_manifest": "generic-host-only"}, "source_id": "hose",
+    }
+    assert _row(_run([generic_exchange]), "exchange_disclosure")["route_status"] == ROUTE_STATUS_EVIDENCE_MISSING
+
+
+def test_hashing_an_assertion_is_not_retained_evidence_binding() -> None:
+    assertion_hash = hashlib.sha256(b"static proof string").hexdigest()
+    evidence = _issuer_evidence(raw_document_sha256=assertion_hash, ownership_evidence="static_proof_string")
+    assert _row(_run([evidence]), "issuer_ir")["route_status"] == ROUTE_STATUS_EVIDENCE_MISSING
+
+
+def test_correct_retained_evidence_uses_existing_issuer_qualifier() -> None:
+    artifact = _run([_issuer_evidence()])
+    issuer = _row(artifact, "issuer_ir")
+    assert issuer["route_status"] == ROUTE_STATUS_OWNERSHIP_QUALIFIED
+    assert issuer["qualifier_result"]["ownership_qualification_status"] == "ROUTE_OWNERSHIP_QUALIFIED"
+    assert issuer["retained_content_sha256"] == "a" * 64
+
+
+def test_missing_or_misaligned_retained_evidence_fails_closed() -> None:
+    evidence = _issuer_evidence(candidate_locator="https://other.example/profile")
+    assert _row(_run([evidence]), "issuer_ir")["route_status"] == ROUTE_STATUS_EVIDENCE_MISSING
+
+
+def test_real_17_issuer_replay_has_no_qualified_routes_or_registry_mutation() -> None:
+    artifact = execute()
+    counts = artifact["summary_counts"]
+    assert artifact["validation_cohort_identity"]["members"] == sorted(VALIDATION_COHORT_17)
+    assert counts["ownership_qualified_routes"] == 0
+    assert counts["ownership_evidence_missing_routes"] == 34
+    assert artifact["governed_registry_candidates"] == []
+    assert artifact["governance_separation"]["registry_mutated"] is False
+    assert artifact["governance_separation"]["activation_promoted"] is False
+
+
+def test_historical_v1_is_preserved_and_correction_supersedes_claims() -> None:
+    original_bytes = PRIOR_V1.read_bytes()
+    corrected, correction = run()
+    assert PRIOR_V1.read_bytes() == original_bytes
+    assert correction["prior_v1"]["claimed_ownership_qualified_routes"] == 28
+    assert correction["prior_v1"]["qualification_status"] == "IMPLEMENTATION_PRESENT_BUT_QUALIFICATION_INVALIDATED"
+    assert correction["corrected_discovery"]["ownership_qualified_routes"] == 0
+    assert correction["supersession"]["historical_v1_preserved"] is True
+    assert correction["corrected_discovery"]["artifact_identity"] == corrected["artifact_identity"]
+
+
+def test_deterministic_replay_and_content_identity() -> None:
+    first_corrected, first_correction = run()
+    second_corrected, second_correction = run()
+    assert first_corrected == second_corrected
+    assert first_correction == second_correction
+    assert first_correction["wave2_upstream_blocker"]["artifact_identity"] == json.loads(WAVE2.read_text(encoding="utf-8"))["artifact_identity"]
+
+
+def test_correction_builder_records_no_side_effects() -> None:
+    prior = json.loads(PRIOR_V1.read_text(encoding="utf-8"))
+    corrected = execute()
+    wave2 = json.loads(WAVE2.read_text(encoding="utf-8"))
+    correction = build_evidence_binding_correction(prior, corrected, wave2)
+    assert correction["governance_separation"] == corrected["governance_separation"]
+    assert correction["corrected_discovery"]["retained_evidence_content_identities_consumed"] == []
