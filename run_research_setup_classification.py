@@ -12,7 +12,7 @@ def run():
     review = json.loads((ROOT / 'operations-review/human-research-review-pack-v1-20260820/human_research_review_pack_artifact.json').read_text(encoding='utf8'))
     scenarios = json.loads((ROOT / 'operations-review/expectations-scenario-research-v1-20260820/expectations_scenario_research_artifact.json').read_text(encoding='utf8'))
     market = json.loads((ROOT / 'operations-review/market-regime-breadth-context-v1-20260820/market_regime_breadth_context_artifact.json').read_text(encoding='utf8'))
-    downside = json.loads((ROOT / 'operations-review/downside-uncertainty-research-context-v1-20260820/downside_uncertainty_research_context_artifact.json').read_text(encoding='utf8'))
+    downside = json.loads((ROOT / 'operations-review/downside-uncertainty-research-context-v2-20260820/downside_uncertainty_research_context_artifact.json').read_text(encoding='utf8'))
     context = build(product, price_run()[0], relative_run()[0], market, downside, scenarios, review)
     return context, daily_overlay(context), *consumer_overlays(context, review, scenarios)
 

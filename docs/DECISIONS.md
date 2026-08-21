@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Downside Semantic Version Repair & Prospective Extension Successor
+
+`DOWNSIDE_SEMANTIC_VERSION_REPAIR = READY_LOCAL` (`downside_uncertainty_research_context.py`, `prospective_research_context_extension.py`, `push = NO`).
+
+1. The legacy current path had incorporated price-structure predicates into Downside V1, changing the core technical cohort from 378 to 382. The exact added tickers are AAN, MIG, TCW, and TRA; each is `NEAR_RECENT_SUPPORT` but satisfies none of V1's four original technical predicates. This is a semantic-versioning defect, not a data-state change.
+2. Restored V1 is immutable from price structure and retains the 378-member four-predicate core. V2 expresses breakdown/near-support only in `PRICE_STRUCTURE_DOWNSIDE_CONTEXT`; it cannot alter V1 membership. The legacy 382 artifact `downside_uncertainty_research_context:da28e80273f2aaf488fbd9060b3a908584202ed030b2e5314c2d81e77933dfef` remains historical evidence, never overwritten.
+3. Legacy extension `prospective_research_context_extension:1248d909c9ffd204d9bbcfbf3c886a4621e690c6739b5c8736fcab3bf7f58339` remains byte-stable but is `SUPERSEDED_FOR_FUTURE_ATTRIBUTION`. The corrected successor retains explicit predecessor/supersession lineage and exposes separate `downside:*_V1` and `price_structure:*` cohort keys; the prospective adapter rejects every non-successor extension.
+4. The repair ran only after confirming that no accepted exact session is later than 2026-08-20. It performs no attribution and promotes no PIT, price, liquidity, sizing, valuation, share, or recommendation authority.
+
 ## 2026-08-20 - Evidence-Aware Research Screener V1
 
 `EVIDENCE_AWARE_RESEARCH_SCREENER_V1 = READY_LOCAL` (`evidence_aware_research_screener.py`, `run_evidence_aware_research_screener.py`, `tests/test_evidence_aware_research_screener.py`, `push = NO`).

@@ -6,6 +6,7 @@ import pytest
 
 from prospective_research_context_extension import build, write_immutable
 from prospective_research_learning import context_extension_dimensions
+from run_prospective_research_context_extension_successor import run as run_successor
 from run_prospective_research_context_extension import ROOT, SNAPSHOT, run
 
 
@@ -27,12 +28,8 @@ def test_extension_is_immutable_t_state_and_preserves_source_identities(tmp_path
     assert first['coverage']['cohort_key_member_counts']['setup:BREAKOUT_CONTEXT'] == 19
     assert first['coverage']['cohort_key_member_counts']['setup:TREND_CONTINUATION_CONTEXT'] == 193
     assert first['seal']['sealed_before_accepted_future_observation'] is True
-    dimensions = context_extension_dimensions(snapshot, first)
-    assert dimensions['outcome_status'] == 'PENDING_FUTURE_OBSERVATION'
-    assert len(dimensions['dimensions']) == 523
-    mixed_session = copy.deepcopy(first); mixed_session['records'][0]['research_session'] = '2026-08-21'
-    with pytest.raises(ValueError, match='PROSPECTIVE_CONTEXT_EXTENSION_SESSION_MISMATCH'):
-        context_extension_dimensions(snapshot, mixed_session)
+    with pytest.raises(ValueError, match='PROSPECTIVE_CONTEXT_EXTENSION_NOT_ATTRIBUTION_SAFE'):
+        context_extension_dimensions(snapshot, first)
     extension_path = tmp_path / 'extension.json'; write_immutable(extension_path, first); write_immutable(extension_path, first)
     changed = dict(first); changed['research_session'] = '2026-08-21'
     with pytest.raises(ValueError): write_immutable(extension_path, changed)
@@ -50,3 +47,23 @@ def test_extension_rejects_later_source_session_and_preserves_setup_identity():
               _load('operations-review/market-regime-breadth-context-v1-20260820/market_regime_breadth_context_artifact.json'),
               _load('operations-review/downside-uncertainty-research-context-v1-20260820/downside_uncertainty_research_context_artifact.json'),
               _load('operations-review/sector-relative-research-context-v1-20260820/sector_relative_research_context_artifact.json'))
+
+
+def test_successor_is_the_only_attribution_safe_extension():
+    snapshot, successor = run_successor()
+    dimensions = context_extension_dimensions(snapshot, successor)
+    assert successor['extension_content_identity'].endswith('6cc76efaaf55b4262b6d94d53abda75dc1a0289d17c7d195014e11a07e987807')
+    assert successor['predecessor_extension_identity'].endswith('1248d909c9ffd204d9bbcfbf3c886a4621e690c6739b5c8736fcab3bf7f58339')
+    assert successor['supersession']['status'] == 'SUPERSEDED_FOR_FUTURE_ATTRIBUTION'
+    assert successor['supersession']['legacy_downside_identity'].endswith('da28e80273f2aaf488fbd9060b3a908584202ed030b2e5314c2d81e77933dfef')
+    assert successor['coverage']['core_v1_adverse_count'] == 378
+    assert successor['coverage']['price_near_support_count'] == 115
+    assert successor['coverage']['price_breakdown_count'] == 20
+    assert len(dimensions['dimensions']) == 523
+    mixed_session = copy.deepcopy(successor); mixed_session['records'][0]['research_session'] = '2026-08-21'
+    with pytest.raises(ValueError, match='PROSPECTIVE_CONTEXT_EXTENSION_SESSION_MISMATCH'):
+        context_extension_dimensions(snapshot, mixed_session)
+    for ticker in ('AAN', 'MIG', 'TCW', 'TRA'):
+        row = next(row for row in successor['records'] if row['ticker'] == ticker)
+        assert 'downside:NO_OBSERVED_ADVERSE_TECHNICAL_CONDITION_V1' in row['prospective_cohort_keys']
+        assert 'price_structure:NEAR_RECENT_SUPPORT_CONTEXT' in row['prospective_cohort_keys']

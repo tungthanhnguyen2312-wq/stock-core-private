@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib,json
 from pathlib import Path
 from typing import Any,Mapping
+from prospective_research_context_extension import ATTRIBUTION_SAFE_SUCCESSOR_ID,SUPERSEDED_LEGACY_EXTENSION_ID
 def _canon(x:Any):return json.dumps(x,ensure_ascii=False,sort_keys=True,separators=(',',':'))
 def _hash(x:Any):return hashlib.sha256(_canon(x).encode()).hexdigest()
 def freeze(product:Mapping[str,Any], analyst:Mapping[str,Any])->dict[str,Any]:
@@ -26,6 +27,7 @@ def context_extension_dimensions(snapshot:Mapping[str,Any], extension:Mapping[st
  """Prepare frozen grouping dimensions for a later strict-future attribution run."""
  if extension.get('original_snapshot_identity') != snapshot.get('snapshot_id') or extension.get('research_session') != snapshot.get('research_session'):
   raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_SNAPSHOT_MISMATCH')
+ if extension.get('extension_content_identity') != ATTRIBUTION_SAFE_SUCCESSOR_ID or extension.get('attribution_eligibility') != 'SAFE_SUCCESSOR_FOR_FIRST_ATTRIBUTION' or extension.get('predecessor_extension_identity') != SUPERSEDED_LEGACY_EXTENSION_ID or extension.get('supersession',{}).get('status') != 'SUPERSEDED_FOR_FUTURE_ATTRIBUTION':raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_NOT_ATTRIBUTION_SAFE')
  if extension.get('seal',{}).get('future_outcomes') != 'PENDING_FUTURE_OBSERVATION':raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_NOT_PRE_OUTCOME')
  frozen={row['ticker'] for row in snapshot['frozen_records']}; rows={row['ticker']:row for row in extension.get('records',[])}
  if frozen != set(rows):raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_COHORT_MISMATCH')
