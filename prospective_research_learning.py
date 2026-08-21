@@ -21,3 +21,13 @@ def attribute(snapshot:Mapping[str,Any],later:Mapping[str,Any]|None=None)->dict[
  # No row from a later session is consulted unless it is strictly later than the frozen session.
  if not later or str(later.get('session',''))<=str(snapshot['research_session']):return {'snapshot_id':snapshot['snapshot_id'],'outcome_status':'PENDING_FUTURE_OBSERVATION','eligible_count':len(snapshot['frozen_records']),'attribution_groups':[]}
  return {'snapshot_id':snapshot['snapshot_id'],'outcome_status':'UNAVAILABLE','eligible_count':len(snapshot['frozen_records']),'attribution_groups':[]}
+
+def context_extension_dimensions(snapshot:Mapping[str,Any], extension:Mapping[str,Any])->dict[str,Any]:
+ """Prepare frozen grouping dimensions for a later strict-future attribution run."""
+ if extension.get('original_snapshot_identity') != snapshot.get('snapshot_id') or extension.get('research_session') != snapshot.get('research_session'):
+  raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_SNAPSHOT_MISMATCH')
+ if extension.get('seal',{}).get('future_outcomes') != 'PENDING_FUTURE_OBSERVATION':raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_NOT_PRE_OUTCOME')
+ frozen={row['ticker'] for row in snapshot['frozen_records']}; rows={row['ticker']:row for row in extension.get('records',[])}
+ if frozen != set(rows):raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_COHORT_MISMATCH')
+ if any(row.get('research_session') != snapshot.get('research_session') for row in rows.values()):raise ValueError('PROSPECTIVE_CONTEXT_EXTENSION_SESSION_MISMATCH')
+ return {'snapshot_id':snapshot['snapshot_id'],'extension_content_identity':extension['extension_content_identity'],'research_session':snapshot['research_session'],'outcome_status':'PENDING_FUTURE_OBSERVATION','dimensions':[{'ticker':ticker,'cohort_keys':rows[ticker]['prospective_cohort_keys'],'setup_identity':rows[ticker]['setup']['source_identity'],'market_context_reference':rows[ticker]['market_context_reference']} for ticker in sorted(rows)]}
