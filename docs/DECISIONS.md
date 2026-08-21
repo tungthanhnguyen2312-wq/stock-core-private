@@ -10,6 +10,22 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Retained Official Route Ownership Evidence Acquisition V1
+
+`RETAINED_OFFICIAL_ROUTE_OWNERSHIP_EVIDENCE_ACQUISITION_V1 = PARTIAL_LOCAL` (`retained_official_route_ownership_evidence.py`, `tools/run_retained_official_route_ownership_evidence.py`, `tests/test_retained_official_route_ownership_evidence.py`, `operations-review/retained-official-route-ownership-evidence-20260821/retained_official_route_ownership_evidence_artifact.json`, `push = NO`).
+
+1. **Real Evidence Acquisition & Byte Retention**:
+   - Acquired and saved 10 genuine first-party HTML evidence objects to `operations-review/retained-official-route-ownership-evidence-20260821/evidence/` across 10 accessible validation issuers: `AAA` (147 KB, `218eb44d7c75`), `AAT` (25 KB, `0b4379eac689`), `ABS` (30 KB, `7fe3439d37ba`), `ABT` (66 KB, `ed66a5aea4ff`), `ABW` (217 KB, `b74c3fd99aa5`), `ACB` (474 KB, `4fa3a5f1901b`), `BID` (58 KB, `f507f59327af`), `MBB` (109 KB, `30d942a1510c`), `MWG` (91 KB, `dac06cd1a19f`), `TCB` (70 KB, `257307005b78`).
+   - Every retained evidence object is immutable, content-addressed with full 64-character SHA-256, and carries structured provenance, MIME headers, and statutory registration spans.
+   - 7 candidates resolved to explicit fail-closed technical dispositions: `AAH`, `AAN`, `ACC` (DNS resolution failed), `AAS` (SSL certificate hostname mismatch), `AAV` (connection refused), `ABB` (connection timeout), `VIC` (HTTP 403 Forbidden).
+
+2. **Qualification & Separation of Registry Activation**:
+   - Replayed retained evidence objects through the corrected evidence-bound qualification contract.
+   - Generated 10 proposed `governed_registry_candidates` (`PENDING_OWNER_PROMOTION_REVIEW`).
+   - `config/official_source_registry.json` remains unmutated; zero financial documents acquired, zero facts created, zero P3-B readiness mutated.
+   - Exchange routes remain fail-closed pending ticker-specific static profile evidence (generic exchange host presence does not qualify).
+   - Next operational gate: `GOVERNED_OFFICIAL_SOURCE_REGISTRY_ACTIVATION_REVIEW`.
+
 ## 2026-08-21 - Official Source Route Evidence-Binding Correction V1
 
 `OFFICIAL_SOURCE_ROUTE_EVIDENCE_BINDING_CORRECTION_V1 = COMPLETE_LOCAL` (`official_financial_source_route_discovery.py`, `tools/run_official_source_route_evidence_binding_correction.py`, `push = NO`).
