@@ -10,6 +10,26 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Wave 2 Official Financial Evidence Scale-Out
+
+`OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT_WAVE2 = PARTIAL_LOCAL` (`wave2_official_financial_evidence_scaleout.py`, `tools/run_official_financial_evidence_scaleout_wave2.py`, `tests/test_official_financial_evidence_scaleout_wave2.py`, `operations-review/official-financial-evidence-scaleout-wave2-20260821/wave2_official_financial_evidence_scaleout_artifact.json`, `push = NO`).
+
+1. **Deterministic Wave 2 Candidate Selection**:
+   - Selected bounded 17-issuer candidate cohort under Layered Authority Topology B from the 523-member empirical-active cohort: 5 Commercial Banks (`ABB`, `ACB`, `BID`, `MBB`, `TCB`), 2 Securities Companies (`AAS`, `ABW`), and 10 Corporate Issuers (`AAA`, `AAH`, `AAN`, `AAT`, `AAV`, `ABS`, `ABT`, `ACC`, `MWG`, `VIC`).
+   - Every candidate has verified empirical-active membership, positive Layered Topology B entity classification, and locally retained raw financial observations in `operations-review/p1f-milestone-20260803/shadow-build-a/data/market-wide-financials/observations/`.
+
+2. **Official Source Discovery & Route Ownership Evaluation**:
+   - Closed-world route discovery evaluated all 17 candidates against approved registry hosts (`config/official_source_registry.json`).
+   - All 17 candidates deterministically resolve `NO_OFFICIAL_ROUTE_DISCOVERABLE` / `NO_APPROVED_ROUTE_FOUND` with route ownership status `OWNERSHIP_EVIDENCE_MISSING` because closed-world domain ownership proof is not yet established in the registry.
+   - All 17 candidates strictly fail closed without synthetic observations or unverified provider promotions.
+
+3. **Preservation of Authoritative Financial Panel**:
+   - Baseline qualified cohort remains 100% stable: 13 qualified issuers (`GAS`, `HPG`, `NVL`, `PAN`, `POW`, `PVD`, `QNS`, `SSI`, `VCB`, `VNM`, `VRE`, `FPT`, `PNJ`), 138 qualified canonical facts, and 94 exact-qualified P3-B metrics (22 proxies, 49 missing metrics across multi-period windows).
+   - Readiness breakdown across 523 empirical active cohort: 0 `COMPLETE`, 13 `PARTIAL`, 510 `BLOCKED`.
+   - Scaleout gate: `OFFICIAL_FINANCIAL_EVIDENCE_SCALEOUT_WAVE2_PARTIAL`.
+   - Preserved all negative boundaries: zero database mutations, zero new unpromoted provider authority, zero price basis changes, zero recommendations or valuation models.
+   - Next operational gate: `OFFICIAL_EXCHANGE_PROFILE_OR_ISSUER_DOMAIN_OWNERSHIP_EVIDENCE`.
+
 ## 2026-08-21 - Prospective Research Cohort Diagnostics V1
 
 `PROSPECTIVE_RESEARCH_COHORT_DIAGNOSTICS_V1 = READY_LOCAL` (`prospective_research_cohort_diagnostics.py`, `run_prospective_research_cohort_diagnostics.py`, `tests/test_prospective_research_cohort_diagnostics.py`, `push = NO`).
