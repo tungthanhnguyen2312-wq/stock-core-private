@@ -1,0 +1,557 @@
+{
+  "artifact_identity": "fhsc_dnse_ohlc_reconciliation_integrity:cf1c9fb6689abe784be1923068a26ee037ca01687fe53001216f63ce726ec0e6",
+  "artifact_sha256": "cf1c9fb6689abe784be1923068a26ee037ca01687fe53001216f63ce726ec0e6",
+  "artifact_type": "FHSC_DNSE_OHLC_RECONCILIATION_INTEGRITY_REVIEW",
+  "authority_boundaries": {
+    "dnse_authority_altered": false,
+    "fhsc_promoted": false,
+    "historical_adjustment_basis_promoted": false,
+    "network_requests_issued": false,
+    "raw_as_traded_promoted": false,
+    "runtime_or_database_mutated": false,
+    "volume_or_foreign_flow_qualified": false
+  },
+  "before_after_scale_matrix": {
+    "after": {
+      "excluded_pair_count": 400,
+      "excluded_reason_counts": {
+        "DNSE_MIXED_FIELD_REPRESENTATION": 400
+      },
+      "field_summary": {
+        "close": {
+          "classifications": {
+            "NOT_COMPARABLE": 100
+          },
+          "distinct_ratios": [],
+          "invariant_ratio": null,
+          "pair_count": 100
+        },
+        "high": {
+          "classifications": {
+            "NOT_COMPARABLE": 100
+          },
+          "distinct_ratios": [],
+          "invariant_ratio": null,
+          "pair_count": 100
+        },
+        "low": {
+          "classifications": {
+            "NOT_COMPARABLE": 100
+          },
+          "distinct_ratios": [],
+          "invariant_ratio": null,
+          "pair_count": 100
+        },
+        "open": {
+          "classifications": {
+            "NOT_COMPARABLE": 100
+          },
+          "distinct_ratios": [],
+          "invariant_ratio": null,
+          "pair_count": 100
+        }
+      },
+      "maximum_residual_after_candidate_x1000": null,
+      "total_comparable_pairs": 0,
+      "total_pairs": 400
+    },
+    "before": {
+      "field_summary": {
+        "close": {
+          "classifications": {
+            "EXACT_1000_TO_1": 94,
+            "OTHER_CONSTANT_RATIO": 6
+          },
+          "distinct_ratios": [
+            "1000",
+            "998.9775051124744376278118609",
+            "998.9795918367346938775510204",
+            "999.0",
+            "999.0039840637450199203187251",
+            "999.0059642147117296222664016",
+            "999.0118577075098814229249012"
+          ],
+          "invariant_ratio": null,
+          "pair_count": 100
+        },
+        "high": {
+          "classifications": {
+            "EXACT_1_TO_1": 94,
+            "OTHER_CONSTANT_RATIO": 6
+          },
+          "distinct_ratios": [
+            "0.9989858012170385395537525355",
+            "0.9989979959919839679358717435",
+            "0.9990099009900990099009900990",
+            "0.9990138067061143984220907298",
+            "0.9990157480314960629921259843",
+            "0.9990196078431372549019607843",
+            "1"
+          ],
+          "invariant_ratio": null,
+          "pair_count": 100
+        },
+        "low": {
+          "classifications": {
+            "EXACT_1_TO_1": 94,
+            "OTHER_CONSTANT_RATIO": 6
+          },
+          "distinct_ratios": [
+            "0.9989669421487603305785123967",
+            "0.9989711934156378600823045267",
+            "0.9989837398373983739837398374",
+            "0.999",
+            "1"
+          ],
+          "invariant_ratio": null,
+          "pair_count": 100
+        },
+        "open": {
+          "classifications": {
+            "EXACT_1_TO_1": 94,
+            "OTHER_CONSTANT_RATIO": 6
+          },
+          "distinct_ratios": [
+            "0.9989690721649484536082474227",
+            "0.9989858012170385395537525355",
+            "0.9989979959919839679358717435",
+            "0.9990059642147117296222664016",
+            "0.9990118577075098814229249012",
+            "1"
+          ],
+          "invariant_ratio": null,
+          "pair_count": 100
+        }
+      },
+      "total_comparable_pairs": 400,
+      "total_pairs": 400
+    }
+  },
+  "contract_version": "fhsc_dnse_ohlc_reconciliation_integrity/v1",
+  "correction": {
+    "evidence_mutated": false,
+    "implemented": "Calibration requires explicit, uniform DNSE OHLC field representations. Mixed or undeclared anchors yield NOT_COMPARABLE for every OHLC field.",
+    "provider_contract_mutated": false
+  },
+  "dnse_anchor_integrity": {
+    "field_representation": {
+      "close": "DNSE_MVA_SNAPSHOT_VALUE_X1000",
+      "high": "DNSE_PROVIDER_NATIVE_VALUE",
+      "low": "DNSE_PROVIDER_NATIVE_VALUE",
+      "open": "DNSE_PROVIDER_NATIVE_VALUE"
+    },
+    "reason": "DNSE_CLOSE_MVA_SNAPSHOT_X1000_WHILE_OPEN_HIGH_LOW_PROVIDER_NATIVE",
+    "source_materializer": "mva_exact_session_snapshot._observation_rows",
+    "source_materializer_transform": {
+      "close": "float(provider_close) * 1000.0",
+      "high": "identity",
+      "low": "identity",
+      "open": "identity"
+    },
+    "status": "UNSUITABLE_FOR_FHSC_OHLC_SCALE_CALIBRATION"
+  },
+  "fhsc_raw_field_integrity": {
+    "parser": "fhsc_retained_live_reconciliation.parse_retained_history",
+    "rule": "All O/H/L/C values are read from aligned arrays in the same SHA-verified retained response/session; no FHSC normalization is applied.",
+    "status": "PASS"
+  },
+  "hpg_2026_08_20_field_trace": [
+    {
+      "classification": "NOT_COMPARABLE",
+      "dnse_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "dnse_field_representation": "DNSE_PROVIDER_NATIVE_VALUE",
+      "dnse_normalized_value": null,
+      "dnse_retained_snapshot_value": 21.25,
+      "dnse_unit": "PRICE_UNIT_UNSPECIFIED_BY_RETAINED_SNAPSHOT",
+      "dnse_upstream_provider_raw_value": null,
+      "dnse_upstream_provider_raw_value_status": "NOT_RETAINED_SEPARATELY_FROM_MVA_SNAPSHOT",
+      "exclusion_reason": "DNSE_MIXED_FIELD_REPRESENTATION",
+      "fhsc_basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+      "fhsc_field_representation": "FHSC_RETAINED_PROVIDER_NATIVE_VALUE",
+      "fhsc_normalized_value": null,
+      "fhsc_parsed_value": 21.25,
+      "fhsc_raw_value": 21.25,
+      "fhsc_unit": "UNSPECIFIED_PRICE_UNIT",
+      "field": "open",
+      "instrument": "HPG",
+      "ratio_dnse_to_fhsc": null,
+      "residual_candidate_1": null,
+      "residual_candidate_1000": null,
+      "session": "2026-08-20"
+    },
+    {
+      "classification": "NOT_COMPARABLE",
+      "dnse_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "dnse_field_representation": "DNSE_PROVIDER_NATIVE_VALUE",
+      "dnse_normalized_value": null,
+      "dnse_retained_snapshot_value": 21.45,
+      "dnse_unit": "PRICE_UNIT_UNSPECIFIED_BY_RETAINED_SNAPSHOT",
+      "dnse_upstream_provider_raw_value": null,
+      "dnse_upstream_provider_raw_value_status": "NOT_RETAINED_SEPARATELY_FROM_MVA_SNAPSHOT",
+      "exclusion_reason": "DNSE_MIXED_FIELD_REPRESENTATION",
+      "fhsc_basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+      "fhsc_field_representation": "FHSC_RETAINED_PROVIDER_NATIVE_VALUE",
+      "fhsc_normalized_value": null,
+      "fhsc_parsed_value": 21.45,
+      "fhsc_raw_value": 21.45,
+      "fhsc_unit": "UNSPECIFIED_PRICE_UNIT",
+      "field": "high",
+      "instrument": "HPG",
+      "ratio_dnse_to_fhsc": null,
+      "residual_candidate_1": null,
+      "residual_candidate_1000": null,
+      "session": "2026-08-20"
+    },
+    {
+      "classification": "NOT_COMPARABLE",
+      "dnse_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "dnse_field_representation": "DNSE_PROVIDER_NATIVE_VALUE",
+      "dnse_normalized_value": null,
+      "dnse_retained_snapshot_value": 21.15,
+      "dnse_unit": "PRICE_UNIT_UNSPECIFIED_BY_RETAINED_SNAPSHOT",
+      "dnse_upstream_provider_raw_value": null,
+      "dnse_upstream_provider_raw_value_status": "NOT_RETAINED_SEPARATELY_FROM_MVA_SNAPSHOT",
+      "exclusion_reason": "DNSE_MIXED_FIELD_REPRESENTATION",
+      "fhsc_basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+      "fhsc_field_representation": "FHSC_RETAINED_PROVIDER_NATIVE_VALUE",
+      "fhsc_normalized_value": null,
+      "fhsc_parsed_value": 21.15,
+      "fhsc_raw_value": 21.15,
+      "fhsc_unit": "UNSPECIFIED_PRICE_UNIT",
+      "field": "low",
+      "instrument": "HPG",
+      "ratio_dnse_to_fhsc": null,
+      "residual_candidate_1": null,
+      "residual_candidate_1000": null,
+      "session": "2026-08-20"
+    },
+    {
+      "classification": "NOT_COMPARABLE",
+      "dnse_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
+      "dnse_field_representation": "DNSE_MVA_SNAPSHOT_VALUE_X1000",
+      "dnse_normalized_value": 21150.0,
+      "dnse_retained_snapshot_value": 21150.0,
+      "dnse_unit": "PRICE_UNIT_UNSPECIFIED_BY_RETAINED_SNAPSHOT",
+      "dnse_upstream_provider_raw_value": null,
+      "dnse_upstream_provider_raw_value_status": "NOT_RETAINED_SEPARATELY_FROM_MVA_SNAPSHOT",
+      "exclusion_reason": "DNSE_MIXED_FIELD_REPRESENTATION",
+      "fhsc_basis": "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT",
+      "fhsc_field_representation": "FHSC_RETAINED_PROVIDER_NATIVE_VALUE",
+      "fhsc_normalized_value": null,
+      "fhsc_parsed_value": 21.15,
+      "fhsc_raw_value": 21.15,
+      "fhsc_unit": "UNSPECIFIED_PRICE_UNIT",
+      "field": "close",
+      "instrument": "HPG",
+      "ratio_dnse_to_fhsc": null,
+      "residual_candidate_1": null,
+      "residual_candidate_1000": null,
+      "session": "2026-08-20"
+    }
+  ],
+  "normalization_verdict": {
+    "authority_effect": "NONE",
+    "reason": "DNSE calibration anchor is representation-inconsistent; no raw-to-raw or explicitly-normalized-to-normalized 10x10 OHLC comparison remains.",
+    "status": "NO_TRANSFORM_QUALIFIED"
+  },
+  "primary_root_cause": "MIXED_SOURCE_REPRESENTATION_DEFECT",
+  "retained_evidence": {
+    "dnse_snapshot": {
+      "anchor_exclusion_reason": "DNSE_CLOSE_MVA_SNAPSHOT_X1000_WHILE_OPEN_HIGH_LOW_PROVIDER_NATIVE",
+      "anchor_qualification": "UNSUITABLE_MIXED_FIELD_REPRESENTATION",
+      "field_representation": {
+        "close": "DNSE_MVA_SNAPSHOT_VALUE_X1000",
+        "high": "DNSE_PROVIDER_NATIVE_VALUE",
+        "low": "DNSE_PROVIDER_NATIVE_VALUE",
+        "open": "DNSE_PROVIDER_NATIVE_VALUE"
+      },
+      "path": "operations-review/p3f9b-market-wide-exact-session-scaleout-20260820/p3f9b_mva_exact_session_snapshot.json",
+      "price_basis": "ADJUSTED_RETROSPECTIVE",
+      "sha256": "f015cab0bb17eee5d2dfce14fcd44db875d9e3a291b49e5cda2425cee0f59fcd",
+      "snapshot_identity": "p3f9_exact_session_snapshot:00a8b1f08b67b69f28a5ad85544f238563dd79122ac6461fa6f4e786bc3181fe"
+    },
+    "fhsc_raw_responses": [
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/DPM_legacy_history_4128e4f0171759ec.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=DPM&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "4128e4f0171759ecd8a4f3421652b15997f5d3437a712f033c15573a1371c24c",
+        "symbol": "DPM"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/FPT_legacy_history_e6cbd5f282af3946.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=FPT&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "e6cbd5f282af3946fc228b79a26f69807fb64f93bdd91ffb6bf3069e847f9946",
+        "symbol": "FPT"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/GAS_legacy_history_abffc21026df4b5a.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=GAS&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "abffc21026df4b5a47443bf624c8367eded6753b2c4730c73479dd2ad940f6c8",
+        "symbol": "GAS"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/HPG_legacy_history_3b86896522249038.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=HPG&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "3b86896522249038ba818dc48d0dfe6593d4330c904055c34b21d447b02bebda",
+        "symbol": "HPG"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/MWG_legacy_history_6ead47946d87b2e3.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=MWG&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "6ead47946d87b2e3bd944d6fc7255bf63d331fe6111346aad2cf8e3724f27d73",
+        "symbol": "MWG"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/SSI_legacy_history_d841bd4f550296b0.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=SSI&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "d841bd4f550296b07b8904802b028282c63c52169778128bc3606152a6de4957",
+        "symbol": "SSI"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VCB_legacy_history_5723f291774f1ec6.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VCB&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "5723f291774f1ec64d467ebce23f3bc3dfc0d4ee870cb7e74df7d58d0925f071",
+        "symbol": "VCB"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VIC_legacy_history_f6acad0e3670de56.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VIC&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "f6acad0e3670de5680229df5db367dfd789d4af7184c8dfb0f82af8a71b20daf",
+        "symbol": "VIC"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VJC_legacy_history_ae9a8ac1e2dca520.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VJC&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "ae9a8ac1e2dca520a5648f3f61b3bbdbe4fa0fd1495de52b944a46a39be89f33",
+        "symbol": "VJC"
+      },
+      {
+        "parse_status": "PARSED",
+        "raw_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VNM_legacy_history_f460581343c64278.json",
+        "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VNM&resolution=1D&from=1786060800&to=1787184000",
+        "sha256": "f460581343c642782f1d26ed7f300cb4bdd70eb97a39a4fc77dcb56215d28385",
+        "symbol": "VNM"
+      }
+    ],
+    "prior_calibration_artifact": {
+      "identity": "fhsc_historical_price_semantics:ff17531c9a79a713ad8b12925c4cadd824879d2baa5037f4fb80d7ce36c81205",
+      "path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/fhsc_historical_price_semantics_qualification_artifact.json",
+      "sha256": "be34602d82a002f2fdcece80a3837cf135672f4b0546af230fe5423e181e3ec4"
+    }
+  },
+  "schema_version": "1.0.0",
+  "secondary_findings": [
+    "DNSE_CLOSE_MVA_SNAPSHOT_X1000_WHILE_OPEN_HIGH_LOW_PROVIDER_NATIVE",
+    "Prior calibration compared mixed DNSE retained snapshot representations to FHSC provider-native values.",
+    "No retained evidence establishes an FHSC field-specific numeric scale."
+  ],
+  "ssi_six_session_deviation_analysis": [
+    {
+      "fields": {
+        "close": {
+          "dnse_retained_snapshot_value": 19540.0,
+          "fhsc_retained_raw_value": 19.56,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "998.9775051124744376278118609",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "high": {
+          "dnse_retained_snapshot_value": 19.7,
+          "fhsc_retained_raw_value": 19.72,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989858012170385395537525355",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "low": {
+          "dnse_retained_snapshot_value": 19.34,
+          "fhsc_retained_raw_value": 19.36,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989669421487603305785123967",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "open": {
+          "dnse_retained_snapshot_value": 19.38,
+          "fhsc_retained_raw_value": 19.4,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989690721649484536082474227",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        }
+      },
+      "session": "2026-08-07"
+    },
+    {
+      "fields": {
+        "close": {
+          "dnse_retained_snapshot_value": 20060.0,
+          "fhsc_retained_raw_value": 20.08,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "999.0039840637450199203187251",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "high": {
+          "dnse_retained_snapshot_value": 20.18,
+          "fhsc_retained_raw_value": 20.2,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9990099009900990099009900990",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "low": {
+          "dnse_retained_snapshot_value": 19.66,
+          "fhsc_retained_raw_value": 19.68,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989837398373983739837398374",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "open": {
+          "dnse_retained_snapshot_value": 19.7,
+          "fhsc_retained_raw_value": 19.72,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989858012170385395537525355",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        }
+      },
+      "session": "2026-08-10"
+    },
+    {
+      "fields": {
+        "close": {
+          "dnse_retained_snapshot_value": 20100.0,
+          "fhsc_retained_raw_value": 20.12,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "999.0059642147117296222664016",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "high": {
+          "dnse_retained_snapshot_value": 20.3,
+          "fhsc_retained_raw_value": 20.32,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9990157480314960629921259843",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "low": {
+          "dnse_retained_snapshot_value": 19.98,
+          "fhsc_retained_raw_value": 20,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.999",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "open": {
+          "dnse_retained_snapshot_value": 20.1,
+          "fhsc_retained_raw_value": 20.12,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9990059642147117296222664016",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        }
+      },
+      "session": "2026-08-11"
+    },
+    {
+      "fields": {
+        "close": {
+          "dnse_retained_snapshot_value": 20220.0,
+          "fhsc_retained_raw_value": 20.24,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "999.0118577075098814229249012",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "high": {
+          "dnse_retained_snapshot_value": 20.26,
+          "fhsc_retained_raw_value": 20.28,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9990138067061143984220907298",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "low": {
+          "dnse_retained_snapshot_value": 19.98,
+          "fhsc_retained_raw_value": 20,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.999",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "open": {
+          "dnse_retained_snapshot_value": 20.1,
+          "fhsc_retained_raw_value": 20.12,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9990059642147117296222664016",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        }
+      },
+      "session": "2026-08-12"
+    },
+    {
+      "fields": {
+        "close": {
+          "dnse_retained_snapshot_value": 19980.0,
+          "fhsc_retained_raw_value": 20,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "999.0",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "high": {
+          "dnse_retained_snapshot_value": 20.38,
+          "fhsc_retained_raw_value": 20.4,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9990196078431372549019607843",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "low": {
+          "dnse_retained_snapshot_value": 19.98,
+          "fhsc_retained_raw_value": 20,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.999",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "open": {
+          "dnse_retained_snapshot_value": 20.22,
+          "fhsc_retained_raw_value": 20.24,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9990118577075098814229249012",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        }
+      },
+      "session": "2026-08-13"
+    },
+    {
+      "fields": {
+        "close": {
+          "dnse_retained_snapshot_value": 19580.0,
+          "fhsc_retained_raw_value": 19.6,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "998.9795918367346938775510204",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "high": {
+          "dnse_retained_snapshot_value": 19.94,
+          "fhsc_retained_raw_value": 19.96,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989979959919839679358717435",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "low": {
+          "dnse_retained_snapshot_value": 19.42,
+          "fhsc_retained_raw_value": 19.44,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989711934156378600823045267",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        },
+        "open": {
+          "dnse_retained_snapshot_value": 19.94,
+          "fhsc_retained_raw_value": 19.96,
+          "prior_classification": "OTHER_CONSTANT_RATIO",
+          "ratio_dnse_to_fhsc": "0.9989979959919839679358717435",
+          "reason": "MIXED_DNSE_SNAPSHOT_REPRESENTATION_INVALIDATES_COMPARISON"
+        }
+      },
+      "session": "2026-08-14"
+    }
+  ]
+}

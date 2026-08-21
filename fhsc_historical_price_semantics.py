@@ -25,6 +25,22 @@ LEGACY_CAPABILITY = "price_histories_chart_1d"
 FIELDS = ("open", "high", "low", "close")
 CALIBRATION_TICKERS = ("HPG", "VCB", "SSI", "VNM", "FPT", "VIC", "MWG", "GAS", "DPM", "VJC")
 SESSIONS = ("2026-08-07", "2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13", "2026-08-14", "2026-08-17", "2026-08-18", "2026-08-19", "2026-08-20")
+
+# The P3F9B snapshot is retained evidence, not a raw DNSE response.  Its
+# materializer preserves provider-native O/H/L but writes ``close * 1000``.
+# A snapshot with that mixed representation cannot serve as an OHLC scale
+# anchor: comparing its O/H/L as raw values and its close as a normalized
+# value is a raw-to-normalized comparison.
+P3F9B_DNSE_FIELD_REPRESENTATION = {
+    "open": "DNSE_PROVIDER_NATIVE_VALUE",
+    "high": "DNSE_PROVIDER_NATIVE_VALUE",
+    "low": "DNSE_PROVIDER_NATIVE_VALUE",
+    "close": "DNSE_MVA_SNAPSHOT_VALUE_X1000",
+}
+FHSC_FIELD_REPRESENTATION = "FHSC_RETAINED_PROVIDER_NATIVE_VALUE"
+FHSC_UNIT = "UNSPECIFIED_PRICE_UNIT"
+FHSC_BASIS = "ADJUSTMENT_AND_PRICE_UNIT_UNSPECIFIED_BY_PUBLISHED_CONTRACT"
+DNSE_SNAPSHOT_UNIT = "PRICE_UNIT_UNSPECIFIED_BY_RETAINED_SNAPSHOT"
 DOCUMENT_URLS = (
     "https://developers.fhsc.com.vn/openapi.yaml",
     "https://developers.fhsc.com.vn/authentication.md",
@@ -153,9 +169,15 @@ def retained_dnse_ohlc(snapshot_path: Path) -> tuple[list[dict[str, Any]], dict[
             if observation.get("session") not in SESSIONS:
                 continue
             rows.append({"provider": "DNSE", "instrument": ticker, "session": observation["session"],
-                         **{field: observation.get(field) for field in FIELDS}})
+                         **{field: observation.get(field) for field in FIELDS},
+                         "field_representation": dict(P3F9B_DNSE_FIELD_REPRESENTATION),
+                         "anchor_qualification": "UNSUITABLE_MIXED_FIELD_REPRESENTATION",
+                         "unit": DNSE_SNAPSHOT_UNIT, "basis": observation.get("price_basis")})
     identity = {"path": _portable_path(snapshot_path), "sha256": _sha256(snapshot_path.read_bytes()),
-                "snapshot_identity": payload.get("snapshot_identity"), "price_basis": "ADJUSTED_RETROSPECTIVE"}
+                "snapshot_identity": payload.get("snapshot_identity"), "price_basis": "ADJUSTED_RETROSPECTIVE",
+                "field_representation": dict(P3F9B_DNSE_FIELD_REPRESENTATION),
+                "anchor_qualification": "UNSUITABLE_MIXED_FIELD_REPRESENTATION",
+                "anchor_exclusion_reason": "DNSE_CLOSE_MVA_SNAPSHOT_X1000_WHILE_OPEN_HIGH_LOW_PROVIDER_NATIVE"}
     return rows, identity
 
 
@@ -180,35 +202,69 @@ def ratio_classification(dnse_value: Any, fhsc_value: Any) -> tuple[str, str | N
     return "OTHER_CONSTANT_RATIO", format(ratio, "f"), ratio
 
 
+def _dnse_anchor_representations(row: Mapping[str, Any]) -> tuple[bool, str | None, dict[str, str] | None]:
+    """Require an explicit, uniform OHLC representation before calibration.
+
+    Scale calibration may compare individual fields, but it cannot silently
+    use different DNSE transformations for open/high/low and close.  This is
+    deliberately stricter than numeric equality: the semantic representation
+    is part of the comparison key.
+    """
+    representations = row.get("field_representation")
+    if not isinstance(representations, Mapping):
+        return False, "DNSE_FIELD_REPRESENTATION_UNDECLARED", None
+    values = {field: representations.get(field) for field in FIELDS}
+    if any(not isinstance(value, str) or not value for value in values.values()):
+        return False, "DNSE_FIELD_REPRESENTATION_INCOMPLETE", None
+    if len(set(values.values())) != 1:
+        return False, "DNSE_MIXED_FIELD_REPRESENTATION", dict(values)
+    return True, None, dict(values)
+
+
 def calibration_matrix(dnse_rows: Iterable[Mapping[str, Any]], fhsc_records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
-    """Compare each OHLC field independently, leaving both source values unchanged."""
+    """Compare only representation-compatible OHLC fields without mutation."""
     fhsc_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     evidence = []
-    for record in fhsc_records:
+    for record in sorted((dict(item) for item in fhsc_records), key=lambda item: str(item.get("symbol", ""))):
         parsed = parse_retained_history(record)
+        evidence.append({"symbol": record["symbol"], "sha256": record.get("raw_sha256"),
+                         "raw_path": _portable_path(Path(record["raw_path"])),
+                         "request_url": record["request_url"], "parse_status": parsed.get("parse_status")})
         if parsed.get("parse_status") != "PARSED":
             continue
         for row in parsed["rows"]:
             if row["session"] in SESSIONS:
                 fhsc_by_key[(str(record["symbol"]), str(row["session"]))] = dict(row)
-        evidence.append({"symbol": record["symbol"], "sha256": record.get("raw_sha256"),
-                         "raw_path": _portable_path(Path(record["raw_path"])),
-                         "request_url": record["request_url"]})
     pairs = []
     for dnse in sorted((dict(row) for row in dnse_rows), key=lambda row: (row["instrument"], row["session"])):
         fhsc = fhsc_by_key.get((dnse["instrument"], dnse["session"]))
+        anchor_compatible, exclusion_reason, representations = _dnse_anchor_representations(dnse)
         for field in FIELDS:
-            classification, ratio_text, ratio = ratio_classification(dnse.get(field), fhsc.get(field) if fhsc else None)
+            if not anchor_compatible:
+                classification, ratio_text, ratio = "NOT_COMPARABLE", None, None
+            else:
+                classification, ratio_text, ratio = ratio_classification(dnse.get(field), fhsc.get(field) if fhsc else None)
             residual_1 = None
             residual_1000 = None
             left, right = _decimal(dnse.get(field)), _decimal(fhsc.get(field) if fhsc else None)
-            if left is not None and right is not None:
+            if anchor_compatible and left is not None and right is not None:
                 residual_1 = str(abs(left - right))
                 residual_1000 = str(abs(left - right * Decimal("1000")))
+            dnse_representation = representations.get(field) if representations else None
+            dnse_normalized_value = dnse.get(field) if dnse_representation == "DNSE_MVA_SNAPSHOT_VALUE_X1000" else None
             pairs.append({"instrument": dnse["instrument"], "session": dnse["session"], "field": field,
-                          "dnse_raw_value": dnse.get(field), "fhsc_raw_value": fhsc.get(field) if fhsc else None,
+                          "dnse_upstream_provider_raw_value": None,
+                          "dnse_upstream_provider_raw_value_status": "NOT_RETAINED_SEPARATELY_FROM_MVA_SNAPSHOT",
+                          "dnse_retained_snapshot_value": dnse.get(field), "dnse_normalized_value": dnse_normalized_value,
+                          "dnse_unit": dnse.get("unit"), "dnse_basis": dnse.get("basis"),
+                          "dnse_field_representation": dnse_representation,
+                          "fhsc_raw_value": fhsc.get(field) if fhsc else None,
+                          "fhsc_parsed_value": fhsc.get(field) if fhsc else None,
+                          "fhsc_normalized_value": None, "fhsc_unit": FHSC_UNIT, "fhsc_basis": FHSC_BASIS,
+                          "fhsc_field_representation": FHSC_FIELD_REPRESENTATION,
                           "classification": classification, "ratio_dnse_to_fhsc": ratio_text,
-                          "residual_candidate_1": residual_1, "residual_candidate_1000": residual_1000})
+                          "residual_candidate_1": residual_1, "residual_candidate_1000": residual_1000,
+                          "exclusion_reason": exclusion_reason})
     by_field = {}
     for field in FIELDS:
         entries = [entry for entry in pairs if entry["field"] == field]
@@ -218,14 +274,18 @@ def calibration_matrix(dnse_rows: Iterable[Mapping[str, Any]], fhsc_records: Ite
                            "distinct_ratios": sorted(ratios), "invariant_ratio": next(iter(ratios)) if len(ratios) == 1 else None}
     comparable = [entry for entry in pairs if entry["classification"] != "NOT_COMPARABLE"]
     all_ratios = {entry["ratio_dnse_to_fhsc"] for entry in comparable}
-    max_residual_1000 = max((_decimal(entry["residual_candidate_1000"]) or Decimal(0) for entry in comparable), default=Decimal(0))
+    max_residual_1000 = max((_decimal(entry["residual_candidate_1000"]) or Decimal(0) for entry in comparable), default=None)
     return {"pairs": pairs, "field_summary": by_field, "total_comparable_pairs": len(comparable),
             "total_pairs": len(pairs), "exact_1000_count": sum(row["classification"] == "EXACT_1000_TO_1" for row in pairs),
             "exact_1_count": sum(row["classification"] == "EXACT_1_TO_1" for row in pairs),
             "other_ratio_count": sum(row["classification"] == "OTHER_CONSTANT_RATIO" for row in pairs),
             "exceptions": [row for row in pairs if row["classification"] not in {"EXACT_1_TO_1", "EXACT_1000_TO_1"}],
+            "excluded_pair_count": sum(row["classification"] == "NOT_COMPARABLE" for row in pairs),
+            "excluded_reason_counts": {reason: sum(row.get("exclusion_reason") == reason for row in pairs)
+                                      for reason in sorted({row.get("exclusion_reason") for row in pairs if row.get("exclusion_reason")})},
             "candidate_transform_invariant_across_fields_issuers_sessions": len(all_ratios) == 1,
-            "observed_ratios": sorted(all_ratios), "maximum_residual_after_candidate_x1000": str(max_residual_1000),
+            "observed_ratios": sorted(all_ratios),
+            "maximum_residual_after_candidate_x1000": str(max_residual_1000) if max_residual_1000 is not None else None,
             "fhsc_retained_evidence": evidence}
 
 
