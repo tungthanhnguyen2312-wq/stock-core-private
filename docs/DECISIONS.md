@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - FHSC Reference Reconciliation Foundation V1
+
+`FHSC_REFERENCE_RECONCILIATION_FOUNDATION_V1 = COMPLETE_LOCAL` (`provider_reference_reconciliation.py`, `tools/run_fhsc_reference_reconciliation.py`, `tests/test_provider_reference_reconciliation.py`, `operations-review/fhsc-reference-reconciliation-foundation-v1-20260821/fhsc_reference_reconciliation_artifact.json`, `push = NO`).
+
+1. **Source roles stay separate:** DNSE retains its existing `PRIMARY_CANDIDATE` role and its adjusted-retrospective/current-analysis boundaries. FHSC is only `SHADOW_REFERENCE_PROVIDER`; VNStock is `LEGACY_OPERATIONAL`, VCI/KBS are `LEGACY_REFERENCE`, and already-promoted official issuer/VSDC/exchange evidence remains `FACTUAL_AUTHORITY`. Reconciliation never selects a provider or treats provider-majority agreement as truth.
+2. **Generic semantic gate:** `provider_reference_observation/v1` preserves provider/interface/capability, identity, session/event/retrieval time, raw and normalized value, unit, basis, finalization, retained-payload identity/hash, missing disposition, and provenance. Comparison emits explicit exact/mismatch/missing/session/unit/basis/finalization/timestamp/unknown/not-comparable verdicts. `LIVE_OR_CURRENT_SESSION_OBSERVATION` and `FINALIZATION_STATUS_UNKNOWN` cannot be compared as closed daily history.
+3. **Offline result and FHSC boundary:** the approved local secrets location was checked by key name only; no FHSC/Finhay pair is configured, so `FHSC_LIVE_PROBE = BLOCKED_CREDENTIAL_NOT_CONFIGURED`, with zero FHSC requests. Retained DNSE HPG/SSI/VCB 2026-08-20 close anchors each return `MISSING_SOURCE_OBSERVATION` against FHSC; retained KBS provenance is recoverable but has no same-session overlap. FHSC `financial_statement` is `PROVIDER_REFERENCE_DESCRIPTIVE_ONLY`, with canonical mapping prohibited pending full statement semantics qualification.
+4. **Negative boundaries:** no FHSC promotion, provider replacement, VNStock migration/retirement, new DNSE request, raw-as-traded, liquidity/sizing, provider-fundamental, canonical-fact, valuation/recommendation, database/runtime, merge, deploy, or push action occurred.
+
 ## 2026-08-21 - Official Source Registry Owner Promotion V1
 
 `OFFICIAL_SOURCE_REGISTRY_OWNER_PROMOTION_V1 = COMPLETE_LOCAL` (`official_source_registry_owner_promotion.py`, `tools/run_official_source_registry_owner_promotion.py`, `tests/test_official_source_registry_owner_promotion.py`, `operations-review/official-source-registry-owner-promotion-v1-20260821/official_source_registry_owner_promotion_artifact.json`, `push = NO`).
