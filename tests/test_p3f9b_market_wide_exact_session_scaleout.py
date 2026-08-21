@@ -119,14 +119,15 @@ class TestP3F9BMarketWideScaleout(unittest.TestCase):
         self.assertEqual("BLOCKED", snap["liquidity_sizing_authority"])
         self.assertEqual("CURRENT_DESCRIPTIVE_ONLY", snap["valuation_scope"])
 
-    def test_snapshot_keeps_close_in_a_different_numeric_representation_than_ohl(self):
+    def test_snapshot_uses_one_provider_native_representation_for_every_ohlc_field(self):
         snap = m.materialize_snapshot(
             candidates=["GOOD"], requested_at=datetime(2026, 8, 20, 16, tzinfo=VN),
             api_key="k", api_secret="s", fetcher=mock_fetcher_mixed, workers=1,
         )
         row = next(row for row in snap["records"]["GOOD"]["observations"] if row["session"] == "2026-08-20")
         self.assertEqual((10.5, 11.0, 10.2), (row["open"], row["high"], row["low"]))
-        self.assertEqual(10800.0, row["close"])
+        self.assertEqual(10.8, row["close"])
+        self.assertEqual({"DNSE_PROVIDER_NATIVE_RAW"}, set(row["field_representation"].values()))
 
 
 if __name__ == "__main__":

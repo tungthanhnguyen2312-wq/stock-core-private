@@ -20,7 +20,7 @@ from freshness_history import latest_completed_market_day
 
 VN_TZ = timezone(timedelta(hours=7))
 LOOKBACK_SESSIONS = 20
-CONTRACT_VERSION = "p3f9_exact_session_mva_snapshot/v1"
+CONTRACT_VERSION = "p3f9_exact_session_mva_snapshot/v2"
 REQUIRED_ENVELOPE = {
     "is_actionable_for_execution": False,
     "pit_backtest_eligible": False,
@@ -67,8 +67,11 @@ def _observation_rows(body: Mapping[str, Any], *, requested_session: str, query:
             continue
         rows.append({
             "session": session, "open": arrays["o"][index], "high": arrays["h"][index], "low": arrays["l"][index],
-            "close": float(close) * 1000.0, "volume": int(volume), "provider": "DNSE", "dataset": "DNSE_OHLC_1D",
-            "field_identity": {"close": "DNSE_OHLC.close", "volume": "DNSE_OHLC.volume"},
+            "close": close, "volume": int(volume), "provider": "DNSE", "dataset": "DNSE_OHLC_1D",
+            "field_identity": {"open": "DNSE_OHLC.open", "high": "DNSE_OHLC.high", "low": "DNSE_OHLC.low", "close": "DNSE_OHLC.close", "volume": "DNSE_OHLC.volume"},
+            "field_representation": {"open": "DNSE_PROVIDER_NATIVE_RAW", "high": "DNSE_PROVIDER_NATIVE_RAW", "low": "DNSE_PROVIDER_NATIVE_RAW", "close": "DNSE_PROVIDER_NATIVE_RAW"},
+            "transformation_identity": "identity_provider_numeric_ohlc/v1",
+            "price_unit": "SOURCE_PRICE_UNIT_UNDOCUMENTED",
             "request": dict(query), "retrieved_at": retrieved_at,
             "price_basis": "CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED",
             "qualification": "CURRENT_MARKET_DESCRIPTIVE_QUALIFIED_ONLY",

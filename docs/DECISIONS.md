@@ -10,6 +10,16 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - DNSE Uniform OHLC Anchor Qualification V1
+
+`DNSE_UNIFORM_OHLC_ANCHOR_QUALIFICATION_V1 = COMPLETE_LOCAL_REPRESENTATION_READY` (`dnse_closed_session_ohlc_representation.py`, `mva_exact_session_snapshot.py`, `tools/run_dnse_uniform_ohlc_anchor_qualification.py`, `tests/test_dnse_closed_session_ohlc_representation.py`, `operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/dnse_uniform_ohlc_anchor_qualification_artifact.json`, `push = NO`).
+
+1. **Raw-byte evidence precedes parsing:** exactly three read-only DNSE `/price/ohlc` calls (HPG, VCB, SSI; one each, zero retry) returned HTTP 200 for 2026-08-20 and were retained byte-for-byte with endpoint/query/retrieval/MIME/SHA provenance. The raw responses show one numeric representation across all O/H/L/C fields: HPG `21.25/21.45/21.15/21.15`, VCB `57.8/58.1/57.3/57.8`, and SSI `19.6/19.7/19.4/19.4`.
+2. **Uniform representation, not unit authority:** `dnse_closed_session_ohlc_representation/v1` applies identity-only parsing/materialization to all four fields and records the source unit as undocumented. The verdict is `EMPIRICALLY_UNIFORM_REPRESENTATION_UNIT_UNDOCUMENTED`; it establishes representation compatibility only, not VND/share, adjustment basis, RAW_AS_TRADED, or price authority.
+3. **P3F9B defect corrected prospectively:** historical P3F9B V1 snapshots remain immutable defect evidence. P3F9B V2 removes the close-only `×1000` materialization and declares a uniform provider-native O/H/L/C representation. No pre-existing snapshot is rewritten or reclassified as a valid calibration anchor.
+4. **FHSC replay remains semantic fail-closed:** all 12 retained FHSC raw O/H/L/C values are numerically equal to the corresponding new DNSE raw anchors. The generic reconciliation result remains `BASIS_UNRESOLVED` because neither source has a qualified adjustment/price-unit basis; equality creates no authority.
+5. **Negative boundaries:** no RAW_AS_TRADED, adjustment-basis, FHSC, DNSE replacement, volume/foreign-flow, provider-fundamental, database/runtime, merge, deployment, or push action occurred.
+
 ## 2026-08-21 - FHSC/DNSE OHLC Reconciliation Integrity V1
 
 `FHSC_DNSE_OHLC_RECONCILIATION_INTEGRITY_V1 = COMPLETE_LOCAL_ANCHOR_UNSUITABLE` (`fhsc_historical_price_semantics.py`, `tools/run_fhsc_dnse_ohlc_reconciliation_integrity.py`, `tests/test_fhsc_historical_price_semantics.py`, `operations-review/fhsc-dnse-ohlc-reconciliation-integrity-v1-20260821/fhsc_dnse_ohlc_reconciliation_integrity_artifact.json`, `push = NO`).
