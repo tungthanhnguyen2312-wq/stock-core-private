@@ -49,6 +49,13 @@ ROOT = Path(__file__).resolve().parent
 VERSION = "1.0.0"
 CONTRACT_VERSION = "bounded_official_route_evidence_enrichment/v1"
 ARTIFACT_TYPE = "BOUNDED_OFFICIAL_ROUTE_EVIDENCE_ENRICHMENT"
+REDIRECT_AUTHORITY_CONTRACT_VERSION = "redirect_domain_authority/v1"
+
+SAFE_SAME_AUTHORITY_REDIRECT = "SAFE_SAME_AUTHORITY_REDIRECT"
+NO_REDIRECT_SAME_HOST = "NO_REDIRECT_SAME_HOST"
+CROSS_DOMAIN_REDIRECT_REQUIRES_EVIDENCE = "CROSS_DOMAIN_REDIRECT_REQUIRES_EVIDENCE"
+REDIRECT_LINEAGE_INVALID = "REDIRECT_LINEAGE_INVALID"
+ROUTE_AUTHORITY_EVIDENCE_REQUIRED = "ROUTE_AUTHORITY_EVIDENCE_REQUIRED"
 
 OPERATIONS_REVIEW_DIR = (
     ROOT / "operations-review" / "bounded-official-route-evidence-enrichment-v1-20260821"
@@ -204,6 +211,95 @@ def _hash(value: Any) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def validate_redirect_domain_authority(
+    requested_url: str,
+    final_url: str,
+    redirect_chain: Sequence[str],
+) -> dict[str, Any]:
+    """Validate request-to-final authority without collapsing arbitrary subdomains.
+
+    V1 recognizes one narrowly defined canonicalization only: an exact leading
+    ``www.`` toggle on the same remaining hostname.  It preserves both hosts
+    in lineage and never treats other subdomains as equivalent.
+    """
+    requested_host = normalize_domain(requested_url)
+    final_host = normalize_domain(final_url)
+    chain = [str(item) for item in redirect_chain]
+    chain_final_host = normalize_domain(chain[-1]) if chain else ""
+
+    if not requested_host or not final_host:
+        return {
+            "requested_host": requested_host,
+            "final_host": final_host,
+            "redirect_chain": chain,
+            "redirect_authority_verdict": REDIRECT_LINEAGE_INVALID,
+            "safe_same_authority": False,
+            "reason_code": "REQUESTED_OR_FINAL_HOST_MISSING",
+        }
+    if chain and chain_final_host != final_host:
+        return {
+            "requested_host": requested_host,
+            "final_host": final_host,
+            "redirect_chain": chain,
+            "redirect_authority_verdict": REDIRECT_LINEAGE_INVALID,
+            "safe_same_authority": False,
+            "reason_code": "REDIRECT_CHAIN_DOES_NOT_TERMINATE_AT_FINAL_HOST",
+        }
+    if requested_host != final_host and not chain:
+        return {
+            "requested_host": requested_host,
+            "final_host": final_host,
+            "redirect_chain": chain,
+            "redirect_authority_verdict": REDIRECT_LINEAGE_INVALID,
+            "safe_same_authority": False,
+            "reason_code": "CROSS_HOST_FINAL_URL_REQUIRES_RETAINED_REDIRECT_CHAIN",
+        }
+
+    def exact_www_pair(left: str, right: str) -> bool:
+        return left == f"www.{right}" or right == f"www.{left}"
+
+    lineage_hosts = [requested_host] + [normalize_domain(item) for item in chain]
+    if chain and any(
+        left != right and not exact_www_pair(left, right)
+        for left, right in zip(lineage_hosts, lineage_hosts[1:])
+    ):
+        return {
+            "requested_host": requested_host,
+            "final_host": final_host,
+            "redirect_chain": chain,
+            "redirect_authority_verdict": CROSS_DOMAIN_REDIRECT_REQUIRES_EVIDENCE,
+            "safe_same_authority": False,
+            "reason_code": "REDIRECT_CHAIN_CONTAINS_NON_WWW_AUTHORITY_CHANGE",
+        }
+    if requested_host == final_host:
+        return {
+            "requested_host": requested_host,
+            "final_host": final_host,
+            "redirect_chain": chain,
+            "redirect_authority_verdict": NO_REDIRECT_SAME_HOST,
+            "safe_same_authority": True,
+            "reason_code": "REQUESTED_AND_FINAL_HOST_MATCH",
+        }
+
+    if exact_www_pair(requested_host, final_host):
+        return {
+            "requested_host": requested_host,
+            "final_host": final_host,
+            "redirect_chain": chain,
+            "redirect_authority_verdict": SAFE_SAME_AUTHORITY_REDIRECT,
+            "safe_same_authority": True,
+            "reason_code": "EXACT_WWW_CANONICALIZATION_WITH_RETAINED_REDIRECT_LINEAGE",
+        }
+    return {
+        "requested_host": requested_host,
+        "final_host": final_host,
+        "redirect_chain": chain,
+        "redirect_authority_verdict": CROSS_DOMAIN_REDIRECT_REQUIRES_EVIDENCE,
+        "safe_same_authority": False,
+        "reason_code": "REQUESTED_AND_FINAL_HOSTS_ARE_NOT_EXACT_WWW_EQUIVALENTS",
+    }
+
+
 def synchronous_fetch_and_retain(
     ticker: str,
     url: str,
@@ -293,7 +389,14 @@ def review_retained_bytes(
     """Perform byte-derived prospective review over locally retained file bytes."""
     expected_identity = str(LEGAL_IDENTITY_HINTS[ticker]["legal_name"])
     norm_expected = normalize_legal_identity(expected_identity)
-    candidate_host = normalize_domain(final_url)
+    redirect_authority = validate_redirect_domain_authority(
+        requested_url,
+        final_url,
+        redirect_chain,
+    )
+    requested_host = redirect_authority["requested_host"]
+    final_host = redirect_authority["final_host"]
+    candidate_host = final_host
     raw_text = raw_bytes.decode("utf-8", errors="replace")
 
     identity_evidence, observed_identity = _identity_evidence(raw_text, expected_identity)
@@ -305,7 +408,13 @@ def review_retained_bytes(
         and normalize_legal_identity(observed_identity) == norm_expected
     )
 
-    if identity_match:
+    if not redirect_authority["safe_same_authority"]:
+        status = ROUTE_AUTHORITY_EVIDENCE_REQUIRED
+        reason_codes.extend([
+            redirect_authority["redirect_authority_verdict"],
+            redirect_authority["reason_code"],
+        ])
+    elif identity_match:
         status = OWNER_REVIEW_READY
         reason_codes.append("BYTE_DERIVED_LEGAL_IDENTITY_MATCH")
     elif conflict:
@@ -324,7 +433,7 @@ def review_retained_bytes(
         identity_evidence = _branding_evidence(raw_text, candidate_host)
 
     evidence_types = sorted({item["evidence_type"] for item in identity_evidence})
-    domain_bound = bool(candidate_host and candidate_host in final_url.lower())
+    domain_bound = bool(redirect_authority["safe_same_authority"])
 
     content_identity = _hash({
         "ticker": ticker,
@@ -333,6 +442,7 @@ def review_retained_bytes(
         "final_url": final_url,
         "retained_sha256": raw_sha,
         "identity_evidence": identity_evidence,
+        "redirect_authority_verdict": redirect_authority["redirect_authority_verdict"],
         "status": status,
     })
 
@@ -341,8 +451,12 @@ def review_retained_bytes(
         "candidate_host": candidate_host,
         "candidate_locator": final_url,
         "requested_url": requested_url,
+        "requested_host": requested_host,
         "final_url": final_url,
-        "redirect_chain": redirect_chain,
+        "final_host": final_host,
+        "redirect_chain": list(redirect_chain),
+        "redirect_authority_contract_version": REDIRECT_AUTHORITY_CONTRACT_VERSION,
+        "redirect_authority_verdict": redirect_authority["redirect_authority_verdict"],
         "retained_file_path": retained_file_path.replace("\\", "/"),
         "retained_sha256": raw_sha,
         "content_bytes_length": len(raw_bytes),
@@ -482,6 +596,7 @@ def execute_bounded_enrichment(
         "contract_version": CONTRACT_VERSION,
         "artifact_type": ARTIFACT_TYPE,
         "milestone": "BOUNDED_OFFICIAL_ROUTE_EVIDENCE_ENRICHMENT_V1",
+        "redirect_domain_authority_contract_version": REDIRECT_AUTHORITY_CONTRACT_VERSION,
         "authority": {
             "prospective_review_is_non_activating": True,
             "activated_route_qualification_still_requires_approved_host": True,
@@ -519,6 +634,7 @@ def execute_bounded_enrichment(
             "insufficient_identity_evidence": statuses[INSUFFICIENT_IDENTITY_EVIDENCE],
             "identity_conflict": statuses[IDENTITY_CONFLICT],
             "technical_evidence_invalid": statuses[TECHNICAL_EVIDENCE_INVALID],
+            "route_authority_evidence_required": statuses[ROUTE_AUTHORITY_EVIDENCE_REQUIRED],
             "new_registry_candidates_proposed": len(candidates),
         },
         "governed_registry_candidates_proposed": candidates,

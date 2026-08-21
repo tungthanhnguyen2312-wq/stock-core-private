@@ -52,7 +52,10 @@ def _generate_summary_markdown(artifact: dict) -> str:
         lines.extend([
             f"### {rec['ticker']} — {rec['expected_issuer_identity']}",
             f"- **Requested URL**: `{rec['requested_url']}`",
+            f"- **Requested Host**: `{rec['requested_host']}`",
             f"- **Final URL**: `{rec['final_url']}`",
+            f"- **Final Host**: `{rec['final_host']}`",
+            f"- **Redirect Authority Verdict**: `{rec['redirect_authority_verdict']}`",
             f"- **Retained File**: `{rec['retained_file_path']}`",
             f"- **SHA-256**: `{rec['retained_sha256']}` ({rec['content_bytes_length']} bytes)",
             f"- **Review Status**: `{rec['prospective_owner_review_status']}`",

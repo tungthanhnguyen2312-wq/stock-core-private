@@ -10,6 +10,14 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Official Route Redirect-Domain Authority Correction V1
+
+`OFFICIAL_ROUTE_REDIRECT_DOMAIN_AUTHORITY_CORRECTION_V1 = COMPLETE_LOCAL` (`bounded_official_route_evidence_enrichment.py`, `tests/test_official_route_redirect_domain_authority.py`, `operations-review/bounded-official-route-evidence-enrichment-v1-20260821/bounded_official_route_evidence_enrichment_artifact.json`, `push = NO`).
+
+1. **Narrow redirect contract:** `redirect_domain_authority/v1` preserves requested URL/host, final URL/host, and retained redirect chain. It allows only an exact leading-`www.` toggle with a retained chain ending at the final host (`SAFE_SAME_AUTHORITY_REDIRECT`); arbitrary subdomains and cross-registrable-domain redirects are `CROSS_DOMAIN_REDIRECT_REQUIRES_EVIDENCE`.
+2. **BID replay:** retained `www.bidv.com.vn` → `bidv.com.vn` lineage satisfies the generic contract, while its byte-derived full legal-identity evidence remains unchanged. BID is therefore `OWNER_REVIEW_READY` and remains only `PENDING_OWNER_PROMOTION_REVIEW`.
+3. **Boundaries:** no registry mutation, owner promotion, network request, financial-document acquisition, financial fact, readiness, provider, PIT, liquidity/sizing, valuation, recommendation, runtime, or production-DB change occurred. Other route outcomes are unchanged.
+
 ## 2026-08-21 - Bounded Official Route Evidence Enrichment V1
 
 `BOUNDED_OFFICIAL_ROUTE_EVIDENCE_ENRICHMENT_V1 = COMPLETE_LOCAL` (`bounded_official_route_evidence_enrichment.py`, `tools/run_bounded_official_route_evidence_enrichment.py`, `tests/test_bounded_official_route_evidence_enrichment.py`, `operations-review/bounded-official-route-evidence-enrichment-v1-20260821/bounded_official_route_evidence_enrichment_artifact.json`, `push = NO`).
