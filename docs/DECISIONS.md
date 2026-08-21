@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Prospective Route Ownership Review Contract V1
+
+`PROSPECTIVE_ROUTE_OWNERSHIP_REVIEW_CONTRACT_V1 = COMPLETE_LOCAL` (`prospective_route_ownership_review.py`, `tools/run_prospective_route_ownership_review.py`, `tests/test_prospective_route_ownership_review.py`, `operations-review/prospective-route-ownership-review-v1-20260821/prospective_route_ownership_review_artifact.json`, `push = NO`).
+
+1. **Historical acquisition preserved, injected semantics superseded:** the prior ten retained HTML objects and their content hashes remain immutable historical evidence. The prior catalog-injected legal identities and statutory-span claims are not owner-review proof; no claimed statutory identifier appears in the corresponding retained bytes.
+2. **Two-stage authority contract:** byte-derived evidence now yields a non-activating prospective result independent of `issuer_ir.allowed_hosts`. Activated route qualification remains separate and still requires the host to be explicitly approved in `config/official_source_registry.json`.
+3. **Real corpus result:** `ABS`, `ABW`, `ACB`, `MBB`, `MWG`, and `TCB` carry byte-derived first-party legal-identity evidence and are `OWNER_REVIEW_READY`; `AAA`, `ABT`, and `BID` remain `INSUFFICIENT_IDENTITY_EVIDENCE`; `AAT` is `IDENTITY_CONFLICT`. The six resulting registry candidates are `PENDING_OWNER_PROMOTION_REVIEW`, not activated routes.
+4. **Boundaries:** no network request, registry mutation, owner promotion, financial-document acquisition, financial fact, readiness, provider, PIT, liquidity/sizing, valuation, recommendation, runtime, or production-DB change occurred.
+
 ## 2026-08-21 - Retained Official Route Ownership Evidence Acquisition V1
 
 `RETAINED_OFFICIAL_ROUTE_OWNERSHIP_EVIDENCE_ACQUISITION_V1 = PARTIAL_LOCAL` (`retained_official_route_ownership_evidence.py`, `tools/run_retained_official_route_ownership_evidence.py`, `tests/test_retained_official_route_ownership_evidence.py`, `operations-review/retained-official-route-ownership-evidence-20260821/retained_official_route_ownership_evidence_artifact.json`, `push = NO`).
