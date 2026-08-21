@@ -1,0 +1,3616 @@
+{
+  "artifact_identity": "dnse_fhsc_market_composition_scaleout:56f9ac5f8661ad5ddea6bed5ee3b7c9c136ae4e2995bbfe735b872f1d0962f22",
+  "artifact_sha256": "56f9ac5f8661ad5ddea6bed5ee3b7c9c136ae4e2995bbfe735b872f1d0962f22",
+  "artifact_type": "DNSE_FHSC_MARKET_COMPOSITION_SCALEOUT",
+  "authority_boundaries": {
+    "authority_effect": "NONE",
+    "liquidity_authority": false,
+    "position_sizing_safe": false,
+    "price_semantics_changed": false,
+    "provider_authority_changed": false,
+    "raw_as_traded_promoted": false,
+    "turnover_authority": false
+  },
+  "cohort": [
+    {
+      "exchange": "HOSE",
+      "liquidity_profile": "large_liquid",
+      "sector": "materials",
+      "ticker": "HPG"
+    },
+    {
+      "exchange": "HOSE",
+      "liquidity_profile": "large_liquid",
+      "sector": "banking",
+      "ticker": "VCB"
+    },
+    {
+      "exchange": "HOSE",
+      "liquidity_profile": "large_liquid",
+      "sector": "securities",
+      "ticker": "SSI"
+    },
+    {
+      "exchange": "HOSE",
+      "liquidity_profile": "large_liquid",
+      "sector": "technology",
+      "ticker": "FPT"
+    },
+    {
+      "exchange": "HOSE",
+      "liquidity_profile": "large_liquid",
+      "sector": "consumer_staples",
+      "ticker": "VNM"
+    },
+    {
+      "exchange": "HOSE",
+      "liquidity_profile": "large_liquid",
+      "sector": "retail",
+      "ticker": "MWG"
+    },
+    {
+      "exchange": "HNX",
+      "liquidity_profile": "liquid",
+      "sector": "energy_services",
+      "ticker": "PVS"
+    },
+    {
+      "exchange": "HNX",
+      "liquidity_profile": "liquid",
+      "sector": "securities",
+      "ticker": "SHS"
+    },
+    {
+      "exchange": "UPCOM",
+      "liquidity_profile": "large",
+      "sector": "transport_infrastructure",
+      "ticker": "ACV"
+    },
+    {
+      "exchange": "UPCOM",
+      "liquidity_profile": "large",
+      "sector": "energy_refining",
+      "ticker": "BSR"
+    },
+    {
+      "exchange": "UPCOM",
+      "liquidity_profile": "large",
+      "sector": "consumer_staples",
+      "ticker": "MCH"
+    },
+    {
+      "exchange": "UPCOM",
+      "liquidity_profile": "large",
+      "sector": "telecommunications",
+      "ticker": "VGI"
+    }
+  ],
+  "cohort_selection": "fixed lexical design before provider responses; no result-dependent replacement",
+  "contract_version": "dnse_fhsc_market_composition_scaleout/v1",
+  "deterministic_replay_network_required": false,
+  "dnse_request_records": [
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "HPG",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/HPG_dnse_ohlc_1c975f603046935e.json",
+      "raw_response_retained": true,
+      "raw_sha256": "1c975f603046935e041d0ebe173c296b0880e2a848038f5594ca13642aea38f5",
+      "retrieval_time": "2026-08-21T15:43:52.966782+00:00",
+      "successful": true,
+      "symbol": "HPG"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "VCB",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/VCB_dnse_ohlc_630bcc4909fcc191.json",
+      "raw_response_retained": true,
+      "raw_sha256": "630bcc4909fcc191907721173fafdd8a4dc73e9bd5ae932316b54759b277bbc4",
+      "retrieval_time": "2026-08-21T15:43:53.678776+00:00",
+      "successful": true,
+      "symbol": "VCB"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "SSI",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/SSI_dnse_ohlc_e6700d45c2f54f94.json",
+      "raw_response_retained": true,
+      "raw_sha256": "e6700d45c2f54f94251cc8444ed77ccf9848d8ecc017fe655047ba44ef1de515",
+      "retrieval_time": "2026-08-21T15:43:54.134504+00:00",
+      "successful": true,
+      "symbol": "SSI"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "FPT",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/FPT_dnse_ohlc_506bae167393ad48.json",
+      "raw_response_retained": true,
+      "raw_sha256": "506bae167393ad4873b2961c8ed7f03751802081976bf610821b9ff2f6a3c36d",
+      "retrieval_time": "2026-08-21T15:43:54.521153+00:00",
+      "successful": true,
+      "symbol": "FPT"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "VNM",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/VNM_dnse_ohlc_701f93c1a350ef31.json",
+      "raw_response_retained": true,
+      "raw_sha256": "701f93c1a350ef319bf2e140b9ef3a08bcdae5d47fd2dbc14a3a336a514be5ca",
+      "retrieval_time": "2026-08-21T15:43:55.946383+00:00",
+      "successful": true,
+      "symbol": "VNM"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "MWG",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/MWG_dnse_ohlc_ce26a7b5c00fb35d.json",
+      "raw_response_retained": true,
+      "raw_sha256": "ce26a7b5c00fb35dbbed103be172a3ddea43df1d218407cd4743ab9bc563663b",
+      "retrieval_time": "2026-08-21T15:43:56.361993+00:00",
+      "successful": true,
+      "symbol": "MWG"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "PVS",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/PVS_dnse_ohlc_1c84976d0a2e48d4.json",
+      "raw_response_retained": true,
+      "raw_sha256": "1c84976d0a2e48d47bb0286a965d458db55a6f007a51c1865e181f956b987384",
+      "retrieval_time": "2026-08-21T15:43:56.764219+00:00",
+      "successful": true,
+      "symbol": "PVS"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "SHS",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/SHS_dnse_ohlc_24c4e19b80119f5e.json",
+      "raw_response_retained": true,
+      "raw_sha256": "24c4e19b80119f5ede847be37d69e1363cd197698d4c6f909ae145d29ff5c5d2",
+      "retrieval_time": "2026-08-21T15:43:57.199612+00:00",
+      "successful": true,
+      "symbol": "SHS"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "ACV",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/ACV_dnse_ohlc_96ad5dc108806362.json",
+      "raw_response_retained": true,
+      "raw_sha256": "96ad5dc1088063621b84c348d7bf043cf52c612023d53d6e9e0f1e45507164fc",
+      "retrieval_time": "2026-08-21T15:43:57.903347+00:00",
+      "successful": true,
+      "symbol": "ACV"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "BSR",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/BSR_dnse_ohlc_5ca6f04bc970392a.json",
+      "raw_response_retained": true,
+      "raw_sha256": "5ca6f04bc970392a224cb3ee32aa525a3eed9b98795642a03995e1417642280d",
+      "retrieval_time": "2026-08-21T15:43:58.335235+00:00",
+      "successful": true,
+      "symbol": "BSR"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "MCH",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/MCH_dnse_ohlc_d9986c5d91c9ce40.json",
+      "raw_response_retained": true,
+      "raw_sha256": "d9986c5d91c9ce4051e4dcd95f08aeba4801bde88255ffb8593c4ef449eef8c6",
+      "retrieval_time": "2026-08-21T15:43:58.839838+00:00",
+      "successful": true,
+      "symbol": "MCH"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786035600,
+        "resolution": "1D",
+        "symbol": "VGI",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/VGI_dnse_ohlc_ca133372dd325ccb.json",
+      "raw_response_retained": true,
+      "raw_sha256": "ca133372dd325ccbd6f7fb070574e76b7de5dfb0b3ad0fbe035a79ac7bb08b42",
+      "retrieval_time": "2026-08-21T15:43:59.251581+00:00",
+      "successful": true,
+      "symbol": "VGI"
+    }
+  ],
+  "dnse_traded_value_trace": {
+    "derived_price_times_volume": "PROHIBITED",
+    "reason": "market_volume_value_semantic_contract.DNSE_DAILY_TRADED_VALUE_FIELD=UNKNOWN/NOT_CONFIRMED; no explicit same-session generic value endpoint in scope",
+    "status": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE"
+  },
+  "fhsc_history_request_records": [
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/HPG_market_price-histories-chart_79ed1c402bc58f89.json",
+      "raw_response_retained": true,
+      "raw_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "HPG",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=HPG&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:36.771115+00:00",
+      "successful": true,
+      "symbol": "HPG"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/VCB_market_price-histories-chart_70dff175ae291946.json",
+      "raw_response_retained": true,
+      "raw_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "VCB",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VCB&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:49.076340+00:00",
+      "successful": true,
+      "symbol": "VCB"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/SSI_market_price-histories-chart_f0763d2dfe7f2817.json",
+      "raw_response_retained": true,
+      "raw_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "SSI",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=SSI&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:49.283184+00:00",
+      "successful": true,
+      "symbol": "SSI"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/FPT_market_price-histories-chart_586c948b0af8b991.json",
+      "raw_response_retained": true,
+      "raw_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "FPT",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=FPT&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:49.442392+00:00",
+      "successful": true,
+      "symbol": "FPT"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/VNM_market_price-histories-chart_839d1342996ff3ab.json",
+      "raw_response_retained": true,
+      "raw_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "VNM",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VNM&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:49.619072+00:00",
+      "successful": true,
+      "symbol": "VNM"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/MWG_market_price-histories-chart_69309fb1825d2265.json",
+      "raw_response_retained": true,
+      "raw_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "MWG",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=MWG&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:49.808856+00:00",
+      "successful": true,
+      "symbol": "MWG"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/PVS_market_price-histories-chart_1c9236ce70441c71.json",
+      "raw_response_retained": true,
+      "raw_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "PVS",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=PVS&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:49.992113+00:00",
+      "successful": true,
+      "symbol": "PVS"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/SHS_market_price-histories-chart_f9eb6a9017df4260.json",
+      "raw_response_retained": true,
+      "raw_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "SHS",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=SHS&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:50.201544+00:00",
+      "successful": true,
+      "symbol": "SHS"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/ACV_market_price-histories-chart_f0a8fc25dcd8dda6.json",
+      "raw_response_retained": true,
+      "raw_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "ACV",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=ACV&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:50.454743+00:00",
+      "successful": true,
+      "symbol": "ACV"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/BSR_market_price-histories-chart_ca901814863aa433.json",
+      "raw_response_retained": true,
+      "raw_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "BSR",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=BSR&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:50.664442+00:00",
+      "successful": true,
+      "symbol": "BSR"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/MCH_market_price-histories-chart_86fe2e6c6acdfc49.json",
+      "raw_response_retained": true,
+      "raw_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "MCH",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=MCH&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:50.856017+00:00",
+      "successful": true,
+      "symbol": "MCH"
+    },
+    {
+      "endpoint": "/market/price-histories-chart",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/VGI_market_price-histories-chart_04165d2f096977ab.json",
+      "raw_response_retained": true,
+      "raw_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "request_parameters": {
+        "from": "1786060800",
+        "resolution": "1D",
+        "symbol": "VGI",
+        "to": "1787184000"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/price-histories-chart?symbol=VGI&resolution=1D&from=1786060800&to=1787184000",
+      "retrieval_time": "2026-08-21T15:43:51.068857+00:00",
+      "successful": true,
+      "symbol": "VGI"
+    }
+  ],
+  "fhsc_history_rows": [
+    {
+      "instrument": "HPG",
+      "session": "2026-08-07",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 13018100
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-10",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 16732700
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-11",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 13694600
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-12",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 15925100
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-13",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 25702700
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-14",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 27443600
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-17",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 18455500
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-18",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 16367500
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-19",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 15312500
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-20",
+      "source_payload_sha256": "79ed1c402bc58f89488647f1c9644fc0e84b7c95063ffac888afb2e4ca1f7dde",
+      "volume": 15156400
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-07",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 6522200
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-10",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 2714200
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-11",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 4065600
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-12",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 2384500
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-13",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 4579700
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-14",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 4805500
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-17",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 2745300
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-18",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 2888000
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-19",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 3770600
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-20",
+      "source_payload_sha256": "70dff175ae291946d272a83d2080a5fb1388e001f7055d7ac643f4d5b6846fe7",
+      "volume": 3006600
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-07",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 13285400
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-10",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 20351300
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-11",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 22669000
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-12",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 15728900
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-13",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 28037400
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-14",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 34016200
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-17",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 18212900
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-18",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 15279600
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-19",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 11085700
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-20",
+      "source_payload_sha256": "f0763d2dfe7f2817163bc18d9ebe5b1b0b655c30adad66b32ddbaf015375f9ff",
+      "volume": 11042500
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-07",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 4301800
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-10",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 5252100
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-11",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 6936800
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-12",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 3685600
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-13",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 7458000
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-14",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 7123800
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-17",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 4104500
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-18",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 3383800
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-19",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 1821000
+    },
+    {
+      "instrument": "FPT",
+      "session": "2026-08-20",
+      "source_payload_sha256": "586c948b0af8b99134fd2ead76fa712a4f98462fd84f4ee36336f86dd3b0a11c",
+      "volume": 4468100
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-07",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 13239500
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-10",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 3480200
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-11",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 4475100
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-12",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 2755600
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-13",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 4257000
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-14",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 3663300
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-17",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 2965800
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-18",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 1844100
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-19",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 4664900
+    },
+    {
+      "instrument": "VNM",
+      "session": "2026-08-20",
+      "source_payload_sha256": "839d1342996ff3ab21b8a8feba4f21442cad6f124735508677f1eaf338cb3e9f",
+      "volume": 6309900
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-07",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 3084600
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-10",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 4628400
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-11",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 3120600
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-12",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 3065700
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-13",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 2669200
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-14",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 3164500
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-17",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 2140400
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-18",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 1649500
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-19",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 1995300
+    },
+    {
+      "instrument": "MWG",
+      "session": "2026-08-20",
+      "source_payload_sha256": "69309fb1825d2265ce0ad8019738cd5c60a86dd30f183152545ff6d7b0287e99",
+      "volume": 2493500
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-07",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 2987800
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-10",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 1805500
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-11",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 2228700
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-12",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 1850400
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-13",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 1792900
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-14",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 2456600
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-17",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 2321500
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-18",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 4129700
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-19",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 2749900
+    },
+    {
+      "instrument": "PVS",
+      "session": "2026-08-20",
+      "source_payload_sha256": "1c9236ce70441c712f55aea17b78111508723652af0c50487a02d56883c0c1da",
+      "volume": 3513600
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-07",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 6005300
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-10",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 9342600
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-11",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 12823600
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-12",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 6152500
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-13",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 15948200
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-14",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 20060800
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-17",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 8009000
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-18",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 14724000
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-19",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 6235700
+    },
+    {
+      "instrument": "SHS",
+      "session": "2026-08-20",
+      "source_payload_sha256": "f9eb6a9017df42602d3421eaab088e4ef3cac8017a6db31ded7878b39cbf8311",
+      "volume": 4587400
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-07",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 1420200
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-10",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 916100
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-11",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 607700
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-12",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 460400
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-13",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 428200
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-14",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 540500
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-17",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 242100
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-18",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 342600
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-19",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 188200
+    },
+    {
+      "instrument": "ACV",
+      "session": "2026-08-20",
+      "source_payload_sha256": "f0a8fc25dcd8dda6692b78c90916e3588776d878ce074fe9369d87780daff0ae",
+      "volume": 243200
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-07",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 19092500
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-10",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 13079300
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-11",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 8476500
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-12",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 7412500
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-13",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 9703200
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-14",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 9790200
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-17",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 7170500
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-18",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 20592500
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-19",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 7311800
+    },
+    {
+      "instrument": "BSR",
+      "session": "2026-08-20",
+      "source_payload_sha256": "ca901814863aa433326d7885aee769c0ae18dd58666bb31bd46f0116f0744862",
+      "volume": 8275400
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-07",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 279200
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-10",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 216700
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-11",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 185600
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-12",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 262100
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-13",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 292000
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-14",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 320800
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-17",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 245400
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-18",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 331900
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-19",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 199000
+    },
+    {
+      "instrument": "MCH",
+      "session": "2026-08-20",
+      "source_payload_sha256": "86fe2e6c6acdfc490bf305d6f1d52a070721fa535d50889913170be0c703f81c",
+      "volume": 553700
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-07",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 753900
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-10",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 441000
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-11",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 425100
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-12",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 302700
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-13",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 314500
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-14",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 440000
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-17",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 155800
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-18",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 668600
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-19",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 173300
+    },
+    {
+      "instrument": "VGI",
+      "session": "2026-08-20",
+      "source_payload_sha256": "04165d2f096977ab89a4977e4226df8d7f3455f8174c5e97a9781bf28c872e3e",
+      "volume": 593600
+    }
+  ],
+  "fhsc_trading_request_records": [
+    {
+      "endpoint": "/market/stocks/HPG/trading/history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/HPG_market_stocks_HPG_trading_history_4bedfaca186edfdc.json",
+      "raw_response_retained": true,
+      "raw_sha256": "4bedfaca186edfdca89fe992ce14501d029d18715f0bd9ff85006c1fdf1cd116",
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/HPG/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:51.259264+00:00",
+      "successful": true,
+      "symbol": "HPG"
+    },
+    {
+      "endpoint": "/market/stocks/VCB/trading/history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/VCB_market_stocks_VCB_trading_history_d62ba59a2385f4ec.json",
+      "raw_response_retained": true,
+      "raw_sha256": "d62ba59a2385f4ecc00a638829036d951b77df9d52063426be0774d31beb2a42",
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/VCB/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:51.390420+00:00",
+      "successful": true,
+      "symbol": "VCB"
+    },
+    {
+      "endpoint": "/market/stocks/SSI/trading/history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/SSI_market_stocks_SSI_trading_history_a5914b0f1b63699d.json",
+      "raw_response_retained": true,
+      "raw_sha256": "a5914b0f1b63699dbf7e8b8fd135057dfa2862e2972a8b574cda1ca35d365441",
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/SSI/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:51.549274+00:00",
+      "successful": true,
+      "symbol": "SSI"
+    },
+    {
+      "endpoint": "/market/stocks/FPT/trading/history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/raw/FPT_market_stocks_FPT_trading_history_3dda1a2401b84110.json",
+      "raw_response_retained": true,
+      "raw_sha256": "3dda1a2401b84110d25afad4c2b95c699e046fabcb5681f03c540f00d3ea16d9",
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/FPT/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:51.680062+00:00",
+      "successful": true,
+      "symbol": "FPT"
+    },
+    {
+      "endpoint": "/market/stocks/VNM/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/VNM/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:51.915135+00:00",
+      "successful": false,
+      "symbol": "VNM"
+    },
+    {
+      "endpoint": "/market/stocks/MWG/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/MWG/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:52.057914+00:00",
+      "successful": false,
+      "symbol": "MWG"
+    },
+    {
+      "endpoint": "/market/stocks/PVS/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/PVS/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:52.179882+00:00",
+      "successful": false,
+      "symbol": "PVS"
+    },
+    {
+      "endpoint": "/market/stocks/SHS/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/SHS/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:52.297905+00:00",
+      "successful": false,
+      "symbol": "SHS"
+    },
+    {
+      "endpoint": "/market/stocks/ACV/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/ACV/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:52.419246+00:00",
+      "successful": false,
+      "symbol": "ACV"
+    },
+    {
+      "endpoint": "/market/stocks/BSR/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/BSR/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:52.541580+00:00",
+      "successful": false,
+      "symbol": "BSR"
+    },
+    {
+      "endpoint": "/market/stocks/MCH/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/MCH/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:52.696177+00:00",
+      "successful": false,
+      "symbol": "MCH"
+    },
+    {
+      "endpoint": "/market/stocks/VGI/trading/history",
+      "http_status": 429,
+      "raw_response_retained": false,
+      "request_parameters": {
+        "from": "2026-08-07",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/VGI/trading/history?from=2026-08-07&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:43:52.841620+00:00",
+      "successful": false,
+      "symbol": "VGI"
+    }
+  ],
+  "request_budget": {
+    "dnse": {
+      "max": 12,
+      "per_ticker_max": 1,
+      "retries": 0,
+      "used": 12
+    },
+    "fhsc": {
+      "max": 24,
+      "per_ticker_max": 2,
+      "retries": 0,
+      "used": 24
+    }
+  },
+  "schema_version": "1.0.0",
+  "sessions": [
+    "2026-08-07",
+    "2026-08-10",
+    "2026-08-11",
+    "2026-08-12",
+    "2026-08-13",
+    "2026-08-14",
+    "2026-08-17",
+    "2026-08-18",
+    "2026-08-19",
+    "2026-08-20"
+  ],
+  "source_roles": {
+    "DNSE": "PRIMARY_CANDIDATE",
+    "FHSC": "SHADOW_REFERENCE_PROVIDER"
+  },
+  "traded_value": {
+    "aggregate_summary": {
+      "contradictory_rows": 0,
+      "discriminating_rows": 0,
+      "dnse_equals_matched": 0,
+      "dnse_equals_put_through": 0,
+      "dnse_equals_total": 0,
+      "non_discriminating_rows": 0,
+      "total_comparable_rows": 0,
+      "unavailable_rows": 120
+    },
+    "authority_effect": "NONE",
+    "matrix": [
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "ACV"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "BSR"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 305390270000,
+        "fhsc_put_through_value": 2872678200,
+        "fhsc_total_value": 308262948200,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-07",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 375432610000,
+        "fhsc_put_through_value": 14200000000,
+        "fhsc_total_value": 389632610000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-10",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 499662220000,
+        "fhsc_put_through_value": 38148080000,
+        "fhsc_total_value": 537810300000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-11",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 262336260000,
+        "fhsc_put_through_value": 37003196000,
+        "fhsc_total_value": 299339456000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-12",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 523616250000,
+        "fhsc_put_through_value": 64160100000,
+        "fhsc_total_value": 587776350000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-13",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 489927950000,
+        "fhsc_put_through_value": 189143186600,
+        "fhsc_total_value": 679071136600,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-14",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 282806090000,
+        "fhsc_put_through_value": 324545720000,
+        "fhsc_total_value": 607351810000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-17",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 232825190000,
+        "fhsc_put_through_value": 92370800000,
+        "fhsc_total_value": 325195990000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-18",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 125355510000,
+        "fhsc_put_through_value": 193267440000,
+        "fhsc_total_value": 318622950000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-19",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 312724020000,
+        "fhsc_put_through_value": 16495250000,
+        "fhsc_total_value": 329219270000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-20",
+        "ticker": "FPT"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 287111730000,
+        "fhsc_put_through_value": 4070000000,
+        "fhsc_total_value": 291181730000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-07",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 369887400000,
+        "fhsc_put_through_value": 30415000000,
+        "fhsc_total_value": 400302400000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-10",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 303142815000,
+        "fhsc_put_through_value": 44932800000,
+        "fhsc_total_value": 348075615000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-11",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 353623430000,
+        "fhsc_put_through_value": 5275512050,
+        "fhsc_total_value": 358898942050,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-12",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 563756915000,
+        "fhsc_put_through_value": 25664800000,
+        "fhsc_total_value": 589421715000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-13",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 589007340000,
+        "fhsc_put_through_value": 5179000000,
+        "fhsc_total_value": 594186340000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-14",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 391222180000,
+        "fhsc_put_through_value": 0,
+        "fhsc_total_value": 391222180000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-17",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 346713700000,
+        "fhsc_put_through_value": 8820000000,
+        "fhsc_total_value": 355533700000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-18",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 322004850000,
+        "fhsc_put_through_value": 31750670100,
+        "fhsc_total_value": 353755520100,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-19",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 321998085000,
+        "fhsc_put_through_value": 4400000000,
+        "fhsc_total_value": 326398085000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-20",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "MCH"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "MWG"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "PVS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HNX",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "SHS"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 325392875000,
+        "fhsc_put_through_value": 9880022600,
+        "fhsc_total_value": 335272897600,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-07",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 508845905000,
+        "fhsc_put_through_value": 6483818250,
+        "fhsc_total_value": 515329723250,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-10",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 572241160000,
+        "fhsc_put_through_value": 204606144000,
+        "fhsc_total_value": 776847304000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-11",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 396879210000,
+        "fhsc_put_through_value": 0,
+        "fhsc_total_value": 396879210000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-12",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 706717020000,
+        "fhsc_put_through_value": 203628291100,
+        "fhsc_total_value": 910345311100,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-13",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 838234940000,
+        "fhsc_put_through_value": 6100046500,
+        "fhsc_total_value": 844334986500,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-14",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 362408915000,
+        "fhsc_put_through_value": 109814436500,
+        "fhsc_total_value": 472223351500,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-17",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 299678815000,
+        "fhsc_put_through_value": 30750000000,
+        "fhsc_total_value": 330428815000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-18",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 214522755000,
+        "fhsc_put_through_value": 119012667750,
+        "fhsc_total_value": 333535422750,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-19",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 215675660000,
+        "fhsc_put_through_value": 30514500000,
+        "fhsc_total_value": 246190160000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-20",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 392536840000,
+        "fhsc_put_through_value": 42524400000,
+        "fhsc_total_value": 435061240000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-07",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 163236870000,
+        "fhsc_put_through_value": 0,
+        "fhsc_total_value": 163236870000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-10",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 244814280000,
+        "fhsc_put_through_value": 8117500000,
+        "fhsc_total_value": 252931780000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-11",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 143013230000,
+        "fhsc_put_through_value": 0,
+        "fhsc_total_value": 143013230000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-12",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 273988710000,
+        "fhsc_put_through_value": 3429900000,
+        "fhsc_total_value": 277418610000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-13",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 283359930000,
+        "fhsc_put_through_value": 5487500000,
+        "fhsc_total_value": 288847430000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-14",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 160482600000,
+        "fhsc_put_through_value": 0,
+        "fhsc_total_value": 160482600000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-17",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 168307490000,
+        "fhsc_put_through_value": 5391000000,
+        "fhsc_total_value": 173698490000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-18",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 216711960000,
+        "fhsc_put_through_value": 0,
+        "fhsc_total_value": 216711960000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-19",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_value": 173526910000,
+        "fhsc_put_through_value": 0,
+        "fhsc_total_value": 173526910000,
+        "fhsc_value_availability": "OBSERVED",
+        "session": "2026-08-20",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "UPCOM",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "VGI"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-07",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-10",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-11",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-12",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-13",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-14",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-17",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-18",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-19",
+        "ticker": "VNM"
+      },
+      {
+        "dnse_value_classification": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE",
+        "exchange": "HOSE",
+        "fhsc_value_availability": "FHSC_TRADING_VALUE_OBSERVATION_MISSING",
+        "session": "2026-08-20",
+        "ticker": "VNM"
+      }
+    ],
+    "verdict": "DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE"
+  },
+  "volume": {
+    "aggregate_summary": {
+      "contradictory_rows": 0,
+      "discriminating_rows": 33,
+      "dnse_equals_matched": 33,
+      "dnse_equals_put_through": 0,
+      "dnse_equals_total": 0,
+      "non_discriminating_rows": 7,
+      "total_comparable_rows": 40,
+      "unavailable_rows": 80
+    },
+    "authority_effect": "NONE",
+    "candidate_mapping": "NO_UNIVERSAL_VOLUME_MAPPING",
+    "exchange_specific_summary": {
+      "HNX": {
+        "candidate": "NO_UNIVERSAL_VOLUME_MAPPING",
+        "contradictory_rows": 0,
+        "discriminating_rows": 0,
+        "matched_rows": 0,
+        "non_discriminating_rows": 0,
+        "put_through_rows": 0,
+        "total_rows": 20,
+        "total_rows_match": 0,
+        "unavailable_rows": 20
+      },
+      "HOSE": {
+        "candidate": "DNSE_MATCHED_VOLUME_SEMANTICS_HOSE_SCALEOUT_VALIDATED",
+        "contradictory_rows": 0,
+        "discriminating_rows": 33,
+        "matched_rows": 33,
+        "non_discriminating_rows": 7,
+        "put_through_rows": 0,
+        "total_rows": 60,
+        "total_rows_match": 0,
+        "unavailable_rows": 20
+      },
+      "UPCOM": {
+        "candidate": "NO_UNIVERSAL_VOLUME_MAPPING",
+        "contradictory_rows": 0,
+        "discriminating_rows": 0,
+        "matched_rows": 0,
+        "non_discriminating_rows": 0,
+        "put_through_rows": 0,
+        "total_rows": 40,
+        "total_rows_match": 0,
+        "unavailable_rows": 40
+      }
+    },
+    "liquidity_authority": false,
+    "position_sizing_safe": false,
+    "volume_matrix": [
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-07",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-10",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-11",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-12",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-13",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-14",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-17",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-18",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-19",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-20",
+        "ticker": "ACV",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-07",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-10",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-11",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-12",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-13",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-14",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-17",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-18",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-19",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-20",
+        "ticker": "BSR",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 4301800,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 4301800,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 4301800,
+        "fhsc_put_through_volume": 40679,
+        "fhsc_total_volume": 4342479,
+        "session": "2026-08-07",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 5252100,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 5252100,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 5252100,
+        "fhsc_put_through_volume": 200000,
+        "fhsc_total_volume": 5452100,
+        "session": "2026-08-10",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 6936800,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 6936800,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 6936800,
+        "fhsc_put_through_volume": 537600,
+        "fhsc_total_volume": 7474400,
+        "session": "2026-08-11",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 3685600,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 3685600,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 3685600,
+        "fhsc_put_through_volume": 518140,
+        "fhsc_total_volume": 4203740,
+        "session": "2026-08-12",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 7458000,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 7458000,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 7458000,
+        "fhsc_put_through_volume": 864600,
+        "fhsc_total_volume": 8322600,
+        "session": "2026-08-13",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 7123800,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 7123800,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 7123800,
+        "fhsc_put_through_volume": 2568140,
+        "fhsc_total_volume": 9691940,
+        "session": "2026-08-14",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 4104500,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 4104500,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 4104500,
+        "fhsc_put_through_volume": 4743700,
+        "fhsc_total_volume": 8848200,
+        "session": "2026-08-17",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 3383800,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 3383800,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 3383800,
+        "fhsc_put_through_volume": 1268000,
+        "fhsc_total_volume": 4651800,
+        "session": "2026-08-18",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 1821000,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 1821000,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 1821000,
+        "fhsc_put_through_volume": 2618800,
+        "fhsc_total_volume": 4439800,
+        "session": "2026-08-19",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 4468100,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 4468100,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 4468100,
+        "fhsc_put_through_volume": 230000,
+        "fhsc_total_volume": 4698100,
+        "session": "2026-08-20",
+        "ticker": "FPT"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 13018100,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 13018100,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 13018100,
+        "fhsc_put_through_volume": 200000,
+        "fhsc_total_volume": 13218100,
+        "session": "2026-08-07",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 16732700,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 16732700,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 16732700,
+        "fhsc_put_through_volume": 1320000,
+        "fhsc_total_volume": 18052700,
+        "session": "2026-08-10",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 13694600,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 13694600,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 13694600,
+        "fhsc_put_through_volume": 1962400,
+        "fhsc_total_volume": 15657000,
+        "session": "2026-08-11",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 15925100,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 15925100,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 15925100,
+        "fhsc_put_through_volume": 228801,
+        "fhsc_total_volume": 16153901,
+        "session": "2026-08-12",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 25702700,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 25702700,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 25702700,
+        "fhsc_put_through_volume": 1152400,
+        "fhsc_total_volume": 26855100,
+        "session": "2026-08-13",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 27443600,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 27443600,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 27443600,
+        "fhsc_put_through_volume": 225000,
+        "fhsc_total_volume": 27668600,
+        "session": "2026-08-14",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "dnse_ohlc_volume": 18455500,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "fhsc_history_volume": 18455500,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 18455500,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 18455500,
+        "session": "2026-08-17",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 16367500,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 16367500,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 16367500,
+        "fhsc_put_through_volume": 400000,
+        "fhsc_total_volume": 16767500,
+        "session": "2026-08-18",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 15312500,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 15312500,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 15312500,
+        "fhsc_put_through_volume": 1512822,
+        "fhsc_total_volume": 16825322,
+        "session": "2026-08-19",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 15156400,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 15156400,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 15156400,
+        "fhsc_put_through_volume": 200000,
+        "fhsc_total_volume": 15356400,
+        "session": "2026-08-20",
+        "ticker": "HPG"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-07",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-10",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-11",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-12",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-13",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-14",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-17",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-18",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-19",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-20",
+        "ticker": "MCH",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-07",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-10",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-11",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-12",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-13",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-14",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-17",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-18",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-19",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-20",
+        "ticker": "MWG",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-07",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-10",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-11",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-12",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-13",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-14",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-17",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-18",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-19",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-20",
+        "ticker": "PVS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-07",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-10",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-11",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-12",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-13",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-14",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-17",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-18",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-19",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HNX",
+        "session": "2026-08-20",
+        "ticker": "SHS",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 13285400,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 13285400,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 13285400,
+        "fhsc_put_through_volume": 380001,
+        "fhsc_total_volume": 13665401,
+        "session": "2026-08-07",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 20351300,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 20351300,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 20351300,
+        "fhsc_put_through_volume": 285003,
+        "fhsc_total_volume": 20636303,
+        "session": "2026-08-10",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 22669000,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 22669000,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 22669000,
+        "fhsc_put_through_volume": 8015120,
+        "fhsc_total_volume": 30684120,
+        "session": "2026-08-11",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "dnse_ohlc_volume": 15728900,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "fhsc_history_volume": 15728900,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 15728900,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 15728900,
+        "session": "2026-08-12",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 28037400,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 28037400,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 28037400,
+        "fhsc_put_through_volume": 8015122,
+        "fhsc_total_volume": 36052522,
+        "session": "2026-08-13",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 34016200,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 34016200,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 34016200,
+        "fhsc_put_through_volume": 244002,
+        "fhsc_total_volume": 34260202,
+        "session": "2026-08-14",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 18212900,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 18212900,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 18212900,
+        "fhsc_put_through_volume": 5356802,
+        "fhsc_total_volume": 23569702,
+        "session": "2026-08-17",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 15279600,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 15279600,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 15279600,
+        "fhsc_put_through_volume": 1500000,
+        "fhsc_total_volume": 16779600,
+        "session": "2026-08-18",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 11085700,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 11085700,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 11085700,
+        "fhsc_put_through_volume": 5856801,
+        "fhsc_total_volume": 16942501,
+        "session": "2026-08-19",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 11042500,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 11042500,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 11042500,
+        "fhsc_put_through_volume": 1500000,
+        "fhsc_total_volume": 12542500,
+        "session": "2026-08-20",
+        "ticker": "SSI"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 6522200,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 6522200,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 6522200,
+        "fhsc_put_through_volume": 707000,
+        "fhsc_total_volume": 7229200,
+        "session": "2026-08-07",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "dnse_ohlc_volume": 2714200,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "fhsc_history_volume": 2714200,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 2714200,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 2714200,
+        "session": "2026-08-10",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 4065600,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 4065600,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 4065600,
+        "fhsc_put_through_volume": 134000,
+        "fhsc_total_volume": 4199600,
+        "session": "2026-08-11",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "dnse_ohlc_volume": 2384500,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "fhsc_history_volume": 2384500,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 2384500,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 2384500,
+        "session": "2026-08-12",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 4579700,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 4579700,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 4579700,
+        "fhsc_put_through_volume": 57000,
+        "fhsc_total_volume": 4636700,
+        "session": "2026-08-13",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 4805500,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 4805500,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 4805500,
+        "fhsc_put_through_volume": 90000,
+        "fhsc_total_volume": 4895500,
+        "session": "2026-08-14",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "dnse_ohlc_volume": 2745300,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "fhsc_history_volume": 2745300,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 2745300,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 2745300,
+        "session": "2026-08-17",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "DNSE_EQUALS_MATCHED",
+        "dnse_ohlc_volume": 2888000,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_EQUALS_MATCHED",
+        "fhsc_history_volume": 2888000,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 2888000,
+        "fhsc_put_through_volume": 90000,
+        "fhsc_total_volume": 2978000,
+        "session": "2026-08-18",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "dnse_ohlc_volume": 3770600,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "fhsc_history_volume": 3770600,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 3770600,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 3770600,
+        "session": "2026-08-19",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "dnse_ohlc_volume": 3006600,
+        "exchange": "HOSE",
+        "fhsc_history_classification": "FHSC_HISTORY_NON_DISCRIMINATING_ZERO_PUT_THROUGH",
+        "fhsc_history_volume": 3006600,
+        "fhsc_identity_retained_exact": true,
+        "fhsc_matched_volume": 3006600,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 3006600,
+        "session": "2026-08-20",
+        "ticker": "VCB"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-07",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-10",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-11",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-12",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-13",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-14",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-17",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-18",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-19",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "UPCOM",
+        "session": "2026-08-20",
+        "ticker": "VGI",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-07",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-10",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-11",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-12",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-13",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-14",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-17",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-18",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-19",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      },
+      {
+        "classification": "NOT_COMPARABLE",
+        "exchange": "HOSE",
+        "session": "2026-08-20",
+        "ticker": "VNM",
+        "unavailable_reason": "FHSC_TRADING_MISSING"
+      }
+    ]
+  }
+}

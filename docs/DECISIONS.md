@@ -10,6 +10,16 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - DNSE/FHSC Market Composition Scale-Out V1
+
+`DNSE_FHSC_MARKET_COMPOSITION_SCALEOUT_V1 = COMPLETE_LOCAL_HOSE_ONLY_PARTIAL` (`dnse_fhsc_market_composition_scaleout.py`, `tools/run_dnse_fhsc_market_composition_scaleout.py`, `tests/test_dnse_fhsc_market_composition_scaleout.py`, `operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/dnse_fhsc_market_composition_scaleout_artifact.json`, `push = NO`).
+
+1. **Deterministic cohort and retained evidence:** the pre-response cohort fixed 12 issuers across HOSE/HNX/UPCOM and ten completed sessions ending 2026-08-20. All 12 DNSE OHLC, 12 FHSC history, and 12 FHSC trading-history requests were attempted, with exact successful bytes retained before parsing.
+2. **HOSE-only empirical result:** 40 exact comparable HOSE rows contain 33 discriminating rows, all `DNSE_EQUALS_MATCHED`, zero total/put-through matches, and zero contradictions. Seven rows with zero put-through are explicitly non-discriminating consistency observations. This supports `DNSE_MATCHED_VOLUME_SEMANTICS_HOSE_SCALEOUT_VALIDATED` only; the historical HPG/VCB/SSI finding remains immutable.
+3. **No cross-exchange result:** FHSC trading-history returned retained HTTP 429 responses for eight issuers after four successes, consuming the bounded 24 FHSC calls. HNX and UPCOM consequently have no comparable rows; a universal mapping is not claimed and no retry or replacement cohort was used.
+4. **Traded value remains unavailable:** FHSC explicit matched/put-through/total values are retained where trading responses succeeded, but `DNSE_DAILY_TRADED_VALUE_FIELD = UNKNOWN/NOT_CONFIRMED`; neither OHLC nor price × volume supplies a comparator. `DNSE_TRADED_VALUE_COMPARATOR_UNAVAILABLE` is fail-closed.
+5. **Negative boundaries:** no price-unit/adjustment/finalization/RAW_AS_TRADED conclusion changed. FHSC remains `SHADOW_REFERENCE_PROVIDER`; no liquidity, turnover, capacity, sizing, execution, backtest, provider, financial-fact, runtime/database, merge, deployment, or push authority changed.
+
 ## 2026-08-21 - DNSE/FHSC Volume Basis Qualification V1
 
 `DNSE_FHSC_VOLUME_BASIS_QUALIFICATION_V1 = COMPLETE_LOCAL_BOUNDED_SHADOW_BASIS` (`dnse_fhsc_volume_basis.py`, `tools/run_dnse_fhsc_volume_basis_qualification.py`, `tests/test_dnse_fhsc_volume_basis.py`, `operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/dnse_fhsc_volume_basis_qualification_artifact.json`, `push = NO`).

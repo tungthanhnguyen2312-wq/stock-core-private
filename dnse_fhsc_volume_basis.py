@@ -136,11 +136,17 @@ def parse_fhsc_trading_history(raw_bytes: bytes, *, instrument: str) -> dict[str
             parsed.append({"session": row["date"], "parse_status": "TRADING_DECOMPOSITION_ABSENT_OR_INVALID"})
             continue
         matched, put_through, total = (amounts[name]["volume"] for name in ("matched", "put_through", "total"))
+        values = {name: amounts[name].get("value") for name in ("matched", "put_through", "total")}
+        values_valid = all(_is_integer(value) for value in values.values())
         parsed.append({
             "session": row["date"], "parse_status": "PARSED", "instrument": instrument.upper(),
             "matched_volume": matched, "put_through_volume": put_through, "total_volume": total,
+            "matched_value": values["matched"] if values_valid else None,
+            "put_through_value": values["put_through"] if values_valid else None,
+            "total_value": values["total"] if values_valid else None,
             "numeric_representation": "INTEGER",
             "retained_arithmetic_identity": matched + put_through == total,
+            "retained_value_arithmetic_identity": values_valid and values["matched"] + values["put_through"] == values["total"],
         })
     return {"parse_status": "PARSED", "instrument": instrument.upper(), "rows": parsed, "raw_sha256": digest}
 
