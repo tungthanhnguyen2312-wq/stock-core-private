@@ -1,0 +1,1 @@
+{"error_code":"0","message":"success","data":{"symbol":"SSI","resolution":"1D","data":[{"date":"2026-08-20","total":{"volume":12542500,"value":246190160000},"matched":{"volume":11042500,"value":215675660000},"put_through":{"volume":1500000,"value":30514500000}}]},"traceId":"168b4b3d-1e44-4aca-9d91-5a108682614e"}

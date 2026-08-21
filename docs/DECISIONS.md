@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - DNSE/FHSC Volume Basis Qualification V1
+
+`DNSE_FHSC_VOLUME_BASIS_QUALIFICATION_V1 = COMPLETE_LOCAL_BOUNDED_SHADOW_BASIS` (`dnse_fhsc_volume_basis.py`, `tools/run_dnse_fhsc_volume_basis_qualification.py`, `tests/test_dnse_fhsc_volume_basis.py`, `operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/dnse_fhsc_volume_basis_qualification_artifact.json`, `push = NO`).
+
+1. **FHSC internal identity is documented and retained:** the retained official FHSC OpenAPI states `matched + put_through = total`; all 15 retained historical trading rows replay that arithmetic exactly.
+2. **Bounded empirical DNSE mapping:** for HPG, VCB, and SSI across 2026-08-14, 17–20, the 11 rows with nonzero put-through have both FHSC history `volume` and DNSE `/price/ohlc` `v` exactly equal to FHSC `matched.volume`. The result is `FHSC_HISTORY_VOLUME_MATCHED` and `DNSE_OHLC_VOLUME_MATCHED_EMPIRICAL`, scoped to this retained provider/capability/cohort; it is not formal provider or exchange authority.
+3. **Zero-component rows are not a contrary majority vote:** four retained rows have `put_through = 0`, making matched and total numerically identical. They are recorded as non-discriminating consistency rows, never as matched-only proof and never as contradictory semantic exceptions.
+4. **Negative boundaries:** price unit/adjustment/finalization and RAW_AS_TRADED conclusions are unchanged. FHSC remains `SHADOW_REFERENCE_PROVIDER`; no liquidity, turnover, market-capacity, sizing, execution, backtest, financial-fact, provider replacement, runtime/database, merge, deployment, or push authority changed.
+
 ## 2026-08-21 - DNSE Closed OHLC Provider-Native Semantics V1
 
 `DNSE_CLOSED_OHLC_PROVIDER_NATIVE_SEMANTICS_V1 = COMPLETE_LOCAL_BOUNDED_REPRESENTATION_SAFE_USES` (`dnse_provider_native_closed_ohlc.py`, `tools/run_dnse_provider_native_closed_ohlc_semantics.py`, `tests/test_dnse_provider_native_closed_ohlc.py`, `operations-review/dnse-provider-native-closed-ohlc-semantics-v1-20260821/dnse_provider_native_closed_ohlc_semantics_artifact.json`, `push = NO`).

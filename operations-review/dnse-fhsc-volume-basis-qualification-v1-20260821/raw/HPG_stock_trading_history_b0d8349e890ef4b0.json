@@ -1,0 +1,1 @@
+{"error_code":"0","message":"success","data":{"symbol":"HPG","resolution":"1D","data":[{"date":"2026-08-20","total":{"volume":15356400,"value":326398085000},"matched":{"volume":15156400,"value":321998085000},"put_through":{"volume":200000,"value":4400000000}}]},"traceId":"33a40587-bb12-4cde-ab56-b0262a233f4b"}

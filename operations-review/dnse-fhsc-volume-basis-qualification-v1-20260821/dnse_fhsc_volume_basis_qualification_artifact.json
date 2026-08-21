@@ -1,0 +1,1201 @@
+{
+  "artifact_identity": "dnse_fhsc_volume_basis_qualification:995ac67c19598e0af3edcf5ec629f92268b4bdd6e3b40ee55c4923b801b2f093",
+  "artifact_sha256": "995ac67c19598e0af3edcf5ec629f92268b4bdd6e3b40ee55c4923b801b2f093",
+  "artifact_type": "DNSE_FHSC_VOLUME_BASIS_QUALIFICATION",
+  "authority_boundaries": {
+    "authority_effect": "NONE",
+    "fhsc_role": "SHADOW_REFERENCE_PROVIDER",
+    "liquidity_authority": false,
+    "position_sizing_safe": false,
+    "price_semantics_changed": false,
+    "raw_as_traded_promoted": false,
+    "turnover_authority": false
+  },
+  "cohort": {
+    "sessions": [
+      "2026-08-14",
+      "2026-08-17",
+      "2026-08-18",
+      "2026-08-19",
+      "2026-08-20"
+    ],
+    "tickers": [
+      "HPG",
+      "VCB",
+      "SSI"
+    ]
+  },
+  "contract_version": "dnse_fhsc_volume_basis_qualification/v1",
+  "deterministic_replay_network_required": false,
+  "dnse_raw_volume_trace": [
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "HPG",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+      "raw_value": 27443600,
+      "session": "2026-08-14",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "HPG",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_ohlc_history_25454b450e5df060.json",
+        "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+        "retrieval_time": "2026-08-21T15:31:50.088498+00:00",
+        "source_payload_identity": "dnse_retained_raw:25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "HPG",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+      "raw_value": 18455500,
+      "session": "2026-08-17",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "HPG",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_ohlc_history_25454b450e5df060.json",
+        "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+        "retrieval_time": "2026-08-21T15:31:50.088498+00:00",
+        "source_payload_identity": "dnse_retained_raw:25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "HPG",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+      "raw_value": 16367500,
+      "session": "2026-08-18",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "HPG",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_ohlc_history_25454b450e5df060.json",
+        "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+        "retrieval_time": "2026-08-21T15:31:50.088498+00:00",
+        "source_payload_identity": "dnse_retained_raw:25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "HPG",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+      "raw_value": 15312500,
+      "session": "2026-08-19",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "HPG",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_ohlc_history_25454b450e5df060.json",
+        "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+        "retrieval_time": "2026-08-21T15:31:50.088498+00:00",
+        "source_payload_identity": "dnse_retained_raw:25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "HPG",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+      "raw_value": 15156400,
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "HPG",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_ohlc_history_25454b450e5df060.json",
+        "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+        "retrieval_time": "2026-08-21T15:31:50.088498+00:00",
+        "source_payload_identity": "dnse_retained_raw:25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "SSI",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+      "raw_value": 34016200,
+      "session": "2026-08-14",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "SSI",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_ohlc_history_955621757d2c79b8.json",
+        "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+        "retrieval_time": "2026-08-21T15:31:50.900091+00:00",
+        "source_payload_identity": "dnse_retained_raw:955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "SSI",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+      "raw_value": 18212900,
+      "session": "2026-08-17",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "SSI",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_ohlc_history_955621757d2c79b8.json",
+        "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+        "retrieval_time": "2026-08-21T15:31:50.900091+00:00",
+        "source_payload_identity": "dnse_retained_raw:955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "SSI",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+      "raw_value": 15279600,
+      "session": "2026-08-18",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "SSI",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_ohlc_history_955621757d2c79b8.json",
+        "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+        "retrieval_time": "2026-08-21T15:31:50.900091+00:00",
+        "source_payload_identity": "dnse_retained_raw:955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "SSI",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+      "raw_value": 11085700,
+      "session": "2026-08-19",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "SSI",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_ohlc_history_955621757d2c79b8.json",
+        "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+        "retrieval_time": "2026-08-21T15:31:50.900091+00:00",
+        "source_payload_identity": "dnse_retained_raw:955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "SSI",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+      "raw_value": 11042500,
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "SSI",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_ohlc_history_955621757d2c79b8.json",
+        "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+        "retrieval_time": "2026-08-21T15:31:50.900091+00:00",
+        "source_payload_identity": "dnse_retained_raw:955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "VCB",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+      "raw_value": 4805500,
+      "session": "2026-08-14",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "VCB",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_ohlc_history_f0b7f7a70fc70218.json",
+        "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+        "retrieval_time": "2026-08-21T15:31:50.536749+00:00",
+        "source_payload_identity": "dnse_retained_raw:f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "VCB",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+      "raw_value": 2745300,
+      "session": "2026-08-17",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "VCB",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_ohlc_history_f0b7f7a70fc70218.json",
+        "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+        "retrieval_time": "2026-08-21T15:31:50.536749+00:00",
+        "source_payload_identity": "dnse_retained_raw:f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "VCB",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+      "raw_value": 2888000,
+      "session": "2026-08-18",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "VCB",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_ohlc_history_f0b7f7a70fc70218.json",
+        "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+        "retrieval_time": "2026-08-21T15:31:50.536749+00:00",
+        "source_payload_identity": "dnse_retained_raw:f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "VCB",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+      "raw_value": 3770600,
+      "session": "2026-08-19",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "VCB",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_ohlc_history_f0b7f7a70fc70218.json",
+        "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+        "retrieval_time": "2026-08-21T15:31:50.536749+00:00",
+        "source_payload_identity": "dnse_retained_raw:f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "VCB",
+      "numeric_representation": "INTEGER",
+      "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+      "raw_value": 3006600,
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "query": {
+          "from": 1786640400,
+          "resolution": "1D",
+          "symbol": "VCB",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_ohlc_history_f0b7f7a70fc70218.json",
+        "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+        "retrieval_time": "2026-08-21T15:31:50.536749+00:00",
+        "source_payload_identity": "dnse_retained_raw:f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a"
+      }
+    }
+  ],
+  "dnse_request_records": [
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786640400,
+        "resolution": "1D",
+        "symbol": "HPG",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_ohlc_history_25454b450e5df060.json",
+      "raw_response_retained": true,
+      "raw_sha256": "25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+      "retrieval_time": "2026-08-21T15:31:50.088498+00:00",
+      "source_payload_identity": "dnse_retained_raw:25454b450e5df06056bffefa24feee3787845e06c22c9fd98aa61a2c897c5b85",
+      "successful": true,
+      "symbol": "HPG"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786640400,
+        "resolution": "1D",
+        "symbol": "VCB",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_ohlc_history_f0b7f7a70fc70218.json",
+      "raw_response_retained": true,
+      "raw_sha256": "f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+      "retrieval_time": "2026-08-21T15:31:50.536749+00:00",
+      "source_payload_identity": "dnse_retained_raw:f0b7f7a70fc70218f0daedb1d238b39c6e45efb15704434504bc2f5a065b259a",
+      "successful": true,
+      "symbol": "VCB"
+    },
+    {
+      "endpoint": "/price/ohlc",
+      "http_status": 200,
+      "mime_type": "application/json; charset=UTF-8",
+      "query": {
+        "from": 1786640400,
+        "resolution": "1D",
+        "symbol": "SSI",
+        "to": 1787245199,
+        "type": "STOCK"
+      },
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_ohlc_history_955621757d2c79b8.json",
+      "raw_response_retained": true,
+      "raw_sha256": "955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+      "retrieval_time": "2026-08-21T15:31:50.900091+00:00",
+      "source_payload_identity": "dnse_retained_raw:955621757d2c79b8f98ba6b84dc31671298c21b29522e9d4cf2ace771e8edc6f",
+      "successful": true,
+      "symbol": "SSI"
+    }
+  ],
+  "exceptions": [
+    {
+      "code": "ZERO_PUT_THROUGH_NON_DISCRIMINATING",
+      "count": 4,
+      "effect": "CONSISTENT_WITH_MATCHED_AND_TOTAL; NOT_A_CONTRADICTORY_EXCEPTION"
+    }
+  ],
+  "fhsc_history_rows": [
+    {
+      "instrument": "HPG",
+      "session": "2026-08-14",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/HPG_legacy_history_3b86896522249038.json",
+      "source_payload_sha256": "3b86896522249038ba818dc48d0dfe6593d4330c904055c34b21d447b02bebda",
+      "volume": 27443600
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-17",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/HPG_legacy_history_3b86896522249038.json",
+      "source_payload_sha256": "3b86896522249038ba818dc48d0dfe6593d4330c904055c34b21d447b02bebda",
+      "volume": 18455500
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-18",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/HPG_legacy_history_3b86896522249038.json",
+      "source_payload_sha256": "3b86896522249038ba818dc48d0dfe6593d4330c904055c34b21d447b02bebda",
+      "volume": 16367500
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-19",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/HPG_legacy_history_3b86896522249038.json",
+      "source_payload_sha256": "3b86896522249038ba818dc48d0dfe6593d4330c904055c34b21d447b02bebda",
+      "volume": 15312500
+    },
+    {
+      "instrument": "HPG",
+      "session": "2026-08-20",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/HPG_legacy_history_3b86896522249038.json",
+      "source_payload_sha256": "3b86896522249038ba818dc48d0dfe6593d4330c904055c34b21d447b02bebda",
+      "volume": 15156400
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-14",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/SSI_legacy_history_d841bd4f550296b0.json",
+      "source_payload_sha256": "d841bd4f550296b07b8904802b028282c63c52169778128bc3606152a6de4957",
+      "volume": 34016200
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-17",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/SSI_legacy_history_d841bd4f550296b0.json",
+      "source_payload_sha256": "d841bd4f550296b07b8904802b028282c63c52169778128bc3606152a6de4957",
+      "volume": 18212900
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-18",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/SSI_legacy_history_d841bd4f550296b0.json",
+      "source_payload_sha256": "d841bd4f550296b07b8904802b028282c63c52169778128bc3606152a6de4957",
+      "volume": 15279600
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-19",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/SSI_legacy_history_d841bd4f550296b0.json",
+      "source_payload_sha256": "d841bd4f550296b07b8904802b028282c63c52169778128bc3606152a6de4957",
+      "volume": 11085700
+    },
+    {
+      "instrument": "SSI",
+      "session": "2026-08-20",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/SSI_legacy_history_d841bd4f550296b0.json",
+      "source_payload_sha256": "d841bd4f550296b07b8904802b028282c63c52169778128bc3606152a6de4957",
+      "volume": 11042500
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-14",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VCB_legacy_history_5723f291774f1ec6.json",
+      "source_payload_sha256": "5723f291774f1ec64d467ebce23f3bc3dfc0d4ee870cb7e74df7d58d0925f071",
+      "volume": 4805500
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-17",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VCB_legacy_history_5723f291774f1ec6.json",
+      "source_payload_sha256": "5723f291774f1ec64d467ebce23f3bc3dfc0d4ee870cb7e74df7d58d0925f071",
+      "volume": 2745300
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-18",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VCB_legacy_history_5723f291774f1ec6.json",
+      "source_payload_sha256": "5723f291774f1ec64d467ebce23f3bc3dfc0d4ee870cb7e74df7d58d0925f071",
+      "volume": 2888000
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-19",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VCB_legacy_history_5723f291774f1ec6.json",
+      "source_payload_sha256": "5723f291774f1ec64d467ebce23f3bc3dfc0d4ee870cb7e74df7d58d0925f071",
+      "volume": 3770600
+    },
+    {
+      "instrument": "VCB",
+      "session": "2026-08-20",
+      "source_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/raw/VCB_legacy_history_5723f291774f1ec6.json",
+      "source_payload_sha256": "5723f291774f1ec64d467ebce23f3bc3dfc0d4ee870cb7e74df7d58d0925f071",
+      "volume": 3006600
+    }
+  ],
+  "fhsc_trading_request_records": [
+    {
+      "endpoint_capability": "stock_trading_history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_001327c82fcf3026.json",
+      "raw_response_retained": true,
+      "raw_sha256": "001327c82fcf3026c0e89f1ed414edc4f6517436963bbc608692747bc82978ec",
+      "request_parameters": {
+        "from": "2026-08-20",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/HPG/trading/history?from=2026-08-20&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:31:49.071942+00:00",
+      "successful": true,
+      "symbol": "HPG"
+    },
+    {
+      "endpoint_capability": "stock_trading_history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_e65ddff1938c2140.json",
+      "raw_response_retained": true,
+      "raw_sha256": "e65ddff1938c2140cb70603505d7d3226880e6f068c8d4cfab9f9b9132123065",
+      "request_parameters": {
+        "from": "2026-08-20",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/VCB/trading/history?from=2026-08-20&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:31:49.647893+00:00",
+      "successful": true,
+      "symbol": "VCB"
+    },
+    {
+      "endpoint_capability": "stock_trading_history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_90e2eff59ee8d286.json",
+      "raw_response_retained": true,
+      "raw_sha256": "90e2eff59ee8d28630a2d6f0299a40b2817c6ebf898be515d85256435e78441c",
+      "request_parameters": {
+        "from": "2026-08-20",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/SSI/trading/history?from=2026-08-20&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:31:49.779632+00:00",
+      "successful": true,
+      "symbol": "SSI"
+    },
+    {
+      "endpoint_capability": "stock_trading_history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_db5aac16f85a11e7.json",
+      "raw_response_retained": true,
+      "raw_sha256": "db5aac16f85a11e71a7a14c5464dabb5124696ddab9c1eb2d7246792381a4c57",
+      "request_parameters": {
+        "from": "2026-08-14",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/HPG/trading/history?from=2026-08-14&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:31:51.277236+00:00",
+      "successful": true,
+      "symbol": "HPG"
+    },
+    {
+      "endpoint_capability": "stock_trading_history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_1b8cf38ffc0a06fa.json",
+      "raw_response_retained": true,
+      "raw_sha256": "1b8cf38ffc0a06fac494139375ccdec9acee38677064b1c8238a45b3053084cc",
+      "request_parameters": {
+        "from": "2026-08-14",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/VCB/trading/history?from=2026-08-14&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:31:51.442901+00:00",
+      "successful": true,
+      "symbol": "VCB"
+    },
+    {
+      "endpoint_capability": "stock_trading_history",
+      "http_status": 200,
+      "mime_type": "application/json",
+      "raw_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_c4dacbdd76d8c48b.json",
+      "raw_response_retained": true,
+      "raw_sha256": "c4dacbdd76d8c48b5e5c4ee0cd203b0d7465f8c9989660cc78b86b1c74209613",
+      "request_parameters": {
+        "from": "2026-08-14",
+        "resolution": "1D",
+        "to": "2026-08-20"
+      },
+      "request_url": "https://open-api.fhsc.com.vn/market/stocks/SSI/trading/history?from=2026-08-14&to=2026-08-20&resolution=1D",
+      "retrieval_time": "2026-08-21T15:31:51.586281+00:00",
+      "successful": true,
+      "symbol": "SSI"
+    }
+  ],
+  "fhsc_trading_rows": [
+    {
+      "instrument": "HPG",
+      "matched_volume": 15156400,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 200000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-20",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_001327c82fcf3026.json",
+      "source_payload_sha256": "001327c82fcf3026c0e89f1ed414edc4f6517436963bbc608692747bc82978ec",
+      "total_volume": 15356400
+    },
+    {
+      "instrument": "HPG",
+      "matched_volume": 15156400,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 200000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-20",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_db5aac16f85a11e7.json",
+      "source_payload_sha256": "db5aac16f85a11e71a7a14c5464dabb5124696ddab9c1eb2d7246792381a4c57",
+      "total_volume": 15356400
+    },
+    {
+      "instrument": "HPG",
+      "matched_volume": 15312500,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 1512822,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-19",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_db5aac16f85a11e7.json",
+      "source_payload_sha256": "db5aac16f85a11e71a7a14c5464dabb5124696ddab9c1eb2d7246792381a4c57",
+      "total_volume": 16825322
+    },
+    {
+      "instrument": "HPG",
+      "matched_volume": 16367500,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 400000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-18",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_db5aac16f85a11e7.json",
+      "source_payload_sha256": "db5aac16f85a11e71a7a14c5464dabb5124696ddab9c1eb2d7246792381a4c57",
+      "total_volume": 16767500
+    },
+    {
+      "instrument": "HPG",
+      "matched_volume": 18455500,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 0,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-17",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_db5aac16f85a11e7.json",
+      "source_payload_sha256": "db5aac16f85a11e71a7a14c5464dabb5124696ddab9c1eb2d7246792381a4c57",
+      "total_volume": 18455500
+    },
+    {
+      "instrument": "HPG",
+      "matched_volume": 27443600,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 225000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-14",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/HPG_stock_trading_history_db5aac16f85a11e7.json",
+      "source_payload_sha256": "db5aac16f85a11e71a7a14c5464dabb5124696ddab9c1eb2d7246792381a4c57",
+      "total_volume": 27668600
+    },
+    {
+      "instrument": "SSI",
+      "matched_volume": 11042500,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 1500000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-20",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_90e2eff59ee8d286.json",
+      "source_payload_sha256": "90e2eff59ee8d28630a2d6f0299a40b2817c6ebf898be515d85256435e78441c",
+      "total_volume": 12542500
+    },
+    {
+      "instrument": "SSI",
+      "matched_volume": 11042500,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 1500000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-20",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_c4dacbdd76d8c48b.json",
+      "source_payload_sha256": "c4dacbdd76d8c48b5e5c4ee0cd203b0d7465f8c9989660cc78b86b1c74209613",
+      "total_volume": 12542500
+    },
+    {
+      "instrument": "SSI",
+      "matched_volume": 11085700,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 5856801,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-19",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_c4dacbdd76d8c48b.json",
+      "source_payload_sha256": "c4dacbdd76d8c48b5e5c4ee0cd203b0d7465f8c9989660cc78b86b1c74209613",
+      "total_volume": 16942501
+    },
+    {
+      "instrument": "SSI",
+      "matched_volume": 15279600,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 1500000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-18",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_c4dacbdd76d8c48b.json",
+      "source_payload_sha256": "c4dacbdd76d8c48b5e5c4ee0cd203b0d7465f8c9989660cc78b86b1c74209613",
+      "total_volume": 16779600
+    },
+    {
+      "instrument": "SSI",
+      "matched_volume": 18212900,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 5356802,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-17",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_c4dacbdd76d8c48b.json",
+      "source_payload_sha256": "c4dacbdd76d8c48b5e5c4ee0cd203b0d7465f8c9989660cc78b86b1c74209613",
+      "total_volume": 23569702
+    },
+    {
+      "instrument": "SSI",
+      "matched_volume": 34016200,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 244002,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-14",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/SSI_stock_trading_history_c4dacbdd76d8c48b.json",
+      "source_payload_sha256": "c4dacbdd76d8c48b5e5c4ee0cd203b0d7465f8c9989660cc78b86b1c74209613",
+      "total_volume": 34260202
+    },
+    {
+      "instrument": "VCB",
+      "matched_volume": 3006600,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 0,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-20",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_e65ddff1938c2140.json",
+      "source_payload_sha256": "e65ddff1938c2140cb70603505d7d3226880e6f068c8d4cfab9f9b9132123065",
+      "total_volume": 3006600
+    },
+    {
+      "instrument": "VCB",
+      "matched_volume": 3006600,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 0,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-20",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_1b8cf38ffc0a06fa.json",
+      "source_payload_sha256": "1b8cf38ffc0a06fac494139375ccdec9acee38677064b1c8238a45b3053084cc",
+      "total_volume": 3006600
+    },
+    {
+      "instrument": "VCB",
+      "matched_volume": 3770600,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 0,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-19",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_1b8cf38ffc0a06fa.json",
+      "source_payload_sha256": "1b8cf38ffc0a06fac494139375ccdec9acee38677064b1c8238a45b3053084cc",
+      "total_volume": 3770600
+    },
+    {
+      "instrument": "VCB",
+      "matched_volume": 2888000,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 90000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-18",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_1b8cf38ffc0a06fa.json",
+      "source_payload_sha256": "1b8cf38ffc0a06fac494139375ccdec9acee38677064b1c8238a45b3053084cc",
+      "total_volume": 2978000
+    },
+    {
+      "instrument": "VCB",
+      "matched_volume": 2745300,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 0,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-17",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_1b8cf38ffc0a06fa.json",
+      "source_payload_sha256": "1b8cf38ffc0a06fac494139375ccdec9acee38677064b1c8238a45b3053084cc",
+      "total_volume": 2745300
+    },
+    {
+      "instrument": "VCB",
+      "matched_volume": 4805500,
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "put_through_volume": 90000,
+      "retained_arithmetic_identity": true,
+      "session": "2026-08-14",
+      "source_path": "operations-review/dnse-fhsc-volume-basis-qualification-v1-20260821/raw/VCB_stock_trading_history_1b8cf38ffc0a06fa.json",
+      "source_payload_sha256": "1b8cf38ffc0a06fac494139375ccdec9acee38677064b1c8238a45b3053084cc",
+      "total_volume": 4895500
+    }
+  ],
+  "official_fhsc_trading_identity": {
+    "document_path": "operations-review/fhsc-historical-price-semantics-qualification-v1-20260821/official-documentation/01_f9f7a6e034313c83.yaml",
+    "document_sha256": "f9f7a6e034313c83247272820532334173a67fe2d0000224c12549a198b2cb92",
+    "statement": "matched + put_through = total",
+    "status": "DOCUMENTED"
+  },
+  "prior_dnse_anchor_trace": [
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "HPG",
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "raw_sha256": "5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+      "raw_value": 15156400,
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "http_status": 200,
+        "mime_type": "application/json; charset=UTF-8",
+        "query": {
+          "from": 1787158800,
+          "resolution": "1D",
+          "symbol": "HPG",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/HPG_ohlc_5b51229b76a60015.json",
+        "raw_sha256": "5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+        "retrieved_at": "2026-08-21T15:05:17.225712+00:00",
+        "source_payload_identity": "dnse_retained_raw:5b51229b76a6001582ecd8c7e7d57e3c4389b6252eb07574d28b7f9212c0f129",
+        "ticker": "HPG"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "SSI",
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "raw_sha256": "6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+      "raw_value": 11042500,
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "http_status": 200,
+        "mime_type": "application/json; charset=UTF-8",
+        "query": {
+          "from": 1787158800,
+          "resolution": "1D",
+          "symbol": "SSI",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/SSI_ohlc_6df8a9602de59f35.json",
+        "raw_sha256": "6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+        "retrieved_at": "2026-08-21T15:05:18.017269+00:00",
+        "source_payload_identity": "dnse_retained_raw:6df8a9602de59f355cced4c303ec6efe3f70af99ef83cdf54e3bc3fbefcfda20",
+        "ticker": "SSI"
+      }
+    },
+    {
+      "basis": "GENERIC_VOLUME_UNKNOWN_BASIS",
+      "field": "v",
+      "instrument": "VCB",
+      "numeric_representation": "INTEGER",
+      "parse_status": "PARSED",
+      "raw_sha256": "9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+      "raw_value": 3006600,
+      "session": "2026-08-20",
+      "source_evidence": {
+        "endpoint": "/price/ohlc",
+        "http_status": 200,
+        "mime_type": "application/json; charset=UTF-8",
+        "query": {
+          "from": 1787158800,
+          "resolution": "1D",
+          "symbol": "VCB",
+          "to": 1787245199,
+          "type": "STOCK"
+        },
+        "raw_path": "operations-review/dnse-uniform-ohlc-anchor-qualification-v1-20260821/raw/VCB_ohlc_9f6a3a7e95f88b23.json",
+        "raw_sha256": "9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+        "retrieved_at": "2026-08-21T15:05:17.620719+00:00",
+        "source_payload_identity": "dnse_retained_raw:9f6a3a7e95f88b23361664202153a06531de1651f7e55432bc2d024ead68cba3",
+        "ticker": "VCB"
+      }
+    }
+  ],
+  "reconciliation": {
+    "authority_effect": "NONE",
+    "discriminating_observation_count": 11,
+    "discriminating_tickers": [
+      "HPG",
+      "SSI",
+      "VCB"
+    ],
+    "dnse_volume_basis_candidate": "DNSE_OHLC_VOLUME_MATCHED_EMPIRICAL",
+    "fhsc_history_volume_basis": "FHSC_HISTORY_VOLUME_MATCHED",
+    "liquidity_authority": false,
+    "matrix": [
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 27443600,
+        "fhsc_history_volume": 27443600,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 27443600,
+        "fhsc_put_through_volume": 225000,
+        "fhsc_total_volume": 27668600,
+        "missing_observation": false,
+        "session": "2026-08-14",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_cross_source_verdict": "BASIS_UNRESOLVED",
+        "dnse_generic_volume": 18455500,
+        "fhsc_history_volume": 18455500,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "NOT_COMPARABLE",
+        "fhsc_matched_volume": 18455500,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 18455500,
+        "missing_observation": false,
+        "session": "2026-08-17",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 16367500,
+        "fhsc_history_volume": 16367500,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 16367500,
+        "fhsc_put_through_volume": 400000,
+        "fhsc_total_volume": 16767500,
+        "missing_observation": false,
+        "session": "2026-08-18",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 15312500,
+        "fhsc_history_volume": 15312500,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 15312500,
+        "fhsc_put_through_volume": 1512822,
+        "fhsc_total_volume": 16825322,
+        "missing_observation": false,
+        "session": "2026-08-19",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 15156400,
+        "fhsc_history_volume": 15156400,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 15156400,
+        "fhsc_put_through_volume": 200000,
+        "fhsc_total_volume": 15356400,
+        "missing_observation": false,
+        "session": "2026-08-20",
+        "ticker": "HPG"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 34016200,
+        "fhsc_history_volume": 34016200,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 34016200,
+        "fhsc_put_through_volume": 244002,
+        "fhsc_total_volume": 34260202,
+        "missing_observation": false,
+        "session": "2026-08-14",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 18212900,
+        "fhsc_history_volume": 18212900,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 18212900,
+        "fhsc_put_through_volume": 5356802,
+        "fhsc_total_volume": 23569702,
+        "missing_observation": false,
+        "session": "2026-08-17",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 15279600,
+        "fhsc_history_volume": 15279600,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 15279600,
+        "fhsc_put_through_volume": 1500000,
+        "fhsc_total_volume": 16779600,
+        "missing_observation": false,
+        "session": "2026-08-18",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 11085700,
+        "fhsc_history_volume": 11085700,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 11085700,
+        "fhsc_put_through_volume": 5856801,
+        "fhsc_total_volume": 16942501,
+        "missing_observation": false,
+        "session": "2026-08-19",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 11042500,
+        "fhsc_history_volume": 11042500,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 11042500,
+        "fhsc_put_through_volume": 1500000,
+        "fhsc_total_volume": 12542500,
+        "missing_observation": false,
+        "session": "2026-08-20",
+        "ticker": "SSI"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 4805500,
+        "fhsc_history_volume": 4805500,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 4805500,
+        "fhsc_put_through_volume": 90000,
+        "fhsc_total_volume": 4895500,
+        "missing_observation": false,
+        "session": "2026-08-14",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_cross_source_verdict": "BASIS_UNRESOLVED",
+        "dnse_generic_volume": 2745300,
+        "fhsc_history_volume": 2745300,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "NOT_COMPARABLE",
+        "fhsc_matched_volume": 2745300,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 2745300,
+        "missing_observation": false,
+        "session": "2026-08-17",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_cross_source_verdict": "DNSE_EQUALS_MATCHED",
+        "dnse_generic_volume": 2888000,
+        "fhsc_history_volume": 2888000,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "HISTORY_EQUALS_MATCHED",
+        "fhsc_matched_volume": 2888000,
+        "fhsc_put_through_volume": 90000,
+        "fhsc_total_volume": 2978000,
+        "missing_observation": false,
+        "session": "2026-08-18",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_cross_source_verdict": "BASIS_UNRESOLVED",
+        "dnse_generic_volume": 3770600,
+        "fhsc_history_volume": 3770600,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "NOT_COMPARABLE",
+        "fhsc_matched_volume": 3770600,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 3770600,
+        "missing_observation": false,
+        "session": "2026-08-19",
+        "ticker": "VCB"
+      },
+      {
+        "dnse_cross_source_verdict": "BASIS_UNRESOLVED",
+        "dnse_generic_volume": 3006600,
+        "fhsc_history_volume": 3006600,
+        "fhsc_identity_documented_and_retained_exact": true,
+        "fhsc_internal_history_verdict": "NOT_COMPARABLE",
+        "fhsc_matched_volume": 3006600,
+        "fhsc_put_through_volume": 0,
+        "fhsc_total_volume": 3006600,
+        "missing_observation": false,
+        "session": "2026-08-20",
+        "ticker": "VCB"
+      }
+    ],
+    "position_sizing_safe": false,
+    "summary_counts": {
+      "dnse_equals_matched": 11,
+      "dnse_equals_put_through": 0,
+      "dnse_equals_total": 0,
+      "dnse_no_match": 0,
+      "missing_observations": 0,
+      "not_comparable": 4
+    },
+    "zero_put_through_non_discriminating_consistency_count": 4
+  },
+  "request_budget": {
+    "dnse": {
+      "per_ticker_max": 2,
+      "retries": 0,
+      "total_max": 6,
+      "used": 3
+    },
+    "fhsc": {
+      "per_ticker_max": 2,
+      "retries": 0,
+      "total_max": 6,
+      "used": 6
+    }
+  },
+  "schema_version": "1.0.0",
+  "unit_metadata": {
+    "dnse": "SHARES_PER_EXISTING_PARTIALLY_QUALIFIED_FIELD_CONTRACT; COMPOSITION_WAS_UNKNOWN_BEFORE_THIS_SCOPE",
+    "fhsc": "STOCK_TRADING_DOCUMENTATION_DESCRIBES_VOLUME_AS_SHARES",
+    "numeric_agreement_unit_undocumented": false,
+    "numeric_transform": "NONE"
+  }
+}
