@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-21 - Prospective Daily Rollforward & Learning Ledger V1
+
+`PROSPECTIVE_DAILY_ROLLFORWARD_V1 = READY_LOCAL` (`prospective_daily_rollforward.py`, `run_prospective_daily_rollforward.py`, `push = NO`).
+
+1. The completed 2026-08-20 → 2026-08-21 attribution remains immutable and is linked as the sole observed H1 ledger row. It is descriptive prospective research evidence, not a backtest, alpha, significance, edge, or recommendation claim.
+2. The retained 2026-08-21 exact session seals an independent 524-member shadow T-state before any later retained exact session. It records 3 entrants (HMS, VPS, VTC), 2 exits (BRS, CCS), and a 521-member intersection with the frozen 2026-08-20 cohort; these are coverage changes, not ACTIVE_UNIVERSE claims.
+3. Setup, price structure, market/relative/downside context, queue, dossier/task/scenario/owner/AI, and same-session fundamental authority are explicitly unavailable for the new T-state because no 2026-08-21 artifacts exist under those contracts. No 2026-08-20 analytical state is relabelled or rolled forward silently.
+4. The append-only ledger counts genuine retained future sessions for H1/H3/H5. H3/H5 and the new T-state H1 remain pending; its maturity state is `FIRST_OBSERVATION_ONLY`. Historical PIT and RAW_AS_TRADED remain unresolved and unpromoted.
+
 ## 2026-08-21 - Downside Semantic Version Repair & Prospective Extension Successor
 
 `DOWNSIDE_SEMANTIC_VERSION_REPAIR = READY_LOCAL` (`downside_uncertainty_research_context.py`, `prospective_research_context_extension.py`, `push = NO`).

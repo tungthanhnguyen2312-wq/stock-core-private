@@ -17,6 +17,8 @@
 
 ## 2. Program Priority & Foundation Status
 
+**Prospective daily rollforward V1:** the immutable 2026-08-20 → 2026-08-21 H1 observation is retained in an append-only descriptive ledger. A new independent 2026-08-21 shadow T-state is sealed at 524 members before a later exact observation; it is pending H1/H3/H5. Missing 2026-08-21 analytical components are explicit rather than substituted from 2026-08-20. This does not promote PIT, RAW_AS_TRADED, backtest, strategy, or recommendation authority.
+
 | Program / Milestone | Description | Status | Key Governance Constraints |
 |---------------------|-------------|--------|----------------------------|
 | **P0-RECOVERY** | Canonical Trades Materialization & Task 160 | **CLOSED** | `TERMINAL_SUCCESS_QUALITY_RESTRICTED`. 18,109,141 canonical trades across 40 sessions. |

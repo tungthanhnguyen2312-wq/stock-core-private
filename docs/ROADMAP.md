@@ -42,6 +42,7 @@
 
 | Program / Milestone | Description | Status | Acceptance Gate & Authority Constraints |
 |---|---|:---:|---|
+| **Prospective Daily Rollforward & Learning Ledger V1** | Offline immutable T-state sealing and session-counted prospective learning | **COMPLETE LOCALLY** | Preserves the first 2026-08-20 → 2026-08-21 descriptive H1 attribution, seals a separate 524-member 2026-08-21 shadow cohort before any later exact session, and retains H1/H3/H5 maturity explicitly. Missing same-session research context is unavailable, never silently carried forward. No backtest/PIT/RAW_AS_TRADED/alpha/edge/recommendation authority. |
 | **P0-RECOVERY** | Canonical Trades Materialization & Task 160 | **CLOSED** | `TERMINAL_SUCCESS_QUALITY_RESTRICTED`. 18.1M trades across 40 sessions. |
 | **P0-A.1** | OHLC Raw Coverage Completion | **COMPLETE** | 1,528/1,660 successful; 132 `PERMANENT` provider-rejected failures classified. |
 | **P0-A.2** | Corporate Action Evidence Scale-Out | **COMPLETE** | Official document authority & multi-event extraction integrated (`official_corporate_action_ledger.py`). |
