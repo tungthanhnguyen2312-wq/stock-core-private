@@ -1,0 +1,39 @@
+"""Independent research downside/uncertainty domains; deliberately no composite risk score."""
+from __future__ import annotations
+import hashlib,json
+from collections import Counter
+from typing import Any,Mapping
+METHOD='downside_uncertainty_research_context/v1'
+def _canon(x:Any)->str:return json.dumps(x,ensure_ascii=False,sort_keys=True,separators=(',',':'))
+def _hash(x:Any)->str:return hashlib.sha256(_canon(x).encode()).hexdigest()
+def _domain(status,authority,reasons,values,source):return {'status':status,'authority_tier':authority,'reason_codes':reasons,'relevant_values':values,'source_identity':source}
+def build(product:Mapping[str,Any],market:Mapping[str,Any],relative:Mapping[str,Any],eligibility:Mapping[str,Any],scenarios:Mapping[str,Any],events:Mapping[str,Any],dossiers:Mapping[str,Any],tasks:Mapping[str,Any],review_pack:Mapping[str,Any])->dict[str,Any]:
+    daily={x['ticker']:x for x in product['stock_research']}; rel={x['ticker']:x for x in relative['records']}; scen={x['ticker']:x for x in scenarios['scenarios']}; ev={x['ticker']:x for x in events['records']}; lenses={x['ticker']:x for x in eligibility['records']}; p75=market['breadth']['volatility']['p75']; rows=[]
+    for ticker,r in sorted(daily.items()):
+        facts=r['ai_ready_brief']['facts']; trend=r['research_summary']['trend_state']; mom=facts.get('momentum_20d'); vol=facts.get('volatility_20d'); contexts=rel[ticker]; relative_metric=next((m for m in contexts['relative_metrics'] if m['metric_identity']=='momentum_20d' and m['status']=='AVAILABLE'),None)
+        technical=[]
+        if trend=='AT_OR_BELOW_MA20':technical.append('AT_OR_BELOW_MA20')
+        if isinstance(mom,(int,float)) and mom<0:technical.append('NEGATIVE_20D_MOMENTUM')
+        if isinstance(vol,(int,float)) and vol>p75:technical.append('UPPER_CROSS_SECTIONAL_VOLATILITY_GROUP')
+        if relative_metric and relative_metric.get('descriptive_bucket')=='LOWER_QUARTILE':technical.append('LOWER_QUARTILE_RELATIVE_MOMENTUM')
+        tech=_domain('OBSERVED_ADVERSE_TECHNICAL_CONTEXT' if technical else 'NO_OBSERVED_ADVERSE_TECHNICAL_CONDITION', 'SHADOW_ONLY',technical,{'trend_state':trend,'momentum_20d':mom,'volatility_20d':vol,'volatility_p75':p75,'relative_momentum_bucket':relative_metric.get('descriptive_bucket') if relative_metric else None},product['artifact_identity'])
+        scenario=scen.get(ticker); bear=(scenario['scenarios']['BEAR'] if scenario else None)
+        downside=_domain('SCENARIO_DOWNSIDE_AVAILABLE' if bear else 'SCENARIO_DOWNSIDE_UNAVAILABLE','RESEARCH_SHADOW',['BEAR_DRIVERS_RETAINED'] if bear else ['NO_RETAINED_SCENARIO_FOR_TICKER'],{'bear_driver_count':len(bear['drivers']) if bear else 0,'invalidation_status':bear['invalidation_or_reversal_conditions'][0]['status'] if bear else None,'counter_thesis_hash':dossiers[ticker]['counter_thesis_hash']},scenario['scenario_content_identity'] if scenario else None)
+        auth=r['research_summary']['fundamental_authority']; uncertainty=[]
+        if auth=='PROVIDER_RESEARCH':uncertainty.append('PROVIDER_RESEARCH_FUNDAMENTAL_CONTEXT')
+        if not scenario:uncertainty.append('SCENARIO_CONTEXT_UNAVAILABLE')
+        if not ev[ticker]['event_facts']:uncertainty.append('NO_RETAINED_EVENT_EVIDENCE_NOT_NO_EVENT_RISK')
+        if any(x['eligibility']=='BLOCKED' for x in lenses[ticker]['lenses'].values()):uncertainty.append('BLOCKED_RESEARCH_LENSES_PRESENT')
+        evidence=_domain('EVIDENCE_UNCERTAINTY_HIGHER' if uncertainty else 'EVIDENCE_UNCERTAINTY_LOWER','PROVIDER_RESEARCH' if auth=='PROVIDER_RESEARCH' else 'OFFICIAL_QUALIFIED',uncertainty,{'fundamental_authority':auth,'open_task_count':sum(x['ticker']==ticker for x in tasks.values())},dossiers[ticker]['dossier_identity'])
+        event_facts=ev[ticker]['event_facts']; event=_domain('NO_RETAINED_EVENT_EVIDENCE' if not event_facts else 'EVIDENCED_EVENT_CONTEXT','OFFICIAL_QUALIFIED' if event_facts else 'MISSING',['EVENT_ABSENCE_NOT_EVENT_RISK'] if not event_facts else [],{'event_count':len(event_facts),'temporal_states':[x['temporal_state'] for x in event_facts]},ev[ticker]['event_context_identity'])
+        execution=_domain('EXECUTION_RISK_NOT_ASSESSABLE','BLOCKED',['QUALIFIED_LIQUIDITY_TRADED_VALUE_SEMANTICS_UNAVAILABLE'],{},'strategy_eligibility')
+        reasons=list(technical)+(['SCENARIO_BEAR_DRIVER_REVIEW'] if bear else [])
+        rows.append({'ticker':ticker,'research_session':facts['session'],'domains':{'TECHNICAL_DOWNSIDE_CONTEXT':tech,'MARKET_CONTEXT_EXPOSURE':_domain(market['breadth']['trend']['descriptor']['descriptor'],'EMPIRICAL_ACTIVE_SHADOW_ONLY',['CONTEMPORANEOUS_EMPIRICAL_COHORT_ONLY'],{'momentum_breadth':market['breadth']['momentum']['descriptor']['descriptor']},market['artifact_identity']),'SCENARIO_DOWNSIDE_CONTEXT':downside,'EVIDENCE_UNCERTAINTY':evidence,'EXECUTION_RISK_STATUS':execution,'EVENT_VISIBILITY':event},'human_downside_review_required':bool(reasons),'human_downside_review_reasons':reasons})
+    review={x['ticker'] for x in review_pack['owner_review_queue']}; counts=Counter();
+    for row in rows:
+        for name,domain in row['domains'].items():counts[(name,domain['status'])]+=1
+    presets={'NEGATIVE_MOMENTUM_CONTEXT':sum('NEGATIVE_20D_MOMENTUM' in x['human_downside_review_reasons'] for x in rows),'BELOW_MA20_CONTEXT':sum('AT_OR_BELOW_MA20' in x['human_downside_review_reasons'] for x in rows),'ELEVATED_CROSS_SECTIONAL_VOLATILITY_CONTEXT':sum('UPPER_CROSS_SECTIONAL_VOLATILITY_GROUP' in x['human_downside_review_reasons'] for x in rows),'EVIDENCE_UNCERTAINTY_PRESENT':sum(x['domains']['EVIDENCE_UNCERTAINTY']['status']=='EVIDENCE_UNCERTAINTY_HIGHER' for x in rows),'SCENARIO_DOWNSIDE_REVIEW_AVAILABLE':sum(x['domains']['SCENARIO_DOWNSIDE_CONTEXT']['status']=='SCENARIO_DOWNSIDE_AVAILABLE' for x in rows),'EXECUTION_RISK_NOT_ASSESSABLE':len(rows),'HUMAN_DOWNSIDE_REVIEW_REQUIRED':sum(x['human_downside_review_required'] for x in rows)}
+    artifact={'schema_version':'1.0.0','contract_version':METHOD,'research_session':product['daily_market_research']['session'],'cohort':{'member_count':len(rows),'authority':'EMPIRICAL_ACTIVE_SHADOW_ONLY'},'source_artifact_identities':{'daily':product['artifact_identity'],'market':market['artifact_identity'],'relative':relative['artifact_identity'],'eligibility':eligibility['artifact_identity'],'scenario':scenarios['artifact_identity'],'event':events['artifact_identity']},'records':rows,'coverage':{'records':len(rows),'domain_status_counts':{f'{k[0]}:{k[1]}':v for k,v in counts.items()},'human_downside_review_required_count':sum(x['human_downside_review_required'] for x in rows),'review_pack_count':len(review),'review_pack_downside_review_count':sum(x['human_downside_review_required'] for x in rows if x['ticker'] in review)},'screener_discovery_presets':presets,'authority_boundary':{'no_composite_risk_score_or_rank':True,'execution_risk_unassessable_not_high_or_low':True,'evidence_uncertainty_not_economic_risk':True,'event_absence_not_no_event_risk':True,'no_var_probability_expected_loss_or_recommendation':True},'verdict':'DOWNSIDE_UNCERTAINTY_RESEARCH_V1_READY'}
+    artifact['artifact_sha256']=_hash(artifact);artifact['artifact_identity']='downside_uncertainty_research_context:'+artifact['artifact_sha256'];return artifact
+def review_overlay(context:Mapping[str,Any],review_pack:Mapping[str,Any])->dict[str,Any]:
+    by={x['ticker']:x for x in context['records']}; out={'schema_version':'1.0.0','contract_version':'downside_uncertainty_review_overlay/v1','downside_context_identity':context['artifact_identity'],'entries':[{'ticker':x['ticker'],'domains':by[x['ticker']]['domains'],'human_downside_review_required':by[x['ticker']]['human_downside_review_required'],'human_downside_review_reasons':by[x['ticker']]['human_downside_review_reasons']} for x in review_pack['owner_review_queue']]};out['artifact_identity']='downside_uncertainty_review_overlay:'+_hash(out);return out
