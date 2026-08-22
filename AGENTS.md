@@ -24,19 +24,38 @@ canonical representation — see `docs/STATE.md` Invariant 6. A rebaselined arch
 itself reopen a completed historical milestone, and existing retained evidence is reused, not
 recreated, wherever it already answers a question.
 
+## Stable project doctrine
+
+[`docs/DATA_FIRST_DOCTRINE.md`](docs/DATA_FIRST_DOCTRINE.md) is the stable owner doctrine for
+Stock Lookup. It defines the non-negotiable direction:
+
+`ACQUIRE BROADLY → PRESERVE RAW → EXTRACT → UNDERSTAND → CANONICALIZE → LABEL FITNESS FOR USE → DETERMINISTIC ANALYSIS → AI RESEARCH → HUMAN DECISION`.
+
+`docs/STATE.md` remains the operational cached truth; `docs/ROADMAP.md` owns sequencing;
+`docs/DECISIONS.md` records implementation decisions. None of them may silently redefine the
+doctrine. If current operational state appears to conflict with the doctrine, surface the conflict
+instead of following the most recent technical thread by inertia.
+
+The doctrine also establishes capability-first source routing: DNSE/Livespeed is the primary
+market-data direction, FHSC may supply complementary capabilities, and overlapping DNSE/FHSC
+claims should be used for cross-validation rather than artificial provider-parity requirements.
+Approved agents may use bounded online discovery/extraction when the task permits it, but retained
+source evidence—not AI-generated text—is factual authority.
+
 ## Default lightweight bootstrap
 
 For a normal bounded implementation milestone:
 
-1. Read this file and [`docs/STATE.md`](docs/STATE.md) in full.
+1. Read this file, [`docs/DATA_FIRST_DOCTRINE.md`](docs/DATA_FIRST_DOCTRINE.md), and
+   [`docs/STATE.md`](docs/STATE.md) in full.
 2. Read only the roadmap, decision, and rule sections explicitly referenced by `STATE.md` or
    directly required by the named milestone.
 3. Read directly relevant code, tests, and data contracts.
 4. Do **not** scan all handoffs, all decisions, or the full roadmap by default.
 
-Perform a full authority refresh (`AGENTS.md`, `STATE.md`, `ROADMAP.md`, `DECISIONS.md`,
-`AI_RULES.md`, and the current handoff) only when changing architecture, program priority,
-governance, or authority; entering a new major program; promoting/demoting a source or
+Perform a full authority refresh (`AGENTS.md`, `DATA_FIRST_DOCTRINE.md`, `STATE.md`, `ROADMAP.md`,
+`DECISIONS.md`, `AI_RULES.md`, and the current handoff) only when changing architecture, program
+priority, governance, or authority; entering a new major program; promoting/demoting a source or
 capability; resolving a conflict with/staleness in `STATE.md`; finding contradictory repository
 docs; or when the owner explicitly requests a rebaseline/governance audit. A new session, a new
 agent, or a normal bounded milestone is not by itself a trigger.
