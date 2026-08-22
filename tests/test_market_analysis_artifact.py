@@ -235,5 +235,408 @@ class MarketAnalysisArtifactTests(unittest.TestCase):
         self.assertEqual(30000000.0, hpg_rec["temporal_fields"]["dnse.foreign_net_value"]["value"])
 
 
+def sample_canonical_packet() -> dict:
+    """Build a deterministic synthetic multi-source session packet."""
+    return {
+        "packet_schema_version": "1.0.0",
+        "contract_version": "capability_first_eod_collector/v1",
+        "session_date": "2026-08-20",
+        "created_at": "2026-08-20T18:05:00.000Z",
+        "execution_mode": "SYNTHETIC_TEST",
+        "request_budget": {
+            "max_requests": 50,
+            "used_requests": 8,
+            "rate_limited_requests": 1,
+            "budget_exhausted": False,
+            "planned_requests_count": 8,
+        },
+        "source_routing": {
+            "routed_capabilities": {},
+            "single_source_capabilities": ["PUT_THROUGH_VOLUME_SHARES", "MATCHED_TRADED_VALUE_VND"],
+            "missing_capabilities": ["FREE_FLOAT"],
+        },
+        "rate_limit_events": [],
+        "revision_events": [],
+        "observations": [
+            # 1. HPG DNSE OHLC
+            {
+                "session": "2026-08-20",
+                "instrument": "HPG",
+                "source": "DNSE",
+                "endpoint_id": "ohlc",
+                "status": "ACQUIRED",
+                "usability_state": "RESEARCH_USABLE",
+                "revision_state": "INITIAL_OBSERVATION",
+                "raw_response_retained": True,
+                "raw_path": "raw/dnse_ohlc_HPG_11111111.json",
+                "raw_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+                "native_fields": {
+                    "OPEN_KVND": {"value": "21.5", "unit": "thousands_of_vnd_per_share", "raw_field": "o"},
+                    "HIGH_KVND": {"value": "22.0", "unit": "thousands_of_vnd_per_share", "raw_field": "h"},
+                    "LOW_KVND": {"value": "21.3", "unit": "thousands_of_vnd_per_share", "raw_field": "l"},
+                    "CLOSE_KVND": {"value": "21.85", "unit": "thousands_of_vnd_per_share", "raw_field": "c"},
+                    "MATCHED_VOLUME_SHARES": {"value": 2500000, "unit": "shares", "raw_field": "v"},
+                },
+                "canonical_fields": {
+                    "OPEN_VND": {
+                        "value": "21500",
+                        "unit": "vnd_per_share",
+                        "derived_from": "OPEN_KVND",
+                        "contract_id": "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1",
+                    },
+                    "HIGH_VND": {
+                        "value": "22000",
+                        "unit": "vnd_per_share",
+                        "derived_from": "HIGH_KVND",
+                        "contract_id": "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1",
+                    },
+                    "LOW_VND": {
+                        "value": "21300",
+                        "unit": "vnd_per_share",
+                        "derived_from": "LOW_KVND",
+                        "contract_id": "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1",
+                    },
+                    "CLOSE_VND": {
+                        "value": "21850",
+                        "unit": "vnd_per_share",
+                        "derived_from": "CLOSE_KVND",
+                        "contract_id": "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1",
+                    },
+                    "MATCHED_VOLUME_SHARES": {
+                        "value": 2500000,
+                        "unit": "shares",
+                    },
+                },
+                "authority_effect": "NONE",
+            },
+            # 2. HPG FHSC Trading History (volume + traded value)
+            {
+                "session": "2026-08-20",
+                "instrument": "HPG",
+                "source": "FHSC",
+                "endpoint_id": "trading_history",
+                "status": "ACQUIRED",
+                "usability_state": "RESEARCH_USABLE",
+                "revision_state": "INITIAL_OBSERVATION",
+                "raw_response_retained": True,
+                "raw_path": "raw/fhsc_trading_history_HPG_22222222.json",
+                "raw_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+                "native_fields": {
+                    "MATCHED_VOLUME_SHARES": {"value": 2200000, "unit": "shares"},
+                    "PUT_THROUGH_VOLUME_SHARES": {"value": 300000, "unit": "shares"},
+                    "TOTAL_VOLUME_SHARES": {"value": 2500000, "unit": "shares"},
+                    "MATCHED_TRADED_VALUE_VND": {"value": 47300000000, "unit": "vnd"},
+                    "PUT_THROUGH_TRADED_VALUE_VND": {"value": 6450000000, "unit": "vnd"},
+                    "TOTAL_TRADED_VALUE_VND": {"value": 53750000000, "unit": "vnd"},
+                },
+                "canonical_fields": {
+                    "MATCHED_VOLUME_SHARES": {"value": 2200000, "unit": "shares"},
+                    "PUT_THROUGH_VOLUME_SHARES": {"value": 300000, "unit": "shares"},
+                    "TOTAL_VOLUME_SHARES": {"value": 2500000, "unit": "shares"},
+                    "MATCHED_TRADED_VALUE_VND": {"value": 47300000000, "unit": "vnd_raw_not_thousands"},
+                    "PUT_THROUGH_TRADED_VALUE_VND": {"value": 6450000000, "unit": "vnd_raw_not_thousands"},
+                    "TOTAL_TRADED_VALUE_VND": {"value": 53750000000, "unit": "vnd_raw_not_thousands"},
+                },
+                "authority_effect": "NONE",
+            },
+            # 3. HPG FHSC Foreign Room
+            {
+                "session": "2026-08-20",
+                "instrument": "HPG",
+                "source": "FHSC",
+                "endpoint_id": "foreign_room",
+                "status": "ACQUIRED",
+                "usability_state": "RESEARCH_USABLE",
+                "raw_response_retained": True,
+                "raw_path": "raw/fhsc_foreign_room_HPG_33333333.json",
+                "raw_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+                "native_fields": {
+                    "FOREIGN_ROOM_MAX": {"value": 2089955445, "unit": "shares"},
+                    "FOREIGN_ROOM_OWNED": {"value": 1969955445, "unit": "shares"},
+                    "FOREIGN_ROOM_AVAILABLE": {"value": 120000000, "unit": "shares"},
+                },
+                "canonical_fields": {
+                    "FOREIGN_ROOM_MAX": {"value": 2089955445, "unit": "shares"},
+                    "FOREIGN_ROOM_OWNED": {"value": 1969955445, "unit": "shares"},
+                    "FOREIGN_ROOM_AVAILABLE": {"value": 120000000, "unit": "shares"},
+                },
+                "authority_effect": "NONE",
+            },
+            # 4. HPG FHSC Proprietary Trading
+            {
+                "session": "2026-08-20",
+                "instrument": "HPG",
+                "source": "FHSC",
+                "endpoint_id": "proprietary_trading",
+                "status": "ACQUIRED",
+                "usability_state": "RESEARCH_USABLE",
+                "raw_response_retained": True,
+                "raw_path": "raw/fhsc_proprietary_HPG_44444444.json",
+                "raw_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+                "native_fields": {
+                    "PROPRIETARY_BUY_VOLUME": {"value": 850000, "unit": "shares"},
+                    "PROPRIETARY_SELL_VOLUME": {"value": 320000, "unit": "shares"},
+                    "PROPRIETARY_NET_VOLUME": {"value": 530000, "unit": "shares"},
+                    "PROPRIETARY_BUY_VALUE": {"value": 18275000000, "unit": "vnd"},
+                    "PROPRIETARY_SELL_VALUE": {"value": 6880000000, "unit": "vnd"},
+                    "PROPRIETARY_NET_VALUE": {"value": 11395000000, "unit": "vnd"},
+                },
+                "canonical_fields": {
+                    "PROPRIETARY_BUY_VOLUME": {"value": 850000, "unit": "shares"},
+                    "PROPRIETARY_SELL_VOLUME": {"value": 320000, "unit": "shares"},
+                    "PROPRIETARY_NET_VOLUME": {"value": 530000, "unit": "shares"},
+                    "PROPRIETARY_BUY_VALUE": {"value": 18275000000, "unit": "vnd_raw_not_thousands"},
+                    "PROPRIETARY_SELL_VALUE": {"value": 6880000000, "unit": "vnd_raw_not_thousands"},
+                    "PROPRIETARY_NET_VALUE": {"value": 11395000000, "unit": "vnd_raw_not_thousands"},
+                },
+                "authority_effect": "NONE",
+            },
+            # 5. HPG FHSC Order Statistics
+            {
+                "session": "2026-08-20",
+                "instrument": "HPG",
+                "source": "FHSC",
+                "endpoint_id": "order_statistics",
+                "status": "ACQUIRED",
+                "usability_state": "RESEARCH_USABLE",
+                "raw_response_retained": True,
+                "raw_path": "raw/fhsc_orders_HPG_55555555.json",
+                "raw_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+                "native_fields": {
+                    "ACTIVE_BUY_ORDER_COUNT": {"value": 18422, "unit": "orders"},
+                    "ACTIVE_SELL_ORDER_COUNT": {"value": 14205, "unit": "orders"},
+                    "ACTIVE_BUY_VOLUME": {"value": 9871300, "unit": "shares"},
+                    "ACTIVE_SELL_VOLUME": {"value": 5285100, "unit": "shares"},
+                    "ACTIVE_NET_VOLUME": {"value": 4586200, "unit": "shares"},
+                },
+                "canonical_fields": {
+                    "ACTIVE_BUY_ORDER_COUNT": {"value": 18422, "unit": "orders"},
+                    "ACTIVE_SELL_ORDER_COUNT": {"value": 14205, "unit": "orders"},
+                    "ACTIVE_BUY_VOLUME": {"value": 9871300, "unit": "shares"},
+                    "ACTIVE_SELL_VOLUME": {"value": 5285100, "unit": "shares"},
+                    "ACTIVE_NET_VOLUME": {"value": 4586200, "unit": "shares"},
+                },
+                "authority_effect": "NONE",
+            },
+            # 6. VCB Missing Requested Session
+            {
+                "session": "2026-08-20",
+                "instrument": "VCB",
+                "source": "DNSE",
+                "endpoint_id": "ohlc",
+                "status": "MISSING_REQUESTED_SESSION",
+                "usability_state": "MISSING",
+                "raw_response_retained": False,
+                "authority_effect": "NONE",
+            },
+            # 7. SSI Provider Rate Limited (DNSE) & Budget Exhausted (FHSC)
+            {
+                "session": "2026-08-20",
+                "instrument": "SSI",
+                "source": "DNSE",
+                "endpoint_id": "ohlc",
+                "status": "PROVIDER_RATE_LIMITED",
+                "usability_state": "PROVIDER_RATE_LIMITED",
+                "raw_response_retained": False,
+            },
+            {
+                "session": "2026-08-20",
+                "instrument": "SSI",
+                "source": "FHSC",
+                "endpoint_id": "trading_history",
+                "status": "BUDGET_EXHAUSTED",
+                "usability_state": "BUDGET_EXHAUSTED",
+                "raw_response_retained": False,
+            },
+            # 8. VNM Conflicting volume arithmetic
+            {
+                "session": "2026-08-20",
+                "instrument": "VNM",
+                "source": "FHSC",
+                "endpoint_id": "trading_history",
+                "status": "ACQUIRED",
+                "usability_state": "RESEARCH_USABLE",
+                "raw_response_retained": True,
+                "raw_path": "raw/conflict_vnm.json",
+                "raw_sha256": "vnm_conflict_sha",
+                "native_fields": {
+                    "MATCHED_VOLUME_SHARES": {"value": 2000000, "unit": "shares"},
+                    "PUT_THROUGH_VOLUME_SHARES": {"value": 300000, "unit": "shares"},
+                    "TOTAL_VOLUME_SHARES": {"value": 10000000, "unit": "shares"},
+                },
+                "canonical_fields": {
+                    "TOTAL_VOLUME_SHARES": {"value": 10000000, "unit": "shares"},
+                },
+            },
+        ],
+        "authority_boundaries": {
+            "authority_effect": "NONE",
+            "raw_as_traded_promoted": False,
+            "pit_backtest_eligible": False,
+            "liquidity_sizing_authority": "BLOCKED",
+            "valuation_authority": False,
+            "recommendation_authority": False,
+            "database_mutated": False,
+        },
+        "packet_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+        "packet_identity": "capability_first_eod_packet:8888888888888888888888888888888888888888888888888888888888888888",
+    }
+
+
+class CanonicalIntegrationConsumerActivationTests(unittest.TestCase):
+    """Validation test suite proving consumer activation on capability-first canonical integration."""
+
+    def setUp(self):
+        self.packet = sample_canonical_packet()
+        self.artifact = build_market_research_artifact(
+            canonical_session_packet=self.packet,
+            permitted_use="within_series_analytics",
+            reference_at="2026-08-20T18:05:00+07:00",
+        )
+
+    # 1. DNSE canonical price reaches the consumer with native/canonical lineage intact
+    def test_dnse_canonical_price_reaches_consumer_with_lineage(self):
+        hpg_rec = next(r for r in self.artifact["records"] if r["instrument_identity"]["symbol"] == "HPG")
+        evidence = hpg_rec["canonical_market_evidence"]
+        self.assertIn("DNSE", evidence["prices"])
+        dnse_prices = evidence["prices"]["DNSE"]
+
+        close_entry = dnse_prices["CLOSE_VND"]
+        self.assertEqual("21850", close_entry["value"])
+        self.assertEqual("vnd_per_share", close_entry["unit"])
+        self.assertEqual("21.85", close_entry["provider_native_value"])
+        self.assertEqual("thousands_of_vnd_per_share", close_entry["provider_native_unit"])
+        self.assertEqual("DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1", close_entry["contract_id"])
+        self.assertEqual("1111111111111111111111111111111111111111111111111111111111111111", close_entry["raw_sha256"])
+
+    # 2. FHSC-only capability reaches the same consumer without DNSE parity
+    def test_fhsc_only_capability_reaches_consumer_without_dnse_parity(self):
+        hpg_rec = next(r for r in self.artifact["records"] if r["instrument_identity"]["symbol"] == "HPG")
+        evidence = hpg_rec["canonical_market_evidence"]
+
+        # Traded values & foreign room are FHSC-only
+        self.assertIn("FHSC", evidence["traded_values"])
+        self.assertNotIn("DNSE", evidence["traded_values"])
+        self.assertIn("FHSC", evidence["foreign_room"])
+        self.assertNotIn("DNSE", evidence["foreign_room"])
+
+        self.assertEqual(53750000000, evidence["traded_values"]["FHSC"]["TOTAL_TRADED_VALUE_VND"]["value"])
+        self.assertEqual(2089955445, evidence["foreign_room"]["FHSC"]["FOREIGN_ROOM_MAX"]["value"])
+
+    # 3. Traded-value identities remain distinct
+    def test_traded_value_identities_remain_distinct(self):
+        hpg_rec = next(r for r in self.artifact["records"] if r["instrument_identity"]["symbol"] == "HPG")
+        tv = hpg_rec["canonical_market_evidence"]["traded_values"]["FHSC"]
+
+        m_val = tv["MATCHED_TRADED_VALUE_VND"]["value"]
+        pt_val = tv["PUT_THROUGH_TRADED_VALUE_VND"]["value"]
+        tot_val = tv["TOTAL_TRADED_VALUE_VND"]["value"]
+
+        self.assertNotEqual(m_val, tot_val)
+        self.assertNotEqual(pt_val, tot_val)
+        self.assertEqual(m_val + pt_val, tot_val)
+        self.assertEqual("vnd_raw_not_thousands", tv["TOTAL_TRADED_VALUE_VND"]["unit"])
+
+    # 4. Proprietary and microstructure data is not mislabeled as total market volume
+    def test_proprietary_and_microstructure_data_not_mislabeled_as_total_volume(self):
+        hpg_rec = next(r for r in self.artifact["records"] if r["instrument_identity"]["symbol"] == "HPG")
+        evidence = hpg_rec["canonical_market_evidence"]
+
+        # Check proprietary flow is distinct
+        self.assertIn("FHSC", evidence["proprietary_flow"])
+        prop = evidence["proprietary_flow"]["FHSC"]
+        self.assertEqual(530000, prop["PROPRIETARY_NET_VOLUME"]["value"])
+        self.assertEqual("shares", prop["PROPRIETARY_NET_VOLUME"]["unit"])
+
+        # Check microstructure is distinct
+        self.assertIn("FHSC", evidence["microstructure"])
+        micro = evidence["microstructure"]["FHSC"]
+        self.assertEqual(18422, micro["ACTIVE_BUY_ORDER_COUNT"]["value"])
+        self.assertEqual(4586200, micro["ACTIVE_NET_VOLUME"]["value"])
+
+        # Verify active volume is NOT present in canonical_volumes
+        vols = evidence["volumes"]["FHSC"]
+        self.assertNotIn("ACTIVE_NET_VOLUME", vols)
+        self.assertNotIn("PROPRIETARY_NET_VOLUME", vols)
+
+    # 5. Missing requested session produces no fabricated feature
+    def test_missing_requested_session_produces_no_fabricated_feature(self):
+        vcb_rec = next(r for r in self.artifact["records"] if r["instrument_identity"]["symbol"] == "VCB")
+        evidence = vcb_rec["canonical_market_evidence"]
+
+        # No fabricated prices
+        self.assertEqual({}, evidence["prices"])
+        self.assertEqual({}, evidence["volumes"])
+
+        # Recorded under unacquired capabilities
+        unacquired = evidence["unacquired_capabilities"]
+        self.assertEqual(1, len(unacquired))
+        self.assertEqual("MISSING_REQUESTED_SESSION", unacquired[0]["status"])
+
+    # 6. Conflicting observation remains non-usable for affected research output
+    def test_conflicting_observation_fails_closed_for_affected_research(self):
+        vnm_rec = next(r for r in self.artifact["records"] if r["instrument_identity"]["symbol"] == "VNM")
+        evidence = vnm_rec["canonical_market_evidence"]
+
+        # Recorded under conflicts
+        self.assertTrue(len(evidence["conflicts"]) >= 1)
+        self.assertEqual("CONFLICTING_VOLUME_ARITHMETIC", evidence["conflicts"][0]["conflict_state"])
+
+        # Value withheld (None) for research display/analytics
+        tot_vol_entry = evidence["volumes"]["FHSC"]["TOTAL_VOLUME_SHARES"]
+        self.assertIsNone(tot_vol_entry["value"])
+        self.assertFalse(tot_vol_entry["is_usable"])
+
+    # 7. Provider-rate-limit and local-budget exhaustion remain distinguishable
+    def test_rate_limit_and_budget_exhaustion_distinguishable(self):
+        ssi_rec = next(r for r in self.artifact["records"] if r["instrument_identity"]["symbol"] == "SSI")
+        evidence = ssi_rec["canonical_market_evidence"]
+
+        unacquired = evidence["unacquired_capabilities"]
+        statuses = {u["source"]: u["status"] for u in unacquired}
+
+        self.assertEqual("PROVIDER_RATE_LIMITED", statuses["DNSE"])
+        self.assertEqual("BUDGET_EXHAUSTED", statuses["FHSC"])
+        self.assertNotEqual(statuses["DNSE"], statuses["FHSC"])
+
+    # 8. Prohibited liquidity/sizing/PIT/valuation/recommendation requests fail closed
+    def test_prohibited_uses_fail_closed(self):
+        prohibited_uses = ("liquidity_sizing", "valuation", "raw_as_traded_pit_backtest", "recommendation_authority")
+        for prohibited in prohibited_uses:
+            art = build_market_research_artifact(
+                canonical_session_packet=self.packet,
+                permitted_use=prohibited,
+            )
+            self.assertEqual("PROHIBITED_USE_REJECTED", art["status"])
+            self.assertFalse(art["is_actionable"])
+            self.assertEqual("NONE", art["authority_effect"])
+            self.assertEqual(0, len(art["records"]))
+
+    # 9. Deterministic replay produces identical consumer artifact identity
+    def test_deterministic_replay_produces_identical_artifact_identity(self):
+        art1 = build_market_research_artifact(
+            canonical_session_packet=self.packet,
+            permitted_use="within_series_analytics",
+            reference_at="2026-08-20T18:05:00+07:00",
+        )
+        art2 = build_market_research_artifact(
+            canonical_session_packet=self.packet,
+            permitted_use="within_series_analytics",
+            reference_at="2026-08-20T18:05:00+07:00",
+        )
+
+        self.assertEqual(art1["content_hash"], art2["content_hash"])
+        self.assertEqual(art1["artifact_id"], art2["artifact_id"])
+        self.assertEqual(len(art1["records"]), len(art2["records"]))
+
+    # 10. No secret material appears in artifact output
+    def test_no_secret_leakage_in_artifact(self):
+        import json
+        dumped = json.dumps(self.artifact)
+        sensitive_patterns = ("api_key", "x-fh-apikey", "authorization", "secret", "passwd")
+        for pat in sensitive_patterns:
+            self.assertNotIn(pat, dumped.lower())
+
+
 if __name__ == "__main__":
     unittest.main()
