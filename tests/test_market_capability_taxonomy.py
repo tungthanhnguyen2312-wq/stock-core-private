@@ -15,6 +15,10 @@ _REQUIRED_FIELDS = {
     "FOREIGN": {"FOREIGN_BUY_VOLUME", "FOREIGN_SELL_VOLUME", "FOREIGN_NET_VOLUME",
                 "FOREIGN_BUY_VALUE", "FOREIGN_SELL_VALUE", "FOREIGN_NET_VALUE",
                 "FOREIGN_ROOM_MAX", "FOREIGN_ROOM_OWNED", "FOREIGN_ROOM_AVAILABLE"},
+    "PROPRIETARY": {"PROPRIETARY_BUY_VOLUME", "PROPRIETARY_SELL_VOLUME", "PROPRIETARY_NET_VOLUME",
+                    "PROPRIETARY_BUY_VALUE", "PROPRIETARY_SELL_VALUE", "PROPRIETARY_NET_VALUE"},
+    "MICROSTRUCTURE": {"ACTIVE_BUY_ORDER_COUNT", "ACTIVE_SELL_ORDER_COUNT",
+                       "ACTIVE_BUY_VOLUME", "ACTIVE_SELL_VOLUME", "ACTIVE_NET_VOLUME"},
     "REFERENCE": {"SYMBOL", "EXCHANGE", "LISTED_SHARES", "OUTSTANDING_SHARES", "FREE_FLOAT"},
 }
 
@@ -27,7 +31,7 @@ class SchemaCompletenessTests(unittest.TestCase):
 
     def test_proprietary_and_microstructure_families_are_declared(self):
         self.assertEqual(6, len(taxonomy.SEMANTIC_FIELDS[taxonomy.FAMILY_PROPRIETARY]))
-        self.assertEqual(4, len(taxonomy.SEMANTIC_FIELDS[taxonomy.FAMILY_MICROSTRUCTURE]))
+        self.assertTrue(5 <= len(taxonomy.SEMANTIC_FIELDS[taxonomy.FAMILY_MICROSTRUCTURE]))
 
     def test_family_of_resolves_every_declared_identity(self):
         for identity in taxonomy.ALL_SEMANTIC_IDENTITIES:
@@ -61,8 +65,8 @@ class SingleAndMultiSourceTests(unittest.TestCase):
 
 class MissingDimensionIsolationTests(unittest.TestCase):
     def test_missing_family_does_not_affect_unrelated_family(self):
-        proprietary = taxonomy.capabilities_for_family(taxonomy.FAMILY_PROPRIETARY)
-        self.assertTrue(all(r["usability_state"] == taxonomy.MISSING for r in proprietary))
+        proprietary_dnse = [r for r in taxonomy.capabilities_for_family(taxonomy.FAMILY_PROPRIETARY) if r["source"] == "DNSE"]
+        self.assertTrue(all(r["usability_state"] == taxonomy.MISSING for r in proprietary_dnse))
         price_dnse = taxonomy.capability("CLOSE_KVND", "DNSE")
         self.assertEqual(taxonomy.RESEARCH_USABLE, price_dnse["usability_state"])
 

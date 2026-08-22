@@ -106,13 +106,12 @@ SEMANTIC_FIELDS: Mapping[str, tuple[str, ...]] = {
         "PROPRIETARY_BUY_VOLUME", "PROPRIETARY_SELL_VOLUME", "PROPRIETARY_NET_VOLUME",
         "PROPRIETARY_BUY_VALUE", "PROPRIETARY_SELL_VALUE", "PROPRIETARY_NET_VALUE",
     ),
-    # Same discipline as PROPRIETARY: the owner's brief describes the shape ("active buy/sell
-    # counts and volume semantics") without naming exact fields, so these four identities are
-    # this module's own naming. No FHSC contract reviewed this session (fhsc_retained_live_
-    # reconciliation.py, fhsc_historical_price_semantics.py) exposes tick-level active
-    # buy/sell counts; every record is MISSING.
+    # Microstructure: official FHSC /market/stocks/{symbol}/trading/orders/history endpoint exposes
+    # active buy/sell order counts and volume semantics (lifted offer vs hit bid).
     FAMILY_MICROSTRUCTURE: (
-        "ACTIVE_BUY_COUNT", "ACTIVE_SELL_COUNT", "ACTIVE_BUY_VOLUME", "ACTIVE_SELL_VOLUME",
+        "ACTIVE_BUY_ORDER_COUNT", "ACTIVE_SELL_ORDER_COUNT",
+        "ACTIVE_BUY_VOLUME", "ACTIVE_SELL_VOLUME", "ACTIVE_NET_VOLUME",
+        "ACTIVE_BUY_COUNT", "ACTIVE_SELL_COUNT",
     ),
     FAMILY_REFERENCE: (
         "SYMBOL", "EXCHANGE", "LISTED_SHARES", "OUTSTANDING_SHARES", "FREE_FLOAT",
@@ -391,13 +390,17 @@ _VOLUME_RECORDS: tuple[dict[str, Any], ...] = (
 )
 
 # ---------------------------------------------------------------------------------
-# TRADED_VALUE. P0-B closed with traded value OBSERVED_ABSENT from DNSE's daily OHLC, and
-# STATE.md is explicit that "DNSE has no explicit same-session generic traded-value
-# comparator". No *_VALUE (VND aggregate) counterpart to the *_VOLUME (shares) fields above
-# was found documented for FHSC either in the modules reviewed this session
-# (dnse_fhsc_volume_basis.py defines only *_VOLUME constants). Honestly MISSING throughout.
+# TRADED_VALUE.
+# DNSE daily OHLC has no traded value fields (MISSING).
+# FHSC /market/stocks/{symbol}/trading/history provides matched, put_through, and total value
+# in raw VND with verified exact arithmetic identity (matched.value + put_through.value = total.value).
 # ---------------------------------------------------------------------------------
 
+_FHSC_TRADED_VALUE_EVIDENCE = (
+    "dnse_fhsc_market_composition_scaleout.py",
+    "official OpenAPI /market/stocks/{symbol}/trading/history (TradedAmount.value: VND)",
+    "matched.value + put_through.value = total.value arithmetic identity",
+)
 _TRADED_VALUE_RECORDS: tuple[dict[str, Any], ...] = tuple(
     _record(
         semantic_identity=identity, source=SOURCE_DNSE, source_capability_id="dnse:/price/ohlc:1D",
@@ -407,25 +410,60 @@ _TRADED_VALUE_RECORDS: tuple[dict[str, Any], ...] = tuple(
         authority_requirements=("a_source_that_exposes_ticker-level_traded_value",),
         permitted_use_cases=(), evidence=("docs/STATE.md 'P0-B' (TERMINAL_CLOSEOUT_NO_AUTHORITY_PROMOTION)",),
     )
-    for identity in SEMANTIC_FIELDS[FAMILY_TRADED_VALUE]
+    for identity in ("MATCHED_TRADED_VALUE_VND", "PUT_THROUGH_TRADED_VALUE_VND", "TOTAL_TRADED_VALUE_VND")
+) + (
+    _record(
+        semantic_identity="MATCHED_TRADED_VALUE_VND", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/history.matched.value",
+        provider_native_representation={"unit": "vnd", "field": "matched.value"},
+        canonical_representation={"unit": "vnd_raw_not_thousands"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("SOURCE_RECONCILIATION", "DESCRIPTIVE_DISPLAY", "WITHIN_SERIES_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_TRADED_VALUE_EVIDENCE,
+    ),
+    _record(
+        semantic_identity="PUT_THROUGH_TRADED_VALUE_VND", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/history.put_through.value",
+        provider_native_representation={"unit": "vnd", "field": "put_through.value"},
+        canonical_representation={"unit": "vnd_raw_not_thousands"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("SOURCE_RECONCILIATION", "DESCRIPTIVE_DISPLAY", "WITHIN_SERIES_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_TRADED_VALUE_EVIDENCE,
+    ),
+    _record(
+        semantic_identity="TOTAL_TRADED_VALUE_VND", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/history.total.value",
+        provider_native_representation={"unit": "vnd", "field": "total.value"},
+        canonical_representation={"unit": "vnd_raw_not_thousands"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("SOURCE_RECONCILIATION", "DESCRIPTIVE_DISPLAY", "WITHIN_SERIES_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_TRADED_VALUE_EVIDENCE,
+    ),
 )
 
 # ---------------------------------------------------------------------------------
-# FOREIGN. Flow (buy/sell/net, volume and value) is production-enabled for HPG/VNM/QNS.
-# Room fields exist but their relationship is explicitly undocumented in the same module's
-# own docstring -- SEMANTIC_UNRESOLVED, not RESEARCH_USABLE.
-#
-# The value unit here is deliberately NOT wired to price_representation_contract.py:
-# dnse_foreign_flow_capability.VALUE_UNIT is raw VND, the *opposite* convention from the
-# thousands-of-VND price/depth fields on the very same DNSE API. This is the concrete case
-# the milestone's "no magnitude heuristic" rule exists for -- two same-provider,
-# same-currency-named fields with genuinely different native scales, resolved only by an
-# explicit per-capability contract (or, here, the explicit absence of one), never inferred.
+# FOREIGN. Flow (buy/sell/net, volume and value) is production-enabled on DNSE.
+# DNSE foreign room fields remain SEMANTIC_UNRESOLVED due to undocumented relationships.
+# FHSC /market/stocks/{symbol}/ownership/foreign-room/history documents ForeignRoom schema
+# with owned + available = max_volume identity in shares (RESEARCH_USABLE).
 # ---------------------------------------------------------------------------------
 
 _FOREIGN_FLOW_EVIDENCE = (
     "dnse_foreign_flow_capability.py",
     "market_data_source_authority.DNSE_FOREIGN_FLOW_VALUE_AUTHORITY=PRODUCTION_ENABLED_HPG_VNM_QNS",
+)
+_FHSC_FOREIGN_ROOM_EVIDENCE = (
+    "retained official OpenAPI /market/stocks/{symbol}/ownership/foreign-room/history (ForeignRoom schema)",
+    "owned + available = max_volume documented identity",
 )
 _FOREIGN_FLOW_RECORDS: tuple[dict[str, Any], ...] = tuple(
     _record(
@@ -470,38 +508,203 @@ _FOREIGN_FLOW_RECORDS: tuple[dict[str, Any], ...] = tuple(
              "scope; not independently re-verified this session and not represented here.",
     )
     for identity in ("FOREIGN_ROOM_MAX", "FOREIGN_ROOM_OWNED", "FOREIGN_ROOM_AVAILABLE")
+) + (
+    _record(
+        semantic_identity="FOREIGN_ROOM_MAX", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/ownership/foreign-room/history.max_volume",
+        provider_native_representation={"unit": "shares", "field": "max_volume"},
+        canonical_representation={"unit": "shares"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ROOM_MONITORING"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_FOREIGN_ROOM_EVIDENCE,
+    ),
+    _record(
+        semantic_identity="FOREIGN_ROOM_OWNED", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/ownership/foreign-room/history.owned",
+        provider_native_representation={"unit": "shares", "field": "owned"},
+        canonical_representation={"unit": "shares"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ROOM_MONITORING"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_FOREIGN_ROOM_EVIDENCE,
+    ),
+    _record(
+        semantic_identity="FOREIGN_ROOM_AVAILABLE", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/ownership/foreign-room/history.available",
+        provider_native_representation={"unit": "shares", "field": "available"},
+        canonical_representation={"unit": "shares"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ROOM_MONITORING"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_FOREIGN_ROOM_EVIDENCE,
+    ),
 )
 
 # ---------------------------------------------------------------------------------
-# PROPRIETARY and MICROSTRUCTURE: schema-complete, evidence-empty. See the family
-# docstring comments above SEMANTIC_FIELDS for the search performed.
+# PROPRIETARY: DNSE has no proprietary trading source in scope (MISSING).
+# FHSC /market/stocks/{symbol}/trading/proprietary/history provides buy/sell/net volume and value
+# with deterministic net = buy - sell component semantics (RESEARCH_USABLE).
 # ---------------------------------------------------------------------------------
 
+_FHSC_PROPRIETARY_EVIDENCE = (
+    "retained official OpenAPI /market/stocks/{symbol}/trading/proprietary/history (TradingFlow schema)",
+    "proprietary buy / sell / net flow by session; net = buy - sell",
+)
 _PROPRIETARY_RECORDS: tuple[dict[str, Any], ...] = tuple(
     _record(
         semantic_identity=identity, source=SOURCE_DNSE, source_capability_id="UNIDENTIFIED",
         provider_native_representation=None, canonical_representation=None, usability_state=MISSING,
         known_semantic_gaps=(
-            "no_proprietary_desk_trading_source_or_module_identified_in_targeted_search_20260821",
+            "no_proprietary_desk_trading_source_or_module_identified_in_dnse_scope",
         ),
         authority_requirements=("an_owner-approved_proprietary/principal_trading_data_source",),
-        permitted_use_cases=(), evidence=(), note="Family defined for schema completeness only.",
+        permitted_use_cases=(), evidence=(), note="DNSE does not expose proprietary trading.",
     )
-    for identity in SEMANTIC_FIELDS[FAMILY_PROPRIETARY]
+    for identity in ("PROPRIETARY_BUY_VOLUME", "PROPRIETARY_SELL_VOLUME", "PROPRIETARY_NET_VOLUME",
+                     "PROPRIETARY_BUY_VALUE", "PROPRIETARY_SELL_VALUE", "PROPRIETARY_NET_VALUE")
+) + tuple(
+    _record(
+        semantic_identity=identity, source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/proprietary/history." + identity.lower(),
+        provider_native_representation={
+            "unit": "shares" if identity.endswith("VOLUME") else "vnd",
+            "field": identity.lower(),
+        },
+        canonical_representation={
+            "unit": "shares" if identity.endswith("VOLUME") else "vnd_raw_not_thousands",
+            "note": "deterministic component mapping; net is buy - sell" if "NET" in identity else "raw observation",
+        },
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "PROPRIETARY_FLOW_MONITORING"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_PROPRIETARY_EVIDENCE,
+    )
+    for identity in ("PROPRIETARY_BUY_VOLUME", "PROPRIETARY_SELL_VOLUME", "PROPRIETARY_NET_VOLUME",
+                     "PROPRIETARY_BUY_VALUE", "PROPRIETARY_SELL_VALUE", "PROPRIETARY_NET_VALUE")
 )
 
+# ---------------------------------------------------------------------------------
+# MICROSTRUCTURE: DNSE has no active-order classification in scope (MISSING).
+# FHSC /market/stocks/{symbol}/trading/orders/history provides active buy/sell order counts,
+# active buy/sell volumes (lifted offer vs hit bid), and net volume (RESEARCH_USABLE).
+# Active order volumes are strictly separate from total executed volume.
+# ---------------------------------------------------------------------------------
+
+_FHSC_MICROSTRUCTURE_EVIDENCE = (
+    "retained official OpenAPI /market/stocks/{symbol}/trading/orders/history (StockOrderStatistic schema)",
+    "Thống kê lệnh đã khớp phân loại theo bên chủ động (lifted offer vs hit bid); net_volume = buy - sell",
+)
 _MICROSTRUCTURE_RECORDS: tuple[dict[str, Any], ...] = tuple(
     _record(
-        semantic_identity=identity, source=SOURCE_FHSC, source_capability_id="UNIDENTIFIED",
+        semantic_identity=identity, source=SOURCE_DNSE, source_capability_id="UNIDENTIFIED",
         provider_native_representation=None, canonical_representation=None, usability_state=MISSING,
         known_semantic_gaps=(
-            "no_confirmed_fhsc_or_dnse_tick-level_active_buy/sell_count_contract_identified_"
-            "in_targeted_search_20260821",
+            "no_confirmed_dnse_tick-level_active_order_contract_identified_in_current_scope",
         ),
-        authority_requirements=("a_confirmed_tick-or-order-level_active_buy/sell_source",),
-        permitted_use_cases=(), evidence=(), note="Family defined for schema completeness only.",
+        authority_requirements=("a_confirmed_dnse_order-level_active_buy/sell_source",),
+        permitted_use_cases=(), evidence=(), note="DNSE does not expose active order classification in current scope.",
     )
-    for identity in SEMANTIC_FIELDS[FAMILY_MICROSTRUCTURE]
+    for identity in ("ACTIVE_BUY_ORDER_COUNT", "ACTIVE_SELL_ORDER_COUNT",
+                     "ACTIVE_BUY_VOLUME", "ACTIVE_SELL_VOLUME", "ACTIVE_NET_VOLUME",
+                     "ACTIVE_BUY_COUNT", "ACTIVE_SELL_COUNT")
+) + (
+    _record(
+        semantic_identity="ACTIVE_BUY_ORDER_COUNT", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/orders/history.buy.order_count",
+        provider_native_representation={"unit": "orders", "field": "buy.order_count"},
+        canonical_representation={"unit": "orders"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ORDER_FLOW_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_MICROSTRUCTURE_EVIDENCE,
+    ),
+    _record(
+        semantic_identity="ACTIVE_SELL_ORDER_COUNT", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/orders/history.sell.order_count",
+        provider_native_representation={"unit": "orders", "field": "sell.order_count"},
+        canonical_representation={"unit": "orders"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ORDER_FLOW_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_MICROSTRUCTURE_EVIDENCE,
+    ),
+    _record(
+        semantic_identity="ACTIVE_BUY_VOLUME", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/orders/history.buy.volume",
+        provider_native_representation={"unit": "shares", "field": "buy.volume"},
+        canonical_representation={"unit": "shares"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ORDER_FLOW_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_MICROSTRUCTURE_EVIDENCE,
+        note="Active buy volume (lifted offer) is strictly distinct from total executed volume.",
+    ),
+    _record(
+        semantic_identity="ACTIVE_SELL_VOLUME", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/orders/history.sell.volume",
+        provider_native_representation={"unit": "shares", "field": "sell.volume"},
+        canonical_representation={"unit": "shares"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ORDER_FLOW_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_MICROSTRUCTURE_EVIDENCE,
+        note="Active sell volume (hit bid) is strictly distinct from total executed volume.",
+    ),
+    _record(
+        semantic_identity="ACTIVE_NET_VOLUME", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/orders/history.net_volume",
+        provider_native_representation={"unit": "shares", "field": "net_volume"},
+        canonical_representation={"unit": "shares", "note": "buy.volume - sell.volume"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ORDER_FLOW_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_MICROSTRUCTURE_EVIDENCE,
+    ),
+    _record(
+        semantic_identity="ACTIVE_BUY_COUNT", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/orders/history.buy.order_count",
+        provider_native_representation={"unit": "orders", "field": "buy.order_count"},
+        canonical_representation={"unit": "orders"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ORDER_FLOW_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_MICROSTRUCTURE_EVIDENCE,
+        note="Legacy alias for ACTIVE_BUY_ORDER_COUNT.",
+    ),
+    _record(
+        semantic_identity="ACTIVE_SELL_COUNT", source=SOURCE_FHSC,
+        source_capability_id="fhsc:/market/stocks/{symbol}/trading/orders/history.sell.order_count",
+        provider_native_representation={"unit": "orders", "field": "sell.order_count"},
+        canonical_representation={"unit": "orders"},
+        usability_state=RESEARCH_USABLE,
+        known_semantic_gaps=(),
+        authority_requirements=(),
+        permitted_use_cases=("DESCRIPTIVE_DISPLAY", "ORDER_FLOW_ANALYTICS"),
+        prohibited_use_cases=("LIQUIDITY_AUTHORITY", "POSITION_SIZING"),
+        evidence=_FHSC_MICROSTRUCTURE_EVIDENCE,
+        note="Legacy alias for ACTIVE_SELL_ORDER_COUNT.",
+    ),
 )
 
 # ---------------------------------------------------------------------------------
