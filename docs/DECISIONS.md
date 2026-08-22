@@ -1667,3 +1667,30 @@ single-ticker work.
    are append-only `HUMAN_EDIT` records with reviewer identity/timestamp; they remain distinct from
    machine claims.  `APPROVED_FOR_INTERNAL_RESEARCH` means only a reviewed internal-research draft,
    never recommendation, portfolio, sizing, trade, or execution authorization.
+
+## 2026-08-22 - Prospective Research Case & Learning Ledger V1
+
+`PROSPECTIVE_RESEARCH_CASE_AND_LEARNING_LEDGER_V1 = READY_FOR_REVIEW` (`push = NO`).
+
+1. `prospective_research_case_learning_ledger.py` establishes the prospective-only lifecycle
+   `KNOWN_AT → FROZEN_CASE → LATER_OBSERVATION → APPEND_ONLY_UPDATE → CLAIM/SCENARIO/CATALYST
+   EVALUATION → OBSERVATIONAL_LEARNING_LEDGER`.  It begins from the current qualified decision and
+   AI-input contracts; no historical case is reconstructed from later knowledge, and no case is
+   written merely to represent the full cohort.
+2. A content-addressed T0 case freezes the dated 2026-08-20 empirical-active 523-member universe
+   identity, decision/AI-input lineage, validated AI draft and human-review state where present,
+   original claims/evidence/authority, lanes, scenario, catalyst, risks, questions, and blockers.
+   Original case content cannot be overwritten.  Later updates require source identity, preserve
+   `observed_at`/`known_at` ordering, reference original claims/evidence, and carry bounded claim
+   outcomes and scenario/catalyst states.  A descriptive market price observation cannot by itself
+   support or contradict a thesis.
+3. Full-cohort readiness is exactly 523 `CASE_CREATABLE`, 0 `NEEDS_MORE_EVIDENCE`, and 0
+   `NOT_CREATABLE`; this is prospective-record createability, not investment eligibility.  The
+   separate 2026-08-21 524-member shadow snapshot is not mixed in.  Representative retained
+   decision packets cover HPG, VCB, SSI, scenario-covered AAN, and low-evidence AAA, while preserving
+   the non-authoritative valuation proxy and corporate-action-blocked cases.
+4. A deterministic ledger aggregates only non-fixture updated cases into observational relationship
+   and gap patterns.  Explicit `TEST_FIXTURE` updates prove mechanics where no eligible later
+   decision-time case observation exists and are excluded from learning.  The ledger cannot emit
+   recommendations, model weights/rules, investment authority, portfolio/sizing, execution,
+   historical PIT/RAW_AS_TRADED, liquidity, or valuation authority.

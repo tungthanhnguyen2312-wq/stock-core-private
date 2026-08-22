@@ -48,6 +48,7 @@
 | **Official Financial Evidence Scale-Out Wave 2** | Bounded Wave 2 official evidence qualification & source discovery over empirical cohort | **PARTIAL LOCALLY** | Evaluates 17 bounded candidates selected under Layered Topology B across Banks (5), Securities (2), and Corporate (10). Closed-world route discovery confirms all 17 fail closed with `NO_APPROVED_ROUTE_FOUND` and `OWNERSHIP_EVIDENCE_MISSING`. Baseline qualified panel remains 100% stable at 13 issuers / 138 canonical facts / 94 exact P3-B metrics (510 blocked). Zero synthetic facts, zero unpromoted provider authority, zero PIT/valuation/recommendation promotion. |
 | **Prospective Research Cohort Diagnostics V1** | Deterministic cohort diagnostics & sample maturity across prospective learning horizons | **COMPLETE LOCALLY** | Maps 1,047 observations across 2 retained sessions to 87 cohort summaries over 10 descriptor dimensions. Real H1 transition (521 observed, 2 missing) is classified as `OBSERVED_IMMATURE_SAMPLE` (descriptive only); H3/H5 remain 100% `PENDING_OUTCOMES`. Zero alpha/backtest/predictive/recommendation/sizing authority; no RAW_AS_TRADED/PIT promotion. |
 | **Prospective Daily Rollforward V1** | Offline immutable T-state sealing and append-only prospective learning ledger | **COMPLETE LOCALLY** | Preserves the first 2026-08-20 → 2026-08-21 descriptive H1 attribution, seals an independent 524-member 2026-08-21 shadow cohort before a later exact session, and retains H1/H3/H5 maturity explicitly. Missing same-session analytical components are unavailable, never silently carried forward. No backtest/PIT/RAW_AS_TRADED/alpha/recommendation authority. |
+| **Prospective Research Case & Learning Ledger V1** | Immutable decision/AI/human T0 research cases with append-only observational updates | **READY FOR REVIEW** | The dated 2026-08-20 523-member empirical-active cohort is readiness-assessed only: 523 `CASE_CREATABLE`, 0 `NEEDS_MORE_EVIDENCE`, 0 `NOT_CREATABLE`; no cohort cases are persisted or backfilled. A case freezes decision/AI/validated-draft/human-review/evidence identities at `KNOWN_AT`; later observations must be strictly later and append-only. Fixture updates are explicitly `TEST_FIXTURE` and excluded from learning. No price movement proves a thesis, no historical PIT/RAW_AS_TRADED authority is created, and learning remains observational without recommendation, model-weight, portfolio, or execution authority. |
 | **P0-RECOVERY** | Canonical Trades Materialization & Task 160 | **CLOSED** | `TERMINAL_SUCCESS_QUALITY_RESTRICTED`. 18,109,141 canonical trades across 40 sessions. |
 | **P0-A.1** | Market-Wide OHLC Raw Ingestion | **COMPLETE** | 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected failures classified. |
 | **P0-A.2** | Corporate Action Evidence Scale-Out | **COMPLETE** | Document-authority coverage & multi-event extraction integrated locally (`official_corporate_action_ledger.py`). |
@@ -180,6 +181,29 @@ internal research disposition.
   `NEEDS_MORE_EVIDENCE`, `APPROVED_FOR_INTERNAL_RESEARCH`, and `REJECTED`.  Human edits append
   `HUMAN_EDIT` provenance; they do not overwrite the machine draft.  Approval is internal
   research workflow only, never investment, portfolio, or execution authority.
+
+### Prospective Research Case & Learning Ledger V1 (2026-08-22)
+
+`PROSPECTIVE_RESEARCH_CASE_AND_LEARNING_LEDGER_V1 = READY_FOR_REVIEW` locally.  The new
+`prospective_research_case_learning_ledger.py` contract begins prospective case history from the
+currently qualified decision/AI packet boundary; it does not fabricate a historical case or consume
+the earlier broad rollforward as a substitute for a decision-time case.
+
+- A frozen case carries the dated 2026-08-20 cohort/universe identity, deterministic decision and
+  AI-input identities, validated-draft and human-review provenance where present, original claims
+  and evidence IDs, lanes, scenario, catalysts, risks, questions, blockers, authority classes, and
+  a content identity.  It is a research snapshot, never a BUY/SELL/HOLD or investment decision.
+- Later records are separate immutable updates.  `observed_at` is strictly after T0 `known_at`,
+  update `known_at` cannot precede its observation, claim outcomes always retain later source
+  evidence (or explicit human-review identity), and updates cannot rewrite the T0 object.  Price
+  observations may be descriptive but may not support or contradict a thesis by themselves.
+- The 523 dated packets are all `CASE_CREATABLE` for a prospective record even where analytical
+  gates remain blocked; readiness is not investment eligibility.  Model drafts remain pending and
+  no cases are persisted as a coverage exercise.  Tests use HPG, VCB, SSI, AAN, and AAA real packet
+  fixtures; later test mechanics are visibly `TEST_FIXTURE` and excluded from learning patterns.
+- The ledger reports only observational claim relationships, recurrent evidence/lane/authority gaps,
+  catalyst/scenario states, and human-edit counts.  It cannot create a recommendation, model rule,
+  authority promotion, valuation authority, liquidity/PIT authority, portfolio action, or execution.
 
 ### Rebaselined Active Gates
 
