@@ -49,6 +49,7 @@
 | **Prospective Research Cohort Diagnostics V1** | Deterministic cohort diagnostics & sample maturity across prospective learning horizons | **COMPLETE LOCALLY** | Maps 1,047 observations across 2 retained sessions to 87 cohort summaries over 10 descriptor dimensions. Real H1 transition (521 observed, 2 missing) is classified as `OBSERVED_IMMATURE_SAMPLE` (descriptive only); H3/H5 remain 100% `PENDING_OUTCOMES`. Zero alpha/backtest/predictive/recommendation/sizing authority; no RAW_AS_TRADED/PIT promotion. |
 | **Prospective Daily Rollforward V1** | Offline immutable T-state sealing and append-only prospective learning ledger | **COMPLETE LOCALLY** | Preserves the first 2026-08-20 → 2026-08-21 descriptive H1 attribution, seals an independent 524-member 2026-08-21 shadow cohort before a later exact session, and retains H1/H3/H5 maturity explicitly. Missing same-session analytical components are unavailable, never silently carried forward. No backtest/PIT/RAW_AS_TRADED/alpha/recommendation authority. |
 | **Prospective Research Case & Learning Ledger V1** | Immutable decision/AI/human T0 research cases with append-only observational updates | **READY FOR REVIEW** | The dated 2026-08-20 523-member empirical-active cohort is readiness-assessed only: 523 `CASE_CREATABLE`, 0 `NEEDS_MORE_EVIDENCE`, 0 `NOT_CREATABLE`; no cohort cases are persisted or backfilled. A case freezes decision/AI/validated-draft/human-review/evidence identities at `KNOWN_AT`; later observations must be strictly later and append-only. Fixture updates are explicitly `TEST_FIXTURE` and excluded from learning. No price movement proves a thesis, no historical PIT/RAW_AS_TRADED authority is created, and learning remains observational without recommendation, model-weight, portfolio, or execution authority. |
+| **Analyst Research Workbench & Case Operations V1** | In-memory analyst orchestration over the dated decision, AI/human-review, and case contracts | **READY FOR REVIEW** | A single reusable workbench resolves only the exact 2026-08-20 523-member retained decision snapshot; it explicitly rejects 2026-08-21 shadow substitution and unknown ticker/as-of requests. Cohort state is 523 `CASE_STRUCTURE_ELIGIBLE` (the prior prospective `CASE_CREATABLE` meaning), but 0 validated drafts, 0 qualifying reviews, 0 `CASE_CREATION_READY`, and 0 local cases. It exposes research state, AI handoff/validator, human review, immutable local case/update/history/claim trace, and read-only learning without recalculating analytics or writing runtime/production data. Later production updates require an explicitly registered retained evidence identity; `TEST_FIXTURE` updates require a `fixture:` identity and remain excluded. All authority boundaries remain unchanged. |
 | **P0-RECOVERY** | Canonical Trades Materialization & Task 160 | **CLOSED** | `TERMINAL_SUCCESS_QUALITY_RESTRICTED`. 18,109,141 canonical trades across 40 sessions. |
 | **P0-A.1** | Market-Wide OHLC Raw Ingestion | **COMPLETE** | 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected failures classified. |
 | **P0-A.2** | Corporate Action Evidence Scale-Out | **COMPLETE** | Document-authority coverage & multi-event extraction integrated locally (`official_corporate_action_ledger.py`). |
@@ -204,6 +205,31 @@ the earlier broad rollforward as a substitute for a decision-time case.
 - The ledger reports only observational claim relationships, recurrent evidence/lane/authority gaps,
   catalyst/scenario states, and human-edit counts.  It cannot create a recommendation, model rule,
   authority promotion, valuation authority, liquidity/PIT authority, portfolio action, or execution.
+
+### Analyst Research Workbench & Case Operations V1 (2026-08-22)
+
+`ANALYST_RESEARCH_WORKBENCH_AND_CASE_OPERATIONS_V1 = READY_FOR_REVIEW` locally.  The new
+`analyst_research_workbench.py` is a reusable in-memory operational boundary, not a second
+analytics engine, digest, Daily Analyst Brief, portfolio surface, or persistence service.
+
+- `GET_RESEARCH_STATE` resolves a ticker only against the exact dated 2026-08-20 523-member
+  decision snapshot and retains its universe/decision/AI-input identities, evidence, eligibility,
+  lanes, scenario, valuation, catalyst, risk, unknown, blocked, and authority states.  The
+  separate 2026-08-21 524-member shadow snapshot is explicitly never substituted or combined.
+- AI handoff returns the existing content-addressed input and prompt contract.  Any supplied draft
+  goes through the existing deterministic validator before human-review packet construction;
+  human review continues to append `HUMAN_EDIT` provenance and approval is internal research only.
+- Cases and histories are local-session/in-memory only.  Case creation requires the exact current
+  validated draft and a recorded `NEEDS_MORE_EVIDENCE` or `APPROVED_FOR_INTERNAL_RESEARCH` review.
+  Updates delegate to the immutable case contract, require ordered timestamps and a registered
+  retained evidence identity (or explicit `fixture:` `TEST_FIXTURE`), and never turn price movement
+  into thesis proof.  Trace and learning queries preserve evidence/claim/AI/human/update lineage.
+- The stateless CLI exposes retained read operations; stateful case operations are API/session
+  operations so milestone acceptance entails no runtime or production database write.  Full-cohort
+  discovery reports 523 research states/AI inputs and 523 `CASE_STRUCTURE_ELIGIBLE` records—the
+  preserved meaning of prospective `CASE_CREATABLE`—but 0 validated drafts, 0 qualifying human
+  reviews, 0 `CASE_CREATION_READY`, and 0 local cases.  The learning view remains observational and
+  cannot promote authority, rules, recommendations, portfolio action, or execution.
 
 ### Rebaselined Active Gates
 

@@ -1694,3 +1694,58 @@ single-ticker work.
    decision-time case observation exists and are excluded from learning.  The ledger cannot emit
    recommendations, model weights/rules, investment authority, portfolio/sizing, execution,
    historical PIT/RAW_AS_TRADED, liquidity, or valuation authority.
+
+## 2026-08-22 - Analyst Research Workbench & Case Operations V1
+
+`ANALYST_RESEARCH_WORKBENCH_AND_CASE_OPERATIONS_V1 = READY_FOR_REVIEW` (`push = NO`).
+
+1. `analyst_research_workbench.py` is the one in-memory analyst orchestration contract over the
+   existing evidence-gated decision workflow, evidence-bound AI/human-review contract, and
+   prospective case/learning ledger.  It delegates to those producers and does not duplicate their
+   calculations, evidence acquisition, authority decisions, or storage.
+2. The workbench resolves only the dated 2026-08-20 523-member empirical-active decision snapshot.
+   Its state and handoff responses preserve exact universe, decision, and AI-input identities;
+   unknown ticker/as-of requests fail clearly, and the separate 2026-08-21 524-member shadow
+   snapshot is neither silently selected nor combined.
+3. Untrusted drafts always pass the existing deterministic validator before a human-review packet
+   can be built.  Review operations preserve bounded review states, reviewer notes, and append-only
+   `HUMAN_EDIT` provenance.  Local case creation requires the exact valid draft/validation and a
+   recorded `NEEDS_MORE_EVIDENCE` or `APPROVED_FOR_INTERNAL_RESEARCH` review; that record remains
+   research-only and does not confer investment authority.
+4. Local case updates delegate to the immutable ledger contract and require ordered timestamps,
+   claim/scenario/catalyst lineage, and a supported evidence identity.  Non-fixture updates must be
+   supplied as registered retained identities at workbench construction; test mechanics must be
+   explicit `TEST_FIXTURE` updates with `fixture:` identities.  Price movement remains descriptive,
+   never causal thesis resolution.  Queryable case, history, claim-trace, and learning-summary
+   contracts preserve the complete lineage while emitting no model weights/rules, recommendation,
+   portfolio, execution, liquidity/PIT, or valuation authority.
+5. The stateless CLI exposes only retained read operations; stateful operations remain local API
+   session methods.  This accepts no production/runtime database write.  Full-cohort resolution is
+   523 research states, 523 AI inputs, 523 structurally creatable cases, and zero automatic drafts
+   or persisted cases.  Representative end-to-end tests cover HPG, VCB, SSI, AAN, and AAA.
+
+## 2026-08-22 - Analyst Research Workbench V1 Terminal Semantic Reconciliation
+
+`ANALYST_RESEARCH_WORKBENCH_AND_CASE_OPERATIONS_V1 = READY_FOR_REVIEW` (`push = NO`).
+
+1. The prospective-case milestone's 523 `CASE_CREATABLE` result remains correct and is preserved:
+   it means the dated decision and deterministic AI-input packet can form a structurally valid
+   prospective research snapshot.  The workbench now exposes that source state as
+   `CASE_STRUCTURE_ELIGIBLE`; it is neither evidence sufficiency nor permission to execute
+   `CREATE_CASE` immediately.
+2. Fresh full-cohort workbench state is exactly 523 research states available, 523 AI inputs
+   available, 523 `CASE_STRUCTURE_ELIGIBLE`, 0 validated AI drafts, 0 qualifying human reviews, 0
+   `CASE_CREATION_READY`, and 0 local cases.  All 523 creation actions are `CASE_CREATION_NOT_READY`
+   for both `NO_VALIDATED_AI_DRAFT_IN_LOCAL_SESSION` and
+   `NO_QUALIFYING_HUMAN_REVIEW_IN_LOCAL_SESSION`; no draft or review was fabricated to change that.
+3. Every exposed operation now returns current session-local status and prerequisites: research
+   state and AI input are `AVAILABLE`; draft validation is `READY` but requires an external draft;
+   human review becomes `READY` only after validation; creation becomes `CASE_CREATION_READY` only
+   after a qualifying recorded review; case/history/claim/update operations require local case and
+   relevant evidence/history state.  A case with no registered retained later evidence is explicitly
+   `READY_FOR_TEST_FIXTURE_ONLY` for updates, not described as production-ready.
+4. The API records valid drafts/reviews and local cases only in its in-memory session.  It supplies
+   no durable production persistence.  Test drafts use `TEST_FIXTURE` identities, test updates use
+   `TEST_FIXTURE` with `fixture:` identities, and fixtures remain excluded from observational
+   learning.  No authority boundary changes: recommendation, model weight/rule, target/probability,
+   valuation, liquidity/PIT, portfolio/sizing, execution, and production DB remain unavailable.
