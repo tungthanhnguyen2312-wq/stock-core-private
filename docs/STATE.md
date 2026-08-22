@@ -51,6 +51,7 @@
 | **Prospective Research Case & Learning Ledger V1** | Immutable decision/AI/human T0 research cases with append-only observational updates | **READY FOR REVIEW** | The dated 2026-08-20 523-member empirical-active cohort is readiness-assessed only: 523 `CASE_CREATABLE`, 0 `NEEDS_MORE_EVIDENCE`, 0 `NOT_CREATABLE`; no cohort cases are persisted or backfilled. A case freezes decision/AI/validated-draft/human-review/evidence identities at `KNOWN_AT`; later observations must be strictly later and append-only. Fixture updates are explicitly `TEST_FIXTURE` and excluded from learning. No price movement proves a thesis, no historical PIT/RAW_AS_TRADED authority is created, and learning remains observational without recommendation, model-weight, portfolio, or execution authority. |
 | **Analyst Research Workbench & Case Operations V1** | In-memory analyst orchestration over the dated decision, AI/human-review, and case contracts | **READY FOR REVIEW** | A single reusable workbench resolves only the exact 2026-08-20 523-member retained decision snapshot; it explicitly rejects 2026-08-21 shadow substitution and unknown ticker/as-of requests. Cohort state is 523 `CASE_STRUCTURE_ELIGIBLE` (the prior prospective `CASE_CREATABLE` meaning), but 0 validated drafts, 0 qualifying reviews, 0 `CASE_CREATION_READY`, and 0 local cases. It exposes research state, AI handoff/validator, human review, immutable local case/update/history/claim trace, and read-only learning without recalculating analytics or writing runtime/production data. Later production updates require an explicitly registered retained evidence identity; `TEST_FIXTURE` updates require a `fixture:` identity and remain excluded. All authority boundaries remain unchanged. |
 | **Durable Prospective Research Case Store V1** | Explicit-path local durable immutable-case and append-only event store | **READY FOR REVIEW** | `durable_prospective_research_case_store.py` persists a content-addressed T0 envelope plus separately content-addressed event chain, verifies all identities on load, and reconstructs deterministic histories/claim/scenario/catalyst state across restart. The store is local, one-writer, and production-independent; it has no implicit path, source fixture, migration, or production DB dependency. `TEST_FIXTURE` cases/updates are excluded from durable learning. The system is `DURABLE_CASE_SYSTEM_READY` for genuine future reviewed cases only once an explicit local store root, validated draft, qualifying review, and retained later-evidence identity are supplied; no real cases were created by this milestone. |
+| **Prospective Research Case Operations V1** | First retained-evidence operating cohort and deterministic human-review manifest | **READY FOR HUMAN REVIEW** | The operational cohort is exactly `HPG`, `VCB`, `SSI`, `AAN`, and `AAA` from the dated 2026-08-20 523-member empirical-active snapshot. It prepares real decision/AI-input identities and a diversity-prioritized review queue only: all five are `MODEL_DRAFT_PENDING`, validation/human review are not run, and `REAL_CASES_CREATED = 0`. The manifest neither invents exact known-at wall-clock times nor substitutes the separate 2026-08-21 524-member snapshot. It is the handoff for an authorized real draft and analyst review, not a case/backfill/recommendation artifact. |
 | **P0-RECOVERY** | Canonical Trades Materialization & Task 160 | **CLOSED** | `TERMINAL_SUCCESS_QUALITY_RESTRICTED`. 18,109,141 canonical trades across 40 sessions. |
 | **P0-A.1** | Market-Wide OHLC Raw Ingestion | **COMPLETE** | 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected failures classified. |
 | **P0-A.2** | Corporate Action Evidence Scale-Out | **COMPLETE** | Document-authority coverage & multi-event extraction integrated locally (`official_corporate_action_ledger.py`). |
@@ -259,6 +260,33 @@ runtime/production database.
   when its existing operational prerequisites are supplied.  It does not mean a live case exists or
   grant any recommendation, valuation, liquidity/PIT, portfolio, sizing, execution, or production
   persistence authority.
+
+### Prospective Research Case Operations V1 (2026-08-22)
+
+`PROSPECTIVE_RESEARCH_CASE_OPERATIONS_V1 = READY_FOR_HUMAN_REVIEW` locally.  The new
+`prospective_research_case_operations.py` consumes the completed workbench only to make the first
+real retained-evidence research queue actionable; it is neither a new decision engine nor a
+synthetic case cohort.
+
+- The five-member cohort is `HPG`, `VCB`, `SSI`, `AAN`, and `AAA`.  Its ordering is deliberate
+  evidence/authority-pattern diversity: corporate official-financial plus proxy valuation; bank
+  corporate-action-blocked valuation; securities sector-method inapplicability; scenario-covered
+  corporate research; and low-official-evidence contrast.  It is not investment attractiveness or
+  BUY/SELL/HOLD ranking.
+- Every member resolves the exact dated 2026-08-20 empirical-active 523-member universe, decision
+  packet, AI input, evidence, lane, scenario, valuation, catalyst, risk, and blocker state.  The
+  retained packet identifies a research session but no exact decision-time wall-clock timestamp, so
+  the manifest explicitly records `SESSION_BOUND_KNOWN_AT` / `NOT_RETAINED` rather than fabricating
+  a time.  The distinct 2026-08-21 524-member shadow snapshot is never substituted.
+- The manifest carries the existing model-independent prompt/schema and complete AI-input packet
+  for each ticker.  No model output is generated: all five are `MODEL_DRAFT_PENDING`, validation is
+  `NOT_RUN_NO_REAL_MODEL_DRAFT`, human review is `HUMAN_REVIEW_REQUIRED`, and durable creation is
+  blocked pending a real draft, valid deterministic validation, qualifying recorded human review,
+  and explicit durable-store root.  Thus `REAL_CASES_CREATED = 0` by design.
+- Future update readiness lists only possible future retained evidence categories and allowed
+  relationships; it does not acquire, monitor, or fabricate evidence.  The T0 learning baseline is
+  zero real cases/reviews/human edits/outcomes.  Human action is the explicit next gate; implementation
+  approval is not analyst thesis approval and cannot create a real case.
 
 ### Rebaselined Active Gates
 

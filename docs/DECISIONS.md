@@ -1774,3 +1774,30 @@ single-ticker work.
    human review, explicit local store root, and retained later-evidence identity are supplied.  It
    creates no real case here and changes no recommendation, model/rule, valuation, liquidity/PIT,
    portfolio, sizing, execution, or production authority.
+
+## 2026-08-22 - Prospective Research Case Operations V1
+
+`PROSPECTIVE_RESEARCH_CASE_OPERATIONS_V1 = READY_FOR_HUMAN_REVIEW` (`push = NO`).
+
+1. The first real operating cohort is exactly `HPG`, `VCB`, `SSI`, `AAN`, and `AAA`, selected from
+   the retained dated 2026-08-20 523-member empirical-active snapshot for diverse research and
+   authority states rather than attractiveness: corporate official financial/proxy valuation, bank
+   corporate-action block, securities sector-specific inapplicability, scenario coverage, and low
+   official evidence.  The separate 2026-08-21 524-member shadow snapshot is never used as a
+   fallback or denominator.
+2. `prospective_research_case_operations.py` resolves each exact existing decision/workbench/AI
+   packet identity, full evidence inventory, lanes, scenario, valuation, catalysts, questions, and
+   blockers into a deterministic operating manifest.  Known-at is honestly session-bound: the
+   retained packet identifies 2026-08-20 but provides no exact decision-time timestamp, which is
+   explicitly `NOT_RETAINED` rather than invented.
+3. Each packet has the actual model-independent AI input and existing prompt/schema prepared.  No
+   live model adapter is authorized or called, hence all five are `MODEL_DRAFT_PENDING`, validator
+   status is not run, and human review is required.  `REAL_CASES_CREATED = 0`: an implementation
+   approval, a fixture, or a coding-agent action cannot substitute for an analyst's real draft and
+   qualifying recorded review.
+4. The manifest provides the exact human queue, not an investment ranking, and names future
+   financial/event/scenario/corporate-action/descriptive-market evidence relationships without
+   acquiring or monitoring them.  Its learning baseline has zero real cases, reviews, human edits,
+   claim outcomes, and scenario/catalyst outcomes.  A real case may enter the completed durable
+   store only after the existing draft-validation-review-store gate passes; no authority boundary
+   changes in this operational preparation.
