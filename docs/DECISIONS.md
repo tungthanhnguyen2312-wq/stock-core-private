@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-22 - Scenario Distribution and Liquidity Reconciliation Checkpoint V1
+
+`CAPABILITY_FIRST_SCENARIO_DISTRIBUTION_V1 = COMPLETE_LOCAL_CHECKPOINT` and `QUALIFIED_LIQUIDITY_INPUTS_RECONCILIATION_V1 = COMPLETE_LOCAL_RECONCILIATION_EVIDENCE` (`push = NO`).
+
+1. Scenario Distribution V1 deterministically retains two distinct denominators: 12 real scenario cases and a 524-record universe. It creates no probability, target, recommendation, or ranking authority.
+2. Liquidity Reconciliation V1 confirms DNSE `v` = FHSC matched volume in 35/35 discriminating retained observations within the tested scope. Missing and non-discriminating observations remain explicit.
+3. The canonical DNSE board contract is centralized as `G1` round-lot, `G4` odd-lot, `T1`/`T3` put-through round-lot, and `T4`/`T6` put-through odd-lot. The prior reversed variable labels were implementation prior art; this correction does not create numeric board composition evidence.
+4. Numeric board composition remains unavailable and `adv_turnover_input_eligible = false`. Neither checkpoint promotes liquidity, sizing, portfolio, PIT, RAW_AS_TRADED, probability, target, recommendation, or ranking authority beyond its explicit tested scope.
+
 ## 2026-08-22 - Capability-First Real EOD Vertical Slice V1 Validation
 
 `CAPABILITY_FIRST_REAL_EOD_VERTICAL_SLICE_V1 = COMPLETE_LOCAL_PASS` (`tools/collect_market_evidence.py`, `tools/materialize_daily_market_research.py`, `tests/test_materialize_daily_market_research.py`, `operations-review/capability-first-real-eod-2026-08-21/`, `operations-review/daily-market-research-2026-08-21/`, `push = NO`).

@@ -203,6 +203,19 @@ def test_reconcile_volume_insufficient_discrimination():
     assert row["verdict_c1_c4"] == "INSUFFICIENT_DISCRIMINATION"
 
 
+def test_t4_is_put_through_odd_lot_under_the_canonical_board_contract():
+    """T4 completes both the put-through and odd-lot discrimination dimensions."""
+    trades = _trades(
+        {"symbol": "G4T4", "session_date": "2026-08-07", "board_id": "G1", "quantity": 100},
+        {"symbol": "G4T4", "session_date": "2026-08-07", "board_id": "G4", "quantity": 10},
+        {"symbol": "G4T4", "session_date": "2026-08-07", "board_id": "T4", "quantity": 5},
+    )
+    ohlc = _simple_ohlc("G4T4", "2026-08-07", 115)
+    row = reconcile_volume(trades, ohlc).iloc[0]
+    assert bool(row["exact_match_C4"]) is True
+    assert row["verdict_c1_c4"] == "VALIDATED_READY_FOR_P0_B2D_REVIEW"
+
+
 # ---------------------------------------------------------------------------
 # 6. Positive delta multiple-of-100 residual classification
 # ---------------------------------------------------------------------------

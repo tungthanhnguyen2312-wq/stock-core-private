@@ -33,6 +33,8 @@ from typing import Any
 
 import pandas as pd
 
+from market_phase2_foundation import DNSE_BOARD_SEMANTICS
+
 import vn_time
 
 
@@ -338,9 +340,21 @@ def reconcile_volume(
         residual_class = classify_c5_residual(delta_c5)
 
         # ---- Discrimination ----
-        has_continuous = g1 > 0
-        has_put_through = g4 > 0
-        has_odd_lot = (t1 > 0) or (t3 > 0)
+        # The C1-C4 sums above already follow the canonical board contract.
+        # These legacy predicate labels did not: G4 is odd-lot, while every
+        # T-board is put-through (T4/T6 are also odd-lot).
+        board_quantities = {"G1": g1, "G4": g4, "T1": t1, "T3": t3, "T4": t4, "T6": t6}
+        has_continuous = board_quantities["G1"] > 0
+        has_put_through = any(
+            board_quantities[code] > 0
+            for code, meaning in DNSE_BOARD_SEMANTICS.items()
+            if meaning.startswith("PUT_THROUGH")
+        )
+        has_odd_lot = any(
+            board_quantities[code] > 0
+            for code, meaning in DNSE_BOARD_SEMANTICS.items()
+            if "ODD_LOT" in meaning
+        )
         discriminating = has_continuous and has_put_through and has_odd_lot
 
         # ---- C1–C4 verdict (unchanged from original milestone) ----

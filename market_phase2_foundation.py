@@ -23,6 +23,18 @@ SEMANTIC_REGISTRY_VERSION = "1.0.0"
 VOLUME_BASIS_UNKNOWN = "UNKNOWN"
 PIT_HISTORICAL_ONLY = FeatureStatus.HISTORICAL_ONLY.value
 
+# Canonical DNSE board semantics. This is the repository's current semantic
+# contract (docs/market_wide_ingest_first_architecture.md), not an inference
+# from board quantities or an authority promotion for volume composition.
+DNSE_BOARD_SEMANTICS: dict[str, str] = {
+    "G1": "ROUND_LOT",
+    "G4": "ODD_LOT",
+    "T1": "PUT_THROUGH_ROUND_LOT",
+    "T3": "PUT_THROUGH_ROUND_LOT",
+    "T4": "PUT_THROUGH_ODD_LOT",
+    "T6": "PUT_THROUGH_ODD_LOT",
+}
+
 
 def _json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
@@ -32,9 +44,7 @@ def semantic_registry() -> list[dict[str, Any]]:
     """Return repository-authoritative board entries plus explicit unknown contracts."""
     authority = "docs/market_wide_ingest_first_architecture.md"
     entries = []
-    for code, meaning in {"G1": "ROUND_LOT", "G4": "ODD_LOT", "T1": "PUT_THROUGH_ROUND_LOT",
-                          "T3": "PUT_THROUGH_ROUND_LOT", "T4": "PUT_THROUGH_ODD_LOT",
-                          "T6": "PUT_THROUGH_ODD_LOT"}.items():
+    for code, meaning in DNSE_BOARD_SEMANTICS.items():
         entries.append({"semantic_key": f"DNSE.board.{code}", "provider": "DNSE", "raw_field": "boardId",
                         "raw_code": code, "normalized_meaning": meaning, "status": "DOCUMENTED",
                         "evidence_reference": authority, "effective_from": None, "effective_to": None,

@@ -3,7 +3,7 @@ import json
 import unittest
 import pandas as pd
 
-from market_phase2_foundation import (FinancialPitFact, canonical_instrument_identity, evaluate_quality,
+from market_phase2_foundation import (DNSE_BOARD_SEMANTICS, FinancialPitFact, canonical_instrument_identity, evaluate_quality,
     expand_raw_ohlc, financial_facts_visible_as_of, phase1_provider_exceptions, price_basis_for,
     semantic_registry)
 from provider_price_basis_registry import bounded_price_basis_for
@@ -16,6 +16,13 @@ def raw(symbol="AAA", payload=None):
             "raw_payload_json":json.dumps(payload), "raw_file":"raw.parquet"}
 
 class Phase2FoundationTests(unittest.TestCase):
+    def test_canonical_dnse_board_semantics_are_explicit(self):
+        self.assertEqual(DNSE_BOARD_SEMANTICS, {
+            "G1": "ROUND_LOT", "G4": "ODD_LOT",
+            "T1": "PUT_THROUGH_ROUND_LOT", "T3": "PUT_THROUGH_ROUND_LOT",
+            "T4": "PUT_THROUGH_ODD_LOT", "T6": "PUT_THROUGH_ODD_LOT",
+        })
+
     def test_identity_preserves_unknown_exchange_and_st_equity(self):
         identity = canonical_instrument_identity("DNSE", "AAA", {"exchange_raw":"UPX", "raw_security_group_id":"ST", "instrument_class":"EQUITY"})
         self.assertEqual("DNSE:AAA", identity["canonical_instrument_id"])
