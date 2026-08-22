@@ -10,6 +10,37 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-22 - Capability-First Real EOD Vertical Slice V1 Validation
+
+`CAPABILITY_FIRST_REAL_EOD_VERTICAL_SLICE_V1 = COMPLETE_LOCAL_PASS` (`tools/collect_market_evidence.py`, `tools/materialize_daily_market_research.py`, `tests/test_materialize_daily_market_research.py`, `operations-review/capability-first-real-eod-2026-08-21/`, `operations-review/daily-market-research-2026-08-21/`, `push = NO`).
+
+1. **Real Bounded EOD Cohort & Completed Session**:
+   - Resolved latest completed Vietnamese market session as `2026-08-21` (Friday, fully finalized post-close).
+   - Collected across 3 liquid listed equities: `HPG`, `VCB`, `SSI`.
+   - Queried `DNSE` (closed OHLC prices, foreign trading) and `FHSC` (trading volume/value history, foreign room, proprietary trading flow, order statistics/microstructure).
+   - Executed synchronously with a 50-request budget: 21 requests sent, 21 HTTP 200 responses, 0 provider rate limits (429), 0 budget skips, 0 conflicts.
+
+2. **Retained Session Packet & Raw Provenance**:
+   - Retained packet: `operations-review/capability-first-real-eod-2026-08-21/session_packet.json`.
+   - Packet identity: `packet:df7a6d73a0e8de762ce3d9261b8e9b5079fb57830529e0dc9d5c2f955a935f8a`.
+   - All 21 raw payloads retained in `operations-review/capability-first-real-eod-2026-08-21/raw/` and SHA-256 byte verified against recorded manifests.
+   - Observation breakdown: 21 `ACQUIRED`, 21 `RESEARCH_USABLE` (DNSE: 6 observations, FHSC: 15 observations). No secrets or credentials in any artifact.
+
+3. **Deterministic Materialization & Offline Idempotent Replay**:
+   - Materialization operator executed offline against retained session packet:
+     - Run directory: `operations-review/daily-market-research-2026-08-21/daily-market-research-2026-08-21/run-a7be9379974d561ab0b2334057edbf4035d02952e56e005fbfd243232db52a07`.
+     - Materialization identity: `daily_market_research_run:a7be9379974d561ab0b2334057edbf4035d02952e56e005fbfd243232db52a07`.
+     - Canonical integration identity: `canonical_market_integration:f884d1a9846cc9b304a28941f7b529bd27444ff440ede83939fd42cd80db3416`.
+     - Research artifact identity: `market-wide-research-artifact:1265038d6449eecb8ed9ff3d2a565d4260a831e6dab361e87c6d63ce96883419`.
+     - Manifest content identity: `f087c3bca5281ee4d42b40258f300decd1babc582c1c132d04be4091e3161a58`.
+   - Second offline execution confirmed idempotent replay (`is_idempotent_replay: true`) with byte-identical outputs, zero network calls, and completion inventory validation.
+
+4. **Preservation of Strict Authority Boundaries**:
+   - `authority_effect: "NONE"`.
+   - Zero promotion of `RAW_AS_TRADED`, PIT backtest eligibility, liquidity/sizing authority, valuation authority, or recommendation authority.
+   - Production database and runtime dashboards unmodified.
+   - Next operational milestone: `CAPABILITY_FIRST_EOD_1800_OPERATIONAL_SCHEDULING_V1` (operational scheduling only; no scheduler configured or installed in this closeout).
+
 ## 2026-08-21 - DNSE/FHSC Market Composition Scale-Out V1
 
 `DNSE_FHSC_MARKET_COMPOSITION_SCALEOUT_V1 = COMPLETE_LOCAL_HOSE_ONLY_PARTIAL` (`dnse_fhsc_market_composition_scaleout.py`, `tools/run_dnse_fhsc_market_composition_scaleout.py`, `tests/test_dnse_fhsc_market_composition_scaleout.py`, `operations-review/dnse-fhsc-market-composition-scaleout-v1-20260821/dnse_fhsc_market_composition_scaleout_artifact.json`, `push = NO`).
