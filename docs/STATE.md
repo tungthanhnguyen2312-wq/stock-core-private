@@ -160,6 +160,27 @@ and a mandatory human-review gate.
   target, expected return, scenario probability, position size, execution, liquidity, or PIT
   authority.  No new evidence, source route, data acquisition, or upstream authority is created.
 
+### Evidence-Bound AI Research & Human Review V1 (2026-08-22)
+
+`EVIDENCE_BOUND_AI_RESEARCH_AND_HUMAN_REVIEW_V1 = READY_FOR_REVIEW` locally.  The downstream
+`evidence_bound_ai_research_human_review.py` contract consumes only the content-addressed
+evidence-gated decision workflow packet, creates a whitelisted AI-input packet, validates an
+untrusted structured draft deterministically, and requires a human review record before any
+internal research disposition.
+
+- The 2026-08-20 empirical-active 523-member cohort yields 523 deterministic AI inputs; the
+  distinct 2026-08-21 524-member shadow snapshot is not mixed in.  No live model call is required
+  or made.  No draft prose is synthesized across the cohort: 523 inputs are explicitly
+  `MODEL_DRAFT_PENDING`, not evidence-insufficient.
+- Every material draft claim must carry its claim type, evidence IDs, authority, and source
+  lineage.  The validator rejects unsupported FACTs/numbers, authority escalation, loss of
+  counter-evidence, changed eligibility states, proxy-as-authoritative valuation, forbidden
+  recommendation/target/probability/sizing/execution output, and blocked liquidity/PIT claims.
+- Human review states are bounded to `DRAFT`, `HUMAN_REVIEW_REQUIRED`,
+  `NEEDS_MORE_EVIDENCE`, `APPROVED_FOR_INTERNAL_RESEARCH`, and `REJECTED`.  Human edits append
+  `HUMAN_EDIT` provenance; they do not overwrite the machine draft.  Approval is internal
+  research workflow only, never investment, portfolio, or execution authority.
+
 ### Rebaselined Active Gates
 
 **Next bounded capability-first milestone:** `CAPABILITY_FIRST_DAILY_RESEARCH_MATERIALIZATION_V1`. It may materialize the completed research-consumer contract only within its retained provenance and per-use-usability boundaries; it does not authorize provider calls or promote RAW_AS_TRADED, PIT, liquidity/sizing, valuation, or recommendation authority.

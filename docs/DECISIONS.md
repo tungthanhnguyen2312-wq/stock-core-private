@@ -1647,3 +1647,23 @@ single-ticker work.
    independent P3-B/P3-F13 state: 13 `PARTIAL`, 510 `BLOCKED`.  VCB and SSI each retain qualified
    evidence and sector-specific model coverage while three corporate-only metrics are
    `NOT_APPLICABLE`; that metric state is neither `UNKNOWN` nor a reason to erase evidence.
+
+## 2026-08-22 - Evidence-Bound AI Research & Human Review V1
+
+`EVIDENCE_BOUND_AI_RESEARCH_AND_HUMAN_REVIEW_V1 = READY_FOR_REVIEW` (`push = NO`).
+
+1. The decision workflow is the sole AI input authority.  The new consumer builds a deterministic,
+   content-addressed packet with only its approved evidence, eligibility, lane, scenario, valuation,
+   risk, blocker, human-decision, and lineage fields.  It does not call a model, obtain evidence,
+   or alter the dated 2026-08-20 523-member cohort; the separate 2026-08-21 524-member shadow
+   snapshot remains distinct.
+2. Model output is explicitly untrusted.  Its structured-draft contract requires labelled
+   `FACT`/`DATA_WARNING`/`INFERENCE`/`HYPOTHESIS` claims, evidence and conflict IDs, source/authority
+   context, complete section vocabulary, preserved dimension states, and mandatory retained
+   counter-evidence.  The deterministic validator—not prompt compliance—rejects unsupported FACTs
+   or numbers, authority escalation, blocked-state claims, authoritative presentation of the MVA
+   proxy, missing counter-evidence, and recommendation/target/probability/sizing/execution output.
+3. A valid draft enters `HUMAN_REVIEW_REQUIRED`.  Review states are bounded and human modifications
+   are append-only `HUMAN_EDIT` records with reviewer identity/timestamp; they remain distinct from
+   machine claims.  `APPROVED_FOR_INTERNAL_RESEARCH` means only a reviewed internal-research draft,
+   never recommendation, portfolio, sizing, trade, or execution authorization.
