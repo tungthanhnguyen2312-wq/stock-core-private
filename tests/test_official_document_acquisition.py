@@ -85,5 +85,20 @@ class AcquisitionTests(unittest.TestCase):
  def test_corporate_governance_report_is_supported(self):
   result=acquire([self.spec(reporting_period="2026",document_class="corporate_governance_report")],self.root,fetcher=self.fetch)
   self.assertEqual(result["outcomes"][0]["state"],"retained")
+ def test_http_fetch_stream_retains_every_chunk_after_type_sniff(self):
+  import official_document_acquisition as module
+  class Response:
+   status_code=200; headers={"Content-Type":"text/html"}
+   is_redirect=False; is_permanent_redirect=False
+   def iter_content(self,chunk_size=1):
+    yield b"<html>first"
+    yield b" middle"
+    yield b" last</html>"
+   def close(self): pass
+  with tempfile.TemporaryDirectory() as folder, patch.object(module.requests,"get",return_value=Response()):
+   target=Path(folder)/"document.part"
+   status,headers,prefix,final=module.fetch_http("https://issuer.example/f.html",temporary_path=target,admit_hop=lambda _url:True)
+   self.assertEqual(200,status); self.assertEqual("https://issuer.example/f.html",final)
+   self.assertEqual(b"<html>first middle last</html>",target.read_bytes())
 
 if __name__=='__main__': unittest.main()

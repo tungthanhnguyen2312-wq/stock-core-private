@@ -174,18 +174,16 @@ def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TI
         if not 200 <= status < 300:
             for chunk in response.iter_content(chunk_size=1024): prefix.extend(chunk); break
             return status, headers, bytes(prefix), current
-        first_chunk = b""
-        for chunk in response.iter_content(chunk_size=1024):
-            first_chunk = chunk
-            prefix.extend(chunk[:1024])
-            break
+        chunks = response.iter_content(chunk_size=65536)
+        first_chunk = next(chunks, b"")
+        prefix.extend(first_chunk[:1024])
         detected_ct, _ = _sniff_media_type(_content_type(headers), bytes(prefix))
         if detected_ct not in {"application/pdf", "text/html"}: return status, headers, bytes(prefix), current
         total = len(first_chunk)
         try:
             with temporary_path.open("wb") as out:
                 out.write(first_chunk)
-                for chunk in response.iter_content(chunk_size=65536):
+                for chunk in chunks:
                     total += len(chunk)
                     if total > max_response_bytes: raise ValueError("response_size_limit")
                     if len(prefix) < 1024: prefix.extend(chunk[:1024-len(prefix)])

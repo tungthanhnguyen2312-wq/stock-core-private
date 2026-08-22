@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-22 - Current Common Shares Official Evidence Acquisition V1
+
+`CURRENT_COMMON_SHARES_OFFICIAL_EVIDENCE_ACQUISITION_V1 = COMPLETE / NO_QUALIFYING_CURRENT_SHARE_EVIDENCE` (`push = NO`).
+
+1. The exact current-valuation acquisition cohort is 11 symbols. Zero of 11 has authoritative common-shares-outstanding evidence continuous through 2026-08-19; nine retain official evidence but currentness remains unresolved.
+2. SSI and VCB retain unresolved corporate-action execution/result states. HPG’s official issuer-IR notice states 8,442,964,520 shares effective 2026-07-02, but retained continuity reaches only 2026-07-30 and is not forward-filled.
+3. Authoritative current market cap and current P/E, P/B, P/S, and EV remain blocked. No valuation implementation, historical/PIT/share authority, provider proxy authority, RAW_AS_TRADED, ranking, recommendation, sizing, leverage, or portfolio authority changed.
+4. The official-document acquirer now retains every response stream chunk; a prior 1,024-byte capture is preserved non-citable, while the complete-stream retry is SHA-256 verified and idempotent. Do not reopen broad official-share acquisition without new finite evidence under existing route governance.
+
 ## 2026-08-22 - Current Share Basis Capability Reconciliation V1
 
 `CURRENT_SHARE_BASIS_CAPABILITY_RECONCILIATION_V1 = COMPLETE / BLOCKED_BY_EVIDENCE` (`push = NO`).
