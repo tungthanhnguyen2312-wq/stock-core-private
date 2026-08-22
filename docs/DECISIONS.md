@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-22 - Provider-Reported Current Valuation Proxy V1
+
+`PROVIDER_REPORTED_CURRENT_VALUATION_PROXY_V1 = COMPLETE / NON_AUTHORITATIVE_RESEARCH_PROXY` (`push = NO`).
+
+1. The method is exactly `PROVIDER_ISSUED_SHARES_PROXY`; every output is labelled `NON_AUTHORITATIVE_RESEARCH_PROXY` and remains distinct from authoritative current market cap or valuation.
+2. Over the 11-symbol valuation cohort, proxy market cap, P/B, P/S, and EV-Sales each produce 9 outputs; P/E produces 8 and EV/EBITDA produces 0. SSI and VCB are blocked by unresolved corporate-action states.
+3. Authoritative current valuation remains blocked. No common-outstanding, provider, historical/PIT, RAW_AS_TRADED, target, expected-return, recommendation, ranking, sizing, leverage, or portfolio authority changed.
+4. Proxy logic is complete. The next blocker is broader retained exact-session price and qualified financial-input coverage; do not expand this proxy abstraction unless a separately authorized consumer requires it.
+
 ## 2026-08-22 - Current Common Shares Official Evidence Acquisition V1
 
 `CURRENT_COMMON_SHARES_OFFICIAL_EVIDENCE_ACQUISITION_V1 = COMPLETE / NO_QUALIFYING_CURRENT_SHARE_EVIDENCE` (`push = NO`).
