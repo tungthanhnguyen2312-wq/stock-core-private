@@ -50,6 +50,7 @@
 | **Prospective Daily Rollforward V1** | Offline immutable T-state sealing and append-only prospective learning ledger | **COMPLETE LOCALLY** | Preserves the first 2026-08-20 → 2026-08-21 descriptive H1 attribution, seals an independent 524-member 2026-08-21 shadow cohort before a later exact session, and retains H1/H3/H5 maturity explicitly. Missing same-session analytical components are unavailable, never silently carried forward. No backtest/PIT/RAW_AS_TRADED/alpha/recommendation authority. |
 | **Prospective Research Case & Learning Ledger V1** | Immutable decision/AI/human T0 research cases with append-only observational updates | **READY FOR REVIEW** | The dated 2026-08-20 523-member empirical-active cohort is readiness-assessed only: 523 `CASE_CREATABLE`, 0 `NEEDS_MORE_EVIDENCE`, 0 `NOT_CREATABLE`; no cohort cases are persisted or backfilled. A case freezes decision/AI/validated-draft/human-review/evidence identities at `KNOWN_AT`; later observations must be strictly later and append-only. Fixture updates are explicitly `TEST_FIXTURE` and excluded from learning. No price movement proves a thesis, no historical PIT/RAW_AS_TRADED authority is created, and learning remains observational without recommendation, model-weight, portfolio, or execution authority. |
 | **Analyst Research Workbench & Case Operations V1** | In-memory analyst orchestration over the dated decision, AI/human-review, and case contracts | **READY FOR REVIEW** | A single reusable workbench resolves only the exact 2026-08-20 523-member retained decision snapshot; it explicitly rejects 2026-08-21 shadow substitution and unknown ticker/as-of requests. Cohort state is 523 `CASE_STRUCTURE_ELIGIBLE` (the prior prospective `CASE_CREATABLE` meaning), but 0 validated drafts, 0 qualifying reviews, 0 `CASE_CREATION_READY`, and 0 local cases. It exposes research state, AI handoff/validator, human review, immutable local case/update/history/claim trace, and read-only learning without recalculating analytics or writing runtime/production data. Later production updates require an explicitly registered retained evidence identity; `TEST_FIXTURE` updates require a `fixture:` identity and remain excluded. All authority boundaries remain unchanged. |
+| **Durable Prospective Research Case Store V1** | Explicit-path local durable immutable-case and append-only event store | **READY FOR REVIEW** | `durable_prospective_research_case_store.py` persists a content-addressed T0 envelope plus separately content-addressed event chain, verifies all identities on load, and reconstructs deterministic histories/claim/scenario/catalyst state across restart. The store is local, one-writer, and production-independent; it has no implicit path, source fixture, migration, or production DB dependency. `TEST_FIXTURE` cases/updates are excluded from durable learning. The system is `DURABLE_CASE_SYSTEM_READY` for genuine future reviewed cases only once an explicit local store root, validated draft, qualifying review, and retained later-evidence identity are supplied; no real cases were created by this milestone. |
 | **P0-RECOVERY** | Canonical Trades Materialization & Task 160 | **CLOSED** | `TERMINAL_SUCCESS_QUALITY_RESTRICTED`. 18,109,141 canonical trades across 40 sessions. |
 | **P0-A.1** | Market-Wide OHLC Raw Ingestion | **COMPLETE** | 1,528/1,660 successful (92.05%), 132 `PERMANENT` provider-rejected failures classified. |
 | **P0-A.2** | Corporate Action Evidence Scale-Out | **COMPLETE** | Document-authority coverage & multi-event extraction integrated locally (`official_corporate_action_ledger.py`). |
@@ -230,6 +231,34 @@ analytics engine, digest, Daily Analyst Brief, portfolio surface, or persistence
   preserved meaning of prospective `CASE_CREATABLE`—but 0 validated drafts, 0 qualifying human
   reviews, 0 `CASE_CREATION_READY`, and 0 local cases.  The learning view remains observational and
   cannot promote authority, rules, recommendations, portfolio action, or execution.
+
+### Durable Prospective Research Case Store V1 (2026-08-22)
+
+`DURABLE_PROSPECTIVE_RESEARCH_CASE_STORE_V1 = READY_FOR_REVIEW` locally.  The new
+`durable_prospective_research_case_store.py` supplies an explicit-root, local non-production store
+for a real prospective case after its already-required valid draft and recorded human review exist.
+It does not create one of the 523 structurally eligible records, a real draft, a review, or a
+runtime/production database.
+
+- Each immutable T0 envelope preserves its content-addressed case, exact decision/AI input,
+  validated draft, validation, human review, and individual `HUMAN_EDIT` provenance.  It records a
+  deterministic initial event chain; duplicate case/content insertion and T0 identity mutation fail
+  closed.  The source tree defines the contract only: an operator must explicitly choose a separate
+  local store root for mutable research records.
+- Later case updates are separate content-addressed `CASE_UPDATE` events linked to the prior event.
+  The store uses an exclusive local writer lock, rejects unknown case/event identity, timestamp
+  reversal, duplicate or disconnected event chains, and unregistered non-fixture evidence.  Fixture
+  updates require `TEST_FIXTURE` plus `fixture:` identity; they, and fixture-origin case records,
+  are excluded from durable observational learning.
+- On any independent reload, the store verifies case/envelope/event identities and deterministically
+  replays immutable T0 content, ordered update history, lifecycle, claim outcomes,
+  scenario/catalyst state, and AI/human provenance.  The existing workbench optionally hydrates and
+  writes its case operations through this store, preserving its no-recalculation and authority
+  boundaries.
+- `DURABLE_CASE_SYSTEM_READY` means the local mechanism is ready to retain a genuine future case
+  when its existing operational prerequisites are supplied.  It does not mean a live case exists or
+  grant any recommendation, valuation, liquidity/PIT, portfolio, sizing, execution, or production
+  persistence authority.
 
 ### Rebaselined Active Gates
 

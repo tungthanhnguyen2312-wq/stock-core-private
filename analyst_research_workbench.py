@@ -59,6 +59,7 @@ class AnalystResearchWorkbench:
     decision_artifact: Mapping[str, Any]
     ai_input_collection: Mapping[str, Any]
     readiness_artifact: Mapping[str, Any]
+    case_store: Any | None = None
     _cases: dict[str, dict[str, Any]] = field(default_factory=dict, init=False, repr=False)
     _histories: dict[str, dict[str, Any]] = field(default_factory=dict, init=False, repr=False)
     _registered_update_evidence_identities: frozenset[str] = field(default_factory=frozenset, init=False, repr=False)
@@ -67,7 +68,7 @@ class AnalystResearchWorkbench:
 
     @classmethod
     def from_artifacts(cls, decision_artifact: Mapping[str, Any], ai_input_collection: Mapping[str, Any], *,
-                       retained_update_evidence_identities: Sequence[str] = ()) -> "AnalystResearchWorkbench":
+                       retained_update_evidence_identities: Sequence[str] = (), case_store: Any | None = None) -> "AnalystResearchWorkbench":
         if ai_input_collection.get("source_decision_workflow_identity") != decision_artifact.get("artifact_identity"):
             raise ValueError("WORKBENCH_AI_INPUT_DECISION_IDENTITY_MISMATCH")
         decision_tickers = {row["ticker"] for row in decision_artifact.get("records", [])}
@@ -76,10 +77,20 @@ class AnalystResearchWorkbench:
             raise ValueError("WORKBENCH_COHORT_MEMBERSHIP_MISMATCH")
         if decision_artifact.get("as_of") != ai_input_collection.get("as_of"):
             raise ValueError("WORKBENCH_AS_OF_MISMATCH")
-        workbench = cls(decision_artifact, ai_input_collection, case_readiness(decision_artifact, ai_input_collection))
+        workbench = cls(decision_artifact, ai_input_collection, case_readiness(decision_artifact, ai_input_collection), case_store)
+        if case_store is not None and not retained_update_evidence_identities:
+            retained_update_evidence_identities = tuple(case_store.registered_update_evidence_identities)
+        if case_store is not None and set(retained_update_evidence_identities) != set(case_store.registered_update_evidence_identities):
+            raise ValueError("WORKBENCH_DURABLE_STORE_EVIDENCE_REGISTRATION_MISMATCH")
         if not all(isinstance(identity, str) and identity for identity in retained_update_evidence_identities):
             raise ValueError("INVALID_RETAINED_UPDATE_EVIDENCE_IDENTITY")
         workbench._registered_update_evidence_identities = frozenset(retained_update_evidence_identities)
+        if case_store is not None:
+            for case_id in case_store.list_case_ids():
+                replay = case_store.replay_case(case_id)
+                workbench._cases[case_id] = replay["case"]
+                if replay["history"]["updates"]:
+                    workbench._histories[case_id] = replay["history"]
         return workbench
 
     @property
@@ -236,6 +247,8 @@ class AnalystResearchWorkbench:
             raise ValueError("CASE_REQUIRES_RECORDED_HUMAN_REVIEW_STATE")
         case = create_research_case(self.decision_artifact, packet, created_at=created_at, known_at=known_at,
                                     validated_draft=draft, validation=expected_validation, human_review=human_review)
+        if self.case_store is not None:
+            self.case_store.persist_case(case, draft, expected_validation, human_review)
         self._cases.setdefault(case["case_id"], case)
         result = {"contract_version": METHOD + "/case_operation", "operation": "CREATE_CASE", "workbench_identity": self.workbench_identity,
                   "case": copy.deepcopy(self._cases[case["case_id"]]), "persistence_boundary": "IN_MEMORY_LOCAL_SESSION_ONLY"}
@@ -266,8 +279,11 @@ class AnalystResearchWorkbench:
                                    source_evidence_identity=source_evidence_identity, evidence_kind=evidence_kind,
                                    relationships=relationships, scenario_updates=scenario_updates,
                                    catalyst_updates=catalyst_updates, human_review_identity=human_review_identity, fixture=fixture)
-        prior = self._histories.get(case_id, {}).get("updates", [])
-        history = append_immutable_case_update(case, prior, update, lifecycle_state=lifecycle_state)
+        if self.case_store is not None:
+            history = self.case_store.append_case_update(case_id, update, lifecycle_state=lifecycle_state)
+        else:
+            prior = self._histories.get(case_id, {}).get("updates", [])
+            history = append_immutable_case_update(case, prior, update, lifecycle_state=lifecycle_state)
         self._histories[case_id] = history
         result = {"contract_version": METHOD + "/case_operation", "operation": "APPEND_CASE_UPDATE", "workbench_identity": self.workbench_identity,
                   "case_id": case_id, "update": copy.deepcopy(update), "history_identity": history["case_history_identity"],
@@ -278,7 +294,11 @@ class AnalystResearchWorkbench:
         case = self._cases.get(case_id)
         if case is None:
             raise ValueError("CASE_NOT_FOUND_IN_LOCAL_WORKBENCH_SESSION")
-        history = self._histories.get(case_id)
+        if self.case_store is not None:
+            history = self.case_store.replay_case(case_id)["history"]
+            self._histories[case_id] = history
+        else:
+            history = self._histories.get(case_id)
         result = {"contract_version": METHOD + "/case_operation", "operation": "GET_CASE_HISTORY", "workbench_identity": self.workbench_identity,
                   "case_id": case_id, "history": copy.deepcopy(history), "history_state": "NO_UPDATES_RECORDED" if history is None else "APPEND_ONLY_UPDATES_RECORDED"}
         return _with_identity(result, "case_operation_identity", "analyst_case_operation:")
@@ -305,7 +325,7 @@ class AnalystResearchWorkbench:
         return _with_identity(trace, "claim_trace_identity", "analyst_claim_trace:")
 
     def get_learning_summary(self) -> dict[str, Any]:
-        ledger = build_learning_ledger([self._histories[case_id] for case_id in sorted(self._histories)])
+        ledger = self.case_store.build_learning_ledger() if self.case_store is not None else build_learning_ledger([self._histories[case_id] for case_id in sorted(self._histories)])
         result = {"contract_version": METHOD + "/learning_summary", "operation": "GET_LEARNING_SUMMARY", "workbench_identity": self.workbench_identity,
                   "local_case_count": len(self._cases), "local_case_history_count": len(self._histories), "learning_ledger": ledger,
                   "read_only_boundary": {"observational_only": True, "no_model_weights_rules_or_authority_promotion": True,
@@ -338,9 +358,10 @@ class AnalystResearchWorkbench:
         return _with_identity(result, "cohort_resolution_identity", "analyst_cohort_resolution:")
 
 
-def build_current_workbench() -> AnalystResearchWorkbench:
+def build_current_workbench(*, case_store: Any | None = None, retained_update_evidence_identities: Sequence[str] = ()) -> AnalystResearchWorkbench:
     """Load the one retained 2026-08-20 decision snapshot for a local session."""
     from tools.run_evidence_bound_ai_research_human_review import run as ai_run
     from tools.run_evidence_gated_research_decision_workflow import run as decision_run
 
-    return AnalystResearchWorkbench.from_artifacts(decision_run(), ai_run())
+    return AnalystResearchWorkbench.from_artifacts(decision_run(), ai_run(), case_store=case_store,
+                                                   retained_update_evidence_identities=retained_update_evidence_identities)

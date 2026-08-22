@@ -1749,3 +1749,28 @@ single-ticker work.
    `TEST_FIXTURE` with `fixture:` identities, and fixtures remain excluded from observational
    learning.  No authority boundary changes: recommendation, model weight/rule, target/probability,
    valuation, liquidity/PIT, portfolio/sizing, execution, and production DB remain unavailable.
+
+## 2026-08-22 - Durable Prospective Research Case Store V1
+
+`DURABLE_PROSPECTIVE_RESEARCH_CASE_STORE_V1 = READY_FOR_REVIEW` (`push = NO`).
+
+1. `durable_prospective_research_case_store.py` is an explicit-path local, non-production,
+   one-writer persistence contract.  It uses immutable content-addressed T0 envelopes for the
+   case, original decision/AI identities, validated draft, validation, human review, and individual
+   `HUMAN_EDIT` provenance; append-only content-addressed event files hold later updates.  No
+   implicit runtime directory, production database, committed mutable case fixture, or migration of
+   the 523 `CASE_STRUCTURE_ELIGIBLE` records exists.
+2. Every load verifies the store contract, T0 envelope, case identity, event identity, and
+   predecessor chain.  Duplicate case/content/event insertion, case mutation, unknown-case append,
+   timestamp reversal, unknown predecessor, disconnected chain, concurrent writer, and unregistered
+   non-fixture evidence fail closed.  Fixture events require `TEST_FIXTURE` and `fixture:` identity.
+3. Replay reconstructs the immutable case, ordered updates, current lifecycle, claim status,
+   scenario/catalyst status, and AI/human provenance deterministically across independent store and
+   workbench restarts.  The workbench can hydrate durable case state and routes create/update/history
+   and durable learning through the store without recalculating any research producer.
+4. Durable learning feeds only non-fixture durable cases into the existing observational ledger;
+   fixture-origin cases and fixture updates do not contribute.  The store is
+   `DURABLE_CASE_SYSTEM_READY` for a genuine future case once a valid draft, qualifying recorded
+   human review, explicit local store root, and retained later-evidence identity are supplied.  It
+   creates no real case here and changes no recommendation, model/rule, valuation, liquidity/PIT,
+   portfolio, sizing, execution, or production authority.
