@@ -130,6 +130,36 @@
 
 ## 4. Current Critical Path & Exact Next Action
 
+### Evidence-Gated Research Decision Workflow V1 (2026-08-22)
+
+`EVIDENCE_GATED_RESEARCH_DECISION_WORKFLOW_V1 = READY_FOR_REVIEW` locally.  The reusable
+`evidence_gated_research_decision_workflow.py` contract integrates the retained, dated
+2026-08-20 523-member `EMPIRICAL_ACTIVE_SHADOW_ONLY` research cohort into one deterministic
+per-instrument packet.  It carries the cohort identity/source/membership state, retained evidence
+lineage, independent eligibility dimensions, existing strategy-research lanes, orthogonal setup
+context, scenario state, structured thesis/counter-thesis evidence, valuation boundary, blockers,
+and a mandatory human-review gate.
+
+- It reuses (and does not recalculate) the daily research, eligibility, setup, scenario, event,
+  downside, market-context, and exact-session MVA artifacts.  The separate 2026-08-21 524-member
+  shadow snapshot is explicitly not substituted for, or combined with, this dated cohort.
+- Coverage is 523 current descriptive and market-context packets; the sector-neutral P3-F13
+  official financial-evidence panel is 13 `ELIGIBLE` / 510 `BLOCKED` (not 11/512).  Fundamental
+  model readiness is independently 13 `PARTIAL` / 510 `BLOCKED`; its P3-B metric-level matrix
+  retains three `NOT_APPLICABLE` corporate-model metrics for VCB and three for SSI; the MVA proxy
+  separately retains three sector-inapplicable industrial valuation methods for each.  Thus evidence
+  presence, model applicability, `UNKNOWN`, and `BLOCKED` are never conflated.  Scenario remains
+  25 partial evidence-bound packets and event evidence 1 retained packet; liquidity/PIT remain
+  blocked for all 523.  These are independent gates, so no blocked gate hides unrelated current
+  descriptive research.
+- Valuation remains `NON_AUTHORITATIVE_RESEARCH_PROXY` only, with the explicit
+  `PROVIDER_REPORTED_ISSUED_SHARES_PROXY` namespace; authoritative current-common share and market
+  cap authority remain blocked.  Bank/securities industrial EV/revenue methods retain
+  `NOT_APPLICABLE`, rather than being represented as missing or zero.
+- Every packet is `RESEARCH_PARTIAL` and requires a human decision.  It emits no BUY/SELL/HOLD,
+  target, expected return, scenario probability, position size, execution, liquidity, or PIT
+  authority.  No new evidence, source route, data acquisition, or upstream authority is created.
+
 ### Rebaselined Active Gates
 
 **Next bounded capability-first milestone:** `CAPABILITY_FIRST_DAILY_RESEARCH_MATERIALIZATION_V1`. It may materialize the completed research-consumer contract only within its retained provenance and per-use-usability boundaries; it does not authorize provider calls or promote RAW_AS_TRADED, PIT, liquidity/sizing, valuation, or recommendation authority.

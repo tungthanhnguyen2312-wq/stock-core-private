@@ -121,6 +121,10 @@
 
 ## Global Roadmap Rebaseline — Active Gates
 
+| Milestone | Scope | State | Exit and boundary |
+|---|---|---|---|
+| **Evidence-Gated Research Decision Workflow V1** | Deterministic reusable per-instrument decision-support packet over retained dated research artifacts | **READY FOR REVIEW LOCALLY** | `evidence_gated_research_decision_workflow.py` and `tools/run_evidence_gated_research_decision_workflow.py` produce 523 packets for the 2026-08-20 empirical-active shadow cohort. The packet joins existing eligibility, setup, scenario, event, downside, market, P3-F13 official evidence, and MVA-proxy artifacts without creating analytical engines or source authority. Official evidence presence is sector-neutral: 13 `ELIGIBLE`, 510 `BLOCKED`; independent fundamental model readiness is 13 `PARTIAL`, 510 `BLOCKED`; VCB/SSI corporate-model metric `NOT_APPLICABLE` states do not erase their official evidence. It remains decision support only: all packets need human decision; liquidity/PIT are blocked; current-share/authoritative valuation are blocked; MVA proxy is labelled non-authoritative; no portfolio, sizing, execution, probability, target, or recommendation output. No subsequent milestone is authorized by this local result. |
+
 | Order | Gate | Current state and boundary |
 |---:|---|---|
 | 1 | Current-share source-authority decision | P3-F5 review remains binding: `VCI.overview.issue_share` is `ISSUED_SHARES` and `AUTHORITY_NOT_PROMOTED_PENDING_OWNER_DECISION`. P3-F6’s owner-approved MVA proxy policy permits only a labelled `DERIVED_PROXY` / `MVA_SHADOW` observation; it does not promote the source or authorize current-common, authoritative market-cap, or P3-F valuation use. |

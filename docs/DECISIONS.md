@@ -1618,3 +1618,32 @@ single-ticker work.
 2. Provider parity is not a gate for research ingestion. A capability with one qualifying source is usable under that source's own contract, while multi-source observations remain distinct and are eligible only where their explicit per-use usability permits it.
 3. This activation changes no authority: RAW_AS_TRADED and PIT remain unpromoted; liquidity/sizing, valuation, and recommendation authority remain blocked. The consumer's canonical projection and research eligibility do not create provider, execution, or decision authority.
 4. The next bounded milestone is `CAPABILITY_FIRST_DAILY_RESEARCH_MATERIALIZATION_V1`; it must preserve these retained provenance and per-use-usability gates and requires separate authorization before execution.
+
+## 2026-08-22 - Evidence-Gated Research Decision Workflow V1
+
+`EVIDENCE_GATED_RESEARCH_DECISION_WORKFLOW_V1 = READY_FOR_REVIEW` (`push = NO`).
+
+1. `evidence_gated_research_decision_workflow.py` is the single deterministic integration contract
+   for the retained 2026-08-20, 523-member empirical-active shadow research cohort.  It consumes
+   existing products by identity and validates same-session and exact-membership alignment.  The
+   separate 524-member 2026-08-21 shadow snapshot remains separate; neither count is a timeless
+   canonical-universe denominator.
+2. The contract preserves the existing `strategy_research_eligibility` registry as the research-lane
+   taxonomy.  Setup labels are retained as independent multi-label context and the scenario axis is
+   explicitly orthogonal; no second strategy taxonomy, signal, score, or recommendation is created.
+3. Evidence is structured into positive, negative, conflicting, unknown/missing, catalyst, and risk
+   sections with source identity and authority.  Missing retained evidence is `UNKNOWN`, never zero,
+   no event, no risk, or an adverse economic fact.  Only the pre-existing 25 evidence-bound scenario
+   objects are consumed; probabilities, targets, and expected returns remain unqualified/not emitted.
+4. MVA data is exposed only as `NON_AUTHORITATIVE_RESEARCH_PROXY` in the explicit
+   `PROVIDER_REPORTED_ISSUED_SHARES_PROXY` namespace.  It cannot be represented as authoritative
+   market cap or valuation.  Current-common share authority, liquidity/sizing, RAW_AS_TRADED, PIT,
+   historical backtest, portfolio, and execution remain blocked.  A mandatory human decision gate
+   makes every packet `RESEARCH_PARTIAL`; AI consumers may explain structured evidence but may not
+   create authority or override eligibility.
+5. Terminal semantic reconciliation uses P3-F13—not the older 11-issuer daily-product lens—for
+   sector-neutral official financial-evidence presence: 13 `ELIGIBLE` and 510 explicitly
+   `BLOCKED` on official-route/evidence absence.  Fundamental-model readiness remains an
+   independent P3-B/P3-F13 state: 13 `PARTIAL`, 510 `BLOCKED`.  VCB and SSI each retain qualified
+   evidence and sector-specific model coverage while three corporate-only metrics are
+   `NOT_APPLICABLE`; that metric state is neither `UNKNOWN` nor a reason to erase evidence.
