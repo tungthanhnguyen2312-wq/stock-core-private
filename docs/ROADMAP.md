@@ -40,6 +40,10 @@
 
 ## 2. Milestone Matrix & Status
 
+> **2026-08-22 program state:** `MARKET_WIDE_FINANCIAL_EVIDENCE_AND_SEMANTIC_COVERAGE_V1` is **CLOSED_PARTIAL / SOURCE_ROUTE_AND_EVIDENCE_CONSTRAINED**. Provider-financial semantic inference is closed: 520 issuer observations remain descriptive-only and the official panel is 13 issuers / 138 facts / 94 exact research metrics. `MARKET_WIDE_ENRICHMENT_AND_CANONICALIZATION_V1` is **PAUSED_RATE_LIMIT_CONSTRAINED**; it is not closed.
+
+> `CORPORATE_ACTION_AND_PIT_AUTHORITY_V1` is **CLOSED_PARTIAL / OFFICIAL_EX_DATE_AND_PRICE_BASIS_EVIDENCE_CONSTRAINED**: the official ledger and HPG executed share-change lineage are reusable, but no representative event chain is PIT-qualified. Explicit official ex-date evidence is absent; record/listing/effective/trading dates cannot substitute, `RAW_AS_TRADED` remains not promoted, and provider-adjusted/retrospective prices remain non-PIT. The next program is `OFFICIAL_SOURCE_ROUTE_AND_EVIDENCE_COVERAGE_SCALEOUT_V1` (not started).
+
 | Program / Milestone | Description | Status | Acceptance Gate & Authority Constraints |
 |---|---|:---:|---|
 | **Capability-First Scenario Distribution V1** | Deterministic descriptive distribution of retained scenario cases | **COMPLETE LOCALLY** | `CAPABILITY_FIRST_SCENARIO_DISTRIBUTION_V1` records the real scenario denominator (12) and universe denominator (524). It emits no probability, target, recommendation, or ranking authority. |

@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-22 - Financial Evidence Program Closure and Enrichment Pause
+
+`MARKET_WIDE_FINANCIAL_EVIDENCE_AND_SEMANTIC_COVERAGE_V1 = CLOSED_PARTIAL / SOURCE_ROUTE_AND_EVIDENCE_CONSTRAINED`. The retained 520-issuer VCI/KBS provider estate remains descriptive-only: generic calculation-grade semantic promotion was rejected, and no provider fact received official authority. The official panel remains 13 issuers / 138 canonical facts / 94 exact research metrics; further scale-out is blocked by approved route/evidence coverage rather than calculation code. Do not reopen provider-semantic inference without materially new evidence. `MARKET_WIDE_ENRICHMENT_AND_CANONICALIZATION_V1 = PAUSED_RATE_LIMIT_CONSTRAINED`, not closed.
+
+## 2026-08-22 - Corporate Action and PIT Authority Closure
+
+`CORPORATE_ACTION_AND_PIT_AUTHORITY_V1 = CLOSED_PARTIAL / OFFICIAL_EX_DATE_AND_PRICE_BASIS_EVIDENCE_CONSTRAINED`. The reusable official corporate-action ledger exists and HPG executed share-change lineage is qualified, but no representative event chain is PIT-qualified because no retained representative corpus document provides an explicit official ex-date. Record, listing, effective, and trading dates never substitute for ex-date; `RAW_AS_TRADED` remains **NOT PROMOTED** and provider-adjusted/retrospective prices remain non-PIT. Do not reopen implementation without materially new official event/price-basis evidence. Next program: `OFFICIAL_SOURCE_ROUTE_AND_EVIDENCE_COVERAGE_SCALEOUT_V1` (not started).
+
 > **Authoritative Decision Surface.**
 > This document maintains active and recent architectural decisions.
 > Historical decisions are preserved in:

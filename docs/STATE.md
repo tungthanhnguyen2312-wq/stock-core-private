@@ -17,6 +17,10 @@
 
 ## 2. Program Priority & Foundation Status
 
+**Governance re-anchor (2026-08-22):** `MARKET_WIDE_FINANCIAL_EVIDENCE_AND_SEMANTIC_COVERAGE_V1` is **CLOSED_PARTIAL / SOURCE_ROUTE_AND_EVIDENCE_CONSTRAINED**: 520 provider-financial issuers remain descriptive-only; generic calculation-grade provider promotion was rejected; the official panel remains 13 issuers / 138 canonical facts / 94 exact research metrics. Official scale-out is constrained by approved route/evidence coverage, not missing calculation code; do not reopen provider-semantic inference without materially new evidence. `MARKET_WIDE_ENRICHMENT_AND_CANONICALIZATION_V1` remains **PAUSED_RATE_LIMIT_CONSTRAINED**, not closed.
+
+`CORPORATE_ACTION_AND_PIT_AUTHORITY_V1` is **CLOSED_PARTIAL / OFFICIAL_EX_DATE_AND_PRICE_BASIS_EVIDENCE_CONSTRAINED**. The reusable official corporate-action ledger and HPG executed share-change lineage remain retained, but no representative event chain is PIT-qualified: no retained representative corpus document states an explicit official ex-date, and record/listing/effective/trading dates never substitute. `RAW_AS_TRADED` remains **NOT PROMOTED** and provider-adjusted/retrospective prices remain non-PIT. Do not reopen corporate-action/PIT implementation without materially new official event/price-basis evidence. The next program is `OFFICIAL_SOURCE_ROUTE_AND_EVIDENCE_COVERAGE_SCALEOUT_V1` (not started).
+
 **DNSE/FHSC market-composition scale-out V1:** the fixed 12-issuer / 10-session design retained 40 comparable HOSE rows: 33 discriminating nonzero-put-through rows are exact DNSE `/price/ohlc.v` = FHSC matched volume, and seven zero-put-through rows are consistent but non-discriminating. This earns only `DNSE_MATCHED_VOLUME_SEMANTICS_HOSE_SCALEOUT_VALIDATED`. Eight FHSC trading-history requests were rate-limited after the full 24-request budget, so HNX/UPCOM and a cross-exchange universal mapping remain unresolved. DNSE has no explicit same-session generic traded-value comparator. No liquidity, turnover, sizing, RAW_AS_TRADED, price, or source authority changed.
 
 | Program / Milestone | Description | Status | Key Governance Constraints |
