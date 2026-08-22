@@ -10,6 +10,15 @@
 
 ## Active & Recent Decision Records (2026-08-20 to Present)
 
+## 2026-08-22 - Current Share Basis Capability Reconciliation V1
+
+`CURRENT_SHARE_BASIS_CAPABILITY_RECONCILIATION_V1 = COMPLETE / BLOCKED_BY_EVIDENCE` (`push = NO`).
+
+1. The retained provider metadata universe is 1,683 rows, of which 1,680 are structurally usable only as non-authoritative issued-share proxies. The current valuation corpus is 11 rows and has 0/11 authoritative current-common-share denominators.
+2. `VCI.overview.issue_share` remains `issued_shares`, not outstanding shares. Issued, listed, outstanding, period-end, and weighted-average identities are separately preserved; numerical equality is not semantic equivalence.
+3. SSI and VCB remain stale-after-corporate-action cases because retained evidence does not establish action timing or resulting common shares. Missing treasury shares remain unknown rather than zero, so no issued-minus-treasury current-share result is manufactured.
+4. Current market cap, P/E, P/B, P/S, and EV inputs remain authority-blocked. No historical/PIT/share authority, source authority, RAW_AS_TRADED, ranking, recommendation, sizing, leverage, or portfolio authority is promoted.
+
 ## 2026-08-22 - Scenario Distribution and Liquidity Reconciliation Checkpoint V1
 
 `CAPABILITY_FIRST_SCENARIO_DISTRIBUTION_V1 = COMPLETE_LOCAL_CHECKPOINT` and `QUALIFIED_LIQUIDITY_INPUTS_RECONCILIATION_V1 = COMPLETE_LOCAL_RECONCILIATION_EVIDENCE` (`push = NO`).
