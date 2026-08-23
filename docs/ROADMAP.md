@@ -243,3 +243,7 @@ Execution focus strictly follows the ordered critical path:
 - Unconditional fail-closed enforcement of `QUALIFIED_LIQUIDITY_INPUTS` and `POSITION_SIZING_IS_SAFE`.
 - Complete separation between `PIT_AS_KNOWN` historical simulation and retrospective restatements.
 - Point-in-time adjusted price series derived strictly from verified official dividend ex-date event windows (`P0-A.3E Part B` / `P3-A`).
+
+### Current Portfolio Risk Envelope V1 (Complete Locally)
+
+`current_portfolio_risk_envelope/v1` is an optional explicit-input daily-session extension. The next real-data gate is qualified liquidity/ADV and policy inputs before days-to-liquidate, correlation, portfolio volatility, VaR/CVaR, leverage, sizing, or execution can be evaluated. No demonstration portfolio may be promoted into prospective learning.

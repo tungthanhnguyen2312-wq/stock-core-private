@@ -438,3 +438,7 @@ For historical investigation logs, forensic reports, and raw capture manifests, 
 - **P0-B.2C Value Authority Gate**: [operations-review/p0-b2c-trading-value-input-authority-gate-v1-20260818.md](../operations-review/p0-b2c-trading-value-input-authority-gate-v1-20260818.md)
 - **Task 160 Canonical Materialization**: [operations-review/task-160-canonical-materialization-v1-20260817/](../operations-review/task-160-canonical-materialization-v1-20260817/)
 - **DNSE Trades and Liquidity Basis Qualification V1**: [operations-review/dnse-trades-liquidity-basis-v1-20260823/](../operations-review/dnse-trades-liquidity-basis-v1-20260823/)
+
+### Current Portfolio Risk Envelope V1
+
+The optional daily-session portfolio branch is complete locally. It consumes only explicit holdings/exposure, emits deterministic concentration and retained-evidence context, and remains descriptive/non-actionable. Liquidity, correlation, portfolio volatility, VaR/CVaR, sizing, leverage, and execution remain blocked or not evaluated. The retained fixture is explicitly `DEMONSTRATION_NOT_REAL_HOLDINGS`, not a live portfolio or learning input.
