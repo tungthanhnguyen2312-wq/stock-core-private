@@ -49,7 +49,11 @@ def _claims(ticker: str, tactical: Mapping[str, Any], peer: Mapping[str, Any], f
 
 def _corporate_summary(corporate: Mapping[str, Any] | None) -> dict[str, Any]:
     corporate = corporate or {}; research = corporate.get("catalyst_research") or {}
-    return {"status": corporate.get("intelligence_disposition", "UNAVAILABLE"), "what_changed": research.get("recent_material_events") or [], "current_catalysts_or_risks": {"observed": research.get("observed_catalysts") or [], "adverse": research.get("adverse_event_risks") or []}, "confirmed": [{"event_id": event.get("event_id"), "status": event.get("status"), "evidence_identity": event.get("evidence_identity")} for event in (corporate.get("events") or [])], "planned_or_pending": research.get("watch_for_execution") or [], "what_to_verify": research.get("watch_for_confirmation") or corporate.get("data_gaps") or ["No retained corporate intelligence evidence; verify through an approved source route."], "source_authority_and_freshness": [{"event_id": event.get("event_id"), "authority_tier": event.get("authority_tier"), "freshness": event.get("freshness")} for event in (corporate.get("events") or [])], "is_actionable": False}
+    events = corporate.get("events") or []
+    questions = research.get("watch_for_confirmation") or corporate.get("data_gaps")
+    if not questions:
+        questions = ["Verify whether later retained official disclosure changes this event's status or current relevance."] if events else ["No retained corporate intelligence evidence; verify through an approved source route."]
+    return {"status": corporate.get("intelligence_disposition", "UNAVAILABLE"), "what_changed": research.get("recent_material_events") or [], "current_catalysts_or_risks": {"observed": research.get("observed_catalysts") or [], "adverse": research.get("adverse_event_risks") or []}, "confirmed": [{"event_id": event.get("event_id"), "status": event.get("status"), "evidence_identity": event.get("evidence_identity")} for event in events], "planned_or_pending": research.get("watch_for_execution") or [], "what_to_verify": questions, "source_authority_and_freshness": [{"event_id": event.get("event_id"), "authority_tier": event.get("authority_tier"), "freshness": event.get("freshness")} for event in events], "is_actionable": False}
 
 
 def _card(ticker: str, tactical: Mapping[str, Any], peer: Mapping[str, Any] | None, fundamental: Mapping[str, Any] | None, valuation: Mapping[str, Any] | None, scenario: Mapping[str, Any] | None, corporate: Mapping[str, Any] | None = None) -> dict[str, Any]:

@@ -43,6 +43,7 @@ def test_cards_preserve_tactical_peer_scenario_and_human_review_boundaries():
     assert all(claim["type"] in {"FACT", "INFERENCE", "DATA_GAP", "QUESTION_TO_VERIFY"} for group in card["thesis_counter_thesis"].values() for claim in group)
     assert card["corporate_intelligence_context"]["status"] == "NO_RETAINED_INTELLIGENCE"
     assert product["detailed_research_cards"]["HPG"]["corporate_intelligence_context"]["confirmed"][0]["status"] == "EXECUTED"
+    assert "No retained corporate intelligence" not in product["detailed_research_cards"]["HPG"]["corporate_intelligence_context"]["what_to_verify"][0]
 
 
 def test_markdown_is_a_compact_human_review_product_not_recommendation_text():
