@@ -141,12 +141,12 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         self.rows[0]["reporting_periods"] = ["2025-Q4", "2026-Q1"]
         facts = {
             "AAA": [
-                {"canonical_metric": "revenue", "status": "provider_reported", "provider": "VCI",
+                {"canonical_metric": "total_assets", "status": "provider_reported", "provider": "VCI", "statement_family": "balance_sheet", "period_end": "2025-12-31", "statement_scope": "consolidated",
                  "reporting_period": "2025-Q4", "value": 100, "fact_id": "old",
-                 "source_observation_ids": ["old-observation"], "source_sha256": "old-sha"},
-                {"canonical_metric": "revenue", "status": "provider_reported", "provider": "VCI",
+                 "source_observation_ids": ["old-observation"], "source_sha256": "same-sha"},
+                {"canonical_metric": "total_assets", "status": "provider_reported", "provider": "VCI", "statement_family": "balance_sheet", "period_end": "2026-03-31", "statement_scope": "consolidated",
                  "reporting_period": "2026-Q1", "value": 125, "fact_id": "new",
-                 "source_observation_ids": ["new-observation"], "source_sha256": "new-sha"},
+                 "source_observation_ids": ["new-observation"], "source_sha256": "same-sha"},
                 {"canonical_metric": "net_income", "status": "provider_reported", "provider": "KBS",
                  "reporting_period": "2026-Q1", "value": 1, "fact_id": "orphan", "source_observation_ids": []},
             ]
@@ -156,30 +156,29 @@ class BuildArtifactJoinLogic(unittest.TestCase):
             requested_at="t", provider_series_by_ticker=facts,
         )
         trends = artifact["records"]["AAA"]["provider_series_trends"]
-        revenue = trends["metrics"]["revenue_growth"]
-        self.assertEqual(revenue["status"], "AVAILABLE")
-        self.assertEqual(revenue["provider"], "VCI")
-        self.assertEqual(revenue["periods"], ["2025-Q4", "2026-Q1"])
-        self.assertEqual(revenue["growth_fraction"], 0.25)
-        self.assertEqual(revenue["authority_tier"], PROVIDER_TIER)
-        self.assertNotIn("value", revenue)
+        assets = trends["metrics"]["assets_direction"]
+        self.assertEqual(assets["status"], "AVAILABLE")
+        self.assertEqual(assets["provider"], "VCI")
+        self.assertEqual(assets["periods"], ["2025-Q4", "2026-Q1"])
+        self.assertEqual(assets["direction"], "INCREASED")
+        self.assertEqual(assets["authority_tier"], PROVIDER_TIER)
+        self.assertNotIn("value", assets)
         self.assertEqual(trends["metrics"]["earnings_growth"]["blocked_reason"], "NO_SAME_PROVIDER_CONSECUTIVE_QUARTER_PAIR")
 
     def test_provider_series_growth_fails_closed_for_nonpositive_base(self) -> None:
         self.rows[0]["reporting_periods"] = ["2025-Q4", "2026-Q1"]
         facts = {"AAA": [
-            {"canonical_metric": "net_income", "status": "provider_reported", "provider": "VCI",
+            {"canonical_metric": "operating_cash_flow", "status": "provider_reported", "provider": "VCI", "statement_family": "cash_flow", "period_start": "2025-10-01", "period_end": "2025-12-31", "cumulative_state": "period_only", "statement_scope": "consolidated", "source_sha256": "same",
              "reporting_period": "2025-Q4", "value": -1, "fact_id": "old", "source_observation_ids": []},
-            {"canonical_metric": "net_income", "status": "provider_reported", "provider": "VCI",
+            {"canonical_metric": "operating_cash_flow", "status": "provider_reported", "provider": "VCI", "statement_family": "cash_flow", "period_start": "2026-01-01", "period_end": "2026-03-31", "cumulative_state": "period_only", "statement_scope": "consolidated", "source_sha256": "same",
              "reporting_period": "2026-Q1", "value": 2, "fact_id": "new", "source_observation_ids": []},
         ]}
         artifact = build_artifact(
             p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current,
             requested_at="t", provider_series_by_ticker=facts,
         )
-        earnings = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["earnings_growth"]
-        self.assertEqual(earnings["status"], "BLOCKED")
-        self.assertEqual(earnings["blocked_reason"], "GROWTH_BASE_NON_POSITIVE")
+        cashflow = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["operating_cash_flow_direction"]
+        self.assertEqual(cashflow["status"], "AVAILABLE")
 
     def test_blocked_no_source_tier_has_no_allowed_uses(self) -> None:
         artifact = build_artifact(p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t")
@@ -256,6 +255,22 @@ class LiveIntegration(unittest.TestCase):
                 self.assertIn(metric["status"], {"AVAILABLE", "BLOCKED"})
                 self.assertNotIn("value", metric)
                 self.assertIsNotNone(metric["blocked_reason"] if metric["status"] == "BLOCKED" else metric["provider"])
+
+    def test_real_period_basis_blocks_unevidenced_income_statement_growth(self) -> None:
+        available = [
+            metric for record in self.artifact["records"].values()
+            if record["authority_tier"] == PROVIDER_TIER
+            for metric in record["provider_series_trends"]["metrics"].values()
+            if metric["status"] == "AVAILABLE"
+        ]
+        self.assertEqual({metric["metric_id"] for metric in available}, {
+            "assets_direction", "equity_direction", "operating_cash_flow_direction",
+        })
+        self.assertEqual(self.artifact["coverage"]["provider_research_usable_for_series_trends_count"], 494)
+        self.assertEqual(len(available), 1054)
+        contract = self.artifact["provider_financial_period_basis_contract"]
+        self.assertEqual(contract["metric_family_classification"]["revenue"], "PERIOD_FLOW")
+        self.assertEqual(contract["metric_family_classification"]["total_assets"], "POINT_IN_TIME_STOCK")
 
     def test_pnj_and_fpt_are_official_and_supersede_frozen_disposition(self) -> None:
         for ticker in ("PNJ", "FPT"):

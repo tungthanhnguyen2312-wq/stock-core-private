@@ -76,6 +76,59 @@ PROVIDER_SERIES_LIMITATIONS = (
 PROVIDER_SERIES_COMPARABILITY_SCOPE = (
     "same_ticker_same_provider_same_canonical_metric_consecutive_quarterly_periods_only"
 )
+METRIC_FAMILY_CLASSIFICATION = {
+    "revenue": "PERIOD_FLOW",
+    "net_income": "PERIOD_FLOW",
+    "operating_cash_flow": "PERIOD_FLOW",
+    "total_assets": "POINT_IN_TIME_STOCK",
+    "shareholders_equity": "POINT_IN_TIME_STOCK",
+}
+
+
+def _period_basis(fact: Mapping[str, Any], source_metric: str) -> dict[str, Any]:
+    """Classify only the retained fact's supported temporal basis; never trust Q labels alone."""
+    period = str(fact.get("reporting_period") or "")
+    quarter = _period_key(period)
+    result = {
+        "fiscal_period_end": fact.get("period_end"), "fiscal_year": quarter[0] if quarter else None,
+        "quarter": quarter[1] if quarter else None, "provider": fact.get("provider"),
+        "scope": fact.get("statement_scope"), "currency": fact.get("currency"),
+        "scale": fact.get("scale"), "semantic_identity": source_metric,
+        "statement_family": fact.get("statement_family"), "duration_basis": "UNKNOWN",
+        "evidence": "retained_canonical_fact_fields",
+    }
+    if METRIC_FAMILY_CLASSIFICATION[source_metric] == "POINT_IN_TIME_STOCK":
+        result["duration_basis"] = "POINT_IN_TIME" if fact.get("period_end") else "UNKNOWN"
+        result["evidence"] = "retained_balance_sheet_period_end"
+    elif source_metric == "operating_cash_flow":
+        state = fact.get("cumulative_state")
+        if state == "period_only" and fact.get("period_start") and fact.get("period_end"):
+            result["duration_basis"] = "SINGLE_QUARTER"
+            result["evidence"] = "retained_cash_flow_beginning_cash_basis_resolver"
+        elif state == "cumulative_ytd":
+            result["duration_basis"] = "YTD_CUMULATIVE"
+            result["evidence"] = "retained_cash_flow_beginning_cash_basis_resolver"
+    return result
+
+
+def _pair_basis_eligibility(previous: Mapping[str, Any], current: Mapping[str, Any], source_metric: str) -> tuple[bool, str | None, list[dict[str, Any]]]:
+    bases = [_period_basis(previous, source_metric), _period_basis(current, source_metric)]
+    # Same retained payload is the only local evidence that unknown native currency/scale are
+    # invariant across both columns. It does not establish their absolute identity.
+    if not previous.get("source_sha256") or previous.get("source_sha256") != current.get("source_sha256"):
+        return False, "SAME_SOURCE_PAYLOAD_NOT_RETAINED", bases
+    if previous.get("statement_scope") != current.get("statement_scope"):
+        return False, "STATEMENT_SCOPE_NOT_COMPARABLE", bases
+    classification = METRIC_FAMILY_CLASSIFICATION[source_metric]
+    if classification == "POINT_IN_TIME_STOCK":
+        if all(item["duration_basis"] == "POINT_IN_TIME" for item in bases):
+            return True, None, bases
+        return False, "POINT_IN_TIME_PERIOD_END_UNAVAILABLE", bases
+    if source_metric == "operating_cash_flow" and all(item["duration_basis"] == "SINGLE_QUARTER" for item in bases):
+        return True, None, bases
+    if source_metric == "operating_cash_flow" and any(item["duration_basis"] == "YTD_CUMULATIVE" for item in bases):
+        return False, "YTD_CUMULATIVE_DIRECT_COMPARISON_FORBIDDEN", bases
+    return False, "PERIOD_FLOW_DURATION_BASIS_UNEVIDENCED", bases
 
 
 def _canonical_json(value: Any) -> str:
@@ -189,6 +242,12 @@ def _provider_series_metric(*, ticker: str, metric_id: str, source_metric: str,
              "source_sha256": current.get("source_sha256"), "status": current.get("status")},
         ],
     })
+    eligible, basis_blocker, basis_records = _pair_basis_eligibility(previous, current, source_metric)
+    base["metric_family_classification"] = METRIC_FAMILY_CLASSIFICATION[source_metric]
+    base["period_basis"] = basis_records
+    if not eligible:
+        base["blocked_reason"] = basis_blocker
+        return base
     if mode == "growth":
         if previous_value <= 0:
             base["blocked_reason"] = "GROWTH_BASE_NON_POSITIVE"
@@ -338,6 +397,14 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             "provider_series_canonical_store_state": (
                 p3f10_frozen.get("source_artifacts", {}).get("canonical_store_state")
             ),
+        },
+        "provider_financial_period_basis_contract": {
+            "version": "provider_financial_period_basis_and_trend_integrity/v1",
+            "metric_family_classification": dict(METRIC_FAMILY_CLASSIFICATION),
+            "point_in_time_stock_rule": "same-provider same-source-payload same-scope consecutive reporting-date direction only",
+            "period_flow_rule": "direct comparison requires evidenced comparable duration; income-statement duration remains UNKNOWN, while cash-flow SINGLE_QUARTER requires retained beginning-cash resolver evidence",
+            "prohibited": ["quarter_label_duration_inference", "ytd_as_single_quarter", "full_year_to_q1_direct_growth", "cross_provider_comparison"],
+            "transformation_contract": "NONE_RETAINED",
         },
         "coverage": {
             "candidate_count": len(all_tickers),
