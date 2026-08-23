@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]; sys.path.insert(0, str(ROOT))
 import dnse_secrets_env, vn_time
 from dnse_access import CREDENTIAL_ENV_PAIRS, credentials_for_request
 from dnse_bulk_market_data import fetch_capability_raw
-from market_wide_current_liquidity_research import build_artifact
+from market_wide_current_liquidity_research import build_artifact, content_identity
 DEFAULT_SNAPSHOT=ROOT/"operations-review"/"p3f9b-market-wide-exact-session-scaleout-20260821"/"p3f9b_mva_exact_session_snapshot.json"; DEFAULT_OUT=ROOT/"operations-review"/"market-wide-current-liquidity-research-v1-20260823"
 def _norm(x): return {"ok":bool(x.get("ok")),"body":x.get("body"),"disposition":"PROVIDER_REJECTED" if not x.get("ok") else None,"reason":x.get("error_code")}
 def _one(t,k,s,day):
@@ -43,6 +43,13 @@ def consolidate(snapshot,out,session):
         seen+=x["symbols"]; trades.update(x["trades"]); ohlc.update(x["ohlc"])
     if sorted(seen)!=candidates or len(seen)!=len(set(seen)): raise ValueError(f"INCOMPLETE_BATCH_SET:{len(set(seen))}/{len(candidates)}")
     a=build_artifact(candidates=candidates,trades=trades,ohlc=ohlc,requested_at=f"SESSION_BOUND:{session}"); a["resolved_completed_session"]=session; a["universe"]["source_snapshot_identity"]=universe.get("snapshot_identity")
+    # build_artifact() stamps artifact_sha256/artifact_identity BEFORE the two lines above add
+    # resolved_completed_session and universe.source_snapshot_identity, so that stamp used to
+    # cover a strict subset of the persisted payload. Re-stamp over the complete final dict so
+    # the recorded hash actually reproduces from 100% of what gets written to disk -- the same
+    # contract every content_identity() sibling (dnse_fhsc_market_composition_scaleout.py,
+    # dnse_fhsc_volume_basis.py) already guarantees.
+    identity=content_identity(a); a["artifact_sha256"]=identity["artifact_sha256"]; a["artifact_identity"]=identity["artifact_identity"]
     (out/"market_wide_current_liquidity_research_artifact.json").write_text(json.dumps(a,ensure_ascii=False,sort_keys=True,indent=2)+"\n",encoding="utf-8"); print(a["artifact_identity"])
 def main(argv=None):
     p=argparse.ArgumentParser(); p.add_argument("--universe-snapshot",default=str(DEFAULT_SNAPSHOT)); p.add_argument("--out-dir",default=str(DEFAULT_OUT)); p.add_argument("--session",default="2026-08-21"); p.add_argument("--batch-index",type=int); p.add_argument("--batch-size",type=int,default=100); p.add_argument("--workers",type=int,default=8); p.add_argument("--consolidate",action="store_true"); a=p.parse_args(argv); out=Path(a.out_dir)

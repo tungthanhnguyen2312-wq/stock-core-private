@@ -16,9 +16,15 @@ def _canon(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
 
 
-def _identity(value: Mapping[str, Any]) -> str:
+def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
+    """Recompute this artifact's content hash from its own bytes, excluding the identity
+    fields it carries itself. Mirrors dnse_fhsc_market_composition_scaleout.content_identity()
+    / dnse_fhsc_volume_basis.content_identity() so a downstream consumer (e.g.
+    export_ai_bundle.py) can verify a retained artifact reproduces its own recorded
+    artifact_sha256 before attaching any of its records to a bundle."""
     payload = {key: item for key, item in value.items() if key not in {"artifact_sha256", "artifact_identity"}}
-    return hashlib.sha256(_canon(payload).encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(_canon(payload).encode("utf-8")).hexdigest()
+    return {"artifact_sha256": digest, "artifact_identity": f"market_wide_current_liquidity_research:{digest}"}
 
 
 def _ohlc_volume(body: Mapping[str, Any], session: str) -> float | None:
@@ -75,6 +81,7 @@ def build_artifact(*, candidates: list[str], trades: Mapping[str, Mapping[str, A
         "coverage": {"disposition_counts": dict(sorted(counts.items())), "reconciled_count": len(records), "eligible_current_session_count": len(eligible), "unattempted_without_disposition": 0},
         "records": records, "authority_boundary": {"CURRENT_SESSION_LIQUIDITY_RESEARCH": "DESCRIPTIVE_ONLY", "QUALIFIED_LIQUIDITY_INPUTS": False,
         "ADV_VOLUME_RESEARCH": "BLOCKED", "ADTV_RESEARCH": "BLOCKED", "POSITION_SIZING": "BLOCKED", "EXECUTION_CAPACITY": "BLOCKED", "PIT_BACKTEST": "BLOCKED", "RAW_AS_TRADED": "NOT_PROMOTED", "gross_trade_amount": "NON_AUTHORITATIVE_SCALE_BASIS_UNRESOLVED", "derived_price_times_shares": "NOT_COMPUTED"}}
-    artifact["artifact_sha256"] = _identity(artifact)
-    artifact["artifact_identity"] = f"market_wide_current_liquidity_research:{artifact['artifact_sha256']}"
+    identity = content_identity(artifact)
+    artifact["artifact_sha256"] = identity["artifact_sha256"]
+    artifact["artifact_identity"] = identity["artifact_identity"]
     return artifact
