@@ -345,6 +345,29 @@ class LiveIntegration(unittest.TestCase):
         self.assertEqual(record["entity_class_applicability"]["provider_series_trend_policy"]["status"],
                          "PERMITTED_PROVIDER_RESEARCH_DESCRIPTIVE_ONLY")
 
+    def test_trajectory_context_is_descriptive_and_coverage_explicit(self) -> None:
+        coverage = self.artifact["fundamental_trajectory_context_coverage"]
+        self.assertEqual(coverage["issuers_with_any_trajectory_context"], 507)
+        self.assertEqual(coverage["issuers_with_income_trajectory"], 83)
+        self.assertEqual(coverage["issuers_with_balance_sheet_trajectory"], 494)
+        self.assertEqual(coverage["issuers_with_ocf_trajectory"], 66)
+        self.assertEqual(coverage["issuers_with_multi_dimensional_trajectory"], 133)
+        self.assertEqual(coverage["acceleration_available_count"], 0)
+        self.assertEqual(sum(coverage["revenue_earnings_alignment"].values()), 523)
+        self.assertEqual(coverage["revenue_earnings_alignment"]["BOTH_EXPANDING"], 22)
+
+    def test_trajectory_context_preserves_provider_official_boundary(self) -> None:
+        provider = self.artifact["records"]["AAA"]["fundamental_trajectory_context"]
+        official = self.artifact["records"]["VCB"]["fundamental_trajectory_context"]
+        self.assertEqual(provider["authority_tier"], PROVIDER_TIER)
+        self.assertEqual(provider["trajectory_status"], "AVAILABLE")
+        self.assertIsNone(provider["official_metric_context"])
+        self.assertEqual(official["authority_tier"], OFFICIAL_TIER)
+        self.assertEqual(official["trajectory_status"], "OFFICIAL_METRIC_CONTEXT_ONLY")
+        self.assertIsNone(official["revenue_direction"])
+        self.assertNotIn("score", provider)
+        self.assertNotIn("recommendation", provider)
+
     def test_content_identity_is_self_consistent(self) -> None:
         identity = content_identity(self.artifact)
         self.assertEqual(identity["artifact_sha256"], self.artifact["artifact_sha256"])

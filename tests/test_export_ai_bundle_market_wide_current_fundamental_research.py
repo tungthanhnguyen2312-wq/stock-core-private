@@ -150,6 +150,8 @@ class AttachMarketWideCurrentFundamentalResearch(unittest.TestCase):
         self.assertNotIn("metrics", aaa)
         self.assertNotIn("value", aaa)
         self.assertFalse(aaa["is_actionable"])
+        self.assertEqual(aaa["fundamental_trajectory_context"]["authority_tier"], "PROVIDER_RESEARCH")
+        self.assertNotIn("score", aaa["fundamental_trajectory_context"])
 
     def test_blocked_no_source_ticker(self) -> None:
         result = bundle.attach_market_wide_current_fundamental_research(

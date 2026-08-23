@@ -117,6 +117,7 @@ ENTITY_CLASS_APPLICABILITY_METRICS = (
     "ebitda", "ev_ebitda",
 )
 ENTITY_CLASS_RESOLUTION_VERSION = "fundamental_entity_class_and_sector_applicability_scaleout/v1"
+TRAJECTORY_CONTEXT_VERSION = "market_wide_fundamental_trajectory_context/v1"
 VCI_INDUSTRY_SNAPSHOT = ROOT / "registry_snapshots" / "metadata" / "vnstock_metadata_snapshot_20260728T122548Z_16fe54ee3497.jsonl"
 VCI_INDUSTRY_PROVIDER = "vnstock:Listing(source=VCI).symbols_by_industries"
 
@@ -413,6 +414,195 @@ def _entity_class_metric_applicability(entity_class: str) -> dict[str, Any]:
             "applies_to": [item[0] for item in PROVIDER_SERIES_METRICS],
         },
     }
+
+
+def _growth_direction(value: Any) -> str | None:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    if value > 0:
+        return "EXPANDING"
+    if value < 0:
+        return "CONTRACTING"
+    return "UNCHANGED"
+
+
+def _qoq_comparison(metric: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    comparison = metric.get("comparisons", {}).get("qoq")
+    if isinstance(comparison, Mapping) and comparison.get("status") == "AVAILABLE":
+        return comparison
+    return None
+
+
+def _growth_trajectory_dimension(metric: Mapping[str, Any]) -> dict[str, Any]:
+    comparison = _qoq_comparison(metric)
+    direction = _growth_direction(metric.get("growth_fraction")) if metric.get("status") == "AVAILABLE" else None
+    if direction is None or comparison is None:
+        return {
+            "status": "UNAVAILABLE", "direction": None, "growth_basis": None,
+            "unavailable_reason": metric.get("blocked_reason") or "NO_COMPARABLE_QOQ_PROVIDER_TREND",
+        }
+    return {
+        "status": "AVAILABLE", "direction": direction,
+        "growth_basis": {
+            "comparison_type": "QoQ", "provider": comparison.get("provider"),
+            "periods": list(comparison.get("periods") or []),
+            "period_basis": list(comparison.get("period_basis") or []),
+            "method": metric.get("method"),
+        },
+        "unavailable_reason": None,
+    }
+
+
+def _direction_trajectory_dimension(metric: Mapping[str, Any]) -> dict[str, Any]:
+    if metric.get("status") != "AVAILABLE" or metric.get("direction") not in {"INCREASED", "DECREASED", "UNCHANGED"}:
+        return {
+            "status": "UNAVAILABLE", "direction": None, "basis": None,
+            "unavailable_reason": metric.get("blocked_reason") or "NO_COMPARABLE_PROVIDER_DIRECTION",
+        }
+    return {
+        "status": "AVAILABLE", "direction": metric["direction"],
+        "basis": {
+            "provider": metric.get("provider"), "periods": list(metric.get("periods") or []),
+            "period_basis": list(metric.get("period_basis") or []), "method": metric.get("method"),
+        },
+        "unavailable_reason": None,
+    }
+
+
+def _revenue_earnings_alignment(revenue: Mapping[str, Any], earnings: Mapping[str, Any]) -> dict[str, Any]:
+    if revenue["status"] != "AVAILABLE" and earnings["status"] != "AVAILABLE":
+        return {"status": "UNAVAILABLE", "reason": "REVENUE_AND_EARNINGS_QOQ_UNAVAILABLE"}
+    if revenue["status"] != "AVAILABLE" or earnings["status"] != "AVAILABLE":
+        return {"status": "PARTIAL", "reason": "ONLY_ONE_INCOME_DIMENSION_QOQ_AVAILABLE"}
+    revenue_basis, earnings_basis = revenue["growth_basis"], earnings["growth_basis"]
+    if (revenue_basis["provider"], revenue_basis["periods"]) != (earnings_basis["provider"], earnings_basis["periods"]):
+        return {"status": "PARTIAL", "reason": "REVENUE_EARNINGS_COMPARISON_PERIODS_NOT_ALIGNED"}
+    pair = (revenue["direction"], earnings["direction"])
+    states = {
+        ("EXPANDING", "EXPANDING"): "BOTH_EXPANDING",
+        ("EXPANDING", "CONTRACTING"): "REVENUE_UP_EARNINGS_DOWN",
+        ("CONTRACTING", "EXPANDING"): "REVENUE_DOWN_EARNINGS_UP",
+        ("CONTRACTING", "CONTRACTING"): "BOTH_CONTRACTING",
+    }
+    return {"status": states.get(pair, "PARTIAL"), "reason": None if pair in states else "UNCHANGED_INCOME_DIMENSION"}
+
+
+def _balance_sheet_expansion_pattern(assets: Mapping[str, Any], equity: Mapping[str, Any]) -> dict[str, Any]:
+    if assets["status"] != "AVAILABLE" and equity["status"] != "AVAILABLE":
+        return {"status": "UNAVAILABLE", "reason": "ASSETS_AND_EQUITY_DIRECTIONS_UNAVAILABLE"}
+    if assets["status"] != "AVAILABLE" or equity["status"] != "AVAILABLE":
+        return {"status": "PARTIAL", "reason": "ONLY_ONE_BALANCE_SHEET_DIRECTION_AVAILABLE"}
+    pair = (assets["direction"], equity["direction"])
+    states = {
+        ("INCREASED", "INCREASED"): "ASSETS_AND_EQUITY_EXPANDING",
+        ("INCREASED", "DECREASED"): "ASSETS_EXPANDING_EQUITY_CONTRACTING",
+        ("DECREASED", "INCREASED"): "ASSETS_CONTRACTING_EQUITY_EXPANDING",
+        ("DECREASED", "DECREASED"): "ASSETS_AND_EQUITY_CONTRACTING",
+    }
+    return {"status": states.get(pair, "UNCHANGED_OR_MIXED"), "reason": None}
+
+
+def _provider_trajectory_context(record: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = record.get("provider_series_trends", {}).get("metrics", {})
+    revenue = _growth_trajectory_dimension(metrics.get("revenue_growth", {}))
+    earnings = _growth_trajectory_dimension(metrics.get("earnings_growth", {}))
+    assets = _direction_trajectory_dimension(metrics.get("assets_direction", {}))
+    equity = _direction_trajectory_dimension(metrics.get("equity_direction", {}))
+    operating_cash_flow = _direction_trajectory_dimension(metrics.get("operating_cash_flow_direction", {}))
+    alignment = _revenue_earnings_alignment(revenue, earnings)
+    balance_sheet = _balance_sheet_expansion_pattern(assets, equity)
+    income_available = revenue["status"] == "AVAILABLE" or earnings["status"] == "AVAILABLE"
+    balance_available = assets["status"] == "AVAILABLE" or equity["status"] == "AVAILABLE"
+    ocf_available = operating_cash_flow["status"] == "AVAILABLE"
+    dimensions = sum((income_available, balance_available, ocf_available))
+    unavailable_or_partial = [
+        value["unavailable_reason"] for value in (revenue, earnings, assets, equity, operating_cash_flow)
+        if value.get("unavailable_reason")
+    ]
+    unavailable_or_partial.extend(
+        value["reason"] for value in (alignment, balance_sheet) if value.get("reason")
+    )
+    return {
+        "version": TRAJECTORY_CONTEXT_VERSION,
+        "trajectory_status": "AVAILABLE" if dimensions else "UNAVAILABLE",
+        "authority_tier": PROVIDER_TIER,
+        "entity_class": record["entity_class"],
+        "revenue_direction": revenue["direction"], "revenue_growth_basis": revenue["growth_basis"],
+        "earnings_direction": earnings["direction"], "earnings_growth_basis": earnings["growth_basis"],
+        "revenue_vs_earnings_alignment": alignment,
+        "assets_direction": assets["direction"], "equity_direction": equity["direction"],
+        "balance_sheet_expansion_pattern": balance_sheet,
+        "operating_cash_flow_direction": operating_cash_flow["direction"],
+        "period_coverage": {
+            "retained_reporting_periods": list(record.get("reporting_periods") or []),
+            "income_trajectory_available": income_available,
+            "balance_sheet_trajectory_available": balance_available,
+            "operating_cash_flow_trajectory_available": ocf_available,
+        },
+        "available_dimension_count": dimensions,
+        "multi_dimensional_trajectory": dimensions >= 2,
+        "acceleration": {
+            "status": "UNAVAILABLE",
+            "reason": "PRIOR_COMPARABLE_DIRECTION_NOT_EMITTED_BY_EXISTING_PROVIDER_SERIES_ENVELOPE",
+        },
+        "official_metric_context": None,
+        "data_limitations": list(record.get("provider_series_trends", {}).get("data_limitations") or []) + [
+            "trajectory_is_descriptive_provider_research_only_not_a_score_or_official_calculation_grade",
+            "balance_sheet_movement_has_no_intrinsic_good_bad_interpretation",
+        ],
+        "unavailable_or_partial_reasons": sorted(set(unavailable_or_partial)),
+    }
+
+
+def _official_trajectory_context(record: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = [{"metric_id": metric.get("metric_id"), "status": metric.get("status"),
+                "periods_used": list(metric.get("periods_used") or []), "blocked_reason": metric.get("blocked_reason")}
+               for metric in record.get("metrics", [])]
+    return {
+        "version": TRAJECTORY_CONTEXT_VERSION,
+        "trajectory_status": "OFFICIAL_METRIC_CONTEXT_ONLY",
+        "authority_tier": OFFICIAL_TIER,
+        "entity_class": record["entity_class"],
+        "revenue_direction": None, "revenue_growth_basis": None,
+        "earnings_direction": None, "earnings_growth_basis": None,
+        "revenue_vs_earnings_alignment": {"status": "UNAVAILABLE", "reason": "NO_PROVIDER_TRAJECTORY_PROMOTION_TO_OFFICIAL"},
+        "assets_direction": None, "equity_direction": None,
+        "balance_sheet_expansion_pattern": {"status": "UNAVAILABLE", "reason": "NO_OFFICIAL_DIRECTION_RECALCULATION_IN_TRAJECTORY_CONTEXT"},
+        "operating_cash_flow_direction": None,
+        "period_coverage": {"authoritative_periods_available": list(record.get("authoritative_periods_available") or [])},
+        "available_dimension_count": 0, "multi_dimensional_trajectory": False,
+        "acceleration": {"status": "UNAVAILABLE", "reason": "NO_OFFICIAL_DIRECTION_RECALCULATION_IN_TRAJECTORY_CONTEXT"},
+        "official_metric_context": {"fundamental_research_readiness": record.get("fundamental_research_readiness"), "metrics": metrics},
+        "data_limitations": ["official_metric_context_is_distinct_from_provider_research_trajectory",
+                             "no_new_official_trend_or_direction_calculation"],
+        "unavailable_or_partial_reasons": ["NO_OFFICIAL_DIRECTION_RECALCULATION_IN_TRAJECTORY_CONTEXT"],
+    }
+
+
+def _blocked_trajectory_context(record: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "version": TRAJECTORY_CONTEXT_VERSION, "trajectory_status": "UNAVAILABLE",
+        "authority_tier": BLOCKED_TIER, "entity_class": record["entity_class"],
+        "revenue_direction": None, "revenue_growth_basis": None, "earnings_direction": None,
+        "earnings_growth_basis": None,
+        "revenue_vs_earnings_alignment": {"status": "UNAVAILABLE", "reason": "NO_RETAINED_PROVIDER_OR_OFFICIAL_TRAJECTORY_SOURCE"},
+        "assets_direction": None, "equity_direction": None,
+        "balance_sheet_expansion_pattern": {"status": "UNAVAILABLE", "reason": "NO_RETAINED_PROVIDER_OR_OFFICIAL_TRAJECTORY_SOURCE"},
+        "operating_cash_flow_direction": None, "period_coverage": {}, "available_dimension_count": 0,
+        "multi_dimensional_trajectory": False,
+        "acceleration": {"status": "UNAVAILABLE", "reason": "NO_RETAINED_PROVIDER_OR_OFFICIAL_TRAJECTORY_SOURCE"},
+        "official_metric_context": None,
+        "data_limitations": ["no_retained_fundamental_source"],
+        "unavailable_or_partial_reasons": ["NO_RETAINED_PROVIDER_OR_OFFICIAL_TRAJECTORY_SOURCE"],
+    }
+
+
+def _trajectory_context(record: Mapping[str, Any]) -> dict[str, Any]:
+    if record["authority_tier"] == PROVIDER_TIER:
+        return _provider_trajectory_context(record)
+    if record["authority_tier"] == OFFICIAL_TIER:
+        return _official_trajectory_context(record)
+    return _blocked_trajectory_context(record)
 
 
 def _official_ticker_record(readiness_row: Mapping[str, Any], frozen_row: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -725,6 +915,42 @@ def _official_coverage_by_class(records: Mapping[str, Mapping[str, Any]]) -> dic
     return {entity_class: dict(sorted(counts.items())) for entity_class, counts in sorted(coverage.items())}
 
 
+def _trajectory_context_coverage(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    by_entity_class: dict[str, Counter[str]] = defaultdict(Counter)
+    alignment = Counter()
+    unavailable_or_partial = Counter()
+    summary = Counter()
+    for record in records.values():
+        context = record["fundamental_trajectory_context"]
+        entity_class = str(context["entity_class"])
+        by_entity_class[entity_class][f"trajectory_status:{context['trajectory_status']}"] += 1
+        if context["trajectory_status"] != "UNAVAILABLE":
+            summary["issuers_with_any_trajectory_context"] += 1
+            by_entity_class[entity_class]["any_trajectory_context"] += 1
+        period_coverage = context["period_coverage"]
+        if period_coverage.get("income_trajectory_available"):
+            summary["issuers_with_income_trajectory"] += 1
+            by_entity_class[entity_class]["income_trajectory"] += 1
+        if period_coverage.get("balance_sheet_trajectory_available"):
+            summary["issuers_with_balance_sheet_trajectory"] += 1
+            by_entity_class[entity_class]["balance_sheet_trajectory"] += 1
+        if period_coverage.get("operating_cash_flow_trajectory_available"):
+            summary["issuers_with_ocf_trajectory"] += 1
+            by_entity_class[entity_class]["ocf_trajectory"] += 1
+        if context["multi_dimensional_trajectory"]:
+            summary["issuers_with_multi_dimensional_trajectory"] += 1
+            by_entity_class[entity_class]["multi_dimensional_trajectory"] += 1
+        alignment[str(context["revenue_vs_earnings_alignment"]["status"])] += 1
+        unavailable_or_partial.update(context["unavailable_or_partial_reasons"])
+    summary["acceleration_available_count"] = 0
+    return {
+        **dict(sorted(summary.items())),
+        "revenue_earnings_alignment": dict(sorted(alignment.items())),
+        "coverage_by_entity_class": {entity: dict(sorted(counts.items())) for entity, counts in sorted(by_entity_class.items())},
+        "unavailable_or_partial_reasons": dict(sorted(unavailable_or_partial.items())),
+    }
+
+
 def _income_statement_period_semantic_coverage(
     records: Mapping[str, Mapping[str, Any]], provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]],
 ) -> dict[str, Any]:
@@ -824,6 +1050,7 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         record["sector"] = resolution["entity_class"]
         record["entity_class_provenance"] = resolution
         record["entity_class_applicability"] = _entity_class_metric_applicability(resolution["entity_class"])
+        record["fundamental_trajectory_context"] = _trajectory_context(record)
 
     official_tickers = sorted(official_rows)
     official_records = [records[ticker] for ticker in official_tickers]
@@ -901,6 +1128,7 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         "entity_class_metric_applicability_coverage": _metric_applicability_coverage(records),
         "provider_series_trend_coverage_by_entity_class": _provider_trend_coverage_by_class(records),
         "official_coverage_by_entity_class": _official_coverage_by_class(records),
+        "fundamental_trajectory_context_coverage": _trajectory_context_coverage(records),
         "data_gap_summary": {
             "official_tier_blocked_reasons": dict(sorted(Counter(
                 record["official_tier_blocked_reason"] for record in records.values()
