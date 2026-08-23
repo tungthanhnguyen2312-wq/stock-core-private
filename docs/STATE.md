@@ -13,6 +13,8 @@
 - **Target Pipeline**:
   `Market Universe → Raw Ingest Lake → Quality / Canonical / PIT → Vectorized Feature Store → Feature-Level Eligibility → Strategy → Portfolio / Risk → AI Synthesis → Dashboard / Decision`
 
+**Market-wide current valuation V1 (2026-08-24):** `MARKET_WIDE_CURRENT_VALUATION_END_TO_END_V1 = COMPLETE_LOCALLY / COHERENT_PARTIAL`. The retained 1,683-candidate price universe now has a deterministic, opt-in Producer→Consumer current-valuation envelope. It reuses the 2026-08-21 exact-session DNSE snapshot (960 price-ready records), the current entity/fundamental research artifact (13 `OFFICIAL_QUALIFIED`, 507 `PROVIDER_RESEARCH`, 3 blocked, 1,160 without a retained financial record), and the retained share-promotion review. No share basis is proved current through that price session: 11 ticker-level retained provider/official-reference rows are explicitly `PROVIDER_REPORTED_STALE` and 1,672 are `UNAVAILABLE`, yielding zero market-cap or multiple-ready records. Every attempted metric is therefore explicitly `BLOCKED` or sector/entity `NOT_APPLICABLE`; provider trends never become absolute valuation inputs. The opt-in bundle field preserves price session/basis, share authority/freshness, financial authority, entity applicability, lineage, and blockers verbatim; it remains current-only, non-actionable, non-ranking, non-recommendation, non-PIT, and non-RAW-AS-TRADED. Artifact: `operations-review/market-wide-current-valuation-v1-20260824/market_wide_current_valuation_artifact.json` (`market_wide_current_valuation:0cab92d67f337f96c4fedaee69eb47e13dd88022d279a3aa1214a0144369cc07`).
+
 ---
 
 ## 2. Program Priority & Foundation Status

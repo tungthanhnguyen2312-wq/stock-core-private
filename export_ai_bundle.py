@@ -134,6 +134,9 @@ from current_market_screening_opportunity_comparison_foundation import (
 from market_wide_current_fundamental_research import (
     content_identity as market_wide_current_fundamental_research_content_identity,
 )
+from market_wide_current_valuation_input_scaleout import (
+    content_identity as market_wide_current_valuation_content_identity,
+)
 from watchlist_tactical_entry_classifier import (
     content_identity as watchlist_tactical_entry_classifier_content_identity,
 )
@@ -2724,6 +2727,38 @@ def attach_distribution_evidence(
     return bundle_entries
 
 
+def load_market_wide_current_valuation_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Load only a self-identifying retained valuation artifact."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict):
+            return None
+        if market_wide_current_valuation_content_identity(artifact)["artifact_sha256"] != artifact.get("artifact_sha256"):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def attach_market_wide_current_valuation(bundle_entries: dict[str, dict], include: bool, artifact_path: str | None) -> dict[str, dict]:
+    """Opt-in pass-through; no valuation calculation or authority promotion occurs here."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_market_wide_current_valuation_artifact(Path(artifact_path))
+    if artifact is None or not isinstance(artifact.get("records"), Mapping):
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        record = artifact["records"].get(ticker)
+        if isinstance(record, Mapping):
+            value = dict(record)
+            value["source_artifact_identity"] = artifact.get("artifact_identity")
+            value["coverage"] = artifact.get("coverage")
+            value["status"] = "current_valuation_snapshot"
+            value["is_actionable"] = False
+            entry["market_wide_current_valuation"] = value
+    return bundle_entries
+
+
 # ==========================================================================
 # DNSE foreign-flow VALUE integration — opt-in (disabled by default)
 # ==========================================================================
@@ -4078,6 +4113,11 @@ def main() -> int:
                              " market_wide_current_fundamental_research_artifact.json, required only"
                              " with --include-market-wide-current-fundamental-research; never"
                              " inferred or hardcoded.")
+    parser.add_argument("--include-market-wide-current-valuation", action="store_true",
+                        help="Opt-in current valuation snapshot pass-through; never enabled by default,"
+                             " never a target price, ranking, recommendation, sizing, or historical/PIT claim.")
+    parser.add_argument("--market-wide-current-valuation-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained market_wide_current_valuation artifact.")
     parser.add_argument("--include-watchlist-tactical-entry-classifier", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].watchlist_tactical_entry_classifier from the"
@@ -4419,6 +4459,10 @@ def main() -> int:
     attach_market_wide_current_fundamental_research(
         bundle_entries, args.include_market_wide_current_fundamental_research,
         args.market_wide_current_fundamental_research_path,
+    )
+    attach_market_wide_current_valuation(
+        bundle_entries, args.include_market_wide_current_valuation,
+        args.market_wide_current_valuation_path,
     )
     # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
     # market_wide_current_* siblings above.
