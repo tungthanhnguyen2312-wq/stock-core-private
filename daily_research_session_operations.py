@@ -15,6 +15,7 @@ from current_daily_decision_research_product import build as build_product, cont
 from current_evidence_bound_scenario import build as build_scenario, content_identity as scenario_identity
 from field_temporal_contract import stable_id
 from market_wide_current_corporate_intelligence import prospective_context
+from polymorphic_current_strategy_classification import build as build_strategy, content_identity as strategy_identity, prospective_context as strategy_prospective_context
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
 
@@ -92,18 +93,21 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
     if peer_identity(peer)["artifact_sha256"] != peer["artifact_sha256"]: raise ValueError("PEER_ARTIFACT_SELF_VERIFICATION_FAILED")
     scenario = build_scenario(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], triage=inputs["triage"], catalyst=inputs["catalyst"], screening=inputs["screening"], corporate_intelligence=inputs["corporate_intelligence"])
     if scenario_identity(scenario)["artifact_sha256"] != scenario["artifact_sha256"]: raise ValueError("SCENARIO_ARTIFACT_SELF_VERIFICATION_FAILED")
-    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"])
+    strategy = build_strategy(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, corporate_intelligence=inputs["corporate_intelligence"])
+    if strategy_identity(strategy)["artifact_sha256"] != strategy["artifact_sha256"]: raise ValueError("STRATEGY_ARTIFACT_SELF_VERIFICATION_FAILED")
+    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy)
     if product_identity(product)["artifact_sha256"] != product["artifact_sha256"]: raise ValueError("PRODUCT_ARTIFACT_SELF_VERIFICATION_FAILED")
     snapshot = freeze_current_decision_surface(inputs["tactical"], inputs["triage"], inputs["fundamental"], inputs["valuation"])
     corporate_snapshot = prospective_context(inputs["corporate_intelligence"])
+    strategy_snapshot = strategy_prospective_context(strategy)
     input_manifest = {}
     for name, value in inputs.items():
         input_session = value.get("session") or value.get("source_market_session") or value.get("valuation_session") or value.get("research_session")
         freshness = "ACCEPTED_DEGRADED" if name == "catalyst" else "ACCEPTED_UNDATED_RETAINED_CONTEXT" if name == "fundamental" else "CURRENT_SESSION_COHERENT_WITH_RETAINED_EVENT_FRESHNESS" if name == "corporate_intelligence" else "CURRENT_SESSION_COHERENT"
         input_manifest[name] = {"artifact_identity": value.get("artifact_identity"), "contract_version": value.get("contract_version"), "session": input_session, "freshness_state": freshness}
-    manifest = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "market_session": session, "generation_context": generation_context, "producer_head": producer_head, "consumer_head": consumer_head, "input_artifacts": input_manifest, "session_coherence": coherence, "outputs": {"peer_relative": peer["artifact_identity"], "scenario": scenario["artifact_identity"], "daily_product": product["artifact_identity"], "prospective_snapshot": snapshot["snapshot_id"], "corporate_intelligence_prospective_context": corporate_snapshot["snapshot_id"]}, "coverage_summary": {"technical": product["market_brief"]["coverage"]["same_session_technical_feature_available_count"], "watchlist_cards": product["watchlist"]["cards_available"], "high_priority_review": product["high_priority_full_universe_review_set"]["count"], "entry_relevant": product["aggregate_validation"]["entry_relevant_90_count"], "corporate_intelligence": inputs["corporate_intelligence"]["coverage"]}, "warnings": ["Catalyst context is explicitly earlier retained evidence.", "Corporate Intelligence uses retained source evidence; event freshness remains per record.", "Fundamental context is retained/undated rather than session-stamped.", "Strict valuation and valuation peer comparison remain unavailable."], "authority_boundary": product["authority_boundary"]}
+    manifest = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "market_session": session, "generation_context": generation_context, "producer_head": producer_head, "consumer_head": consumer_head, "input_artifacts": input_manifest, "session_coherence": coherence, "outputs": {"peer_relative": peer["artifact_identity"], "scenario": scenario["artifact_identity"], "strategy_classification": strategy["artifact_identity"], "daily_product": product["artifact_identity"], "prospective_snapshot": snapshot["snapshot_id"], "corporate_intelligence_prospective_context": corporate_snapshot["snapshot_id"], "strategy_prospective_context": strategy_snapshot["snapshot_id"]}, "coverage_summary": {"technical": product["market_brief"]["coverage"]["same_session_technical_feature_available_count"], "watchlist_cards": product["watchlist"]["cards_available"], "high_priority_review": product["high_priority_full_universe_review_set"]["count"], "entry_relevant": product["aggregate_validation"]["entry_relevant_90_count"], "corporate_intelligence": inputs["corporate_intelligence"]["coverage"], "strategy": strategy["coverage"]}, "warnings": ["Catalyst context is explicitly earlier retained evidence.", "Corporate Intelligence uses retained source evidence; event freshness remains per record.", "Strategy fit is separate from entry action, scenario probability, and portfolio action.", "Fundamental context is retained/undated rather than session-stamped.", "Strict valuation and valuation peer comparison remain unavailable."], "authority_boundary": product["authority_boundary"]}
     manifest["operation_identity"] = _identity(manifest)
-    return {"peer": peer, "scenario": scenario, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "manifest": manifest}
+    return {"peer": peer, "scenario": scenario, "strategy": strategy, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
@@ -116,6 +120,7 @@ def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
 def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
     write_immutable(output_dir / "peer_relative_research_artifact.json", operation["peer"])
     write_immutable(output_dir / "scenario_artifact.json", operation["scenario"])
+    write_immutable(output_dir / "strategy_classification_artifact.json", operation["strategy"])
     write_immutable(output_dir / "current_daily_decision_research_product_artifact.json", operation["product"])
     text = markdown(operation["product"])
     markdown_path = output_dir / "current_daily_decision_research_brief.md"
@@ -123,4 +128,5 @@ def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
     markdown_path.write_text(text, encoding="utf-8")
     write_immutable(output_dir / "prospective_snapshot.json", operation["snapshot"])
     write_immutable(output_dir / "corporate_intelligence_prospective_context.json", operation["corporate_snapshot"])
+    write_immutable(output_dir / "strategy_prospective_context.json", operation["strategy_snapshot"])
     write_immutable(output_dir / "run_manifest.json", operation["manifest"])

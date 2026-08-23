@@ -3,6 +3,7 @@ from pathlib import Path
 
 from current_daily_decision_research_product import build, content_identity, markdown
 from export_ai_bundle import attach_current_daily_decision_research_product
+from polymorphic_current_strategy_classification import build as build_strategy
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,6 +53,15 @@ def test_markdown_is_a_compact_human_review_product_not_recommendation_text():
     assert "Candidate means human research candidate only" in brief
     assert "Human review required; no sizing or execution instruction." in brief
     assert "most likely" not in brief.lower()
+
+
+def test_product_shows_deterministic_strategy_fit_without_turning_it_into_action():
+    inputs = _inputs()
+    strategy = build_strategy(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=inputs["peer_relative"], fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=inputs["scenario"], corporate_intelligence=inputs["corporate_intelligence"])
+    product = build(**inputs, strategy_classification=strategy)
+    hpg = product["detailed_research_cards"]["HPG"]["strategy_fit"]
+    assert hpg["is_actionable"] is False and hpg["source_artifact_identity"] == strategy["artifact_identity"]
+    assert next(item for item in hpg["strategies"] if item["strategy_id"] == "EVENT_DRIVEN")["status"] == "ELIGIBLE"
 
 
 def test_opt_in_attach_passes_card_from_single_product_artifact():
