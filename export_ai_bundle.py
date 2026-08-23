@@ -143,6 +143,9 @@ from sector_aware_relative_research import (
 from current_evidence_bound_scenario import (
     content_identity as current_evidence_bound_scenario_content_identity,
 )
+from current_daily_decision_research_product import (
+    content_identity as current_daily_decision_research_product_content_identity,
+)
 from watchlist_tactical_entry_classifier import (
     content_identity as watchlist_tactical_entry_classifier_content_identity,
 )
@@ -2824,6 +2827,33 @@ def attach_current_evidence_bound_scenario(bundle_entries: dict[str, dict], incl
     return bundle_entries
 
 
+def load_current_daily_decision_research_product_artifact(path: Path) -> Mapping[str, Any] | None:
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if (not isinstance(artifact, dict) or artifact.get("contract_version") != "current_daily_decision_research_product/v2"
+                or current_daily_decision_research_product_content_identity(artifact)["artifact_sha256"] != artifact.get("artifact_sha256")):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def attach_current_daily_decision_research_product(bundle_entries: dict[str, dict], include: bool, artifact_path: str | None) -> dict[str, dict]:
+    """Opt-in per-ticker card pass-through from the single daily product artifact."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_current_daily_decision_research_product_artifact(Path(artifact_path))
+    if artifact is None or not isinstance(artifact.get("detailed_research_cards"), Mapping):
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        card = artifact["detailed_research_cards"].get(ticker)
+        if isinstance(card, Mapping):
+            value = dict(card)
+            value.update({"source_artifact_identity": artifact.get("artifact_identity"), "source_session": artifact.get("session"), "market_brief": artifact.get("market_brief"), "authority_boundary": artifact.get("authority_boundary"), "is_actionable": False})
+            entry["current_daily_decision_research"] = value
+    return bundle_entries
+
+
 # ==========================================================================
 # DNSE foreign-flow VALUE integration — opt-in (disabled by default)
 # ==========================================================================
@@ -4191,6 +4221,10 @@ def main() -> int:
                         help="Opt-in current evidence-bound Bear/Base/Bull scenario pass-through; conditional research only, no probability, target, ranking, recommendation, or sizing.")
     parser.add_argument("--current-evidence-bound-scenario-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained current_evidence_bound_scenario artifact.")
+    parser.add_argument("--include-current-daily-decision-research-product", action="store_true",
+                        help="Opt-in current daily decision-research card pass-through; human-review research only, never recommendation, probability, target, sizing, or execution.")
+    parser.add_argument("--current-daily-decision-research-product-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained current daily decision-research product artifact.")
     parser.add_argument("--include-watchlist-tactical-entry-classifier", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].watchlist_tactical_entry_classifier from the"
@@ -4544,6 +4578,10 @@ def main() -> int:
     attach_current_evidence_bound_scenario(
         bundle_entries, args.include_current_evidence_bound_scenario,
         args.current_evidence_bound_scenario_path,
+    )
+    attach_current_daily_decision_research_product(
+        bundle_entries, args.include_current_daily_decision_research_product,
+        args.current_daily_decision_research_product_path,
     )
     # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
     # market_wide_current_* siblings above.

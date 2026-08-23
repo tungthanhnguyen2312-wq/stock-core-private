@@ -21,6 +21,8 @@
 
 **Current evidence-bound scenario engine V1 (2026-08-24):** `CURRENT_EVIDENCE_BOUND_SCENARIO_ENGINE_V1 = COMPLETE_LOCALLY / RESEARCH_ONLY`. The additive 1,683-record current artifact ports the retained evidence-bound Bear/Base/Bull semantics without replacing the frozen 25-case `expectations_scenario_research/v1` overlay. Every case is conditional, source-identity-bound, and has `probability_status=UNKNOWN_UNCALIBRATED`; Base is explicitly a current-continuation reference, never a most-likely claim. It preserves current tactical confirmation/invalidation, retained peer-relative and fundamental availability, valuation non-discrimination, and catalyst gaps verbatim through an opt-in Producer→Consumer pass-through. No target, expected return, ranking, recommendation, sizing, portfolio, execution, outcome, or calibration authority is created.
 
+**Current Daily Decision Research Product V2 (2026-08-24):** `CURRENT_DAILY_DECISION_RESEARCH_PRODUCT_V2 = COMPLETE_LOCALLY / HUMAN_REVIEW_RESEARCH_ONLY`. One source-identity-bound current-session product now integrates the existing market brief, deterministic tactical cohorts, 11-name watchlist, 47-name high-priority full-universe review set, peer/fundamental/valuation context, and conditional scenario cards. It keeps full-universe discovery distinct from the watchlist and passes per-ticker cards opt-in through Producer→Consumer. Entry actions remain existing non-actionable tactical states; probability remains `UNKNOWN_UNCALIBRATED`; no recommendation, target, ranking, sizing, portfolio, execution, or authority promotion is created.
+
 ---
 
 ## 2. Program Priority & Foundation Status
