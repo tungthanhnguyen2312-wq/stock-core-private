@@ -72,9 +72,18 @@ def _hash(value: Any) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
+    """Recompute this artifact's content hash from its own bytes, excluding the identity fields
+    it carries itself. Mirrors market_wide_current_liquidity_research.content_identity() so a
+    downstream consumer (export_ai_bundle.py) can verify a retained artifact reproduces its own
+    recorded artifact_sha256 before attaching any of its records to a bundle."""
+    payload = {key: item for key, item in value.items() if key not in {"artifact_sha256", "artifact_identity"}}
+    digest = _hash(payload)
+    return {"artifact_sha256": digest, "artifact_identity": f"market_wide_current_descriptive_research:{digest}"}
+
+
 def _verify_local_identity(artifact: Mapping[str, Any], *, hash_key: str, identity_key: str, label: str) -> None:
-    payload = {key: value for key, value in artifact.items() if key not in {hash_key, identity_key}}
-    if artifact.get(hash_key) != _hash(payload):
+    if artifact.get(hash_key) != content_identity(artifact)["artifact_sha256"]:
         raise MarketWideCurrentDescriptiveResearchError(f"{label}_IDENTITY_MISMATCH")
 
 
