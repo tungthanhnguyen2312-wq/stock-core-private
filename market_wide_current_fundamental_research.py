@@ -37,8 +37,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping
 
+from entity_classification_contract import EntityClass
 from p3f13_official_financial_evidence_scaleout import DEFAULT_P3F10 as DEFAULT_P3F10_FROZEN
 from p3f13_official_financial_evidence_scaleout import execute as execute_p3f13
+from sector_financial_taxonomy import evaluate_metric_sector_applicability
+from sector_relative_research_context import load_qualified_entity_classes
 from two_tier_fundamental_research import ALLOWED as PROVIDER_ALLOWED_USES
 from two_tier_fundamental_research import FORBIDDEN as PROVIDER_FORBIDDEN_USES
 from fundamental_research_readiness import NON_AUTHORIZED_DOWNSTREAM_USES
@@ -83,6 +86,39 @@ METRIC_FAMILY_CLASSIFICATION = {
     "total_assets": "POINT_IN_TIME_STOCK",
     "shareholders_equity": "POINT_IN_TIME_STOCK",
 }
+
+# This is a deliberately narrow *research-envelope* mapping over one retained provider taxonomy.
+# It neither writes the global entity-class promotion registry nor treats a provider industry as
+# official issuer identity.  Financial-services is intentionally unmapped because the retained
+# label does not distinguish securities companies from finance companies (or other structures).
+VCI_PROVIDER_INDUSTRY_ENTITY_CLASS_MAP = {
+    "Bán lẻ": "corporate",
+    "Bảo hiểm": "insurance",
+    "Bất động sản": "corporate",
+    "Công nghệ Thông tin": "corporate",
+    "Du lịch và Giải trí": "corporate",
+    "Dầu khí": "corporate",
+    "Hàng & Dịch vụ Công nghiệp": "corporate",
+    "Hàng cá nhân & Gia dụng": "corporate",
+    "Hóa chất": "corporate",
+    "Ngân hàng": "bank",
+    "Thực phẩm và đồ uống": "corporate",
+    "Truyền thông": "corporate",
+    "Tài nguyên Cơ bản": "corporate",
+    "Viễn thông": "corporate",
+    "Xây dựng và Vật liệu": "corporate",
+    "Y tế": "corporate",
+    "Ô tô và phụ tùng": "corporate",
+    "Điện, nước & xăng dầu khí đốt": "corporate",
+}
+VCI_AMBIGUOUS_INDUSTRY_LABELS = frozenset({"Dịch vụ tài chính"})
+ENTITY_CLASS_APPLICABILITY_METRICS = (
+    "revenue", "net_income", "total_assets", "shareholders_equity", "operating_cash_flow",
+    "ebitda", "ev_ebitda",
+)
+ENTITY_CLASS_RESOLUTION_VERSION = "fundamental_entity_class_and_sector_applicability_scaleout/v1"
+VCI_INDUSTRY_SNAPSHOT = ROOT / "registry_snapshots" / "metadata" / "vnstock_metadata_snapshot_20260728T122548Z_16fe54ee3497.jsonl"
+VCI_INDUSTRY_PROVIDER = "vnstock:Listing(source=VCI).symbols_by_industries"
 
 # Endpoint-scoped, provider-owned schema evidence collected in the bounded V1 review.  It is
 # intentionally narrower than a provider-wide accounting assertion: only KBS's `KQKD`,
@@ -197,6 +233,186 @@ def content_identity(value: Mapping[str, Any]) -> dict[str, str]:
     payload = {key: item for key, item in value.items() if key not in {"artifact_sha256", "artifact_identity"}}
     digest = _hash(payload)
     return {"artifact_sha256": digest, "artifact_identity": f"market_wide_current_fundamental_research:{digest}"}
+
+
+def _load_retained_vci_industry_rows() -> dict[str, dict[str, Any]]:
+    """Load one retained provider classification per ticker, failing closed on same-source drift."""
+    candidates: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for line in VCI_INDUSTRY_SNAPSHOT.read_text(encoding="utf-8").splitlines():
+        row = json.loads(line)
+        if (row.get("provider") == VCI_INDUSTRY_PROVIDER and row.get("field") == "industry"
+                and isinstance(row.get("value"), str) and row["value"].strip()):
+            candidates[str(row.get("ticker") or "").upper()].append(row)
+    resolved: dict[str, dict[str, Any]] = {}
+    for ticker, rows in sorted(candidates.items()):
+        labels = {" ".join(str(row["value"]).split()) for row in rows}
+        if len(labels) != 1:
+            resolved[ticker] = {
+                "raw_label": None, "source_records": [f"{ticker}:industry" for _ in rows],
+                "conflict_or_missing_reason": "CONFLICTING_RETAINED_VCI_INDUSTRY_LABELS",
+            }
+            continue
+        row = rows[0]
+        label = next(iter(labels))
+        resolved[ticker] = {
+            "raw_label": label,
+            "source_record_id": f"{ticker}:industry",
+            "source_provider": "VCI",
+            "source_artifact": VCI_INDUSTRY_SNAPSHOT.name,
+            "source": row.get("source"),
+            "observed_at": row.get("timestamps", {}).get("observed_at"),
+            "effective_at": row.get("timestamps", {}).get("effective_at"),
+            "qualification_status": row.get("qualification_status"),
+            "conflict_or_missing_reason": None,
+        }
+    return resolved
+
+
+@lru_cache(maxsize=1)
+def load_entity_classification_evidence() -> dict[str, Mapping[str, Mapping[str, Any]]]:
+    """Retained-only source inventory for this artifact's bounded class resolution.
+
+    The P2-E/P2-E3 loader supplies already-qualified records.  VCI classifications remain a
+    separately-labelled provider-research source and are never routed into the global resolver.
+    """
+    return {
+        "qualified": load_qualified_entity_classes(ROOT),
+        "vci_industry": _load_retained_vci_industry_rows(),
+    }
+
+
+def _candidate(*, entity_class: str, source_type: str, classification_status: str,
+               qualification_state: str, mapping_method: str, source: str,
+               source_record_id: str | None, observed_at: str | None, reason: str,
+               confidence: str, source_artifact: str | None = None,
+               effective_at: str | None = None) -> dict[str, Any]:
+    return {
+        "entity_class": entity_class,
+        "source_type": source_type,
+        "source": source,
+        "source_record_id": source_record_id,
+        "source_artifact": source_artifact,
+        "observed_at": observed_at,
+        "effective_at": effective_at,
+        "classification_status": classification_status,
+        "qualification_state": qualification_state,
+        "mapping_method": mapping_method,
+        "mapping_version": ENTITY_CLASS_RESOLUTION_VERSION,
+        "confidence": confidence,
+        "reason": reason,
+    }
+
+
+def _entity_class_resolution(*, ticker: str, frozen_row: Mapping[str, Any] | None,
+                             official_entity_class: str | None,
+                             evidence: Mapping[str, Mapping[str, Mapping[str, Any]]]) -> dict[str, Any]:
+    """Resolve only explicit retained classifications; all disagreement fails closed."""
+    candidates: list[dict[str, Any]] = []
+    observations: list[dict[str, Any]] = []
+    if official_entity_class and official_entity_class != "unknown":
+        candidates.append(_candidate(
+            entity_class=official_entity_class, source_type="OFFICIAL_CURRENT_FUNDAMENTAL_READINESS",
+            classification_status="QUALIFIED", qualification_state="OFFICIAL_QUALIFIED",
+            mapping_method="official_readiness_entity_class_passthrough/v1",
+            source="p3f13_official_financial_evidence_scaleout", source_record_id=ticker,
+            observed_at=None, reason="current_official_fundamental_readiness_issuer_identity", confidence="HIGH",
+        ))
+    qualified = evidence["qualified"].get(ticker)
+    if qualified:
+        candidates.append(_candidate(
+            entity_class=str(qualified["entity_class"]), source_type="QUALIFIED_ENTITY_CLASS",
+            classification_status="QUALIFIED", qualification_state="GLOBAL_CURRENT_STATE_QUALIFIED",
+            mapping_method="p2e_p2e3_qualified_passthrough/v1",
+            source=str(qualified["source_artifact_identity"]),
+            source_record_id=str(qualified["classification_evidence_id"]), observed_at=None,
+            reason=f"qualified_source_id:{qualified['source_id']}", confidence="HIGH",
+        ))
+    if frozen_row is not None and str(frozen_row.get("sector") or "unknown") != "unknown":
+        candidates.append(_candidate(
+            entity_class=str(frozen_row["sector"]), source_type="RETAINED_P3F10_EXISTING_CLASS",
+            classification_status="RETAINED_EXISTING_CLASSIFICATION",
+            qualification_state="PRESERVED_EXISTING_ARTIFACT_CLASS_NO_NEW_INFERENCE",
+            mapping_method="p3f10_sector_passthrough/v1", source="p3f10_generic_fundamental_evidence_scaleout",
+            source_record_id=ticker, observed_at=None,
+            reason="preexisting_p3f10_class_preserved_without_rederiving_from_statement_shape", confidence="RETAINED",
+        ))
+    industry = evidence["vci_industry"].get(ticker)
+    if industry:
+        label = industry.get("raw_label")
+        if industry.get("conflict_or_missing_reason"):
+            observations.append({"source_type": "VCI_PROVIDER_INDUSTRY", "source": VCI_INDUSTRY_PROVIDER,
+                                 "source_record_id": industry.get("source_record_id"), "raw_label": label,
+                                 "observed_at": industry.get("observed_at"),
+                                 "reason": industry["conflict_or_missing_reason"]})
+        elif label in VCI_PROVIDER_INDUSTRY_ENTITY_CLASS_MAP:
+            candidates.append(_candidate(
+                entity_class=VCI_PROVIDER_INDUSTRY_ENTITY_CLASS_MAP[label], source_type="VCI_PROVIDER_INDUSTRY",
+                classification_status="PROVIDER_RESEARCH_CLASSIFIED",
+                qualification_state="PROVIDER_REPORTED_DESCRIPTIVE_MAPPING_NOT_GLOBAL_ENTITY_AUTHORITY",
+                mapping_method="retained_vci_industry_to_financial_entity_class/v1",
+                source=VCI_INDUSTRY_PROVIDER, source_record_id=str(industry.get("source_record_id")),
+                observed_at=industry.get("observed_at"), reason=f"retained_provider_industry:{label}",
+                confidence="PROVIDER_REPORTED", source_artifact=industry.get("source_artifact"),
+                effective_at=industry.get("effective_at"),
+            ))
+        else:
+            observations.append({"source_type": "VCI_PROVIDER_INDUSTRY", "source": VCI_INDUSTRY_PROVIDER,
+                                 "source_record_id": industry.get("source_record_id"), "raw_label": label,
+                                 "observed_at": industry.get("observed_at"),
+                                 "reason": ("AMBIGUOUS_FINANCIAL_SERVICES_PROVIDER_INDUSTRY"
+                                            if label in VCI_AMBIGUOUS_INDUSTRY_LABELS else "UNMAPPED_PROVIDER_INDUSTRY")})
+    positive_classes = {candidate["entity_class"] for candidate in candidates}
+    conflict = len(positive_classes) > 1
+    if conflict:
+        entity_class, status, authority, reason = (
+            "unknown", "CONFLICT", "CONFLICT_UNRESOLVED",
+            "CONFLICTING_RETAINED_ENTITY_CLASS_SOURCES_FAIL_CLOSED",
+        )
+        selected: list[dict[str, Any]] = []
+    elif candidates:
+        selected = candidates
+        winner = candidates[0]
+        entity_class, status, authority, reason = (
+            winner["entity_class"], winner["classification_status"], winner["qualification_state"], winner["reason"],
+        )
+    else:
+        selected = []
+        entity_class, status, authority, reason = (
+            "unknown", "UNKNOWN", "UNRESOLVED", observations[0]["reason"] if observations else "NO_RETAINED_ENTITY_CLASS_SOURCE",
+        )
+    return {
+        "entity_class": entity_class,
+        "classification_status": status,
+        "classification_authority": authority,
+        "resolution_version": ENTITY_CLASS_RESOLUTION_VERSION,
+        "conflict": conflict,
+        "unresolved_reason": reason if entity_class == "unknown" else None,
+        "selected_sources": selected,
+        "source_candidates": candidates,
+        "source_observations": observations,
+    }
+
+
+def _entity_class_metric_applicability(entity_class: str) -> dict[str, Any]:
+    """Expose existing taxonomy evaluations without using them to infer an issuer class."""
+    sector_metrics: dict[str, Any] = {}
+    for metric in ENTITY_CLASS_APPLICABILITY_METRICS:
+        result = evaluate_metric_sector_applicability(EntityClass(entity_class), metric)
+        sector_metrics[metric] = {
+            "applicability": result.applicability.value,
+            "reason_codes": list(result.reason_codes),
+            "statement_family": result.statement_family,
+            "temporal_nature": result.temporal_nature,
+            "ordinary_corporate_metric": result.is_ordinary_corporate_metric,
+        }
+    return {
+        "sector_metric_applicability": sector_metrics,
+        "provider_series_trend_policy": {
+            "status": "PERMITTED_PROVIDER_RESEARCH_DESCRIPTIVE_ONLY",
+            "reason": "entity_class_applicability_does_not_block_existing_same_provider_series_contract",
+            "applies_to": [item[0] for item in PROVIDER_SERIES_METRICS],
+        },
+    }
 
 
 def _official_ticker_record(readiness_row: Mapping[str, Any], frozen_row: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -451,6 +667,64 @@ def _sector_coverage(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]
     }
 
 
+def _entity_class_scaleout_coverage(records: Mapping[str, Mapping[str, Any]],
+                                    before_counts: Counter[str]) -> dict[str, Any]:
+    after_counts = Counter(str(record["entity_class"]) for record in records.values())
+    source_coverage = Counter(
+        str(record["entity_class_provenance"]["selected_sources"][0]["source_type"])
+        if record["entity_class_provenance"]["selected_sources"] else "UNRESOLVED"
+        for record in records.values()
+    )
+    return {
+        "before_entity_class_distribution": dict(sorted(before_counts.items())),
+        "after_entity_class_distribution": dict(sorted(after_counts.items())),
+        "resolved_unknown_count": max(0, before_counts.get("unknown", 0) - after_counts.get("unknown", 0)),
+        "remaining_unknown_count": after_counts.get("unknown", 0),
+        "conflicting_count": sum(record["entity_class_provenance"]["conflict"] for record in records.values()),
+        "selected_source_coverage": dict(sorted(source_coverage.items())),
+        "evidence_hierarchy": [
+            "OFFICIAL_CURRENT_FUNDAMENTAL_READINESS",
+            "QUALIFIED_ENTITY_CLASS",
+            "RETAINED_P3F10_EXISTING_CLASS",
+            "VCI_PROVIDER_INDUSTRY_RESEARCH_ONLY",
+            "UNKNOWN_OR_CONFLICT_FAIL_CLOSED",
+        ],
+    }
+
+
+def _metric_applicability_coverage(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    coverage: dict[str, dict[str, Counter[str]]] = defaultdict(lambda: defaultdict(Counter))
+    for record in records.values():
+        entity_class = str(record["entity_class"])
+        for metric, evaluation in record["entity_class_applicability"]["sector_metric_applicability"].items():
+            coverage[entity_class][metric][evaluation["applicability"]] += 1
+    return {
+        entity_class: {metric: dict(sorted(states.items())) for metric, states in sorted(metrics.items())}
+        for entity_class, metrics in sorted(coverage.items())
+    }
+
+
+def _provider_trend_coverage_by_class(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    coverage: dict[str, Counter[str]] = defaultdict(Counter)
+    for record in records.values():
+        if record.get("authority_tier") != PROVIDER_TIER:
+            continue
+        entity_class = str(record["entity_class"])
+        for metric in record.get("provider_series_trends", {}).get("metrics", {}).values():
+            coverage[entity_class][f"{metric['metric_id']}:{metric['status']}"] += 1
+    return {entity_class: dict(sorted(counts.items())) for entity_class, counts in sorted(coverage.items())}
+
+
+def _official_coverage_by_class(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    coverage: dict[str, Counter[str]] = defaultdict(Counter)
+    for record in records.values():
+        if record.get("authority_tier") == OFFICIAL_TIER:
+            coverage[str(record["entity_class"])]["issuer_count"] += 1
+            for metric in record.get("metrics", []):
+                coverage[str(record["entity_class"])][f"metric:{metric['status']}"] += 1
+    return {entity_class: dict(sorted(counts.items())) for entity_class, counts in sorted(coverage.items())}
+
+
 def _income_statement_period_semantic_coverage(
     records: Mapping[str, Mapping[str, Any]], provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]],
 ) -> dict[str, Any]:
@@ -526,6 +800,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         raise ValueError("COHORT_SIZE_MISMATCH")
 
     records: dict[str, dict[str, Any]] = {}
+    entity_class_evidence = load_entity_classification_evidence()
+    before_entity_class_counts: Counter[str] = Counter()
     for ticker in all_tickers:
         if ticker in official_rows:
             records[ticker] = _official_ticker_record(official_rows[ticker], frozen_rows.get(ticker))
@@ -534,6 +810,20 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
                 frozen_rows[ticker], acquisition_by_ticker.get(ticker),
                 (provider_series_by_ticker or {}).get(ticker),
             )
+        record = records[ticker]
+        before_entity_class = str(record.get("entity_class", record.get("sector", "unknown")))
+        before_entity_class_counts[before_entity_class] += 1
+        resolution = _entity_class_resolution(
+            ticker=ticker, frozen_row=frozen_rows.get(ticker),
+            official_entity_class=record.get("entity_class") if record["authority_tier"] == OFFICIAL_TIER else None,
+            evidence=entity_class_evidence,
+        )
+        record["entity_class"] = resolution["entity_class"]
+        # `sector` is retained as the legacy consumer field, now tied exactly to the explicit
+        # entity-class provenance rather than a second independently-derived classification.
+        record["sector"] = resolution["entity_class"]
+        record["entity_class_provenance"] = resolution
+        record["entity_class_applicability"] = _entity_class_metric_applicability(resolution["entity_class"])
 
     official_tickers = sorted(official_rows)
     official_records = [records[ticker] for ticker in official_tickers]
@@ -607,6 +897,10 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             records, provider_series_by_ticker or {}
         ),
         "sector_coverage": _sector_coverage(records),
+        "entity_class_scaleout_coverage": _entity_class_scaleout_coverage(records, before_entity_class_counts),
+        "entity_class_metric_applicability_coverage": _metric_applicability_coverage(records),
+        "provider_series_trend_coverage_by_entity_class": _provider_trend_coverage_by_class(records),
+        "official_coverage_by_entity_class": _official_coverage_by_class(records),
         "data_gap_summary": {
             "official_tier_blocked_reasons": dict(sorted(Counter(
                 record["official_tier_blocked_reason"] for record in records.values()
@@ -625,6 +919,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             "official_qualified_is_calculation_grade": True,
             "provider_research_is_descriptive_only": True,
             "provider_research_never_official_label": True,
+            "provider_industry_entity_class_mapping_is_research_only": True,
+            "provider_industry_entity_class_mapping_promoted_to_global_authority": False,
             "new_evidence_acquired": True,
             "new_evidence_scope": "bounded provider-owned endpoint-schema semantic evidence; no provider absolute fact or authority promotion",
             "new_source_route_approved": False,

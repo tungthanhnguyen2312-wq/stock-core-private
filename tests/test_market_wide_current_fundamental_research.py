@@ -317,6 +317,34 @@ class LiveIntegration(unittest.TestCase):
         broad = self.artifact["sector_coverage"]["broad_sector_distribution_all_candidates"]
         self.assertEqual(sum(broad.values()), self.artifact["coverage"]["candidate_count"])
 
+    def test_retained_entity_class_scaleout_is_evidence_backed_and_fail_closed(self) -> None:
+        coverage = self.artifact["entity_class_scaleout_coverage"]
+        self.assertEqual(coverage["before_entity_class_distribution"], {
+            "bank": 28, "corporate": 13, "finance_company": 1,
+            "insurance": 6, "securities": 33, "unknown": 442,
+        })
+        self.assertEqual(coverage["after_entity_class_distribution"], {
+            "bank": 28, "corporate": 452, "finance_company": 1,
+            "insurance": 7, "securities": 33, "unknown": 2,
+        })
+        self.assertEqual(coverage["resolved_unknown_count"], 440)
+        self.assertEqual(coverage["conflicting_count"], 0)
+        self.assertEqual({ticker for ticker, record in self.artifact["records"].items()
+                          if record["entity_class"] == "unknown"}, {"F88", "OGC"})
+        for ticker in ("F88", "OGC"):
+            provenance = self.artifact["records"][ticker]["entity_class_provenance"]
+            self.assertEqual(provenance["classification_status"], "UNKNOWN")
+            self.assertEqual(provenance["source_observations"][0]["reason"],
+                             "AMBIGUOUS_FINANCIAL_SERVICES_PROVIDER_INDUSTRY")
+
+    def test_entity_class_applicability_never_blocks_provider_series_only_by_class(self) -> None:
+        record = self.artifact["records"]["ABB"]
+        self.assertEqual(record["entity_class"], "bank")
+        self.assertEqual(record["entity_class_applicability"]["sector_metric_applicability"]["ebitda"]["applicability"],
+                         "NOT_APPLICABLE")
+        self.assertEqual(record["entity_class_applicability"]["provider_series_trend_policy"]["status"],
+                         "PERMITTED_PROVIDER_RESEARCH_DESCRIPTIVE_ONLY")
+
     def test_content_identity_is_self_consistent(self) -> None:
         identity = content_identity(self.artifact)
         self.assertEqual(identity["artifact_sha256"], self.artifact["artifact_sha256"])
