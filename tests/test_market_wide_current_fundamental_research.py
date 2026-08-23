@@ -180,6 +180,34 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         cashflow = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["operating_cash_flow_direction"]
         self.assertEqual(cashflow["status"], "AVAILABLE")
 
+    def test_kbs_income_statement_period_schema_recovers_direct_qoq_and_yoy_only(self) -> None:
+        self.rows[0]["reporting_periods"] = ["2025-Q1", "2025-Q2", "2026-Q1", "2026-Q2"]
+        facts = {"AAA": [
+            {"canonical_metric": "revenue", "status": "provider_reported", "provider": "KBS",
+             "statement_family": "income_statement", "statement_scope": "consolidated", "source_sha256": "same",
+             "reporting_period": period, "value": value, "fact_id": f"r-{period}", "source_observation_ids": [f"r-{period}"]}
+            for period, value in (("2025-Q1", 10), ("2025-Q2", 20), ("2026-Q1", 15), ("2026-Q2", 30))
+        ] + [
+            {"canonical_metric": "net_income", "status": "provider_reported", "provider": "VCI",
+             "statement_family": "income_statement", "statement_scope": "consolidated", "source_sha256": "same",
+             "reporting_period": period, "value": value, "fact_id": f"n-{period}", "source_observation_ids": [f"n-{period}"]}
+            for period, value in (("2025-Q1", 2), ("2025-Q2", 3), ("2026-Q1", 4), ("2026-Q2", 5))
+        ]}
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current,
+            requested_at="t", provider_series_by_ticker=facts,
+        )
+        revenue = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["revenue_growth"]
+        self.assertEqual(revenue["status"], "AVAILABLE")
+        self.assertEqual(revenue["provider"], "KBS")
+        self.assertEqual(revenue["period_basis"][0]["duration_basis"], "SINGLE_QUARTER")
+        self.assertEqual(revenue["comparisons"]["qoq"]["periods"], ["2026-Q1", "2026-Q2"])
+        self.assertEqual(revenue["comparisons"]["yoy"]["periods"], ["2025-Q2", "2026-Q2"])
+        self.assertEqual(revenue["comparisons"]["yoy"]["status"], "AVAILABLE")
+        earnings = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["earnings_growth"]
+        self.assertEqual(earnings["status"], "BLOCKED")
+        self.assertEqual(earnings["blocked_reason"], "PERIOD_FLOW_DURATION_BASIS_UNEVIDENCED")
+
     def test_blocked_no_source_tier_has_no_allowed_uses(self) -> None:
         artifact = build_artifact(p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t")
         self.assertEqual(artifact["records"]["BBB"]["allowed_uses"], [])
@@ -201,7 +229,7 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         boundary = artifact["authority_boundary"]
         self.assertFalse(boundary["authority_promoted"])
         self.assertFalse(boundary["valuation_or_ranking_or_recommendation_produced"])
-        self.assertFalse(boundary["new_evidence_acquired"])
+        self.assertTrue(boundary["new_evidence_acquired"])
 
     def test_content_identity_self_verifies(self) -> None:
         artifact = build_artifact(p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t")
@@ -256,7 +284,7 @@ class LiveIntegration(unittest.TestCase):
                 self.assertNotIn("value", metric)
                 self.assertIsNotNone(metric["blocked_reason"] if metric["status"] == "BLOCKED" else metric["provider"])
 
-    def test_real_period_basis_blocks_unevidenced_income_statement_growth(self) -> None:
+    def test_real_period_basis_recovers_only_kbs_income_statement_growth(self) -> None:
         available = [
             metric for record in self.artifact["records"].values()
             if record["authority_tier"] == PROVIDER_TIER
@@ -264,12 +292,14 @@ class LiveIntegration(unittest.TestCase):
             if metric["status"] == "AVAILABLE"
         ]
         self.assertEqual({metric["metric_id"] for metric in available}, {
-            "assets_direction", "equity_direction", "operating_cash_flow_direction",
+            "revenue_growth", "earnings_growth", "assets_direction", "equity_direction", "operating_cash_flow_direction",
         })
         self.assertEqual(self.artifact["coverage"]["provider_research_usable_for_series_trends_count"], 494)
-        self.assertEqual(len(available), 1054)
+        self.assertEqual(len(available), 1205)
         contract = self.artifact["provider_financial_period_basis_contract"]
         self.assertEqual(contract["metric_family_classification"]["revenue"], "PERIOD_FLOW")
+        self.assertEqual(contract["income_statement_provider_semantics"]["KBS"]["period_basis"]["Q2"], "SINGLE_QUARTER")
+        self.assertEqual(contract["income_statement_provider_semantics"]["VCI"]["period_basis"]["Q2"], "UNKNOWN")
         self.assertEqual(contract["metric_family_classification"]["total_assets"], "POINT_IN_TIME_STOCK")
 
     def test_pnj_and_fpt_are_official_and_supersede_frozen_disposition(self) -> None:
@@ -300,7 +330,7 @@ class LiveIntegration(unittest.TestCase):
         boundary = self.artifact["authority_boundary"]
         self.assertFalse(boundary["valuation_or_ranking_or_recommendation_produced"])
         self.assertFalse(boundary["authority_promoted"])
-        self.assertFalse(boundary["new_evidence_acquired"])
+        self.assertTrue(boundary["new_evidence_acquired"])
         self.assertFalse(boundary["new_source_route_approved"])
         for ticker, record in self.artifact["records"].items():
             self.assertNotIn("target_price", record)

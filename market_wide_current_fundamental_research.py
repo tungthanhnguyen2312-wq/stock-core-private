@@ -84,6 +84,35 @@ METRIC_FAMILY_CLASSIFICATION = {
     "shareholders_equity": "POINT_IN_TIME_STOCK",
 }
 
+# Endpoint-scoped, provider-owned schema evidence collected in the bounded V1 review.  It is
+# intentionally narrower than a provider-wide accounting assertion: only KBS's `KQKD`,
+# `termtype=2` endpoint has per-row `PeriodBegin` / `PeriodEnd` fields which identify the served
+# quarter as its own three-month interval.  VCI's corresponding endpoint returns `quarters` with
+# `yearReport` / `lengthReport`, but no documented/retained start-end duration, so it remains
+# fail-closed.  The retention adapter currently omits KBS's bounds, hence they are semantic
+# evidence for the endpoint contract, not fabricated per-fact dates.
+INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION = "provider_income_statement_period_semantics_and_trend_recovery/v1"
+KBS_KQKD_QUARTER_SEMANTICS = {
+    "provider": "KBS",
+    "endpoint": "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stock/finance-info/{ticker}",
+    "request_contract": {"type": "KQKD", "termtype": 2, "languageid": 1},
+    "response_fields": ["TermCode", "TermNameEN", "PeriodBegin", "PeriodEnd", "ReportDate", "LastUpdate", "United", "AuditedStatus"],
+    "period_basis": {"Q1": "SINGLE_QUARTER", "Q2": "SINGLE_QUARTER", "Q3": "SINGLE_QUARTER", "Q4": "SINGLE_QUARTER", "FY": "NOT_IN_QUARTER_ENDPOINT"},
+    "evidence": "provider_owned_kbs_kqkd_quarter_schema_periodbegin_periodend_bounded_2026-08-23",
+    "retention_limitation": "canonical facts retain provider, fiscal label and source hash but not KBS PeriodBegin/PeriodEnd/United/AuditedStatus",
+    "revision_semantics": "LastUpdate is exposed by the endpoint but revision lineage is not retained; no cross-snapshot restatement claim",
+}
+VCI_INCOME_STATEMENT_SEMANTICS = {
+    "provider": "VCI",
+    "endpoint": "https://iq.vietcap.com.vn/api/iq-insight-service/v1/company/{ticker}/financial-statement",
+    "request_contract": {"section": "INCOME_STATEMENT", "response_key": "quarters"},
+    "observed_response_fields": ["yearReport", "lengthReport", "publicDate", "createDate", "updateDate"],
+    "period_basis": {"Q1": "UNKNOWN", "Q2": "UNKNOWN", "Q3": "UNKNOWN", "Q4": "UNKNOWN", "FY": "UNKNOWN"},
+    "evidence": "provider_owned_vci_endpoint_schema_has_no_duration_range_or_first_party_duration_definition_in_retained_or_bounded_review",
+    "retention_limitation": "quarter label and lengthReport are not sufficient duration authority; no numeric-pattern inference",
+    "revision_semantics": "publicDate/createDate/updateDate exist on endpoint output but no retained revision-chain contract",
+}
+
 
 def _period_basis(fact: Mapping[str, Any], source_metric: str) -> dict[str, Any]:
     """Classify only the retained fact's supported temporal basis; never trust Q labels alone."""
@@ -108,6 +137,25 @@ def _period_basis(fact: Mapping[str, Any], source_metric: str) -> dict[str, Any]
         elif state == "cumulative_ytd":
             result["duration_basis"] = "YTD_CUMULATIVE"
             result["evidence"] = "retained_cash_flow_beginning_cash_basis_resolver"
+    elif source_metric in {"revenue", "net_income"} and fact.get("provider") == "KBS":
+        result.update({
+            "duration_basis": "SINGLE_QUARTER",
+            "original_basis": "DIRECT_SINGLE_QUARTER",
+            "resulting_comparable_basis": "SINGLE_QUARTER",
+            "transformation_method": "NONE_DIRECT_PROVIDER_PERIOD",
+            "semantic_contract_version": INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION,
+            "evidence": KBS_KQKD_QUARTER_SEMANTICS["evidence"],
+            "provider_endpoint": KBS_KQKD_QUARTER_SEMANTICS["endpoint"],
+        })
+    elif source_metric in {"revenue", "net_income"} and fact.get("provider") == "VCI":
+        result.update({
+            "original_basis": "UNKNOWN",
+            "resulting_comparable_basis": "UNKNOWN",
+            "transformation_method": "NONE_SEMANTICS_UNRESOLVED",
+            "semantic_contract_version": INCOME_STATEMENT_PERIOD_SEMANTICS_VERSION,
+            "evidence": VCI_INCOME_STATEMENT_SEMANTICS["evidence"],
+            "provider_endpoint": VCI_INCOME_STATEMENT_SEMANTICS["endpoint"],
+        })
     return result
 
 
@@ -128,6 +176,8 @@ def _pair_basis_eligibility(previous: Mapping[str, Any], current: Mapping[str, A
         return True, None, bases
     if source_metric == "operating_cash_flow" and any(item["duration_basis"] == "YTD_CUMULATIVE" for item in bases):
         return False, "YTD_CUMULATIVE_DIRECT_COMPARISON_FORBIDDEN", bases
+    if source_metric in {"revenue", "net_income"} and all(item["duration_basis"] == "SINGLE_QUARTER" for item in bases):
+        return True, None, bases
     return False, "PERIOD_FLOW_DURATION_BASIS_UNEVIDENCED", bases
 
 
@@ -190,6 +240,55 @@ def _is_consecutive_quarter(previous: str, current: str) -> bool:
     return old is not None and new is not None and (new[0] * 4 + new[1]) == (old[0] * 4 + old[1] + 1)
 
 
+def _comparison_record(*, previous: Mapping[str, Any], current: Mapping[str, Any],
+                       source_metric: str, mode: str, comparison_type: str) -> dict[str, Any]:
+    """Calculate one bounded comparison while exposing basis and source lineage, never values."""
+    record: dict[str, Any] = {
+        "comparison_type": comparison_type,
+        "status": "BLOCKED",
+        "provider": str(current["provider"]),
+        "periods": [str(previous["reporting_period"]), str(current["reporting_period"])],
+        "lineage": [
+            {"fact_id": previous.get("fact_id"), "source_observation_ids": list(previous.get("source_observation_ids") or []),
+             "source_sha256": previous.get("source_sha256"), "status": previous.get("status")},
+            {"fact_id": current.get("fact_id"), "source_observation_ids": list(current.get("source_observation_ids") or []),
+             "source_sha256": current.get("source_sha256"), "status": current.get("status")},
+        ],
+        "metric_family_classification": METRIC_FAMILY_CLASSIFICATION[source_metric],
+        "blocked_reason": None,
+    }
+    eligible, blocker, bases = _pair_basis_eligibility(previous, current, source_metric)
+    record["period_basis"] = bases
+    if not eligible:
+        record["blocked_reason"] = blocker
+        return record
+    previous_value, current_value = float(previous["value"]), float(current["value"])
+    if mode == "growth":
+        if previous_value <= 0:
+            record["blocked_reason"] = "GROWTH_BASE_NON_POSITIVE"
+            return record
+        record["growth_fraction"] = (current_value - previous_value) / previous_value
+    else:
+        record["direction"] = "INCREASED" if current_value > previous_value else (
+            "DECREASED" if current_value < previous_value else "UNCHANGED"
+        )
+    record["status"] = "AVAILABLE"
+    return record
+
+
+def _latest_comparison(*, candidates: list[Mapping[str, Any]], source_metric: str,
+                       mode: str, comparison_type: str, prefer_available: bool = False) -> dict[str, Any] | None:
+    """Prefer the newest eligible same-provider comparison; a newer unusable provider cannot
+    hide an older valid provider-series trend.  If none are eligible, retain the newest block."""
+    results = [_comparison_record(
+        previous=previous, current=current, source_metric=source_metric, mode=mode,
+        comparison_type=comparison_type,
+    ) for previous, current in candidates]
+    available = [record for record in results if record["status"] == "AVAILABLE"]
+    pool = available if prefer_available and available else results
+    return max(pool, key=lambda record: (_period_key(record["periods"][1]), record["provider"])) if pool else None
+
+
 def _provider_series_metric(*, ticker: str, metric_id: str, source_metric: str,
                             family: str, mode: str, facts: list[Mapping[str, Any]]) -> dict[str, Any]:
     """Derive one permitted provider-series trend from retained canonical provider facts only."""
@@ -197,7 +296,7 @@ def _provider_series_metric(*, ticker: str, metric_id: str, source_metric: str,
         "ticker": ticker,
         "metric_id": metric_id,
         "metric_family": family,
-        "method": "same_provider_consecutive_quarter_provider_series_trend/v1",
+        "method": "same_provider_comparable_quarter_provider_series_trend/v2",
         "authority_tier": PROVIDER_TIER,
         "status": "BLOCKED",
         "provider": None,
@@ -206,6 +305,8 @@ def _provider_series_metric(*, ticker: str, metric_id: str, source_metric: str,
         "data_limitations": list(PROVIDER_SERIES_LIMITATIONS),
         "comparability_scope": PROVIDER_SERIES_COMPARABILITY_SCOPE,
         "blocked_reason": "NO_RETAINED_PROVIDER_REPORTED_SERIES",
+        "metric_family_classification": METRIC_FAMILY_CLASSIFICATION[source_metric],
+        "period_basis": [],
     }
     candidates = [
         fact for fact in facts
@@ -222,43 +323,44 @@ def _provider_series_metric(*, ticker: str, metric_id: str, source_metric: str,
     by_provider: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for fact in candidates:
         by_provider[str(fact["provider"])].append(fact)
-    pairs: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    qoq_pairs: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    yoy_pairs: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
     for provider_facts in by_provider.values():
         for previous, current in zip(provider_facts, provider_facts[1:]):
             if _is_consecutive_quarter(str(previous["reporting_period"]), str(current["reporting_period"])):
-                pairs.append((previous, current))
-    if not pairs:
+                qoq_pairs.append((previous, current))
+        by_period = {_period_key(fact["reporting_period"]): fact for fact in provider_facts}
+        for current in provider_facts:
+            year, quarter = _period_key(current["reporting_period"])
+            previous = by_period.get((year - 1, quarter))
+            if previous is not None:
+                yoy_pairs.append((previous, current))
+    if not qoq_pairs:
         base["blocked_reason"] = "NO_SAME_PROVIDER_CONSECUTIVE_QUARTER_PAIR"
         return base
-    previous, current = max(pairs, key=lambda pair: _period_key(pair[1]["reporting_period"]))
-    previous_value, current_value = float(previous["value"]), float(current["value"])
-    base.update({
-        "provider": str(current["provider"]),
-        "periods": [str(previous["reporting_period"]), str(current["reporting_period"])],
-        "lineage": [
-            {"fact_id": previous.get("fact_id"), "source_observation_ids": list(previous.get("source_observation_ids") or []),
-             "source_sha256": previous.get("source_sha256"), "status": previous.get("status")},
-            {"fact_id": current.get("fact_id"), "source_observation_ids": list(current.get("source_observation_ids") or []),
-             "source_sha256": current.get("source_sha256"), "status": current.get("status")},
-        ],
-    })
-    eligible, basis_blocker, basis_records = _pair_basis_eligibility(previous, current, source_metric)
-    base["metric_family_classification"] = METRIC_FAMILY_CLASSIFICATION[source_metric]
-    base["period_basis"] = basis_records
-    if not eligible:
-        base["blocked_reason"] = basis_blocker
+    qoq = _latest_comparison(
+        candidates=qoq_pairs, source_metric=source_metric, mode=mode, comparison_type="QoQ",
+        prefer_available=source_metric in {"revenue", "net_income"},
+    )
+    # Same-quarter YoY is meaningful only for the newly evidenced income-statement flow series.
+    comparisons = {"qoq": qoq}
+    if source_metric in {"revenue", "net_income"}:
+        comparisons["yoy"] = _latest_comparison(
+            candidates=yoy_pairs, source_metric=source_metric, mode=mode, comparison_type="YoY", prefer_available=True,
+        ) or {"comparison_type": "YoY", "status": "BLOCKED", "provider": None, "periods": [],
+              "lineage": [], "metric_family_classification": METRIC_FAMILY_CLASSIFICATION[source_metric],
+              "period_basis": [], "blocked_reason": "NO_SAME_PROVIDER_SAME_QUARTER_PRIOR_YEAR_PAIR"}
+        base["comparisons"] = comparisons
+    selected = qoq if qoq and qoq["status"] == "AVAILABLE" else next(
+        (record for record in comparisons.values() if record and record["status"] == "AVAILABLE"), qoq
+    )
+    if selected is None:
+        base["blocked_reason"] = "NO_SAME_PROVIDER_CONSECUTIVE_QUARTER_PAIR"
         return base
-    if mode == "growth":
-        if previous_value <= 0:
-            base["blocked_reason"] = "GROWTH_BASE_NON_POSITIVE"
-            return base
-        base["growth_fraction"] = (current_value - previous_value) / previous_value
-    else:
-        base["direction"] = "INCREASED" if current_value > previous_value else (
-            "DECREASED" if current_value < previous_value else "UNCHANGED"
-        )
-    base["status"] = "AVAILABLE"
-    base["blocked_reason"] = None
+    base.update({key: value for key, value in selected.items() if key != "comparison_type"})
+    if selected["status"] == "AVAILABLE":
+        base["status"] = "AVAILABLE"
+        base["blocked_reason"] = None
     return base
 
 
@@ -349,6 +451,60 @@ def _sector_coverage(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]
     }
 
 
+def _income_statement_period_semantic_coverage(
+    records: Mapping[str, Mapping[str, Any]], provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]],
+) -> dict[str, Any]:
+    """Coverage accounting for the endpoint-semantic decision, without emitting provider values."""
+    direct = Counter()
+    blocked = Counter()
+    by_provider = defaultdict(Counter)
+    by_entity_class = defaultdict(Counter)
+    for ticker, record in records.items():
+        if record.get("authority_tier") != PROVIDER_TIER:
+            continue
+        retained_periods = set(record.get("reporting_periods") or [])
+        for fact in provider_series_by_ticker.get(ticker, []):
+            metric = fact.get("canonical_metric")
+            if metric not in {"revenue", "net_income"} or fact.get("status") != "provider_reported":
+                continue
+            if retained_periods and fact.get("reporting_period") not in retained_periods:
+                continue
+            if _period_key(fact.get("reporting_period")) is None or not isinstance(fact.get("value"), (int, float)):
+                continue
+            if fact.get("provider") == "KBS":
+                direct[metric] += 1
+                by_provider["KBS"][metric] += 1
+                by_entity_class[str(record.get("sector") or "unknown")][metric] += 1
+            elif fact.get("provider") == "VCI":
+                blocked["VCI_DURATION_BASIS_UNEVIDENCED"] += 1
+                by_provider["VCI"]["blocked_periods"] += 1
+    qoq = Counter()
+    yoy = Counter()
+    blocked_trends = Counter()
+    for record in records.values():
+        if record.get("authority_tier") != PROVIDER_TIER:
+            continue
+        for metric_id in ("revenue_growth", "earnings_growth"):
+            metric = record.get("provider_series_trends", {}).get("metrics", {}).get(metric_id, {})
+            if metric.get("status") == "BLOCKED":
+                blocked_trends[str(metric.get("blocked_reason"))] += 1
+            comparisons = metric.get("comparisons", {})
+            if comparisons.get("qoq", {}).get("status") == "AVAILABLE":
+                qoq[metric_id] += 1
+            if comparisons.get("yoy", {}).get("status") == "AVAILABLE":
+                yoy[metric_id] += 1
+    return {
+        "direct_single_quarter_periods": dict(sorted(direct.items())),
+        "transformed_single_quarter_periods": 0,
+        "blocked_periods": dict(sorted(blocked.items())),
+        "qoq_trends": dict(sorted(qoq.items())),
+        "yoy_trends": dict(sorted(yoy.items())),
+        "blocked_trends": dict(sorted(blocked_trends.items())),
+        "direct_period_coverage_by_provider": {provider: dict(sorted(counts.items())) for provider, counts in sorted(by_provider.items())},
+        "direct_period_coverage_by_entity_class": {entity: dict(sorted(counts.items())) for entity, counts in sorted(by_entity_class.items())},
+    }
+
+
 def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[str, Any],
                    requested_at: str,
                    provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]] | None = None) -> dict[str, Any]:
@@ -399,12 +555,18 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             ),
         },
         "provider_financial_period_basis_contract": {
-            "version": "provider_financial_period_basis_and_trend_integrity/v1",
+            "version": "provider_financial_period_basis_and_trend_integrity/v1+provider_income_statement_period_semantics_and_trend_recovery/v1",
             "metric_family_classification": dict(METRIC_FAMILY_CLASSIFICATION),
             "point_in_time_stock_rule": "same-provider same-source-payload same-scope consecutive reporting-date direction only",
-            "period_flow_rule": "direct comparison requires evidenced comparable duration; income-statement duration remains UNKNOWN, while cash-flow SINGLE_QUARTER requires retained beginning-cash resolver evidence",
-            "prohibited": ["quarter_label_duration_inference", "ytd_as_single_quarter", "full_year_to_q1_direct_growth", "cross_provider_comparison"],
-            "transformation_contract": "NONE_RETAINED",
+            "period_flow_rule": "direct comparison requires evidenced comparable duration; KBS KQKD termtype=2 is endpoint-evidenced SINGLE_QUARTER, VCI income-statement duration remains UNKNOWN, and cash-flow SINGLE_QUARTER requires retained beginning-cash resolver evidence",
+            "income_statement_provider_semantics": {"KBS": KBS_KQKD_QUARTER_SEMANTICS, "VCI": VCI_INCOME_STATEMENT_SEMANTICS},
+            "prohibited": ["quarter_label_duration_inference", "ytd_as_single_quarter", "full_year_to_q1_direct_growth", "cross_provider_comparison", "numeric_behavior_duration_inference"],
+            "transformation_contract": {
+                "version": "provider_income_statement_standalone_quarter_transform/v1",
+                "status": "NOT_ENABLED_NO_EVIDENCED_YTD_PROVIDER_ENDPOINT",
+                "permitted_only_if": ["same_provider", "same_ticker", "same_fiscal_year", "same_metric_identity", "same_statement_scope", "same_currency", "same_scale", "evidenced_cumulative_basis", "both_required_periods_retained"],
+                "methods": {"Q2": "Q2_YTD_MINUS_Q1_YTD", "Q3": "Q3_YTD_MINUS_Q2_YTD", "Q4": "FY_MINUS_Q3_YTD"},
+            },
         },
         "coverage": {
             "candidate_count": len(all_tickers),
@@ -441,6 +603,9 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             for metric in record.get("provider_series_trends", {}).get("metrics", {}).values()
             if metric.get("status") == "AVAILABLE"
         ).items())),
+        "income_statement_period_semantic_coverage": _income_statement_period_semantic_coverage(
+            records, provider_series_by_ticker or {}
+        ),
         "sector_coverage": _sector_coverage(records),
         "data_gap_summary": {
             "official_tier_blocked_reasons": dict(sorted(Counter(
@@ -460,7 +625,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             "official_qualified_is_calculation_grade": True,
             "provider_research_is_descriptive_only": True,
             "provider_research_never_official_label": True,
-            "new_evidence_acquired": False,
+            "new_evidence_acquired": True,
+            "new_evidence_scope": "bounded provider-owned endpoint-schema semantic evidence; no provider absolute fact or authority promotion",
             "new_source_route_approved": False,
             "authority_promoted": False,
             "valuation_or_ranking_or_recommendation_produced": False,
