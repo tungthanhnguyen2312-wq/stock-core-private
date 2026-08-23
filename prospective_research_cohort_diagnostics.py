@@ -122,6 +122,7 @@ def _extract_ticker_cohorts(snapshot: Mapping[str, Any],
                     ('fundamental_alignment', fundamental.get('revenue_vs_earnings_alignment')),
                     ('valuation_context', 'STRICT_AVAILABLE' if valuation.get('authoritative_current_valuation_available') else ('SHADOW_PROXY_AVAILABLE' if valuation.get('shadow_proxy_valuation_available') else 'VALUATION_UNAVAILABLE')),
                     ('tactical_fundamental_availability', f"{tactical.get('entry_state') or 'UNAVAILABLE'}|{fundamental.get('trajectory_status') or 'UNAVAILABLE'}"),
+                    ('tactical_fundamental_alignment', f"{tactical.get('entry_state') or 'UNAVAILABLE'}|{fundamental.get('revenue_vs_earnings_alignment') or 'UNAVAILABLE'}"),
                 ):
                     if value is not None: cohorts.add((dimension, str(value)))
                 ticker_cohorts[ticker] = cohorts
