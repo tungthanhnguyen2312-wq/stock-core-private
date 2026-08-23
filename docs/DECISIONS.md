@@ -1898,3 +1898,11 @@ single-ticker work.
    `risk_liquidity.py` was not touched. Total live DNSE calls across this milestone's design and
    final run: 42 (19 bounded exploratory + 23 in the final fixed, auditable call plan); zero
    polling, zero retry loops, zero background agents, no merge/deploy/push.
+## 2026-08-23 - Market-Wide Current Liquidity Research Scale-Out V1
+
+`MARKET_WIDE_CURRENT_LIQUIDITY_RESEARCH_SCALEOUT_V1 = COMPLETE_LOCALLY / COHERENT_PARTIAL`.
+
+1. The retained P3F9B canonical mapping supplies the fixed 1,683-candidate universe. Foreground-only, idempotent 25-symbol batches retain every response disposition and consolidate only when each candidate appears exactly once; no runtime or production database is written.
+2. The 2026-08-21 terminal artifact records 955 `CURRENT_SESSION_DESCRIPTIVE_ELIGIBLE`, 241 `INCOMPLETE`, 479 `MISSING`, and 8 `PROVIDER_REJECTED` records, with zero unattempted. Missing, rejection, malformed/incomplete states are distinct and never zero-filled.
+3. G1/G4/T1/T3/T4/T6 remain separate. Provider-raw current-session composition ratios are descriptive only; G1 is exactly reconciled with compatible OHLC `v` for 954/955 eligible records, while SHB's residual of four remains explicit. `grossTradeAmount` is retained only with unresolved scale/basis; no traded value is derived.
+4. This does not promote qualified liquidity inputs, ADV/ADTV, historical liquidity, execution capacity, position sizing, PIT/backtest, or RAW_AS_TRADED authority.
