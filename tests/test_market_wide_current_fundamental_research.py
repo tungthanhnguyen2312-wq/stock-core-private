@@ -137,6 +137,50 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         self.assertNotIn("value", aaa)
         self.assertNotIn("metrics", aaa)
 
+    def test_provider_series_trend_requires_same_provider_consecutive_reported_facts(self) -> None:
+        self.rows[0]["reporting_periods"] = ["2025-Q4", "2026-Q1"]
+        facts = {
+            "AAA": [
+                {"canonical_metric": "revenue", "status": "provider_reported", "provider": "VCI",
+                 "reporting_period": "2025-Q4", "value": 100, "fact_id": "old",
+                 "source_observation_ids": ["old-observation"], "source_sha256": "old-sha"},
+                {"canonical_metric": "revenue", "status": "provider_reported", "provider": "VCI",
+                 "reporting_period": "2026-Q1", "value": 125, "fact_id": "new",
+                 "source_observation_ids": ["new-observation"], "source_sha256": "new-sha"},
+                {"canonical_metric": "net_income", "status": "provider_reported", "provider": "KBS",
+                 "reporting_period": "2026-Q1", "value": 1, "fact_id": "orphan", "source_observation_ids": []},
+            ]
+        }
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current,
+            requested_at="t", provider_series_by_ticker=facts,
+        )
+        trends = artifact["records"]["AAA"]["provider_series_trends"]
+        revenue = trends["metrics"]["revenue_growth"]
+        self.assertEqual(revenue["status"], "AVAILABLE")
+        self.assertEqual(revenue["provider"], "VCI")
+        self.assertEqual(revenue["periods"], ["2025-Q4", "2026-Q1"])
+        self.assertEqual(revenue["growth_fraction"], 0.25)
+        self.assertEqual(revenue["authority_tier"], PROVIDER_TIER)
+        self.assertNotIn("value", revenue)
+        self.assertEqual(trends["metrics"]["earnings_growth"]["blocked_reason"], "NO_SAME_PROVIDER_CONSECUTIVE_QUARTER_PAIR")
+
+    def test_provider_series_growth_fails_closed_for_nonpositive_base(self) -> None:
+        self.rows[0]["reporting_periods"] = ["2025-Q4", "2026-Q1"]
+        facts = {"AAA": [
+            {"canonical_metric": "net_income", "status": "provider_reported", "provider": "VCI",
+             "reporting_period": "2025-Q4", "value": -1, "fact_id": "old", "source_observation_ids": []},
+            {"canonical_metric": "net_income", "status": "provider_reported", "provider": "VCI",
+             "reporting_period": "2026-Q1", "value": 2, "fact_id": "new", "source_observation_ids": []},
+        ]}
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current,
+            requested_at="t", provider_series_by_ticker=facts,
+        )
+        earnings = artifact["records"]["AAA"]["provider_series_trends"]["metrics"]["earnings_growth"]
+        self.assertEqual(earnings["status"], "BLOCKED")
+        self.assertEqual(earnings["blocked_reason"], "GROWTH_BASE_NON_POSITIVE")
+
     def test_blocked_no_source_tier_has_no_allowed_uses(self) -> None:
         artifact = build_artifact(p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t")
         self.assertEqual(artifact["records"]["BBB"]["allowed_uses"], [])
@@ -199,6 +243,19 @@ class LiveIntegration(unittest.TestCase):
         self.assertEqual(coverage["exact_qualified_metrics"], 94)
         self.assertEqual(coverage["derived_proxy_metrics"], 22)
         self.assertEqual(coverage["missing_or_blocked_metrics"], 49)
+
+    def test_real_provider_series_trends_are_explicitly_bounded(self) -> None:
+        coverage = self.artifact["coverage"]
+        self.assertGreater(coverage["provider_research_usable_for_series_trends_count"], 0)
+        self.assertLessEqual(coverage["provider_research_usable_for_series_trends_count"], 507)
+        for record in self.artifact["records"].values():
+            if record["authority_tier"] != PROVIDER_TIER:
+                continue
+            for metric in record["provider_series_trends"]["metrics"].values():
+                self.assertEqual(metric["authority_tier"], PROVIDER_TIER)
+                self.assertIn(metric["status"], {"AVAILABLE", "BLOCKED"})
+                self.assertNotIn("value", metric)
+                self.assertIsNotNone(metric["blocked_reason"] if metric["status"] == "BLOCKED" else metric["provider"])
 
     def test_pnj_and_fpt_are_official_and_supersede_frozen_disposition(self) -> None:
         for ticker in ("PNJ", "FPT"):

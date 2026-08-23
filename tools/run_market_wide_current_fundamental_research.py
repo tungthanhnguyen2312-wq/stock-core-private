@@ -21,8 +21,8 @@ DEFAULT_OUT = ROOT / "operations-review" / "market-wide-current-fundamental-rese
 ARTIFACT_FILENAME = "market_wide_current_fundamental_research_artifact.json"
 
 
-def run(out_dir: Path) -> Path:
-    artifact = execute()
+def run(out_dir: Path, *, requested_at: str | None = None) -> Path:
+    artifact = execute(requested_at=requested_at)
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / ARTIFACT_FILENAME
     target.write_text(json.dumps(artifact, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
@@ -35,8 +35,9 @@ def run(out_dir: Path) -> Path:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", default=str(DEFAULT_OUT))
+    parser.add_argument("--requested-at", help="Optional fixed timestamp for deterministic offline replay.")
     args = parser.parse_args(argv)
-    run(Path(args.out_dir))
+    run(Path(args.out_dir), requested_at=args.requested_at)
 
 
 if __name__ == "__main__":
