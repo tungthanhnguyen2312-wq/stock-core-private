@@ -113,6 +113,19 @@ def _extract_ticker_cohorts(snapshot: Mapping[str, Any],
         for record in snapshot['frozen_records']:
             ticker = record['ticker']
             cohorts = {(DIMENSION_OVERALL, 'ALL_OBSERVATIONS')}
+            surface = record.get('decision_surface')
+            if isinstance(surface, Mapping):
+                tactical = surface.get('tactical') or {}; fundamental = surface.get('fundamental') or {}; valuation = surface.get('valuation') or {}
+                for dimension, value in (
+                    ('entry_state', tactical.get('entry_state')), ('entry_action', tactical.get('entry_action')),
+                    ('entity_class', fundamental.get('entity_class')), ('fundamental_authority', fundamental.get('authority_tier')),
+                    ('fundamental_alignment', fundamental.get('revenue_vs_earnings_alignment')),
+                    ('valuation_context', 'STRICT_AVAILABLE' if valuation.get('authoritative_current_valuation_available') else ('SHADOW_PROXY_AVAILABLE' if valuation.get('shadow_proxy_valuation_available') else 'VALUATION_UNAVAILABLE')),
+                    ('tactical_fundamental_availability', f"{tactical.get('entry_state') or 'UNAVAILABLE'}|{fundamental.get('trajectory_status') or 'UNAVAILABLE'}"),
+                ):
+                    if value is not None: cohorts.add((dimension, str(value)))
+                ticker_cohorts[ticker] = cohorts
+                continue
             
             # Attention descriptors
             for descriptor in record.get('attention_descriptors', []):
