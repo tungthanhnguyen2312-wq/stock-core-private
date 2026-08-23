@@ -1,5 +1,19 @@
 # Watchlist tactical entry-state classifier contract
 
+> **2026-08-23 closeout correction.** Four corrections were applied to the original same-day
+> build, before this classifier's first use against the actual configured watchlist ahead of the
+> 2026-08-24 market open: (1) `entry_action` was added as the PRIMARY should-I-enter field,
+> separate from the pre-existing `action`, which is now documented as secondary and
+> position-management-conditional (see "Action, horizon, and full-position gating" below); (2)
+> `is_full_position_ready` is now unconditionally `False` (and `position_sizing_status`
+> unconditionally `"NOT_EVALUATED"`) for every record, since position sizing is not implemented,
+> replacing the old BREAKOUT_READY-conditional gate; (3) `EARLY_REVERSAL_CANDIDATE` (rule `R6`) now
+> requires an independent confirming signal beyond the bare momentum-sign flip; (4) `BASE_BUILDING`
+> (rule `R7`) now additionally requires no bottom-quartile relative momentum and no confirmed-down
+> session today, so low volatility alone no longer qualifies a persistent weak/downtrend. See
+> `docs/DECISIONS.md`'s 2026-08-23 "Watchlist Tactical Decision Closeout" entry for the full
+> rationale and real-data before/after counts.
+
 Schema/contract version: `1.0.0` / `watchlist_tactical_entry_classifier/v1`. Deterministic per-ticker
 tactical entry classification for watchlist review before the next trading session, built only from
 already-computed current market-wide research: `market_wide_current_descriptive_research.py`
@@ -33,17 +47,47 @@ session/denominator mismatch and never coerced toward `BLOCKED`.
 `entry_state` (the required 9-state taxonomy: `DOWNTREND`, `SELLING_PRESSURE_EASING`,
 `EARLY_REVERSAL_CANDIDATE`, `BASE_BUILDING`, `SIDEWAYS_NEUTRAL`, `BREAKOUT_READY`,
 `UPTREND_CONFIRMED`, `DISTRIBUTION_RISK`, `BREAKDOWN_RISK`) additionally folds in: market-relative
-momentum quartile (screening's `momentum_bucket`), today's session return sign, provider-relative-
+momentum quartile (screening's `momentum_bucket`), sector-relative momentum quartile
+(`sector_relative_comparison.momentum_bucket`), today's session return sign, provider-relative-
 volume confirmation (the `RELATIVE_VOLUME_ABOVE_COHORT_MEDIAN` screen flag), and a cross-sectional
 volatility regime (a ticker's `volatility_20d` compared only to the market's own contemporaneous
 median from `market_breadth.volatility.median` — never a historical-compression claim). One
 ordered, first-match-wins decision table (`_entry_state_rule()`, documented per-rule in
-`RULE_DEFINITIONS`) produces exactly one state for every technical-eligible ticker; exhaustively
-verified gapless across all 1,080 combinatorial input states.
+`RULE_DEFINITIONS`) produces exactly one state for every technical-eligible ticker.
 
-## Action, horizon, and full-position gating
+`EARLY_REVERSAL_CANDIDATE` (rule `R6`) requires price at/below MA20 with positive 20-day momentum
+**and** at least one independent confirming signal: market-relative momentum in the upper half of
+the cohort, sector-relative momentum in the upper half of its own sector cohort, or today's return
+positive together with elevated relative volume. Without a confirming signal the ticker falls to
+rule `R6B` and is reported `SIDEWAYS_NEUTRAL` instead — an unconfirmed momentum tick is neutral,
+not a reversal candidate. `BASE_BUILDING` (rule `R7`) requires low cross-sectional volatility with
+no elevated volume **and** no bottom-quartile relative momentum **and** no confirmed-down session
+today — low volatility alone no longer qualifies a persistent weak/downtrend as a base (2026-08-23
+closeout correction; see `RULE_DEFINITIONS` for the exact predicates).
 
-`action` is a fixed 9→7 lookup (`ACTION_BY_ENTRY_STATE`), never an independently-derived signal:
+## Two action fields: entry_action (primary) and action (secondary)
+
+Two separate, deliberately not conflated action fields travel with every record (2026-08-23
+closeout correction). Earlier same-day code exposed only `action`, a 9→7 lookup that included
+`HOLD_DO_NOT_ADD`/`REDUCE_EXIT` — position-management verbs that presuppose an existing position.
+Because this pipeline has no holdings/portfolio input anywhere, those two values are meaningless as
+an answer to "should I enter this ticker," so a second, primary field was added rather than
+reinterpreting the first:
+
+`entry_action` is a fixed 9→5 lookup (`ENTRY_ACTION_BY_ENTRY_STATE`) — the PRIMARY field for
+"should I enter," never `HOLD_DO_NOT_ADD` or `REDUCE_EXIT`:
+
+| entry_state | entry_action |
+|---|---|
+| `BREAKOUT_READY` | `BUY_ON_CONFIRMATION` |
+| `EARLY_REVERSAL_CANDIDATE` | `EARLY_ENTRY` |
+| `BASE_BUILDING` | `ACCUMULATE_IN_BASE` |
+| `UPTREND_CONFIRMED`, `DISTRIBUTION_RISK`, `SELLING_PRESSURE_EASING`, `SIDEWAYS_NEUTRAL` | `WAIT` |
+| `BREAKDOWN_RISK`, `DOWNTREND` | `AVOID` |
+
+`action` (`ACTION_BY_ENTRY_STATE`, unchanged from the original build) remains a fixed 9→7 lookup,
+now documented as SECONDARY and position-management-conditional — only meaningful if the reader
+already holds the ticker, never a basis for the entry decision:
 
 | entry_state | action |
 |---|---|
@@ -56,23 +100,27 @@ verified gapless across all 1,080 combinatorial input states.
 | `BREAKDOWN_RISK` | `REDUCE_EXIT` |
 | `DOWNTREND` | `AVOID` |
 
-`EARLY_ENTRY` maps only from `EARLY_REVERSAL_CANDIDATE` — deliberately not gated behind
-`UPTREND_CONFIRMED`/`BREAKOUT_READY`, per this milestone's own instruction that a confirmed uptrend
-must never be a prerequisite for it.
+`EARLY_ENTRY` maps only from `EARLY_REVERSAL_CANDIDATE` in both lookups — deliberately not gated
+behind `UPTREND_CONFIRMED`/`BREAKOUT_READY`, per this milestone's own instruction that a confirmed
+uptrend must never be a prerequisite for it, preserved unchanged by the closeout correction.
+
+## Horizon and full-position gating
 
 `horizon` (`NEXT_SESSION_WATCH` / `SHORT_TERM_FEW_SESSIONS` / `MULTI_WEEK_SWING`) has a fixed base
 value per `entry_state` (`HORIZON_BY_ENTRY_STATE`), downgraded one tier toward `NEXT_SESSION_WATCH`
 when `fundamental_context.authority_tier` is `None` (not in cohort) or `BLOCKED` — missing
-fundamental authority *narrows* horizon, it never forces `WAIT` by itself.
+fundamental authority *narrows* horizon, it never forces `WAIT` by itself. `entry_state`/
+`entry_action` never require `OFFICIAL_QUALIFIED` fundamentals: fundamental tier only ever modifies
+`horizon` and `data_quality.confidence`, never the tactical classification itself.
 
-`is_full_position_ready` is `False` by construction for every `entry_state` except `BREAKOUT_READY`,
-and even then only when **all** of: descriptive liquidity is `ELIGIBLE`, fundamental
-`authority_tier == "OFFICIAL_QUALIFIED"` with `fundamental_research_readiness` in
-`{"READY", "PARTIAL"}`, and `market_state != "RISK_OFF_BROAD_WEAKNESS"`. This means `EARLY_ENTRY`
-and `ACCUMULATE_IN_BASE` can never reach `True` — enforced twice, independently: Producer's
-`_is_full_position_ready()` and Consumer's `watchlist_tactical_entry_classifier_contract()` (which
-fails a record closed to `status="malformed"` if `EARLY_ENTRY`/`ACCUMULATE_IN_BASE` and
-`is_full_position_ready=true` are ever both present, regardless of what the bundle claims).
+`is_full_position_ready` is unconditionally `False`, and `position_sizing_status` is unconditionally
+`"NOT_EVALUATED"`, for **every** record regardless of `entry_state` (2026-08-23 closeout
+correction, replacing the original BREAKOUT_READY-conditional gate): position sizing is not
+implemented anywhere in this pipeline, so no ticker may ever be reported ready for a full-size
+position. This is enforced twice, independently: the Producer never computes anything but `False`/
+`"NOT_EVALUATED"`, and Consumer's `watchlist_tactical_entry_classifier_contract()` fails a record
+closed to `status="malformed"` if `is_full_position_ready` is ever anything but `False`, or
+`position_sizing_status` anything but `"NOT_EVALUATED"`, regardless of what the bundle claims.
 
 ## Market state
 
@@ -99,10 +147,12 @@ and neither state — nor any other — is ever described as a confirmed bottom 
 
 `blocked_outputs` includes `portfolio_weights_or_position_sizes: "SIZING_FORMULA_NOT_YET_IMPLEMENTED"`
 (reserved for a future milestone, not implemented here), `probabilities_or_target_prices:
-"FORECAST_PROHIBITED"`, and `historical_raw_as_traded_or_pit: "RAW_AS_TRADED_NOT_PROMOTED"`. No
-target price, probability, expected-return figure, or position-size/share-count field exists
-anywhere in the artifact (verified by an explicit key-absence test over both the synthetic test
-fixtures and the complete real 1,683-record output).
+"FORECAST_PROHIBITED"`, and `historical_raw_as_traded_or_pit: "RAW_AS_TRADED_NOT_PROMOTED"`. Every
+record also carries its own `position_sizing_status: "NOT_EVALUATED"` (unconditional, see
+"Horizon and full-position gating" above) so a per-ticker reader sees the boundary without needing
+the artifact-level `blocked_outputs` block. No target price, probability, expected-return figure,
+or position-size/share-count field exists anywhere in the artifact (verified by an explicit
+key-absence test over both the synthetic test fixtures and the complete real 1,683-record output).
 
 ## Wiring
 
@@ -113,7 +163,8 @@ reverified before any attach; a mismatch fails the whole step closed). Runner:
 `tickers[ticker].watchlist_tactical_entry_classifier`. Consumer:
 `watchlist_tactical_entry_classifier_contract` / `apply_bundle_watchlist_tactical_entry_classifier_contract`
 in `ai-core-private/builders/build_ticker_context.py`, byte-identical pass-through with independent
-`EARLY_ENTRY`/`ACCUMULATE_IN_BASE` full-position revalidation. `is_actionable=false` and
-`requires_human_review=true` unconditionally at every level (artifact, per-ticker record, Consumer
-context) — this lane is descriptive tactical classification for human review, never an execution
-instruction.
+revalidation that `is_full_position_ready` is unconditionally `False` and `position_sizing_status`
+unconditionally `"NOT_EVALUATED"` for every record, and that `entry_action` never carries
+`HOLD_DO_NOT_ADD`/`REDUCE_EXIT`. `is_actionable=false` and `requires_human_review=true`
+unconditionally at every level (artifact, per-ticker record, Consumer context) — this lane is
+descriptive tactical classification for human review, never an execution instruction.

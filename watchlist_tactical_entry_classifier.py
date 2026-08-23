@@ -17,16 +17,31 @@ Two output layers per ticker:
     derived only from ``trend_state`` and ``momentum_20d``'s sign plus the close-vs-MA20 proximity
     test.
   * ``entry_state`` -- the refined nine-state tactical classification (the required entry
-    taxonomy), which additionally folds in market-relative momentum quartile, today's session
-    return, provider-relative-volume confirmation, and cross-sectional (contemporaneous, not
-    historical) volatility regime.
+    taxonomy), which additionally folds in market-relative momentum quartile, sector-relative
+    momentum quartile, today's session return, provider-relative-volume confirmation, and
+    cross-sectional (contemporaneous, not historical) volatility regime. ``EARLY_REVERSAL_CANDIDATE``
+    additionally requires at least one independent confirming signal (market-relative momentum,
+    sector-relative momentum, or today's return+volume) beyond the bare momentum-sign flip, and
+    ``BASE_BUILDING`` additionally requires no bottom-quartile relative momentum and no
+    confirmed-down session today, so low volatility alone on an otherwise unconfirmed weak trend no
+    longer qualifies for either state (2026-08-23 closeout correction).
 
-``action`` is a fixed, documented nine-to-seven lookup from ``entry_state`` (never a recomputed
-score). ``is_full_position_ready`` is true only for the single most-confirmed bullish state
-(``BREAKOUT_READY``) and only when liquidity is descriptive-eligible, the fundamental tier is
-``OFFICIAL_QUALIFIED`` with usable readiness, and the market backdrop is not broadly risk-off --
-every other state is ``False`` by construction, and ``EARLY_ENTRY``/``ACCUMULATE_IN_BASE`` can
-never reach this gate (see module docstring on ``ACTION_BY_ENTRY_STATE``).
+Two separate action fields, deliberately not conflated (2026-08-23 closeout correction):
+  * ``entry_action`` -- the PRIMARY field, answering "should a reader who may or may not currently
+    hold this ticker open new exposure today." A fixed nine-to-five lookup from ``entry_state``
+    (``ENTRY_ACTION_BY_ENTRY_STATE``): ``EARLY_ENTRY``, ``BUY_ON_CONFIRMATION``,
+    ``ACCUMULATE_IN_BASE``, ``WAIT``, or ``AVOID`` -- never ``HOLD_DO_NOT_ADD`` or ``REDUCE_EXIT``,
+    which presuppose an existing position. This pipeline has no holdings/portfolio input anywhere,
+    so those two values would be meaningless as an answer to "should I enter."
+  * ``action`` -- a SECONDARY, position-management-conditional field (unchanged nine-to-seven
+    lookup, ``ACTION_BY_ENTRY_STATE``): only meaningful if the reader already holds this ticker.
+    Never use it to decide whether to enter a ticker with unknown or zero holdings.
+
+``is_full_position_ready`` is unconditionally ``False`` for every record, and
+``position_sizing_status`` is unconditionally ``"NOT_EVALUATED"``: position sizing is not
+implemented anywhere in this pipeline (see ``blocked_outputs.portfolio_weights_or_position_sizes``
+== ``SIZING_FORMULA_NOT_YET_IMPLEMENTED``), so this classifier never claims any ticker, under any
+condition, is ready for a full-size position.
 
 No ranking, score, probability, target price, portfolio-sizing formula, RAW_AS_TRADED/PIT claim,
 or backtest output is produced anywhere in this module.
@@ -77,11 +92,15 @@ ACTIONS = (
     "REDUCE_EXIT",
 )
 
-# Fixed nine-to-seven lookup, never a recomputed score. EARLY_ENTRY is reserved for
-# EARLY_REVERSAL_CANDIDATE only (deterministic evidence of an early reversal), matching this
-# milestone's explicit instruction that EARLY_ENTRY must not require a confirmed uptrend and must
-# never imply a full-size position (enforced separately by _is_full_position_ready, which never
-# returns True for any state other than BREAKOUT_READY).
+# Fixed nine-to-seven lookup, never a recomputed score. SECONDARY, position-management-conditional
+# field -- HOLD_DO_NOT_ADD and REDUCE_EXIT are only meaningful if the reader already holds this
+# ticker, which this classifier has no way to know (no holdings/portfolio input exists anywhere in
+# this pipeline). Never use `action` to decide whether to enter a ticker with unknown or zero
+# holdings; use `entry_action` (ENTRY_ACTION_BY_ENTRY_STATE below) for that question instead.
+# EARLY_ENTRY is reserved for EARLY_REVERSAL_CANDIDATE only (deterministic evidence of an early
+# reversal), matching this milestone's explicit instruction that EARLY_ENTRY must not require a
+# confirmed uptrend and must never imply a full-size position (is_full_position_ready is
+# unconditionally False for every state; see module docstring).
 ACTION_BY_ENTRY_STATE = {
     "BREAKOUT_READY": "BUY_ON_CONFIRMATION",
     "UPTREND_CONFIRMED": "HOLD_DO_NOT_ADD",
@@ -93,6 +112,33 @@ ACTION_BY_ENTRY_STATE = {
     "BREAKDOWN_RISK": "REDUCE_EXIT",
     "DOWNTREND": "AVOID",
 }
+
+# PRIMARY field for "should I enter" -- fixed nine-to-five lookup, never HOLD_DO_NOT_ADD or
+# REDUCE_EXIT (see ACTION_BY_ENTRY_STATE's docstring on why those two are excluded here). WAIT
+# groups every state where fresh entry is not tactically supported by the evidence but the picture
+# is not outright bearish either (including UPTREND_CONFIRMED -- already running, with no fresh
+# low-risk entry trigger today, is a "wait for the next setup" read for a flat reader, not a signal
+# to chase); AVOID groups the two outright-bearish states.
+ENTRY_ACTIONS = (
+    "EARLY_ENTRY",
+    "BUY_ON_CONFIRMATION",
+    "ACCUMULATE_IN_BASE",
+    "WAIT",
+    "AVOID",
+)
+ENTRY_ACTION_BY_ENTRY_STATE = {
+    "BREAKOUT_READY": "BUY_ON_CONFIRMATION",
+    "EARLY_REVERSAL_CANDIDATE": "EARLY_ENTRY",
+    "BASE_BUILDING": "ACCUMULATE_IN_BASE",
+    "UPTREND_CONFIRMED": "WAIT",
+    "DISTRIBUTION_RISK": "WAIT",
+    "SELLING_PRESSURE_EASING": "WAIT",
+    "SIDEWAYS_NEUTRAL": "WAIT",
+    "BREAKDOWN_RISK": "AVOID",
+    "DOWNTREND": "AVOID",
+}
+
+POSITION_SIZING_STATUS = "NOT_EVALUATED"
 
 HORIZON_STATES = ("NEXT_SESSION_WATCH", "SHORT_TERM_FEW_SESSIONS", "MULTI_WEEK_SWING")
 HORIZON_BY_ENTRY_STATE = {
@@ -141,12 +187,25 @@ RULE_DEFINITIONS = {
     ),
     "R6_EARLY_REVERSAL_CANDIDATE": (
         "Price at or below the 20-day moving average but 20-day momentum has turned positive -- "
-        "momentum inflecting before price structure confirms."
+        "momentum inflecting before price structure confirms -- AND at least one independent "
+        "confirming signal: same-session market-relative momentum in the upper half of the market "
+        "cohort, same-session sector-relative momentum in the upper half of its own sector cohort, "
+        "or today's return positive together with today's provider-relative volume above the "
+        "cohort median."
+    ),
+    "R6B_EARLY_REVERSAL_UNCONFIRMED_NEUTRAL": (
+        "Price at or below the 20-day moving average with 20-day momentum positive, but none of "
+        "R6's independent confirming signals is present -- an unconfirmed momentum tick rather "
+        "than a distinguishable early-reversal candidate, reported as neutral rather than as a "
+        "reversal signal the evidence does not yet support."
     ),
     "R7_BASE_BUILDING": (
         "Price at or below the 20-day moving average, 20-day momentum negative, 20-day volatility "
-        "below the same-session market median, and today's provider-relative volume not above the "
-        "cohort median -- a quiet, unforced consolidation rather than active selling."
+        "below the same-session market median, today's provider-relative volume not above the "
+        "cohort median, today's return not negative, and 20-day momentum not ranked in the bottom "
+        "same-session market quartile -- a quiet, unforced, non-deteriorating consolidation, not "
+        "merely low volatility sitting on top of an otherwise unconfirmed weak or "
+        "breakdown-flavored trend."
     ),
     "R8_SELLING_PRESSURE_EASING": (
         "Price at or below the 20-day moving average, 20-day momentum negative, but momentum ranks "
@@ -227,6 +286,7 @@ def _market_state(market_breadth: Mapping[str, Any], *, session: str | None) -> 
 def _entry_state_rule(
     *, near_ma20: bool, above_ma20: bool, momentum_positive: bool, momentum_bucket: str | None,
     today_positive: bool | None, elevated_volume: bool | None, volatility_regime: str,
+    sector_momentum_bucket: str | None,
 ) -> tuple[str, str]:
     """The complete, gapless, ordered (first-match-wins) nine-state decision table. Every branch
     uses only already-computed inputs; see RULE_DEFINITIONS for the plain-English predicate each
@@ -243,11 +303,29 @@ def _entry_state_rule(
     if above_ma20 and not momentum_positive:
         return "R4_DISTRIBUTION_RISK", "DISTRIBUTION_RISK"
     if (not above_ma20) and momentum_positive:
-        return "R6_EARLY_REVERSAL_CANDIDATE", "EARLY_REVERSAL_CANDIDATE"
+        # Tightened 2026-08-23 closeout: a bare momentum-sign flip is not enough on its own: at
+        # least one independent confirming signal (market-relative momentum, sector-relative
+        # momentum, or today's return+volume) must corroborate it before this is reported as a
+        # reversal candidate rather than merely neutral.
+        reversal_confirmed = (
+            momentum_bucket in ("UPPER_QUARTILE", "UPPER_MIDDLE")
+            or sector_momentum_bucket in ("UPPER_QUARTILE", "UPPER_MIDDLE")
+            or (today_positive is True and elevated_volume is True)
+        )
+        if reversal_confirmed:
+            return "R6_EARLY_REVERSAL_CANDIDATE", "EARLY_REVERSAL_CANDIDATE"
+        return "R6B_EARLY_REVERSAL_UNCONFIRMED_NEUTRAL", "SIDEWAYS_NEUTRAL"
     # Remaining quadrant: not above_ma20 and not momentum_positive.
     if momentum_bucket == "LOWER_QUARTILE" and elevated_volume is True and today_positive is False:
         return "R5_BREAKDOWN_RISK", "BREAKDOWN_RISK"
-    if volatility_regime == "BELOW_MARKET_MEDIAN" and elevated_volume is not True:
+    # Tightened 2026-08-23 closeout: low volatility alone is not enough -- also require no
+    # breakdown evidence (momentum not bottom-quartile relative to the market) and no active
+    # stabilization failure (today's return not negative), so a persistent weak/downtrend that
+    # merely happens to be quiet today no longer qualifies as a base.
+    if (
+        volatility_regime == "BELOW_MARKET_MEDIAN" and elevated_volume is not True
+        and momentum_bucket != "LOWER_QUARTILE" and today_positive is not False
+    ):
         return "R7_BASE_BUILDING", "BASE_BUILDING"
     if momentum_bucket in ("UPPER_QUARTILE", "UPPER_MIDDLE") or today_positive is True:
         return "R8_SELLING_PRESSURE_EASING", "SELLING_PRESSURE_EASING"
@@ -434,27 +512,6 @@ def _horizon(entry_state: str, fundamental_tier: str | None) -> str:
     return base
 
 
-def _is_full_position_ready(
-    *, entry_state: str, liquidity_eligible: bool, fundamental_tier: str | None,
-    fundamental_readiness: str | None, market_state: str,
-) -> bool:
-    """True only for the single most-confirmed bullish state, and only with descriptive-liquidity
-    eligibility, official-tier fundamental evidence with usable readiness, and a market backdrop
-    that is not broadly risk-off. Every other entry_state -- including EARLY_ENTRY's
-    EARLY_REVERSAL_CANDIDATE and ACCUMULATE_IN_BASE's BASE_BUILDING -- can never reach True here,
-    which is how this milestone's "EARLY_ENTRY must never imply full-size position" instruction is
-    structurally enforced rather than merely asserted in prose."""
-    if entry_state != "BREAKOUT_READY":
-        return False
-    if not liquidity_eligible:
-        return False
-    if fundamental_tier != "OFFICIAL_QUALIFIED" or fundamental_readiness not in ("READY", "PARTIAL"):
-        return False
-    if market_state == "RISK_OFF_BROAD_WEAKNESS":
-        return False
-    return True
-
-
 def _fundamental_context(fundamental_record: Mapping[str, Any] | None) -> dict[str, Any]:
     if fundamental_record is None:
         return {
@@ -517,6 +574,7 @@ def _insufficient_data_record(
         "ticker_structure_state": "NOT_AVAILABLE",
         "entry_state": None,
         "action": "WAIT",
+        "entry_action": "WAIT",
         "evidence_for": [],
         "evidence_against": ["Same-session technical features are unavailable for this ticker."],
         "confirmation_trigger": "Await same-session technical-feature availability before any tactical classification.",
@@ -529,6 +587,7 @@ def _insufficient_data_record(
         ),
         "horizon": None,
         "is_full_position_ready": False,
+        "position_sizing_status": POSITION_SIZING_STATUS,
         "fundamental_context": fundamental_context,
         "rule_id": "R0_TECHNICAL_FEATURES_UNAVAILABLE",
         "is_actionable": False,
@@ -577,10 +636,16 @@ def _classify_ticker(
     if isinstance(volatility, (int, float)) and isinstance(market_vol_median, (int, float)):
         volatility_regime = "AT_OR_ABOVE_MARKET_MEDIAN" if volatility >= market_vol_median else "BELOW_MARKET_MEDIAN"
 
+    sector_comparison = screening_record.get("sector_relative_comparison") if isinstance(screening_record, Mapping) else None
+    sector_status = sector_comparison.get("status") if isinstance(sector_comparison, Mapping) else None
+    sector_available = sector_status == "AVAILABLE"
+    sector_momentum_bucket = sector_comparison.get("momentum_bucket") if sector_available else None
+
     rule_id, entry_state = _entry_state_rule(
         near_ma20=near_ma20, above_ma20=above_ma20, momentum_positive=momentum_positive,
         momentum_bucket=momentum_bucket, today_positive=today_positive,
         elevated_volume=elevated_volume, volatility_regime=volatility_regime,
+        sector_momentum_bucket=sector_momentum_bucket,
     )
 
     if near_ma20:
@@ -594,20 +659,18 @@ def _classify_ticker(
     liquidity_status = liquidity.get("status", "NOT_APPLICABLE")
     liquidity_eligible = liquidity_status == "ELIGIBLE"
 
-    sector_comparison = screening_record.get("sector_relative_comparison") if isinstance(screening_record, Mapping) else None
-    sector_status = sector_comparison.get("status") if isinstance(sector_comparison, Mapping) else None
-    sector_available = sector_status == "AVAILABLE"
-
     fundamental_context = _fundamental_context(fundamental_record)
     fundamental_tier = fundamental_context["authority_tier"]
     fundamental_readiness = fundamental_context["fundamental_research_readiness"]
 
     action = ACTION_BY_ENTRY_STATE[entry_state]
+    entry_action = ENTRY_ACTION_BY_ENTRY_STATE[entry_state]
     horizon = _horizon(entry_state, fundamental_tier)
-    is_full_position_ready = _is_full_position_ready(
-        entry_state=entry_state, liquidity_eligible=liquidity_eligible, fundamental_tier=fundamental_tier,
-        fundamental_readiness=fundamental_readiness, market_state=market_state_block["market_state"],
-    )
+    # Position sizing is not implemented anywhere in this pipeline: unconditionally False/
+    # NOT_EVALUATED for every entry_state, never derived from liquidity/fundamental/market
+    # conditions (see module docstring and blocked_outputs.portfolio_weights_or_position_sizes).
+    is_full_position_ready = False
+    position_sizing_status = POSITION_SIZING_STATUS
     confidence = _confidence(liquidity_eligible=liquidity_eligible, fundamental_tier=fundamental_tier, sector_available=sector_available)
 
     evidence_for, evidence_against = _evidence(
@@ -624,6 +687,7 @@ def _classify_ticker(
         "ticker_structure_state": structure_state,
         "entry_state": entry_state,
         "action": action,
+        "entry_action": entry_action,
         "evidence_for": evidence_for,
         "evidence_against": evidence_against,
         "confirmation_trigger": _CONFIRMATION_TRIGGER_BY_STATE[entry_state],
@@ -636,6 +700,7 @@ def _classify_ticker(
         ),
         "horizon": horizon,
         "is_full_position_ready": is_full_position_ready,
+        "position_sizing_status": position_sizing_status,
         "fundamental_context": fundamental_context,
         "rule_id": rule_id,
         "signals": {
@@ -643,7 +708,7 @@ def _classify_ticker(
             "momentum_20d": momentum, "momentum_bucket": momentum_bucket, "return_1d": return_1d,
             "relative_volume_provider_scoped": relative_volume_value, "relative_volume_bucket": relative_volume_bucket,
             "elevated_volume_vs_cohort_median": elevated_volume, "volatility_20d": volatility,
-            "volatility_regime_vs_market_median": volatility_regime,
+            "volatility_regime_vs_market_median": volatility_regime, "sector_momentum_bucket": sector_momentum_bucket,
         },
         "is_actionable": False,
     }
@@ -695,6 +760,7 @@ def build_artifact(
 
     entry_state_counts = Counter(record["entry_state"] for record in records.values() if record["entry_state"])
     action_counts = Counter(record["action"] for record in records.values())
+    entry_action_counts = Counter(record["entry_action"] for record in records.values())
     classified_count = sum(1 for record in records.values() if record["entry_state"] is not None)
     full_position_ready_count = sum(1 for record in records.values() if record["is_full_position_ready"])
 
@@ -714,6 +780,8 @@ def build_artifact(
         "structure_taxonomy": list(STRUCTURE_STATES),
         "action_taxonomy": list(ACTIONS),
         "action_by_entry_state": dict(ACTION_BY_ENTRY_STATE),
+        "entry_action_taxonomy": list(ENTRY_ACTIONS),
+        "entry_action_by_entry_state": dict(ENTRY_ACTION_BY_ENTRY_STATE),
         "horizon_by_entry_state": dict(HORIZON_BY_ENTRY_STATE),
         "rule_definitions": dict(RULE_DEFINITIONS),
         "coverage": {
@@ -722,6 +790,7 @@ def build_artifact(
             "insufficient_data_count": len(records) - classified_count,
             "entry_state_counts": dict(sorted(entry_state_counts.items())),
             "action_counts": dict(sorted(action_counts.items())),
+            "entry_action_counts": dict(sorted(entry_action_counts.items())),
             "full_position_ready_count": full_position_ready_count,
             "fundamental_cohort_intersection_count": sum(1 for ticker in records if ticker in fundamental_records),
         },
@@ -740,8 +809,11 @@ def build_artifact(
             "not_a_recommendation_or_execution_instruction": True,
             "requires_human_review": True,
             "full_position_sizing_reserved_for_future_milestone": True,
+            "position_sizing_not_evaluated_for_any_ticker": True,
             "early_entry_never_implies_full_position": True,
             "market_state_is_context_not_a_forecast_or_gate_on_ticker_entry_state": True,
+            "entry_action_is_the_primary_field_for_should_i_enter": True,
+            "action_is_secondary_position_management_conditional_on_already_holding": True,
         },
         "records": records,
     }

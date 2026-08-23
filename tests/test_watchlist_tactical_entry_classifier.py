@@ -199,13 +199,33 @@ class EntryStateClassificationTests(unittest.TestCase):
                 with self.subTest(ticker=ticker):
                     self.assertFalse(record["is_full_position_ready"])
 
-    def test_is_full_position_ready_true_only_for_fully_qualified_breakout(self) -> None:
-        # BRK: BREAKOUT_READY, liquidity ELIGIBLE, OFFICIAL_QUALIFIED+READY fundamental, mixed (not risk-off) market.
-        self.assertTrue(self.records["BRK"]["is_full_position_ready"])
+    def test_is_full_position_ready_always_false_position_sizing_not_evaluated(self) -> None:
+        # Position sizing is not implemented anywhere in this pipeline (2026-08-23 closeout
+        # correction): is_full_position_ready is unconditionally False and position_sizing_status
+        # is unconditionally NOT_EVALUATED for every ticker, including BRK -- BREAKOUT_READY,
+        # liquidity ELIGIBLE, OFFICIAL_QUALIFIED+READY fundamental, mixed (not risk-off) market --
+        # which would have qualified under the old, now-removed conditional gate.
         for ticker, record in self.records.items():
-            if ticker != "BRK":
-                with self.subTest(ticker=ticker):
-                    self.assertFalse(record["is_full_position_ready"])
+            with self.subTest(ticker=ticker):
+                self.assertFalse(record["is_full_position_ready"])
+                self.assertEqual(record["position_sizing_status"], "NOT_EVALUATED")
+
+    def test_entry_action_matches_fixed_lookup_and_excludes_hold_and_reduce(self) -> None:
+        for ticker, expected_state in _EXPECTED_ENTRY_STATE.items():
+            with self.subTest(ticker=ticker):
+                self.assertEqual(self.records[ticker]["entry_action"], classifier.ENTRY_ACTION_BY_ENTRY_STATE[expected_state])
+        for record in self.records.values():
+            self.assertNotIn(record["entry_action"], ("HOLD_DO_NOT_ADD", "REDUCE_EXIT"))
+
+    def test_entry_action_is_primary_for_early_entry_and_accumulate(self) -> None:
+        self.assertEqual(self.records["REV"]["entry_action"], "EARLY_ENTRY")
+        self.assertEqual(self.records["BAS"]["entry_action"], "ACCUMULATE_IN_BASE")
+        self.assertEqual(self.records["BRK"]["entry_action"], "BUY_ON_CONFIRMATION")
+        # UPTREND_CONFIRMED/DISTRIBUTION_RISK never claim HOLD_DO_NOT_ADD as an entry answer.
+        self.assertEqual(self.records["UPT"]["entry_action"], "WAIT")
+        self.assertEqual(self.records["DST"]["entry_action"], "WAIT")
+        # BREAKDOWN_RISK never claims REDUCE_EXIT as an entry answer.
+        self.assertEqual(self.records["BRD"]["entry_action"], "AVOID")
 
     def test_horizon_downgraded_when_fundamental_missing_or_blocked(self) -> None:
         # DST is DISTRIBUTION_RISK (base horizon SHORT_TERM_FEW_SESSIONS) with BLOCKED fundamental tier
@@ -350,6 +370,80 @@ class NoNewFeatureComputationTests(unittest.TestCase):
         artifact = classifier.build_artifact(descriptive_source=descriptive, screening_source=screening, fundamental_source=fundamental, requested_at="t")
         expected_bucket = screening["records"]["BRK"]["market_relative_comparison"]["momentum_bucket"]
         self.assertEqual(artifact["records"]["BRK"]["signals"]["momentum_bucket"], expected_bucket)
+
+
+class TightenedEarlyReversalAndBaseBuildingTests(unittest.TestCase):
+    """2026-08-23 closeout correction: proves R6/R7 are now genuinely tighter, not merely
+    redocumented -- a separate, small, hand-computed cohort (independent of _TICKER_SPECS above)
+    where a bare unconfirmed momentum-sign flip and a persistent bottom-quartile-momentum decline
+    would have qualified under the OLD loose rules, and no longer do."""
+
+    def _cohort_source(self):
+        # Momentum values, ascending: DWK -0.15, UNC 0.005, F3 0.10, F2 0.20, F1 0.30 (5 tickers).
+        # UNC's tie-aware percentile = (1 less + 1)/5 = 0.4 -> LOWER_MIDDLE (not upper-half).
+        # DWK's tie-aware percentile = (0 less + 1)/5 = 0.2 -> LOWER_QUARTILE (breakdown evidence).
+        specs = {
+            # ticker: (close, ma20, momentum, return_1d, volatility, relative_volume)
+            "UNC": (97.0, 100.0, 0.005, -0.005, 0.02, 1.0),   # below MA20, momentum barely positive, unconfirmed
+            "DWK": (85.0, 100.0, -0.15, -0.01, 0.01, 1.0),    # below MA20, deep negative momentum, LOW volatility
+            "F1": (130.0, 100.0, 0.30, 0.01, 0.02, 1.0),
+            "F2": (120.0, 100.0, 0.20, 0.01, 0.02, 1.0),
+            "F3": (110.0, 100.0, 0.10, 0.01, 0.02, 1.0),
+        }
+        records = {}
+        for ticker, (close, ma20, momentum, return_1d, volatility, relvol) in specs.items():
+            records[ticker] = {
+                "ticker": ticker, "in_current_descriptive_scope": True, "activity_and_session_state": "ACTIVE_LISTED_OBSERVED",
+                "technical_features": _technical(close=close, ma20=ma20, momentum=momentum, return_1d=return_1d,
+                                                 volatility=volatility, relative_volume=relvol),
+                "trend_state": "ABOVE_MA20" if close > ma20 else "AT_OR_BELOW_MA20",
+                "liquidity": _liquidity(eligible=True), "sector_classification": {},
+            }
+        source = {
+            "schema_version": "1.0.0", "contract_version": "market_wide_current_descriptive_research/v1", "session": SESSION,
+            "records": records,
+            "market_breadth": {
+                "breadth_descriptor": {"descriptor": "MARKET_BREADTH_MIXED"},
+                "momentum_descriptor": {"descriptor": "MOMENTUM_BREADTH_MIXED"},
+                "advance_ratio": 0.5, "quality_state": "PARTIAL_COVERAGE_EXPLICIT",
+                "volatility": {"median": VOLATILITY_MEDIAN},
+            },
+            "sector_breadth": {"sector_count_available": 0, "sector_count_insufficient_coverage": 0, "sectors": {}},
+            "liquidity_features": {"reconciliation_warnings": []},
+            "validation": {
+                "coverage": {"current_active_equity_denominator": len(records), "observed_session_cohort": len(records)},
+                "lineage": {"liquidity_artifact_identity": "fixture-liquidity"},
+            },
+        }
+        return {**source, **descriptive_module.content_identity(source)}
+
+    def setUp(self) -> None:
+        descriptive = self._cohort_source()
+        screening = screening_module.build_artifact(descriptive)
+        fundamental = {"schema_version": "1.0.0", "contract_version": "market_wide_current_fundamental_research/v1",
+                       "records": {}, "coverage": {"candidate_count": 0}}
+        fundamental = {**fundamental, **fundamental_module.content_identity(fundamental)}
+        self.artifact = classifier.build_artifact(
+            descriptive_source=descriptive, screening_source=screening, fundamental_source=fundamental,
+            requested_at="2026-08-23T00:00:00+00:00",
+        )
+        self.records = self.artifact["records"]
+
+    def test_unconfirmed_momentum_flip_is_neutral_not_early_reversal(self) -> None:
+        record = self.records["UNC"]
+        self.assertEqual(record["signals"]["momentum_bucket"], "LOWER_MIDDLE")
+        self.assertEqual(record["rule_id"], "R6B_EARLY_REVERSAL_UNCONFIRMED_NEUTRAL")
+        self.assertEqual(record["entry_state"], "SIDEWAYS_NEUTRAL")
+        self.assertNotEqual(record["entry_state"], "EARLY_REVERSAL_CANDIDATE")
+        self.assertEqual(record["entry_action"], "WAIT")
+
+    def test_deep_bottom_quartile_decline_is_downtrend_not_base_building_despite_low_volatility(self) -> None:
+        record = self.records["DWK"]
+        self.assertEqual(record["signals"]["momentum_bucket"], "LOWER_QUARTILE")
+        self.assertEqual(record["signals"]["volatility_regime_vs_market_median"], "BELOW_MARKET_MEDIAN")
+        self.assertNotEqual(record["entry_state"], "BASE_BUILDING")
+        self.assertEqual(record["entry_state"], "DOWNTREND")
+        self.assertEqual(record["entry_action"], "AVOID")
 
 
 if __name__ == "__main__":

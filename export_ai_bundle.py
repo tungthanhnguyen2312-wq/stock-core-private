@@ -3322,8 +3322,10 @@ def attach_market_wide_current_fundamental_research(
 # tools/run_watchlist_tactical_entry_classifier.py -- this layer never recomputes a technical
 # feature, screening flag, market/sector-relative percentile, or fundamental-tier value; it copies
 # the retained per-ticker tactical classification (market_state, ticker_structure_state,
-# entry_state, action, evidence_for/against, confirmation_trigger, invalidation, data_quality,
-# horizon, is_full_position_ready) and adds the same bundle-common "status"/"is_actionable"
+# entry_state, entry_action [PRIMARY -- should-I-enter], action [secondary, position-management-
+# conditional on already holding], evidence_for/against, confirmation_trigger, invalidation,
+# data_quality, horizon, is_full_position_ready [unconditionally False], position_sizing_status
+# [unconditionally NOT_EVALUATED]) and adds the same bundle-common "status"/"is_actionable"
 # convenience fields every sibling current-state attach layer above already adds. An explicit
 # --watchlist-tactical-entry-classifier-path is required (never inferred or hardcoded); the
 # artifact's own recorded hash is reverified via
@@ -3370,6 +3372,8 @@ def build_watchlist_tactical_entry_classifier_for_ticker_safe(
         result["state_taxonomy"] = artifact.get("state_taxonomy")
         result["action_taxonomy"] = artifact.get("action_taxonomy")
         result["action_by_entry_state"] = artifact.get("action_by_entry_state")
+        result["entry_action_taxonomy"] = artifact.get("entry_action_taxonomy")
+        result["entry_action_by_entry_state"] = artifact.get("entry_action_by_entry_state")
         result["blocked_outputs"] = artifact.get("blocked_outputs")
         result["status"] = "classified" if record.get("entry_state") is not None else "insufficient_data"
         # Unconditional, never derived from entry_state/action: this is descriptive tactical

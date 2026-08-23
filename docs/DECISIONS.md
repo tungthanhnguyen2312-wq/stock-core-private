@@ -1,5 +1,106 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-23 - Watchlist Tactical Decision Closeout
+
+`WATCHLIST_TACTICAL_DECISION_CLOSEOUT_V1 = COMPLETE_LOCALLY / COHERENT_PARTIAL`. Owner-authorized
+closeout on the same-day classifier below, before its first use against the actual configured
+watchlist ahead of the 2026-08-24 market open. Four corrections, all inside
+`watchlist_tactical_entry_classifier.py` (Producer) and `build_ticker_context.py`/
+`ai_analysis_templates.md` (Consumer, `ai-core-private`); no new architectural lane or worktree.
+
+**1. Entry guidance separated from position-management guidance.** The original `action` field
+mixed two concerns: `BUY_ON_CONFIRMATION`/`EARLY_ENTRY`/`ACCUMULATE_IN_BASE`/`WAIT`/`AVOID` answer
+"should I enter," but `HOLD_DO_NOT_ADD`/`REDUCE_EXIT` presuppose an existing position this pipeline
+has no holdings input to confirm. New `entry_action` (`ENTRY_ACTION_BY_ENTRY_STATE`, a fixed 9→5
+lookup) is now the PRIMARY field for "should I enter this ticker": `UPTREND_CONFIRMED` and
+`DISTRIBUTION_RISK` now answer `WAIT` (no fresh low-risk entry trigger today, not a chase, and not
+an artifact of an assumed position) and `BREAKDOWN_RISK` answers `AVOID` rather than the
+position-only `REDUCE_EXIT`. The original `action` (`ACTION_BY_ENTRY_STATE`) is unchanged in value
+and remains present as a SECONDARY, position-management-conditional field, now documented as such
+everywhere it appears (module docstring, contract doc, Consumer docstrings, AI prompt template) --
+never the basis for an entry decision when holdings are unknown.
+
+**2. No full-position-readiness claims; sizing stays NOT_EVALUATED.** `is_full_position_ready` is
+now unconditionally `False` and a new `position_sizing_status` unconditionally `"NOT_EVALUATED"`
+for every record without exception, replacing the old BREAKOUT_READY-conditional gate (liquidity +
+`OFFICIAL_QUALIFIED` fundamentals + non-risk-off market). Position sizing is not implemented
+anywhere in this pipeline, so no ticker -- not even a fully-qualified `BREAKOUT_READY` -- may ever
+be reported ready for a full-size position. Enforced twice, independently: Producer never computes
+anything but the two constants, and Consumer's `watchlist_tactical_entry_classifier_contract()`
+fails a record closed to `status="malformed"` if `is_full_position_ready` is ever anything but
+`False` or `position_sizing_status` anything but `"NOT_EVALUATED"`, regardless of the bundle.
+
+**3. Fundamentals confirmed never to gate EARLY_ENTRY/ACCUMULATE_IN_BASE.** Audited, not changed:
+`entry_state`/`entry_action` derivation never reads `fundamental_tier` anywhere in
+`_entry_state_rule()`/`_classify_ticker()`; fundamental tier only ever narrows `horizon` one tier
+and lowers `data_quality.confidence`. Real-data proof: PAN (the watchlist's one
+`ACCUMULATE_IN_BASE` ticker below) carries `OFFICIAL_QUALIFIED`/`PARTIAL` fundamentals that raised
+its confidence to `HIGH` and kept horizon at the base `MULTI_WEEK_SWING` -- it did not gate the
+classification, which was already reachable independent of fundamental tier.
+
+**4. EARLY_REVERSAL_CANDIDATE and BASE_BUILDING tightened, both using only already-computed
+fields.** `EARLY_REVERSAL_CANDIDATE` (rule `R6`) previously fired on a bare below-MA20,
+momentum-turned-positive flip alone. It now additionally requires at least one independent
+confirming signal -- market-relative momentum in the upper half of the cohort, sector-relative
+momentum in the upper half of its own sector cohort (a new `sector_momentum_bucket` parameter
+wired into `_entry_state_rule()`, from the already-computed `sector_relative_comparison` this
+module already read for evidence text), or today's return positive together with elevated
+provider-relative volume. An unconfirmed flip now falls to new rule `R6B` and reports
+`SIDEWAYS_NEUTRAL` instead. `BASE_BUILDING` (rule `R7`) previously fired on low volatility plus no
+elevated volume alone, regardless of how far or how persistently the ticker had declined. It now
+additionally requires no bottom-quartile relative momentum and no confirmed-down session today, so
+a persistent weak/downtrend that merely happens to be quiet no longer qualifies as a base.
+`EARLY_ENTRY` remains reachable without a confirmed uptrend (preserved unchanged, per the original
+milestone's explicit instruction) -- the correction is strictly a tightening of the evidence bar,
+not a reversion to confirmation-only behavior.
+
+**Real before/after, full retained 2026-08-21 session (1,683 candidates, 956 classified,
+zero network calls -- offline regeneration from the same three already-retained source
+artifacts):** `BASE_BUILDING` 77 -> 20, `DOWNTREND` 109 -> 140, `SELLING_PRESSURE_EASING`
+139 -> 165 (the 57 tickers leaving `BASE_BUILDING` land exactly here: 31 in `DOWNTREND`, 26 in
+`SELLING_PRESSURE_EASING`, confirmed by exact arithmetic, not estimated). `EARLY_REVERSAL_CANDIDATE`
+(30), `SIDEWAYS_NEUTRAL` (274), `UPTREND_CONFIRMED` (177), `BREAKDOWN_RISK` (44), `BREAKOUT_READY`
+(40), and `DISTRIBUTION_RISK` (66) are all byte-unchanged -- rules R1-R5/R8/R9 were not touched, and
+real data shows every previously-confirmed `EARLY_REVERSAL_CANDIDATE` already carried a qualifying
+confirming signal (R6B never actually fires on this session's data, though it is real, tested, and
+reachable). New entry_action distribution: `EARLY_ENTRY` 30, `ACCUMULATE_IN_BASE` 20,
+`BUY_ON_CONFIRMATION` 40, `WAIT` 1409, `AVOID` 184. `full_position_ready_count` stays 0 (previously
+an "honest zero" for BREAKOUT_READY-specific reasons; now 0 unconditionally for every ticker and
+every state). New artifact:
+`operations-review/watchlist-tactical-entry-decision-v1-20260823/watchlist_tactical_entry_classifier_artifact.json`
+(`watchlist_tactical_entry_classifier:bcc1e855f069e13b80d3e4b5b9c523a489356426fc32891a12c592265e7bc885`,
+regenerated in place over the prior `4797deeb...` checkpoint).
+
+**Frozen pre-open artifact for 2026-08-24.** Extracted the actual configured 11-ticker production
+cohort (`export_ai_bundle.py`'s `DEFAULT_TICKERS`: POW, SSI, HPG, EVF, PAN, PNJ, FPT, QNS, VNM,
+PVD, NVL) from the regenerated artifact above -- all 11 present and classified, none missing or
+insufficient-data. Result: 1 `ACCUMULATE_IN_BASE` (PAN, `BASE_BUILDING`), 10 `WAIT` (POW/HPG/EVF/
+QNS/PVD `SIDEWAYS_NEUTRAL`; SSI/PNJ/FPT `DISTRIBUTION_RISK`; VNM/NVL `UPTREND_CONFIRMED`), 0
+`EARLY_ENTRY`, 0 `BUY_ON_CONFIRMATION`, 0 `AVOID` -- an honest, unglamorous real reading, not
+adjusted for variety. Artifact:
+`operations-review/watchlist-tactical-entry-decision-preopen-20260824/watchlist_tactical_entry_decision_preopen_20260824.json`
+(local-only, gitignored like all `operations-review/` content, same as its source).
+
+**Tests.** Producer: 42 tests in the two existing classifier test files (was 38; +4, including two
+new hand-computed-cohort tests -- independent of the main 9-ticker fixture -- proving R6/R7 are
+genuinely tighter: an unconfirmed momentum flip now resolves `SIDEWAYS_NEUTRAL` via `R6B`, and a
+deep bottom-quartile decline with low volatility now resolves `DOWNTREND` via `R9`, not
+`BASE_BUILDING`). Consumer: 38 tests across the three existing classifier test files (was 31; +7,
+including a stronger "fails closed for BREAKOUT_READY too" test and two new full-real-universe
+proofs added to the frozen-time E2E suite). All pass, including the real cross-repo frozen-time E2E
+over the actual 11-ticker production cohort against the regenerated artifact. A targeted 356-test
+Producer sweep (`-k "watchlist_tactical or market_wide_current or screening or export_ai_bundle"`)
+reproduces the same 6 pre-existing failures by name (stale VCB/VNM/HPG evidence-state and
+share-basis fixtures, unrelated to this classifier); a full 736-test Consumer sweep reproduces the
+same 10 pre-existing failures by name (metadata-registry-shadow/phase7-8-9-11 batch/catalog
+fixtures) -- neither is a regression. `py_compile` clean in both repos.
+
+**Negative boundaries, unchanged.** No new technical indicator (the one new rule input,
+`sector_momentum_bucket`, is an already-computed value newly wired into the rule function, not a
+new computation). No ranking, score, probability, target price, valuation, RAW_AS_TRADED/PIT claim,
+backtest, or new data acquisition anywhere. No push, merge, deploy, or production write in either
+repository; local checkpoint commits only.
+
 ## 2026-08-23 - Watchlist Tactical Entry-State Classifier
 
 `WATCHLIST_TACTICAL_ENTRY_DECISION_V1 = COMPLETE_LOCALLY / COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED_NOT_AUTHORITATIVE`. Owner-authorized bounded milestone: turn the already-computed current market-wide descriptive/screening/fundamental research into a deterministic tactical entry-state classifier, explicitly scoped to reuse existing lanes rather than build a new feature store or ranking engine. New `watchlist_tactical_entry_classifier.py` joins `market_wide_current_descriptive_research` (technical features, trend state, breadth/regime, liquidity), `current_market_screening_opportunity_comparison_foundation` (market/sector-relative momentum and volume percentile context), and `market_wide_current_fundamental_research` (official/provider fundamental tier), wired through `export_ai_bundle.py` into the Consumer using the identical opt-in/hash-verified attach convention every `market_wide_current_*` sibling already established.
