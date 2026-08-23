@@ -17,6 +17,7 @@ from field_temporal_contract import stable_id
 from market_wide_current_corporate_intelligence import prospective_context
 from polymorphic_current_strategy_classification import build as build_strategy, content_identity as strategy_identity, prospective_context as strategy_prospective_context
 from current_portfolio_risk_envelope import build as build_portfolio_risk
+from current_macro_regime import session_context as macro_session_context
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
 
@@ -88,16 +89,17 @@ def validate_coherence(inputs: Mapping[str, Any], session: str) -> dict[str, Any
     return {"session": session, "technical_coverage_semantics": {"same_session_technical_feature_available_count": coverage, "current_active_equity_denominator": descriptive["market_breadth"]["current_active_equity_denominator"], "observed_session_cohort": descriptive["market_breadth"]["observed_session_cohort"], "semantic_note": "956 is same-session technical feature coverage and tactical classified count after retained technical recovery; 763 is superseded pre-recovery coverage and is rejected."}, "corporate_intelligence_coverage": corporate.get("coverage"), "accepted_degraded_inputs": {"catalyst": "EARLIER_RETAINED_CATALYST_CONTEXT"}, "incompatible_inputs": []}
 
 
-def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None) -> dict[str, Any]:
     coherence = validate_coherence(inputs, session)
     peer = build_peer(descriptive=inputs["descriptive"], tactical=inputs["tactical"], fundamental=inputs["fundamental"], valuation=inputs["valuation"])
     if peer_identity(peer)["artifact_sha256"] != peer["artifact_sha256"]: raise ValueError("PEER_ARTIFACT_SELF_VERIFICATION_FAILED")
-    scenario = build_scenario(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], triage=inputs["triage"], catalyst=inputs["catalyst"], screening=inputs["screening"], corporate_intelligence=inputs["corporate_intelligence"])
+    macro_context = macro_session_context(macro, session)
+    scenario = build_scenario(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], triage=inputs["triage"], catalyst=inputs["catalyst"], screening=inputs["screening"], corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context)
     if scenario_identity(scenario)["artifact_sha256"] != scenario["artifact_sha256"]: raise ValueError("SCENARIO_ARTIFACT_SELF_VERIFICATION_FAILED")
     strategy = build_strategy(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, corporate_intelligence=inputs["corporate_intelligence"])
     if strategy_identity(strategy)["artifact_sha256"] != strategy["artifact_sha256"]: raise ValueError("STRATEGY_ARTIFACT_SELF_VERIFICATION_FAILED")
-    portfolio_risk = build_portfolio_risk(portfolio=portfolio, descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, strategy=strategy, corporate_intelligence=inputs["corporate_intelligence"]) if portfolio else None
-    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk)
+    portfolio_risk = build_portfolio_risk(portfolio=portfolio, descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, strategy=strategy, corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context) if portfolio else None
+    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context)
     if product_identity(product)["artifact_sha256"] != product["artifact_sha256"]: raise ValueError("PRODUCT_ARTIFACT_SELF_VERIFICATION_FAILED")
     snapshot = freeze_current_decision_surface(inputs["tactical"], inputs["triage"], inputs["fundamental"], inputs["valuation"])
     corporate_snapshot = prospective_context(inputs["corporate_intelligence"])
@@ -116,7 +118,12 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         manifest["coverage_summary"]["portfolio_risk"] = {"portfolio_id": portfolio_risk["portfolio_id"], "positions": len(portfolio_risk["positions"]), "is_actionable": False}
         manifest["warnings"].append("Portfolio risk is an explicit-input descriptive envelope only; sizing, liquidity, correlation, volatility, VaR/CVaR, leverage, and execution remain blocked or not evaluated.")
         manifest["operation_identity"] = _identity(manifest)
-    return {"peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
+    if macro:
+        manifest["input_artifacts"]["macro"] = {"artifact_identity": macro.get("artifact_identity"), "contract_version": macro.get("contract_version"), "session": macro.get("current_research_as_of"), "freshness_state": macro_context["status"]}
+        manifest["outputs"]["macro_context"] = macro_context
+        manifest["warnings"].append("Macro evidence is accepted only when known by the retained equity session; otherwise it is preserved as unavailable context.")
+        manifest["operation_identity"] = _identity(manifest)
+    return {"peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:

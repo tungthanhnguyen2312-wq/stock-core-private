@@ -14,7 +14,7 @@ from field_temporal_contract import stable_id
 CONTRACT_VERSION = "current_evidence_bound_scenario/v1"
 WATCHLIST = ("EVF", "FPT", "HPG", "NVL", "PAN", "PNJ", "POW", "PVD", "QNS", "SSI", "VNM")
 PREOPEN_47 = ("ABB", "ABS", "BCA", "BHN", "BSH", "BTH", "DCV", "DHB", "FDC", "GCF", "H11", "HCC", "KTL", "LMC", "LMH", "MEL", "MKV", "PJC", "POM", "PWA", "SHN", "SPM", "TH1", "TNI", "TTS", "VMS", "VQC", "VRC", "VSF", "VVS", "AGG", "AVC", "BMC", "BMP", "C47", "HD6", "SMC", "TDT", "VC3", "VCF", "VIC", "VNS", "VPL", "AAN", "ABW", "DHG", "HCM")
-DRIVER_TYPES = ("MARKET_CONTEXT", "TECHNICAL", "TACTICAL", "PEER_RELATIVE", "FUNDAMENTAL", "VALUATION_CONTEXT", "CATALYST_OR_EVENT", "DATA_QUALITY")
+DRIVER_TYPES = ("MARKET_CONTEXT", "MACRO_CONTEXT", "TECHNICAL", "TACTICAL", "PEER_RELATIVE", "FUNDAMENTAL", "VALUATION_CONTEXT", "CATALYST_OR_EVENT", "DATA_QUALITY")
 
 
 def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
@@ -43,7 +43,7 @@ def _driver(status: str, evidence: Any, limitations: list[str] | None = None) ->
 
 
 def _drivers(tactical: Mapping[str, Any], peer: Mapping[str, Any] | None, fundamental: Mapping[str, Any] | None,
-             valuation: Mapping[str, Any] | None, catalyst: Mapping[str, Any] | None) -> dict[str, Any]:
+             valuation: Mapping[str, Any] | None, catalyst: Mapping[str, Any] | None, macro_context: Mapping[str, Any] | None) -> dict[str, Any]:
     technical_ready = bool((tactical.get("data_quality") or {}).get("technical_eligible"))
     entry_state = tactical.get("entry_state")
     peer_technical = (peer or {}).get("technical_peer_context") or {}
@@ -51,6 +51,7 @@ def _drivers(tactical: Mapping[str, Any], peer: Mapping[str, Any] | None, fundam
     valuation_context = (peer or {}).get("valuation_peer_context") or {}
     return {
         "MARKET_CONTEXT": _driver("SUPPORTIVE" if tactical.get("market_state") else "UNAVAILABLE", {"market_state": tactical.get("market_state")}),
+        "MACRO_CONTEXT": _driver("AVAILABLE" if (macro_context or {}).get("status") == "AVAILABLE" else "UNAVAILABLE", macro_context or {"status": "UNAVAILABLE"}, ["Macro is independent descriptive context, not causal proof or probability."]),
         "TECHNICAL": _driver("SUPPORTIVE" if technical_ready else "UNAVAILABLE", {"ticker_structure_state": tactical.get("ticker_structure_state"), "signals": tactical.get("signals")}, list((tactical.get("data_quality") or {}).get("warnings") or [])),
         "TACTICAL": _driver("SUPPORTIVE" if entry_state else "UNAVAILABLE", {"entry_state": entry_state, "confirmation_trigger": tactical.get("confirmation_trigger"), "invalidation": tactical.get("invalidation"), "rule_id": tactical.get("rule_id")}),
         "PEER_RELATIVE": _driver("SUPPORTIVE" if peer_technical.get("status") == "AVAILABLE" else "UNAVAILABLE", {"peer_membership": (peer or {}).get("peer_membership"), "technical_peer_context": peer_technical, "expectations_context": (peer or {}).get("expectations_context")}, list((peer or {}).get("data_gaps") or [])),
@@ -85,15 +86,15 @@ def _detail(record: Mapping[str, Any]) -> dict[str, Any]:
     return {key: record[key] for key in ("ticker", "scenario_disposition", "current_state", "bear_case", "base_case", "bull_case", "key_driver_conflicts", "confirmation_trigger", "invalidation", "peer_context", "fundamental_context", "valuation_context", "catalyst_context", "time_horizon", "data_quality", "authority_limitations")}
 
 
-def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], triage: Mapping[str, Any], catalyst: Mapping[str, Any] | None = None, screening: Mapping[str, Any] | None = None, corporate_intelligence: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], triage: Mapping[str, Any], catalyst: Mapping[str, Any] | None = None, screening: Mapping[str, Any] | None = None, corporate_intelligence: Mapping[str, Any] | None = None, macro_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
     d, t, p, f, v = descriptive["records"], tactical["records"], peer_relative["records"], fundamental["records"], valuation["records"]
     catalyst_by_ticker = {row["ticker"]: row for row in (catalyst or {}).get("records", []) if isinstance(row, Mapping)}
     corporate_by_ticker = {row["ticker"]: row for row in (corporate_intelligence or {}).get("records", {}).values() if isinstance(row, Mapping)}
-    source_ids = {"descriptive": descriptive["artifact_identity"], "tactical": tactical["artifact_identity"], "peer_relative": peer_relative["artifact_identity"], "fundamental": fundamental["artifact_identity"], "valuation": valuation["artifact_identity"], "triage": triage["artifact_identity"], "catalyst": (catalyst or {}).get("artifact_identity"), "corporate_intelligence": (corporate_intelligence or {}).get("artifact_identity"), "screening": (screening or {}).get("artifact_identity")}
+    source_ids = {"descriptive": descriptive["artifact_identity"], "tactical": tactical["artifact_identity"], "peer_relative": peer_relative["artifact_identity"], "fundamental": fundamental["artifact_identity"], "valuation": valuation["artifact_identity"], "triage": triage["artifact_identity"], "catalyst": (catalyst or {}).get("artifact_identity"), "corporate_intelligence": (corporate_intelligence or {}).get("artifact_identity"), "screening": (screening or {}).get("artifact_identity"), "macro": (macro_context or {}).get("macro_artifact_identity")}
     records: dict[str, Any] = {}
     for ticker in sorted(d):
         tactical_row, peer_row, fund_row, valuation_row = t.get(ticker) or {}, p.get(ticker), f.get(ticker), v.get(ticker)
-        catalyst_context = _catalysts(catalyst_by_ticker.get(ticker), corporate_by_ticker.get(ticker)); drivers = _drivers(tactical_row, peer_row, fund_row, valuation_row, catalyst_context); disposition = _disposition(tactical_row, drivers); cases = _cases(ticker, disposition, tactical_row, drivers, source_ids)
+        catalyst_context = _catalysts(catalyst_by_ticker.get(ticker), corporate_by_ticker.get(ticker)); drivers = _drivers(tactical_row, peer_row, fund_row, valuation_row, catalyst_context, macro_context); disposition = _disposition(tactical_row, drivers); cases = _cases(ticker, disposition, tactical_row, drivers, source_ids)
         conflicts = [name for name, value in drivers.items() if value["status"] == "CONTRADICTORY"]
         records[ticker] = {"ticker": ticker, "scenario_disposition": disposition, "probability_status": "UNKNOWN_UNCALIBRATED", "current_state": {"market_state": tactical_row.get("market_state"), "ticker_structure_state": tactical_row.get("ticker_structure_state"), "entry_state": tactical_row.get("entry_state")}, "observed_facts": {"descriptive_activity": (d[ticker].get("activity_and_session_state")), "technical_current_session": ((d[ticker].get("technical_features") or {}).get("is_current_session")), "tactical_state": tactical_row.get("entry_state")}, "conditional_assumptions": ["Future conditions are not observed facts.", "Base means continuation/reference, not most likely."], "scenario_drivers": drivers, "bear_case": cases["BEAR"], "base_case": cases["BASE"], "bull_case": cases["BULL"], "key_driver_conflicts": conflicts, "confirmation_trigger": tactical_row.get("confirmation_trigger"), "invalidation": tactical_row.get("invalidation"), "peer_context": peer_row or {"status": "UNAVAILABLE"}, "fundamental_context": (fund_row or {}).get("fundamental_trajectory_context") or {"status": "UNAVAILABLE"}, "valuation_context": {"strict_status": (valuation_row or {}).get("status", "UNAVAILABLE"), "shadow_proxy": (valuation_row or {}).get("shadow_proxy_valuation"), "peer_status": ((peer_row or {}).get("valuation_peer_context") or {}).get("status")}, "catalyst_context": catalyst_context, "time_horizon": tactical_row.get("horizon"), "data_quality": tactical_row.get("data_quality") or {}, "authority_limitations": ["Current deterministic research only.", "No calibrated probabilities, targets, expected returns, ranking, recommendation, sizing, portfolio, execution, or outcomes."], "is_actionable": False}
     entry_source = triage.get("all_entry_relevant_records", {})

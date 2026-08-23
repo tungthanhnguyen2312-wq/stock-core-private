@@ -2179,3 +2179,10 @@ single-ticker work.
 2. The first envelope is concentration and evidence context only. It reports single-name/entity/strategy/tactical exposure, scenario/fundamental/event/data-quality context, and explicit user-limit comparisons. It does not emit recommendations, allocation, optimal weights, sizing, execution, probability-weighted risk, or a portfolio volatility estimate.
 3. Liquidity, days-to-liquidate, correlation, portfolio volatility, VaR, CVaR, position sizing, leverage, and execution remain fail-closed because qualified liquidity/PIT/policy inputs are absent. Consumer accepts the optional envelope only when it preserves those non-actionable statuses.
 4. The bounded fixture is designated `DEMONSTRATION_NOT_REAL_HOLDINGS`; it is retained solely as a deterministic validation fixture and is excluded from prospective-learning surfaces.
+
+## 2026-08-24 - Current Macro Regime and Cross-Asset Context V1
+
+1. Current macro evidence is represented as source-bound observations with observation date and release timestamp kept distinct. Missing official dimensions are `UNAVAILABLE`, never zero or an inferred proxy.
+2. Independent deterministic axes are not a weighted score. The optional high-level regime is an explicit mapping of those axes and remains descriptive—not a stock-market forecast or causal proof.
+3. FRED graph CSV is current-research official-public evidence but lacks release/vintage timestamps in the retained endpoint; it is therefore expressly not historical PIT. A later macro artifact can be bound in a historical equity-session manifest only as `UNAVAILABLE` context.
+4. No ticker macro sensitivity, sector beta, VaR/CVaR, liquidity, sizing, leverage, execution, ranking, recommendation, probability, target, or calibration output is authorized.

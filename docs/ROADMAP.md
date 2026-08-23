@@ -247,3 +247,7 @@ Execution focus strictly follows the ordered critical path:
 ### Current Portfolio Risk Envelope V1 (Complete Locally)
 
 `current_portfolio_risk_envelope/v1` is an optional explicit-input daily-session extension. The next real-data gate is qualified liquidity/ADV and policy inputs before days-to-liquidate, correlation, portfolio volatility, VaR/CVaR, leverage, sizing, or execution can be evaluated. No demonstration portfolio may be promoted into prospective learning.
+
+### Current Macro Regime V1 (Complete Locally)
+
+The next macro evidence gate is a governed, machine-readable official Vietnam route for policy rate, FX, credit, banking-liquidity, and government-bond observations with release/vintage metadata. That gate must not promote historical PIT, forecast, causality, allocation, sizing, or execution.

@@ -2851,6 +2851,7 @@ def attach_current_daily_decision_research_product(bundle_entries: dict[str, dic
             value = dict(card)
             value.update({"source_artifact_identity": artifact.get("artifact_identity"), "source_session": artifact.get("session"), "market_brief": artifact.get("market_brief"), "authority_boundary": artifact.get("authority_boundary"), "is_actionable": False})
             if isinstance(artifact.get("portfolio_risk"), Mapping): value["portfolio_risk"] = artifact["portfolio_risk"]
+            if isinstance(artifact.get("macro_context"), Mapping): value["macro_context"] = artifact["macro_context"]
             entry["current_daily_decision_research"] = value
     return bundle_entries
 

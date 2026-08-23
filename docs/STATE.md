@@ -442,3 +442,7 @@ For historical investigation logs, forensic reports, and raw capture manifests, 
 ### Current Portfolio Risk Envelope V1
 
 The optional daily-session portfolio branch is complete locally. It consumes only explicit holdings/exposure, emits deterministic concentration and retained-evidence context, and remains descriptive/non-actionable. Liquidity, correlation, portfolio volatility, VaR/CVaR, sizing, leverage, and execution remain blocked or not evaluated. The retained fixture is explicitly `DEMONSTRATION_NOT_REAL_HOLDINGS`, not a live portfolio or learning input.
+
+### Current Macro Regime and Cross-Asset Context V1
+
+`current_macro_regime/v1` is a source-bound current-research macro artifact. It retains official FRED payloads with hashes and separately labels Vietnam official dimensions unavailable when no current machine-readable official observation is retained. It is not historical PIT: a macro artifact released or retrieved after an equity session is passed into that session only as explicitly unavailable context. No macro forecast, causal attribution, macro beta, sizing, or execution authority is created.

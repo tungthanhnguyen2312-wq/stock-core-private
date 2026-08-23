@@ -70,7 +70,7 @@ def _card(ticker: str, tactical: Mapping[str, Any], peer: Mapping[str, Any] | No
     return {"ticker": ticker, "current_decision_state": {"ticker_structure_state": tactical.get("ticker_structure_state"), "entry_state": state, "entry_action": tactical.get("entry_action"), "horizon": tactical.get("horizon"), "human_use_language": LANGUAGE.get(state, "technical evidence unavailable / no current tactical classification"), "is_actionable": False, "requires_human_review": True, "position_sizing_status": tactical.get("position_sizing_status", "NOT_EVALUATED")}, "why_it_is_on_radar": {"deterministic_reasons": tactical.get("evidence_for") or [], "evidence_for": tactical.get("evidence_for") or []}, "what_argues_against": {"evidence_against": tactical.get("evidence_against") or [], "conflicts": scenario.get("key_driver_conflicts") or [], "limitations": (tactical.get("data_quality") or {}).get("warnings") or []}, "peer_context": _peer_summary(peer, state), "fundamental_context": _fundamental_summary(fundamental), "valuation_context": _valuation_summary(valuation, peer), "corporate_intelligence_context": _corporate_summary(corporate), "strategy_fit": _strategy_summary(strategy), "scenario": {"bear_case": scenario.get("bear_case"), "base_case": scenario.get("base_case"), "bull_case": scenario.get("bull_case"), "probability_status": scenario.get("probability_status", "UNKNOWN_UNCALIBRATED")}, "trigger": tactical.get("confirmation_trigger"), "invalidation": tactical.get("invalidation"), "data_quality": tactical.get("data_quality") or {}, "thesis_counter_thesis": _claims(ticker, tactical, peer, fundamental), "authority_limitations": ["Strategy eligibility is distinct from entry action, scenario, and portfolio action.", "Entry action is tactical research state only, not execution authority.", "No target, probability, ranking, recommendation, sizing, portfolio, or execution instruction."]}
 
 
-def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], scenario: Mapping[str, Any], triage: Mapping[str, Any], corporate_intelligence: Mapping[str, Any] | None = None, strategy_classification: Mapping[str, Any] | None = None, portfolio_risk: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], scenario: Mapping[str, Any], triage: Mapping[str, Any], corporate_intelligence: Mapping[str, Any] | None = None, strategy_classification: Mapping[str, Any] | None = None, portfolio_risk: Mapping[str, Any] | None = None, macro_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
     d, t, p, f, v, s = descriptive["records"], tactical["records"], peer_relative["records"], fundamental["records"], valuation["records"], scenario["records"]
     groups = {"EARLY_REVERSAL": "EARLY_REVERSAL_CANDIDATE", "BASE_BUILDING": "BASE_BUILDING", "BREAKOUT_CONFIRMATION": "BREAKOUT_READY", "UPTREND_ESTABLISHED_STRENGTH": "UPTREND_CONFIRMED", "DISTRIBUTION_OR_BREAKDOWN_RISK": {"DISTRIBUTION_RISK", "BREAKDOWN_RISK", "DOWNTREND"}}
     cohorts = {name: [ticker for ticker in sorted(t) if (t[ticker].get("entry_state") in state if isinstance(state, set) else t[ticker].get("entry_state") == state)] for name, state in groups.items()}
@@ -84,6 +84,9 @@ def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_r
     if portfolio_risk is None:
         artifact["source_artifact_identities"].pop("portfolio_risk")
         artifact.pop("portfolio_risk")
+    if macro_context is not None:
+        artifact["macro_context"] = macro_context
+        artifact["source_artifact_identities"]["macro"] = macro_context.get("macro_artifact_identity")
     artifact.update(content_identity(artifact)); return artifact
 
 
@@ -104,5 +107,9 @@ def markdown(artifact: Mapping[str, Any]) -> str:
     if isinstance(portfolio, Mapping):
         breached = [item["limit_id"] for item in portfolio.get("user_limit_results", []) if item.get("status") == "LIMIT_BREACH"]
         lines += ["", "## Portfolio risk (explicit input)", f"- Portfolio: {portfolio.get('portfolio_id')} ({portfolio.get('portfolio_kind')}); {len(portfolio.get('positions', []))} explicit positions.", f"- User-limit breaches: {', '.join(breached) or 'none declared'}.", "- Concentration context only; no allocation, sizing, VaR/CVaR, leverage, liquidity, or execution instruction."]
+    macro = artifact.get("macro_context")
+    if isinstance(macro, Mapping):
+        regime = (macro.get("macro_regime") or {}).get("state", "UNAVAILABLE")
+        lines += ["", "## Macro / top-down", f"- Regime: {regime}; session compatibility: {macro.get('status') or 'UNAVAILABLE'}.", "- Macro context is descriptive evidence only; it does not establish causality, probability, portfolio sensitivity, or a trading instruction."]
     lines += ["", "## Risk and data gaps", f"- Technical unavailable: {artifact['risk_data_gap_panel']['technical_unavailable']}; peer context unavailable: {artifact['risk_data_gap_panel']['peer_context_unavailable']}; strict valuation ready: 0.", "", "## What to verify next"] + [f"- {item}" for item in artifact["what_to_verify_next"]]
     return "\n".join(lines) + "\n"
