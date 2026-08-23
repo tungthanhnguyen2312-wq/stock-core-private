@@ -140,6 +140,9 @@ from market_wide_current_valuation_input_scaleout import (
 from sector_aware_relative_research import (
     content_identity as sector_aware_relative_research_content_identity,
 )
+from current_evidence_bound_scenario import (
+    content_identity as current_evidence_bound_scenario_content_identity,
+)
 from watchlist_tactical_entry_classifier import (
     content_identity as watchlist_tactical_entry_classifier_content_identity,
 )
@@ -2794,6 +2797,33 @@ def attach_sector_aware_relative_research(bundle_entries: dict[str, dict], inclu
     return bundle_entries
 
 
+def load_current_evidence_bound_scenario_artifact(path: Path) -> Mapping[str, Any] | None:
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if (not isinstance(artifact, dict) or artifact.get("contract_version") != "current_evidence_bound_scenario/v1"
+                or current_evidence_bound_scenario_content_identity(artifact)["artifact_sha256"] != artifact.get("artifact_sha256")):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def attach_current_evidence_bound_scenario(bundle_entries: dict[str, dict], include: bool, artifact_path: str | None) -> dict[str, dict]:
+    """Opt-in current scenario pass-through.  Cases are never recalculated here."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_current_evidence_bound_scenario_artifact(Path(artifact_path))
+    if artifact is None or not isinstance(artifact.get("records"), Mapping):
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        record = artifact["records"].get(ticker)
+        if isinstance(record, Mapping):
+            value = dict(record)
+            value.update({"source_artifact_identity": artifact.get("artifact_identity"), "source_session": artifact.get("session"), "coverage": artifact.get("coverage"), "authority_boundary": artifact.get("authority_boundary"), "is_actionable": False})
+            entry["current_evidence_bound_scenario"] = value
+    return bundle_entries
+
+
 # ==========================================================================
 # DNSE foreign-flow VALUE integration — opt-in (disabled by default)
 # ==========================================================================
@@ -4157,6 +4187,10 @@ def main() -> int:
                         help="Opt-in retained sector-aware relative-research pass-through; descriptive only, never ranking, recommendation, target, sizing, probability, or valuation authority.")
     parser.add_argument("--sector-aware-relative-research-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained sector_aware_relative_research artifact.")
+    parser.add_argument("--include-current-evidence-bound-scenario", action="store_true",
+                        help="Opt-in current evidence-bound Bear/Base/Bull scenario pass-through; conditional research only, no probability, target, ranking, recommendation, or sizing.")
+    parser.add_argument("--current-evidence-bound-scenario-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained current_evidence_bound_scenario artifact.")
     parser.add_argument("--include-watchlist-tactical-entry-classifier", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].watchlist_tactical_entry_classifier from the"
@@ -4506,6 +4540,10 @@ def main() -> int:
     attach_sector_aware_relative_research(
         bundle_entries, args.include_sector_aware_relative_research,
         args.sector_aware_relative_research_path,
+    )
+    attach_current_evidence_bound_scenario(
+        bundle_entries, args.include_current_evidence_bound_scenario,
+        args.current_evidence_bound_scenario_path,
     )
     # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
     # market_wide_current_* siblings above.
