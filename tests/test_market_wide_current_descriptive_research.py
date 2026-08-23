@@ -234,6 +234,36 @@ def test_deterministic_identity_across_repeated_builds():
     assert first["artifact_identity"] == second["artifact_identity"]
 
 
+def test_recovered_history_preserves_the_existing_feature_contract_and_provenance():
+    ur, pf, liq, classifications = _build_scenario()
+    pf_records = dict(pf["records"])
+    pf_records["DEC1"] = {"disposition": "EXACT_SESSION_RETAINED", "observations": _observations(TARGET, 7, start_close=100.0, step=-1.0)}
+    pf = p3f9b_snapshot(pf_records)
+    liq = liquidity_artifact(liq["records"], snapshot_identity=pf["snapshot_identity"])
+    recovered_observations = _observations(TARGET, 20, start_close=100.0, step=-1.0)
+    recovery_payload = {
+        "target_session": TARGET,
+        "source_lineage": {"p3f9b_snapshot_identity": pf["snapshot_identity"]},
+        "recovered_history_overrides": {
+            "DEC1": {"state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "payload_sha256": "retained",
+                     "observations": recovered_observations}
+        },
+    }
+    recovery = {
+        **recovery_payload,
+        "artifact_sha256": _hash(recovery_payload),
+        "artifact_identity": "market_wide_current_technical_coverage_scaleout:retained",
+    }
+
+    artifact = build_artifact(
+        universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq,
+        entity_classifications=classifications, technical_history_recovery_artifact=recovery,
+    )
+    assert artifact["market_breadth"]["same_session_technical_feature_available_count"] == 6
+    assert artifact["records"]["DEC1"]["technical_features"]["is_current_session"] is True
+    assert artifact["records"]["DEC1"]["technical_features"]["technical_history_provenance"]["source"] == "RETAINED_DNSE_EXTENDED_HISTORY_RECOVERY"
+
+
 def test_tampered_inputs_are_rejected():
     ur, pf, liq, classifications = _build_scenario()
 

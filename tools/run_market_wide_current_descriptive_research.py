@@ -36,12 +36,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--universe-resolution-artifact", default=str(DEFAULT_UNIVERSE_RESOLUTION))
     parser.add_argument("--p3f9b-snapshot", default=str(DEFAULT_P3F9B_SNAPSHOT))
     parser.add_argument("--liquidity-artifact", default=str(DEFAULT_LIQUIDITY_ARTIFACT))
+    parser.add_argument("--technical-history-recovery-artifact", default=None)
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
     args = parser.parse_args(argv)
 
     universe_resolution = _load(Path(args.universe_resolution_artifact))
     p3f9b_snapshot = _load(Path(args.p3f9b_snapshot))
     liquidity_artifact = _load(Path(args.liquidity_artifact))
+    technical_history_recovery = _load(Path(args.technical_history_recovery_artifact)) if args.technical_history_recovery_artifact else None
 
     qualified = load_qualified_entity_classes(ROOT)
     provider_descriptive = load_provider_descriptive_industry_classes(ROOT, qualified)
@@ -52,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
         p3f9b_snapshot=p3f9b_snapshot,
         liquidity_artifact=liquidity_artifact,
         entity_classifications=entity_classifications,
+        technical_history_recovery_artifact=technical_history_recovery,
     )
 
     output = Path(args.output)

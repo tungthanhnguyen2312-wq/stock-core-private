@@ -109,12 +109,18 @@ def _feature_rows(pf_record: Mapping[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
-def _technical_features(pf_record: Mapping[str, Any], *, target_session: str) -> dict[str, Any]:
+def _technical_features(pf_record: Mapping[str, Any], *, target_session: str,
+                        provenance: Mapping[str, Any] | None = None) -> dict[str, Any]:
     rows = _feature_rows(pf_record)
     result = market_features(rows)
     dates = sorted(str(row["date"]) for row in rows)
     latest = dates[-1] if dates else None
-    return {**result, "feature_as_of_session": latest, "is_current_session": latest == target_session}
+    return {
+        **result,
+        "feature_as_of_session": latest,
+        "is_current_session": latest == target_session,
+        "technical_history_provenance": dict(provenance or {"source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"}),
+    }
 
 
 def _trend_state(values: Mapping[str, Any]) -> str | None:
@@ -222,6 +228,7 @@ def _sector_breadth(records: Sequence[Mapping[str, Any]], classifications: Mappi
 def build_artifact(
     *, universe_resolution_artifact: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any],
     liquidity_artifact: Mapping[str, Any], entity_classifications: Mapping[str, Mapping[str, Any]],
+    technical_history_recovery_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     _verify_local_identity(universe_resolution_artifact, hash_key="artifact_sha256", identity_key="artifact_identity",
                            label="UNIVERSE_RESOLUTION_ARTIFACT")
@@ -245,6 +252,21 @@ def build_artifact(
     if liquidity_snapshot_identity != p3f9b_snapshot.get("snapshot_identity"):
         raise MarketWideCurrentDescriptiveResearchError("LIQUIDITY_ARTIFACT_SNAPSHOT_IDENTITY_MISMATCH")
 
+    recovery_overrides: Mapping[str, Any] = {}
+    recovery_identity = None
+    if technical_history_recovery_artifact is not None:
+        recovered_identity = content_identity(technical_history_recovery_artifact)
+        if technical_history_recovery_artifact.get("artifact_sha256") != recovered_identity["artifact_sha256"]:
+            raise MarketWideCurrentDescriptiveResearchError("TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH")
+        if technical_history_recovery_artifact.get("target_session") != target_session:
+            raise MarketWideCurrentDescriptiveResearchError("TECHNICAL_HISTORY_RECOVERY_SESSION_MISMATCH")
+        if technical_history_recovery_artifact.get("source_lineage", {}).get("p3f9b_snapshot_identity") != p3f9b_snapshot.get("snapshot_identity"):
+            raise MarketWideCurrentDescriptiveResearchError("TECHNICAL_HISTORY_RECOVERY_SNAPSHOT_IDENTITY_MISMATCH")
+        recovery_overrides = technical_history_recovery_artifact.get("recovered_history_overrides", {})
+        if not isinstance(recovery_overrides, Mapping):
+            raise MarketWideCurrentDescriptiveResearchError("TECHNICAL_HISTORY_RECOVERY_OVERRIDES_INVALID")
+        recovery_identity = technical_history_recovery_artifact.get("artifact_identity")
+
     current_active_equity_denominator = universe_resolution_artifact["current_active_equity_denominator"]["count"]
     observed_session_cohort_count = universe_resolution_artifact["observed_session_cohort"]["count"]
 
@@ -255,7 +277,18 @@ def build_artifact(
         in_scope = activity_state in IN_SCOPE_ACTIVITY_STATES
 
         if in_scope:
-            technical = _technical_features(pf_records[ticker], target_session=target_session)
+            override = recovery_overrides.get(ticker)
+            if isinstance(override, Mapping) and override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
+                technical = _technical_features(
+                    {"observations": override.get("observations", [])}, target_session=target_session,
+                    provenance={
+                        "source": "RETAINED_DNSE_EXTENDED_HISTORY_RECOVERY",
+                        "recovery_artifact_identity": recovery_identity,
+                        "recovery_payload_sha256": override.get("payload_sha256"),
+                    },
+                )
+            else:
+                technical = _technical_features(pf_records[ticker], target_session=target_session)
         else:
             technical = {"status": "NOT_APPLICABLE", "reason": "OUT_OF_CURRENT_DESCRIPTIVE_SCOPE",
                         "feature_as_of_session": None, "is_current_session": False, "values": {}}
@@ -360,6 +393,8 @@ def build_artifact(
             "current_active_equity_denominator": current_active_equity_denominator,
             "observed_session_cohort": observed_session_cohort_count,
             "same_session_technical_feature_available_count": len(same_session_shadow),
+            "stale_feature_available_but_not_current_session_count": len(stale_but_available),
+            "technical_feature_unavailable_count": sum(1 for record in in_scope_records if record["technical_features"]["status"] != "SHADOW_ONLY"),
             "universe_status_counts": dict(sorted(universe_status_counts.items())),
         },
         "available_outputs": ["market_breadth", "sector_breadth", "cross_sectional_features", "liquidity_features"],
@@ -368,6 +403,7 @@ def build_artifact(
             "universe_resolution_artifact_identity": universe_resolution_artifact.get("artifact_identity"),
             "p3f9b_snapshot_identity": p3f9b_snapshot.get("snapshot_identity"),
             "liquidity_artifact_identity": liquidity_artifact.get("artifact_identity"),
+            "technical_history_recovery_artifact_identity": recovery_identity,
             "session": target_session,
         },
         "session": target_session,
