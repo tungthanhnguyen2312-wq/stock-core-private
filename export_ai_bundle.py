@@ -134,6 +134,9 @@ from current_market_screening_opportunity_comparison_foundation import (
 from market_wide_current_fundamental_research import (
     content_identity as market_wide_current_fundamental_research_content_identity,
 )
+from watchlist_tactical_entry_classifier import (
+    content_identity as watchlist_tactical_entry_classifier_content_identity,
+)
 from current_state_relative_valuation import (
     STATUS_QUALIFIED as CURRENT_STATE_RELATIVE_VALUATION_STATUS_QUALIFIED,
     evaluate_current_state_relative_valuation,
@@ -3312,6 +3315,96 @@ def attach_market_wide_current_fundamental_research(
 
 
 # ==========================================================================
+# Watchlist tactical entry-state classifier — opt-in (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-watchlist-tactical-entry-classifier). Consumes ONLY the
+# already-retained watchlist_tactical_entry_classifier_artifact.json produced offline by
+# tools/run_watchlist_tactical_entry_classifier.py -- this layer never recomputes a technical
+# feature, screening flag, market/sector-relative percentile, or fundamental-tier value; it copies
+# the retained per-ticker tactical classification (market_state, ticker_structure_state,
+# entry_state, action, evidence_for/against, confirmation_trigger, invalidation, data_quality,
+# horizon, is_full_position_ready) and adds the same bundle-common "status"/"is_actionable"
+# convenience fields every sibling current-state attach layer above already adds. An explicit
+# --watchlist-tactical-entry-classifier-path is required (never inferred or hardcoded); the
+# artifact's own recorded hash is reverified via
+# watchlist_tactical_entry_classifier_content_identity() before anything is attached; a mismatch
+# fails the whole step closed, matching every sibling market_wide_current_* attach layer above.
+
+def load_watchlist_tactical_entry_classifier_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Fail-closed loader: returns None (never raises) if the file is absent, unreadable,
+    malformed, or its own recomputed content hash does not match its recorded artifact_sha256."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(artifact, dict):
+        return None
+    try:
+        recomputed = watchlist_tactical_entry_classifier_content_identity(artifact)
+    except Exception:
+        return None
+    if recomputed.get("artifact_sha256") != artifact.get("artifact_sha256"):
+        return None
+    return artifact
+
+
+def build_watchlist_tactical_entry_classifier_for_ticker_safe(
+    ticker: str, artifact: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Fail-closed wrapper: a ticker absent from the retained artifact's universe, or any local
+    shaping failure, returns None (no key attached) and never raises into the caller's per-ticker
+    loop. The record itself is never recalculated -- only copied, plus the artifact-level
+    state/action/horizon taxonomy tables and blocked-outputs/authority-boundary disclosure that
+    give a single-ticker reader the full classification contract without needing the whole
+    artifact."""
+    try:
+        records = artifact.get("records")
+        if not isinstance(records, Mapping):
+            return None
+        record = records.get(ticker)
+        if not isinstance(record, Mapping) or record.get("ticker") != ticker:
+            return None
+        result = dict(record)
+        result["source_artifact_identity"] = artifact.get("artifact_identity")
+        result["session"] = artifact.get("session")
+        result["state_taxonomy"] = artifact.get("state_taxonomy")
+        result["action_taxonomy"] = artifact.get("action_taxonomy")
+        result["action_by_entry_state"] = artifact.get("action_by_entry_state")
+        result["blocked_outputs"] = artifact.get("blocked_outputs")
+        result["status"] = "classified" if record.get("entry_state") is not None else "insufficient_data"
+        # Unconditional, never derived from entry_state/action: this is descriptive tactical
+        # classification for human review, never an execution instruction (see
+        # authority_boundary.requires_human_review, always True).
+        result["is_actionable"] = False
+        return result
+    except Exception:
+        return None
+
+
+def attach_watchlist_tactical_entry_classifier(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False): when include is False, the retained
+    artifact is never read and no watchlist_tactical_entry_classifier key is ever added -- current
+    default bundle behavior is preserved exactly. When True, an absent artifact_path, an unreadable
+    file, or a hash mismatch leaves every ticker's entry untouched (fail closed on the whole step,
+    not a partial/degraded attach). Own dedicated flag; order relative to the other attach steps
+    does not matter since nothing else reads tickers[ticker].watchlist_tactical_entry_classifier."""
+    if not include:
+        return bundle_entries
+    if not artifact_path:
+        return bundle_entries
+    artifact = load_watchlist_tactical_entry_classifier_artifact(Path(artifact_path))
+    if artifact is None:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_watchlist_tactical_entry_classifier_for_ticker_safe(tk, artifact)
+        if result is not None:
+            entry["watchlist_tactical_entry_classifier"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # Current-state relative valuation (HPG) — opt-in (disabled by default)
 # ==========================================================================
 # New dedicated flag (--include-current-state-relative-valuation). Delegates all
@@ -3980,6 +4073,31 @@ def main() -> int:
                              " market_wide_current_fundamental_research_artifact.json, required only"
                              " with --include-market-wide-current-fundamental-research; never"
                              " inferred or hardcoded.")
+    parser.add_argument("--include-watchlist-tactical-entry-classifier", action="store_true",
+                        help="Opt-in, disabled by default: attach"
+                             " tickers[ticker].watchlist_tactical_entry_classifier from the"
+                             " already-retained watchlist_tactical_entry_classifier_artifact.json"
+                             " (tools/run_watchlist_tactical_entry_classifier.py) -- a deterministic"
+                             " nine-state tactical entry classification (market_state,"
+                             " ticker_structure_state, entry_state, action, evidence_for/against,"
+                             " confirmation_trigger, invalidation, data_quality, horizon,"
+                             " is_full_position_ready) built only from the already-computed"
+                             " market_wide_current_descriptive_research/current_market_screening_"
+                             " opportunity_comparison_foundation/market_wide_current_fundamental_"
+                             " research lanes -- no new technical indicator, ranking, or evidence is"
+                             " computed here. Requires"
+                             " --watchlist-tactical-entry-classifier-path; the artifact's own hash is"
+                             " reverified before any attach and a mismatch fails the whole step"
+                             " closed. Always is_actionable=false and requires_human_review=true;"
+                             " never a probability, target price, or portfolio-sizing output, and"
+                             " EARLY_ENTRY/ACCUMULATE_IN_BASE can never carry"
+                             " is_full_position_ready=true. Not enabled in any default/production"
+                             " invocation.")
+    parser.add_argument("--watchlist-tactical-entry-classifier-path", metavar="PATH",
+                        help="Explicit path to a retained"
+                             " watchlist_tactical_entry_classifier_artifact.json, required only with"
+                             " --include-watchlist-tactical-entry-classifier; never inferred or"
+                             " hardcoded.")
     parser.add_argument("--include-current-state-relative-valuation", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].current_state_relative_valuation from"
@@ -4296,6 +4414,12 @@ def main() -> int:
     attach_market_wide_current_fundamental_research(
         bundle_entries, args.include_market_wide_current_fundamental_research,
         args.market_wide_current_fundamental_research_path,
+    )
+    # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
+    # market_wide_current_* siblings above.
+    attach_watchlist_tactical_entry_classifier(
+        bundle_entries, args.include_watchlist_tactical_entry_classifier,
+        args.watchlist_tactical_entry_classifier_path,
     )
     # Own dedicated flag; must run after relative_valuation is already present on each
     # entry (set inside build_ticker_entry, well before this attach-sequence block) so
