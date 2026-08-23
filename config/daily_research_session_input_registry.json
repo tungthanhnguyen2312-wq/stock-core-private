@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "contract_version": "daily_research_session_input_registry/v1",
+  "sessions": {
+    "2026-08-21": {
+      "descriptive": {"path": "operations-review/market-wide-current-technical-coverage-scaleout-v1-20260823/market_wide_current_descriptive_research_artifact.json", "artifact_identity": "market_wide_current_descriptive_research:8660d4ece155e91895557a0f7b70a6a501ab5ebcee8978818199084a88a6c9b6"},
+      "screening": {"path": "operations-review/current-market-screening-opportunity-comparison-foundation-v1-20260823/current_market_screening_opportunity_comparison_foundation_artifact.json", "artifact_identity": "current_market_screening_opportunity_comparison_foundation:a11d637f23d3e9d4e18ad975ddf38bc6bbbac2b221d8d154c5e9316f3e555684"},
+      "tactical": {"path": "operations-review/watchlist-tactical-entry-decision-v1-20260823/watchlist_tactical_entry_classifier_artifact.json", "artifact_identity": "watchlist_tactical_entry_classifier:bcc1e855f069e13b80d3e4b5b9c523a489356426fc32891a12c592265e7bc885"},
+      "triage": {"path": "operations-review/full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json", "artifact_identity": "full_universe_entry_candidate_triage:4b527330c1817b37cc09fb44ad16dd34e72718012d921b859d7318f06af799c1"},
+      "fundamental": {"path": "operations-review/market-wide-current-fundamental-research-v1-20260823/market_wide_current_fundamental_research_artifact.json", "artifact_identity": "market_wide_current_fundamental_research:fc7619fcd7d0f5077a396c9e05fcdce14e97bdcdc078722c49e67070990d0feb"},
+      "valuation": {"path": "operations-review/market-wide-current-valuation-v1-20260824/market_wide_current_valuation_artifact.json", "artifact_identity": "market_wide_current_valuation:e6d015f2feee4cc5c5969d7a1fddac9d2f1b2b55918adb4ea199920e4455b29a"},
+      "catalyst": {"path": "operations-review/catalyst-event-research-context-v1-20260820/catalyst_event_research_context_artifact.json", "artifact_identity": "catalyst_event_research_context:fcbada853866b0136a6c106da17b687dced1a8fe1a5c4021923b7582ed0c50fb", "accepted_degraded": "EARLIER_RETAINED_CATALYST_CONTEXT"}
+    }
+  }
+}

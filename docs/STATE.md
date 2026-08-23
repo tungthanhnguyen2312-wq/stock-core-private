@@ -23,6 +23,8 @@
 
 **Current Daily Decision Research Product V2 (2026-08-24):** `CURRENT_DAILY_DECISION_RESEARCH_PRODUCT_V2 = COMPLETE_LOCALLY / HUMAN_REVIEW_RESEARCH_ONLY`. One source-identity-bound current-session product now integrates the existing market brief, deterministic tactical cohorts, 11-name watchlist, 47-name high-priority full-universe review set, peer/fundamental/valuation context, and conditional scenario cards. It keeps full-universe discovery distinct from the watchlist and passes per-ticker cards opt-in through Producer→Consumer. Entry actions remain existing non-actionable tactical states; probability remains `UNKNOWN_UNCALIBRATED`; no recommendation, target, ranking, sizing, portfolio, execution, or authority promotion is created.
 
+**Daily Research Session Operations V1 (2026-08-24):** `DAILY_RESEARCH_SESSION_OPERATIONS_V1 = COMPLETE_LOCALLY / RETAINED_EVIDENCE_ONLY`. `tools/run_daily_research_session_operation.py` is the foreground entry point: it resolves an explicit identity-bound session registry, rejects mismatched/superseded upstream lineage, rebuilds peer/scenario/product surfaces coherently, validates Consumer pass-through, seals the existing immutable prospective snapshot, and writes an immutable run manifest. The prior 763/1510 product coverage was a superseded pre-recovery descriptive artifact; the accepted recovered 2026-08-21 artifact is bound by screening and tactical lineage and has 956 same-session technical records. Fundamental context is explicitly retained/undated and catalyst evidence is explicitly earlier/degraded; neither is silently treated as current-session market evidence.
+
 ---
 
 ## 2. Program Priority & Foundation Status

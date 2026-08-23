@@ -11,7 +11,7 @@ from current_daily_decision_research_product import build, content_identity, mar
 
 OPERATIONS = ROOT / "operations-review"
 PATHS = {
-    "descriptive": "market-wide-current-descriptive-research-v1-20260823/market_wide_current_descriptive_research_artifact.json",
+    "descriptive": "market-wide-current-technical-coverage-scaleout-v1-20260823/market_wide_current_descriptive_research_artifact.json",
     "tactical": "watchlist-tactical-entry-decision-v1-20260823/watchlist_tactical_entry_classifier_artifact.json",
     "peer_relative": "sector-aware-relative-research-v1-20260824/sector_aware_relative_research_artifact.json",
     "fundamental": "market-wide-current-fundamental-research-v1-20260823/market_wide_current_fundamental_research_artifact.json",
