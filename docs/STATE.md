@@ -446,3 +446,7 @@ The optional daily-session portfolio branch is complete locally. It consumes onl
 ### Current Macro Regime and Cross-Asset Context V1
 
 `current_macro_regime/v1` is a source-bound current-research macro artifact. It retains official FRED payloads with hashes and separately labels Vietnam official dimensions unavailable when no current machine-readable official observation is retained. It is not historical PIT: a macro artifact released or retrieved after an equity session is passed into that session only as explicitly unavailable context. No macro forecast, causal attribution, macro beta, sizing, or execution authority is created.
+
+### Current Market Flow / Positioning V1
+
+`current_market_flow_positioning/v1` is a deterministic, provider-scoped current-research projection over retained canonical DNSE/FHSC observations. It independently retains traded-value composition, DNSE foreign value flow, FHSC foreign-room, proprietary, and active-order context, with exact session/retrieval/raw identities and fail-closed missing/rejected/rate-limited/semantic-blocked states. The retained real 2026-08-21 three-name acquisition materialized all five dimensions for HPG/SSI/VCB; it is a bounded retained cohort, not a whole-market claim. Flow is optional evidence in scenario, strategy, explicit-portfolio context, Product V2, Consumer, and session manifests. No institutional intent, causality, liquidity, sizing, execution, PIT, backtest, or RAW_AS_TRADED authority is created.

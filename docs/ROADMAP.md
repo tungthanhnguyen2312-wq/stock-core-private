@@ -251,3 +251,7 @@ Execution focus strictly follows the ordered critical path:
 ### Current Macro Regime V1 (Complete Locally)
 
 The next macro evidence gate is a governed, machine-readable official Vietnam route for policy rate, FX, credit, banking-liquidity, and government-bond observations with release/vintage metadata. That gate must not promote historical PIT, forecast, causality, allocation, sizing, or execution.
+
+### Current Market Flow / Positioning V1 (Complete Locally / Coherent Partial)
+
+The next real-data gate is a bounded, rate-safe full supported-universe retained session packet that includes all mapped FHSC flow endpoints and the existing DNSE foreign-flow contract. It must retain per-ticker dispositions and session/freshness boundaries; it must not promote traded value to liquidity/ADV, position sizing, execution capacity, PIT/backtest, or causal/identity claims.

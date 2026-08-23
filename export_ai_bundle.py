@@ -146,6 +146,9 @@ from current_evidence_bound_scenario import (
 from current_daily_decision_research_product import (
     content_identity as current_daily_decision_research_product_content_identity,
 )
+from current_market_flow_positioning import (
+    content_identity as current_market_flow_positioning_content_identity,
+)
 from watchlist_tactical_entry_classifier import (
     content_identity as watchlist_tactical_entry_classifier_content_identity,
 )
@@ -2856,6 +2859,33 @@ def attach_current_daily_decision_research_product(bundle_entries: dict[str, dic
     return bundle_entries
 
 
+def load_current_market_flow_positioning_artifact(path: Path) -> Mapping[str, Any] | None:
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if (not isinstance(artifact, dict) or artifact.get("contract_version") != "current_market_flow_positioning/v1"
+                or current_market_flow_positioning_content_identity(artifact)["artifact_sha256"] != artifact.get("artifact_sha256")):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def attach_current_market_flow_positioning(bundle_entries: dict[str, dict], include: bool, artifact_path: str | None) -> dict[str, dict]:
+    """Opt-in provider-scoped flow pass-through; never derives intent or causality."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_current_market_flow_positioning_artifact(Path(artifact_path))
+    if artifact is None or not isinstance(artifact.get("records"), Mapping):
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        record = artifact["records"].get(ticker)
+        if isinstance(record, Mapping):
+            value = dict(record)
+            value.update({"source_artifact_identity": artifact.get("artifact_identity"), "source_session": artifact.get("session"), "authority_boundary": artifact.get("authority_boundary"), "is_actionable": False})
+            entry["current_market_flow_positioning"] = value
+    return bundle_entries
+
+
 # ==========================================================================
 # DNSE foreign-flow VALUE integration — opt-in (disabled by default)
 # ==========================================================================
@@ -4215,6 +4245,10 @@ def main() -> int:
                              " never a target price, ranking, recommendation, sizing, or historical/PIT claim.")
     parser.add_argument("--market-wide-current-valuation-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained market_wide_current_valuation artifact.")
+    parser.add_argument("--include-current-market-flow-positioning", action="store_true",
+                        help="Opt-in provider-scoped current flow/positioning pass-through; descriptive only, never intent, causality, sizing, liquidity, or execution authority.")
+    parser.add_argument("--current-market-flow-positioning-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained current_market_flow_positioning artifact.")
     parser.add_argument("--include-sector-aware-relative-research", action="store_true",
                         help="Opt-in retained sector-aware relative-research pass-through; descriptive only, never ranking, recommendation, target, sizing, probability, or valuation authority.")
     parser.add_argument("--sector-aware-relative-research-path", metavar="PATH",
@@ -4572,6 +4606,10 @@ def main() -> int:
     attach_market_wide_current_valuation(
         bundle_entries, args.include_market_wide_current_valuation,
         args.market_wide_current_valuation_path,
+    )
+    attach_current_market_flow_positioning(
+        bundle_entries, args.include_current_market_flow_positioning,
+        args.current_market_flow_positioning_path,
     )
     attach_sector_aware_relative_research(
         bundle_entries, args.include_sector_aware_relative_research,

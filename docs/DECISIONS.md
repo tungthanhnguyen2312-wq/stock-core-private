@@ -2186,3 +2186,10 @@ single-ticker work.
 2. Independent deterministic axes are not a weighted score. The optional high-level regime is an explicit mapping of those axes and remains descriptive—not a stock-market forecast or causal proof.
 3. FRED graph CSV is current-research official-public evidence but lacks release/vintage timestamps in the retained endpoint; it is therefore expressly not historical PIT. A later macro artifact can be bound in a historical equity-session manifest only as `UNAVAILABLE` context.
 4. No ticker macro sensitivity, sector beta, VaR/CVaR, liquidity, sizing, leverage, execution, ranking, recommendation, probability, target, or calibration output is authorized.
+
+## 2026-08-24 - Current Market Flow / Positioning V1
+
+1. `current_market_flow_positioning/v1` is a projection of canonical retained observations, never a second feature store. Provider-specific facts remain separate and every field keeps session, retrieval, endpoint, raw hash, and source identity.
+2. Traded-value and foreign-room arithmetic are emitted only when exact component identities hold. Missing/rejected/rate-limited/semantic-blocked observations never become zero. DNSE remains the selected source for qualified foreign value flow when present; FHSC-only current research fields are usable without artificial provider parity.
+3. Price-flow labels are deterministic relationships only. They are not causal explanations, hidden-liquidity/SMC evidence, institutional intent, a recommendation, or an execution/sizing input. Strategy evidence is optional and does not alter existing eligibility.
+4. A session registry may bind an explicit flow artifact as an optional input. Scenario, Product V2, Consumer, explicit portfolio context, and prospective identity freeze preserve the same non-causal, non-sizing boundary. Full-universe aggregation is only permitted over a named eligible cohort.

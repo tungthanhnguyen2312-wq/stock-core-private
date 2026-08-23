@@ -17,12 +17,14 @@ from field_temporal_contract import stable_id
 from market_wide_current_corporate_intelligence import prospective_context
 from polymorphic_current_strategy_classification import build as build_strategy, content_identity as strategy_identity, prospective_context as strategy_prospective_context
 from current_portfolio_risk_envelope import build as build_portfolio_risk
+from current_market_flow_positioning import prospective_context as flow_prospective_context
 from current_macro_regime import session_context as macro_session_context
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
 
 CONTRACT_VERSION = "daily_research_session_operation/v1"
 REQUIRED = ("descriptive", "screening", "tactical", "triage", "fundamental", "valuation", "catalyst", "corporate_intelligence")
+OPTIONAL = ("market_flow_positioning",)
 
 
 def _canon(value: Any) -> str:
@@ -46,10 +48,10 @@ def resolve_inputs(root: Path, session: str, registry: Mapping[str, Any]) -> tup
     selection = (registry.get("sessions") or {}).get(session)
     if not isinstance(selection, Mapping):
         raise ValueError("SESSION_NOT_REGISTERED_EXPLICIT_INPUT_MANIFEST_REQUIRED")
-    if set(selection) != set(REQUIRED):
+    if not set(REQUIRED).issubset(selection) or not set(selection).issubset(set(REQUIRED) | set(OPTIONAL)):
         raise ValueError("SESSION_INPUT_REGISTRY_INCOMPLETE")
     values: dict[str, Any] = {}; metadata: dict[str, Mapping[str, Any]] = {}
-    for name in REQUIRED:
+    for name in tuple(REQUIRED) + tuple(name for name in OPTIONAL if name in selection):
         entry = selection[name]
         if not isinstance(entry, Mapping) or not isinstance(entry.get("path"), str) or not isinstance(entry.get("artifact_identity"), str):
             raise ValueError("SESSION_INPUT_REGISTRY_ENTRY_INVALID:" + name)
@@ -86,6 +88,9 @@ def validate_coherence(inputs: Mapping[str, Any], session: str) -> dict[str, Any
     coverage = (descriptive.get("market_breadth") or {}).get("same_session_technical_feature_available_count")
     if coverage != (tactical.get("coverage") or {}).get("classified_count"):
         raise ValueError("TECHNICAL_COVERAGE_TACTICAL_CLASSIFIED_MISMATCH")
+    flow = inputs.get("market_flow_positioning")
+    if flow and (flow.get("contract_version") != "current_market_flow_positioning/v1" or flow.get("session") != session):
+        raise ValueError("MARKET_FLOW_POSITIONING_SESSION_OR_CONTRACT_MISMATCH")
     return {"session": session, "technical_coverage_semantics": {"same_session_technical_feature_available_count": coverage, "current_active_equity_denominator": descriptive["market_breadth"]["current_active_equity_denominator"], "observed_session_cohort": descriptive["market_breadth"]["observed_session_cohort"], "semantic_note": "956 is same-session technical feature coverage and tactical classified count after retained technical recovery; 763 is superseded pre-recovery coverage and is rejected."}, "corporate_intelligence_coverage": corporate.get("coverage"), "accepted_degraded_inputs": {"catalyst": "EARLIER_RETAINED_CATALYST_CONTEXT"}, "incompatible_inputs": []}
 
 
@@ -94,16 +99,18 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
     peer = build_peer(descriptive=inputs["descriptive"], tactical=inputs["tactical"], fundamental=inputs["fundamental"], valuation=inputs["valuation"])
     if peer_identity(peer)["artifact_sha256"] != peer["artifact_sha256"]: raise ValueError("PEER_ARTIFACT_SELF_VERIFICATION_FAILED")
     macro_context = macro_session_context(macro, session)
-    scenario = build_scenario(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], triage=inputs["triage"], catalyst=inputs["catalyst"], screening=inputs["screening"], corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context)
+    flow = inputs.get("market_flow_positioning")
+    scenario = build_scenario(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], triage=inputs["triage"], catalyst=inputs["catalyst"], screening=inputs["screening"], corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context, market_flow_positioning=flow)
     if scenario_identity(scenario)["artifact_sha256"] != scenario["artifact_sha256"]: raise ValueError("SCENARIO_ARTIFACT_SELF_VERIFICATION_FAILED")
-    strategy = build_strategy(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, corporate_intelligence=inputs["corporate_intelligence"])
+    strategy = build_strategy(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, corporate_intelligence=inputs["corporate_intelligence"], market_flow_positioning=flow)
     if strategy_identity(strategy)["artifact_sha256"] != strategy["artifact_sha256"]: raise ValueError("STRATEGY_ARTIFACT_SELF_VERIFICATION_FAILED")
-    portfolio_risk = build_portfolio_risk(portfolio=portfolio, descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, strategy=strategy, corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context) if portfolio else None
-    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context)
+    portfolio_risk = build_portfolio_risk(portfolio=portfolio, descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, strategy=strategy, corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context, market_flow_positioning=flow) if portfolio else None
+    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context, market_flow_positioning=flow)
     if product_identity(product)["artifact_sha256"] != product["artifact_sha256"]: raise ValueError("PRODUCT_ARTIFACT_SELF_VERIFICATION_FAILED")
     snapshot = freeze_current_decision_surface(inputs["tactical"], inputs["triage"], inputs["fundamental"], inputs["valuation"])
     corporate_snapshot = prospective_context(inputs["corporate_intelligence"])
     strategy_snapshot = strategy_prospective_context(strategy)
+    flow_snapshot = flow_prospective_context(flow) if flow else None
     input_manifest = {}
     for name, value in inputs.items():
         input_session = value.get("session") or value.get("source_market_session") or value.get("valuation_session") or value.get("research_session")
@@ -112,6 +119,10 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
     if portfolio_risk:
         input_manifest["explicit_portfolio"] = {"artifact_identity": portfolio_risk["input_identity"], "contract_version": "explicit_portfolio_input/v1", "session": portfolio_risk["session"], "freshness_state": "EXPLICIT_USER_OR_DEMONSTRATION_INPUT"}
     manifest = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "market_session": session, "generation_context": generation_context, "producer_head": producer_head, "consumer_head": consumer_head, "input_artifacts": input_manifest, "session_coherence": coherence, "outputs": {"peer_relative": peer["artifact_identity"], "scenario": scenario["artifact_identity"], "strategy_classification": strategy["artifact_identity"], "daily_product": product["artifact_identity"], "prospective_snapshot": snapshot["snapshot_id"], "corporate_intelligence_prospective_context": corporate_snapshot["snapshot_id"], "strategy_prospective_context": strategy_snapshot["snapshot_id"]}, "coverage_summary": {"technical": product["market_brief"]["coverage"]["same_session_technical_feature_available_count"], "watchlist_cards": product["watchlist"]["cards_available"], "high_priority_review": product["high_priority_full_universe_review_set"]["count"], "entry_relevant": product["aggregate_validation"]["entry_relevant_90_count"], "corporate_intelligence": inputs["corporate_intelligence"]["coverage"], "strategy": strategy["coverage"]}, "warnings": ["Catalyst context is explicitly earlier retained evidence.", "Corporate Intelligence uses retained source evidence; event freshness remains per record.", "Strategy fit is separate from entry action, scenario probability, and portfolio action.", "Fundamental context is retained/undated rather than session-stamped.", "Strict valuation and valuation peer comparison remain unavailable."], "authority_boundary": product["authority_boundary"]}
+    if flow:
+        manifest["outputs"]["market_flow_positioning_prospective_context"] = flow_snapshot["snapshot_id"]
+        manifest["coverage_summary"]["market_flow_positioning"] = flow["coverage"]
+        manifest["warnings"].append("Market flow/positioning is provider-scoped descriptive research only; no causality, institutional intent, liquidity, sizing, or execution authority.")
     manifest["operation_identity"] = _identity(manifest)
     if portfolio_risk:
         manifest["outputs"]["portfolio_risk"] = portfolio_risk["artifact_identity"]
@@ -123,7 +134,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         manifest["outputs"]["macro_context"] = macro_context
         manifest["warnings"].append("Macro evidence is accepted only when known by the retained equity session; otherwise it is preserved as unavailable context.")
         manifest["operation_identity"] = _identity(manifest)
-    return {"peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
+    return {"peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
@@ -146,4 +157,5 @@ def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
     write_immutable(output_dir / "prospective_snapshot.json", operation["snapshot"])
     write_immutable(output_dir / "corporate_intelligence_prospective_context.json", operation["corporate_snapshot"])
     write_immutable(output_dir / "strategy_prospective_context.json", operation["strategy_snapshot"])
+    if operation.get("flow_snapshot"): write_immutable(output_dir / "market_flow_positioning_prospective_context.json", operation["flow_snapshot"])
     write_immutable(output_dir / "run_manifest.json", operation["manifest"])
