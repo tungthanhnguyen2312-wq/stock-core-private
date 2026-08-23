@@ -18,6 +18,7 @@ def _inputs():
         "valuation": "market-wide-current-valuation-v1-20260824/market_wide_current_valuation_artifact.json",
         "triage": "full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json",
         "catalyst": "catalyst-event-research-context-v1-20260820/catalyst_event_research_context_artifact.json",
+        "corporate_intelligence": "market-wide-current-corporate-intelligence-v1-20260824/market_wide_current_corporate_intelligence_artifact.json",
         "screening": "current-market-screening-opportunity-comparison-foundation-v1-20260823/current_market_screening_opportunity_comparison_foundation_artifact.json",
     }
     return {name: json.loads((OPERATIONS / path).read_text(encoding="utf-8")) for name, path in paths.items()}
@@ -30,6 +31,7 @@ def test_current_scenarios_are_deterministic_conditional_and_full_universe():
     assert all(record["probability_status"] == "UNKNOWN_UNCALIBRATED" for record in artifact["records"].values())
     assert all(record["is_actionable"] is False for record in artifact["records"].values())
     assert all(set(("bear_case", "base_case", "bull_case")) <= set(record) for record in artifact["records"].values())
+    assert artifact["records"]["HPG"]["scenario_drivers"]["CATALYST_OR_EVENT"]["status"] == "AVAILABLE"
 
 
 def test_validation_cohorts_and_existing_tactical_boundaries_are_preserved():
@@ -40,6 +42,7 @@ def test_validation_cohorts_and_existing_tactical_boundaries_are_preserved():
     assert len(validation["entry_relevant_90"]) == 90
     assert set(validation["representative_scenarios"]) == {"EARLY_REVERSAL_CANDIDATE", "BASE_BUILDING", "BREAKOUT_READY", "UPTREND_CONFIRMED", "DISTRIBUTION_RISK", "DOWNTREND"}
     assert artifact["records"]["HPG"]["confirmation_trigger"] == _inputs()["tactical"]["records"]["HPG"]["confirmation_trigger"]
+    assert artifact["records"]["VCB"]["catalyst_context"]["pending"][0]["descriptor"] == "WATCH_FOR_EXECUTION"
 
 
 def test_opt_in_bundle_attach_keeps_current_scenario_verbatim():

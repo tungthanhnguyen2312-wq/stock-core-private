@@ -30,8 +30,11 @@ def test_operation_is_deterministic_and_preserves_current_contracts(tmp_path: Pa
     assert first["product"]["watchlist"]["cards_available"] == 11
     assert first["product"]["detailed_research_cards"]["ABB"]["scenario"]["probability_status"] == "UNKNOWN_UNCALIBRATED"
     assert first["snapshot"]["future_outcomes"] == "PENDING_FUTURE_OBSERVATION"
+    assert first["corporate_snapshot"]["cohort_count"] == 1683
+    assert first["manifest"]["input_artifacts"]["corporate_intelligence"]["artifact_identity"].startswith("market_wide_current_corporate_intelligence:")
     materialize(tmp_path, first); materialize(tmp_path, second)
     assert (tmp_path / "run_manifest.json").exists()
+    assert (tmp_path / "corporate_intelligence_prospective_context.json").exists()
 
 
 def test_mismatched_tactical_lineage_fails_closed():

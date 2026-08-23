@@ -18,6 +18,7 @@ def _inputs():
         "valuation": "market-wide-current-valuation-v1-20260824/market_wide_current_valuation_artifact.json",
         "scenario": "current-evidence-bound-scenario-v1-20260824/current_evidence_bound_scenario_artifact.json",
         "triage": "full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json",
+        "corporate_intelligence": "market-wide-current-corporate-intelligence-v1-20260824/market_wide_current_corporate_intelligence_artifact.json",
     }
     return {name: json.loads((OPERATIONS / path).read_text(encoding="utf-8")) for name, path in paths.items()}
 
@@ -40,6 +41,8 @@ def test_cards_preserve_tactical_peer_scenario_and_human_review_boundaries():
     assert card["current_decision_state"]["requires_human_review"] is True
     assert card["current_decision_state"]["position_sizing_status"] == "NOT_EVALUATED"
     assert all(claim["type"] in {"FACT", "INFERENCE", "DATA_GAP", "QUESTION_TO_VERIFY"} for group in card["thesis_counter_thesis"].values() for claim in group)
+    assert card["corporate_intelligence_context"]["status"] == "NO_RETAINED_INTELLIGENCE"
+    assert product["detailed_research_cards"]["HPG"]["corporate_intelligence_context"]["confirmed"][0]["status"] == "EXECUTED"
 
 
 def test_markdown_is_a_compact_human_review_product_not_recommendation_text():
