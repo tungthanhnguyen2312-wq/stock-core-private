@@ -584,6 +584,14 @@ def build_scaleout_artifact(
         "metadata_qualifications": metadata_qualifications,
         "value_qualifications": value_qualifications,
         "newly_qualified_issuers": [iss["issuer_identity"]["ticker"] for iss in newly_qualified_issuers],
+        # Exposed verbatim so a downstream consumer (e.g.
+        # market_wide_current_fundamental_research.py) can read the full current 13-issuer
+        # panel/readiness without recomputing it -- mirrors p3e_fundamental_coverage_closeout.py's
+        # own refreshed_panel_data/refreshed_fundamental_readiness keys, which this engine already
+        # consumes as its own baseline above. Additive only; every previously existing key and
+        # value in this artifact is unchanged.
+        "refreshed_panel_data": refreshed_panel,
+        "refreshed_fundamental_readiness": p3b_refreshed,
         "before_after_comparison": before_after_comparison,
         "root_blocker_distribution": root_blocker_distribution,
         "authority_boundaries": {

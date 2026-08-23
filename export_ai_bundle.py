@@ -131,6 +131,9 @@ from market_wide_current_descriptive_research import (
 from current_market_screening_opportunity_comparison_foundation import (
     content_identity as current_market_screening_comparison_content_identity,
 )
+from market_wide_current_fundamental_research import (
+    content_identity as market_wide_current_fundamental_research_content_identity,
+)
 from current_state_relative_valuation import (
     STATUS_QUALIFIED as CURRENT_STATE_RELATIVE_VALUATION_STATUS_QUALIFIED,
     evaluate_current_state_relative_valuation,
@@ -3219,6 +3222,96 @@ def attach_market_wide_current_descriptive_research(
 
 
 # ==========================================================================
+# Market-wide current fundamental research — opt-in (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-market-wide-current-fundamental-research). Consumes ONLY the
+# already-retained market_wide_current_fundamental_research_artifact.json produced offline by
+# tools/run_market_wide_current_fundamental_research.py -- this layer never calls
+# fundamental_research_readiness.py or p3f13_official_financial_evidence_scaleout.py itself and
+# never acquires or re-qualifies a single financial fact. An explicit
+# --market-wide-current-fundamental-research-path is required (never inferred or hardcoded),
+# matching --market-wide-current-liquidity-research-path/--market-wide-current-descriptive-
+# research-path above. The artifact's own artifact_sha256 is recomputed via
+# market_wide_current_fundamental_research.content_identity() before anything is attached; a
+# missing file, malformed JSON, or hash mismatch fails the whole attach step closed (no key on
+# any ticker). Per-ticker authority_tier (OFFICIAL_QUALIFIED/PROVIDER_RESEARCH/BLOCKED), sector,
+# and either the full official per-metric lineage (13 issuers today) or the provider-tier
+# disposition/blocked-reason and allowed/forbidden-use list (the remaining ~510 candidates) are
+# attached unmodified -- Consumer never computes a metric value for a PROVIDER_RESEARCH or
+# BLOCKED ticker, and never upgrades one to OFFICIAL_QUALIFIED.
+
+def load_market_wide_current_fundamental_research_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Fail-closed loader: returns None (never raises) if the file is absent, unreadable,
+    malformed, or its own recomputed content hash does not match its recorded artifact_sha256."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(artifact, dict):
+        return None
+    try:
+        recomputed = market_wide_current_fundamental_research_content_identity(artifact)
+    except Exception:
+        return None
+    if recomputed.get("artifact_sha256") != artifact.get("artifact_sha256"):
+        return None
+    return artifact
+
+
+def build_market_wide_current_fundamental_research_for_ticker_safe(
+    ticker: str, artifact: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Fail-closed wrapper: a ticker absent from the retained artifact's universe, or any local
+    shaping failure, returns None (no key attached) and never raises into the caller's per-ticker
+    loop. The record itself is never recalculated -- only copied, plus the same bundle-common
+    "status"/"is_actionable" convenience fields every sibling current-state attach layer above
+    already adds."""
+    try:
+        records = artifact.get("records")
+        if not isinstance(records, Mapping):
+            return None
+        record = records.get(ticker)
+        if not isinstance(record, Mapping):
+            return None
+        result = dict(record)
+        result["ticker"] = ticker
+        result["source_artifact_identity"] = artifact.get("artifact_identity")
+        result["coverage"] = artifact.get("coverage")
+        result["status"] = "official_qualified" if result.get("authority_tier") == "OFFICIAL_QUALIFIED" else (
+            "provider_research" if result.get("authority_tier") == "PROVIDER_RESEARCH" else "blocked")
+        # Unconditional, never derived from tier: fundamental research readiness/coverage is
+        # never a valuation, ranking, recommendation, or sizing signal by itself.
+        result["is_actionable"] = False
+        return result
+    except Exception:
+        return None
+
+
+def attach_market_wide_current_fundamental_research(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in (default include=False): when include is False, the retained
+    artifact is never read and no market_wide_current_fundamental_research key is ever added --
+    current default bundle behavior is preserved exactly. When True, an absent artifact_path, an
+    unreadable file, or a hash mismatch leaves every ticker's entry untouched (fail closed on the
+    whole step, not a partial/degraded attach). Own dedicated flag; order relative to the other
+    attach steps does not matter since nothing else reads
+    tickers[ticker].market_wide_current_fundamental_research."""
+    if not include:
+        return bundle_entries
+    if not artifact_path:
+        return bundle_entries
+    artifact = load_market_wide_current_fundamental_research_artifact(Path(artifact_path))
+    if artifact is None:
+        return bundle_entries
+    for tk, entry in bundle_entries.items():
+        result = build_market_wide_current_fundamental_research_for_ticker_safe(tk, artifact)
+        if result is not None:
+            entry["market_wide_current_fundamental_research"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # Current-state relative valuation (HPG) — opt-in (disabled by default)
 # ==========================================================================
 # New dedicated flag (--include-current-state-relative-valuation). Delegates all
@@ -3864,6 +3957,29 @@ def main() -> int:
                              " current_market_screening_opportunity_comparison_foundation artifact,"
                              " required only with --include-current-market-screening-comparison;"
                              " never inferred or hardcoded.")
+    parser.add_argument("--include-market-wide-current-fundamental-research", action="store_true",
+                        help="Opt-in, disabled by default: attach"
+                             " tickers[ticker].market_wide_current_fundamental_research from the"
+                             " already-retained"
+                             " market_wide_current_fundamental_research_artifact.json"
+                             " (tools/run_market_wide_current_fundamental_research.py) -- a"
+                             " sector-aware, coverage-explicit market-wide fundamental-research join"
+                             " of the officially-qualified panel (13 issuers today: exact/proxy"
+                             " metrics with full per-metric lineage, periods used, and sector-"
+                             " specific NOT_APPLICABLE gates) and the broad provider-research tier"
+                             " (~510 remaining candidates: retained VCI/KBS statement-family"
+                             " presence and an explicit blocked reason, zero computed metric values)."
+                             " Requires --market-wide-current-fundamental-research-path; the"
+                             " artifact's own hash is reverified before any attach and a mismatch"
+                             " fails the whole step closed. Always is_actionable=false; never"
+                             " valuation, ranking, recommendation, probability, sizing, or backtest"
+                             " authority, and never upgrades a PROVIDER_RESEARCH/BLOCKED ticker to"
+                             " OFFICIAL_QUALIFIED. Not enabled in any default/production invocation.")
+    parser.add_argument("--market-wide-current-fundamental-research-path", metavar="PATH",
+                        help="Explicit path to a retained"
+                             " market_wide_current_fundamental_research_artifact.json, required only"
+                             " with --include-market-wide-current-fundamental-research; never"
+                             " inferred or hardcoded.")
     parser.add_argument("--include-current-state-relative-valuation", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].current_state_relative_valuation from"
@@ -4172,6 +4288,14 @@ def main() -> int:
         args.market_wide_current_descriptive_research_path,
         include_screening_comparison=args.include_current_market_screening_comparison,
         screening_comparison_artifact_path=args.current_market_screening_comparison_path,
+    )
+    # Own dedicated flag; order relative to the others does not matter since nothing else reads
+    # tickers[ticker].market_wide_current_fundamental_research. Same explicit-path convention as
+    # its market_wide_current_liquidity_research/market_wide_current_descriptive_research siblings
+    # immediately above -- not a runtime-root-backed store.
+    attach_market_wide_current_fundamental_research(
+        bundle_entries, args.include_market_wide_current_fundamental_research,
+        args.market_wide_current_fundamental_research_path,
     )
     # Own dedicated flag; must run after relative_valuation is already present on each
     # entry (set inside build_ticker_entry, well before this attach-sequence block) so
