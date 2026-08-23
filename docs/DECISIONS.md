@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-23 - Market-Wide Current Research-Universe Qualification
+
+`MARKET_WIDE_CURRENT_RESEARCH_UNIVERSE_QUALIFICATION_V1 = COMPLETE_LOCALLY / OWNER_REVIEW_REQUIRED_NOT_AUTHORITATIVE`. The immutable candidate denominator is the retained 1,683-record P3F9B current-session snapshot, not a reconstructed security master or historical constituent set. A complete, foreground-retained 3,254-row DNSE instruments reference was joined deterministically. Each candidate has exactly one disposition: 960 `INCLUDED` current descriptive equities with exact-session observations; 675 `EXCLUDED` for their retained current-market `SESSION_MISSING` (550) or `PROVIDER_REJECTED` (125) disposition; and 48 `UNKNOWN` for `SECURITY_MASTER_SYMBOL_NOT_RETAINED`. No unknown identity or listing state was inferred.
+
+DNSE instruments classifies 1,635 candidate symbols as `EQUITY` and leaves 48 `UNKNOWN`; its payload does not establish current listing status, so every record explicitly preserves `UNKNOWN_NOT_PROVIDED_BY_DNSE_INSTRUMENTS`. The contract remains capable of separately excluding ETF/fund, warrant, bond, derivative, and other non-equity classes if evidenced; none was evidenced in this specific candidate set. Reference-symbol duplication is never silently selected and is fail-closed as an ambiguous symbol.
+
+The resulting 960-record set may support current descriptive breadth and cross-sectional screening only. It preserves raw observations and separate capability eligibility for excluded symbols, and does not create authoritative market membership, historical constituents, survivorship-safe/PIT universe, RAW_AS_TRADED, ranking, valuation, recommendation, or execution authority. Promotion remains `OWNER_REVIEW_REQUIRED_NOT_AUTHORITATIVE` because listing status is unavailable from the retained primary reference. Artifact: `operations-review/market-wide-current-research-universe-qualification-v1-20260823/market_wide_current_research_universe_artifact.json`.
+
 ## 2026-08-22 - Financial Evidence Program Closure and Enrichment Pause
 
 `MARKET_WIDE_FINANCIAL_EVIDENCE_AND_SEMANTIC_COVERAGE_V1 = CLOSED_PARTIAL / SOURCE_ROUTE_AND_EVIDENCE_CONSTRAINED`. The retained 520-issuer VCI/KBS provider estate remains descriptive-only: generic calculation-grade semantic promotion was rejected, and no provider fact received official authority. The official panel remains 13 issuers / 138 canonical facts / 94 exact research metrics; further scale-out is blocked by approved route/evidence coverage rather than calculation code. Do not reopen provider-semantic inference without materially new evidence. `MARKET_WIDE_ENRICHMENT_AND_CANONICALIZATION_V1 = PAUSED_RATE_LIMIT_CONSTRAINED`, not closed.
