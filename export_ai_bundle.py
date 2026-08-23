@@ -128,6 +128,9 @@ from market_wide_current_liquidity_research import (
 from market_wide_current_descriptive_research import (
     content_identity as market_wide_current_descriptive_research_content_identity,
 )
+from current_market_screening_opportunity_comparison_foundation import (
+    content_identity as current_market_screening_comparison_content_identity,
+)
 from current_state_relative_valuation import (
     STATUS_QUALIFIED as CURRENT_STATE_RELATIVE_VALUATION_STATUS_QUALIFIED,
     evaluate_current_state_relative_valuation,
@@ -3016,6 +3019,85 @@ def load_market_wide_current_descriptive_research_artifact(path: Path) -> Mappin
     return artifact
 
 
+def load_current_market_screening_comparison_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Load the optional screening extension only when its own identity is intact.
+
+    The screening artifact is a deterministic consumer of one specific descriptive-research
+    artifact.  This loader deliberately verifies only its own content identity; the attach path
+    below additionally verifies the source-artifact lineage before exposing any nested result.
+    """
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(artifact, dict):
+        return None
+    try:
+        recomputed = current_market_screening_comparison_content_identity(artifact)
+    except Exception:
+        return None
+    if recomputed.get("artifact_sha256") != artifact.get("artifact_sha256"):
+        return None
+    if artifact.get("contract_version") != "current_market_screening_and_opportunity_comparison_foundation/v1":
+        return None
+    return artifact
+
+
+def build_current_market_screening_comparison_for_ticker_safe(
+    ticker: str,
+    descriptive_artifact: Mapping[str, Any],
+    screening_artifact: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Shape the retained screening record as a nested extension of the descriptive lane.
+
+    No flags, percentiles, coverage, or warnings are recalculated.  A lineage, session, or
+    denominator mismatch makes the complete screening extension unavailable rather than
+    attaching a plausible-looking result to the wrong descriptive artifact.
+    """
+    try:
+        source_identity = descriptive_artifact.get("artifact_identity")
+        lineage = screening_artifact.get("input_lineage")
+        source_records = descriptive_artifact.get("records")
+        screening_records = screening_artifact.get("records")
+        coverage = screening_artifact.get("coverage_disclosure")
+        definitions = screening_artifact.get("screen_definitions")
+        counts = screening_artifact.get("screen_membership_counts")
+        if not (
+            isinstance(source_identity, str)
+            and isinstance(lineage, Mapping)
+            and lineage.get("current_descriptive_artifact_identity") == source_identity
+            and screening_artifact.get("session") == descriptive_artifact.get("session")
+            and isinstance(source_records, Mapping)
+            and isinstance(screening_records, Mapping)
+            and set(source_records) == set(screening_records)
+            and isinstance(coverage, Mapping)
+            and coverage.get("denominator") == descriptive_artifact.get("validation", {}).get("coverage", {}).get("current_active_equity_denominator")
+            and isinstance(definitions, Mapping)
+            and isinstance(counts, Mapping)
+        ):
+            return None
+        record = screening_records.get(ticker)
+        if not isinstance(record, Mapping) or record.get("ticker") != ticker:
+            return None
+        return {
+            "artifact_identity": screening_artifact.get("artifact_identity"),
+            "source_lineage": dict(lineage),
+            "session": screening_artifact.get("session"),
+            "coverage_disclosure": dict(coverage),
+            "screen_definitions": dict(definitions),
+            "screen_membership_counts": dict(counts),
+            "market_relative_comparison_summary": screening_artifact.get("market_relative_comparison"),
+            "sector_relative_comparison_summary": screening_artifact.get("sector_relative_comparison"),
+            "quality_warnings": screening_artifact.get("quality_warnings"),
+            "blocked_outputs": screening_artifact.get("blocked_outputs"),
+            "authority_boundary": screening_artifact.get("authority_boundary"),
+            "ticker_context": dict(record),
+            "is_actionable": False,
+        }
+    except Exception:
+        return None
+
+
 def _sector_state_for_ticker(record: Mapping[str, Any], sectors: Mapping[str, Any]) -> dict[str, Any] | None:
     classification = record.get("sector_classification")
     if not isinstance(classification, Mapping):
@@ -3059,6 +3141,7 @@ def build_market_wide_current_descriptive_research_for_ticker_safe(
         result = {
             "ticker": ticker,
             "session": artifact.get("session"),
+            "source_artifact_identity": artifact.get("artifact_identity"),
             "activity_and_session_state": record.get("activity_and_session_state"),
             "membership_state": record.get("membership_state"),
             "in_current_descriptive_scope": record.get("in_current_descriptive_scope"),
@@ -3089,6 +3172,7 @@ def build_market_wide_current_descriptive_research_for_ticker_safe(
 
 def attach_market_wide_current_descriptive_research(
     bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+    *, include_screening_comparison: bool = False, screening_comparison_artifact_path: str | None = None,
 ) -> dict[str, dict]:
     """Disabled-by-default opt-in (default include=False): when include is False, the retained
     artifact is never read and no market_wide_current_descriptive_research key is ever added --
@@ -3096,7 +3180,10 @@ def attach_market_wide_current_descriptive_research(
     unreadable file, or a hash mismatch leaves every ticker's entry untouched (fail closed on the
     whole step, not a partial/degraded attach) rather than silently guessing which candidate the
     caller meant. Own dedicated flag; order relative to the other attach steps does not matter
-    since nothing else reads tickers[ticker].market_wide_current_descriptive_research."""
+    since nothing else reads tickers[ticker].market_wide_current_descriptive_research.  The
+    optional screening extension is nested beneath this same key, requires a second explicit
+    flag/path, verifies its own identity and its source-descriptive-artifact identity, and is
+    omitted as a whole on any mismatch; it never creates another top-level bundle contract."""
     if not include:
         return bundle_entries
     if not artifact_path:
@@ -3104,10 +3191,30 @@ def attach_market_wide_current_descriptive_research(
     artifact = load_market_wide_current_descriptive_research_artifact(Path(artifact_path))
     if artifact is None:
         return bundle_entries
+    screening_artifact = None
+    if include_screening_comparison:
+        if not screening_comparison_artifact_path:
+            return bundle_entries
+        screening_artifact = load_current_market_screening_comparison_artifact(Path(screening_comparison_artifact_path))
+        if screening_artifact is None:
+            return bundle_entries
+        # Verify shared lineage before adding even the base lane.  A caller expressly requesting
+        # this nested screen must not receive a base-only result that could be mistaken for the
+        # requested screened view.
+        if build_current_market_screening_comparison_for_ticker_safe(next(iter(artifact.get("records", {})), ""), artifact, screening_artifact) is None:
+            return bundle_entries
+    attached: dict[str, dict[str, Any]] = {}
     for tk, entry in bundle_entries.items():
         result = build_market_wide_current_descriptive_research_for_ticker_safe(tk, artifact)
         if result is not None:
-            entry["market_wide_current_descriptive_research"] = result
+            if screening_artifact is not None:
+                screening = build_current_market_screening_comparison_for_ticker_safe(tk, artifact, screening_artifact)
+                if screening is None:
+                    return bundle_entries
+                result["screening_comparison"] = screening
+            attached[tk] = result
+    for tk, result in attached.items():
+        bundle_entries[tk]["market_wide_current_descriptive_research"] = result
     return bundle_entries
 
 
@@ -3742,6 +3849,21 @@ def main() -> int:
                              " market_wide_current_descriptive_research_artifact.json, required only"
                              " with --include-market-wide-current-descriptive-research; never"
                              " inferred or hardcoded.")
+    parser.add_argument("--include-current-market-screening-comparison", action="store_true",
+                        help="Opt-in, disabled by default: nest the retained deterministic current"
+                             " screening/comparison artifact under the existing"
+                             " tickers[ticker].market_wide_current_descriptive_research contract."
+                             " Requires --include-market-wide-current-descriptive-research and"
+                             " --current-market-screening-comparison-path; both artifact identities"
+                             " and their source lineage must verify. Independent descriptive flags"
+                             " only: never a ranking, score, recommendation, forecast, valuation,"
+                             " sizing, execution, or liquidity authority. Not enabled in any"
+                             " default/production invocation.")
+    parser.add_argument("--current-market-screening-comparison-path", metavar="PATH",
+                        help="Explicit path to a retained"
+                             " current_market_screening_opportunity_comparison_foundation artifact,"
+                             " required only with --include-current-market-screening-comparison;"
+                             " never inferred or hardcoded.")
     parser.add_argument("--include-current-state-relative-valuation", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].current_state_relative_valuation from"
@@ -4048,6 +4170,8 @@ def main() -> int:
     attach_market_wide_current_descriptive_research(
         bundle_entries, args.include_market_wide_current_descriptive_research,
         args.market_wide_current_descriptive_research_path,
+        include_screening_comparison=args.include_current_market_screening_comparison,
+        screening_comparison_artifact_path=args.current_market_screening_comparison_path,
     )
     # Own dedicated flag; must run after relative_valuation is already present on each
     # entry (set inside build_ticker_entry, well before this attach-sequence block) so
