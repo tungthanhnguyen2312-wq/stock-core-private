@@ -137,6 +137,9 @@ from market_wide_current_fundamental_research import (
 from market_wide_current_valuation_input_scaleout import (
     content_identity as market_wide_current_valuation_content_identity,
 )
+from sector_aware_relative_research import (
+    content_identity as sector_aware_relative_research_content_identity,
+)
 from watchlist_tactical_entry_classifier import (
     content_identity as watchlist_tactical_entry_classifier_content_identity,
 )
@@ -2759,6 +2762,38 @@ def attach_market_wide_current_valuation(bundle_entries: dict[str, dict], includ
     return bundle_entries
 
 
+def load_sector_aware_relative_research_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Load only a self-verifying, non-actionable sector-relative artifact."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if (not isinstance(artifact, dict) or artifact.get("contract_version") != "sector_aware_relative_research/v1"
+                or sector_aware_relative_research_content_identity(artifact)["artifact_sha256"] != artifact.get("artifact_sha256")):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def attach_sector_aware_relative_research(bundle_entries: dict[str, dict], include: bool, artifact_path: str | None) -> dict[str, dict]:
+    """Opt-in verbatim pass-through; no peer group or expectation is reinterpreted."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_sector_aware_relative_research_artifact(Path(artifact_path))
+    if artifact is None or not isinstance(artifact.get("records"), Mapping):
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        record = artifact["records"].get(ticker)
+        if isinstance(record, Mapping):
+            value = dict(record)
+            value["source_artifact_identity"] = artifact.get("artifact_identity")
+            value["source_session"] = artifact.get("session")
+            value["coverage"] = artifact.get("coverage")
+            value["authority_boundary"] = artifact.get("authority_boundary")
+            value["is_actionable"] = False
+            entry["sector_aware_relative_research"] = value
+    return bundle_entries
+
+
 # ==========================================================================
 # DNSE foreign-flow VALUE integration — opt-in (disabled by default)
 # ==========================================================================
@@ -4118,6 +4153,10 @@ def main() -> int:
                              " never a target price, ranking, recommendation, sizing, or historical/PIT claim.")
     parser.add_argument("--market-wide-current-valuation-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained market_wide_current_valuation artifact.")
+    parser.add_argument("--include-sector-aware-relative-research", action="store_true",
+                        help="Opt-in retained sector-aware relative-research pass-through; descriptive only, never ranking, recommendation, target, sizing, probability, or valuation authority.")
+    parser.add_argument("--sector-aware-relative-research-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained sector_aware_relative_research artifact.")
     parser.add_argument("--include-watchlist-tactical-entry-classifier", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].watchlist_tactical_entry_classifier from the"
@@ -4463,6 +4502,10 @@ def main() -> int:
     attach_market_wide_current_valuation(
         bundle_entries, args.include_market_wide_current_valuation,
         args.market_wide_current_valuation_path,
+    )
+    attach_sector_aware_relative_research(
+        bundle_entries, args.include_sector_aware_relative_research,
+        args.sector_aware_relative_research_path,
     )
     # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
     # market_wide_current_* siblings above.
