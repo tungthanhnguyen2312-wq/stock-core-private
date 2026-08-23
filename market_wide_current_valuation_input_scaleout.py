@@ -11,10 +11,12 @@ from collections import Counter
 from typing import Any, Mapping
 
 from field_temporal_contract import stable_id
+import mva_provider_share_proxy as issued_share_proxy
 
 CONTRACT_VERSION = "market_wide_current_valuation/v1"
 ARTIFACT_TYPE = "MARKET_WIDE_CURRENT_VALUATION"
 METRICS = ("market_cap", "P/E", "P/B", "P/S", "enterprise_value", "EV/Sales", "EV/EBITDA")
+SHADOW_METRICS = ("proxy_market_cap", "proxy_P/E", "proxy_P/B", "proxy_P/S", "proxy_EV", "proxy_EV/Sales", "proxy_EV/EBITDA")
 
 
 def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
@@ -135,5 +137,89 @@ def build_current_valuation_artifact(*, price_snapshot: Mapping[str, Any], funda
         "authority_boundary": {"current_snapshot_only": True, "historical_pit_eligible": False, "raw_as_traded": "NOT_PROMOTED", "provider_financial_absolute_inputs": "BLOCKED", "ranking": False, "recommendation": False, "target_price": False},
         "valuation_context": {"status": "SKIPPED", "reason": "NO_METRIC_READY_COMPARABLE_COHORT"}, "is_actionable": False,
     }
+    artifact.update(content_identity(artifact))
+    return artifact
+
+
+def _shadow_price(record: Mapping[str, Any], snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    base = _price_input(record, snapshot)
+    return {"status": "PRICE_READY" if base["status"] == "PRICE_READY" else "PRICE_BLOCKED",
+            "value": base["value"], "reason_codes": base["blocked_reasons"], "provider": base["source"],
+            "field_identity": "close", "session": base["session"], "payload_identity": base["source_snapshot_identity"],
+            "price_basis": base["basis"], "price_namespace": "CURRENT_MARKET", "raw_as_traded": "NOT_PROMOTED"}
+
+
+def _shadow_metric(name: str, source: Mapping[str, Any], *, entity: str) -> dict[str, Any]:
+    status = source.get("status")
+    ready = status in {"PROXY_MARKET_CAP_READY", "MVA_PROXY_READY"}
+    return {"metric_id": name, "status": "SHADOW_PROXY_READY" if ready else ("NOT_APPLICABLE" if status == "NOT_APPLICABLE" else "BLOCKED"),
+            "value": source.get("value") if ready else None, "entity_class": entity,
+            "formula_version": issued_share_proxy.POLICY_VERSION, "labels": ["SHADOW", "DESCRIPTIVE", "NON_AUTHORITATIVE", "NOT_COMMON_OUTSTANDING_SHARE_BASIS", "NOT_PIT", "NOT_FOR_TARGET_PRICE", "NOT_FOR_SIZING", "NOT_FOR_EXECUTION"],
+            "blocked_reasons": list(source.get("blockers") or []), "is_actionable": False}
+
+
+def attach_shadow_proxy_valuation(*, authoritative_artifact: Mapping[str, Any], price_snapshot: Mapping[str, Any],
+                                  p3e_artifact: Mapping[str, Any], provider_observations: Mapping[str, Mapping[str, Any]],
+                                  safety_states: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Add the owner-approved issued-share MVA shadow lane without changing strict metrics."""
+    artifact = copy.deepcopy(dict(authoritative_artifact))
+    envelope = dict(issued_share_proxy.REQUIRED_ENVELOPE)
+    issuers = {str(item["issuer_identity"]["ticker"]): item for item in (p3e_artifact.get("refreshed_panel_data") or {}).get("issuers", [])}
+    freshness, proxy_statuses, financial_usage, blockers = Counter(), Counter(), Counter(), Counter()
+    shadow_ready = Counter()
+    for ticker, row in artifact["records"].items():
+        price = _shadow_price((price_snapshot.get("records") or {}).get(ticker, {}), price_snapshot)
+        proxy = issued_share_proxy.qualify_provider_issued_shares_proxy(
+            {"canonical_ticker": ticker}, provider_observations.get(ticker), valuation_date=str(price_snapshot.get("resolved_completed_session")),
+            safety_state=safety_states.get(ticker), envelope=envelope,
+        )
+        cap = issued_share_proxy.build_provider_proxy_market_cap(price, proxy, envelope=envelope)
+        entity = row["entity_class"]
+        values: dict[str, Mapping[str, Any]] = {"proxy_market_cap": cap}
+        issuer = issuers.get(ticker)
+        if issuer is not None:
+            calculated = issued_share_proxy.evaluate_mva_proxy_issuer(issuer, price=price, proxy=proxy, envelope=envelope)
+            method_map = calculated["methods"]
+            values.update({f"proxy_{name}": method_map[name] for name in ("P/E", "P/B", "P/S", "EV/Sales", "EV/EBITDA")})
+            # P3-F emits EV as an intermediate on EV/Sales; retain it only when the same exact inputs did.
+            ev_sales = method_map["EV/Sales"]
+            values["proxy_EV"] = {"status": "MVA_PROXY_READY" if ev_sales.get("status") == "MVA_PROXY_READY" else ev_sales.get("status"),
+                                  "value": ev_sales.get("enterprise_value"), "blockers": ev_sales.get("blockers")}
+            financial_usage["OFFICIAL_QUALIFIED"] += 1
+        else:
+            for name in ("proxy_P/E", "proxy_P/B", "proxy_P/S", "proxy_EV", "proxy_EV/Sales", "proxy_EV/EBITDA"):
+                base_metric = name.removeprefix("proxy_")
+                applicable = _applicability(entity, base_metric if base_metric != "EV" else "enterprise_value")
+                values[name] = ({"status": "NOT_APPLICABLE", "value": None, "blockers": ["SECTOR_ENTITY_METHOD_NOT_SUPPORTED"]}
+                                if applicable == "NOT_APPLICABLE" else
+                                {"status": "VALUATION_BLOCKED", "value": None, "blockers": ["OFFICIAL_QUALIFIED_FINANCIAL_INPUT_UNAVAILABLE"]})
+            financial_usage["UNAVAILABLE_OR_PROVIDER_RESEARCH_ONLY"] += 1
+        metrics = {name: _shadow_metric(name, values[name], entity=entity) for name in SHADOW_METRICS}
+        for metric in metrics.values():
+            if metric["status"] == "SHADOW_PROXY_READY":
+                shadow_ready[metric["metric_id"]] += 1
+            for reason in metric["blocked_reasons"]:
+                blockers[reason] += 1
+        freshness[proxy["freshness_state"]] += 1
+        proxy_statuses[proxy["status"]] += 1
+        row["shadow_proxy_valuation"] = {
+            "share_basis_type": "PROVIDER_ISSUED_SHARE_PROXY", "authority_tier": "SHADOW_RESEARCH_ONLY",
+            "provider": proxy.get("provider_source"), "source_observation": proxy,
+            "price_session": price.get("session"), "age_days": proxy.get("observation_age_days"),
+            "allowed_uses": ["CURRENT_DESCRIPTIVE_SHADOW_VALUATION_ONLY"],
+            "forbidden_uses": ["COMMON_SHARES_OUTSTANDING", "AUTHORITATIVE_VALUATION", "PIT", "TARGET_PRICE", "SIZING", "EXECUTION", "RANKING", "RECOMMENDATION"],
+            "metrics": metrics, "is_actionable": False,
+        }
+    for metric in SHADOW_METRICS:
+        shadow_ready.setdefault(metric, 0)
+    artifact["shadow_proxy_valuation_coverage"] = {
+        "proxy_share_statuses": dict(sorted(proxy_statuses.items())), "share_freshness_buckets": dict(sorted(freshness.items())),
+        "financial_authority_usage": dict(sorted(financial_usage.items())), "metric_ready_counts": dict(sorted(shadow_ready.items())),
+        "tickers_with_any_shadow_proxy_metric": sum(any(m["status"] == "SHADOW_PROXY_READY" for m in r["shadow_proxy_valuation"]["metrics"].values()) for r in artifact["records"].values()),
+        "blocker_reasons": dict(sorted(blockers.items())),
+    }
+    artifact["source_artifacts"]["provider_issued_share_proxy_policy"] = issued_share_proxy.POLICY_VERSION
+    artifact["authority_boundary"]["shadow_proxy_issued_shares"] = "SHADOW_RESEARCH_ONLY_NOT_COMMON_OUTSTANDING"
+    artifact["authority_boundary"]["authoritative_metrics_unchanged"] = True
     artifact.update(content_identity(artifact))
     return artifact
