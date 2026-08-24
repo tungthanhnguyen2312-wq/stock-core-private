@@ -21,6 +21,7 @@ from current_market_flow_positioning import prospective_context as flow_prospect
 from current_macro_regime import session_context as macro_session_context
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
+from ai_research_session_delivery import build_delivery
 
 CONTRACT_VERSION = "daily_research_session_operation/v1"
 REQUIRED = ("descriptive", "screening", "tactical", "triage", "fundamental", "valuation", "catalyst", "corporate_intelligence")
@@ -118,7 +119,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         input_manifest[name] = {"artifact_identity": value.get("artifact_identity"), "contract_version": value.get("contract_version"), "session": input_session, "freshness_state": freshness}
     if portfolio_risk:
         input_manifest["explicit_portfolio"] = {"artifact_identity": portfolio_risk["input_identity"], "contract_version": "explicit_portfolio_input/v1", "session": portfolio_risk["session"], "freshness_state": "EXPLICIT_USER_OR_DEMONSTRATION_INPUT"}
-    manifest = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "market_session": session, "generation_context": generation_context, "producer_head": producer_head, "consumer_head": consumer_head, "input_artifacts": input_manifest, "session_coherence": coherence, "outputs": {"peer_relative": peer["artifact_identity"], "scenario": scenario["artifact_identity"], "strategy_classification": strategy["artifact_identity"], "daily_product": product["artifact_identity"], "prospective_snapshot": snapshot["snapshot_id"], "corporate_intelligence_prospective_context": corporate_snapshot["snapshot_id"], "strategy_prospective_context": strategy_snapshot["snapshot_id"]}, "coverage_summary": {"technical": product["market_brief"]["coverage"]["same_session_technical_feature_available_count"], "watchlist_cards": product["watchlist"]["cards_available"], "high_priority_review": product["high_priority_full_universe_review_set"]["count"], "entry_relevant": product["aggregate_validation"]["entry_relevant_90_count"], "corporate_intelligence": inputs["corporate_intelligence"]["coverage"], "strategy": strategy["coverage"]}, "warnings": ["Catalyst context is explicitly earlier retained evidence.", "Corporate Intelligence uses retained source evidence; event freshness remains per record.", "Strategy fit is separate from entry action, scenario probability, and portfolio action.", "Fundamental context is retained/undated rather than session-stamped.", "Strict valuation and valuation peer comparison remain unavailable."], "authority_boundary": product["authority_boundary"]}
+    manifest = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "market_session": session, "generation_context": generation_context, "producer_head": producer_head, "consumer_head": consumer_head, "input_artifacts": input_manifest, "session_coherence": coherence, "outputs": {"peer_relative": peer["artifact_identity"], "scenario": scenario["artifact_identity"], "strategy_classification": strategy["artifact_identity"], "daily_product": product["artifact_identity"], "prospective_snapshot": snapshot["snapshot_id"], "corporate_intelligence_prospective_context": corporate_snapshot["snapshot_id"], "strategy_prospective_context": strategy_snapshot["snapshot_id"]}, "delivery_contract": {"ai_research_bundle": "ai_research_session_bundle/v1", "dashboard_projection": "current_decision_cockpit_projection/v2", "primary_filename": "ai_research_session_bundle.json", "full_universe_filename": "ai_research_full_universe.ndjson", "dashboard_projection_filename": "current_decision_cockpit_projection.json"}, "coverage_summary": {"technical": product["market_brief"]["coverage"]["same_session_technical_feature_available_count"], "watchlist_cards": product["watchlist"]["cards_available"], "high_priority_review": product["high_priority_full_universe_review_set"]["count"], "entry_relevant": product["aggregate_validation"]["entry_relevant_90_count"], "corporate_intelligence": inputs["corporate_intelligence"]["coverage"], "strategy": strategy["coverage"]}, "warnings": ["Catalyst context is explicitly earlier retained evidence.", "Corporate Intelligence uses retained source evidence; event freshness remains per record.", "Strategy fit is separate from entry action, scenario probability, and portfolio action.", "Fundamental context is retained/undated rather than session-stamped.", "Strict valuation and valuation peer comparison remain unavailable."], "authority_boundary": product["authority_boundary"]}
     if flow:
         manifest["outputs"]["market_flow_positioning_prospective_context"] = flow_snapshot["snapshot_id"]
         manifest["coverage_summary"]["market_flow_positioning"] = flow["coverage"]
@@ -134,7 +135,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         manifest["outputs"]["macro_context"] = macro_context
         manifest["warnings"].append("Macro evidence is accepted only when known by the retained equity session; otherwise it is preserved as unavailable context.")
         manifest["operation_identity"] = _identity(manifest)
-    return {"peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
+    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
@@ -158,4 +159,9 @@ def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
     write_immutable(output_dir / "corporate_intelligence_prospective_context.json", operation["corporate_snapshot"])
     write_immutable(output_dir / "strategy_prospective_context.json", operation["strategy_snapshot"])
     if operation.get("flow_snapshot"): write_immutable(output_dir / "market_flow_positioning_prospective_context.json", operation["flow_snapshot"])
+    delivery = build_delivery(operation, operation["inputs"])
+    for filename, value in (("ai_research_session_bundle.json", delivery["primary"]), ("ai_research_full_universe.ndjson", delivery["full_universe"]), ("ai_research_bundle_manifest.json", delivery["manifest"]), ("ai_research_session_brief.md", delivery["brief"]), ("current_decision_cockpit_projection.json", delivery["projection"])):
+        path = output_dir / filename
+        if path.exists() and path.read_bytes() != value: raise ValueError("IMMUTABLE_SESSION_OPERATION_DELIVERY_CONFLICT:" + filename)
+        path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(value)
     write_immutable(output_dir / "run_manifest.json", operation["manifest"])

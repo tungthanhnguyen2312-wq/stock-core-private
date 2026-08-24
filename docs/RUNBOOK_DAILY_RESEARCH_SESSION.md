@@ -44,6 +44,14 @@ Open the session output directory under
 - `peer_relative_research_artifact.json` and `scenario_artifact.json` — rebuilt coherent
   current-session downstream inputs;
 - `prospective_snapshot.json` — immutable current-decision prospective baseline.
+- `ai_research_session_bundle.json` — the normal single-file ChatGPT/Claude upload;
+  it is a compact, authority-labelled projection of the same operation, not a new analysis.
+- `ai_research_full_universe.ndjson` — optional compact 1,683-ticker companion for
+  out-of-cohort work; no raw provider payloads are included.
+- `ai_research_bundle_manifest.json` — exact session/operation, SHA-256 values,
+  source identities, file sizes, and authority warnings.
+- `current_decision_cockpit_projection.json` — the deterministic Dashboard payload
+  for the same operation.
 
 Investigate a fail-closed lineage/session error by correcting the governed registry entry or
 upstream retained artifact. Never substitute an older same-date artifact merely to make a run
@@ -61,3 +69,24 @@ prospective-attribution contract evaluate that frozen session.
 The product is human-review research only. Entry actions remain deterministic tactical states;
 probability remains `UNKNOWN_UNCALIBRATED`; strict valuation, rankings, targets, sizing,
 portfolio, execution, PIT, and backtesting remain unavailable.
+
+## Daily human workflow
+
+1. Open the released Decision Cockpit and review the retained market session, discovery,
+   watchlist, ticker cards, limitations, and lineage.
+2. For normal AI-assisted research, upload only `ai_research_session_bundle.json`.
+3. For an arbitrary ticker outside the useful research set, upload the optional
+   `ai_research_full_universe.ndjson`, or extract one compact row first:
+
+   ```powershell
+   python tools/extract_ai_ticker_context.py --bundle ai_research_full_universe.ndjson --ticker HPG --output hpg_ai_context.json
+   ```
+
+4. Treat any AI conclusion as human-review research. The bundle contains no target,
+   calibrated probability, sizing, or execution authority.
+
+## Daily producer workflow
+
+One completed-session operation emits Product V2, the AI delivery files, and the Dashboard
+projection together. A governed Dashboard publication remains a separate owner-authorized
+release step; do not select a `latest` operation or manually combine artifacts.
