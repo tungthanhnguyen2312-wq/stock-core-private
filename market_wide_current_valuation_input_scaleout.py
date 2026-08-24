@@ -32,22 +32,34 @@ OFFICIAL_CURRENT_STATUSES = frozenset({
 })
 SHARE_STATUS_BY_AUTHORITY = {
     "qualified_official": "QUALIFIED_OFFICIAL",
+    "qualified_current_common_shares": "QUALIFIED_CURRENT_COMMON_SHARES",
+    "qualified_official_anchor_not_current": "QUALIFIED_OFFICIAL_ANCHOR_NOT_CURRENT",
     "provider_reported_current": "PROVIDER_REPORTED_CURRENT",
+    "provider_reported_current_research": "PROVIDER_REPORTED_CURRENT_RESEARCH",
     "provider_reported_lagged": "PROVIDER_REPORTED_LAGGED",
     "provider_reported_stale": "PROVIDER_REPORTED_STALE",
     "provider_reported_unverifiable_freshness": "PROVIDER_REPORTED_UNVERIFIABLE_FRESHNESS",
+    "unverifiable_freshness": "UNVERIFIABLE_FRESHNESS",
+    "corporate_action_reconciliation_required": "CORPORATE_ACTION_RECONCILIATION_REQUIRED",
+    "semantic_identity_unresolved": "SEMANTIC_IDENTITY_UNRESOLVED",
     "unknown_observation_date": "UNKNOWN_OBSERVATION_DATE",
     "unavailable": "UNAVAILABLE",
     "unresolved_error": "UNRESOLVED_ERROR",
 }
 RESEARCH_SHARE_AUTHORITIES = frozenset({
     "qualified_official",
+    "qualified_current_common_shares",
+    "qualified_official_anchor_not_current",
     "provider_reported_current",
+    "provider_reported_current_research",
     "provider_reported_lagged",
 })
 STALE_FAIL_CLOSED_AUTHORITIES = frozenset({
     "provider_reported_stale",
     "provider_reported_unverifiable_freshness",
+    "unverifiable_freshness",
+    "corporate_action_reconciliation_required",
+    "semantic_identity_unresolved",
 })
 RESEARCH_LABELS = (
     "CURRENT_RESEARCH_ONLY",
@@ -95,6 +107,38 @@ def official_research_universe_tickers(official_universe: Mapping[str, Any] | No
     )
 
 
+def _share_from_authority_record(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Consume current_common_shares_authority/v1 without changing valuation formulas."""
+    tier = str(record.get("authority_tier") or "UNAVAILABLE")
+    authority = tier.lower()
+    status = SHARE_STATUS_BY_AUTHORITY.get(authority, tier if tier else "UNAVAILABLE")
+    authoritative_ready = tier == "QUALIFIED_CURRENT_COMMON_SHARES"
+    research_eligible = (
+        record.get("fitness_for_use") in {"AUTHORITATIVE_CURRENT_MARKET_CAP", "RESEARCH_USABLE_NOT_AUTHORITATIVE"}
+        and record.get("value") is not None
+        and authority not in STALE_FAIL_CLOSED_AUTHORITIES
+    )
+    blockers = list(record.get("blockers") or [])
+    if not authoritative_ready:
+        blockers.append("CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION")
+    if authority in STALE_FAIL_CLOSED_AUTHORITIES:
+        blockers.append("STALE_SHARE_FAIL_CLOSED_CORPORATE_ACTION_OR_UNVERIFIABLE_FRESHNESS")
+    return {
+        "status": status,
+        "authority": authority,
+        "value": record.get("value") if research_eligible or authoritative_ready else None,
+        "share_concept": record.get("canonical_share_identity") if (research_eligible or authoritative_ready) else "unknown_share_concept",
+        "source_artifact_identity": record.get("source_evidence_identity"),
+        "freshness": str(record.get("fitness_for_use") or tier),
+        "observation_date": record.get("observed_at"),
+        "observation_lag_days": None,
+        "authoritative_current_market_cap_eligible": authoritative_ready,
+        "research_proxy_eligible": research_eligible,
+        "blocked_reasons": sorted(set(blockers)),
+        "retained_evidence": dict(record),
+    }
+
+
 def _share_from_resolver(resolved: Mapping[str, Any], authoritative: Mapping[str, Any] | None) -> dict[str, Any]:
     authority = str(resolved.get("authority") or "unavailable")
     status = SHARE_STATUS_BY_AUTHORITY.get(authority, "UNAVAILABLE")
@@ -139,8 +183,11 @@ def _share_disposition(
     promotion: Mapping[str, Any],
     resolved: Mapping[str, Any] | None = None,
     authoritative: Mapping[str, Any] | None = None,
+    authority_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Preserve resolver/P3-F5 share tiers; never promote issued shares to official CSO."""
+    if isinstance(authority_record, Mapping) and authority_record:
+        return _share_from_authority_record(authority_record)
     if isinstance(resolved, Mapping) and resolved:
         return _share_from_resolver(resolved, authoritative)
     cohort = (promotion.get("projected_coverage_impact") or {}).get("cohort_rows") or []
@@ -507,11 +554,13 @@ def build_current_valuation_artifact(
     official_universe: Mapping[str, Any] | None = None,
     p3e_artifact: Mapping[str, Any] | None = None,
     authoritative_share_states: Mapping[str, Mapping[str, Any]] | None = None,
+    share_authority_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Materialize one record per research-universe ticker without imputation."""
     records: dict[str, Any] = {}
     fundamentals = fundamental_artifact.get("records") or {}
     resolved_tickers = ((share_resolution or {}).get("tickers") or {})
+    authority_records = (share_authority_artifact or {}).get("records") or {}
     issuers = {
         str(item["issuer_identity"]["ticker"]): item
         for item in ((p3e_artifact or {}).get("refreshed_panel_data") or {}).get("issuers", [])
@@ -527,6 +576,7 @@ def build_current_valuation_artifact(
             ticker, share_promotion_artifact,
             resolved=resolved_tickers.get(ticker),
             authoritative=(authoritative_share_states or {}).get(ticker),
+            authority_record=authority_records.get(ticker),
         )
         financial = _financial_input(fundamental, fundamental_artifact)
         issuer = issuers.get(ticker)
@@ -573,6 +623,7 @@ def build_current_valuation_artifact(
                 "session_date": share_resolution.get("session_date"),
                 "status": share_resolution.get("status"),
             },
+            "share_authority": None if share_authority_artifact is None else share_authority_artifact.get("artifact_identity"),
         },
         "records": records,
         "coverage": {

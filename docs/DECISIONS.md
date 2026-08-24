@@ -1,5 +1,20 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-25 - Current Common Shares Authority And Scaleout V1
+
+`CURRENT_COMMON_SHARES_AUTHORITY_AND_SCALEOUT_V1 = CURRENT_COMMON_SHARES_AUTHORITY_CEILING_ESTABLISHED` (`push = NO`).
+
+The prior valuation research layer still collapsed HPG’s official executed count into `QUALIFIED_OFFICIAL` without proving coverage through the price session, and it did not emit one explicit current-share terminal disposition per official-universe ticker.
+
+Decisions:
+
+1. **Keep identities separate.** `VCI.overview.issue_share` remains `ISSUED_SHARES` / `NOT_PROMOTED`. HOSE `outStanding` remains exchange outstanding volume. HNX `KLLH`/`KLNY`/`KLĐKGD` remain circulating/listed/registered-trading. Period-end and weighted-average shares never satisfy current common shares. Issued-minus-treasury is not inferred.
+2. **Coverage-through-session is the current-common gate.** An official executed resulting count is `QUALIFIED_CURRENT_COMMON_SHARES` only when `valid_from <= session <= coverage_through` and no unresolved share-changing action remains. HPG’s 8,442,964,520 count is `QUALIFIED_OFFICIAL_ANCHOR_NOT_CURRENT`.
+3. **Reconcile later share-changing events without inferring dates.** Planned/upcoming events do not terminate an observation. Dated stock-dividend/bonus events in the observation-to-session gap without execution or resulting shares fail closed as `CORPORATE_ACTION_RECONCILIATION_REQUIRED` (HCC, IPA, NAG). Undated ISS remains `UNVERIFIABLE_FRESHNESS` (SSI, VCB).
+4. **No generic authority source was manufactured.** The market-wide ceiling is 0/1,507 authoritative current-common. The existing valuation engine consumes the new artifact prospectively; formulas, VALUE thresholds, RAW_AS_TRADED, PIT, sizing, target-price/DCF, and frozen 2026-08-21/24 identities are unchanged.
+
+Validation: official denominator 1,507 with zero unexplained drift; one terminal disposition per ticker; focused tests; `py_compile`; `git diff --check`. No push, merge, deploy, or authority promotion.
+
 ## 2026-08-25 - Market-Wide Current Valuation Research Scale-Out V1
 
 `MARKET_WIDE_CURRENT_VALUATION_RESEARCH_SCALEOUT_V1 = COMPLETE_LOCALLY / CURRENT_RESEARCH_ONLY / OWNER_REVIEW_REQUIRED_NOT_AUTHORITATIVE`.
