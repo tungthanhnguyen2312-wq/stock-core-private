@@ -59,6 +59,8 @@ DOCUMENT_TYPES = (
     "audited_annual_financial_statements",
     "reviewed_interim_financial_statements",
     "amendment_or_supersession_notice",
+    "insider_transaction_notice",
+    "major_shareholder_notice",
 )
 
 RETRIEVAL_RETAINED = "retained"

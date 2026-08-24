@@ -69,9 +69,15 @@
         "corporate_action_notice",
         "ex_right_notice",
         "listing_change_notice",
-        "amendment_or_supersession_notice"
+        "amendment_or_supersession_notice",
+        "insider_transaction_notice",
+        "major_shareholder_notice"
       ],
-      "discovery_path": "per-security event pages, operator-supplied; the design records these as the most structured source and therefore the first crawl candidate (B2)",
+      "index_document_types": [
+        "disclosure_rss_feed"
+      ],
+      "index_document_type_rule": "A syndication feed is a DISCOVERY INPUT, never disclosure evidence. It is admissible for acquisition so item links can be read from stored bytes, and is refused by official_document_store.adopt_retained_document (see DOCUMENT_TYPES), so it can never reach the observation ledger, the resolver, qualified_official or corroborated_period_end. Declared for hnx only, because hnx is the one exchange source whose own RSS landing page (retained 2026-08-24, /vi-vn/rss.html) directly links a first-party, unauthenticated, statically-rendered channel -- '/3/vi_vn/thong-tin-cong-bo-tu-to-chuc-phat-hanh.rss' ('disclosure information from the issuing organization') -- confirmed by direct fetch to carry real-time insider-transaction registration/result notices and major-shareholder threshold-crossing notices market-wide, one item per disclosure, with no query parameters or session state. HOSE's equivalent listed-organization disclosure feed ('Tin tổ chức niêm yết') was investigated the same day and found to render its list client-side (a plain HTTP GET returns an empty SPA shell; no first-party JSON/XML endpoint was observed), so it is deliberately NOT given this type; do not add it without the same kind of first-party static-rendering observation this rule records for hnx.",
+      "discovery_path": "per-security event pages, operator-supplied, remain the primary route (most structured, first crawl candidate, B2). Additionally, the one RSS channel named in index_document_types may be fetched whole (it is bounded by the feed itself, not paginated) and parsed for item links; no query, search, or link-following beyond that one parsed feed.",
       "requests_per_minute": 6,
       "min_request_interval_seconds": 10,
       "terms_considerations": "Public disclosure pages.",
