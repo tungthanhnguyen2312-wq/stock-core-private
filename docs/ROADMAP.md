@@ -5,6 +5,8 @@
 
 **Historical matched traded-value gate (2026-08-24):** `HISTORICAL_MATCHED_TRADED_VALUE_AND_ADV_AUTHORITY_V1` is complete locally with a deliberately narrow Outcome C.  Twelve retained DNSE Trades/FHSC exact anchors (FPT, HPG, SSI, VCB; 2026-08-07/10/11) qualify only `G1` matched value via the explicit `price × raw quantity × 10 × 1,000 VND` contract.  The retained 40-session corpus is still insufficient for the 20-session ADV20 denominator, and no liquidity, sizing, execution, PIT, or backtest gate is promoted.  The next dependency is a sufficiently deep exact-reconciled G1 matched-value cohort, not a new liquidity/sizing engine.
 
+**Historical PIT raw-as-traded/corporate-action gate (2026-08-24):** `HISTORICAL_PIT_RAW_AS_TRADED_AND_CORPORATE_ACTION_EVIDENCE_V1 = OUTCOME_D`. A single governed VSDC index page and its direct DTP cash-dividend notice yielded retained official corporate-action evidence, but only a record date—not an explicit ex-date—and no new raw historical price stream or pre-event snapshot pair. The event is intentionally `INSUFFICIENT`, its adjustment ledger is shadow-only `NOT_IMPLEMENTED`, and RAW_AS_TRADED/PIT/valuation/return-risk/backtest remain blocked. The next gate is an explicit official ex-date plus matching pre-event raw snapshot evidence for the same ticker/event window.
+
 ---
 
 ## 1. Architectural Phases

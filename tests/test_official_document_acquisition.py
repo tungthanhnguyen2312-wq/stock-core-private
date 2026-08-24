@@ -1,7 +1,7 @@
 import json, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
-from official_document_acquisition import EVENTS, MANIFEST, _response_failure, acquire, canonical_url, import_offline_event
+from official_document_acquisition import EVENTS, MANIFEST, TICKERS, _response_failure, acquire, canonical_url, import_offline_event
 
 PDF=b"%PDF-1.4\nfixture\n"
 HTML=b"<html><body>official notice</body></html>"
@@ -79,6 +79,8 @@ class AcquisitionTests(unittest.TestCase):
   future=acquire([self.spec(reporting_period="2027")],self.root,fetcher=self.fetch)
   self.assertEqual(current["outcomes"][0]["state"],"retained")
   self.assertEqual(future["outcomes"][0]["state"],"unsupported_request")
+ def test_index_observed_dtp_is_a_finite_supported_ticker(self):
+  self.assertIn("DTP",TICKERS)
  def test_reviewed_interim_statement_is_supported(self):
   result=acquire([self.spec(reporting_period="2026",document_class="reviewed_interim_financial_statements")],self.root,fetcher=self.fetch)
   self.assertEqual(result["outcomes"][0]["state"],"retained")

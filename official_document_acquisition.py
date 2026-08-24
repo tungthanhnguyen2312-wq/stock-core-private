@@ -21,7 +21,11 @@ from official_source_registry import ADMITTED, admit, load_registry
 VERSION = "1.2.0"
 MANIFEST = "official_document_acquisition_manifest.json"
 EVENTS = "official_price_test_events.jsonl"
-TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN", "PNJ", "FPT", "PVD", "QNS", "POW", "NVL", "GAS", "VRE"})
+# The governed acquirer deliberately retains a finite cohort.  DTP is the one additional
+# ticker admitted by HISTORICAL_PIT_RAW_AS_TRADED_AND_CORPORATE_ACTION_EVIDENCE_V1 after it
+# appeared as a cash-dividend notice on the single retained VSDC index page; it is not a
+# discovery wildcard or a provider-wide expansion.
+TICKERS = frozenset({"HPG", "VNM", "VCB", "SSI", "PAN", "PNJ", "FPT", "PVD", "QNS", "POW", "NVL", "GAS", "VRE", "DTP"})
 #: Retained for the storage-path vocabulary only. The gate on what may be requested comes
 #: from the registry (`declared_document_types`), never from this tuple.
 DOCUMENT_CLASSES = ("audited_annual_financial_statements", "reviewed_interim_financial_statements", "annual_report", "corporate_governance_report", "agm_document_or_resolution", "corporate_action_notice", "amendment_or_supersession_notice")
