@@ -8,6 +8,8 @@
 
 ## 1. Executive Program State
 
+**Authoritative current common shares qualification and scaleout V1 (2026-08-24):** `NO_NEW_SCALABLE_AUTHORITY`. A raw-first six-ticker KBS public-profile pilot retained immutable HTTP 400 responses but no usable share observation, schema, effective date, or common-share semantic proof. The 1,683-candidate disposition ledger is six `UNAVAILABLE` plus 1,677 justified non-attempts; no bulk crawl occurred after the failed pilot. Strict valuation, peer valuation, and Value remain blocked; VCI issued-share shadow proxy semantics are unchanged.
+
 - **Current Program**: Universal Market Data & Feature Foundation V1
 - **Program Phase**: Foundation Complete → First Market-Wide Deterministic Analysis Artifact
 - **Target Pipeline**:
