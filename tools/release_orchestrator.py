@@ -48,6 +48,7 @@ WHOLE_MARKET_ALLOWLIST = (
     "data/screener_data.js",
     "data/build_info.json",
     "data/build_info.js",
+    "data/current_decision_cockpit.json",
 )
 
 LOCK_FILE_PATH = Path(tempfile.gettempdir()) / "stock_lookup_release_orchestrator.lock"
@@ -169,6 +170,10 @@ def build_parser() -> argparse.ArgumentParser:
                                help="Explicit previous-served V2 snapshot used only with --generate. "
                                     "Overrides the automatic baseline this orchestrator otherwise "
                                     "reconstructs from --web-dir's currently served analysis bundle.")
+    parent_parser.add_argument("--cockpit-projection-source", type=Path,
+                               help="Explicit Producer current_decision_cockpit_projection.json for cockpit release only.")
+    parent_parser.add_argument("--expected-cockpit-operation-identity",
+                               help="Exact Daily Research Session Operation identity for cockpit release only.")
 
     parser = argparse.ArgumentParser(
         prog="release_orchestrator.py",
@@ -180,6 +185,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("whole-market", help="Publish whole-market frontend & dashboard only", parents=[parent_parser])
     subparsers.add_parser("trusted-ai", help="Publish trusted AI subset only", parents=[parent_parser])
     subparsers.add_parser("all", help="Publish trusted AI first, then whole-market dashboard", parents=[parent_parser])
+    subparsers.add_parser("cockpit", help="Publish one explicit Decision Cockpit projection", parents=[parent_parser])
     return parser
 
 
@@ -205,8 +211,22 @@ def orchestrate(args: argparse.Namespace) -> int:
             return 1
 
         # 2. Runtime session validation
-        actual_session = get_runtime_session(backend_dir)
-        if expected_session and actual_session != expected_session:
+        actual_session = "N/A"
+        if group != "cockpit":
+            actual_session = get_runtime_session(backend_dir)
+        if group == "cockpit":
+            if not args.cockpit_projection_source or not expected_session or not args.expected_cockpit_operation_identity:
+                sys.stderr.write("[ERROR] cockpit requires --cockpit-projection-source, --expected-session, and --expected-cockpit-operation-identity.\n")
+                return 1
+            try:
+                cockpit = json.loads(args.cockpit_projection_source.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                sys.stderr.write(f"[ERROR] Invalid cockpit projection: {exc}\n")
+                return 1
+            if cockpit.get("session") != expected_session or (cockpit.get("source") or {}).get("operation_identity") != args.expected_cockpit_operation_identity:
+                sys.stderr.write("[ERROR] Cockpit projection session/operation identity mismatch.\n")
+                return 1
+        if group != "cockpit" and expected_session and actual_session != expected_session:
             sys.stderr.write(f"[ERROR] Session mismatch: expected '{expected_session}', got '{actual_session}'. Aborting.\n")
             return 1
 
@@ -222,8 +242,14 @@ def orchestrate(args: argparse.Namespace) -> int:
 
         rc, dashboard_upstream = get_git_output(["rev-parse", "@{u}"], web_dir)
         if rc == 0 and live and dashboard_head != dashboard_upstream:
-            sys.stderr.write(f"[ERROR] Dashboard HEAD ({dashboard_head}) differs from upstream ({dashboard_upstream}) in live mode. Aborting.\n")
-            return 1
+            if group != "cockpit":
+                sys.stderr.write(f"[ERROR] Dashboard HEAD ({dashboard_head}) differs from upstream ({dashboard_upstream}) in live mode. Aborting.\n")
+                return 1
+            pushed = subprocess.run(["git", "push", "origin", "main"], cwd=web_dir, capture_output=True, text=True)
+            if pushed.returncode != 0:
+                sys.stderr.write(f"[ERROR] Cockpit source push failed: {pushed.stderr}\n")
+                return 1
+            rc, dashboard_upstream = get_git_output(["rev-parse", "@{u}"], web_dir)
 
         rc, staged_files = get_git_output(["diff", "--cached", "--name-only"], web_dir)
         if staged_files:
@@ -298,6 +324,12 @@ def orchestrate(args: argparse.Namespace) -> int:
             if live:
                 cmd_pub.append("--live")
             argv_plans.append(cmd_pub)
+
+        if group == "cockpit":
+            cmd_cockpit = [python_exe, str(web_dir / "publish_dashboard.py"), "--cockpit-projection-source", str(args.cockpit_projection_source), "--expected-cockpit-session", expected_session, "--expected-cockpit-operation-identity", args.expected_cockpit_operation_identity]
+            if live:
+                cmd_cockpit.append("--live")
+            argv_plans.append(cmd_cockpit)
 
         # 6. Print Execution Attestation
         print("============================================================")
