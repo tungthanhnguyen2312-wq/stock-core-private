@@ -29,6 +29,8 @@ from ai_research_session_delivery import build_delivery
 CONTRACT_VERSION = "daily_research_session_operation/v1"
 REQUIRED = ("descriptive", "screening", "tactical", "triage", "fundamental", "valuation", "catalyst", "corporate_intelligence")
 OPTIONAL = ("market_flow_positioning", "official_universe", "event_context")
+QUEUE_OPTIONAL = ("official_universe", "event_context")
+MODULE_ROOT = Path(__file__).resolve().parent
 
 
 def _canon(value: Any) -> str:
@@ -48,12 +50,119 @@ def load_registry(root: Path, registry_path: Path | None = None) -> Mapping[str,
     return registry
 
 
-def resolve_inputs(root: Path, session: str, registry: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Mapping[str, Any]]]:
+def selection_identities(selection: Mapping[str, Any]) -> dict[str, str]:
+    identities: dict[str, str] = {}
+    for name, entry in selection.items():
+        if not isinstance(entry, Mapping) or not isinstance(entry.get("artifact_identity"), str):
+            raise ValueError("SESSION_INPUT_REGISTRY_ENTRY_INVALID:" + str(name))
+        identities[str(name)] = entry["artifact_identity"]
+    return identities
+
+
+def frozen_input_identities(registry: Mapping[str, Any], session: str) -> dict[str, str] | None:
+    completed = (registry.get("completed_sessions") or {}).get(session)
+    if not isinstance(completed, Mapping) or completed.get("status") != "COMPLETED_RETAINED_EVIDENCE":
+        return None
+    lock = completed.get("frozen_input_identities")
+    if not isinstance(lock, Mapping) or not lock:
+        raise ValueError("COMPLETED_SESSION_INPUT_LOCK_MISSING")
+    identities: dict[str, str] = {}
+    for name, value in lock.items():
+        if not isinstance(value, str) or not value:
+            raise ValueError("COMPLETED_SESSION_INPUT_LOCK_INVALID:" + str(name))
+        identities[str(name)] = value
+    return identities
+
+
+def registered_session_selection(registry: Mapping[str, Any], session: str) -> Mapping[str, Any]:
     selection = (registry.get("sessions") or {}).get(session)
     if not isinstance(selection, Mapping):
         raise ValueError("SESSION_NOT_REGISTERED_EXPLICIT_INPUT_MANIFEST_REQUIRED")
     if not set(REQUIRED).issubset(selection) or not set(selection).issubset(set(REQUIRED) | set(OPTIONAL)):
         raise ValueError("SESSION_INPUT_REGISTRY_INCOMPLETE")
+    return selection
+
+
+def assert_completed_session_inputs_locked(registry: Mapping[str, Any], session: str, selection: Mapping[str, Any]) -> None:
+    lock = frozen_input_identities(registry, session)
+    if lock is None:
+        return
+    if selection_identities(selection) != lock:
+        raise ValueError("COMPLETED_SESSION_INPUT_MUTATION_REJECTED")
+
+
+def assert_inputs_match_registered_session(session: str, inputs: Mapping[str, Any], registry: Mapping[str, Any]) -> None:
+    selection = registered_session_selection(registry, session)
+    assert_completed_session_inputs_locked(registry, session, selection)
+    used: dict[str, str] = {}
+    for name, value in inputs.items():
+        if not isinstance(value, Mapping) or not isinstance(value.get("artifact_identity"), str):
+            raise ValueError("SESSION_INPUT_NOT_REGISTERED:" + str(name))
+        used[str(name)] = value["artifact_identity"]
+    if used != selection_identities(selection):
+        raise ValueError("SESSION_INPUT_NOT_REGISTERED")
+
+
+def optional_identities_from_selection(selection: Mapping[str, Any]) -> dict[str, str]:
+    identities = selection_identities(selection)
+    return {name: identities[name] for name in OPTIONAL if name in identities}
+
+
+def optional_identities_from_manifest(manifest: Mapping[str, Any]) -> dict[str, str]:
+    artifacts = manifest.get("input_artifacts") or {}
+    used: dict[str, str] = {}
+    if not isinstance(artifacts, Mapping):
+        return used
+    for name in OPTIONAL:
+        entry = artifacts.get(name)
+        if isinstance(entry, Mapping) and isinstance(entry.get("artifact_identity"), str):
+            used[name] = entry["artifact_identity"]
+    return used
+
+
+def queue_optional_identities(queue: Mapping[str, Any]) -> dict[str, str]:
+    used: dict[str, str] = {}
+    records = queue.get("records") or {}
+    if not isinstance(records, Mapping):
+        return used
+    for record in records.values():
+        if not isinstance(record, Mapping):
+            continue
+        sources = record.get("source_input_identities") or {}
+        if not isinstance(sources, Mapping):
+            continue
+        for name in QUEUE_OPTIONAL:
+            identity = sources.get(name)
+            if not isinstance(identity, str) or not identity:
+                continue
+            if name in used and used[name] != identity:
+                raise ValueError("SESSION_QUEUE_OPTIONAL_INPUT_IDENTITY_CONFLICT:" + name)
+            used[name] = identity
+    return used
+
+
+def assert_manifest_and_queue_match_registered_session(
+    session: str,
+    manifest: Mapping[str, Any],
+    queue: Mapping[str, Any],
+    registry: Mapping[str, Any],
+) -> None:
+    selection = registered_session_selection(registry, session)
+    assert_completed_session_inputs_locked(registry, session, selection)
+    registered_optional = optional_identities_from_selection(selection)
+    if optional_identities_from_manifest(manifest) != registered_optional:
+        raise ValueError("SESSION_MANIFEST_OPTIONAL_INPUT_MISMATCH")
+    if "official_universe" not in registered_optional or "event_context" not in registered_optional:
+        raise ValueError("SESSION_QUEUE_REQUIRES_REGISTERED_OFFICIAL_UNIVERSE_AND_EVENT_CONTEXT")
+    queue_optional = queue_optional_identities(queue)
+    for name in QUEUE_OPTIONAL:
+        if queue_optional.get(name) != registered_optional[name]:
+            raise ValueError("SESSION_QUEUE_OPTIONAL_INPUT_MISMATCH:" + name)
+
+
+def resolve_inputs(root: Path, session: str, registry: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Mapping[str, Any]]]:
+    selection = registered_session_selection(registry, session)
+    assert_completed_session_inputs_locked(registry, session, selection)
     values: dict[str, Any] = {}; metadata: dict[str, Mapping[str, Any]] = {}
     for name in tuple(REQUIRED) + tuple(name for name in OPTIONAL if name in selection):
         entry = selection[name]
@@ -98,7 +207,9 @@ def validate_coherence(inputs: Mapping[str, Any], session: str) -> dict[str, Any
     return {"session": session, "technical_coverage_semantics": {"same_session_technical_feature_available_count": coverage, "current_active_equity_denominator": descriptive["market_breadth"]["current_active_equity_denominator"], "observed_session_cohort": descriptive["market_breadth"]["observed_session_cohort"], "semantic_note": "956 is same-session technical feature coverage and tactical classified count after retained technical recovery; 763 is superseded pre-recovery coverage and is rejected."}, "corporate_intelligence_coverage": corporate.get("coverage"), "accepted_degraded_inputs": {"catalyst": "EARLIER_RETAINED_CATALYST_CONTEXT"}, "incompatible_inputs": []}
 
 
-def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None) -> dict[str, Any]:
+    registry = registry if registry is not None else load_registry(root or MODULE_ROOT)
+    assert_inputs_match_registered_session(session, inputs, registry)
     coherence = validate_coherence(inputs, session)
     peer = build_peer(descriptive=inputs["descriptive"], tactical=inputs["tactical"], fundamental=inputs["fundamental"], valuation=inputs["valuation"])
     if peer_identity(peer)["artifact_sha256"] != peer["artifact_sha256"]: raise ValueError("PEER_ARTIFACT_SELF_VERIFICATION_FAILED")
@@ -210,7 +321,8 @@ def run_session_operation(
     repository heads and explicit optional inputs; it never discovers a
     ``latest`` artifact or performs acquisition.
     """
-    inputs, _ = resolve_inputs(root, session, load_registry(root, registry_path))
+    registry = load_registry(root, registry_path)
+    inputs, _ = resolve_inputs(root, session, registry)
     operation = build_operation(
         inputs,
         session,
@@ -219,6 +331,8 @@ def run_session_operation(
         generation_context=generation_context,
         portfolio=portfolio,
         macro=macro,
+        registry=registry,
+        root=root,
     )
     consumer_root = root.parent / "ai-core-private"
     if str(consumer_root) not in sys.path:

@@ -1,5 +1,9 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-24 - Daily Session Temporal Input Lock Hardening V1
+
+`DAILY_SESSION_TEMPORAL_INPUT_LOCK_HARDENING_V1 = COMPLETE_LOCALLY`. After `bba1afe` closed the concrete 2026-08-21 queue-serving bypass, remaining construction/consumption holes could still attach later `official_universe`/`event_context` through a self-consistent manifest, a direct `build_operation()` dict, or mutation of `sessions[session]` after completion. The existing daily-session registry is now the lock: `registry["sessions"][session]` is the allowlist for operation construction, `completed_sessions[session].frozen_input_identities` rejects post-completion input mutation, and queue resolution additionally requires those registered identities (not merely a self-hashing run manifest). Optional inputs absent from a session stay absent. The governed 2026-08-24 operation and the immutable 2026-08-21 prospective snapshot identity are unchanged. No new registry, ranking, or opportunity semantic.
+
 ## 2026-08-23 - Watchlist Tactical Decision Closeout
 
 `WATCHLIST_TACTICAL_DECISION_CLOSEOUT_V1 = COMPLETE_LOCALLY / COHERENT_PARTIAL`. Owner-authorized

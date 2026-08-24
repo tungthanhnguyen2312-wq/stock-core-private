@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 from current_opportunity_prioritization import replay as replay_opportunity
 from daily_opportunity_decision_queue import replay as replay_queue
-from daily_research_session_operations import _identity, load_registry
+from daily_research_session_operations import _identity, assert_manifest_and_queue_match_registered_session, load_registry
 from polymorphic_current_strategy_classification import content_identity as strategy_identity
 from prospective_research_learning import freeze_opportunity_decision_context, replay_opportunity_decision_context, write_immutable
 
@@ -48,6 +48,7 @@ def resolve(session: str, root: Path = ROOT) -> tuple[dict[str, Any], Path]:
   raise ValueError('OPPORTUNITY_DECISION_FREEZE_QUEUE_IDENTITY_MISMATCH')
  if bundle.get('operation_identity') != entry['operation_identity']:
   raise ValueError('OPPORTUNITY_DECISION_FREEZE_AI_BUNDLE_LINEAGE_MISMATCH')
+ assert_manifest_and_queue_match_registered_session(session, manifest, queue, registry)
  if any(key in value for value in (manifest, bundle, queue) for key in ('human_selection', 'final_human_selection', 'final_human_selection_state')):
   raise ValueError('OPPORTUNITY_DECISION_FREEZE_RECORDED_HUMAN_SELECTION_REQUIRES_EXPLICIT_INPUT')
  replay_opportunity(opportunity); replay_queue(queue)

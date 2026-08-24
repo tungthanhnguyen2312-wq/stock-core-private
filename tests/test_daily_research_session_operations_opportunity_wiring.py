@@ -1,41 +1,28 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from daily_research_session_operations import build_operation, load_registry, materialize, resolve_inputs
 
 ROOT = Path(__file__).resolve().parents[1]
 OPS = ROOT / "operations-review"
 
 
-def _resolved_with_opportunity_inputs():
+def test_unregistered_optional_inputs_cannot_be_injected_into_a_prior_session():
     inputs, _ = resolve_inputs(ROOT, "2026-08-21", load_registry(ROOT))
     inputs = dict(inputs)
-    # Test-only combination: official_universe/event_context are "current as of build"
-    # (2026-08-24), not session-locked, per their own contracts. Layering them onto the
-    # retained 2026-08-21 session inputs here proves the wiring mechanics against real
-    # 1,507-scale data without ever materializing to operations-review/ or the session
-    # registry -- so it never becomes a claim about a governed 2026-08-21 output (see
-    # prospective_research_learning's "no backdated knowledge" boundary).
     inputs["official_universe"] = json.loads((OPS / "current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json").read_text(encoding="utf-8"))
     inputs["event_context"] = json.loads((OPS / "current-official-event-context-integration-v1-20260824/current_official_event_context_artifact.json").read_text(encoding="utf-8"))
-    return inputs
+    with pytest.raises(ValueError, match="SESSION_INPUT_NOT_REGISTERED"):
+        build_operation(inputs, "2026-08-21", producer_head="producer", consumer_head="consumer")
 
 
-def test_decision_queue_builds_when_optional_inputs_present_and_is_deterministic():
-    # NOTE on the PRIORITY_NOW count seen here: this session's *registered* corporate_intelligence
-    # input (coverage.current_event_coverage == 1) predates the 2026-08-24 official-event-context
-    # merge, so EVENT_DRIVEN eligibility for this specific registered 2026-08-21 session is smaller
-    # than the 190/124-count standalone snapshot produced by tools/run_current_opportunity_prioritization.py
-    # (which rebuilds corporate_intelligence fresh with the event context). That is correct, not a
-    # bug: this wiring must use the session's own registered corporate_intelligence, never silently
-    # rebuild it with evidence the frozen session's registry entry does not carry (see the
-    # "no backdated knowledge" boundary in prospective_research_learning.py / this module's own
-    # official_universe/event_context comment above). This test therefore checks structure and
-    # determinism, not the specific accepted 190 figure (covered separately, against the real
-    # standalone snapshot, in test_daily_opportunity_decision_queue.py).
-    inputs = _resolved_with_opportunity_inputs()
-    first = build_operation(inputs, "2026-08-21", producer_head="producer", consumer_head="consumer")
-    second = build_operation(inputs, "2026-08-21", producer_head="producer", consumer_head="consumer")
+def test_decision_queue_builds_from_registered_same_session_optional_inputs_and_is_deterministic():
+    registry = load_registry(ROOT)
+    inputs, _ = resolve_inputs(ROOT, "2026-08-24", registry)
+    first = build_operation(inputs, "2026-08-24", producer_head="producer", consumer_head="consumer", registry=registry)
+    second = build_operation(inputs, "2026-08-24", producer_head="producer", consumer_head="consumer", registry=registry)
     assert first["manifest"]["operation_identity"] == second["manifest"]["operation_identity"]
     assert first["decision_queue"] is not None and first["opportunity"] is not None
     assert first["opportunity"]["coverage"]["current_official_universe"] == 1507
@@ -49,7 +36,7 @@ def test_decision_queue_builds_when_optional_inputs_present_and_is_deterministic
     assert product_summary["full_priority_now_count"] == summary["PRIORITY_NOW_TOTAL"]
     cards = first["product"]["detailed_research_cards"]
     available = [ticker for ticker, card in cards.items() if card["research_priority"]["status"] == "AVAILABLE"]
-    assert len(available) == len(cards)  # every existing detailed card is within the 1,507 official universe
+    assert len(available) == len(cards)
 
 
 def test_decision_queue_absent_when_optional_inputs_missing_matches_pre_change_behavior():
@@ -62,8 +49,9 @@ def test_decision_queue_absent_when_optional_inputs_missing_matches_pre_change_b
 
 
 def test_materialize_writes_decision_queue_artifacts_only_when_present(tmp_path):
-    inputs = _resolved_with_opportunity_inputs()
-    operation = build_operation(inputs, "2026-08-21", producer_head="producer", consumer_head="consumer")
+    registry = load_registry(ROOT)
+    inputs, _ = resolve_inputs(ROOT, "2026-08-24", registry)
+    operation = build_operation(inputs, "2026-08-24", producer_head="producer", consumer_head="consumer", registry=registry)
     materialize(tmp_path, operation)
     assert (tmp_path / "daily_opportunity_decision_queue_artifact.json").exists()
     assert (tmp_path / "opportunity_prioritization_artifact.json").exists()

@@ -152,6 +152,7 @@ from daily_opportunity_decision_queue import (
 )
 from daily_research_session_operations import (
     _identity as daily_research_session_operation_identity,
+    assert_manifest_and_queue_match_registered_session,
 )
 from current_market_flow_positioning import (
     content_identity as current_market_flow_positioning_content_identity,
@@ -2921,6 +2922,7 @@ def resolve_daily_opportunity_decision_queue_artifact(
             or (manifest.get("outputs") or {}).get("daily_opportunity_decision_queue") != artifact.get("artifact_identity")
         ):
             return None
+        assert_manifest_and_queue_match_registered_session(session, manifest, artifact, registry)
         return artifact, path
     except Exception:
         return None
