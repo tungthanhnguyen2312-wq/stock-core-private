@@ -14,7 +14,7 @@ from daily_producer_pipeline import (
     completed_session_gate,
     resolve_latest_registered_completed_session,
 )
-from daily_research_session_operations import load_registry, resolve_inputs
+from daily_research_session_operations import load_registry, resolve_inputs, validate_coherence
 from vn_time import VN_TZ
 
 
@@ -51,6 +51,17 @@ def test_acquisition_plan_preserves_exact_identities_and_localized_optional_stat
     assert rows["valuation"]["execution_disposition"] == "BLOCKED"
     assert rows["macro"]["execution_disposition"] == "OPTIONAL_UNAVAILABLE"
     assert rows["market_flow_positioning"]["required_for_core_operation"] is False
+
+
+def test_malformed_retained_artifact_and_source_session_mismatch_fail_closed():
+    malformed = copy.deepcopy(_registry())
+    malformed["sessions"]["2026-08-21"]["descriptive"]["path"] = "AGENTS.md"
+    with pytest.raises(json.JSONDecodeError):
+        resolve_inputs(ROOT, "2026-08-21", malformed)
+    inputs, _ = resolve_inputs(ROOT, "2026-08-21", _registry())
+    inputs["tactical"]["session"] = "2026-08-20"
+    with pytest.raises(ValueError, match="SESSION_COHERENCE_MISMATCH"):
+        validate_coherence(inputs, "2026-08-21")
 
 
 def test_parity_mismatch_fails_closed(tmp_path: Path):
