@@ -7,6 +7,8 @@
 
 **Historical PIT raw-as-traded/corporate-action gate (2026-08-24):** `HISTORICAL_PIT_RAW_AS_TRADED_AND_CORPORATE_ACTION_EVIDENCE_V1 = OUTCOME_D`. A single governed VSDC index page and its direct DTP cash-dividend notice yielded retained official corporate-action evidence, but only a record date—not an explicit ex-date—and no new raw historical price stream or pre-event snapshot pair. The event is intentionally `INSUFFICIENT`, its adjustment ledger is shadow-only `NOT_IMPLEMENTED`, and RAW_AS_TRADED/PIT/valuation/return-risk/backtest remain blocked. The next gate is an explicit official ex-date plus matching pre-event raw snapshot evidence for the same ticker/event window.
 
+**Historical matched-value existing-store requalification (2026-08-24):** `HISTORICAL_MATCHED_VALUE_EXISTING_STORE_REQUALIFICATION_V1 = EXISTING_STORE_CANNOT_UNLOCK_ADV20`. Existing raw/canonical Trades history supplies execution price/quantity/board identity but no independently semantic matched-value field; existing daily Parquet/SQLite is OHLCV-only. The requalification fixes zero-based DNSE page-chain replay and reproduces the existing 12 FHSC exact anchors, but does not generalize them outside their four-ticker/three-session scope. The next data gate remains 20 complete sessions with independent exact G1 matched-value anchors or an independently qualified explicit matched-value field.
+
 ---
 
 ## 1. Architectural Phases

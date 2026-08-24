@@ -51,7 +51,10 @@ def page_chain_status(pages: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     if not ordered:
         return {"status": "INCOMPLETE", "reason": "NO_RETAINED_PAGES"}
     indices = [int(page["page_index"]) for page in ordered]
-    if indices[0] != 1:
+    # DNSE's retained pagination contracts use a zero-based first page.  Earlier
+    # in-memory callers used one-based examples, so accept either explicit base
+    # while still refusing a chain that starts in the middle.
+    if indices[0] not in {0, 1}:
         return {"status": "INCOMPLETE", "reason": "PAGE_CHAIN_DOES_NOT_START_AT_FIRST_PAGE", "page_indices": indices}
     if indices != list(range(indices[0], indices[0] + len(indices))):
         return {"status": "INCOMPLETE", "reason": "NON_CONTIGUOUS_PAGE_INDICES", "page_indices": indices}
@@ -60,7 +63,8 @@ def page_chain_status(pages: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
             return {"status": "INCOMPLETE", "reason": "PAGINATION_CURSOR_CHAIN_BROKEN", "page_indices": indices}
     if ordered[-1].get("next_page_token"):
         return {"status": "INCOMPLETE", "reason": "TERMINAL_PAGE_TOKEN_PRESENT", "page_indices": indices}
-    return {"status": "COMPLETE", "page_count": len(ordered), "page_indices": indices}
+    return {"status": "COMPLETE", "page_count": len(ordered), "page_indices": indices,
+            "page_index_base": indices[0]}
 
 
 def summarize_complete_trade_session(

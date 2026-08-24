@@ -69,6 +69,18 @@ def test_page_chain_missing_first_page_is_not_complete():
     assert candidate["session_completeness"]["reason"] == "PAGE_CHAIN_DOES_NOT_START_AT_FIRST_PAGE"
 
 
+def test_zero_based_retained_page_chain_is_complete():
+    candidate = summarize_complete_trade_session(
+        ticker="AAA", session="2026-08-11",
+        pages=[
+            {"page_index": 0, "page_cursor": None, "next_page_token": "next", "trades": [_trade("G1", "20", "100")]},
+            {"page_index": 1, "page_cursor": "next", "next_page_token": None, "trades": []},
+        ], raw_payload_hashes=["a", "b"],
+    )
+    assert candidate["session_completeness"]["status"] == "COMPLETE"
+    assert candidate["session_completeness"]["page_index_base"] == 0
+
+
 def test_adv20_does_not_average_three_qualified_sessions():
     rows = []
     for session in ("2026-08-07", "2026-08-10", "2026-08-11"):
