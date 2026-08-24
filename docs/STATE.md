@@ -6,6 +6,8 @@
 
 ---
 
+**Current Official Market Universe Integration V1 (2026-08-24):** `COMPLETE_LOCALLY / CURRENT_RESEARCH_ONLY`. The retained first-party HNX/UPCoM and HOSE master lists now reconcile through `current_official_market_universe/v1`: 1,104 HNX/UPCoM and 403 HOSE matches of the existing 1,683 Stock Lookup candidates, producing a 1,507 current official exchange-presence boundary. The 176 residual candidates resolve to 173 `DELISTED_OR_NO_LONGER_CURRENT` and three `SYMBOL_IDENTITY_DRIFT`; 18 official-only rows are retained for review without automatic production-universe addition. Current breadth coverage changes from 960/1,510 to 960/1,507; existing screening, tactical, strategy, scenario and daily-research consumers use an explicit ticker-filter adapter with no rule change. HNX qualified event rows are ticker-linkable but the existing Corporate Intelligence loader needs a bounded adapter (`EVENT_DATA_READY_CONSUMER_MAPPING_PENDING`). This is neither common-share authority nor historical/PIT or survivorship-safe universe authority. Artifact: `operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json`.
+
 ## 1. Executive Program State
 
 **Authoritative current common shares qualification and scaleout V1 (2026-08-24):** `NO_NEW_SCALABLE_AUTHORITY`. A raw-first six-ticker KBS public-profile pilot retained immutable HTTP 400 responses but no usable share observation, schema, effective date, or common-share semantic proof. The 1,683-candidate disposition ledger is six `UNAVAILABLE` plus 1,677 justified non-attempts; no bulk crawl occurred after the failed pilot. Strict valuation, peer valuation, and Value remain blocked; VCI issued-share shadow proxy semantics are unchanged.

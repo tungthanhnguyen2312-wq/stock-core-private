@@ -2147,6 +2147,12 @@ single-ticker work.
 2. Cases reuse retained tactical confirmation/invalidation, current descriptive state, sector-aware peer context, fundamental trajectory, valuation availability, and retained catalyst status. Missing inputs narrow dependent case content; no provider/network acquisition or new financial/technical calculation occurs.
 3. Every case is conditional and carries `UNKNOWN_UNCALIBRATED` probability status. Base is a reference/current-continuation case, not most likely. Producer and Consumer are opt-in verbatim pass-throughs and reject malformed structures; no target, expected return, rank, recommendation, sizing, portfolio, execution, valuation discrimination, outcome, or calibration authority is emitted.
 
+## 2026-08-24 - Current Official Market Universe Integration V1
+
+1. `current_official_market_universe/v1` is a read-only projection over retained HNX/UPCoM issuer-list and HOSE stock-master rows. It establishes current official exchange presence and preserves source-row identity, but never aliases HNX KLLH/KLNY/KLĐKGD or HOSE `outStanding` to accounting common shares outstanding.
+2. Exact ticker reconciliation is deterministic. Official-only rows remain a governed delta for owner review; they are not silently added. A Stock Lookup-only residual is only called delisted when the already-retained cross-provider status artifact establishes it; remaining active-reference disagreement is `SYMBOL_IDENTITY_DRIFT`, not inferred absence.
+3. The projection is fit only as a current research denominator through an explicit ticker-filter adapter. It neither changes downstream formulas/classifiers nor creates historical PIT, survivorship-safe backtest, ranking, sizing, execution, or valuation authority. HNX event rows remain source-identity-bound and CI-compatible in shape, but require an explicit future CI-loader adapter rather than a parallel event engine.
+
 ## 2026-08-24 - Current Daily Decision Research Product V2
 
 1. The product extends the existing daily research / AI Research Analyst architecture as one integration surface rather than a new analytical engine, packet, workbench, or case store. It reads only current retained artifacts and writes one deterministic JSON product plus one Markdown human-review brief.
