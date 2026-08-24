@@ -16,12 +16,19 @@ def fetcher(_capability, **kwargs):
 
 class TestP3F9ExactSessionSnapshot(unittest.TestCase):
     def test_exact_session_and_generic_mapping(self):
-        snap = m.materialize_snapshot(candidates=["AAA", "BBB"], requested_at=datetime(2026, 8, 20, 16, tzinfo=VN), api_key="x", api_secret="y", fetcher=fetcher, workers=1)
+        captured = {}
+        def capturing_fetcher(_capability, **kwargs):
+            captured["query"] = kwargs.get("query")
+            return fetcher(_capability, **kwargs)
+        snap = m.materialize_snapshot(candidates=["AAA", "BBB"], requested_at=datetime(2026, 8, 20, 16, tzinfo=VN), api_key="x", api_secret="y", fetcher=capturing_fetcher, workers=1)
         self.assertEqual("2026-08-20", snap["resolved_completed_session"])
         self.assertEqual(2, snap["exact_session_observed_count"])
         self.assertEqual(0, snap["missing_current_session_count"])
         self.assertFalse(snap["is_actionable_for_execution"])
         self.assertEqual("NOT_PROMOTED", snap["authority_boundary"]["RAW_AS_TRADED"])
+        start = datetime(2026, 8, 20, tzinfo=VN) - timedelta(days=m.EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS)
+        self.assertEqual(m.EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS, 365)
+        self.assertEqual(captured["query"]["from"], int(datetime.combine(start.date(), datetime.min.time(), VN).timestamp()))
 
     def test_missing_exact_session_fails_closed_without_prior_substitution(self):
         def old_only(*args, **kwargs):

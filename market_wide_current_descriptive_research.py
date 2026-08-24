@@ -47,6 +47,25 @@ LOOKBACK_SESSIONS = 20
 IN_SCOPE_ACTIVITY_STATES = frozenset({"ACTIVE_LISTED_OBSERVED", "ACTIVE_LISTED_NO_QUALIFIED_SESSION_OBSERVATION"})
 LIQUIDITY_ELIGIBLE_DISPOSITION = "CURRENT_SESSION_DESCRIPTIVE_ELIGIBLE"
 
+
+def _assert_no_recoverable_same_session_technical_gap(
+    records: Mapping[str, Mapping[str, Any]], snapshot_records: Mapping[str, Any],
+) -> None:
+    """Future sessions must not emit exact-session bars without same-session technicals."""
+    gaps = [
+        ticker for ticker, record in records.items()
+        if record.get("in_current_descriptive_scope")
+        and (snapshot_records.get(ticker) or {}).get("disposition") == "EXACT_SESSION_RETAINED"
+        and not (
+            (record.get("technical_features") or {}).get("status") == "SHADOW_ONLY"
+            and (record.get("technical_features") or {}).get("is_current_session") is True
+        )
+    ]
+    if gaps:
+        raise MarketWideCurrentDescriptiveResearchError(
+            "RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP:" + ",".join(gaps[:20])
+        )
+
 BLOCKED_OUTPUTS = {
     "stock_rankings": "RANKING_PROHIBITED",
     "buy_sell_recommendations": "RECOMMENDATION_PROHIBITED",
@@ -308,6 +327,8 @@ def build_artifact(
             "liquidity": _liquidity_view(ticker, liquidity_artifact) if in_scope else {"status": "NOT_APPLICABLE", "reason": "OUT_OF_CURRENT_DESCRIPTIVE_SCOPE"},
             "sector_classification": entity_classifications.get(ticker),
         }
+
+    _assert_no_recoverable_same_session_technical_gap(records, pf_records)
 
     in_scope_records = [record for record in records.values() if record["in_current_descriptive_scope"]]
     same_session_records = [record for record in in_scope_records if record["technical_features"].get("is_current_session")]

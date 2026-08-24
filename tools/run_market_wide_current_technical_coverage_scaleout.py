@@ -21,6 +21,7 @@ from market_wide_current_technical_coverage_scaleout import (
     recovery_candidates,
     recovery_record,
 )
+from mva_exact_session_snapshot import EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS
 
 
 BASELINE = ROOT / "operations-review/market-wide-current-descriptive-research-v1-20260823/market_wide_current_descriptive_research_artifact.json"
@@ -48,7 +49,7 @@ def run_batch(*, baseline: Mapping, snapshot: Mapping, out: Path, batch: int, ba
         print(f"REUSED {path}")
         return
     target = datetime.fromisoformat(snapshot["resolved_completed_session"]).replace(tzinfo=VN_TZ)
-    start = target - timedelta(days=365)
+    start = target - timedelta(days=EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS)
     end = target + timedelta(days=1) - timedelta(seconds=1)
     original = {key: os.environ.get(key) for pair in CREDENTIAL_ENV_PAIRS for key in pair}
     try:

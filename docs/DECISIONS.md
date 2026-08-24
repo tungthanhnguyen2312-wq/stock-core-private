@@ -1,5 +1,9 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-24 - Same-Session Technical Coverage Recovery V1
+
+`SAME_SESSION_TECHNICAL_COVERAGE_RECOVERY_V1 = COVERAGE_CEILING_ESTABLISHED`. The 881 same-session technical/tactical count on 2026-08-24 is complete coverage of exact-session observed bars after 132/132 history-only recoveries. Missing official-universe coverage is structurally `SESSION_MISSING` (no target bar), not a leftover materialization hole. Same-session eligibility remains `SHADOW_ONLY` and `is_current_session`; prior-session windows cannot satisfy it. Future snapshot lookback is 365 calendar days, matching recovery, and descriptive build fails closed on exact-session bars without current technicals. No ticker patches, no fabricated no-trade bars, no PIT/RAW_AS_TRADED promotion, and no retrofit of the governed 2026-08-24 session.
+
 ## 2026-08-24 - Daily Session Temporal Input Lock Hardening V1
 
 `DAILY_SESSION_TEMPORAL_INPUT_LOCK_HARDENING_V1 = COMPLETE_LOCALLY`. After `bba1afe` closed the concrete 2026-08-21 queue-serving bypass, remaining construction/consumption holes could still attach later `official_universe`/`event_context` through a self-consistent manifest, a direct `build_operation()` dict, or mutation of `sessions[session]` after completion. The existing daily-session registry is now the lock: `registry["sessions"][session]` is the allowlist for operation construction, `completed_sessions[session].frozen_input_identities` rejects post-completion input mutation, and queue resolution additionally requires those registered identities (not merely a self-hashing run manifest). Optional inputs absent from a session stay absent. The governed 2026-08-24 operation and the immutable 2026-08-21 prospective snapshot identity are unchanged. No new registry, ranking, or opportunity semantic.

@@ -20,6 +20,7 @@ from freshness_history import latest_completed_market_day
 
 VN_TZ = timezone(timedelta(hours=7))
 LOOKBACK_SESSIONS = 20
+EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS = 365
 CONTRACT_VERSION = "p3f9_exact_session_mva_snapshot/v2"
 REQUIRED_ENVELOPE = {
     "is_actionable_for_execution": False,
@@ -87,7 +88,7 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
                          request_limit: int | None = None) -> dict[str, Any]:
     """Fetch each canonical candidate through one generic DNSE path, no fallback."""
     target = resolved_completed_session(requested_at)
-    start = datetime.combine(datetime.fromisoformat(target).date() - timedelta(days=45), datetime.min.time(), VN_TZ)
+    start = datetime.combine(datetime.fromisoformat(target).date() - timedelta(days=EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS), datetime.min.time(), VN_TZ)
     end = datetime.combine(datetime.fromisoformat(target).date() + timedelta(days=1), datetime.min.time(), VN_TZ) - timedelta(seconds=1)
     query_base = {"resolution": "1D", "from": int(start.timestamp()), "to": int(end.timestamp()), "type": "STOCK"}
     retrieved_at = requested_at.astimezone(VN_TZ).isoformat()
