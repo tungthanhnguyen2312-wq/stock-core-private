@@ -225,9 +225,10 @@ def run_session_operation(
         sys.path.insert(0, str(consumer_root))
     from builders.build_ticker_context import current_daily_decision_research_contract
 
-    card = operation["product"]["detailed_research_cards"].get("ABB")
-    if not card:
+    card_ticker = "ABB" if "ABB" in operation["product"]["detailed_research_cards"] else next(iter(operation["product"]["detailed_research_cards"]), None)
+    if not card_ticker:
         raise ValueError("CONSUMER_E2E_REPRESENTATIVE_CARD_MISSING")
+    card = operation["product"]["detailed_research_cards"][card_ticker]
     bundled = dict(card)
     bundled.update({
         "source_artifact_identity": operation["product"]["artifact_identity"],
@@ -241,13 +242,13 @@ def run_session_operation(
     if operation.get("macro_context"):
         bundled["macro_context"] = operation["macro_context"]
     accepted = current_daily_decision_research_contract(
-        {"tickers": {"ABB": {"current_daily_decision_research": bundled}}}, "ABB"
+        {"tickers": {card_ticker: {"current_daily_decision_research": bundled}}}, card_ticker
     )
     if not accepted or accepted.get("status") == "malformed":
         raise ValueError("CONSUMER_E2E_FAIL_CLOSED")
     operation["manifest"]["consumer_e2e"] = {
         "status": "PASS",
-        "representative_ticker": "ABB",
+        "representative_ticker": card_ticker,
         "consumer_contract": "current_daily_decision_research_contract",
     }
     operation["manifest"]["operation_identity"] = _identity(operation["manifest"])

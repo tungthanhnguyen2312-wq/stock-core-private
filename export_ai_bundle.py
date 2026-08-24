@@ -2863,10 +2863,8 @@ def attach_current_daily_decision_research_product(bundle_entries: dict[str, dic
     return bundle_entries
 
 
-DAILY_OPPORTUNITY_DECISION_QUEUE_ARTIFACT = (
-    Path(__file__).resolve().parent
-    / "operations-review/daily-opportunity-decision-queue-v1-20260824"
-    / "daily_opportunity_decision_queue_artifact.json"
+DAILY_RESEARCH_SESSION_REGISTRY = (
+    Path(__file__).resolve().parent / "config/daily_research_session_input_registry.json"
 )
 
 
@@ -2886,22 +2884,51 @@ def load_daily_opportunity_decision_queue_artifact(path: Path) -> Mapping[str, A
         return None
 
 
+def resolve_daily_opportunity_decision_queue_artifact(
+    session: str, registry_path: Path | None = None,
+) -> tuple[Mapping[str, Any], Path] | None:
+    """Resolve one governed same-session queue; never discover a latest artifact."""
+    try:
+        registry = json.loads((registry_path or DAILY_RESEARCH_SESSION_REGISTRY).read_text(encoding="utf-8"))
+        completed = (registry.get("completed_sessions") or {}).get(session) or {}
+        entry = (completed.get("output_artifacts") or {}).get("daily_opportunity_decision_queue")
+        if not isinstance(entry, Mapping) or not isinstance(entry.get("path"), str) or not isinstance(entry.get("artifact_identity"), str):
+            return None
+        path = Path(__file__).resolve().parent / entry["path"]
+        artifact = load_daily_opportunity_decision_queue_artifact(path)
+        if artifact is None or artifact.get("research_session") != session or artifact.get("artifact_identity") != entry["artifact_identity"]:
+            return None
+        manifest_path = entry.get("manifest_path")
+        if manifest_path is not None:
+            manifest = json.loads((Path(__file__).resolve().parent / str(manifest_path)).read_text(encoding="utf-8"))
+            if (
+                manifest.get("market_session") != session
+                or manifest.get("operation_identity") != entry.get("operation_identity")
+                or (manifest.get("outputs") or {}).get("daily_opportunity_decision_queue") != artifact.get("artifact_identity")
+            ):
+                return None
+        return artifact, path
+    except Exception:
+        return None
+
+
 def attach_daily_opportunity_decision_queue(
-    analysis_bundle: dict[str, Any], artifact_path: Path | None = None,
+    analysis_bundle: dict[str, Any], registry_path: Path | None = None,
 ) -> dict[str, Any]:
-    """Attach the exact current-session queue to every normal AI bundle.
+    """Attach the exact governed queue to every normal same-session AI bundle.
 
     This is intentionally a bundle-root attachment: it preserves the complete
     all-lane PRIORITY_NOW output separately from the legacy human-review queue,
-    rather than selecting or flattening it per requested ticker. A session
-    mismatch or absent/tampered retained artifact leaves older bundle semantics
-    unchanged; no "latest" artifact discovery or fallback is permitted.
+    rather than selecting or flattening it per requested ticker. An unknown,
+    missing, mismatched, or tampered session mapping leaves older bundle
+    semantics unchanged; no caller-supplied queue path, "latest" discovery, or
+    fallback is permitted.
     """
-    artifact = load_daily_opportunity_decision_queue_artifact(
-        artifact_path or DAILY_OPPORTUNITY_DECISION_QUEUE_ARTIFACT,
-    )
-    if artifact is None or analysis_bundle.get("reference_session_date") != artifact.get("research_session"):
+    session = analysis_bundle.get("reference_session_date")
+    resolved = resolve_daily_opportunity_decision_queue_artifact(session, registry_path) if isinstance(session, str) else None
+    if resolved is None:
         return analysis_bundle
+    artifact, _ = resolved
     analysis_bundle["daily_opportunity_decision_queue"] = copy.deepcopy(artifact)
     return analysis_bundle
 
