@@ -9,6 +9,8 @@
 
 **Historical matched-value existing-store requalification (2026-08-24):** `HISTORICAL_MATCHED_VALUE_EXISTING_STORE_REQUALIFICATION_V1 = EXISTING_STORE_CANNOT_UNLOCK_ADV20`. Existing raw/canonical Trades history supplies execution price/quantity/board identity but no independently semantic matched-value field; existing daily Parquet/SQLite is OHLCV-only. The requalification fixes zero-based DNSE page-chain replay and reproduces the existing 12 FHSC exact anchors, but does not generalize them outside their four-ticker/three-session scope. The next data gate remains 20 complete sessions with independent exact G1 matched-value anchors or an independently qualified explicit matched-value field.
 
+**HOSE public SPA/XHR reconciliation (2026-08-24):** `HOSE_PUBLIC_XHR_AND_PERIODIC_SERIES_RECON_V1 = HOSE_PUBLIC_SCOPED_DATA_OPERATIONAL`. The official SPA's disclosed public XHR contract supplies a 405-row stock master, public HPG foreign-room series, corporate-event and disclosure indexes, and VN30 membership. It does not supply a public static room/free-float document series or a full-cohort current market-cap/liquidity corpus. `outStanding` is retained strictly as source-labelled exchange outstanding volume, never as common shares outstanding. Licensed catalog field contracts remain a distinct owner decision; no authenticated/licensed delivery was accessed.
+
 ---
 
 ## 1. Architectural Phases
