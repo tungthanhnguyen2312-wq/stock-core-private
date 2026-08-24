@@ -73,7 +73,36 @@ def _event(*, ticker: str, event_type: str, announcement_date: str | None, effec
     return event
 
 
-def load_retained_events(root: Path, session: str) -> list[dict[str, Any]]:
+def _official_event_context_events(event_context: Mapping[str, Any] | None, session: str) -> list[dict[str, Any]]:
+    """Map the bounded official-event projection into the existing CI event shape.
+
+    Publication timing remains unknown for HNX index rows, so these records are
+    current research context only and explicitly cannot rewrite a frozen session.
+    """
+    if not event_context:
+        return []
+    if event_context.get("contract_version") != "current_official_event_context/v1" or event_context.get("research_session") != session:
+        raise ValueError("OFFICIAL_EVENT_CONTEXT_SESSION_OR_CONTRACT_INVALID")
+    output = []
+    for source in event_context.get("corporate_intelligence_adapter", {}).get("events", []):
+        event = _event(
+            ticker=source["ticker"], event_type=source["event_type"], announcement_date=source.get("published_at"),
+            effective_date=None, record_date=source.get("record_date"), ex_date=source.get("ex_date"),
+            payment_date=source.get("execution_date"), status="OFFICIAL_EVENT_CONTEXT",
+            status_basis=f"deterministic event_state={source['event_state']} from explicit ex_date only",
+            source_authority=source["source"], authority_tier="OFFICIAL_QUALIFIED",
+            retrieved_at=source.get("official_observed_at") or "UNKNOWN", source_urls=[source.get("source_url")] if source.get("source_url") else [],
+            evidence_identity=source["source_identity"], material_evidence=[source["qualification"]], session=session,
+            limitations=list(source.get("warnings") or []) + ["Publication date/time is unavailable; this context is not suitable for historical known-at replay."],
+        )
+        event.update({"event_state": source["event_state"], "materiality_status": source["materiality_status"],
+                      "publication_availability": source["publication_availability"], "source_event_id": source["event_id"],
+                      "pit_suitability": "LIMITED_PUBLICATION_TIME_UNKNOWN"})
+        output.append(event)
+    return output
+
+
+def load_retained_events(root: Path, session: str, official_event_context: Mapping[str, Any] | None = None) -> list[dict[str, Any]]:
     """Read only the three retained official chains with explicit lifecycle evidence."""
     catalyst_path = root / "operations-review/catalyst-event-research-context-v1-20260820/catalyst_event_research_context_artifact.json"
     catalyst = json.loads(catalyst_path.read_text(encoding="utf-8"))
@@ -111,11 +140,11 @@ def load_retained_events(root: Path, session: str) -> list[dict[str, Any]]:
         material_evidence=[vcb_source["document"]["citation"]], session=session,
         limitations=["Approved/planned issuance is not executed issuance.", "Completion, amendment, and supersession evidence is missing.", "Record date is not an ex-date."],
     )
-    return sorted((hpg, vcb, vnm), key=lambda item: (item["ticker"], item["event_id"]))
+    return sorted((hpg, vcb, vnm, *_official_event_context_events(official_event_context, session)), key=lambda item: (item["ticker"], item["event_id"]))
 
 
 def _catalyst_surface(events: list[Mapping[str, Any]]) -> dict[str, list[dict[str, Any]]]:
-    current = [event for event in events if event["freshness"] == "CURRENT_90_DAYS"]
+    current = [event for event in events if event["freshness"] == "CURRENT_90_DAYS" or event.get("event_state") in {"UPCOMING", "EX_DATE_TODAY", "RECENT"}]
     pending = [event for event in events if event["status"] in {"PLANNED", "PROPOSED", "APPROVED", "ANNOUNCED"}]
     historical = [event for event in events if event["freshness"] != "CURRENT_90_DAYS"]
     def descriptor(event: Mapping[str, Any], descriptor_type: str, direction: str, note: str) -> dict[str, Any]:
@@ -132,12 +161,12 @@ def _catalyst_surface(events: list[Mapping[str, Any]]) -> dict[str, list[dict[st
     }
 
 
-def build(*, descriptive: Mapping[str, Any], fundamental: Mapping[str, Any], session: str, root: Path) -> dict[str, Any]:
+def build(*, descriptive: Mapping[str, Any], fundamental: Mapping[str, Any], session: str, root: Path, official_event_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
     if descriptive.get("session") != session or not isinstance(descriptive.get("records"), Mapping):
         raise ValueError("CORPORATE_INTELLIGENCE_DESCRIPTIVE_SESSION_OR_RECORDS_INVALID")
     if not isinstance(fundamental.get("records"), Mapping):
         raise ValueError("CORPORATE_INTELLIGENCE_FUNDAMENTAL_RECORDS_INVALID")
-    events = load_retained_events(root, session)
+    events = load_retained_events(root, session, official_event_context)
     by_ticker: dict[str, list[dict[str, Any]]] = {}
     for event in events: by_ticker.setdefault(event["ticker"], []).append(event)
     records = {}
@@ -158,7 +187,7 @@ def build(*, descriptive: Mapping[str, Any], fundamental: Mapping[str, Any], ses
     event_types, statuses, tiers, freshness = (Counter(event[key] for event in events) for key in ("event_type", "status", "authority_tier", "freshness"))
     coverage = {"universe_count": len(records), "any_intelligence_coverage": sum(bool(row["events"]) for row in records.values()), "current_event_coverage": sum(bool(row["catalyst_research"]["recent_material_events"]) for row in records.values()), "ownership_coverage": 0, "governance_coverage": 0, "corporate_action_coverage": sum(bool(row["corporate_action_context"]["events"]) for row in records.values()), "event_type_counts": dict(sorted(event_types.items())), "event_status_counts": dict(sorted(statuses.items())), "authority_tier_counts": dict(sorted(tiers.items())), "freshness_counts": dict(sorted(freshness.items())), "disposition_counts": dict(sorted(Counter(row["intelligence_disposition"] for row in records.values()).items()))}
     artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "session": session,
-                "source_artifact_identities": {"descriptive": descriptive["artifact_identity"], "fundamental": fundamental["artifact_identity"], "prior_catalyst_context": "catalyst_event_research_context:fcbada853866b0136a6c106da17b687dced1a8fe1a5c4021923b7582ed0c50fb"},
+                "source_artifact_identities": {"descriptive": descriptive["artifact_identity"], "fundamental": fundamental["artifact_identity"], "prior_catalyst_context": "catalyst_event_research_context:fcbada853866b0136a6c106da17b687dced1a8fe1a5c4021923b7582ed0c50fb", "official_event_context": (official_event_context or {}).get("artifact_identity")},
                 "schema": {"corporate_fact_required_fields": list(FACT_FIELDS), "event_required_fields": list(EVENT_FIELDS), "catalyst_descriptor_types": ["OBSERVED_EVENT_CONTEXT", "WATCH_FOR_EXECUTION", "WATCH_FOR_CONFIRMATION", "HISTORICAL_CONTEXT_ONLY"]},
                 "records": records, "events": events, "coverage": coverage,
                 "authority_boundary": {"retained_evidence_only": True, "event_fact_separate_from_catalyst_interpretation": True, "planned_or_approved_not_executed": True, "record_date_not_ex_date": True, "no_price_impact_probability_target_or_recommendation": True, "no_raw_as_traded_or_pit_promotion": True},

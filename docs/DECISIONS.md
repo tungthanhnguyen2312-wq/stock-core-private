@@ -2153,6 +2153,12 @@ single-ticker work.
 2. Exact ticker reconciliation is deterministic. Official-only rows remain a governed delta for owner review; they are not silently added. A Stock Lookup-only residual is only called delisted when the already-retained cross-provider status artifact establishes it; remaining active-reference disagreement is `SYMBOL_IDENTITY_DRIFT`, not inferred absence.
 3. The projection is fit only as a current research denominator through an explicit ticker-filter adapter. It neither changes downstream formulas/classifiers nor creates historical PIT, survivorship-safe backtest, ranking, sizing, execution, or valuation authority. HNX event rows remain source-identity-bound and CI-compatible in shape, but require an explicit future CI-loader adapter rather than a parallel event engine.
 
+## 2026-08-24 - Current Official Event Context Integration V1
+
+1. `current_official_event_context/v1` is a read-only, individually retained event projection over the already-acquired HNX rights index and scoped HOSE public events, filtered to the current 1,507 Stock Lookup official-universe denominator. Non-current and official-only evidence is retained separately and never injected into current candidate context.
+2. The existing Corporate Intelligence event contract is extended only through its optional event input. Explicit ex-date derives deterministic `UPCOMING`, `EX_DATE_TODAY`, `RECENT`, or `PAST` context; missing ex-date remains `DATE_INCOMPLETE`, and AGM remains informational/governance context. Publication timing remains unknown for indexed HNX rows, so every added event is marked `LIMITED_PUBLICATION_TIME_UNKNOWN` and is unavailable for historical known-at replay.
+3. Existing scenario, Daily Product, and EVENT_DRIVEN paths consume the CI context unchanged. EVENT_DRIVEN has only `CURRENT_OFFICIAL_EVENT` as a required feature, so its eligibility increase is a consequence of its existing rule rather than a new strategy rule. The frozen 2026-08-20 research packet remains unmodified because its governed cohort/session has no compatible current-session adapter.
+
 ## 2026-08-24 - Current Daily Decision Research Product V2
 
 1. The product extends the existing daily research / AI Research Analyst architecture as one integration surface rather than a new analytical engine, packet, workbench, or case store. It reads only current retained artifacts and writes one deterministic JSON product plus one Markdown human-review brief.

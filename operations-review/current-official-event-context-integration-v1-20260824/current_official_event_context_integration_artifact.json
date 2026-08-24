@@ -1,0 +1,178 @@
+{
+  "artifact_identity": "current_official_event_context_integration:859aa20e67885ef6c431cbb2788da319b90238edc6f767b583afba52d0055356",
+  "artifact_sha256": "859aa20e67885ef6c431cbb2788da319b90238edc6f767b583afba52d0055356",
+  "authority_boundary": "FACTUAL_CURRENT_EVENT_CONTEXT_ONLY; publication timing unknown; no event scoring, impact, price adjustment, RAW_AS_TRADED, PIT, or backtest authority",
+  "ci_adapter": {
+    "event_context_tickers": 189,
+    "event_records_consumed": 210,
+    "ready_after": 192,
+    "ready_before": 3
+  },
+  "contract_version": "current_official_event_context_integration/v1",
+  "corporate_intelligence_artifact_identity": "market_wide_current_corporate_intelligence:093c95f303d13fc5934cb2c93be0ff630d6f1d5993b6379699674ae8b5aebf5b",
+  "coverage": {
+    "agm_context": 2578,
+    "bonus_context": 59,
+    "cash_dividend_context": 1310,
+    "date_incomplete_events": 6,
+    "event_context_records": 4450,
+    "event_context_tickers": 1101,
+    "ex_date_today_events": 12,
+    "other_context": 323,
+    "past_events": 4234,
+    "recent_events": 137,
+    "rights_context": 41,
+    "stock_dividend_context": 139,
+    "unknown_events": 0,
+    "upcoming_events": 61
+  },
+  "daily_product_artifact_identity": "current_daily_decision_research_product:3eb03dc64330893535bd66ac33f90a3fc4954ce947d65d0ee8d542858bc33cd4",
+  "daily_research_compatibility": "COMPATIBLE_CURRENT_PRODUCT_EXTENSION; CI context passes through existing corporate_intelligence_context without changing product rules.",
+  "event_context_artifact_identity": "current_official_event_context:ba62a516b3c2189e27be8e98f653e9e4a14509495795b5ce956a6a2183d9127b",
+  "event_driven": {
+    "eligible_after": 190,
+    "eligible_before": 1,
+    "event_data_ready_but_other_gates_blocked": 0,
+    "rule": "Existing EVENT_DRIVEN rule has only CURRENT_OFFICIAL_EVENT as its required feature."
+  },
+  "official_only_delta_review": [
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "CMP"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "CNA"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "CPH"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "HOSE",
+      "official_source": "hose_public_stock_master/v1",
+      "ticker": "DMX"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "EGL"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "HOSE",
+      "official_source": "hose_public_stock_master/v1",
+      "ticker": "LPS"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "MBN"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "MES"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "PCB"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "PQN"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "TAH"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "TBW"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "TQW"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "ULG"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "UTT"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "V68"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "VDB"
+    },
+    {
+      "candidate_action": "REVIEW_FOR_FUTURE_ADDITION",
+      "known_exclusion_reason": "CANDIDATE_UNIVERSE_STALENESS_OR_GOVERNED_EXCLUSION_UNRESOLVED",
+      "market": "UPCOM",
+      "official_source": "hnx_official_equity_universe/v1",
+      "ticker": "VTM"
+    }
+  ],
+  "overlap": {
+    "entry_relevant": 50,
+    "scenario_ready_or_partial": 592,
+    "screening_ready": 592,
+    "strategy_eligible": 321,
+    "tactical_classified": 592
+  },
+  "research_packet_result": "NOT_INTEGRATED_FROZEN_PACKET_SESSION_2026_08_20_MISMATCH; no compatible current-session packet adapter exists without changing its governed cohort.",
+  "scenario_artifact_identity": "current_evidence_bound_scenario:8a1c7878aab79f21ce4408b263650624255cd1648c78cbb684efa09ef1abfe16",
+  "scenario_event_mapping_result": "WIRED_THROUGH_EXISTING_CORPORATE_INTELLIGENCE_CATALYST_CONTEXT",
+  "schema_version": "1.0.0",
+  "strategy_artifact_identity": "polymorphic_current_strategy_classification:0f1f5799f641a7632e7e1405e20fa4c813a03a3cd3f86396d28c4f25a4d4d799"
+}
