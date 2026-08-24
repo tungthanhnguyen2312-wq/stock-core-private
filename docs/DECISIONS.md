@@ -2187,6 +2187,13 @@ single-ticker work.
 3. FRED graph CSV is current-research official-public evidence but lacks release/vintage timestamps in the retained endpoint; it is therefore expressly not historical PIT. A later macro artifact can be bound in a historical equity-session manifest only as `UNAVAILABLE` context.
 4. No ticker macro sensitivity, sector beta, VaR/CVaR, liquidity, sizing, leverage, execution, ranking, recommendation, probability, target, or calibration output is authorized.
 
+## 2026-08-24 - Vietnam Official Macro Evidence V1
+
+1. `vietnam_macro_observation/v1` retains immutable, SHA-256-addressed raw first-party NSO release bytes, including source locator, content type, publication date, retrieval timestamp, reference period, parse state, and revision-chain slots. June and July 2026 CPI releases explicitly state their year-on-year values; no homepage label or secondary source is used as a metric.
+2. July 2026 CPI year-on-year (4.45%, published 2026-08-03) is qualified for current descriptive context and for date-level historical use after its publication date only. The retained NSO calendar makes it current through 2026-09-03; this is metric-specific freshness, never a generic age threshold. Intraday publication timing remains unavailable.
+3. The existing Macro V1 adapter uses the June predecessor (4.69%) only to compute the independent CPI axis. SBV policy rate, central FX, credit growth, system liquidity, and government-bond yield remain unavailable until a retained official source explicitly supplies each metric's own definition, period, and publication metadata. No proxy or no-data regime inference is permitted.
+4. The result remains descriptive and non-actionable. It creates no forecast, causal, allocation, liquidity, sizing, execution, portfolio, or broader historical-PIT authority; a post-session current macro artifact remains unavailable to the earlier daily-session context.
+
 ## 2026-08-24 - Current Market Flow / Positioning V1
 
 1. `current_market_flow_positioning/v1` is a projection of canonical retained observations, never a second feature store. Provider-specific facts remain separate and every field keeps session, retrieval, endpoint, raw hash, and source identity.

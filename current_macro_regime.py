@@ -7,7 +7,6 @@ import csv
 import hashlib
 import io
 import json
-import re
 from datetime import UTC, datetime
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
@@ -54,15 +53,6 @@ def _fred_observation(indicator_id: str, code: str, region: str, category: str, 
     return observation, {"source_identity": "FRED:" + code, "url": url, "retrieved_at": retrieved_at, "sha256": payload_hash, "raw_payload_base64": base64.b64encode(raw).decode("ascii"), "status": "RETAINED"}
 
 
-def _gso_cpi(retrieved_at: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    url = "https://www.gso.gov.vn/en/homepage/"
-    raw, payload_hash = _fetch(url); text = raw.decode("utf-8", errors="replace")
-    match = re.search(r"Consumer Price Index\s*</?[^>]*>\s*\|\s*([0-9.]+)%", text, re.I)
-    value = float(match.group(1)) if match else None
-    status = "AVAILABLE" if value is not None else "UNAVAILABLE"
-    return {"indicator_id": "vn_cpi_yoy", "country_or_region": "Vietnam", "category": "inflation", "value": value, "unit": "percent_yoy", "observation_date": "2026-06", "released_at": "2026-07-03", "source": "National Statistics Office of Vietnam", "source_identity": "GSO:CPI:2026-06", "url": url, "retrieved_at": retrieved_at, "freshness": {"frequency": "MONTHLY", "stale_after_days": 50, "status": "STALE"}, "revision_state": "SOURCE_CURRENT_PAGE", "authority": "OFFICIAL_PUBLIC_SOURCE", "status": status, "limitations": ["June 2026 release retained from official homepage; later release not programmatically located."] if value is not None else ["GSO official homepage did not expose parsable CPI value."], "previous_observation_date": None, "previous_value": None, "raw_payload_sha256": payload_hash}, {"source_identity": "GSO:CPI:2026-06", "url": url, "retrieved_at": retrieved_at, "sha256": payload_hash, "raw_payload_base64": base64.b64encode(raw).decode("ascii"), "status": "RETAINED"}
-
-
 def _unavailable(indicator_id: str, category: str, reason: str, retrieved_at: str) -> dict[str, Any]:
     return {"indicator_id": indicator_id, "country_or_region": "Vietnam", "category": category, "value": None, "unit": "UNKNOWN", "observation_date": None, "released_at": None, "source": "State Bank of Vietnam official portal", "source_identity": "SBV:" + indicator_id, "url": "https://www.sbv.gov.vn/", "retrieved_at": retrieved_at, "freshness": {"status": "UNKNOWN"}, "revision_state": "UNKNOWN", "authority": "OFFICIAL_SOURCE_ROUTE_ATTEMPTED", "status": "UNAVAILABLE", "limitations": [reason], "previous_observation_date": None, "previous_value": None, "raw_payload_sha256": None}
 
@@ -75,10 +65,12 @@ def acquire() -> dict[str, Any]:
         except Exception as exc:
             observations.append({"indicator_id": indicator_id, "country_or_region": region, "category": category, "value": None, "unit": unit, "observation_date": None, "released_at": None, "source": "Federal Reserve Bank of St. Louis FRED", "source_identity": "FRED:" + code, "url": "https://fred.stlouisfed.org/series/" + code, "retrieved_at": retrieved_at, "freshness": {"status": "UNKNOWN"}, "revision_state": "UNKNOWN", "authority": "OFFICIAL_PUBLIC_SOURCE", "status": "UNAVAILABLE", "limitations": ["ACQUISITION_FAILED:" + type(exc).__name__], "previous_observation_date": None, "previous_value": None, "raw_payload_sha256": None})
     try:
-        observation, raw = _gso_cpi(retrieved_at); observations.append(observation); raw_sources.append(raw)
+        from vietnam_official_macro_evidence import acquire as acquire_vietnam, current_macro_observations
+        vietnam = acquire_vietnam(retrieved_at=retrieved_at)
+        observations.extend(current_macro_observations(vietnam))
+        raw_sources.append({"source_identity": "vietnam_official_macro_evidence", "artifact_identity": vietnam["artifact_identity"], "sha256": vietnam["artifact_sha256"], "status": "RETAINED_EVIDENCE_ARTIFACT"})
     except Exception as exc:
-        observations.append(_unavailable("vn_cpi_yoy", "inflation", "GSO_ACQUISITION_FAILED:" + type(exc).__name__, retrieved_at))
-    observations += [_unavailable("vn_policy_rate", "domestic_rates", "NO_MACHINE_READABLE_CURRENT_OFFICIAL_POLICY_RATE_OBSERVATION_RETAINED", retrieved_at), _unavailable("vn_usd_vnd", "fx", "NO_MACHINE_READABLE_CURRENT_OFFICIAL_SBV_FX_OBSERVATION_RETAINED", retrieved_at), _unavailable("vn_credit_growth", "credit", "NO_CURRENT_OFFICIAL_CREDIT_RELEASE_RETAINED", retrieved_at), _unavailable("vn_system_liquidity", "liquidity", "NO_QUALIFIED_OFFICIAL_SYSTEM_LIQUIDITY_PROXY_RETAINED", retrieved_at), _unavailable("vn_government_bond_yield", "government_bonds", "NO_CURRENT_MACHINE_READABLE_OFFICIAL_BOND_YIELD_RETAINED", retrieved_at)]
+        observations += [_unavailable("vn_cpi_yoy", "inflation", "VIETNAM_OFFICIAL_MACRO_ACQUISITION_FAILED:" + type(exc).__name__, retrieved_at), _unavailable("vn_policy_rate", "domestic_rates", "NO_MACHINE_READABLE_CURRENT_OFFICIAL_POLICY_RATE_OBSERVATION_RETAINED", retrieved_at), _unavailable("vn_usd_vnd", "fx", "NO_MACHINE_READABLE_CURRENT_OFFICIAL_SBV_FX_OBSERVATION_RETAINED", retrieved_at), _unavailable("vn_credit_growth", "credit", "NO_CURRENT_OFFICIAL_CREDIT_RELEASE_RETAINED", retrieved_at), _unavailable("vn_system_liquidity", "liquidity", "NO_QUALIFIED_OFFICIAL_SYSTEM_LIQUIDITY_PROXY_RETAINED", retrieved_at), _unavailable("vn_government_bond_yield", "government_bonds", "NO_CURRENT_MACHINE_READABLE_OFFICIAL_BOND_YIELD_RETAINED", retrieved_at)]
     return build(observations=observations, raw_sources=raw_sources, retrieved_at=retrieved_at)
 
 
@@ -106,7 +98,7 @@ def build(*, observations: list[Mapping[str, Any]], raw_sources: list[Mapping[st
     indexed = {str(row["indicator_id"]): dict(row) for row in observations}; axes = {name: _axis(indexed, name) for name in ("DOMESTIC_RATES", "INFLATION_PRESSURE", "FX_PRESSURE", "CREDIT_CONTEXT", "DOMESTIC_LIQUIDITY", "GLOBAL_RATES", "USD_PRESSURE", "COMMODITY_CONTEXT")}
     supportive = [name for name, row in axes.items() if row["state"] in {"EASING", "SUPPORTIVE"}]; restrictive = [name for name, row in axes.items() if row["state"] in {"TIGHTENING", "ACCELERATING", "RISING", "PRESSURE"}]; unknown = [name for name, row in axes.items() if row["state"] == "UNKNOWN"]
     regime = "INSUFFICIENT_EVIDENCE" if len(unknown) > 4 else "MIXED" if supportive and restrictive else "SUPPORTIVE" if supportive else "RESTRICTIVE" if restrictive else "INSUFFICIENT_EVIDENCE"
-    artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "retrieved_at": retrieved_at, "current_research_as_of": retrieved_at[:10], "observations": indexed, "raw_sources": list(raw_sources), "state_axes": axes, "macro_regime": {"state": regime, "rule_version": RULE_VERSION, "supporting_axes": supportive, "restrictive_axes": restrictive, "unavailable_axes": unknown, "meaning": "Descriptive current-research context, not an equity forecast or causal conclusion."}, "events": [], "human_research": {"vietnam": ["Vietnam CPI is retained only at the official June 2026 release and is stale for this snapshot.", "Vietnam rates, FX, credit, liquidity, and government-bond context are unavailable without a machine-readable current official observation."], "global": ["Global observations are official-source latest-vintage current research; their release timestamps are unavailable in FRED graph CSV and therefore they are not historical PIT."], "what_to_verify_next": ["Obtain a source-bound SBV current policy, FX, credit, and liquidity observation.", "Obtain an official HNX or government-bond current yield observation.", "Retain release timestamps or vintages before historical macro PIT use."]}, "authority_boundary": {"current_research_only": True, "historical_pit": "NOT_EMITTED", "forecast_probability_target_recommendation_sizing_execution": "NOT_EMITTED", "macro_sector_beta_or_sensitivity": "NOT_EMITTED"}, "is_actionable": False}
+    artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "retrieved_at": retrieved_at, "current_research_as_of": retrieved_at[:10], "observations": indexed, "raw_sources": list(raw_sources), "state_axes": axes, "macro_regime": {"state": regime, "rule_version": RULE_VERSION, "supporting_axes": supportive, "restrictive_axes": restrictive, "unavailable_axes": unknown, "meaning": "Descriptive current-research context, not an equity forecast or causal conclusion."}, "events": [], "human_research": {"vietnam": ["Vietnam CPI is retained from dated NSO releases; all other domestic dimensions remain unavailable without an explicit retained first-party metric."], "global": ["Global observations are official-source latest-vintage current research; their release timestamps are unavailable in FRED graph CSV and therefore they are not historical PIT."], "what_to_verify_next": ["Obtain a source-bound SBV current policy, FX, credit, and liquidity observation.", "Obtain an official HNX or government-bond current yield observation.", "Retain release timestamps or vintages before historical macro PIT use."]}, "authority_boundary": {"current_research_only": True, "historical_pit": "NOT_EMITTED", "forecast_probability_target_recommendation_sizing_execution": "NOT_EMITTED", "macro_sector_beta_or_sensitivity": "NOT_EMITTED"}, "is_actionable": False}
     artifact.update(content_identity(artifact)); return artifact
 
 

@@ -257,7 +257,7 @@ Execution focus strictly follows the ordered critical path:
 
 ### Current Macro Regime V1 (Complete Locally)
 
-The next macro evidence gate is a governed, machine-readable official Vietnam route for policy rate, FX, credit, banking-liquidity, and government-bond observations with release/vintage metadata. That gate must not promote historical PIT, forecast, causality, allocation, sizing, or execution.
+The completed first macro-evidence increment retains current NSO CPI releases with raw hashes, period/publication distinction, source-specific freshness, and date-level PIT metadata. The next macro evidence gate is a governed, machine-readable official Vietnam route for policy rate, FX, credit, banking-liquidity, and government-bond observations with release/vintage metadata. That gate must not promote historical PIT, forecast, causality, allocation, sizing, or execution.
 
 ### Current Market Flow / Positioning V1 (Complete Locally / Coherent Partial)
 

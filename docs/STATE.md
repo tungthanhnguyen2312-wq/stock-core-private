@@ -451,7 +451,7 @@ The optional daily-session portfolio branch is complete locally. It consumes onl
 
 ### Current Macro Regime and Cross-Asset Context V1
 
-`current_macro_regime/v1` is a source-bound current-research macro artifact. It retains official FRED payloads with hashes and separately labels Vietnam official dimensions unavailable when no current machine-readable official observation is retained. It is not historical PIT: a macro artifact released or retrieved after an equity session is passed into that session only as explicitly unavailable context. No macro forecast, causal attribution, macro beta, sizing, or execution authority is created.
+`current_macro_regime/v1` is a source-bound current-research macro artifact. `vietnam_macro_observation/v1` now retains two dated National Statistics Office CPI releases (June and July 2026) and its release-calendar payload; July CPI year-on-year (4.45%, published 2026-08-03) is current descriptive context through the retained 2026-09-03 next-release date, with date-level—not intraday—PIT qualification after publication. The CPI axis may use its retained June predecessor (4.69%) only. SBV policy-rate, central-FX, credit-growth, system-liquidity, and official bond-yield metric contracts remain unavailable; they are never proxied. A macro artifact released or retrieved after an equity session is passed into that session only as explicitly unavailable context. No macro forecast, causal attribution, macro beta, sizing, or execution authority is created.
 
 ### Current Market Flow / Positioning V1
 
