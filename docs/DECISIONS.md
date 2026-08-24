@@ -2201,6 +2201,13 @@ single-ticker work.
 3. No document supplied both a qualified issuer identity and an exact machine-readable cited value line for a canonical fact. Accordingly, canonical financial observations, provider reconciliations, financial/peer/scenario dependencies, and valuation readiness remain unchanged. Missing is not zero; total equity, debt, and weighted-average shares receive no alias or proxy.
 4. The HNX attachment host is admitted only as the first-party file host explicitly linked by the approved HNX disclosure detail pages and only for the two existing financial filing document types. No provider, issuer-IR wildcard, valuation engine, or runtime database is added or mutated.
 
+## 2026-08-24 - HNX Official Filing Evidence Binding and Extraction V1
+
+1. The eight retained HNX H1-2026 PDFs are each linked exactly once by their retained HNX parent detail page, with both parent and PDF SHA-256 checked on deterministic replay. That attachment relation alone does not identify an issuer.
+2. All eight parent `Box-Noidung` blocks are present but empty: there is no explicit `Mã chứng khoán` field or other structured issuer/ticker evidence. HNX page chrome, search-widget symbols, attachment filenames, company-name guesses, and provider records are not admitted as document identity evidence.
+3. Parent titles qualify H1-2026 period for eight documents and separate scope for three; audit/review status remains unknown. Because document identity is unproven, no PDF text/OCR fact is extracted, no provider reconciliation is attempted, and canonical financial facts remain 138 across 13 issuers.
+4. This is terminal `OFFICIAL_PARENT_BINDING_UNPROVEN` for this retained route. The only next gate is HNX parent disclosure metadata that explicitly ties the existing attachment to an issuer ticker; it is not a basis for repeated PDF/OCR attempts or a broader crawl.
+
 ## 2026-08-24 - Current Market Flow / Positioning V1
 
 1. `current_market_flow_positioning/v1` is a projection of canonical retained observations, never a second feature store. Provider-specific facts remain separate and every field keeps session, retrieval, endpoint, raw hash, and source identity.
