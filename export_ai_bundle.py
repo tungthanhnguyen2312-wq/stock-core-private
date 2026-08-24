@@ -39,6 +39,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -145,6 +146,9 @@ from current_evidence_bound_scenario import (
 )
 from current_daily_decision_research_product import (
     content_identity as current_daily_decision_research_product_content_identity,
+)
+from daily_opportunity_decision_queue import (
+    content_identity as daily_opportunity_decision_queue_content_identity,
 )
 from current_market_flow_positioning import (
     content_identity as current_market_flow_positioning_content_identity,
@@ -2859,6 +2863,49 @@ def attach_current_daily_decision_research_product(bundle_entries: dict[str, dic
     return bundle_entries
 
 
+DAILY_OPPORTUNITY_DECISION_QUEUE_ARTIFACT = (
+    Path(__file__).resolve().parent
+    / "operations-review/daily-opportunity-decision-queue-v1-20260824"
+    / "daily_opportunity_decision_queue_artifact.json"
+)
+
+
+def load_daily_opportunity_decision_queue_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Read the retained queue only when its own identity still verifies."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            not isinstance(artifact, dict)
+            or artifact.get("contract_version") != "daily_opportunity_decision_queue/v1"
+            or daily_opportunity_decision_queue_content_identity(artifact)["artifact_sha256"]
+            != artifact.get("artifact_sha256")
+        ):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def attach_daily_opportunity_decision_queue(
+    analysis_bundle: dict[str, Any], artifact_path: Path | None = None,
+) -> dict[str, Any]:
+    """Attach the exact current-session queue to every normal AI bundle.
+
+    This is intentionally a bundle-root attachment: it preserves the complete
+    all-lane PRIORITY_NOW output separately from the legacy human-review queue,
+    rather than selecting or flattening it per requested ticker. A session
+    mismatch or absent/tampered retained artifact leaves older bundle semantics
+    unchanged; no "latest" artifact discovery or fallback is permitted.
+    """
+    artifact = load_daily_opportunity_decision_queue_artifact(
+        artifact_path or DAILY_OPPORTUNITY_DECISION_QUEUE_ARTIFACT,
+    )
+    if artifact is None or analysis_bundle.get("reference_session_date") != artifact.get("research_session"):
+        return analysis_bundle
+    analysis_bundle["daily_opportunity_decision_queue"] = copy.deepcopy(artifact)
+    return analysis_bundle
+
+
 def load_current_market_flow_positioning_artifact(path: Path) -> Mapping[str, Any] | None:
     try:
         artifact = json.loads(path.read_text(encoding="utf-8"))
@@ -4776,6 +4823,7 @@ def main() -> int:
             " đừng chỉ đọc phần 'tickers'.",
         ],
     }
+    attach_daily_opportunity_decision_queue(analysis_bundle)
     bundle_path = output_dir / 'analysis_bundle.json'
     serialization_started = time.perf_counter()
     atomic_write_json(bundle_path, analysis_bundle)
