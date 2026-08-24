@@ -2208,6 +2208,13 @@ single-ticker work.
 3. Parent titles qualify H1-2026 period for eight documents and separate scope for three; audit/review status remains unknown. Because document identity is unproven, no PDF text/OCR fact is extracted, no provider reconciliation is attempted, and canonical financial facts remain 138 across 13 issuers.
 4. This is terminal `OFFICIAL_PARENT_BINDING_UNPROVEN` for this retained route. The only next gate is HNX parent disclosure metadata that explicitly ties the existing attachment to an issuer ticker; it is not a basis for repeated PDF/OCR attempts or a broader crawl.
 
+## 2026-08-24 - HNX Multi-Attachment Binding and Citable Extraction V1
+
+1. The eight retained parent pages disclose a real one-to-many topology of 27 ordered HNX attachment links. Attachment-level filename/title evidence classifies 16 statement candidates (six consolidated, four separate, six scope-unknown), ten explanatory letters, and one other disclosure letter; explanatory letters are excluded from statement extraction and scope is never copied across siblings.
+2. Eight statement children have retained PDF bytes and SHA-256; the remaining 19 listed attachment bytes were not retained and therefore have null SHA/content states. All eight retained PDFs deterministically yield zero native-text characters and are classified `IMAGE_ONLY_OR_SCANNED`. The repository's OCR sidecar has no operating executor for this corpus, so no OCR result/citation is created.
+3. Every parent disclosure content block remains empty of issuer/ticker. An exact parent-to-child link cannot convey identity without an explicit parent identity, so all 27 child tickers remain unresolved. Attachment filenames, file titles, page chrome, and providers are not substitute identity evidence.
+4. No retained statement has citable currency/unit/scale evidence; all eight retained PDFs are `UNIT_SCALE_UNRESOLVED`, canonical values remain null, provider comparison is not attempted, and the existing 138 observations/13 tickers are unchanged. This is terminal `MULTI_ATTACHMENT_BINDING_UNPROVEN` for the current HNX route.
+
 ## 2026-08-24 - Current Market Flow / Positioning V1
 
 1. `current_market_flow_positioning/v1` is a projection of canonical retained observations, never a second feature store. Provider-specific facts remain separate and every field keeps session, retrieval, endpoint, raw hash, and source identity.
