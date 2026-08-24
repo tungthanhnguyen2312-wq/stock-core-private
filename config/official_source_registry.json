@@ -64,13 +64,15 @@
       "authority": "Hanoi Stock Exchange",
       "authority_class": "exchange",
       "activation": "approved",
-      "allowed_hosts": ["www.hnx.vn", "hnx.vn"],
+      "allowed_hosts": ["www.hnx.vn", "hnx.vn", "owa.hnx.vn"],
       "document_types": [
         "corporate_action_notice",
         "ex_right_notice",
         "listing_change_notice",
-        "amendment_or_supersession_notice",
-        "insider_transaction_notice",
+      "amendment_or_supersession_notice",
+      "audited_annual_financial_statements",
+      "reviewed_interim_financial_statements",
+      "insider_transaction_notice",
         "major_shareholder_notice"
       ],
       "index_document_types": [

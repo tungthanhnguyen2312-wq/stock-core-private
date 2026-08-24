@@ -2194,6 +2194,13 @@ single-ticker work.
 3. The existing Macro V1 adapter uses the June predecessor (4.69%) only to compute the independent CPI axis. SBV policy rate, central FX, credit growth, system liquidity, and government-bond yield remain unavailable until a retained official source explicitly supplies each metric's own definition, period, and publication metadata. No proxy or no-data regime inference is permitted.
 4. The result remains descriptive and non-actionable. It creates no forecast, causal, allocation, liquidity, sizing, execution, portfolio, or broader historical-PIT authority; a post-session current macro artifact remains unavailable to the earlier daily-session context.
 
+## 2026-08-24 - Official Financial Filings and Canonical History Scale-Out V1
+
+1. The retained, approved HNX issuer-disclosure RSS is a bounded bulk discovery input. Its 100 items exposed 11 H1-2026 financial-statement disclosures; eight directly linked first-party statement PDFs were retained immutably, while three detail pages did not expose a statement attachment matching the filing contract.
+2. HNX detail pages did not state a ticker field for these filing notices. Attachment filename tokens are retained as unqualified source text and are never promoted to a ticker identity. The PDFs are retained with SHA-256, source URL, publication date, reporting-period candidate, title-derived scope candidate, and separately detected extraction status; original bytes are not replaced.
+3. No document supplied both a qualified issuer identity and an exact machine-readable cited value line for a canonical fact. Accordingly, canonical financial observations, provider reconciliations, financial/peer/scenario dependencies, and valuation readiness remain unchanged. Missing is not zero; total equity, debt, and weighted-average shares receive no alias or proxy.
+4. The HNX attachment host is admitted only as the first-party file host explicitly linked by the approved HNX disclosure detail pages and only for the two existing financial filing document types. No provider, issuer-IR wildcard, valuation engine, or runtime database is added or mutated.
+
 ## 2026-08-24 - Current Market Flow / Positioning V1
 
 1. `current_market_flow_positioning/v1` is a projection of canonical retained observations, never a second feature store. Provider-specific facts remain separate and every field keeps session, retrieval, endpoint, raw hash, and source identity.
