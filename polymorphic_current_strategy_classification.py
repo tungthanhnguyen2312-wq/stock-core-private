@@ -57,7 +57,11 @@ def _fundamental_requirements(fundamental: Mapping[str, Any]) -> tuple[dict[str,
 
 def _event_requirement(corporate: Mapping[str, Any]) -> dict[str, Any]:
     research = corporate.get("catalyst_research") or {}; events = research.get("recent_material_events") or []
-    return _requirement("CURRENT_OFFICIAL_EVENT", bool(events), "SATISFIED" if events else "MISSING", "retained_corporate_intelligence_event", "SOURCE_LINKED_EVENT", "OFFICIAL_QUALIFIED" if events else "UNAVAILABLE", bool(events), "Current retained official event available." if events else "NO_CURRENT_RETAINED_OFFICIAL_EVENT")
+    # Current factual context is broader than a current event-driven setup. An
+    # AGM is retained CI context, but it is not price/share-affecting strategy
+    # evidence. Preserve the legacy qualified HPG corporate-action case.
+    relevant = [event for event in events if event.get("materiality_status") == "PRICE_SHARE_AFFECTING" or (event.get("event_type") == "CORPORATE_ACTION" and event.get("event_state") is None and event.get("freshness") == "CURRENT_90_DAYS")]
+    return _requirement("CURRENT_OFFICIAL_EVENT", bool(relevant), "SATISFIED" if relevant else "MISSING", "retained_corporate_intelligence_event_current_price_share_applicability", "SOURCE_LINKED_EVENT", "OFFICIAL_QUALIFIED" if relevant else "UNAVAILABLE", bool(relevant), "Current retained official price/share-affecting event available." if relevant else "NO_CURRENT_DECISION_RELEVANT_OFFICIAL_EVENT")
 
 
 def _valuation_requirement(valuation: Mapping[str, Any]) -> dict[str, Any]:
