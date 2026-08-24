@@ -10,7 +10,8 @@
       "fundamental": {"path": "operations-review/market-wide-current-fundamental-research-v1-20260823/market_wide_current_fundamental_research_artifact.json", "artifact_identity": "market_wide_current_fundamental_research:fc7619fcd7d0f5077a396c9e05fcdce14e97bdcdc078722c49e67070990d0feb"},
       "valuation": {"path": "operations-review/market-wide-current-valuation-v1-20260824/market_wide_current_valuation_artifact.json", "artifact_identity": "market_wide_current_valuation:e6d015f2feee4cc5c5969d7a1fddac9d2f1b2b55918adb4ea199920e4455b29a"},
       "catalyst": {"path": "operations-review/catalyst-event-research-context-v1-20260820/catalyst_event_research_context_artifact.json", "artifact_identity": "catalyst_event_research_context:fcbada853866b0136a6c106da17b687dced1a8fe1a5c4021923b7582ed0c50fb", "accepted_degraded": "EARLIER_RETAINED_CATALYST_CONTEXT"},
-      "corporate_intelligence": {"path": "operations-review/market-wide-current-corporate-intelligence-v1-20260824/market_wide_current_corporate_intelligence_artifact.json", "artifact_identity": "market_wide_current_corporate_intelligence:7e9884a1c1681b15088c24d287fd3e65f31021c35b7a54dfda76bcd942af92e3"}
+      "corporate_intelligence": {"path": "operations-review/market-wide-current-corporate-intelligence-v1-20260824/market_wide_current_corporate_intelligence_artifact.json", "artifact_identity": "market_wide_current_corporate_intelligence:7e9884a1c1681b15088c24d287fd3e65f31021c35b7a54dfda76bcd942af92e3"},
+      "market_flow_positioning": {"path": "operations-review/current-market-flow-positioning-scaleout-v1-20260824-attested/current_market_flow_positioning_artifact.json", "artifact_identity": "current_market_flow_positioning:6082522f8a53131fba979b40812ead3f54488c7e086b935ff42697a5dc821f4a"}
     }
   }
 }

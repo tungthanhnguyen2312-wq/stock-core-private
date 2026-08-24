@@ -4,7 +4,7 @@ from current_market_flow_positioning import build, content_identity, prospective
 
 
 def obs(semantic, value, *, source="FHSC", status="ACQUIRED", session="2026-08-21"):
-    return {"instrument": "HPG", "session": session, "retrieved_at": "2026-08-21T10:00:00+07:00", "source": source, "endpoint_id": "test", "semantic_identity": semantic, "canonical_value": value, "canonical_unit": "vnd" if "VALUE" in semantic else "shares", "provider_native_value": value, "provider_native_unit": "native", "raw_sha256": semantic, "observation_status": status, "conflict_state": "CLEAN", "downstream_eligibility": {"descriptive_research_display": status == "ACQUIRED", "flow_research": status == "ACQUIRED"}}
+    return {"instrument": "HPG", "session": session, "retrieved_at": "2026-08-21T10:00:00+07:00", "source": source, "endpoint_id": "test", "semantic_identity": semantic, "canonical_value": value, "canonical_unit": "vnd" if "VALUE" in semantic else "shares", "provider_native_value": value, "provider_native_unit": "native", "raw_sha256": semantic, "observation_status": status, "conflict_state": "CLEAN", "provenance": {"provider_session_date": session}, "downstream_eligibility": {"descriptive_research_display": status == "ACQUIRED", "flow_research": status == "ACQUIRED"}}
 
 
 class CurrentMarketFlowPositioningTests(unittest.TestCase):
@@ -43,3 +43,7 @@ class CurrentMarketFlowPositioningTests(unittest.TestCase):
         self.assertEqual(frozen["future_outcomes"], "PENDING_FUTURE_OBSERVATION")
         self.assertEqual(frozen["frozen_records"][0]["foreign_flow_state"], "NET_FOREIGN_BUY")
 
+    def test_unobserved_candidate_is_retained_as_missing_not_removed(self):
+        artifact = build(canonical_integration=self.packet, candidate_tickers=["HPG", "ZZZ"])
+        self.assertIn("ZZZ", artifact["records"])
+        self.assertEqual(artifact["records"]["ZZZ"]["traded_value"]["status"], "MISSING")

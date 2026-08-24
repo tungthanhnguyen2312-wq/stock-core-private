@@ -255,3 +255,7 @@ The next macro evidence gate is a governed, machine-readable official Vietnam ro
 ### Current Market Flow / Positioning V1 (Complete Locally / Coherent Partial)
 
 The next real-data gate is a bounded, rate-safe full supported-universe retained session packet that includes all mapped FHSC flow endpoints and the existing DNSE foreign-flow contract. It must retain per-ticker dispositions and session/freshness boundaries; it must not promote traded value to liquidity/ADV, position sizing, execution capacity, PIT/backtest, or causal/identity claims.
+
+### Current Market Flow / Positioning Scaleout V1 (Terminally Closed)
+
+The scaleout attempt is terminally `COHERENT_PARTIAL_PROVIDER_LIMITED`: retained same-session evidence materially expands traded-value context but does not establish full-universe all-dimension availability. Do not start another arbitrary flow cohort. The next real-data gate, only with owner authorization, is one governed broad full-universe session packet under demonstrated provider rate/session safety; it remains a promotion-review candidate only for any later liquidity-authority program.

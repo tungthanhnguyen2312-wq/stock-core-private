@@ -413,6 +413,7 @@ def integrate_session_packet(
                     "packet_identity": packet_identity,
                     "packet_sha256": packet_sha256,
                     "raw_path": raw_path,
+                    "provider_session_date": raw_obs.get("provider_session_date"),
                     "contract_basis_tier": contract_tier,
                     "derived_from": derived_from,
                     "native_raw_field": native_info.get("raw_field"),

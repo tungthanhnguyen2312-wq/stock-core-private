@@ -50,7 +50,8 @@ def _drivers(tactical: Mapping[str, Any], peer: Mapping[str, Any] | None, fundam
     fund_context = (fundamental or {}).get("fundamental_trajectory_context") or {}
     valuation_context = (peer or {}).get("valuation_peer_context") or {}
     relationships = (flow or {}).get("price_flow_relationships") or []
-    flow_status = "UNAVAILABLE" if not flow else "CONTRADICTORY" if any("DIVERGENCE" in item or "SELL_PRESSURE" in item for item in relationships) else "SUPPORTIVE" if any("CONFIRMATION" in item or "BUY_SUPPORT" in item for item in relationships) else "AVAILABLE"
+    flow_available = bool((flow or {}).get("coverage", {}).get("available_dimensions", 0))
+    flow_status = "UNAVAILABLE" if not flow_available else "CONTRADICTORY" if any("DIVERGENCE" in item or "SELL_PRESSURE" in item for item in relationships) else "SUPPORTIVE" if any("CONFIRMATION" in item or "BUY_SUPPORT" in item for item in relationships) else "AVAILABLE"
     return {
         "MARKET_CONTEXT": _driver("SUPPORTIVE" if tactical.get("market_state") else "UNAVAILABLE", {"market_state": tactical.get("market_state")}),
         "MARKET_FLOW_CONTEXT": _driver(flow_status, flow or {"status": "FLOW_UNAVAILABLE"}, ["Flow/positioning is provider-scoped descriptive context; it is not causality, intent, or execution evidence."]),

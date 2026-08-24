@@ -15,7 +15,7 @@ from field_temporal_contract import stable_id
 CONTRACT_VERSION = "current_market_flow_positioning/v1"
 FLOW_USE = "flow_research"
 DISPLAY_USE = "descriptive_research_display"
-DISPOSITIONS = ("AVAILABLE", "MISSING", "PROVIDER_REJECTED", "RATE_LIMITED", "SEMANTIC_BLOCKED", "NOT_APPLICABLE")
+DISPOSITIONS = ("AVAILABLE", "MISSING", "PROVIDER_REJECTED", "RATE_LIMITED", "SESSION_MISMATCH", "SESSION_UNRESOLVED", "SEMANTIC_BLOCKED", "NOT_APPLICABLE")
 
 
 def content_identity(artifact: Mapping[str, Any]) -> dict[str, str]:
@@ -37,7 +37,8 @@ def _status(observations: list[Mapping[str, Any]]) -> str:
 
 
 def _usable(observation: Mapping[str, Any], session: str) -> bool:
-    return (observation.get("session") == session and observation.get("observation_status") == "ACQUIRED"
+    provider_session = (observation.get("provenance") or {}).get("provider_session_date")
+    return (observation.get("session") == session and provider_session == session and observation.get("observation_status") == "ACQUIRED"
             and observation.get("conflict_state", "CLEAN") in {"CLEAN", "NONE"}
             and bool((observation.get("downstream_eligibility") or {}).get(FLOW_USE)
                      or (observation.get("downstream_eligibility") or {}).get(DISPLAY_USE)))
@@ -46,7 +47,7 @@ def _usable(observation: Mapping[str, Any], session: str) -> bool:
 def _entry(observation: Mapping[str, Any]) -> dict[str, Any]:
     return {"value": observation.get("canonical_value"), "unit": observation.get("canonical_unit"),
             "provider_native_value": observation.get("provider_native_value"), "provider_native_unit": observation.get("provider_native_unit"),
-            "source": observation.get("source"), "endpoint_id": observation.get("endpoint_id"), "session": observation.get("session"),
+            "source": observation.get("source"), "endpoint_id": observation.get("endpoint_id"), "session": observation.get("session"), "provider_session_date": (observation.get("provenance") or {}).get("provider_session_date"),
             "retrieved_at": observation.get("retrieved_at"), "raw_sha256": observation.get("raw_sha256"),
             "observation_identity": "canonical_market_observation:" + stable_id({k: observation.get(k) for k in ("instrument", "session", "source", "endpoint_id", "semantic_identity", "raw_sha256")})}
 
@@ -118,7 +119,7 @@ def _relationships(tactical: Mapping[str, Any], active: Mapping[str, Any], prop:
     return relationships
 
 
-def build(*, canonical_integration: Mapping[str, Any], tactical: Mapping[str, Any] | None = None, sector_by_ticker: Mapping[str, str] | None = None) -> dict[str, Any]:
+def build(*, canonical_integration: Mapping[str, Any], tactical: Mapping[str, Any] | None = None, sector_by_ticker: Mapping[str, str] | None = None, candidate_tickers: list[str] | tuple[str, ...] | None = None) -> dict[str, Any]:
     session = str(canonical_integration.get("session_date") or canonical_integration.get("session") or "")
     if not session: raise ValueError("FLOW_POSITIONING_SESSION_REQUIRED")
     by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
@@ -126,14 +127,18 @@ def build(*, canonical_integration: Mapping[str, Any], tactical: Mapping[str, An
         if isinstance(observation, Mapping) and observation.get("instrument"): by_ticker[str(observation["instrument"]).upper()].append(observation)
     tactical_records = (tactical or {}).get("records", {})
     records: dict[str, Any] = {}
-    for ticker in sorted(by_ticker):
+    tickers = sorted(set(by_ticker) | {str(ticker).upper() for ticker in (candidate_tickers or []) if str(ticker).strip()})
+    for ticker in tickers:
         observations = by_ticker[ticker]; traded = _traded(observations, session); foreign = _flow(observations, session, "FOREIGN", "FOREIGN"); room = _room(observations, session); prop = _flow(observations, session, "PROPRIETARY", "PROP"); active = _active(observations, session)
         relationships = _relationships(tactical_records.get(ticker) or {}, active, prop)
         sections = (traded, foreign, room, prop, active)
         record = {"ticker": ticker, "session": session, "traded_value": traded, "foreign_flow": foreign, "foreign_room": room, "proprietary_flow": prop, "active_order_context": active, "price_flow_relationships": relationships, "coverage": {"available_dimensions": sum(item["status"] == "AVAILABLE" for item in sections), "provider_disposition": _status(observations)}, "authority_boundaries": ["CURRENT_RESEARCH_ONLY", "NON_CAUSAL", "NOT_LIQUIDITY_OR_SIZING", "NOT_EXECUTION", "NOT_INSTITUTIONAL_INTENT"]}
         record["flow_positioning_record_id"] = "flow_positioning_record:" + stable_id(record); records[ticker] = record
     coverage = {"UNIVERSE_COUNT": len(records), "ANY_FLOW_CONTEXT": sum(r["coverage"]["available_dimensions"] > 0 for r in records.values()), "TRADED_VALUE_READY": sum(r["traded_value"]["status"] == "AVAILABLE" for r in records.values()), "FOREIGN_FLOW_READY": sum(r["foreign_flow"]["status"] == "AVAILABLE" for r in records.values()), "FOREIGN_ROOM_READY": sum(r["foreign_room"]["status"] == "AVAILABLE" for r in records.values()), "PROPRIETARY_FLOW_READY": sum(r["proprietary_flow"]["status"] == "AVAILABLE" for r in records.values()), "ACTIVE_ORDER_READY": sum(r["active_order_context"]["status"] == "AVAILABLE" for r in records.values()), "MULTI_DIMENSION_READY": sum(r["coverage"]["available_dimensions"] >= 2 for r in records.values())}
-    market = {"eligible_cohort": [ticker for ticker, row in records.items() if row["traded_value"]["status"] == "AVAILABLE"], "aggregate_matched_value": sum(row["traded_value"].get("fields", {}).get("MATCHED_TRADED_VALUE_VND", {}).get("value", 0) for row in records.values() if row["traded_value"]["status"] == "AVAILABLE"), "aggregate_put_through_value": sum(row["traded_value"].get("fields", {}).get("PUT_THROUGH_TRADED_VALUE_VND", {}).get("value", 0) for row in records.values() if row["traded_value"]["status"] == "AVAILABLE"), "foreign_net_buy_names": sum(row["foreign_flow"]["state"] == "NET_FOREIGN_BUY" for row in records.values()), "foreign_net_sell_names": sum(row["foreign_flow"]["state"] == "NET_FOREIGN_SELL" for row in records.values()), "cohort_note": "Aggregates cover only the named eligible cohort, not the whole market."}
+    eligible = [ticker for ticker, row in records.items() if row["traded_value"]["status"] == "AVAILABLE"]
+    matched = sum(row["traded_value"].get("fields", {}).get("MATCHED_TRADED_VALUE_VND", {}).get("value", 0) for row in records.values() if row["traded_value"]["status"] == "AVAILABLE")
+    put_through = sum(row["traded_value"].get("fields", {}).get("PUT_THROUGH_TRADED_VALUE_VND", {}).get("value", 0) for row in records.values() if row["traded_value"]["status"] == "AVAILABLE")
+    market = {"status": "AVAILABLE" if len(eligible) >= 20 else "PARTIAL_COHORT_CONTEXT", "eligible_ticker_count": len(eligible), "eligible_cohort": eligible, "aggregate_matched_value": matched, "aggregate_put_through_value": put_through, "put_through_share": put_through / (matched + put_through) if matched + put_through > 0 else None, "foreign_net_buy_names": sum(row["foreign_flow"]["state"] == "NET_FOREIGN_BUY" for row in records.values()), "foreign_net_sell_names": sum(row["foreign_flow"]["state"] == "NET_FOREIGN_SELL" for row in records.values()), "prop_net_buy_names": sum(row["proprietary_flow"]["state"] == "NET_PROP_BUY" for row in records.values()), "prop_net_sell_names": sum(row["proprietary_flow"]["state"] == "NET_PROP_SELL" for row in records.values()), "active_buy_skew_names": sum(row["active_order_context"]["state"] == "ACTIVE_BUY_SKEW" for row in records.values()), "active_sell_skew_names": sum(row["active_order_context"]["state"] == "ACTIVE_SELL_SKEW" for row in records.values()), "cohort_note": "Aggregates cover only the named eligible cohort, not the whole market."}
     artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "session": session, "source_artifact_identities": {"canonical_integration": canonical_integration.get("integration_identity") or canonical_integration.get("artifact_identity"), "tactical": (tactical or {}).get("artifact_identity")}, "thresholds": {"traded_value": "v1:0,.20,.50,.75", "foreign_room": "v1:.50,.80,.95", "active_order": "v1:abs(net_ratio)<.10"}, "records": records, "coverage": coverage, "market_level_flow_context": market, "peer_relative_flow_context": {"status": "NOT_EMITTED", "reason": "Sector-comparable cohort minimum is not asserted by this artifact."}, "data_dispositions": dict(sorted(Counter(r["coverage"]["provider_disposition"] for r in records.values()).items())), "authority_boundary": {"current_research_only": True, "causal_or_intent_claims": "NOT_EMITTED", "liquidity_sizing_execution": "BLOCKED", "pit_backtest_raw_as_traded": "NOT_PROMOTED"}, "is_actionable": False}
     artifact.update(content_identity(artifact)); return artifact
 

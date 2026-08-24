@@ -2193,3 +2193,10 @@ single-ticker work.
 2. Traded-value and foreign-room arithmetic are emitted only when exact component identities hold. Missing/rejected/rate-limited/semantic-blocked observations never become zero. DNSE remains the selected source for qualified foreign value flow when present; FHSC-only current research fields are usable without artificial provider parity.
 3. Price-flow labels are deterministic relationships only. They are not causal explanations, hidden-liquidity/SMC evidence, institutional intent, a recommendation, or an execution/sizing input. Strategy evidence is optional and does not alter existing eligibility.
 4. A session registry may bind an explicit flow artifact as an optional input. Scenario, Product V2, Consumer, explicit portfolio context, and prospective identity freeze preserve the same non-causal, non-sizing boundary. Full-universe aggregation is only permitted over a named eligible cohort.
+
+## 2026-08-24 - Current Market Flow / Positioning Scaleout V1
+
+1. Session eligibility requires a retained provider session binding equal to the selected completed session. The DNSE foreign-trading adapter now retains a provider session only when all row timestamps agree with the requested session; mixed/undated responses remain unavailable for flow use.
+2. The scaleout artifact is a deterministic retained-packet composite, not a new provider or data store. It selects the latest acquired endpoint version deterministically while retaining every candidate raw version in lineage; no raw payload is overwritten or silently repaired.
+3. The 1,683-record flow surface is bound by exact identity to the daily session registry. Missing fields remain independent dimensions. Aggregates are labeled `PARTIAL_COHORT_CONTEXT` unless an eligible cohort is sufficiently broad; no provider cohort is called the Vietnamese market.
+4. The terminal result is `COHERENT_PARTIAL_PROVIDER_LIMITED`. Broad traded-value evidence is a future `PROMOTION_REVIEW_CANDIDATE` only; it does not grant liquidity, ADV, sizing, execution, PIT, backtest, RAW_AS_TRADED, causal, or institutional-intent authority.

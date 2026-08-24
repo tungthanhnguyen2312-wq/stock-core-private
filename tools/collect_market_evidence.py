@@ -756,9 +756,13 @@ def parse_raw_observation_data(
             room_avail = raw_payload.get("foreignRoomAvailable") or raw_payload.get("roomAvailable")
 
             found_any = False
+            record_dates: set[str] = set()
             for rec in records:
                 if isinstance(rec, Mapping):
                     found_any = True
+                    observed_at = rec.get("time") or rec.get("tradingDate") or rec.get("date")
+                    if isinstance(observed_at, str) and len(observed_at) >= 10:
+                        record_dates.add(observed_at[:10])
                     b_q = rec.get("buyForeignQuantity", rec.get("totalBuyQuantity", rec.get("buyVolume", 0)))
                     s_q = rec.get("sellForeignQuantity", rec.get("totalSellQuantity", rec.get("sellVolume", 0)))
                     b_v = rec.get("buyForeignValue", rec.get("buyTradedAmount", rec.get("buyValue", 0)))
@@ -790,6 +794,14 @@ def parse_raw_observation_data(
                 "FOREIGN_SELL_VALUE": {"value": sell_val, "unit": "vnd_raw_not_thousands", "note": "raw VND; not passed through KVND contract"},
                 "FOREIGN_NET_VALUE": {"value": net_val, "unit": "vnd_raw_not_thousands", "note": "raw VND; not passed through KVND contract"},
             }
+            # DNSE does not publish a top-level session label on this endpoint, but
+            # its retained rows carry provider timestamps.  Bind only when all dated
+            # rows agree with the requested completed session; otherwise preserve the
+            # payload but leave the session unresolved for dependent consumers.
+            if record_dates == {session_date}:
+                parsed["provider_session_date"] = session_date
+            elif record_dates:
+                parsed["semantic_gaps"].append("dnse_foreign_trading_provider_session_mismatch_or_mixed")
             parsed["parse_status"] = "PARSED" if found_any or records == [] else "PARSED_EMPTY"
 
     elif source == taxonomy.SOURCE_FHSC:
