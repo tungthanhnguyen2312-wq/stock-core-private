@@ -20,13 +20,15 @@ from polymorphic_current_strategy_classification import build as build_strategy,
 from current_portfolio_risk_envelope import build as build_portfolio_risk
 from current_market_flow_positioning import prospective_context as flow_prospective_context
 from current_macro_regime import session_context as macro_session_context
+from current_opportunity_prioritization import build as build_opportunity, content_identity as opportunity_identity
+from daily_opportunity_decision_queue import build as build_decision_queue, content_identity as decision_queue_identity, prospective_context as decision_queue_prospective_context
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
 from ai_research_session_delivery import build_delivery
 
 CONTRACT_VERSION = "daily_research_session_operation/v1"
 REQUIRED = ("descriptive", "screening", "tactical", "triage", "fundamental", "valuation", "catalyst", "corporate_intelligence")
-OPTIONAL = ("market_flow_positioning",)
+OPTIONAL = ("market_flow_positioning", "official_universe", "event_context")
 
 
 def _canon(value: Any) -> str:
@@ -107,7 +109,18 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
     strategy = build_strategy(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, corporate_intelligence=inputs["corporate_intelligence"], market_flow_positioning=flow)
     if strategy_identity(strategy)["artifact_sha256"] != strategy["artifact_sha256"]: raise ValueError("STRATEGY_ARTIFACT_SELF_VERIFICATION_FAILED")
     portfolio_risk = build_portfolio_risk(portfolio=portfolio, descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, strategy=strategy, corporate_intelligence=inputs["corporate_intelligence"], macro_context=macro_context, market_flow_positioning=flow) if portfolio else None
-    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context, market_flow_positioning=flow)
+    official_universe, event_context_input = inputs.get("official_universe"), inputs.get("event_context")
+    opportunity = decision_queue = opportunity_snapshot = None
+    # official_universe/event_context are "current as of build" (not session-locked) inputs;
+    # only attach the research-priority queue when a session explicitly registers both, so an
+    # already-frozen session (e.g. 2026-08-21) is never retrofitted with knowledge it never had.
+    if official_universe is not None and event_context_input is not None:
+        opportunity = build_opportunity(official_universe=official_universe, screening=inputs["screening"], tactical=inputs["tactical"], strategy=strategy, scenario=scenario, fundamental=inputs["fundamental"], peer=peer, event_context=event_context_input, descriptive=inputs["descriptive"])
+        if opportunity_identity(opportunity)["artifact_sha256"] != opportunity["artifact_sha256"]: raise ValueError("OPPORTUNITY_ARTIFACT_SELF_VERIFICATION_FAILED")
+        decision_queue = build_decision_queue(opportunity=opportunity, triage=inputs["triage"])
+        if decision_queue_identity(decision_queue)["artifact_sha256"] != decision_queue["artifact_sha256"]: raise ValueError("DECISION_QUEUE_ARTIFACT_SELF_VERIFICATION_FAILED")
+        opportunity_snapshot = decision_queue_prospective_context(opportunity, decision_queue)
+    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context, market_flow_positioning=flow, opportunity_decision_queue=decision_queue)
     if product_identity(product)["artifact_sha256"] != product["artifact_sha256"]: raise ValueError("PRODUCT_ARTIFACT_SELF_VERIFICATION_FAILED")
     snapshot = freeze_current_decision_surface(inputs["tactical"], inputs["triage"], inputs["fundamental"], inputs["valuation"])
     corporate_snapshot = prospective_context(inputs["corporate_intelligence"])
@@ -116,7 +129,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
     input_manifest = {}
     for name, value in inputs.items():
         input_session = value.get("session") or value.get("source_market_session") or value.get("valuation_session") or value.get("research_session")
-        freshness = "ACCEPTED_DEGRADED" if name == "catalyst" else "ACCEPTED_UNDATED_RETAINED_CONTEXT" if name == "fundamental" else "CURRENT_SESSION_COHERENT_WITH_RETAINED_EVENT_FRESHNESS" if name == "corporate_intelligence" else "CURRENT_SESSION_COHERENT"
+        freshness = "ACCEPTED_DEGRADED" if name == "catalyst" else "ACCEPTED_UNDATED_RETAINED_CONTEXT" if name == "fundamental" else "CURRENT_SESSION_COHERENT_WITH_RETAINED_EVENT_FRESHNESS" if name == "corporate_intelligence" else "ACCEPTED_CURRENT_ASOF_BUILD_NOT_SESSION_LOCKED" if name in ("official_universe", "event_context") else "CURRENT_SESSION_COHERENT"
         input_manifest[name] = {"artifact_identity": value.get("artifact_identity"), "contract_version": value.get("contract_version"), "session": input_session, "freshness_state": freshness}
     if portfolio_risk:
         input_manifest["explicit_portfolio"] = {"artifact_identity": portfolio_risk["input_identity"], "contract_version": "explicit_portfolio_input/v1", "session": portfolio_risk["session"], "freshness_state": "EXPLICIT_USER_OR_DEMONSTRATION_INPUT"}
@@ -136,7 +149,14 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         manifest["outputs"]["macro_context"] = macro_context
         manifest["warnings"].append("Macro evidence is accepted only when known by the retained equity session; otherwise it is preserved as unavailable context.")
         manifest["operation_identity"] = _identity(manifest)
-    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
+    if decision_queue:
+        manifest["outputs"]["opportunity_prioritization"] = opportunity["artifact_identity"]
+        manifest["outputs"]["daily_opportunity_decision_queue"] = decision_queue["artifact_identity"]
+        manifest["outputs"]["opportunity_decision_prospective_context"] = opportunity_snapshot["snapshot_id"]
+        manifest["coverage_summary"]["opportunity_decision_queue"] = {"current_official_universe": opportunity["coverage"]["current_official_universe"], "priority_now": decision_queue["entry_relevant_summary"]["PRIORITY_NOW_TOTAL"], "priority_now_entry_relevant": decision_queue["entry_relevant_summary"]["PRIORITY_NOW_ENTRY_RELEVANT"], "primary_review_candidates": decision_queue["primary_review_candidates"]["count"]}
+        manifest["warnings"].append("Research priority tier is a research-lane signal, not entry timing, full-position readiness, or position sizing; see entry_relevant and lane_specific_priority on each decision-queue record.")
+        manifest["operation_identity"] = _identity(manifest)
+    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "opportunity": opportunity, "decision_queue": decision_queue, "opportunity_snapshot": opportunity_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
@@ -160,6 +180,10 @@ def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
     write_immutable(output_dir / "corporate_intelligence_prospective_context.json", operation["corporate_snapshot"])
     write_immutable(output_dir / "strategy_prospective_context.json", operation["strategy_snapshot"])
     if operation.get("flow_snapshot"): write_immutable(output_dir / "market_flow_positioning_prospective_context.json", operation["flow_snapshot"])
+    if operation.get("decision_queue"):
+        write_immutable(output_dir / "opportunity_prioritization_artifact.json", operation["opportunity"])
+        write_immutable(output_dir / "daily_opportunity_decision_queue_artifact.json", operation["decision_queue"])
+        write_immutable(output_dir / "opportunity_decision_prospective_context.json", operation["opportunity_snapshot"])
     delivery = build_delivery(operation, operation["inputs"])
     for filename, value in (("ai_research_session_bundle.json", delivery["primary"]), ("ai_research_full_universe.ndjson", delivery["full_universe"]), ("ai_research_bundle_manifest.json", delivery["manifest"]), ("ai_research_session_brief.md", delivery["brief"]), ("current_decision_cockpit_projection.json", delivery["projection"])):
         path = output_dir / filename
