@@ -9,12 +9,6 @@
         "basis": "EXACT_SESSION_UPSTREAM_ARTIFACT_REGISTRY",
         "required_current_session_inputs": ["descriptive", "screening", "tactical", "triage", "valuation", "corporate_intelligence", "market_flow_positioning"],
         "policy": "The registry is a governed completed-session ledger. It does not infer completion from civil time, weekday, or a latest file."
-      },
-      "output_artifacts": {
-        "daily_opportunity_decision_queue": {
-          "path": "operations-review/daily-opportunity-decision-queue-v1-20260824/daily_opportunity_decision_queue_artifact.json",
-          "artifact_identity": "daily_opportunity_decision_queue:e620cfaea729111fe51a88e3e3b19f31689b613f4417de4fa5864066058c1a2f"
-        }
       }
     },
     "2026-08-24": {

@@ -150,6 +150,9 @@ from current_daily_decision_research_product import (
 from daily_opportunity_decision_queue import (
     content_identity as daily_opportunity_decision_queue_content_identity,
 )
+from daily_research_session_operations import (
+    _identity as daily_research_session_operation_identity,
+)
 from current_market_flow_positioning import (
     content_identity as current_market_flow_positioning_content_identity,
 )
@@ -2887,26 +2890,37 @@ def load_daily_opportunity_decision_queue_artifact(path: Path) -> Mapping[str, A
 def resolve_daily_opportunity_decision_queue_artifact(
     session: str, registry_path: Path | None = None,
 ) -> tuple[Mapping[str, Any], Path] | None:
-    """Resolve one governed same-session queue; never discover a latest artifact."""
+    """Resolve one governed same-session queue; never discover a latest artifact.
+
+    manifest_path/operation_identity are mandatory, not optional: recomputing the
+    manifest's identity is the only proof that official_universe/event_context
+    (when used) were this session's own registered inputs, not a later "current
+    as of build" run mislabelled with this session's date.
+    """
     try:
         registry = json.loads((registry_path or DAILY_RESEARCH_SESSION_REGISTRY).read_text(encoding="utf-8"))
         completed = (registry.get("completed_sessions") or {}).get(session) or {}
         entry = (completed.get("output_artifacts") or {}).get("daily_opportunity_decision_queue")
-        if not isinstance(entry, Mapping) or not isinstance(entry.get("path"), str) or not isinstance(entry.get("artifact_identity"), str):
+        if (
+            not isinstance(entry, Mapping)
+            or not isinstance(entry.get("path"), str)
+            or not isinstance(entry.get("artifact_identity"), str)
+            or not isinstance(entry.get("manifest_path"), str)
+            or not isinstance(entry.get("operation_identity"), str)
+        ):
             return None
         path = Path(__file__).resolve().parent / entry["path"]
         artifact = load_daily_opportunity_decision_queue_artifact(path)
         if artifact is None or artifact.get("research_session") != session or artifact.get("artifact_identity") != entry["artifact_identity"]:
             return None
-        manifest_path = entry.get("manifest_path")
-        if manifest_path is not None:
-            manifest = json.loads((Path(__file__).resolve().parent / str(manifest_path)).read_text(encoding="utf-8"))
-            if (
-                manifest.get("market_session") != session
-                or manifest.get("operation_identity") != entry.get("operation_identity")
-                or (manifest.get("outputs") or {}).get("daily_opportunity_decision_queue") != artifact.get("artifact_identity")
-            ):
-                return None
+        manifest = json.loads((Path(__file__).resolve().parent / entry["manifest_path"]).read_text(encoding="utf-8"))
+        if (
+            manifest.get("market_session") != session
+            or manifest.get("operation_identity") != entry["operation_identity"]
+            or daily_research_session_operation_identity(manifest) != entry["operation_identity"]
+            or (manifest.get("outputs") or {}).get("daily_opportunity_decision_queue") != artifact.get("artifact_identity")
+        ):
+            return None
         return artifact, path
     except Exception:
         return None

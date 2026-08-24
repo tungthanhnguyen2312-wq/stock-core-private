@@ -76,11 +76,17 @@ def test_unknown_or_missing_session_keeps_legacy_bundle_shape_unchanged():
     assert missing == expected
 
 
-def test_registered_session_resolves_its_own_queue_not_the_2026_08_24_queue():
+# 2026-08-21's own registered session inputs (registry["sessions"]["2026-08-21"]) never
+# carried official_universe/event_context. It must never surface a queue that was actually
+# built -- by a standalone, non-session-gated tool -- from the later 2026-08-24
+# official_universe/event_context, even if that artifact is self-labelled research_session=2026-08-21.
+def test_completed_prior_session_without_governed_manifest_lineage_resolves_no_queue():
+    assert resolve_daily_opportunity_decision_queue_artifact("2026-08-21") is None
     prior = _normal_bundle("2026-08-21")
+    expected = copy.deepcopy(prior)
     attach_daily_opportunity_decision_queue(prior)
-    assert prior["daily_opportunity_decision_queue"]["research_session"] == "2026-08-21"
-    assert prior["daily_opportunity_decision_queue"]["artifact_identity"] != _retained_queue("2026-08-24")["artifact_identity"]
+    assert prior == expected
+    assert "daily_opportunity_decision_queue" not in prior
 
 
 def test_priority_now_wait_preserves_non_entry_action_and_authority_boundaries():
@@ -97,14 +103,39 @@ def test_priority_now_wait_preserves_non_entry_action_and_authority_boundaries()
     assert queue["authority_boundary"]["priority_now_is_not_sizing_ready"] is True
 
 
-def test_registered_priority_now_avoid_remains_avoid_in_the_prior_session_queue():
-    prior = _normal_bundle("2026-08-21")
-    attach_daily_opportunity_decision_queue(prior)
-    bkc = prior["daily_opportunity_decision_queue"]["records"]["BKC"]
-    assert bkc["research_priority_tier"] == "PRIORITY_NOW"
-    assert bkc["entry_action"] == "AVOID"
-    assert bkc["entry_relevant"] is False
-    assert bkc["is_actionable"] is False
+# Real manifest_path/path/artifact_identity alone are not enough: the stated
+# operation_identity must also match the manifest's own recomputed identity. A single
+# tampered character -- the smallest possible forgery -- must be rejected.
+def test_registry_entry_with_mismatched_operation_identity_fails_closed(tmp_path):
+    registry_path = Path(__file__).resolve().parents[1] / "config" / "daily_research_session_input_registry.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    entry = registry["completed_sessions"]["2026-08-24"]["output_artifacts"]["daily_opportunity_decision_queue"]
+    real_identity = entry["operation_identity"]
+    entry["operation_identity"] = real_identity[:-1] + ("0" if real_identity[-1] != "0" else "1")
+    tampered_path = tmp_path / "registry.json"
+    tampered_path.write_text(json.dumps(registry), encoding="utf-8")
+
+    assert resolve_daily_opportunity_decision_queue_artifact("2026-08-24", tampered_path) is None
+    # Sanity: the tamper -- not a path/environment issue -- caused the rejection above.
+    assert resolve_daily_opportunity_decision_queue_artifact("2026-08-24", registry_path) is not None
+
+
+# Neither the resolver fix nor the registry correction may touch the already-immutable
+# 2026-08-21 prospective freeze or the session's own real registered inputs.
+def test_2026_08_21_prospective_snapshot_and_session_registration_remain_immutable():
+    registry_path = Path(__file__).resolve().parents[1] / "config" / "daily_research_session_input_registry.json"
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    assert "output_artifacts" not in registry["completed_sessions"]["2026-08-21"]
+    session_inputs = registry["sessions"]["2026-08-21"]
+    assert "official_universe" not in session_inputs and "event_context" not in session_inputs
+
+    historical = (
+        Path(__file__).resolve().parents[1]
+        / "operations-review/current-decision-prospective-learning-v1-20260824"
+        / "current_decision_prospective_snapshot_20260821.json"
+    )
+    snapshot = json.loads(historical.read_text(encoding="utf-8"))
+    assert snapshot["snapshot_id"] == "prospective_research_snapshot:d227f98bfc0f9d79ae20ae0d686d2eab8085ecb014da3bf48345de7db3c3daf1"
 
 
 def test_strategy_taxonomy_and_lane_ids_are_preserved_without_report_aliases():
