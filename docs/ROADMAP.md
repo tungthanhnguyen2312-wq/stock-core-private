@@ -3,6 +3,8 @@
 > **Authoritative Technical Roadmap.** This document defines the engineering phases, milestone matrix, dependency contracts, and acceptance gates for Stock Lookup.
 > Current operational state and immediate milestones are tracked in [STATE.md](STATE.md).
 
+**Historical matched traded-value gate (2026-08-24):** `HISTORICAL_MATCHED_TRADED_VALUE_AND_ADV_AUTHORITY_V1` is complete locally with a deliberately narrow Outcome C.  Twelve retained DNSE Trades/FHSC exact anchors (FPT, HPG, SSI, VCB; 2026-08-07/10/11) qualify only `G1` matched value via the explicit `price × raw quantity × 10 × 1,000 VND` contract.  The retained 40-session corpus is still insufficient for the 20-session ADV20 denominator, and no liquidity, sizing, execution, PIT, or backtest gate is promoted.  The next dependency is a sufficiently deep exact-reconciled G1 matched-value cohort, not a new liquidity/sizing engine.
+
 ---
 
 ## 1. Architectural Phases
