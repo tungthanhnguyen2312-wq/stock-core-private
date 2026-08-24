@@ -1,5 +1,24 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-24 - Market-Wide Historical Research Context V1
+
+`MARKET_WIDE_HISTORICAL_RESEARCH_CONTEXT_V1 = COMPLETE_LOCALLY / COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED_NOT_AUTHORITATIVE`.
+
+Current research already had same-session 20-bar technicals. It did not say where that state sat in the ticker's retained history. This milestone adds one retrospective descriptive contract over already-retained DNSE bars (2026-08-24 P3F9B snapshot plus 132 recovery overrides). It is within-ticker only.
+
+Decisions:
+
+1. **Reuse, do not duplicate, the feature engine.** Rolling volatility, 20-session momentum, MA20, and provider-scoped relative volume are `mva_daily_research_bundle.market_features()` on explicit last-20 observed-session slices. Windows use actual retained trading observations; missing sessions are not imputed.
+2. **Preserve price basis.** Retained DNSE history stays `ADJUSTED_RETROSPECTIVE` with the snapshot's `CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED` source label. `RAW_AS_TRADED` remains `NOT_PROMOTED`; PIT remains `BLOCKED`.
+3. **52-week is fail-closed.** It requires 252 retained observations. The current corpus has none, so every ticker is `INSUFFICIENT_HISTORY` rather than a calendar 52-week guess from a 45-day or 365-day lookback with fewer than 252 bars.
+4. **No PIT membership, no cross-section through time.** Historical percentiles are own-history only. Cross-sectional historical comparison is `BLOCKED` / `HISTORICAL_PIT_MEMBERSHIP_UNAVAILABLE`.
+5. **Structural context is not strategy or entry.** `TREND_CONTINUATION` / `MATURE_TREND` / `BASE` / `EARLY_REVERSAL` / `DETERIORATION` are derived from existing MA/momentum/vol primitives. They do not change `entry_state`, `entry_action`, `research_priority`, or strategy eligibility. Optional strategy-lane examples in `pilot_diagnostics` are reference-only.
+6. **Producer integration in the same milestone.** `export_ai_bundle.py` gains `--include-market-wide-historical-research-context` (default off, explicit path, fail-closed hash) as a sibling of current descriptive research. No second integration milestone. Governed 2026-08-24 session artifacts and the 2026-08-21 freeze are not regenerated.
+
+Validation: focused unit tests, real retained-data pilot, deterministic replay, short/missing history, no performance fields, no RAW_AS_TRADED/PIT promotion, `py_compile`, `git diff --check`, frozen 2026-08-24/2026-08-21 identities. No push, merge, deploy, or authority promotion.
+
+Artifact: `operations-review/market-wide-historical-research-context-v1-20260824/market_wide_historical_research_context_artifact.json` (`market_wide_historical_research_context:bf25da2fc89f82b168b624fa5bfe4a4d3ec4ff4a6e3aa4f91cd7ae00d2ba1787`).
+
 ## 2026-08-24 - Same-Session Technical Coverage Recovery V1
 
 `SAME_SESSION_TECHNICAL_COVERAGE_RECOVERY_V1 = COVERAGE_CEILING_ESTABLISHED`. The 881 same-session technical/tactical count on 2026-08-24 is complete coverage of exact-session observed bars after 132/132 history-only recoveries. Missing official-universe coverage is structurally `SESSION_MISSING` (no target bar), not a leftover materialization hole. Same-session eligibility remains `SHADOW_ONLY` and `is_current_session`; prior-session windows cannot satisfy it. Future snapshot lookback is 365 calendar days, matching recovery, and descriptive build fails closed on exact-session bars without current technicals. No ticker patches, no fabricated no-trade bars, no PIT/RAW_AS_TRADED promotion, and no retrofit of the governed 2026-08-24 session.

@@ -129,6 +129,9 @@ from market_wide_current_liquidity_research import (
 from market_wide_current_descriptive_research import (
     content_identity as market_wide_current_descriptive_research_content_identity,
 )
+from market_wide_historical_research_context import (
+    content_identity as market_wide_historical_research_context_content_identity,
+)
 from current_market_screening_opportunity_comparison_foundation import (
     content_identity as current_market_screening_comparison_content_identity,
 )
@@ -3477,6 +3480,82 @@ def attach_market_wide_current_descriptive_research(
 
 
 # ==========================================================================
+# Market-wide historical research context — opt-in (disabled by default)
+# ==========================================================================
+# New dedicated flag (--include-market-wide-historical-research-context). Consumes ONLY the
+# already-retained market_wide_historical_research_context_artifact.json produced offline by
+# tools/run_market_wide_historical_research_context.py. This layer never recomputes historical
+# context, never mutates research_priority / entry_action / strategy eligibility / sizing, and
+# never promotes RAW_AS_TRADED or PIT. An explicit path is required (never inferred). Hash
+# mismatch fails the whole step closed.
+
+def load_market_wide_historical_research_context_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Fail-closed loader: returns None if the file is absent, unreadable, malformed, or the
+    recomputed content hash does not match the recorded artifact_sha256."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(artifact, dict):
+        return None
+    try:
+        recomputed = market_wide_historical_research_context_content_identity(artifact)
+    except Exception:
+        return None
+    if recomputed.get("artifact_sha256") != artifact.get("artifact_sha256"):
+        return None
+    if artifact.get("contract_version") != "market_wide_historical_research_context/v1":
+        return None
+    return artifact
+
+
+def build_market_wide_historical_research_context_for_ticker_safe(
+    ticker: str, artifact: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Verbatim per-ticker pass-through plus bundle-common status / is_actionable fields."""
+    try:
+        records = artifact.get("records")
+        if not isinstance(records, Mapping):
+            return None
+        record = records.get(ticker)
+        if not isinstance(record, Mapping) or record.get("ticker") != ticker:
+            return None
+        result = dict(record)
+        result["session"] = artifact.get("session")
+        result["source_artifact_identity"] = artifact.get("artifact_identity")
+        result["research_mode"] = artifact.get("research_mode")
+        result["coverage"] = artifact.get("coverage")
+        result["blocked_outputs"] = artifact.get("blocked_outputs")
+        result["authority_boundary"] = artifact.get("authority_boundary")
+        result["status"] = "available" if record.get("in_current_descriptive_scope") else "not_available"
+        result["is_actionable"] = False
+        return result
+    except Exception:
+        return None
+
+
+def attach_market_wide_historical_research_context(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> dict[str, dict]:
+    """Disabled-by-default opt-in. Missing path or hash mismatch attaches nothing."""
+    if not include:
+        return bundle_entries
+    if not artifact_path:
+        return bundle_entries
+    artifact = load_market_wide_historical_research_context_artifact(Path(artifact_path))
+    if artifact is None:
+        return bundle_entries
+    attached: dict[str, dict[str, Any]] = {}
+    for tk, entry in bundle_entries.items():
+        result = build_market_wide_historical_research_context_for_ticker_safe(tk, artifact)
+        if result is not None:
+            attached[tk] = result
+    for tk, result in attached.items():
+        bundle_entries[tk]["market_wide_historical_research_context"] = result
+    return bundle_entries
+
+
+# ==========================================================================
 # Market-wide current fundamental research — opt-in (disabled by default)
 # ==========================================================================
 # New dedicated flag (--include-market-wide-current-fundamental-research). Consumes ONLY the
@@ -4291,6 +4370,24 @@ def main() -> int:
                              " market_wide_current_descriptive_research_artifact.json, required only"
                              " with --include-market-wide-current-descriptive-research; never"
                              " inferred or hardcoded.")
+    parser.add_argument("--include-market-wide-historical-research-context", action="store_true",
+                        help="Opt-in, disabled by default: attach"
+                             " tickers[ticker].market_wide_historical_research_context from the"
+                             " already-retained market_wide_historical_research_context_artifact.json"
+                             " (tools/run_market_wide_historical_research_context.py) -- retrospective"
+                             " within-ticker descriptive historical context only. Requires"
+                             " --market-wide-historical-research-context-path; the artifact's own"
+                             " hash is reverified before any attach and a mismatch fails the whole"
+                             " step closed. Always DESCRIPTIVE / is_actionable=false; never ranking,"
+                             " recommendation, historical performance, backtest, RAW_AS_TRADED, PIT,"
+                             " or a modifier of research_priority, entry_action, strategy"
+                             " eligibility, or sizing. Not enabled in any default/production"
+                             " invocation.")
+    parser.add_argument("--market-wide-historical-research-context-path", metavar="PATH",
+                        help="Explicit path to a retained"
+                             " market_wide_historical_research_context_artifact.json, required only"
+                             " with --include-market-wide-historical-research-context; never"
+                             " inferred or hardcoded.")
     parser.add_argument("--include-current-market-screening-comparison", action="store_true",
                         help="Opt-in, disabled by default: nest the retained deterministic current"
                              " screening/comparison artifact under the existing"
@@ -4684,6 +4781,14 @@ def main() -> int:
         args.market_wide_current_descriptive_research_path,
         include_screening_comparison=args.include_current_market_screening_comparison,
         screening_comparison_artifact_path=args.current_market_screening_comparison_path,
+    )
+    # Own dedicated flag; order relative to the others does not matter since nothing else reads
+    # tickers[ticker].market_wide_historical_research_context. Historical context is a sibling
+    # of current descriptive research, never nested into it and never fed into strategy,
+    # priority, entry_action, or sizing.
+    attach_market_wide_historical_research_context(
+        bundle_entries, args.include_market_wide_historical_research_context,
+        args.market_wide_historical_research_context_path,
     )
     # Own dedicated flag; order relative to the others does not matter since nothing else reads
     # tickers[ticker].market_wide_current_fundamental_research. Same explicit-path convention as
