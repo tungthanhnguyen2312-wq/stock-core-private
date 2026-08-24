@@ -38,6 +38,12 @@
 
 ## Evidence and semantic discipline
 
+- Separate source discovery from authority promotion: retain first-party raw
+  data whenever its route contract supports acquisition, then qualify each
+  identity/semantic/use-case independently. Search helpers are `LOOKUP`, not
+  `UNIVERSE_ENUMERATION`; terminal source conclusions must record the adjacent
+  source surfaces checked and a concrete reopening gate.
+
 - `documented_verified` is the only tier that can speak for a source. An
   `empirically_deduced` verdict is provider-, field-, ticker-, and window-scoped; preserve its
   methods, alternatives, falsifications, retained artifacts, timestamps, and scope limits.

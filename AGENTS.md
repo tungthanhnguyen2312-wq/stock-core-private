@@ -67,6 +67,18 @@ request an explicit owner override; do not silently change architecture.
 
 ## Repository boundaries
 
+### First-party source-route qualification
+
+Classify each source surface by its explicit role (for example, universe
+enumeration, lookup, issuer detail, disclosure index, event calendar,
+attachment, or bulk download) before drawing a capability conclusion. Inspect
+bounded adjacent first-party surfaces before closing a source family. Retain
+broadly supported raw observations with their route provenance, then resolve
+and promote each use-case authority fail-closed; a search/autocomplete helper
+is never universe-enumeration evidence. Exact upstream parent metadata may
+establish provenance only through an exact linkage. A source closure must name
+the sibling surfaces checked and the specific evidence that would reopen it.
+
 Codex is the executor. Producer owns raw-source contracts, canonicalization, and artifact
 authority. For a cross-repository task, read the directly applicable sibling repository guardrail
 and the Producer `STATE.md`; do not reconstruct project truth from chat memory or old handoffs.
