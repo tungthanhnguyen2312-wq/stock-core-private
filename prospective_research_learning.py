@@ -3,13 +3,110 @@
 This is shadow prospective learning, never historical PIT backtesting.
 """
 from __future__ import annotations
-import hashlib,json
+import copy,hashlib,json
 import statistics
 from pathlib import Path
 from typing import Any,Mapping
 from prospective_research_context_extension import ATTRIBUTION_SAFE_SUCCESSOR_ID,SUPERSEDED_LEGACY_EXTENSION_ID
 def _canon(x:Any):return json.dumps(x,ensure_ascii=False,sort_keys=True,separators=(',',':'))
 def _hash(x:Any):return hashlib.sha256(_canon(x).encode()).hexdigest()
+
+
+OPPORTUNITY_DECISION_FREEZE_CONTRACT = 'prospective_research_learning/opportunity_decision_freeze/v1'
+
+
+def _opportunity_decision_freeze_identity(payload: Mapping[str, Any]) -> str:
+ body = copy.deepcopy(dict(payload)); body.pop('snapshot_id', None)
+ return 'prospective_research_snapshot:' + _hash(body)
+
+
+def freeze_opportunity_decision_context(*, manifest: Mapping[str, Any], opportunity: Mapping[str, Any], decision_queue: Mapping[str, Any], strategy: Mapping[str, Any], source_file_hashes: Mapping[str, str]) -> dict[str, Any]:
+ """Freeze a completed session's opportunity, queue, and recorded selection state.
+
+ This is intentionally a new additive snapshot rather than a rewrite of the
+ session-operation context.  It permits later attribution to compare the three
+ decision layers independently without deriving a human-selection policy from
+ any deterministic research or review queue.
+ """
+ session = opportunity.get('research_session')
+ outputs = manifest.get('outputs') or {}
+ if manifest.get('contract_version') != 'daily_research_session_operation/v1' or not isinstance(session, str) or not session:
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_SESSION_CONTRACT_INVALID')
+ if manifest.get('market_session') != session or decision_queue.get('research_session') != session or strategy.get('session') != session:
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_SESSION_MISMATCH')
+ if outputs.get('opportunity_prioritization') != opportunity.get('artifact_identity') or outputs.get('daily_opportunity_decision_queue') != decision_queue.get('artifact_identity') or outputs.get('strategy_classification') != strategy.get('artifact_identity'):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_MANIFEST_LINEAGE_MISMATCH')
+ if decision_queue.get('source_artifact_identities', {}).get('opportunity') != opportunity.get('artifact_identity'):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_QUEUE_LINEAGE_MISMATCH')
+ if opportunity.get('contract_version') != 'current_opportunity_prioritization/v1' or decision_queue.get('contract_version') != 'daily_opportunity_decision_queue/v1' or strategy.get('contract_version') != 'polymorphic_current_strategy_classification/v1':
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_SOURCE_CONTRACT_MISMATCH')
+ if set(source_file_hashes) != {'run_manifest.json', 'ai_research_session_bundle.json', 'opportunity_prioritization_artifact.json', 'daily_opportunity_decision_queue_artifact.json', 'strategy_classification_artifact.json'} or any(not isinstance(value, str) or len(value) != 64 for value in source_file_hashes.values()):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_SOURCE_HASH_BINDING_INVALID')
+ opportunity_records, queue_records, strategy_records = opportunity.get('records') or {}, decision_queue.get('records') or {}, strategy.get('records') or {}
+ if not opportunity_records or set(opportunity_records) != set(queue_records) or not set(opportunity_records).issubset(strategy_records):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_COHORT_MISMATCH')
+ if opportunity.get('coverage', {}).get('current_official_universe') != len(opportunity_records):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_DENOMINATOR_MISMATCH')
+ opportunity_rows, queue_rows = [], []
+ for ticker in sorted(opportunity_records):
+  opportunity_row, queue_row, strategy_row = opportunity_records[ticker], queue_records[ticker], strategy_records[ticker]
+  if opportunity_row.get('priority_tier') != queue_row.get('research_priority_tier'):
+   raise ValueError('OPPORTUNITY_DECISION_FREEZE_PRIORITY_MISMATCH:' + ticker)
+  if list(opportunity_row.get('eligible_strategies') or []) != list(strategy_row.get('eligible_strategy_ids') or []):
+   raise ValueError('OPPORTUNITY_DECISION_FREEZE_STRATEGY_MEMBERSHIP_MISMATCH:' + ticker)
+  opportunity_rows.append({
+   'ticker': ticker,
+   'governed_universe_status': opportunity_row.get('official_current_universe_status'),
+   'research_priority_tier': opportunity_row.get('priority_tier'),
+   'eligible_strategy_ids': list(opportunity_row.get('eligible_strategies') or []),
+   'lane_specific_priority': copy.deepcopy(opportunity_row.get('lane_priority') or {}),
+   'strategy_record_state': strategy_row.get('record_strategy_state'),
+   'strategy_record_identity': strategy_row.get('strategy_record_id'),
+   'opportunity_record_identity': opportunity_row.get('content_identity'),
+   'source_input_identities': copy.deepcopy(opportunity_row.get('source_input_identities') or {}),
+   'eligibility_and_blockers': {'blocking_reasons': list(opportunity_row.get('blocking_reasons') or []), 'data_quality_status': opportunity_row.get('data_quality_status'), 'scenario_status': opportunity_row.get('scenario_status'), 'event_context_status': opportunity_row.get('event_context_status'), 'fundamental_context_status': opportunity_row.get('fundamental_context_status'), 'invalidation_or_context_warnings': list(opportunity_row.get('invalidation_or_context_warnings') or []), 'is_actionable': opportunity_row.get('is_actionable'), 'position_sizing_status': opportunity_row.get('position_sizing_status'), 'is_full_position_ready': opportunity_row.get('is_full_position_ready')},
+  })
+  queue_rows.append({
+   'ticker': ticker,
+   'research_priority_tier': queue_row.get('research_priority_tier'),
+   'entry_relevant': queue_row.get('entry_relevant'),
+   'entry_action': queue_row.get('entry_action'),
+   'tactical_state': queue_row.get('tactical_state'),
+   'scenario_status': queue_row.get('scenario_status'),
+   'eligible_strategy_ids': list(queue_row.get('eligible_strategies') or []),
+   'lane_specific_priority': copy.deepcopy(queue_row.get('lane_specific_priority') or {}),
+   'queue_record_identity': queue_row.get('content_identity'),
+   'opportunity_record_identity': queue_row.get('opportunity_record_content_identity'),
+   'source_input_identities': copy.deepcopy(queue_row.get('source_input_identities') or {}),
+   'action_and_eligibility_warnings': {'authority_note': queue_row.get('authority_note'), 'blocking_reasons': list(queue_row.get('blocking_reasons') or []), 'invalidation_or_context_warnings': list(queue_row.get('invalidation_or_context_warnings') or []), 'is_actionable': queue_row.get('is_actionable')},
+  })
+ payload = {
+  'schema_version': '1.0.0', 'contract_version': OPPORTUNITY_DECISION_FREEZE_CONTRACT,
+  'research_session': session,
+  'governed_session': {'operation_identity': manifest.get('operation_identity'), 'generation_commit': manifest.get('producer_head'), 'source_file_sha256': dict(sorted(source_file_hashes.items()))},
+  'layers': {
+   'opportunity_signal_state': {'record_count': len(opportunity_rows), 'governed_universe': {'denominator_semantics': 'current_official_universe', 'coverage': copy.deepcopy(opportunity.get('coverage') or {})}, 'source_artifact_identities': {'opportunity': opportunity.get('artifact_identity'), 'strategy_classification': strategy.get('artifact_identity'), **copy.deepcopy(opportunity.get('source_artifact_identities') or {})}, 'lane_coverage': copy.deepcopy(opportunity.get('lane_coverage') or {}), 'authority_boundary': copy.deepcopy(opportunity.get('authority_boundary')), 'records': opportunity_rows},
+   'daily_decision_queue': {'record_count': len(queue_rows), 'artifact_identity': decision_queue.get('artifact_identity'), 'artifact_sha256': decision_queue.get('artifact_sha256'), 'source_artifact_identities': copy.deepcopy(decision_queue.get('source_artifact_identities') or {}), 'entry_relevant_summary': copy.deepcopy(decision_queue.get('entry_relevant_summary') or {}), 'full_priority_now': list(decision_queue.get('full_priority_now') or []), 'lane_queues': copy.deepcopy(decision_queue.get('lane_queues') or {}), 'multi_strategy': copy.deepcopy(decision_queue.get('multi_strategy') or {}), 'legacy_comparison': copy.deepcopy(decision_queue.get('legacy_comparison') or {}), 'deterministic_review_queue': copy.deepcopy(decision_queue.get('primary_review_candidates') or {}), 'authority_boundary': copy.deepcopy(decision_queue.get('authority_boundary') or {}), 'records': queue_rows},
+   'human_review_selection': {'status': 'ABSENT_NOT_RECORDED', 'selection_count': 0, 'selection_tickers': [], 'provenance': {'reason': 'NO_EXPLICIT_FINAL_HUMAN_SELECTION_ARTIFACT_OR_STATE_RECORDED_FOR_GOVERNED_SESSION', 'checked_governed_sources': ['run_manifest.json', 'ai_research_session_bundle.json', 'daily_opportunity_decision_queue_artifact.json'], 'operation_identity': manifest.get('operation_identity')}, 'semantic_boundary': 'NOT_INFERRED_FROM_FULL_PRIORITY_NOW_ENTRY_RELEVANT_DETERMINISTIC_REVIEW_QUEUE_OR_STRATEGY_LANE_QUEUE'},
+  },
+  'future_outcomes': 'PENDING_FUTURE_OBSERVATION',
+  'authority_boundaries': ['OPPORTUNITY_SIGNAL_STATE_SEPARATE_FROM_DAILY_DECISION_QUEUE', 'DAILY_RESEARCH_PRIORITY_NOT_ENTRY_ACTION_NOT_SIZING_AUTHORITY', 'HUMAN_SELECTION_SEPARATE_AND_NOT_INFERRED', 'NOT_OUTCOME_NOT_BACKTEST_NOT_PREDICTIVE_NOT_RECOMMENDATION_NOT_SIZING_NOT_EXECUTION'],
+ }
+ payload['snapshot_id'] = _opportunity_decision_freeze_identity(payload)
+ return payload
+
+
+def replay_opportunity_decision_context(snapshot: Mapping[str, Any]) -> None:
+ if snapshot.get('contract_version') != OPPORTUNITY_DECISION_FREEZE_CONTRACT or snapshot.get('snapshot_id') != _opportunity_decision_freeze_identity(snapshot):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_IDENTITY_MISMATCH')
+ layers = snapshot.get('layers') or {}
+ opportunity, queue, human = layers.get('opportunity_signal_state') or {}, layers.get('daily_decision_queue') or {}, layers.get('human_review_selection') or {}
+ if opportunity.get('record_count') != len(opportunity.get('records') or []) or queue.get('record_count') != len(queue.get('records') or []) or opportunity.get('record_count') != queue.get('record_count'):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_RECORD_COUNT_MISMATCH')
+ if human.get('status') != 'ABSENT_NOT_RECORDED' or human.get('selection_count') != 0 or human.get('selection_tickers') != []:
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_HUMAN_SELECTION_SEMANTICS_INVALID')
+ if any('outcome' in key.lower() or key.lower() in {'future_price', 'realized_return', 'hit_rate', 'calibration'} for row in list(opportunity.get('records') or []) + list(queue.get('records') or []) for key in row):
+  raise ValueError('OPPORTUNITY_DECISION_FREEZE_HINDSIGHT_FIELD_PRESENT')
 def freeze(product:Mapping[str,Any], analyst:Mapping[str,Any])->dict[str,Any]:
  records={x['ticker']:x for x in product['stock_research']}; briefs={x['ticker']:x for x in analyst['stock_briefs']}; frozen=[]
  for ticker in sorted(records):
