@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-25 - Market-Wide Current Valuation Research Scale-Out V1
+
+`MARKET_WIDE_CURRENT_VALUATION_RESEARCH_SCALEOUT_V1 = COMPLETE_LOCALLY / CURRENT_RESEARCH_ONLY / OWNER_REVIEW_REQUIRED_NOT_AUTHORITATIVE`.
+
+The prior market-wide valuation envelope collapsed every ticker-level share row to `PROVIDER_REPORTED_STALE` and emitted only `BLOCKED`/`NOT_APPLICABLE` on the strict lane. This milestone materializes CURRENT RESEARCH valuation inputs over the official 1,507-name universe and the retained 2026-08-21 price session.
+
+Decisions:
+
+1. **Preserve resolver share tiers.** Statuses are `QUALIFIED_OFFICIAL`, `PROVIDER_REPORTED_CURRENT`, `PROVIDER_REPORTED_LAGGED`, `PROVIDER_REPORTED_STALE`, `PROVIDER_REPORTED_UNVERIFIABLE_FRESHNESS`, and `UNAVAILABLE`. Issued shares are never relabelled common outstanding.
+2. **`READY` remains the authoritative gate.** It requires P3-F2 current-common coverage through the price session. Resolver `qualified_official` without that coverage is `RESEARCH_USABLE` only. VALUE still requires any strict `metrics.status==READY` and therefore stays blocked.
+3. **`RESEARCH_USABLE` reuses the existing MVA/current-descriptive share contract plus official-qualified financial identities and P3-F formulas.** Provider-research absolute financials stay forbidden. EV/EBITDA stays blocked (`EXACT_EBITDA_COMPARABILITY_NOT_RETAINED`). Banks/securities industrial EV/Sales/EBITDA stay `NOT_APPLICABLE`.
+4. **Fitness is per metric.** A missing EV/EBITDA does not globally block a ticker that has research-usable P/E or market cap.
+5. **Prospective artifact only.** Default output is `operations-review/market-wide-current-valuation-research-scaleout-v1/`. Frozen 2026-08-21 (`e6d015f2…`) and 2026-08-24 (`b9ca1224…`) valuation identities, and the daily-session registry, are not rewritten. Daily analyst brief may attach coverage opt-in without changing attention priority or `valuation_authority`.
+
+Validation: denominator 1,507 with zero unexplained drift; deterministic replay `market_wide_current_valuation:94d6116f6277cced9988281ea2d0327347079a973a8755128ee2ed726a5315aa`; stale-share and bank/securities EV regressions; VALUE 0 eligible; focused tests; `py_compile`; `git diff --check`. No push, merge, deploy, or authority promotion.
+
 ## 2026-08-24 - Market-Wide Historical Research Context V1
 
 `MARKET_WIDE_HISTORICAL_RESEARCH_CONTEXT_V1 = COMPLETE_LOCALLY / COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED_NOT_AUTHORITATIVE`.
