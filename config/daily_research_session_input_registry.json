@@ -1,6 +1,17 @@
 {
   "schema_version": "1.0.0",
   "contract_version": "daily_research_session_input_registry/v1",
+  "completed_sessions": {
+    "2026-08-21": {
+      "status": "COMPLETED_RETAINED_EVIDENCE",
+      "trading_day_valid": true,
+      "completion_evidence": {
+        "basis": "EXACT_SESSION_UPSTREAM_ARTIFACT_REGISTRY",
+        "required_current_session_inputs": ["descriptive", "screening", "tactical", "triage", "valuation", "corporate_intelligence", "market_flow_positioning"],
+        "policy": "The registry is a governed completed-session ledger. It does not infer completion from civil time, weekday, or a latest file."
+      }
+    }
+  },
   "sessions": {
     "2026-08-21": {
       "descriptive": {"path": "operations-review/market-wide-current-technical-coverage-scaleout-v1-20260823/market_wide_current_descriptive_research_artifact.json", "artifact_identity": "market_wide_current_descriptive_research:8660d4ece155e91895557a0f7b70a6a501ab5ebcee8978818199084a88a6c9b6"},

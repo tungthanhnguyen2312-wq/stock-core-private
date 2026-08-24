@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -165,3 +166,67 @@ def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
         if path.exists() and path.read_bytes() != value: raise ValueError("IMMUTABLE_SESSION_OPERATION_DELIVERY_CONFLICT:" + filename)
         path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(value)
     write_immutable(output_dir / "run_manifest.json", operation["manifest"])
+
+
+def run_session_operation(
+    root: Path,
+    *,
+    session: str,
+    producer_head: str,
+    consumer_head: str,
+    output_root: Path,
+    registry_path: Path | None = None,
+    generation_context: str = "RETAINED_FIXED_TIME_REPLAY",
+    portfolio: Mapping[str, Any] | None = None,
+    macro: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, Any], Path]:
+    """Build, Consumer-validate, and immutably materialize one exact operation.
+
+    This is the reusable foreground integration seam.  Callers supply resolved
+    repository heads and explicit optional inputs; it never discovers a
+    ``latest`` artifact or performs acquisition.
+    """
+    inputs, _ = resolve_inputs(root, session, load_registry(root, registry_path))
+    operation = build_operation(
+        inputs,
+        session,
+        producer_head=producer_head,
+        consumer_head=consumer_head,
+        generation_context=generation_context,
+        portfolio=portfolio,
+        macro=macro,
+    )
+    consumer_root = root.parent / "ai-core-private"
+    if str(consumer_root) not in sys.path:
+        sys.path.insert(0, str(consumer_root))
+    from builders.build_ticker_context import current_daily_decision_research_contract
+
+    card = operation["product"]["detailed_research_cards"].get("ABB")
+    if not card:
+        raise ValueError("CONSUMER_E2E_REPRESENTATIVE_CARD_MISSING")
+    bundled = dict(card)
+    bundled.update({
+        "source_artifact_identity": operation["product"]["artifact_identity"],
+        "source_session": session,
+        "market_brief": operation["product"]["market_brief"],
+        "authority_boundary": operation["product"]["authority_boundary"],
+        "is_actionable": False,
+    })
+    if operation.get("portfolio_risk"):
+        bundled["portfolio_risk"] = operation["portfolio_risk"]
+    if operation.get("macro_context"):
+        bundled["macro_context"] = operation["macro_context"]
+    accepted = current_daily_decision_research_contract(
+        {"tickers": {"ABB": {"current_daily_decision_research": bundled}}}, "ABB"
+    )
+    if not accepted or accepted.get("status") == "malformed":
+        raise ValueError("CONSUMER_E2E_FAIL_CLOSED")
+    operation["manifest"]["consumer_e2e"] = {
+        "status": "PASS",
+        "representative_ticker": "ABB",
+        "consumer_contract": "current_daily_decision_research_contract",
+    }
+    operation["manifest"]["operation_identity"] = _identity(operation["manifest"])
+    output_dir = output_root / session / operation["manifest"]["operation_identity"].split(":", 1)[1]
+    materialize(output_dir, operation)
+    return operation, output_dir

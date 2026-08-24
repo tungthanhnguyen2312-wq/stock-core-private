@@ -1,8 +1,79 @@
 # Daily Research Session Operation
 
-Use this runbook only after a completed market session has been retained by the upstream
-current-research contracts. This is a foreground, retained-evidence operation; it neither
-acquires market data nor schedules itself.
+Use this runbook after a completed market session has been retained by the upstream
+current-research contracts. The normal foreground command is the Daily Producer;
+it resolves one explicit completed-session ledger entry, reuses exact accepted
+artifacts, materializes the Daily Session Operation, and leaves the AI and
+Dashboard delivery files together. It never schedules itself, infers completion
+from the wall clock, or promotes a source authority.
+
+## After market close: one normal command
+
+1. Confirm that upstream approved acquisition/materialization has retained the
+   completed session and that its exact artifacts have been entered in
+   `config/daily_research_session_input_registry.json`. The `completed_sessions`
+   ledger is the completion proof; a weekday, local time, or a "latest" filename
+   is never proof.
+2. Run one foreground command from `stock-core-private`:
+
+   ```powershell
+   python tools/run_daily_producer.py --session YYYY-MM-DD
+   ```
+
+   To select only the greatest explicitly governed completed session, use:
+
+   ```powershell
+   python tools/run_daily_producer.py --latest-completed-session
+   ```
+
+   This mode reads the ledger only. It does not guess holidays, close status, or
+   provider sessions from the wall clock.
+3. Read the concise terminal summary (`SESSION`, `STATUS`, `OPERATION_ID`,
+   `MARKET_COVERAGE`, warnings, primary AI bundle, Dashboard projection, and
+   blocked dimensions). `REFUSE_COMPLETED_SESSION_RUN` is a safe refusal; correct
+   the governed completion/registry evidence rather than forcing a partial run.
+4. Open the printed owner directory under
+   `operations-review/daily-producer-runs-v1/<SESSION>/<run-hash>/`.
+5. Upload `ai_research_session_bundle.json` to ChatGPT or Claude for normal
+   human-review research.
+6. A Dashboard projection is ready in `dashboard/current_decision_cockpit_projection.json`.
+   Publish it only later through the separately governed, owner-authorized
+   Dashboard release command.
+7. Evaluate outcomes only when a genuinely later retained session exists through
+   the separate prospective-learning contract.
+
+`LATEST_COMPLETED_RUN.json` beside the session directories is navigation only.
+It carries exact session, producer-run, and Daily Session Operation identities;
+it is never analytical truth.
+
+## Acquire versus reuse and failure handling
+
+The Daily Producer is an orchestrator. It retains the source plan in its final
+`run_manifest.json` and uses only these dispositions: `ACQUIRE_FOR_TARGET_SESSION`,
+`REUSE_CURRENT_VALID_RETAINED`, `REUSE_HISTORICAL_CONTEXT`,
+`OPTIONAL_UNAVAILABLE`, `BLOCKED`, and `NOT_APPLICABLE`.
+
+- Session-dependent DNSE/current-market, screening, tactical, and triage inputs
+  must be exact-session and identity-bound; their failure blocks dependent
+  tactical/product delivery.
+- Fundamental and catalyst context are reused with their retained undated or
+  earlier/degraded labels. Corporate Intelligence, macro, flow, and explicit
+  portfolio branches are localized optional dependencies where their existing
+  contracts permit that state.
+- Strict valuation stays blocked; the shadow proxy is not substituted. Missing
+  macro or flow does not manufacture zeros or block unrelated tactical research.
+- Each actual upstream source acquisition retains its own raw provider/endpoint,
+  request/session, retrieval time, response status, raw payload/content hash, and
+  parsed disposition under its existing source contract. The Producer records
+  identities only and never overwrites raw evidence.
+
+## Rerun / resume
+
+Run the same command again. With the same registry identities, repository heads,
+and explicit optional inputs it targets the same immutable operation and owner
+delivery directory. Existing byte-identical artifacts are reused; a conflicting
+partial or changed artifact fails closed. Do not alter a historical snapshot to
+make a rerun pass.
 
 ## 1. Prepare the explicit session selection
 
@@ -87,6 +158,8 @@ portfolio, execution, PIT, and backtesting remain unavailable.
 
 ## Daily producer workflow
 
-One completed-session operation emits Product V2, the AI delivery files, and the Dashboard
-projection together. A governed Dashboard publication remains a separate owner-authorized
-release step; do not select a `latest` operation or manually combine artifacts.
+One completed-session Producer run emits Product V2, the AI delivery files, and
+the Dashboard projection together. It mechanically asserts AI/Dashboard parity
+for session, Daily Session Operation, Product, and analytical input identities.
+It has no scheduler, polling loop, background service, production database write,
+or Dashboard publication behavior.
