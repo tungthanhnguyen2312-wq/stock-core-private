@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-25 - Current Financial Momentum Context V1
+
+`CURRENT_FINANCIAL_MOMENTUM_CONTEXT_V1 = CURRENT_FINANCIAL_MOMENTUM_CONTEXT_PASS` (`push = NO`).
+
+Existing `market_wide_current_fundamental_research` already joins official P3-B metrics, provider-series trends, and `fundamental_trajectory_context` (QoQ revenue/earnings alignment used by `FUNDAMENTAL_IMPROVEMENT`). That envelope is not a comparable-period momentum state, does not consume official FY YoY growth, and does not contrast operational improvement with current-session price momentum. This milestone adds a sibling current-research context rather than a second fundamental evidence lane.
+
+Decisions:
+
+1. **Reuse retained evidence.** Official FY YoY (`revenue_growth_yoy`, `earnings_growth_yoy`, two-period `net_margin`, `operating_cash_flow_growth_yoy`) and already-emitted provider series comparisons. No new facts, no provider-to-official upgrade, no adjacent-period substitution for a missing YoY pair. QoQ may appear only as `PARTIAL` with an explicit `YoY` absence warning.
+2. **Keep identities distinct.** Consolidated/standalone, FY versus quarter, and parent versus total earnings fail closed. Bank/securities industrial revenue/margin/OCF are `NOT_APPLICABLE`. Provider `net_income` is not treated as parent-attributable bank/securities earnings.
+3. **Transparent states, no score.** `BROAD_IMPROVEMENT`, `EARNINGS_IMPROVING`, `MIXED`, `DETERIORATING`, `LOSS_MAKING_OR_STRESSED`, `INSUFFICIENT_COMPARABLE_DATA`, `NOT_APPLICABLE`. Revenue up with earnings or margin down stays `MIXED`. One missing metric does not globally block a ticker.
+4. **Operational versus price is a contrast, not a claim.** Current-session descriptive `momentum_20d` may show financial improvement without price momentum (HPG) or aligned-not-distinguished (SSI). Financial momentum is not price momentum, cheapness, or VALUE.
+5. **Downstream unchanged.** Opt-in `export_ai_bundle.py` attach is default-off. `FUNDAMENTAL_IMPROVEMENT` still requires trajectory `BOTH_EXPANDING`. `research_priority` and `entry_action` are not modified. Frozen 2026-08-21/24 identities are unchanged.
+
+Validation: focused tests; fundamental-readiness and strategy regressions; `py_compile`; `git diff --check`; retained replay `current_financial_momentum_context:1100ea5a39ea22747f9cd455f0ca86971046e54c07c99472695a452757b154e1`. No push, merge, deploy, or authority promotion.
+
 ## 2026-08-25 - ADTV20 Window Integrity And Conflict Qualification V1
 
 `ADTV20_WINDOW_INTEGRITY_AND_CONFLICT_QUALIFICATION_V1 = MATCHED_VALUE_AUTHORITY_SCOPE_RESTRICTED` (`push = NO`).
