@@ -219,10 +219,10 @@ def build_historical_matched_trading_value_authority(
         ticker_sessions = [item for item in session_rows if item["ticker"] == ticker]
         if ticker_sessions:
             disposition = MATCHED_VALUE_OBSERVATION_QUALIFIED
-            blockers = ["ADTV20_REQUIRES_20_QUALIFIED_COMPLETE_TRADING_SESSIONS"]
+            blockers = ["ADTV20_REQUIRES_20_QUALIFIED_COMPLETE_TRADING_SESSIONS"] if len(ticker_sessions) < EXPECTED_ADTV_SESSIONS else []
         elif ticker in trades:
             disposition = UNAVAILABLE_NO_VALUE_ANCHOR
-            blockers = ["NO_INDEPENDENT_EXACT_MATCHED_VALUE_ANCHOR_OUTSIDE_EMPIRICAL_12_ROW_SCOPE"]
+            blockers = ["NO_INDEPENDENT_EXACT_MATCHED_VALUE_ANCHOR"]
         else:
             disposition = UNAVAILABLE_MISSING_TRADES
             blockers = ["MISSING_FROM_RETAINED_TRADES_CORPUS"]
