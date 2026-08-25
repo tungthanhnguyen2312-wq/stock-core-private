@@ -74,7 +74,11 @@ def completed_session_gate(registry: Mapping[str, Any], session: str, *, now: da
         raise DailyProducerError("REFUSE_COMPLETED_SESSION_RUN:SESSION_COMPLETION_NOT_PROVED")
     if record.get("trading_day_valid") is not True:
         raise DailyProducerError("REFUSE_COMPLETED_SESSION_RUN:TRADING_DAY_NOT_VALIDATED")
-    if session >= local_now.date().isoformat():
+    # A future session is always refused. A same-local-date session is refused only by the
+    # governed-evidence checks above (status/trading_day_valid) -- not by this date compare --
+    # so same-day eligibility comes exclusively from the explicit completed-session ledger,
+    # never from wall-clock/"market should be closed" inference.
+    if session > local_now.date().isoformat():
         raise DailyProducerError("REFUSE_COMPLETED_SESSION_RUN:TARGET_NOT_STRICTLY_BEFORE_LOCAL_DATE")
     return {
         "status": "PASS",

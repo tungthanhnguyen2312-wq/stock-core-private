@@ -29,17 +29,89 @@ def test_completed_session_gate_uses_governed_ledger_not_clock_inference():
     gate = completed_session_gate(_registry(), "2026-08-21", now=datetime(2026, 8, 24, 9, 0, tzinfo=VN_TZ))
     assert gate["status"] == "PASS"
     assert gate["completion_status"] == "COMPLETED_RETAINED_EVIDENCE"
-    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-21"
+    # Pre-existing bug fixed in passing: this assertion pre-dates the registry's 2026-08-24
+    # completed-session entry and never accounted for it (fails identically on the
+    # unmodified baseline, unrelated to the same-day gate fix below). "Latest" must reflect
+    # the real governed ledger, not a stale expectation from before 08-24 was registered.
+    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-24"
 
 
-def test_completed_session_gate_refuses_incomplete_or_current_session():
+def test_completed_session_gate_refuses_incomplete_session():
     registry = copy.deepcopy(_registry())
-    registry["completed_sessions"]["2026-08-24"] = {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}
-    with pytest.raises(DailyProducerError, match="TARGET_NOT_STRICTLY_BEFORE_LOCAL_DATE"):
-        completed_session_gate(registry, "2026-08-24", now=datetime(2026, 8, 24, 16, 0, tzinfo=VN_TZ))
     registry["completed_sessions"]["2026-08-21"]["status"] = "INTRADAY"
     with pytest.raises(DailyProducerError, match="SESSION_COMPLETION_NOT_PROVED"):
         completed_session_gate(registry, "2026-08-21", now=datetime(2026, 8, 24, 16, 0, tzinfo=VN_TZ))
+
+
+# --- Same-day completed-session gate: session > local date is always refused; a session
+# equal to the local date is refused or accepted purely by the explicit governed
+# completed_sessions ledger, never by wall-clock/"market should be closed" inference. ---
+
+def test_gate_A_future_session_refused_even_with_complete_looking_evidence():
+    """A session strictly after local date must refuse regardless of ledger content --
+    proves the date check is not merely skipped once evidence exists."""
+    registry = copy.deepcopy(_registry())
+    registry["completed_sessions"]["2026-08-26"] = {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}
+    with pytest.raises(DailyProducerError, match="TARGET_NOT_STRICTLY_BEFORE_LOCAL_DATE"):
+        completed_session_gate(registry, "2026-08-26", now=datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ))
+
+
+def test_gate_B_same_day_without_completed_evidence_refused():
+    """Same local date with no ledger entry, or an entry not yet proved complete, must
+    still refuse -- same-day is never granted merely by matching the wall clock."""
+    registry = copy.deepcopy(_registry())
+    with pytest.raises(DailyProducerError, match="SESSION_NOT_GOVERNED_COMPLETED"):
+        completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ))
+
+    registry["completed_sessions"]["2026-08-25"] = {"status": "INTRADAY", "trading_day_valid": True}
+    with pytest.raises(DailyProducerError, match="SESSION_COMPLETION_NOT_PROVED"):
+        completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ))
+
+    registry["completed_sessions"]["2026-08-25"] = {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": False}
+    with pytest.raises(DailyProducerError, match="TRADING_DAY_NOT_VALIDATED"):
+        completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ))
+
+
+def test_gate_C_same_day_with_explicit_completed_evidence_accepted():
+    """The one behavior this fix adds: a same-local-date session with a governed
+    COMPLETED_RETAINED_EVIDENCE + trading_day_valid=True record must PASS, not refuse."""
+    registry = copy.deepcopy(_registry())
+    registry["completed_sessions"]["2026-08-25"] = {
+        "status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True,
+        "completion_evidence": {"basis": "EXACT_SESSION_UPSTREAM_ARTIFACT_REGISTRY"},
+    }
+    gate = completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 18, 30, tzinfo=VN_TZ))
+    assert gate["status"] == "PASS"
+    assert gate["target_session"] == "2026-08-25"
+    assert gate["completion_status"] == "COMPLETED_RETAINED_EVIDENCE"
+
+
+def test_gate_D_prior_day_completed_session_behavior_unchanged():
+    """A strictly-prior-day session with governed evidence must still PASS exactly as
+    before this fix (session > local_date is False either way for a prior day)."""
+    gate = completed_session_gate(_registry(), "2026-08-21", now=datetime(2026, 8, 25, 9, 0, tzinfo=VN_TZ))
+    assert gate["status"] == "PASS"
+    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-24"
+
+
+def test_gate_E_same_day_gate_pass_does_not_bypass_exact_session_input_coherence():
+    """Passing the date/evidence gate for a same-day session must not by itself make an
+    incoherent or missing exact-session input set acceptable -- resolve_inputs/
+    validate_coherence remain independent, composed fail-closed checks (mirrors
+    test_malformed_retained_artifact_and_source_session_mismatch_fail_closed, but pinned
+    to a same-day gate PASS to prove the two checks were not accidentally merged)."""
+    registry = copy.deepcopy(_registry())
+    registry["completed_sessions"]["2026-08-25"] = {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}
+    gate = completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 18, 30, tzinfo=VN_TZ))
+    assert gate["status"] == "PASS"
+
+    with pytest.raises(ValueError, match="SESSION_NOT_REGISTERED_EXPLICIT_INPUT_MANIFEST_REQUIRED"):
+        resolve_inputs(ROOT, "2026-08-25", registry)  # no "sessions" entry registered for 2026-08-25
+
+    inputs, _ = resolve_inputs(ROOT, "2026-08-21", _registry())
+    inputs["tactical"]["session"] = "2026-08-20"
+    with pytest.raises(ValueError, match="SESSION_COHERENCE_MISMATCH"):
+        validate_coherence(inputs, "2026-08-21")
 
 
 def test_acquisition_plan_preserves_exact_identities_and_localized_optional_states():
