@@ -1,5 +1,20 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-25 - Historical Matched Trading Value Authority V1
+
+`HISTORICAL_MATCHED_TRADING_VALUE_AUTHORITY_V1 = MATCHED_TRADING_VALUE_AUTHORITY_CEILING_ESTABLISHED` (`push = NO`).
+
+The prior G1/FHSC 12-row observation remains the only independently exact matched-value proof. This milestone names the monetary 20-session feature `ADTV20_MATCHED_VALUE`, scales one terminal disposition across the official 1,507-name universe, and does not manufacture a generic value field.
+
+Decisions:
+
+1. **Matched value is G1 only.** Formula `sum(G1.matchPrice * G1.matchQtty) * 10 * 1000` VND. G4 odd-lot and T1/T3/T4/T6 put-through stay retained and excluded. Missing boards are not zero-filled. `grossTradeAmount` and OHLC `v`/`va` are not matched value.
+2. **`ADTV20_MATCHED_VALUE` is not ADV.** Trailing 20 actual qualified trading sessions, no calendar imputation, no 17/20 tolerance. Ready count is 0 because each qualified ticker has 3/20 sessions. `ADV20_MATCHED_VOLUME` is not emitted; volume authority is not derived from the value proof.
+3. **No generic promotion outside the 12 exact rows.** Market-wide ceiling: 4 observation-qualified tickers, 1,503 official names `UNAVAILABLE_NO_INDEPENDENT_MATCHED_VALUE_ANCHOR`. `QUALIFIED_LIQUIDITY_INPUTS` and `POSITION_SIZING_IS_SAFE` stay false. No participation cap is embedded.
+4. **Prospective opt-in only.** `export_ai_bundle.py` may attach the artifact behind a default-off explicit path. Frozen 2026-08-21/24 identities, current-session liquidity, current-share, and valuation/VALUE contracts are unchanged.
+
+Validation: official 1,507 denominator; 12/12 discriminating `EXACT_RECONCILED`; focused tests; `py_compile`; `git diff --check`. No push, merge, deploy, or sizing/PIT/RAW_AS_TRADED promotion.
+
 ## 2026-08-25 - Current Common Shares Authority And Scaleout V1
 
 `CURRENT_COMMON_SHARES_AUTHORITY_AND_SCALEOUT_V1 = CURRENT_COMMON_SHARES_AUTHORITY_CEILING_ESTABLISHED` (`push = NO`).
