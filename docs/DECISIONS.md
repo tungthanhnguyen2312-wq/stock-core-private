@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-25 - Current Research Packet Dashboard Shadow Surfacing V1
+
+`CURRENT_RESEARCH_PACKET_DASHBOARD_SHADOW_SURFACING_V1 = CURRENT_RESEARCH_PACKET_DASHBOARD_SHADOW_SURFACING_PASS` (`push = NO`).
+
+The canonical `current_research_decision_packet/v1` already packages current decision context and optional research siblings. This milestone organizes those facts through the existing daily decision research product and the existing opt-in bundle attach. It does not redesign the packet, add a research-context sibling, or promote packet authority.
+
+Decisions:
+
+1. **Reuse the existing product surface.** Extend `current_daily_decision_research_product/v2` and `--include-current-research-decision-packet`. Do not invent a second dashboard architecture or write Consumer/`market-dashboard-main`.
+2. **Shadow/opt-in only.** Default product and default bundle bytes stay unchanged. Missing or incorrect packet identity fails closed without altering the default path.
+3. **Do not conflate scenario or priority contracts.** Packet scenario is the evidence-bound Bear/Base/Bull family and is never labelled CONSERVATIVE/BASE/SPECULATIVE. Packet `priority_tier` remains `current_opportunity_prioritization/v1` and is not merged with `daily_opportunity_decision_queue`.
+4. **Authority labels are required presentation.** `NO_MATERIAL_RISK_ESTABLISHED` is not LOW_RISK; `RESEARCH_USABLE` is not authoritative READY; `ADJUSTED_RETROSPECTIVE` is not RAW_AS_TRADED; retrospective history is not PIT; record date is not ex-date; planned/approved is not executed; scenario axis is not probability; research priority is not entry action; research state is not sizing.
+5. **Local absence stays local.** A missing or malformed optional packet component does not make the ticker unusable and does not revise upstream decision state.
+
+Validation: focused product/packet tests; retained market-wide render 1,507/1,507 residual 0 malformed 0; `py_compile`; `git diff --check`. Packet identity `current_research_decision_packet:489e04894b5be6b1a0c8d4c69c41140706d32cf6dcec46b916b1ee7a95afb763`. No push, merge, deploy, default cutover, or authority promotion.
+
 ## 2026-08-25 - Current Corporate Event Context V1
 
 `CURRENT_CORPORATE_EVENT_CONTEXT_V1 = CURRENT_CORPORATE_EVENT_CONTEXT_PASS` (`push = NO`).

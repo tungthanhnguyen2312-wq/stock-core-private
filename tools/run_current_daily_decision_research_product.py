@@ -1,6 +1,7 @@
 """Materialize the current daily human-review product from retained artifacts only."""
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -20,14 +21,29 @@ PATHS = {
     "triage": "full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json",
 }
 OUTPUT = OPERATIONS / "current-daily-decision-research-product-v2-20260824"
+SHADOW_OUTPUT = OPERATIONS / "current-research-decision-packet-dashboard-shadow-v1"
+DEFAULT_PACKET = OPERATIONS / "current-research-decision-packet-v1/current_research_decision_packet_artifact.json"
 
 
-def main() -> None:
-    artifact = build(**{name: json.loads((OPERATIONS / path).read_text(encoding="utf-8")) for name, path in PATHS.items()})
+def main(argv=None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--include-current-research-decision-packet", action="store_true",
+                        help="Opt-in shadow attach of current_research_decision_packet/v1. Default off.")
+    parser.add_argument("--current-research-decision-packet-path", default=str(DEFAULT_PACKET))
+    args = parser.parse_args(argv)
+    inputs = {name: json.loads((OPERATIONS / path).read_text(encoding="utf-8")) for name, path in PATHS.items()}
+    packet = None
+    output = OUTPUT
+    if args.include_current_research_decision_packet:
+        packet = json.loads(Path(args.current_research_decision_packet_path).read_text(encoding="utf-8"))
+        output = SHADOW_OUTPUT
+    artifact = build(**inputs, current_research_decision_packet=packet)
     assert content_identity(artifact)["artifact_sha256"] == artifact["artifact_sha256"]
-    OUTPUT.mkdir(parents=True, exist_ok=True)
-    (OUTPUT / "current_daily_decision_research_product_artifact.json").write_text(json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (OUTPUT / "current_daily_decision_research_brief.md").write_text(markdown(artifact), encoding="utf-8")
+    output.mkdir(parents=True, exist_ok=True)
+    (output / "current_daily_decision_research_product_artifact.json").write_text(
+        json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    (output / "current_daily_decision_research_brief.md").write_text(markdown(artifact), encoding="utf-8")
     print(artifact["artifact_identity"])
 
 

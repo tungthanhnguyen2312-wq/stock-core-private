@@ -6,6 +6,7 @@ from collections import Counter
 from typing import Any, Mapping
 
 from field_temporal_contract import stable_id
+from current_research_decision_packet_product import attach_shadow_to_daily_product, markdown as packet_shadow_markdown
 
 CONTRACT_VERSION = "current_daily_decision_research_product/v2"
 WATCHLIST = ("EVF", "FPT", "HPG", "NVL", "PAN", "PNJ", "POW", "PVD", "QNS", "SSI", "VNM")
@@ -82,7 +83,7 @@ def _card(ticker: str, tactical: Mapping[str, Any], peer: Mapping[str, Any] | No
     return {"ticker": ticker, "current_decision_state": {"ticker_structure_state": tactical.get("ticker_structure_state"), "entry_state": state, "entry_action": tactical.get("entry_action"), "horizon": tactical.get("horizon"), "human_use_language": LANGUAGE.get(state, "technical evidence unavailable / no current tactical classification"), "is_actionable": False, "requires_human_review": True, "position_sizing_status": tactical.get("position_sizing_status", "NOT_EVALUATED")}, "why_it_is_on_radar": {"deterministic_reasons": tactical.get("evidence_for") or [], "evidence_for": tactical.get("evidence_for") or []}, "what_argues_against": {"evidence_against": tactical.get("evidence_against") or [], "conflicts": scenario.get("key_driver_conflicts") or [], "limitations": (tactical.get("data_quality") or {}).get("warnings") or []}, "peer_context": _peer_summary(peer, state), "fundamental_context": _fundamental_summary(fundamental), "valuation_context": _valuation_summary(valuation, peer), "market_flow_positioning": _flow_summary(flow), "corporate_intelligence_context": _corporate_summary(corporate), "strategy_fit": _strategy_summary(strategy), "research_priority": _research_priority_summary(opportunity_record), "scenario": {"bear_case": scenario.get("bear_case"), "base_case": scenario.get("base_case"), "bull_case": scenario.get("bull_case"), "probability_status": scenario.get("probability_status", "UNKNOWN_UNCALIBRATED")}, "trigger": tactical.get("confirmation_trigger"), "invalidation": tactical.get("invalidation"), "data_quality": tactical.get("data_quality") or {}, "thesis_counter_thesis": _claims(ticker, tactical, peer, fundamental), "authority_limitations": ["Strategy eligibility is distinct from entry action, scenario, and portfolio action.", "Research priority tier is distinct from entry action, is_full_position_ready, and position_sizing_status.", "Entry action is tactical research state only, not execution authority.", "No target, probability, ranking, recommendation, sizing, portfolio, or execution instruction."]}
 
 
-def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], scenario: Mapping[str, Any], triage: Mapping[str, Any], corporate_intelligence: Mapping[str, Any] | None = None, strategy_classification: Mapping[str, Any] | None = None, portfolio_risk: Mapping[str, Any] | None = None, macro_context: Mapping[str, Any] | None = None, market_flow_positioning: Mapping[str, Any] | None = None, opportunity_decision_queue: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], scenario: Mapping[str, Any], triage: Mapping[str, Any], corporate_intelligence: Mapping[str, Any] | None = None, strategy_classification: Mapping[str, Any] | None = None, portfolio_risk: Mapping[str, Any] | None = None, macro_context: Mapping[str, Any] | None = None, market_flow_positioning: Mapping[str, Any] | None = None, opportunity_decision_queue: Mapping[str, Any] | None = None, current_research_decision_packet: Mapping[str, Any] | None = None) -> dict[str, Any]:
     d, t, p, f, v, s = descriptive["records"], tactical["records"], peer_relative["records"], fundamental["records"], valuation["records"], scenario["records"]
     groups = {"EARLY_REVERSAL": "EARLY_REVERSAL_CANDIDATE", "BASE_BUILDING": "BASE_BUILDING", "BREAKOUT_CONFIRMATION": "BREAKOUT_READY", "UPTREND_ESTABLISHED_STRENGTH": "UPTREND_CONFIRMED", "DISTRIBUTION_OR_BREAKDOWN_RISK": {"DISTRIBUTION_RISK", "BREAKDOWN_RISK", "DOWNTREND"}}
     cohorts = {name: [ticker for ticker in sorted(t) if (t[ticker].get("entry_state") in state if isinstance(state, set) else t[ticker].get("entry_state") == state)] for name, state in groups.items()}
@@ -118,6 +119,8 @@ def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_r
             "authority_boundary": dict(opportunity_decision_queue["authority_boundary"]),
         }
         artifact["source_artifact_identities"]["opportunity_decision_queue"] = opportunity_decision_queue["artifact_identity"]
+    if current_research_decision_packet is not None:
+        attach_shadow_to_daily_product(artifact, current_research_decision_packet)
     artifact.update(content_identity(artifact)); return artifact
 
 
@@ -143,6 +146,12 @@ def markdown(artifact: Mapping[str, Any]) -> str:
     if isinstance(portfolio, Mapping):
         breached = [item["limit_id"] for item in portfolio.get("user_limit_results", []) if item.get("status") == "LIMIT_BREACH"]
         lines += ["", "## Portfolio risk (explicit input)", f"- Portfolio: {portfolio.get('portfolio_id')} ({portfolio.get('portfolio_kind')}); {len(portfolio.get('positions', []))} explicit positions.", f"- User-limit breaches: {', '.join(breached) or 'none declared'}.", "- Concentration context only; no allocation, sizing, VaR/CVaR, leverage, liquidity, or execution instruction."]
+    packet_shadow = artifact.get("current_research_decision_packet_shadow")
+    if isinstance(packet_shadow, Mapping):
+        panel = dict(packet_shadow)
+        panel["cards"] = {ticker: card.get("current_research_decision_packet") for ticker, card in artifact.get("detailed_research_cards", {}).items() if isinstance(card, Mapping) and isinstance(card.get("current_research_decision_packet"), Mapping)}
+        panel["cards_requested"] = sorted(panel["cards"])
+        lines += ["", packet_shadow_markdown(panel).rstrip()]
     macro = artifact.get("macro_context")
     if isinstance(macro, Mapping):
         regime = (macro.get("macro_regime") or {}).get("state", "UNAVAILABLE")
