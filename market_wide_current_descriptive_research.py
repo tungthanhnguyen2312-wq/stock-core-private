@@ -48,6 +48,14 @@ IN_SCOPE_ACTIVITY_STATES = frozenset({"ACTIVE_LISTED_OBSERVED", "ACTIVE_LISTED_N
 LIQUIDITY_ELIGIBLE_DISPOSITION = "CURRENT_SESSION_DESCRIPTIVE_ELIGIBLE"
 
 
+# Proven structural insufficiency after the extended-history recovery attempt. Acquisition
+# failures (FETCH_FAILED, MALFORMED_RESPONSE) and TARGET_SESSION_NOT_RECOVERED remain
+# recoverable same-session gaps and must not be treated as lifetime insufficiency.
+PROVEN_STRUCTURAL_TECHNICAL_INSUFFICIENCY_STATES = frozenset({
+    "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK",
+})
+
+
 def _assert_no_recoverable_same_session_technical_gap(
     records: Mapping[str, Mapping[str, Any]], snapshot_records: Mapping[str, Any],
     recovery_records: Mapping[str, Any] | None = None,
@@ -56,12 +64,7 @@ def _assert_no_recoverable_same_session_technical_gap(
     unrecoverable = set()
     if recovery_records:
         for ticker, rec in recovery_records.items():
-            if isinstance(rec, Mapping) and rec.get("state") in {
-                "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK",
-                "TARGET_SESSION_NOT_RECOVERED",
-                "FETCH_FAILED",
-                "MALFORMED_RESPONSE",
-            }:
+            if isinstance(rec, Mapping) and rec.get("state") in PROVEN_STRUCTURAL_TECHNICAL_INSUFFICIENCY_STATES:
                 unrecoverable.add(ticker)
     gaps = [
         ticker for ticker, record in records.items()

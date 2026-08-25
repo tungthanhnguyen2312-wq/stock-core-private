@@ -290,3 +290,103 @@ def test_session_mismatch_between_liquidity_snapshot_identity_and_p3f9b_raises()
     liq = {**liq, **liquidity_content_identity(liq)}
     with pytest.raises(MarketWideCurrentDescriptiveResearchError):
         build_artifact(universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq, entity_classifications=classifications)
+
+
+def _gap_inputs():
+    """Exact-session bar present, but fewer than 20 lifetime bars so technicals are MISSING."""
+    ur, pf, liq, classifications = _build_scenario()
+    ticker = "GAP1"
+    ur_records = dict(ur["records"])
+    pf_records = dict(pf["records"])
+    liq_records = dict(liq["records"])
+    ur_records[ticker] = _ur_record(ticker, "ACTIVE_LISTED_OBSERVED")
+    pf_records[ticker] = {
+        "disposition": "EXACT_SESSION_RETAINED",
+        "observations": _observations(TARGET, 7, start_close=40.0, step=0.5),
+    }
+    liq_records[ticker] = _liq_missing_record(ticker)
+    ur = universe_resolution(ur_records, denominator=9, observed=7)
+    pf = p3f9b_snapshot(pf_records)
+    liq = liquidity_artifact(liq_records, snapshot_identity=pf["snapshot_identity"])
+    return ur, pf, liq, classifications, ticker
+
+
+def _recovery_with_state(pf, ticker, state):
+    payload = {
+        "target_session": TARGET,
+        "source_lineage": {"p3f9b_snapshot_identity": pf["snapshot_identity"]},
+        "recovered_history_overrides": {},
+        "records": {ticker: {"ticker": ticker, "state": state, "reason": state}},
+    }
+    return {
+        **payload,
+        "artifact_sha256": _hash(payload),
+        "artifact_identity": "market_wide_current_technical_coverage_scaleout:gap-test",
+    }
+
+
+def test_exact_session_bar_without_20_bars_is_a_recoverable_gap_without_recovery():
+    ur, pf, liq, classifications, ticker = _gap_inputs()
+    with pytest.raises(MarketWideCurrentDescriptiveResearchError, match=f"RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP:.*{ticker}"):
+        build_artifact(universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq, entity_classifications=classifications)
+
+
+def test_fetch_failed_is_not_treated_as_lifetime_insufficiency():
+    ur, pf, liq, classifications, ticker = _gap_inputs()
+    recovery = _recovery_with_state(pf, ticker, "FETCH_FAILED")
+    with pytest.raises(MarketWideCurrentDescriptiveResearchError, match="RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP"):
+        build_artifact(
+            universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq,
+            entity_classifications=classifications, technical_history_recovery_artifact=recovery,
+        )
+
+
+def test_malformed_response_is_not_treated_as_lifetime_insufficiency():
+    ur, pf, liq, classifications, ticker = _gap_inputs()
+    recovery = _recovery_with_state(pf, ticker, "MALFORMED_RESPONSE")
+    with pytest.raises(MarketWideCurrentDescriptiveResearchError, match="RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP"):
+        build_artifact(
+            universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq,
+            entity_classifications=classifications, technical_history_recovery_artifact=recovery,
+        )
+
+
+def test_target_session_not_recovered_is_not_treated_as_lifetime_insufficiency():
+    ur, pf, liq, classifications, ticker = _gap_inputs()
+    recovery = _recovery_with_state(pf, ticker, "TARGET_SESSION_NOT_RECOVERED")
+    with pytest.raises(MarketWideCurrentDescriptiveResearchError, match="RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP"):
+        build_artifact(
+            universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq,
+            entity_classifications=classifications, technical_history_recovery_artifact=recovery,
+        )
+
+
+def test_insufficient_history_after_extended_lookback_is_proven_structural_insufficiency():
+    ur, pf, liq, classifications, ticker = _gap_inputs()
+    recovery = _recovery_with_state(pf, ticker, "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK")
+    artifact = build_artifact(
+        universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq,
+        entity_classifications=classifications, technical_history_recovery_artifact=recovery,
+    )
+    gap_row = artifact["records"][ticker]["technical_features"]
+    assert gap_row["status"] == "MISSING"
+    assert artifact["market_breadth"]["same_session_technical_feature_available_count"] == 6
+    assert artifact["records"]["RIS0"]["technical_features"]["status"] == "SHADOW_ONLY"
+    assert artifact["records"]["RIS0"]["technical_features"]["is_current_session"] is True
+
+
+def test_proven_insufficiency_exemption_does_not_lower_requirements_for_eligible_tickers():
+    ur, pf, liq, classifications, ticker = _gap_inputs()
+    pf_records = dict(pf["records"])
+    pf_records["RIS0"] = {
+        "disposition": "EXACT_SESSION_RETAINED",
+        "observations": _observations(TARGET, 7, start_close=100.0, step=1.0),
+    }
+    pf = p3f9b_snapshot(pf_records)
+    liq = liquidity_artifact(liq["records"], snapshot_identity=pf["snapshot_identity"])
+    recovery = _recovery_with_state(pf, ticker, "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK")
+    with pytest.raises(MarketWideCurrentDescriptiveResearchError, match="RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP"):
+        build_artifact(
+            universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq,
+            entity_classifications=classifications, technical_history_recovery_artifact=recovery,
+        )
