@@ -135,6 +135,9 @@ from current_market_sector_leadership_context import (
 from current_research_risk_register import (
     content_identity as current_research_risk_register_content_identity,
 )
+from current_research_scenario_context import (
+    content_identity as current_research_scenario_context_content_identity,
+)
 from current_financial_momentum_context import (
     content_identity as current_financial_momentum_context_content_identity,
 )
@@ -3720,6 +3723,37 @@ def attach_current_research_risk_register(bundle_entries: dict[str, dict], inclu
     return bundle_entries
 
 
+def load_current_research_scenario_context_artifact(path: Path) -> Mapping[str, Any] | None:
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict) or artifact.get("contract_version") != "current_research_scenario_context/v1":
+            return None
+        if current_research_scenario_context_content_identity(artifact).get("artifact_sha256") != artifact.get("artifact_sha256"):
+            return None
+        return artifact if isinstance(artifact.get("records"), Mapping) else None
+    except Exception:
+        return None
+
+
+def attach_current_research_scenario_context(bundle_entries: dict[str, dict], include: bool, artifact_path: str | None) -> dict[str, dict]:
+    """Attach a verified scenario-context sibling without changing any decision-bearing field."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_current_research_scenario_context_artifact(Path(artifact_path))
+    if artifact is None:
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        record = artifact["records"].get(ticker)
+        if isinstance(record, Mapping) and record.get("ticker") == ticker:
+            entry["current_research_scenario_context"] = {
+                "ticker": ticker, "source_artifact_identity": artifact.get("artifact_identity"),
+                "source_contexts": copy.deepcopy(artifact.get("source_contexts")),
+                "scenario_context": copy.deepcopy(record), "authority_boundary": copy.deepcopy(artifact.get("authority_boundary")),
+                "blocked_outputs": copy.deepcopy(artifact.get("blocked_outputs")), "is_actionable": False,
+            }
+    return bundle_entries
+
+
 # ===========================================================================
 # Market-wide historical research context — opt-in (disabled by default)
 # ==========================================================================
@@ -4667,6 +4701,10 @@ def main() -> int:
                         help="Opt-in, disabled by default: attach a retained multi-domain current research risk register; descriptive only, never a score, probability, recommendation, decision, or sizing input.")
     parser.add_argument("--current-research-risk-register-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained current_research_risk_register artifact.")
+    parser.add_argument("--include-current-research-scenario-context", action="store_true",
+                        help="Opt-in, disabled by default: attach a retained CONSERVATIVE/BASE/SPECULATIVE current research scenario context; descriptive only, never probability, target, expected return, action, priority, eligibility, or sizing.")
+    parser.add_argument("--current-research-scenario-context-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained current_research_scenario_context artifact.")
     parser.add_argument("--include-current-financial-momentum-context", action="store_true",
                         help="Opt-in, disabled by default: attach a separately retained current "
                              "financial-momentum research context. Descriptive only: never a forecast, "
@@ -5110,6 +5148,10 @@ def main() -> int:
     attach_current_research_risk_register(
         bundle_entries, args.include_current_research_risk_register,
         args.current_research_risk_register_path,
+    )
+    attach_current_research_scenario_context(
+        bundle_entries, args.include_current_research_scenario_context,
+        args.current_research_scenario_context_path,
     )
     attach_current_financial_momentum_context(
         bundle_entries, args.include_current_financial_momentum_context,
