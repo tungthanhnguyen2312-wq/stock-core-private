@@ -135,6 +135,9 @@ from current_market_sector_leadership_context import (
 from current_research_risk_register import (
     content_identity as current_research_risk_register_content_identity,
 )
+from current_research_decision_packet import (
+    content_identity as current_research_decision_packet_content_identity,
+)
 from current_research_scenario_context import (
     content_identity as current_research_scenario_context_content_identity,
 )
@@ -3723,6 +3726,22 @@ def attach_current_research_risk_register(bundle_entries: dict[str, dict], inclu
     return bundle_entries
 
 
+def attach_current_research_decision_packet(bundle_entries: dict[str, dict], include: bool, artifact_path: str | None) -> dict[str, dict]:
+    if not include or not artifact_path:
+        return bundle_entries
+    try:
+        artifact = json.loads(Path(artifact_path).read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict) or artifact.get("contract_version") != "current_research_decision_packet/v1" or current_research_decision_packet_content_identity(artifact).get("artifact_sha256") != artifact.get("artifact_sha256"):
+            return bundle_entries
+        for ticker, entry in bundle_entries.items():
+            record = artifact.get("records", {}).get(ticker)
+            if isinstance(record, Mapping) and record.get("ticker") == ticker:
+                entry["current_research_decision_packet"] = {"ticker": ticker, "source_artifact_identity": artifact.get("artifact_identity"), "packet": copy.deepcopy(record), "component_manifest": copy.deepcopy(artifact.get("component_manifest")), "authority_boundary": copy.deepcopy(artifact.get("authority_boundary")), "is_actionable": False}
+    except Exception:
+        return bundle_entries
+    return bundle_entries
+
+
 def load_current_research_scenario_context_artifact(path: Path) -> Mapping[str, Any] | None:
     try:
         artifact = json.loads(path.read_text(encoding="utf-8"))
@@ -4701,6 +4720,8 @@ def main() -> int:
                         help="Opt-in, disabled by default: attach a retained multi-domain current research risk register; descriptive only, never a score, probability, recommendation, decision, or sizing input.")
     parser.add_argument("--current-research-risk-register-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained current_research_risk_register artifact.")
+    parser.add_argument("--include-current-research-decision-packet", action="store_true", help="Opt-in, disabled by default: attach the retained current decision-support packet without recomputing or changing its upstream decisions.")
+    parser.add_argument("--current-research-decision-packet-path", metavar="PATH", help="Explicit path to a self-verifying retained current_research_decision_packet artifact.")
     parser.add_argument("--include-current-research-scenario-context", action="store_true",
                         help="Opt-in, disabled by default: attach a retained CONSERVATIVE/BASE/SPECULATIVE current research scenario context; descriptive only, never probability, target, expected return, action, priority, eligibility, or sizing.")
     parser.add_argument("--current-research-scenario-context-path", metavar="PATH",
@@ -5149,6 +5170,7 @@ def main() -> int:
         bundle_entries, args.include_current_research_risk_register,
         args.current_research_risk_register_path,
     )
+    attach_current_research_decision_packet(bundle_entries, args.include_current_research_decision_packet, args.current_research_decision_packet_path)
     attach_current_research_scenario_context(
         bundle_entries, args.include_current_research_scenario_context,
         args.current_research_scenario_context_path,
