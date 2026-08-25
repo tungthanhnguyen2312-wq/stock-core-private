@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-25 - Current Corporate Event Context V1
+
+`CURRENT_CORPORATE_EVENT_CONTEXT_V1 = CURRENT_CORPORATE_EVENT_CONTEXT_PASS` (`push = NO`).
+
+Existing `current_official_event_context` already retains 4,450 official HNX/HOSE events, and corporate intelligence already maps only the 210 explicit-ex-date current rows plus three issuer/VSDC chains. This milestone adds a current-research sibling over the full retained event set rather than a second event engine or a CI/strategy rewrite.
+
+Decisions:
+
+1. **Reuse retained events.** Official event records keep their identities, taxonomy, and uncollapsed dates. Supplemental HPG executed, VNM executed record-date-only, and VCB planned-not-executed chains are the same CI sources, without re-importing the CI adapter subset.
+2. **No inferred dates.** `record_date != ex_date`. Planned/approved is not executed. Announcement is not execution. Missing known_at is `UNKNOWN_NOT_RETAINED`, not as-of. A published/known timestamp after the research as-of is look-ahead and excluded. Previously blocked ex-date cases stay without ex-date.
+3. **Statuses are factual.** `CONFIRMED_UPCOMING`, `CONFIRMED_RECENT` (30-day window reused from official event context), `EXECUTED` only with execution evidence, `PLANNED_NOT_EXECUTED`, `TEMPORAL_DETAILS_INCOMPLETE`, `CONFLICTING_EVIDENCE`, `DATA_LIMITED`. No bullish/bearish label.
+4. **Dedup is exact.** Merge only across source families when ticker, type, and all of record/ex/execution dates that are present match. Same-source occurrence duplicates and near-date neighbors stay distinct. Conflicting ex-dates for the same record date fail closed.
+5. **Downstream unchanged.** Default-off bundle attach. EVENT_DRIVEN still requires CI `PRICE_SHARE_AFFECTING` current official events. `research_priority` and `entry_action` are not modified. Frozen 2026-08-21/24 identities are unchanged.
+
+Validation: focused tests; official event context and CI regressions; `py_compile`; `git diff --check`; retained replay `current_corporate_event_context:214e4a164b8058c572d9487b56d38c5ae5c226c7dae81d540e79a83533ca5934`. No push, merge, deploy, or authority promotion.
+
 ## 2026-08-25 - Current Financial Momentum Context V1
 
 `CURRENT_FINANCIAL_MOMENTUM_CONTEXT_V1 = CURRENT_FINANCIAL_MOMENTUM_CONTEXT_PASS` (`push = NO`).

@@ -135,6 +135,9 @@ from current_market_sector_leadership_context import (
 from current_financial_momentum_context import (
     content_identity as current_financial_momentum_context_content_identity,
 )
+from current_corporate_event_context import (
+    content_identity as current_corporate_event_context_content_identity,
+)
 from market_wide_historical_research_context import (
     content_identity as market_wide_historical_research_context_content_identity,
 )
@@ -3617,6 +3620,68 @@ def attach_current_financial_momentum_context(
     return bundle_entries
 
 
+def load_current_corporate_event_context_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Fail closed unless the explicit retained corporate-event artifact verifies itself."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict):
+            return None
+        if artifact.get("contract_version") != "current_corporate_event_context/v1":
+            return None
+        recomputed = current_corporate_event_context_content_identity(artifact)
+        if recomputed.get("artifact_sha256") != artifact.get("artifact_sha256"):
+            return None
+        if not isinstance(artifact.get("records"), Mapping) or not isinstance(artifact.get("coverage"), Mapping):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def build_current_corporate_event_context_for_ticker_safe(
+    ticker: str, artifact: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Pass through one current event context; never infer impact, eligibility, or a score."""
+    try:
+        records = artifact.get("records")
+        record = records.get(ticker) if isinstance(records, Mapping) else None
+        if not isinstance(record, Mapping) or record.get("ticker") != ticker:
+            return None
+        return {
+            "ticker": ticker,
+            "research_session": artifact.get("research_session"),
+            "source_artifact_identity": artifact.get("artifact_identity"),
+            "research_mode": artifact.get("research_mode"),
+            "ticker_context": copy.deepcopy(record),
+            "coverage": copy.deepcopy(artifact.get("coverage")),
+            "blocked_outputs": copy.deepcopy(artifact.get("blocked_outputs")),
+            "authority_boundary": copy.deepcopy(artifact.get("authority_boundary")),
+            "status": "available" if record.get("events") else "data_limited",
+            "is_actionable": False,
+        }
+    except Exception:
+        return None
+
+
+def attach_current_corporate_event_context(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> dict[str, dict]:
+    """Attach an independent explicit-path context sibling without changing default bundles."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_current_corporate_event_context_artifact(Path(artifact_path))
+    if artifact is None:
+        return bundle_entries
+    attached: dict[str, dict[str, Any]] = {}
+    for ticker in bundle_entries:
+        result = build_current_corporate_event_context_for_ticker_safe(ticker, artifact)
+        if result is not None:
+            attached[ticker] = result
+    for ticker, result in attached.items():
+        bundle_entries[ticker]["current_corporate_event_context"] = result
+    return bundle_entries
+
+
 # ===========================================================================
 # Market-wide historical research context — opt-in (disabled by default)
 # ==========================================================================
@@ -4567,6 +4632,13 @@ def main() -> int:
                              "research_priority, entry_action, or sizing claim.")
     parser.add_argument("--current-financial-momentum-context-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained current_financial_momentum_context artifact.")
+    parser.add_argument("--include-current-corporate-event-context", action="store_true",
+                        help="Opt-in, disabled by default: attach a separately retained current "
+                             "corporate-event research context. Event facts only: never price impact, "
+                             "probability, EVENT_DRIVEN eligibility, research_priority, entry_action, "
+                             "recommendation, or sizing.")
+    parser.add_argument("--current-corporate-event-context-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained current_corporate_event_context artifact.")
     parser.add_argument("--include-market-wide-historical-research-context", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].market_wide_historical_research_context from the"
@@ -4996,6 +5068,10 @@ def main() -> int:
     attach_current_financial_momentum_context(
         bundle_entries, args.include_current_financial_momentum_context,
         args.current_financial_momentum_context_path,
+    )
+    attach_current_corporate_event_context(
+        bundle_entries, args.include_current_corporate_event_context,
+        args.current_corporate_event_context_path,
     )
     # Own dedicated flag; order relative to the others does not matter since nothing else reads
     # tickers[ticker].market_wide_historical_research_context. Historical context is a sibling
