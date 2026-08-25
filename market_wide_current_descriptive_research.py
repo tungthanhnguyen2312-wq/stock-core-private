@@ -50,12 +50,24 @@ LIQUIDITY_ELIGIBLE_DISPOSITION = "CURRENT_SESSION_DESCRIPTIVE_ELIGIBLE"
 
 def _assert_no_recoverable_same_session_technical_gap(
     records: Mapping[str, Mapping[str, Any]], snapshot_records: Mapping[str, Any],
+    recovery_records: Mapping[str, Any] | None = None,
 ) -> None:
-    """Future sessions must not emit exact-session bars without same-session technicals."""
+    """Future sessions must not emit exact-session bars without same-session technicals unless unrecoverable."""
+    unrecoverable = set()
+    if recovery_records:
+        for ticker, rec in recovery_records.items():
+            if isinstance(rec, Mapping) and rec.get("state") in {
+                "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK",
+                "TARGET_SESSION_NOT_RECOVERED",
+                "FETCH_FAILED",
+                "MALFORMED_RESPONSE",
+            }:
+                unrecoverable.add(ticker)
     gaps = [
         ticker for ticker, record in records.items()
         if record.get("in_current_descriptive_scope")
         and (snapshot_records.get(ticker) or {}).get("disposition") == "EXACT_SESSION_RETAINED"
+        and ticker not in unrecoverable
         and not (
             (record.get("technical_features") or {}).get("status") == "SHADOW_ONLY"
             and (record.get("technical_features") or {}).get("is_current_session") is True
@@ -328,7 +340,8 @@ def build_artifact(
             "sector_classification": entity_classifications.get(ticker),
         }
 
-    _assert_no_recoverable_same_session_technical_gap(records, pf_records)
+    recovery_all_records = technical_history_recovery_artifact.get("records", {}) if technical_history_recovery_artifact else None
+    _assert_no_recoverable_same_session_technical_gap(records, pf_records, recovery_all_records)
 
     in_scope_records = [record for record in records.values() if record["in_current_descriptive_scope"]]
     same_session_records = [record for record in in_scope_records if record["technical_features"].get("is_current_session")]
