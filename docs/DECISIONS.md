@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-25 - ADTV20 Window Integrity And Conflict Qualification V1
+
+`ADTV20_WINDOW_INTEGRITY_AND_CONFLICT_QUALIFICATION_V1 = MATCHED_VALUE_AUTHORITY_SCOPE_RESTRICTED` (`push = NO`).
+
+The FHSC historical matched-value scale-out claimed 295 `ADTV20_READY` names by counting any 20 exact rows in the 40-session DNSE corpus. That is not the trailing 20 trading sessions. This milestone repairs the window, classifies all 5,447 conflicts from retained evidence, and narrows applicability. It does not acquire, retry HTTP 429, or rewrite the G1 formula.
+
+Decisions:
+
+1. **Session grid is 1,507 × 40 = 60,280 with residual 0.** Evaluated DNSE parquet pairs are 60,273. The prior 7-row discrepancy is seven structurally absent ticker-session parquet pairs (POM/VCI 2026-07-13, HPH/SGR 2026-07-14, OCH 2026-07-15, CT3 2026-07-16, ONE 2026-08-11), not unexplained evaluation. Accounting: 13,196 EXACT + 5,447 CONFLICT + 12,746 NOT_COMPARABLE + 28,884 no FHSC observation + 7 absent = 60,280.
+2. **Conflicts are not coerced.** 5,258/5,447 conflicts are exactly FHSC matched volume/value = G1 shares + G4 raw shares. 184 unexplained residuals and 5 G1-only leftovers remain conflicts. The G1-only formula is not replaced by a G1+G4 identity that would fit more rows. Put-through is usually absent (5,297/5,447 have FHSC put-through value 0).
+3. **Numerical EXACT is not authority.** 7,818 discriminating vs 5,378 non-discriminating exacts. Non-discriminating exacts are not promoted. HNX/UPCOM discriminating exacts are restricted-scope, not generic ADTV20 inputs. Observation-qualified scope is HOSE discriminating exact only (214 tickers, 6,805 sessions).
+4. **`ADTV20_MATCHED_VALUE` is the expected trailing 20 trading sessions** `2026-07-15` through `2026-08-11`. A missing, conflicting, non-discriminating, or restricted session inside that window is not replaced by an older 21st observation. READY requires 20/20 HOSE discriminating exacts. True READY is 0 (was claimed 295); PARTIAL 213; BLOCKED 190; NOT_APPLICABLE 1,104. Missing is not zero. `ADV20_MATCHED_VOLUME` stays not emitted.
+5. **Downstream gate unchanged.** ADTV20 is a research input for qualified records only. It is not a safe position size, participation cap, market-impact estimate, slippage model, or executable capacity. `QUALIFIED_LIQUIDITY_INPUTS` and `POSITION_SIZING_IS_SAFE` stay false. Frozen 2026-08-21/24 identities are unchanged.
+
+Validation: session-grid residual 0; conflict taxonomy; trailing-window regressions; exchange applicability; focused tests; `py_compile`; `git diff --check`; frozen identities. No push, merge, deploy, or 429 retry.
+
 ## 2026-08-25 - Historical Matched Trading Value Authority V1
 
 `HISTORICAL_MATCHED_TRADING_VALUE_AUTHORITY_V1 = MATCHED_TRADING_VALUE_AUTHORITY_CEILING_ESTABLISHED` (`push = NO`).

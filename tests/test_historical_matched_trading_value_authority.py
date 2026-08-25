@@ -8,20 +8,31 @@ import export_ai_bundle as bundle
 
 from historical_matched_traded_value_authority import MATCHED_VALUE_FORMULA, summarize_complete_trade_session
 from historical_matched_trading_value_authority import (
+    ADTV20_BLOCKED,
+    ADTV20_NOT_APPLICABLE,
+    ADTV20_PARTIAL,
+    ADTV20_READY,
     COVERAGE_RESTRICTED_RECONCILED,
     EXACT_RECONCILED,
     FEATURE_ADTV20,
     FEATURE_ADV20_VOLUME,
     INSUFFICIENT_DISCRIMINATION,
+    MATCHED_VALUE_NON_DISCRIMINATING,
     MATCHED_VALUE_OBSERVATION_QUALIFIED,
+    MATCHED_VALUE_RESTRICTED_SCOPE,
+    RESTRICTED_SCOPE_EXACT,
+    UNAVAILABLE,
     UNAVAILABLE_MISSING_TRADES,
     UNAVAILABLE_NO_VALUE_ANCHOR,
     adtv20_matched_value,
     adv20_matched_volume_status,
     build_historical_matched_trading_value_authority,
+    classify_conflict_cause,
     classify_session_discrimination,
     content_identity,
+    reconcile_expected_session_grid,
     session_value_reconciliation,
+    trailing_expected_sessions,
 )
 from tools.derive_market_wide_current_valuation_input_scaleout import FROZEN_OUTPUTS, _refuse_frozen_output
 
@@ -59,9 +70,13 @@ def _qualified_row(*, ticker="HPG", session="2026-08-11", g4=10, t1=5, value=20_
     return candidate
 
 
-def _official(*tickers: str) -> dict:
+def _official(*tickers: str, exchanges: dict[str, str] | None = None) -> dict:
     return {"artifact_identity": "official:test", "records": {
-        ticker: {"stocklookup_candidate": True, "current_universe_status": "OFFICIAL_CURRENT_EXCHANGE_SECURITY"}
+        ticker: {
+            "stocklookup_candidate": True,
+            "current_universe_status": "OFFICIAL_CURRENT_EXCHANGE_SECURITY",
+            "exchange_or_market": (exchanges or {}).get(ticker, "HOSE"),
+        }
         for ticker in tickers
     }}
 
@@ -88,43 +103,119 @@ def test_composition_identities_are_preserved_and_missing_boards_are_not_zero():
 
 
 def test_adtv20_uses_trading_sessions_and_does_not_fill_calendar_days():
+    calendar = [f"2026-07-{day:02d}" for day in range(1, 21)]
     three = [_qualified_row(session=session) for session in ("2026-08-07", "2026-08-10", "2026-08-11")]
-    short = adtv20_matched_value(three)
-    assert short["HPG"]["status"] == "ADTV20_INSUFFICIENT_HISTORY"
+    short = adtv20_matched_value(
+        three, expected_trading_sessions=calendar, exchange_by_ticker={"HPG": "HOSE"}, tickers=["HPG"],
+    )
+    assert short["HPG"]["status"] == ADTV20_BLOCKED
     assert short["HPG"]["adtv20_matched_value_vnd"] is None
     assert short["HPG"]["expected_sessions"] == 20
-    assert short["HPG"]["observed_sessions"] == 3
+    assert short["HPG"]["qualified_sessions"] == 0
     assert short["HPG"]["feature_id"] == FEATURE_ADTV20
     assert short["HPG"]["calendar_day_imputation"] is False
     assert short["HPG"]["participation_policy_embedded"] is False
-    twenty = [_qualified_row(session=f"2026-07-{day:02d}") for day in range(1, 21)]
-    ready = adtv20_matched_value(twenty)
-    assert ready["HPG"]["status"] == "ADTV20_READY"
-    assert ready["HPG"]["observed_sessions"] == 20
+    twenty = [_qualified_row(session=session) for session in calendar]
+    ready = adtv20_matched_value(
+        twenty, expected_trading_sessions=calendar, exchange_by_ticker={"HPG": "HOSE"}, tickers=["HPG"],
+    )
+    assert ready["HPG"]["status"] == ADTV20_READY
+    assert ready["HPG"]["qualified_sessions"] == 20
     assert ready["HPG"]["adtv20_matched_value_vnd"] == 20_000_000
+    assert ready["HPG"]["first_session"] == "2026-07-01"
+    assert ready["HPG"]["last_session"] == "2026-07-20"
     assert adv20_matched_volume_status()["feature_id"] == FEATURE_ADV20_VOLUME
     assert adv20_matched_volume_status()["status"] == "NOT_EMITTED"
 
 
+def test_adtv20_does_not_replace_missing_or_conflict_with_older_qualified_session():
+    calendar = [f"2026-07-{day:02d}" for day in range(1, 21)]
+    older = _qualified_row(session="2026-06-30")
+    window_rows = [_qualified_row(session=session) for session in calendar if session != "2026-07-20"]
+    gap = adtv20_matched_value(
+        [older, *window_rows],
+        expected_trading_sessions=calendar,
+        exchange_by_ticker={"HPG": "HOSE"},
+        tickers=["HPG"],
+    )
+    assert gap["HPG"]["status"] == ADTV20_PARTIAL
+    assert gap["HPG"]["qualified_sessions"] == 19
+    assert gap["HPG"]["unavailable_sessions"] == 1
+    assert gap["HPG"]["adtv20_matched_value_vnd"] is None
+    assert gap["HPG"]["gap_filled_with_older_session"] is False
+    assert "2026-06-30" not in gap["HPG"]["window_sessions"]
+    conflict = _qualified_row(session="2026-07-20")
+    conflict["qualification_status"] = "CONFLICTING"
+    conflict["fhsc_reconciliation"] = {"status": "CONFLICT"}
+    conflicted = adtv20_matched_value(
+        [older, *window_rows, conflict],
+        expected_trading_sessions=calendar,
+        exchange_by_ticker={"HPG": "HOSE"},
+        tickers=["HPG"],
+    )
+    assert conflicted["HPG"]["status"] == ADTV20_PARTIAL
+    assert conflicted["HPG"]["conflict_sessions"] == 1
+    assert conflicted["HPG"]["qualified_sessions"] == 19
+    assert conflicted["HPG"]["adtv20_matched_value_vnd"] is None
+
+
+def test_non_hose_and_non_discriminating_exact_are_not_promoted():
+    hose = _qualified_row(ticker="HPG", session="2026-08-11")
+    hnx = _qualified_row(ticker="SHS", session="2026-08-11")
+    g1_only = _qualified_row(ticker="AAA", session="2026-08-11", g4=0, t1=0)
+    assert session_value_reconciliation(hose, exchange="HOSE") == EXACT_RECONCILED
+    assert session_value_reconciliation(hnx, exchange="HNX_LISTED") == RESTRICTED_SCOPE_EXACT
+    assert session_value_reconciliation(g1_only, exchange="HOSE") == INSUFFICIENT_DISCRIMINATION
+    cause = classify_conflict_cause({
+        "g1_share_quantity": 1000,
+        "fhsc_matched_volume": 1088,
+        "board_composition": [
+            {"board_id": "G1", "raw_quantity": 100},
+            {"board_id": "G4", "raw_quantity": 88},
+        ],
+    })
+    assert cause["cause"] == "FHSC_MATCHED_EQUALS_G1_PLUS_G4_RAW_SHARES"
+    assert cause["formula_rewritten"] is False
+    calendar = trailing_expected_sessions([f"2026-07-{day:02d}" for day in range(1, 21)])
+    hnx_window = [_qualified_row(ticker="SHS", session=session) for session in calendar]
+    hnx_adtv = adtv20_matched_value(
+        hnx_window, expected_trading_sessions=calendar, exchange_by_ticker={"SHS": "HNX_LISTED"}, tickers=["SHS"],
+    )
+    assert hnx_adtv["SHS"]["status"] == ADTV20_NOT_APPLICABLE
+    assert hnx_adtv["SHS"]["adtv20_matched_value_vnd"] is None
+    grid = reconcile_expected_session_grid(
+        official_ticker_count=1507, trading_session_count=40, evaluated_pairs=60273,
+        exact=13196, conflict=5447, not_comparable=12746, unavailable=28884, structurally_absent=7,
+    )
+    assert grid["expected_ticker_session_pairs"] == 60280
+    assert grid["residual"] == 0
+
+
 def test_market_wide_dispositions_reconcile_and_do_not_claim_sizing():
     artifact = build_historical_matched_trading_value_authority(
-        official_universe=_official("HPG", "AAA", "ZZZ"),
+        official_universe=_official("HPG", "AAA", "ZZZ", "SHS", exchanges={"SHS": "HNX_LISTED"}),
         qualified_rows=[
             _qualified_row(session="2026-08-07"),
             _qualified_row(session="2026-08-10"),
             _qualified_row(session="2026-08-11"),
+            _qualified_row(ticker="SHS", session="2026-08-11"),
+            _qualified_row(ticker="AAA", session="2026-08-11", g4=0, t1=0),
         ],
-        trades_universe=["HPG", "AAA"],
+        trades_universe=["HPG", "AAA", "SHS"],
+        expected_trading_sessions=[f"2026-07-{day:02d}" for day in range(1, 21)],
     )
-    assert artifact["coverage"]["universe_denominator"] == 3
+    assert artifact["coverage"]["universe_denominator"] == 4
     assert artifact["coverage"]["denominator_reconciles"] is True
     assert artifact["coverage"]["unexplained_count"] == 0
     assert artifact["records"]["HPG"]["authority_tier"] == MATCHED_VALUE_OBSERVATION_QUALIFIED
-    assert artifact["records"]["AAA"]["authority_tier"] == UNAVAILABLE_NO_VALUE_ANCHOR
+    assert artifact["records"]["AAA"]["authority_tier"] == MATCHED_VALUE_NON_DISCRIMINATING
+    assert artifact["records"]["SHS"]["authority_tier"] == MATCHED_VALUE_RESTRICTED_SCOPE
     assert artifact["records"]["ZZZ"]["authority_tier"] == UNAVAILABLE_MISSING_TRADES
     assert artifact["coverage"]["adtv20_ready_count"] == 0
-    assert artifact["reconciliation"]["cohort_status"] == COVERAGE_RESTRICTED_RECONCILED
-    assert artifact["reconciliation"]["discriminating_sessions"] == 3
+    assert artifact["records"]["HPG"]["adtv20_matched_value"]["status"] == ADTV20_BLOCKED
+    assert artifact["records"]["SHS"]["adtv20_matched_value"]["status"] == ADTV20_NOT_APPLICABLE
+    assert artifact["reconciliation"]["cohort_status"] == UNAVAILABLE
+    assert artifact["reconciliation"]["hose_discriminating_exact_sessions"] == 3
     assert artifact["qualified_session_rows"][0]["value_reconciliation"] == EXACT_RECONCILED
     assert artifact["authority_boundary"]["position_sizing_is_safe"] is False
     assert artifact["authority_boundary"]["qualified_liquidity_inputs"] is False
@@ -132,13 +223,16 @@ def test_market_wide_dispositions_reconcile_and_do_not_claim_sizing():
     assert artifact["matched_value_contract"]["formula"] == MATCHED_VALUE_FORMULA
     assert artifact["adv20_volume_contract"]["ready_count"] == 0
     replay = build_historical_matched_trading_value_authority(
-        official_universe=_official("HPG", "AAA", "ZZZ"),
+        official_universe=_official("HPG", "AAA", "ZZZ", "SHS", exchanges={"SHS": "HNX_LISTED"}),
         qualified_rows=[
             _qualified_row(session="2026-08-07"),
             _qualified_row(session="2026-08-10"),
             _qualified_row(session="2026-08-11"),
+            _qualified_row(ticker="SHS", session="2026-08-11"),
+            _qualified_row(ticker="AAA", session="2026-08-11", g4=0, t1=0),
         ],
-        trades_universe=["HPG", "AAA"],
+        trades_universe=["HPG", "AAA", "SHS"],
+        expected_trading_sessions=[f"2026-07-{day:02d}" for day in range(1, 21)],
     )
     assert replay["artifact_identity"] == artifact["artifact_identity"]
     assert content_identity(artifact)["artifact_sha256"] == artifact["artifact_sha256"]

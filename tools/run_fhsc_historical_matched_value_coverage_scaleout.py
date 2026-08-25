@@ -32,6 +32,8 @@ from historical_matched_traded_value_authority import (
 from historical_matched_trading_value_authority import (
     build_historical_matched_trading_value_authority,
     content_identity,
+    reconcile_expected_session_grid,
+    trailing_expected_sessions,
 )
 from market_wide_current_valuation_input_scaleout import official_research_universe_tickers
 
@@ -58,6 +60,31 @@ FROZEN_IDENTITIES = {
 
 START_DATE = "2026-06-17"
 END_DATE = "2026-08-25"
+STRUCTURALLY_ABSENT_TRADES_PAIRS = (
+    ("POM", "2026-07-13"),
+    ("VCI", "2026-07-13"),
+    ("HPH", "2026-07-14"),
+    ("SGR", "2026-07-14"),
+    ("OCH", "2026-07-15"),
+    ("CT3", "2026-07-16"),
+    ("ONE", "2026-08-11"),
+)
+RETAINED_CONFLICT_TAXONOMY = {
+    "conflict_rows": 5447,
+    "by_cause": {
+        "FHSC_MATCHED_EQUALS_G1_PLUS_G4_RAW_SHARES": 5258,
+        "UNEXPLAINED_RESIDUAL": 184,
+        "NO_G4_NO_PT_STILL_CONFLICT": 5,
+    },
+    "by_exchange": {
+        "HOSE": 192,
+        "HNX_LISTED": 2220,
+        "UPCOM": 3035,
+    },
+    "volume_and_value_both_conflict": 5447,
+    "formula_not_rewritten": True,
+    "g4_not_coerced_into_matched_value": True,
+}
 
 
 def _rel(path: Path) -> str:
@@ -386,6 +413,18 @@ def run_acquisition_and_reconciliation(
         official_universe=official_doc,
         qualified_rows=qualified_rows,
         trades_universe=trades_universe,
+        expected_trading_sessions=dnse_sessions,
+        reconciliation_rows=reconciliation_rows,
+        session_grid=reconcile_expected_session_grid(
+            official_ticker_count=len(tickers),
+            trading_session_count=len(dnse_sessions),
+            evaluated_pairs=sum(recon_status_counts.values()) - recon_status_counts.get("DNSE_PARSE_FAILURE", 0),
+            exact=recon_status_counts.get("EXACT", 0),
+            conflict=recon_status_counts.get("CONFLICT", 0),
+            not_comparable=recon_status_counts.get("NOT_COMPARABLE", 0),
+            unavailable=recon_status_counts.get("UNAVAILABLE_NO_FHSC_OBSERVATION", 0),
+            structurally_absent=len(STRUCTURALLY_ABSENT_TRADES_PAIRS),
+        ),
         source_identities={
             "official_universe": official_doc.get("artifact_identity"),
             "fhsc_openapi_capability": "fhsc:/market/stocks/{symbol}/trading/history",
@@ -453,16 +492,138 @@ def run_acquisition_and_reconciliation(
     }
 
 
+def replay_retained_authority(
+    *,
+    out_dir: Path = ARTIFACT_DIR,
+    official_universe_path: Path = DEFAULT_OFFICIAL_UNIVERSE,
+) -> dict[str, Any]:
+    """Rebuild authority from retained files. No network, no 429 retry, no raw rewrite."""
+    official_doc = _load_json(official_universe_path)
+    expected_official_id = official_identity(official_doc)
+    if expected_official_id["artifact_sha256"] != official_doc.get("artifact_sha256"):
+        raise ValueError("SOURCE_SELF_VERIFICATION_FAILED:official_universe")
+    tickers = official_research_universe_tickers(official_doc)
+    if len(tickers) != 1507:
+        raise ValueError(f"unexpected_official_universe_size:{len(tickers)}")
+    dnse_sessions = sorted([p.name.split("=")[1] for p in ORIGINAL_RAW_ROOT.glob("session=*")])
+    if len(dnse_sessions) != 40:
+        raise ValueError(f"unexpected_dnse_session_count:{len(dnse_sessions)}")
+    qualified_rows = _load_json(out_dir / "historical_matched_value_qualified_rows.json")
+    recon_doc = _load_json(out_dir / "historical_matched_value_reconciliation_artifact.json")
+    recon_summary = recon_doc.get("summary") or {}
+    session_grid = reconcile_expected_session_grid(
+        official_ticker_count=len(tickers),
+        trading_session_count=len(dnse_sessions),
+        evaluated_pairs=(
+            recon_summary.get("EXACT", 0) + recon_summary.get("CONFLICT", 0)
+            + recon_summary.get("NOT_COMPARABLE", 0) + recon_summary.get("UNAVAILABLE_NO_FHSC_OBSERVATION", 0)
+        ),
+        exact=recon_summary.get("EXACT", 0),
+        conflict=recon_summary.get("CONFLICT", 0),
+        not_comparable=recon_summary.get("NOT_COMPARABLE", 0),
+        unavailable=recon_summary.get("UNAVAILABLE_NO_FHSC_OBSERVATION", 0),
+        structurally_absent=len(STRUCTURALLY_ABSENT_TRADES_PAIRS),
+    )
+    authority_artifact = build_historical_matched_trading_value_authority(
+        official_universe=official_doc,
+        qualified_rows=qualified_rows,
+        trades_universe=_trades_universe(FINAL_SESSION_MANIFEST),
+        expected_trading_sessions=dnse_sessions,
+        reconciliation_rows=recon_doc.get("rows") or [],
+        session_grid=session_grid,
+        source_identities={
+            "official_universe": official_doc.get("artifact_identity"),
+            "fhsc_openapi_capability": "fhsc:/market/stocks/{symbol}/trading/history",
+            "dnse_trades_corpus": "DNSE:trades_history:40sessions",
+        },
+        trades_source_contract={
+            "replay_retained_only": True,
+            "http_429_not_retried": True,
+            "expected_trading_sessions": dnse_sessions,
+            "trailing_adtv20_window": trailing_expected_sessions(dnse_sessions),
+        },
+    )
+    identity = content_identity(authority_artifact)
+    if identity["artifact_sha256"] != authority_artifact["artifact_sha256"]:
+        raise ValueError("ARTIFACT_SELF_VERIFICATION_FAILED")
+    authority_path = out_dir / "historical_matched_trading_value_authority_artifact.json"
+    _refuse_frozen(authority_path)
+    authority_path.write_text(json.dumps(authority_artifact, indent=2, sort_keys=True, default=str), encoding="utf-8")
+    report_payload = {
+        "artifact_identity": authority_artifact["artifact_identity"],
+        "verdict": authority_artifact["verdict"],
+        "universe_denominator": authority_artifact["coverage"]["universe_denominator"],
+        "denominator_reconciles": authority_artifact["coverage"]["denominator_reconciles"],
+        "unexplained_count": authority_artifact["coverage"]["unexplained_count"],
+        "authority_tier_distribution": authority_artifact["coverage"]["authority_tier_distribution"],
+        "reconciliation": authority_artifact["reconciliation"],
+        "session_grid": session_grid,
+        "conflict_taxonomy": RETAINED_CONFLICT_TAXONOMY,
+        "adtv20_contract": authority_artifact["adtv20_contract"],
+        "qualified_rows_count": len(qualified_rows),
+        "adtv20_ready_count": authority_artifact["coverage"]["adtv20_ready_count"],
+        "adtv20_partial_count": authority_artifact["coverage"]["adtv20_partial_count"],
+        "adtv20_blocked_count": authority_artifact["coverage"]["adtv20_blocked_count"],
+        "adtv20_not_applicable_count": authority_artifact["coverage"]["adtv20_not_applicable_count"],
+        "prior_claimed_adtv20_ready_count": 295,
+        "adv20_matched_volume_ready_count": authority_artifact["coverage"]["adv20_matched_volume_ready_count"],
+        "qualified_observation_tickers": authority_artifact["coverage"]["qualified_observation_tickers"],
+        "qualified_observation_sessions": authority_artifact["coverage"]["qualified_observation_sessions"],
+        "restricted_scope_tickers": authority_artifact["coverage"]["restricted_scope_tickers"],
+        "non_discriminating_exact_tickers": authority_artifact["coverage"]["non_discriminating_exact_tickers"],
+        "qualified_observation_tickers_by_exchange": authority_artifact["coverage"]["qualified_observation_tickers_by_exchange"],
+        "frozen_identities_unchanged": sorted(FROZEN_IDENTITIES),
+        "qualified_liquidity_inputs": authority_artifact["authority_boundary"]["qualified_liquidity_inputs"],
+        "position_sizing_is_safe": authority_artifact["authority_boundary"]["position_sizing_is_safe"],
+    }
+    (out_dir / "historical_matched_trading_value_authority_report.json").write_text(
+        json.dumps(report_payload, indent=2, sort_keys=True, default=str), encoding="utf-8",
+    )
+    (out_dir / "adtv20_window_integrity_report.json").write_text(
+        json.dumps({
+            "contract_version": "adtv20_window_integrity/v1",
+            "session_grid": session_grid,
+            "conflict_taxonomy": RETAINED_CONFLICT_TAXONOMY,
+            "adtv20": authority_artifact["adtv20_contract"],
+            "coverage": authority_artifact["coverage"],
+            "authority_boundary": authority_artifact["authority_boundary"],
+            "prior_claimed_adtv20_ready_count": 295,
+            "true_adtv20_ready_count": authority_artifact["coverage"]["adtv20_ready_count"],
+            "structurally_absent_trades_pairs": [
+                {"ticker": ticker, "session": session} for ticker, session in STRUCTURALLY_ABSENT_TRADES_PAIRS
+            ],
+        }, indent=2, sort_keys=True, default=str),
+        encoding="utf-8",
+    )
+    return {
+        "artifact_identity": authority_artifact["artifact_identity"],
+        "verdict": authority_artifact["verdict"],
+        "coverage": authority_artifact["coverage"],
+        "session_grid": session_grid,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, default=ARTIFACT_DIR)
     parser.add_argument("--official-universe", type=Path, default=DEFAULT_OFFICIAL_UNIVERSE)
+    parser.add_argument(
+        "--replay-retained",
+        action="store_true",
+        help="Rebuild authority from retained files only. No FHSC acquisition or 429 retry.",
+    )
     args = parser.parse_args(argv)
 
-    summary = run_acquisition_and_reconciliation(
-        out_dir=args.out_dir,
-        official_universe_path=args.official_universe,
-    )
+    if args.replay_retained:
+        summary = replay_retained_authority(
+            out_dir=args.out_dir,
+            official_universe_path=args.official_universe,
+        )
+    else:
+        summary = run_acquisition_and_reconciliation(
+            out_dir=args.out_dir,
+            official_universe_path=args.official_universe,
+        )
     print(json.dumps(summary, indent=2, sort_keys=True, default=str))
     return 0
 
