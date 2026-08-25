@@ -71,4 +71,27 @@ def build_artifact(*, opportunity: Mapping[str,Any], scenario: Mapping[str,Any]|
  artifact.update(content_identity(artifact));return artifact
 def replay(a:Mapping[str,Any])->None:
  if a.get("contract_version")!=CONTRACT_VERSION or a.get("artifact_sha256")!=content_identity(a).get("artifact_sha256"):raise CurrentResearchDecisionPacketError("PACKET_IDENTITY_MISMATCH")
- if a.get("coverage",{}).get("universe_denominator")!=len(a.get("records") or {}):raise CurrentResearchDecisionPacketError("PACKET_DENOMINATOR_MISMATCH")
+ records=a.get("records") or {}
+ cov=a.get("coverage") or {}
+ if cov.get("universe_denominator")!=len(records):raise CurrentResearchDecisionPacketError("PACKET_DENOMINATOR_MISMATCH")
+ manifest=a.get("component_manifest") or {}
+ if set(manifest)!=set(SPECS):raise CurrentResearchDecisionPacketError("PACKET_MANIFEST_MISMATCH")
+ complete=partial=0
+ for ticker,row in records.items():
+  if row.get("ticker")!=ticker:raise CurrentResearchDecisionPacketError("PACKET_TICKER_MISMATCH")
+  status=row.get("packet_status")
+  unresolved=list(row.get("unresolved_components") or [])
+  if status=="COMPLETE_FOR_AVAILABLE_COMPONENTS":
+   if unresolved:raise CurrentResearchDecisionPacketError("PACKET_COMPLETE_HAS_UNRESOLVED")
+   complete+=1
+  elif status=="PARTIAL":
+   if not unresolved:raise CurrentResearchDecisionPacketError("PACKET_PARTIAL_WITHOUT_UNRESOLVED")
+   partial+=1
+  else:
+   raise CurrentResearchDecisionPacketError("PACKET_STATUS_NOT_IN_V1_VOCABULARY")
+  if row.get("is_actionable") is True:raise CurrentResearchDecisionPacketError("PACKET_ACTIONABLE")
+  ctx=row.get("current_decision_context") or {}
+  for key in FORBIDDEN:
+   if key in row or key in ctx:raise CurrentResearchDecisionPacketError("PACKET_FORBIDDEN_FIELD")
+ if complete+partial!=len(records):raise CurrentResearchDecisionPacketError("PACKET_STATUS_RESIDUAL")
+ if cov.get("valid_packet_count")!=complete or cov.get("partial_count")!=partial:raise CurrentResearchDecisionPacketError("PACKET_COVERAGE_RECONCILE_FAILED")
