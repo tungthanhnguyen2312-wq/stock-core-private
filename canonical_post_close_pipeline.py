@@ -32,6 +32,10 @@ from typing import Any, Mapping
 
 import daily_session_level2_package as level2
 import release_session_contract
+from canonical_dashboard_runtime_release import (
+    CanonicalRuntimeReleaseError,
+    materialize_canonical_runtime_release,
+)
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
 from daily_research_session_operations import (
     load_registry,
@@ -760,6 +764,12 @@ def run_canonical_post_close(
         )
     except DailyProducerError as exc:
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:DAILY_PRODUCER_INTEGRITY_FAILURE:" + str(exc)) from exc
+    try:
+        materialize_canonical_runtime_release(root, runtime_root, session)
+    except CanonicalRuntimeReleaseError as exc:
+        raise CanonicalPostCloseError(
+            "REFUSE_CANONICAL_POST_CLOSE:CANONICAL_RUNTIME_RELEASE_INTEGRITY_FAILURE:" + str(exc)
+        ) from exc
     enrichment = build_enrichment_components(root, session, artifact_root=artifact_root)
     decision_packet = build_decision_packet(
         root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,

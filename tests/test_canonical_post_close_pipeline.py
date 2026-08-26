@@ -313,6 +313,7 @@ def _patch_full_pipeline_stages(monkeypatch, order, tmp_path, *, prospective_res
         }
 
     monkeypatch.setattr(cpc, "run_daily_producer", fake_run_daily_producer)
+    monkeypatch.setattr(cpc, "materialize_canonical_runtime_release", lambda *a, **k: order.append("runtime_release") or {})
     monkeypatch.setattr(cpc, "build_decision_packet", lambda *a, **k: order.append("packet") or None)
     monkeypatch.setattr(cpc, "run_prospective_collection", lambda *a, **k: order.append("prospective") or (
         prospective_result if prospective_result is not None else {"status": "COLLECTED"}
