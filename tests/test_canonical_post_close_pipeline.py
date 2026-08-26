@@ -91,7 +91,7 @@ def test_partial_session_evidence_fails_closed(tmp_path, monkeypatch):
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate; isolates the coverage check
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None):
+    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         _write_snapshot(paths, session, requested_at=f"{session}T16:07:09+07:00", exact=10, total=1683)
 
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
@@ -135,13 +135,13 @@ def test_acquisition_provenance_passthrough(tmp_path, monkeypatch):
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None):
+    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         _write_snapshot(
             paths, session, requested_at=f"{session}T19:05:00+07:00", exact=500, total=1000,
             provider="DNSE", artifact_identity="p3f9_exact_session_mva_snapshot:deadbeef",
         )
 
-    def fake_maybe_build_triage(root, s):
+    def fake_maybe_build_triage(root, s, execution_root=None):
         _write_triage(paths, s)
         return {"built": True}
 
@@ -163,11 +163,11 @@ def test_acquisition_never_writes_into_runtime_root(tmp_path, monkeypatch):
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
 
-    def fake_materialize(root, sess, runtime_root_arg, workers=12, now=None):
+    def fake_materialize(root, sess, runtime_root_arg, workers=12, now=None, execution_root=None):
         assert runtime_root_arg == runtime_root
         _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=50, total=100)
 
-    def fake_maybe_build_triage(root, s):
+    def fake_maybe_build_triage(root, s, execution_root=None):
         _write_triage(paths, s)
         return {"built": True}
 
@@ -206,6 +206,10 @@ def test_component_local_failure_does_not_block_unrelated_components(tmp_path, m
     results = cpc.build_enrichment_components(ROOT, "2026-08-25")
     assert "SIMULATED_COMPONENT_FAILURE" in (results["corporate_event_context"].get("reason") or "")
     assert results["corporate_event_context"]["status"] in ("PRIOR_AS_OF_CONTEXT", "UNAVAILABLE")
+    if results["corporate_event_context"]["status"] == "PRIOR_AS_OF_CONTEXT":
+        assert results["corporate_event_context"]["path"] == level2.session_artifact_paths(
+            ROOT, "2026-08-25"
+        )["corporate_event_context"]
     # unrelated components still ran independently and reached a definitive status, not skipped
     assert results["financial_momentum"]["status"] in ("BUILT", "PRIOR_AS_OF_CONTEXT", "UNAVAILABLE")
     assert results["historical_context"]["status"] in ("BUILT", "PRIOR_AS_OF_CONTEXT", "UNAVAILABLE")
@@ -373,7 +377,7 @@ def test_resolved_completed_session_never_returns_a_future_date():
 def test_acquired_session_mismatch_never_silently_substituted(tmp_path, monkeypatch):
     requested = "2026-08-27"
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None):
+    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         raise ValueError("P3F9B_ACQUIRED_SESSION_MISMATCH:requested=2026-08-27:resolved=2026-08-26")
 
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
@@ -427,11 +431,11 @@ def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexis
 
     now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)  # past the cutoff
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None):
+    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         fresh_paths = level2.session_artifact_paths(root, sess)
         _write_snapshot(fresh_paths, session, requested_at=f"{session}T19:05:00+07:00", exact=1200, total=1683)
 
-    def fake_maybe_build_triage(root, s):
+    def fake_maybe_build_triage(root, s, execution_root=None):
         _write_triage(level2.session_artifact_paths(root, s), s)
         return {"built": True}
 
@@ -454,6 +458,36 @@ def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexis
     assert result["snapshot"] != pre_cutoff
 
 
+def test_redirected_attempt_propagates_artifact_and_execution_roots(tmp_path, monkeypatch):
+    session = "2026-08-26"
+    default_paths = level2.session_artifact_paths(tmp_path, session)
+    _write_snapshot(default_paths, session, requested_at=f"{session}T16:07:09+07:00", exact=889, total=1683)
+    calls = {}
+    now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)
+
+    def fake_materialize(artifact_root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        calls["materialize"] = (artifact_root, execution_root)
+        _write_snapshot(
+            level2.session_artifact_paths(artifact_root, sess),
+            sess,
+            requested_at=f"{session}T19:05:00+07:00", exact=1200, total=1683,
+        )
+
+    def fake_triage(artifact_root, sess, execution_root=None):
+        calls["triage"] = (artifact_root, execution_root)
+        _write_triage(level2.session_artifact_paths(artifact_root, sess), sess)
+        return {"built": True}
+
+    monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
+    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_triage)
+
+    result = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
+
+    assert result["artifact_root"] != tmp_path
+    assert calls["materialize"] == (result["artifact_root"], tmp_path)
+    assert calls["triage"] == (result["artifact_root"], tmp_path)
+
+
 # --- 6. downstream uses the selected eligible artifact identity/path, not a rediscovered static one ---
 
 def test_registration_reads_from_the_redirected_artifact_root_not_the_default_path(tmp_path):
@@ -462,7 +496,8 @@ def test_registration_reads_from_the_redirected_artifact_root_not_the_default_pa
     fresh_paths = level2.session_artifact_paths(attempt_root, session)
     for reg_key, l2_key in cpc.REGISTRY_KEY_TO_LEVEL2_KEY.items():
         artifact = {"artifact_identity": f"{l2_key}:fresh-{reg_key}", "session": session, "source_market_session": session, "valuation_session": session, "research_session": session}
-        path = fresh_paths[l2_key]
+        path = (level2.session_artifact_paths(tmp_path, session)[l2_key]
+                if l2_key in cpc.RETAINED_LEVEL2_INPUT_KEYS else fresh_paths[l2_key])
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(artifact), encoding="utf-8")
     registry_path = tmp_path / "registry.json"
@@ -473,7 +508,10 @@ def test_registration_reads_from_the_redirected_artifact_root_not_the_default_pa
     assert result["status"] == "REGISTERED"
     for reg_key in cpc.REQUIRED_REGISTRY_KEYS:
         recorded_path = result["selection"][reg_key]["path"]
-        assert "post-close-attempt-190500" in recorded_path  # points at the selected attempt, not the default static path
+        if cpc.REGISTRY_KEY_TO_LEVEL2_KEY[reg_key] in cpc.RETAINED_LEVEL2_INPUT_KEYS:
+            assert "post-close-attempt-190500" not in recorded_path
+        else:
+            assert "post-close-attempt-190500" in recorded_path
         assert (tmp_path / recorded_path).is_file()  # resolves correctly relative to the real root
 
 

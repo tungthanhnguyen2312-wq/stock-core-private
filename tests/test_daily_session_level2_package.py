@@ -1,6 +1,10 @@
+import json
+import sys
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
+import daily_session_level2_package as level2
 from daily_research_session_operations import load_registry
 from daily_session_level2_package import (
     BLOCKED_BY_STALE_TRIAGE_DEPENDENCY,
@@ -17,6 +21,75 @@ from vn_time import VN_TZ
 
 ROOT = Path(__file__).resolve().parents[1]
 NAMED_TRIAGE = ROOT / "operations-review/full-universe-entry-candidate-triage-20260824/full_universe_entry_candidate_triage_20260824.json"
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _prime_materialization_outputs(paths: dict[str, Path]) -> None:
+    for key in (
+        "breadth_foundation", "universe_resolution", "liquidity_research", "technical_recovery",
+        "descriptive_research", "screening_foundation", "tactical_classifier",
+        "corporate_intelligence", "valuation", "sector_leadership", "peer_relative",
+        "risk_register", "technical_coverage_disposition",
+    ):
+        _write_json(paths[key], {})
+
+
+def test_run_cmd_executes_relative_tool_from_explicit_execution_root(tmp_path):
+    execution_root = tmp_path / "producer"
+    execution_root.mkdir()
+    with patch.object(level2.subprocess, "run") as mocked:
+        level2.run_cmd(execution_root, ["tools/example.py", "--flag"])
+    assert mocked.call_args.args[0] == [sys.executable, "tools/example.py", "--flag"]
+    assert mocked.call_args.kwargs["cwd"] == str(execution_root)
+    assert mocked.call_args.kwargs["check"] is True
+
+
+def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp_path):
+    session = "2026-08-26"
+    attempt_root = tmp_path / "operations-review" / "canonical-post-close-v1" / session / "post-close-attempt-190500"
+    paths = level2.session_artifact_paths(attempt_root, session)
+    _prime_materialization_outputs(paths)
+    calls: list[tuple[Path, list[str]]] = []
+
+    def fake_run(execution_root: Path, command: list[str]) -> None:
+        calls.append((execution_root, command))
+        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
+
+    with patch.object(level2, "run_cmd", fake_run):
+        level2.materialize_independent_components(
+            attempt_root,
+            session,
+            tmp_path / "runtime",
+            execution_root=ROOT,
+        )
+
+    assert len(calls) == 1
+    assert calls[0][0] == ROOT
+    command = calls[0][1]
+    assert command[0] == "tools/run_p3f9b_market_wide_exact_session_scaleout.py"
+    assert command[command.index("--output-dir") + 1] == str(paths["exact_session_snapshot"].parent)
+    assert str(attempt_root) in command[command.index("--output-dir") + 1]
+
+
+def test_ordinary_materialization_keeps_its_single_root_as_execution_root(tmp_path):
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    _prime_materialization_outputs(paths)
+    calls: list[tuple[Path, list[str]]] = []
+
+    def fake_run(execution_root: Path, command: list[str]) -> None:
+        calls.append((execution_root, command))
+        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
+
+    with patch.object(level2, "run_cmd", fake_run), \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"):
+        level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
+
+    assert calls[0][0] == tmp_path
 
 
 def test_named_20260824_triage_file_is_2026_08_21_session():

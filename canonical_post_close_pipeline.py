@@ -66,6 +66,13 @@ REQUIRED_REGISTRY_KEYS = (
 )
 OPTIONAL_REGISTRY_KEYS = ("official_universe", "event_context")
 
+# These Level-2 keys are governed retained inputs, not outputs of a redirected
+# canonical attempt. They must continue to resolve under the Producer root.
+RETAINED_LEVEL2_INPUT_KEYS = frozenset({
+    "fundamental", "official_universe", "official_event_context", "catalyst",
+    "historical_context", "financial_momentum", "corporate_event_context",
+})
+
 # A completed-session snapshot with fewer than this fraction of the attempted DNSE candidate
 # universe returning an exact-dated bar is treated as evidence of a partial/failed acquisition
 # (pre-close attempt, connectivity failure, etc.), never as a genuine thin trading day. Observed
@@ -270,7 +277,14 @@ def acquire_and_materialize(
     artifact_root, eligibility = resolve_acquisition_root(root, session, now=now)
     paths = level2.session_artifact_paths(artifact_root, session)
     try:
-        level2.materialize_independent_components(artifact_root, session, runtime_root, workers=workers, now=now)
+        level2.materialize_independent_components(
+            artifact_root,
+            session,
+            runtime_root,
+            workers=workers,
+            now=now,
+            execution_root=root,
+        )
     except ValueError as exc:
         if str(exc).startswith("P3F9B_ACQUIRED_SESSION_MISMATCH"):
             raise CanonicalPostCloseError(
@@ -288,7 +302,11 @@ def acquire_and_materialize(
             f"REFUSE_CANONICAL_POST_CLOSE:PARTIAL_OR_INTRADAY_SESSION_EVIDENCE:"
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
         )
-    triage_build_result = level2.maybe_build_triage_dependent(artifact_root, session)
+    triage_build_result = level2.maybe_build_triage_dependent(
+        artifact_root,
+        session,
+        execution_root=root,
+    )
     # Ground-truth check on the triage file itself, matching maybe_build_triage_dependent's own
     # fallback (registry-based session_triage_status would require this session to already be
     # registered, which it deliberately is not yet at this point in the pipeline -- registration
@@ -329,14 +347,15 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
     degrades to Level-2's shared prior-as-of file (still real retained evidence, just not
     session-pinned) rather than leaving the component wholly absent.
 
-    `artifact_root` (defaulting to `root`) is where the Level-2 inputs this reads are looked up --
-    it is whatever acquire_and_materialize()'s eligibility check resolved for THIS run, which may
-    be a fresh-attempt directory rather than `root` itself. Output always stays under `root`
+    `artifact_root` (defaulting to `root`) is where this run's session-specific Level-2 outputs
+    are looked up. Immutable retained inputs stay under the Producer `root`, even when the run
+    selected a fresh-attempt directory. Output always stays under `root`
     (this pipeline's own enrichment namespace never collides with a pre-cutoff artifact, since
     that namespace does not exist until this function runs).
     """
     artifact_root = artifact_root or root
     paths = level2.session_artifact_paths(artifact_root, session)
+    retained_paths = level2.session_artifact_paths(root, session)
     results: dict[str, Any] = {}
 
     def _attempt(name: str, level2_key: str, fn) -> None:
@@ -348,16 +367,21 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
             return
         except Exception as exc:  # noqa: BLE001 -- deliberately broad: component-local isolation
             reason = f"{type(exc).__name__}:{exc}"
-        prior = _load(paths[level2_key])
+        prior = _load(retained_paths[level2_key])
         if prior:
-            results[name] = {"status": "PRIOR_AS_OF_CONTEXT", "artifact": prior, "path": paths[level2_key], "reason": reason}
+            results[name] = {
+                "status": "PRIOR_AS_OF_CONTEXT",
+                "artifact": prior,
+                "path": retained_paths[level2_key],
+                "reason": reason,
+            }
         else:
             results[name] = {"status": "UNAVAILABLE", "artifact": None, "reason": reason}
 
     def _financial_momentum():
         from current_financial_momentum_context import build_artifact as build
-        official_universe = _load(paths["official_universe"])
-        fundamental = _load(paths["fundamental"])
+        official_universe = _load(retained_paths["official_universe"])
+        fundamental = _load(retained_paths["fundamental"])
         descriptive = _load(paths["descriptive_research"])
         if not official_universe or not fundamental:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
@@ -365,8 +389,8 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
 
     def _corporate_event_context():
         from current_corporate_event_context import build_artifact as build
-        official_universe = _load(paths["official_universe"])
-        official_event_context = _load(paths["official_event_context"])
+        official_universe = _load(retained_paths["official_universe"])
+        official_event_context = _load(retained_paths["official_event_context"])
         if not official_universe or not official_event_context:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
         return build(official_universe=official_universe, official_event_context=official_event_context, research_session=session)
@@ -399,18 +423,20 @@ def register_session_inputs(
     conflicting already-frozen completed_sessions[session] lock, matching
     daily_research_session_operations.assert_completed_session_inputs_locked semantics.
 
-    `artifact_root` (defaulting to `root`) is where the Level-2 artifacts this reads are looked
-    up (see build_enrichment_components); recorded registry paths are always computed relative to
-    the real `root`, so daily_research_session_operations.resolve_inputs() resolves them correctly
-    regardless of how deep the source artifact is nested under a fresh-attempt directory.
+    `artifact_root` (defaulting to `root`) supplies session-specific outputs while immutable
+    retained inputs stay under `root` (see build_enrichment_components). Recorded registry paths
+    are always computed relative to the real `root`, so
+    daily_research_session_operations.resolve_inputs() resolves them correctly regardless of how
+    deep the selected attempt directory is nested.
     """
     artifact_root = artifact_root or root
     path = registry_path or root / "config" / "daily_research_session_input_registry.json"
     registry = json.loads(path.read_text(encoding="utf-8"))
     paths = level2.session_artifact_paths(artifact_root, session)
+    retained_paths = level2.session_artifact_paths(root, session)
     selection: dict[str, dict[str, str]] = {}
     for registry_key, level2_key in REGISTRY_KEY_TO_LEVEL2_KEY.items():
-        artifact_path = paths[level2_key]
+        artifact_path = retained_paths[level2_key] if level2_key in RETAINED_LEVEL2_INPUT_KEYS else paths[level2_key]
         artifact = _load(artifact_path)
         if artifact is None or not isinstance(artifact.get("artifact_identity"), str):
             if registry_key in REQUIRED_REGISTRY_KEYS:

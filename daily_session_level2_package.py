@@ -847,15 +847,35 @@ def write_level2_package(root: Path, session: str, *, classification: Mapping[st
     return {"manifest": manifest_path, "brief": brief_path, "package_dir": pkg}
 
 
-def run_cmd(root: Path, cmd: list[str]) -> None:
+def run_cmd(execution_root: Path, cmd: list[str]) -> None:
+    """Run a repository-relative tool from the Producer checkout.
+
+    Level-2 artifacts can be redirected into an isolated canonical post-close
+    attempt directory. That output location must never also become the cwd for
+    the relative ``tools/...`` commands below.
+    """
     print(f"--> {' '.join(cmd)}")
-    subprocess.run([sys.executable] + cmd, cwd=str(root), check=True)
+    subprocess.run([sys.executable] + cmd, cwd=str(execution_root), check=True)
 
 
-def materialize_independent_components(root: Path, session: str, runtime_root: Path, workers: int = 12, now: datetime | None = None) -> None:
-    """Reuse retained independent artifacts. Never substitute a prior-session triage."""
-    ops = root / "operations-review"
-    paths = session_artifact_paths(root, session)
+def materialize_independent_components(
+    artifact_root: Path,
+    session: str,
+    runtime_root: Path,
+    workers: int = 12,
+    now: datetime | None = None,
+    *,
+    execution_root: Path | None = None,
+) -> None:
+    """Materialize a session into ``artifact_root`` using ``execution_root`` tools.
+
+    Ordinary Level-2 callers omit ``execution_root`` and retain the historic
+    one-root behaviour. Canonical post-close callers provide their isolated
+    attempt output root plus the Producer checkout separately.
+    """
+    execution_root = execution_root or artifact_root
+    paths = session_artifact_paths(artifact_root, session)
+    retained_paths = session_artifact_paths(execution_root, session)
     p3f9b_snapshot = paths["exact_session_snapshot"]
     p3f9b_dir = p3f9b_snapshot.parent
     if not p3f9b_snapshot.exists():
@@ -872,7 +892,7 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         ]
         if now is not None:
             cmd += ["--requested-at", now.astimezone(VN_TZ).isoformat()]
-        run_cmd(root, cmd)
+        run_cmd(execution_root, cmd)
         acquired = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
         if acquired.get("resolved_completed_session") != session:
             raise ValueError(
@@ -881,10 +901,10 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
             )
     breadth_out = paths["breadth_foundation"]
     if not breadth_out.exists():
-        run_cmd(root, ["tools/build_current_market_universe_breadth_foundation.py", "--snapshot", str(p3f9b_snapshot), "--output", str(breadth_out)])
+        run_cmd(execution_root, ["tools/build_current_market_universe_breadth_foundation.py", "--snapshot", str(p3f9b_snapshot), "--output", str(breadth_out)])
     ur_out = paths["universe_resolution"]
     if not ur_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_current_universe_status_and_session_coverage_resolution.py",
             "--breadth-foundation-artifact", str(breadth_out),
             "--p3f9b-snapshot", str(p3f9b_snapshot),
@@ -897,19 +917,19 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         num_candidates = len(snapshot_data.get("records", {}))
         num_batches = math.ceil(num_candidates / 100)
         for i in range(num_batches):
-            run_cmd(root, [
+            run_cmd(execution_root, [
                 "tools/run_market_wide_current_liquidity_research.py",
                 "--universe-snapshot", str(p3f9b_snapshot), "--out-dir", str(liq_dir),
                 "--session", session, "--batch-index", str(i), "--batch-size", "100", "--workers", str(workers),
             ])
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_market_wide_current_liquidity_research.py",
             "--universe-snapshot", str(p3f9b_snapshot), "--out-dir", str(liq_dir),
             "--session", session, "--consolidate",
         ])
     tech_out = paths["technical_recovery"]
     tech_dir = tech_out.parent
-    baseline_desc = _prior_completed_descriptive(root, session)
+    baseline_desc = _prior_completed_descriptive(execution_root, session)
     if not tech_out.exists():
         from market_wide_current_technical_coverage_scaleout import recovery_candidates
         b_data = json.loads(baseline_desc.read_text(encoding="utf-8"))
@@ -917,19 +937,19 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         candidates = recovery_candidates(baseline_artifact=b_data, p3f9b_snapshot=s_data)
         num_batches = math.ceil(len(candidates) / 10) if candidates else 0
         for i in range(num_batches):
-            run_cmd(root, [
+            run_cmd(execution_root, [
                 "tools/run_market_wide_current_technical_coverage_scaleout.py",
                 "--baseline", str(baseline_desc), "--snapshot", str(p3f9b_snapshot),
                 "--out-dir", str(tech_dir), "--batch", str(i), "--batch-size", "10",
             ])
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_market_wide_current_technical_coverage_scaleout.py",
             "--baseline", str(baseline_desc), "--snapshot", str(p3f9b_snapshot),
             "--out-dir", str(tech_dir), "--consolidate", "--batch-size", "10",
         ])
     desc_out = paths["descriptive_research"]
     if not desc_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_market_wide_current_descriptive_research.py",
             "--universe-resolution-artifact", str(ur_out), "--p3f9b-snapshot", str(p3f9b_snapshot),
             "--liquidity-artifact", str(liq_out), "--technical-history-recovery-artifact", str(tech_out),
@@ -937,19 +957,19 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         ])
     screen_out = paths["screening_foundation"]
     if not screen_out.exists():
-        run_cmd(root, ["tools/run_current_market_screening_opportunity_comparison_foundation.py", "--source", str(desc_out), "--out", str(screen_out)])
+        run_cmd(execution_root, ["tools/run_current_market_screening_opportunity_comparison_foundation.py", "--source", str(desc_out), "--out", str(screen_out)])
     tactical_out = paths["tactical_classifier"]
     tactical_dir = tactical_out.parent
-    fundamental_retained = paths["fundamental"]
+    fundamental_retained = retained_paths["fundamental"]
     if not tactical_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_watchlist_tactical_entry_classifier.py",
             "--descriptive-path", str(desc_out), "--screening-path", str(screen_out),
             "--fundamental-path", str(fundamental_retained), "--out-dir", str(tactical_dir),
         ])
     ci_out = paths["corporate_intelligence"]
     if not ci_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_market_wide_current_corporate_intelligence.py",
             "--session", session, "--descriptive", str(desc_out),
             "--fundamental", str(fundamental_retained), "--output", str(ci_out),
@@ -957,15 +977,15 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
     val_out = paths["valuation"]
     val_dir = val_out.parent
     if not val_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/derive_market_wide_current_valuation_input_scaleout.py",
             "--runtime-root", str(runtime_root), "--price", str(p3f9b_snapshot),
             "--output", str(val_out), "--report", str(val_dir / "market_wide_current_valuation_research_scaleout_report.json"),
         ])
     leadership_out = paths["sector_leadership"]
-    official_u = paths["official_universe"]
+    official_u = retained_paths["official_universe"]
     if not leadership_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_current_market_sector_leadership_context.py",
             "--current-descriptive-artifact", str(desc_out),
             "--current-screening-artifact", str(screen_out),
@@ -974,7 +994,7 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         ])
     peer_out = paths["peer_relative"]
     if not peer_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_sector_aware_relative_research.py",
             "--descriptive", str(desc_out), "--tactical", str(tactical_out),
             "--fundamental", str(fundamental_retained), "--valuation", str(val_out),
@@ -982,7 +1002,7 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         ])
     risk_out = paths["risk_register"]
     if not risk_out.exists():
-        run_cmd(root, [
+        run_cmd(execution_root, [
             "tools/run_current_research_risk_register.py",
             "--leadership-context", str(leadership_out),
             "--valuation-context", str(val_out),
@@ -1004,9 +1024,21 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         disp_out.write_text(json.dumps(disp_art, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def maybe_build_triage_dependent(root: Path, session: str) -> dict[str, Any]:
-    """Generate exact-session triage when inputs exist, then rebuild dependents. Never substitute."""
-    paths = session_artifact_paths(root, session)
+def maybe_build_triage_dependent(
+    artifact_root: Path,
+    session: str,
+    *,
+    execution_root: Path | None = None,
+) -> dict[str, Any]:
+    """Build attempt outputs from selected artifacts and retained Producer inputs.
+
+    ``artifact_root`` owns all session-specific output paths. ``execution_root``
+    owns the registry and immutable retained inputs; defaults preserve existing
+    non-canonical callers.
+    """
+    execution_root = execution_root or artifact_root
+    paths = session_artifact_paths(artifact_root, session)
+    retained_paths = session_artifact_paths(execution_root, session)
     if (
         not paths["session_triage"].exists()
         and paths["descriptive_research"].exists()
@@ -1018,22 +1050,24 @@ def maybe_build_triage_dependent(root: Path, session: str) -> dict[str, Any]:
             descriptive=json.loads(paths["descriptive_research"].read_text(encoding="utf-8")),
             screening=json.loads(paths["screening_foundation"].read_text(encoding="utf-8")),
             tactical=json.loads(paths["tactical_classifier"].read_text(encoding="utf-8")),
-            fundamental=_load(paths["fundamental"]),
+            fundamental=_load(retained_paths["fundamental"]),
             session=session,
         )
         replay_triage(triage_art)
         paths["session_triage"].parent.mkdir(parents=True, exist_ok=True)
         paths["session_triage"].write_text(json.dumps(triage_art, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    registry = load_registry(root)
-    triage = session_triage_status(root, session, registry)
+    registry = load_registry(execution_root)
+    triage = session_triage_status(execution_root, session, registry)
+    generated_triage = False
     if triage["status"] != EXACT_SESSION_CLEAN:
         generated = _load(paths["session_triage"])
         if generated and generated.get("source_market_session") == session:
+            generated_triage = True
             triage = {
                 "status": EXACT_SESSION_CLEAN,
                 "reason_code": None,
                 "identity": generated.get("artifact_identity"),
-                "path": _rel(root, paths["session_triage"]),
+                "path": _rel(artifact_root, paths["session_triage"]),
                 "source_session": session,
             }
         else:
@@ -1043,14 +1077,16 @@ def maybe_build_triage_dependent(root: Path, session: str) -> dict[str, Any]:
     from current_evidence_bound_scenario import build as build_scenario
     from polymorphic_current_strategy_classification import build as build_strategy
     from current_opportunity_prioritization import build as build_opp, content_identity as opp_id
-    triage_path = root / triage["path"] if triage.get("path") else paths["session_triage"]
+    triage_path = paths["session_triage"] if generated_triage else (
+        execution_root / triage["path"] if triage.get("path") else paths["session_triage"]
+    )
     triage_art = json.loads(triage_path.read_text(encoding="utf-8"))
-    cat = _load(paths["catalyst"])
+    cat = _load(retained_paths["catalyst"])
     scenario_art = build_scenario(
         descriptive=json.loads(paths["descriptive_research"].read_text("utf-8")),
         tactical=json.loads(paths["tactical_classifier"].read_text("utf-8")),
         peer_relative=json.loads(paths["peer_relative"].read_text("utf-8")),
-        fundamental=json.loads(paths["fundamental"].read_text("utf-8")),
+        fundamental=json.loads(retained_paths["fundamental"].read_text("utf-8")),
         valuation=json.loads(paths["valuation"].read_text("utf-8")),
         triage=triage_art,
         catalyst=cat,
@@ -1063,7 +1099,7 @@ def maybe_build_triage_dependent(root: Path, session: str) -> dict[str, Any]:
         descriptive=json.loads(paths["descriptive_research"].read_text("utf-8")),
         tactical=json.loads(paths["tactical_classifier"].read_text("utf-8")),
         peer_relative=json.loads(paths["peer_relative"].read_text("utf-8")),
-        fundamental=json.loads(paths["fundamental"].read_text("utf-8")),
+        fundamental=json.loads(retained_paths["fundamental"].read_text("utf-8")),
         valuation=json.loads(paths["valuation"].read_text("utf-8")),
         scenario=json.loads(paths["scenario"].read_text("utf-8")),
         corporate_intelligence=json.loads(paths["corporate_intelligence"].read_text("utf-8")),
@@ -1071,14 +1107,14 @@ def maybe_build_triage_dependent(root: Path, session: str) -> dict[str, Any]:
     paths["strategy"].parent.mkdir(parents=True, exist_ok=True)
     paths["strategy"].write_text(json.dumps(strategy_art, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     opp_art = build_opp(
-        official_universe=json.loads(paths["official_universe"].read_text("utf-8")),
+        official_universe=json.loads(retained_paths["official_universe"].read_text("utf-8")),
         screening=json.loads(paths["screening_foundation"].read_text("utf-8")),
         tactical=json.loads(paths["tactical_classifier"].read_text("utf-8")),
         strategy=json.loads(paths["strategy"].read_text("utf-8")),
         scenario=json.loads(paths["scenario"].read_text("utf-8")),
-        fundamental=json.loads(paths["fundamental"].read_text("utf-8")),
+        fundamental=json.loads(retained_paths["fundamental"].read_text("utf-8")),
         peer=json.loads(paths["peer_relative"].read_text("utf-8")),
-        event_context=json.loads(paths["official_event_context"].read_text("utf-8")),
+        event_context=json.loads(retained_paths["official_event_context"].read_text("utf-8")),
         descriptive=json.loads(paths["descriptive_research"].read_text("utf-8")),
     )
     opp_art.update(opp_id(opp_art))
