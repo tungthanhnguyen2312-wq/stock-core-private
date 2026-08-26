@@ -492,7 +492,11 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
     def test_backend_equals_web_is_refused(self):
         res = self.run_fixture(["whole-market"], backend_dir=self.web_dir, web_dir=self.web_dir)
         self.assertNotEqual(res.returncode, 0)
-        self.assertIn("equals WEB_ROOT", res.stderr)
+        combined = res.stderr + res.stdout
+        self.assertTrue(
+            "equals WEB_ROOT" in combined or "backend == web" in combined,
+            combined,
+        )
 
     def test_cockpit_uses_producer_publisher_not_web_dir_copy(self):
         projection = self.backend_dir / "current_decision_cockpit_projection.json"

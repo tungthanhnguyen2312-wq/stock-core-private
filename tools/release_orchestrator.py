@@ -219,6 +219,9 @@ def orchestrate(args: argparse.Namespace) -> int:
     with SingleInstanceLock():
         try:
             assert_producer_publisher_file(SCRIPT_PATH, role="release_orchestrator")
+            # Path/legacy/runtime refusals happen before any git cwd on web_dir, so a
+            # deleted or non-directory legacy checkout still fail-closes.
+            assert_web_checkout_identity(web_dir, backend_dir=backend_dir, live=False)
         except ReleaseIdentityError as exc:
             sys.stderr.write(f"[ERROR] {exc}\n")
             return 1
