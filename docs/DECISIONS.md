@@ -1,5 +1,22 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-26 - Capability-First EOD 18:00 Operational Scheduling V1
+
+`CAPABILITY_FIRST_EOD_1800_OPERATIONAL_SCHEDULING_V1 = COMPLETE_LOCALLY / SCHEDULER_READY` (`push = NO`).
+
+Decisions:
+
+1. **Provider/session evidence is primary.** Clock time is not proof of a completed VN market session. The gate never claims `PROVIDER_CONFIRMED_COMPLETED`.
+2. **DNSE `working_dates` semantic ceiling.** The retained `/market/working-dates` contract is a forward calendar window. It proves working-date identity and prior/next dates only inside the observed window. It does not expose a documented market-closed/session-completed flag and has no historical coverage. Opaque extra fields are not interpreted as completion.
+3. **18:00 Asia/Ho_Chi_Minh is a safety floor.** Same-day collection before the floor fails closed (`TOO_EARLY`) before the collector runs. After the floor, time alone never returns `READY`.
+4. **READY semantic is `EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR`.** That requires working-date identity (or retained historical exact-session evidence when the forward window does not cover the date) plus sufficient retained exact-session observations acquired at or after the floor for the intended session.
+5. **One-shot foreground command only.** `python tools/run_capability_first_eod_operation.py` reuses the existing collector and `tools/materialize_daily_market_research.py`. No OS scheduler, cron, daemon, poll, or sleep. Portable contract: `config/capability_first_eod_operation.json`. `SCHEDULER_READY=YES`.
+6. **Authority unchanged.** `authority_effect = NONE`. RAW_AS_TRADED not promoted; PIT blocked; ADTV20/sizing not promoted; strict valuation remains bounded; no probability/target/ranking/recommendation authority.
+
+Validation: focused gate and one-command tests (too-early, time-alone, READY, mismatch, future, weekend/holiday, omitted resolution, stale packet, provider unavailable, successful fixture chain, idempotent replay, tamper, collector/materializer failure, no network, no sleep/poll); `py_compile`; `git diff --check`; isolated 2026-08-26 replay against retained P3F9B exact-session evidence. No dashboard-runtime mutation. No Dashboard publish/deploy.
+
+M0 terminal-state sync in the same commit: `CANONICAL_POST_CLOSE_ONE_COMMAND_PIPELINE_V1 = PUBLISHED / CLOSED` with deployed content source `534e4971edf2b9be62467ce89758b6625544558d`, Dashboard CI `32986483019` SUCCESS, Deploy Pages `32986911616` SUCCESS, public session `2026-08-26` `PUBLIC_BYTE_IDENTITY_PASS`. Dashboard `main` later includes workflow-only fallback `691b63dedec8625bfab7f6b126d8928a2184abf4`, which is not the deployed 26/8 content source.
+
 ## 2026-08-26 - Public session companion publication layer V1
 
 `CANONICAL_POST_CLOSE_ONE_COMMAND_PIPELINE_V1` publication gap: missing current-session companions before release-smoke (`push = NO`).

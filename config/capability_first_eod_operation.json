@@ -1,0 +1,21 @@
+{
+  "schema_version": "capability_first_eod_operation_schedule_contract/v1",
+  "scheduler_ready": true,
+  "operating_timezone": "Asia/Ho_Chi_Minh",
+  "safety_floor_local_time": "18:00",
+  "invocation": {
+    "command": ["python", "tools/run_capability_first_eod_operation.py"],
+    "working_directory": "repository_root",
+    "mode": "one_shot_foreground",
+    "poll": false,
+    "sleep_until_floor": false,
+    "daemon": false,
+    "os_scheduler_installed_by_this_contract": false
+  },
+  "notes": [
+    "External operator or OS scheduler may invoke this one-shot command around or after the safety floor.",
+    "18:00 Asia/Ho_Chi_Minh is a safety floor, not market-session factual authority.",
+    "DNSE working_dates proves working-date identity inside its observed forward window only.",
+    "READY means EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR, never PROVIDER_CONFIRMED_COMPLETED."
+  ]
+}
