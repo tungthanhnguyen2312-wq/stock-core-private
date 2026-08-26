@@ -141,10 +141,24 @@ class WorkspaceStatusTopologyTests(unittest.TestCase):
         status = Path(r"C:\Projects\StockLookup\tools\workspace_status.py")
         text = status.read_text(encoding="utf-8")
         self.assertIn('("market-dashboard", "main", True)', text)
-        self.assertNotIn("worktrees/market-dashboard-main", text)
-        self.assertNotIn("worktrees/market-dashboard-phase5", text)
-        self.assertNotIn("worktrees/market-dashboard-ci", text)
+        self.assertIn("FORBIDDEN_WEB_CLONES", text)
+        self.assertIn("CANONICAL_PYTHON", text)
         self.assertIn('("dashboard-runtime", None, False)', text)
+        self.assertNotIn('("worktrees/market-dashboard-main"', text)
+
+    def test_obsolete_venvs_are_gone(self):
+        root = Path(r"C:\Projects\StockLookup")
+        self.assertFalse((root / ".phase3a-benchmark-venv").exists())
+        self.assertFalse((root / "stock-core-private" / ".test-venv").exists())
+        self.assertFalse((root / "dashboard-runtime" / ".venv").exists())
+        self.assertTrue(Path(r"C:\Program Files\Python313\python.exe").is_file())
+
+    def test_runtime_publisher_fail_closes(self):
+        import subprocess
+        script = Path(r"C:\Projects\StockLookup\dashboard-runtime\publish_dashboard.py")
+        res = subprocess.run([sys.executable, str(script)], capture_output=True, text=True)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("REFUSED", res.stderr)
 
 
 if __name__ == "__main__":

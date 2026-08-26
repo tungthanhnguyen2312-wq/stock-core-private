@@ -18,7 +18,11 @@ class PipelineTests(unittest.TestCase):
             def fake(cmd, **kw): calls.append((cmd,kw)); return SimpleNamespace(returncode=0)
             with mock.patch.object(pipeline,"upstream_ok",return_value=(True,{})),mock.patch.object(pipeline,"inspect",return_value={}),mock.patch.object(pipeline,"enrich"):
                 self.assertEqual(pipeline.main(["--runtime-root",raw,"--tickers","AAA","BBB"],fake),0)
-            self.assertEqual([x[0][1] for x in calls[:-1]],["vn_stock_pipeline.py","macro_sync.py","news_sync.py","vn_indicators.py","candle_scan.py","stock_analyzer.py","stock_analyzer.py","stock_analyzer.py","export_ai_bundle.py"])
+            self.assertEqual(
+                [Path(x[0][1]).name for x in calls[:-1]],
+                ["vn_stock_pipeline.py","macro_sync.py","news_sync.py","vn_indicators.py","candle_scan.py","stock_analyzer.py","stock_analyzer.py","stock_analyzer.py","export_ai_bundle.py"],
+            )
+            self.assertTrue(all(str(pipeline.SCRIPT_DIR) in x[0][1] for x in calls[:-1]))
             self.assertEqual(calls[7][0][-2:],["AAA","BBB"]); self.assertEqual(calls[8][0][-1],"AAA,BBB")
             self.assertTrue(all(x[1]["env"][pipeline.RUNTIME_ROOT_ENV]==str(Path(raw).resolve()) for x in calls))
     def test_fail_fast(self):
@@ -31,7 +35,7 @@ class PipelineTests(unittest.TestCase):
             root=Path(raw); self.make_upstream(root); os.utime(root/"ta_signals.csv",(1700000001,1700000001)); calls=[]
             def fake(cmd,**kw): calls.append(cmd); return SimpleNamespace(returncode=0)
             self.assertEqual(pipeline.main(["--runtime-root",raw,"--skip-price-update","--skip-macro","--skip-news"],fake),1)
-            self.assertNotIn("export_ai_bundle.py",[x[1] for x in calls])
+            self.assertNotIn("export_ai_bundle.py",[Path(x[1]).name for x in calls])
     def test_verify_only(self):
         with tempfile.TemporaryDirectory() as raw:
             calls=[]
@@ -48,7 +52,7 @@ class PipelineTests(unittest.TestCase):
             root = Path(raw); self.make_upstream(root); calls = []
             def fake(command, **kwargs):
                 calls.append((command, kwargs))
-                if command[1] == "export_ai_bundle.py" and "--verify" not in command:
+                if Path(command[1]).name == "export_ai_bundle.py" and "--verify" not in command:
                     (root / "analysis_bundle.json").write_text(json.dumps({"reference_session_date": "2026-07-22"}), encoding="utf-8")
                     (root / "bundle_manifest.json").write_text(json.dumps({"files": []}), encoding="utf-8")
                 return SimpleNamespace(returncode=0)
@@ -73,7 +77,7 @@ class PipelineTests(unittest.TestCase):
                 root = Path(raw); self.make_upstream(root); os.utime(root / dependency, (1700000001, 1700000001)); calls=[]
                 def fake(command, **kwargs): calls.append(command); return SimpleNamespace(returncode=0)
                 self.assertEqual(pipeline.main(["--runtime-root", raw, "--skip-price-update", "--skip-macro", "--skip-news"], fake), 1)
-                self.assertNotIn("export_ai_bundle.py", [x[1] for x in calls])
+                self.assertNotIn("export_ai_bundle.py", [Path(x[1]).name for x in calls])
 
     def make_metadata_db(self, root, updated_value):
         conn = sqlite3.connect(root / "vn_stock.db")
@@ -86,7 +90,7 @@ class PipelineTests(unittest.TestCase):
             root=Path(raw); self.make_upstream(root); self.make_metadata_db(root, "2000-01-01 00:00"); calls=[]
             def fake(cmd,**kw): calls.append(cmd); return SimpleNamespace(returncode=0)
             self.assertEqual(pipeline.main(["--runtime-root",raw,"--skip-price-update","--skip-macro","--skip-news"],fake),1)
-            self.assertNotIn("export_ai_bundle.py",[x[1] for x in calls])
+            self.assertNotIn("export_ai_bundle.py",[Path(x[1]).name for x in calls])
 
     def test_fresh_vnstock_metadata_snapshot_does_not_block_export(self):
         with tempfile.TemporaryDirectory(prefix="daily runtime fresh meta ") as raw:
@@ -94,7 +98,7 @@ class PipelineTests(unittest.TestCase):
             fresh = pipeline.datetime.now(pipeline.timezone.utc).strftime("%Y-%m-%d %H:%M")
             self.make_metadata_db(root, fresh)
             def fake(command,**kwargs):
-                if command[1]=="export_ai_bundle.py" and "--verify" not in command:
+                if Path(command[1]).name=="export_ai_bundle.py" and "--verify" not in command:
                     (root/"analysis_bundle.json").write_text(json.dumps({"reference_session_date":"2026-07-27"}),encoding="utf-8")
                     (root/"bundle_manifest.json").write_text(json.dumps({"files":[]}),encoding="utf-8")
                 return SimpleNamespace(returncode=0)
@@ -107,9 +111,9 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root=Path(raw); self.make_upstream(root); calls=[]
             def fake(command, **kwargs):
-                calls.append(command); return SimpleNamespace(returncode=17 if command[1] == "candle_scan.py" else 0)
+                calls.append(command); return SimpleNamespace(returncode=17 if Path(command[1]).name == "candle_scan.py" else 0)
             self.assertEqual(pipeline.main(["--runtime-root", raw], fake), 1)
-            self.assertNotIn("export_ai_bundle.py", [x[1] for x in calls]); self.assertFalse((root / "bundle_manifest.json").exists())
+            self.assertNotIn("export_ai_bundle.py", [Path(x[1]).name for x in calls]); self.assertFalse((root / "bundle_manifest.json").exists())
 
     def test_verify_only_does_not_rewrite_manifest(self):
         with tempfile.TemporaryDirectory(prefix="verify only ") as raw:

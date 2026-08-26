@@ -164,24 +164,27 @@ def run(name: str, command: list[str], env: dict[str, str], runner: Callable, ro
 def steps(args: argparse.Namespace, tickers: list[str]) -> list[tuple[str, list[str]]]:
     py = sys.executable
     result = []
+    def producer_script(name: str) -> str:
+        return str(SCRIPT_DIR / name)
+
     if not args.skip_price_update:
-        result.append(("price_update", [py, "vn_stock_pipeline.py", "update"]))
+        result.append(("price_update", [py, producer_script("vn_stock_pipeline.py"), "update"]))
     if not args.skip_macro:
-        result.append(("macro_sync", [py, "macro_sync.py"]))
+        result.append(("macro_sync", [py, producer_script("macro_sync.py")]))
     if not args.skip_news:
-        result.append(("news_sync", [py, "news_sync.py"]))
+        result.append(("news_sync", [py, producer_script("news_sync.py")]))
 
     base = [
-        ("indicators", [py, "vn_indicators.py"]),
-        ("candle_scan", [py, "candle_scan.py"]),
-        ("strategy_all", [py, "stock_analyzer.py", "--strategy", "all"]),
-        ("market_scan", [py, "stock_analyzer.py", "--scan-market"]),
-        ("focus_analysis", [py, "stock_analyzer.py", "--tickers", *tickers]),
-        ("export_bundle", [py, "export_ai_bundle.py", "--tickers", ",".join(tickers)]),
+        ("indicators", [py, producer_script("vn_indicators.py")]),
+        ("candle_scan", [py, producer_script("candle_scan.py")]),
+        ("strategy_all", [py, producer_script("stock_analyzer.py"), "--strategy", "all"]),
+        ("market_scan", [py, producer_script("stock_analyzer.py"), "--scan-market"]),
+        ("focus_analysis", [py, producer_script("stock_analyzer.py"), "--tickers", *tickers]),
+        ("export_bundle", [py, producer_script("export_ai_bundle.py"), "--tickers", ",".join(tickers)]),
     ]
     res = result + base
     if getattr(args, "publish_dashboard", False):
-        cmd = [py, "publish_dashboard.py"]
+        cmd = [py, producer_script("publish_dashboard.py")]
         if getattr(args, "live_publish", False):
             cmd.append("--live")
         res.append(("publish_dashboard", cmd))
