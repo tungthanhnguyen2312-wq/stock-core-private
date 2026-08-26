@@ -8,6 +8,7 @@ real file on disk, which is the intended/only environment this script ever runs 
 """
 
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -121,6 +122,8 @@ class _PublishDashboardTestBase(unittest.TestCase):
         pd.WEB_ROOT = self.tmp
         pd.BACKEND_ROOT = self.backend
         pd.LIVE_MODE = False
+        self._orig_identity_env = os.environ.get("STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE")
+        os.environ["STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE"] = str(self.tmp.resolve())
         self.addCleanup(self._restore_globals)
 
         self.fake_git = FakeGit(self.tmp)
@@ -129,6 +132,10 @@ class _PublishDashboardTestBase(unittest.TestCase):
         pd.WEB_ROOT = self._orig_web
         pd.BACKEND_ROOT = self._orig_backend
         pd.LIVE_MODE = self._orig_live
+        if self._orig_identity_env is None:
+            os.environ.pop("STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE", None)
+        else:
+            os.environ["STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE"] = self._orig_identity_env
 
     def _all_files(self, exclude_logs: bool = False) -> dict[str, tuple[int, bytes]]:
         return {

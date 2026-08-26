@@ -31,6 +31,18 @@ from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve()
 PRODUCER_ROOT = SCRIPT_PATH.parent.parent
+if str(PRODUCER_ROOT) not in sys.path:
+    sys.path.insert(0, str(PRODUCER_ROOT))
+
+from release_checkout_identity import (  # noqa: E402
+    CANONICAL_WEB_ROOT,
+    GITHUB_SOURCE_UPDATED,
+    PUBLISHED,
+    ReleaseIdentityError,
+    assert_producer_publisher_file,
+    assert_web_checkout_identity,
+    publication_state_after_push,
+)
 
 WHOLE_MARKET_ALLOWLIST = (
     "screen_snapshot.csv",
@@ -200,11 +212,17 @@ def orchestrate(args: argparse.Namespace) -> int:
     expected_dashboard_head = args.expected_dashboard_head
 
     backend_dir = Path(args.backend_dir or os.environ.get("STOCK_LOOKUP_BACKEND_DIR") or PRODUCER_ROOT / ".." / "dashboard-runtime").resolve()
-    web_dir = Path(args.web_dir or os.environ.get("STOCK_LOOKUP_WEB_DIR") or PRODUCER_ROOT / ".." / "worktrees" / "market-dashboard-main").resolve()
+    web_dir = Path(args.web_dir or os.environ.get("STOCK_LOOKUP_WEB_DIR") or CANONICAL_WEB_ROOT).resolve()
     producer_dir = Path(args.producer_dir or PRODUCER_ROOT).resolve()
     python_exe = args.python_exe
 
     with SingleInstanceLock():
+        try:
+            assert_producer_publisher_file(SCRIPT_PATH, role="release_orchestrator")
+        except ReleaseIdentityError as exc:
+            sys.stderr.write(f"[ERROR] {exc}\n")
+            return 1
+
         # 1. Fail closed if Backend == Web
         if backend_dir.resolve() == web_dir.resolve():
             sys.stderr.write(f"[ERROR] BACKEND_ROOT ({backend_dir}) equals WEB_ROOT ({web_dir}). Single-root execution forbidden.\n")
@@ -241,15 +259,27 @@ def orchestrate(args: argparse.Namespace) -> int:
             return 1
 
         rc, dashboard_upstream = get_git_output(["rev-parse", "@{u}"], web_dir)
+        rc_origin, origin_url = get_git_output(["remote", "get-url", "origin"], web_dir)
+        rc_branch, web_branch = get_git_output(["branch", "--show-current"], web_dir)
+        rc_om, origin_main = get_git_output(["rev-parse", "origin/main"], web_dir)
+        rc_top, git_toplevel = get_git_output(["rev-parse", "--show-toplevel"], web_dir)
+        try:
+            assert_web_checkout_identity(
+                web_dir,
+                backend_dir=backend_dir,
+                origin_url=origin_url if rc_origin == 0 else None,
+                branch=web_branch if rc_branch == 0 else None,
+                head=dashboard_head,
+                origin_main=origin_main if rc_om == 0 else None,
+                live=live,
+                git_toplevel=Path(git_toplevel) if rc_top == 0 and git_toplevel else None,
+            )
+        except ReleaseIdentityError as exc:
+            sys.stderr.write(f"[ERROR] {exc}\n")
+            return 1
         if rc == 0 and live and dashboard_head != dashboard_upstream:
-            if group != "cockpit":
-                sys.stderr.write(f"[ERROR] Dashboard HEAD ({dashboard_head}) differs from upstream ({dashboard_upstream}) in live mode. Aborting.\n")
-                return 1
-            pushed = subprocess.run(["git", "push", "origin", "main"], cwd=web_dir, capture_output=True, text=True)
-            if pushed.returncode != 0:
-                sys.stderr.write(f"[ERROR] Cockpit source push failed: {pushed.stderr}\n")
-                return 1
-            rc, dashboard_upstream = get_git_output(["rev-parse", "@{u}"], web_dir)
+            sys.stderr.write(f"[ERROR] Dashboard HEAD ({dashboard_head}) differs from upstream ({dashboard_upstream}) in live mode. Aborting.\n")
+            return 1
 
         rc, staged_files = get_git_output(["diff", "--cached", "--name-only"], web_dir)
         if staged_files:
@@ -326,7 +356,7 @@ def orchestrate(args: argparse.Namespace) -> int:
             argv_plans.append(cmd_pub)
 
         if group == "cockpit":
-            cmd_cockpit = [python_exe, str(web_dir / "publish_dashboard.py"), "--cockpit-projection-source", str(args.cockpit_projection_source), "--expected-cockpit-session", expected_session, "--expected-cockpit-operation-identity", args.expected_cockpit_operation_identity]
+            cmd_cockpit = [python_exe, str(producer_dir / "publish_dashboard.py"), "--cockpit-projection-source", str(args.cockpit_projection_source), "--expected-cockpit-session", expected_session, "--expected-cockpit-operation-identity", args.expected_cockpit_operation_identity]
             if live:
                 cmd_cockpit.append("--live")
             argv_plans.append(cmd_cockpit)
@@ -362,7 +392,11 @@ def orchestrate(args: argparse.Namespace) -> int:
         try:
             for plan in argv_plans:
                 print(f"[INFO] Executing child process: {' '.join(plan)}")
-                res = subprocess.run(plan, cwd=web_dir, env=env, capture_output=False, shell=False)
+                child_cwd = web_dir
+                plan_text = " ".join(plan)
+                if "operate_stocklookup.py" in plan_text:
+                    child_cwd = producer_dir
+                res = subprocess.run(plan, cwd=child_cwd, env=env, capture_output=False, shell=False)
                 if res.returncode != 0:
                     sys.stderr.write(f"[ERROR] Child process failed with exit code {res.returncode}: {plan}\n")
                     if live:
@@ -375,7 +409,18 @@ def orchestrate(args: argparse.Namespace) -> int:
                 restore_allowlist_state(web_dir, pre_run_state)
             return 1
 
-        print(f"[OK] Release orchestration for '{group}' completed successfully.")
+        if live:
+            state = publication_state_after_push(
+                local_validation_pass=True,
+                ci_pass=False,
+                pages_pass=False,
+                public_verify_pass=False,
+            )
+            print(f"[STATE] {GITHUB_SOURCE_UPDATED}: git push is not {PUBLISHED}.")
+            print("[STATE] PUBLISHED requires local validation PASS, Dashboard CI PASS on the same SHA, Deploy Pages PASS on the same SHA, and cache-busted public session verification PASS.")
+            print(f"[OK] Release orchestration for '{group}' reached {state}.")
+        else:
+            print(f"[OK] Release orchestration for '{group}' completed successfully.")
         return 0
 
 

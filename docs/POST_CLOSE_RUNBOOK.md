@@ -34,8 +34,10 @@ A complete daily run, in one command:
 python tools/operate_stocklookup.py --runtime-root C:\Projects\StockLookup\dashboard-runtime --refresh-metadata --prepare-inputs --execute --include-canonical-financial-facts
 ```
 
-Add `--publish --web-root <served checkout>` to stage a release, and `--live` to promote it.
-`--live` runs only when every prior gate has passed.
+Add `--publish --web-root C:\Projects\StockLookup\market-dashboard` to stage a release, and `--live` to promote it.
+`--live` runs only when every prior gate has passed. The served checkout must be the
+canonical `market-dashboard` clone on `main`; `dashboard-runtime` is not a publish target.
+A git push is `GITHUB_SOURCE_UPDATED`, not `PUBLISHED`.
 
 ### What each flag does, and does not
 
@@ -95,7 +97,7 @@ counts are reported either way and a lagged value is never relabelled as current
 ## Dry-Run vs. Live Behavior
 
 * **Dry-Run Mode (Default)**: Validates state and execution plan; writes nothing to production files or served checkout.
-* **Live Mode (`--execute --publish --web-root <path> --live`)**: Promotes release artifacts by atomic rename into served checkout, updates manifest hashes, and commits release.
+* **Live Mode (`--execute --publish --web-root C:\Projects\StockLookup\market-dashboard --live`)**: Promotes release artifacts by atomic rename into the canonical served checkout, updates manifest hashes, and commits release. Push = `GITHUB_SOURCE_UPDATED`. `PUBLISHED` requires Dashboard CI, Deploy Pages, and cache-busted public verification on the same SHA.
 
 ## Verifying the run
 

@@ -177,7 +177,16 @@ class ReleaseFixture(unittest.TestCase):
         self.source = self.base / "runtime"
         self.incoming = build_release(self.source)
         self.destination, self.remote = build_destination(self.base)
+        self._orig_identity_env = os.environ.get("STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE")
+        os.environ["STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE"] = str(self.destination.resolve())
+        self.addCleanup(self._restore_identity_env)
         self.addCleanup(self._tmp.cleanup)
+
+    def _restore_identity_env(self) -> None:
+        if self._orig_identity_env is None:
+            os.environ.pop("STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE", None)
+        else:
+            os.environ["STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE"] = self._orig_identity_env
 
     def publisher(self, **kwargs) -> release.ReleasePublisher:
         kwargs.setdefault("live", True)

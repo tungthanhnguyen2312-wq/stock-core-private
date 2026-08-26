@@ -31,6 +31,11 @@ from pathlib import Path
 from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
 import release_session_contract
 import trusted_subset_contract
+from release_checkout_identity import (
+    ReleaseIdentityError,
+    assert_producer_publisher_file,
+    assert_web_checkout_identity,
+)
 try:
     from observability_events import (
         EventOutcome,
@@ -608,6 +613,20 @@ def git_preflight() -> tuple[str, str, str]:
     ok, head = git("rev-parse", "HEAD")
     if not ok:
         raise ValueError(head)
+    ok, origin_main = git("rev-parse", "origin/main")
+    try:
+        assert_web_checkout_identity(
+            WEB_ROOT,
+            backend_dir=BACKEND_ROOT,
+            origin_url=remote.strip(),
+            branch=branch.strip(),
+            head=head.strip(),
+            origin_main=origin_main.strip() if ok else None,
+            live=LIVE_MODE,
+            git_toplevel=Path(root),
+        )
+    except ReleaseIdentityError as exc:
+        raise ValueError(str(exc)) from exc
     ok, when = git("show", "-s", "--format=%cI", "HEAD")
     log(f"Git root={root} · branch={branch} · origin={remote}")
     log(f"Local HEAD={head} · commit_time={when if ok else '?'}")
@@ -676,6 +695,10 @@ def main() -> int:
         description="Build/publish dashboard with atomic writes, asset versioning, basis contracts, and Phase 2A pipeline integration.")
     parser.add_argument("--live", action="store_true", help="cho phép ghi file, fetch/pull/add/commit/push thật")
     parser.add_argument("--isolated-test-fixture", action="store_true", help="cho phép BACKEND_ROOT trùng WEB_ROOT trong môi trường test isolated")
+    parser.add_argument("--cockpit-projection-source", type=Path, default=None,
+                        help="accepted for orchestrator compatibility; does not select a dashboard-repo publisher")
+    parser.add_argument("--expected-cockpit-session", default=None)
+    parser.add_argument("--expected-cockpit-operation-identity", default=None)
     args = parser.parse_args()
 
     global LIVE_MODE
@@ -683,6 +706,16 @@ def main() -> int:
     mode = "LIVE" if args.live else "DRY-RUN (read-only)"
     log(f"=== publish_dashboard {mode} ===")
     log(f"Backend={BACKEND_ROOT} · Web={WEB_ROOT}")
+
+    try:
+        assert_producer_publisher_file(Path(__file__), role="publish_dashboard")
+    except ReleaseIdentityError as exc:
+        return fail(str(exc))
+
+    if args.isolated_test_fixture:
+        os.environ.setdefault(
+            "STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE", str(WEB_ROOT.resolve())
+        )
 
     if BACKEND_ROOT.resolve() == WEB_ROOT.resolve() and not args.isolated_test_fixture:
         return fail(f"BACKEND_ROOT và WEB_ROOT trùng nhau ({BACKEND_ROOT}). Cannot publish backend artifacts from web root to itself. Set STOCK_LOOKUP_BACKEND_DIR to point to dashboard-runtime (e.g. C:\\Projects\\StockLookup\\dashboard-runtime).")

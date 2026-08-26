@@ -54,6 +54,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from atomic_io import atomic_write_json  # noqa: E402
+from release_checkout_identity import (  # noqa: E402
+    GITHUB_SOURCE_UPDATED,
+    ReleaseIdentityError,
+    assert_producer_publisher_file,
+    assert_web_checkout_identity,
+    publication_state_after_push,
+)
 
 WORKSPACE = ROOT.parent
 DEFAULT_CONSUMER_ROOT = WORKSPACE / "ai-core-private"
@@ -516,9 +523,11 @@ class ReleasePublisher:
         if remote_head != head:
             raise ReleaseError("git_push_verification",
                                f"origin/{branch}={remote_head or '(none)'} does not match the pushed commit {head}")
+        state = publication_state_after_push(local_validation_pass=True)
         self._record("git_publish", "passed", branch=branch, commit=head, staged=staged,
-                     detail=f"pushed {len(staged)} file(s) to origin/{branch} and verified the remote SHA")
-        return {"committed": True, "staged": staged, "head": head, "branch": branch}
+                     state=state,
+                     detail=f"pushed {len(staged)} file(s) to origin/{branch} and verified the remote SHA; state={GITHUB_SOURCE_UPDATED} not PUBLISHED")
+        return {"committed": True, "staged": staged, "head": head, "branch": branch, "state": state}
 
     def git_preflight(self) -> str:
         top = self._git("rev-parse", "--show-toplevel")
@@ -527,6 +536,26 @@ class ReleasePublisher:
         branch = self._git("branch", "--show-current")
         if not branch:
             raise ReleaseError("git_preflight", "the destination is not on a named branch")
+        origin_url = self._git("remote", "get-url", "origin")
+        head = self._git("rev-parse", "HEAD")
+        try:
+            origin_main = self._git("rev-parse", "origin/main")
+        except Exception:
+            origin_main = ""
+        try:
+            assert_producer_publisher_file(Path(__file__), role="publish_release")
+            assert_web_checkout_identity(
+                self.destination,
+                backend_dir=self.source,
+                origin_url=origin_url,
+                branch=branch,
+                head=head,
+                origin_main=origin_main or None,
+                live=self.live,
+                git_toplevel=Path(top),
+            )
+        except ReleaseIdentityError as exc:
+            raise ReleaseError("release_identity", str(exc)) from exc
         conflicts = self._git("diff", "--name-only", "--diff-filter=U")
         if conflicts:
             raise ReleaseError("git_preflight", f"the destination worktree has conflicts: {conflicts}")
@@ -544,10 +573,13 @@ class ReleasePublisher:
         if ahead and behind:
             raise ReleaseError("git_preflight", f"local and origin/{branch} have diverged; refusing to merge")
         if behind:
-            self._git("pull", "--ff-only", "origin", branch)
+            raise ReleaseError(
+                "git_preflight",
+                f"HEAD != origin/{branch} before release mutation (behind {behind}); refusing to pull as part of live publish",
+            )
         self._record("git_preflight", "passed", branch=branch, ahead=ahead, behind=behind,
                      head=self._git("rev-parse", "HEAD"),
-                     detail=f"destination is on {branch}, fast-forwarded where needed")
+                     detail=f"destination is on {branch}, HEAD matches origin/{branch}")
         return branch
 
     # ------------------------------------------------------------------ 7. live verification

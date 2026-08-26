@@ -136,7 +136,7 @@ DAILY_STAGE_ORDER = ("refresh_metadata", "prepare_inputs", "export_analysis_bund
 #: The published production ticker set. Kept identical to what the last successful export
 #: actually shipped -- narrowing it would silently drop tickers the dashboard already
 #: presents. Verified 2026-08-09 against the served bundle at
-#: worktrees/market-dashboard-main (analysis_bundle.json.tickers_requested): exactly these
+#: C:\Projects\StockLookup\market-dashboard (analysis_bundle.json.tickers_requested): exactly these
 #: 11, no VNINDEX. VNINDEX was previously listed here as "deliberately included ... to
 #: exercise unproven_tickers in production", but the served release has never actually
 #: shipped it -- unproven_tickers is `[]` there, not `["VNINDEX"]`. That drift is what
@@ -892,8 +892,8 @@ def parse_args(argv=None) -> argparse.Namespace:
                         help="Also run tools/publish_release.py (its own dry-run unless --live).")
     parser.add_argument("--web-root", default=None,
                         help="The Dashboard checkout that is actually served. Required with"
-                             " --publish; the release is promoted into it, never into the"
-                             " runtime root.")
+                             " --publish. Must be C:\\Projects\\StockLookup\\market-dashboard;"
+                             " dashboard-runtime is DATA/RUNTIME only.")
     parser.add_argument("--verify-live-url", default=None,
                         help="[Not reachable via this CLI: --live is retired here, and this"
                              " only ever applied with --live.] Use tools/release_orchestrator.py"

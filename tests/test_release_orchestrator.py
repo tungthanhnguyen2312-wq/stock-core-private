@@ -79,11 +79,13 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         subprocess.run(["git", "commit", "-q", "-m", "fixture init"], cwd=path, env=env, check=True)
         return path
 
-    def run_orchestrator_proc(self, args: list[str], cwd=None):
+    def run_orchestrator_proc(self, args: list[str], cwd=None, extra_env=None):
         cmd = [sys.executable, str(ORCHESTRATOR)] + args
         env = os.environ.copy()
         env["PYTHONUTF8"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
+        if extra_env:
+            env.update(extra_env)
         return subprocess.run(
             cmd,
             cwd=cwd or ROOT,
@@ -99,11 +101,14 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         """Run against this test's own fixture dirs, with `--expected-session` set correctly
         unless the test is specifically about a session mismatch."""
         args = list(group_and_flags)
+        web_dir = overrides.get("web_dir", self.web_dir)
         args += ["--backend-dir", str(overrides.get("backend_dir", self.backend_dir))]
-        args += ["--web-dir", str(overrides.get("web_dir", self.web_dir))]
+        args += ["--web-dir", str(web_dir)]
         if "expected_session" not in overrides or overrides["expected_session"] is not None:
             args += ["--expected-session", overrides.get("expected_session", FIXTURE_SESSION)]
-        return self.run_orchestrator_proc(args)
+        extra_env = {"STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE": str(Path(web_dir).resolve())}
+        extra_env.update(overrides.get("extra_env") or {})
+        return self.run_orchestrator_proc(args, extra_env=extra_env)
 
     @staticmethod
     def _executed(res: subprocess.CompletedProcess, needle: str) -> bool:
@@ -464,6 +469,61 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         res = self.run_fixture(["trusted-ai", "--generate", "--research-changes-v2-baseline", str(override)])
         self.assertTrue(self._executed(res, str(override)), res.stdout)
         self.assertFalse(self._executed(res, "research_changes_v2_served_baseline.json"), res.stdout)
+
+    def test_wrong_path_legacy_web_dir_is_refused(self):
+        legacy = Path(r"C:\Projects\StockLookup\worktrees\market-dashboard-main")
+        res = self.run_orchestrator_proc(
+            ["whole-market", "--backend-dir", str(self.backend_dir),
+             "--web-dir", str(legacy), "--expected-session", FIXTURE_SESSION],
+        )
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("REFUSED", res.stderr)
+        self.assertIn("legacy Dashboard checkout", res.stderr)
+
+    def test_runtime_as_web_is_refused(self):
+        runtime = Path(r"C:\Projects\StockLookup\dashboard-runtime")
+        res = self.run_orchestrator_proc(
+            ["whole-market", "--backend-dir", str(self.backend_dir),
+             "--web-dir", str(runtime), "--expected-session", FIXTURE_SESSION],
+        )
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("REFUSED", res.stderr)
+
+    def test_backend_equals_web_is_refused(self):
+        res = self.run_fixture(["whole-market"], backend_dir=self.web_dir, web_dir=self.web_dir)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("equals WEB_ROOT", res.stderr)
+
+    def test_cockpit_uses_producer_publisher_not_web_dir_copy(self):
+        projection = self.backend_dir / "current_decision_cockpit_projection.json"
+        projection.write_text(json.dumps({
+            "session": FIXTURE_SESSION,
+            "source": {"operation_identity": "daily_research_session_operation:test"},
+        }), encoding="utf-8")
+        res = self.run_fixture([
+            "cockpit",
+            "--cockpit-projection-source", str(projection),
+            "--expected-cockpit-operation-identity", "daily_research_session_operation:test",
+        ])
+        self.assertIn(repr(str(ROOT / "publish_dashboard.py")), res.stdout)
+        self.assertNotIn(repr(str(self.web_dir / "publish_dashboard.py")), res.stdout)
+
+    def test_live_success_is_github_source_updated_not_published(self):
+        from release_checkout_identity import GITHUB_SOURCE_UPDATED, PUBLISHED, publication_state_after_push
+        self.assertEqual(
+            publication_state_after_push(local_validation_pass=True),
+            GITHUB_SOURCE_UPDATED,
+        )
+        self.assertEqual(
+            publication_state_after_push(
+                local_validation_pass=True, ci_pass=True, pages_pass=True, public_verify_pass=True,
+            ),
+            PUBLISHED,
+        )
+        res = self.run_fixture(["whole-market", "--live"])
+        if "Release orchestration" in res.stdout:
+            self.assertIn(GITHUB_SOURCE_UPDATED, res.stdout)
+            self.assertNotIn(f"[OK] Release orchestration for 'whole-market' completed successfully.", res.stdout)
 
 
 class ResolveResearchChangesV2BaselineTests(unittest.TestCase):

@@ -13,10 +13,29 @@ sidecar's authority level. This document only covers publication.
 | | |
 |---|---|
 | Source (runtime root) | `dashboard-runtime` — where the export writes, and where local evidence, `vn_stock.db` and the untracked data stores live. Routinely on a feature branch with unrelated generated-artifact drift. |
-| Destination (served checkout) | `worktrees/market-dashboard-main` — a clean checkout of `tungthanhnguyen2312-wq/market-dashboard` on **`main`**. |
+| Destination (served checkout) | `C:\Projects\StockLookup\market-dashboard` — the only live Dashboard publication checkout: a **normal clone** of `tungthanhnguyen2312-wq/market-dashboard` on **`main`**. |
 | Authoritative branch | `main`. GitHub Pages is configured `source.branch = main`, `build_type = workflow`. |
 | Serving pipeline | push to `main` → `.github/workflows/dashboard-ci.yml` (*Dashboard CI*) → on success `deploy-pages.yml` (`workflow_run`) checks out the validated SHA and deploys the whole repo root. |
 | Served origin | <https://tungthanhnguyen2312-wq.github.io/market-dashboard/> |
+
+Live release refuses any other web checkout, including `worktrees/market-dashboard-main`,
+`publish/market-dashboard-main`, and `dashboard-runtime`. `dashboard-runtime` is DATA/RUNTIME
+only. Publisher authority is only:
+
+- `stock-core-private/tools/release_orchestrator.py`
+- `stock-core-private/publish_dashboard.py`
+- `stock-core-private/tools/publish_release.py`
+
+A Dashboard checkout is a **target**, never a publisher. `web_dir/publish_dashboard.py` is
+not live authority. Whole-market `COPY_ARTIFACTS` includes `analysis_latest.json` (Producer
+copy). Validation, `git add`, commit, and push must use the same canonical checkout.
+
+Permanent state vocabulary:
+
+- A successful `git push` is **`GITHUB_SOURCE_UPDATED`**.
+- **`PUBLISHED`** only after (1) local release validation PASS, (2) GitHub Dashboard CI PASS
+  on the same SHA, (3) Deploy Pages PASS on the same SHA, and (4) cache-busted public
+  session verification PASS.
 
 `feature/horizontal-top-navigation` is a feature branch. It is not a deployment branch, it
 is not built by Pages, and publishing onto it publishes to nobody.
@@ -141,7 +160,7 @@ through unchanged to this publisher's own `--live` re-fetch-and-compare check.
 python stock-core-private/tools/operate_stocklookup.py \
     --runtime-root C:\Projects\StockLookup\dashboard-runtime \
     --execute \
-    --publish --web-root C:\Projects\StockLookup\worktrees\market-dashboard-main
+    --publish --web-root C:\Projects\StockLookup\market-dashboard
 ```
 
 `tools/operate_stocklookup.py` composes the full generate-verify-Consumer-validate chain for
