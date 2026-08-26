@@ -226,6 +226,22 @@ class AllowlistedPublicationTests(ReleaseFixture):
         self.assertEqual(self.destination_snapshot(), before)
         self.assertEqual(git(self.destination, "rev-list", "--count", "HEAD"), "1")
 
+    def test_no_git_live_promotion_keeps_all_semantic_gates_but_never_commits_or_pushes(self) -> None:
+        """This is the trusted first phase of the atomic ``all`` transaction."""
+        before_head = git(self.destination, "rev-parse", "HEAD")
+        before_remote = git(self.destination, "ls-remote", "origin", "refs/heads/main").split()[0]
+
+        code, payload = release.run_publication(self.publisher(use_git=False))
+
+        self.assertEqual(code, 0, payload)
+        self.assertEqual(payload["outcome"], "published")
+        self.assertEqual(payload["live_sha256"], self.incoming)
+        passed = {step["step"] for step in payload["steps"] if step["status"] == "passed"}
+        self.assertTrue({"resolve_release_set", "verify_staged_hashes", "verify_session_identity",
+                         "consumer_exact_session_validation", "verify_destination"} <= passed)
+        self.assertEqual(git(self.destination, "rev-parse", "HEAD"), before_head)
+        self.assertEqual(git(self.destination, "ls-remote", "origin", "refs/heads/main").split()[0], before_remote)
+
     def destination_snapshot(self) -> dict[str, str]:
         return {p.name: release.sha256_file(p)
                 for p in sorted(self.destination.rglob("*")) if p.is_file() and ".git" not in p.parts}

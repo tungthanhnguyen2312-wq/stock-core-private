@@ -8,7 +8,7 @@ copy any artifact, does not write or update the build manifest, does not
 touch any HTML/CSS/JS file, does not write a log file, and never invokes a
 mutating git command (add/commit/push/fetch/pull).
 
-Only ``--live`` may write files and fetch/pull/stage/commit/push. The
+Only ``--live`` may write files and fetch/stage/commit/push. The
 publisher is the single source of truth for copying artifacts, rebuilding
 the file:// fallback, writing build_info and deriving the exact git
 whitelist.
@@ -445,6 +445,10 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
         "published_at": published_at,
         "market_session": market_session,
         "git_commit": head,
+        # The final publication SHA cannot be embedded in the files that create it
+        # without a nondeterministic commit-recursion.  This is deliberately the
+        # pre-publication source checkout used to build this artifact set.
+        "git_commit_semantics": "pre_publication_source_head",
         "row_counts": {"screen_snapshot": len(rows), "market_breadth": len(breadth)},
         "price_basis_contract": basis_contract,
         "files": files,
@@ -634,6 +638,13 @@ def git_preflight() -> tuple[str, str, str]:
 
 
 def sync_remote_before_live(branch: str) -> None:
+    """Refresh the remote ref and fail closed; never pull during publication.
+
+    The release orchestrator may already have promoted a verified trusted subset into
+    this worktree for its one-commit ``all`` transaction.  Pulling at this point would
+    mix an external commit into that transaction, so an advanced remote is a terminal
+    race, not an invitation to synchronize the checkout.
+    """
     ok, output = git("fetch", "origin", branch)
     if not ok:
         raise ValueError(f"git fetch thất bại: {output}")
@@ -645,15 +656,15 @@ def sync_remote_before_live(branch: str) -> None:
         raise ValueError(relation)
     ahead, behind = [int(part) for part in relation.split()]
     log(f"Remote origin/{branch}={remote_head} · local ahead={ahead}, behind={behind}")
-    if ahead and behind:
-        raise ValueError("local và remote đã diverge; không tự merge")
-    if behind:
-        ok, output = git("pull", "--ff-only", "origin", branch)
-        if not ok:
-            raise ValueError(f"git pull --ff-only thất bại: {output}")
+    if ahead or behind:
+        raise ValueError(
+            "Dashboard HEAD no longer equals origin before final publication "
+            f"(ahead={ahead}, behind={behind}); refusing to merge or pull"
+        )
 
 
-def publish_live(whitelist: list[str], branch: str) -> int:
+def publish_live(whitelist: list[str], branch: str,
+                 *, required_release_paths: tuple[str, ...] = ()) -> int:
     ok, staged_before = git("diff", "--cached", "--name-only")
     if not ok:
         return fail(staged_before)
@@ -667,6 +678,14 @@ def publish_live(whitelist: list[str], branch: str) -> int:
     staged_files = [line for line in staged.splitlines() if line]
     if not ok or set(staged_files) - set(whitelist):
         return fail(f"stage vượt whitelist: {staged}")
+    missing_required = [
+        relative for relative in required_release_paths
+        if (WEB_ROOT / relative).is_file()
+        and git("diff", "--name-only", "HEAD", "--", relative)[1].strip()
+        and relative not in staged_files
+    ]
+    if missing_required:
+        return fail("trusted subset changed but was not staged: " + ", ".join(missing_required))
     if not staged_files:
         log("Không có thay đổi; không commit/push.")
         return 0
@@ -693,7 +712,9 @@ def publish_live(whitelist: list[str], branch: str) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Build/publish dashboard with atomic writes, asset versioning, basis contracts, and Phase 2A pipeline integration.")
-    parser.add_argument("--live", action="store_true", help="cho phép ghi file, fetch/pull/add/commit/push thật")
+    parser.add_argument("--live", action="store_true", help="cho phép ghi file, fetch/add/commit/push thật")
+    parser.add_argument("--include-trusted-subset", action="store_true",
+                        help="Stage and verify every canonical trusted-subset artifact in this final commit.")
     parser.add_argument("--isolated-test-fixture", action="store_true", help="cho phép BACKEND_ROOT trùng WEB_ROOT trong môi trường test isolated")
     parser.add_argument("--cockpit-projection-source", type=Path, default=None,
                         help="accepted for orchestrator compatibility; does not select a dashboard-repo publisher")
@@ -742,6 +763,8 @@ def main() -> int:
         version_plan = plan_asset_versions(str(manifest["build_id"]))
         validate_json_artifacts()
         whitelist = build_whitelist()
+        if args.include_trusted_subset:
+            whitelist = sorted(set(whitelist) | set(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS))
     except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
         return fail(str(exc))
 
@@ -763,6 +786,8 @@ def main() -> int:
         update_asset_versions(str(manifest["build_id"]))
         validate_json_artifacts()
         whitelist = build_whitelist()
+        if args.include_trusted_subset:
+            whitelist = sorted(set(whitelist) | set(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS))
     except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
         return fail(str(exc))
 
@@ -770,6 +795,13 @@ def main() -> int:
     if smoke_rc != 0:
         return fail(f"tests/release-smoke.test.js failed with exit code {smoke_rc}; "
                      "no git mutation performed")
+
+    if args.include_trusted_subset:
+        trusted_report = trusted_subset_contract.verify_trusted_subset(WEB_ROOT)
+        for line in trusted_report.render():
+            log(line)
+        if not trusted_report.ready:
+            return fail("full trusted-subset verification failed; no git mutation performed")
 
     ok, diff_check = git("diff", "--check", "--", *whitelist)
     if not ok:
@@ -784,7 +816,12 @@ def main() -> int:
     if not changed:
         log("Không có thay đổi; exit 0, không commit/push.")
         return 0
-    return publish_live(whitelist, branch)
+    return publish_live(
+        whitelist,
+        branch,
+        required_release_paths=(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS
+                                if args.include_trusted_subset else ()),
+    )
 
 
 if __name__ == "__main__":

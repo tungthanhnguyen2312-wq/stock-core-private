@@ -27,6 +27,7 @@ import os
 import sys
 import tempfile
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve()
@@ -125,6 +126,88 @@ def restore_allowlist_state(web_dir: Path, state: dict[str, bytes]):
         p.write_bytes(content)
 
 
+@dataclass
+class DashboardTransactionSnapshot:
+    """Exact tracked Dashboard bytes and HEAD before a live ``all`` transaction.
+
+    ``all`` first promotes the independently verified trusted subset without git,
+    then lets the existing whole-market publisher build and commit the complete
+    release.  Any failure before that one final commit must restore the clean
+    Dashboard worktree without touching ignored operator tools or unrelated files.
+    """
+
+    head: str
+    tracked: dict[str, bytes]
+
+
+def capture_dashboard_transaction(web_dir: Path) -> DashboardTransactionSnapshot:
+    rc, head = get_git_output(["rev-parse", "HEAD"], web_dir)
+    if rc != 0:
+        raise RuntimeError("cannot capture Dashboard transaction HEAD")
+    result = subprocess.run(["git", "ls-files", "-z"], cwd=web_dir, capture_output=True,
+                            check=False)
+    if result.returncode != 0:
+        raise RuntimeError("cannot enumerate Dashboard tracked files for rollback")
+    paths = [item.decode("utf-8") for item in result.stdout.split(b"\0") if item]
+    return DashboardTransactionSnapshot(
+        head=head,
+        tracked={relative: (web_dir / relative).read_bytes() for relative in paths},
+    )
+
+
+def restore_dashboard_transaction(web_dir: Path, snapshot: DashboardTransactionSnapshot) -> None:
+    """Restore tracked bytes and remove a local failed final commit without ``--hard``.
+
+    This deliberately never enumerates/deletes untracked paths, preserving ignored
+    operator-owned tools such as the local Tailwind executable.  The transaction is
+    entered only from a clean Dashboard index, so a mixed reset to the captured HEAD
+    merely drops staging from a failed local final commit before byte restoration.
+    """
+    rc, current_head = get_git_output(["rev-parse", "HEAD"], web_dir)
+    if rc != 0:
+        raise RuntimeError("cannot read Dashboard HEAD during rollback")
+    if current_head != snapshot.head:
+        ancestor_rc, _ = get_git_output(["merge-base", "--is-ancestor", snapshot.head, current_head], web_dir)
+        if ancestor_rc != 0:
+            raise RuntimeError("Dashboard HEAD changed outside the release transaction; refusing rollback")
+        result = subprocess.run(["git", "reset", "--mixed", snapshot.head], cwd=web_dir,
+                                capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError("failed to remove local unpushed release commit during rollback")
+    else:
+        result = subprocess.run(["git", "reset"], cwd=web_dir, capture_output=True,
+                                text=True, check=False)
+        if result.returncode != 0:
+            raise RuntimeError("failed to clear the Dashboard index during rollback")
+    for relative, content in snapshot.tracked.items():
+        path = web_dir / relative
+        if not path.is_file() or path.read_bytes() != content:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+    rc, dirty = get_git_output(["status", "--porcelain", "--untracked-files=no"], web_dir)
+    if rc != 0 or dirty:
+        raise RuntimeError(f"Dashboard tracked rollback verification failed: {dirty}")
+
+
+def require_live_remote_head(web_dir: Path, branch: str) -> None:
+    """Fetch once before an ``all`` transaction and require HEAD == origin/branch.
+
+    Isolated test fixtures intentionally have no remote.  Canonical live releases do,
+    and must never start a transaction from stale remote state.
+    """
+    fixture = os.environ.get("STOCK_LOOKUP_RELEASE_IDENTITY_TEST_FIXTURE")
+    if fixture and Path(fixture).resolve() == web_dir.resolve():
+        return
+    result = subprocess.run(["git", "fetch", "origin", branch], cwd=web_dir,
+                            capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        raise RuntimeError("failed to fetch Dashboard origin before release transaction")
+    rc, head = get_git_output(["rev-parse", "HEAD"], web_dir)
+    rc_remote, remote = get_git_output(["rev-parse", f"origin/{branch}"], web_dir)
+    if rc != 0 or rc_remote != 0 or head != remote:
+        raise RuntimeError("Dashboard HEAD differs from origin before release transaction; refusing stale-head mutation")
+
+
 def resolve_research_changes_v2_baseline(web_dir: Path, backend_dir: Path, producer_dir: Path) -> Path | None:
     """Derive the V2 research-change comparison baseline from what is actually served.
 
@@ -164,7 +247,7 @@ def build_parser() -> argparse.ArgumentParser:
     parent_parser.add_argument("--producer-dir", type=str, default=None, help="Override producer directory")
     parent_parser.add_argument("--python-exe", type=str, default=sys.executable, help="Python executable for child calls")
     parent_parser.add_argument("--verify-live-url", type=str, default=None,
-                               help="With trusted-ai/all --live: after publish_release.py pushes, "
+                                help="With trusted-ai --live: after publish_release.py pushes, "
                                     "re-fetch each artifact from this origin and compare hashes "
                                     "before reporting success (passed through unchanged).")
     parent_parser.add_argument("--generate", action="store_true",
@@ -196,7 +279,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="group", help="Release group subcommand")
     subparsers.add_parser("whole-market", help="Publish whole-market frontend & dashboard only", parents=[parent_parser])
     subparsers.add_parser("trusted-ai", help="Publish trusted AI subset only", parents=[parent_parser])
-    subparsers.add_parser("all", help="Publish trusted AI first, then whole-market dashboard", parents=[parent_parser])
+    subparsers.add_parser("all", help="Publish one atomic trusted-AI + whole-market Dashboard session", parents=[parent_parser])
     subparsers.add_parser("cockpit", help="Publish one explicit Decision Cockpit projection", parents=[parent_parser])
     return parser
 
@@ -341,9 +424,14 @@ def orchestrate(args: argparse.Namespace) -> int:
         if group in ("trusted-ai", "all"):
             trusted_ai_invoked = True
             cmd = [python_exe, str(producer_dir / "tools" / "publish_release.py"), "--source", str(backend_dir), "--destination", str(web_dir)]
+            # ``all`` is one logical release.  Preserve publish_release.py's staging,
+            # hash, session and Consumer gates, but defer the only Dashboard commit/push
+            # to publish_dashboard.py after it has added the whole-market surfaces.
+            if group == "all":
+                cmd.append("--no-git")
             if live:
                 cmd.append("--live")
-                if args.verify_live_url:
+                if group == "trusted-ai" and args.verify_live_url:
                     cmd += ["--verify-live-url", args.verify_live_url]
             argv_plans.append(cmd)
 
@@ -354,6 +442,11 @@ def orchestrate(args: argparse.Namespace) -> int:
             argv_plans.append(cmd_build)
 
             cmd_pub = [python_exe, str(producer_dir / "publish_dashboard.py")]
+            if group == "all":
+                # The final publisher owns the one commit/push and must stage the
+                # trusted subset explicitly, never merely because an HTML reference
+                # happened to include one of its files.
+                cmd_pub.append("--include-trusted-subset")
             if live:
                 cmd_pub.append("--live")
             argv_plans.append(cmd_pub)
@@ -378,13 +471,28 @@ def orchestrate(args: argparse.Namespace) -> int:
         print(f"TRUSTED_AI_INVOKED    : {'true' if trusted_ai_invoked else 'false'}")
         print(f"GENERATE_INVOKED      : {'true' if generate_invoked else 'false'}")
         print(f"ZERO_MUTATION         : {'PASS' if not live else 'N/A (LIVE)'}")
+        if group == "all":
+            print("ALL_TRANSACTION       : one final Dashboard commit/push; trusted promotion is --no-git")
         print("Execution Plans:")
         for idx, plan in enumerate(argv_plans, 1):
             print(f"  Plan {idx}: {plan}")
         print("============================================================")
 
-        # 7. Capture pre-run state for rollback
+        # 7. Capture pre-run state for rollback.  ``all --live`` mutates both
+        # trusted and whole-market tracked files before its one final commit, so
+        # its rollback boundary is the complete clean tracked Dashboard tree.
+        transaction_snapshot = None
         pre_run_state = capture_allowlist_state(web_dir)
+        if live and group == "all":
+            try:
+                rc, tracked_dirty = get_git_output(["status", "--porcelain", "--untracked-files=no"], web_dir)
+                if rc != 0 or tracked_dirty:
+                    raise RuntimeError("Dashboard tracked worktree is not clean before all-release transaction")
+                require_live_remote_head(web_dir, web_branch)
+                transaction_snapshot = capture_dashboard_transaction(web_dir)
+            except RuntimeError as exc:
+                sys.stderr.write(f"[ERROR] {exc}\n")
+                return 1
 
         # 8. Execute child process plans
         env = os.environ.copy()
@@ -403,13 +511,26 @@ def orchestrate(args: argparse.Namespace) -> int:
                 if res.returncode != 0:
                     sys.stderr.write(f"[ERROR] Child process failed with exit code {res.returncode}: {plan}\n")
                     if live:
-                        sys.stderr.write("[ROLLBACK] Restoring pre-run whole-market allowlist files...\n")
-                        restore_allowlist_state(web_dir, pre_run_state)
+                        try:
+                            if transaction_snapshot is not None:
+                                sys.stderr.write("[ROLLBACK] Restoring the pre-release Dashboard transaction...\n")
+                                restore_dashboard_transaction(web_dir, transaction_snapshot)
+                            else:
+                                sys.stderr.write("[ROLLBACK] Restoring pre-run whole-market allowlist files...\n")
+                                restore_allowlist_state(web_dir, pre_run_state)
+                        except RuntimeError as rollback_exc:
+                            sys.stderr.write(f"[ROLLBACK] FAILED: {rollback_exc}\n")
                     return res.returncode
         except Exception as exc:
             sys.stderr.write(f"[ERROR] Exception during execution: {exc}\n")
             if live:
-                restore_allowlist_state(web_dir, pre_run_state)
+                try:
+                    if transaction_snapshot is not None:
+                        restore_dashboard_transaction(web_dir, transaction_snapshot)
+                    else:
+                        restore_allowlist_state(web_dir, pre_run_state)
+                except RuntimeError as rollback_exc:
+                    sys.stderr.write(f"[ROLLBACK] FAILED: {rollback_exc}\n")
             return 1
 
         if live:

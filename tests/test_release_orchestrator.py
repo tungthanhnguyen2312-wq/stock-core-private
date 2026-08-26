@@ -164,6 +164,45 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         self.assertIn(repr(str(ROOT / "publish_dashboard.py")), res.stdout)
         self.assertNotIn(repr(str(self.web_dir / "publish_dashboard.py")), res.stdout)
 
+    def test_all_live_defers_trusted_git_publication_to_one_final_dashboard_commit(self):
+        """``all`` keeps the trusted semantic gate but cannot create an intermediate push."""
+        res = self.run_fixture(["all", "--live"])
+        plans = [line for line in res.stdout.splitlines() if line.strip().startswith("Plan")]
+        trusted_plan = next(line for line in plans if "publish_release.py" in line)
+        dashboard_plan = next(line for line in plans if "publish_dashboard.py" in line)
+        self.assertIn("--live", trusted_plan)
+        self.assertIn("--no-git", trusted_plan)
+        self.assertIn("--live", dashboard_plan)
+        self.assertIn("--include-trusted-subset", dashboard_plan)
+        self.assertNotIn("--verify-live-url", trusted_plan)
+
+    def test_transaction_rollback_restores_tracked_dashboard_and_keeps_ignored_tool(self):
+        """Rollback is byte-exact for tracked files and never deletes ignored local tools."""
+        trusted = self.web_dir / "analysis_bundle.json"
+        trusted.write_text('{"reference_session_date":"old"}\n', encoding="utf-8")
+        env = os.environ.copy()
+        env.update(GIT_IDENTITY_ENV)
+        subprocess.run(["git", "add", "analysis_bundle.json"], cwd=self.web_dir, env=env, check=True)
+        subprocess.run(["git", "commit", "-q", "-m", "tracked trusted fixture"],
+                       cwd=self.web_dir, env=env, check=True)
+        original = (self.web_dir / "README.md").read_bytes()
+        trusted_original = trusted.read_bytes()
+        snapshot = release_orchestrator.capture_dashboard_transaction(self.web_dir)
+        (self.web_dir / "README.md").write_text("mutated release state\n", encoding="utf-8")
+        trusted.write_text('{"reference_session_date":"new"}\n', encoding="utf-8")
+        tool = self.web_dir / "tools" / "tailwind" / "tailwindcss.exe"
+        tool.parent.mkdir(parents=True, exist_ok=True)
+        tool.write_bytes(b"operator-local-tool")
+
+        release_orchestrator.restore_dashboard_transaction(self.web_dir, snapshot)
+
+        self.assertEqual((self.web_dir / "README.md").read_bytes(), original)
+        self.assertEqual(trusted.read_bytes(), trusted_original)
+        self.assertEqual(tool.read_bytes(), b"operator-local-tool")
+        status = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"],
+                                cwd=self.web_dir, capture_output=True, text=True, check=True)
+        self.assertEqual(status.stdout, "")
+
     def test_single_instance_lock(self):
         lock_file = Path(tempfile.gettempdir()) / "stock_lookup_release_orchestrator.lock"
         if lock_file.exists():

@@ -71,6 +71,41 @@ into a release.
 for referenced files, which is right for that job and wrong for a release: every already
 dirty generated artifact falls inside that whitelist. The two are separate on purpose.
 
+## Atomic full-session release (`all`)
+
+`release_orchestrator.py all --live` is one logical publication and therefore produces
+either no Dashboard commit/push (when no files change) or **exactly one Dashboard commit
+and one push**. It must never expose a trusted-subset-only intermediate commit.
+
+The orchestrator first invokes `publish_release.py --live --no-git`. This retains the
+static manifest-bounded release set, staging hashes, exact-session identity, Consumer
+validation, undeclared-artifact rejection, and rollback evidence, but deliberately defers
+Git publication. It then runs the existing frontend builder and the existing
+`publish_dashboard.py --live --include-trusted-subset`. The latter adds every member of
+`trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS` explicitly to its final whitelist,
+re-verifies the complete subset against `bundle_manifest.json`, validates the whole-market
+session surfaces and release smoke tests, and owns the sole `git add` / commit / push.
+
+Before mutation, `all --live` fetches the canonical branch and requires `HEAD ==
+origin/main`. The final Dashboard publisher fetches again and fails if it is ahead or
+behind; it never pulls or merges during this transaction. If a child fails before the
+final commit, the orchestrator restores the captured bytes for the original tracked
+Dashboard tree and clears only its own index state. Ignored operator files (including the
+local Tailwind binary) and unrelated untracked files are never enumerated or deleted.
+
+`trusted-ai`, `whole-market`, and `cockpit` remain independently invokable groups with
+their existing publication boundaries. The one-commit composition rule applies only to
+`all`.
+
+## `build_info.json` commit field
+
+`data/build_info.json.git_commit` is the **pre-publication source HEAD** used when the
+build signature and cache token are computed, not the final publication SHA. Its
+`git_commit_semantics` field is fixed to `pre_publication_source_head`. Embedding the
+final SHA would create a circular, nondeterministic commit: changing the file to name the
+new commit would itself change that commit. The actual publication SHA is the Dashboard
+Git commit reported after the one final push.
+
 ## What must hold before anything is promoted
 
 1. **Allowlist ↔ manifest agreement** — as above.

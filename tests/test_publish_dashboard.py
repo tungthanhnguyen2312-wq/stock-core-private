@@ -272,6 +272,48 @@ class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
         html = (self.tmp / "dashboard.html").read_text(encoding="utf-8")
         self.assertIn("?v=", html, "update_asset_versions() phải thêm cache-busting token khi --live")
 
+    def test_atomic_all_mode_explicitly_verifies_and_stages_full_trusted_subset(self):
+        """The final whole-market publisher cannot rely on incidental asset references."""
+        self.fake_git.status_output = " M dashboard.html\n"
+        report = pd.trusted_subset_contract.TrustedSubsetReport(
+            ready=True,
+            checked=list(pd.trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS),
+        )
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd.trusted_subset_contract, "verify_trusted_subset", return_value=report) as verify, \
+             mock.patch.object(pd, "publish_live", return_value=0) as publish:
+            rc = self._run(["publish_dashboard.py", "--live", "--include-trusted-subset"])
+
+        self.assertEqual(rc, 0)
+        verify.assert_called_once_with(self.tmp)
+        whitelist = publish.call_args.args[0]
+        self.assertTrue(set(pd.trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS) <= set(whitelist))
+        self.assertEqual(
+            publish.call_args.kwargs["required_release_paths"],
+            pd.trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS,
+        )
+
+
+class RemoteRaceTests(_PublishDashboardTestBase):
+    def test_remote_advance_fails_closed_without_a_pull(self):
+        calls: list[tuple[str, ...]] = []
+
+        def fake_git(*args: str, timeout: int = 180):
+            calls.append(args)
+            if args == ("fetch", "origin", "main"):
+                return True, ""
+            if args == ("rev-parse", "origin/main"):
+                return True, "1" * 40
+            if args and args[0] == "rev-list":
+                return True, "0\t1"
+            raise AssertionError(f"unexpected git call: {args!r}")
+
+        with mock.patch.object(pd, "git", side_effect=fake_git):
+            with self.assertRaisesRegex(ValueError, "refusing to merge or pull"):
+                pd.sync_remote_before_live("main")
+
+        self.assertNotIn(("pull", "--ff-only", "origin", "main"), calls)
+
 
 class ValidationFailureStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
     def setUp(self):
