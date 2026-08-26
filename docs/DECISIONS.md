@@ -1,5 +1,18 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-26 - Public session companion publication layer V1
+
+`CANONICAL_POST_CLOSE_ONE_COMMAND_PIPELINE_V1` publication gap: missing current-session companions before release-smoke (`push = NO`).
+
+Decisions:
+
+1. **Producer publication layer, not a new orchestrator.** `dashboard_session_companions.py` is a pure compute + live apply module. Publication authority remains `release_orchestrator.py all` → `publish_release` → frontend → `publish_dashboard`.
+2. **Retained 2026-08-26 evidence only.** Companions are computed from the canonical handoff, unique Daily Producer run, and frozen registry sources. 2026-08-25 Dashboard files are schema/presentation references and are never copied or relabelled.
+3. **Write before release-smoke.** Dry-run plans both paths with zero mutation. Live writes the exact computed bytes after asset versioning and before `tests/release-smoke.test.js`.
+4. **Exact whitelist and managed-path rollback.** Only `data/session_<YYYY_MM_DD>_manifest.json` and `report-<YYYY-MM-DD>.html` are added. On later-gate failure, newly created companions are unlinked and preexisting companion bytes are restored; unrelated tracked/untracked files are preserved. No `git clean` or `git reset --hard`.
+
+Validation: focused companion tests (determinism, lineage, dry-run, live-before-smoke, whitelist, rollback); temp Dashboard `release_orchestrator all --live` with trusted subset / frontend / release-smoke / trusted verification; no real Dashboard or runtime mutation; no DNSE.
+
 ## 2026-08-26 - Canonical trusted-subset financial-evidence bridge V1
 
 `CANONICAL_POST_CLOSE_ONE_COMMAND_PIPELINE_V1` trusted-subset gap: Outcome B, sidecar builder reused (Outcome A for taxonomy records only).

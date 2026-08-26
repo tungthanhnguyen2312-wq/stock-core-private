@@ -203,6 +203,28 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
                                 cwd=self.web_dir, capture_output=True, text=True, check=True)
         self.assertEqual(status.stdout, "")
 
+    def test_managed_companion_rollback_is_path_exact(self):
+        from dashboard_session_companions import companion_relpaths
+        session = "2026-08-26"
+        manifest_rel, report_rel = companion_relpaths(session)
+        prior = self.web_dir / manifest_rel
+        prior.parent.mkdir(parents=True, exist_ok=True)
+        prior.write_bytes(b'{"dashboard_session":"preexisting"}\n')
+        snapshot = release_orchestrator.capture_dashboard_transaction(
+            self.web_dir, managed_relpaths=companion_relpaths(session),
+        )
+        prior.write_bytes(b'{"dashboard_session":"mutated"}\n')
+        (self.web_dir / report_rel).write_text("new-report\n", encoding="utf-8")
+        unrelated = self.web_dir / "operator_untracked.txt"
+        unrelated.write_text("keep-me\n", encoding="utf-8")
+        release_orchestrator.restore_dashboard_transaction(self.web_dir, snapshot)
+        self.assertEqual(prior.read_bytes(), b'{"dashboard_session":"preexisting"}\n')
+        self.assertFalse((self.web_dir / report_rel).exists())
+        self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep-me\n")
+        source = Path(release_orchestrator.__file__).read_text(encoding="utf-8")
+        self.assertNotIn('["git", "clean"', source)
+        self.assertNotIn('"reset", "--hard"', source)
+
     def test_single_instance_lock(self):
         lock_file = Path(tempfile.gettempdir()) / "stock_lookup_release_orchestrator.lock"
         if lock_file.exists():

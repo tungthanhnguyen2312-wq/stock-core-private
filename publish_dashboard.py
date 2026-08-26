@@ -29,6 +29,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
+import dashboard_session_companions
 import release_session_contract
 import trusted_subset_contract
 from release_checkout_identity import (
@@ -581,6 +582,17 @@ def build_whitelist() -> list[str]:
     return sorted(cleaned)
 
 
+def compute_current_session_companions(market_session: str, build_id: str) -> dashboard_session_companions.SessionCompanionPlan:
+    """Pure: plan the current-session public companions from retained canonical evidence."""
+    return dashboard_session_companions.compute_session_companions(
+        SCRIPT_ROOT,
+        market_session,
+        producer_commit=dashboard_session_companions.producer_git_head(SCRIPT_ROOT),
+        producer_commit_summary=dashboard_session_companions.producer_git_subject(SCRIPT_ROOT),
+        build_id=build_id,
+    )
+
+
 def run_release_smoke_tests() -> int:
     """Run tests/release-smoke.test.js against WEB_ROOT — the exact post-copy worktree —
     via `node --test`. LIVE only, and only after copy_public_artifacts()/write_build_manifest()
@@ -761,11 +773,16 @@ def main() -> int:
         copy_plan = plan_copy_artifacts()
         manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
+        companion_plan = compute_current_session_companions(market_session, str(manifest["build_id"]))
         validate_json_artifacts()
         whitelist = build_whitelist()
         if args.include_trusted_subset:
             whitelist = sorted(set(whitelist) | set(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS))
-    except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
+        whitelist = dashboard_session_companions.extend_whitelist(
+            whitelist, companion_plan, web_root=WEB_ROOT, require_exist=False,
+        )
+    except (OSError, ValueError, json.JSONDecodeError, csv.Error,
+            dashboard_session_companions.DashboardSessionCompanionError) as exc:
         return fail(str(exc))
 
     if not args.live:
@@ -776,6 +793,12 @@ def main() -> int:
         log(f"[DRY-RUN] Build id dự kiến (phiên {market_session}): {manifest['build_id']}")
         log(f"[DRY-RUN] Sẽ cập nhật asset-version trên {len(version_plan)} trang HTML: "
             f"{', '.join(version_plan) or '(không có)'}")
+        if companion_plan.omitted:
+            log(f"[DRY-RUN] Session companions omitted: {companion_plan.omit_reason}")
+        else:
+            log("[DRY-RUN] Session companions planned (zero mutation):")
+            log(f"  {companion_plan.manifest_relpath}")
+            log(f"  {companion_plan.report_relpath}")
         log(f"[DRY-RUN] Whitelist git nếu publish thật: {len(whitelist)} file")
         log("[DRY-RUN] Muốn xuất bản thật phải gọi rõ: publish_dashboard.py --live")
         return 0
@@ -784,11 +807,18 @@ def main() -> int:
         copy_public_artifacts()
         write_build_manifest(manifest, screener_js_content)
         update_asset_versions(str(manifest["build_id"]))
+        if not companion_plan.omitted:
+            written = dashboard_session_companions.apply_session_companions(WEB_ROOT, companion_plan)
+            log("Session companions written before release-smoke: " + ", ".join(written))
         validate_json_artifacts()
         whitelist = build_whitelist()
         if args.include_trusted_subset:
             whitelist = sorted(set(whitelist) | set(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS))
-    except (OSError, ValueError, json.JSONDecodeError, csv.Error) as exc:
+        whitelist = dashboard_session_companions.extend_whitelist(
+            whitelist, companion_plan, web_root=WEB_ROOT, require_exist=not companion_plan.omitted,
+        )
+    except (OSError, ValueError, json.JSONDecodeError, csv.Error,
+            dashboard_session_companions.DashboardSessionCompanionError) as exc:
         return fail(str(exc))
 
     smoke_rc = run_release_smoke_tests()

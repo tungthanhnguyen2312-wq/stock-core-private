@@ -35,6 +35,10 @@ PRODUCER_ROOT = SCRIPT_PATH.parent.parent
 if str(PRODUCER_ROOT) not in sys.path:
     sys.path.insert(0, str(PRODUCER_ROOT))
 
+from dashboard_session_companions import (  # noqa: E402
+    DashboardSessionCompanionError,
+    companion_relpaths,
+)
 from release_checkout_identity import (  # noqa: E402
     CANONICAL_WEB_ROOT,
     GITHUB_SOURCE_UPDATED,
@@ -134,13 +138,22 @@ class DashboardTransactionSnapshot:
     then lets the existing whole-market publisher build and commit the complete
     release.  Any failure before that one final commit must restore the clean
     Dashboard worktree without touching ignored operator tools or unrelated files.
+
+    ``managed_paths`` records only the current-session companion files this
+    release owns.  A ``None`` value means the path was absent before the
+    transaction and must be removed on rollback; prior bytes are restored
+    exactly when the path already existed.
     """
 
     head: str
     tracked: dict[str, bytes]
+    managed_paths: dict[str, bytes | None]
 
 
-def capture_dashboard_transaction(web_dir: Path) -> DashboardTransactionSnapshot:
+def capture_dashboard_transaction(
+    web_dir: Path,
+    managed_relpaths: tuple[str, ...] | list[str] = (),
+) -> DashboardTransactionSnapshot:
     rc, head = get_git_output(["rev-parse", "HEAD"], web_dir)
     if rc != 0:
         raise RuntimeError("cannot capture Dashboard transaction HEAD")
@@ -149,9 +162,14 @@ def capture_dashboard_transaction(web_dir: Path) -> DashboardTransactionSnapshot
     if result.returncode != 0:
         raise RuntimeError("cannot enumerate Dashboard tracked files for rollback")
     paths = [item.decode("utf-8") for item in result.stdout.split(b"\0") if item]
+    managed: dict[str, bytes | None] = {}
+    for relative in managed_relpaths:
+        path = web_dir / relative
+        managed[relative] = path.read_bytes() if path.is_file() else None
     return DashboardTransactionSnapshot(
         head=head,
         tracked={relative: (web_dir / relative).read_bytes() for relative in paths},
+        managed_paths=managed,
     )
 
 
@@ -162,6 +180,11 @@ def restore_dashboard_transaction(web_dir: Path, snapshot: DashboardTransactionS
     operator-owned tools such as the local Tailwind executable.  The transaction is
     entered only from a clean Dashboard index, so a mixed reset to the captured HEAD
     merely drops staging from a failed local final commit before byte restoration.
+
+    Managed companion paths are the sole exception: newly created release-owned
+    companions that were absent before the transaction are unlinked; preexisting
+    companion bytes are restored.  Unrelated untracked operator files are left
+    untouched.  ``git clean`` and ``git reset --hard`` are never used.
     """
     rc, current_head = get_git_output(["rev-parse", "HEAD"], web_dir)
     if rc != 0:
@@ -184,6 +207,15 @@ def restore_dashboard_transaction(web_dir: Path, snapshot: DashboardTransactionS
         if not path.is_file() or path.read_bytes() != content:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(content)
+    for relative, prior in snapshot.managed_paths.items():
+        path = web_dir / relative
+        if prior is None:
+            if path.is_file():
+                path.unlink()
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if not path.is_file() or path.read_bytes() != prior:
+                path.write_bytes(prior)
     rc, dirty = get_git_output(["status", "--porcelain", "--untracked-files=no"], web_dir)
     if rc != 0 or dirty:
         raise RuntimeError(f"Dashboard tracked rollback verification failed: {dirty}")
@@ -489,7 +521,11 @@ def orchestrate(args: argparse.Namespace) -> int:
                 if rc != 0 or tracked_dirty:
                     raise RuntimeError("Dashboard tracked worktree is not clean before all-release transaction")
                 require_live_remote_head(web_dir, web_branch)
-                transaction_snapshot = capture_dashboard_transaction(web_dir)
+                try:
+                    managed = companion_relpaths(actual_session)
+                except DashboardSessionCompanionError:
+                    managed = ()
+                transaction_snapshot = capture_dashboard_transaction(web_dir, managed_relpaths=managed)
             except RuntimeError as exc:
                 sys.stderr.write(f"[ERROR] {exc}\n")
                 return 1
