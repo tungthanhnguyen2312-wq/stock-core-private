@@ -3,6 +3,8 @@
 > **Authoritative Technical Roadmap.** This document defines the engineering phases, milestone matrix, dependency contracts, and acceptance gates for Stock Lookup.
 > Current operational state and immediate milestones are tracked in [STATE.md](STATE.md).
 
+**P0 Daily Producer triage and session governance recovery (2026-08-26):** `full_universe_entry_candidate_triage/v1` is implemented from the recovered 2026-08-24 post-close contract. Session 2026-08-25 is governed and Canonical Daily Producer completed (888 same-session technical coverage). This is blocker recovery, not a new architecture phase. Do not wait 20 future sessions for current Daily Producer eligibility. Prospective learning still needs more real later-session outcomes; HPG/VCB were seed cases, not a frozen universe. After 2026-08-26 close, register exact-session inputs and run `python tools/run_daily_producer.py --session 2026-08-26`. Remaining separate evidence lanes: ADTV20, PIT/ex-date, current-share authority.
+
 **Current research packet dashboard shadow surfacing (2026-08-25):** `CURRENT_RESEARCH_PACKET_DASHBOARD_SHADOW_SURFACING_V1` organizes the retained `current_research_decision_packet/v1` through the existing daily decision research product and opt-in bundle attach. Default product/bundle behavior is unchanged. Packet Bear/Base/Bull is not CONSERVATIVE/BASE/SPECULATIVE. 1,507/1,507 rendered with residual 0.
 
 **Current corporate event context (2026-08-25):** `CURRENT_CORPORATE_EVENT_CONTEXT_V1` projects retained official exchange events and the HPG/VNM/VCB issuer-VSDC chains into current-research statuses without inferring ex-dates, enabling EVENT_DRIVEN, or claiming price impact.

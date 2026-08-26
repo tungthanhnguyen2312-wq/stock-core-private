@@ -38,6 +38,24 @@ BLOCKED_BY_STALE_TRIAGE_DEPENDENCY = "BLOCKED_BY_STALE_TRIAGE_DEPENDENCY"
 UNAVAILABLE_REQUIRED_INPUT = "UNAVAILABLE_REQUIRED_INPUT"
 
 ROOT_DEFAULT = Path(__file__).resolve().parent
+FALLBACK_RECOVERY_BASELINE = Path("operations-review/market-wide-current-descriptive-research-v1-20260824/market_wide_current_descriptive_research_artifact.json")
+
+
+def _prior_completed_descriptive(root: Path, session: str) -> Path:
+    """Use the latest governed completed-session descriptive strictly before target; never glob."""
+    registry = load_registry(root)
+    prior = sorted(name for name in (registry.get("completed_sessions") or {}) if str(name) < session)
+    if prior:
+        selection = (registry.get("sessions") or {}).get(prior[-1]) or {}
+        entry = selection.get("descriptive") if isinstance(selection, Mapping) else None
+        if isinstance(entry, Mapping) and isinstance(entry.get("path"), str):
+            path = root / entry["path"]
+            if path.is_file():
+                return path
+    fallback = root / FALLBACK_RECOVERY_BASELINE
+    if fallback.is_file():
+        return fallback
+    raise FileNotFoundError("RECOVERY_BASELINE_DESCRIPTIVE_UNAVAILABLE")
 
 
 def _iso_date(value: str) -> str:
@@ -162,6 +180,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "historical_context": ops / "market-wide-historical-research-context-v1-20260824" / "market_wide_historical_research_context_artifact.json",
         "financial_momentum": ops / "current-financial-momentum-context-v1" / "current_financial_momentum_context_artifact.json",
         "corporate_event_context": ops / "current-corporate-event-context-v1" / "current_corporate_event_context_artifact.json",
+        "session_triage": ops / f"full-universe-entry-candidate-triage-v1-{nodash}" / f"full_universe_entry_candidate_triage_{nodash}.json",
         "named_20260824_triage": ops / "full-universe-entry-candidate-triage-20260824" / "full_universe_entry_candidate_triage_20260824.json",
         "postclose_20260824_triage": ops / "full-universe-entry-candidate-triage-postclose-20260824" / "full_universe_entry_candidate_triage_20260824.json",
     }
@@ -490,11 +509,18 @@ def classify_level2_components(root: Path, session: str) -> dict[str, Any]:
             },
         ))
 
-    add_blocked("current_evidence_bound_scenario", "scenario", scenario_blocked_claims, scenario)
-    add_blocked("polymorphic_current_strategy_classification", "strategy", strategy_blocked_claims, strategy)
-    add_blocked("current_opportunity_prioritization", "opportunity_prioritization", opportunity_blocked_claims, opportunity)
-    add_blocked("current_research_decision_packet", "decision_packet", packet_blocked_claims, packet)
-    add_blocked("decision_packet_dashboard", "decision_packet_dashboard", packet_blocked_claims, loaded.get("decision_packet_dashboard"))
+    if scenario_blocked:
+        add_blocked("current_evidence_bound_scenario", "scenario", scenario_blocked_claims, scenario)
+        add_blocked("polymorphic_current_strategy_classification", "strategy", strategy_blocked_claims, strategy)
+        add_blocked("current_opportunity_prioritization", "opportunity_prioritization", opportunity_blocked_claims, opportunity)
+        add_blocked("current_research_decision_packet", "decision_packet", packet_blocked_claims, packet)
+        add_blocked("decision_packet_dashboard", "decision_packet_dashboard", packet_blocked_claims, loaded.get("decision_packet_dashboard"))
+    else:
+        add_exact("current_evidence_bound_scenario", "scenario", ["Exact-session evidence-bound scenario over same-session triage."])
+        add_exact("polymorphic_current_strategy_classification", "strategy", ["Exact-session polymorphic strategy classification over same-session scenario."])
+        add_exact("current_opportunity_prioritization", "opportunity_prioritization", ["Exact-session opportunity prioritization over same-session scenario/strategy/tactical inputs."])
+        add_exact("current_research_decision_packet", "decision_packet", ["Exact-session decision packet over same-session opportunity/scenario."])
+        add_exact("decision_packet_dashboard", "decision_packet_dashboard", ["Dashboard/product projection of the exact-session decision packet."])
 
     components.append(_component(
         component_id="full_universe_entry_candidate_triage",
@@ -865,7 +891,7 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
         ])
     tech_out = paths["technical_recovery"]
     tech_dir = tech_out.parent
-    baseline_desc = ops / "market-wide-current-descriptive-research-v1-20260824" / "market_wide_current_descriptive_research_artifact.json"
+    baseline_desc = _prior_completed_descriptive(root, session)
     if not tech_out.exists():
         from market_wide_current_technical_coverage_scaleout import recovery_candidates
         b_data = json.loads(baseline_desc.read_text(encoding="utf-8"))
@@ -961,18 +987,46 @@ def materialize_independent_components(root: Path, session: str, runtime_root: P
 
 
 def maybe_build_triage_dependent(root: Path, session: str) -> dict[str, Any]:
-    """Build scenario/strategy/opportunity only when exact-session triage exists. Never substitute."""
+    """Generate exact-session triage when inputs exist, then rebuild dependents. Never substitute."""
+    paths = session_artifact_paths(root, session)
+    if (
+        not paths["session_triage"].exists()
+        and paths["descriptive_research"].exists()
+        and paths["screening_foundation"].exists()
+        and paths["tactical_classifier"].exists()
+    ):
+        from full_universe_entry_candidate_triage import build as build_triage, replay as replay_triage
+        triage_art = build_triage(
+            descriptive=json.loads(paths["descriptive_research"].read_text(encoding="utf-8")),
+            screening=json.loads(paths["screening_foundation"].read_text(encoding="utf-8")),
+            tactical=json.loads(paths["tactical_classifier"].read_text(encoding="utf-8")),
+            fundamental=_load(paths["fundamental"]),
+            session=session,
+        )
+        replay_triage(triage_art)
+        paths["session_triage"].parent.mkdir(parents=True, exist_ok=True)
+        paths["session_triage"].write_text(json.dumps(triage_art, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     registry = load_registry(root)
     triage = session_triage_status(root, session, registry)
     if triage["status"] != EXACT_SESSION_CLEAN:
-        return {"built": False, "reason": triage}
-    paths = session_artifact_paths(root, session)
+        generated = _load(paths["session_triage"])
+        if generated and generated.get("source_market_session") == session:
+            triage = {
+                "status": EXACT_SESSION_CLEAN,
+                "reason_code": None,
+                "identity": generated.get("artifact_identity"),
+                "path": _rel(root, paths["session_triage"]),
+                "source_session": session,
+            }
+        else:
+            return {"built": False, "reason": triage}
     if paths["scenario"].exists() and paths["strategy"].exists() and paths["opportunity_prioritization"].exists():
         return {"built": False, "reason": {"status": "ALREADY_PRESENT_EXACT_SESSION_TRIAGE"}}
     from current_evidence_bound_scenario import build as build_scenario
     from polymorphic_current_strategy_classification import build as build_strategy
     from current_opportunity_prioritization import build as build_opp, content_identity as opp_id
-    triage_art = json.loads((root / triage["path"]).read_text(encoding="utf-8"))
+    triage_path = root / triage["path"] if triage.get("path") else paths["session_triage"]
+    triage_art = json.loads(triage_path.read_text(encoding="utf-8"))
     cat = _load(paths["catalyst"])
     scenario_art = build_scenario(
         descriptive=json.loads(paths["descriptive_research"].read_text("utf-8")),
@@ -1040,7 +1094,10 @@ def run_level2_package(
         "canonical_refusal": canonical.get("canonical_refusal"),
         "current_session_analysis_still_available": True,
         "tactical_current_session_signal": classification["tactical_current_session_signal"].get("status"),
-        "full_opportunity_prioritization": "FULL_OPPORTUNITY_PRIORITIZATION_UNAVAILABLE",
+        "full_opportunity_prioritization": (
+            "AVAILABLE" if not classification["stale_triage_dependency_trace"]["transitive_blocked"]["current_opportunity_prioritization"]
+            else "FULL_OPPORTUNITY_PRIORITIZATION_UNAVAILABLE"
+        ),
         "level2_package": str(written["package_dir"]),
         "manifest": str(written["manifest"]),
         "brief": str(written["brief"]),

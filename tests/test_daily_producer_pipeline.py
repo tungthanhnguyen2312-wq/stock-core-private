@@ -33,7 +33,7 @@ def test_completed_session_gate_uses_governed_ledger_not_clock_inference():
     # completed-session entry and never accounted for it (fails identically on the
     # unmodified baseline, unrelated to the same-day gate fix below). "Latest" must reflect
     # the real governed ledger, not a stale expectation from before 08-24 was registered.
-    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-24"
+    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-25"
 
 
 def test_completed_session_gate_refuses_incomplete_session():
@@ -60,16 +60,17 @@ def test_gate_B_same_day_without_completed_evidence_refused():
     """Same local date with no ledger entry, or an entry not yet proved complete, must
     still refuse -- same-day is never granted merely by matching the wall clock."""
     registry = copy.deepcopy(_registry())
+    now = datetime(2026, 8, 26, 16, 0, tzinfo=VN_TZ)
     with pytest.raises(DailyProducerError, match="SESSION_NOT_GOVERNED_COMPLETED"):
-        completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ))
+        completed_session_gate(registry, "2026-08-26", now=now)
 
-    registry["completed_sessions"]["2026-08-25"] = {"status": "INTRADAY", "trading_day_valid": True}
+    registry["completed_sessions"]["2026-08-26"] = {"status": "INTRADAY", "trading_day_valid": True}
     with pytest.raises(DailyProducerError, match="SESSION_COMPLETION_NOT_PROVED"):
-        completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ))
+        completed_session_gate(registry, "2026-08-26", now=now)
 
-    registry["completed_sessions"]["2026-08-25"] = {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": False}
+    registry["completed_sessions"]["2026-08-26"] = {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": False}
     with pytest.raises(DailyProducerError, match="TRADING_DAY_NOT_VALIDATED"):
-        completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ))
+        completed_session_gate(registry, "2026-08-26", now=now)
 
 
 def test_gate_C_same_day_with_explicit_completed_evidence_accepted():
@@ -91,7 +92,7 @@ def test_gate_D_prior_day_completed_session_behavior_unchanged():
     before this fix (session > local_date is False either way for a prior day)."""
     gate = completed_session_gate(_registry(), "2026-08-21", now=datetime(2026, 8, 25, 9, 0, tzinfo=VN_TZ))
     assert gate["status"] == "PASS"
-    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-24"
+    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-25"
 
 
 def test_gate_E_same_day_gate_pass_does_not_bypass_exact_session_input_coherence():
@@ -106,7 +107,7 @@ def test_gate_E_same_day_gate_pass_does_not_bypass_exact_session_input_coherence
     assert gate["status"] == "PASS"
 
     with pytest.raises(ValueError, match="SESSION_NOT_REGISTERED_EXPLICIT_INPUT_MANIFEST_REQUIRED"):
-        resolve_inputs(ROOT, "2026-08-25", registry)  # no "sessions" entry registered for 2026-08-25
+        resolve_inputs(ROOT, "2026-08-26", registry)
 
     inputs, _ = resolve_inputs(ROOT, "2026-08-21", _registry())
     inputs["tactical"]["session"] = "2026-08-20"

@@ -26,11 +26,12 @@ def test_named_20260824_triage_file_is_2026_08_21_session():
     assert artifact["artifact_identity"].startswith("full_universe_entry_candidate_triage:4b527330")
 
 
-def test_2026_08_25_has_no_authorized_triage():
+def test_2026_08_25_has_authorized_exact_session_triage():
     registry = load_registry(ROOT)
     status = session_triage_status(ROOT, "2026-08-25", registry)
-    assert status["status"] == UNAVAILABLE_REQUIRED_INPUT
-    assert status["reason_code"] == "REQUIRED_TRIAGE_GENERATOR_UNAVAILABLE"
+    assert status["status"] == EXACT_SESSION_CLEAN
+    assert status["source_session"] == "2026-08-25"
+    assert status["identity"].startswith("full_universe_entry_candidate_triage:97d80cf0")
 
 
 def test_latest_completed_after_close_on_trading_day():
@@ -60,13 +61,12 @@ def test_explicit_historical_session_is_not_overridden_by_clock():
     assert resolved["resolution_mode"] == "EXPLICIT_SESSION"
 
 
-def test_canonical_2026_08_25_is_blocked_without_fake_outputs():
-    now = datetime(2026, 8, 25, 16, 0, tzinfo=VN_TZ)
+def test_canonical_2026_08_25_is_eligible_without_fake_outputs():
+    now = datetime(2026, 8, 26, 16, 0, tzinfo=VN_TZ)
     status = evaluate_canonical_daily_producer(ROOT, "2026-08-25", now=now)
-    assert status["canonical_daily_producer_status"] == "BLOCKED"
-    assert status["root_blocker"] == "REQUIRED_TRIAGE_GENERATOR_UNAVAILABLE"
+    assert status["canonical_daily_producer_status"] == "ELIGIBLE_NOT_EXECUTED_BY_LEVEL2"
     assert status["fake_canonical_outputs_written"] is False
-    assert "SESSION_NOT_GOVERNED_COMPLETED" in (status["canonical_refusal"] or "")
+    assert status["root_blocker"] is None
 
 
 def test_tactical_signal_is_distinct_from_opportunity_prioritization():

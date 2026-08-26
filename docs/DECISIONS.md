@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-26 - P0 Daily Producer Triage And Session Governance Recovery V1
+
+`P0_DAILY_PRODUCER_TRIAGE_AND_SESSION_GOVERNANCE_RECOVERY_V1 = DAILY_PRODUCER_TRIAGE_AND_SESSION_RECOVERY_PASS`.
+
+The missing `full_universe_entry_candidate_triage/v1` generator is recovered from the governed 2026-08-24 post-close artifact (byte-identical replay of identity `e8488d55…`), its explicit `cohort_definitions`, and existing consumer contracts. Canonical Daily Producer for 2026-08-25 completes on registered exact-session inputs.
+
+Decisions:
+
+1. **Recover, do not invent.** Entry-relevant states remain `BASE_BUILDING`, `BREAKOUT_READY`, and `EARLY_REVERSAL_CANDIDATE`. High-priority review is the existing evidence-gated rule (eligible liquidity; market momentum not LOWER_QUARTILE; sector not LOWER_QUARTILE when available; no explicit tactical/fundamental conflict). Missing fundamental context is not an eligibility condition.
+2. **No prior-day triage reuse.** 2026-08-25 triage is generated from 2026-08-25 descriptive, screening, and tactical inputs plus retained fundamental overlay. The 2026-08-21/named-20260824 file is schema/behavior reference only.
+3. **Register then produce.** Session 2026-08-25 is entered in `config/daily_research_session_input_registry.json` with frozen identities only after coherence passed. Canonical Daily Producer is the governed path; Level-2 remains fallback.
+4. **Do not conflate contracts.** Five names with fewer than 20 lifetime bars stay component-local technical gaps. They do not block the session. ADTV20, PIT, and current-share authority remain separate.
+5. **Do not manufacture the next session.** 2026-08-26 close data is not created before that market session completes. Omitted `--session` on the Level-2 runner resolves latest completed working-date; explicit `--session YYYY-MM-DD` remains.
+
+Validation: 2026-08-24 post-close identity replay; focused triage/producer/Level-2 tests; real 2026-08-25 generator run; scenario/strategy/opportunity/packet rebuild; Canonical Daily Producer PASS (`daily_producer_run:b1d7c838…`, coverage 888); `py_compile`; `git diff --check`.
+
 ## 2026-08-25 - Current Research Packet Dashboard Shadow Surfacing V1
 
 `CURRENT_RESEARCH_PACKET_DASHBOARD_SHADOW_SURFACING_V1 = CURRENT_RESEARCH_PACKET_DASHBOARD_SHADOW_SURFACING_PASS` (`push = NO`).
