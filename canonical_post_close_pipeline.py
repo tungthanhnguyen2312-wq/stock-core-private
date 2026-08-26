@@ -1,0 +1,583 @@
+"""Canonical post-close one-command operator pipeline (PROSPECTIVE_RESEARCH scope: operational
+composition only -- no new analytical methodology, no authority promotion).
+
+This module is pure orchestration glue over already-existing, already-tested capabilities:
+
+    GOVERNED EXACT-SESSION MARKET EVIDENCE (DNSE P3F9B, existing)
+        -> CANONICAL RUNTIME MATERIALIZATION (existing per-session artifact chain, reused via
+           daily_session_level2_package.materialize_independent_components/maybe_build_triage_dependent)
+        -> DETERMINISTIC CURRENT-SESSION ANALYTICS / CURRENT RESEARCH CONTEXT (same reused chain,
+           plus best-effort enrichment builders for the three components no orchestrator wires today)
+        -> EXACT INPUT REGISTRATION (new: config/daily_research_session_input_registry.json writer;
+           no such writer existed anywhere in the repository before this module)
+        -> CANONICAL DAILY PRODUCER (existing daily_producer_pipeline.run_daily_producer, unmodified)
+        -> PROSPECTIVE COLLECTION (existing tools/run_prospective_research_cohort_collection.py, unmodified)
+        -> BUNDLE INDEX / AI HANDOFF (new: tiered index over already-materialized artifacts; no
+           payload is duplicated, only paths + identities + hashes)
+
+No provider is added. DNSE/Livespeed is the only acquisition route this pipeline calls. The legacy
+VCI/KBS route (vn_stock_pipeline.py, driven from daily_analysis_pipeline.py's default step list)
+is never imported or invoked here -- see PROVIDER_ROLE_MATRIX below.
+"""
+from __future__ import annotations
+
+import copy
+import json
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Mapping
+
+import daily_session_level2_package as level2
+from daily_producer_pipeline import DailyProducerError, run_daily_producer
+from daily_research_session_operations import (
+    load_registry,
+    resolve_inputs,
+    selection_identities,
+    validate_coherence,
+)
+from vn_time import VN_TZ, vn_now
+
+ROOT = Path(__file__).resolve().parent
+CONTRACT_VERSION = "canonical_post_close_pipeline/v1"
+
+# Registry input class -> daily_session_level2_package.session_artifact_paths() key. Every
+# REQUIRED registry key must resolve; market_flow_positioning is intentionally omitted -- Level-2
+# does not build it and the real 2026-08-24/25 governed sessions register it (see
+# config/daily_research_session_input_registry.json). Its absence is an accepted, already-precedented
+# optional gap, not a new one.
+REGISTRY_KEY_TO_LEVEL2_KEY = {
+    "descriptive": "descriptive_research",
+    "screening": "screening_foundation",
+    "tactical": "tactical_classifier",
+    "triage": "session_triage",
+    "fundamental": "fundamental",
+    "valuation": "valuation",
+    "catalyst": "catalyst",
+    "corporate_intelligence": "corporate_intelligence",
+    "official_universe": "official_universe",
+    "event_context": "official_event_context",
+}
+REQUIRED_REGISTRY_KEYS = (
+    "descriptive", "screening", "tactical", "triage",
+    "fundamental", "valuation", "catalyst", "corporate_intelligence",
+)
+OPTIONAL_REGISTRY_KEYS = ("official_universe", "event_context")
+
+# A completed-session snapshot with fewer than this fraction of the attempted DNSE candidate
+# universe returning an exact-dated bar is treated as evidence of a partial/failed acquisition
+# (pre-close attempt, connectivity failure, etc.), never as a genuine thin trading day. Observed
+# real full-universe runs to date: 2026-08-20 50.09%, 2026-08-25 53.06% -- this floor is set well
+# below that range so it never rejects a normal session while still catching a degenerate fetch.
+MIN_EXACT_SESSION_COVERAGE_RATIO = 0.20
+
+
+class CanonicalPostCloseError(ValueError):
+    """A deliberately concise operational refusal, mirroring DailyProducerError's style."""
+
+
+PROVIDER_ROLE_MATRIX = {
+    "DNSE_LIVESPEED": {
+        "role": "CANONICAL",
+        "scope": "Full-universe exact-session OHLC acquisition and every current-research artifact "
+                 "this pipeline builds or reuses (descriptive, screening, tactical, triage, "
+                 "corporate intelligence, valuation price leg, liquidity, technical recovery).",
+        "used_by_this_pipeline_for": ["session_acquisition", "runtime_materialization", "current_research"],
+    },
+    "FHSC": {
+        "role": "SUPPLEMENTAL_BOUNDED",
+        "scope": "Shadow/reference cross-validation of DNSE volume semantics only (HOSE-only, "
+                 "credential-blocked in production). Never a price/OHLC acquisition route.",
+        "used_by_this_pipeline_for": [],
+        "constraint": "This pipeline never calls FHSC and never promotes it toward liquidity, "
+                       "ADTV20, or RAW_AS_TRADED authority as an operational side effect.",
+    },
+    "VNSTOCK_VCI_KBS": {
+        "role": "LEGACY_NON_CANONICAL",
+        "scope": "vn_stock_pipeline.py update (VCI primary, KBS failover) feeds only the legacy "
+                 "daily_analysis_pipeline.py default step list (indicators/candle_scan/"
+                 "stock_analyzer/export_ai_bundle) and vn_stock.db. It is read-only-consumed by "
+                 "this pipeline exactly once, as mva_exact_session_snapshot.canonical_candidates() "
+                 "reads vn_stock.db.metadata for the DNSE candidate ticker list -- never written, "
+                 "never used as a price/session-completeness authority.",
+        "used_by_this_pipeline_for": [],
+        "constraint": "--canonical-post-close never invokes vn_stock_pipeline.py and never routes "
+                       "through it, even as a fallback. Retained for legacy compatibility, bounded "
+                       "recovery, historical tooling, and tests -- not deleted by this milestone.",
+    },
+}
+
+
+def _git_head(path: Path) -> str | None:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except Exception:
+        return None
+
+
+def _load(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_json(path: Path, value: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def acquire_and_materialize(
+    root: Path, session: str, runtime_root: Path, *, workers: int = 12, now: datetime | None = None,
+) -> dict[str, Any]:
+    """Stage 1-3: DNSE acquisition, runtime materialization, current-session analytics.
+
+    Wholly delegates to daily_session_level2_package -- this pipeline adds no second research
+    engine. Raises CanonicalPostCloseError if the acquired snapshot's own resolved session does
+    not exactly equal the requested session (no silent prior-session substitution).
+    """
+    now = now or vn_now()
+    paths = level2.session_artifact_paths(root, session)
+    try:
+        level2.materialize_independent_components(root, session, runtime_root, workers=workers, now=now)
+    except ValueError as exc:
+        if str(exc).startswith("P3F9B_ACQUIRED_SESSION_MISMATCH"):
+            raise CanonicalPostCloseError(
+                "REFUSE_CANONICAL_POST_CLOSE:" + str(exc)
+                + ":requested session is not the DNSE wall-clock-resolved latest completed session; "
+                  "never silently substituting."
+            ) from exc
+        raise
+    snapshot = _load(paths["exact_session_snapshot"])
+    if not snapshot:
+        raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXACT_SESSION_SNAPSHOT_MISSING_AFTER_ACQUISITION")
+    total = int((snapshot.get("acquisition_cohort") or {}).get("total_candidates") or 0)
+    exact = int((snapshot.get("exact_session_dispositions") or {}).get("exact_session_retained_count") or 0)
+    coverage_ratio = (exact / total) if total else 0.0
+    if coverage_ratio < MIN_EXACT_SESSION_COVERAGE_RATIO:
+        raise CanonicalPostCloseError(
+            f"REFUSE_CANONICAL_POST_CLOSE:PARTIAL_OR_INTRADAY_SESSION_EVIDENCE:"
+            f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
+        )
+    triage_result = level2.maybe_build_triage_dependent(root, session)
+    registry = load_registry(root)
+    triage_status = level2.session_triage_status(root, session, registry)
+    if triage_status["status"] != level2.EXACT_SESSION_CLEAN:
+        raise CanonicalPostCloseError(
+            "REFUSE_CANONICAL_POST_CLOSE:TRIAGE_NOT_EXACT_SESSION_CLEAN:" + json.dumps(triage_status, default=str)
+        )
+    return {
+        "snapshot": snapshot,
+        "resolved_completed_session": snapshot.get("resolved_completed_session"),
+        "coverage": {"exact_session_retained_count": exact, "total_candidates": total, "ratio": coverage_ratio},
+        "triage_status": triage_status,
+        "triage_build_result": triage_result,
+        "paths": paths,
+    }
+
+
+def enrichment_output_path(root: Path, session: str, name: str) -> Path:
+    """Session-scoped output for the three components Level-2 only ever reuses at a shared,
+    non-session-templated path (session_artifact_paths()'s financial_momentum/
+    corporate_event_context/historical_context keys). Writing a freshly-built, session-specific
+    artifact over one of those shared paths would silently relabel retained prior-as-of evidence
+    under its old filename -- exactly what docs/DATA_FIRST_DOCTRINE.md's immutability/provenance
+    rules forbid. A fresh build therefore gets its own session-scoped identity here instead.
+    """
+    return root / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / f"{name}.json"
+
+
+def build_enrichment_components(root: Path, session: str) -> dict[str, Any]:
+    """Best-effort materialize the three current-research components no orchestrator wires today
+    (historical context, financial momentum, corporate event context). Each is fully independent;
+    a failure in one never blocks the others or the rest of the pipeline -- component-local
+    missing evidence stays component-local, per docs/AI_RULES.md invariant 6. A failed fresh build
+    degrades to Level-2's shared prior-as-of file (still real retained evidence, just not
+    session-pinned) rather than leaving the component wholly absent.
+    """
+    paths = level2.session_artifact_paths(root, session)
+    results: dict[str, Any] = {}
+
+    def _attempt(name: str, level2_key: str, fn) -> None:
+        try:
+            artifact = fn()
+            out = enrichment_output_path(root, session, name)
+            _write_json(out, artifact)
+            results[name] = {"status": "BUILT", "artifact": artifact, "path": out}
+            return
+        except Exception as exc:  # noqa: BLE001 -- deliberately broad: component-local isolation
+            reason = f"{type(exc).__name__}:{exc}"
+        prior = _load(paths[level2_key])
+        if prior:
+            results[name] = {"status": "PRIOR_AS_OF_CONTEXT", "artifact": prior, "path": paths[level2_key], "reason": reason}
+        else:
+            results[name] = {"status": "UNAVAILABLE", "artifact": None, "reason": reason}
+
+    def _financial_momentum():
+        from current_financial_momentum_context import build_artifact as build
+        official_universe = _load(paths["official_universe"])
+        fundamental = _load(paths["fundamental"])
+        descriptive = _load(paths["descriptive_research"])
+        if not official_universe or not fundamental:
+            raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        return build(current_official_universe=official_universe, current_fundamental=fundamental, current_descriptive=descriptive)
+
+    def _corporate_event_context():
+        from current_corporate_event_context import build_artifact as build
+        official_universe = _load(paths["official_universe"])
+        official_event_context = _load(paths["official_event_context"])
+        if not official_universe or not official_event_context:
+            raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        return build(official_universe=official_universe, official_event_context=official_event_context, research_session=session)
+
+    def _historical_context():
+        from market_wide_historical_research_context import build_artifact as build
+        universe_resolution = _load(paths["universe_resolution"])
+        p3f9b_snapshot = _load(paths["exact_session_snapshot"])
+        technical_recovery = _load(paths["technical_recovery"])
+        strategy = _load(paths["strategy"])
+        if not universe_resolution or not p3f9b_snapshot:
+            raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        return build(universe_resolution_artifact=universe_resolution, p3f9b_snapshot=p3f9b_snapshot,
+                     technical_history_recovery_artifact=technical_recovery, strategy_artifact=strategy)
+
+    _attempt("financial_momentum", "financial_momentum", _financial_momentum)
+    _attempt("corporate_event_context", "corporate_event_context", _corporate_event_context)
+    _attempt("historical_context", "historical_context", _historical_context)
+    return results
+
+
+def register_session_inputs(root: Path, session: str, *, registry_path: Path | None = None) -> dict[str, Any]:
+    """Write config/daily_research_session_input_registry.json's sessions[session] entry.
+
+    No such writer existed in the repository before this pipeline (confirmed by exhaustive
+    search); registration was previously always a manual JSON edit. This function reproduces
+    the exact shape of the three existing hand-written entries and refuses (never overwrites) a
+    conflicting already-frozen completed_sessions[session] lock, matching
+    daily_research_session_operations.assert_completed_session_inputs_locked semantics.
+    """
+    path = registry_path or root / "config" / "daily_research_session_input_registry.json"
+    registry = json.loads(path.read_text(encoding="utf-8"))
+    paths = level2.session_artifact_paths(root, session)
+    selection: dict[str, dict[str, str]] = {}
+    for registry_key, level2_key in REGISTRY_KEY_TO_LEVEL2_KEY.items():
+        artifact_path = paths[level2_key]
+        artifact = _load(artifact_path)
+        if artifact is None or not isinstance(artifact.get("artifact_identity"), str):
+            if registry_key in REQUIRED_REGISTRY_KEYS:
+                raise CanonicalPostCloseError(
+                    f"REFUSE_CANONICAL_POST_CLOSE:REQUIRED_REGISTRY_INPUT_UNAVAILABLE:{registry_key}"
+                )
+            continue
+        selection[registry_key] = {
+            "path": _rel(root, artifact_path),
+            "artifact_identity": artifact["artifact_identity"],
+        }
+    completed = (registry.get("completed_sessions") or {}).get(session)
+    if isinstance(completed, Mapping) and completed.get("status") == "COMPLETED_RETAINED_EVIDENCE":
+        lock = completed.get("frozen_input_identities") or {}
+        if selection_identities(selection) != {k: v for k, v in lock.items()}:
+            raise CanonicalPostCloseError("COMPLETED_SESSION_INPUT_MUTATION_REJECTED:" + session)
+        return {"status": "ALREADY_FROZEN_IDENTICAL", "session": session, "selection": selection}
+    existing = (registry.get("sessions") or {}).get(session)
+    if existing == selection:
+        return {"status": "ALREADY_REGISTERED_IDENTICAL", "session": session, "selection": selection}
+    registry.setdefault("sessions", {})[session] = selection
+    path.write_text(json.dumps(registry, ensure_ascii=False, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    return {"status": "REGISTERED", "session": session, "selection": selection}
+
+
+def _rel(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def validate_and_freeze_completed_session(
+    root: Path, session: str, *, registry_path: Path | None = None,
+) -> dict[str, Any]:
+    """Prove real input coherence (descriptive/screening/tactical/triage session agreement,
+    lineage chaining, technical coverage parity -- the same checks Daily Producer itself runs)
+    and only then freeze completed_sessions[session]. This is the evidence basis for
+    COMPLETED_RETAINED_EVIDENCE; it is never inferred from wall-clock time alone -- the acquisition
+    stage's own coverage-ratio and resolved-session checks already ran before this is reached.
+    """
+    path = registry_path or root / "config" / "daily_research_session_input_registry.json"
+    registry = json.loads(path.read_text(encoding="utf-8"))
+    already = (registry.get("completed_sessions") or {}).get(session)
+    if isinstance(already, Mapping) and already.get("status") == "COMPLETED_RETAINED_EVIDENCE":
+        return {"status": "ALREADY_COMPLETED", "session": session}
+    inputs, entries = resolve_inputs(root, session, registry)
+    coherence = validate_coherence(inputs, session)
+    required_inputs = sorted(name for name in entries if name in REQUIRED_REGISTRY_KEYS)
+    frozen_identities = {name: entries[name]["artifact_identity"] for name in entries}
+    registry.setdefault("completed_sessions", {})[session] = {
+        "status": "COMPLETED_RETAINED_EVIDENCE",
+        "trading_day_valid": True,
+        "completion_evidence": {
+            "basis": "EXACT_SESSION_UPSTREAM_ARTIFACT_REGISTRY",
+            "required_current_session_inputs": required_inputs,
+            "policy": "The registry is a governed completed-session ledger. It does not infer completion from civil time, weekday, or a latest file.",
+            "canonical_post_close_pipeline_evidence": {
+                "contract_version": CONTRACT_VERSION,
+                "session_coherence": coherence,
+            },
+        },
+        "frozen_input_identities": frozen_identities,
+    }
+    path.write_text(json.dumps(registry, ensure_ascii=False, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    return {"status": "FROZEN", "session": session, "coherence": coherence, "frozen_input_identities": frozen_identities}
+
+
+def build_decision_packet(
+    root: Path, session: str, *,
+    opportunity: Mapping[str, Any] | None = None, enrichment: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Build current_research_decision_packet/v1 for this session, degrading gracefully.
+
+    opportunity comes from the just-completed Daily Producer operation in-memory when available
+    (daily_producer_pipeline.run_daily_producer()'s returned operation["opportunity"]); falling
+    back to the materialized artifact on disk keeps this function independently callable/testable.
+    financial_momentum/corporate_event/historical are read from the in-memory enrichment result
+    (build_enrichment_components' return value) so a freshly session-scoped build is preferred
+    over Level-2's shared prior-as-of file without this function needing to know the difference.
+    """
+    from current_research_decision_packet import build_artifact
+
+    paths = level2.session_artifact_paths(root, session)
+    opportunity = opportunity if opportunity is not None else _load(paths["opportunity_prioritization"])
+    if not opportunity:
+        return None
+    enrichment = enrichment or {}
+
+    def _enriched(name: str, level2_key: str) -> Any:
+        row = enrichment.get(name)
+        if isinstance(row, Mapping) and row.get("artifact") is not None:
+            return row["artifact"]
+        return _load(paths[level2_key])
+
+    packet = build_artifact(
+        opportunity=opportunity,
+        scenario=_load(paths["scenario"]),
+        risk_register=_load(paths["risk_register"]),
+        market_sector=_load(paths["sector_leadership"]),
+        financial_momentum=_enriched("financial_momentum", "financial_momentum"),
+        corporate_event=_enriched("corporate_event_context", "corporate_event_context"),
+        valuation=_load(paths["valuation"]),
+        historical=_enriched("historical_context", "historical_context"),
+    )
+    _write_json(paths["decision_packet"], packet)
+    return packet
+
+
+def run_prospective_collection(root: Path, session: str) -> dict[str, Any] | None:
+    """Post-hoc, non-blocking: a failure here never revises the completed Daily Producer result."""
+    paths = level2.session_artifact_paths(root, session)
+    packet_path = paths["decision_packet"]
+    cmd = [sys.executable, "tools/run_prospective_research_cohort_collection.py", "--session", session]
+    if packet_path.is_file():
+        cmd += ["--decision-packet-path", str(packet_path)]
+    result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
+    if result.returncode != 0:
+        return {"status": "UNAVAILABLE", "reason": (result.stderr or result.stdout).strip()[-2000:]}
+    output = root / "operations-review" / "prospective-research-cohort-collection-v1" / f"prospective_research_cohort_snapshot_{session}.json"
+    snapshot = _load(output)
+    return {"status": "COLLECTED", "stdout": result.stdout, "snapshot": snapshot, "path": str(output)}
+
+
+def build_tiered_bundle(
+    root: Path, session: str, *,
+    acquisition: Mapping[str, Any], producer_result: Mapping[str, Any],
+    decision_packet: Mapping[str, Any] | None, prospective: Mapping[str, Any] | None,
+    enrichment: Mapping[str, Any], producer_head: str | None, consumer_head: str | None,
+) -> dict[str, Any]:
+    bundle_dir = root / "operations-review" / "canonical-post-close-v1" / session
+    manifest = producer_result["manifest"]
+    operation = producer_result["operation"]
+    product = operation["product"]
+    triage = _load(level2.session_artifact_paths(root, session)["session_triage"])
+    tactical = _load(level2.session_artifact_paths(root, session)["tactical_classifier"])
+    breadth = (product.get("market_brief") or {}).get("coverage") or {}
+    descriptive = _load(level2.session_artifact_paths(root, session)["descriptive_research"]) or {}
+    market_breadth = descriptive.get("market_breadth") or {}
+    tactical_counts = (tactical or {}).get("coverage", {}).get("entry_state_counts") or {}
+
+    shared_lineage = {
+        "session": session,
+        "producer_head": producer_head,
+        "consumer_head": consumer_head,
+        "schema_version": "1.0.0",
+        "canonical_post_close_contract_version": CONTRACT_VERSION,
+        "daily_producer_run_identity": producer_result["run_identity"],
+        "daily_session_operation_identity": operation["manifest"]["operation_identity"],
+        "upstream_evidence_identities": manifest["upstream_artifact_identities"],
+    }
+
+    tier1 = {
+        **shared_lineage,
+        "tier": "SESSION_AI_HANDOFF_BUNDLE",
+        "market_session_proof": {
+            "resolved_completed_session": acquisition["resolved_completed_session"],
+            "exact_session_coverage": acquisition["coverage"],
+            "provider": "DNSE",
+        },
+        "market_coverage": breadth,
+        "breadth": {
+            "advancing": market_breadth.get("advancing"),
+            "declining": market_breadth.get("declining"),
+            "unchanged": market_breadth.get("unchanged"),
+            "breadth_descriptor": (market_breadth.get("breadth_descriptor") or {}).get("descriptor"),
+            "momentum_descriptor": (market_breadth.get("momentum_descriptor") or {}).get("descriptor"),
+        },
+        "tactical_counts": {state: tactical_counts.get(state) for state in
+                             ("BASE_BUILDING", "BREAKOUT_READY", "EARLY_REVERSAL_CANDIDATE", "UPTREND_CONFIRMED")},
+        "entry_relevant_count": (triage or {}).get("entry_relevant_count"),
+        "high_priority_review_count": product.get("high_priority_full_universe_review_set", {}).get("count"),
+        "blocked_dimensions": manifest["blocked_dimensions"],
+        "warnings": manifest["warnings"],
+        "daily_producer": {
+            "operation_identity": operation["manifest"]["operation_identity"],
+            "run_identity": producer_result["run_identity"],
+            "status": producer_result["status"],
+        },
+        "current_research_packet_identity": (decision_packet or {}).get("artifact_identity"),
+        "prospective_cohort_snapshot_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "enrichment_component_status": {name: row["status"] for name, row in enrichment.items()},
+        "deeper_bundles": {
+            "opportunity_research_bundle": _rel(root, bundle_dir / "opportunity_research_bundle.json"),
+            "full_universe_bundle_index": _rel(root, bundle_dir / "full_universe_bundle_index.json"),
+            "dashboard_release_set_index": _rel(root, bundle_dir / "dashboard_release_set_index.json"),
+        },
+        "authority_boundary": manifest["authority_boundary"],
+    }
+
+    decision_queue = _load(level2.session_artifact_paths(root, session)["opportunity_prioritization"])
+    tier2 = {
+        **shared_lineage,
+        "tier": "OPPORTUNITY_RESEARCH_BUNDLE",
+        "current_research_decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
+        "current_research_decision_packet_path": _rel(root, level2.session_artifact_paths(root, session)["decision_packet"]) if decision_packet else None,
+        "opportunity_prioritization_identity": (decision_queue or {}).get("artifact_identity"),
+        "entry_relevant_states": ("BASE_BUILDING", "BREAKOUT_READY", "EARLY_REVERSAL_CANDIDATE"),
+        "cohort_tickers_by_state": {
+            state: sorted(t for t, row in ((tactical or {}).get("records") or {}).items() if row.get("entry_state") == state)
+            for state in ("BASE_BUILDING", "BREAKOUT_READY", "EARLY_REVERSAL_CANDIDATE")
+        },
+        "prospective_cohort_snapshot": {
+            "identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+            "path": (prospective or {}).get("path"),
+        },
+        "authority_boundary": {"no_probability_target_expected_return_or_sizing": True, "is_actionable": False},
+    }
+
+    tier3 = {
+        **shared_lineage,
+        "tier": "FULL_UNIVERSE_BUNDLE_INDEX",
+        "format": "NDJSON",
+        "full_universe_path": _rel(root, producer_result["run_dir"] / "ai_research_full_universe.ndjson"),
+        "manifest_path": _rel(root, producer_result["run_dir"] / "ai_research_bundle_manifest.json"),
+        "queryable_by": ["ticker", "exact session"],
+        "note": "Not inlined into the session handoff bundle; read this file directly for per-ticker drill-down.",
+    }
+
+    tier4 = {
+        **shared_lineage,
+        "tier": "DASHBOARD_RELEASE_SET_INDEX",
+        "dashboard_projection_path": _rel(root, producer_result["run_dir"] / "dashboard" / "current_decision_cockpit_projection.json"),
+        "dashboard_projection_identity": manifest["dashboard_projection"]["identity"],
+        "run_manifest_path": _rel(root, producer_result["run_dir"] / "run_manifest.json"),
+        "ready_for_governed_publication": True,
+        "publication_authority": "release_orchestrator.py (existing; not invoked by this pipeline)",
+        "note": "This is an index over already-materialized Daily Producer output, not a second Dashboard payload.",
+    }
+
+    _write_json(bundle_dir / "session_handoff_bundle.json", tier1)
+    _write_json(bundle_dir / "opportunity_research_bundle.json", tier2)
+    _write_json(bundle_dir / "full_universe_bundle_index.json", tier3)
+    _write_json(bundle_dir / "dashboard_release_set_index.json", tier4)
+    return {"session_handoff_bundle": tier1, "opportunity_research_bundle": tier2,
+            "full_universe_bundle_index": tier3, "dashboard_release_set_index": tier4, "bundle_dir": bundle_dir}
+
+
+def run_canonical_post_close(
+    root: Path, runtime_root: Path, session: str, *, workers: int = 12, now: datetime | None = None,
+) -> dict[str, Any]:
+    if not isinstance(session, str) or not session.strip():
+        raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXPLICIT_SESSION_REQUIRED")
+    now = now or vn_now()
+    acquisition = acquire_and_materialize(root, session, runtime_root, workers=workers, now=now)
+    build_enrichment_components(root, session)
+    register_session_inputs(root, session)
+    validate_and_freeze_completed_session(root, session)
+    producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
+    try:
+        producer_result = run_daily_producer(
+            root, session=session, latest_completed_session=False,
+            producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
+            now=now,
+        )
+    except DailyProducerError as exc:
+        raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:DAILY_PRODUCER_INTEGRITY_FAILURE:" + str(exc)) from exc
+    enrichment = build_enrichment_components(root, session)
+    decision_packet = build_decision_packet(
+        root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,
+    )
+    prospective = run_prospective_collection(root, session)
+    tiers = build_tiered_bundle(
+        root, session, acquisition=acquisition, producer_result=producer_result,
+        decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
+        producer_head=producer_head, consumer_head=consumer_head,
+    )
+    return {
+        "session": session, "acquisition": acquisition, "enrichment": enrichment,
+        "producer_result": producer_result, "decision_packet": decision_packet,
+        "prospective": prospective, "tiers": tiers,
+        "producer_head": producer_head, "consumer_head": consumer_head,
+    }
+
+
+def print_terminal_handoff(result: Mapping[str, Any]) -> None:
+    tier1 = result["tiers"]["session_handoff_bundle"]
+    producer_result = result["producer_result"]
+    print(f"SESSION: {result['session']}")
+    print(f"STATUS: {producer_result['status']}")
+    print(f"MARKET_SESSION_PROOF: {json.dumps(tier1['market_session_proof'], sort_keys=True)}")
+    print(f"MARKET_COVERAGE: {json.dumps(tier1['market_coverage'], sort_keys=True)}")
+    print(f"BREADTH: {json.dumps(tier1['breadth'], sort_keys=True)}")
+    print(f"TACTICAL_COUNTS: {json.dumps(tier1['tactical_counts'], sort_keys=True)}")
+    print(f"HIGH_PRIORITY_REVIEW_COUNT: {tier1['high_priority_review_count']}")
+    print(f"AI_PRIMARY_BUNDLE: {result['tiers']['full_universe_bundle_index']['manifest_path']}")
+    print(f"SESSION_HANDOFF_BUNDLE: {_rel(ROOT, result['tiers']['bundle_dir'] / 'session_handoff_bundle.json')}")
+    print(f"DAILY_PRODUCER_OPERATION_ID: {tier1['daily_producer']['operation_identity']}")
+    print(f"DAILY_PRODUCER_RUN_ID: {tier1['daily_producer']['run_identity']}")
+    print(f"CURRENT_RESEARCH_PACKET_ID: {tier1['current_research_packet_identity']}")
+    print(f"PROSPECTIVE_COHORT_SNAPSHOT_ID: {tier1['prospective_cohort_snapshot_identity']}")
+    print(f"BLOCKED_DIMENSIONS: {tier1['blocked_dimensions']}")
+    print(f"WARNINGS: {tier1['warnings']}")
+    print("DASHBOARD_RUNTIME_READY: YES")
+    print("PUBLICATION_REQUIRED_SEPARATELY: YES")
+    print(f"READY_FOR_GOVERNED_PUBLICATION: {'YES' if result['tiers']['dashboard_release_set_index']['ready_for_governed_publication'] else 'NO'}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description="Canonical one-command post-close pipeline.")
+    parser.add_argument("--runtime-root", required=True)
+    parser.add_argument("--session", required=True, help="Explicit completed market session YYYY-MM-DD.")
+    parser.add_argument("--workers", type=int, default=12)
+    args = parser.parse_args(argv)
+    try:
+        result = run_canonical_post_close(ROOT, Path(args.runtime_root), args.session, workers=args.workers)
+    except CanonicalPostCloseError as exc:
+        print(f"STATUS: {exc}")
+        return 2
+    print_terminal_handoff(result)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -852,26 +852,44 @@ def run_cmd(root: Path, cmd: list[str]) -> None:
     subprocess.run([sys.executable] + cmd, cwd=str(root), check=True)
 
 
-def materialize_independent_components(root: Path, session: str, runtime_root: Path, workers: int = 12) -> None:
+def materialize_independent_components(root: Path, session: str, runtime_root: Path, workers: int = 12, now: datetime | None = None) -> None:
     """Reuse retained independent artifacts. Never substitute a prior-session triage."""
     ops = root / "operations-review"
     paths = session_artifact_paths(root, session)
     p3f9b_snapshot = paths["exact_session_snapshot"]
     p3f9b_dir = p3f9b_snapshot.parent
     if not p3f9b_snapshot.exists():
-        run_cmd(root, [
+        # The P3F9B CLI has no --session flag: it always targets whatever
+        # freshness_history/resolved_completed_session resolves as of --requested-at
+        # (defaulting to real current time). A caller-requested session is honored only
+        # by verifying the acquired snapshot's own resolved_completed_session afterward --
+        # never by asking the acquisition route for an arbitrary date it cannot target.
+        cmd = [
             "tools/run_p3f9b_market_wide_exact_session_scaleout.py",
-            "--session", session,
             "--runtime-root", str(runtime_root),
-            "--out-dir", str(p3f9b_dir),
+            "--output-dir", str(p3f9b_dir),
             "--workers", str(workers),
-        ])
+        ]
+        if now is not None:
+            cmd += ["--requested-at", now.astimezone(VN_TZ).isoformat()]
+        run_cmd(root, cmd)
+        acquired = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
+        if acquired.get("resolved_completed_session") != session:
+            raise ValueError(
+                "P3F9B_ACQUIRED_SESSION_MISMATCH:requested=" + session
+                + ":resolved=" + str(acquired.get("resolved_completed_session"))
+            )
     breadth_out = paths["breadth_foundation"]
     if not breadth_out.exists():
         run_cmd(root, ["tools/build_current_market_universe_breadth_foundation.py", "--snapshot", str(p3f9b_snapshot), "--output", str(breadth_out)])
     ur_out = paths["universe_resolution"]
     if not ur_out.exists():
-        run_cmd(root, ["tools/run_current_universe_status_and_session_coverage_resolution.py", "--snapshot", str(p3f9b_snapshot), "--output", str(ur_out)])
+        run_cmd(root, [
+            "tools/run_current_universe_status_and_session_coverage_resolution.py",
+            "--breadth-foundation-artifact", str(breadth_out),
+            "--p3f9b-snapshot", str(p3f9b_snapshot),
+            "--output", str(ur_out),
+        ])
     liq_out = paths["liquidity_research"]
     liq_dir = liq_out.parent
     if not liq_out.exists():
@@ -1082,7 +1100,7 @@ def run_level2_package(
     selected = resolution["session"]
     canonical = evaluate_canonical_daily_producer(root, selected, now=now)
     if acquire:
-        materialize_independent_components(root, selected, runtime_root, workers=workers)
+        materialize_independent_components(root, selected, runtime_root, workers=workers, now=now or vn_now())
         maybe_build_triage_dependent(root, selected)
     classification = classify_level2_components(root, selected)
     written = write_level2_package(root, selected, classification=classification, canonical=canonical, resolution=resolution)

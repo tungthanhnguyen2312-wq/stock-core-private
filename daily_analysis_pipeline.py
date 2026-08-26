@@ -215,6 +215,13 @@ def parse(argv=None):
     p.add_argument("--publish-dashboard", action="store_true", help="Trigger dashboard publisher step post-export")
     p.add_argument("--live-publish", action="store_true", help="Run dashboard publisher in live mode")
     p.add_argument("--verify-only", action="store_true")
+    p.add_argument("--session", default=None, help="Explicit market session YYYY-MM-DD. Required by --canonical-post-close; ignored by the LEGACY_NON_CANONICAL VCI/KBS step list.")
+    p.add_argument("--canonical-post-close", action="store_true",
+                    help="Run the canonical DNSE-based post-close pipeline (acquisition, current research, "
+                         "Canonical Daily Producer, prospective collection, tiered AI handoff) instead of the "
+                         "LEGACY_NON_CANONICAL VCI/KBS step list below. Requires --session. Never falls back "
+                         "to vn_stock_pipeline.py.")
+    p.add_argument("--workers", type=int, default=12, help="Parallel DNSE fetch workers; only used by --canonical-post-close.")
     return p.parse_args(argv)
 
 def main(argv=None, runner=subprocess.run) -> int:
@@ -223,6 +230,18 @@ def main(argv=None, runner=subprocess.run) -> int:
     if not root.is_dir():
         print(f"[daily_analysis] runtime root does not exist: {root}", file=sys.stderr)
         return 2
+    if args.canonical_post_close:
+        if not args.session:
+            print("[daily_analysis] --canonical-post-close requires an explicit --session YYYY-MM-DD", file=sys.stderr)
+            return 2
+        from canonical_post_close_pipeline import CanonicalPostCloseError, print_terminal_handoff, run_canonical_post_close
+        try:
+            result = run_canonical_post_close(SCRIPT_DIR, root, args.session, workers=args.workers)
+        except CanonicalPostCloseError as exc:
+            print(f"[daily_analysis] CANONICAL_POST_CLOSE_FAILED: {exc}", file=sys.stderr)
+            return 1
+        print_terminal_handoff(result)
+        return 0
     tickers = [x.upper() for x in args.tickers]
     env = os.environ.copy()
     env[RUNTIME_ROOT_ENV] = str(root)
