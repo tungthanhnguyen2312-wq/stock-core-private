@@ -293,3 +293,157 @@ def first_real_observation(snapshot: Mapping[str, Any], extension: Mapping[str, 
     }
     report['artifact_identity'] = 'first_real_prospective_attribution:' + _hash(report)
     return report
+
+
+PROSPECTIVE_RESEARCH_COHORT_SNAPSHOT_CONTRACT = 'prospective_research_learning/cohort_snapshot/v1'
+ENTRY_RELEVANT_COHORT_STATES = ('BASE_BUILDING', 'BREAKOUT_READY', 'EARLY_REVERSAL_CANDIDATE')
+_COHORT_ROW_KEYS = {
+    'ticker', 'research_session', 'triage_state', 'cohort_admission', 'current_decision_context',
+    'components', 'unresolved_components', 'authority_limitations', 'decision_packet_status',
+    'decision_packet_identity',
+}
+# Exact dict-key match only -- never a substring scan over free-text values, which routinely
+# *describe* these same words while disclaiming them (e.g. "No ... recommendation, sizing ...").
+_COHORT_FORBIDDEN_CONTEXT_KEYS = {
+    'recommendation', 'probability', 'expected_return', 'target_price', 'position_size', 'sizing',
+    'realized_return', 'future_price', 'hit_rate', 'win_rate', 'score', 'calibration',
+}
+
+
+def resolve_entry_relevant_cohort(triage: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Deterministically derive the prospective-collection cohort from one triage artifact.
+
+    This is the full BASE_BUILDING + BREAKOUT_READY + EARLY_REVERSAL_CANDIDATE membership --
+    never narrowed to the high-priority review subset, which is retained only as descriptive
+    per-ticker metadata so high-priority never doubles as the admission rule.
+    """
+    buckets = triage.get('all_entry_relevant_records') or {}
+    cohort: dict[str, dict[str, Any]] = {}
+    for state in ENTRY_RELEVANT_COHORT_STATES:
+        for row in buckets.get(state) or []:
+            ticker = row['ticker']
+            if ticker in cohort:
+                raise ValueError('PROSPECTIVE_COHORT_TICKER_IN_MULTIPLE_TRIAGE_STATES:' + ticker)
+            cohort[ticker] = {
+                'admission_state': state,
+                'admission_reason': 'FULL_UNIVERSE_ENTRY_CANDIDATE_TRIAGE_ENTRY_RELEVANT_STATE',
+                'high_priority_review_eligible': bool(row.get('high_priority_review_eligible')),
+            }
+    return cohort
+
+
+def _cohort_component_view(ticker: str, packet_records: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a per-ticker decision-packet view that never raises.
+
+    A single malformed or absent packet record degrades only that ticker's row to an
+    explicit UNAVAILABLE/MALFORMED state; it never aborts the rest of the cohort snapshot.
+    """
+    packet_row = packet_records.get(ticker)
+    if packet_row is None:
+        return {'decision_context': {}, 'components': {}, 'unresolved_components': [],
+                'authority_limitations': ['DECISION_PACKET_HAS_NO_RECORD_FOR_TICKER'],
+                'decision_packet_status': 'UNAVAILABLE_NOT_IN_PACKET'}
+    try:
+        decision_context = copy.deepcopy(packet_row['current_decision_context'])
+        components = copy.deepcopy(packet_row['components'])
+        unresolved = [str(x) for x in packet_row['unresolved_components']]
+        limitations = [str(x) for x in packet_row['authority_limitations']]
+        status = packet_row['packet_status']
+        if not isinstance(decision_context, Mapping) or not isinstance(components, Mapping) or not isinstance(status, str):
+            raise TypeError('MALFORMED_PACKET_ROW_SHAPE')
+    except (KeyError, TypeError):
+        return {'decision_context': {}, 'components': {}, 'unresolved_components': [],
+                'authority_limitations': ['DECISION_PACKET_ROW_MALFORMED_FOR_TICKER'],
+                'decision_packet_status': 'MALFORMED'}
+    return {'decision_context': decision_context, 'components': components,
+            'unresolved_components': sorted(unresolved), 'authority_limitations': limitations,
+            'decision_packet_status': status}
+
+
+def freeze_prospective_research_cohort(*, session: str, triage: Mapping[str, Any],
+                                       decision_packet: Mapping[str, Any] | None = None,
+                                       registered_source_identities: Mapping[str, str] = {},
+                                       full_universe_prospective_snapshot_id: str | None = None) -> dict[str, Any]:
+    """Freeze an explicit-cohort, richer sibling to freeze_current_decision_surface.
+
+    Scoped to the deterministic entry-relevant triage cohort (currently ~95 tickers, not the
+    2-5 name pilots this program started with) rather than the full official universe. Where a
+    same-session current_research_decision_packet is supplied and self-verifies, each row also
+    retains its scenario/risk/financial/event/valuation/historical component identities and
+    limitations; when it is not supplied (or one row is malformed), that record degrades to an
+    explicit unavailable/malformed state rather than blocking the batch. This is additive: it
+    never replaces or narrows freeze_current_decision_surface's full-universe lightweight freeze,
+    which remains the broader observational layer and may be cross-linked by identity only.
+    """
+    if not isinstance(session, str) or not session or triage.get('source_market_session') != session:
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_SESSION_MISMATCH')
+    cohort = resolve_entry_relevant_cohort(triage)
+    if not cohort:
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_EMPTY_COHORT')
+    packet_records: Mapping[str, Any] = {}
+    packet_identity = None
+    if decision_packet is not None:
+        from current_research_decision_packet import replay as _replay_packet
+        if decision_packet.get('research_session') != session:
+            raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_DECISION_PACKET_INVALID_OR_SESSION_MISMATCH')
+        _replay_packet(decision_packet)  # reuses the packet's own identity/coverage/forbidden-field gate
+        packet_records = decision_packet.get('records') or {}
+        packet_identity = decision_packet.get('artifact_identity')
+    rows = []
+    for ticker in sorted(cohort):
+        admission = cohort[ticker]
+        view = _cohort_component_view(ticker, packet_records)
+        rows.append({
+            'ticker': ticker, 'research_session': session, 'triage_state': admission['admission_state'],
+            'cohort_admission': admission, 'current_decision_context': view['decision_context'],
+            'components': view['components'], 'unresolved_components': view['unresolved_components'],
+            'authority_limitations': view['authority_limitations'],
+            'decision_packet_status': view['decision_packet_status'],
+            'decision_packet_identity': packet_identity if view['decision_packet_status'] not in ('UNAVAILABLE_NOT_IN_PACKET',) else None,
+        })
+    payload = {
+        'schema_version': '1.0.0', 'contract_version': PROSPECTIVE_RESEARCH_COHORT_SNAPSHOT_CONTRACT,
+        'authority': 'PROSPECTIVE_RESEARCH_NOT_BACKTEST_NOT_PREDICTIVE', 'research_session': session,
+        'cohort_definition': {'source': 'full_universe_entry_candidate_triage/v1',
+                              'admission_states': list(ENTRY_RELEVANT_COHORT_STATES),
+                              'admission_rule': 'MEMBERSHIP_IN_ANY_ENTRY_RELEVANT_STATE_NOT_HIGH_PRIORITY_SUBSET'},
+        'source_artifact_identities': {'triage': triage.get('artifact_identity'), 'decision_packet': packet_identity,
+                                       'full_universe_prospective_snapshot': full_universe_prospective_snapshot_id,
+                                       'session_registered_inputs': dict(sorted(registered_source_identities.items()))},
+        'frozen_records': rows, 'cohort_count': len(rows),
+        'state_counts': {state: sum(1 for r in rows if r['triage_state'] == state) for state in ENTRY_RELEVANT_COHORT_STATES},
+        'high_priority_review_eligible_count': sum(1 for r in rows if r['cohort_admission']['high_priority_review_eligible']),
+        'decision_packet_coverage': {'available': sum(1 for r in rows if r['decision_packet_status'] not in ('UNAVAILABLE_NOT_IN_PACKET', 'MALFORMED')),
+                                     'unavailable_or_malformed': sum(1 for r in rows if r['decision_packet_status'] in ('UNAVAILABLE_NOT_IN_PACKET', 'MALFORMED'))},
+        'future_outcomes': 'PENDING_FUTURE_OBSERVATION',
+        'authority_boundaries': ['NOT_RECOMMENDATION_AUTHORITY', 'NOT_POSITION_SIZING_AUTHORITY',
+                                 'SHADOW_VALUATION_NON_AUTHORITATIVE', 'NOT_HISTORICAL_PIT_BACKTEST',
+                                 'NO_SCORING_RANKING_OR_PROBABILITY_CALIBRATION'],
+    }
+    payload['snapshot_id'] = 'prospective_research_cohort_snapshot:' + _hash(payload)
+    return payload
+
+
+def replay_prospective_research_cohort_snapshot(snapshot: Mapping[str, Any]) -> None:
+    body = copy.deepcopy(dict(snapshot)); recorded = body.pop('snapshot_id', None)
+    if snapshot.get('contract_version') != PROSPECTIVE_RESEARCH_COHORT_SNAPSHOT_CONTRACT or recorded != 'prospective_research_cohort_snapshot:' + _hash(body):
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_IDENTITY_MISMATCH')
+    rows = snapshot.get('frozen_records') or []
+    if snapshot.get('cohort_count') != len(rows):
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_COUNT_MISMATCH')
+    tickers = [row['ticker'] for row in rows]
+    if len(set(tickers)) != len(tickers):
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_DUPLICATE_TICKER')
+    if sorted(tickers) != tickers:
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_NOT_SORTED')
+    counted = {state: sum(1 for row in rows if row['triage_state'] == state) for state in ENTRY_RELEVANT_COHORT_STATES}
+    if snapshot.get('state_counts') != counted:
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_STATE_COUNT_MISMATCH')
+    if snapshot.get('future_outcomes') != 'PENDING_FUTURE_OBSERVATION':
+        raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_FUTURE_OUTCOME_NOT_PENDING')
+    for row in rows:
+        if set(row) != _COHORT_ROW_KEYS:
+            raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_ROW_SCHEMA_MISMATCH:' + str(row.get('ticker')))
+        ctx = row['current_decision_context']
+        if any(key in ctx for key in _COHORT_FORBIDDEN_CONTEXT_KEYS):
+            raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_HINDSIGHT_OR_SCORING_FIELD_PRESENT:' + str(row.get('ticker')))
