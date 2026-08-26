@@ -57,18 +57,22 @@ def recovery_candidates(*, baseline_artifact: Mapping[str, Any], p3f9b_snapshot:
 
 
 def recovery_record(*, ticker: str, response: Mapping[str, Any], target_session: str,
-                    query: Mapping[str, Any], retrieved_at: str) -> dict[str, Any]:
+                    query: Mapping[str, Any], retrieved_at: str, attempt_count: int = 1) -> dict[str, Any]:
     """Preserve a single unmodified provider response while classifying technical usability."""
+    if attempt_count < 1:
+        raise ValueError("RECOVERY_ATTEMPT_COUNT_INVALID")
     if not response.get("ok"):
         return {
             "ticker": ticker, "state": "FETCH_FAILED", "reason": response.get("error_code", "FETCH_FAILED"),
             "query": dict(query), "provider": response.get("provider"), "endpoint": response.get("endpoint"),
+            "attempt_count": attempt_count,
         }
     body = response.get("body")
     if not isinstance(body, Mapping):
         return {
             "ticker": ticker, "state": "MALFORMED_RESPONSE", "reason": "BODY_NOT_OBJECT", "query": dict(query),
             "provider": response.get("provider"), "endpoint": response.get("endpoint"),
+            "attempt_count": attempt_count,
         }
     observations, target_problem = _observation_rows(
         body, requested_session=target_session, query=query, retrieved_at=retrieved_at,
@@ -80,6 +84,7 @@ def recovery_record(*, ticker: str, response: Mapping[str, Any], target_session:
             "provider": response.get("provider"), "endpoint": response.get("endpoint"),
             "payload_sha256": hashlib.sha256(_canonical_json(body).encode("utf-8")).hexdigest(),
             "observations": observations,
+            "attempt_count": attempt_count,
         }
     features = market_features([{"date": row["session"], "close": row["close"], "volume": row["volume"]} for row in observations])
     state = "RECOVERED_COMPLETE_TECHNICAL_HISTORY" if features.get("status") == "SHADOW_ONLY" else "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK"
@@ -88,6 +93,7 @@ def recovery_record(*, ticker: str, response: Mapping[str, Any], target_session:
         "query": dict(query), "provider": response.get("provider"), "endpoint": response.get("endpoint"),
         "payload_sha256": hashlib.sha256(_canonical_json(body).encode("utf-8")).hexdigest(),
         "observations": observations,
+        "attempt_count": attempt_count,
     }
 
 

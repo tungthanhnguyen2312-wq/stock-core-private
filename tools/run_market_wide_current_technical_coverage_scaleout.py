@@ -28,6 +28,18 @@ BASELINE = ROOT / "operations-review/market-wide-current-descriptive-research-v1
 SNAPSHOT = ROOT / "operations-review/p3f9b-market-wide-exact-session-scaleout-20260821/p3f9b_mva_exact_session_snapshot.json"
 OUT = ROOT / "operations-review/market-wide-current-technical-coverage-scaleout-v1-20260823"
 VN_TZ = timezone(timedelta(hours=7))
+MAX_TRANSIENT_TRANSPORT_ATTEMPTS = 3
+
+# ``fetch_capability_raw`` represents request transport exceptions with these stable error-code
+# suffixes. Keep this list narrower than its generic ``is_retryable`` helper: this recovery path
+# must not reissue rate-limited, authentication, HTTP, or provider-semantic responses.
+TRANSIENT_TRANSPORT_ERROR_CODES = frozenset({
+    "request_failed_ConnectionError",
+    "request_failed_ConnectTimeout",
+    "request_failed_ReadTimeout",
+    "request_failed_Timeout",
+    "request_failed_TimeoutError",
+})
 
 
 def _load(path: Path) -> dict:
@@ -60,10 +72,14 @@ def run_batch(*, baseline: Mapping, snapshot: Mapping, out: Path, batch: int, ba
         records = []
         for ticker in tickers:
             query = {"symbol": ticker, "resolution": "1D", "from": int(start.timestamp()), "to": int(end.timestamp()), "type": "STOCK"}
-            response = fetch_capability_raw("ohlc", api_key=credentials[0], api_secret=credentials[1], query=query)
+            for attempt_count in range(1, MAX_TRANSIENT_TRANSPORT_ATTEMPTS + 1):
+                response = fetch_capability_raw("ohlc", api_key=credentials[0], api_secret=credentials[1], query=query)
+                if (str(response.get("error_code", "")) not in TRANSIENT_TRANSPORT_ERROR_CODES
+                        or attempt_count == MAX_TRANSIENT_TRANSPORT_ATTEMPTS):
+                    break
             record = recovery_record(
                 ticker=ticker, response=response, target_session=snapshot["resolved_completed_session"],
-                query=query, retrieved_at=datetime.now(VN_TZ).isoformat(),
+                query=query, retrieved_at=datetime.now(VN_TZ).isoformat(), attempt_count=attempt_count,
             )
             records.append({**record, "raw_response_body": response.get("body") if response.get("ok") else None})
         payload = {
