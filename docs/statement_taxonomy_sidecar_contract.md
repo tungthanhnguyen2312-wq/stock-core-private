@@ -78,11 +78,20 @@ These match the 2026-08-02 shadow study exactly.
 
 ## Session binding
 
-The sidecar carries the `session_identity` it was built for. `export_ai_bundle.py` ignores
-a sidecar whose `session_identity` differs from the export's reference session, raises the
-`statement_taxonomy_sidecar_session_mismatch` data-quality flag, and proceeds with **no**
-taxonomy evidence — leaving the applicability gate on `insufficient_evidence` rather than
-binding a previous session's generated evidence into an exact-session artifact set.
+The sidecar carries the `session_identity` it was built for. `generated_at` and
+`session_identity` are envelope fields excluded from `records_fingerprint`; they are a
+packaging/coherence bind into an exact-session release, not a claim that the Circular
+template itself is a same-session market observation. Binding a previous session's sidecar
+JSON into a later market session (or rewriting only `session_identity` on those bytes) is
+forbidden. Rebuild from retained statement payloads with
+`tools/build_statement_taxonomy_sidecar.py` or
+`tools/materialize_canonical_trusted_subset_release.py`.
+
+`export_ai_bundle.py` ignores a sidecar whose `session_identity` differs from the export's
+reference session, raises the `statement_taxonomy_sidecar_session_mismatch` data-quality
+flag, and proceeds with **no** taxonomy evidence — leaving the applicability gate on
+`insufficient_evidence` rather than binding a previous session's generated evidence into an
+exact-session artifact set.
 
 When it is bound, its sha256 enters `bundle_manifest.json → trusted_subset.required_artifacts`,
 so any later edit to the sidecar invalidates the whole bundle at the Consumer.

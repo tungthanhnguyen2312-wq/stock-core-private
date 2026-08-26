@@ -1,5 +1,19 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-26 - Canonical trusted-subset financial-evidence bridge V1
+
+`CANONICAL_POST_CLOSE_ONE_COMMAND_PIPELINE_V1` trusted-subset gap: Outcome B, sidecar builder reused (Outcome A for taxonomy records only).
+
+Decisions:
+
+1. **Do not relabel the 2026-08-25 VCI sidecar.** `session_identity` is packaging excluded from `records_fingerprint`. A new market session rebuilds the sidecar from retained `data_bctc` payloads with a new envelope.
+2. **Do not route 2026-08-26 through `export_ai_bundle.py`.** That exporter still requires same-session `vn_stock.db` OHLCV, `ta_signals.csv`, and `live_universe_status=live`. Canonical runtime has none of those on-session; re-running those generators is out of scope.
+3. **Official citations are insufficient for taxonomy.** They carry canonical metrics, not Circular template `item_id` vocabularies. Taxonomy stays generated_evidence over retained statement payloads; source remains VCI; no official promotion.
+4. **Consumer contract unchanged.** `verify_exact_session_bundle` still requires the four declared artifacts. Sidecar-optional `present:false` exists in export, but `publish_release.py` still requires the allowlist of four. No Consumer edit.
+5. **Temp-only in this job.** Real `dashboard-runtime` is not written here. Owner runtime materialization is a separate authorized command.
+
+Validation: focused adapter tests (lookahead, relabel, missing taxonomy, hash mismatch, session mismatch, Consumer, no network imports); retained 2026-08-26 canonical temp replay; `publish_release.py` dry-run; `release_orchestrator.py all` dry-run `PUBLISH_READY=YES`; existing canonical runtime adapter tests unchanged; `py_compile`; `git diff --check`.
+
 ## 2026-08-26 - P0 Daily Producer Triage And Session Governance Recovery V1
 
 `P0_DAILY_PRODUCER_TRIAGE_AND_SESSION_GOVERNANCE_RECOVERY_V1 = DAILY_PRODUCER_TRIAGE_AND_SESSION_RECOVERY_PASS`.
