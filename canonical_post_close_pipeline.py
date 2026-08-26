@@ -26,6 +26,7 @@ import json
 import subprocess
 import sys
 from datetime import datetime
+from datetime import time as dt_time
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -72,9 +73,22 @@ OPTIONAL_REGISTRY_KEYS = ("official_universe", "event_context")
 # below that range so it never rejects a normal session while still catching a degenerate fetch.
 MIN_EXACT_SESSION_COVERAGE_RATIO = 0.20
 
+# Owner operational collection cutoff: same-day session evidence is not treated as eligible for
+# canonical post-close use before this local time, regardless of DNSE credential/API availability
+# or of the exchange's own ~15:00 close. This is an operational collection policy, not a claim
+# that providers can never revise data after this point.
+POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME = dt_time(18, 0)
+
 
 class CanonicalPostCloseError(ValueError):
     """A deliberately concise operational refusal, mirroring DailyProducerError's style."""
+
+
+class PreCutoffArtifactError(CanonicalPostCloseError):
+    """An existing same-session artifact fails the post-close eligibility contract (see
+    assert_post_close_eligible). Distinct from CanonicalPostCloseError so callers can catch this
+    specifically and redirect to a fresh acquisition attempt, rather than treating it as a hard
+    pipeline failure the way an unrelated CanonicalPostCloseError should be treated."""
 
 
 PROVIDER_ROLE_MATRIX = {
@@ -130,6 +144,117 @@ def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def assert_same_day_post_close_eligible(session: str, *, now: datetime | None = None) -> None:
+    """Fail closed before any acquisition/reuse attempt when the requested session is today's
+    Vietnam calendar date and it is not yet past the owner's collection cutoff. Deliberately
+    accepts an injectable `now` rather than calling the wall clock internally, so tests never
+    depend on real time and business logic elsewhere never has to hardwire it either. A session
+    strictly before today is never gated here -- only same-day requests are collection-cutoff
+    sensitive; a past completed session is governed by its own retained acquisition evidence.
+    """
+    now = now or vn_now()
+    local = now.astimezone(VN_TZ)
+    if session == local.date().isoformat() and local.time() < POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME:
+        raise CanonicalPostCloseError(
+            "REFUSE_CANONICAL_POST_CLOSE:COMPLETED_SESSION_EVIDENCE_NOT_YET_ELIGIBLE:"
+            f"session={session}:local_time={local.isoformat(timespec='seconds')}:"
+            f"cutoff={POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME.isoformat()}"
+        )
+
+
+def _exact_session_coverage(snapshot: Mapping[str, Any]) -> tuple[int, int, float]:
+    total = int(snapshot.get("attempted_candidate_count") or 0)
+    exact = int(snapshot.get("exact_session_observed_count") or 0)
+    ratio = (exact / total) if total else 0.0
+    return exact, total, ratio
+
+
+def assert_post_close_eligible(snapshot: Mapping[str, Any], session: str, *, now: datetime | None = None) -> None:
+    """The 5-point contract an *existing* same-session P3F9B snapshot must satisfy before this
+    pipeline may reuse it as canonical post-close evidence, rather than treating mere same-session
+    file presence as sufficient (that was the defect: an artifact genuinely acquired before the
+    owner's collection cutoff can still have resolved_completed_session == session and look
+    self-consistent). Raises PreCutoffArtifactError -- distinct from a hard pipeline failure --
+    naming exactly which condition failed; callers should catch it and redirect to a fresh
+    acquisition rather than propagate it.
+    """
+    now = now or vn_now()
+    # 1. session identity
+    if snapshot.get("resolved_completed_session") != session or snapshot.get("retained_snapshot_session") != session:
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_SESSION_IDENTITY_MISMATCH:" + session)
+    # 4. required lineage/hash metadata present
+    identity, sha = snapshot.get("snapshot_identity"), snapshot.get("snapshot_sha256")
+    if not isinstance(identity, str) or not isinstance(sha, str) or not identity.endswith(sha):
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_LINEAGE_HASH_METADATA_MISSING:" + session)
+    # 3. upstream acquisition has a terminal/complete status for its own contract
+    if snapshot.get("contract_version") != "p3f9_exact_session_mva_snapshot/v2":
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_UPSTREAM_CONTRACT_UNRECOGNIZED:" + session)
+    if snapshot.get("materialization_scope") != "FULL_CANONICAL_CANDIDATE_SET":
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_NOT_FULL_UNIVERSE_SCOPE:" + session)
+    if snapshot.get("unattempted_without_explicit_disposition") not in (0, None):
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_HAS_UNATTEMPTED_CANDIDATES:" + session)
+    # 5. not merely a partial artifact from an interrupted acquisition
+    exact, total, ratio = _exact_session_coverage(snapshot)
+    if total <= 0 or ratio < MIN_EXACT_SESSION_COVERAGE_RATIO:
+        raise PreCutoffArtifactError(
+            f"EXISTING_ARTIFACT_PARTIAL_OR_INTRADAY_EVIDENCE:session={session}:exact={exact}:total={total}:ratio={ratio:.4f}"
+        )
+    # 2. acquisition/request timestamp satisfies the canonical post-close eligibility contract
+    requested_at_raw = snapshot.get("requested_at")
+    if not isinstance(requested_at_raw, str) or not requested_at_raw:
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_ACQUISITION_TIMESTAMP_MISSING:" + session)
+    try:
+        acquired_at = datetime.fromisoformat(requested_at_raw)
+    except ValueError as exc:
+        raise PreCutoffArtifactError("EXISTING_ARTIFACT_ACQUISITION_TIMESTAMP_UNPARSEABLE:" + session) from exc
+    acquired_local = (acquired_at if acquired_at.tzinfo else acquired_at.replace(tzinfo=VN_TZ)).astimezone(VN_TZ)
+    if acquired_local.date().isoformat() == session and acquired_local.time() < POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME:
+        raise PreCutoffArtifactError(
+            f"PRE_CUTOFF_RETAINED_NOT_POST_CLOSE_ELIGIBLE:session={session}:"
+            f"acquired_at_local={acquired_local.isoformat(timespec='seconds')}:"
+            f"cutoff={POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME.isoformat()}"
+        )
+
+
+def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None = None) -> tuple[Path, dict[str, Any]]:
+    """Decide where THIS run's DNSE acquisition/materialization chain should read and write.
+
+    Defaults to `root` (Level-2's own static per-session paths), exactly as before this fix, when
+    no same-session P3F9B snapshot exists yet or the existing one is genuinely post-close eligible
+    (real idempotent reuse -- no unnecessary network acquisition on an identical rerun). Only when
+    an existing snapshot is found and fails assert_post_close_eligible does this redirect to a
+    fresh, distinctly-named attempt directory nested under the same session's operations-review
+    namespace, so the ineligible artifact is never overwritten, relabeled, or silently resumed
+    from -- the smallest available run/attempt/output-directory mechanism, not a second data lake.
+    """
+    now = now or vn_now()
+    assert_same_day_post_close_eligible(session, now=now)
+    default_paths = level2.session_artifact_paths(root, session)
+    existing = _load(default_paths["exact_session_snapshot"])
+    if existing is None:
+        return root, {"redirected": False, "reason": "NO_EXISTING_ARTIFACT_FOR_SESSION"}
+    try:
+        assert_post_close_eligible(existing, session, now=now)
+    except PreCutoffArtifactError as exc:
+        attempt_root = (
+            root / "operations-review" / "canonical-post-close-v1" / session
+            / f"post-close-attempt-{now.astimezone(VN_TZ).strftime('%H%M%S')}"
+        )
+        return attempt_root, {
+            "redirected": True,
+            "reason": str(exc),
+            "pre_cutoff_artifact_classification": "PRE_CUTOFF_RETAINED_NOT_POST_CLOSE_ELIGIBLE",
+            "pre_cutoff_artifact_path": _rel(root, default_paths["exact_session_snapshot"]),
+            "pre_cutoff_artifact_identity": existing.get("snapshot_identity"),
+            "fresh_attempt_root": _rel(root, attempt_root),
+        }
+    return root, {
+        "redirected": False,
+        "reused_existing_eligible_artifact": True,
+        "artifact_identity": existing.get("snapshot_identity"),
+    }
+
+
 def acquire_and_materialize(
     root: Path, session: str, runtime_root: Path, *, workers: int = 12, now: datetime | None = None,
 ) -> dict[str, Any]:
@@ -137,12 +262,15 @@ def acquire_and_materialize(
 
     Wholly delegates to daily_session_level2_package -- this pipeline adds no second research
     engine. Raises CanonicalPostCloseError if the acquired snapshot's own resolved session does
-    not exactly equal the requested session (no silent prior-session substitution).
+    not exactly equal the requested session (no silent prior-session substitution), or if an
+    existing same-session snapshot exists but is not post-close eligible and today's collection
+    cutoff has not yet passed (resolve_acquisition_root's same-day gate).
     """
     now = now or vn_now()
-    paths = level2.session_artifact_paths(root, session)
+    artifact_root, eligibility = resolve_acquisition_root(root, session, now=now)
+    paths = level2.session_artifact_paths(artifact_root, session)
     try:
-        level2.materialize_independent_components(root, session, runtime_root, workers=workers, now=now)
+        level2.materialize_independent_components(artifact_root, session, runtime_root, workers=workers, now=now)
     except ValueError as exc:
         if str(exc).startswith("P3F9B_ACQUIRED_SESSION_MISMATCH"):
             raise CanonicalPostCloseError(
@@ -154,28 +282,31 @@ def acquire_and_materialize(
     snapshot = _load(paths["exact_session_snapshot"])
     if not snapshot:
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXACT_SESSION_SNAPSHOT_MISSING_AFTER_ACQUISITION")
-    total = int((snapshot.get("acquisition_cohort") or {}).get("total_candidates") or 0)
-    exact = int((snapshot.get("exact_session_dispositions") or {}).get("exact_session_retained_count") or 0)
-    coverage_ratio = (exact / total) if total else 0.0
+    exact, total, coverage_ratio = _exact_session_coverage(snapshot)
     if coverage_ratio < MIN_EXACT_SESSION_COVERAGE_RATIO:
         raise CanonicalPostCloseError(
             f"REFUSE_CANONICAL_POST_CLOSE:PARTIAL_OR_INTRADAY_SESSION_EVIDENCE:"
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
         )
-    triage_result = level2.maybe_build_triage_dependent(root, session)
-    registry = load_registry(root)
-    triage_status = level2.session_triage_status(root, session, registry)
-    if triage_status["status"] != level2.EXACT_SESSION_CLEAN:
+    triage_build_result = level2.maybe_build_triage_dependent(artifact_root, session)
+    # Ground-truth check on the triage file itself, matching maybe_build_triage_dependent's own
+    # fallback (registry-based session_triage_status would require this session to already be
+    # registered, which it deliberately is not yet at this point in the pipeline -- registration
+    # happens after acquisition, consuming this very artifact).
+    triage_artifact = _load(paths["session_triage"])
+    if not triage_artifact or triage_artifact.get("source_market_session") != session:
         raise CanonicalPostCloseError(
-            "REFUSE_CANONICAL_POST_CLOSE:TRIAGE_NOT_EXACT_SESSION_CLEAN:" + json.dumps(triage_status, default=str)
+            "REFUSE_CANONICAL_POST_CLOSE:TRIAGE_NOT_EXACT_SESSION_CLEAN:session=" + session
         )
     return {
         "snapshot": snapshot,
         "resolved_completed_session": snapshot.get("resolved_completed_session"),
         "coverage": {"exact_session_retained_count": exact, "total_candidates": total, "ratio": coverage_ratio},
-        "triage_status": triage_status,
-        "triage_build_result": triage_result,
+        "triage_status": {"status": level2.EXACT_SESSION_CLEAN, "identity": triage_artifact.get("artifact_identity")},
+        "triage_build_result": triage_build_result,
         "paths": paths,
+        "artifact_root": artifact_root,
+        "eligibility": eligibility,
     }
 
 
@@ -190,15 +321,22 @@ def enrichment_output_path(root: Path, session: str, name: str) -> Path:
     return root / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / f"{name}.json"
 
 
-def build_enrichment_components(root: Path, session: str) -> dict[str, Any]:
+def build_enrichment_components(root: Path, session: str, *, artifact_root: Path | None = None) -> dict[str, Any]:
     """Best-effort materialize the three current-research components no orchestrator wires today
     (historical context, financial momentum, corporate event context). Each is fully independent;
     a failure in one never blocks the others or the rest of the pipeline -- component-local
     missing evidence stays component-local, per docs/AI_RULES.md invariant 6. A failed fresh build
     degrades to Level-2's shared prior-as-of file (still real retained evidence, just not
     session-pinned) rather than leaving the component wholly absent.
+
+    `artifact_root` (defaulting to `root`) is where the Level-2 inputs this reads are looked up --
+    it is whatever acquire_and_materialize()'s eligibility check resolved for THIS run, which may
+    be a fresh-attempt directory rather than `root` itself. Output always stays under `root`
+    (this pipeline's own enrichment namespace never collides with a pre-cutoff artifact, since
+    that namespace does not exist until this function runs).
     """
-    paths = level2.session_artifact_paths(root, session)
+    artifact_root = artifact_root or root
+    paths = level2.session_artifact_paths(artifact_root, session)
     results: dict[str, Any] = {}
 
     def _attempt(name: str, level2_key: str, fn) -> None:
@@ -250,7 +388,9 @@ def build_enrichment_components(root: Path, session: str) -> dict[str, Any]:
     return results
 
 
-def register_session_inputs(root: Path, session: str, *, registry_path: Path | None = None) -> dict[str, Any]:
+def register_session_inputs(
+    root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
+) -> dict[str, Any]:
     """Write config/daily_research_session_input_registry.json's sessions[session] entry.
 
     No such writer existed in the repository before this pipeline (confirmed by exhaustive
@@ -258,10 +398,16 @@ def register_session_inputs(root: Path, session: str, *, registry_path: Path | N
     the exact shape of the three existing hand-written entries and refuses (never overwrites) a
     conflicting already-frozen completed_sessions[session] lock, matching
     daily_research_session_operations.assert_completed_session_inputs_locked semantics.
+
+    `artifact_root` (defaulting to `root`) is where the Level-2 artifacts this reads are looked
+    up (see build_enrichment_components); recorded registry paths are always computed relative to
+    the real `root`, so daily_research_session_operations.resolve_inputs() resolves them correctly
+    regardless of how deep the source artifact is nested under a fresh-attempt directory.
     """
+    artifact_root = artifact_root or root
     path = registry_path or root / "config" / "daily_research_session_input_registry.json"
     registry = json.loads(path.read_text(encoding="utf-8"))
-    paths = level2.session_artifact_paths(root, session)
+    paths = level2.session_artifact_paths(artifact_root, session)
     selection: dict[str, dict[str, str]] = {}
     for registry_key, level2_key in REGISTRY_KEY_TO_LEVEL2_KEY.items():
         artifact_path = paths[level2_key]
@@ -336,6 +482,7 @@ def validate_and_freeze_completed_session(
 def build_decision_packet(
     root: Path, session: str, *,
     opportunity: Mapping[str, Any] | None = None, enrichment: Mapping[str, Any] | None = None,
+    artifact_root: Path | None = None,
 ) -> dict[str, Any] | None:
     """Build current_research_decision_packet/v1 for this session, degrading gracefully.
 
@@ -345,10 +492,15 @@ def build_decision_packet(
     financial_momentum/corporate_event/historical are read from the in-memory enrichment result
     (build_enrichment_components' return value) so a freshly session-scoped build is preferred
     over Level-2's shared prior-as-of file without this function needing to know the difference.
+
+    `artifact_root` (defaulting to `root`) governs both where the Level-2 inputs are read from
+    and where the packet itself is written, so a fresh-attempt run never writes its packet over
+    Level-2's shared static per-session decision-packet path if a different attempt already has.
     """
     from current_research_decision_packet import build_artifact
 
-    paths = level2.session_artifact_paths(root, session)
+    artifact_root = artifact_root or root
+    paths = level2.session_artifact_paths(artifact_root, session)
     opportunity = opportunity if opportunity is not None else _load(paths["opportunity_prioritization"])
     if not opportunity:
         return None
@@ -374,9 +526,18 @@ def build_decision_packet(
     return packet
 
 
-def run_prospective_collection(root: Path, session: str) -> dict[str, Any] | None:
-    """Post-hoc, non-blocking: a failure here never revises the completed Daily Producer result."""
-    paths = level2.session_artifact_paths(root, session)
+def run_prospective_collection(
+    root: Path, session: str, *, artifact_root: Path | None = None,
+) -> dict[str, Any] | None:
+    """Post-hoc, non-blocking: a failure here never revises the completed Daily Producer result.
+
+    `artifact_root` (defaulting to `root`) locates the decision packet build_decision_packet just
+    wrote for THIS run; prospective collection's own output always stays under `root`
+    (unaffected by any fresh-attempt redirect -- that namespace is not session-templated per
+    attempt and was never touched by an earlier pre-cutoff run).
+    """
+    artifact_root = artifact_root or root
+    paths = level2.session_artifact_paths(artifact_root, session)
     packet_path = paths["decision_packet"]
     cmd = [sys.executable, "tools/run_prospective_research_cohort_collection.py", "--session", session]
     if packet_path.is_file():
@@ -394,15 +555,18 @@ def build_tiered_bundle(
     acquisition: Mapping[str, Any], producer_result: Mapping[str, Any],
     decision_packet: Mapping[str, Any] | None, prospective: Mapping[str, Any] | None,
     enrichment: Mapping[str, Any], producer_head: str | None, consumer_head: str | None,
+    artifact_root: Path | None = None,
 ) -> dict[str, Any]:
+    artifact_root = artifact_root or root
+    level2_paths = level2.session_artifact_paths(artifact_root, session)
     bundle_dir = root / "operations-review" / "canonical-post-close-v1" / session
     manifest = producer_result["manifest"]
     operation = producer_result["operation"]
     product = operation["product"]
-    triage = _load(level2.session_artifact_paths(root, session)["session_triage"])
-    tactical = _load(level2.session_artifact_paths(root, session)["tactical_classifier"])
+    triage = _load(level2_paths["session_triage"])
+    tactical = _load(level2_paths["tactical_classifier"])
     breadth = (product.get("market_brief") or {}).get("coverage") or {}
-    descriptive = _load(level2.session_artifact_paths(root, session)["descriptive_research"]) or {}
+    descriptive = _load(level2_paths["descriptive_research"]) or {}
     market_breadth = descriptive.get("market_breadth") or {}
     tactical_counts = (tactical or {}).get("coverage", {}).get("entry_state_counts") or {}
 
@@ -455,12 +619,12 @@ def build_tiered_bundle(
         "authority_boundary": manifest["authority_boundary"],
     }
 
-    decision_queue = _load(level2.session_artifact_paths(root, session)["opportunity_prioritization"])
+    decision_queue = _load(level2_paths["opportunity_prioritization"])
     tier2 = {
         **shared_lineage,
         "tier": "OPPORTUNITY_RESEARCH_BUNDLE",
         "current_research_decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
-        "current_research_decision_packet_path": _rel(root, level2.session_artifact_paths(root, session)["decision_packet"]) if decision_packet else None,
+        "current_research_decision_packet_path": _rel(root, level2_paths["decision_packet"]) if decision_packet else None,
         "opportunity_prioritization_identity": (decision_queue or {}).get("artifact_identity"),
         "entry_relevant_states": ("BASE_BUILDING", "BREAKOUT_READY", "EARLY_REVERSAL_CANDIDATE"),
         "cohort_tickers_by_state": {
@@ -510,8 +674,8 @@ def run_canonical_post_close(
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXPLICIT_SESSION_REQUIRED")
     now = now or vn_now()
     acquisition = acquire_and_materialize(root, session, runtime_root, workers=workers, now=now)
-    build_enrichment_components(root, session)
-    register_session_inputs(root, session)
+    artifact_root = acquisition["artifact_root"]
+    register_session_inputs(root, session, artifact_root=artifact_root)
     validate_and_freeze_completed_session(root, session)
     producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
     try:
@@ -522,15 +686,16 @@ def run_canonical_post_close(
         )
     except DailyProducerError as exc:
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:DAILY_PRODUCER_INTEGRITY_FAILURE:" + str(exc)) from exc
-    enrichment = build_enrichment_components(root, session)
+    enrichment = build_enrichment_components(root, session, artifact_root=artifact_root)
     decision_packet = build_decision_packet(
         root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,
+        artifact_root=artifact_root,
     )
-    prospective = run_prospective_collection(root, session)
+    prospective = run_prospective_collection(root, session, artifact_root=artifact_root)
     tiers = build_tiered_bundle(
         root, session, acquisition=acquisition, producer_result=producer_result,
         decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
-        producer_head=producer_head, consumer_head=consumer_head,
+        producer_head=producer_head, consumer_head=consumer_head, artifact_root=artifact_root,
     )
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,

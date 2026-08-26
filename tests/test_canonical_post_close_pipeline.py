@@ -40,6 +40,36 @@ def _minimal_fake_result(tmp_path):
     }
 
 
+def _make_snapshot(session, *, requested_at, exact, total, **extra):
+    return {
+        "resolved_completed_session": session,
+        "retained_snapshot_session": session,
+        "snapshot_sha256": "a" * 64,
+        "snapshot_identity": "p3f9_exact_session_snapshot:" + "a" * 64,
+        "contract_version": "p3f9_exact_session_mva_snapshot/v2",
+        "materialization_scope": "FULL_CANONICAL_CANDIDATE_SET",
+        "unattempted_without_explicit_disposition": 0,
+        "attempted_candidate_count": total,
+        "exact_session_observed_count": exact,
+        "requested_at": requested_at,
+        **extra,
+    }
+
+
+def _write_snapshot(paths, session, **kwargs):
+    snapshot = _make_snapshot(session, **kwargs)
+    paths["exact_session_snapshot"].parent.mkdir(parents=True, exist_ok=True)
+    paths["exact_session_snapshot"].write_text(json.dumps(snapshot), encoding="utf-8")
+    return snapshot
+
+
+def _write_triage(paths, session):
+    triage = {"source_market_session": session, "artifact_identity": "full_universe_entry_candidate_triage:" + "b" * 64}
+    paths["session_triage"].parent.mkdir(parents=True, exist_ok=True)
+    paths["session_triage"].write_text(json.dumps(triage), encoding="utf-8")
+    return triage
+
+
 # --- 1. explicit requested session required ---
 
 def test_explicit_session_required_by_pipeline():
@@ -59,19 +89,14 @@ def test_explicit_session_required_by_cli(capsys):
 def test_partial_session_evidence_fails_closed(tmp_path, monkeypatch):
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
+    now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate; isolates the coverage check
 
     def fake_materialize(root, sess, runtime_root, workers=12, now=None):
-        snapshot = {
-            "resolved_completed_session": session,
-            "acquisition_cohort": {"total_candidates": 1683},
-            "exact_session_dispositions": {"exact_session_retained_count": 10},
-        }
-        paths["exact_session_snapshot"].parent.mkdir(parents=True, exist_ok=True)
-        paths["exact_session_snapshot"].write_text(json.dumps(snapshot), encoding="utf-8")
+        _write_snapshot(paths, session, requested_at=f"{session}T16:07:09+07:00", exact=10, total=1683)
 
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
     with pytest.raises(cpc.CanonicalPostCloseError, match="PARTIAL_OR_INTRADAY_SESSION_EVIDENCE"):
-        cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime")
+        cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
 
 
 # --- 3. canonical mode does not use legacy VCI/KBS acquisition ---
@@ -108,24 +133,22 @@ def test_canonical_post_close_flag_never_invokes_legacy_step_runner(tmp_path, mo
 def test_acquisition_provenance_passthrough(tmp_path, monkeypatch):
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
-    snapshot = {
-        "resolved_completed_session": session,
-        "acquisition_cohort": {"total_candidates": 1000},
-        "exact_session_dispositions": {"exact_session_retained_count": 500},
-        "provider": "DNSE",
-        "artifact_identity": "p3f9_exact_session_mva_snapshot:deadbeef",
-    }
+    now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
 
     def fake_materialize(root, sess, runtime_root, workers=12, now=None):
-        paths["exact_session_snapshot"].parent.mkdir(parents=True, exist_ok=True)
-        paths["exact_session_snapshot"].write_text(json.dumps(snapshot), encoding="utf-8")
+        _write_snapshot(
+            paths, session, requested_at=f"{session}T19:05:00+07:00", exact=500, total=1000,
+            provider="DNSE", artifact_identity="p3f9_exact_session_mva_snapshot:deadbeef",
+        )
+
+    def fake_maybe_build_triage(root, s):
+        _write_triage(paths, s)
+        return {"built": True}
 
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
-    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", lambda root, s: {"built": False})
-    monkeypatch.setattr(cpc.level2, "session_triage_status", lambda root, s, registry: {"status": cpc.level2.EXACT_SESSION_CLEAN})
-    monkeypatch.setattr(cpc, "load_registry", lambda root: {})
+    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_maybe_build_triage)
 
-    result = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime")
+    result = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
     assert result["snapshot"]["artifact_identity"] == "p3f9_exact_session_mva_snapshot:deadbeef"
     assert result["snapshot"]["provider"] == "DNSE"
     assert result["resolved_completed_session"] == session
@@ -138,22 +161,20 @@ def test_acquisition_never_writes_into_runtime_root(tmp_path, monkeypatch):
     runtime_root = tmp_path / "runtime"
     runtime_root.mkdir()
     paths = level2.session_artifact_paths(tmp_path, session)
+    now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
 
     def fake_materialize(root, sess, runtime_root_arg, workers=12, now=None):
         assert runtime_root_arg == runtime_root
-        paths["exact_session_snapshot"].parent.mkdir(parents=True, exist_ok=True)
-        paths["exact_session_snapshot"].write_text(json.dumps({
-            "resolved_completed_session": session,
-            "acquisition_cohort": {"total_candidates": 100},
-            "exact_session_dispositions": {"exact_session_retained_count": 50},
-        }), encoding="utf-8")
+        _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=50, total=100)
+
+    def fake_maybe_build_triage(root, s):
+        _write_triage(paths, s)
+        return {"built": True}
 
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
-    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", lambda root, s: {"built": False})
-    monkeypatch.setattr(cpc.level2, "session_triage_status", lambda root, s, registry: {"status": cpc.level2.EXACT_SESSION_CLEAN})
-    monkeypatch.setattr(cpc, "load_registry", lambda root: {})
+    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_maybe_build_triage)
 
-    cpc.acquire_and_materialize(tmp_path, session, runtime_root)
+    cpc.acquire_and_materialize(tmp_path, session, runtime_root, now=now)
     assert list(runtime_root.iterdir()) == []
 
 
@@ -226,7 +247,7 @@ def test_frozen_conflicting_identity_refused(tmp_path, monkeypatch):
 
 def _patch_full_pipeline_stages(monkeypatch, order, tmp_path, *, prospective_result=None):
     monkeypatch.setattr(cpc, "acquire_and_materialize", lambda *a, **k: order.append("acquire") or {
-        "snapshot": {}, "resolved_completed_session": "2026-08-26", "coverage": {},
+        "snapshot": {}, "resolved_completed_session": "2026-08-26", "coverage": {}, "artifact_root": tmp_path,
     })
     monkeypatch.setattr(cpc, "build_enrichment_components", lambda *a, **k: order.append("enrich") or {})
     monkeypatch.setattr(cpc, "register_session_inputs", lambda *a, **k: order.append("register") or {})
@@ -358,6 +379,193 @@ def test_acquired_session_mismatch_never_silently_substituted(tmp_path, monkeypa
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
     with pytest.raises(cpc.CanonicalPostCloseError, match="never silently substituting"):
         cpc.acquire_and_materialize(tmp_path, requested, tmp_path / "runtime")
+
+
+# =====================================================================================
+# Pre-cutoff artifact reuse fix: session identity alone is not post-close eligibility.
+# =====================================================================================
+
+# --- 1. same-day canonical run before 18:00 fails closed ---
+
+def test_same_day_run_before_cutoff_fails_closed():
+    now = datetime(2026, 8, 26, 17, 59, tzinfo=VN_TZ)
+    with pytest.raises(cpc.CanonicalPostCloseError, match="COMPLETED_SESSION_EVIDENCE_NOT_YET_ELIGIBLE"):
+        cpc.assert_same_day_post_close_eligible("2026-08-26", now=now)
+
+
+def test_same_day_run_at_or_after_cutoff_is_allowed():
+    now = datetime(2026, 8, 26, 18, 0, tzinfo=VN_TZ)
+    cpc.assert_same_day_post_close_eligible("2026-08-26", now=now)  # does not raise
+
+
+def test_past_session_is_never_gated_by_same_day_cutoff():
+    # A prior day's session is governed by its own retained acquisition evidence, not today's clock.
+    now = datetime(2026, 8, 26, 9, 0, tzinfo=VN_TZ)
+    cpc.assert_same_day_post_close_eligible("2026-08-25", now=now)  # does not raise
+
+
+# --- 2. credentials/API availability does not bypass the gate ---
+
+def test_gate_is_a_pure_function_of_session_and_clock_not_credentials(monkeypatch):
+    # Simulate credentials being fully configured/reachable; the gate must still fire, because it
+    # never inspects credential or API state at all -- only session identity and the injected clock.
+    monkeypatch.setattr("dnse_secrets_env.ensure_credentials_loaded", lambda: {"configured": True})
+    monkeypatch.setattr("dnse_access.credentials_for_request", lambda: ("fake-key", "fake-secret"))
+    now = datetime(2026, 8, 26, 12, 0, tzinfo=VN_TZ)
+    with pytest.raises(cpc.CanonicalPostCloseError, match="COMPLETED_SESSION_EVIDENCE_NOT_YET_ELIGIBLE"):
+        cpc.assert_same_day_post_close_eligible("2026-08-26", now=now)
+
+
+# --- 3, 4, 5. existing pre-cutoff artifact is not reused; stays byte-preserved; fresh eligible
+#              artifact coexists alongside it without overwriting ---
+
+def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexists(tmp_path, monkeypatch):
+    session = "2026-08-26"
+    default_paths = level2.session_artifact_paths(tmp_path, session)
+    pre_cutoff = _write_snapshot(default_paths, session, requested_at=f"{session}T16:07:09+07:00", exact=889, total=1683)
+    original_bytes = default_paths["exact_session_snapshot"].read_bytes()
+
+    now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)  # past the cutoff
+
+    def fake_materialize(root, sess, runtime_root, workers=12, now=None):
+        fresh_paths = level2.session_artifact_paths(root, sess)
+        _write_snapshot(fresh_paths, session, requested_at=f"{session}T19:05:00+07:00", exact=1200, total=1683)
+
+    def fake_maybe_build_triage(root, s):
+        _write_triage(level2.session_artifact_paths(root, s), s)
+        return {"built": True}
+
+    monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
+    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_maybe_build_triage)
+
+    result = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
+
+    assert result["artifact_root"] != tmp_path  # redirected to a fresh-attempt directory
+    assert result["eligibility"]["redirected"] is True
+    assert result["eligibility"]["pre_cutoff_artifact_classification"] == "PRE_CUTOFF_RETAINED_NOT_POST_CLOSE_ELIGIBLE"
+    # pre-cutoff artifact byte-preserved, never rewritten/relabeled
+    assert default_paths["exact_session_snapshot"].read_bytes() == original_bytes
+    assert json.loads(original_bytes)["exact_session_observed_count"] == 889
+    # the fresh, now-eligible artifact coexists at a distinct path with its own (different) content
+    fresh_snapshot_path = level2.session_artifact_paths(result["artifact_root"], session)["exact_session_snapshot"]
+    assert fresh_snapshot_path != default_paths["exact_session_snapshot"]
+    assert fresh_snapshot_path.is_file()
+    assert result["snapshot"]["exact_session_observed_count"] == 1200
+    assert result["snapshot"] != pre_cutoff
+
+
+# --- 6. downstream uses the selected eligible artifact identity/path, not a rediscovered static one ---
+
+def test_registration_reads_from_the_redirected_artifact_root_not_the_default_path(tmp_path):
+    session = "2026-08-26"
+    attempt_root = tmp_path / "operations-review" / "canonical-post-close-v1" / session / "post-close-attempt-190500"
+    fresh_paths = level2.session_artifact_paths(attempt_root, session)
+    for reg_key, l2_key in cpc.REGISTRY_KEY_TO_LEVEL2_KEY.items():
+        artifact = {"artifact_identity": f"{l2_key}:fresh-{reg_key}", "session": session, "source_market_session": session, "valuation_session": session, "research_session": session}
+        path = fresh_paths[l2_key]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(artifact), encoding="utf-8")
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_text(json.dumps({"schema_version": "1.0.0", "contract_version": "daily_research_session_input_registry/v1", "completed_sessions": {}, "sessions": {}}), encoding="utf-8")
+
+    result = cpc.register_session_inputs(tmp_path, session, registry_path=registry_path, artifact_root=attempt_root)
+
+    assert result["status"] == "REGISTERED"
+    for reg_key in cpc.REQUIRED_REGISTRY_KEYS:
+        recorded_path = result["selection"][reg_key]["path"]
+        assert "post-close-attempt-190500" in recorded_path  # points at the selected attempt, not the default static path
+        assert (tmp_path / recorded_path).is_file()  # resolves correctly relative to the real root
+
+
+# --- 7. pre-cutoff partial liquidity batches are not silently reused against a new upstream identity ---
+
+def test_fresh_attempt_is_isolated_from_pre_cutoff_partial_liquidity_batches(tmp_path):
+    session = "2026-08-26"
+    default_paths = level2.session_artifact_paths(tmp_path, session)
+    _write_snapshot(default_paths, session, requested_at=f"{session}T16:07:09+07:00", exact=889, total=1683)
+    # simulate the genuinely partial liquidity-batch state left by the interrupted pre-cutoff run
+    partial_batch = default_paths["liquidity_research"].parent / "batches" / "batch-000.json"
+    partial_batch.parent.mkdir(parents=True, exist_ok=True)
+    partial_batch.write_text("{}", encoding="utf-8")
+
+    now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)
+    artifact_root, info = cpc.resolve_acquisition_root(tmp_path, session, now=now)
+
+    assert info["redirected"] is True
+    fresh_liquidity_dir = level2.session_artifact_paths(artifact_root, session)["liquidity_research"].parent
+    default_liquidity_dir = default_paths["liquidity_research"].parent
+    assert fresh_liquidity_dir != default_liquidity_dir
+    # the fresh namespace has never seen the old partial batches -- nothing to silently resume from
+    assert not (fresh_liquidity_dir / "batches").exists()
+    # the old partial batch itself is untouched
+    assert partial_batch.is_file()
+
+
+# --- 8. valid terminal post-cutoff rerun is idempotent (no unnecessary network acquisition) ---
+
+def test_eligible_post_cutoff_artifact_rerun_is_idempotent_no_redirect(tmp_path):
+    session = "2026-08-25"  # a prior day -- same-day cutoff does not apply
+    paths = level2.session_artifact_paths(tmp_path, session)
+    _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=900, total=1683)
+    now = datetime(2026, 8, 26, 10, 0, tzinfo=VN_TZ)
+
+    root1, info1 = cpc.resolve_acquisition_root(tmp_path, session, now=now)
+    root2, info2 = cpc.resolve_acquisition_root(tmp_path, session, now=now)
+
+    assert root1 == root2 == tmp_path
+    assert info1["redirected"] is False and info1.get("reused_existing_eligible_artifact") is True
+    assert info2["redirected"] is False and info2.get("reused_existing_eligible_artifact") is True
+
+
+# --- 9. requested session mismatch still fails: see test_acquired_session_mismatch_never_silently_substituted above ---
+# --- 10. legacy VCI/KBS unreachable from --canonical-post-close: see test_module_never_references_legacy_vci_kbs_route
+#         and test_canonical_post_close_flag_never_invokes_legacy_step_runner above ---
+# --- 11a. no Dashboard mutation: see test_module_never_invokes_dashboard_publication above ---
+
+# --- 11b. no Consumer (ai-core-private) mutation ---
+
+def test_module_never_mutates_consumer_repository():
+    # ai-core-private is referenced exactly once, for a read-only `git rev-parse HEAD` provenance
+    # stamp (_git_head) -- never opened, written to, or otherwise mutated.
+    source = (ROOT / "canonical_post_close_pipeline.py").read_text(encoding="utf-8")
+    assert source.count('"ai-core-private"') == 1
+    assert 'root.parent / "ai-core-private"' in source
+
+
+# --- 12. no authority promotion: bundle tiers pass authority fields through verbatim ---
+
+def test_tiered_bundle_never_invents_authority_only_passes_it_through(tmp_path):
+    sentinel_authority = {"is_actionable": False, "no_recommendation": True, "sentinel_marker": "NOT_INVENTED_HERE"}
+    session = "2026-08-25"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    for key in ("session_triage", "tactical_classifier", "descriptive_research", "opportunity_prioritization", "decision_packet"):
+        paths[key].parent.mkdir(parents=True, exist_ok=True)
+        paths[key].write_text(json.dumps({"records": {}}), encoding="utf-8")
+    run_dir = tmp_path / "run"
+    (run_dir / "dashboard").mkdir(parents=True, exist_ok=True)
+    (run_dir / "ai_research_full_universe.ndjson").write_text("", encoding="utf-8")
+    (run_dir / "ai_research_bundle_manifest.json").write_text("{}", encoding="utf-8")
+    (run_dir / "dashboard" / "current_decision_cockpit_projection.json").write_text("{}", encoding="utf-8")
+    (run_dir / "run_manifest.json").write_text("{}", encoding="utf-8")
+    producer_result = {
+        "run_identity": "daily_producer_run:fake", "run_dir": run_dir, "status": "COMPLETED",
+        "manifest": {
+            "upstream_artifact_identities": {}, "blocked_dimensions": [], "warnings": [],
+            "authority_boundary": sentinel_authority,
+            "dashboard_projection": {"identity": "current_decision_cockpit_projection:fake"},
+        },
+        "operation": {"manifest": {"operation_identity": "daily_research_session_operation:fake"},
+                      "product": {"market_brief": {"coverage": {}}, "high_priority_full_universe_review_set": {"count": 0}}},
+    }
+    acquisition = {"resolved_completed_session": session, "coverage": {}}
+
+    tiers = cpc.build_tiered_bundle(
+        tmp_path, session, acquisition=acquisition, producer_result=producer_result,
+        decision_packet=None, prospective=None, enrichment={}, producer_head="deadbeef", consumer_head="deadbeef",
+        artifact_root=tmp_path,
+    )
+
+    assert tiers["session_handoff_bundle"]["authority_boundary"] == sentinel_authority
 
 
 # --- bonus regression coverage for the two pre-existing Level-2 acquisition bugs fixed alongside this milestone ---
