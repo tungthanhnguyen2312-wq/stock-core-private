@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import daily_session_level2_package as level2
+import release_session_contract
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
 from daily_research_session_operations import (
     load_registry,
@@ -80,6 +81,14 @@ RETAINED_LEVEL2_INPUT_KEYS = frozenset({
 # below that range so it never rejects a normal session while still catching a degenerate fetch.
 MIN_EXACT_SESSION_COVERAGE_RATIO = 0.20
 
+# These are the publisher's session-sensitive runtime inputs.  Their session semantics are
+# owned by release_session_contract.py; this pipeline deliberately calls that contract rather
+# than re-implementing its manifest/CSV/JSON validation rules.
+DASHBOARD_RUNTIME_REQUIRED_ARTIFACTS = (
+    "screen_snapshot.csv", "market_breadth.csv", "analysis_latest.json",
+)
+DASHBOARD_RUNTIME_OPTIONAL_ARTIFACTS = ("screen_snapshot_live.csv",)
+
 # Owner operational collection cutoff: same-day session evidence is not treated as eligible for
 # canonical post-close use before this local time, regardless of DNSE credential/API availability
 # or of the exchange's own ~15:00 close. This is an operational collection policy, not a claim
@@ -104,7 +113,7 @@ PROVIDER_ROLE_MATRIX = {
         "scope": "Full-universe exact-session OHLC acquisition and every current-research artifact "
                  "this pipeline builds or reuses (descriptive, screening, tactical, triage, "
                  "corporate intelligence, valuation price leg, liquidity, technical recovery).",
-        "used_by_this_pipeline_for": ["session_acquisition", "runtime_materialization", "current_research"],
+        "used_by_this_pipeline_for": ["session_acquisition", "runtime_evidence_input", "current_research"],
     },
     "FHSC": {
         "role": "SUPPLEMENTAL_BOUNDED",
@@ -149,6 +158,44 @@ def _load(path: Path) -> dict[str, Any] | None:
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def evaluate_dashboard_runtime_readiness(runtime_root: Path, session: str) -> dict[str, Any]:
+    """Return the existing release-session contract's verdict for one canonical session.
+
+    ``runtime_root`` is the exact input root that publish_dashboard.py will consume.  A
+    successful research/Producer run is not a substitute for this check: only a complete,
+    same-session runtime release may be advertised as ready for governed publication.
+    """
+    runtime_root = Path(runtime_root)
+    required = list(DASHBOARD_RUNTIME_REQUIRED_ARTIFACTS)
+    required += [name for name in DASHBOARD_RUNTIME_OPTIONAL_ARTIFACTS
+                 if (runtime_root / name).is_file()]
+    report = release_session_contract.resolve_release_session(runtime_root, required)
+    exact_session = report.session == session
+    ready = bool(report.ready and exact_session)
+    reason = None
+    if not report.ready:
+        reason = "RUNTIME_RELEASE_SESSION_CONTRACT_FAILED"
+    elif not exact_session:
+        reason = f"RUNTIME_RELEASE_SESSION_MISMATCH:expected={session}:observed={report.session or 'UNRESOLVED'}"
+    return {
+        "runtime_root": str(runtime_root),
+        "expected_session": session,
+        "resolved_session": report.session,
+        "ready": ready,
+        "reason": reason,
+        "release_session_report": {
+            "authority": report.authority,
+            "required_artifacts": [row.name for row in report.results],
+            "problems": list(report.problems),
+            "results": [
+                {"name": row.name, "status": row.status, "observed": row.observed,
+                 "detail": row.detail}
+                for row in report.results
+            ],
+        },
+    }
 
 
 def assert_same_day_post_close_eligible(session: str, *, now: datetime | None = None) -> None:
@@ -581,7 +628,7 @@ def build_tiered_bundle(
     acquisition: Mapping[str, Any], producer_result: Mapping[str, Any],
     decision_packet: Mapping[str, Any] | None, prospective: Mapping[str, Any] | None,
     enrichment: Mapping[str, Any], producer_head: str | None, consumer_head: str | None,
-    artifact_root: Path | None = None,
+    artifact_root: Path | None = None, runtime_release: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     artifact_root = artifact_root or root
     level2_paths = level2.session_artifact_paths(artifact_root, session)
@@ -680,9 +727,10 @@ def build_tiered_bundle(
         "dashboard_projection_path": _rel(root, producer_result["run_dir"] / "dashboard" / "current_decision_cockpit_projection.json"),
         "dashboard_projection_identity": manifest["dashboard_projection"]["identity"],
         "run_manifest_path": _rel(root, producer_result["run_dir"] / "run_manifest.json"),
-        "ready_for_governed_publication": True,
+        "runtime_release": dict(runtime_release or {}),
+        "ready_for_governed_publication": bool((runtime_release or {}).get("ready")),
         "publication_authority": "release_orchestrator.py (existing; not invoked by this pipeline)",
-        "note": "This is an index over already-materialized Daily Producer output, not a second Dashboard payload.",
+        "note": "This is an index over already-materialized Daily Producer output. Governed publication is ready only when the publisher input runtime root independently validates for this exact session.",
     }
 
     _write_json(bundle_dir / "session_handoff_bundle.json", tier1)
@@ -718,15 +766,17 @@ def run_canonical_post_close(
         artifact_root=artifact_root,
     )
     prospective = run_prospective_collection(root, session, artifact_root=artifact_root)
+    runtime_release = evaluate_dashboard_runtime_readiness(runtime_root, session)
     tiers = build_tiered_bundle(
         root, session, acquisition=acquisition, producer_result=producer_result,
         decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
         producer_head=producer_head, consumer_head=consumer_head, artifact_root=artifact_root,
+        runtime_release=runtime_release,
     )
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
         "producer_result": producer_result, "decision_packet": decision_packet,
-        "prospective": prospective, "tiers": tiers,
+        "prospective": prospective, "runtime_release": runtime_release, "tiers": tiers,
         "producer_head": producer_head, "consumer_head": consumer_head,
     }
 
@@ -749,7 +799,11 @@ def print_terminal_handoff(result: Mapping[str, Any]) -> None:
     print(f"PROSPECTIVE_COHORT_SNAPSHOT_ID: {tier1['prospective_cohort_snapshot_identity']}")
     print(f"BLOCKED_DIMENSIONS: {tier1['blocked_dimensions']}")
     print(f"WARNINGS: {tier1['warnings']}")
-    print("DASHBOARD_RUNTIME_READY: YES")
+    runtime_release = result.get("runtime_release") or result["tiers"]["dashboard_release_set_index"].get("runtime_release") or {}
+    print(f"DASHBOARD_RUNTIME_READY: {'YES' if runtime_release.get('ready') else 'NO'}")
+    print(f"DASHBOARD_RUNTIME_SESSION: {runtime_release.get('resolved_session') or 'UNRESOLVED'}")
+    if runtime_release.get("reason"):
+        print(f"DASHBOARD_RUNTIME_REASON: {runtime_release['reason']}")
     print("PUBLICATION_REQUIRED_SEPARATELY: YES")
     print(f"READY_FOR_GOVERNED_PUBLICATION: {'YES' if result['tiers']['dashboard_release_set_index']['ready_for_governed_publication'] else 'NO'}")
 

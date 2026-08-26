@@ -70,6 +70,53 @@ def _write_triage(paths, session):
     return triage
 
 
+def _write_runtime_release(root, session, *, analysis_session=None, live_session=None):
+    analysis_session = analysis_session or session
+    live_session = live_session or session
+    (root / "bundle_manifest.json").write_text(json.dumps({
+        "freshness": {"reference_session": session, "blocked": False, "status": "fresh"},
+    }), encoding="utf-8")
+    (root / "screen_snapshot.csv").write_text(
+        f"ticker,exchange,date\nHPG,HSX,{session}\n", encoding="utf-8")
+    (root / "market_breadth.csv").write_text(
+        f"group,date\nALL,{session}\n", encoding="utf-8")
+    (root / "analysis_latest.json").write_text(json.dumps({
+        "summary": {"session_date": analysis_session},
+    }), encoding="utf-8")
+    (root / "screen_snapshot_live.csv").write_text(
+        f"ticker,exchange,date\nHPG,HSX,{live_session}\n", encoding="utf-8")
+
+
+def test_runtime_release_readiness_rejects_stale_prior_session(tmp_path):
+    _write_runtime_release(tmp_path, "2026-08-25")
+    readiness = cpc.evaluate_dashboard_runtime_readiness(tmp_path, "2026-08-26")
+    assert readiness["ready"] is False
+    assert readiness["resolved_session"] == "2026-08-25"
+    assert readiness["reason"] == "RUNTIME_RELEASE_SESSION_MISMATCH:expected=2026-08-26:observed=2026-08-25"
+
+
+def test_runtime_release_readiness_accepts_exact_coherent_session(tmp_path):
+    _write_runtime_release(tmp_path, "2026-08-26")
+    readiness = cpc.evaluate_dashboard_runtime_readiness(tmp_path, "2026-08-26")
+    assert readiness["ready"] is True
+    assert readiness["resolved_session"] == "2026-08-26"
+    assert readiness["reason"] is None
+
+
+@pytest.mark.parametrize("variant", ("missing", "analysis_mismatch", "live_mismatch"))
+def test_runtime_release_readiness_fails_closed_for_missing_or_mismatched_artifact(tmp_path, variant):
+    _write_runtime_release(
+        tmp_path, "2026-08-26",
+        analysis_session="2026-08-25" if variant == "analysis_mismatch" else None,
+        live_session="2026-08-25" if variant == "live_mismatch" else None,
+    )
+    if variant == "missing":
+        (tmp_path / "market_breadth.csv").unlink()
+    readiness = cpc.evaluate_dashboard_runtime_readiness(tmp_path, "2026-08-26")
+    assert readiness["ready"] is False
+    assert readiness["reason"] == "RUNTIME_RELEASE_SESSION_CONTRACT_FAILED"
+
+
 # --- 1. explicit requested session required ---
 
 def test_explicit_session_required_by_pipeline():

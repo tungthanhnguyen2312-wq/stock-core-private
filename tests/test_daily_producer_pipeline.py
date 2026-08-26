@@ -29,11 +29,8 @@ def test_completed_session_gate_uses_governed_ledger_not_clock_inference():
     gate = completed_session_gate(_registry(), "2026-08-21", now=datetime(2026, 8, 24, 9, 0, tzinfo=VN_TZ))
     assert gate["status"] == "PASS"
     assert gate["completion_status"] == "COMPLETED_RETAINED_EVIDENCE"
-    # Pre-existing bug fixed in passing: this assertion pre-dates the registry's 2026-08-24
-    # completed-session entry and never accounted for it (fails identically on the
-    # unmodified baseline, unrelated to the same-day gate fix below). "Latest" must reflect
-    # the real governed ledger, not a stale expectation from before 08-24 was registered.
-    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-25"
+    # The latest session is read from the governed ledger, never inferred from the wall clock.
+    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-26"
 
 
 def test_completed_session_gate_refuses_incomplete_session():
@@ -60,6 +57,8 @@ def test_gate_B_same_day_without_completed_evidence_refused():
     """Same local date with no ledger entry, or an entry not yet proved complete, must
     still refuse -- same-day is never granted merely by matching the wall clock."""
     registry = copy.deepcopy(_registry())
+    registry["completed_sessions"].pop("2026-08-26", None)
+    registry["sessions"].pop("2026-08-26", None)
     now = datetime(2026, 8, 26, 16, 0, tzinfo=VN_TZ)
     with pytest.raises(DailyProducerError, match="SESSION_NOT_GOVERNED_COMPLETED"):
         completed_session_gate(registry, "2026-08-26", now=now)
@@ -92,7 +91,7 @@ def test_gate_D_prior_day_completed_session_behavior_unchanged():
     before this fix (session > local_date is False either way for a prior day)."""
     gate = completed_session_gate(_registry(), "2026-08-21", now=datetime(2026, 8, 25, 9, 0, tzinfo=VN_TZ))
     assert gate["status"] == "PASS"
-    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-25"
+    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-26"
 
 
 def test_gate_E_same_day_gate_pass_does_not_bypass_exact_session_input_coherence():
@@ -103,6 +102,7 @@ def test_gate_E_same_day_gate_pass_does_not_bypass_exact_session_input_coherence
     to a same-day gate PASS to prove the two checks were not accidentally merged)."""
     registry = copy.deepcopy(_registry())
     registry["completed_sessions"]["2026-08-25"] = {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}
+    registry["sessions"].pop("2026-08-26", None)
     gate = completed_session_gate(registry, "2026-08-25", now=datetime(2026, 8, 25, 18, 30, tzinfo=VN_TZ))
     assert gate["status"] == "PASS"
 
