@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Annual provider financial metadata retention and flow semantic corroboration V1
+
+`ANNUAL_PROVIDER_FINANCIAL_METADATA_RETENTION_AND_FLOW_SEMANTIC_CORROBORATION_V1 = OUTCOME_B_PROVIDER_ANNUAL_METADATA_RECOVERED_SEMANTICS_PARTIAL` (`push = NO`).
+
+1. **Retain raw before parsing.** KBS's existing approved annual endpoint is captured as exact immutable response bytes and SHA-256 before the installed adapter discards `Head`/`Audit`/`Unit` metadata. The first eight empty payloads are retained as a request-contract correction record, not silently retried as semantic evidence; the corrected eight calls exhaust but do not exceed the 16-request budget.
+2. **Narrow sidecar, exact lineage.** `provider_financial_source_metadata/v1` keys provider, exact route/parameters, ticker, family, annual fiscal period, raw response hash, and derived adapter-payload hash. It joins only those exact payloads; annual and quarterly modes cannot cross-propagate.
+3. **KBS `United` is scope, not scale.** Source label `Hợp nhất` is retained as the provider's consolidated statement-scope indicator. It is not a numeric unit. Report/update dates and audit status are recovered; currency, numerical unit and scale are not exposed and remain unknown. The documented `unit=1000` request plus adapter `×1000` transform remains an adapter transform only.
+4. **No promotion from partial metadata.** Even with scope/date/audit provenance, flow facts have no provider-owned currency/unit contract and no aligned same-year official anchors in this bounded projection. Semantic-basis and valuation outputs remain unchanged; PVD/VNM are not reopened. The next gate is exact-route provider currency/unit evidence plus independent aligned flow anchors.
+
 ## 2026-08-27 - Annual provider financial history retention repair and flow reconciliation V1
 
 `ANNUAL_PROVIDER_FINANCIAL_HISTORY_RETENTION_REPAIR_AND_FLOW_RECONCILIATION_V1 = OUTCOME_B_ANNUAL_HISTORY_RECOVERED_SEMANTICS_PARTIAL` (`push = NO`).
