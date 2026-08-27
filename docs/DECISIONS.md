@@ -1,5 +1,21 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Governed publication one-command completion V1
+
+`GOVERNED_PUBLICATION_ONE_COMMAND_COMPLETION_V1 = COMPLETE_LOCALLY / ONE_COMMAND_PUBLICATION_READY` (`push = NO`).
+
+Decisions:
+
+1. **Same orchestrator.** `--complete-publication` is an opt-in live `all`-group stage. Dry-run and ordinary `--live` stay `GITHUB_SOURCE_UPDATED` and do not wait on GitHub Actions.
+2. **Reuse before dispatch.** Exact-SHA completed Dashboard CI SUCCESS is reused. In-progress exact-SHA CI is watched via `gh run watch --exit-status`. Otherwise at most one `dashboard-ci.yml --ref main` dispatch, which must resolve back to the release SHA.
+3. **Pages.** Automatic `workflow_run` success is reused only when logs prove `PUBLIC_BYTE_IDENTITY_PASS` for the expected session and exact source SHA. Otherwise one manual `deploy-pages.yml` fallback with `source_sha` and `validated_ci_run_id`. The Dashboard workflow still independently verifies that proof.
+4. **PUBLISHED requires public-byte proof.** Workflow SUCCESS without `PUBLIC_BYTE_IDENTITY_PASS` is `BLOCKED_PUBLIC_BYTE_PROOF`.
+5. **Race.** New-publication CI dispatch requires `HEAD == origin/main == RELEASE_SOURCE_SHA`. Recovery of a previously validated SHA may use current-main lineage `AHEAD` (workflow-only successor) only with exact-SHA CI proof, matching the 26/8 `534e497` / `691b63d` contract.
+6. **No rollback of git history** after a successful Dashboard push if remote completion fails. Retain the recoverable SHA. No `git reset --hard`, force-push, or `git clean`.
+7. **Authority unchanged.** `authority_effect = NONE`.
+
+Validation: mocked `gh` tests (reuse, wrong SHA, watch, single dispatch, CI failure before Pages, public-byte required, timeout, idempotence, race, recovery); orchestrator backward-compatibility tests; `py_compile`; `git diff --check`; read-only live reuse of the 26/8 chain with `allow_dispatch=False` (zero workflow dispatch). No Dashboard source change.
+
 ## 2026-08-26 - Capability-First EOD 18:00 Operational Scheduling V1
 
 `CAPABILITY_FIRST_EOD_1800_OPERATIONAL_SCHEDULING_V1 = COMPLETE_LOCALLY / SCHEDULER_READY` (`push = NO`).

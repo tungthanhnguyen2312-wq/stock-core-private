@@ -39,6 +39,12 @@ from dashboard_session_companions import (  # noqa: E402
     DashboardSessionCompanionError,
     companion_relpaths,
 )
+from governed_publication_completion import (  # noqa: E402
+    PublicationCompletionError,
+    complete_publication,
+    format_handoff,
+    gh_preflight,
+)
 from release_checkout_identity import (  # noqa: E402
     CANONICAL_WEB_ROOT,
     GITHUB_SOURCE_UPDATED,
@@ -273,6 +279,13 @@ def build_parser() -> argparse.ArgumentParser:
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("--live", action="store_true", help="cho phép ghi file, commit/push thật")
     parent_parser.add_argument("--expected-session", type=str, default=None, help="YYYY-MM-DD expected market session date")
+    parent_parser.add_argument(
+        "--complete-publication",
+        action="store_true",
+        help="After a live all-group Dashboard push, resolve/dispatch Dashboard CI and Deploy Pages "
+             "for the exact release SHA and require public-byte identity before reporting PUBLISHED. "
+             "No effect on dry-run; requires --live and group 'all'.",
+    )
     parent_parser.add_argument("--expected-dashboard-head", type=str, default=None, help="Expected git commit SHA for market-dashboard repo")
     parent_parser.add_argument("--backend-dir", type=str, default=None, help="Override backend runtime directory")
     parent_parser.add_argument("--web-dir", type=str, default=None, help="Override web directory")
@@ -325,6 +338,7 @@ def orchestrate(args: argparse.Namespace) -> int:
     live = args.live
     expected_session = args.expected_session
     expected_dashboard_head = args.expected_dashboard_head
+    complete_publication_requested = bool(getattr(args, "complete_publication", False))
 
     backend_dir = Path(args.backend_dir or os.environ.get("STOCK_LOOKUP_BACKEND_DIR") or PRODUCER_ROOT / ".." / "dashboard-runtime").resolve()
     web_dir = Path(args.web_dir or os.environ.get("STOCK_LOOKUP_WEB_DIR") or CANONICAL_WEB_ROOT).resolve()
@@ -398,6 +412,22 @@ def orchestrate(args: argparse.Namespace) -> int:
         if rc == 0 and live and dashboard_head != dashboard_upstream:
             sys.stderr.write(f"[ERROR] Dashboard HEAD ({dashboard_head}) differs from upstream ({dashboard_upstream}) in live mode. Aborting.\n")
             return 1
+
+        if complete_publication_requested:
+            if group != "all":
+                sys.stderr.write("[ERROR] BLOCKED_COMPLETE_PUBLICATION_REQUIRES_ALL: --complete-publication is only valid with group 'all'.\n")
+                return 2
+            if not live:
+                sys.stderr.write("[ERROR] BLOCKED_COMPLETE_PUBLICATION_REQUIRES_LIVE: --complete-publication requires --live; dry-run does not dispatch workflows.\n")
+                return 2
+            if not expected_session:
+                sys.stderr.write("[ERROR] BLOCKED_EXPECTED_SESSION_REQUIRED: --complete-publication requires --expected-session.\n")
+                return 2
+            try:
+                gh_preflight(web_dir)
+            except PublicationCompletionError as exc:
+                sys.stderr.write(f"[ERROR] {exc}\n")
+                return 2
 
         rc, staged_files = get_git_output(["diff", "--cached", "--name-only"], web_dir)
         if staged_files:
@@ -503,6 +533,7 @@ def orchestrate(args: argparse.Namespace) -> int:
         print(f"TRUSTED_AI_INVOKED    : {'true' if trusted_ai_invoked else 'false'}")
         print(f"GENERATE_INVOKED      : {'true' if generate_invoked else 'false'}")
         print(f"ZERO_MUTATION         : {'PASS' if not live else 'N/A (LIVE)'}")
+        print(f"COMPLETE_PUBLICATION  : {'true' if complete_publication_requested else 'false'}")
         if group == "all":
             print("ALL_TRANSACTION       : one final Dashboard commit/push; trusted promotion is --no-git")
         print("Execution Plans:")
@@ -568,6 +599,34 @@ def orchestrate(args: argparse.Namespace) -> int:
                 except RuntimeError as rollback_exc:
                     sys.stderr.write(f"[ROLLBACK] FAILED: {rollback_exc}\n")
             return 1
+
+        if live and complete_publication_requested:
+            try:
+                completion = complete_publication(
+                    web_dir=web_dir,
+                    expected_session=expected_session,
+                    producer_root=producer_dir,
+                    require_identical_main=True,
+                )
+            except PublicationCompletionError as exc:
+                rc_head, pushed_sha = get_git_output(["rev-parse", "HEAD"], web_dir)
+                sys.stderr.write(f"[ERROR] {exc}\n")
+                sys.stderr.write(
+                    f"[STATE] {GITHUB_SOURCE_UPDATED}: Dashboard source push is retained; remote completion did not reach {PUBLISHED}.\n"
+                )
+                if rc_head == 0:
+                    sys.stderr.write(f"RECOVERABLE_RELEASE_SOURCE_SHA={pushed_sha}\n")
+                sys.stderr.write(f"BLOCKER={exc.code}\n")
+                return 2
+            print(format_handoff(completion))
+            state = publication_state_after_push(
+                local_validation_pass=True,
+                ci_pass=True,
+                pages_pass=True,
+                public_verify_pass=True,
+            )
+            print(f"[OK] Release orchestration for '{group}' reached {state}.")
+            return 0
 
         if live:
             state = publication_state_after_push(

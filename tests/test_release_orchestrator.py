@@ -573,6 +573,24 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         self.assertIn(repr(str(ROOT / "publish_dashboard.py")), res.stdout)
         self.assertNotIn(repr(str(self.web_dir / "publish_dashboard.py")), res.stdout)
 
+    def test_complete_publication_flag_is_absent_without_it(self):
+        res = self.run_fixture(["all"])
+        self.assertIn("COMPLETE_PUBLICATION  : false", res.stdout)
+        self.assertNotIn("dashboard-ci.yml", res.stdout)
+        self.assertNotIn("deploy-pages.yml", res.stdout)
+
+    def test_dry_run_complete_publication_does_not_dispatch(self):
+        res = self.run_fixture(["all", "--complete-publication"])
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("BLOCKED_COMPLETE_PUBLICATION_REQUIRES_LIVE", res.stderr)
+        self.assertFalse(self._executed(res, "publish_release.py"))
+        self.assertNotIn("workflow run", res.stdout + res.stderr)
+
+    def test_complete_publication_on_whole_market_is_rejected(self):
+        res = self.run_fixture(["whole-market", "--live", "--complete-publication"])
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("BLOCKED_COMPLETE_PUBLICATION_REQUIRES_ALL", res.stderr)
+
     def test_live_success_is_github_source_updated_not_published(self):
         from release_checkout_identity import GITHUB_SOURCE_UPDATED, PUBLISHED, publication_state_after_push
         self.assertEqual(
