@@ -9,9 +9,22 @@ DESIGN
     It does not expose a documented "session completed" / "market closed" flag, and
     it has no historical coverage. This module never claims PROVIDER_CONFIRMED_COMPLETED.
 
-    READY is the lower-strength semantic EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR:
-    working-date identity + exact intended session + sufficient retained exact-session
-    observations acquired at or after the safety floor.
+    Two distinct phases:
+
+    PHASE A — PRE_ACQUISITION_ATTEMPT (ATTEMPT_ELIGIBLE)
+        Answers only: may the operator attempt the bounded post-close acquisition now?
+        Eligible when requested_at is at/after the safety floor, the intended session
+        is not future, the session has qualified working-date identity under the DNSE
+        working_dates contract, there is no contradictory session evidence, and the
+        provider/session route is operationally available.
+        ATTEMPT_ELIGIBLE does not mean market close, completed session, or exact-session
+        data is proven. Time alone never produces Phase-B READY.
+
+    PHASE B — POST_ACQUISITION_COMPLETION (READY)
+        READY is the lower-strength semantic EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR:
+        working-date identity + exact intended session + sufficient retained exact-session
+        observations acquired at or after the safety floor. Only an actual retained
+        response may establish this. Time alone never produces READY.
 
 All evaluation is a pure function of injected `requested_at` plus injected or
 explicitly supplied evidence. Tests must never depend on the host wall clock.
@@ -33,6 +46,7 @@ PROVIDER_EVIDENCE_TYPE = "DNSE_WORKING_DATES_CALENDAR_IDENTITY"
 PROVIDER_SEMANTIC_STRENGTH = "WORKING_DATE_IDENTITY_AND_NEIGHBOR_SESSIONS"
 PROVIDER_SEMANTIC_STRENGTH_UNAVAILABLE = "UNAVAILABLE"
 READY_SEMANTIC = "EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR"
+ATTEMPT_ELIGIBLE_SEMANTIC = "PRE_ACQUISITION_ATTEMPT_ELIGIBLE"
 OPERATING_TIMEZONE = "Asia/Ho_Chi_Minh"
 DEFAULT_SAFETY_FLOOR = time(18, 0)
 # Reuse the canonical post-close floor for full-universe snapshots only.
@@ -40,6 +54,7 @@ MIN_P3F9B_EXACT_SESSION_COVERAGE_RATIO = 0.20
 MIN_PACKET_EXACT_SESSION_OBSERVATIONS = 1
 
 STATUS_READY = "READY"
+STATUS_ATTEMPT_ELIGIBLE = "ATTEMPT_ELIGIBLE"
 STATUS_TOO_EARLY = "TOO_EARLY"
 STATUS_NON_WORKING_DATE = "NON_WORKING_DATE"
 STATUS_SESSION_MISMATCH = "SESSION_MISMATCH"
@@ -47,6 +62,9 @@ STATUS_PROVIDER_EVIDENCE_UNAVAILABLE = "PROVIDER_EVIDENCE_UNAVAILABLE"
 STATUS_EXACT_SESSION_EVIDENCE_INSUFFICIENT = "EXACT_SESSION_EVIDENCE_INSUFFICIENT"
 STATUS_AMBIGUOUS = "AMBIGUOUS"
 STATUS_BLOCKED = "BLOCKED"
+
+PHASE_A = "PRE_ACQUISITION_ATTEMPT"
+PHASE_B = "POST_ACQUISITION_COMPLETION"
 
 AUTHORITY_BOUNDARIES = {
     "authority_effect": "NONE",
@@ -493,7 +511,11 @@ def evaluate_completed_market_session_gate(
     allow_provider_probe: bool = False,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Evaluate eligibility for capability-first EOD collection.
+    """Phase B: evaluate post-acquisition exact-session completion evidence.
+
+    READY means EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR. Time alone never
+    returns READY. Pre-acquisition attempt eligibility is
+    ``evaluate_attempt_eligibility`` (Phase A).
 
     `requested_at` / `now` are the only clocks. Host wall clock is used solely when
     both are omitted (operator CLI). Tests must inject `requested_at`.
@@ -625,6 +647,199 @@ def evaluate_completed_market_session_gate(
         return emit(STATUS_AMBIGUOUS, ["WORKING_DATE_AND_EXACT_SESSION_UNALIGNED"], resolved, method)
 
     return emit(STATUS_READY, ["EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR", "WORKING_DATE_IDENTITY_CONFIRMED_OR_RETAINED"], resolved, method)
+
+
+def _attempt_record(
+    *,
+    requested_at: datetime,
+    timezone_name: str,
+    safety_floor: time,
+    safety_floor_pass: bool,
+    requested_session: str | None,
+    resolved_session: str | None,
+    working: Mapping[str, Any],
+    exact: Mapping[str, Any],
+    resolution_method: str,
+    attempt_gate_status: str,
+    reason_codes: Sequence[str],
+) -> dict[str, Any]:
+    neighbors = neighbor_sessions(working.get("working_dates") or [], resolved_session) if resolved_session else {}
+    payload = {
+        "schema_version": SCHEMA_VERSION,
+        "contract_version": CONTRACT_VERSION,
+        "phase": PHASE_A,
+        "requested_at": requested_at.isoformat(),
+        "timezone": timezone_name,
+        "safety_floor": safety_floor.isoformat(timespec="minutes"),
+        "safety_floor_pass": safety_floor_pass,
+        "requested_session": requested_session,
+        "resolved_session": resolved_session,
+        "provider": PROVIDER,
+        "provider_evidence_type": PROVIDER_EVIDENCE_TYPE,
+        "provider_evidence_identity": working.get("provider_evidence_identity"),
+        "provider_evidence_hash": working.get("provider_evidence_hash"),
+        "provider_semantic_strength": working.get("provider_semantic_strength"),
+        "working_dates_window": {
+            "start": working.get("window_start"),
+            "end": working.get("window_end"),
+            "status": working.get("status"),
+        },
+        "working_dates": list(working.get("working_dates") or []),
+        "neighbor_sessions": neighbors,
+        "exact_session_evidence": {
+            "status": exact.get("status"),
+            "source_contract": exact.get("source_contract"),
+            "resolved_completed_session": exact.get("resolved_completed_session"),
+            "retained_snapshot_session": exact.get("retained_snapshot_session"),
+            "requested_at": exact.get("requested_at"),
+            "exact_session_observed_count": exact.get("exact_session_observed_count"),
+            "attempted_candidate_count": exact.get("attempted_candidate_count"),
+            "identity": exact.get("identity"),
+            "hash": exact.get("hash"),
+        },
+        "resolution_method": resolution_method,
+        "attempt_gate_status": attempt_gate_status,
+        "completion_gate_status": None,
+        "reason_codes": list(reason_codes),
+        "attempt_semantic": ATTEMPT_ELIGIBLE_SEMANTIC if attempt_gate_status == STATUS_ATTEMPT_ELIGIBLE else None,
+        "ready_semantic": None,
+        "authority_statement": {
+            "provider_confirmed_completed": False,
+            "safety_floor_is_not_session_authority": True,
+            "attempt_eligible_does_not_mean": [
+                "market_session_completed",
+                "market_closed",
+                "exact_session_data_proven",
+            ],
+            "working_dates_proves": [
+                "working_date_identity_within_observed_window",
+                "prior_next_working_date_within_observed_window",
+            ],
+            "working_dates_does_not_prove": [
+                "market_session_completed",
+                "market_closed",
+                "historical_working_dates_outside_observed_window",
+            ],
+            "ready_means": READY_SEMANTIC,
+            "time_alone_never_produces_phase_b_ready": True,
+            "limitations": list(working.get("limitations") or []),
+            "authority_effect": "NONE",
+        },
+        "authority_boundaries": dict(AUTHORITY_BOUNDARIES),
+    }
+    digest = stable_id({k: v for k, v in payload.items()})
+    payload["gate_content_identity"] = digest
+    payload["gate_identity"] = f"completed_market_session_attempt_gate:{digest}"
+    return payload
+
+
+def evaluate_attempt_eligibility(
+    *,
+    requested_at: datetime | str | None = None,
+    requested_session: str | None = None,
+    timezone_name: str = OPERATING_TIMEZONE,
+    safety_floor: time = DEFAULT_SAFETY_FLOOR,
+    working_dates_evidence: Mapping[str, Any] | None = None,
+    exact_session_evidence: Mapping[str, Any] | None = None,
+    working_dates_fetcher: Callable[[], Mapping[str, Any]] | None = None,
+    allow_provider_probe: bool = False,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Phase A: may the operator attempt bounded post-close acquisition now?
+
+    Does not establish market close, completed session, or exact-session data.
+    Time alone never yields Phase-B READY.
+    """
+    instant = parse_requested_at(requested_at if requested_at is not None else now or vn_now(), timezone_name=timezone_name)
+    local_date = instant.date().isoformat()
+    safety_floor_pass = instant.timetz().replace(tzinfo=None) >= safety_floor
+    explicit_session = parse_session_date(requested_session) if requested_session else None
+
+    working_payload = working_dates_evidence
+    if working_payload is None and allow_provider_probe and working_dates_fetcher is not None:
+        working_payload = working_dates_fetcher()
+    working = normalize_working_dates_evidence(working_payload, retrieved_at=instant.isoformat())
+    dates = list(working.get("working_dates") or [])
+    exact = normalize_exact_session_evidence(exact_session_evidence)
+
+    def emit(status: str, reasons: Sequence[str], resolved: str | None, method: str) -> dict[str, Any]:
+        return _attempt_record(
+            requested_at=instant,
+            timezone_name=timezone_name,
+            safety_floor=safety_floor,
+            safety_floor_pass=safety_floor_pass,
+            requested_session=explicit_session,
+            resolved_session=resolved,
+            working=working,
+            exact=exact,
+            resolution_method=method,
+            attempt_gate_status=status,
+            reason_codes=reasons,
+        )
+
+    if explicit_session and explicit_session > local_date:
+        return emit(STATUS_BLOCKED, ["FUTURE_SESSION"], explicit_session, "EXPLICIT_SESSION")
+
+    if explicit_session == local_date and not safety_floor_pass:
+        return emit(STATUS_TOO_EARLY, ["BEFORE_SAFETY_FLOOR"], explicit_session, "EXPLICIT_SESSION")
+
+    if working.get("status") not in {"OBSERVED"}:
+        if not safety_floor_pass and (explicit_session is None or explicit_session == local_date):
+            return emit(
+                STATUS_TOO_EARLY,
+                ["BEFORE_SAFETY_FLOOR", "WORKING_DATES_UNAVAILABLE"],
+                explicit_session,
+                "EXPLICIT_SESSION" if explicit_session else "OMITTED_SESSION",
+            )
+        return emit(
+            STATUS_PROVIDER_EVIDENCE_UNAVAILABLE,
+            ["WORKING_DATES_UNAVAILABLE"],
+            explicit_session,
+            "EXPLICIT_SESSION" if explicit_session else "OMITTED_SESSION",
+        )
+
+    window_start, window_end = working.get("window_start"), working.get("window_end")
+
+    def in_window(session: str) -> bool:
+        return bool(window_start and window_end and window_start <= session <= window_end)
+
+    if explicit_session:
+        resolved = explicit_session
+        method = "EXPLICIT_SESSION"
+        if _weekend(resolved):
+            return emit(STATUS_NON_WORKING_DATE, ["WEEKEND_SESSION"], resolved, method)
+        if resolved not in dates:
+            if in_window(resolved) or resolved >= local_date:
+                return emit(STATUS_NON_WORKING_DATE, ["NOT_IN_WORKING_DATES"], resolved, method)
+            return emit(
+                STATUS_PROVIDER_EVIDENCE_UNAVAILABLE,
+                ["WORKING_DATES_WINDOW_DOES_NOT_COVER_SESSION"],
+                resolved,
+                method,
+            )
+    else:
+        method = "LATEST_WORKING_DATE_NOT_FUTURE"
+        candidates = [
+            item for item in dates
+            if item < local_date or (item == local_date and safety_floor_pass)
+        ]
+        if not candidates:
+            if not safety_floor_pass:
+                return emit(STATUS_TOO_EARLY, ["BEFORE_SAFETY_FLOOR", "NO_DEFENSIBLE_INTENDED_SESSION"], None, method)
+            return emit(STATUS_BLOCKED, ["NO_DEFENSIBLE_INTENDED_SESSION"], None, method)
+        resolved = max(candidates)
+        if resolved not in dates:
+            return emit(STATUS_NON_WORKING_DATE, ["NOT_IN_WORKING_DATES"], resolved, method)
+
+    if exact.get("status") not in {None, "ABSENT"} and exact.get("resolved_completed_session") not in {None, resolved}:
+        return emit(STATUS_SESSION_MISMATCH, ["PROVIDER_OR_EXACT_SESSION_MISMATCH"], resolved, method)
+
+    return emit(
+        STATUS_ATTEMPT_ELIGIBLE,
+        ["ATTEMPT_ELIGIBLE_AFTER_SAFETY_FLOOR", "WORKING_DATE_IDENTITY_CONFIRMED"],
+        resolved,
+        method,
+    )
 
 
 def load_json_mapping(path: Path | str | None) -> dict[str, Any] | None:

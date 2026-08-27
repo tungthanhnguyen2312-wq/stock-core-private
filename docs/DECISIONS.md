@@ -1,5 +1,20 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Canonical daily one-command operational cutover V1
+
+`CANONICAL_DAILY_ONE_COMMAND_OPERATIONAL_CUTOVER_V1 = COMPLETE_LOCALLY / DAILY_ONE_COMMAND_READY` (`push = NO`).
+
+Decisions:
+
+1. **Two-phase gate.** Phase A `ATTEMPT_ELIGIBLE` answers only whether bounded post-close acquisition may be attempted (safety floor, non-future session, DNSE working-date identity, no contradictory session evidence, route available). It does not prove market close, completed session, or exact-session data. Phase B `READY` remains `EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR` and is evaluated only against the actual retained response after exactly one acquisition attempt. Time alone never produces Phase B. M1's retained exact-session completion rule is unchanged; only its pre-acquisition READY-before-collect interpretation is corrected. 18:00 Asia/Ho_Chi_Minh remains a safety floor, not market-completion authority.
+2. **Single market-wide acquisition owner.** `tools/collect_market_evidence.py` emits `capability_first_eod_collector/v1` packets (default cohort, `max_requests=50`) that cannot satisfy `assert_post_close_eligible` (`p3f9_exact_session_mva_snapshot/v2`, `FULL_CANONICAL_CANDIDATE_SET`). Daily Producer, runtime release, and trusted subset consume that canonical snapshot. The daily command therefore owns acquisition only through `canonical_post_close_pipeline.acquire_and_materialize` (P3F9B). Capability-first EOD stays an independent lower-level capability and is not invoked on this path.
+3. **Same-session runtime + trusted subset before publication.** `canonical_dashboard_runtime_release` then `canonical_trusted_subset_release` must resolve to the same session as Daily Producer and `--expected-session`. Existing atomic/rollback semantics are reused. Stale prior-session artifacts fail closed.
+4. **Publication delegation.** After local/session gates, call `tools/release_orchestrator.py all --live --expected-session <session> --complete-publication`. `governed_publication_completion.py` remains the remote publication authority. Do not reimplement CI/Pages in `daily_analysis_pipeline.py`.
+5. **Fail at the exact stage.** Publication failure retains recoverable local state. GitHub timeout is not a data-integrity failure.
+6. **No second orchestrator, no scheduler install.** One foreground bounded invocation. `authority_effect = NONE`.
+
+Validation: two-phase gate tests; daily-operation tests (no acquisition before floor, Phase A vs Phase B, one P3F9B owner, producer/runtime/trusted/publication fail-closed order, idempotent replay, tamper, isolated 26/8 retained replay to PUBLISHED with `allow_dispatch=False`); existing M0/M1/publication tests; `py_compile`; `git diff --check`. No Dashboard source change. No live market-wide DNSE request.
+
 ## 2026-08-27 - Governed publication one-command completion V1
 
 `GOVERNED_PUBLICATION_ONE_COMMAND_COMPLETION_V1 = COMPLETE_LOCALLY / ONE_COMMAND_PUBLICATION_READY` (`push = NO`).

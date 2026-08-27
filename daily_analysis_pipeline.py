@@ -207,7 +207,7 @@ def enrich(root: Path, tickers: list[str], executed: list[dict], report: dict[st
 
 def parse(argv=None):
     p = argparse.ArgumentParser(description="Run canonical daily analysis sequentially.")
-    p.add_argument("--runtime-root", required=True)
+    p.add_argument("--runtime-root", default=None, help="Dashboard runtime root. Defaults to STOCK_LOOKUP_RUNTIME_ROOT.")
     p.add_argument("--tickers", nargs="+", default=DEFAULT_TICKERS)
     p.add_argument("--skip-price-update", action="store_true")
     p.add_argument("--skip-macro", action="store_true")
@@ -215,32 +215,72 @@ def parse(argv=None):
     p.add_argument("--publish-dashboard", action="store_true", help="Trigger dashboard publisher step post-export")
     p.add_argument("--live-publish", action="store_true", help="Run dashboard publisher in live mode")
     p.add_argument("--verify-only", action="store_true")
-    p.add_argument("--session", default=None, help="Explicit market session YYYY-MM-DD. Required by --canonical-post-close; ignored by the LEGACY_NON_CANONICAL VCI/KBS step list.")
+    p.add_argument("--session", default=None, help="Explicit market session YYYY-MM-DD. Optional with --canonical-post-close (resolved by Phase A). Ignored by the LEGACY_NON_CANONICAL VCI/KBS step list.")
     p.add_argument("--canonical-post-close", action="store_true",
-                    help="Run the canonical DNSE-based post-close pipeline (acquisition, current research, "
-                         "Canonical Daily Producer, prospective collection, tiered AI handoff) instead of the "
-                         "LEGACY_NON_CANONICAL VCI/KBS step list below. Requires --session. Never falls back "
-                         "to vn_stock_pipeline.py.")
+                    help="Run the canonical DNSE-based daily operation (Phase A eligibility, one P3F9B "
+                         "acquisition, Phase B completion, current research, Canonical Daily Producer, "
+                         "runtime + trusted-subset materialization). Never falls back to vn_stock_pipeline.py.")
+    p.add_argument("--complete-publication", action="store_true",
+                    help="After local/session gates, delegate to tools/release_orchestrator.py all "
+                         "--live --expected-session <session> --complete-publication. Requires --canonical-post-close.")
+    p.add_argument("--requested-at", default=None, help="ISO-8601 evaluation instant for --canonical-post-close. Defaults to now in Asia/Ho_Chi_Minh.")
+    p.add_argument("--working-dates-path", default=None, help="Retained DNSE working_dates JSON for --canonical-post-close.")
+    p.add_argument("--offline", action="store_true", help="Never probe DNSE working_dates; require --working-dates-path.")
+    p.add_argument("--allow-provider-probe", action="store_true", help="Permit exactly one working_dates GET.")
+    p.add_argument("--web-dir", default=None, help="Dashboard checkout for --complete-publication.")
+    p.add_argument("--out-dir", default=None, help="Daily-operation artifact root; defaults to operations-review.")
     p.add_argument("--workers", type=int, default=12, help="Parallel DNSE fetch workers; only used by --canonical-post-close.")
     return p.parse_args(argv)
 
 def main(argv=None, runner=subprocess.run) -> int:
     args = parse(argv)
-    root = Path(args.runtime_root).expanduser().resolve()
+    from runtime_paths import RUNTIME_ROOT_ENV, runtime_root as resolve_runtime_root
+    if args.complete_publication and not args.canonical_post_close:
+        print("[daily_analysis] --complete-publication requires --canonical-post-close", file=sys.stderr)
+        return 2
+    if args.runtime_root:
+        root = Path(args.runtime_root).expanduser().resolve()
+    elif os.environ.get(RUNTIME_ROOT_ENV, "").strip():
+        root = resolve_runtime_root()
+    else:
+        print(f"[daily_analysis] --runtime-root or {RUNTIME_ROOT_ENV} is required", file=sys.stderr)
+        return 2
     if not root.is_dir():
         print(f"[daily_analysis] runtime root does not exist: {root}", file=sys.stderr)
         return 2
     if args.canonical_post_close:
-        if not args.session:
-            print("[daily_analysis] --canonical-post-close requires an explicit --session YYYY-MM-DD", file=sys.stderr)
-            return 2
-        from canonical_post_close_pipeline import CanonicalPostCloseError, print_terminal_handoff, run_canonical_post_close
+        from canonical_daily_operation import (
+            CanonicalDailyOperationError,
+            print_daily_operation_handoff,
+            run_canonical_daily_operation,
+        )
+        from completed_market_session_gate import load_json_mapping, parse_requested_at
+        from vn_time import vn_now
+        probe = bool(args.allow_provider_probe) and not args.offline
+        if not args.offline and args.working_dates_path is None and not args.allow_provider_probe:
+            probe = True
+        instant = parse_requested_at(args.requested_at) if args.requested_at else vn_now()
         try:
-            result = run_canonical_post_close(SCRIPT_DIR, root, args.session, workers=args.workers)
-        except CanonicalPostCloseError as exc:
-            print(f"[daily_analysis] CANONICAL_POST_CLOSE_FAILED: {exc}", file=sys.stderr)
-            return 1
-        print_terminal_handoff(result)
+            result = run_canonical_daily_operation(
+                SCRIPT_DIR,
+                root,
+                args.session,
+                now=instant,
+                workers=args.workers,
+                complete_publication=args.complete_publication,
+                working_dates_evidence=load_json_mapping(args.working_dates_path) if args.working_dates_path else None,
+                allow_provider_probe=probe,
+                web_dir=Path(args.web_dir) if args.web_dir else None,
+                out_dir=args.out_dir,
+            )
+        except CanonicalDailyOperationError as exc:
+            print(f"DAILY_OPERATION_STATE={exc.stage}", file=sys.stderr)
+            print(f"[daily_analysis] {exc.stage}: {exc}", file=sys.stderr)
+            return 2 if exc.stage in {
+                "TOO_EARLY", "NON_WORKING_DATE", "FUTURE_SESSION",
+                "PROVIDER_EVIDENCE_UNAVAILABLE", "BLOCKED_PRE_ACQUISITION_SESSION_EVIDENCE",
+            } else 1
+        print_daily_operation_handoff(result)
         return 0
     tickers = [x.upper() for x in args.tickers]
     env = os.environ.copy()

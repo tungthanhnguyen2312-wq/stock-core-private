@@ -124,11 +124,19 @@ def test_explicit_session_required_by_pipeline():
         cpc.run_canonical_post_close(ROOT, ROOT.parent / "dashboard-runtime", "")
 
 
-def test_explicit_session_required_by_cli(capsys):
+def test_omitted_session_without_working_dates_fails_closed(capsys, tmp_path):
     import daily_analysis_pipeline as dap
-    rc = dap.main(["--runtime-root", str(ROOT.parent / "dashboard-runtime"), "--canonical-post-close"])
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    rc = dap.main([
+        "--runtime-root", str(runtime),
+        "--canonical-post-close",
+        "--offline",
+        "--requested-at", "2026-08-26T18:05:00+07:00",
+    ])
     assert rc == 2
-    assert "requires an explicit --session" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "PROVIDER_EVIDENCE_UNAVAILABLE" in err
 
 
 # --- 2. same-day partial/intraday session fails closed ---
@@ -167,10 +175,27 @@ def test_canonical_post_close_flag_never_invokes_legacy_step_runner(tmp_path, mo
             returncode = 0
         return R()
 
-    monkeypatch.setattr("canonical_post_close_pipeline.run_canonical_post_close", lambda *a, **k: _minimal_fake_result(tmp_path))
+    monkeypatch.setattr(
+        "canonical_daily_operation.run_canonical_daily_operation",
+        lambda *a, **k: {
+            "daily_operation_state": "LOCAL_COMPLETE",
+            "session": "2026-08-25",
+            "session_gate": "EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR",
+            "daily_producer_status": "COMPLETED",
+            "runtime_release_status": "READY",
+            "trusted_subset_status": "READY",
+            "authority_effect": "NONE",
+            "market_acquisition_owner": "canonical_p3f9b_exact_session",
+            "operation_identity": "canonical_daily_operation:test",
+            "publication": {},
+        },
+    )
     runtime = tmp_path / "runtime"
     runtime.mkdir()
-    rc = dap.main(["--runtime-root", str(runtime), "--session", "2026-08-25", "--canonical-post-close"], runner=fake_runner)
+    rc = dap.main(
+        ["--runtime-root", str(runtime), "--session", "2026-08-25", "--canonical-post-close", "--offline"],
+        runner=fake_runner,
+    )
     assert rc == 0
     assert calls == []  # vn_stock_pipeline.py / macro_sync.py / etc. were never subprocessed
 
@@ -424,13 +449,14 @@ def test_resolved_completed_session_never_returns_a_future_date():
 
 def test_acquired_session_mismatch_never_silently_substituted(tmp_path, monkeypatch):
     requested = "2026-08-27"
+    now = datetime(2026, 8, 27, 19, 0, tzinfo=VN_TZ)
 
     def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         raise ValueError("P3F9B_ACQUIRED_SESSION_MISMATCH:requested=2026-08-27:resolved=2026-08-26")
 
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
     with pytest.raises(cpc.CanonicalPostCloseError, match="never silently substituting"):
-        cpc.acquire_and_materialize(tmp_path, requested, tmp_path / "runtime")
+        cpc.acquire_and_materialize(tmp_path, requested, tmp_path / "runtime", now=now)
 
 
 # =====================================================================================

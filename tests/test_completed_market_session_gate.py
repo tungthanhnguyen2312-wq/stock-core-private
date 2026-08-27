@@ -71,6 +71,39 @@ def test_after_floor_without_exact_session_is_insufficient():
     assert result["safety_floor_pass"] is True
 
 
+def test_phase_a_after_floor_valid_working_date_is_attempt_eligible_not_ready():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=AFTER,
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert result["completion_gate_status"] is None
+    assert result["ready_semantic"] is None
+    assert result["resolved_session"] == SESSION
+    assert result["authority_statement"]["provider_confirmed_completed"] is False
+    assert "exact_session_data_proven" in result["authority_statement"]["attempt_eligible_does_not_mean"]
+
+
+def test_phase_a_time_alone_never_attempt_eligible():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=AFTER,
+        requested_session=SESSION,
+    )
+    assert result["attempt_gate_status"] != gate.STATUS_ATTEMPT_ELIGIBLE
+    assert result["attempt_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+
+
+def test_phase_a_before_floor_is_too_early_and_not_attempt_eligible():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=BEFORE,
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_TOO_EARLY
+    assert result["attempt_gate_status"] != gate.STATUS_ATTEMPT_ELIGIBLE
+
+
 def test_valid_working_date_exact_session_after_floor_is_ready():
     result = gate.evaluate_completed_market_session_gate(
         requested_at=POST_CLOSE,
@@ -227,6 +260,7 @@ def test_no_sleep_or_poll_in_gate_module():
     assert "sched" not in source
     assert "BackgroundScheduler" not in source
     assert inspect.getsource(gate.evaluate_completed_market_session_gate).count("while ") == 0
+    assert inspect.getsource(gate.evaluate_attempt_eligibility).count("while ") == 0
 
 
 def test_gate_identity_is_deterministic():

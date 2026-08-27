@@ -35,8 +35,10 @@ from completed_market_session_gate import (
     AUTHORITY_BOUNDARIES,
     DEFAULT_SAFETY_FLOOR,
     OPERATING_TIMEZONE,
+    STATUS_ATTEMPT_ELIGIBLE,
     STATUS_READY,
     CompletedSessionGateError,
+    evaluate_attempt_eligibility,
     evaluate_completed_market_session_gate,
     load_exact_session_evidence_from_root,
     load_json_mapping,
@@ -58,6 +60,7 @@ AUTHORITY_EFFECT = "NONE"
 
 DISPOSITION_COMPLETED = "COMPLETED"
 DISPOSITION_BLOCKED_BEFORE_COLLECTION = "BLOCKED_BEFORE_COLLECTION"
+DISPOSITION_BLOCKED_POST_ACQUISITION = "BLOCKED_POST_ACQUISITION"
 DISPOSITION_COLLECTOR_FAILED = "COLLECTOR_FAILED"
 DISPOSITION_PACKET_INVALID = "PACKET_INVALID"
 DISPOSITION_MATERIALIZATION_FAILED = "MATERIALIZATION_FAILED"
@@ -212,7 +215,7 @@ def run_capability_first_eod_operation(
         lookup_session = parse_session_date(session) if session else instant.date().isoformat()
         resolved_exact = load_exact_session_evidence_from_root(repo_root, lookup_session)
 
-    gate = evaluate_completed_market_session_gate(
+    gate = evaluate_attempt_eligibility(
         requested_at=instant,
         requested_session=session,
         timezone_name=str(config.get("operating_timezone") or OPERATING_TIMEZONE),
@@ -271,7 +274,8 @@ def run_capability_first_eod_operation(
             "session_gate": {
                 "identity": gate.get("gate_identity"),
                 "content_identity": gate.get("gate_content_identity"),
-                "completion_gate_status": gate.get("completion_gate_status"),
+                "attempt_gate_status": gate.get("attempt_gate_status"),
+                "completion_gate_status": gate.get("completion_gate_status") or gate.get("attempt_gate_status"),
                 "provider_semantic_strength": gate.get("provider_semantic_strength"),
                 "ready_semantic": gate.get("ready_semantic"),
             },
@@ -309,10 +313,10 @@ def run_capability_first_eod_operation(
         _write_immutable_json(existing, record)
         return record
 
-    if gate.get("completion_gate_status") != STATUS_READY or not resolved_session:
+    if gate.get("attempt_gate_status") != STATUS_ATTEMPT_ELIGIBLE or not resolved_session:
         return finish(
             disposition=DISPOSITION_BLOCKED_BEFORE_COLLECTION,
-            reason_codes=list(gate.get("reason_codes") or [str(gate.get("completion_gate_status"))]),
+            reason_codes=list(gate.get("reason_codes") or [str(gate.get("attempt_gate_status"))]),
         )
 
     def _existing_packet_path() -> Path | None:
@@ -399,6 +403,28 @@ def run_capability_first_eod_operation(
         return finish(
             disposition=DISPOSITION_PACKET_INVALID,
             reason_codes=[reason],
+            packet=packet,
+            packet_path_used=packet_source,
+            collector_called=collector_invoked,
+        )
+
+    phase_b = evaluate_completed_market_session_gate(
+        requested_at=instant,
+        requested_session=resolved_session,
+        timezone_name=str(config.get("operating_timezone") or OPERATING_TIMEZONE),
+        safety_floor=safety_floor,
+        working_dates_evidence=working_dates_evidence or {"workingDates": list(gate.get("working_dates") or [])},
+        exact_session_evidence=packet,
+        allow_provider_probe=False,
+    )
+    gate = dict(gate)
+    gate["completion_gate_status"] = phase_b.get("completion_gate_status")
+    gate["ready_semantic"] = phase_b.get("ready_semantic")
+    gate["phase_b_identity"] = phase_b.get("gate_identity")
+    if phase_b.get("completion_gate_status") != STATUS_READY:
+        return finish(
+            disposition=DISPOSITION_BLOCKED_POST_ACQUISITION,
+            reason_codes=list(phase_b.get("reason_codes") or ["EXACT_SESSION_EVIDENCE_INSUFFICIENT"]),
             packet=packet,
             packet_path_used=packet_source,
             collector_called=collector_invoked,

@@ -132,6 +132,17 @@ def test_before_safety_floor_does_not_invoke_collector(tmp_path: Path):
     assert calls == []
 
 
+def test_attempt_eligible_without_prior_exact_session_collects(tmp_path: Path):
+    """Phase A may start collection for a new session; Phase B READY is post-acquisition."""
+    kwargs = _ready_kwargs(tmp_path)
+    kwargs["exact_session_evidence"] = None
+    record = op.run_capability_first_eod_operation(**kwargs)
+    assert record["final_disposition"] == op.DISPOSITION_COMPLETED
+    assert record["collector_invoked"] is True
+    assert record["session_gate"]["attempt_gate_status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert record["session_gate"]["completion_gate_status"] == gate.STATUS_READY
+
+
 def test_time_alone_never_ready_and_does_not_collect(tmp_path: Path):
     calls = []
 
