@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - HPG Column-Major Financial Table Geometry Disentanglement V1
+
+`HPG_COLUMN_MAJOR_FINANCIAL_TABLE_GEOMETRY_DISENTANGLEMENT_V1 = OUTCOME_A_HPG_COLUMN_MAJOR_GEOMETRY_QUALIFIES_FACTS` (`push = NO`).
+
+1. Existing `pypdf` visitor text matrices are sufficient for this retained-native-text capability. The page-evidence contract now preserves deterministic token origins, raw callback order, conservative-width bbox provenance, and parser identity; no PDF dependency, OCR, network, provider, or document was added.
+2. The generic `COLUMN_MAJOR_WITH_LINE_CODES` path reconstructs physical lines from bounded, per-page geometric tolerance, then derives semantic X-bands only after finding explicit two-period header evidence. It uses header order, not a left/right convention, to bind current/comparative value bands; requires a canonical metric's existing line code to occur inside the CODE band; treats NOTE as a distinct optional band; and blocks overlapping/ambiguous cells. Wrapped labels retain all fragments and are joined only when an immediately preceding label-only physical line has compatible geometry.
+3. HPG's retained FY2022 and FY2023 reports each independently yield page/table/row/period-cited revenue, parent-attributable net income, and operating cash flow. Their P3-F13 identities already collide: revenue and OCF independently `EXACT_MATCH`, while parent-attributable code-61 net income is a `VALUE_CONFLICT` with the prior materialization. No candidate enters ingress and no official fact is overwritten. AAA/PAN/VNM behavior and VCB/SSI corporate exclusion remain unchanged; no valuation, strategy, VALUE, or PIT authority expands.
+
 ## 2026-08-27 - Official Financial Normalization Scale Correction V1
 
 `OFFICIAL_FINANCIAL_NORMALIZATION_SCALE_CORRECTION_V1 = OUTCOME_A_NORMALIZATION_DEFECT_CORRECTED_PANEL_CLEAN` (`push = NO`).

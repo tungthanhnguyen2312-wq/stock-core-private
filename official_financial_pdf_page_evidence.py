@@ -16,8 +16,9 @@ from financial_statement_template_recognizer import extract_generic_financial_st
 import official_financial_structural_table
 
 
-VERSION = "official_financial_pdf_page_evidence/v1"
+VERSION = "official_financial_pdf_page_evidence/v2"
 EXTRACTION_METHOD = "pypdf_native_text"
+POSITIONED_TEXT_METHOD = "pypdf_visitor_text_origin_v1"
 CORPORATE_METRICS = ("total_assets", "shareholders_equity", "cash_and_equivalents", "total_interest_bearing_debt", "revenue", "net_income", "operating_cash_flow")
 
 
@@ -29,7 +30,35 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-def _load_pages(path: Path, expected_sha256: str) -> tuple[str, list[str], str]:
+def _positioned_page_tokens(page: Any) -> tuple[str, list[dict[str, Any]]]:
+    """Return native visitor-text chunks with their deterministic PDF text origins.
+
+    pypdf exposes the text matrix origin for every emitted text chunk.  Its public
+    callback does not expose glyph outlines, so ``x1`` is deliberately a bounded,
+    conservative width estimate; geometry consumers use x0/top for alignment and
+    retain the estimate's provenance instead of pretending it is a glyph box.
+    """
+    chunks: list[dict[str, Any]] = []
+
+    def visitor(text: str, _cm: Any, tm: Any, _font: Any, font_size: Any) -> None:
+        value = str(text).strip()
+        x0, top = float(tm[4]), float(tm[5])
+        if not value or (x0 == 0.0 and top == 0.0):
+            return
+        size = max(1.0, float(font_size or 1.0))
+        chunks.append({
+            "text": value, "x0": round(x0, 4),
+            "x1": round(x0 + max(1, len(value)) * size * 0.55, 4),
+            "top": round(top, 4), "bottom": round(top + size, 4),
+            "font_size": round(size, 4), "raw_token_order": len(chunks),
+            "bbox_method": "pypdf_text_origin_conservative_width",
+        })
+
+    text = page.extract_text(visitor_text=visitor) or ""
+    return text, chunks
+
+
+def _load_pages(path: Path, expected_sha256: str) -> tuple[str, list[tuple[str, list[dict[str, Any]]]], str]:
     raw = path.read_bytes(); actual = _hash(raw)
     if actual != expected_sha256:
         raise ValueError("DOCUMENT_HASH_MISMATCH")
@@ -38,19 +67,21 @@ def _load_pages(path: Path, expected_sha256: str) -> tuple[str, list[str], str]:
     except ImportError as exc:  # pragma: no cover
         raise ValueError("PDF_TEXT_EXTRACTOR_UNAVAILABLE") from exc
     reader = pypdf.PdfReader(path)
-    return actual, [(page.extract_text() or "") for page in reader.pages], f"pypdf {pypdf.__version__}"
+    return actual, [_positioned_page_tokens(page) for page in reader.pages], f"pypdf {pypdf.__version__}"
 
 
 def page_evidence(*, document: Mapping[str, Any], path: Path) -> list[dict[str, Any]]:
     digest, pages, engine = _load_pages(path, str(document["sha256"]))
     rows = []
-    for number, text in enumerate(pages, 1):
+    for number, (text, positioned_tokens) in enumerate(pages, 1):
         text_hash = _hash(text)
         identity = _hash(_json({"contract": VERSION, "document_sha256": digest, "page": number, "text_sha256": text_hash, "method": EXTRACTION_METHOD}))
         rows.append({"page_evidence_id": identity, "document_identity": document["document_id"], "document_sha256": digest,
                      "ticker": str(document["ticker"]).upper(), "official_url": document["official_url"], "page_number": number,
                      "page_label": None, "page_text_hash": text_hash, "page_text": text, "extraction_method": EXTRACTION_METHOD,
-                     "parser_identity": engine, "status": "TEXT_AVAILABLE" if text.strip() else "TEXT_EMPTY"})
+                     "parser_identity": engine, "positioned_text_method": POSITIONED_TEXT_METHOD,
+                     "positioned_tokens": positioned_tokens,
+                     "status": "TEXT_AVAILABLE" if text.strip() else "TEXT_EMPTY"})
     return rows
 
 

@@ -57,8 +57,9 @@ from financial_statement_template_recognizer import (
 )
 
 
-VERSION = "official_financial_structural_table/v1"
-EXTRACTION_METHOD = "pypdf_native_text_structural_v1"
+VERSION = "official_financial_structural_table/v2"
+EXTRACTION_METHOD = "pypdf_native_text_structural_v2"
+GEOMETRY_RECOGNIZER_VERSION = "column_major_geometry/v1"
 
 #: The 7-metric AAA/P3-F13 corporate contract, minus total_interest_bearing_debt.
 #: Debt's two-component aggregation (GENERIC_DEBT_COMPONENTS) is Vietnamese-anchor-only
@@ -80,7 +81,7 @@ _METRIC_STATEMENT: dict[str, StatementType] = {name: spec["statement_type"] for 
 #: exact-form AAA path (which never imports this module) is unaffected.
 _ENGLISH_ANCHORS: dict[str, tuple[str, ...]] = {
     "revenue": ("net revenue", "revenue"),
-    "net_income": ("net profit after tax", "profit after tax attributable to parent", "net profit"),
+    "net_income": ("net profit after tax", "profit after tax attributable to parent", "shareholders of the parent company", "net profit"),
     "operating_cash_flow": (
         "net cash flows from operating activities",
         "net cash generated from operating activities",
@@ -539,8 +540,194 @@ def _column_major_match(block_text_by_page: Mapping[int, str], metric: str) -> d
     return None
 
 
-def match_metric_row(block_text_by_page: Mapping[int, str], metric: str) -> dict[str, Any] | None:
+def _vertical_tolerance(tokens: Sequence[Mapping[str, Any]]) -> float:
+    """Derive a bounded same-baseline tolerance from this page's own token geometry."""
+    levels = sorted({float(token["top"]) for token in tokens})
+    jitter = [b - a for a, b in zip(levels, levels[1:]) if 0 < b - a <= 4.0]
+    if jitter:
+        jitter.sort()
+        median = jitter[len(jitter) // 2]
+        return round(min(3.0, max(0.5, median * 3.0 + 0.25)), 4)
+    sizes = sorted(max(0.1, float(token.get("font_size", 1.0))) for token in tokens)
+    median_size = sizes[len(sizes) // 2] if sizes else 1.0
+    return round(min(3.0, max(0.5, median_size * 0.75)), 4)
+
+
+def reconstruct_physical_lines(tokens: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Rebuild physical lines from native token geometry, never stream ordering.
+
+    The result preserves raw callback order and x-sorted geometric order.  The
+    tolerance is per-page, deterministic, bounded, and included in the contract so
+    a later parser revision cannot silently change row grouping.
+    """
+    usable = [dict(token) for token in tokens if str(token.get("text", "")).strip()]
+    tolerance = _vertical_tolerance(usable)
+    lines: list[dict[str, Any]] = []
+    for token in sorted(usable, key=lambda row: (-float(row["top"]), int(row.get("raw_token_order", 0)))):
+        line = next((item for item in lines if abs(float(item["baseline"]) - float(token["top"])) <= tolerance), None)
+        if line is None:
+            line = {"line_id": len(lines), "baseline": float(token["top"]), "raw_tokens": []}
+            lines.append(line)
+        line["raw_tokens"].append(token)
+    for line in lines:
+        geometric = sorted(line["raw_tokens"], key=lambda row: (float(row["x0"]), int(row.get("raw_token_order", 0))))
+        line["tokens"] = geometric
+        line["text"] = " ".join(str(token["text"]) for token in geometric)
+        line["bbox"] = {
+            "x0": min(float(token["x0"]) for token in geometric), "x1": max(float(token["x1"]) for token in geometric),
+            "top": min(float(token["top"]) for token in geometric), "bottom": max(float(token["bottom"]) for token in geometric),
+        }
+    lines.sort(key=lambda row: -float(row["baseline"]))
+    for index, line in enumerate(lines):
+        line["line_id"] = index
+    return {"recognizer_version": GEOMETRY_RECOGNIZER_VERSION, "vertical_tolerance": tolerance, "lines": lines}
+
+
+def _x_clusters(tokens: Sequence[Mapping[str, Any]], gap: float = 35.0) -> list[list[Mapping[str, Any]]]:
+    clusters: list[list[Mapping[str, Any]]] = []
+    for token in sorted(tokens, key=lambda row: float(row["x0"])):
+        if not clusters or float(token["x0"]) - float(clusters[-1][-1]["x0"]) > gap:
+            clusters.append([token])
+        else:
+            clusters[-1].append(token)
+    return clusters
+
+
+def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str) -> dict[str, Any] | None:
+    """Discover code/note/value x-bands with explicit two-period header evidence."""
+    # Header labels can occupy two nearby physical baselines (year above VND).  This
+    # is a semantic header group, not a relaxation of physical-line reconstruction:
+    # each component line remains preserved and its total bounded vertical span is
+    # recorded below.
+    header = None
+    for start in range(len(lines)):
+        group = [lines[start]]
+        for candidate in lines[start + 1:start + 3]:
+            if abs(float(candidate["baseline"]) - float(group[0]["baseline"])) <= 8.0:
+                group.append(candidate)
+        text = " ".join(str(line["text"]) for line in group)
+        if "code" in _normalize_text(text) and target_period in text and len(set(re.findall(r"20[0-3][0-9]", text))) >= 2:
+            header = {"lines": group, "text": text}
+            break
+    if header is None:
+        return None
+    ordered_years = list(dict.fromkeys(re.findall(r"20[0-3][0-9]", str(header["text"]))))
+    comparative = next((year for year in ordered_years if year != target_period), None)
+    if comparative is None:
+        return None
+    all_tokens = [token for line in lines for token in line["tokens"]]
+    amount_tokens = [token for token in all_tokens if "," in str(token["text"]) or str(token["text"]).strip() in _DASH_TOKENS]
+    amount_clusters = [cluster for cluster in _x_clusters(amount_tokens) if len(cluster) >= 3]
+    if len(amount_clusters) < 2:
+        return None
+    first_cluster, second_cluster = amount_clusters[-2:]
+    if ordered_years[0] == target_period:
+        current_cluster, comparative_cluster = first_cluster, second_cluster
+    elif ordered_years[1] == target_period:
+        comparative_cluster, current_cluster = first_cluster, second_cluster
+    else:  # defensive: target period was required above, so do not infer a fallback.
+        return None
+    left_edge = min(float(token["x0"]) for token in current_cluster)
+    short_numeric = [token for token in all_tokens if _CODE_LINE_RE.fullmatch(str(token["text"]).strip()) and float(token["x0"]) < left_edge]
+    short_clusters = [cluster for cluster in _x_clusters(short_numeric, gap=20.0) if len(cluster) >= 3]
+    if not short_clusters:
+        return None
+    code_cluster = short_clusters[-2] if len(short_clusters) >= 2 else short_clusters[-1]
+    note_cluster = short_clusters[-1] if len(short_clusters) >= 2 else None
+    def band(cluster: Sequence[Mapping[str, Any]]) -> dict[str, float]:
+        return {"x0": round(min(float(token["x0"]) for token in cluster) - 2.0, 4), "x1": round(max(float(token["x0"]) for token in cluster) + 2.0, 4)}
+    return {
+        "recognizer_version": GEOMETRY_RECOGNIZER_VERSION,
+        "header_evidence": {"line_ids": [line["line_id"] for line in header["lines"]], "text": header["text"],
+                            "bbox": {"x0": min(line["bbox"]["x0"] for line in header["lines"]), "x1": max(line["bbox"]["x1"] for line in header["lines"]),
+                                     "top": min(line["bbox"]["top"] for line in header["lines"]), "bottom": max(line["bbox"]["bottom"] for line in header["lines"])}},
+        "current_period_label": target_period, "comparative_period_label": comparative,
+        "bands": {"line_code": band(code_cluster), "note_reference": band(note_cluster) if note_cluster is not None else None, "current_period_value": band(current_cluster), "comparative_period_value": band(comparative_cluster)},
+    }
+
+
+def _in_band(token: Mapping[str, Any], band: Mapping[str, float] | None) -> bool:
+    if band is None:
+        return False
+    return float(band["x0"]) <= float(token["x0"]) <= float(band["x1"])
+
+
+def _geometry_column_major_match(page: Mapping[str, Any], metric: str, target_period: str) -> dict[str, Any] | None:
+    tokens = page.get("positioned_tokens") or []
+    if not tokens:
+        return None
+    reconstruction = reconstruct_physical_lines(tokens)
+    lines = reconstruction["lines"]
+    discovered = discover_column_bands(lines, target_period)
+    if discovered is None:
+        return None
+    bands = discovered["bands"]
+    if max(bands["current_period_value"]["x0"], bands["comparative_period_value"]["x0"]) <= min(bands["current_period_value"]["x1"], bands["comparative_period_value"]["x1"]):
+        return None
+    code = _METRIC_CODE.get(metric)
+    if not code:
+        return None
+    # A wrapped label may precede its code/value line by one physical baseline.  The
+    # permitted gap is derived from this page's closest distinct baselines, not text
+    # similarity or a fixed line count.
+    baselines = [float(line["baseline"]) for line in lines]
+    steps = [abs(a - b) for a, b in zip(baselines, baselines[1:]) if abs(a - b) >= 6.0]
+    continuation_gap = min(steps) * 1.5 if steps else 0.0
+    anchors = _anchors_for(metric)
+    for index, line in enumerate(lines):
+        code_tokens = [token for token in line["tokens"] if _in_band(token, bands["line_code"])]
+        if not any(str(token["text"]).strip() == code for token in code_tokens):
+            continue
+        fragments = [token for token in line["tokens"] if float(token["x0"]) < bands["line_code"]["x0"]]
+        if index and continuation_gap:
+            prior = lines[index - 1]
+            prior_fragments = [token for token in prior["tokens"] if float(token["x0"]) < bands["line_code"]["x0"]]
+            prior_has_code_or_value = any(
+                _in_band(token, bands["line_code"]) or _in_band(token, bands["current_period_value"]) or _in_band(token, bands["comparative_period_value"])
+                for token in prior["tokens"]
+            )
+            if prior_fragments and not prior_has_code_or_value and abs(float(prior["baseline"]) - float(line["baseline"])) <= continuation_gap:
+                fragments = prior_fragments + fragments
+        raw_fragments = [str(token["text"]) for token in fragments]
+        reconstructed_label = " ".join(raw_fragments)
+        norm_label = _normalize_text(reconstructed_label)
+        anchor = next((item for item in anchors if _anchor_matches(norm_label, item)), None)
+        if anchor is None:
+            continue
+        current = [token for token in line["tokens"] if _in_band(token, bands["current_period_value"])]
+        comparative = [token for token in line["tokens"] if _in_band(token, bands["comparative_period_value"])]
+        if any(token in comparative for token in current):
+            return None
+        if len(current) != 1 or len(comparative) != 1:
+            return None
+        note = next((str(token["text"]).strip() for token in line["tokens"] if _in_band(token, bands["note_reference"]) and _NOTE_TOKEN_RE.fullmatch(str(token["text"]).strip())), None)
+        citation_label = next((fragment for fragment in raw_fragments if anchor in _normalize_text(fragment)), max(raw_fragments, key=len, default=""))
+        if not citation_label:
+            return None
+        return {
+            "page": int(page["page_number"]), "line_text": citation_label, "matched_anchor": anchor,
+            "current_raw": str(current[0]["text"]), "comparative_raw": str(comparative[0]["text"]),
+            "has_code": True, "note_reference": note, "layout": "column_major_geometry",
+            "row_object": {"document_sha": page.get("document_sha256"), "page": int(page["page_number"]), "table_id": None,
+                "statement_family": None, "row_bbox": line["bbox"], "raw_label_fragments": raw_fragments,
+                "reconstructed_label": reconstructed_label, "line_code": code, "note_reference": note,
+                "current_period_label": discovered["current_period_label"], "current_raw_value": str(current[0]["text"]),
+                "current_value_bbox": {k: current[0][k] for k in ("x0", "x1", "top", "bottom")},
+                "comparative_period_label": discovered["comparative_period_label"], "comparative_raw_value": str(comparative[0]["text"]),
+                "comparative_value_bbox": {k: comparative[0][k] for k in ("x0", "x1", "top", "bottom")},
+                "recognizer_version": GEOMETRY_RECOGNIZER_VERSION, "physical_line_reconstruction": {"vertical_tolerance": reconstruction["vertical_tolerance"], "line_id": line["line_id"]},
+                "column_bands": discovered},
+        }
+    return None
+
+
+def match_metric_row(block_text_by_page: Mapping[int, str], metric: str, *, positioned_pages: Mapping[int, Mapping[str, Any]] | None = None, target_period: str | None = None) -> dict[str, Any] | None:
     """Dispatch: row-major evidence first, column-major positional reconstruction second."""
+    if positioned_pages is not None and target_period is not None:
+        for page_no in sorted(positioned_pages):
+            match = _geometry_column_major_match(positioned_pages[page_no], metric, target_period)
+            if match is not None:
+                return match
     return _row_major_match(block_text_by_page, metric) or _column_major_match(block_text_by_page, metric)
 
 
@@ -721,7 +908,8 @@ def build_structural_candidates(*, document: Mapping[str, Any], pages: Sequence[
         if table is None:
             continue
         block_text = {page_no: page_map[page_no] for page_no in table["pages"]}
-        match = match_metric_row(block_text, metric)
+        positioned_pages = {int(page["page_number"]): page for page in pages if int(page["page_number"]) in table["pages"]}
+        match = match_metric_row(block_text, metric, positioned_pages=positioned_pages, target_period=table["target_period"])
         if match is None:
             blocked.append({"statement_family": statement_type.value, "canonical_metric": metric,
                              "state": "STRUCTURE_INSUFFICIENT", "reason": "ROW_NOT_STRUCTURALLY_MATCHED", "pages": table["pages"]})
@@ -752,6 +940,12 @@ def build_structural_candidates(*, document: Mapping[str, Any], pages: Sequence[
             continue
         table_id = _hash({"document": document_sha256, "statement_family": statement_type.value,
                            "pages": table["pages"], "recognizer": VERSION})
+        if match.get("row_object") is not None:
+            match["row_object"]["table_id"] = table_id
+            match["row_object"]["statement_family"] = statement_type.value
+            match["row_object"]["unit_currency_lineage"] = {
+                "currency": table["unit_currency"], "unit_scale": table["unit_scale"], "unit_evidence_text": table["unit_evidence_text"],
+            }
         # verified_extraction's own "normalized_value" is only the parsed displayed
         # integer (e.g. 2,225,944 as printed) -- it does not know the table's unit
         # scale.  The actual base-currency value requires multiplying by unit_scale,
@@ -779,6 +973,7 @@ def build_structural_candidates(*, document: Mapping[str, Any], pages: Sequence[
                 "period_header_evidence": table["period_header_evidence"],
                 "comparative_period_column": table["comparative_period_column"],
                 "unit_evidence_text": table["unit_evidence_text"], "continuation_pages": table["continuation_pages"],
+                "row_object": match.get("row_object"),
             },
         })
     return candidates, blocked
