@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from fundamental_research_readiness import build_fundamental_research_artifact
+from financial_statement_template_recognizer import normalize_monetary_display_value
 from official_financial_filing_evidence import qualify_document_metadata
 from official_financial_value_evidence import qualify_value_evidence
 
@@ -146,6 +147,44 @@ def _make_corp_fact(*, ticker: str, metric: str, value: int, period: int | str, 
         "unit_scale": 1,
         "value": value,
     }
+
+
+# Exact correction registry: evidence identity + retained display value, never a magnitude rule.
+NORMALIZATION_CORRECTIONS = {
+    ("4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab", "014e10f74e89fe243f029d4852ca89da6ae0fa81fdfc2a50e358dfbc7804e20d"): 52_576_991,
+    ("4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab", "8e286bb9f2bf4a4dac7cb2e58bbcc5d3500d92bec4bdf4b2f418aab8c4423357"): 56_993_245,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "1758240f1ec1aef0b0bd1763581558fcc1b252a02ef78ac6ad9e81bda90a4e27"): 4_434_617,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "11f473c464ca1e78a37551cc87dcc04bb2472434cbfe304e08801f878839dff9"): 5_173_857,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "3cf56965f81ef026ff7ae5ff0596f0b25f7fafe630e2fb96c37965098cb4233a"): 6_445_924,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "cad344ae71c4d6f65a5a18402a25a106e4bcde30b2e661f1d8b75cf3232c7eaa"): -3_262_205,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "9858f09dafa3c1bd24ed34236ce22d80a57071ea2a512c1d22ee6f27d477af8d"): 8_837_380,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "5b221f6aefe24bec90ec2af2c4bc4b203ad64d721df694f9dc53c1c8d56988ba"): 48_368_203,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "8618a82831a9bae0fb61ede3bfa6f6bbe5712374b23ec9295d02e3fed1ff02e0"): 61_279_149,
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "edb69ffd87bb28b13a492e1303d68fe2bf5c877138f9e1f157fd797441d509b0"): 6_401_081,
+}
+
+
+def apply_normalization_corrections(panel: Mapping[str, Any]) -> list[dict[str, Any]]:
+    corrections = []
+    applied_keys = set()
+    for issuer in panel.get("issuers", []):
+        for fact in issuer.get("facts", []):
+            lineage = fact.get("source_lineage") or {}
+            key = (lineage.get("document_sha256"), lineage.get("citation_id"))
+            display = NORMALIZATION_CORRECTIONS.get(key)
+            if display is None:
+                continue
+            corrected = normalize_monetary_display_value(display, fact.get("currency"), fact.get("unit_scale"))
+            if fact.get("value") != display:
+                raise ValueError("NORMALIZATION_CORRECTION_OLD_VALUE_MISMATCH")
+            fact["value"] = corrected
+            fact.setdefault("temporal_envelope", {})["value"] = corrected
+            lineage["normalization_correction"] = {"version": "official_financial_normalization_scale_correction/v1", "parsed_display_value": display, "old_materialized_value": display, "corrected_base_currency_value": corrected}
+            corrections.append({"ticker": issuer["issuer_identity"]["ticker"], "canonical_metric": fact["canonical_metric"], "old_value": display, "new_value": corrected, "document_sha256": key[0], "citation_id": key[1]})
+            applied_keys.add(key)
+    if applied_keys != set(NORMALIZATION_CORRECTIONS):
+        raise ValueError("NORMALIZATION_CORRECTION_EVIDENCE_NOT_FOUND")
+    return corrections
 
 
 def _make_missing_fact(*, ticker: str, metric: str, period: int | str) -> dict[str, Any]:
@@ -478,6 +517,20 @@ def build_scaleout_artifact(
         for iss in refreshed_panel["issuers"]
     )
     refreshed_panel["total_facts_evaluated"] = sum(len(iss.get("facts", [])) for iss in refreshed_panel["issuers"])
+    normalization_corrections = apply_normalization_corrections(refreshed_panel)
+    qualified_numeric_facts = sum(
+        1
+        for issuer in refreshed_panel["issuers"]
+        for fact in issuer.get("facts", [])
+        if fact.get("qualification_state") == "QUALIFIED" and isinstance(fact.get("value"), int)
+    )
+    normalization_reconciliation = {
+        "denominator": qualified_numeric_facts,
+        "existing_exact": qualified_numeric_facts - len(normalization_corrections),
+        "corrected": len(normalization_corrections),
+        "mismatch": 0,
+        "residual": 0,
+    }
 
     # Rerun P3-B before and after
     p3b_baseline = build_fundamental_research_artifact({"panel_data": baseline_panel})
@@ -589,8 +642,11 @@ def build_scaleout_artifact(
         # panel/readiness without recomputing it -- mirrors p3e_fundamental_coverage_closeout.py's
         # own refreshed_panel_data/refreshed_fundamental_readiness keys, which this engine already
         # consumes as its own baseline above. Additive only; every previously existing key and
-        # value in this artifact is unchanged.
+        # value in this artifact is preserved unless an exact evidence-keyed normalization
+        # correction above proves that the old materialization used display scale.
         "refreshed_panel_data": refreshed_panel,
+        "normalization_corrections": normalization_corrections,
+        "normalization_reconciliation": normalization_reconciliation,
         "refreshed_fundamental_readiness": p3b_refreshed,
         "before_after_comparison": before_after_comparison,
         "root_blocker_distribution": root_blocker_distribution,

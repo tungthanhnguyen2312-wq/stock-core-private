@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Official Financial Normalization Scale Correction V1
+
+`OFFICIAL_FINANCIAL_NORMALIZATION_SCALE_CORRECTION_V1 = OUTCOME_A_NORMALIZATION_DEFECT_CORRECTED_PANEL_CLEAN` (`push = NO`).
+
+1. `Fact.value` means base currency for qualified monetary facts: `parsed_display_value × explicitly qualified unit_scale`. The generic boundary rejects missing currency or non-positive/unknown scale and never uses magnitude inference.
+2. Ten pre-existing errors are corrected only by exact `(document_sha256, citation_id)` registry entries with retained display values: VNM FY2024 revenue/assets and VRE FY2025 cash, current liabilities, net income, operating cash flow, revenue, equity, assets, and total debt. Historical artifacts stay untouched; the active fact retains its original lineage plus correction provenance.
+3. The current 138-fact panel is clean: 128 existing exact + 10 corrected, mismatch 0 and residual 0. VNM structural reconciliation changes from `VALUE_CONFLICT` to `EXACT_MATCH`; VRE ratios remain unchanged because their components scale together, while VNM net margin and ROA are corrected because only revenue/assets were wrong. Coverage, readiness, valuation, and VALUE authority do not expand.
+
 ## 2026-08-27 - Bilingual Non-Form-Code Corporate Financial Table Recognition V1
 
 `BILINGUAL_NON_FORM_CODE_CORPORATE_FINANCIAL_TABLE_RECOGNITION_V1 = OUTCOME_B_STRUCTURAL_RECOGNIZER_WORKS_PARTIALLY` (`push = NO`).

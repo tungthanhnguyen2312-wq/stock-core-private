@@ -213,35 +213,35 @@ class RealFixtureGenericExtractionTests(unittest.TestCase):
             self.assertEqual(f.unit_scale, 1_000_000)
             self.assertEqual(f.currency, "VND")
 
-        self.assertEqual(by_metric["revenue"].normalized_value, 8_837_380)
+        self.assertEqual(by_metric["revenue"].normalized_value, 8_837_380_000_000)
         self.assertEqual(by_metric["revenue"].line_item_code, "10")
         self.assertEqual(by_metric["revenue"].page, 11)
 
-        self.assertEqual(by_metric["net_income"].normalized_value, 6_445_924)
+        self.assertEqual(by_metric["net_income"].normalized_value, 6_445_924_000_000)
         self.assertEqual(by_metric["net_income"].line_item_code, "61")
         self.assertEqual(by_metric["net_income"].page, 11)
 
-        self.assertEqual(by_metric["operating_cash_flow"].normalized_value, -3_262_205)
+        self.assertEqual(by_metric["operating_cash_flow"].normalized_value, -3_262_205_000_000)
         self.assertEqual(by_metric["operating_cash_flow"].line_item_code, "20")
         self.assertEqual(by_metric["operating_cash_flow"].page, 12)
 
-        self.assertEqual(by_metric["total_assets"].normalized_value, 61_279_149)
+        self.assertEqual(by_metric["total_assets"].normalized_value, 61_279_149_000_000)
         self.assertEqual(by_metric["total_assets"].line_item_code, "270")
         self.assertEqual(by_metric["total_assets"].page, 8)
 
-        self.assertEqual(by_metric["shareholders_equity"].normalized_value, 48_368_203)
+        self.assertEqual(by_metric["shareholders_equity"].normalized_value, 48_368_203_000_000)
         self.assertEqual(by_metric["shareholders_equity"].line_item_code, "400")
         self.assertEqual(by_metric["shareholders_equity"].page, 10)
 
-        self.assertEqual(by_metric["cash_and_equivalents"].normalized_value, 4_434_617)
+        self.assertEqual(by_metric["cash_and_equivalents"].normalized_value, 4_434_617_000_000)
         self.assertEqual(by_metric["cash_and_equivalents"].line_item_code, "110")
         self.assertEqual(by_metric["cash_and_equivalents"].page, 7)
 
-        self.assertEqual(by_metric["current_liabilities"].normalized_value, 5_173_857)
+        self.assertEqual(by_metric["current_liabilities"].normalized_value, 5_173_857_000_000)
         self.assertEqual(by_metric["current_liabilities"].line_item_code, "310")
         self.assertEqual(by_metric["current_liabilities"].page, 9)
 
-        self.assertEqual(by_metric["total_interest_bearing_debt"].normalized_value, 6_401_081)
+        self.assertEqual(by_metric["total_interest_bearing_debt"].normalized_value, 6_401_081_000_000)
         self.assertEqual(by_metric["total_interest_bearing_debt"].line_item_code, "320+338")
 
 

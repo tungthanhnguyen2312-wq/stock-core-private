@@ -151,13 +151,7 @@ class RealCorpusRegressionTests(unittest.TestCase):
         # evidenced route; none may be silently merged over.
         self.assertEqual(len(records), 6)
         self.assertTrue(all(not row["eligible_for_ingress"] for row in records))
-        classifications = {row["classification"] for row in records}
-        self.assertEqual(classifications, {"EXACT_MATCH", "VALUE_CONFLICT"})
-        # VNM revenue is a real, evidenced discrepancy (the existing entry's own
-        # unit_scale=1,000,000 is not applied to its stored value) -- flagged, not
-        # silently repaired here.
-        conflict = next(row for row in records if row["classification"] == "VALUE_CONFLICT")
-        self.assertEqual((conflict["ticker"], conflict["canonical_metric"]), ("VNM", "revenue"))
+        self.assertEqual({row["classification"] for row in records}, {"EXACT_MATCH"})
 
     def test_reconciliation_new_key_would_be_eligible_for_ingress(self):
         fake_candidate = {"ticker": "ZZZZ", "canonical_metric": "revenue", "fiscal_period": "2024",

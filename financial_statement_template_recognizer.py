@@ -46,6 +46,17 @@ CONTRACT_VERSION = "financial_statement_template_recognizer/v1"
 CANONICAL_NET_INCOME_SEMANTIC = "net_income_attributable_to_parent"
 
 
+def normalize_monetary_display_value(parsed_display_value: int, currency: str | None, unit_scale: int | None) -> int:
+    """Convert an explicitly qualified displayed monetary value to base currency."""
+    if not isinstance(parsed_display_value, int):
+        raise ValueError("MONETARY_DISPLAY_VALUE_REQUIRED")
+    if not isinstance(currency, str) or not currency.strip():
+        raise ValueError("MONETARY_CURRENCY_REQUIRED")
+    if not isinstance(unit_scale, int) or unit_scale <= 0:
+        raise ValueError("MONETARY_UNIT_SCALE_REQUIRED")
+    return parsed_display_value * unit_scale
+
+
 class StatementType(StrEnum):
     BALANCE_SHEET = "balance_sheet"
     INCOME_STATEMENT = "income_statement"
@@ -710,7 +721,7 @@ def extract_generic_financial_statement_facts(
                 source_label=src_label,
                 ocr_matched_label=matched_line,
                 raw_value=raw_val,
-                normalized_value=ext["normalized_value"],
+                normalized_value=normalize_monetary_display_value(ext["normalized_value"], global_unit_scale.currency, global_unit_scale.unit_scale),
                 currency=global_unit_scale.currency,
                 unit_scale=global_unit_scale.unit_scale,
                 unit_label=global_unit_scale.unit_label,
@@ -727,7 +738,13 @@ def extract_generic_financial_statement_facts(
                     "unit_scale": global_unit_scale.unit_scale,
                     "unit_label": global_unit_scale.unit_label,
                 },
-                extraction_details=ext,
+                extraction_details={
+                    **ext,
+                    "parsed_display_value": ext["normalized_value"],
+                    "base_currency_value": normalize_monetary_display_value(
+                        ext["normalized_value"], global_unit_scale.currency, global_unit_scale.unit_scale
+                    ),
+                },
             )
         )
 
@@ -771,6 +788,7 @@ def extract_generic_financial_statement_facts(
     )
 
     comp_texts = [f"{c['label']}: {c['raw_value']}" for c in debt_components]
+    debt_base_value = normalize_monetary_display_value(debt_extraction["normalized_value"], global_unit_scale.currency, global_unit_scale.unit_scale)
     debt_citation_text = " + ".join(comp_texts) + f" = {debt_extraction['normalized_value']} ({global_unit_scale.unit_label})"
 
     extracted_facts.append(
@@ -782,7 +800,7 @@ def extract_generic_financial_statement_facts(
             source_label="Vay và nợ thuê tài chính (ngắn hạn + dài hạn)",
             ocr_matched_label=debt_citation_text,
             raw_value=str(debt_extraction["normalized_value"]),
-            normalized_value=debt_extraction["normalized_value"],
+            normalized_value=debt_base_value,
             currency=global_unit_scale.currency,
             unit_scale=global_unit_scale.unit_scale,
             unit_label=global_unit_scale.unit_label,
@@ -799,7 +817,11 @@ def extract_generic_financial_statement_facts(
                 "unit_scale": global_unit_scale.unit_scale,
                 "unit_label": global_unit_scale.unit_label,
             },
-            extraction_details=debt_extraction,
+            extraction_details={
+                **debt_extraction,
+                "parsed_display_value": debt_extraction["normalized_value"],
+                "base_currency_value": debt_base_value,
+            },
         )
     )
 
