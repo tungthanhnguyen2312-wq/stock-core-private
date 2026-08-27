@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Approved Issuer-IR Official Financial Evidence Cohort V1
+
+`APPROVED_ISSUER_IR_OFFICIAL_FINANCIAL_EVIDENCE_COHORT_V1 = OUTCOME_C_APPROVED_ROUTES_CURRENT_EVIDENCE_CEILING` (`push = NO`).
+
+1. The acquisition boundary is exactly ABS, ABW, ACB, MBB, MWG, TCB, AAA, AAT, and BID on their owner-approved issuer-IR hosts. ABT remains rejected. One foreground pass used bounded same-host index/document resolution only; there was no provider, Dashboard, production-store, retry, polling, or archive crawl path.
+2. A document is counted only if it is a same-host PDF with a PDF content signature. Category/detail HTML is preserved as a resolver record, never relabelled as a financial statement. The 18-document ceiling was respected (actual 1): AAA FY2024 annual report, content hash `fa5a765bf5214c56a609361699a04e9d527e99b34c18c2ff52ac12aecd197fd8`.
+3. The AAA PDF lacks the complete page/table-bound metadata and canonical-value extraction needed by `official_financial_filing_evidence`/P3-F13. No source-absent unit, scope, audit state, currency, period, or numeric scale is inferred, so it creates no qualified fact. Every other route has an explicit terminal disposition retained in the cohort artifact.
+4. The P3-F13 panel now has a constrained additive ingress for future cited, qualified document facts; it rejects uncited/unqualified rows. Bank inputs remain limited to bank canonical identities, and corporate revenue/debt/EV-family semantics are not manufactured for ACB/MBB/TCB/BID. Current run is a panel no-op: 0 facts, conflicts, readiness/valuation/authority changes.
+
 ## 2026-08-27 - Annual provider financial metadata retention and flow semantic corroboration V1
 
 `ANNUAL_PROVIDER_FINANCIAL_METADATA_RETENTION_AND_FLOW_SEMANTIC_CORROBORATION_V1 = OUTCOME_B_PROVIDER_ANNUAL_METADATA_RECOVERED_SEMANTICS_PARTIAL` (`push = NO`).

@@ -622,6 +622,39 @@ def build_scaleout_artifact(
     return artifact
 
 
+def merge_document_qualified_facts_into_panel(
+    baseline_panel: Mapping[str, Any], qualified_facts: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """The additive ingress for later approved-issuer document facts.
+
+    It is deliberately a small extension of the existing P3-F13 panel, rather
+    than a second official-fact store.  Callers must supply the already
+    qualified panel-shaped facts; rejected/extraction-only values are refused.
+    """
+    panel = copy.deepcopy(dict(baseline_panel))
+    issuers = panel.get("issuers")
+    if not isinstance(issuers, list):
+        raise ValueError("P3F13_PANEL_ISSUERS_REQUIRED")
+    by_ticker = {str(i.get("issuer_identity", {}).get("ticker", "")).upper(): i for i in issuers}
+    for fact in qualified_facts:
+        ticker = str(fact.get("issuer_identity") or "").upper()
+        lineage = fact.get("source_lineage") or {}
+        if fact.get("qualification_state") != "QUALIFIED" or not ticker or not lineage.get("document_sha256") or not lineage.get("citation_id"):
+            raise ValueError("P3F13_REQUIRES_QUALIFIED_DOCUMENT_CITED_FACT")
+        issuer = by_ticker.get(ticker)
+        if issuer is None:
+            issuer = {"issuer_identity": {"ticker": ticker, "entity_type": fact.get("entity_type", "unknown"), "entity_class_authority": "provided", "entity_class_is_positive": True}, "facts": []}
+            issuers.append(issuer); by_ticker[ticker] = issuer
+        facts = issuer.setdefault("facts", [])
+        key = (fact.get("canonical_metric"), fact.get("reporting_period"), fact.get("statement_scope"))
+        facts[:] = [old for old in facts if (old.get("canonical_metric"), old.get("reporting_period"), old.get("statement_scope")) != key]
+        facts.append(copy.deepcopy(dict(fact)))
+    panel["issuers_represented"] = len(issuers)
+    panel["total_issuers_processed"] = len(issuers)
+    panel["qualified_facts_count"] = sum(sum(f.get("qualification_state") == "QUALIFIED" for f in i.get("facts", [])) for i in issuers)
+    return panel
+
+
 def execute(
     *,
     p3f10_path: Path = DEFAULT_P3F10,

@@ -1,5 +1,7 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Approved issuer-IR official financial evidence cohort (2026-08-27):** `APPROVED_ISSUER_IR_OFFICIAL_FINANCIAL_EVIDENCE_COHORT_V1 = OUTCOME_C_APPROVED_ROUTES_CURRENT_EVIDENCE_CEILING`. Exactly nine owner-approved issuer-IR routes were checked; one AAA PDF was retained but cannot qualify without page-bound metadata/value extraction. Official coverage and valuation remain unchanged. Next gate is a direct same-approved-host statement with explicit full semantics and citation; do not reopen provider semantic inference from this result.
+
 > **Authoritative Technical Roadmap.** This document defines the engineering phases, milestone matrix, dependency contracts, and acceptance gates for Stock Lookup.
 > Current operational state and immediate milestones are tracked in [STATE.md](STATE.md).
 
