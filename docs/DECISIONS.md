@@ -1,5 +1,20 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Prospective research cohort first-future attribution V1
+
+`PROSPECTIVE_RESEARCH_COHORT_FIRST_FUTURE_ATTRIBUTION_V1 = COMPLETE_LOCALLY / FIRST_STRICTLY_LATER_SESSION_MATERIALIZED` (`push = NO`).
+
+Decisions:
+
+1. **Same lane.** Sibling contract `prospective_research_learning/cohort_future_attribution/v1` inside `PROSPECTIVE_RESEARCH_COHORT_COLLECTION_SCALEOUT_V1`. Not a new learning engine, score, backtest, or ranking surface. Historical `first_real_observation()` remains the 523-member 2026-08-20 contract and is not reused or rewritten for the 25/8 cohort.
+2. **Frozen T admission.** Attribution denominator is exactly the immutable 2026-08-25 snapshot `prospective_research_cohort_snapshot:4af5724516b386a3eda67515c322f01856eb9cb96a30287d3fa2a805f506bfc3` (95; 17/14/64). 26/8 triage/tactical state is optional `future_descriptive_state` only and never changes membership.
+3. **Strictly later exact-session prices.** T close from retained 2026-08-25 P3F9B `p3f9_exact_session_snapshot:ce30d85d132db0cebfa85d1f7a2b0c8f3258ba9da39d5b093ea88cd5fc5c8ab7`. Future close from the governed canonical 26/8 attempt `p3f9_exact_session_snapshot:c25bc8aea24e1490e2d3b7f8957c3d861456599ca697674a1f4f61207dd8415a`. Registry-selected attempt root wins; disagreeing extra 26/8 copies fail closed. No prior-session, next-available, intraday, or missing-as-zero substitution.
+4. **Descriptive arithmetic only.** Same retained representation (`DNSE_PROVIDER_NATIVE_RAW` / identity transform / current-descriptive adjusted-retrospective). Label `PROSPECTIVE_OBSERVED_CLOSE_TO_CLOSE_DESCRIPTIVE`. Zero/invalid T close and representation mismatch stay explicit rows. `RAW_AS_TRADED` not promoted. No costs, dividends, or invented corporate-action adjustments.
+5. **One horizon.** 2026-08-25 → 2026-08-26 is the first later completed session. Multi-horizon statistics are not emitted. Later sessions can materialize additional artifacts without rewriting the frozen T snapshot.
+6. **Authority unchanged.** `authority_effect = NONE`. `PROSPECTIVE_DESCRIPTIVE_ATTRIBUTION_ONLY`; not PIT backtest, predictive, calibrated, recommendation, sizing, or execution.
+
+Validation: 21 focused tests plus existing prospective-collection/learning/first-real-attribution tests; real 95-member materialization (85 observed / 10 `FUTURE_SESSION_MISSING`); identical replay no-op; `py_compile`; `git diff --check`. Zero network.
+
 ## 2026-08-27 - ADTV20 exact-reconciled trailing-window recovery V1
 
 `ADTV20_EXACT_RECONCILED_TRAILING_WINDOW_RECOVERY_V1 = OUTCOME_C_CURRENT_SOURCE_CEILING_ESTABLISHED` (`push = NO`).

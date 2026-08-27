@@ -139,7 +139,7 @@ def test_cli_resolve_rejects_unregistered_or_ungoverned_session():
     with pytest.raises(ValueError, match='SESSION_NOT_GOVERNED_COMPLETED'):
         resolve('2026-08-22')
     with pytest.raises(ValueError, match='SESSION_NOT_GOVERNED_COMPLETED'):
-        resolve('2026-08-26')
+        resolve('2026-08-27')
 
 
 def test_old_hpg_vcb_and_five_ticker_pilot_artifacts_are_byte_unchanged():

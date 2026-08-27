@@ -5,8 +5,10 @@ This is shadow prospective learning, never historical PIT backtesting.
 from __future__ import annotations
 import copy,hashlib,json
 import statistics
+from datetime import date
 from pathlib import Path
 from typing import Any,Mapping
+from field_temporal_contract import stable_id
 from prospective_research_context_extension import ATTRIBUTION_SAFE_SUCCESSOR_ID,SUPERSEDED_LEGACY_EXTENSION_ID
 def _canon(x:Any):return json.dumps(x,ensure_ascii=False,sort_keys=True,separators=(',',':'))
 def _hash(x:Any):return hashlib.sha256(_canon(x).encode()).hexdigest()
@@ -447,3 +449,407 @@ def replay_prospective_research_cohort_snapshot(snapshot: Mapping[str, Any]) -> 
         ctx = row['current_decision_context']
         if any(key in ctx for key in _COHORT_FORBIDDEN_CONTEXT_KEYS):
             raise ValueError('PROSPECTIVE_COHORT_SNAPSHOT_HINDSIGHT_OR_SCORING_FIELD_PRESENT:' + str(row.get('ticker')))
+
+
+PROSPECTIVE_RESEARCH_COHORT_FUTURE_ATTRIBUTION_CONTRACT = 'prospective_research_learning/cohort_future_attribution/v1'
+COHORT_FUTURE_ATTRIBUTION_IDENTITY_PREFIX = 'prospective_research_cohort_future_attribution:'
+OBSERVED_CHANGE_SEMANTICS = 'PROSPECTIVE_OBSERVED_CLOSE_TO_CLOSE_DESCRIPTIVE'
+EXACT_SESSION_SCALEOUT_CONTRACT = 'p3f9b_market_wide_exact_session_scaleout/v1'
+ALLOWED_CLOSE_REPRESENTATION = 'DNSE_PROVIDER_NATIVE_RAW'
+ALLOWED_TRANSFORMATION_IDENTITY = 'identity_provider_numeric_ohlc/v1'
+ALLOWED_PRICE_BASIS = 'CURRENT_DESCRIPTIVE_DNSE_REST_ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED'
+_ATTRIBUTION_FORBIDDEN_KEYS = frozenset({
+    'win_rate', 'hit_rate', 'expected_return', 'probability', 'score', 'recommendation',
+    'target_price', 'position_size', 'accuracy', 'edge', 'calibration', 'sizing',
+})
+_ATTRIBUTION_AUTHORITY_BOUNDARIES = (
+    'PROSPECTIVE_DESCRIPTIVE_ATTRIBUTION_ONLY',
+    'NOT_HISTORICAL_PIT_BACKTEST',
+    'NOT_PREDICTIVE',
+    'NOT_CALIBRATED',
+    'NOT_RECOMMENDATION',
+    'NOT_SIZING',
+    'NOT_EXECUTION',
+)
+
+
+def _iso_session(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(label)
+    try:
+        date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(label) from exc
+    return value
+
+
+def _cohort_future_attribution_identity(payload: Mapping[str, Any]) -> str:
+    body = copy.deepcopy(dict(payload))
+    body.pop('artifact_identity', None)
+    return COHORT_FUTURE_ATTRIBUTION_IDENTITY_PREFIX + _hash(body)
+
+
+def _walk_forbidden_keys(obj: Any) -> None:
+    if isinstance(obj, Mapping):
+        for key, value in obj.items():
+            if str(key) in _ATTRIBUTION_FORBIDDEN_KEYS:
+                raise ValueError('COHORT_FUTURE_ATTRIBUTION_FORBIDDEN_FIELD:' + str(key))
+            _walk_forbidden_keys(value)
+    elif isinstance(obj, list):
+        for item in obj:
+            _walk_forbidden_keys(item)
+
+
+def _verify_p3f9_scaleout(scaleout: Mapping[str, Any], session: str, label: str) -> None:
+    if scaleout.get('contract_version') != EXACT_SESSION_SCALEOUT_CONTRACT:
+        raise ValueError(label + '_EXACT_SOURCE_CONTRACT_MISMATCH')
+    body = dict(scaleout)
+    recorded_id = body.pop('artifact_identity', None)
+    recorded_sha = body.pop('artifact_sha256', None)
+    digest = stable_id(body)
+    if recorded_sha != digest or recorded_id != 'p3f9b_market_wide_exact_session_scaleout:' + digest:
+        raise ValueError(label + '_EXACT_SOURCE_IDENTITY_MISMATCH')
+    resolved = scaleout.get('resolved_session') or {}
+    if (resolved.get('resolved_completed_session') != session or
+            resolved.get('retained_snapshot_session') != session or
+            resolved.get('mva_bundle_session') not in (session, None) or
+            resolved.get('exact_session_equality') is not True or
+            resolved.get('incomplete_intraday_used') is not False):
+        raise ValueError(label + '_EXACT_SESSION_PRECONDITION_NOT_MET')
+
+
+def _verify_p3f9_snapshot(snapshot: Mapping[str, Any], scaleout: Mapping[str, Any], session: str, label: str) -> None:
+    body = dict(snapshot)
+    recorded_id = body.pop('snapshot_identity', None)
+    recorded_sha = body.pop('snapshot_sha256', None)
+    digest = stable_id(body)
+    if recorded_sha != digest or recorded_id != 'p3f9_exact_session_snapshot:' + digest:
+        raise ValueError(label + '_EXACT_SOURCE_IDENTITY_MISMATCH')
+    if snapshot.get('snapshot_identity') != scaleout.get('snapshot_identity'):
+        raise ValueError(label + '_EXACT_SOURCE_IDENTITY_MISMATCH')
+    if (snapshot.get('resolved_completed_session') != session or
+            snapshot.get('retained_snapshot_session') != session):
+        raise ValueError(label + '_EXACT_SESSION_PRECONDITION_NOT_MET')
+    authority = snapshot.get('authority_boundary') or {}
+    if authority.get('RAW_AS_TRADED') not in ('NOT_PROMOTED', None):
+        raise ValueError(label + '_RAW_AS_TRADED_PROMOTION')
+
+
+def _exact_session_observation(record: Mapping[str, Any] | None, session: str) -> tuple[Mapping[str, Any] | None, str | None]:
+    """Return the exact-session bar only. Prior-session lookback rows never substitute."""
+    if not isinstance(record, Mapping):
+        return None, 'RECORD_MISSING'
+    disposition = record.get('disposition')
+    if disposition != 'EXACT_SESSION_RETAINED':
+        return None, str(disposition or 'RECORD_MISSING')
+    matches = [item for item in record.get('observations') or []
+               if isinstance(item, Mapping) and item.get('session') == session]
+    if len(matches) != 1:
+        return None, 'EXACT_SESSION_OBSERVATION_MISSING' if not matches else 'EXACT_SESSION_OBSERVATION_AMBIGUOUS'
+    return matches[0], None
+
+
+def _numeric_close(observation: Mapping[str, Any] | None) -> float | None:
+    if not isinstance(observation, Mapping):
+        return None
+    close = observation.get('close')
+    if isinstance(close, bool) or not isinstance(close, (int, float)):
+        return None
+    value = float(close)
+    if value != value or value == 0.0 or value in (float('inf'), float('-inf')):
+        return None
+    return value
+
+
+def _representation_view(observation: Mapping[str, Any]) -> dict[str, Any]:
+    field_repr = observation.get('field_representation') or {}
+    return {
+        'close_field_representation': field_repr.get('close'),
+        'transformation_identity': observation.get('transformation_identity'),
+        'price_basis': observation.get('price_basis'),
+        'price_unit': observation.get('price_unit'),
+        'qualification': observation.get('qualification'),
+    }
+
+
+def _representation_comparable(t_obs: Mapping[str, Any], future_obs: Mapping[str, Any]) -> bool:
+    t_view, future_view = _representation_view(t_obs), _representation_view(future_obs)
+    if t_view != future_view:
+        return False
+    if t_view['close_field_representation'] != ALLOWED_CLOSE_REPRESENTATION:
+        return False
+    if t_view['transformation_identity'] != ALLOWED_TRANSFORMATION_IDENTITY:
+        return False
+    if t_view['price_basis'] != ALLOWED_PRICE_BASIS:
+        return False
+    if t_view['price_basis'] == 'RAW_AS_TRADED' or future_view['price_basis'] == 'RAW_AS_TRADED':
+        return False
+    return True
+
+
+def _cohort_attribution_summary(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
+    observed = [row for row in rows if row.get('outcome_status') == 'OBSERVED_EXACT_FUTURE_SESSION']
+    returns = [row['observed_return'] for row in observed]
+    return {
+        'frozen_count': len(rows),
+        'observed_count': len(observed),
+        'missing_count': len(rows) - len(observed),
+        'positive': sum(1 for row in observed if row.get('direction') == 'POSITIVE'),
+        'negative': sum(1 for row in observed if row.get('direction') == 'NEGATIVE'),
+        'unchanged': sum(1 for row in observed if row.get('direction') == 'UNCHANGED'),
+        'mean_observed_return': (sum(returns) / len(returns)) if returns else None,
+        'median_observed_return': statistics.median(returns) if returns else None,
+    }
+
+
+def _group_attribution_summaries(rows: list[Mapping[str, Any]], key_fn, names: list[str]) -> list[dict[str, Any]]:
+    buckets: dict[str, list[Mapping[str, Any]]] = {name: [] for name in names}
+    for row in rows:
+        buckets.setdefault(key_fn(row), []).append(row)
+    return [dict({'group': name}, **_cohort_attribution_summary(buckets.get(name, []))) for name in names]
+
+
+def _future_descriptive_state(ticker: str, future_triage: Mapping[str, Any] | None,
+                              future_tactical: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if future_triage is None and future_tactical is None:
+        return None
+    triage_state = 'NOT_IN_FUTURE_ENTRY_RELEVANT_COHORT'
+    if isinstance(future_triage, Mapping):
+        for state, members in (future_triage.get('all_entry_relevant_records') or {}).items():
+            for member in members or []:
+                if isinstance(member, Mapping) and member.get('ticker') == ticker:
+                    triage_state = str(state)
+                    break
+    tactical_row = {}
+    if isinstance(future_tactical, Mapping):
+        records = future_tactical.get('records') or {}
+        if isinstance(records, Mapping):
+            tactical_row = records.get(ticker) or {}
+    return {
+        'status': 'DESCRIPTIVE_FUTURE_CONTEXT_ONLY',
+        'future_triage_state': triage_state,
+        'future_tactical_state': tactical_row.get('entry_state') if isinstance(tactical_row, Mapping) else None,
+        'future_entry_action': tactical_row.get('entry_action') if isinstance(tactical_row, Mapping) else None,
+        'not_outcome_success_or_failure': True,
+    }
+
+
+def attribute_prospective_research_cohort_first_future(
+        *, snapshot: Mapping[str, Any], t_exact_snapshot: Mapping[str, Any],
+        t_exact_scaleout: Mapping[str, Any], future_exact_snapshot: Mapping[str, Any],
+        future_exact_scaleout: Mapping[str, Any], future_session: str,
+        future_triage: Mapping[str, Any] | None = None,
+        future_tactical: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Descriptive strictly-future join for prospective_research_learning/cohort_snapshot/v1.
+
+    Sibling to first_real_observation(). It does not reuse that function's hard-coded
+    523-member identities. Frozen T membership is never refreshed from the future session.
+    """
+    replay_prospective_research_cohort_snapshot(snapshot)
+    t_session = _iso_session(snapshot.get('research_session'), 'COHORT_FUTURE_ATTRIBUTION_T_SESSION_INVALID')
+    future_session = _iso_session(future_session, 'COHORT_FUTURE_ATTRIBUTION_FUTURE_SESSION_INVALID')
+    if future_session <= t_session:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_FUTURE_SESSION_NOT_STRICTLY_LATER')
+    _verify_p3f9_scaleout(t_exact_scaleout, t_session, 'T')
+    _verify_p3f9_snapshot(t_exact_snapshot, t_exact_scaleout, t_session, 'T')
+    _verify_p3f9_scaleout(future_exact_scaleout, future_session, 'FUTURE')
+    _verify_p3f9_snapshot(future_exact_snapshot, future_exact_scaleout, future_session, 'FUTURE')
+    frozen_rows = list(snapshot.get('frozen_records') or [])
+    frozen = {row['ticker']: row for row in frozen_rows}
+    if len(frozen) != snapshot.get('cohort_count') or len(frozen) != len(frozen_rows):
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_FROZEN_COHORT_INVALID')
+    future_members = set(future_exact_snapshot.get('records') or {})
+    future_only = sorted(future_members - set(frozen))
+    t_records = t_exact_snapshot.get('records') or {}
+    future_records = future_exact_snapshot.get('records') or {}
+    outcomes = []
+    missing_state_counts: dict[str, int] = {}
+    for ticker in sorted(frozen):
+        frozen_row = frozen[ticker]
+        t_obs, t_reason = _exact_session_observation(t_records.get(ticker), t_session)
+        future_obs, future_reason = _exact_session_observation(future_records.get(ticker), future_session)
+        t_close = _numeric_close(t_obs)
+        future_close = _numeric_close(future_obs)
+        row = {
+            'ticker': ticker,
+            't_session': t_session,
+            'future_session': future_session,
+            'frozen_triage_state': frozen_row.get('triage_state'),
+            'frozen_high_priority_review_eligible': bool(
+                (frozen_row.get('cohort_admission') or {}).get('high_priority_review_eligible')),
+            'frozen_decision_packet_status': frozen_row.get('decision_packet_status'),
+            'observed_change_semantics': OBSERVED_CHANGE_SEMANTICS,
+        }
+        context = _future_descriptive_state(ticker, future_triage, future_tactical)
+        if context is not None:
+            row['future_descriptive_state'] = context
+        if t_obs is None:
+            row.update({'outcome_status': 'MISSING_T_EXACT_OBSERVATION',
+                        'missing_state_reason': 'T_' + str(t_reason)})
+        elif t_close is None:
+            row.update({'outcome_status': 'T_CLOSE_INVALID_OR_ZERO',
+                        'missing_state_reason': 'T_CLOSE_INVALID_OR_ZERO',
+                        't_price_representation': _representation_view(t_obs)})
+        elif future_obs is None:
+            row.update({'outcome_status': 'MISSING_FUTURE_EXACT_OBSERVATION',
+                        'missing_state_reason': 'FUTURE_' + str(future_reason),
+                        't_close': t_close,
+                        't_price_representation': _representation_view(t_obs),
+                        't_observation_identity': 'exact_session_observation:' + _hash(dict(t_obs))})
+        elif future_close is None:
+            row.update({'outcome_status': 'FUTURE_CLOSE_INVALID',
+                        'missing_state_reason': 'FUTURE_CLOSE_INVALID',
+                        't_close': t_close,
+                        't_price_representation': _representation_view(t_obs),
+                        'future_price_representation': _representation_view(future_obs)})
+        elif not _representation_comparable(t_obs, future_obs):
+            row.update({'outcome_status': 'PRICE_REPRESENTATION_COMPARISON_UNSAFE',
+                        'missing_state_reason': 'PRICE_REPRESENTATION_COMPARISON_UNSAFE',
+                        't_close': t_close, 'future_close': future_close,
+                        't_price_representation': _representation_view(t_obs),
+                        'future_price_representation': _representation_view(future_obs)})
+        else:
+            change = future_close - t_close
+            observed_return = (future_close / t_close) - 1.0
+            direction = 'POSITIVE' if change > 0 else 'NEGATIVE' if change < 0 else 'UNCHANGED'
+            row.update({
+                'outcome_status': 'OBSERVED_EXACT_FUTURE_SESSION',
+                't_close': t_close, 'future_close': future_close,
+                'observed_price_change': change, 'observed_return': observed_return,
+                'direction': direction,
+                't_price_representation': _representation_view(t_obs),
+                'future_price_representation': _representation_view(future_obs),
+                't_observation_identity': 'exact_session_observation:' + _hash(dict(t_obs)),
+                'future_observation_identity': 'exact_session_observation:' + _hash(dict(future_obs)),
+            })
+        missing_state_counts[row['outcome_status']] = missing_state_counts.get(row['outcome_status'], 0) + 1
+        outcomes.append(row)
+    if any(row['ticker'] not in frozen for row in outcomes) or len(outcomes) != len(frozen):
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_FUTURE_COHORT_LEAKAGE')
+    overall = _cohort_attribution_summary(outcomes)
+    triage_summaries = _group_attribution_summaries(
+        outcomes, lambda row: row['frozen_triage_state'], list(ENTRY_RELEVANT_COHORT_STATES))
+    if sum(item['frozen_count'] for item in triage_summaries) != overall['frozen_count']:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_GROUP_COUNT_MISMATCH')
+    if overall['observed_count'] + overall['missing_count'] != overall['frozen_count']:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_COVERAGE_MISMATCH')
+    if overall['positive'] + overall['negative'] + overall['unchanged'] != overall['observed_count']:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_DIRECTION_MISMATCH')
+    payload = {
+        'schema_version': '1.0.0',
+        'contract_version': PROSPECTIVE_RESEARCH_COHORT_FUTURE_ATTRIBUTION_CONTRACT,
+        'authority': 'PROSPECTIVE_DESCRIPTIVE_ATTRIBUTION_ONLY',
+        'authority_boundaries': list(_ATTRIBUTION_AUTHORITY_BOUNDARIES),
+        'authority_effect': 'NONE',
+        'frozen_snapshot_identity': snapshot.get('snapshot_id'),
+        't_session': t_session,
+        'future_session': future_session,
+        'future_is_strictly_later': True,
+        'horizon': {
+            'kind': 'FIRST_STRICTLY_LATER_COMPLETED_SESSION',
+            't_session': t_session,
+            'future_session': future_session,
+            'later_sessions_not_materialized': True,
+        },
+        'source_artifact_identities': {
+            'frozen_cohort_snapshot': snapshot.get('snapshot_id'),
+            't_exact_session_snapshot': t_exact_snapshot.get('snapshot_identity'),
+            't_exact_session_scaleout': t_exact_scaleout.get('artifact_identity'),
+            'future_exact_session_snapshot': future_exact_snapshot.get('snapshot_identity'),
+            'future_exact_session_scaleout': future_exact_scaleout.get('artifact_identity'),
+            'future_triage': None if future_triage is None else future_triage.get('artifact_identity'),
+            'future_tactical': None if future_tactical is None else future_tactical.get('artifact_identity'),
+        },
+        'frozen_cohort_definition': copy.deepcopy(snapshot.get('cohort_definition') or {}),
+        'frozen_cohort_count': overall['frozen_count'],
+        'frozen_state_counts': copy.deepcopy(snapshot.get('state_counts') or {}),
+        'outcome_observation_coverage': {
+            'observed_count': overall['observed_count'],
+            'missing_count': overall['missing_count'],
+            'missing_state_counts': {status: count for status, count in sorted(missing_state_counts.items())
+                                     if status != 'OBSERVED_EXACT_FUTURE_SESSION'},
+        },
+        'overall': overall,
+        'frozen_triage_state_summaries': triage_summaries,
+        'high_priority_review_eligible_summaries': _group_attribution_summaries(
+            outcomes,
+            lambda row: 'high_priority_review_eligible:true' if row['frozen_high_priority_review_eligible']
+            else 'high_priority_review_eligible:false',
+            ['high_priority_review_eligible:true', 'high_priority_review_eligible:false'],
+        ),
+        'decision_packet_status_summaries': _group_attribution_summaries(
+            outcomes, lambda row: str(row.get('frozen_decision_packet_status') or 'UNKNOWN'),
+            sorted({str(row.get('frozen_decision_packet_status') or 'UNKNOWN') for row in outcomes}),
+        ),
+        'cohort_reconciliation': {
+            'frozen_t_cohort_size': len(frozen),
+            'attributed_tickers': [row['ticker'] for row in outcomes],
+            'future_only_members_not_added_to_t': future_only,
+            'frozen_members_not_in_future_snapshot_records': sorted(set(frozen) - future_members),
+        },
+        'price_representation': {
+            'observed_change_semantics': OBSERVED_CHANGE_SEMANTICS,
+            'arithmetic_comparison': 'SAME_REPRESENTATION_DESCRIPTIVE_ONLY',
+            'raw_as_traded': 'NOT_PROMOTED',
+            'transaction_costs': 'NONE',
+            'dividends': 'NOT_APPLIED',
+            'corporate_action_adjustment': 'NOT_INVENTED',
+        },
+        'temporal_safety': {
+            'frozen_cohort_not_recomputed_from_future': True,
+            'future_only_tickers_excluded_from_denominator': True,
+            'missing_observations_remain_missing': True,
+            'no_prior_session_substitution': True,
+            'no_next_available_session_substitution': True,
+            'no_intraday_substitution': True,
+            'no_missing_as_zero': True,
+            'future_descriptive_state_not_used_as_denominator': True,
+            'historical_raw_as_traded_or_pit_promoted': False,
+        },
+        'outcomes': outcomes,
+    }
+    _walk_forbidden_keys(payload)
+    payload['artifact_identity'] = _cohort_future_attribution_identity(payload)
+    return payload
+
+
+def replay_prospective_research_cohort_future_attribution(artifact: Mapping[str, Any]) -> None:
+    if artifact.get('contract_version') != PROSPECTIVE_RESEARCH_COHORT_FUTURE_ATTRIBUTION_CONTRACT:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_CONTRACT_MISMATCH')
+    if artifact.get('artifact_identity') != _cohort_future_attribution_identity(artifact):
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_IDENTITY_MISMATCH')
+    if artifact.get('authority') != 'PROSPECTIVE_DESCRIPTIVE_ATTRIBUTION_ONLY':
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_AUTHORITY_MISMATCH')
+    if artifact.get('authority_effect') != 'NONE':
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_AUTHORITY_EFFECT_NOT_NONE')
+    if artifact.get('future_is_strictly_later') is not True:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_FUTURE_SESSION_NOT_STRICTLY_LATER')
+    if str(artifact.get('future_session') or '') <= str(artifact.get('t_session') or ''):
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_FUTURE_SESSION_NOT_STRICTLY_LATER')
+    rows = artifact.get('outcomes') or []
+    if artifact.get('frozen_cohort_count') != len(rows):
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_COUNT_MISMATCH')
+    tickers = [row['ticker'] for row in rows]
+    if len(set(tickers)) != len(tickers) or sorted(tickers) != tickers:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_TICKER_SET_INVALID')
+    future_only = set((artifact.get('cohort_reconciliation') or {}).get('future_only_members_not_added_to_t') or [])
+    if future_only & set(tickers):
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_FUTURE_COHORT_LEAKAGE')
+    overall = artifact.get('overall') or {}
+    expected = _cohort_attribution_summary(rows)
+    if overall != expected:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_OVERALL_SUMMARY_MISMATCH')
+    if expected['observed_count'] + expected['missing_count'] != expected['frozen_count']:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_COVERAGE_MISMATCH')
+    if expected['positive'] + expected['negative'] + expected['unchanged'] != expected['observed_count']:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_DIRECTION_MISMATCH')
+    triage = artifact.get('frozen_triage_state_summaries') or []
+    if [item.get('group') for item in triage] != list(ENTRY_RELEVANT_COHORT_STATES):
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_TRIAGE_GROUP_MISMATCH')
+    if sum(item.get('frozen_count') or 0 for item in triage) != expected['frozen_count']:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_GROUP_COUNT_MISMATCH')
+    if (artifact.get('price_representation') or {}).get('raw_as_traded') != 'NOT_PROMOTED':
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_RAW_AS_TRADED_PROMOTION')
+    if (artifact.get('price_representation') or {}).get('observed_change_semantics') != OBSERVED_CHANGE_SEMANTICS:
+        raise ValueError('COHORT_FUTURE_ATTRIBUTION_CHANGE_SEMANTICS_MISMATCH')
+    _walk_forbidden_keys(artifact)
