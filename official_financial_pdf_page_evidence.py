@@ -52,6 +52,7 @@ def _positioned_page_tokens(page: Any) -> tuple[str, list[dict[str, Any]]]:
             "top": round(top, 4), "bottom": round(top + size, 4),
             "font_size": round(size, 4), "raw_token_order": len(chunks),
             "bbox_method": "pypdf_text_origin_conservative_width",
+            "provenance": "NATIVE_PDF_POSITIONED_TOKEN",
         })
 
     text = page.extract_text(visitor_text=visitor) or ""

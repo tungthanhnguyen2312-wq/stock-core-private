@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-28 - FPT FY2025 Image-Table TSV OCR Evidence Qualification V1
+
+`FPT_FY2025_IMAGE_TABLE_TSV_OCR_EVIDENCE_QUALIFICATION_V1 = OUTCOME_B_OCR_GEOMETRY_WORKS_WITH_NUMERIC_AMBIGUITIES_BLOCKING_SOME_FACTS` (`push = NO`).
+
+1. The retained FPT issuer-IR scan is handled by a generic image-table TSV adapter: deterministic PyMuPDF grayscale render, hashed render identity, Tesseract TSV word boxes, raw sequence/confidence, and explicit `OCR_TSV_POSITIONED_TOKEN` provenance feed the existing physical-line and X-band contract. Native tokens retain `NATIVE_PDF_POSITIONED_TOKEN`; the OCR header extension restored the native fused-header fallback, and HPG/PAN/VNM/AAA behavior is unchanged.
+2. Exact OCR numeric cells on p12 independently qualify FY2025 revenue (line 10, 70,112,825,100,710 VND) and consolidated parent-attributable net income (line 61, 9,376,127,629,501 VND); p13 OCF qualifies at 10,136,043,915,911 VND. p8 cash exactly corroborates its existing fact. The page-10 line-320 code is retained as OCR text `3²0`; no substitution is allowed, so debt cannot use line 300 or an inferred correction and remains blocked until both exact line-320 and line-338 evidence exist.
+3. P3-F13 ingress is ephemeral and non-overwriting: cash is `EXACT_MATCH`; revenue, net income, and OCF are new qualified keys (138→141 facts). FPT's retained-only fundamental replay becomes `PARTIAL` with exact margin and cash-flow-to-earnings plus ROA/ROE ending-balance proxies; it still has no prior annual period and no qualified debt. Current valuation/readiness counts, VALUE, ranking, recommendations, sizing, and PIT authority remain unchanged.
+4. The updated owner-focus matrix moves FPT from three to six current core facts; YoY and trend remain unavailable. The exact next evidence target is FPT FY2025 `total_interest_bearing_debt` on the same retained document through `IMAGE_ONLY_TABLE_OCR`, not a new acquisition or an automatic next milestone.
+
 ## 2026-08-27 - Owner-Focus Core Financial Panel Coverage & Evidence Priority V1
 
 `OWNER_FOCUS_CORE_FINANCIAL_PANEL_COVERAGE_AND_EVIDENCE_PRIORITY_V1 = OUTCOME_B_OWNER_FOCUS_PANEL_BUILT_WITH_SECTOR_CONTRACT_GAPS` (`push = NO`).

@@ -600,23 +600,79 @@ def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str
     # each component line remains preserved and its total bounded vertical span is
     # recorded below.
     header = None
+    all_header_tokens = [token for line in lines for token in line["tokens"]]
+    heights = sorted(max(0.1, float(token["bottom"]) - float(token["top"])) for token in all_header_tokens)
+    median_height = heights[len(heights) // 2] if heights else 1.0
+    page_height = max((float(token["bottom"]) for token in all_header_tokens), default=0.0) - min((float(token["top"]) for token in all_header_tokens), default=0.0)
+    # OCR may split a header across baselines farther apart than native text.  The
+    # join envelope is therefore derived from the page's median glyph height and
+    # capped as a fraction of the rendered page, never a ticker/page pixel magic
+    # distance.
+    header_span = min(page_height * 0.03, max(8.0, median_height * 3.0))
     for start in range(len(lines)):
         group = [lines[start]]
-        for candidate in lines[start + 1:start + 3]:
-            if abs(float(candidate["baseline"]) - float(group[0]["baseline"])) <= 8.0:
+        for candidate in lines[start + 1:]:
+            if abs(float(candidate["baseline"]) - float(group[0]["baseline"])) <= header_span:
                 group.append(candidate)
+            else:
+                break
         text = " ".join(str(line["text"]) for line in group)
-        if "code" in _normalize_text(text) and target_period in text and len(set(re.findall(r"20[0-3][0-9]", text))) >= 2:
+        normalized = _normalize_text(text)
+        # Both native English reports (``Code Note``) and VAS statements rendered
+        # through local OCR (``Mã Thuyết minh``) identify the code/note/value
+        # table header explicitly.  This is a header vocabulary extension, not an
+        # issuer/page exception; two independently visible year labels remain
+        # mandatory below.
+        has_code_header = "code" in normalized or ("ma" in normalized and "thuyet" in normalized)
+        if has_code_header and target_period in text and len(set(re.findall(r"20[0-3][0-9]", text))) >= 2:
             header = {"lines": group, "text": text}
             break
     if header is None:
         return None
-    ordered_years = list(dict.fromkeys(re.findall(r"20[0-3][0-9]", str(header["text"]))))
+    # Physical lines are stored in reading order for reconstruction, which can
+    # reverse two nearby OCR header baselines.  Period columns are spatial, so
+    # establish their order from the positioned year tokens rather than joined
+    # text order.
+    header_tokens = [token for line in header["lines"] for token in line["tokens"]]
+    header_year_tokens = [
+        token for token in header_tokens
+        if re.fullmatch(r"20[0-3][0-9]", str(token["text"]).strip())
+    ]
+    ordered_years = list(dict.fromkeys(
+        str(token["text"]).strip() for token in sorted(header_year_tokens, key=lambda token: float(token["x0"]))
+    ))
+    # Native PDF visitor callbacks may emit a complete header phrase in one text
+    # object (for example ``Code Note 2024 2023``).  That is still explicit header
+    # evidence, but it has no independent glyph boxes for its two years.  Preserve
+    # the historical native-text behavior by using its literal header order only in
+    # that case.  OCR TSV words always have their own boxes and may not use this
+    # fallback: period-band authority for OCR remains spatially evidenced.
+    year_geometry_proven = len(ordered_years) >= 2
+    if not year_geometry_proven:
+        has_ocr_tokens = any(str(token.get("provenance", "NATIVE_PDF_POSITIONED_TOKEN")) == "OCR_TSV_POSITIONED_TOKEN" for token in header_tokens)
+        if has_ocr_tokens:
+            return None
+        ordered_years = list(dict.fromkeys(re.findall(r"20[0-3][0-9]", str(header["text"]))))
+    if len(ordered_years) < 2:
+        return None
     comparative = next((year for year in ordered_years if year != target_period), None)
     if comparative is None:
         return None
     all_tokens = [token for line in lines for token in line["tokens"]]
-    amount_tokens = [token for token in all_tokens if "," in str(token["text"]) or str(token["text"]).strip() in _DASH_TOKENS]
+    # Period bands are established only from exact parseable numeric cells.  A
+    # dash is a reported nil marker, never a number and never a band anchor; this
+    # keeps blank/dash distinct from zero and prevents an OCR artefact beside a
+    # value from widening the numeric cell band.
+    amount_tokens = []
+    for token in all_tokens:
+        raw = str(token["text"]).strip()
+        if "." not in raw and "," not in raw:
+            continue
+        try:
+            parse_accounting_integer(raw)
+        except ValueError:
+            continue
+        amount_tokens.append(token)
     amount_clusters = [cluster for cluster in _x_clusters(amount_tokens) if len(cluster) >= 3]
     if len(amount_clusters) < 2:
         return None
@@ -627,22 +683,69 @@ def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str
         comparative_cluster, current_cluster = first_cluster, second_cluster
     else:  # defensive: target period was required above, so do not infer a fallback.
         return None
+    year_tokens = [token for token in header_tokens if str(token["text"]).strip() in {target_period, comparative}]
+    current_year_tokens = [token for token in year_tokens if str(token["text"]).strip() == target_period]
+    comparative_year_tokens = [token for token in year_tokens if str(token["text"]).strip() == comparative]
+    if year_geometry_proven:
+        if len(current_year_tokens) != 1 or len(comparative_year_tokens) != 1:
+            return None
     left_edge = min(float(token["x0"]) for token in current_cluster)
     short_numeric = [token for token in all_tokens if _CODE_LINE_RE.fullmatch(str(token["text"]).strip()) and float(token["x0"]) < left_edge]
     short_clusters = [cluster for cluster in _x_clusters(short_numeric, gap=20.0) if len(cluster) >= 3]
     if not short_clusters:
         return None
-    code_cluster = short_clusters[-2] if len(short_clusters) >= 2 else short_clusters[-1]
-    note_cluster = short_clusters[-1] if len(short_clusters) >= 2 else None
+    # Bind the code/note bands to the visible header labels where available.
+    # Selecting the right-most short-number clusters is unsafe for OCR tables:
+    # note references and incidental integers in a description can lie to the
+    # right of the actual code column.
+    code_header_tokens = [token for token in header_tokens if _normalize_text(str(token["text"])) in {"code", "ma"}]
+    note_header_tokens = [token for token in header_tokens if _normalize_text(str(token["text"])) in {"note", "thuyet"}]
+
+    def nearest_cluster(header_tokens: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]] | None:
+        if not header_tokens:
+            return None
+        header_x = sum(float(token["x0"]) for token in header_tokens) / len(header_tokens)
+        return min(
+            short_clusters,
+            key=lambda cluster: abs(
+                (sum(float(token["x0"]) for token in cluster) / len(cluster)) - header_x
+            ),
+        )
+
+    if not code_header_tokens and not note_header_tokens:
+        # See the native fused-header compatibility note above.  The historical
+        # native path had an explicit two-run code/note layout and no individual
+        # header-word boxes; retain that behavior without applying it to OCR.
+        has_ocr_tokens = any(str(token.get("provenance", "NATIVE_PDF_POSITIONED_TOKEN")) == "OCR_TSV_POSITIONED_TOKEN" for token in header_tokens)
+        if has_ocr_tokens:
+            return None
+        code_cluster = short_clusters[-2] if len(short_clusters) >= 2 else short_clusters[-1]
+        note_cluster = short_clusters[-1] if len(short_clusters) >= 2 else None
+    else:
+        code_cluster = nearest_cluster(code_header_tokens)
+        if code_cluster is None:
+            code_cluster = max(short_clusters, key=lambda cluster: (len(cluster), -float(cluster[0]["x0"])))
+        note_cluster = nearest_cluster(note_header_tokens)
+        if note_cluster is code_cluster:
+            note_cluster = None
     def band(cluster: Sequence[Mapping[str, Any]]) -> dict[str, float]:
-        return {"x0": round(min(float(token["x0"]) for token in cluster) - 2.0, 4), "x1": round(max(float(token["x0"]) for token in cluster) + 2.0, 4)}
+        # OCR amount starts can shift left from row to row while a year heading
+        # is aligned over the right side of the values.  Preserve the entire
+        # rendered value extent, not merely the range of token starts.
+        return {
+            "x0": round(min(float(token["x0"]) for token in cluster) - 2.0, 4),
+            "x1": round(max(float(token["x1"]) for token in cluster) + 2.0, 4),
+        }
+    current_band, comparative_band = band(current_cluster), band(comparative_cluster)
+    if year_geometry_proven and (not _in_band(current_year_tokens[0], current_band) or not _in_band(comparative_year_tokens[0], comparative_band)):
+        return None
     return {
         "recognizer_version": GEOMETRY_RECOGNIZER_VERSION,
         "header_evidence": {"line_ids": [line["line_id"] for line in header["lines"]], "text": header["text"],
                             "bbox": {"x0": min(line["bbox"]["x0"] for line in header["lines"]), "x1": max(line["bbox"]["x1"] for line in header["lines"]),
                                      "top": min(line["bbox"]["top"] for line in header["lines"]), "bottom": max(line["bbox"]["bottom"] for line in header["lines"])}},
         "current_period_label": target_period, "comparative_period_label": comparative,
-        "bands": {"line_code": band(code_cluster), "note_reference": band(note_cluster) if note_cluster is not None else None, "current_period_value": band(current_cluster), "comparative_period_value": band(comparative_cluster)},
+        "bands": {"line_code": band(code_cluster), "note_reference": band(note_cluster) if note_cluster is not None else None, "current_period_value": current_band, "comparative_period_value": comparative_band},
     }
 
 
@@ -650,6 +753,106 @@ def _in_band(token: Mapping[str, Any], band: Mapping[str, float] | None) -> bool
     if band is None:
         return False
     return float(band["x0"]) <= float(token["x0"]) <= float(band["x1"])
+
+
+def match_geometry_table_row(
+    page: Mapping[str, Any],
+    *,
+    line_code: str,
+    target_period: str,
+    label_anchors: Sequence[str] = (),
+    require_label_anchor: bool = False,
+) -> dict[str, Any] | None:
+    """Return one exact code-addressed OCR/native table row from positioned tokens.
+
+    This is intentionally a geometry and published-statement-taxonomy matcher.  It
+    does not use fuzzy text to identify a canonical financial metric: callers give
+    the applicable standardized line code and statement family.  Labels are retained
+    as evidence and may be required by native-text callers, while scan OCR can remain
+    safely code-addressed when diacritics are not recovered faithfully.
+    """
+    tokens = page.get("positioned_tokens") or []
+    if not tokens:
+        return None
+    # This public helper is the TSV-OCR adapter boundary.  Native PDFs use the
+    # established ``_geometry_column_major_match`` path above; accepting a mixed
+    # token source here would make its evidence provenance ambiguous.
+    if {str(token.get("provenance", "")) for token in tokens} != {"OCR_TSV_POSITIONED_TOKEN"}:
+        return None
+    reconstruction = reconstruct_physical_lines(tokens)
+    lines = reconstruction["lines"]
+    discovered = discover_column_bands(lines, target_period)
+    if discovered is None:
+        return None
+    bands = discovered["bands"]
+    if max(bands["current_period_value"]["x0"], bands["comparative_period_value"]["x0"]) <= min(bands["current_period_value"]["x1"], bands["comparative_period_value"]["x1"]):
+        return None
+
+    code_lines = []
+    for line in lines:
+        codes = [token for token in line["tokens"] if _in_band(token, bands["line_code"]) and _CODE_LINE_RE.fullmatch(str(token["text"]).strip())]
+        if codes:
+            code_lines.append((float(line["baseline"]), line, codes))
+    target = [(baseline, line, codes) for baseline, line, codes in code_lines if any(str(token["text"]).strip() == str(line_code) for token in codes)]
+    if len(target) != 1:
+        return None
+    baseline, line, _ = target[0]
+    # Delimit with every visible short code-column row, not solely codes whose
+    # glyphs survived OCR as digits.  A malformed neighbouring code (for example
+    # ``02`` read as ``0²``) must still keep its value cells out of line 10.
+    delimiter_baselines = {
+        float(candidate["baseline"])
+        for candidate in lines
+        if float(candidate["baseline"]) != baseline
+        and any(_in_band(token, bands["line_code"]) for token in candidate["tokens"])
+    }
+    other_baselines = sorted(delimiter_baselines)
+    below = max((value for value in other_baselines if value < baseline), default=None)
+    above = min((value for value in other_baselines if value > baseline), default=None)
+    # Code rows delimit a table record, so a wrapped label/value may occupy a
+    # different physical baseline without becoming a neighbouring record.
+    lower_bound = (baseline + below) / 2.0 if below is not None else float("-inf")
+    upper_bound = (baseline + above) / 2.0 if above is not None else float("inf")
+    row_lines = [item for item in lines if lower_bound < float(item["baseline"]) <= upper_bound]
+    row_tokens = [token for row in row_lines for token in row["tokens"]]
+    # A rendered scan may have its code column to the left of the label column
+    # (unlike the already-supported native column-major family).  The label band
+    # is therefore the bounded space between the code and note/value bands, not
+    # a stream-order or fixed-side assumption.
+    label_right = float((bands["note_reference"] or bands["current_period_value"])["x0"])
+    label_band = {"x0": float(bands["line_code"]["x1"]), "x1": label_right}
+    label_tokens = [token for token in row_tokens if label_band["x0"] < float(token["x0"]) < label_band["x1"]]
+    label_tokens.sort(key=lambda token: (float(token["top"]), float(token["x0"]), int(token.get("raw_token_order", 0))))
+    raw_fragments = [str(token["text"]) for token in label_tokens]
+    reconstructed_label = " ".join(raw_fragments)
+    normalized_label = _normalize_text(reconstructed_label)
+    anchor = next((item for item in label_anchors if _anchor_matches(normalized_label, item)), None)
+    if require_label_anchor and anchor is None:
+        return None
+    current = [token for token in row_tokens if _in_band(token, bands["current_period_value"])]
+    comparative = [token for token in row_tokens if _in_band(token, bands["comparative_period_value"])]
+    if any(token in comparative for token in current) or len(current) != 1 or len(comparative) != 1:
+        return None
+    note = next((str(token["text"]).strip() for token in row_tokens if _in_band(token, bands["note_reference"]) and _NOTE_TOKEN_RE.fullmatch(str(token["text"]).strip())), None)
+    row_bbox = {
+        "x0": min(float(token["x0"]) for token in row_tokens), "x1": max(float(token["x1"]) for token in row_tokens),
+        "top": min(float(token["top"]) for token in row_tokens), "bottom": max(float(token["bottom"]) for token in row_tokens),
+    }
+    return {
+        "page": int(page["page_number"]), "line_text": reconstructed_label, "matched_anchor": anchor,
+        "current_raw": str(current[0]["text"]), "comparative_raw": str(comparative[0]["text"]),
+        "has_code": True, "note_reference": note, "layout": "column_major_geometry",
+        "row_object": {"document_sha": page.get("document_sha256"), "page": int(page["page_number"]), "table_id": None,
+            "statement_family": page.get("statement_family"), "row_bbox": row_bbox, "raw_label_fragments": raw_fragments,
+            "reconstructed_label": reconstructed_label, "line_code": str(line_code), "note_reference": note,
+            "current_period_label": discovered["current_period_label"], "current_raw_value": str(current[0]["text"]),
+            "current_value_bbox": {k: current[0][k] for k in ("x0", "x1", "top", "bottom")},
+            "comparative_period_label": discovered["comparative_period_label"], "comparative_raw_value": str(comparative[0]["text"]),
+            "comparative_value_bbox": {k: comparative[0][k] for k in ("x0", "x1", "top", "bottom")},
+            "recognizer_version": GEOMETRY_RECOGNIZER_VERSION, "physical_line_reconstruction": {"vertical_tolerance": reconstruction["vertical_tolerance"], "line_id": line["line_id"], "row_baseline_bounds": [lower_bound, upper_bound]},
+            "column_bands": {**discovered, "bands": {**discovered["bands"], "label": label_band}},
+        },
+    }
 
 
 def _geometry_column_major_match(page: Mapping[str, Any], metric: str, target_period: str) -> dict[str, Any] | None:
