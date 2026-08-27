@@ -57,6 +57,13 @@ def normalize_monetary_display_value(parsed_display_value: int, currency: str | 
     return parsed_display_value * unit_scale
 
 
+def net_income_line_codes_for_scope(statement_scope: str | None) -> tuple[str, ...]:
+    """Return only the evidence line codes allowed for canonical net_income."""
+    if statement_scope in {"separate", "unconsolidated"}:
+        return ("61", "60")
+    return ("61",)
+
+
 class StatementType(StrEnum):
     BALANCE_SHEET = "balance_sheet"
     INCOME_STATEMENT = "income_statement"
@@ -553,6 +560,7 @@ def extract_generic_financial_statement_facts(
     qualification_record: Mapping[str, Any] | None = None,
     verified_at: str | None = None,
     required_metrics: Sequence[str] | None = None,
+    statement_scope: str | None = None,
 ) -> list[ExtractedStatementFact]:
     """Pure generic financial statement template recognition and fact extraction.
     
@@ -688,8 +696,10 @@ def extract_generic_financial_statement_facts(
 
         match_res = _find_line_item_on_pages(st_pages, target_code, anchors, col_layout)
         
-        # Check unconsolidated fallback for net_income if consolidated line 61 is absent
-        if match_res is None and metric_name == "net_income" and "unconsolidated_fallback_line_code" in spec:
+        # Line 60 is total consolidated PAT; canonical corporate net_income is parent
+        # attributable line 61.  The narrow line-60 fallback remains available only
+        # when an explicit separate/unconsolidated statement scope proves it applies.
+        if match_res is None and metric_name == "net_income" and "60" in net_income_line_codes_for_scope(statement_scope) and "unconsolidated_fallback_line_code" in spec:
             fallback_code = spec["unconsolidated_fallback_line_code"]
             fallback_anchors = ("loi nhuan sau thue thu nhap doanh nghiep", "loi nhuan sau thue tndn", "loi nhuan sau thue")
             match_res = _find_line_item_on_pages(st_pages, fallback_code, fallback_anchors, col_layout)

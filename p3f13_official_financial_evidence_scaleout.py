@@ -149,18 +149,22 @@ def _make_corp_fact(*, ticker: str, metric: str, value: int, period: int | str, 
     }
 
 
-# Exact correction registry: evidence identity + retained display value, never a magnitude rule.
-NORMALIZATION_CORRECTIONS = {
-    ("4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab", "014e10f74e89fe243f029d4852ca89da6ae0fa81fdfc2a50e358dfbc7804e20d"): 52_576_991,
-    ("4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab", "8e286bb9f2bf4a4dac7cb2e58bbcc5d3500d92bec4bdf4b2f418aab8c4423357"): 56_993_245,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "1758240f1ec1aef0b0bd1763581558fcc1b252a02ef78ac6ad9e81bda90a4e27"): 4_434_617,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "11f473c464ca1e78a37551cc87dcc04bb2472434cbfe304e08801f878839dff9"): 5_173_857,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "3cf56965f81ef026ff7ae5ff0596f0b25f7fafe630e2fb96c37965098cb4233a"): 6_445_924,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "cad344ae71c4d6f65a5a18402a25a106e4bcde30b2e661f1d8b75cf3232c7eaa"): -3_262_205,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "9858f09dafa3c1bd24ed34236ce22d80a57071ea2a512c1d22ee6f27d477af8d"): 8_837_380,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "5b221f6aefe24bec90ec2af2c4bc4b203ad64d721df694f9dc53c1c8d56988ba"): 48_368_203,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "8618a82831a9bae0fb61ede3bfa6f6bbe5712374b23ec9295d02e3fed1ff02e0"): 61_279_149,
-    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "edb69ffd87bb28b13a492e1303d68fe2bf5c877138f9e1f157fd797441d509b0"): 6_401_081,
+# One governed, evidence-keyed active-fact correction registry.  Historical source
+# artifacts are never rewritten; each record proves both the old materialization and
+# its exact replacement semantics.
+GOVERNED_FACT_CORRECTIONS = {
+    ("4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab", "014e10f74e89fe243f029d4852ca89da6ae0fa81fdfc2a50e358dfbc7804e20d"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 52_576_991},
+    ("4313d34c5d2131803e87c11bdd34ff3313d607e901dd37ea6e09f5600441a6ab", "8e286bb9f2bf4a4dac7cb2e58bbcc5d3500d92bec4bdf4b2f418aab8c4423357"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 56_993_245},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "1758240f1ec1aef0b0bd1763581558fcc1b252a02ef78ac6ad9e81bda90a4e27"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 4_434_617},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "11f473c464ca1e78a37551cc87dcc04bb2472434cbfe304e08801f878839dff9"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 5_173_857},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "3cf56965f81ef026ff7ae5ff0596f0b25f7fafe630e2fb96c37965098cb4233a"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 6_445_924},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "cad344ae71c4d6f65a5a18402a25a106e4bcde30b2e661f1d8b75cf3232c7eaa"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": -3_262_205},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "9858f09dafa3c1bd24ed34236ce22d80a57071ea2a512c1d22ee6f27d477af8d"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 8_837_380},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "5b221f6aefe24bec90ec2af2c4bc4b203ad64d721df694f9dc53c1c8d56988ba"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 48_368_203},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "8618a82831a9bae0fb61ede3bfa6f6bbe5712374b23ec9295d02e3fed1ff02e0"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 61_279_149},
+    ("85b250e9bd3b87aac9a1f650363f7063b2a830f6f4f1dda07eb6eecd09063a3e", "edb69ffd87bb28b13a492e1303d68fe2bf5c877138f9e1f157fd797441d509b0"): {"kind": "NORMALIZATION_SCALE", "parsed_display_value": 6_401_081},
+    ("4fb8f8e0f8dd5dc429533e548e4cfd045c9a81f9d26a51a5e3cf1cee53498074", "0131580c5ea79faa60fdd920f4c4762b42b4c1a3791a61d034573e94995cd126"): {"kind": "CANONICAL_IDENTITY_LINE_CODE_CORRECTION", "ticker": "HPG", "canonical_metric": "net_income", "reporting_period": "2022", "statement_scope": "consolidated", "old_source_page": 106, "old_row_label": "Net profit after tax", "old_line_code": "60", "old_value": 8_444_429_054_516, "correct_source_page": 107, "correct_row_label": "Shareholders of the parent company", "correct_line_code": "61", "correct_value": 8_483_510_554_031, "currency": "VND", "unit_scale": 1, "correct_citation_id": "1f33cabb35a9a4bc7fc6c0eed7c89a80fda8258d61f8d4241669712cc9d94220", "version": "hpg_parent_attributable_net_income_semantic_correction/v1"},
+    ("44919df68306d2389509d5701369c70966f3669fb5b2ce20f609b28322cfef0e", "265e679db80277ffea7450b811c47a00248cf574ceb2097011176ebc2d7a281d"): {"kind": "CANONICAL_IDENTITY_LINE_CODE_CORRECTION", "ticker": "HPG", "canonical_metric": "net_income", "reporting_period": "2023", "statement_scope": "consolidated", "old_source_page": 88, "old_row_label": "Net profit after tax", "old_line_code": "60", "old_value": 6_800_388_315_081, "correct_source_page": 89, "correct_row_label": "Shareholders of the parent company", "correct_line_code": "61", "correct_value": 6_835_064_334_356, "currency": "VND", "unit_scale": 1, "correct_citation_id": "d49913fd44b2f7e2fe5accc17d0ab766b363d075e7b15069aed9d00b2c4dc573", "version": "hpg_parent_attributable_net_income_semantic_correction/v1"},
 }
 
 
@@ -171,9 +175,10 @@ def apply_normalization_corrections(panel: Mapping[str, Any]) -> list[dict[str, 
         for fact in issuer.get("facts", []):
             lineage = fact.get("source_lineage") or {}
             key = (lineage.get("document_sha256"), lineage.get("citation_id"))
-            display = NORMALIZATION_CORRECTIONS.get(key)
-            if display is None:
+            correction = GOVERNED_FACT_CORRECTIONS.get(key)
+            if correction is None or correction["kind"] != "NORMALIZATION_SCALE":
                 continue
+            display = correction["parsed_display_value"]
             corrected = normalize_monetary_display_value(display, fact.get("currency"), fact.get("unit_scale"))
             if fact.get("value") != display:
                 raise ValueError("NORMALIZATION_CORRECTION_OLD_VALUE_MISMATCH")
@@ -182,8 +187,35 @@ def apply_normalization_corrections(panel: Mapping[str, Any]) -> list[dict[str, 
             lineage["normalization_correction"] = {"version": "official_financial_normalization_scale_correction/v1", "parsed_display_value": display, "old_materialized_value": display, "corrected_base_currency_value": corrected}
             corrections.append({"ticker": issuer["issuer_identity"]["ticker"], "canonical_metric": fact["canonical_metric"], "old_value": display, "new_value": corrected, "document_sha256": key[0], "citation_id": key[1]})
             applied_keys.add(key)
-    if applied_keys != set(NORMALIZATION_CORRECTIONS):
+    expected_keys = {key for key, correction in GOVERNED_FACT_CORRECTIONS.items() if correction["kind"] == "NORMALIZATION_SCALE"}
+    if applied_keys != expected_keys:
         raise ValueError("NORMALIZATION_CORRECTION_EVIDENCE_NOT_FOUND")
+    return corrections
+
+
+def apply_canonical_identity_corrections(panel: Mapping[str, Any]) -> list[dict[str, Any]]:
+    corrections = []
+    applied_keys = set()
+    for issuer in panel.get("issuers", []):
+        for fact in issuer.get("facts", []):
+            lineage = fact.get("source_lineage") or {}
+            key = (lineage.get("document_sha256"), lineage.get("citation_id"))
+            correction = GOVERNED_FACT_CORRECTIONS.get(key)
+            if correction is None or correction["kind"] != "CANONICAL_IDENTITY_LINE_CODE_CORRECTION":
+                continue
+            if (issuer["issuer_identity"]["ticker"], fact.get("canonical_metric"), fact.get("reporting_period"), fact.get("statement_scope")) != (correction["ticker"], correction["canonical_metric"], correction["reporting_period"], correction["statement_scope"]):
+                raise ValueError("CANONICAL_IDENTITY_CORRECTION_TARGET_MISMATCH")
+            if (fact.get("value"), fact.get("currency"), fact.get("unit_scale")) != (correction["old_value"], correction["currency"], correction["unit_scale"]):
+                raise ValueError("CANONICAL_IDENTITY_CORRECTION_OLD_VALUE_MISMATCH")
+            fact["value"] = correction["correct_value"]
+            fact.setdefault("temporal_envelope", {})["value"] = correction["correct_value"]
+            lineage.update({"citation": f"Issuer PDF page {correction['correct_source_page']}; audited consolidated FY{correction['reporting_period']}; {correction['correct_row_label']} (line {correction['correct_line_code']}).", "citation_id": correction["correct_citation_id"], "source_page": correction["correct_source_page"], "line_code": correction["correct_line_code"], "raw_row_label": correction["correct_row_label"], "evidence_id": f"evidence:{key[0]}:{correction['correct_source_page']}"})
+            lineage["canonical_identity_correction"] = {**correction, "superseded_citation_id": key[1], "document_sha256": key[0]}
+            corrections.append({**correction, "document_sha256": key[0], "superseded_citation_id": key[1], "new_citation_id": correction["correct_citation_id"]})
+            applied_keys.add(key)
+    expected_keys = {key for key, correction in GOVERNED_FACT_CORRECTIONS.items() if correction["kind"] == "CANONICAL_IDENTITY_LINE_CODE_CORRECTION"}
+    if applied_keys != expected_keys:
+        raise ValueError("CANONICAL_IDENTITY_CORRECTION_EVIDENCE_NOT_FOUND")
     return corrections
 
 
@@ -518,6 +550,7 @@ def build_scaleout_artifact(
     )
     refreshed_panel["total_facts_evaluated"] = sum(len(iss.get("facts", [])) for iss in refreshed_panel["issuers"])
     normalization_corrections = apply_normalization_corrections(refreshed_panel)
+    canonical_identity_corrections = apply_canonical_identity_corrections(refreshed_panel)
     qualified_numeric_facts = sum(
         1
         for issuer in refreshed_panel["issuers"]
@@ -642,11 +675,12 @@ def build_scaleout_artifact(
         # panel/readiness without recomputing it -- mirrors p3e_fundamental_coverage_closeout.py's
         # own refreshed_panel_data/refreshed_fundamental_readiness keys, which this engine already
         # consumes as its own baseline above. Additive only; every previously existing key and
-        # value in this artifact is preserved unless an exact evidence-keyed normalization
-        # correction above proves that the old materialization used display scale.
+        # value in this artifact is preserved unless an exact evidence-keyed governed
+        # correction above proves the old materialization is wrong.
         "refreshed_panel_data": refreshed_panel,
         "normalization_corrections": normalization_corrections,
         "normalization_reconciliation": normalization_reconciliation,
+        "canonical_identity_corrections": canonical_identity_corrections,
         "refreshed_fundamental_readiness": p3b_refreshed,
         "before_after_comparison": before_after_comparison,
         "root_blocker_distribution": root_blocker_distribution,

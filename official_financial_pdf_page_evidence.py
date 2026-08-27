@@ -171,7 +171,7 @@ def discover_tables(pages: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
 
 def _sidecar(document: Mapping[str, Any], tables: list[Mapping[str, Any]], table_type: str) -> dict[str, Any]:
     selected = [t for t in tables if t["table_type"] == table_type]
-    return {"document_id": document["document_id"], "document_sha256": document["sha256"], "pages": [
+    return {"document_id": document["document_id"], "document_sha256": document["sha256"], "statement_scope": document.get("statement_scope"), "pages": [
         {"page": t["page_number"], "text": t["text"], "status": "text_available", "text_sha256": _hash(t["text"]),
          "citation_id": _hash(_json({"document": document["sha256"], "page": t["page_number"], "table": t["table_id"]})),
          "materialization_id": t["table_id"], "extraction_engine": EXTRACTION_METHOD} for t in selected]}
@@ -217,7 +217,7 @@ def extract_candidates(*, document: Mapping[str, Any], pages: list[Mapping[str, 
     extracted = []
     for family, metrics in family_metrics.items():
         try:
-            extracted.extend(extract_generic_financial_statement_facts(sidecar=_sidecar(document, tables, family), reporting_period=reporting_period, required_metrics=metrics))
+            extracted.extend(extract_generic_financial_statement_facts(sidecar=_sidecar({**document, "statement_scope": claims["statement_scope"]["value"]}, tables, family), reporting_period=reporting_period, required_metrics=metrics, statement_scope=claims["statement_scope"]["value"]))
         except ValueError as exc:
             rejected.append({"table_type": family, "state": "CANONICAL_IDENTITY_AMBIGUOUS", "reason": str(exc)})
     candidates = []

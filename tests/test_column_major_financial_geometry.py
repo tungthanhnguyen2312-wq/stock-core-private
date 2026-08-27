@@ -113,7 +113,4 @@ def test_hpg_existing_official_collisions_remain_explicit_and_never_ingress():
     assert len(records) == 6
     assert all(not record["eligible_for_ingress"] for record in records)
     by_metric = {(record["reporting_period"], record["canonical_metric"]): record["classification"] for record in records}
-    assert by_metric == {
-        ("2022", "revenue"): "EXACT_MATCH", ("2022", "net_income"): "VALUE_CONFLICT", ("2022", "operating_cash_flow"): "EXACT_MATCH",
-        ("2023", "revenue"): "EXACT_MATCH", ("2023", "net_income"): "VALUE_CONFLICT", ("2023", "operating_cash_flow"): "EXACT_MATCH",
-    }
+    assert set(by_metric.values()) == {"EXACT_MATCH"}

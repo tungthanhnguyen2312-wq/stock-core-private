@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - HPG Parent-Attributable Net Income Semantic Correction V1
+
+`HPG_PARENT_ATTRIBUTABLE_NET_INCOME_SEMANTIC_CORRECTION_V1 = OUTCOME_A_CANONICAL_CONSOLIDATED_NET_INCOME_CORRECTED` (`push = NO`).
+
+1. Consolidated canonical `net_income` means the parent-attributable line 61. The generic financial-statement extractor therefore permits the legacy line-60 fallback only when statement scope is explicitly `separate` or `unconsolidated`; it cannot silently qualify consolidated or unproven scope.
+2. A single governed active-fact correction registry is exact-keyed by the old retained `(document_sha256, citation_id)`. It corrects only HPG FY2022 from p106/code 60/8,444,429,054,516 VND to p107/code 61/8,483,510,554,031 VND and FY2023 from p88/code 60/6,800,388,315,081 VND to p89/code 61/6,835,064,334,356 VND. The retained historical citation JSONL is immutable; active lineage records the superseded citation and correction reason, then cites the independently qualified structural row.
+3. The correction is accounting-reconciled: parent-attributable earnings plus the stated non-controlling-interest share equals each prior consolidated-profit total exactly. All six HPG structural candidates now are `EXACT_MATCH`; collision handling remains non-overwriting and no candidate enters ingress.
+4. Only relevant derived outputs are recomputed: HPG FY2022→FY2023 earnings YoY is -19.4312%, net margins are 5.9993% and 5.7460%, and OCF-to-earnings is 1.4472x and 1.2645x. Current HPG P/E consumes unchanged FY2024 earnings, so valuation research-usable coverage and READY/VALUE authority do not change. No acquisition, provider, database, dashboard, strategy, recommendation, ranking, target, sizing, or PIT authority is opened.
+
 ## 2026-08-27 - HPG Column-Major Financial Table Geometry Disentanglement V1
 
 `HPG_COLUMN_MAJOR_FINANCIAL_TABLE_GEOMETRY_DISENTANGLEMENT_V1 = OUTCOME_A_HPG_COLUMN_MAJOR_GEOMETRY_QUALIFIES_FACTS` (`push = NO`).
