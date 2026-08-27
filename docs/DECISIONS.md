@@ -1,5 +1,68 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Provider Financial Semantic Basis Qualification V1
+
+`PROVIDER_FINANCIAL_SEMANTIC_BASIS_QUALIFICATION_V1 = OUTCOME_C_RETAINED_PROVIDER_ABSOLUTE_SEMANTICS_REMAIN_UNQUALIFIED` (`push = NO`).
+
+1. **Both evidence legs are required, not either.** A `(provider, statement_family)` shape may
+   qualify `PROVIDER_ABSOLUTE_RESEARCH_QUALIFIED` only with (a) provider-owned schema or explicit
+   library-contract evidence, **and** (b) zero-disagreement, discriminating (≥2 issuers, ≥5x
+   magnitude spread), official-anchor reconciliation. Leg (a) alone is a ratio/pattern identity —
+   internally consistent with a hypothesis, never an independent anchor — the exact trap
+   `docs/kbs_empirical_basis_qualification.md` already names for a different provider. Leg (b)
+   alone on a single ticker is explicitly excluded by the milestone brief.
+2. **Installed library source beats a live probe.** `vnstock==4.0.4`'s own source
+   (`vnstock/explorer/kbs/financial.py`) proves KBS requests `unit=1000` and multiplies every value
+   by 1000.0 before returning it — stronger evidence than any fresh network capture, since it shows
+   the exact transform, not a schema snapshot. `vnstock/explorer/vci/financial.py` has zero
+   occurrences of unit/scale/currency handling of any kind. A bounded Phase-4 live probe was
+   evaluated and skipped: it could not change the outcome, since leg (b) is blocked by data
+   availability (no retained annual payloads), not remaining schema uncertainty, and recovering
+   that history is out of this milestone's scope ("do not acquire broad new financial coverage").
+3. **Real reconciliation found real disagreement, not just absence of evidence.** `(VCI,
+   balance_sheet)` is the only shape with any official-anchor evidence: 6/8 issuers agree exactly
+   on `shareholders_equity`, 5/7 on `cash_and_cash_equivalents` — but PVD (~25,250x) and VNM
+   (~2.7%) reproducibly disagree on both. A shape with live counter-examples in its own tested
+   sample is not "consistent reconciliation" regardless of how many other issuers agree; this is
+   the concrete case the "no single-ticker proof may become market-wide authority" rule protects
+   against, generalized to a small-sample proof with visible contradictions. Flagged (not fixed —
+   different owner/lane): PVD's and VNM's own official citations may themselves be wrong (PVD's
+   635,711,153 VND cited "total equity" is implausibly small) or scope-mismatched.
+4. **One real, unrelated retention/propagation bug found and fixed.**
+   `canonical_fact_store.load_official_citations` mapped citation metric `cash_and_equivalents` to
+   canonical name `cash_and_equivalents`, but `canonical_financial_facts.METRIC_REGISTRY` spells
+   the same concept `cash_and_cash_equivalents` — the identical pre-existing two-spellings
+   correspondence `financial_fact_coverage_recovery.OFFICIAL_PANEL_CANONICAL_METRIC_ALIAS` already
+   documents for a different consumer of the same two names. The citation silently never matched
+   any built fact. Fixed the mapping value (not the citation file, which correctly uses the
+   official-evidence-panel's own established spelling).
+5. **Per-fact `PROVIDER_EXACT_RESEARCH_USABLE` is additive and independently gated.** New
+   `provider_financial_semantic_basis.classify_provider_exact_research_usable` requires a fact's
+   own `qualified`/`official_citation_agreement` status **and** its own independently-resolved
+   `statement_scope` (never `unknown`) — belt-and-suspenders against a coincidental value match
+   masking a scope mismatch. Wired into `financial_fact_coverage_recovery.classify_identity_cell`
+   as a new optional parameter; omitting it reproduces prior behavior byte-for-byte (verified by
+   test). Finds 10 real qualifying facts today, all for tickers already `OFFICIAL_QUALIFIED` for
+   the same identity via the separate p3f13 panel — zero net inventory-cell change, by construction
+   (the citation pool and the `PROVIDER_TIER` pool are disjoint today), not by an implementation
+   gap. QNS is an instructive near-miss: its cash value matches its citation exactly, but zero
+   minority interest leaves its own `statement_scope` unresolved, so the belt-and-suspenders check
+   correctly withholds the tier.
+6. **Full-universe recompute: 0 cells changed, valuation byte-identical.** 12,914-cell inventory
+   before/after identical in every state count (residual 0 both times); rerun current-valuation
+   artifact's `artifact_sha256` is byte-identical to the pre-milestone one. `READY`/`VALUE` stay
+   0/1,507. No official promotion, no new provider, no acquisition, no ticker-specific branch.
+
+Validation: `tests/test_provider_financial_semantic_basis.py` (25 tests covering all 17 named
+requirements) plus the full pre-existing suite touching every module reused
+(`test_canonical_financial_facts.py`, `test_financial_fact_coverage_recovery.py`,
+`test_pan_fy2024_financial_identity_qualification.py`,
+`test_ssi_fy2024_financial_identity_qualification.py`,
+`test_export_ai_bundle_pillar_a_cache.py`) all pass; `py_compile`; `git diff --check`. Zero network
+in any deterministic test; the one bounded, read-only, zero-write, zero-network pass over
+`dashboard-runtime` (reconciliation + evidence loading) touches only the 8 tickers that carry an
+official citation, by construction.
+
 ## 2026-08-27 - Current Financial Fact Coverage Recovery and Scale-Out V1
 
 `CURRENT_FINANCIAL_FACT_COVERAGE_RECOVERY_AND_SCALEOUT_V1 = OUTCOME_B_BOUNDED_RECOVERY_PARTIAL` (`push = NO`).

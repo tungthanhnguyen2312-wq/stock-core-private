@@ -185,7 +185,15 @@ def load_official_citations(runtime_root: Path | str) -> dict[tuple, dict[str, A
         "revenue": "revenue",
         "net_income": "net_income",
         "operating_cash_flow": "operating_cash_flow",
-        "cash_and_equivalents": "cash_and_equivalents",
+        # The official-evidence panel's own fact rows and citation files spell this balance-sheet
+        # line "cash_and_equivalents"; canonical_financial_facts.METRIC_REGISTRY spells the same
+        # concept "cash_and_cash_equivalents". Same pre-existing correspondence already documented
+        # and applied at the other consumer of this pair of spellings,
+        # financial_fact_coverage_recovery.OFFICIAL_PANEL_CANONICAL_METRIC_ALIAS -- not a new alias
+        # invented here. Without this, a retained cash_and_equivalents citation silently never
+        # matches any built fact, because build_facts() only ever looks up METRIC_REGISTRY's own
+        # canonical names.
+        "cash_and_equivalents": "cash_and_cash_equivalents",
         "total_interest_bearing_debt": "total_interest_bearing_debt",
     }
     citations: dict[tuple, dict[str, Any]] = {}

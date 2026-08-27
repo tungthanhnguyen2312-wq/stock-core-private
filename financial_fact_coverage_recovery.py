@@ -219,10 +219,20 @@ def _official_identity_fact(facts: Mapping[str, Mapping[str, Any]], identity: st
 def classify_identity_cell(
     *, ticker_record: Mapping[str, Any], identity: str, canonical_presence: Mapping[str, bool],
     official_facts: Mapping[str, Mapping[str, Any]] | None = None,
+    provider_exact_research_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Classify one (ticker, required-identity) cell into the strongest defensible state. Pure and
     deterministic: identical inputs always produce the identical state, and no ticker literal
-    appears anywhere in this function."""
+    appears anywhere in this function.
+
+    ``provider_exact_research_evidence`` is this ticker's own entry (if any) from
+    ``provider_financial_semantic_basis.load_provider_exact_research_evidence`` -- a mapping of
+    ``canonical_metric -> [fact, ...]`` for facts this ticker's OWN retained payload independently
+    reconciled against a qualified official citation (or that a shape-wide semantic-basis contract
+    covers). It is per-ticker, per-identity evidence, never a provider-wide inference: a ticker
+    with no entry here is completely unaffected, and this branch is only ever consulted for
+    ``PROVIDER_TIER`` records, so it can never promote a fact to ``OFFICIAL_QUALIFIED``.
+    """
     authority_tier = ticker_record.get("authority_tier")
     if authority_tier == mwcfr.OFFICIAL_TIER:
         fact = _official_identity_fact(official_facts or {}, identity)
@@ -242,6 +252,12 @@ def classify_identity_cell(
         ).get(series_metric_id) if series_metric_id else None
         if trend is not None and trend.get("status") == "AVAILABLE":
             return {"state": "PROVIDER_DESCRIPTIVE_ONLY", "reason": "PROVIDER_SERIES_TREND_AVAILABLE"}
+        exact_facts = (provider_exact_research_evidence or {}).get(identity)
+        if exact_facts:
+            return {
+                "state": "PROVIDER_EXACT_RESEARCH_USABLE",
+                "reason": "PER_FACT_OFFICIAL_CITATION_AGREEMENT",
+            }
         if canonical_presence.get(identity):
             return {
                 "state": "UNIT_OR_SCALE_UNRESOLVED",
@@ -270,12 +286,20 @@ def _trend_comparison_blocker_observations(records: Mapping[str, Mapping[str, An
 def build_financial_identity_inventory(
     wide_fundamental_artifact: Mapping[str, Any], canonical_presence_by_ticker: Mapping[str, Mapping[str, bool]],
     official_facts_by_ticker: Mapping[str, Mapping[str, Mapping[str, Any]]] | None = None,
+    provider_exact_research_evidence_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Phase-1 deterministic ticker x required-financial-identity inventory over the full official
     research universe. Every required cell receives exactly one of REQUIRED_CELL_STATES; residual
-    (expected cell count vs. actually classified cell count) must equal zero."""
+    (expected cell count vs. actually classified cell count) must equal zero.
+
+    ``provider_exact_research_evidence_by_ticker`` is optional and additive: omitting it (the
+    default) reproduces the exact prior behavior byte-for-byte, since every cell classification
+    still falls through to ``UNIT_OR_SCALE_UNRESOLVED``/``MISSING`` unchanged. See
+    ``provider_financial_semantic_basis.load_provider_exact_research_evidence`` for how it is built
+    -- bounded to the tickers that carry an official citation, so it can never affect any other."""
     records = wide_fundamental_artifact.get("records") or {}
     official_facts_by_ticker = official_facts_by_ticker or {}
+    provider_exact_research_evidence_by_ticker = provider_exact_research_evidence_by_ticker or {}
     cells: dict[str, list[dict[str, Any]]] = {}
     state_counts: Counter[str] = Counter()
     state_counts_by_entity: dict[str, Counter[str]] = defaultdict(Counter)
@@ -299,6 +323,7 @@ def build_financial_identity_inventory(
                     ticker_record=record, identity=identity,
                     canonical_presence=canonical_presence_by_ticker.get(ticker, {}),
                     official_facts=official_facts_by_ticker.get(ticker),
+                    provider_exact_research_evidence=provider_exact_research_evidence_by_ticker.get(ticker),
                 )
                 row.append({"identity": identity, **classified})
         cells[ticker] = row
@@ -325,9 +350,17 @@ def build_financial_identity_inventory(
             entity: dict(sorted(counts.items())) for entity, counts in sorted(state_counts_by_entity.items())
         },
         "provider_exact_research_usable_note": (
-            "Zero by construction: no provider-tier fact reaches PROVIDER_EXACT_RESEARCH_USABLE "
-            "while statement scope/currency/scale remain UNKNOWN_FAIL_CLOSED for every provider "
-            "observation market-wide (module docstring policy, unchanged by this milestone)."
+            "PROVIDER_EXACT_RESEARCH_USABLE is reachable (see "
+            "provider_financial_semantic_basis.classify_provider_exact_research_usable) but requires "
+            "this ticker's own retained fact to independently reconcile, digit-for-digit, against a "
+            "qualified official citation -- never a provider-wide inference from scope/currency/scale "
+            "remaining UNKNOWN_FAIL_CLOSED elsewhere market-wide. As of the "
+            "provider-financial-semantic-basis-qualification-v1 milestone this count is still 0 for "
+            "PROVIDER_TIER tickers specifically: every ticker that carries a matching official "
+            "citation today is already OFFICIAL_TIER and is classified through that branch instead, "
+            "so the mechanism has zero current beneficiaries even though it is proven correct "
+            "(tests/test_provider_financial_semantic_basis.py) and requires no further code change "
+            "the day a PROVIDER_TIER ticker gains its own official citation."
         ),
         "period_scope_note": (
             "PERIOD_MISMATCH/SCOPE_MISMATCH are not selected as a single-cell primary state here; "
