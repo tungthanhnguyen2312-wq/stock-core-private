@@ -13,6 +13,7 @@ from typing import Any, Mapping
 
 from annual_financial_ocr_materialization import parse_accounting_integer
 from financial_statement_template_recognizer import extract_generic_financial_statement_facts
+import official_financial_structural_table
 
 
 VERSION = "official_financial_pdf_page_evidence/v1"
@@ -169,6 +170,14 @@ def extract_candidates(*, document: Mapping[str, Any], pages: list[Mapping[str, 
     if str(document.get("entity_type", "corporate")) != "corporate":
         return [], [{"state": "NOT_APPLICABLE", "reason": "ENTITY_LAYOUT_NOT_SUPPORTED_BY_CORPORATE_TEMPLATE",
                      "entity_type": document.get("entity_type")}]
+    if not tables:
+        # The exact-form Circular-200 table fragmenter found nothing on this corporate
+        # document (no literal B01/B02/B03-DN/HN code on any page).  Dispatch to the
+        # structural fallback recognizer instead of blocking on REPORTING_PERIOD_UNPROVEN
+        # below -- that check is specific to document_metadata()'s Vietnamese-only claims
+        # and is never reached here.  AAA and every other exact-form-eligible document
+        # always has tables != [] at this point, so this branch never fires for them.
+        return official_financial_structural_table.build_structural_candidates(document=document, pages=pages)
     claims = metadata["metadata_claims"]
     reporting_period = str(claims["reporting_period"]["value"] or "")
     if not re.fullmatch(r"20\d{2}", reporting_period):
@@ -203,5 +212,15 @@ def build_artifact(*, document: Mapping[str, Any], path: Path) -> dict[str, Any]
         knowledge_available_at = document["retrieved_at"]
         panel_facts.append({"issuer_identity": candidate["ticker"], "entity_type": "corporate", "applicability_state": "APPLICABLE", "authority_tier": "promoted_corporate_evidence", "canonical_metric": candidate["canonical_metric"], "value": candidate["normalized_value"], "currency": candidate["currency"], "unit_scale": candidate["unit_scale"], "reporting_period": period, "period_type": "annual", "period_start": f"{period}-01-01", "period_end": f"{period}-12-31", "statement_scope": candidate["statement_scope"], "statement_family": candidate["statement_family"], "temporal_nature": "instant" if instant else "duration", "qualification_state": "QUALIFIED", "is_positive_authority": True, "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "reason_codes": ["OFFICIAL_DOCUMENT_PAGE_TABLE_CITED"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER", "temporal_envelope": {"as_of": period, "domain": "financial_statement", "field_id": f"pdf-page:{candidate['document_sha256']}:{candidate['canonical_metric']}:{period}", "field_name": candidate["canonical_metric"], "freshness_status": "historical", "knowledge_available_at": knowledge_available_at, "observed_at": knowledge_available_at, "pit_eligible": True, "pit_status": "QUALIFIED", "quality_status": "qualified", "value": candidate["normalized_value"]}, "source_lineage": {"provider": "official_issuer_ir", "authority_tier": "promoted_corporate_evidence", "document_sha256": candidate["document_sha256"], "citation_id": candidate["table_id"], "evidence_id": candidate["table_id"], "source_page": candidate["page_number"], "source_span": candidate["source_span"], "table_heading": candidate["table_heading"], "period_column_label": candidate["period_column_label"], "extraction_method": candidate["extraction_method"], "reconciliation_status": "NOT_COMPARED_TO_PROVIDER"}})
     output = {"schema_version": VERSION, "document": {k: document[k] for k in ("document_id", "ticker", "sha256", "official_url", "retrieved_at")}, "page_count": len(pages), "text_layer_status": "USABLE_NATIVE_TEXT" if any(p["status"] == "TEXT_AVAILABLE" for p in pages) else "IMAGE_ONLY_OR_SCANNED", "page_evidence": pages, "document_metadata": metadata, "tables": tables, "fact_candidates": candidates, "p3f13_panel_facts": panel_facts, "blocked_candidates": rejected, "authority": {"network_used": False, "provider_used": False, "production_db_mutated": False, "value_or_recommendation_activated": False}}
+    if not tables and str(document.get("entity_type", "corporate")) == "corporate":
+        # Additive only: the exact-form document_metadata claims above stay exactly what
+        # the Vietnamese-only function found (usually DOCUMENT_METADATA_BLOCKED for this
+        # branch) -- this key never redefines that meaning, it just makes the separate
+        # structural-fallback evidence that actually gated `candidates` visible too.
+        output["structural_document_metadata"] = {
+            "recognizer_identity": official_financial_structural_table.VERSION,
+            "layout_family": official_financial_structural_table.recognize_layout_family(pages),
+            "identity_claims": official_financial_structural_table.structural_document_identity_claims(pages, str(document["ticker"])),
+        }
     output["artifact_sha256"] = _hash(_json(output)); output["artifact_identity"] = f"official_financial_pdf_page_evidence:{output['artifact_sha256']}"
     return output
