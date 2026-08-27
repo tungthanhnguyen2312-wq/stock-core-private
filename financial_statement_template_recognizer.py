@@ -484,8 +484,12 @@ def _find_line_item_on_pages(
 
     for p in pages:
         lines = p.text.splitlines()
-        for line in lines:
-            l_str = line.strip()
+        for start, line in enumerate(lines):
+            # Native PDF text commonly preserves a visually single table row as two or
+            # three lines (label, note reference, then value columns).  Join only a
+            # bounded contiguous window; the line code plus label and numeric grammar
+            # still have to match before it can be selected.
+            l_str = " ".join(part.strip() for part in lines[start:start + 3] if part.strip())
             if not l_str:
                 continue
             l_norm = _normalize_text(l_str)
@@ -495,11 +499,17 @@ def _find_line_item_on_pages(
             if not anchor_matched:
                 continue
 
-            # Check line code
-            if target_code and target_code not in l_str.split():
-                # Allow line code if immediately adjacent to text / punctuation
-                if not re.search(rf"\b{target_code}\b", l_str):
-                    continue
+            # A code may lead a native-PDF row, or (as in OCR sidecars) follow the
+            # label on that *same physical line*.  Do not accept a code which appears
+            # only in a later line of the stitched window: that can combine a prior
+            # row's values with the next row's label.
+            code_at_row_start = bool(re.match(rf"^\s*{re.escape(target_code)}\b", l_str))
+            code_with_anchor_on_line = (
+                any(anchor in _normalize_text(line) for anchor in norm_anchors)
+                and bool(re.search(rf"\b{re.escape(target_code)}\b", line))
+            )
+            if target_code and not (code_at_row_start or code_with_anchor_on_line):
+                continue
 
             # Extract numeric tokens
             tokens = re.findall(r"\(?[0-9]{1,3}(?:[.,][0-9]{3})+\)?", l_str)
@@ -602,14 +612,30 @@ def extract_generic_financial_statement_facts(
                 )
             )
 
-    # Verify statement presence
-    for req_type in (StatementType.BALANCE_SHEET, StatementType.INCOME_STATEMENT, StatementType.CASH_FLOW):
+    # A caller may extract a strict subset from independently discovered tables.  Requiring
+    # unrelated statement families made a page-bound extraction of a balance-sheet or income
+    # table fail even though its own table, period, and unit evidence were complete.
+    selected_metrics = (
+        set(required_metrics)
+        if required_metrics is not None
+        else set(GENERIC_METRIC_RULES) | {"total_interest_bearing_debt"}
+    )
+    unknown_metrics = selected_metrics.difference(GENERIC_METRIC_RULES).difference({"total_interest_bearing_debt"})
+    if unknown_metrics:
+        raise ValueError(f"UNKNOWN_REQUIRED_METRICS: {sorted(unknown_metrics)}")
+    required_statement_types = {GENERIC_METRIC_RULES[name]["statement_type"] for name in selected_metrics if name in GENERIC_METRIC_RULES}
+    if "total_interest_bearing_debt" in selected_metrics:
+        required_statement_types.add(StatementType.BALANCE_SHEET)
+
+    # Verify only the statement families needed by this extraction request.
+    for req_type in required_statement_types:
         if not statements_by_type[req_type]:
             raise ValueError(f"STATEMENT_NOT_RECOGNIZED: Could not locate {req_type} in filing sidecar")
 
     # Step 2: Discover Unit & Scale across statements
     global_unit_scale: RecognizedUnitScale | None = None
-    for st_pages in statements_by_type.values():
+    for st_type in required_statement_types:
+        st_pages = statements_by_type[st_type]
         for p in st_pages:
             unit_candidate = recognize_unit_and_scale(p.text)
             if unit_candidate is not None:
@@ -623,7 +649,8 @@ def extract_generic_financial_statement_facts(
 
     # Step 3: Period Column Recognition for each statement
     column_layouts: dict[StatementType, PeriodColumnLayout] = {}
-    for st_type, st_pages in statements_by_type.items():
+    for st_type in required_statement_types:
+        st_pages = statements_by_type[st_type]
         layout = None
         for p in st_pages:
             try:
@@ -637,15 +664,6 @@ def extract_generic_financial_statement_facts(
 
     # Step 4: Line Item Recognition and Verified Extraction
     extracted_facts: list[ExtractedStatementFact] = []
-
-    selected_metrics = (
-        set(required_metrics)
-        if required_metrics is not None
-        else set(GENERIC_METRIC_RULES) | {"total_interest_bearing_debt"}
-    )
-    unknown_metrics = selected_metrics.difference(GENERIC_METRIC_RULES).difference({"total_interest_bearing_debt"})
-    if unknown_metrics:
-        raise ValueError(f"UNKNOWN_REQUIRED_METRICS: {sorted(unknown_metrics)}")
 
     for metric_name, spec in GENERIC_METRIC_RULES.items():
         if metric_name not in selected_metrics:

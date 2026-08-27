@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Official Financial PDF Page/Table Extraction and Citation V1
+
+`OFFICIAL_FINANCIAL_PDF_PAGE_TABLE_EXTRACTION_AND_CITATION_V1 = OUTCOME_A_GENERIC_PDF_EXTRACTION_QUALIFIES_NEW_OFFICIAL_FACTS` (`push = NO`).
+
+1. `official_financial_pdf_page_evidence/v1` is a retained-bytes, native-text extraction boundary—not an acquirer or a fact store. It verifies the source SHA-256 before parsing, emits deterministic page text hashes and identities, and preserves table/row evidence and native coordinates only where the text layer supports them. OCR/provider fallback is not activated.
+2. Explicit AAA FY2024 PDF claims establish issuer, annual 2024 period, consolidated audited scope, VND, and unit scale 1. Five statement-table fragments yield exactly seven cited canonical corporate facts: cash, total assets, equity, total interest-bearing debt (with disclosed components), revenue, parent-attributable net income, and operating cash flow. Missing currency/scale, unproven period, blocked candidate, ambiguous mapping, or unsupported bank/securities layout is fail-closed.
+3. Qualified page/table-cited rows enter only the existing P3-F13 constrained ingress. The 1,507-name retained-evidence replay moves the financial identity inventory from 64 to 70 official-qualified cells, residual zero. AAA becomes `OFFICIAL_QUALIFIED` but only `PARTIAL`: no 2023 official fact exists for its YoY calculations.
+4. This is an evidence/citation gain, not valuation or strategy authority. Research-usable valuation coverage remains market cap 888, P/E 9, P/B 10, P/S 9, EV 9, EV/Sales 9, EV/EBITDA 0, with READY/VALUE 0. No provider/network/production DB/Dashboard mutation, recommendation, ranking, target, sizing, or PIT promotion occurs.
+
 ## 2026-08-27 - Approved Issuer-IR Official Financial Evidence Cohort V1
 
 `APPROVED_ISSUER_IR_OFFICIAL_FINANCIAL_EVIDENCE_COHORT_V1 = OUTCOME_C_APPROVED_ROUTES_CURRENT_EVIDENCE_CEILING` (`push = NO`).

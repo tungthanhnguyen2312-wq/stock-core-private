@@ -57,7 +57,8 @@ def _write(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def build_wide_fundamental_artifact(*, official_tickers: list[str], as_of_session: str) -> tuple[dict, dict, dict]:
+def build_wide_fundamental_artifact(*, official_tickers: list[str], as_of_session: str,
+                                    supplemental_qualified_facts: list[dict] | None = None) -> tuple[dict, dict, dict]:
     raw_state = _read(p3f10mod.DEFAULT_RAW_STATE)
     canonical_state = _read(p3f10mod.DEFAULT_CANONICAL_STATE)
     p3e = _read(p3f10mod.DEFAULT_P3E)
@@ -71,6 +72,7 @@ def build_wide_fundamental_artifact(*, official_tickers: list[str], as_of_sessio
     p3f13_wide = ffcr.build_extended_p3f13_artifact(
         p3f10_wide=p3f10_wide, p3e=p3e, registry=registry, manifest_records=manifest.get("records", []),
         evidence_root=p3f13mod.DEFAULT_EVIDENCE_ROOT, raw_obs_dir=p3f13mod.DEFAULT_RAW_OBS_DIR,
+        supplemental_qualified_facts=supplemental_qualified_facts or [],
     )
     provider_series = mwcfr.load_retained_provider_series(mwcfr.DEFAULT_CANONICAL_FACTS_ROOT)
     fundamental_wide = ffcr.build_extended_fundamental_artifact(
@@ -97,6 +99,7 @@ def main() -> int:
     parser.add_argument("--share-authority", type=Path, default=DEFAULT_SHARE_AUTHORITY)
     parser.add_argument("--price-snapshot", type=Path, default=DEFAULT_PRICE_SNAPSHOT)
     parser.add_argument("--narrow-fundamental", type=Path, default=NARROW_FUNDAMENTAL)
+    parser.add_argument("--supplemental-page-evidence", type=Path)
     args = parser.parse_args()
 
     official = _read(args.official_universe)
@@ -104,8 +107,12 @@ def main() -> int:
     if len(official_tickers) != 1507:
         raise ValueError(f"OFFICIAL_UNIVERSE_DENOMINATOR_DRIFT:{len(official_tickers)}")
 
+    supplemental = []
+    if args.supplemental_page_evidence:
+        supplemental_doc = _read(args.supplemental_page_evidence)
+        supplemental = list(supplemental_doc.get("p3f13_panel_facts") or [])
     p3f10_wide, p3f13_wide, fundamental_wide = build_wide_fundamental_artifact(
-        official_tickers=official_tickers, as_of_session=args.session,
+        official_tickers=official_tickers, as_of_session=args.session, supplemental_qualified_facts=supplemental,
     )
 
     canonical_presence = ffcr.load_canonical_metric_presence(mwcfr.DEFAULT_CANONICAL_FACTS_ROOT)
@@ -135,6 +142,7 @@ def main() -> int:
         identity_inventory=identity_inventory,
     )
     report["as_of_session"] = args.session
+    report["supplemental_page_evidence_fact_count"] = len(supplemental)
     report["source_artifacts"] = {
         "p3f10_wide": p3f10_wide.get("artifact_identity"),
         "p3f13_wide": p3f13_wide.get("artifact_identity"),

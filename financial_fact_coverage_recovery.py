@@ -134,16 +134,27 @@ def build_extended_p3f10_artifact(
 def build_extended_p3f13_artifact(
     *, p3f10_wide: Mapping[str, Any], p3e: Mapping[str, Any], registry: Mapping[str, Any],
     manifest_records: Sequence[Mapping[str, Any]], evidence_root: Path, raw_obs_dir: Path,
+    supplemental_qualified_facts: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Rerun p3f13's own generic acquisition-disposition builder, unmodified, against the wider
     p3f10 artifact. Cohort membership comes from `p3f10_artifact["instrument_dispositions"]`
     directly (p3f13 never reads the frozen bundle itself), so this naturally widens too. Every
     lookup here is against already-retained local files (manifest / evidence_root / raw_obs_dir);
     no network call is made by this function or by the reused p3f13 builder."""
-    return p3f13mod.build_scaleout_artifact(
+    artifact = p3f13mod.build_scaleout_artifact(
         p3f10_artifact=p3f10_wide, p3e_artifact=p3e, source_registry=registry,
         manifest_records=manifest_records, evidence_root=evidence_root, raw_obs_dir=raw_obs_dir,
     )
+    if not supplemental_qualified_facts:
+        return artifact
+    panel = p3f13mod.merge_document_qualified_facts_into_panel(
+        artifact["refreshed_panel_data"], supplemental_qualified_facts,
+    )
+    artifact["refreshed_panel_data"] = panel
+    artifact["refreshed_fundamental_readiness"] = p3f13mod.build_fundamental_research_artifact({"panel_data": panel})
+    artifact["supplemental_document_qualified_fact_count"] = len(supplemental_qualified_facts)
+    artifact["supplemental_document_qualified_tickers"] = sorted({str(row["issuer_identity"]).upper() for row in supplemental_qualified_facts})
+    return artifact
 
 
 def build_extended_fundamental_artifact(
