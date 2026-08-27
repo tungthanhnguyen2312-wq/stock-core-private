@@ -42,6 +42,8 @@ def main() -> None:
     print(f"MARKET_COVERAGE: {manifest['coverage_summary']['technical']}")
     print(f"WARNINGS: {len(manifest['warnings'])}")
     print(f"AI_PRIMARY_BUNDLE: {result['run_dir'] / 'ai_research_session_bundle.json'}")
+    print(f"AI_FULL_UNIVERSE_LOOKUP_ONLY: {result['run_dir'] / 'ai_research_full_universe.ndjson'}")
+    print("DO_NOT_USE_AS_PRIMARY: ai_research_full_universe.ndjson")
     print(f"DASHBOARD_PROJECTION: {result['run_dir'] / 'dashboard' / 'current_decision_cockpit_projection.json'}")
     print(f"BLOCKED_DIMENSIONS: {','.join(manifest['blocked_dimensions'])}")
 

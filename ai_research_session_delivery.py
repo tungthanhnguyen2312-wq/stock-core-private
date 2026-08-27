@@ -12,10 +12,16 @@ import json
 from typing import Any, Mapping
 
 from field_temporal_contract import stable_id
+from current_daily_decision_research_product import ABSENT_OWNER_FOCUS_STATUS, is_present_research_card
+from owner_research_focus import load_owner_research_focus, owner_focus_tickers
 
 
 AI_CONTRACT = "ai_research_session_bundle/v1"
 COCKPIT_CONTRACT = "current_decision_cockpit_projection/v2"
+PRIMARY_HUMAN_REVIEW_FILENAME = "ai_research_session_bundle.json"
+FULL_UNIVERSE_LOOKUP_FILENAME = "ai_research_full_universe.ndjson"
+FULL_UNIVERSE_COMPANION_ROLE = "FULL_UNIVERSE_LOOKUP_ONLY"
+PRIMARY_HUMAN_REVIEW_ROLE = "PRIMARY_NORMAL_HUMAN_REVIEW_INPUT"
 
 
 def _canon(value: Any) -> str:
@@ -112,8 +118,16 @@ def _valuation_handoff(row: Any) -> dict[str, Any]:
 
 def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
     """One source-preserving compact context for an arbitrary universe ticker."""
+    boundary = copy.deepcopy((operation.get("product") or {}).get("authority_boundary") or {})
+    boundary["is_actionable"] = False
+    boundary["entry_action_is_research_label_not_execution_instruction"] = True
     return {
         "ticker": ticker,
+        "companion_role": FULL_UNIVERSE_COMPANION_ROLE,
+        "not_primary_human_review_input": True,
+        "no_alphabetical_sampling": True,
+        "entry_action_is_research_label_not_execution_instruction": True,
+        "is_actionable": False,
         "current_decision_state": _slim(_records(inputs.get("tactical")).get(ticker)),
         "strategy_fit": _slim(_records(operation.get("strategy")).get(ticker)),
         "scenario": _slim(_records(operation.get("scenario")).get(ticker)),
@@ -122,8 +136,136 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
         "valuation_context": _valuation_handoff(_records(inputs.get("valuation")).get(ticker)),
         "market_flow_positioning": _slim(_records(inputs.get("market_flow_positioning")).get(ticker)),
         "corporate_intelligence_context": _slim(_records(inputs.get("corporate_intelligence")).get(ticker)),
-        "authority_boundary": copy.deepcopy((operation.get("product") or {}).get("authority_boundary") or {}),
+        "authority_boundary": boundary,
     }
+
+
+def recommended_ai_inputs() -> dict[str, str]:
+    return {
+        "normal_human_review": PRIMARY_HUMAN_REVIEW_FILENAME,
+        "arbitrary_ticker_lookup": FULL_UNIVERSE_LOOKUP_FILENAME,
+    }
+
+
+def _authority_boundary(product: Mapping[str, Any]) -> dict[str, Any]:
+    boundary = copy.deepcopy(product.get("authority_boundary") or {})
+    boundary["is_actionable"] = False
+    boundary["entry_action_is_research_label_not_execution_instruction"] = True
+    boundary["owner_focus_is_not_portfolio_holdings"] = True
+    boundary["recommendation"] = boundary.get("recommendation") or "NOT_EMITTED"
+    return boundary
+
+
+def _analysis_scope(product: Mapping[str, Any], *, full_universe_record_count: int) -> dict[str, Any]:
+    focus_config = load_owner_research_focus()
+    owner_focus = list(product.get("owner_focus", {}).get("tickers") or focus_config["owner_focus_tickers"])
+    watchlist = list(product.get("watchlist", {}).get("tickers") or focus_config["broader_watchlist"])
+    cards = product.get("detailed_research_cards") or {}
+    present = [ticker for ticker in owner_focus if is_present_research_card(cards.get(ticker))]
+    missing = [ticker for ticker in owner_focus if ticker not in present]
+    cohorts = product.get("research_cohorts") or {}
+    high_priority = product.get("high_priority_full_universe_review_set") or {}
+    return {
+        "role": "PRESENTATION_ANALYSIS_SCOPE_ONLY",
+        "grants_investment_authority": False,
+        "is_portfolio_holdings": False,
+        "is_actionable": False,
+        "review_order": "OWNER_FOCUS_REVIEW_REQUIRED_BEFORE_MARKET_DISCOVERY",
+        "owner_focus_tickers": owner_focus,
+        "broader_watchlist": watchlist,
+        "mandatory_owner_focus_coverage_count": len(owner_focus),
+        "deterministic_discovery_cohorts": {
+            name: {"count": (value or {}).get("count"), "tickers": list((value or {}).get("tickers") or []), "ordering": (value or {}).get("ordering") or "TICKER_ASCENDING_NOT_RANKING"}
+            for name, value in cohorts.items() if isinstance(value, Mapping)
+        },
+        "high_priority_review": {
+            "count": high_priority.get("count"),
+            "tickers": list(high_priority.get("tickers") or []),
+            "meaning": high_priority.get("meaning") or "Candidates for human research, not portfolio/watchlist inclusion.",
+        },
+        "full_universe_record_count": full_universe_record_count,
+        "full_universe_companion_role": FULL_UNIVERSE_COMPANION_ROLE,
+        "no_alphabetical_sampling": True,
+        "entry_action_is_research_label_not_execution_instruction": True,
+        "coverage": {
+            "owner_focus_requested": owner_focus,
+            "owner_focus_present": present,
+            "owner_focus_missing": missing,
+            "owner_focus_context_count": len(present),
+            "discovery_cohort_counts": {name: (value or {}).get("count") for name, value in cohorts.items() if isinstance(value, Mapping)},
+            "high_priority_review_count": high_priority.get("count"),
+            "broader_watchlist_count": len(watchlist),
+        },
+    }
+
+
+def _owner_focus_contexts(product: Mapping[str, Any]) -> list[dict[str, Any]]:
+    cards = product.get("detailed_research_cards") or {}
+    rows = []
+    for ticker in owner_focus_tickers():
+        card = cards.get(ticker)
+        if is_present_research_card(card):
+            rows.append(copy.deepcopy(card))
+        elif isinstance(card, Mapping):
+            rows.append(copy.deepcopy(card))
+        else:
+            rows.append({
+                "ticker": ticker,
+                "status": ABSENT_OWNER_FOCUS_STATUS,
+                "is_actionable": False,
+                "entry_action_is_research_label_not_execution_instruction": True,
+            })
+    return rows
+
+
+def _session_brief(session: str, operation_identity: str, product_identity: str, warnings: list[Any], scope: Mapping[str, Any]) -> str:
+    owner_focus = ", ".join(scope.get("owner_focus_tickers") or [])
+    missing = ", ".join((scope.get("coverage") or {}).get("owner_focus_missing") or []) or "none"
+    present_count = (scope.get("coverage") or {}).get("owner_focus_context_count")
+    required = scope.get("mandatory_owner_focus_coverage_count")
+    lines = [
+        f"# AI Research Session Bundle — {session}",
+        "",
+        f"Operation: `{operation_identity}`",
+        f"Product: `{product_identity}`",
+        "",
+        "## UPLOAD THIS",
+        PRIMARY_HUMAN_REVIEW_FILENAME,
+        "",
+        "This is the primary normal human-review AI input.",
+        "",
+        "## DO NOT USE AS PRIMARY",
+        FULL_UNIVERSE_LOOKUP_FILENAME,
+        "",
+        f"Role: `{FULL_UNIVERSE_COMPANION_ROLE}`",
+        "Status: `NOT_PRIMARY_HUMAN_REVIEW_INPUT`",
+        "Use it only for on-demand arbitrary ticker lookup, never as the normal review file.",
+        "JSON object key order and NDJSON line order are canonical-sorted for identity; they are not a sampling queue.",
+        "",
+        "## External-AI analysis contract",
+        "1. Market / session context first.",
+        f"2. Complete owner-focus coverage before market discovery (`OWNER_FOCUS_REVIEW_REQUIRED_BEFORE_MARKET_DISCOVERY`). Required names ({required}): {owner_focus}.",
+        "3. Discovery second: use deterministic_discovery_cohorts and high_priority_review only after owner-focus coverage.",
+        "4. Report coverage explicitly from analysis_scope.coverage: owner_focus_requested, owner_focus_present, owner_focus_missing, owner_focus_context_count, and discovery cohort counts. Do not infer coverage by scanning the NDJSON file.",
+        "5. No alphabetical sampling. Do not take the first N tickers of the bundle or NDJSON.",
+        "6. No invention. Preserve UNKNOWN/MISSING/UNAVAILABLE. Do not fabricate facts, targets, probabilities, or trades.",
+        "7. `entry_action` values such as BUY_ON_CONFIRMATION, EARLY_ENTRY, and ACCUMULATE_IN_BASE are tactical research-state labels, not recommendations or suggested trades.",
+        "8. `is_actionable = false`. No ranking, recommendation, target, probability, sizing, portfolio, or execution authority.",
+        "",
+        f"entry_action_is_research_label_not_execution_instruction = true",
+        "is_actionable = false",
+        "no_alphabetical_sampling = true",
+        f"owner_focus_present_count = {present_count}",
+        f"owner_focus_missing = {missing}",
+        "",
+        "Bounded on-demand extractor:",
+        "`python tools/extract_ai_research_tickers.py --session YYYY-MM-DD --tickers HPG,PAN,SSI`",
+        "",
+        "## Warnings",
+        *[f"- {item}" for item in warnings],
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def build_dashboard_projection(operation: Mapping[str, Any]) -> dict[str, Any]:
@@ -133,7 +275,7 @@ def build_dashboard_projection(operation: Mapping[str, Any]) -> dict[str, Any]:
         "schema_version": COCKPIT_CONTRACT,
         "projection_kind": "RELEASED_HUMAN_DECISION_COCKPIT",
         "session": manifest["market_session"],
-        "authority_boundary": copy.deepcopy(product["authority_boundary"]),
+        "authority_boundary": _authority_boundary(product),
         "source": {
             "operation_identity": manifest["operation_identity"],
             "product_identity": product["artifact_identity"],
@@ -146,6 +288,7 @@ def build_dashboard_projection(operation: Mapping[str, Any]) -> dict[str, Any]:
         },
         "market_overview": copy.deepcopy(product["market_brief"]),
         "research_discovery": {"cohorts": copy.deepcopy(product["research_cohorts"]), "high_priority_review": copy.deepcopy(product["high_priority_full_universe_review_set"])},
+        "owner_focus": copy.deepcopy(product.get("owner_focus") or {"tickers": list(owner_focus_tickers()), "is_portfolio_holdings": False, "is_actionable": False}),
         "watchlist": copy.deepcopy(product["watchlist"]),
         "ticker_cards": copy.deepcopy(product["detailed_research_cards"]),
         "risk_data_gaps": copy.deepcopy(product["risk_data_gap_panel"]),
@@ -163,25 +306,35 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
     session = manifest["market_session"]
     cards = product["detailed_research_cards"]
     useful_tickers = sorted(cards)
+    universe = sorted(_records(inputs.get("descriptive")))
+    scope = _analysis_scope(product, full_universe_record_count=len(universe))
+    routing = recommended_ai_inputs()
+    boundary = _authority_boundary(product)
     primary: dict[str, Any] = {
         "schema_version": AI_CONTRACT,
+        "artifact_role": PRIMARY_HUMAN_REVIEW_ROLE,
         "session": session,
         "operation_identity": manifest["operation_identity"],
         "product_identity": product["artifact_identity"],
         "producer_head": manifest["producer_head"],
         "consumer_compatible_contract_version": "current_daily_decision_research_contract/v1",
-        "authority_boundary": copy.deepcopy(product["authority_boundary"]),
-        "market": {"summary": copy.deepcopy(product["market_brief"]), "macro": copy.deepcopy(product["macro_context"]), "flow_coverage": copy.deepcopy((manifest.get("coverage_summary") or {}).get("market_flow_positioning")), "limitations": copy.deepcopy(manifest["warnings"])},
-        "research_cohorts": {"watchlist": copy.deepcopy(product["watchlist"]), "high_priority_review": copy.deepcopy(product["high_priority_full_universe_review_set"]), "deterministic_cohorts": copy.deepcopy(product["research_cohorts"]), "entry_relevant_90_count": product["aggregate_validation"]["entry_relevant_90_count"]},
+        "authority_boundary": boundary,
+        "recommended_ai_inputs": routing,
+        "analysis_scope": scope,
+        "entry_action_is_research_label_not_execution_instruction": True,
+        "is_actionable": False,
+        "no_alphabetical_sampling": True,
+        "market": {"summary": copy.deepcopy(product["market_brief"]), "macro": copy.deepcopy(product.get("macro_context")), "flow_coverage": copy.deepcopy((manifest.get("coverage_summary") or {}).get("market_flow_positioning")), "limitations": copy.deepcopy(manifest["warnings"])},
+        "owner_focus_research_contexts": _owner_focus_contexts(product),
+        "research_cohorts": {"watchlist": copy.deepcopy(product["watchlist"]), "owner_focus": copy.deepcopy(product.get("owner_focus") or {"tickers": list(owner_focus_tickers()), "is_portfolio_holdings": False}), "high_priority_review": copy.deepcopy(product["high_priority_full_universe_review_set"]), "deterministic_cohorts": copy.deepcopy(product["research_cohorts"]), "entry_relevant_90_count": product["aggregate_validation"]["entry_relevant_90_count"]},
         "ticker_research_contexts": {ticker: copy.deepcopy(cards[ticker]) for ticker in useful_tickers},
         "portfolio_risk": copy.deepcopy(operation.get("portfolio_risk") or {"status": "NO_EXPLICIT_PORTFOLIO_SUPPLIED", "is_actionable": False}),
         "lineage": {"input_artifacts": copy.deepcopy(manifest["input_artifacts"]), "output_artifacts": copy.deepcopy(manifest["outputs"]), "session_coherence": copy.deepcopy(manifest["session_coherence"])},
         "what_to_verify_next": copy.deepcopy(product["what_to_verify_next"]),
     }
     primary_bytes = (_canon(primary) + "\n").encode("utf-8")
-    universe = sorted(_records(inputs.get("descriptive")))
     rows = [_canon(_compact_context(ticker, operation, inputs)) for ticker in universe]
-    full_bytes = ("\n".join(rows) + "\n").encode("utf-8")
+    full_bytes = (("\n".join(rows) + "\n") if rows else "").encode("utf-8")
     projection = build_dashboard_projection(operation)
     projection_bytes = (_canon(projection) + "\n").encode("utf-8")
     # Session operations are immutable/replayable.  A wall-clock timestamp would
@@ -194,20 +347,35 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         "operation_identity": manifest["operation_identity"],
         "producer_head": manifest["producer_head"],
         "consumer_compatible_contract_version": "current_daily_decision_research_contract/v1",
-        "primary_bundle_filename": "ai_research_session_bundle.json",
-        "full_universe_companion_filename": "ai_research_full_universe.ndjson",
+        "primary_bundle_filename": PRIMARY_HUMAN_REVIEW_FILENAME,
+        "full_universe_companion_filename": FULL_UNIVERSE_LOOKUP_FILENAME,
         "dashboard_projection_filename": "current_decision_cockpit_projection.json",
+        "recommended_ai_inputs": routing,
+        "artifact_roles": {
+            PRIMARY_HUMAN_REVIEW_FILENAME: PRIMARY_HUMAN_REVIEW_ROLE,
+            FULL_UNIVERSE_LOOKUP_FILENAME: FULL_UNIVERSE_COMPANION_ROLE,
+        },
         "files": {
-            "ai_research_session_bundle.json": {"bytes": len(primary_bytes), "sha256": _hash_bytes(primary_bytes)},
-            "ai_research_full_universe.ndjson": {"bytes": len(full_bytes), "sha256": _hash_bytes(full_bytes), "record_count": len(universe)},
+            PRIMARY_HUMAN_REVIEW_FILENAME: {"bytes": len(primary_bytes), "sha256": _hash_bytes(primary_bytes), "role": PRIMARY_HUMAN_REVIEW_ROLE},
+            FULL_UNIVERSE_LOOKUP_FILENAME: {
+                "bytes": len(full_bytes),
+                "sha256": _hash_bytes(full_bytes),
+                "record_count": len(universe),
+                "role": FULL_UNIVERSE_COMPANION_ROLE,
+                "not_primary_human_review_input": True,
+                "ordering": "TICKER_ASCENDING_DETERMINISTIC_LOOKUP_NOT_SAMPLING",
+            },
             "current_decision_cockpit_projection.json": {"bytes": len(projection_bytes), "sha256": _hash_bytes(projection_bytes), "projection_identity": projection["projection_identity"]},
         },
         "source_artifact_identities": copy.deepcopy(product["source_artifact_identities"]),
-        "authority_boundary": copy.deepcopy(product["authority_boundary"]),
+        "authority_boundary": boundary,
         "warnings": copy.deepcopy(manifest["warnings"]),
         "created_at": created_at,
         "creation_timestamp_basis": "SESSION_DERIVED_DETERMINISTIC_REPLAY",
+        "entry_action_is_research_label_not_execution_instruction": True,
+        "is_actionable": False,
+        "no_alphabetical_sampling": True,
     }
     manifest_bytes = (_canon(manifest_payload) + "\n").encode("utf-8")
-    brief = "\n".join([f"# AI Research Session Bundle — {session}", "", f"Operation: `{manifest['operation_identity']}`", f"Product: `{product['artifact_identity']}`", "", "Upload `ai_research_session_bundle.json` for normal human-review research. It is not a recommendation, target, probability, sizing, or execution instruction.", "", "For an arbitrary ticker outside the useful research set, use `ai_research_full_universe.ndjson` or the deterministic ticker extractor.", "", "## Warnings", *[f"- {item}" for item in manifest["warnings"]], ""])
+    brief = _session_brief(session, manifest["operation_identity"], product["artifact_identity"], list(manifest["warnings"]), scope)
     return {"primary": primary_bytes, "full_universe": full_bytes, "manifest": manifest_bytes, "brief": brief.encode("utf-8"), "projection": projection_bytes}

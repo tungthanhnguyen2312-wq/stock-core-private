@@ -35,7 +35,8 @@ from the wall clock, or promotes a source authority.
 4. Open the printed owner directory under
    `operations-review/daily-producer-runs-v1/<SESSION>/<run-hash>/`.
 5. Upload `ai_research_session_bundle.json` to ChatGPT or Claude for normal
-   human-review research.
+   human-review research. Do **not** upload `ai_research_full_universe.ndjson`
+   as the primary file; that companion is `FULL_UNIVERSE_LOOKUP_ONLY`.
 6. A Dashboard projection is ready in `dashboard/current_decision_cockpit_projection.json`.
    Publish it only later through the separately governed, owner-authorized
    Dashboard release command.
@@ -115,12 +116,18 @@ Open the session output directory under
 - `peer_relative_research_artifact.json` and `scenario_artifact.json` — rebuilt coherent
   current-session downstream inputs;
 - `prospective_snapshot.json` — immutable current-decision prospective baseline.
-- `ai_research_session_bundle.json` — the normal single-file ChatGPT/Claude upload;
-  it is a compact, authority-labelled projection of the same operation, not a new analysis.
-- `ai_research_full_universe.ndjson` — optional compact 1,683-ticker companion for
-  out-of-cohort work; no raw provider payloads are included.
+- `ai_research_session_bundle.json` — **UPLOAD THIS** as the normal single-file
+  ChatGPT/Claude human-review input. It carries market context, owner-focus
+  coverage, deterministic discovery cohorts, and analysis_scope. It is not a new
+  analysis and grants no recommendation, target, probability, sizing, or
+  execution authority.
+- `ai_research_full_universe.ndjson` — **DO NOT USE AS PRIMARY.** Role:
+  `FULL_UNIVERSE_LOOKUP_ONLY` / `NOT_PRIMARY_HUMAN_REVIEW_INPUT`. Optional
+  compact full-universe companion for on-demand arbitrary ticker lookup. Line
+  order is ticker-ascending for deterministic lookup, not a sampling queue.
 - `ai_research_bundle_manifest.json` — exact session/operation, SHA-256 values,
-  source identities, file sizes, and authority warnings.
+  recommended_ai_inputs routing, source identities, file sizes, and authority
+  warnings.
 - `current_decision_cockpit_projection.json` — the deterministic Dashboard payload
   for the same operation.
 
@@ -146,8 +153,21 @@ portfolio, execution, PIT, and backtesting remain unavailable.
 1. Open the released Decision Cockpit and review the retained market session, discovery,
    watchlist, ticker cards, limitations, and lineage.
 2. For normal AI-assisted research, upload only `ai_research_session_bundle.json`.
-3. For an arbitrary ticker outside the useful research set, upload the optional
-   `ai_research_full_universe.ndjson`, or extract one compact row first:
+   Require complete owner-focus coverage before market discovery. Do not
+   alphabetically sample the file. `entry_action` is a tactical research-state
+   label, not a recommendation.
+3. For an arbitrary ticker outside the useful research set, do not promote the
+   NDJSON to the primary upload. Extract a bounded packet from the exact session
+   and run:
+
+   ```powershell
+   python tools/extract_ai_research_tickers.py --session YYYY-MM-DD --tickers HPG,PAN,SSI
+   ```
+
+   This resolves the unique Daily Producer run for that session (or requires
+   `--run-identity` when multiple runs exist) and writes
+   `ai_ticker_research_packet.json`. The older single-row helper remains available
+   when you already have the NDJSON file:
 
    ```powershell
    python tools/extract_ai_ticker_context.py --bundle ai_research_full_universe.ndjson --ticker HPG --output hpg_ai_context.json

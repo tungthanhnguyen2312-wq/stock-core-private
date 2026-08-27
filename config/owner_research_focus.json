@@ -1,0 +1,38 @@
+{
+  "schema_version": "owner_research_focus/v1",
+  "role": "PRESENTATION_ANALYSIS_SCOPE_ONLY",
+  "grants_investment_authority": false,
+  "is_portfolio_holdings": false,
+  "is_actionable": false,
+  "review_order": "OWNER_FOCUS_REVIEW_REQUIRED_BEFORE_MARKET_DISCOVERY",
+  "owner_focus_tickers": [
+    "SSI",
+    "HPG",
+    "PAN",
+    "EVF",
+    "VNM",
+    "FPT",
+    "PVD",
+    "NVL",
+    "POW",
+    "PNJ"
+  ],
+  "broader_watchlist": [
+    "EVF",
+    "FPT",
+    "HPG",
+    "NVL",
+    "PAN",
+    "PNJ",
+    "POW",
+    "PVD",
+    "QNS",
+    "SSI",
+    "VNM"
+  ],
+  "notes": [
+    "Owner-focus is presentation/analysis scope for human-review AI handoff. It is not holdings, ranking, or a recommendation.",
+    "Broader watchlist preserves historical WATCHLIST compatibility, including QNS.",
+    "Watchlist is never treated as a portfolio."
+  ]
+}

@@ -422,10 +422,15 @@ def test_terminal_handoff_includes_exact_identities_and_paths(capsys, tmp_path):
                 "blocked_dimensions": ["STRICT_VALUATION"],
                 "warnings": ["w1"],
             },
-            "full_universe_bundle_index": {"manifest_path": "operations-review/x/manifest.json"},
+            "full_universe_bundle_index": {"manifest_path": "operations-review/x/manifest.json", "full_universe_path": "operations-review/x/ai_research_full_universe.ndjson"},
             "bundle_dir": tmp_path,
             "dashboard_release_set_index": {"ready_for_governed_publication": True},
         },
+    }
+    result["tiers"]["session_handoff_bundle"]["primary_ai_input"] = "operations-review/x/ai_research_session_bundle.json"
+    result["tiers"]["session_handoff_bundle"]["recommended_ai_inputs"] = {
+        "normal_human_review": "operations-review/x/ai_research_session_bundle.json",
+        "arbitrary_ticker_lookup": "operations-review/x/ai_research_full_universe.ndjson",
     }
     cpc.print_terminal_handoff(result)
     out = capsys.readouterr().out
@@ -433,7 +438,9 @@ def test_terminal_handoff_includes_exact_identities_and_paths(capsys, tmp_path):
     assert "daily_producer_run:abc123" in out
     assert "current_research_decision_packet:xyz" in out
     assert "prospective_research_cohort_snapshot:qrs" in out
-    assert "operations-review/x/manifest.json" in out
+    assert "AI_PRIMARY_BUNDLE: operations-review/x/ai_research_session_bundle.json" in out
+    assert "AI_FULL_UNIVERSE_LOOKUP_ONLY: operations-review/x/ai_research_full_universe.ndjson" in out
+    assert "DO_NOT_USE_AS_PRIMARY: ai_research_full_universe.ndjson" in out
     assert "READY_FOR_GOVERNED_PUBLICATION: YES" in out
 
 
@@ -678,6 +685,11 @@ def test_tiered_bundle_never_invents_authority_only_passes_it_through(tmp_path):
     )
 
     assert tiers["session_handoff_bundle"]["authority_boundary"] == sentinel_authority
+    assert tiers["session_handoff_bundle"]["primary_ai_input"].endswith("ai_research_session_bundle.json")
+    assert tiers["session_handoff_bundle"]["recommended_ai_inputs"]["normal_human_review"].endswith("ai_research_session_bundle.json")
+    assert tiers["session_handoff_bundle"]["recommended_ai_inputs"]["arbitrary_ticker_lookup"].endswith("ai_research_full_universe.ndjson")
+    assert tiers["full_universe_bundle_index"]["role"] == "FULL_UNIVERSE_LOOKUP_ONLY"
+    assert tiers["full_universe_bundle_index"]["not_primary_human_review_input"] is True
 
 
 # --- bonus regression coverage for the two pre-existing Level-2 acquisition bugs fixed alongside this milestone ---

@@ -1,5 +1,23 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - AI research handoff scope and routing V1
+
+`AI_RESEARCH_HANDOFF_SCOPE_AND_ROUTING_V1 = COMPLETE_LOCALLY / AI_HANDOFF_READY` (`push = NO`).
+
+Decisions:
+
+1. **Same path.** Harden `ai_research_session_delivery` / `current_daily_decision_research_product` / Daily Producer delivery. Do not open a new research, ranking, or recommendation engine.
+2. **Routing defect, not market data.** The external-AI test that returned AAA/AAM/AAN/ABB/AFX/AMP sampled the alphabetical front of the useful-card / NDJSON universe. Canonical JSON `sort_keys` and `sorted(universe)` make that order deterministic for identity, not a review queue. Keep NDJSON alphabetically deterministic and mark it `FULL_UNIVERSE_LOOKUP_ONLY`.
+3. **Primary file.** `ai_research_session_bundle.json` is the only normal human-review upload. Manifest/session bundle/canonical post-close handoff carry `recommended_ai_inputs` (`normal_human_review` vs `arbitrary_ticker_lookup`). Do not delete the NDJSON companion.
+4. **Analysis scope.** Primary bundle `analysis_scope` lists owner-focus, broader watchlist, mandatory coverage count, deterministic discovery cohorts, high-priority review, full-universe companion role, and `no_alphabetical_sampling=true`. Review order is `OWNER_FOCUS_REVIEW_REQUIRED_BEFORE_MARKET_DISCOVERY`. Presentation/analysis scope only; no investment authority.
+5. **Owner-focus config.** Portable `config/owner_research_focus.json`: SSI, HPG, PAN, EVF, VNM, FPT, PVD, NVL, POW, PNJ. Broader WATCHLIST keeps QNS. `is_portfolio_holdings=false`. Absent owner-focus tickers emit an explicit missing card.
+6. **Extractor.** New `python tools/extract_ai_research_tickers.py --session YYYY-MM-DD --tickers ...` resolves the unique Daily Producer run (or requires `--run-identity`). No latest-file navigation, no network, no recomputation. Keep `extract_ai_ticker_context.py` for an already-held NDJSON file.
+7. **Semantics.** `entry_action` stays the existing tactical enum. Bundle/brief/cards state `entry_action_is_research_label_not_execution_instruction=true` and `is_actionable=false`. BUY_ON_CONFIRMATION / EARLY_ENTRY / ACCUMULATE_IN_BASE are not recommendations.
+8. **Frozen 26/8.** No data regeneration, no DNSE, no Dashboard publish. Retained 26/8 primary bundle already contains all 10 owner-focus names; bounded HPG/PAN/SSI extraction does not return AAA/AAM.
+9. **Authority unchanged.** `authority_effect = NONE`.
+
+Validation: focused delivery/product/extractor/Daily Producer/canonical-post-close tests; retained 26/8 hash self-verify + extractor; `py_compile`; `git diff --check`. Zero network.
+
 ## 2026-08-27 - Market-wide current valuation session-native scale-out V1
 
 `MARKET_WIDE_CURRENT_VALUATION_SESSION_NATIVE_SCALEOUT_V1 = OUTCOME_C_CURRENT_RETAINED_EVIDENCE_CEILING_ESTABLISHED` (`push = NO`).

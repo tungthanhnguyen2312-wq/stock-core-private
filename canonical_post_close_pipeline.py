@@ -693,6 +693,11 @@ def build_tiered_bundle(
             "full_universe_bundle_index": _rel(root, bundle_dir / "full_universe_bundle_index.json"),
             "dashboard_release_set_index": _rel(root, bundle_dir / "dashboard_release_set_index.json"),
         },
+        "primary_ai_input": _rel(root, producer_result["run_dir"] / "ai_research_session_bundle.json"),
+        "recommended_ai_inputs": {
+            "normal_human_review": _rel(root, producer_result["run_dir"] / "ai_research_session_bundle.json"),
+            "arbitrary_ticker_lookup": _rel(root, producer_result["run_dir"] / "ai_research_full_universe.ndjson"),
+        },
         "authority_boundary": manifest["authority_boundary"],
     }
 
@@ -719,10 +724,13 @@ def build_tiered_bundle(
         **shared_lineage,
         "tier": "FULL_UNIVERSE_BUNDLE_INDEX",
         "format": "NDJSON",
+        "role": "FULL_UNIVERSE_LOOKUP_ONLY",
+        "not_primary_human_review_input": True,
         "full_universe_path": _rel(root, producer_result["run_dir"] / "ai_research_full_universe.ndjson"),
         "manifest_path": _rel(root, producer_result["run_dir"] / "ai_research_bundle_manifest.json"),
         "queryable_by": ["ticker", "exact session"],
-        "note": "Not inlined into the session handoff bundle; read this file directly for per-ticker drill-down.",
+        "ordering": "TICKER_ASCENDING_DETERMINISTIC_LOOKUP_NOT_SAMPLING",
+        "note": "FULL_UNIVERSE_LOOKUP_ONLY / NOT_PRIMARY_HUMAN_REVIEW_INPUT. Do not upload as the normal human-review AI input. Use ai_research_session_bundle.json for normal review, or the deterministic ticker extractor for bounded lookup.",
     }
 
     tier4 = {
@@ -801,7 +809,9 @@ def print_terminal_handoff(result: Mapping[str, Any]) -> None:
     print(f"BREADTH: {json.dumps(tier1['breadth'], sort_keys=True)}")
     print(f"TACTICAL_COUNTS: {json.dumps(tier1['tactical_counts'], sort_keys=True)}")
     print(f"HIGH_PRIORITY_REVIEW_COUNT: {tier1['high_priority_review_count']}")
-    print(f"AI_PRIMARY_BUNDLE: {result['tiers']['full_universe_bundle_index']['manifest_path']}")
+    print(f"AI_PRIMARY_BUNDLE: {tier1.get('primary_ai_input') or (tier1.get('recommended_ai_inputs') or {}).get('normal_human_review')}")
+    print(f"AI_FULL_UNIVERSE_LOOKUP_ONLY: {(tier1.get('recommended_ai_inputs') or {}).get('arbitrary_ticker_lookup') or result['tiers']['full_universe_bundle_index'].get('full_universe_path')}")
+    print("DO_NOT_USE_AS_PRIMARY: ai_research_full_universe.ndjson")
     print(f"SESSION_HANDOFF_BUNDLE: {_rel(ROOT, result['tiers']['bundle_dir'] / 'session_handoff_bundle.json')}")
     print(f"DAILY_PRODUCER_OPERATION_ID: {tier1['daily_producer']['operation_identity']}")
     print(f"DAILY_PRODUCER_RUN_ID: {tier1['daily_producer']['run_identity']}")

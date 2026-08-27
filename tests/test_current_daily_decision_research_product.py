@@ -1,7 +1,14 @@
 import json
 from pathlib import Path
 
-from current_daily_decision_research_product import build, content_identity, markdown
+from current_daily_decision_research_product import (
+    ABSENT_OWNER_FOCUS_STATUS,
+    OWNER_FOCUS_TICKERS,
+    WATCHLIST,
+    build,
+    content_identity,
+    markdown,
+)
 from export_ai_bundle import attach_current_daily_decision_research_product
 from polymorphic_current_strategy_classification import build as build_strategy
 
@@ -62,6 +69,36 @@ def test_product_shows_deterministic_strategy_fit_without_turning_it_into_action
     hpg = product["detailed_research_cards"]["HPG"]["strategy_fit"]
     assert hpg["is_actionable"] is False and hpg["source_artifact_identity"] == strategy["artifact_identity"]
     assert next(item for item in hpg["strategies"] if item["strategy_id"] == "EVENT_DRIVEN")["status"] == "ELIGIBLE"
+
+
+def test_owner_focus_is_distinct_from_broader_watchlist_and_not_holdings():
+    product = build(**_inputs())
+    assert list(WATCHLIST) == ["EVF", "FPT", "HPG", "NVL", "PAN", "PNJ", "POW", "PVD", "QNS", "SSI", "VNM"]
+    assert list(OWNER_FOCUS_TICKERS) == ["SSI", "HPG", "PAN", "EVF", "VNM", "FPT", "PVD", "NVL", "POW", "PNJ"]
+    assert product["watchlist"]["tickers"] == list(WATCHLIST)
+    assert "QNS" in product["watchlist"]["tickers"]
+    assert "QNS" not in product["owner_focus"]["tickers"]
+    assert product["watchlist"]["is_portfolio_holdings"] is False
+    assert product["owner_focus"]["is_portfolio_holdings"] is False
+    assert product["owner_focus"]["is_actionable"] is False
+    assert product["authority_boundary"]["entry_action_is_research_label_not_execution_instruction"] is True
+    assert product["authority_boundary"]["owner_focus_is_not_portfolio_holdings"] is True
+    for ticker in OWNER_FOCUS_TICKERS:
+        assert ticker in product["detailed_research_cards"]
+        card = product["detailed_research_cards"][ticker]
+        assert card["current_decision_state"]["entry_action_is_research_label_not_execution_instruction"] is True
+        assert card["is_actionable"] is False
+
+
+def test_absent_owner_focus_ticker_is_explicit_never_silently_dropped():
+    inputs = _inputs()
+    inputs["tactical"]["records"].pop("HPG", None)
+    product = build(**inputs)
+    card = product["detailed_research_cards"]["HPG"]
+    assert card["status"] == ABSENT_OWNER_FOCUS_STATUS
+    assert "HPG" in product["owner_focus"]["missing"]
+    assert product["owner_focus"]["tickers"][1] == "HPG"
+    assert "QNS" in product["watchlist"]["tickers"]
 
 
 def test_opt_in_attach_passes_card_from_single_product_artifact():
