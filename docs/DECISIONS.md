@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Owner-Focus Core Financial Panel Coverage & Evidence Priority V1
+
+`OWNER_FOCUS_CORE_FINANCIAL_PANEL_COVERAGE_AND_EVIDENCE_PRIORITY_V1 = OUTCOME_B_OWNER_FOCUS_PANEL_BUILT_WITH_SECTOR_CONTRACT_GAPS` (`push = NO`).
+
+1. The new artifact is a deterministic consumer of P3-F13, the retained PDF corpus inventory, the owner-focus configuration, and the existing current-fundamental provider envelope. It covers exactly SSI, HPG, PAN, EVF, VNM, FPT, PVD, NVL, POW, and PNJ in configured order; it neither queries a network surface nor substitutes acquisition fixtures.
+2. Core panels are sector-aware and contain only canonical identities already present in the taxonomy. SSI uses the promoted securities vocabulary, never corporate revenue/debt semantics. EVF remains a finance-company schema-only boundary: no real-data proof corpus or retained official document exists, so `SECTOR_CORE_PANEL_CONTRACT_INCOMPLETE` is an explicit result rather than a new architecture or a corporate fallback.
+3. Temporal coverage is derived only from compatible annual facts matching scope/currency/unit. Current level, two-period YoY, and three-period trend are separately represented; interim/provider periods remain distinct. HPG preserves the corrected code-61 parent-attributable FY2022/FY2023 facts plus FY2024 and is therefore closed for primary current/YoY/trend coverage, not automatically first for more extraction.
+4. The lexicographic evidence queue is not an investment score. `P0` selects missing current primary core evidence, followed by consecutive-period, valuation-input, cash-flow-quality, secondary, and sector-contract reasons, with deterministic ordering. The current leading retained-evidence opportunity is FPT FY2025 parent earnings/revenue/debt in an image-only official report; it is reported as `IMAGE_ONLY_TABLE_OCR` for a future authorized capability and is not run here.
+
 ## 2026-08-27 - HPG Parent-Attributable Net Income Semantic Correction V1
 
 `HPG_PARENT_ATTRIBUTABLE_NET_INCOME_SEMANTIC_CORRECTION_V1 = OUTCOME_A_CANONICAL_CONSOLIDATED_NET_INCOME_CORRECTED` (`push = NO`).
