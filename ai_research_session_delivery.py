@@ -59,6 +59,57 @@ def _slim(value: Any, *, depth: int = 0) -> Any:
     return str(value)
 
 
+def _valuation_handoff(row: Any) -> dict[str, Any]:
+    """Pass through existing valuation authority labels without ranking or cheap/expensive claims."""
+    if not isinstance(row, Mapping):
+        return {"status": "UNAVAILABLE", "research_usable_is_not_authoritative": True, "is_actionable": False}
+    metrics: dict[str, Any] = {}
+    for name, metric in sorted((row.get("metrics") or {}).items()):
+        if not isinstance(metric, Mapping):
+            continue
+        status = metric.get("status")
+        if status == "READY":
+            note = "AUTHORITATIVE_VALUATION_AVAILABLE"
+        elif status == "RESEARCH_USABLE":
+            note = "RESEARCH_PROXY_VALUATION_AVAILABLE_NOT_AUTHORITATIVE"
+        elif status == "NOT_APPLICABLE":
+            note = "NOT_APPLICABLE"
+        else:
+            note = "AUTHORITATIVE_VALUATION_UNAVAILABLE"
+        metrics[str(name)] = {
+            "status": status,
+            "labels": list(metric.get("labels") or []),
+            "blocked_reasons": list(metric.get("blocked_reasons") or []),
+            "first_blocker": metric.get("first_blocker"),
+            "authority_note": note,
+        }
+    shadow = row.get("shadow_proxy_valuation") if isinstance(row.get("shadow_proxy_valuation"), Mapping) else {}
+    shadow_metrics = {}
+    for name, metric in sorted((shadow.get("metrics") or {}).items()):
+        if isinstance(metric, Mapping):
+            shadow_metrics[str(name)] = {"status": metric.get("status"), "labels": list(metric.get("labels") or [])}
+    price = row.get("price_input") if isinstance(row.get("price_input"), Mapping) else {}
+    share = row.get("share_basis_input") if isinstance(row.get("share_basis_input"), Mapping) else {}
+    financial = row.get("financial_input") if isinstance(row.get("financial_input"), Mapping) else {}
+    strategy = row.get("value_strategy") if isinstance(row.get("value_strategy"), Mapping) else {}
+    return {
+        "valuation_session": price.get("session"),
+        "price_status": price.get("status"),
+        "share_basis_status": share.get("status"),
+        "financial_authority": financial.get("authority"),
+        "metrics": metrics,
+        "shadow_proxy": {
+            "authority_tier": shadow.get("authority_tier"),
+            "share_basis_type": shadow.get("share_basis_type"),
+            "metrics": shadow_metrics,
+        },
+        "value_strategy_status": strategy.get("status"),
+        "research_usable_is_not_authoritative": True,
+        "research_proxy_is_not_a_value_judgment": True,
+        "is_actionable": False,
+    }
+
+
 def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
     """One source-preserving compact context for an arbitrary universe ticker."""
     return {
@@ -68,7 +119,7 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
         "scenario": _slim(_records(operation.get("scenario")).get(ticker)),
         "peer_context": _slim(_records(operation.get("peer")).get(ticker)),
         "fundamental_context": _slim(_records(inputs.get("fundamental")).get(ticker)),
-        "valuation_context": _slim(_records(inputs.get("valuation")).get(ticker)),
+        "valuation_context": _valuation_handoff(_records(inputs.get("valuation")).get(ticker)),
         "market_flow_positioning": _slim(_records(inputs.get("market_flow_positioning")).get(ticker)),
         "corporate_intelligence_context": _slim(_records(inputs.get("corporate_intelligence")).get(ticker)),
         "authority_boundary": copy.deepcopy((operation.get("product") or {}).get("authority_boundary") or {}),

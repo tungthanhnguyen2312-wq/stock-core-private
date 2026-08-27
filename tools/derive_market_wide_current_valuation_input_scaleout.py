@@ -28,7 +28,6 @@ from tools.run_p3f6_mva_provider_share_proxy import _metadata
 OPS = ROOT / "operations-review"
 DEFAULT_OUTPUT = OPS / "market-wide-current-valuation-research-scaleout-v1" / "market_wide_current_valuation_artifact.json"
 DEFAULT_REPORT = OPS / "market-wide-current-valuation-research-scaleout-v1" / "market_wide_current_valuation_research_scaleout_report.json"
-DEFAULT_PRICE = OPS / "p3f9b-market-wide-exact-session-scaleout-20260821" / "p3f9b_mva_exact_session_snapshot.json"
 DEFAULT_FUNDAMENTAL = OPS / "market-wide-current-fundamental-research-v1-20260823" / "market_wide_current_fundamental_research_artifact.json"
 DEFAULT_SHARES = OPS / "p3f5-current-share-promotion-review-20260820" / "p3f5_current_share_promotion_review_artifact.json"
 DEFAULT_P3E = OPS / "p3e-fundamental-coverage-closeout-20260820" / "p3e_fundamental_coverage_closeout_artifact.json"
@@ -36,6 +35,7 @@ DEFAULT_OFFICIAL_UNIVERSE = OPS / "current-official-market-universe-integration-
 FROZEN_OUTPUTS = {
     (OPS / "market-wide-current-valuation-v1-20260824" / "market_wide_current_valuation_artifact.json").resolve(),
     (OPS / "market-wide-current-valuation-v1-20260824-session20260824" / "market_wide_current_valuation_artifact.json").resolve(),
+    (OPS / "market-wide-current-valuation-v1-20260825-session20260825" / "market_wide_current_valuation_artifact.json").resolve(),
 }
 
 
@@ -84,16 +84,19 @@ def _report(artifact: dict) -> dict:
         "metric_not_applicable_counts": coverage["metric_not_applicable_counts"],
         "blocked_reason_counts": coverage["blocked_reason_counts"],
         "sector_archetype_breakdown": coverage["sector_archetype_breakdown"],
+        "input_coverage": coverage.get("input_coverage"),
+        "first_blocker_counts": coverage.get("first_blocker_counts"),
         "value_strategy_readiness": artifact["value_strategy_readiness"],
         "authority_boundary": artifact["authority_boundary"],
         "shadow_proxy_valuation_coverage": artifact.get("shadow_proxy_valuation_coverage"),
     }
 
 
-def materialize(output: Path = DEFAULT_OUTPUT, *, price: Path = DEFAULT_PRICE,
+def materialize(output: Path = DEFAULT_OUTPUT, *, price: Path,
                 fundamental: Path = DEFAULT_FUNDAMENTAL, shares: Path = DEFAULT_SHARES,
                 p3e: Path = DEFAULT_P3E, official_universe: Path | None = DEFAULT_OFFICIAL_UNIVERSE,
-                runtime_root: Path | None = None, report: Path = DEFAULT_REPORT) -> dict:
+                runtime_root: Path | None = None, report: Path = DEFAULT_REPORT,
+                expected_session: str | None = None) -> dict:
     if runtime_root is None:
         raise ValueError("RUNTIME_ROOT_REQUIRED_FOR_RETAINED_PROVIDER_SHARE_INVENTORY")
     _refuse_frozen_output(output)
@@ -101,6 +104,10 @@ def materialize(output: Path = DEFAULT_OUTPUT, *, price: Path = DEFAULT_PRICE,
     official_source = _load(official_universe) if official_universe is not None else None
     _verify_sources(price_source, fundamental_source, share_source, p3e_source, official_source)
     session = str(price_source["resolved_completed_session"])
+    if expected_session is not None and session != expected_session:
+        raise ValueError("VALUATION_PRICE_SESSION_MISMATCH:" + session + "!=" + expected_session)
+    if str(price_source.get("retained_snapshot_session") or session) != session:
+        raise ValueError("VALUATION_PRICE_SNAPSHOT_SESSION_NOT_EXACT:" + session)
     safety = resolve_market_wide_shares(runtime_root, session)
     if safety.get("status") != "measured" or not safety.get("counts_reconcile"):
         raise ValueError("RETAINED_SHARE_INVENTORY_UNREADABLE_OR_NONRECONCILING")
@@ -136,7 +143,9 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--runtime-root", type=Path, required=True)
-    parser.add_argument("--price", type=Path, default=DEFAULT_PRICE)
+    parser.add_argument("--price", type=Path, required=True,
+                        help="Exact-session P3F9B snapshot for the requested valuation session. No silent 2026-08-21 default.")
+    parser.add_argument("--expected-session", help="Fail closed unless the price snapshot resolved session matches.")
     parser.add_argument("--fundamental", type=Path, default=DEFAULT_FUNDAMENTAL)
     parser.add_argument("--shares", type=Path, default=DEFAULT_SHARES)
     parser.add_argument("--p3e", type=Path, default=DEFAULT_P3E)
@@ -145,6 +154,7 @@ def main() -> None:
     artifact = materialize(
         args.output, runtime_root=args.runtime_root, price=args.price, fundamental=args.fundamental,
         shares=args.shares, p3e=args.p3e, official_universe=args.official_universe, report=args.report,
+        expected_session=args.expected_session,
     )
     print(json.dumps({
         "artifact_identity": artifact["artifact_identity"],

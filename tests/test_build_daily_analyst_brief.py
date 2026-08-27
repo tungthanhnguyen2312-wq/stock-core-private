@@ -458,7 +458,7 @@ class TestDailyAnalystBrief(unittest.TestCase):
         baseline = self._build()
         valuation = build_current_valuation_artifact(
             price_snapshot={"resolved_completed_session": "2026-08-21", "source": "DNSE", "snapshot_identity": "price:1",
-                            "records": {"T01": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 10_000}]}}},
+                            "records": {"T01": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": "2026-08-21", "close": 10_000}]}}},
             fundamental_artifact={"artifact_identity": "fund:1", "records": {"T01": {"entity_class": "corporate", "authority_tier": "PROVIDER_RESEARCH"}}},
             share_promotion_artifact={"artifact_identity": "shares:1", "projected_coverage_impact": {"cohort_rows": [
                 {"ticker": "T01", "resolver_authority": "provider_reported_current", "freshness_state": "PROVIDER_REPORTED_CURRENT", "provider_value": 100},

@@ -40,7 +40,8 @@ def _manifest(name, artifact):
 def _event(row):
  return {k:row.get(k) for k in ("qualified_event_count","planned_unresolved_count","temporal_incomplete_count","data_limited_count","conflicting_count","research_session")} | {"events":[{k:e.get(k) for k in ("event_id","event_status","event_type","known_at","published_at","ex_date","effective_date","execution_date","temporal_completeness","evidence_tier")} for e in row.get("events",[])]}
 def _valuation(row):
- return {"valuation_session":(row.get("price_input") or {}).get("session"),"share_basis_status":(row.get("share_basis_input") or {}).get("status"),"metrics":{k:{x:v.get(x) for x in ("status","blocked_reasons","price_session","authority_tier") if x in v} for k,v in sorted((row.get("metrics") or {}).items())},"value_strategy":copy.deepcopy(row.get("value_strategy"))}
+ keys=("status","blocked_reasons","price_session","authority_tier","labels","first_blocker")
+ return {"valuation_session":(row.get("price_input") or {}).get("session"),"share_basis_status":(row.get("share_basis_input") or {}).get("status"),"financial_authority":(row.get("financial_input") or {}).get("authority"),"metrics":{k:{x:v.get(x) for x in keys if x in v} for k,v in sorted((row.get("metrics") or {}).items())},"value_strategy":copy.deepcopy(row.get("value_strategy")),"research_usable_is_not_authoritative":True}
 def _historical(row, artifact):
  return {"as_of_session":row.get("as_of_session"),"context_status":row.get("context_status"),"structural_state":copy.deepcopy(row.get("structural_state")),"volatility_regime":copy.deepcopy(row.get("volatility_regime")),"momentum":copy.deepcopy(row.get("momentum")),"drawdown":copy.deepcopy(row.get("drawdown")),"authority_boundary":copy.deepcopy(artifact.get("authority_boundary"))}
 def _financial(row):

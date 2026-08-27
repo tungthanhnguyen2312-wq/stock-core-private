@@ -47,11 +47,12 @@ def _securities_facts():
 
 def _inputs():
     prices = {"resolved_completed_session": "2026-08-21", "source": "DNSE", "snapshot_identity": "price:1", "records": {
-        "AAA": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 10_000}]},
-        "VCB": {"disposition": "SESSION_MISSING", "observations": []},
-        "SSI": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 20_000}]},
-        "HPG": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 21_700}]},
-        "STALE": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 5_000}]},
+        "AAA": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": "2026-08-21", "close": 10_000}]},
+        "VCB": {"disposition": "SESSION_MISSING", "observations": [{"session": "2026-08-20", "close": 50_000}]},
+        "SSI": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": "2026-08-21", "close": 20_000}]},
+        "HPG": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": "2026-08-21", "close": 21_700}]},
+        "STALE": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": "2026-08-21", "close": 5_000}]},
+        "BBB": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": "2026-08-21", "close": 12_000}]},
     }}
     fundamentals = {"artifact_identity": "fund:1", "records": {
         "AAA": {"entity_class": "corporate", "authority_tier": "OFFICIAL_QUALIFIED", "metrics": [{"metric_id": "revenue"}]},
@@ -59,12 +60,14 @@ def _inputs():
         "SSI": {"entity_class": "securities", "authority_tier": "OFFICIAL_QUALIFIED", "metrics": [{"metric_id": "profit_after_tax_parent"}]},
         "HPG": {"entity_class": "corporate", "authority_tier": "OFFICIAL_QUALIFIED", "metrics": [{"metric_id": "net_income"}]},
         "STALE": {"entity_class": "corporate", "authority_tier": "OFFICIAL_QUALIFIED", "metrics": [{"metric_id": "net_income"}]},
+        "BBB": {"entity_class": "corporate", "authority_tier": "PROVIDER_RESEARCH"},
     }}
     shares = {"artifact_identity": "shares:1", "projected_coverage_impact": {"cohort_rows": [
         {"ticker": "AAA", "resolver_authority": "provider_reported_lagged", "freshness_state": "PROVIDER_REPORTED_STALE", "provider_value": 100},
         {"ticker": "HPG", "resolver_authority": "provider_reported_current", "freshness_state": "PROVIDER_REPORTED_CURRENT", "provider_value": 200},
         {"ticker": "SSI", "resolver_authority": "provider_reported_stale", "freshness_state": "PROVIDER_REPORTED_STALE", "provider_value": 300},
         {"ticker": "STALE", "resolver_authority": "provider_reported_stale", "freshness_state": "PROVIDER_REPORTED_STALE", "provider_value": 50},
+        {"ticker": "BBB", "resolver_authority": "provider_reported_lagged", "freshness_state": "PROVIDER_REPORTED_STALE", "provider_value": 80},
     ]}}
     p3e = {"artifact_identity": "p3e:1", "refreshed_panel_data": {"issuers": [
         {"issuer_identity": {"ticker": "AAA", "entity_type": "corporate"}, "facts": _corporate_facts()},
@@ -89,7 +92,7 @@ def test_deterministic_and_lagged_shares_are_research_usable_not_ready():
     second = _artifact()
     assert first["artifact_identity"] == second["artifact_identity"]
     assert content_identity(first)["artifact_sha256"] == first["artifact_sha256"]
-    assert first["coverage"]["price_ready"] == 4
+    assert first["coverage"]["price_ready"] == 5
     assert first["coverage"]["share_ready"] == 0
     aaa = first["records"]["AAA"]
     assert aaa["share_basis_input"]["status"] == "PROVIDER_REPORTED_LAGGED"
@@ -270,6 +273,122 @@ def test_no_target_price_dcf_or_authority_promotion_fields():
         assert "intrinsic_value" not in row
         assert "wacc" not in row
         assert "terminal_growth" not in row
+
+
+def test_exact_session_price_required_and_stale_prior_session_cannot_substitute():
+    prices, fundamentals, shares, p3e = _inputs()
+    prices["records"]["AAA"] = {
+        "disposition": "EXACT_SESSION_RETAINED",
+        "observations": [{"session": "2026-08-20", "close": 9_000}, {"session": "2026-08-21", "close": 10_000}],
+    }
+    prices["records"]["VCB"] = {
+        "disposition": "SESSION_MISSING",
+        "observations": [{"session": "2026-08-20", "close": 99_000}],
+    }
+    artifact = build_current_valuation_artifact(
+        price_snapshot=prices, fundamental_artifact=fundamentals, share_promotion_artifact=shares, p3e_artifact=p3e,
+    )
+    assert artifact["records"]["AAA"]["price_input"]["value"] == 10_000
+    assert artifact["records"]["AAA"]["price_input"]["session"] == "2026-08-21"
+    assert artifact["records"]["VCB"]["price_input"]["status"] == "PRICE_UNAVAILABLE"
+    assert artifact["records"]["VCB"]["price_input"]["value"] is None
+    assert "PRICE_SESSION_MISSING" in artifact["records"]["VCB"]["price_input"]["blocked_reasons"] or \
+        "PRICE_SESSION_MISSING" in " ".join(artifact["records"]["VCB"]["metrics"]["market_cap"]["blocked_reasons"]) or \
+        artifact["records"]["VCB"]["metrics"]["market_cap"]["first_blocker"] == "PRICE_MISSING"
+
+
+def test_mismatched_snapshot_session_does_not_use_last_lookback_bar():
+    prices, fundamentals, shares, p3e = _inputs()
+    prices["resolved_completed_session"] = "2026-08-26"
+    artifact = build_current_valuation_artifact(
+        price_snapshot=prices, fundamental_artifact=fundamentals, share_promotion_artifact=shares, p3e_artifact=p3e,
+    )
+    assert artifact["records"]["HPG"]["price_input"]["status"] == "PRICE_UNAVAILABLE"
+    assert artifact["records"]["HPG"]["metrics"]["market_cap"]["status"] == "BLOCKED"
+    assert artifact["records"]["HPG"]["metrics"]["market_cap"]["first_blocker"] == "PRICE_MISSING"
+
+
+def test_zero_or_invalid_close_is_not_price_ready():
+    prices, fundamentals, shares, p3e = _inputs()
+    prices["records"]["AAA"]["observations"] = [{"session": "2026-08-21", "close": 0}]
+    artifact = build_current_valuation_artifact(
+        price_snapshot=prices, fundamental_artifact=fundamentals, share_promotion_artifact=shares, p3e_artifact=p3e,
+    )
+    assert artifact["records"]["AAA"]["price_input"]["status"] == "PRICE_UNAVAILABLE"
+    assert "PRICE_CLOSE_INVALID" in artifact["records"]["AAA"]["price_input"]["blocked_reasons"]
+
+
+def test_provider_issued_shares_never_become_official_cso():
+    row = _artifact()["records"]["AAA"]
+    assert row["share_basis_input"]["authority"] == "provider_reported_lagged"
+    assert row["share_basis_input"]["share_concept"] != "current_common_shares_outstanding"
+    assert "NOT_COMMON_OUTSTANDING_SHARE_BASIS" in row["metrics"]["market_cap"]["labels"]
+    assert row["metrics"]["market_cap"]["status"] == "RESEARCH_USABLE"
+    assert row["metrics"]["P/E"]["status"] != "READY"
+
+
+def test_provider_trend_cannot_substitute_missing_exact_financial_fact():
+    row = _artifact()["records"]["BBB"]
+    assert row["financial_input"]["authority"] == "PROVIDER_RESEARCH"
+    assert row["price_input"]["status"] == "PRICE_READY"
+    assert row["share_basis_input"]["research_proxy_eligible"] is True
+    assert row["metrics"]["market_cap"]["status"] == "RESEARCH_USABLE"
+    assert row["metrics"]["P/E"]["status"] == "BLOCKED"
+    assert row["metrics"]["P/E"]["first_blocker"] == "FINANCIAL_FACT_MISSING"
+    assert row["metrics"]["P/E"]["value"] is None
+
+
+def test_first_blocker_and_input_coverage_residual_zero():
+    artifact = _artifact()
+    coverage = artifact["coverage"]
+    assert coverage["input_coverage"]["residual"] == 0
+    assert coverage["denominator_reconciles"] is True
+    assert sum(coverage["input_coverage"]["price"].values()) == coverage["universe_denominator"]
+    assert artifact["records"]["VCB"]["metrics"]["market_cap"]["first_blocker"] == "PRICE_MISSING"
+    assert artifact["records"]["STALE"]["metrics"]["market_cap"]["first_blocker"] == "SHARE_STALE_OR_CORPORATE_ACTION_BLOCKED"
+    assert artifact["records"]["HPG"]["metrics"]["EV/EBITDA"]["first_blocker"] == "EBITDA_NOT_EXACT"
+    assert artifact["records"]["HPG"]["metrics"]["market_cap"]["first_blocker"] is None
+
+
+def test_ev_does_not_invent_missing_debt_and_ebitda_stays_exact():
+    hpg = _artifact()["records"]["HPG"]
+    assert hpg["metrics"]["EV/EBITDA"]["status"] == "BLOCKED"
+    assert "EXACT_EBITDA_COMPARABILITY_NOT_RETAINED" in hpg["metrics"]["EV/EBITDA"]["blocked_reasons"]
+    assert hpg["metrics"]["EV/Sales"]["input_identities"]["debt"] == "total_interest_bearing_debt"
+
+
+def test_no_ranking_recommendation_sizing_or_raw_as_traded_promotion():
+    artifact = _artifact()
+    assert artifact["authority_boundary"]["ranking"] is False
+    assert artifact["authority_boundary"]["recommendation"] is False
+    assert artifact["authority_boundary"]["target_price"] is False
+    assert artifact["authority_boundary"]["raw_as_traded"] == "NOT_PROMOTED"
+    assert artifact["authority_boundary"]["historical_pit_eligible"] is False
+    for row in artifact["records"].values():
+        assert "position_size" not in row
+        assert row["is_actionable"] is False
+
+
+def test_no_network_in_valuation_session_native_path():
+    root = Path(__file__).resolve().parents[1]
+    banned = ("urllib", "requests", "http.client", "dnse_access", "fetch_capability_raw")
+    for rel in (
+        "market_wide_current_valuation_input_scaleout.py",
+        "tools/derive_market_wide_current_valuation_input_scaleout.py",
+        "ai_research_session_delivery.py",
+    ):
+        text = (root / rel).read_text(encoding="utf-8")
+        for token in banned:
+            assert token not in text, f"{rel} contains {token}"
+
+
+def test_price_required_on_derive_cli_and_no_hardcoded_20260821_default():
+    import inspect
+    from tools import derive_market_wide_current_valuation_input_scaleout as runner
+    source = inspect.getsource(runner)
+    assert 'required=True' in inspect.getsource(runner.main)
+    assert 'p3f9b-market-wide-exact-session-scaleout-20260821' not in source
+    assert 'DEFAULT_PRICE' not in source
 
 
 def test_frozen_session_identities_unchanged_and_output_refuse_path():

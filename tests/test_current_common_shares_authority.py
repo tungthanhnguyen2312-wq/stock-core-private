@@ -161,9 +161,9 @@ def test_market_wide_denominator_and_one_terminal_per_ticker():
 
 def test_existing_valuation_engine_consumes_share_authority_without_formula_changes():
     prices = {"resolved_completed_session": SESSION, "source": "DNSE", "snapshot_identity": "price:1", "records": {
-        "HPG": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 21_700}]},
-        "AAA": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 10_000}]},
-        "SSI": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"close": 20_000}]},
+        "HPG": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": SESSION, "close": 21_700}]},
+        "AAA": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": SESSION, "close": 10_000}]},
+        "SSI": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": SESSION, "close": 20_000}]},
     }}
     fundamentals = {"artifact_identity": "fund:1", "records": {
         "HPG": {"entity_class": "corporate", "authority_tier": "OFFICIAL_QUALIFIED", "metrics": [{"metric_id": "net_income"}]},

@@ -231,16 +231,32 @@ def _share_disposition(
 
 
 def _price_input(record: Mapping[str, Any], snapshot: Mapping[str, Any]) -> dict[str, Any]:
-    observation = (record.get("observations") or [{}])[-1]
-    ready = record.get("disposition") == "EXACT_SESSION_RETAINED"
-    blocked = [] if ready else [f"PRICE_{record.get('disposition', 'UNAVAILABLE')}"]
-    close = observation.get("close") if ready else None
-    if ready and (not isinstance(close, (int, float)) or isinstance(close, bool) or close <= 0):
-        ready, close, blocked = False, None, ["PRICE_CLOSE_INVALID"]
+    """Use only the exact snapshot session close. Prior-session lookback never substitutes."""
+    session = snapshot.get("resolved_completed_session")
+    if not isinstance(record, Mapping):
+        record = {"disposition": "NOT_IN_PRICE_SNAPSHOT", "observations": []}
+    disposition = record.get("disposition") or "UNAVAILABLE"
+    matches = [
+        item for item in record.get("observations") or []
+        if isinstance(item, Mapping) and item.get("session") == session
+    ]
+    blocked: list[str] = []
+    close = None
+    ready = False
+    if disposition != "EXACT_SESSION_RETAINED":
+        blocked = [f"PRICE_{disposition}"]
+    elif len(matches) != 1:
+        blocked = ["PRICE_SESSION_MISSING" if not matches else "PRICE_SESSION_AMBIGUOUS"]
+    else:
+        close = matches[0].get("close")
+        if isinstance(close, bool) or not isinstance(close, (int, float)) or close <= 0:
+            close, blocked = None, ["PRICE_CLOSE_INVALID"]
+        else:
+            ready = True
     return {
         "status": "PRICE_READY" if ready else "PRICE_UNAVAILABLE",
         "value": close,
-        "session": snapshot.get("resolved_completed_session"),
+        "session": session,
         "source": snapshot.get("source") or "DNSE",
         "basis": "CURRENT_SESSION_DESCRIPTIVE_CURRENT_VALUATION_PRICE_LEG",
         "currency": "VND",
@@ -251,6 +267,64 @@ def _price_input(record: Mapping[str, Any], snapshot: Mapping[str, Any]) -> dict
         "blocked_reasons": blocked,
         "reason_codes": blocked,
     }
+
+
+def _price_coverage_state(price: Mapping[str, Any]) -> str:
+    if price.get("status") == "PRICE_READY":
+        return "EXACT_SESSION_READY"
+    reasons = " ".join(price.get("blocked_reasons") or [])
+    if "PRICE_CLOSE_INVALID" in reasons:
+        return "INVALID"
+    if any(token in reasons for token in ("PRICE_SESSION_MISSING", "PRICE_SESSION_AMBIGUOUS", "PRICE_SESSION_MISSING", "PRICE_NOT_IN_PRICE_SNAPSHOT")):
+        return "MISSING_EXACT_SESSION"
+    if "SESSION_MISSING" in reasons:
+        return "MISSING_EXACT_SESSION"
+    return "OTHER"
+
+
+def _financial_coverage_state(financial: Mapping[str, Any], entity: str) -> str:
+    authority = financial.get("authority")
+    if authority == "OFFICIAL_QUALIFIED" and financial.get("calculation_grade") is True:
+        return "OFFICIAL_QUALIFIED_USABLE"
+    if authority == "PROVIDER_RESEARCH":
+        return "PROVIDER_TRENDS_DESCRIPTIVE_NOT_ABSOLUTE"
+    if entity in {"finance_company", "insurance"}:
+        return "NOT_APPLICABLE_ENTITY_CLASS"
+    if authority == "UNAVAILABLE":
+        return "MISSING"
+    return "INSUFFICIENT_EVIDENCE"
+
+
+def _first_blocker(metric: Mapping[str, Any], *, price: Mapping[str, Any],
+                   share: Mapping[str, Any], financial: Mapping[str, Any], entity: str) -> str | None:
+    """Name the first real blocker. Observed READY/RESEARCH_USABLE have none."""
+    status = metric.get("status")
+    if status in {"READY", "RESEARCH_USABLE"}:
+        return None
+    if status == "NOT_APPLICABLE":
+        return "NOT_APPLICABLE"
+    reasons = [str(item) for item in metric.get("blocked_reasons") or []]
+    joined = " ".join(reasons)
+    if price.get("status") != "PRICE_READY" or any(item.startswith("PRICE_") for item in reasons):
+        return "PRICE_MISSING"
+    if share.get("authority") in STALE_FAIL_CLOSED_AUTHORITIES or "STALE_SHARE_FAIL_CLOSED" in joined:
+        return "SHARE_STALE_OR_CORPORATE_ACTION_BLOCKED"
+    if not share.get("research_proxy_eligible") and not share.get("authoritative_current_market_cap_eligible"):
+        return "SHARE_AUTHORITY_OR_PROXY_UNAVAILABLE"
+    if "EXACT_EBITDA_COMPARABILITY_NOT_RETAINED" in joined:
+        return "EBITDA_NOT_EXACT"
+    if any("FINANCIAL_IDENTITY_MISSING:total_interest_bearing_debt" in item or item.endswith(":total_interest_bearing_debt") for item in reasons):
+        return "DEBT_COMPONENT_MISSING"
+    if any("PERIOD" in item or "period" in item for item in reasons):
+        return "FINANCIAL_PERIOD_MISMATCH"
+    if entity == "unknown" or "ENTITY_CLASS_UNRESOLVED" in joined:
+        return "FINANCIAL_ENTITY_IDENTITY_MISMATCH"
+    if any(token in joined for token in (
+        "PROVIDER_RESEARCH_NOT_AUTHORIZED", "NO_RETAINED_FINANCIAL_RECORD",
+        "OFFICIAL_QUALIFIED_FINANCIAL_INPUT_UNAVAILABLE", "FINANCIAL_IDENTITY_MISSING",
+    )):
+        return "FINANCIAL_FACT_MISSING"
+    return reasons[0] if reasons else "VALUATION_INPUT_BLOCKED"
 
 
 def _applicability(entity: str, metric: str) -> str:
@@ -581,6 +655,10 @@ def build_current_valuation_artifact(
         financial = _financial_input(fundamental, fundamental_artifact)
         issuer = issuers.get(ticker)
         metric_rows = _build_metrics(entity=entity, price=price, share=share, financial=financial, issuer=issuer)
+        for metric in metric_rows.values():
+            metric["first_blocker"] = _first_blocker(
+                metric, price=price, share=share, financial=financial, entity=entity,
+            )
         warnings = ["CURRENT_DESCRIPTIVE_NOT_HISTORICAL_PIT", "NO_RANKING_OR_RECOMMENDATION", "NO_TARGET_PRICE_OR_DCF"]
         if any(metric["status"] == "RESEARCH_USABLE" for metric in metric_rows.values()):
             warnings.append("RESEARCH_USABLE_IS_NOT_AUTHORITATIVE_AND_DOES_NOT_MAKE_VALUE_ELIGIBLE")
@@ -604,11 +682,29 @@ def build_current_valuation_artifact(
     metric_na = {metric: sum(row["metrics"][metric]["status"] == "NOT_APPLICABLE" for row in records.values()) for metric in METRICS}
     blocked_reasons: Counter[str] = Counter()
     sector_breakdown: dict[str, dict[str, dict[str, int]]] = defaultdict(lambda: defaultdict(Counter))
+    first_blocker_by_metric: dict[str, Counter[str]] = defaultdict(Counter)
+    first_blocker_by_entity: dict[str, Counter[str]] = defaultdict(Counter)
+    first_blocker_total: Counter[str] = Counter()
     for row in records.values():
         for metric_id, metric in row["metrics"].items():
             for reason in metric.get("blocked_reasons") or []:
                 blocked_reasons[reason] += 1
             sector_breakdown[row["entity_class"]][metric_id][metric["status"]] += 1
+            blocker = metric.get("first_blocker")
+            if blocker:
+                first_blocker_by_metric[metric_id][blocker] += 1
+                first_blocker_by_entity[row["entity_class"]][blocker] += 1
+                first_blocker_total[blocker] += 1
+    price_states = dict(sorted(Counter(_price_coverage_state(r["price_input"]) for r in records.values()).items()))
+    financial_states = dict(sorted(Counter(
+        _financial_coverage_state(r["financial_input"], r["entity_class"]) for r in records.values()
+    ).items()))
+    share_states = dict(sorted(Counter(r["share_basis_input"]["status"] for r in records.values()).items()))
+    input_residual = (
+        abs(sum(price_states.values()) - len(records))
+        + abs(sum(share_states.values()) - len(records))
+        + abs(sum(financial_states.values()) - len(records))
+    )
     artifact: dict[str, Any] = {
         "schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "artifact_type": ARTIFACT_TYPE,
         "valuation_session": price_snapshot.get("resolved_completed_session"),
@@ -649,6 +745,17 @@ def build_current_valuation_artifact(
                 entity: {metric: dict(sorted(states.items())) for metric, states in metrics.items()}
                 for entity, metrics in sorted(sector_breakdown.items())
             },
+            "input_coverage": {
+                "price": price_states,
+                "shares": share_states,
+                "financial": financial_states,
+                "residual": input_residual,
+            },
+            "first_blocker_counts": {
+                "overall": dict(sorted(first_blocker_total.items())),
+                "by_metric": {metric: dict(sorted(counts.items())) for metric, counts in sorted(first_blocker_by_metric.items())},
+                "by_entity_class": {entity: dict(sorted(counts.items())) for entity, counts in sorted(first_blocker_by_entity.items())},
+            },
         },
         "authority_boundary": {
             "current_snapshot_only": True, "historical_pit_eligible": False, "raw_as_traded": "NOT_PROMOTED",
@@ -676,6 +783,11 @@ def build_current_valuation_artifact(
         and sum(artifact["coverage"]["share_authority_tiers"].values()) == len(records)
         and sum(artifact["coverage"]["entity_classes"].values()) == len(records)
         and (official_tickers is None or len(official_tickers) == len(records))
+        and artifact["coverage"]["input_coverage"]["residual"] == 0
+        and all(
+            metric_ready[metric] + metric_research_usable[metric] + metric_blocked[metric] + metric_na[metric] == len(records)
+            for metric in METRICS
+        )
     )
     artifact["coverage"]["unexplained_denominator_drift"] = 0 if artifact["coverage"]["denominator_reconciles"] else abs(
         artifact["coverage"]["universe_denominator"] - len(records)

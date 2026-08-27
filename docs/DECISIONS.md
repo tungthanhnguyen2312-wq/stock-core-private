@@ -1,5 +1,20 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Market-wide current valuation session-native scale-out V1
+
+`MARKET_WIDE_CURRENT_VALUATION_SESSION_NATIVE_SCALEOUT_V1 = OUTCOME_C_CURRENT_RETAINED_EVIDENCE_CEILING_ESTABLISHED` (`push = NO`).
+
+Decisions:
+
+1. **Same lanes.** Continue `market_wide_current_valuation/v1`, P3-F2/P3-F6 share proxy, and official-qualified fundamentals. No new valuation architecture.
+2. **26/8 Daily Producer was already session-native.** Registered valuation `market_wide_current_valuation:cb333137…` binds P3F9B `p3f9_exact_session_snapshot:c25bc8ae…`. Isolated retained replay reproduces the same metric counts. Do not rewrite that frozen 26/8 Daily Producer artifact.
+3. **Exact-session close only.** `_price_input` now requires `observation.session == snapshot.resolved_completed_session`. A prior-session lookback bar cannot substitute. Derive `--price` is required; the 2026-08-21 default is removed; `--expected-session` fail-closes mismatch. Level-2 passes both.
+4. **Ceiling, not expansion.** Research-usable multiples still need official-qualified financial identities. Provider trends remain descriptive. Issued shares remain `ISSUED_SHARES` / not CSO. Authoritative READY stays 0. VALUE stays 0/1,507.
+5. **AI compact pass-through.** Full-universe NDJSON now retains per-metric status/labels so research-proxy availability is distinct from authoritative unavailability. It does not say cheap/expensive. Frozen 26/8 NDJSON is not rebuilt.
+6. **Authority unchanged.** `authority_effect = NONE`. Frozen 21/8/24 valuation identities unchanged.
+
+Validation: focused valuation/AI/packet/Level-2/share tests; isolated 26/8 rematerialization vs Daily Producer counts; `py_compile`; `git diff --check`. Zero network.
+
 ## 2026-08-27 - Prospective research cohort first-future attribution V1
 
 `PROSPECTIVE_RESEARCH_COHORT_FIRST_FUTURE_ATTRIBUTION_V1 = COMPLETE_LOCALLY / FIRST_STRICTLY_LATER_SESSION_MATERIALIZED` (`push = NO`).

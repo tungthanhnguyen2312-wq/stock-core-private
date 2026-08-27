@@ -980,6 +980,7 @@ def materialize_independent_components(
         run_cmd(execution_root, [
             "tools/derive_market_wide_current_valuation_input_scaleout.py",
             "--runtime-root", str(runtime_root), "--price", str(p3f9b_snapshot),
+            "--expected-session", session,
             "--output", str(val_out), "--report", str(val_dir / "market_wide_current_valuation_research_scaleout_report.json"),
         ])
     leadership_out = paths["sector_leadership"]
