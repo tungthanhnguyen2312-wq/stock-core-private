@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Retained Official Financial PDF Extraction Scaleout V1
+
+`RETAINED_OFFICIAL_FINANCIAL_PDF_EXTRACTION_SCALEOUT_V1 = OUTCOME_B_RETAINED_PDF_EXTRACTION_PARTIAL_LAYOUT_CEILING` (`push = NO`).
+
+1. The scaleout denominator is every local `%PDF-` byte set under `operations-review`, deduplicated by SHA-256 before replay. Duplicate paths preserve provenance but cannot trigger a second extraction; image-only documents are inventoried and never OCR'd in this milestone.
+2. The existing page/table extractor is replayed unchanged. AAA reproduces its already-qualified facts exactly. Native-text reports without the current exact VAS form-code/table proof remain blocked rather than receiving a new ticker recipe or fuzzy alias; VCB/SSI remain bank/securities layout boundaries and receive no corporate mapping.
+3. No newly qualified fact entered P3-F13. Official financial cells remain 70, valuation research coverage and READY/VALUE remain unchanged, and no provider/network/DB/strategy authority was opened. The exact next capability is structural bilingual/non-form-code corporate table recognition with the same page/row/period evidence requirements.
+
 ## 2026-08-27 - Official Financial PDF Page/Table Extraction and Citation V1
 
 `OFFICIAL_FINANCIAL_PDF_PAGE_TABLE_EXTRACTION_AND_CITATION_V1 = OUTCOME_A_GENERIC_PDF_EXTRACTION_QUALIFIES_NEW_OFFICIAL_FACTS` (`push = NO`).
