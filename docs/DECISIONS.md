@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - Annual provider financial history retention repair and flow reconciliation V1
+
+`ANNUAL_PROVIDER_FINANCIAL_HISTORY_RETENTION_REPAIR_AND_FLOW_RECONCILIATION_V1 = OUTCOME_B_ANNUAL_HISTORY_RECOVERED_SEMANTICS_PARTIAL` (`push = NO`).
+
+1. **Annual is a separate retained period contract.** `*_year.parquet` is replayed only into additive annual observations/facts; no quarterly byte or fact is overwritten. The existing filename collision explains historical loss, while KBS `YYYY-Năm` required an explicit annual column parser repair.
+2. **Replay before acquisition; acquisition was exact and bounded.** Nine repository annual payloads were replayed first. They did not overlap the official-citation panel, so the approved 8-issuer × 3-family plan ran once per route (24/24 successful) with no retry, failover, delay, scheduler, or production-database write. Adapter-return parquet bytes and hashes plus request dispositions are retained.
+3. **Missing provider metadata stays missing.** Acquisition-envelope ticker/provider/family identity is recorded separately from provider metadata. Report dates, audit/review, scope, currency and unit are `None`/unknown where the adapter did not expose them. KBS’s documented upstream multiplier is retained as a transform method, never inferred from magnitude.
+4. **Annual numerical matches do not widen authority.** Fourteen aligned annual exacts exist, but flow and unresolved-scope/unit rows remain non-comparable; PVD/VNM remain untouched. Existing semantic-basis evaluation has zero absolute-qualified shapes and the isolated valuation replay is byte-identical. The next evidence gate is retained provider-owned annual scope/currency/unit metadata plus independent flow corroboration.
+
 ## 2026-08-27 - Provider Financial Semantic Basis Qualification V1
 
 `PROVIDER_FINANCIAL_SEMANTIC_BASIS_QUALIFICATION_V1 = OUTCOME_C_RETAINED_PROVIDER_ABSOLUTE_SEMANTICS_REMAIN_UNQUALIFIED` (`push = NO`).

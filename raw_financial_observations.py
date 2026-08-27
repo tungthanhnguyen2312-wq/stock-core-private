@@ -75,9 +75,9 @@ _PAYLOAD_NAME_RE = re.compile(
     r"_(?P<frequency>quarter|year)$"
 )
 
-# `2026-Q1`, `2025-Q4_1`, `2025Q4`, `2024`, `2024_1`, `2024.1`
+# `2026-Q1`, `2025-Q4_1`, `2025Q4`, `2024`, `2024-Năm`, `2024_1`, `2024.1`
 _PERIOD_COLUMN_RE = re.compile(
-    r"^(?P<year>\d{4})(?:[-_.]?Q(?P<quarter>[1-4]))?(?:[._-](?P<variant>\d+))?$",
+    r"^(?P<year>\d{4})(?:[-_.]?Q(?P<quarter>[1-4])|[-_.]?(?:YEAR|NĂM))?(?:[._-](?P<variant>\d+))?$",
     re.IGNORECASE,
 )
 
