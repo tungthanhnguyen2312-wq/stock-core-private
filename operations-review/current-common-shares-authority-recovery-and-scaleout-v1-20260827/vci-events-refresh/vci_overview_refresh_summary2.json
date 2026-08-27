@@ -1,0 +1,30 @@
+[
+  {
+    "issue_share": 8355675094.0,
+    "observed_at": "2026-08-27T03:18:10Z",
+    "sha256": "ca8a135eb9e6a2141ea0f9bc1dd198f312a3e41a807a2eddc545d82845f3ec2b",
+    "symbol": "VCB",
+    "ticker": "VCB"
+  },
+  {
+    "issue_share": 7170401.0,
+    "observed_at": "2026-08-27T03:18:15Z",
+    "sha256": "f31b4e0bf5499ec0cdc5d27645341cd32ed0e7169f1f11a4cb1e78b4a3e5c877",
+    "symbol": "HCC",
+    "ticker": "HCC"
+  },
+  {
+    "issue_share": 245911141.0,
+    "observed_at": "2026-08-27T03:18:16Z",
+    "sha256": "25c9e00c6ed46110ad60922c67c07304b9be84a044a153153f6eb01578a29069",
+    "symbol": "IPA",
+    "ticker": "IPA"
+  },
+  {
+    "issue_share": 55644162.0,
+    "observed_at": "2026-08-27T03:18:16Z",
+    "sha256": "93c3f273d687ed2687b6f7a3a57136d5b55b583ae84f7669c1a09aed6d89c80e",
+    "symbol": "NAG",
+    "ticker": "NAG"
+  }
+]

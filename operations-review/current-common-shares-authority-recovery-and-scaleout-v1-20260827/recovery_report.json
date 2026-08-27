@@ -1,0 +1,193 @@
+{
+  "acquisition_performed": {
+    "hnx_issuer_profile_probe": {
+      "budget": 6,
+      "requests_made": 6,
+      "result": "KLLH/KLNY unchanged from pre-event values for all 3 -- negative corroboration, retained",
+      "retries": 0,
+      "route": "hnx_official_issuer_profile_multi_gate.py (reused unchanged: fetch/retain/parse_profile)",
+      "tickers": [
+        "HCC",
+        "IPA",
+        "NAG"
+      ]
+    },
+    "runtime_or_database_writes": false,
+    "total_live_requests": 13,
+    "vci_events_recheck": {
+      "budget": 2,
+      "requests_made": 2,
+      "result": "SSI: most recent ISS event now dated (exright_date 2026-08-17); VCB: still undated",
+      "retries": 0,
+      "route": "corporate_events_sync.normalize_event (reused unchanged) over a fresh vnstock.api.company.Company(source='VCI').events() call",
+      "tickers": [
+        "SSI",
+        "VCB"
+      ]
+    },
+    "vci_overview_recheck": {
+      "budget": 5,
+      "requests_made": 5,
+      "result": "SSI/HCC/IPA/NAG updated to a fresh post-event count each matching a clean whole-percent ratio; VCB byte-identical to retained",
+      "retries": 0,
+      "route": "vnstock.api.company.Company(source='VCI').overview() -- the same source already used market-wide for issue_share",
+      "tickers": [
+        "SSI",
+        "VCB",
+        "HCC",
+        "IPA",
+        "NAG"
+      ]
+    },
+    "vn_stock_db_mutated": false
+  },
+  "after_bounded_recovery_session_2026_08_26": {
+    "authority_tier_distribution": {
+      "PROVIDER_REPORTED_CURRENT_RESEARCH": 4,
+      "PROVIDER_REPORTED_LAGGED": 1501,
+      "QUALIFIED_OFFICIAL_ANCHOR_NOT_CURRENT": 1,
+      "UNVERIFIABLE_FRESHNESS": 1
+    },
+    "first_blocker_inventory": {
+      "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN": 1,
+      "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION": 1505,
+      "STALE_SHARE_FAIL_CLOSED_CORPORATE_ACTION_OR_UNVERIFIABLE_FRESHNESS": 1
+    },
+    "share_artifact_identity": "current_common_shares_authority:0ffb1fe1ef22ea5d36fb3f904b51408cf5577bc1ac4703fb2e8addcfe15e55eb",
+    "tickers_upgraded": [
+      "HCC",
+      "IPA",
+      "NAG",
+      "SSI"
+    ],
+    "upgrade_direction": {
+      "HCC": "CORPORATE_ACTION_RECONCILIATION_REQUIRED -> PROVIDER_REPORTED_CURRENT_RESEARCH",
+      "IPA": "CORPORATE_ACTION_RECONCILIATION_REQUIRED -> PROVIDER_REPORTED_CURRENT_RESEARCH",
+      "NAG": "CORPORATE_ACTION_RECONCILIATION_REQUIRED -> PROVIDER_REPORTED_CURRENT_RESEARCH",
+      "SSI": "UNVERIFIABLE_FRESHNESS -> PROVIDER_REPORTED_CURRENT_RESEARCH"
+    }
+  },
+  "as_of_session": "2026-08-26",
+  "authority_impact": {
+    "note": "No ticker was promoted to QUALIFIED_CURRENT_COMMON_SHARES. All four upgrades stay PROVIDER_REPORTED_CURRENT_RESEARCH (research-usable, non-authoritative); a provider issued-share re-observation is never promoted to official common-outstanding authority regardless of freshness.",
+    "qualified_current_common_shares_after": 0,
+    "qualified_current_common_shares_before": 0
+  },
+  "before_08_25_frozen_session_2026_08_21": {
+    "authority_tier_distribution": {
+      "CORPORATE_ACTION_RECONCILIATION_REQUIRED": 3,
+      "PROVIDER_REPORTED_LAGGED": 1501,
+      "QUALIFIED_CURRENT_COMMON_SHARES": 0,
+      "QUALIFIED_OFFICIAL_ANCHOR_NOT_CURRENT": 1,
+      "UNVERIFIABLE_FRESHNESS": 2
+    },
+    "share_artifact_identity": "current_common_shares_authority:a1de67f6eff40ae74615e2be378c58fca2eb81fa8c0d55427b6cd5ddd99328d0"
+  },
+  "boundaries": {
+    "frozen_26_08_artifacts_rewritten": false,
+    "new_provider_added": false,
+    "official_authority_promoted_from_provider_source": false,
+    "value_strategy_activated": false,
+    "vn_stock_db_mutated": false
+  },
+  "denominator": 1507,
+  "hpg_recheck": {
+    "note": "Live resolver returns qualified_official for HPG at 2026-08-26 using the SAME 2026-07-02 anchor and its existing 2026-08-14 corroborating provider observation, but current_common_shares_authority.py's official_common branch (fed from the frozen P3F4/P3F5 review, coverage_through=2026-07-30) correctly still governs the terminal tier: no NEW evidence extends coverage_through past 2026-07-30, so HPG remains QUALIFIED_OFFICIAL_ANCHOR_NOT_CURRENT. No override applied.",
+    "result": "NO_CHANGE_CEILING_RECONFIRMED"
+  },
+  "report_sha256": "3866140bfabf7ddf2375ad35ba20710a4fb782d4f0a9a4848edf1f21786295e2",
+  "runtime_root": "C:\\Projects\\StockLookup\\dashboard-runtime",
+  "same_day_reprice_no_new_evidence_session_2026_08_26": {
+    "authority_tier_distribution": {
+      "CORPORATE_ACTION_RECONCILIATION_REQUIRED": 3,
+      "PROVIDER_REPORTED_LAGGED": 1501,
+      "QUALIFIED_OFFICIAL_ANCHOR_NOT_CURRENT": 1,
+      "UNVERIFIABLE_FRESHNESS": 2
+    },
+    "first_blocker_inventory": {
+      "CORPORATE_ACTION_TIMING_UNRESOLVED_NO_EX_DATE_INFERRED": 3,
+      "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN": 1,
+      "CURRENT_COMMON_OUTSTANDING_COVERAGE_NOT_PROVEN_THROUGH_PRICE_SESSION": 1501,
+      "STALE_SHARE_FAIL_CLOSED_CORPORATE_ACTION_OR_UNVERIFIABLE_FRESHNESS": 2
+    },
+    "share_artifact_identity": "current_common_shares_authority:8df3e598eaf9a8de75507aee10ce98d68687388b077f8e85e856992518011d9a"
+  },
+  "valuation_effect": {
+    "1_frozen_26_08_baseline_share_authority_null": {
+      "artifact_identity": "market_wide_current_valuation:dcbcb55bb7176f2b73d7528ee6fce4933f6fc7bb2af47eece0816fa10ed2899a",
+      "metric_research_usable_counts": {
+        "EV/EBITDA": 0,
+        "EV/Sales": 9,
+        "P/B": 9,
+        "P/E": 8,
+        "P/S": 9,
+        "enterprise_value": 9,
+        "market_cap": 887
+      },
+      "share_ready": 0,
+      "value_strategy_readiness": {
+        "blocked": 1507,
+        "eligible": 0,
+        "research_usable_does_not_satisfy_value": true,
+        "rule": "VALUE requires any strict metrics.status==READY under AUTHORITATIVE_CURRENT_VALUATION",
+        "shadow_proxy_does_not_satisfy_value": true,
+        "universe_count": 1507
+      }
+    },
+    "2_reprice_only_same_evidence_via_share_authority_artifact": {
+      "artifact_identity": "market_wide_current_valuation:4b07950e9657f7bc052206dc9fc335f7836a8165e4f837e268b9a775c86f4a5d",
+      "metric_research_usable_counts": {
+        "EV/EBITDA": 0,
+        "EV/Sales": 9,
+        "P/B": 9,
+        "P/E": 8,
+        "P/S": 9,
+        "enterprise_value": 9,
+        "market_cap": 884
+      },
+      "share_ready": 0,
+      "value_strategy_readiness": {
+        "blocked": 1507,
+        "eligible": 0,
+        "research_usable_does_not_satisfy_value": true,
+        "rule": "VALUE requires any strict metrics.status==READY under AUTHORITATIVE_CURRENT_VALUATION",
+        "shadow_proxy_does_not_satisfy_value": true,
+        "universe_count": 1507
+      }
+    },
+    "3_recovered_with_bounded_overrides": {
+      "artifact_identity": "market_wide_current_valuation:3be21226261e58c280d3bd4dcfc8f2cafb444e0f5c68078ddd8c4f94ae75c28f",
+      "metric_research_usable_counts": {
+        "EV/EBITDA": 0,
+        "EV/Sales": 9,
+        "P/B": 10,
+        "P/E": 9,
+        "P/S": 9,
+        "enterprise_value": 9,
+        "market_cap": 888
+      },
+      "share_ready": 0,
+      "value_strategy_readiness": {
+        "blocked": 1507,
+        "eligible": 0,
+        "research_usable_does_not_satisfy_value": true,
+        "rule": "VALUE requires any strict metrics.status==READY under AUTHORITATIVE_CURRENT_VALUATION",
+        "shadow_proxy_does_not_satisfy_value": true,
+        "universe_count": 1507
+      }
+    },
+    "note": "Three points, not two, to isolate the code-path switch from the evidence effect: (1) the existing frozen 26/8 baseline used share_authority_artifact=None (raw-resolution code path); (2) reprice_only re-routes through share_authority_artifact with NO new evidence -- isolates the effect of that routing change alone; (3) recovered adds the four bounded overrides on top of (2) -- isolates the effect of the bounded acquisition alone."
+  },
+  "vcb_recheck": {
+    "checked_at": "2026-08-27T03:16:34Z / 2026-08-27T03:18:10Z",
+    "evidence_files": [
+      "operations-review\\current-common-shares-authority-recovery-and-scaleout-v1-20260827\\vci-events-refresh\\VCB_events_7e86625588278da0a48cac44e05a767c7de631e04b47c4418937a34d27e8137d.json",
+      "operations-review\\current-common-shares-authority-recovery-and-scaleout-v1-20260827\\vci-events-refresh\\VCB_overview_ca8a135eb9e6a2141ea0f9bc1dd198f312a3e41a807a2eddc545d82845f3ec2b.json"
+    ],
+    "issue_share_fresh": 8355675094,
+    "issue_share_retained": 8355675094,
+    "most_recent_iss_event_exright_date": null,
+    "result": "NO_CHANGE_CEILING_RECONFIRMED",
+    "ticker": "VCB"
+  }
+}

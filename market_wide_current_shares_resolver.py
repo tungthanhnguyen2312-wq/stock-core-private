@@ -364,6 +364,8 @@ def resolve_effective_shares(ticker: str, runtime_root: Path | str, session_date
                            unit="shares", source="official_share_basis_citation",
                            lineage=("official executed corporate action stating shares_after, "
                                     "corroborated by an independent observation"),
+                           corroborating_observation_date=observed_on.isoformat() if observed_on else None,
+                           ledger_coverage_status=coverage,
                            **official)
         official["official_anchor_not_promoted_because"] = refusal
         official["ledger_coverage_status"] = coverage
