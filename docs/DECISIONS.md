@@ -1,5 +1,20 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-27 - ADTV20 exact-reconciled trailing-window recovery V1
+
+`ADTV20_EXACT_RECONCILED_TRAILING_WINDOW_RECOVERY_V1 = OUTCOME_C_CURRENT_SOURCE_CEILING_ESTABLISHED` (`push = NO`).
+
+Decisions:
+
+1. **Same lane.** This is evidence recovery inside `ADTV20_WINDOW_INTEGRITY_AND_CONFLICT_QUALIFICATION_V1` / `HISTORICAL_MATCHED_TRADING_VALUE_AUTHORITY_V1`. No new architecture, provider, or daily-pipeline blocker.
+2. **Expected calendar unchanged.** Trailing 20 remains the last 20 sessions of the retained 40-session DNSE Trades corpus: `2026-07-15` through `2026-08-11`. Older 21st+ rows still cannot substitute.
+3. **Session-first hole.** Inventory residual 0 over 1,507 × 20 = 30,140 cells. FHSC is missing for every official ticker on `2026-08-06` (1,507 cells). DNSE Trades for that session exist. Six HOSE names are 19/20 with that single FHSC_MISSING cell as the sole blocker (`AAA`, `BID`, `BWE`, `CTG`, `DPM`, `MZG`).
+4. **Bounded acquisition of that cohort only.** Approved FHSC route `/market/stocks/{symbol}/trading/history` (`SUPPLEMENTAL_BOUNDED`). Budget 6, one GET each, no sleep/retry. 6/6 HTTP 200. Live payloads still omit `2026-08-06` (they do include later dates such as `2026-08-25`). 0 new `QUALIFIED_G1_EXACT` cells.
+5. **Ceiling.** ADTV20 READY cannot reach 20/20 on this calendar until an already-qualified independent matched-value field emits `2026-08-06` and exact-reconciles to DNSE G1. Do not drop that DNSE session from the expected window. Do not coerce G1+G4. Filling the other 185 HOSE names that lack any FHSC file cannot create READY while this hole remains.
+6. **Authority unchanged.** `authority_effect = NONE`. `ADV20_MATCHED_VOLUME` not emitted. `QUALIFIED_LIQUIDITY_INPUTS` and `POSITION_SIZING_IS_SAFE` stay false.
+
+Validation: trailing-20 inventory residual 0; 19/20 vs 20/20; no older-session substitution; G1 formula/G4 exclusion; budget and 429 tests; live 6-request batch; `py_compile`; `git diff --check`. No daily-orchestration or Dashboard change.
+
 ## 2026-08-27 - Canonical daily one-command operational cutover V1
 
 `CANONICAL_DAILY_ONE_COMMAND_OPERATIONAL_CUTOVER_V1 = COMPLETE_LOCALLY / DAILY_ONE_COMMAND_READY` (`push = NO`).

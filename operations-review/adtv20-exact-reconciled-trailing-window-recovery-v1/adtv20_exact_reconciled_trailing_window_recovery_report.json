@@ -1,0 +1,227 @@
+{
+  "acquisition": {
+    "http_disposition": {
+      "HTTP_200": 6
+    },
+    "records": [
+      {
+        "endpoint": "/market/stocks/AAA/trading/history",
+        "has_target_sessions": {
+          "2026-08-06": false
+        },
+        "http_status": 200,
+        "mime_type": "application/json",
+        "parsed_session_count": 49,
+        "rate_limited": false,
+        "raw_path": "operations-review/adtv20-exact-reconciled-trailing-window-recovery-v1/raw/AAA_stock_trading_history_a8b892cf01474de6.json",
+        "raw_response_retained": true,
+        "raw_sha256": "a8b892cf01474de6432e498db5587235aa4b6fab1845d8dcfc3e4312f6943afd",
+        "request_parameters": {
+          "from": "2026-06-17",
+          "resolution": "1D",
+          "to": "2026-08-25"
+        },
+        "request_url": "https://open-api.fhsc.com.vn/market/stocks/AAA/trading/history",
+        "retrieval_time": "2026-08-27T01:11:00+00:00",
+        "successful": true,
+        "symbol": "AAA"
+      },
+      {
+        "endpoint": "/market/stocks/BID/trading/history",
+        "has_target_sessions": {
+          "2026-08-06": false
+        },
+        "http_status": 200,
+        "mime_type": "application/json",
+        "parsed_session_count": 49,
+        "rate_limited": false,
+        "raw_path": "operations-review/adtv20-exact-reconciled-trailing-window-recovery-v1/raw/BID_stock_trading_history_8293547ee36a8dff.json",
+        "raw_response_retained": true,
+        "raw_sha256": "8293547ee36a8dff89ad32332edda23d4cd57c8648a024870d1416595ab00cce",
+        "request_parameters": {
+          "from": "2026-06-17",
+          "resolution": "1D",
+          "to": "2026-08-25"
+        },
+        "request_url": "https://open-api.fhsc.com.vn/market/stocks/BID/trading/history",
+        "retrieval_time": "2026-08-27T01:11:00+00:00",
+        "successful": true,
+        "symbol": "BID"
+      },
+      {
+        "endpoint": "/market/stocks/BWE/trading/history",
+        "has_target_sessions": {
+          "2026-08-06": false
+        },
+        "http_status": 200,
+        "mime_type": "application/json",
+        "parsed_session_count": 49,
+        "rate_limited": false,
+        "raw_path": "operations-review/adtv20-exact-reconciled-trailing-window-recovery-v1/raw/BWE_stock_trading_history_286fed318ae901e7.json",
+        "raw_response_retained": true,
+        "raw_sha256": "286fed318ae901e720263aa55de8676101b8c78db0d3de877ea8dada58ccbafc",
+        "request_parameters": {
+          "from": "2026-06-17",
+          "resolution": "1D",
+          "to": "2026-08-25"
+        },
+        "request_url": "https://open-api.fhsc.com.vn/market/stocks/BWE/trading/history",
+        "retrieval_time": "2026-08-27T01:11:00+00:00",
+        "successful": true,
+        "symbol": "BWE"
+      },
+      {
+        "endpoint": "/market/stocks/CTG/trading/history",
+        "has_target_sessions": {
+          "2026-08-06": false
+        },
+        "http_status": 200,
+        "mime_type": "application/json",
+        "parsed_session_count": 49,
+        "rate_limited": false,
+        "raw_path": "operations-review/adtv20-exact-reconciled-trailing-window-recovery-v1/raw/CTG_stock_trading_history_abac71650d0e6203.json",
+        "raw_response_retained": true,
+        "raw_sha256": "abac71650d0e6203b1c8ba146f786a83081b4afea137abeb8c1c7702dd027f35",
+        "request_parameters": {
+          "from": "2026-06-17",
+          "resolution": "1D",
+          "to": "2026-08-25"
+        },
+        "request_url": "https://open-api.fhsc.com.vn/market/stocks/CTG/trading/history",
+        "retrieval_time": "2026-08-27T01:11:00+00:00",
+        "successful": true,
+        "symbol": "CTG"
+      },
+      {
+        "endpoint": "/market/stocks/DPM/trading/history",
+        "has_target_sessions": {
+          "2026-08-06": false
+        },
+        "http_status": 200,
+        "mime_type": "application/json",
+        "parsed_session_count": 49,
+        "rate_limited": false,
+        "raw_path": "operations-review/adtv20-exact-reconciled-trailing-window-recovery-v1/raw/DPM_stock_trading_history_d27575630a3cc772.json",
+        "raw_response_retained": true,
+        "raw_sha256": "d27575630a3cc77275b42f806169030fad5f095a47b5c8b2466bafab2c7d763a",
+        "request_parameters": {
+          "from": "2026-06-17",
+          "resolution": "1D",
+          "to": "2026-08-25"
+        },
+        "request_url": "https://open-api.fhsc.com.vn/market/stocks/DPM/trading/history",
+        "retrieval_time": "2026-08-27T01:11:00+00:00",
+        "successful": true,
+        "symbol": "DPM"
+      },
+      {
+        "endpoint": "/market/stocks/MZG/trading/history",
+        "has_target_sessions": {
+          "2026-08-06": false
+        },
+        "http_status": 200,
+        "mime_type": "application/json",
+        "parsed_session_count": 41,
+        "rate_limited": false,
+        "raw_path": "operations-review/adtv20-exact-reconciled-trailing-window-recovery-v1/raw/MZG_stock_trading_history_3fbcebf41457c6cf.json",
+        "raw_response_retained": true,
+        "raw_sha256": "3fbcebf41457c6cf701a940d70d1ffcf6d4aba66178c08c6192b9684c00eff11",
+        "request_parameters": {
+          "from": "2026-06-17",
+          "resolution": "1D",
+          "to": "2026-08-25"
+        },
+        "request_url": "https://open-api.fhsc.com.vn/market/stocks/MZG/trading/history",
+        "retrieval_time": "2026-08-27T01:11:00+00:00",
+        "successful": true,
+        "symbol": "MZG"
+      }
+    ],
+    "request_budget": 6,
+    "requests_sent": 6,
+    "terminated_reason": "COMPLETED"
+  },
+  "acquisition_plan": {
+    "request_budget": 6,
+    "selected_tickers": [
+      "AAA",
+      "BID",
+      "BWE",
+      "CTG",
+      "DPM",
+      "MZG"
+    ],
+    "session_wide_fhsc_holes": [
+      "2026-08-06"
+    ]
+  },
+  "after": {
+    "blocked_count": 190,
+    "not_applicable_count": 1104,
+    "partial_count": 213,
+    "ready_count": 0
+  },
+  "artifact_identity": "adtv20_exact_reconciled_trailing_window_recovery:d6e9548dfd562bb83ff6cdc3e1158e1e276f0fb59c7f53643092e2a39b0523ca",
+  "authority_effect": "NONE",
+  "before": {
+    "blocked_count": 190,
+    "not_applicable_count": 1104,
+    "partial_count": 213,
+    "ready_count": 0
+  },
+  "inventory": {
+    "accounted": 30140,
+    "expected_ticker_session_pairs": 30140,
+    "fhsc_missing_by_session": {
+      "2026-07-15": 700,
+      "2026-07-16": 701,
+      "2026-07-17": 701,
+      "2026-07-20": 701,
+      "2026-07-21": 701,
+      "2026-07-22": 701,
+      "2026-07-23": 701,
+      "2026-07-24": 701,
+      "2026-07-27": 701,
+      "2026-07-28": 701,
+      "2026-07-29": 701,
+      "2026-07-30": 701,
+      "2026-07-31": 701,
+      "2026-08-03": 701,
+      "2026-08-04": 701,
+      "2026-08-05": 701,
+      "2026-08-06": 1507,
+      "2026-08-07": 701,
+      "2026-08-10": 701,
+      "2026-08-11": 700
+    },
+    "hose_state_counts": {
+      "CONFLICT_G1_VS_FHSC": 170,
+      "DNSE_TRADES_MISSING": 0,
+      "EXCHANGE_NOT_APPLICABLE": 0,
+      "FHSC_MISSING": 3918,
+      "G1_PLUS_G4_CONFLICT_PATTERN": 0,
+      "NOT_COMPARABLE": 278,
+      "NUMERIC_EXACT_NON_DISCRIMINATING": 443,
+      "QUALIFIED_G1_EXACT": 3251,
+      "STRUCTURALLY_ABSENT": 0
+    },
+    "residual": 0,
+    "session_wide_fhsc_holes": [
+      "2026-08-06"
+    ],
+    "state_counts": {
+      "CONFLICT_G1_VS_FHSC": 2187,
+      "DNSE_TRADES_MISSING": 0,
+      "EXCHANGE_NOT_APPLICABLE": 974,
+      "FHSC_MISSING": 14824,
+      "G1_PLUS_G4_CONFLICT_PATTERN": 0,
+      "NOT_COMPARABLE": 6180,
+      "NUMERIC_EXACT_NON_DISCRIMINATING": 2721,
+      "QUALIFIED_G1_EXACT": 3251,
+      "STRUCTURALLY_ABSENT": 3
+    }
+  },
+  "new_qualified_observations": [],
+  "outcome": "OUTCOME_C_CURRENT_SOURCE_CEILING_ESTABLISHED",
+  "reopening_gate": "Independent matched-value observation for session-wide FHSC hole(s) 2026-08-06 via the already-approved FHSC /market/stocks/{symbol}/trading/history route or another already-qualified independent matched-value field; then 20/20 HOSE discriminating exacts on the expected trailing window."
+}
