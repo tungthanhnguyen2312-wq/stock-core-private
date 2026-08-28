@@ -1008,7 +1008,8 @@ def _income_statement_period_semantic_coverage(
 def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[str, Any],
                    requested_at: str,
                    provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]] | None = None,
-                   operational_proxy_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
+                   operational_proxy_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
+                   opportunity_research_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Build the complete market-wide current fundamental-research artifact from two already
     -computed inputs. Raises if p3f13_current was not derived from exactly this p3f10_frozen
     checkpoint (a cross-repository content-identity guard, not a recomputation).
@@ -1018,7 +1019,11 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
     records (keyed by ticker). It never changes `authority_tier` dispatch and is never
     recomputed here -- this function only copies through what it is given. Default `None`
     leaves every existing caller's output byte-identical to before this parameter existed
-    (no `operational_proxy` key on any record, no `operational_proxy_coverage` section)."""
+    (no `operational_proxy` key on any record, no `operational_proxy_coverage` section).
+
+    `opportunity_research_by_ticker` is likewise an optional, read-only consumer attachment.
+    It carries a separately-labelled downstream research view and cannot flatten provider facts,
+    derived features, valuation proxies, or confidence into official facts or authority."""
     if p3f13_current.get("source_artifacts", {}).get("p3f10") != p3f10_frozen.get("artifact_identity"):
         raise ValueError("P3F10_ARTIFACT_IDENTITY_MISMATCH")
 
@@ -1064,6 +1069,10 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             # already computed by financial_operational_proxy.py against this same ticker's
             # retained canonical facts. Nothing here recomputes it or touches authority_tier.
             record["operational_proxy"] = operational_proxy_by_ticker[ticker]
+        if opportunity_research_by_ticker is not None and opportunity_research_by_ticker.get(ticker) is not None:
+            # Opportunity research is a downstream interpretation whose dimensions remain
+            # separately visible.  This consumer does not recalculate or promote it.
+            record["opportunity_research"] = opportunity_research_by_ticker[ticker]
 
     official_tickers = sorted(official_rows)
     official_records = [records[ticker] for ticker in official_tickers]
@@ -1193,6 +1202,14 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             "verified_research_evidence_fact_count": verified_research_evidence_count,
             "official_qualified_issuer_count": len(official_tickers),
             "authoritative_coverage_unchanged": True,
+        }
+    if opportunity_research_by_ticker is not None:
+        attached = [records[ticker]["opportunity_research"] for ticker in all_tickers if "opportunity_research" in records[ticker]]
+        artifact["opportunity_research_coverage"] = {
+            "attached_ticker_count": len(attached),
+            "attachment_mode": "READ_ONLY_SEPARATE_RESEARCH_DIMENSIONS",
+            "authoritative_coverage_unchanged": True,
+            "provider_facts_flattened_into_official_facts": False,
         }
     identity = content_identity(artifact)
     artifact["artifact_sha256"] = identity["artifact_sha256"]

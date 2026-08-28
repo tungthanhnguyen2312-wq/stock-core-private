@@ -106,6 +106,16 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         self.assertEqual(artifact["records"]["AAA"]["authority_tier"], PROVIDER_TIER)
         self.assertEqual(artifact["records"]["BBB"]["authority_tier"], BLOCKED_TIER)
 
+    def test_opportunity_research_attachment_is_separate_and_opt_in(self) -> None:
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t",
+            opportunity_research_by_ticker={"AAA": {"research_priority": "BUCKET_ONLY"}},
+        )
+        self.assertEqual(artifact["records"]["AAA"]["opportunity_research"], {"research_priority": "BUCKET_ONLY"})
+        self.assertNotIn("opportunity_research", artifact["records"]["BBB"])
+        self.assertEqual(artifact["opportunity_research_coverage"]["attached_ticker_count"], 1)
+        self.assertFalse(artifact["opportunity_research_coverage"]["provider_facts_flattened_into_official_facts"])
+
     def test_promoted_ticker_uses_official_record_not_stale_frozen_disposition(self) -> None:
         """PNJ was STATEMENT_SCOPE_UNKNOWN in the frozen P3-F10 checkpoint but is officially
         qualified in the current P3-F13 refresh -- the join must prefer the current truth and
