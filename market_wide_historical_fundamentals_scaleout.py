@@ -22,7 +22,7 @@ import p3f13_official_financial_evidence_scaleout as p3f13
 ROOT = Path(__file__).resolve().parent
 RUNTIME_ROOT = ROOT / "operations-review" / "p1f-milestone-20260803" / "shadow-build-b"
 PROFILES_PATH = ROOT / "config" / "ticker_entity_profiles.csv"
-CONTRACT_VERSION = "market_wide_historical_fundamentals_scaleout/v1"
+CONTRACT_VERSION = "market_wide_quarterly_fundamental_research_features/v1"
 
 
 def _canonical(value: Any) -> str:
@@ -83,7 +83,7 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         "manifest": manifest,
         "coverage": {"denominator": len(tickers), "terminal_count": len(manifest), "residual": len(tickers) - len(manifest),
                      "by_entity_type": {key: dict(value) for key, value in sorted(by_entity.items())},
-                     "terminal_blockers": dict(sorted(by_blocker.items())), "annual_depth_distribution": dict(sorted(depth.items())),
+                     "terminal_blockers": dict(sorted(by_blocker.items())), "retained_period_depth_distribution": dict(sorted(depth.items())),
                      "facts_by_metric_and_evidence_tier": {f"{metric}:{tier}": count for (metric, tier), count in sorted(metric_tiers.items(), key=lambda item: (str(item[0][0]), str(item[0][1])))},
                      "derived_metrics": {f"{metric}:{status}": count for (metric, status), count in sorted(derived.items(), key=lambda item: (str(item[0][0]), str(item[0][1])))},
                      "operational_proxy": operational["coverage"], "feature_readiness": features.summarize(operational["records"]), "consumer": attached.get("operational_proxy_coverage")},

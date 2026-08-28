@@ -2826,3 +2826,10 @@ single-ticker work.
 2. The existing operational proxy is replayed unchanged: proxy-ready records rise 21→449, facts 808→17,276, verified-research stays 6, and authoritative issuer count stays 13.
 3. The feature envelope is per-feature and research-only. Current retained provider flow facts are quarterly, so annual YoY/CAGR/margin/cross-statement calculations and full Piotroski remain blocked instead of making an unsupported Q4-as-annual inference.
 4. No authority is promoted. Future work should be an analysis capability using compatible retained annual/duration-evidenced inputs, not another tier, registry, or provider architecture milestone.
+## 2026-08-28 - Market-wide Quarterly Fundamental Research Features V1
+
+`MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1 = OUTCOME_A_QUARTERLY_FUNDAMENTAL_FEATURES_MATERIAL_COVERAGE` (`push = NO`).
+
+1. Retained period depth is quarterly, never annual by label alone. Same-period flow YoY is a labelled proxy when duration is unresolved; balance-sheet stocks retain point-in-time semantics.
+2. EOP ratios are separately named research proxies: net margin 446, ROA/ROE 428, asset-turnover/DuPont 425, and equity multiplier 446. Standard average-balance ratios, TTM, and standard Piotroski remain blocked where their required semantics are absent.
+3. Sector gates, evidence tiers, authoritative count (13), and valuation authority are unchanged. The next authorized direction is cross-sectional research scoring/ranking of comparable proxy features, not another data architecture milestone.
