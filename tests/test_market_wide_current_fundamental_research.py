@@ -116,6 +116,18 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         self.assertEqual(artifact["opportunity_research_coverage"]["attached_ticker_count"], 1)
         self.assertFalse(artifact["opportunity_research_coverage"]["provider_facts_flattened_into_official_facts"])
 
+    def test_flow_ttm_attachment_is_separate_and_opt_in(self) -> None:
+        ttm = {"status": "AVAILABLE", "ttm": {"revenue": {"value": 100, "evidence_tier": "OPERATIONAL_PROXY"}}}
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t",
+            financial_flow_ttm_by_ticker={"AAA": ttm},
+        )
+        self.assertEqual(artifact["records"]["AAA"]["financial_flow_ttm"], ttm)
+        self.assertNotIn("financial_flow_ttm", artifact["records"]["BBB"])
+        self.assertEqual(artifact["financial_flow_ttm_coverage"]["attached_ticker_count"], 1)
+        self.assertTrue(artifact["financial_flow_ttm_coverage"]["authoritative_coverage_unchanged"])
+        self.assertEqual(artifact["records"]["AAA"]["authority_tier"], PROVIDER_TIER)
+
     def test_promoted_ticker_uses_official_record_not_stale_frozen_disposition(self) -> None:
         """PNJ was STATEMENT_SCOPE_UNKNOWN in the frozen P3-F10 checkpoint but is officially
         qualified in the current P3-F13 refresh -- the join must prefer the current truth and

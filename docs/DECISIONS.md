@@ -2861,6 +2861,16 @@ single-ticker work.
 7. Same-milestone owner addendum permits two labels only where existing data supports them: `SUPER_SETUP_RESEARCH` requires `BREAKOUT_READY` or `EARLY_REVERSAL_CANDIDATE` and a top-20% quality percentile in the actual 449-name valid corporate cohort; `HIGH_RISK_SPECULATION` is a warning only, requiring an existing constructive setup and bottom-25% quality percentile in that same cohort. Both records carry `CORPORATE_VALID_FUNDAMENTAL_QUALITY_COHORT_EMPIRICAL_PERCENTILE/v1`; no sector-top-percentile claim, action, or sizing change is emitted.
 8. Approved future intents, explicitly not implemented here: current TTM valuation research scale-out; implied-growth/reverse-valuation research; thesis/catalyst/downside research with dual technical and fundamental invalidation; and one-time workspace-topology convergence before the next Dashboard publication.
 
+## 2026-08-28 - Financial Flow Semantics and TTM Bridge Foundation V1
+
+`FINANCIAL_FLOW_SEMANTICS_AND_TTM_BRIDGE_FOUNDATION_V1 = OUTCOME_B_TTM_SEMANTICS_PARTIAL_UNLOCK_WITH_DEPTH_LIMITS` (`financial_flow_semantics_ttm_bridge.py`, `tools/run_financial_flow_semantics_ttm_bridge_v1.py`; `push = NO`).
+
+1. Flow duration is a distinct `flow_period_basis`, never a reinterpretation of `period_type`. Existing retained KBS KQKD quarter-endpoint evidence establishes `STANDALONE_QUARTER` only for its income-statement flows; retained canonical cash-flow resolver evidence may establish its own direct standalone basis; VCI duration remains `UNKNOWN`. Explicit future raw metadata can propagate through canonical facts, but no retained source field is manufactured from labels or values.
+2. The deterministic derivation boundary permits only Q1=Q1-YTD, Q2=H1-YTD−Q1-YTD, Q3=9M-YTD−H1-YTD, Q4=FY−9M-YTD and `CURRENT_YTD + PRIOR_FULL_YEAR - PRIOR_SAME_PERIOD_YTD`, with exact ticker/metric/provider/scope/currency/scale compatibility. Missing or mismatched operands block; valid negative standalone flow is retained.
+3. Market-wide replay is partial: 3 revenue and 3 net-income rolling-4Q TTM series, 56 OCF-only TTM series, and no YTD bridge. Exact EBITDA stays 0 because the retained canonical registry has no exact EBIT identity; no EBIT-context proxy can satisfy EBITDA/EV-EBITDA. All current/LFY valuation methods remain blocked by missing compatible denominators and unknown currency/scale.
+4. TTM output is a separate optional consumer attachment at `OPERATIONAL_PROXY`; it cannot alter authority tier or enter VALUE, ranking, recommendation, target, probability, sizing, PIT, or backtest. Authoritative issuer count remains 13.
+5. This is the retained-data ceiling for the current route, not an invitation to another generic semantic audit. Proceed to `THESIS_CATALYST_DOWNSIDE_AND_DUAL_INVALIDATION_V1` using the active opportunity matrix unless new compatible source evidence is separately authorized and retained.
+
 ## 2026-08-28 - Workspace Topology Convergence V1
 
 `WORKSPACE_TOPOLOGY_CONVERGENCE_V1 = OUTCOME_B_CANONICAL_TOPOLOGY_ESTABLISHED_WITH_SAFE_RETIREMENT_BLOCKERS` (`push = NO`).

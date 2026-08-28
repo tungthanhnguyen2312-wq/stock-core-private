@@ -1009,6 +1009,7 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
                    requested_at: str,
                    provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]] | None = None,
                    operational_proxy_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
+                   financial_flow_ttm_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
                    opportunity_research_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Build the complete market-wide current fundamental-research artifact from two already
     -computed inputs. Raises if p3f13_current was not derived from exactly this p3f10_frozen
@@ -1020,6 +1021,10 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
     recomputed here -- this function only copies through what it is given. Default `None`
     leaves every existing caller's output byte-identical to before this parameter existed
     (no `operational_proxy` key on any record, no `operational_proxy_coverage` section).
+
+    `financial_flow_ttm_by_ticker` is a second optional, read-only attachment for the
+    fail-closed flow-semantics/TTM artifact.  It is deliberately separate from both
+    operational facts and authority; default `None` keeps legacy output byte-identical.
 
     `opportunity_research_by_ticker` is likewise an optional, read-only consumer attachment.
     It carries a separately-labelled downstream research view and cannot flatten provider facts,
@@ -1069,6 +1074,10 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             # already computed by financial_operational_proxy.py against this same ticker's
             # retained canonical facts. Nothing here recomputes it or touches authority_tier.
             record["operational_proxy"] = operational_proxy_by_ticker[ticker]
+        if financial_flow_ttm_by_ticker is not None and financial_flow_ttm_by_ticker.get(ticker) is not None:
+            # TTM results remain a labelled research attachment.  This consumer does not
+            # recalculate their semantics, convert an evidence tier, or alter authority_tier.
+            record["financial_flow_ttm"] = financial_flow_ttm_by_ticker[ticker]
         if opportunity_research_by_ticker is not None and opportunity_research_by_ticker.get(ticker) is not None:
             # Opportunity research is a downstream interpretation whose dimensions remain
             # separately visible.  This consumer does not recalculate or promote it.
@@ -1202,6 +1211,16 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             "verified_research_evidence_fact_count": verified_research_evidence_count,
             "official_qualified_issuer_count": len(official_tickers),
             "authoritative_coverage_unchanged": True,
+        }
+    if financial_flow_ttm_by_ticker is not None:
+        attached = [records[ticker]["financial_flow_ttm"] for ticker in all_tickers
+                    if "financial_flow_ttm" in records[ticker]]
+        artifact["financial_flow_ttm_coverage"] = {
+            "attached_ticker_count": len(attached),
+            "ttm_ready_ticker_count": sum(bool(row.get("ttm")) for row in attached),
+            "attachment_mode": "READ_ONLY_FLOW_SEMANTICS_RESEARCH_CONTEXT",
+            "authoritative_coverage_unchanged": True,
+            "valuation_or_ranking_promoted": False,
         }
     if opportunity_research_by_ticker is not None:
         attached = [records[ticker]["opportunity_research"] for ticker in all_tickers if "opportunity_research" in records[ticker]]

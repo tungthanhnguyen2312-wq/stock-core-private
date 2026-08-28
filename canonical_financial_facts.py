@@ -968,6 +968,12 @@ def _fact(*, ticker: str, metric: str, definition: Mapping[str, Any], period: st
         "period_type": "quarterly" if "-Q" in period else "annual",
         "period_start": bounds["period_start"],
         "period_end": bounds["period_end"],
+        # Preserve explicit upstream duration metadata when a retained observation carries it.
+        # Existing VCI/KBS parquet observations do not, so their canonical value remains
+        # unknown; no reporting-period label is used to fill it here.
+        "flow_period_basis": (observation or {}).get("flow_period_basis", UNKNOWN),
+        "flow_period_basis_evidence": (observation or {}).get("flow_period_basis_evidence"),
+        "duration_months": (observation or {}).get("duration_months"),
 
         "statement_scope": scope,
         "statement_scope_reason": evidence["scope"]["reason"],
