@@ -2848,6 +2848,16 @@ single-ticker work.
 2. Corrective continuation: market cap and EV are size contexts, never relative-value inputs. Relative value has 9 research-ready multiple records; lower-positive multiples are descriptive percentiles only, while negative/nonmeaningful multiples are unranked.
 3. Authoritative count and valuation strategy authority remain unchanged. Next analysis capability: `FUNDAMENTAL_PLUS_MARKET_OPPORTUNITY_RANKING_V1`.
 
+## 2026-08-28 - Shadow Action Readiness V1
+
+`SHADOW_ACTION_READINESS_V1 = OUTCOME_B_SHADOW_POSTURES_ACTIVE_WITH_READINESS_LIMITS` (`shadow_action_readiness.py`, `tools/run_shadow_action_readiness_v1.py`; `push = NO`).
+
+1. `SHADOW_POSTURE` and `ACTION_READINESS_GATE` are two independent, read-only experiment dimensions over the existing 523 research cases.  Candidate labels are strictly `INITIATE_CANDIDATE`, `ACCUMULATE_CANDIDATE`, `WAIT_FOR_CONFIRMATION_CANDIDATE`, `HIGH_RISK_SPECULATION_CANDIDATE`, `AVOID_CANDIDATE`, or `INSUFFICIENT_ACTION_EVIDENCE`; none is a recommendation or portfolio instruction.  No opaque composite is produced.
+2. The deterministic posture table uses only existing terminal case disposition, actual corporate-comparable quality percentile, tactical state/rule, and separately retained negative evidence.  `INITIATE_CANDIDATE` requires a top-20% actual corporate cohort percentile plus `BREAKOUT_READY`/`EARLY_REVERSAL_CANDIDATE`; `ACCUMULATE_CANDIDATE` requires a high actual-corporate percentile plus an existing base/uptrend state; high-risk speculation takes precedence over avoid for the constructive-setup/bottom-quartile warning cohort.  Market-only records never inherit a fundamental-quality claim and terminate insufficient-action-evidence.
+3. Readiness never rewrites posture.  `READY_SHADOW` requires both pre-existing invalidation channels `READY`; it is correctly zero.  A substantive posture with both retained conditional rule identities is `CONDITIONAL_SHADOW` (446), while unavailable invalidation or insufficient case evidence is `NOT_READY_SHADOW` (77).  Missing catalyst, valuation, or TTM neither forces WAIT nor changes readiness by itself.  No price level, financial threshold, scenario support, sector rank, or event catalyst is fabricated.
+4. `market_wide_current_fundamental_research.build_artifact()` accepts a backward-compatible optional `shadow_action_readiness_by_ticker` attachment.  It reports this shadow layer separately and cannot flatten it into facts or alter evidence tier, fitness, valuation, technical state, opportunity research, case state, or authority.  The authoritative issuer count remains 13; no recommendation, target, probability, sizing, leverage, PIT, or valuation authority is granted.
+5. The next capability if owner-authorized is action instrumentation / invalidation precision (retained deterministic technical boundaries and thesis-related compatible fundamental triggers), not another general financial-data acquisition or semantic audit.
+
 ## 2026-08-28 - Thesis, Catalyst, Downside, and Dual Invalidation V1
 
 `THESIS_CATALYST_DOWNSIDE_AND_DUAL_INVALIDATION_V1 = OUTCOME_B_RESEARCH_CASE_LAYER_ACTIVE_WITH_CATALYST_OR_INVALIDATION_LIMITS` (`thesis_catalyst_downside_research_cases.py`, `tools/run_thesis_catalyst_downside_research_cases_v1.py`; `push = NO`).

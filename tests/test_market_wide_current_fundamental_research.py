@@ -126,6 +126,16 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         self.assertEqual(artifact["research_case_coverage"]["attached_ticker_count"], 1)
         self.assertTrue(artifact["research_case_coverage"]["authoritative_coverage_unchanged"])
 
+    def test_shadow_action_readiness_attachment_is_separate_and_opt_in(self) -> None:
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t",
+            shadow_action_readiness_by_ticker={"AAA": {"shadow_posture": "INITIATE_CANDIDATE", "action_readiness_gate": "CONDITIONAL_SHADOW"}},
+        )
+        self.assertEqual(artifact["records"]["AAA"]["shadow_action_readiness"]["action_readiness_gate"], "CONDITIONAL_SHADOW")
+        self.assertNotIn("shadow_action_readiness", artifact["records"]["BBB"])
+        self.assertEqual(artifact["shadow_action_readiness_coverage"]["attached_ticker_count"], 1)
+        self.assertFalse(artifact["shadow_action_readiness_coverage"]["shadow_authority_promoted"])
+
     def test_flow_ttm_attachment_is_separate_and_opt_in(self) -> None:
         ttm = {"status": "AVAILABLE", "ttm": {"revenue": {"value": 100, "evidence_tier": "OPERATIONAL_PROXY"}}}
         artifact = build_artifact(
