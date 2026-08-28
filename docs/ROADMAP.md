@@ -1,5 +1,7 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Current valuation research proxy and relative-value axis (2026-08-28):** `CURRENT_VALUATION_RESEARCH_PROXY_AND_RELATIVE_VALUE_AXIS_V1 = OUTCOME_A_CURRENT_VALUATION_RESEARCH_MATERIAL_COVERAGE`. Current-only restricted valuation proxy coverage is material; advance to `FUNDAMENTAL_PLUS_MARKET_OPPORTUNITY_RANKING_V1`, not another data-authority milestone.
+
 **Fundamental cross-sectional scoring and ranking (2026-08-28):** `FUNDAMENTAL_CROSS_SECTIONAL_SCORING_AND_RANKING_V1 = OUTCOME_A_FUNDAMENTAL_CROSS_SECTIONAL_RANKING_MATERIAL_COVERAGE`. Multi-axis proxy research ranking is active; composite/action outputs remain intentionally absent. The next step is investment analysis (`CURRENT_VALUATION_RESEARCH_PROXY` or `FUNDAMENTAL_PLUS_MARKET_OPPORTUNITY_RANKING`), not another evidence-tier/classification audit.
 
 **Market-wide quarterly fundamental research features (2026-08-28):** `MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1 = OUTCOME_A_QUARTERLY_FUNDAMENTAL_FEATURES_MATERIAL_COVERAGE`. Completed research-only same-period/EOP proxy activation across the existing 523 denominator. The next capability is `FUNDAMENTAL_CROSS_SECTIONAL_SCORING_AND_RANKING_V1` over only semantically comparable proxy features; no new data-tier work is needed.

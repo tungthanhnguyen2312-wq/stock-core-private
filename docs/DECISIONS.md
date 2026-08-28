@@ -2840,3 +2840,10 @@ single-ticker work.
 1. Independent research-only axes use existing operational-proxy quarterly features: profitability 449, capital efficiency 425, balance-sheet context 433, growth 2. Missing inputs are never neutral and one blocked axis never blocks another.
 2. Data confidence is separate from investment quality. No composite/action is emitted; sector-relative results remain null without a sufficient retained comparable cohort.
 3. Owner doctrine is recorded: capability-first market-wide research proceeds when fitness permits; non-authoritative does not mean unusable; stronger authority/PIT gates stay local; PDF/OCR is verification fallback; and pure schema/audit work is disfavored absent an integrity blocker.
+## 2026-08-28 - Current Valuation Research Proxy and Relative-Value Axis V1
+
+`CURRENT_VALUATION_RESEARCH_PROXY_AND_RELATIVE_VALUE_AXIS_V1 = OUTCOME_A_CURRENT_VALUATION_RESEARCH_MATERIAL_COVERAGE` (`push = NO`).
+
+1. Retained provider-issued-share valuation proxies are current-only research inputs, never authoritative outstanding shares or PIT valuation.
+2. Relative value has 519 research-ready records; lower-positive multiples are descriptive percentiles only, while negative/nonmeaningful multiples are unranked.
+3. Authoritative count and valuation strategy authority remain unchanged. Next analysis capability: `FUNDAMENTAL_PLUS_MARKET_OPPORTUNITY_RANKING_V1`.
