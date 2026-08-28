@@ -2868,6 +2868,17 @@ single-ticker work.
 4. Fundamental precision is consumed by the existing `shadow_action_readiness` and `action_instrumentation` contracts. It changes no posture: 40 records satisfy the unchanged full technical-plus-fundamental `READY_SHADOW` contract (13 initiate, 27 accumulate); 406 are conditional and 77 not-ready. WAIT remains independent of boundary precision.
 5. All outputs remain experiment/shadow-only attachments. There is no recommendation, action, target, probability, sizing, leverage, valuation, provider/official-evidence, or PIT promotion. If authorized, the only next action-lane capability is a bounded shadow security-recommendation contract.
 
+## 2026-08-28 - A1 Bitemporal Semantic Contract V1
+
+`A1_BITEMPORAL_SEMANTIC_CONTRACT_V1 = OUTCOME_A_BITEMPORAL_SEMANTIC_CONTRACT_ACTIVE` (`bitemporal_semantic_contract.py`, `tools/run_a1_bitemporal_semantic_contract_v1.py`; `push = NO`).
+
+1. Valid time, qualified official publication, provider reported/update/event time, first observed receipt, and pipeline processing/verification are permanently separate fields. Missing temporal evidence remains `UNKNOWN`; processing time, file metadata, Git time, and provider metadata never substitute for raw receipt or qualified publication.
+2. A qualified exact public timestamp resolves through the governed EOD-session contract. A qualified date-only publication has no exact knowledge timestamp and resolves only to the strictly next governed session. First-observed fallback is explicitly `FROM_FIRST_OBSERVED_FORWARD_ONLY`; it cannot backdate an old fiscal fact.
+3. `completed_market_session_gate.py` supplies the reused 18:00 Asia/Ho_Chi_Minh `OWNER_OPERATING_CONVENTION_V1` safety cutoff for completed-EOD research, not an exchange-close fact. EOD research-session availability never grants same-session closing-price execution, which is `NOT_ESTABLISHED`.
+4. KBS `ReportDate` is `PROVIDER_REPORTED_REPORT_DATE`; KBS `LastUpdate` is provider record-update metadata and preserves timezone uncertainty. DNSE `lastUpdated` is provider event time; it never substitutes for receipt, and a provider time later than first receipt is surfaced as `PROVIDER_CLIENT_CLOCK_CONFLICT`.
+5. Derived records inherit the latest required resolved research-session bound. Required unknown knowledge fails closed; optional unknown enrichment is retained but cannot block the core derived record. Existing KBS restatement-variant semantics are preserved without a universal revision ledger.
+6. The bounded retained official panel may support only retained-panel temporal replay. It does not promote `ADJUSTED_RETROSPECTIVE`, `RAW_AS_TRADED`, historical price PIT, corporate-action/ex-date inference, historical backtesting, recommendation, or portfolio authority. A2 remains future prospective ingestion-retention work.
+
 ## 2026-08-28 - Shadow Action Readiness V1
 
 `SHADOW_ACTION_READINESS_V1 = OUTCOME_B_SHADOW_POSTURES_ACTIVE_WITH_READINESS_LIMITS` (`shadow_action_readiness.py`, `tools/run_shadow_action_readiness_v1.py`; `push = NO`).
