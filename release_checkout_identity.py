@@ -103,6 +103,23 @@ def assert_producer_publisher_file(path: Path, *, role: str) -> None:
         )
 
 
+def assert_runtime_root_identity(runtime_dir: Path) -> None:
+    """Refuse an alternate runtime root for any real publication invocation.
+
+    The declared fixture escape hatch is intentionally shared with the checkout identity
+    guard so isolated tests can construct temporary runtime/web pairs without ever making
+    an alternate workspace path production-capable.
+    """
+    runtime = runtime_dir.resolve()
+    if os.environ.get(TEST_FIXTURE_ENV, "").strip():
+        return
+    if _norm(runtime) != _norm(CANONICAL_BACKEND_ROOT):
+        raise ReleaseIdentityError(
+            f"REFUSED: runtime root must be {CANONICAL_BACKEND_ROOT}; got {runtime}. "
+            "The runtime root is distinct from the canonical Dashboard checkout."
+        )
+
+
 def assert_web_checkout_identity(
     web_dir: Path,
     *,

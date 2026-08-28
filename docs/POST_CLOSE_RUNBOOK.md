@@ -1,5 +1,13 @@
 # Post-Close Operations Runbook — Canonical Financial Activation
 
+## Topology preflight
+
+Use `C:\Projects\StockLookup\dashboard-runtime` only as the runtime root and
+`C:\Projects\StockLookup\market-dashboard` only as the served Dashboard checkout. The runtime
+is never a publication target. For any live release, use only
+`tools/release_orchestrator.py`; checkout-local publisher scripts are not authority. See
+[`workspace_topology_convergence.md`](workspace_topology_convergence.md).
+
 ## Objective
 
 Execute the supported post-close path with canonical financial data enabled, verifying end-to-end exact-session integrity from the canonical fact store through Producer export, Consumer context generation, Consumer validation, and release publication preview.

@@ -51,6 +51,7 @@ from release_checkout_identity import (  # noqa: E402
     PUBLISHED,
     ReleaseIdentityError,
     assert_producer_publisher_file,
+    assert_runtime_root_identity,
     assert_web_checkout_identity,
     publication_state_after_push,
 )
@@ -348,6 +349,7 @@ def orchestrate(args: argparse.Namespace) -> int:
     with SingleInstanceLock():
         try:
             assert_producer_publisher_file(SCRIPT_PATH, role="release_orchestrator")
+            assert_runtime_root_identity(backend_dir)
             # Path/legacy/runtime refusals happen before any git cwd on web_dir, so a
             # deleted or non-directory legacy checkout still fail-closes.
             assert_web_checkout_identity(web_dir, backend_dir=backend_dir, live=False)

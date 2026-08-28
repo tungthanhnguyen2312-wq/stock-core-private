@@ -58,6 +58,7 @@ from release_checkout_identity import (  # noqa: E402
     GITHUB_SOURCE_UPDATED,
     ReleaseIdentityError,
     assert_producer_publisher_file,
+    assert_runtime_root_identity,
     assert_web_checkout_identity,
     publication_state_after_push,
 )
@@ -544,6 +545,7 @@ class ReleasePublisher:
             origin_main = ""
         try:
             assert_producer_publisher_file(Path(__file__), role="publish_release")
+            assert_runtime_root_identity(self.source)
             assert_web_checkout_identity(
                 self.destination,
                 backend_dir=self.source,

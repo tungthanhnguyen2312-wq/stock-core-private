@@ -33,8 +33,11 @@ import dashboard_session_companions
 import release_session_contract
 import trusted_subset_contract
 from release_checkout_identity import (
+    CANONICAL_BACKEND_ROOT,
+    CANONICAL_WEB_ROOT,
     ReleaseIdentityError,
     assert_producer_publisher_file,
+    assert_runtime_root_identity,
     assert_web_checkout_identity,
 )
 try:
@@ -63,17 +66,10 @@ def get_default_backend_root() -> Path:
         return Path(os.environ["STOCK_LOOKUP_BACKEND_DIR"]).expanduser().resolve()
     if os.environ.get("STOCK_LOOKUP_RUNTIME_ROOT"):
         return Path(os.environ["STOCK_LOOKUP_RUNTIME_ROOT"]).expanduser().resolve()
-    for candidate_dir in (
-        SCRIPT_ROOT / ".." / "dashboard-runtime",
-        SCRIPT_ROOT / ".." / ".." / "dashboard-runtime",
-    ):
-        cand = candidate_dir.resolve()
-        if cand.is_dir() and (cand / "screen_snapshot.csv").is_file():
-            return cand
-    return SCRIPT_ROOT
+    return CANONICAL_BACKEND_ROOT
 
 BACKEND_ROOT = get_default_backend_root()
-WEB_ROOT = Path(os.environ.get("STOCK_LOOKUP_WEB_DIR", SCRIPT_ROOT)).expanduser().resolve()
+WEB_ROOT = Path(os.environ.get("STOCK_LOOKUP_WEB_DIR", CANONICAL_WEB_ROOT)).expanduser().resolve()
 
 # LIVE_MODE gates every filesystem/log write in this module. main() sets it
 # from --live before doing anything else. Tests may also set it directly.
@@ -742,6 +738,7 @@ def main() -> int:
 
     try:
         assert_producer_publisher_file(Path(__file__), role="publish_dashboard")
+        assert_runtime_root_identity(BACKEND_ROOT)
     except ReleaseIdentityError as exc:
         return fail(str(exc))
 

@@ -21,6 +21,7 @@ from release_checkout_identity import (
     ReleaseIdentityError,
     TEST_FIXTURE_ENV,
     assert_producer_publisher_file,
+    assert_runtime_root_identity,
     assert_web_checkout_identity,
     origin_is_canonical,
     publication_state_after_push,
@@ -99,6 +100,11 @@ class CheckoutRefusalTests(unittest.TestCase):
     def test_backend_equals_web_refused(self):
         with self.assertRaises(ReleaseIdentityError):
             assert_web_checkout_identity(CANONICAL_WEB_ROOT, backend_dir=CANONICAL_WEB_ROOT)
+
+    def test_alternate_runtime_root_refused_outside_fixture_mode(self):
+        with self.assertRaises(ReleaseIdentityError) as ctx:
+            assert_runtime_root_identity(Path(r"C:\Projects\StockLookup\tmp\dashboard-runtime"))
+        self.assertIn("runtime root", str(ctx.exception))
 
     def test_same_checkout_mismatch_refused(self):
         with self.assertRaises(ReleaseIdentityError) as ctx:

@@ -30,6 +30,16 @@ A Dashboard checkout is a **target**, never a publisher. `web_dir/publish_dashbo
 not live authority. Whole-market `COPY_ARTIFACTS` includes `analysis_latest.json` (Producer
 copy). Validation, `git add`, commit, and push must use the same canonical checkout.
 
+## Workspace topology invariant
+
+The canonical runtime root is `C:\Projects\StockLookup\dashboard-runtime`; the canonical
+Dashboard checkout is `C:\Projects\StockLookup\market-dashboard`; and the only live
+publication entrypoint is `stock-core-private/tools/release_orchestrator.py`. The runtime and
+checkout must remain distinct. The Producer publisher paths fail closed if a real invocation
+names another runtime or served checkout. `dashboard-runtime` may retain local runtime data and
+legacy Git metadata, but is never a source/publish checkout. See
+[`workspace_topology_convergence.md`](workspace_topology_convergence.md).
+
 Permanent state vocabulary:
 
 - A successful `git push` is **`GITHUB_SOURCE_UPDATED`**.
