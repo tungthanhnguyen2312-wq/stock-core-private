@@ -154,6 +154,7 @@ class RawDocumentRecord:
     outcome: AcquisitionOutcome
     outcome_reason: str | None
     qualification_state: str = QUALIFICATION_STATE_UNKNOWN
+    temporal_retention: dict | None = None
 
     def to_dict(self) -> dict:
         payload = dataclasses.asdict(self)
@@ -176,6 +177,7 @@ def build_record(
     sha256: str | None = None,
     storage_locator: str | None = None,
     supersedes_sha256: str | None = None,
+    temporal_retention: dict | None = None,
 ) -> RawDocumentRecord:
     """Single construction path for RawDocumentRecord so every caller supplies
     the same required context; refuses to build a silently-empty success."""
@@ -207,4 +209,5 @@ def build_record(
         outcome=outcome,
         outcome_reason=outcome_reason,
         qualification_state=QUALIFICATION_STATE_UNKNOWN,
+        temporal_retention=temporal_retention,
     )

@@ -128,7 +128,8 @@ repository.
   "blobs": {
     "<sha256>": {
       "sha256": "...", "byte_size": 12345, "storage_locator": "raw/blobs/<sha256>.pdf",
-      "content_type": "application/pdf", "first_observed_at": "...", "first_acquired_run_id": "..."
+      "content_type": "application/pdf", "first_observed_at": "...", "first_acquired_run_id": "...",
+      "temporal_retention": {"temporal_retention_contract_version": "provider_temporal_retention/v1", "observation_identity": "<raw sha256>", "raw_received_at": "...", "source_published_at": null, "publication_authority_tier": "UNVERIFIED"}
     }
   },
   "latest_hash_by_logical_identity": {"<sha256(domain\\nsource_locator)>": "<sha256>"}
@@ -143,8 +144,22 @@ identity, domain, issuer/document-type when known, source authority
 class, source locator, observed-at, source-published-at only when
 directly known, HTTP status, filename, content type, byte size, SHA-256,
 storage locator, acquisition method/version, `supersedes_sha256` only
-when deterministically known, outcome, outcome reason, and the
-`qualification_state` boundary marker).
+when deterministically known, outcome, outcome reason, the
+`qualification_state` boundary marker, and (for byte receipts) the
+`temporal_retention` envelope).
+
+### Prospective temporal retention
+
+Each successful raw-byte receipt additionally carries `temporal_retention` under
+`provider_temporal_retention/v1`. It holds raw-byte SHA-256 identity, UTC receipt
+and earliest-observed time, explicitly supplied source-publication fields, provider
+report/update/event metadata, and HTTP response metadata. HTTP
+`Date`/`Last-Modified`/`ETag` and provider timestamps are provenance only, never
+qualified official publication. A rerun of identical bytes preserves the earliest
+receipt monotonically; changed bytes are a new observation and retain the existing
+same-logical-identity-only supersession rule. Old manifests without an aware receipt
+remain `LEGACY_UNKNOWN` rather than being backfilled. This does not grant
+raw-as-traded, historical PIT/backtest, or same-close execution authority.
 
 Both files are written via `acquisition_landing_atomic_io.atomic_write_json`
 (tempfile in the same directory, then `os.replace`) and with

@@ -28,9 +28,10 @@ from acquisition_landing_contract import (
     RawDocumentRecord,
     SUCCESS_OUTCOMES,
 )
-from acquisition_landing_identity import logical_identity
+from acquisition_landing_identity import content_sha256, logical_identity
 from acquisition_landing_isolation import assert_write_allowed
 from acquisition_landing_retention import retain
+from temporal_retention import merge_identical_reobservation
 
 CONTENT_MANIFEST_FILENAME = "content_manifest.json"
 
@@ -92,9 +93,16 @@ def _record_into_manifest(manifest: dict, spec: AcquisitionSpec, record: RawDocu
             "byte_size": record.byte_size,
             "storage_locator": record.storage_locator,
             "content_type": record.content_type,
-            "first_observed_at": record.observed_at,
+            "first_observed_at": (record.temporal_retention or {}).get("first_observed_at") or record.observed_at,
             "first_acquired_run_id": record.run_id,
+            "temporal_retention": record.temporal_retention,
         }
+    elif record.temporal_retention is not None:
+        manifest["blobs"][record.sha256]["temporal_retention"] = record.temporal_retention
+        manifest["blobs"][record.sha256]["first_observed_at"] = (
+            record.temporal_retention.get("first_observed_at")
+            or manifest["blobs"][record.sha256].get("first_observed_at")
+        )
     manifest["latest_hash_by_logical_identity"][logical_identity(spec)] = record.sha256
     return manifest
 
@@ -161,6 +169,16 @@ def process_batch(
 
         try:
             known_latest = manifest["latest_hash_by_logical_identity"].get(li)
+            raw_data = retain_kwargs.get("data")
+            known_first = None
+            legacy_first_unknown = False
+            if isinstance(raw_data, bytes):
+                known_blob = manifest["blobs"].get(content_sha256(raw_data), {})
+                prior_temporal = known_blob.get("temporal_retention")
+                if prior_temporal is None and known_blob:
+                    legacy_first_unknown = True
+                else:
+                    known_first = known_blob.get("first_observed_at")
             record = retain(
                 landing_root,
                 spec,
@@ -170,6 +188,8 @@ def process_batch(
                 protected_roots=protected_roots,
                 extra_protected_paths=extra_protected_paths,
                 known_latest_hash_for_logical_identity=known_latest,
+                known_first_observed_at=known_first,
+                legacy_first_observed_unknown=legacy_first_unknown,
                 **retain_kwargs,
             )
         except AcquisitionContractError as exc:
@@ -186,11 +206,15 @@ def process_batch(
             _write_checkpoint(landing_root, allowed_root, protected_roots, extra_protected_paths, checkpoint)
             continue
 
-        record_dict = record.to_dict()
-        report.records.append(record_dict)
-        checkpoint["completed"][li] = record_dict
-
         if record.outcome in SUCCESS_OUTCOMES:
+            existing = manifest["blobs"].get(record.sha256, {})
+            if record.temporal_retention is not None and existing.get("temporal_retention") is not None:
+                record = dataclasses.replace(
+                    record,
+                    temporal_retention=merge_identical_reobservation(
+                        existing["temporal_retention"], record.temporal_retention,
+                    ),
+                )
             report.succeeded += 1
             manifest = _record_into_manifest(manifest, spec, record)
             _write_content_manifest(landing_root, allowed_root, protected_roots, extra_protected_paths, manifest)
@@ -200,6 +224,10 @@ def process_batch(
             report.failed_retryable += 1
         elif record.outcome in PERMANENT_FAILURE_OUTCOMES:
             report.failed_permanent += 1
+
+        record_dict = record.to_dict()
+        report.records.append(record_dict)
+        checkpoint["completed"][li] = record_dict
 
         _write_checkpoint(landing_root, allowed_root, protected_roots, extra_protected_paths, checkpoint)
 

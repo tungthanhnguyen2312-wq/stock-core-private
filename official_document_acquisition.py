@@ -17,6 +17,7 @@ import requests
 
 import official_source_registry as registry_module
 from official_source_registry import ADMITTED, admit, load_registry
+from temporal_retention import capture_raw_receipt, project_retention_to_a1
 
 VERSION = "1.2.0"
 MANIFEST = "official_document_acquisition_manifest.json"
@@ -313,10 +314,21 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
         if not path.exists(): os.replace(temporary, path)
         else: temporary.unlink(missing_ok=True)
         document_id, prior = _document_id(ticker, url, sha256), [r for r in records if r.get("ticker") == ticker and r.get("canonical_url") == url]
+        received_at = spec.get("observed_at") or observed_at or _now()
+        qualified_official = (str(spec.get("qualification_state") or "").upper() == "QUALIFIED"
+                              and str(spec.get("source_authority") or "").lower() in {"issuer_ir", "exchange"})
+        temporal_retention = capture_raw_receipt(
+            data=path.read_bytes(), raw_received_at=received_at, source_identity=source_id,
+            provider_or_source=source_id, acquisition_method="GOVERNED_OFFICIAL_DOCUMENT_ACQUISITION_V1",
+            source_published_at=spec.get("published_at"),
+            publication_authority_tier=("OFFICIAL_ISSUER_IR_OR_EXCHANGE" if qualified_official else "UNVERIFIED"),
+            http_headers=headers, content_type=detected_ct or raw_ct,
+            warnings=[] if qualified_official else ["OFFICIAL_PUBLICATION_NOT_QUALIFIED"],
+        )
         record = {"document_id": document_id, "ticker": ticker, "source_id": source_id,
                   "canonical_url": url, "final_url": final_url, "document_class": document_class,
                   "reporting_period": period, "published_at": spec.get("published_at"),
-                  "observed_at": spec.get("observed_at") or observed_at or _now(),
+                  "observed_at": received_at,
                   "source_authority": spec.get("source_authority"),
                   "discovery_provenance": spec.get("discovery_provenance"),
                   "acquisition_status": "retained", "http_status": status,
@@ -326,7 +338,9 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
                   "content_length": path.stat().st_size,
                   "sha256": sha256, "relative_path": relative.as_posix(),
                   "supersedes_document_id": spec.get("supersedes_document_id") or (prior[-1].get("document_id") if prior else None),
-                  "extraction_status": _extraction_state(path)}
+                  "extraction_status": _extraction_state(path),
+                  "temporal_retention": temporal_retention,
+                  "a1_temporal_projection": project_retention_to_a1(temporal_retention)}
         records.append(record); outcomes.append({"ticker": ticker, "document_id": document_id, "state": "retained", "extraction_status": record["extraction_status"]})
     _write_manifest(manifest_path, records)
     return {"schema_version": VERSION, "manifest": str(manifest_path), "outcomes": outcomes}
@@ -365,7 +379,17 @@ def import_offline_event(source_path: Path, destination: Path, metadata: Mapping
         suffix = ".pdf" if content_type == "application/pdf" else ".html"; relative = Path("documents") / ticker / str(metadata["reporting_period"]) / "corporate_action_notice" / f"{sha256}{suffix}"; retained = root / relative; retained.parent.mkdir(parents=True, exist_ok=True)
         if retained.exists() and _sha_file(retained) != sha256: raise ValueError("hash_conflict")
         if not retained.exists(): _atomic_write(retained, source_path.read_bytes())
-        records.append({"document_id": document_id, "document_identity": metadata["document_identity"], "ticker": ticker, "canonical_url": url, "final_url": url, "document_class": "corporate_action_notice", "reporting_period": str(metadata["reporting_period"]), "published_at": metadata.get("published_at"), "observed_at": metadata["retrieved_at"], "source_authority": metadata["source_authority"], "acquisition_status": "retained", "http_status": None, "content_type": content_type, "content_length": retained.stat().st_size, "sha256": sha256, "relative_path": relative.as_posix(), "supersedes_document_id": None, "extraction_status": _extraction_state(retained)})
+        temporal_retention = capture_raw_receipt(
+            data=retained.read_bytes(), raw_received_at=metadata["retrieved_at"],
+            source_identity=metadata.get("official_source_id") or url,
+            provider_or_source=metadata.get("official_source_id") or "official_event",
+            acquisition_method="OFFLINE_OFFICIAL_CORPORATE_EVENT_IMPORT_V1",
+            source_published_at=metadata.get("published_at"),
+            publication_authority_tier="UNVERIFIED",
+            content_type=content_type,
+            warnings=["OFFLINE_EVENT_PUBLICATION_NOT_SEMANTICALLY_QUALIFIED"],
+        )
+        records.append({"document_id": document_id, "document_identity": metadata["document_identity"], "ticker": ticker, "canonical_url": url, "final_url": url, "document_class": "corporate_action_notice", "reporting_period": str(metadata["reporting_period"]), "published_at": metadata.get("published_at"), "observed_at": metadata["retrieved_at"], "source_authority": metadata["source_authority"], "acquisition_status": "retained", "http_status": None, "content_type": content_type, "content_length": retained.stat().st_size, "sha256": sha256, "relative_path": relative.as_posix(), "supersedes_document_id": None, "extraction_status": _extraction_state(retained), "temporal_retention": temporal_retention, "a1_temporal_projection": project_retention_to_a1(temporal_retention)})
         _write_manifest(root / MANIFEST, records)
     if not any(row.get("canonical_event_id") == event["canonical_event_id"] for row in existing_events):
         _atomic_write(event_path, ("\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True) for row in [*existing_events, event]) + "\n").encode("utf-8"))

@@ -30,6 +30,11 @@ class AcquisitionTests(unittest.TestCase):
   with patch("official_document_acquisition._extraction_state",return_value="needs_ocr"):
    first=acquire([self.spec()],self.root,fetcher=self.fetch); second=acquire([self.spec()],self.root,fetcher=lambda *_a,**_k:self.fail("network"))
   self.assertEqual(first["outcomes"][0]["state"],"retained"); self.assertEqual(second["outcomes"][0]["state"],"cached_valid")
+ def test_explicitly_qualified_issuer_publication_projects_to_a1(self):
+  acquire([self.spec(qualification_state="QUALIFIED",published_at="2026-08-01")],self.root,fetcher=self.fetch)
+  record=json.loads((self.root/MANIFEST).read_text())["records"][0]
+  self.assertEqual(record["temporal_retention"]["publication_authority_tier"],"OFFICIAL_ISSUER_IR_OR_EXCHANGE")
+  self.assertEqual(record["a1_temporal_projection"]["knowledge_resolution"]["historical_reconstruction_scope"],"FROM_QUALIFIED_SOURCE_PUBLICATION")
   self.assertEqual(json.loads((self.root/MANIFEST).read_text())["records"][0]["final_url"],"https://cdn.example/f.pdf")
  def test_retains_governed_source_and_discovery_provenance(self):
   provenance={"listing_url":"https://issuer.example/notices","link_text":"Official notice","page_index":1}
@@ -63,6 +68,9 @@ class AcquisitionTests(unittest.TestCase):
   first=import_offline_event(pdf,self.root,self.metadata()); second=import_offline_event(pdf,self.root,self.metadata())
   self.assertEqual(first["state"],"retained"); self.assertEqual(second["state"],"cached_valid")
   event=json.loads((self.root/EVENTS).read_text()); self.assertTrue(event["qualified_for_price_basis_test"]); self.assertFalse(event["qualified_for_share_transition"])
+  record=json.loads((self.root/MANIFEST).read_text())["records"][0]
+  self.assertEqual(record["temporal_retention"]["first_observed_at"],"2026-08-02T00:00:00Z")
+  self.assertEqual(record["a1_temporal_projection"]["publication_time"]["publication_authority_tier"],"UNVERIFIED")
   html=self.root/"notice.html"; html.write_bytes(HTML)
   self.assertEqual(import_offline_event(html,self.root,self.metadata(source_url="https://issuer.example/h.html"))["state"],"retained")
  def test_offline_rejects_missing_empty_and_conflicting_metadata(self):

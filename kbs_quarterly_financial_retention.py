@@ -13,6 +13,7 @@ import re
 from typing import Any, Iterable, Mapping
 
 import provider_financial_source_metadata as source
+from temporal_retention import capture_raw_receipt, project_retention_to_a1
 
 CONTRACT_VERSION = "kbs_quarterly_financial_retention/v1"
 KBS_QUARTERLY_INCOME_TYPE = "KQKD"
@@ -143,6 +144,20 @@ def metadata_rows(request: Mapping[str, Any], raw: Mapping[str, Any], *, raw_has
             "raw_response_sha256": raw_hash, "source_payload_identity": raw_hash,
             "retrieved_at": request.get("retrieved_at"),
         }
+        temporal_retention = capture_raw_receipt(
+            data=None,
+            raw_identity=raw_hash,
+            raw_received_at=request.get("retrieved_at"),
+            source_identity=str(request.get("url") or request.get("endpoint_contract") or "KBS"),
+            provider_or_source="KBS",
+            acquisition_method="KBS_FINANCE_INFO_KQKD_QUARTER_PAGED_V1",
+            provider_reported_date=head.get("ReportDate"),
+            provider_record_update_at=head.get("LastUpdate"),
+            warnings=["LEGACY_RAW_RECEIPT_UNKNOWN" if not request.get("retrieved_at") else ""],
+        )
+        temporal_retention["warnings"] = [warning for warning in temporal_retention["warnings"] if warning]
+        row["temporal_retention"] = temporal_retention
+        row["a1_temporal_projection"] = project_retention_to_a1(temporal_retention)
         row["metadata_identity"] = identity(row)
         rows.append(row)
     return rows

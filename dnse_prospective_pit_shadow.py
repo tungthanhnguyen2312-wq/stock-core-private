@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from temporal_retention import capture_raw_receipt, project_retention_to_a1
+
 SCHEMA_ID = "dnse.prospective_pit_observation.v1"
 COLLECTOR_ID = "stocklookup.dnse_prospective_pit_shadow.v1"
 AUTHORITY_STATE = "EXPERIMENT_SHADOW_ONLY"
@@ -168,6 +170,16 @@ def build_observation(*, payload: Mapping[str, Any], channel: str, message_type:
         "payload_sha256": payload_hash,
         "first_observed_at_utc": received_at_utc,
     })
+    temporal_retention = capture_raw_receipt(
+        data=canonical_json(copied_payload).encode("utf-8"),
+        raw_received_at=receipt_at,
+        source_identity=f"{channel}:{message_type}",
+        provider_or_source="DNSE/Livespeed",
+        acquisition_method="DNSE_WEBSOCKET_CLOSED_OHLC_V1",
+        provider_event_at=source_time["source_event_time"],
+        content_type="application/json",
+        warnings=["EXPERIMENT_SHADOW_ONLY"],
+    )
     return {
         "schema_id": SCHEMA_ID,
         "collector_id": COLLECTOR_ID,
@@ -197,6 +209,8 @@ def build_observation(*, payload: Mapping[str, Any], channel: str, message_type:
         "payload_sha256": payload_hash,
         "normalized_payload": normalized_payload,
         "normalized_payload_sha256": sha256_json(normalized_payload),
+        "temporal_retention": temporal_retention,
+        "a1_temporal_projection": project_retention_to_a1(temporal_retention),
     }
 
 

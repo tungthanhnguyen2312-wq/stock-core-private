@@ -2879,6 +2879,16 @@ single-ticker work.
 5. Derived records inherit the latest required resolved research-session bound. Required unknown knowledge fails closed; optional unknown enrichment is retained but cannot block the core derived record. Existing KBS restatement-variant semantics are preserved without a universal revision ledger.
 6. The bounded retained official panel may support only retained-panel temporal replay. It does not promote `ADJUSTED_RETROSPECTIVE`, `RAW_AS_TRADED`, historical price PIT, corporate-action/ex-date inference, historical backtesting, recommendation, or portfolio authority. A2 remains future prospective ingestion-retention work.
 
+## 2026-08-29 - A2 Provider Publication and First-Seen Retention V1
+
+`A2_PROVIDER_PUBLICATION_AND_FIRST_SEEN_RETENTION_V1 = OUTCOME_B_PROVIDER_TEMPORAL_RETENTION_ACTIVE_WITH_HISTORICAL_CEILING` (`temporal_retention.py`, `tools/run_a2_provider_publication_first_seen_retention_v1.py`; `push = NO`).
+
+1. `provider_temporal_retention/v1` is the sole prospective raw-receipt envelope for the bounded active paths. It records immutable raw identity, UTC receipt/first observation, direct source publication with explicit authority tier, provider report/update/event fields, HTTP response metadata, source identity, acquisition method, and warnings. Raw receipt is captured at the byte/message boundary with an injected clock-capable API; no new scattered clock semantics are introduced.
+2. The landing manifest merges identical raw identity re-observations by retaining the earliest first observation monotonically and preserving later receipt metadata. Different bytes are distinct observations; the existing `supersedes_sha256` link remains restricted to a directly observed changed hash under the same logical identity. No generic revision chain is fabricated.
+3. Governed official-document acquisition can project qualified official publication only when both explicit qualification and issuer/exchange authority are supplied. KBS `ReportDate`/`LastUpdate`, DNSE `lastUpdated`, and HTTP `Date`/`Last-Modified`/`ETag` remain provider/transport provenance and never substitute for official publication. KBS legacy sidecars retain raw identity and provider dates but deliberately remain receipt-unknown.
+4. A1 projection is attached to governed official documents, KBS sidecars, DNSE prospective shadow observations, and offline corporate-event imports. Its temporal fitness is explicit: qualified exact publication, qualified date-only publication, first-observed-forward-only, or blocked legacy/unknown. It does not grant `ADJUSTED_RETROSPECTIVE`, `RAW_AS_TRADED`, historical price PIT/backtests, same-close execution, valuation, recommendation, target, probability, sizing, or portfolio authority.
+5. The next shared capability, only with owner authorization, is `A3_ASOF_QUERY_AND_REVISION_LEDGER_V1`: query retained records as of their explicit availability and introduce a bounded revision ledger only where stable logical identities and revision evidence exist. It must not backfill old receipt time or reopen acquisition.
+
 ## 2026-08-28 - Shadow Action Readiness V1
 
 `SHADOW_ACTION_READINESS_V1 = OUTCOME_B_SHADOW_POSTURES_ACTIVE_WITH_READINESS_LIMITS` (`shadow_action_readiness.py`, `tools/run_shadow_action_readiness_v1.py`; `push = NO`).

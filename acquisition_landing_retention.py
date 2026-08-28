@@ -10,7 +10,7 @@ batch/resume orchestration that calls this once per document.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Mapping
 
 from acquisition_landing_atomic_io import atomic_write_bytes
 from acquisition_landing_contract import (
@@ -24,6 +24,7 @@ from acquisition_landing_contract import (
 from acquisition_landing_identity import content_sha256
 from acquisition_landing_isolation import assert_write_allowed
 from acquisition_landing_quarantine import quarantine_item
+from temporal_retention import capture_raw_receipt
 
 BLOBS_SUBDIR = ("raw", "blobs")
 
@@ -68,6 +69,14 @@ def retain(
     content_type: str | None = None,
     original_filename: str | None = None,
     source_published_at: str | None = None,
+    publication_authority_tier: str = "UNVERIFIED",
+    provider_or_source: str | None = None,
+    provider_reported_date: str | None = None,
+    provider_record_update_at: str | None = None,
+    provider_event_at: str | None = None,
+    http_headers: Mapping[str, object] | None = None,
+    known_first_observed_at: str | None = None,
+    legacy_first_observed_unknown: bool = False,
     known_latest_hash_for_logical_identity: str | None = None,
     validator: Validator | None = default_pdf_validator,
     file_suffix: str = ".pdf",
@@ -89,6 +98,22 @@ def retain(
         )
 
     assert data is not None
+    temporal = capture_raw_receipt(
+        data=data,
+        raw_received_at=observed_at,
+        source_identity=spec.source_locator,
+        provider_or_source=provider_or_source or spec.source_authority_class,
+        acquisition_method=spec.acquisition_method,
+        source_published_at=source_published_at,
+        publication_authority_tier=publication_authority_tier,
+        provider_reported_date=provider_reported_date,
+        provider_record_update_at=provider_record_update_at,
+        provider_event_at=provider_event_at,
+        http_headers=http_headers,
+        content_type=content_type,
+        known_first_observed_at=known_first_observed_at,
+        legacy_first_observed_unknown=legacy_first_observed_unknown,
+    )
 
     if declared_sha256 is not None:
         actual = content_sha256(data)
@@ -120,6 +145,7 @@ def retain(
                 sha256=actual,
                 original_filename=original_filename,
                 source_published_at=source_published_at,
+                temporal_retention=temporal,
             )
 
     invalid_reason = validator(data, content_type) if validator else None
@@ -151,6 +177,7 @@ def retain(
             sha256=q.sha256,
             original_filename=original_filename,
             source_published_at=source_published_at,
+            temporal_retention=temporal,
         )
 
     sha256 = content_sha256(data)
@@ -181,6 +208,7 @@ def retain(
             storage_locator=str(target.relative_to(landing_root)),
             original_filename=original_filename,
             source_published_at=source_published_at,
+            temporal_retention=temporal,
         )
 
     atomic_write_bytes(target, data)
@@ -208,4 +236,5 @@ def retain(
         original_filename=original_filename,
         source_published_at=source_published_at,
         supersedes_sha256=supersedes,
+        temporal_retention=temporal,
     )
