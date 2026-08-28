@@ -2848,6 +2848,16 @@ single-ticker work.
 2. Corrective continuation: market cap and EV are size contexts, never relative-value inputs. Relative value has 9 research-ready multiple records; lower-positive multiples are descriptive percentiles only, while negative/nonmeaningful multiples are unranked.
 3. Authoritative count and valuation strategy authority remain unchanged. Next analysis capability: `FUNDAMENTAL_PLUS_MARKET_OPPORTUNITY_RANKING_V1`.
 
+## 2026-08-28 - Action Instrumentation and Invalidation Precision V1
+
+`ACTION_INSTRUMENTATION_AND_INVALIDATION_PRECISION_V1 = OUTCOME_B_ACTION_INSTRUMENTATION_IMPROVES_PRECISION_WITH_READY_LIMITS` (`action_instrumentation.py`, `tools/run_action_instrumentation_v1.py`; `push = NO`).
+
+1. Action instrumentation is a third independent experiment dimension after shadow posture and readiness.  It exposes only the existing tactical classifier's exact `ma_20` and momentum-sign intermediates, along with session, adjusted-retrospective price basis, rule identity, source metric, and retained technical lineage.  No rule, technical indicator, price basis, or strategy is changed.
+2. Exact boundaries are posture-specific: R6 early reversal may use MA20 reclaim for confirmation and momentum-zero failure for risk; R2/R3 trend states use their existing MA20/momentum state transitions; adverse R4/R5/R9 states use recovery/reversal, never a bullish stop.  Disjunctive R7 and categorical states remain conditional rather than being reduced to invented support, pivot, MA, ATR, or price levels.
+3. The current replay yields 33 exact entry/confirmation, 130 exact technical-risk, and 70 exact posture-reversal boundaries.  It leaves 0 fundamental boundaries READY because no margin-led compatible baseline intersects the current case cohort and no other thesis-linked future-test numerical condition exists.  Thus complete positive/speculative instrumentation and `READY_SHADOW` remain zero; 446 substantive records remain conditional and 77 remain not-ready.
+4. `market_wide_current_fundamental_research.build_artifact()` adds an optional read-only `action_instrumentation_by_ticker` attachment.  It is separate from facts, features, tactical state, valuation, opportunity research, cases, and shadow readiness; it cannot promote authority.  No recommendation, target, probability, sizing, leverage, PIT, valuation, RAW_AS_TRADED, provider, or official-evidence authority is opened.
+5. The next authorized capability is retained action instrumentation / thesis-compatible fundamental invalidation precision.  It is not a justification to reopen generic acquisition, KBS lookback, TTM scaleout, or OCR.
+
 ## 2026-08-28 - Shadow Action Readiness V1
 
 `SHADOW_ACTION_READINESS_V1 = OUTCOME_B_SHADOW_POSTURES_ACTIVE_WITH_READINESS_LIMITS` (`shadow_action_readiness.py`, `tools/run_shadow_action_readiness_v1.py`; `push = NO`).

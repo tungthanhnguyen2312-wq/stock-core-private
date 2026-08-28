@@ -136,6 +136,16 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         self.assertEqual(artifact["shadow_action_readiness_coverage"]["attached_ticker_count"], 1)
         self.assertFalse(artifact["shadow_action_readiness_coverage"]["shadow_authority_promoted"])
 
+    def test_action_instrumentation_attachment_is_separate_and_opt_in(self) -> None:
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t",
+            action_instrumentation_by_ticker={"AAA": {"technical_risk_boundary": {"status": "READY"}}},
+        )
+        self.assertEqual(artifact["records"]["AAA"]["action_instrumentation"]["technical_risk_boundary"]["status"], "READY")
+        self.assertNotIn("action_instrumentation", artifact["records"]["BBB"])
+        self.assertEqual(artifact["action_instrumentation_coverage"]["attached_ticker_count"], 1)
+        self.assertFalse(artifact["action_instrumentation_coverage"]["shadow_authority_promoted"])
+
     def test_flow_ttm_attachment_is_separate_and_opt_in(self) -> None:
         ttm = {"status": "AVAILABLE", "ttm": {"revenue": {"value": 100, "evidence_tier": "OPERATIONAL_PROXY"}}}
         artifact = build_artifact(

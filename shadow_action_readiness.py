@@ -104,6 +104,7 @@ def build_artifact(*, research_cases: Mapping[str, Any]) -> dict[str, Any]:
             "readiness_reason_codes": gate_reasons, "fundamental_quality_context": fundamental_context,
             "market_setup_context": market_context, "technical_invalidation": case.get("technical_invalidation"),
             "fundamental_invalidation": case.get("fundamental_invalidation"),
+            "fundamental_invalidation": case.get("fundamental_invalidation"),
             "market_confirmation_trigger": case.get("market_confirmation_trigger"),
             "qualified_catalyst": case.get("catalysts") or [], "retained_event_context": case.get("retained_event_context") or [],
             "valuation_context": case.get("valuation_context"), "ttm_context": case.get("ttm_context"),

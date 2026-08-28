@@ -1012,7 +1012,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
                    financial_flow_ttm_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
                    opportunity_research_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
                    research_cases_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
-                   shadow_action_readiness_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
+                   shadow_action_readiness_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
+                   action_instrumentation_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Build the complete market-wide current fundamental-research artifact from two already
     -computed inputs. Raises if p3f13_current was not derived from exactly this p3f10_frozen
     checkpoint (a cross-repository content-identity guard, not a recomputation).
@@ -1038,7 +1039,9 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
 
     `shadow_action_readiness_by_ticker` is an experiment-only, read-only downstream attachment.
     It preserves separate shadow posture/readiness dimensions and cannot grant authority; default
-    `None` leaves legacy output byte-identical."""
+    `None` leaves legacy output byte-identical. `action_instrumentation_by_ticker` is a further
+    optional read-only attachment for precise boundary research; it cannot alter the shadow
+    posture, upstream evidence, fitness, or authority."""
     if p3f13_current.get("source_artifacts", {}).get("p3f10") != p3f10_frozen.get("artifact_identity"):
         raise ValueError("P3F10_ARTIFACT_IDENTITY_MISMATCH")
 
@@ -1098,6 +1101,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             record["research_case"] = research_cases_by_ticker[ticker]
         if shadow_action_readiness_by_ticker is not None and shadow_action_readiness_by_ticker.get(ticker) is not None:
             record["shadow_action_readiness"] = shadow_action_readiness_by_ticker[ticker]
+        if action_instrumentation_by_ticker is not None and action_instrumentation_by_ticker.get(ticker) is not None:
+            record["action_instrumentation"] = action_instrumentation_by_ticker[ticker]
 
     official_tickers = sorted(official_rows)
     official_records = [records[ticker] for ticker in official_tickers]
@@ -1259,6 +1264,15 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         artifact["shadow_action_readiness_coverage"] = {
             "attached_ticker_count": len(attached),
             "attachment_mode": "READ_ONLY_EXPERIMENT_SHADOW_POSTURE_AND_READINESS",
+            "authoritative_coverage_unchanged": True,
+            "provider_facts_flattened_into_official_facts": False,
+            "shadow_authority_promoted": False,
+        }
+    if action_instrumentation_by_ticker is not None:
+        attached = [records[ticker]["action_instrumentation"] for ticker in all_tickers if "action_instrumentation" in records[ticker]]
+        artifact["action_instrumentation_coverage"] = {
+            "attached_ticker_count": len(attached),
+            "attachment_mode": "READ_ONLY_EXPERIMENT_ACTION_BOUNDARY_INSTRUMENTATION",
             "authoritative_coverage_unchanged": True,
             "provider_facts_flattened_into_official_facts": False,
             "shadow_authority_promoted": False,
