@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from thesis_catalyst_downside_research_cases import build_artifact
+from thesis_catalyst_downside_research_cases import _terminal_set_proof, build_artifact
 
 
 def _record(*, state="BREAKOUT_READY", quality_band="HIGH_QUALITY", percentile=.9, valuation=True):
@@ -43,7 +43,7 @@ class ThesisCatalystDownsideCasesTest(unittest.TestCase):
     def test_optional_contexts_do_not_block_case_and_identity_is_deterministic(self):
         artifact = self._build(record=_record(valuation=False))
         record = artifact["records"]["AAA"]
-        self.assertEqual(record["case_class"], "CASE_ELIGIBLE")
+        self.assertEqual(record["terminal_disposition"], "OPPORTUNITY_CASE_ELIGIBLE")
         self.assertEqual(record["catalyst_status"], "NO_QUALIFIED_CATALYST")
         self.assertIn({"dimension": "VALUATION", "status": "EVIDENCE_GAP", "reason": "OPTIONAL_CONTEXT_UNAVAILABLE"}, record["evidence_gaps"])
         self.assertEqual(artifact["artifact_sha256"], self._build(record=_record(valuation=False))["artifact_sha256"])
@@ -74,17 +74,52 @@ class ThesisCatalystDownsideCasesTest(unittest.TestCase):
         non_margin = self._build(record=_record(percentile=.2), ttm=_ttm())["records"]["AAA"]
         self.assertNotEqual(non_margin["fundamental_invalidation"].get("trigger_type"), "NET_MARGIN_RELATIVE_DRAWDOWN_20PCT")
 
-    def test_qualified_event_is_context_only_and_no_authority_is_emitted(self):
+    def test_historical_or_unlinked_event_is_context_only_and_no_authority_is_emitted(self):
         events = {"research_session": "2026-08-21", "events": [{"event_status": "CONFIRMED_UPCOMING", "event_type": "CASH_DIVIDEND", "evidence_tier": "OFFICIAL_QUALIFIED", "source": "issuer", "source_record_identity": "x", "warnings": []}]}
         record = self._build(events=events)["records"]["AAA"]
-        self.assertEqual(record["catalyst_status"], "QUALIFIED_CATALYST_AVAILABLE")
-        self.assertTrue(record["catalysts"][0]["not_event_driven"])
+        self.assertEqual(record["catalyst_status"], "NO_QUALIFIED_CATALYST")
+        self.assertEqual(record["catalysts"], [])
+        self.assertEqual(record["retained_event_context"][0]["context_status"], "RETAINED_EVENT_CONTEXT")
         self.assertTrue(record["authority_boundaries"]["case_is_not_decision_authority"])
+
+    def test_qualified_catalyst_requires_explicit_temporal_and_thesis_linkage(self):
+        events = {"research_session": "2026-08-21", "events": [{
+            "event_id": "event:1", "event_status": "CONFIRMED_UPCOMING", "event_type": "CORPORATE_ACTION",
+            "evidence_tier": "OFFICIAL_QUALIFIED", "source": "issuer", "source_record_identity": "x",
+            "effective_date": "2026-09-01", "known_at": "2026-08-20", "thesis_linkage": "capacity pathway",
+            "causal_thesis_reason": "The retained action explicitly advances the stated pathway.", "warnings": [],
+        }]}
+        record = self._build(events=events)["records"]["AAA"]
+        self.assertEqual(record["catalyst_status"], "QUALIFIED_CATALYST_AVAILABLE")
+        catalyst = record["catalysts"][0]
+        self.assertEqual(catalyst["effective_or_expected_date"], "2026-09-01")
+        self.assertEqual(catalyst["thesis_linkage"], "capacity pathway")
 
     def test_market_only_and_terminal_reconciliation(self):
         source = _record()
         source["fundamental_quality"] = {"status": "INSUFFICIENT_INPUTS"}
         artifact = self._build(record=source)
-        self.assertEqual(artifact["records"]["AAA"]["case_readiness"], "MARKET_ONLY_RESEARCH_CASE")
+        self.assertEqual(artifact["records"]["AAA"]["terminal_disposition"], "MARKET_ONLY_RESEARCH_CASE")
         self.assertEqual(artifact["denominator"], 1)
         self.assertEqual(artifact["residual"], 0)
+
+    def test_terminal_dispositions_are_disjoint_and_cover_the_denominator(self):
+        market_only = _record()
+        market_only["fundamental_quality"] = {"status": "INSUFFICIENT_INPUTS"}
+        insufficient = _record()
+        insufficient["market_technical_strength"] = {"status": "INSUFFICIENT_INPUTS"}
+        artifact = build_artifact(
+            opportunity={"records": {"AAA": _record(), "BBB": market_only, "CCC": insufficient}},
+            events={"records": {}}, ttm={"records": {}},
+        )
+        proof = artifact["terminal_disposition_reconciliation"]
+        self.assertEqual(proof["union_count"], artifact["denominator"])
+        self.assertEqual(proof["residual"], 0)
+        self.assertTrue(all(not intersection for intersection in proof["pairwise_intersections"].values()))
+        self.assertEqual(sum(artifact["coverage"]["terminal_dispositions"].values()), artifact["denominator"])
+        self.assertEqual(set(artifact["coverage"]["terminal_dispositions"]), {
+            "OPPORTUNITY_CASE_ELIGIBLE", "MARKET_ONLY_RESEARCH_CASE", "INSUFFICIENT_CASE_EVIDENCE",
+        })
+        self.assertNotIn("has_market_confirmation_trigger", artifact["coverage"]["terminal_dispositions"])
+        with self.assertRaisesRegex(ValueError, "TERMINAL_DISPOSITION_SET_RECONCILIATION_FAILED"):
+            _terminal_set_proof({"BAD": {"terminal_disposition": "NOT_A_TERMINAL_DISPOSITION"}})

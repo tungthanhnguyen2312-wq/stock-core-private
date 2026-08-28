@@ -68,9 +68,9 @@ def _case_class(record: Mapping[str, Any], archetype: str) -> str:
     quality = record.get("fundamental_quality") or {}
     technical = record.get("market_technical_strength") or {}
     if archetype == "MARKET_ONLY_RESEARCH_CASE":
-        return "MARKET_ONLY_CASE"
+        return "MARKET_ONLY_RESEARCH_CASE"
     if quality.get("status") == "READY_RESEARCH_ONLY" and technical.get("status") == "READY_RESEARCH_ONLY":
-        return "CASE_ELIGIBLE"
+        return "OPPORTUNITY_CASE_ELIGIBLE"
     return "INSUFFICIENT_CASE_EVIDENCE"
 
 
@@ -101,19 +101,35 @@ def _thesis_evidence(record: Mapping[str, Any], archetype: str) -> list[dict[str
     return reasons
 
 
-def _catalysts(event_record: Mapping[str, Any] | None) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]]]:
+def _event_detail(event: Mapping[str, Any], event_record: Mapping[str, Any] | None) -> dict[str, Any]:
+    return {"event_identity": event.get("event_id"), "event_type": event.get("event_type"),
+            "event_status": event.get("event_status"), "effective_or_expected_date": event.get("effective_date") or event.get("ex_date") or event.get("execution_date"),
+            "as_of": (event_record or {}).get("research_session"), "known_at": event.get("known_at") or event.get("published_at"),
+            "source": event.get("source"), "source_record_identity": event.get("source_record_identity"),
+            "evidence_tier": event.get("evidence_tier"), "limitations": event.get("warnings") or []}
+
+
+def _catalysts(event_record: Mapping[str, Any] | None) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     events = (event_record or {}).get("events") or []
-    qualifying = [event for event in events if event.get("event_status") in QUALIFIED_CATALYST_STATES
-                  and event.get("evidence_tier") == "OFFICIAL_QUALIFIED"]
-    catalysts = [{"category": "DIVIDEND/CORPORATE_ACTION" if event.get("event_type") in {"CASH_DIVIDEND", "BONUS", "STOCK_DIVIDEND", "RIGHTS", "CORPORATE_ACTION"} else "REGULATORY/INDUSTRY_EVENT",
-                  "event_type": event.get("event_type"), "event_status": event.get("event_status"),
-                  "as_of": (event_record or {}).get("research_session"), "source": event.get("source"),
-                  "source_record_identity": event.get("source_record_identity"), "evidence_tier": event.get("evidence_tier"),
-                  "limitations": event.get("warnings") or [], "not_event_driven": True} for event in qualifying]
+    candidate_events = [event for event in events if event.get("event_status") in QUALIFIED_CATALYST_STATES
+                        and event.get("evidence_tier") == "OFFICIAL_QUALIFIED"]
+    catalysts: list[dict[str, Any]] = []
+    contexts: list[dict[str, Any]] = []
+    for event in candidate_events:
+        detail = _event_detail(event, event_record)
+        has_temporal_basis = bool(detail["effective_or_expected_date"] and detail["known_at"])
+        thesis_linkage = event.get("thesis_linkage")
+        if has_temporal_basis and thesis_linkage and event.get("causal_thesis_reason") and detail["event_identity"] and detail["event_type"] and detail["source_record_identity"]:
+            catalysts.append({**detail, "thesis_linkage": thesis_linkage,
+                              "reason": event.get("causal_thesis_reason"), "not_event_driven": True})
+        else:
+            contexts.append({**detail, "context_status": "RETAINED_EVENT_CONTEXT",
+                             "reason": "Retained event lacks the explicit temporal-and-thesis linkage required for a qualified catalyst.",
+                             "not_event_driven": True})
     gaps: list[dict[str, Any]] = []
     if not catalysts:
         gaps.append({"dimension": "CATALYST", "status": "EVIDENCE_GAP", "reason": "NO_QUALIFIED_CATALYST"})
-    return ("QUALIFIED_CATALYST_AVAILABLE" if catalysts else "NO_QUALIFIED_CATALYST", catalysts, gaps)
+    return ("QUALIFIED_CATALYST_AVAILABLE" if catalysts else "NO_QUALIFIED_CATALYST", catalysts, contexts, gaps)
 
 
 def _counter_evidence(record: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -136,7 +152,7 @@ def _counter_evidence(record: Mapping[str, Any]) -> list[dict[str, Any]]:
 def _technical_invalidation(record: Mapping[str, Any], case_class: str) -> dict[str, Any]:
     tactical = record.get("tactical_setup") or {}
     state, rule = tactical.get("state"), tactical.get("rule_id")
-    if case_class != "CASE_ELIGIBLE" or not state:
+    if case_class != "OPPORTUNITY_CASE_ELIGIBLE" or not state:
         return {"status": "UNAVAILABLE", "reason": "CURRENT_TACTICAL_CASE_CHANNEL_UNAVAILABLE", "threshold": None}
     return {"status": "CONDITIONAL", "trigger_type": "RETAINED_TACTICAL_RULE_FAILURE",
             "threshold": None, "source_rule": rule, "as_of_session": record.get("market_session"),
@@ -145,7 +161,7 @@ def _technical_invalidation(record: Mapping[str, Any], case_class: str) -> dict[
 
 def _fundamental_invalidation(record: Mapping[str, Any], ttm_record: Mapping[str, Any] | None,
                               case_class: str, archetype: str) -> dict[str, Any]:
-    if case_class != "CASE_ELIGIBLE":
+    if case_class != "OPPORTUNITY_CASE_ELIGIBLE":
         return {"status": "UNAVAILABLE", "reason": "FUNDAMENTAL_CASE_CHANNEL_UNAVAILABLE", "threshold": None}
     margin = ((ttm_record or {}).get("derived_metrics") or {}).get("ttm_net_margin") or {}
     ttm = (ttm_record or {}).get("ttm") or {}
@@ -170,15 +186,30 @@ def _fundamental_invalidation(record: Mapping[str, Any], ttm_record: Mapping[str
 
 
 def _readiness(case_class: str, catalyst_status: str, technical: Mapping[str, Any], fundamental: Mapping[str, Any]) -> str:
-    if case_class == "MARKET_ONLY_CASE":
+    if case_class == "MARKET_ONLY_RESEARCH_CASE":
         return "MARKET_ONLY_RESEARCH_CASE"
-    if case_class != "CASE_ELIGIBLE":
+    if case_class != "OPPORTUNITY_CASE_ELIGIBLE":
         return "INSUFFICIENT_CASE_EVIDENCE"
     if technical.get("status") != "READY" or fundamental.get("status") != "READY":
         return "RESEARCH_CASE_READY_WITH_PARTIAL_INVALIDATION"
     if catalyst_status == "NO_QUALIFIED_CATALYST":
         return "RESEARCH_CASE_READY_WITH_MISSING_CATALYST"
     return "RESEARCH_CASE_READY"
+
+
+def _terminal_set_proof(records: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Make terminal-disposition set semantics inspectable and fail if they drift."""
+    dispositions = ("OPPORTUNITY_CASE_ELIGIBLE", "MARKET_ONLY_RESEARCH_CASE", "INSUFFICIENT_CASE_EVIDENCE")
+    sets = {name: sorted(ticker for ticker, record in records.items() if record["terminal_disposition"] == name)
+            for name in dispositions}
+    intersections = {f"{left}__INTERSECT__{right}": sorted(set(sets[left]) & set(sets[right]))
+                     for index, left in enumerate(dispositions) for right in dispositions[index + 1:]}
+    union = set().union(*(set(tickers) for tickers in sets.values()))
+    if any(intersections.values()) or union != set(records):
+        raise ValueError("TERMINAL_DISPOSITION_SET_RECONCILIATION_FAILED")
+    return {"terminal_disposition_ticker_sets": sets,
+            "pairwise_intersections": intersections,
+            "union_count": len(union), "denominator": len(records), "residual": len(set(records) - union)}
 
 
 def build_artifact(*, opportunity: Mapping[str, Any], events: Mapping[str, Any], ttm: Mapping[str, Any]) -> dict[str, Any]:
@@ -189,14 +220,18 @@ def build_artifact(*, opportunity: Mapping[str, Any], events: Mapping[str, Any],
     records: dict[str, dict[str, Any]] = {}
     coverage: Counter[str] = Counter()
     archetypes: Counter[str] = Counter()
-    catalysts_by_type: Counter[str] = Counter()
+    catalyst_event_ids: set[str] = set()
+    catalyst_tickers: set[str] = set()
+    context_event_ids: set[str] = set()
+    context_tickers: set[str] = set()
+    market_confirmation_trigger_count = 0
     technical_status: Counter[str] = Counter()
     fundamental_status: Counter[str] = Counter()
     for ticker in sorted(opportunity_records):
         source = opportunity_records[ticker]
         archetype = _archetype(source)
         case_class = _case_class(source, archetype)
-        catalyst_status, catalysts, catalyst_gaps = _catalysts(event_records.get(ticker))
+        catalyst_status, catalysts, retained_event_context, catalyst_gaps = _catalysts(event_records.get(ticker))
         technical = _technical_invalidation(source, case_class)
         fundamental = _fundamental_invalidation(source, ttm_records.get(ticker), case_class, archetype)
         valuation = source.get("relative_value") or {}
@@ -215,7 +250,9 @@ def build_artifact(*, opportunity: Mapping[str, Any], events: Mapping[str, Any],
             "ticker": ticker, "entity_class": source.get("entity_class"), "sector": source.get("sector"),
             "as_of_session": source.get("market_session"), "opportunity_bucket": (source.get("opportunity_research_priority") or {}).get("bucket"),
             "case_class": case_class, "thesis_archetype": archetype,
+            "terminal_disposition": case_class,
             "thesis_evidence": _thesis_evidence(source, archetype), "catalyst_status": catalyst_status, "catalysts": catalysts,
+            "retained_event_context": retained_event_context,
             "market_confirmation_trigger": market_trigger, "counter_thesis_evidence": _counter_evidence(source),
             "evidence_gaps": gaps, "technical_invalidation": technical, "fundamental_invalidation": fundamental,
             "valuation_context": {"relative_value": valuation, "size_context_only": (valuation.get("size_context") or {})},
@@ -229,8 +266,6 @@ def build_artifact(*, opportunity: Mapping[str, Any], events: Mapping[str, Any],
                                      "event_driven_authority": False, "pit": False},
         }
         records[ticker] = record
-        coverage[case_class] += 1
-        coverage[record["case_readiness"]] += 1
         coverage["valuation_enriched"] += valuation.get("status") == "READY_RESEARCH_ONLY"
         coverage["ttm_enriched"] += ((ttm_source.get("derived_metrics") or {}).get("ttm_net_margin") or {}).get("status") == "AVAILABLE"
         coverage["SUPER_SETUP_CASE"] += (source.get("research_classifications") or {}).get("SUPER_SETUP_RESEARCH", {}).get("status") == "PRESENT"
@@ -241,14 +276,33 @@ def build_artifact(*, opportunity: Mapping[str, Any], events: Mapping[str, Any],
         archetypes[archetype] += 1
         technical_status[technical["status"]] += 1
         fundamental_status[fundamental["status"]] += 1
-        for catalyst in catalysts:
-            catalysts_by_type[catalyst["category"]] += 1
+        if catalysts:
+            catalyst_tickers.add(ticker)
+        if retained_event_context:
+            context_tickers.add(ticker)
+        catalyst_event_ids.update(str(item["event_identity"] or item["source_record_identity"]) for item in catalysts)
+        context_event_ids.update(str(item["event_identity"] or item["source_record_identity"]) for item in retained_event_context)
+        market_confirmation_trigger_count += market_trigger is not None
+    terminal_proof = _terminal_set_proof(records)
+    terminal_counts = {name: len(tickers) for name, tickers in terminal_proof["terminal_disposition_ticker_sets"].items()}
+    readiness_distribution = dict(sorted(Counter(record["case_readiness"] for record in records.values()).items()))
+    independent_flags = {
+        "has_qualified_catalyst": len(catalyst_tickers),
+        "has_retained_event_context": len(context_tickers),
+        "has_market_confirmation_trigger": market_confirmation_trigger_count,
+        "no_qualified_catalyst": sum(record["catalyst_status"] == "NO_QUALIFIED_CATALYST" for record in records.values()),
+    }
     artifact: dict[str, Any] = {
         "contract_version": CONTRACT_VERSION, "denominator": len(records), "residual": 0,
         "source_artifacts": {"opportunity": opportunity.get("artifact_identity"), "events": events.get("artifact_identity"), "ttm": ttm.get("artifact_identity")},
-        "coverage": {**dict(sorted(coverage.items())), "thesis_archetypes": dict(sorted(archetypes.items())),
-                     "catalyst_categories": dict(sorted(catalysts_by_type.items())), "technical_invalidation": dict(sorted(technical_status.items())),
+        "coverage": {**dict(sorted(coverage.items())), "terminal_dispositions": terminal_counts,
+                     "terminal_readiness_states": readiness_distribution, "independent_readiness_flags": independent_flags,
+                     "catalysts": {"qualified_catalyst_tickers": len(catalyst_tickers), "qualified_catalyst_events": len(catalyst_event_ids),
+                                   "retained_event_context_tickers": len(context_tickers), "retained_event_context_events": len(context_event_ids),
+                                   "event_identity_sets_are_disjoint": not bool(catalyst_event_ids & context_event_ids)},
+                     "thesis_archetypes": dict(sorted(archetypes.items())), "technical_invalidation": dict(sorted(technical_status.items())),
                      "fundamental_invalidation": dict(sorted(fundamental_status.items()))},
+        "terminal_disposition_reconciliation": terminal_proof,
         "authority_boundary": {"research_only": True, "no_decision_authority": True, "no_new_evidence": True,
                                "authoritative_issuer_count_before": 13, "authoritative_issuer_count_after": 13,
                                "market_cap_and_ev_are_size_context_only": True, "valuation_and_ttm_optional": True},
