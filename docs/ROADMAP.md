@@ -1,5 +1,7 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Fundamental cross-sectional scoring and ranking (2026-08-28):** `FUNDAMENTAL_CROSS_SECTIONAL_SCORING_AND_RANKING_V1 = OUTCOME_A_FUNDAMENTAL_CROSS_SECTIONAL_RANKING_MATERIAL_COVERAGE`. Multi-axis proxy research ranking is active; composite/action outputs remain intentionally absent. The next step is investment analysis (`CURRENT_VALUATION_RESEARCH_PROXY` or `FUNDAMENTAL_PLUS_MARKET_OPPORTUNITY_RANKING`), not another evidence-tier/classification audit.
+
 **Market-wide quarterly fundamental research features (2026-08-28):** `MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1 = OUTCOME_A_QUARTERLY_FUNDAMENTAL_FEATURES_MATERIAL_COVERAGE`. Completed research-only same-period/EOP proxy activation across the existing 523 denominator. The next capability is `FUNDAMENTAL_CROSS_SECTIONAL_SCORING_AND_RANKING_V1` over only semantically comparable proxy features; no new data-tier work is needed.
 
 **Market-wide fundamental feature activation (2026-08-28):** `MARKET_WIDE_FUNDAMENTAL_FEATURE_ACTIVATION_V1 = OUTCOME_B_FEATURE_ENGINE_ACTIVE_WITH_SHARED_INPUT_LIMITS`. The existing proxy/consumer contracts now emit a full research-only annual-feature envelope across 523 records after retained entity-class resolution. Current retained provider flow periods are explicitly quarterly, not annual, so annual feature values remain fail-closed. The next analysis capability is `VALUATION_RESEARCH_EXPANSION` only when compatible annual/duration-evidenced retained inputs exist; no new data-tier program is opened.

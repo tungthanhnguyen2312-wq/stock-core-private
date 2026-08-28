@@ -2833,3 +2833,10 @@ single-ticker work.
 1. Retained period depth is quarterly, never annual by label alone. Same-period flow YoY is a labelled proxy when duration is unresolved; balance-sheet stocks retain point-in-time semantics.
 2. EOP ratios are separately named research proxies: net margin 446, ROA/ROE 428, asset-turnover/DuPont 425, and equity multiplier 446. Standard average-balance ratios, TTM, and standard Piotroski remain blocked where their required semantics are absent.
 3. Sector gates, evidence tiers, authoritative count (13), and valuation authority are unchanged. The next authorized direction is cross-sectional research scoring/ranking of comparable proxy features, not another data architecture milestone.
+## 2026-08-28 - Fundamental Cross-Sectional Scoring and Ranking V1
+
+`FUNDAMENTAL_CROSS_SECTIONAL_SCORING_AND_RANKING_V1 = OUTCOME_A_FUNDAMENTAL_CROSS_SECTIONAL_RANKING_MATERIAL_COVERAGE` (`push = NO`).
+
+1. Independent research-only axes use existing operational-proxy quarterly features: profitability 449, capital efficiency 425, balance-sheet context 433, growth 2. Missing inputs are never neutral and one blocked axis never blocks another.
+2. Data confidence is separate from investment quality. No composite/action is emitted; sector-relative results remain null without a sufficient retained comparable cohort.
+3. Owner doctrine is recorded: capability-first market-wide research proceeds when fitness permits; non-authoritative does not mean unusable; stronger authority/PIT gates stay local; PDF/OCR is verification fallback; and pure schema/audit work is disfavored absent an integrity blocker.

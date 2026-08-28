@@ -199,6 +199,13 @@ technical thread.
 - Authority promotion requires explicit bounded evidence and owner approval; acquisition does not.
 - Do not add another market-data provider merely to avoid solving DNSE/FHSC/official-source
   contracts unless the owner explicitly changes the source strategy.
+- Capability/data-first and market-wide-first are the defaults. Evidence fitness is use-case
+  specific: non-authoritative provider evidence may support explicitly labelled current research
+  while authority/PIT gates remain strict for the uses that require them. Missing capability
+  narrows only dependent features; it does not invalidate unrelated research features.
+- Once enough compatible feature coverage exists, progress to deterministic analysis rather than
+  withholding all analysis until every blocked record is repaired. PDF/OCR remains a triggered
+  verification fallback, not the default market-wide fundamentals path.
 
 ## 11. Definition of progress
 
