@@ -53,9 +53,9 @@ DEBT_COMPONENT_LABEL_TERMS = {
     "long_term_borrowings_or_finance_leases": ("vay", "dai", "han"),
 }
 _FAMILY_ANCHORS = {
-    "balance_sheet": (("bang can", "ke toan"),),
-    "income_statement": (("bao cao ket qua", "kinh doanh"),),
-    "cash_flow": (("bao cao luu chuyen", "tien"),),
+    "balance_sheet": (("bang can", "ke toan"), ("balance", "sheet")),
+    "income_statement": (("bao cao ket qua", "kinh doanh"), ("income", "statement")),
+    "cash_flow": (("bao cao luu chuyen", "tien"), ("cash", "flow")),
 }
 
 

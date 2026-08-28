@@ -601,6 +601,7 @@ def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str
     # recorded below.
     header = None
     all_header_tokens = [token for line in lines for token in line["tokens"]]
+    page_form_code_header = bool(re.search(r"form\s*b\s*0[1-3]", _normalize_text(" ".join(str(token["text"]) for token in all_header_tokens))))
     heights = sorted(max(0.1, float(token["bottom"]) - float(token["top"])) for token in all_header_tokens)
     median_height = heights[len(heights) // 2] if heights else 1.0
     page_height = max((float(token["bottom"]) for token in all_header_tokens), default=0.0) - min((float(token["top"]) for token in all_header_tokens), default=0.0)
@@ -624,8 +625,13 @@ def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str
         # issuer/page exception; two independently visible year labels remain
         # mandatory below.
         has_code_header = "code" in normalized or ("ma" in normalized and "thuyet" in normalized)
-        if has_code_header and target_period in text and len(set(re.findall(r"20[0-3][0-9]", text))) >= 2:
-            header = {"lines": group, "text": text}
+        # A scanned Vietnamese prescribed form can retain the exact visible form
+        # identifier while OCR damages the non-authoritative header word "Code".
+        # Form B01/B02/B03 plus two spatially positioned years is independent
+        # layout evidence; it does not reinterpret any row character or value.
+        form_code_header = page_form_code_header or bool(re.search(r"form\s*b\s*0[1-3]", normalized))
+        if (has_code_header or form_code_header) and target_period in text and len(set(re.findall(r"20[0-3][0-9]", text))) >= 2:
+            header = {"lines": group, "text": text, "form_code_header": form_code_header}
             break
     if header is None:
         return None
@@ -718,9 +724,15 @@ def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str
         # header-word boxes; retain that behavior without applying it to OCR.
         has_ocr_tokens = any(str(token.get("provenance", "NATIVE_PDF_POSITIONED_TOKEN")) == "OCR_TSV_POSITIONED_TOKEN" for token in header_tokens)
         if has_ocr_tokens:
-            return None
-        code_cluster = short_clusters[-2] if len(short_clusters) >= 2 else short_clusters[-1]
-        note_cluster = short_clusters[-1] if len(short_clusters) >= 2 else None
+            if not header.get("form_code_header"):
+                return None
+            # The visible prescribed form establishes that the left-most compact
+            # integer column is the statement line-code field.  Do not invent a
+            # note band when its own header glyphs are unavailable.
+            code_cluster, note_cluster = short_clusters[0], None
+        else:
+            code_cluster = short_clusters[-2] if len(short_clusters) >= 2 else short_clusters[-1]
+            note_cluster = short_clusters[-1] if len(short_clusters) >= 2 else None
     else:
         code_cluster = nearest_cluster(code_header_tokens)
         if code_cluster is None:
