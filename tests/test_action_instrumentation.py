@@ -22,10 +22,11 @@ def _descriptive(basis="ADJUSTED_RETROSPECTIVE"):
 
 
 class ActionInstrumentationTest(unittest.TestCase):
-    def _build(self, shadow, tactical=None, descriptive=None):
+    def _build(self, shadow, tactical=None, descriptive=None, fundamental_boundaries=None):
         return build_artifact(shadow={"denominator": 1, "artifact_identity": "shadow", "records": {"AAA": shadow}},
                               tactical={"artifact_identity": "tactical", "records": {"AAA": tactical or _tactical()}},
-                              descriptive={"artifact_identity": "descriptive", "records": {"AAA": descriptive or _descriptive()}})
+                              descriptive={"artifact_identity": "descriptive", "records": {"AAA": descriptive or _descriptive()}},
+                              fundamental_boundaries_by_ticker=fundamental_boundaries)
 
     def test_exact_early_reversal_boundaries_preserve_posture_but_not_ready_without_fundamental(self):
         record = self._build(_shadow())["records"]["AAA"]
@@ -60,6 +61,16 @@ class ActionInstrumentationTest(unittest.TestCase):
         self.assertEqual(boundary["status"], "READY")
         self.assertEqual(boundary["value"], .2)
         self.assertEqual(boundary["baseline_value"] * .80, boundary["value"])
+
+    def test_exact_existing_fundamental_boundary_unlocks_only_full_existing_contract(self):
+        precise = {"AAA": {"fundamental_boundary": {"status": "READY", "boundary_type": "FUNDAMENTAL_QUALITY_QUALIFICATION_LOST",
+                  "rule_identity": "SUPER_SETUP_PERCENTILE_FLOOR/v1", "current_trigger_state": "NOT_TRIGGERED", "warnings": []}}}
+        record = self._build(_shadow(), fundamental_boundaries=precise)["records"]["AAA"]
+        self.assertEqual(record["fundamental_thesis_boundary"]["status"], "READY")
+        self.assertEqual(record["action_readiness_gate"], "READY_SHADOW")
+        self.assertEqual(self._build(_shadow(), fundamental_boundaries=precise)["coverage"]["COMPLETE_TECHNICAL_PLUS_FUNDAMENTAL_INSTRUMENTATION"], 1)
+        wait = self._build(_shadow(posture="WAIT_FOR_CONFIRMATION_CANDIDATE"), fundamental_boundaries=precise)["records"]["AAA"]
+        self.assertEqual(wait["action_readiness_gate"], "CONDITIONAL_SHADOW")
 
     def test_identity_and_no_target_sizing_or_score(self):
         first, second = self._build(_shadow()), self._build(_shadow())

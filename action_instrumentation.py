@@ -125,7 +125,9 @@ def _technical_boundaries(posture: str, context: Mapping[str, Any]) -> tuple[dic
         warnings=["CURRENT_STATE_HAS_NO_POSTURE-SPECIFIC_EXACT_BOUNDARY"], reason="Categorial state retained without applicable exact action boundary."), unavailable, unavailable
 
 
-def _fundamental_boundary(shadow: Mapping[str, Any]) -> dict[str, Any]:
+def _fundamental_boundary(shadow: Mapping[str, Any], precision: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    if precision and precision.get("fundamental_boundary"):
+        return dict(precision["fundamental_boundary"])
     prior = shadow.get("fundamental_invalidation") or {}
     if prior.get("status") == "READY" and prior.get("trigger_type") == "NET_MARGIN_RELATIVE_DRAWDOWN_20PCT":
         return _boundary(status="READY", boundary_type="NET_MARGIN_RELATIVE_DRAWDOWN_20PCT", direction="RELATIVE_DRAWDOWN",
@@ -149,7 +151,8 @@ def _gate(shadow: Mapping[str, Any], technical: Mapping[str, Any], fundamental: 
     return shadow.get("action_readiness_gate")
 
 
-def build_artifact(*, shadow: Mapping[str, Any], tactical: Mapping[str, Any], descriptive: Mapping[str, Any]) -> dict[str, Any]:
+def build_artifact(*, shadow: Mapping[str, Any], tactical: Mapping[str, Any], descriptive: Mapping[str, Any],
+                   fundamental_boundaries_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     records: dict[str, dict[str, Any]] = {}
     coverage: Counter[str] = Counter()
     blocker_counts: Counter[str] = Counter()
@@ -158,13 +161,13 @@ def build_artifact(*, shadow: Mapping[str, Any], tactical: Mapping[str, Any], de
         source = shadow["records"][ticker]
         context, price_basis = _technical_context(tactical_records.get(ticker), descriptive_records.get(ticker))
         entry, technical_risk, reversal = _technical_boundaries(source.get("shadow_posture"), context)
-        fundamental = _fundamental_boundary(source)
+        fundamental = _fundamental_boundary(source, (fundamental_boundaries_by_ticker or {}).get(ticker))
         gate = _gate(source, technical_risk, fundamental)
         record = {"ticker": ticker, "shadow_posture": source.get("shadow_posture"), "action_readiness_gate": gate,
                   "entry_or_confirmation_boundary": entry, "technical_risk_boundary": technical_risk,
                   "fundamental_thesis_boundary": fundamental, "posture_reversal_boundary": reversal,
                   "market_confirmation_trigger": source.get("market_confirmation_trigger"), "technical_state": context.get("state"),
-                  "fundamental_thesis_archetype": source.get("research_case_readiness"),
+                  "fundamental_thesis_archetype": source.get("thesis_archetype"),
                   "boundary_compatibility": {"price_basis": price_basis, "price_basis_compatible": price_basis == "ADJUSTED_RETROSPECTIVE",
                                               "current_session_technical": context.get("eligible")},
                   "reason_codes": [item for item in (entry.get("reason"), technical_risk.get("reason"), fundamental.get("reason"), reversal.get("reason")) if item],
@@ -178,6 +181,9 @@ def build_artifact(*, shadow: Mapping[str, Any], tactical: Mapping[str, Any], de
             for warning in boundary.get("warnings") or []:
                 blocker_counts[warning] += 1
         coverage[f"READINESS_{gate}"] += 1
+        if source.get("shadow_posture") in {"INITIATE_CANDIDATE", "ACCUMULATE_CANDIDATE", "HIGH_RISK_SPECULATION_CANDIDATE"} and technical_risk["status"] == fundamental["status"] == "READY":
+            coverage["COMPLETE_TECHNICAL_PLUS_FUNDAMENTAL_INSTRUMENTATION"] += 1
+            coverage[f"COMPLETE_TECHNICAL_PLUS_FUNDAMENTAL_{source.get('shadow_posture')}"] += 1
         if source.get("shadow_posture") in {"INITIATE_CANDIDATE", "ACCUMULATE_CANDIDATE"}:
             coverage["COMPLETE_POSITIVE_ACTION_INSTRUMENTATION"] += entry["status"] == technical_risk["status"] == fundamental["status"] == "READY"
         if source.get("shadow_posture") == "HIGH_RISK_SPECULATION_CANDIDATE":
@@ -191,6 +197,9 @@ def build_artifact(*, shadow: Mapping[str, Any], tactical: Mapping[str, Any], de
             coverage.setdefault(f"{name}_{status}", 0)
     for gate in ("READY_SHADOW", "CONDITIONAL_SHADOW", "NOT_READY_SHADOW"):
         coverage.setdefault(f"READINESS_{gate}", 0)
+    for posture in ("INITIATE_CANDIDATE", "ACCUMULATE_CANDIDATE", "HIGH_RISK_SPECULATION_CANDIDATE"):
+        coverage.setdefault(f"COMPLETE_TECHNICAL_PLUS_FUNDAMENTAL_{posture}", 0)
+    coverage.setdefault("COMPLETE_TECHNICAL_PLUS_FUNDAMENTAL_INSTRUMENTATION", 0)
     coverage["MARKET_CONFIRMATION_EXACT_LEVEL"] = sum(
         record["market_confirmation_trigger"] is not None and record["entry_or_confirmation_boundary"]["status"] == "READY"
         for record in records.values()

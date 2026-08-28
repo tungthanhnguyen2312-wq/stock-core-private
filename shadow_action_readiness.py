@@ -41,8 +41,12 @@ def _contexts(case: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any], 
     quality = _first_evidence(case, "FUNDAMENTAL_QUALITY")
     tactical = _first_evidence(case, "TACTICAL_SETUP")
     market = _first_evidence(case, "CURRENT_MARKET_SETUP")
-    return ({"comparable_cohort_percentile": quality.get("value"), "ranking_basis": quality.get("method"),
-             "evidence_tier": quality.get("evidence_tier"), "source_dimension": quality.get("source_dimension")},
+    return ({"comparable_cohort_percentile": quality.get("value"),
+             "ranking_basis": quality.get("cohort_definition") or quality.get("method"),
+             "quality_method": quality.get("method"), "cohort_size": quality.get("cohort_size"),
+             "as_of": quality.get("as_of"), "period_basis": quality.get("period_basis"),
+             "statement_scope": quality.get("statement_scope"), "evidence_tier": quality.get("evidence_tier"),
+             "source_dimension": quality.get("source_dimension")},
             {"market_technical_rank": market.get("metric_or_state"), "momentum_20d": market.get("value"),
              "tactical_state": tactical.get("metric_or_state"), "tactical_rule": tactical.get("value"),
              "as_of_session": case.get("as_of_session")}, tactical.get("metric_or_state"))
@@ -65,9 +69,10 @@ def _posture(case: Mapping[str, Any], percentile: float | None, tactical_state: 
     return "WAIT_FOR_CONFIRMATION_CANDIDATE", ["USEFUL_FUNDAMENTAL_MARKET_CASE_WITHOUT_STRONG_ACTION_POSTURE"]
 
 
-def _readiness(case: Mapping[str, Any], posture: str) -> tuple[str, list[str]]:
-    technical = case.get("technical_invalidation") or {}
-    fundamental = case.get("fundamental_invalidation") or {}
+def _readiness(case: Mapping[str, Any], posture: str, fundamental_override: Mapping[str, Any] | None = None,
+               technical_override: Mapping[str, Any] | None = None) -> tuple[str, list[str]]:
+    technical = technical_override or case.get("technical_invalidation") or {}
+    fundamental = fundamental_override or case.get("fundamental_invalidation") or {}
     technical_status, fundamental_status = technical.get("status"), fundamental.get("status")
     if posture == "INSUFFICIENT_ACTION_EVIDENCE" or case.get("terminal_disposition") != "OPPORTUNITY_CASE_ELIGIBLE":
         return "NOT_READY_SHADOW", ["SUBSTANTIVE_ACTION_CASE_UNAVAILABLE"]
@@ -84,7 +89,8 @@ def _readiness(case: Mapping[str, Any], posture: str) -> tuple[str, list[str]]:
     return "NOT_READY_SHADOW", ["ACTION_READINESS_REQUIREMENTS_NOT_MET"]
 
 
-def build_artifact(*, research_cases: Mapping[str, Any]) -> dict[str, Any]:
+def build_artifact(*, research_cases: Mapping[str, Any], fundamental_boundaries_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
+                   technical_boundaries_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Create one shadow action-readiness record per terminal research case."""
     source_records = research_cases.get("records") or {}
     records: dict[str, dict[str, Any]] = {}
@@ -96,15 +102,21 @@ def build_artifact(*, research_cases: Mapping[str, Any]) -> dict[str, Any]:
         fundamental_context, market_context, tactical_state = _contexts(case)
         percentile = fundamental_context["comparable_cohort_percentile"]
         posture, posture_reasons = _posture(case, percentile, tactical_state)
-        gate, gate_reasons = _readiness(case, posture)
+        boundary_record = (fundamental_boundaries_by_ticker or {}).get(ticker) or {}
+        fundamental = boundary_record.get("fundamental_boundary") or case.get("fundamental_invalidation")
+        technical_record = (technical_boundaries_by_ticker or {}).get(ticker) or {}
+        precise_technical = technical_record.get("technical_risk_boundary") or {}
+        # Precision can satisfy the existing conditional channel, but an unavailable optional
+        # precise boundary must not demote the retained case channel into a new not-ready state.
+        technical = precise_technical if precise_technical.get("status") == "READY" else case.get("technical_invalidation")
+        gate, gate_reasons = _readiness(case, posture, fundamental, technical)
         record = {
             "ticker": ticker, "terminal_case_disposition": case.get("terminal_disposition"),
-            "research_case_readiness": case.get("case_readiness"), "shadow_posture": posture,
+            "research_case_readiness": case.get("case_readiness"), "thesis_archetype": case.get("thesis_archetype"), "shadow_posture": posture,
             "shadow_posture_reason_codes": posture_reasons, "action_readiness_gate": gate,
             "readiness_reason_codes": gate_reasons, "fundamental_quality_context": fundamental_context,
-            "market_setup_context": market_context, "technical_invalidation": case.get("technical_invalidation"),
-            "fundamental_invalidation": case.get("fundamental_invalidation"),
-            "fundamental_invalidation": case.get("fundamental_invalidation"),
+            "market_setup_context": market_context, "technical_invalidation": technical,
+            "fundamental_invalidation": fundamental,
             "market_confirmation_trigger": case.get("market_confirmation_trigger"),
             "qualified_catalyst": case.get("catalysts") or [], "retained_event_context": case.get("retained_event_context") or [],
             "valuation_context": case.get("valuation_context"), "ttm_context": case.get("ttm_context"),

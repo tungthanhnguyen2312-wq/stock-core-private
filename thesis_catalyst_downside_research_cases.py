@@ -34,9 +34,9 @@ def _identity(value: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _evidence(*, source_dimension: str, metric_or_state: str, value: Any, as_of: str | None,
-              method: str | None, tier: str, reason: str) -> dict[str, Any]:
+              method: str | None, tier: str, reason: str, **lineage: Any) -> dict[str, Any]:
     return {"source_dimension": source_dimension, "metric_or_state": metric_or_state, "value": value,
-            "as_of": as_of, "method": method, "evidence_tier": tier, "reason": reason}
+            "as_of": as_of, "method": method, "evidence_tier": tier, "reason": reason, **lineage}
 
 
 def _archetype(record: Mapping[str, Any]) -> str:
@@ -84,7 +84,9 @@ def _thesis_evidence(record: Mapping[str, Any], archetype: str) -> list[dict[str
     if quality.get("status") == "READY_RESEARCH_ONLY":
         reasons.append(_evidence(source_dimension="FUNDAMENTAL_QUALITY", metric_or_state="COMPARABLE_COHORT_PERCENTILE",
             value=quality.get("actual_comparable_cohort_percentile"), as_of=session, method=quality.get("method"),
-            tier="OPERATIONAL_PROXY", reason="Existing comparable corporate-quality context."))
+            tier="OPERATIONAL_PROXY", reason="Existing comparable corporate-quality context.",
+            cohort_definition=quality.get("ranking_basis"), cohort_size=quality.get("actual_comparable_cohort_size"),
+            period_basis="CURRENT_CROSS_SECTIONAL_RESEARCH", statement_scope="CORPORATE_VALID_COMPARABLE_COHORT"))
     for axis in ("PROFITABILITY_QUALITY", "CAPITAL_EFFICIENCY", "BALANCE_SHEET_TRAJECTORY"):
         item = axes.get(axis) or {}
         if item.get("axis_status") == "READY_RESEARCH_ONLY":

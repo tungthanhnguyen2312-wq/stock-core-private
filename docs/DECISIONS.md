@@ -2858,6 +2858,16 @@ single-ticker work.
 4. `market_wide_current_fundamental_research.build_artifact()` adds an optional read-only `action_instrumentation_by_ticker` attachment.  It is separate from facts, features, tactical state, valuation, opportunity research, cases, and shadow readiness; it cannot promote authority.  No recommendation, target, probability, sizing, leverage, PIT, valuation, RAW_AS_TRADED, provider, or official-evidence authority is opened.
 5. The next authorized capability is retained action instrumentation / thesis-compatible fundamental invalidation precision.  It is not a justification to reopen generic acquisition, KBS lookback, TTM scaleout, or OCR.
 
+## 2026-08-28 - Fundamental Thesis Invalidation Precision V1
+
+`FUNDAMENTAL_THESIS_INVALIDATION_PRECISION_V1 = OUTCOME_A_FUNDAMENTAL_INVALIDATION_UNLOCKS_READY_SHADOW` (`fundamental_thesis_invalidation_precision.py`, `tools/run_fundamental_thesis_invalidation_precision_v1.py`; `push = NO`).
+
+1. Exact current production/research qualification rules may be reused as future-monitoring state transitions only when their actual corporate cohort, cohort size, `AVAILABLE_FUNDAMENTAL_AXIS_MEAN/v1` method, current as-of value, scope, and comparison contract are retained. The only current exact quality thresholds are top-20% for initiate, high-quality 0.75 for accumulate/high-quality wait, and bottom-quartile recovery for avoid; no sector percentile is claimed and no financial cutoff is introduced.
+2. The replay has 125 `READY` fundamental boundaries (55 quality-threshold transitions and 70 avoid-recovery transitions), 321 conditional, and 77 unavailable. All ready rules are currently `NOT_TRIGGERED`; missing future observations do not become triggers. Sign, margin-relative-drawdown, axis-state, and balance-sheet-state boundaries are zero because no current case satisfies their thesis-linkage and compatible retained-contract requirements.
+3. `HIGH_RISK_SPECULATION_CANDIDATE` remains a warning-only `FUNDAMENTAL_RISK_STATE` with a conditional boundary, not a fabricated positive-quality thesis. `AVOID_CANDIDATE` retains recovery/reversal semantics and never becomes SELL.
+4. Fundamental precision is consumed by the existing `shadow_action_readiness` and `action_instrumentation` contracts. It changes no posture: 40 records satisfy the unchanged full technical-plus-fundamental `READY_SHADOW` contract (13 initiate, 27 accumulate); 406 are conditional and 77 not-ready. WAIT remains independent of boundary precision.
+5. All outputs remain experiment/shadow-only attachments. There is no recommendation, action, target, probability, sizing, leverage, valuation, provider/official-evidence, or PIT promotion. If authorized, the only next action-lane capability is a bounded shadow security-recommendation contract.
+
 ## 2026-08-28 - Shadow Action Readiness V1
 
 `SHADOW_ACTION_READINESS_V1 = OUTCOME_B_SHADOW_POSTURES_ACTIVE_WITH_READINESS_LIMITS` (`shadow_action_readiness.py`, `tools/run_shadow_action_readiness_v1.py`; `push = NO`).

@@ -23,8 +23,10 @@ def _case(*, disposition="OPPORTUNITY_CASE_ELIGIBLE", state="BREAKOUT_READY", pe
 
 
 class ShadowActionReadinessTest(unittest.TestCase):
-    def _build(self, cases):
-        return build_artifact(research_cases={"denominator": len(cases), "artifact_identity": "cases", "records": cases})
+    def _build(self, cases, fundamental_boundaries=None, technical_boundaries=None):
+        return build_artifact(research_cases={"denominator": len(cases), "artifact_identity": "cases", "records": cases},
+                              fundamental_boundaries_by_ticker=fundamental_boundaries,
+                              technical_boundaries_by_ticker=technical_boundaries)
 
     def test_initiate_and_conditional_readiness_are_separate(self):
         record = self._build({"AAA": _case()})["records"]["AAA"]
@@ -44,6 +46,16 @@ class ShadowActionReadinessTest(unittest.TestCase):
         self.assertEqual(record["shadow_posture"], "INITIATE_CANDIDATE")
         self.assertEqual(record["qualified_catalyst"], [])
         self.assertEqual(record["retained_event_context"][0]["context_status"], "RETAINED_EVENT_CONTEXT")
+
+    def test_existing_gate_requires_both_precise_channels_without_posture_reclassification(self):
+        fundamental = {"AAA": {"fundamental_boundary": {"status": "READY", "rule_identity": "SUPER_SETUP_PERCENTILE_FLOOR/v1"}}}
+        technical = {"AAA": {"technical_risk_boundary": {"status": "READY", "source_rule": "R1"}}}
+        record = self._build({"AAA": _case()}, fundamental, technical)["records"]["AAA"]
+        self.assertEqual(record["shadow_posture"], "INITIATE_CANDIDATE")
+        self.assertEqual(record["action_readiness_gate"], "READY_SHADOW")
+        wait = self._build({"AAA": _case(state="BASE_BUILDING", percentile=.5)}, fundamental)["records"]["AAA"]
+        self.assertEqual(wait["shadow_posture"], "WAIT_FOR_CONFIRMATION_CANDIDATE")
+        self.assertEqual(wait["action_readiness_gate"], "CONDITIONAL_SHADOW")
 
     def test_high_risk_is_not_avoid_and_adverse_weak_is_avoid(self):
         high_risk = self._build({"AAA": _case(percentile=.2, archetype="HIGH_RISK_SPECULATION_THESIS")})["records"]["AAA"]
