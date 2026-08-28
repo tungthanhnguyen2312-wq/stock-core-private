@@ -855,6 +855,90 @@ def match_geometry_table_row(
     }
 
 
+def match_geometry_ambiguous_line_code_cell(
+    page: Mapping[str, Any],
+    *,
+    target_period: str,
+    required_label_terms: Sequence[str],
+) -> dict[str, Any] | None:
+    """Locate one malformed OCR line-code cell without interpreting its characters.
+
+    This is deliberately a crop-locator, not a correction routine.  The caller may
+    use its returned row geometry to re-read *only* a line-code cell, but still has
+    to independently prove the requested code from that secondary raw OCR output.
+    """
+    tokens = page.get("positioned_tokens") or []
+    if not tokens or {str(token.get("provenance", "")) for token in tokens} != {"OCR_TSV_POSITIONED_TOKEN"}:
+        return None
+    reconstruction = reconstruct_physical_lines(tokens)
+    lines = reconstruction["lines"]
+    discovered = discover_column_bands(lines, target_period)
+    if discovered is None:
+        return None
+    bands = discovered["bands"]
+    if max(bands["current_period_value"]["x0"], bands["comparative_period_value"]["x0"]) <= min(bands["current_period_value"]["x1"], bands["comparative_period_value"]["x1"]):
+        return None
+    normalized_terms = tuple(_normalize_text(term) for term in required_label_terms if _normalize_text(term))
+    if not normalized_terms:
+        return None
+    delimiter_baselines = sorted({
+        float(line["baseline"])
+        for line in lines
+        if any(_in_band(token, bands["line_code"]) for token in line["tokens"])
+    })
+    candidates = []
+    for line in lines:
+        code_tokens = [token for token in line["tokens"] if _in_band(token, bands["line_code"])]
+        # An exact token remains on the primary path.  This helper is specifically
+        # for an OCR-malformed code cell and refuses multiple competing candidates.
+        if len(code_tokens) != 1 or _CODE_LINE_RE.fullmatch(str(code_tokens[0]["text"]).strip()):
+            continue
+        baseline = float(line["baseline"])
+        below = max((value for value in delimiter_baselines if value < baseline), default=None)
+        above = min((value for value in delimiter_baselines if value > baseline), default=None)
+        lower_bound = (baseline + below) / 2.0 if below is not None else float("-inf")
+        upper_bound = (baseline + above) / 2.0 if above is not None else float("inf")
+        row_lines = [item for item in lines if lower_bound < float(item["baseline"]) <= upper_bound]
+        row_tokens = [token for row in row_lines for token in row["tokens"]]
+        label_right = float((bands["note_reference"] or bands["current_period_value"])["x0"])
+        label_band = {"x0": float(bands["line_code"]["x1"]), "x1": label_right}
+        label_tokens = [token for token in row_tokens if label_band["x0"] < float(token["x0"]) < label_band["x1"]]
+        label_tokens.sort(key=lambda token: (float(token["top"]), float(token["x0"]), int(token.get("raw_token_order", 0))))
+        raw_fragments = [str(token["text"]) for token in label_tokens]
+        reconstructed_label = " ".join(raw_fragments)
+        normalized_label = _normalize_text(reconstructed_label)
+        if not all(term in normalized_label for term in normalized_terms):
+            continue
+        current = [token for token in row_tokens if _in_band(token, bands["current_period_value"])]
+        comparative = [token for token in row_tokens if _in_band(token, bands["comparative_period_value"])]
+        if any(token in comparative for token in current) or len(current) != 1 or len(comparative) != 1:
+            continue
+        note = next((str(token["text"]).strip() for token in row_tokens if _in_band(token, bands["note_reference"]) and _NOTE_TOKEN_RE.fullmatch(str(token["text"]).strip())), None)
+        row_bbox = {
+            "x0": min(float(token["x0"]) for token in row_tokens), "x1": max(float(token["x1"]) for token in row_tokens),
+            "top": min(float(token["top"]) for token in row_tokens), "bottom": max(float(token["bottom"]) for token in row_tokens),
+        }
+        candidates.append({
+            "page": int(page["page_number"]), "line_text": reconstructed_label,
+            "observed_line_code_raw": str(code_tokens[0]["text"]),
+            "code_cell_bbox": {key: code_tokens[0][key] for key in ("x0", "x1", "top", "bottom")},
+            "code_row_bbox": dict(line["bbox"]),
+            "current_raw": str(current[0]["text"]), "comparative_raw": str(comparative[0]["text"]),
+            "row_object": {"document_sha": page.get("document_sha256"), "page": int(page["page_number"]), "table_id": None,
+                "statement_family": page.get("statement_family"), "row_bbox": row_bbox, "raw_label_fragments": raw_fragments,
+                "reconstructed_label": reconstructed_label, "observed_line_code_raw": str(code_tokens[0]["text"]), "note_reference": note,
+                "current_period_label": discovered["current_period_label"], "current_raw_value": str(current[0]["text"]),
+                "current_value_bbox": {key: current[0][key] for key in ("x0", "x1", "top", "bottom")},
+                "comparative_period_label": discovered["comparative_period_label"], "comparative_raw_value": str(comparative[0]["text"]),
+                "comparative_value_bbox": {key: comparative[0][key] for key in ("x0", "x1", "top", "bottom")},
+                "recognizer_version": GEOMETRY_RECOGNIZER_VERSION,
+                "physical_line_reconstruction": {"vertical_tolerance": reconstruction["vertical_tolerance"], "line_id": line["line_id"], "row_baseline_bounds": [lower_bound, upper_bound]},
+                "column_bands": {**discovered, "bands": {**discovered["bands"], "label": label_band}},
+            },
+        })
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def _geometry_column_major_match(page: Mapping[str, Any], metric: str, target_period: str) -> dict[str, Any] | None:
     tokens = page.get("positioned_tokens") or []
     if not tokens:

@@ -13,7 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from official_financial_ocr_table_evidence import materialize_tsv_pages, panel_facts_from_qualified_ocr, qualify_table_facts
+from official_financial_ocr_table_evidence import (
+    materialize_tsv_pages,
+    panel_facts_from_qualified_ocr,
+    qualify_table_facts,
+    resolve_ambiguous_debt_line_code_cells,
+)
 from official_financial_structural_table import reconcile_against_existing_panel
 from owner_focus_core_financial_panel_coverage import RETAINED_PDF_INVENTORY, build_artifact as build_owner_focus
 from p3f13_official_financial_evidence_scaleout import merge_document_qualified_facts_into_panel
@@ -58,7 +63,13 @@ def run(*, document_sha256: str, evidence_root: Path = DEFAULT_EVIDENCE_ROOT, pa
     record = _record(evidence_root, document_sha256)
     baseline_p3f13 = p3f13.execute()
     materialization = materialize_tsv_pages(record, evidence_root=evidence_root, pages=pages)
-    qualification = qualify_table_facts(materialization, ticker=record["ticker"], reporting_period=record["reporting_period"])
+    line_code_cell_resolution = resolve_ambiguous_debt_line_code_cells(
+        materialization, record=record, evidence_root=evidence_root, reporting_period=record["reporting_period"],
+    )
+    qualification = qualify_table_facts(
+        materialization, ticker=record["ticker"], reporting_period=record["reporting_period"],
+        line_code_cell_resolution=line_code_cell_resolution,
+    )
     candidates = _qualified_candidates(qualification, record)
     reconciliation = reconcile_against_existing_panel(candidates, baseline_p3f13["refreshed_panel_data"])
     eligible_metrics = {row["canonical_metric"] for row in reconciliation if row["eligible_for_ingress"]}
@@ -82,8 +93,9 @@ def run(*, document_sha256: str, evidence_root: Path = DEFAULT_EVIDENCE_ROOT, pa
     )
     owner_before = build_owner_focus(p3f13_artifact=baseline_p3f13, fundamental_artifact=current_fundamental.execute(requested_at=record["observed_at"]), pdf_inventory=json.loads(RETAINED_PDF_INVENTORY.read_text(encoding="utf-8")))
     owner_after = build_owner_focus(p3f13_artifact=after_p3f13, fundamental_artifact=after_current, pdf_inventory=json.loads(RETAINED_PDF_INVENTORY.read_text(encoding="utf-8")))
-    output = {"contract_version": "image_table_tsv_ocr_evidence_run/v1", "document": record,
-              "pages_requested": list(pages), "materialization": materialization, "qualification": qualification,
+    output = {"contract_version": "image_table_tsv_ocr_evidence_run/v2", "document": record,
+              "pages_requested": list(pages), "materialization": materialization,
+              "line_code_cell_resolution": line_code_cell_resolution, "qualification": qualification,
               "reconciliation": reconciliation, "ingress": {"eligible_metrics": sorted(eligible_metrics), "panel_facts": ingress_facts,
                   "duplicate_or_conflict_metrics": sorted(row["canonical_metric"] for row in reconciliation if not row["eligible_for_ingress"])},
               "p3f13_before_after": {"before_count": baseline_p3f13["refreshed_panel_data"]["qualified_facts_count"], "after_count": refreshed_panel["qualified_facts_count"],

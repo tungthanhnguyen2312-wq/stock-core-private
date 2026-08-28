@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-28 - FPT FY2025 Debt Line-Code Cell Disambiguation V1
+
+`FPT_FY2025_DEBT_LINE_CODE_CELL_DISAMBIGUATION_V1 = OUTCOME_A_FPT_DEBT_QUALIFIED_BY_CELL_LEVEL_CODE_EVIDENCE` (`push = NO`).
+
+1. A malformed primary TSV code token is never repaired. `match_geometry_ambiguous_line_code_cell` may locate one malformed OCR code cell only when the existing OCR-only physical-line reconstruction, code/value bands, borrowing-label terms, and two exact monetary cells produce one row. It returns the original token (`3²0` here), its bbox, and the unchanged row/value lineage; a token outside the code band, a missing label identity, multiple candidate cells, or ambiguous monetary cells fails closed.
+2. `ocr_cell_code_read/v1` is the only secondary procedure: the deterministic 240-DPI source render is cropped to the discovered code-band × code-row rectangle, hashes the crop, expands it by fixed 4× Lanczos, and invokes Tesseract once with fixed English/PSM-8 and a digits-only whitelist. The whitelist is limited to the accounting line-code field. Only raw ASCII digits satisfying the existing 1–3 digit code contract and exactly matching the already-declared taxonomy code can qualify; an empty, invalid, or conflicting raw result blocks. No DPI/PSM/threshold/rotation loop, Unicode replacement, monetary OCR, or ticker-specific conditional exists.
+3. The retained FPT crop returns raw `320`; p10 code 338 stays primary-exact. Their source-bound values are 19,169,697,497,955 and 1,903,789,988,184 VND, so the pre-existing explicit component sum qualifies debt at 21,073,487,486,139 VND. P3-F13 remains additive/non-overwriting and replays 138→142. FPT current primary-core coverage moves 6→7/7, fundamental readiness stays `PARTIAL` because only compatible prior annual periods are absent, leverage is supportable, and valuation input availability remains partial.
+4. The deterministic owner-focus queue's next P0 target is PNJ FY2025 `net_income`, an existing image-only official-document opportunity. This does not authorize a further FPT technique or any next milestone; no network, provider, package/model install, production DB, Dashboard, VALUE, ranking, recommendation, target, probability, sizing, or PIT promotion occurred.
+
 ## 2026-08-28 - FPT FY2025 Image-Table TSV OCR Evidence Qualification V1
 
 `FPT_FY2025_IMAGE_TABLE_TSV_OCR_EVIDENCE_QUALIFICATION_V1 = OUTCOME_B_OCR_GEOMETRY_WORKS_WITH_NUMERIC_AMBIGUITIES_BLOCKING_SOME_FACTS` (`push = NO`).
