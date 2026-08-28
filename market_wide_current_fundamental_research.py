@@ -1007,10 +1007,18 @@ def _income_statement_period_semantic_coverage(
 
 def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[str, Any],
                    requested_at: str,
-                   provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]] | None = None) -> dict[str, Any]:
+                   provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]] | None = None,
+                   operational_proxy_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Build the complete market-wide current fundamental-research artifact from two already
     -computed inputs. Raises if p3f13_current was not derived from exactly this p3f10_frozen
-    checkpoint (a cross-repository content-identity guard, not a recomputation)."""
+    checkpoint (a cross-repository content-identity guard, not a recomputation).
+
+    `operational_proxy_by_ticker` is an optional, read-only attach point for
+    `financial_operational_proxy.build_operational_proxy_artifact(...)`'s per-ticker
+    records (keyed by ticker). It never changes `authority_tier` dispatch and is never
+    recomputed here -- this function only copies through what it is given. Default `None`
+    leaves every existing caller's output byte-identical to before this parameter existed
+    (no `operational_proxy` key on any record, no `operational_proxy_coverage` section)."""
     if p3f13_current.get("source_artifacts", {}).get("p3f10") != p3f10_frozen.get("artifact_identity"):
         raise ValueError("P3F10_ARTIFACT_IDENTITY_MISMATCH")
 
@@ -1051,6 +1059,11 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         record["entity_class_provenance"] = resolution
         record["entity_class_applicability"] = _entity_class_metric_applicability(resolution["entity_class"])
         record["fundamental_trajectory_context"] = _trajectory_context(record)
+        if operational_proxy_by_ticker is not None and operational_proxy_by_ticker.get(ticker) is not None:
+            # Read-only passthrough: the operational-proxy tier/fitness classification was
+            # already computed by financial_operational_proxy.py against this same ticker's
+            # retained canonical facts. Nothing here recomputes it or touches authority_tier.
+            record["operational_proxy"] = operational_proxy_by_ticker[ticker]
 
     official_tickers = sorted(official_rows)
     official_records = [records[ticker] for ticker in official_tickers]
@@ -1158,6 +1171,29 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         "ticker_specific_branch_audit": {"status": "PASS", "production_ticker_literals": []},
         "records": records,
     }
+    if operational_proxy_by_ticker is not None:
+        attached = [records[ticker]["operational_proxy"] for ticker in all_tickers if "operational_proxy" in records[ticker]]
+        tier_counts: Counter[str] = Counter()
+        verified_research_evidence_count = 0
+        official_count = sum(1 for row in official_records)
+        for proxy_record in attached:
+            for tier, count in (proxy_record.get("tier_counts") or {}).items():
+                tier_counts[tier] += count
+            verified_research_evidence_count += (proxy_record.get("tier_counts") or {}).get("VERIFIED_RESEARCH_EVIDENCE", 0)
+        # Reported separately per the milestone contract: official facts, verified-research
+        # facts, and operational-proxy facts must never be flattened into one count.
+        official_qualified_fact_count = sum(
+            1 for row in official_records for metric in row.get("metrics", [])
+            if metric.get("status") == "EXACT_QUALIFIED"
+        )
+        artifact["operational_proxy_coverage"] = {
+            "attached_ticker_count": len(attached),
+            "official_qualified_fact_count": official_qualified_fact_count,
+            "operational_proxy_fact_count": tier_counts.get("OPERATIONAL_PROXY", 0),
+            "verified_research_evidence_fact_count": verified_research_evidence_count,
+            "official_qualified_issuer_count": len(official_tickers),
+            "authoritative_coverage_unchanged": True,
+        }
     identity = content_identity(artifact)
     artifact["artifact_sha256"] = identity["artifact_sha256"]
     artifact["artifact_identity"] = identity["artifact_identity"]
