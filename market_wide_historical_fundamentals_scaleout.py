@@ -14,6 +14,7 @@ from typing import Any, Mapping
 
 import canonical_fact_store as store
 import financial_operational_proxy as proxy
+import market_wide_fundamental_features as features
 import market_wide_current_fundamental_research as research
 import p3f13_official_financial_evidence_scaleout as p3f13
 
@@ -36,6 +37,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
                    runtime_root: Path = RUNTIME_ROOT, profiles_path: Path = PROFILES_PATH) -> dict[str, Any]:
     """Replay every current-consumer ticker through the unmodified proxy contract."""
     tickers = sorted(str(row["ticker"]) for row in p3f10_frozen["instrument_dispositions"])
+    resolved = research.build_artifact(p3f10_frozen=p3f10_frozen, p3f13_current=p3f13_current, requested_at=requested_at,
+                                      provider_series_by_ticker=research.load_retained_provider_series(research.DEFAULT_CANONICAL_FACTS_ROOT))
     profiles = store.load_entity_profiles(profiles_path)
     citations = store.load_official_citations(runtime_root)
     facts_by_ticker: dict[str, list[dict[str, Any]]] = {}
@@ -44,7 +47,7 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
     for ticker in tickers:
         built = store.build_ticker_facts(runtime_root, ticker, profiles=profiles, official_citations=citations)
         facts_by_ticker[ticker] = built["facts"]
-        entity_type = built["applicability"]["archetype"].get("issuer_entity_type")
+        entity_type = resolved["records"][ticker]["entity_class"]
         entity_type_by_ticker[ticker] = entity_type
         manifest.append({"ticker": ticker, "entity_type": entity_type or "unknown", "canonical_fact_count": len(built["facts"]),
                          "terminal_disposition": "REPLAY_ELIGIBLE" if built["facts"] else "NO_RETAINED_PROVIDER_FACTS"})
@@ -54,6 +57,7 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
     )
     for row in manifest:
         record = operational["records"][row["ticker"]]
+        record["fundamental_features"] = features.build_ticker_features(record)
         row["terminal_disposition"] = (
             "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE" if not record["entity_type_supported_this_milestone"]
             else "OPERATIONAL_PROXY_OR_VERIFIED_RESEARCH_EVIDENCE" if sum(record["tier_counts"].values())
@@ -82,7 +86,7 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
                      "terminal_blockers": dict(sorted(by_blocker.items())), "annual_depth_distribution": dict(sorted(depth.items())),
                      "facts_by_metric_and_evidence_tier": {f"{metric}:{tier}": count for (metric, tier), count in sorted(metric_tiers.items(), key=lambda item: (str(item[0][0]), str(item[0][1])))},
                      "derived_metrics": {f"{metric}:{status}": count for (metric, status), count in sorted(derived.items(), key=lambda item: (str(item[0][0]), str(item[0][1])))},
-                     "operational_proxy": operational["coverage"], "consumer": attached.get("operational_proxy_coverage")},
+                     "operational_proxy": operational["coverage"], "feature_readiness": features.summarize(operational["records"]), "consumer": attached.get("operational_proxy_coverage")},
         "operational_proxy": operational, "consumer_artifact": attached,
         "authority_boundary": {"authoritative_counts_before": 13, "authoritative_counts_after": 13, "authoritative_evidence_promoted": False,
                                "network_used": False, "ocr_used": False, "valuation_unlocked": False,

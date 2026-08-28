@@ -2818,3 +2818,11 @@ single-ticker work.
 2. Only 21 resolved corporate records emit 808 operational-proxy and 6 verified-research facts. The 502 bank/securities/finance-company/insurance/unknown records remain terminally sector-blocked; no corporate identity is applied to them.
 3. The existing consumer attaches the proxy records read-only and keeps 94 official facts, 6 verified-research facts, and 808 operational-proxy facts separate. Authoritative issuer count is unchanged at 13 and valuation remains blocked where absolute semantics are unresolved.
 4. The next shared capability is entity-class and sector-specific provider financial identity/semantic coverage; no provider addition, OCR/official scaleout, or authority-bearing downstream feature is authorized here.
+## 2026-08-28 - Market-wide Fundamental Feature Activation V1
+
+`MARKET_WIDE_FUNDAMENTAL_FEATURE_ACTIVATION_V1 = OUTCOME_B_FEATURE_ENGINE_ACTIVE_WITH_SHARED_INPUT_LIMITS` (`push = NO`).
+
+1. The existing consumer entity resolver is the bounded retained-metadata precondition: 452 corporate / 28 bank / 33 securities / 7 insurance / 1 finance-company / 2 unknown. Unknown never defaults to corporate; all non-corporate and unknown records remain outside industrial formulas.
+2. The existing operational proxy is replayed unchanged: proxy-ready records rise 21→449, facts 808→17,276, verified-research stays 6, and authoritative issuer count stays 13.
+3. The feature envelope is per-feature and research-only. Current retained provider flow facts are quarterly, so annual YoY/CAGR/margin/cross-statement calculations and full Piotroski remain blocked instead of making an unsupported Q4-as-annual inference.
+4. No authority is promoted. Future work should be an analysis capability using compatible retained annual/duration-evidenced inputs, not another tier, registry, or provider architecture milestone.
