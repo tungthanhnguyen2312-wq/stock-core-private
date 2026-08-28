@@ -138,7 +138,9 @@ def adapter_dataframe_from_raw(request: Mapping[str, Any], raw: Mapping[str, Any
         report_key = "Kết quả kinh doanh"
     else:
         report_key = next((str(key) for key in raw.get("Content", {}) if str(key).startswith("Lưu chuyển tiền tệ")), "")
-    adapter = Finance(symbol=str(request["ticker"]), period="year", show_log=False)
+    adapter = Finance(symbol=str(request["ticker"]),
+                      period="quarter" if request.get("request_mode") == "quarterly" else "year",
+                      show_log=False)
     return adapter._parse_financial_response(dict(raw), report_key, unit_multiplier=1000.0)
 
 
