@@ -1010,7 +1010,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
                    provider_series_by_ticker: Mapping[str, list[Mapping[str, Any]]] | None = None,
                    operational_proxy_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
                    financial_flow_ttm_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
-                   opportunity_research_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
+                   opportunity_research_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
+                   research_cases_by_ticker: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Build the complete market-wide current fundamental-research artifact from two already
     -computed inputs. Raises if p3f13_current was not derived from exactly this p3f10_frozen
     checkpoint (a cross-repository content-identity guard, not a recomputation).
@@ -1028,7 +1029,11 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
 
     `opportunity_research_by_ticker` is likewise an optional, read-only consumer attachment.
     It carries a separately-labelled downstream research view and cannot flatten provider facts,
-    derived features, valuation proxies, or confidence into official facts or authority."""
+    derived features, valuation proxies, or confidence into official facts or authority.
+
+    `research_cases_by_ticker` is an optional downstream thesis/catalyst/downside attachment.
+    It remains distinct from facts, features, tactical state, valuation, and opportunity research;
+    default `None` leaves legacy output byte-identical."""
     if p3f13_current.get("source_artifacts", {}).get("p3f10") != p3f10_frozen.get("artifact_identity"):
         raise ValueError("P3F10_ARTIFACT_IDENTITY_MISMATCH")
 
@@ -1082,6 +1087,10 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
             # Opportunity research is a downstream interpretation whose dimensions remain
             # separately visible.  This consumer does not recalculate or promote it.
             record["opportunity_research"] = opportunity_research_by_ticker[ticker]
+        if research_cases_by_ticker is not None and research_cases_by_ticker.get(ticker) is not None:
+            # A research case is a separate, read-only interpretation.  It cannot promote or
+            # overwrite upstream facts, evidence tiers, fitness, or authority fields.
+            record["research_case"] = research_cases_by_ticker[ticker]
 
     official_tickers = sorted(official_rows)
     official_records = [records[ticker] for ticker in official_tickers]
@@ -1227,6 +1236,14 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
         artifact["opportunity_research_coverage"] = {
             "attached_ticker_count": len(attached),
             "attachment_mode": "READ_ONLY_SEPARATE_RESEARCH_DIMENSIONS",
+            "authoritative_coverage_unchanged": True,
+            "provider_facts_flattened_into_official_facts": False,
+        }
+    if research_cases_by_ticker is not None:
+        attached = [records[ticker]["research_case"] for ticker in all_tickers if "research_case" in records[ticker]]
+        artifact["research_case_coverage"] = {
+            "attached_ticker_count": len(attached),
+            "attachment_mode": "READ_ONLY_SEPARATE_THESIS_CATALYST_DOWNSIDE_RESEARCH_CASE",
             "authoritative_coverage_unchanged": True,
             "provider_facts_flattened_into_official_facts": False,
         }

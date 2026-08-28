@@ -116,6 +116,16 @@ class BuildArtifactJoinLogic(unittest.TestCase):
         self.assertEqual(artifact["opportunity_research_coverage"]["attached_ticker_count"], 1)
         self.assertFalse(artifact["opportunity_research_coverage"]["provider_facts_flattened_into_official_facts"])
 
+    def test_research_case_attachment_is_separate_and_opt_in(self) -> None:
+        artifact = build_artifact(
+            p3f10_frozen=self.p3f10_frozen, p3f13_current=self.p3f13_current, requested_at="t",
+            research_cases_by_ticker={"AAA": {"case_readiness": "RESEARCH_CASE_READY_WITH_MISSING_CATALYST"}},
+        )
+        self.assertEqual(artifact["records"]["AAA"]["research_case"]["case_readiness"], "RESEARCH_CASE_READY_WITH_MISSING_CATALYST")
+        self.assertNotIn("research_case", artifact["records"]["BBB"])
+        self.assertEqual(artifact["research_case_coverage"]["attached_ticker_count"], 1)
+        self.assertTrue(artifact["research_case_coverage"]["authoritative_coverage_unchanged"])
+
     def test_flow_ttm_attachment_is_separate_and_opt_in(self) -> None:
         ttm = {"status": "AVAILABLE", "ttm": {"revenue": {"value": 100, "evidence_tier": "OPERATIONAL_PROXY"}}}
         artifact = build_artifact(
