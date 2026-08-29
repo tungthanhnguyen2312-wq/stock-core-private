@@ -127,6 +127,17 @@ def test_phase_a_historical_session_without_qualified_evidence_fails_closed():
     assert "EXACT_SESSION_EVIDENCE_ABSENT" in result["reason_codes"]
 
 
+def test_phase_a_historical_target_acquisition_is_explicitly_opt_in():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
+        allow_historical_target_session_acquisition=True,
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert "ATTEMPT_ELIGIBLE_HISTORICAL_TARGET_SESSION_ACQUISITION" in result["reason_codes"]
+
+
 def test_valid_working_date_exact_session_after_floor_is_ready():
     result = gate.evaluate_completed_market_session_gate(
         requested_at=POST_CLOSE,

@@ -84,14 +84,26 @@ def _observation_rows(body: Mapping[str, Any], *, requested_session: str, query:
 
 
 def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_key: str, api_secret: str,
+                         target_session: str | None = None,
                          fetcher: Callable[..., dict[str, Any]] = fetch_capability_raw, workers: int = 8,
                          request_limit: int | None = None) -> dict[str, Any]:
     """Fetch each canonical candidate through one generic DNSE path, no fallback."""
-    target = resolved_completed_session(requested_at)
+    observed_at = requested_at.astimezone(VN_TZ) if requested_at.tzinfo else requested_at.replace(tzinfo=VN_TZ)
+    if target_session is None:
+        target = resolved_completed_session(observed_at)
+        target_mode = "LATEST_COMPLETED_AT_OBSERVED_AT"
+    else:
+        try:
+            target = datetime.fromisoformat(str(target_session)).date().isoformat()
+        except ValueError as exc:
+            raise ValueError("INVALID_TARGET_SESSION") from exc
+        if target > observed_at.date().isoformat():
+            raise ValueError("TARGET_SESSION_AFTER_OBSERVED_AT")
+        target_mode = "EXPLICIT_TARGET_SESSION"
     start = datetime.combine(datetime.fromisoformat(target).date() - timedelta(days=EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS), datetime.min.time(), VN_TZ)
     end = datetime.combine(datetime.fromisoformat(target).date() + timedelta(days=1), datetime.min.time(), VN_TZ) - timedelta(seconds=1)
     query_base = {"resolution": "1D", "from": int(start.timestamp()), "to": int(end.timestamp()), "type": "STOCK"}
-    retrieved_at = requested_at.astimezone(VN_TZ).isoformat()
+    retrieved_at = observed_at.isoformat()
 
     def one(ticker: str) -> tuple[str, dict[str, Any]]:
         query = {"symbol": ticker, **query_base}
@@ -155,7 +167,9 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
     snapshot: dict[str, Any] = {
         "schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "artifact_type": "P3F9_MVA_EXACT_SESSION_SNAPSHOT",
         **REQUIRED_ENVELOPE,
-        "resolved_completed_session": target, "retained_snapshot_session": target, "requested_at": retrieved_at,
+        "resolved_completed_session": target, "retained_snapshot_session": target,
+        "requested_at": retrieved_at, "observed_at": retrieved_at,
+        "target_session": target, "target_session_mode": target_mode,
         "canonical_identity": "runtime_metadata_ticker_sorted_v1", "candidate_count": len(candidates),
         "candidate_pre_classification": {"ATTEMPT_ELIGIBLE": len(candidates), "NOT_APPLICABLE": 0, "INSTRUMENT_UNRESOLVED": 0, "EXPLICITLY_EXCLUDED_BY_EXISTING_CONTRACT": 0},
         "materialization_scope": "FULL_CANONICAL_CANDIDATE_SET" if request_limit is None else "EXPLICIT_PARTIAL_PROVIDER_WINDOW",
@@ -165,6 +179,7 @@ def materialize_snapshot(*, candidates: list[str], requested_at: datetime, api_k
         "unattempted_without_explicit_disposition": 0,
         "sessions": sessions,
         "source": {"provider": "DNSE", "endpoint": "/price/ohlc", "dataset": "DNSE_OHLC_1D", "request_contract": query_base,
+                   "target_session": target, "observed_at": retrieved_at,
                    "no_older_session_substitution": True, "intraday_observations_used": False},
         "records": records,
         "authority_boundary": {"CURRENT_MARKET": "DESCRIPTIVE_QUALIFIED_ONLY", "RAW_AS_TRADED": "NOT_PROMOTED", "HISTORICAL_PIT": "BLOCKED",

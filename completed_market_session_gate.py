@@ -745,6 +745,7 @@ def evaluate_attempt_eligibility(
     exact_session_evidence: Mapping[str, Any] | None = None,
     working_dates_fetcher: Callable[[], Mapping[str, Any]] | None = None,
     allow_provider_probe: bool = False,
+    allow_historical_target_session_acquisition: bool = False,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Phase A: may the operator attempt bounded post-close acquisition now?
@@ -824,6 +825,16 @@ def evaluate_attempt_eligibility(
                     [
                         "ATTEMPT_ELIGIBLE_AFTER_SAFETY_FLOOR",
                         "RETAINED_HISTORICAL_EXACT_SESSION_IDENTITY_CONFIRMED",
+                    ],
+                    resolved,
+                    method,
+                )
+            if allow_historical_target_session_acquisition:
+                return emit(
+                    STATUS_ATTEMPT_ELIGIBLE,
+                    [
+                        "ATTEMPT_ELIGIBLE_HISTORICAL_TARGET_SESSION_ACQUISITION",
+                        "HISTORICAL_WORKING_DATE_IDENTITY_PENDING_EXACT_DNSE_RESPONSE",
                     ],
                     resolved,
                     method,

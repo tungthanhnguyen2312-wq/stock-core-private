@@ -289,11 +289,50 @@ def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None =
     assert_same_day_post_close_eligible(session, now=now)
     default_paths = level2.session_artifact_paths(root, session)
     existing = _load(default_paths["exact_session_snapshot"])
+
+    def retained_attempt_root() -> tuple[Path, Mapping[str, Any]] | None:
+        # A completed historical P3F9B attempt is retained beneath the canonical
+        # attempt namespace. Reuse its exact artifact root rather than using the
+        # current wall clock to acquire whichever session is latest today.
+        attempts_root = root / "operations-review" / "canonical-post-close-v1" / session
+        if attempts_root.is_dir():
+            for candidate_root in sorted(attempts_root.glob("post-close-attempt-*"), reverse=True):
+                candidate = _load(level2.session_artifact_paths(candidate_root, session)["exact_session_snapshot"])
+                if not isinstance(candidate, Mapping):
+                    continue
+                try:
+                    assert_post_close_eligible(candidate, session, now=now)
+                except PreCutoffArtifactError:
+                    continue
+                return candidate_root, candidate
+
+        return None
+
     if existing is None:
+        retained = retained_attempt_root()
+        if retained is not None:
+            candidate_root, candidate = retained
+            return candidate_root, {
+                "redirected": False,
+                "reused_existing_eligible_artifact": True,
+                "historical_retained_reuse": True,
+                "artifact_identity": candidate.get("snapshot_identity"),
+                "artifact_root": _rel(root, candidate_root),
+            }
         return root, {"redirected": False, "reason": "NO_EXISTING_ARTIFACT_FOR_SESSION"}
     try:
         assert_post_close_eligible(existing, session, now=now)
     except PreCutoffArtifactError as exc:
+        retained = retained_attempt_root()
+        if retained is not None:
+            candidate_root, candidate = retained
+            return candidate_root, {
+                "redirected": False,
+                "reused_existing_eligible_artifact": True,
+                "historical_retained_reuse": True,
+                "artifact_identity": candidate.get("snapshot_identity"),
+                "artifact_root": _rel(root, candidate_root),
+            }
         attempt_root = (
             root / "operations-review" / "canonical-post-close-v1" / session
             / f"post-close-attempt-{now.astimezone(VN_TZ).strftime('%H%M%S')}"

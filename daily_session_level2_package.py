@@ -879,16 +879,15 @@ def materialize_independent_components(
     p3f9b_snapshot = paths["exact_session_snapshot"]
     p3f9b_dir = p3f9b_snapshot.parent
     if not p3f9b_snapshot.exists():
-        # The P3F9B CLI has no --session flag: it always targets whatever
-        # freshness_history/resolved_completed_session resolves as of --requested-at
-        # (defaulting to real current time). A caller-requested session is honored only
-        # by verifying the acquired snapshot's own resolved_completed_session afterward --
-        # never by asking the acquisition route for an arbitrary date it cannot target.
+        # P3F9B explicitly requests the canonical target session while retaining
+        # actual observed-at time independently. The returned snapshot must still
+        # prove exact equality below; no prior/latest substitution is allowed.
         cmd = [
             "tools/run_p3f9b_market_wide_exact_session_scaleout.py",
             "--runtime-root", str(runtime_root),
             "--output-dir", str(p3f9b_dir),
             "--workers", str(workers),
+            "--session", session,
         ]
         if now is not None:
             cmd += ["--requested-at", now.astimezone(VN_TZ).isoformat()]

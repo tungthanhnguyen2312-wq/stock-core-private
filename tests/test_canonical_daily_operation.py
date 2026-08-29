@@ -269,19 +269,22 @@ def test_2026_08_26_retained_artifact_is_loaded_read_only_without_regeneration(t
     assert retained.read_bytes() == original_bytes
 
 
-def test_backdated_historical_session_without_exact_evidence_skips_acquisition(tmp_path, monkeypatch):
-    def forbidden(*_args, **_kwargs):
-        raise AssertionError("acquisition_must_not_run")
+def test_backdated_historical_session_without_exact_evidence_requests_exact_target(tmp_path, monkeypatch):
+    seen_sessions = []
 
-    with pytest.raises(cdo.CanonicalDailyOperationError) as exc:
-        _run(
-            tmp_path,
-            monkeypatch,
-            now=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
-            working=_working_dates("2026-08-31", "2026-09-01"),
-            acquire_fn=forbidden,
-        )
-    assert exc.value.stage == cdo.STAGE_PROVIDER_EVIDENCE_UNAVAILABLE
+    def acquire(_root, requested_session, *_args, **_kwargs):
+        seen_sessions.append(requested_session)
+        return _acquired(tmp_path, requested_session)
+
+    record = _run(
+        tmp_path,
+        monkeypatch,
+        now=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        working=_working_dates("2026-08-31", "2026-09-01"),
+        acquire_fn=acquire,
+    )
+    assert record["phase_a"]["status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert seen_sessions == [SESSION]
 
 
 def test_stale_prior_session_response_fails(tmp_path, monkeypatch):

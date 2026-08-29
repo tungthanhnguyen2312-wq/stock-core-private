@@ -323,6 +323,7 @@ def run_canonical_daily_operation(
             exact_session_evidence=resolved_exact_evidence,
             working_dates_fetcher=probe,
             allow_provider_probe=allow_provider_probe,
+            allow_historical_target_session_acquisition=True,
         )
     except CompletedSessionGateError as exc:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_PRE_ACQUISITION, str(exc)) from exc

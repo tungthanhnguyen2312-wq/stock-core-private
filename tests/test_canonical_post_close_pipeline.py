@@ -636,6 +636,29 @@ def test_eligible_post_cutoff_artifact_rerun_is_idempotent_no_redirect(tmp_path)
     assert info2["redirected"] is False and info2.get("reused_existing_eligible_artifact") is True
 
 
+def test_retained_historical_attempt_is_reused_without_p3f9b_reacquisition(tmp_path):
+    session = "2026-08-27"
+    # A failed wall-clock acquisition may have left a static path carrying a
+    # different session. It is retained as evidence but must never outrank the
+    # exact historical attempt below.
+    _write_snapshot(
+        level2.session_artifact_paths(tmp_path, session), "2026-08-28",
+        requested_at="2026-08-30T10:00:00+07:00", exact=800, total=1683,
+    )
+    attempt_root = tmp_path / "operations-review" / "canonical-post-close-v1" / session / "post-close-attempt-190000"
+    paths = level2.session_artifact_paths(attempt_root, session)
+    _write_snapshot(paths, session, requested_at="2026-08-27T19:00:00+07:00", exact=839, total=1683)
+
+    root, info = cpc.resolve_acquisition_root(
+        tmp_path, session, now=datetime(2026, 8, 30, 10, 0, tzinfo=VN_TZ),
+    )
+
+    assert root == attempt_root
+    assert info["reused_existing_eligible_artifact"] is True
+    assert info["historical_retained_reuse"] is True
+    assert paths["exact_session_snapshot"].is_file()
+
+
 # --- 9. requested session mismatch still fails: see test_acquired_session_mismatch_never_silently_substituted above ---
 # --- 10. legacy VCI/KBS unreachable from --canonical-post-close: see test_module_never_references_legacy_vci_kbs_route
 #         and test_canonical_post_close_flag_never_invokes_legacy_step_runner above ---

@@ -36,6 +36,7 @@ def execute(
     runtime: Path,
     output_dir: Path,
     requested_at: datetime | None = None,
+    target_session: str | None = None,
     workers: int = 12,
     request_limit: int | None = None,
 ) -> dict[str, Any]:
@@ -60,6 +61,7 @@ def execute(
     snapshot = snapshotter.materialize_snapshot(
         candidates=candidates,
         requested_at=now,
+        target_session=target_session,
         api_key=creds[0],
         api_secret=creds[1],
         workers=workers,
@@ -355,6 +357,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Output directory for P3-F9B artifacts")
     parser.add_argument("--workers", type=int, default=12, help="Parallel worker threads for generic DNSE fetch")
     parser.add_argument("--requested-at", default=None, help="Reference ISO timestamp (defaults to current time)")
+    parser.add_argument("--session", default=None, help="Explicit target session YYYY-MM-DD; observed time remains --requested-at/current time")
     parser.add_argument("--request-limit", type=int, default=None, help="Optional request limit for testing")
     args = parser.parse_args(argv)
 
@@ -369,6 +372,7 @@ def main(argv: list[str] | None = None) -> int:
         runtime=root,
         output_dir=Path(args.output_dir),
         requested_at=req_time,
+        target_session=args.session,
         workers=args.workers,
         request_limit=args.request_limit,
     )

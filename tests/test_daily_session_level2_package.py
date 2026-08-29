@@ -73,6 +73,7 @@ def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp
     assert command[0] == "tools/run_p3f9b_market_wide_exact_session_scaleout.py"
     assert command[command.index("--output-dir") + 1] == str(paths["exact_session_snapshot"].parent)
     assert str(attempt_root) in command[command.index("--output-dir") + 1]
+    assert command[command.index("--session") + 1] == session
 
 
 def test_ordinary_materialization_keeps_its_single_root_as_execution_root(tmp_path):

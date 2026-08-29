@@ -37,6 +37,27 @@ class TestP3F9ExactSessionSnapshot(unittest.TestCase):
         self.assertEqual("EXACT_SESSION_MISSING", snap["records"]["AAA"]["status"])
         self.assertEqual(0, snap["exact_session_observed_count"])
 
+    def test_explicit_historical_target_keeps_actual_observed_at(self):
+        captured = {}
+
+        def capturing_fetcher(_capability, **kwargs):
+            captured["query"] = kwargs["query"]
+            return fetcher(_capability, **kwargs)
+
+        observed_at = datetime(2026, 8, 30, 10, 15, tzinfo=VN)
+        snap = m.materialize_snapshot(
+            candidates=["AAA"], requested_at=observed_at, target_session="2026-08-20",
+            api_key="x", api_secret="y", fetcher=capturing_fetcher, workers=1,
+        )
+        self.assertEqual("2026-08-20", snap["resolved_completed_session"])
+        self.assertEqual("2026-08-20", snap["target_session"])
+        self.assertEqual("EXPLICIT_TARGET_SESSION", snap["target_session_mode"])
+        self.assertEqual(observed_at.isoformat(), snap["requested_at"])
+        self.assertEqual(observed_at.isoformat(), snap["observed_at"])
+        self.assertEqual("2026-08-20", snap["source"]["target_session"])
+        self.assertEqual(observed_at.isoformat(), snap["source"]["observed_at"])
+        self.assertEqual(int(datetime(2026, 8, 20, tzinfo=VN).timestamp()), captured["query"]["to"] - 86399)
+
     def test_intraday_and_malformed_are_rejected(self):
         def malformed(*args, **kwargs): return {"ok": True, "body": {"t": [], "c": []}}
         snap = m.materialize_snapshot(candidates=["AAA"], requested_at=datetime(2026, 8, 20, 16, tzinfo=VN), api_key="x", api_secret="y", fetcher=malformed, workers=1)
