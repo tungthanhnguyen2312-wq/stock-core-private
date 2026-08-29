@@ -19,7 +19,7 @@ import fitz
 from annual_financial_ocr_materialization import DEFAULT_ENGINE, sha256_file
 from official_financial_ocr_table_evidence import (
     materialize_tsv_pages, panel_facts_from_qualified_ocr, qualify_table_facts,
-    resolve_ambiguous_debt_line_code_cells,
+    resolve_ambiguous_debt_line_code_cells, resolve_scoped_unit_evidence,
 )
 from official_financial_structural_table import reconcile_against_existing_panel
 from owner_focus_core_financial_panel_coverage import RETAINED_PDF_INVENTORY, build_artifact as build_owner_focus
@@ -190,18 +190,14 @@ def process_document(record: Mapping[str, Any], *, evidence_root: Path = EVIDENC
         return {"record": dict(record), "discovery": discovery, "terminal_disposition": "STATEMENT_NOT_FOUND", "metric_dispositions": [{"canonical_metric": metric, "disposition": "STATEMENT_NOT_FOUND"} for metric in CORE_METRICS], "qualification": None}
     source_record = {"sha256": record["document_sha256"], "relative_path": record["retained_path"], "document_id": record["document_sha256"], "ticker": record["ticker"], "reporting_period": record["reporting_period"], "observed_at": "2026-08-09T00:00:00Z"}
     materialization = materialize_tsv_pages(source_record, evidence_root=evidence_root, pages=pages)
-    observed_units = {str(token["text"]).upper() for page in materialization.get("pages", []) for token in (page.get("ocr_derived_text_evidence") or {}).get("tokens", []) if str(token.get("text", "")).upper() in {"VND", "USD"}}
-    # This batch has no USD-to-VND source/unit contract.  Keep the source rows
-    # retained and explicitly block their values instead of relabelling them VND.
-    if observed_units != {"VND"}:
-        return {"record": dict(record), "discovery": discovery, "terminal_disposition": "UNIT_SCALE_BLOCKED", "materialization": materialization,
-                "metric_dispositions": [{"canonical_metric": metric, "disposition": "UNIT_SCALE_BLOCKED"} for metric in CORE_METRICS], "qualification": None}
+    scoped_unit_evidence = resolve_scoped_unit_evidence(materialization)
     resolution = resolve_ambiguous_debt_line_code_cells(materialization, record=source_record, evidence_root=evidence_root, reporting_period=str(record["reporting_period"]))
-    qualification = qualify_table_facts(materialization, ticker=str(record["ticker"]), reporting_period=str(record["reporting_period"]), line_code_cell_resolution=resolution)
+    qualification = qualify_table_facts(materialization, ticker=str(record["ticker"]), reporting_period=str(record["reporting_period"]), line_code_cell_resolution=resolution, scoped_unit_evidence=scoped_unit_evidence)
     qualified = {row["canonical_metric"] for row in qualification["qualified_facts"]}
     blocked = {row["canonical_metric"]: row["reason"] for row in qualification["blocked_candidates"]}
     dispositions = [{"canonical_metric": metric, "disposition": "OFFICIAL_FACT_QUALIFIED_NEW" if metric in qualified else "REQUIRED_COMPONENT_MISSING" if blocked.get(metric) == "DEBT_COMPONENT_INCOMPLETE" else "CANONICAL_ROW_AMBIGUOUS" if blocked.get(metric) == "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED" else blocked.get(metric, "NOT_APPLICABLE")} for metric in CORE_METRICS]
-    return {"record": dict(record), "discovery": discovery, "terminal_disposition": "PROCESSED", "materialization": materialization, "line_code_cell_resolution": resolution, "qualification": qualification, "metric_dispositions": dispositions}
+    terminal = "PROCESSED" if qualification["qualified_facts"] else "UNIT_SCALE_BLOCKED" if any(row.get("reason") == "UNIT_SCALE_BLOCKED" for row in qualification["blocked_candidates"]) else "PROCESSED"
+    return {"record": dict(record), "discovery": discovery, "terminal_disposition": terminal, "materialization": materialization, "scoped_unit_evidence": scoped_unit_evidence, "line_code_cell_resolution": resolution, "qualification": qualification, "metric_dispositions": dispositions}
 
 
 def build_batch_artifact(*, inventory: Mapping[str, Any], official_manifest: Mapping[str, Any], owner_focus_artifact: Mapping[str, Any], evidence_root: Path = EVIDENCE_ROOT) -> dict[str, Any]:

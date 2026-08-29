@@ -40,6 +40,7 @@ from annual_financial_ocr_materialization import (
     verified_debt_extraction,
     verified_extraction,
 )
+from financial_statement_unit_resolution import parse_explicit_unit_declaration
 
 SCHEMA_VERSION = "1.0.0"
 CONTRACT_VERSION = "financial_statement_template_recognizer/v1"
@@ -207,43 +208,10 @@ def recognize_unit_and_scale(page_text: str) -> RecognizedUnitScale | None:
     """Discover unit, currency, and scale multiplier from statement page text."""
     lines = page_text.splitlines()
     for line in lines:
-        l_norm = _normalize_text(line)
-        if "don vi" in l_norm or "unit" in l_norm:
-            if "trieu" in l_norm or "million" in l_norm:
-                return RecognizedUnitScale(
-                    currency="VND",
-                    unit_scale=1_000_000,
-                    unit_label="triệu VND",
-                    evidence_text=line.strip(),
-                )
-            if "ty" in l_norm or "billion" in l_norm:
-                return RecognizedUnitScale(
-                    currency="VND",
-                    unit_scale=1_000_000_000,
-                    unit_label="tỷ VND",
-                    evidence_text=line.strip(),
-                )
-            if "nghin" in l_norm or "thousand" in l_norm:
-                return RecognizedUnitScale(
-                    currency="VND",
-                    unit_scale=1_000,
-                    unit_label="nghìn VND",
-                    evidence_text=line.strip(),
-                )
-            if "vnd" in l_norm or "dong" in l_norm:
-                return RecognizedUnitScale(
-                    currency="VND",
-                    unit_scale=1,
-                    unit_label="VND",
-                    evidence_text=line.strip(),
-                )
-            if "usd" in l_norm or "u.s. dollar" in l_norm or "us dollar" in l_norm:
-                return RecognizedUnitScale(
-                    currency="USD",
-                    unit_scale=1,
-                    unit_label="USD",
-                    evidence_text=line.strip(),
-                )
+        parsed = parse_explicit_unit_declaration(line)
+        if parsed:
+            return RecognizedUnitScale(currency=parsed["currency"], unit_scale=parsed["unit_scale"],
+                                       unit_label=parsed["unit_label"], evidence_text=parsed["evidence_text"])
     return None
 
 
@@ -651,20 +619,15 @@ def extract_generic_financial_statement_facts(
         if not statements_by_type[req_type]:
             raise ValueError(f"STATEMENT_NOT_RECOGNIZED: Could not locate {req_type} in filing sidecar")
 
-    # Step 2: Discover Unit & Scale across statements
-    global_unit_scale: RecognizedUnitScale | None = None
+    # Step 2: Discover one explicit unit/scale per statement family.  Evidence
+    # from a different statement cannot relabel a matched table.
+    unit_scales_by_statement: dict[StatementType, RecognizedUnitScale] = {}
     for st_type in required_statement_types:
-        st_pages = statements_by_type[st_type]
-        for p in st_pages:
-            unit_candidate = recognize_unit_and_scale(p.text)
-            if unit_candidate is not None:
-                global_unit_scale = unit_candidate
-                break
-        if global_unit_scale is not None:
-            break
-
-    if global_unit_scale is None:
-        raise ValueError("UNIT_SCALE_AMBIGUOUS: Failed to identify unit scale from statement evidence")
+        candidates = [candidate for page in statements_by_type[st_type]
+                      if (candidate := recognize_unit_and_scale(page.text)) is not None]
+        if len({(candidate.currency, candidate.unit_scale) for candidate in candidates}) != 1:
+            raise ValueError("UNIT_SCALE_AMBIGUOUS: Failed to identify one scoped unit scale from statement evidence")
+        unit_scales_by_statement[st_type] = candidates[0]
 
     # Step 3: Period Column Recognition for each statement
     column_layouts: dict[StatementType, PeriodColumnLayout] = {}
@@ -688,6 +651,7 @@ def extract_generic_financial_statement_facts(
         if metric_name not in selected_metrics:
             continue
         st_type = spec["statement_type"]
+        statement_unit_scale = unit_scales_by_statement[st_type]
         target_code = spec["standard_line_code"]
         anchors = spec["label_anchors"]
         src_label = spec["source_label"]
@@ -717,7 +681,7 @@ def extract_generic_financial_statement_facts(
             raw_label=matched_line.strip(),
             raw_value=raw_val,
             source_raw_label=src_label,
-            unit=global_unit_scale.unit_label,
+            unit=statement_unit_scale.unit_label,
             statement=st_type.value,
             visual_source_page_verified=True,
         )
@@ -731,10 +695,10 @@ def extract_generic_financial_statement_facts(
                 source_label=src_label,
                 ocr_matched_label=matched_line,
                 raw_value=raw_val,
-                normalized_value=normalize_monetary_display_value(ext["normalized_value"], global_unit_scale.currency, global_unit_scale.unit_scale),
-                currency=global_unit_scale.currency,
-                unit_scale=global_unit_scale.unit_scale,
-                unit_label=global_unit_scale.unit_label,
+                normalized_value=normalize_monetary_display_value(ext["normalized_value"], statement_unit_scale.currency, statement_unit_scale.unit_scale),
+                currency=statement_unit_scale.currency,
+                unit_scale=statement_unit_scale.unit_scale,
+                unit_label=statement_unit_scale.unit_label,
                 reporting_period=reporting_period,
                 period_column_evidence={
                     "header_evidence": col_layout.header_evidence,
@@ -743,16 +707,17 @@ def extract_generic_financial_statement_facts(
                     "comparative_period_label": col_layout.comparative_period_label,
                 },
                 unit_evidence={
-                    "evidence_text": global_unit_scale.evidence_text,
-                    "currency": global_unit_scale.currency,
-                    "unit_scale": global_unit_scale.unit_scale,
-                    "unit_label": global_unit_scale.unit_label,
+                    "evidence_text": statement_unit_scale.evidence_text,
+                    "currency": statement_unit_scale.currency,
+                    "unit_scale": statement_unit_scale.unit_scale,
+                    "unit_label": statement_unit_scale.unit_label,
+                    "scope_level": "statement",
                 },
                 extraction_details={
                     **ext,
                     "parsed_display_value": ext["normalized_value"],
                     "base_currency_value": normalize_monetary_display_value(
-                        ext["normalized_value"], global_unit_scale.currency, global_unit_scale.unit_scale
+                        ext["normalized_value"], statement_unit_scale.currency, statement_unit_scale.unit_scale
                     ),
                 },
             )
@@ -765,6 +730,7 @@ def extract_generic_financial_statement_facts(
 
     bs_pages = statements_by_type[StatementType.BALANCE_SHEET]
     bs_col_layout = column_layouts[StatementType.BALANCE_SHEET]
+    balance_sheet_unit_scale = unit_scales_by_statement[StatementType.BALANCE_SHEET]
     debt_components: list[dict[str, Any]] = []
 
     for d_spec in GENERIC_DEBT_COMPONENTS:
@@ -792,14 +758,14 @@ def extract_generic_financial_statement_facts(
     debt_extraction = verified_debt_extraction(
         materialization,
         components=debt_components,
-        unit=global_unit_scale.unit_label,
+        unit=balance_sheet_unit_scale.unit_label,
         statement="balance_sheet",
         reporting_period=reporting_period,
     )
 
     comp_texts = [f"{c['label']}: {c['raw_value']}" for c in debt_components]
-    debt_base_value = normalize_monetary_display_value(debt_extraction["normalized_value"], global_unit_scale.currency, global_unit_scale.unit_scale)
-    debt_citation_text = " + ".join(comp_texts) + f" = {debt_extraction['normalized_value']} ({global_unit_scale.unit_label})"
+    debt_base_value = normalize_monetary_display_value(debt_extraction["normalized_value"], balance_sheet_unit_scale.currency, balance_sheet_unit_scale.unit_scale)
+    debt_citation_text = " + ".join(comp_texts) + f" = {debt_extraction['normalized_value']} ({balance_sheet_unit_scale.unit_label})"
 
     extracted_facts.append(
         ExtractedStatementFact(
@@ -811,9 +777,9 @@ def extract_generic_financial_statement_facts(
             ocr_matched_label=debt_citation_text,
             raw_value=str(debt_extraction["normalized_value"]),
             normalized_value=debt_base_value,
-            currency=global_unit_scale.currency,
-            unit_scale=global_unit_scale.unit_scale,
-            unit_label=global_unit_scale.unit_label,
+            currency=balance_sheet_unit_scale.currency,
+            unit_scale=balance_sheet_unit_scale.unit_scale,
+            unit_label=balance_sheet_unit_scale.unit_label,
             reporting_period=reporting_period,
             period_column_evidence={
                 "header_evidence": bs_col_layout.header_evidence,
@@ -822,10 +788,11 @@ def extract_generic_financial_statement_facts(
                 "comparative_period_label": bs_col_layout.comparative_period_label,
             },
             unit_evidence={
-                "evidence_text": global_unit_scale.evidence_text,
-                "currency": global_unit_scale.currency,
-                "unit_scale": global_unit_scale.unit_scale,
-                "unit_label": global_unit_scale.unit_label,
+                "evidence_text": balance_sheet_unit_scale.evidence_text,
+                "currency": balance_sheet_unit_scale.currency,
+                "unit_scale": balance_sheet_unit_scale.unit_scale,
+                "unit_label": balance_sheet_unit_scale.unit_label,
+                "scope_level": "statement",
             },
             extraction_details={
                 **debt_extraction,

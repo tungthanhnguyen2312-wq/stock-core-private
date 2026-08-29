@@ -20,6 +20,7 @@ from PIL import Image
 
 from annual_financial_ocr_materialization import DEFAULT_ENGINE, parse_accounting_integer, sha256_file
 from official_financial_structural_table import match_geometry_ambiguous_line_code_cell, match_geometry_table_row
+from financial_statement_unit_resolution import declaration_from_tokens, resolve_unit_for_scope
 
 
 CONTRACT_VERSION = "official_financial_ocr_table_evidence/v1"
@@ -161,6 +162,20 @@ def _pages_by_statement_family(materialization: Mapping[str, Any]) -> dict[str, 
     return pages
 
 
+def resolve_scoped_unit_evidence(materialization: Mapping[str, Any]) -> dict[str, Any]:
+    """Collect only explicit unit declarations on the exact OCR statement page."""
+    declarations = []
+    for family, pages in _pages_by_statement_family(materialization).items():
+        for page in pages:
+            declarations.extend(declaration_from_tokens(
+                tokens=page["positioned_tokens"], document_sha256=str(materialization["document_sha256"]),
+                page_number=int(page["page_number"]), statement_family=family,
+                table_id=f"ocr-page:{materialization['document_sha256']}:{page['page_number']}:{family}",
+            ))
+    return {"contract_version": "financial_statement_scoped_unit_resolution/v1",
+            "document_sha256": materialization["document_sha256"], "declarations": declarations}
+
+
 def _code_crop_bbox(locator: Mapping[str, Any], source_image: Mapping[str, Any]) -> dict[str, int]:
     """Derive a code-cell crop only from the code band and its physical row."""
     bands = locator["row_object"]["column_bands"]["bands"]
@@ -274,7 +289,8 @@ def resolve_ambiguous_debt_line_code_cells(
 
 
 def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, reporting_period: str, currency: str = "VND", unit_scale: int = 1,
-                        line_code_cell_resolution: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                        line_code_cell_resolution: Mapping[str, Any] | None = None,
+                        scoped_unit_evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Produce qualified and blocked candidates; no panel mutation occurs here."""
     qualified: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []
@@ -293,8 +309,18 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
         else:
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED", "reason": "ROW_NOT_UNIQUE_OR_NOT_GEOMETRICALLY_RESOLVED", "match_count": len(matches)})
             return None
+        table_id = f"ocr-page:{materialization['document_sha256']}:{match['page']}:{family}"
+        unit = ({"state": "QUALIFIED", "scope_level": "legacy_caller_contract", "currency": currency,
+                 "unit_scale": unit_scale, "unit_label": currency, "evidence": None}
+                if scoped_unit_evidence is None else resolve_unit_for_scope(
+                    scoped_unit_evidence.get("declarations") or [], document_sha256=str(materialization["document_sha256"]),
+                    page_number=int(match["page"]), statement_family=family, table_id=table_id))
+        if unit["state"] != "QUALIFIED":
+            blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family,
+                            "state": "BLOCKED", "reason": "UNIT_SCALE_BLOCKED", "unit_resolution": unit})
+            return None
         try:
-            value = parse_accounting_integer(match["current_raw"])[0] * unit_scale
+            value = parse_accounting_integer(match["current_raw"])[0] * int(unit["unit_scale"])
         except ValueError:
             blocked.append({"canonical_metric": metric, "line_code": code, "statement_family": family, "state": "BLOCKED", "reason": "OCR_NUMERIC_AMBIGUITY", "raw_value": match["current_raw"]})
             return None
@@ -303,27 +329,28 @@ def qualify_table_facts(materialization: Mapping[str, Any], *, ticker: str, repo
             reason_codes[-1] = "CELL_LEVEL_EXACT_LINE_CODE"
         lineage = {"document_sha256": materialization["document_sha256"], "source_page": match["page"], "line_code": code,
                    "row_object": match["row_object"], "source_image_evidence": next(page["source_image_evidence"] for page in pages_by_family[family] if page["page_number"] == match["page"]),
-                   "ocr_derived_text_evidence": {"materialization_id": materialization["materialization_id"], "current_raw": match["current_raw"], "comparative_raw": match["comparative_raw"]}}
+                   "ocr_derived_text_evidence": {"materialization_id": materialization["materialization_id"], "current_raw": match["current_raw"], "comparative_raw": match["comparative_raw"]},
+                   "table_id": table_id, "unit_evidence": unit}
         if cell_evidence:
             lineage["line_code_cell_evidence"] = cell_evidence
-        return {"canonical_metric": metric, "value": value, "currency": currency, "unit_scale": unit_scale, "reporting_period": reporting_period, "statement_family": family, "qualification_state": "QUALIFIED", "reason_codes": reason_codes, "source_lineage": lineage}
+        return {"canonical_metric": metric, "value": value, "currency": unit["currency"], "unit_scale": unit["unit_scale"], "reporting_period": reporting_period, "statement_family": family, "qualification_state": "QUALIFIED", "reason_codes": reason_codes, "source_lineage": lineage}
     for rule in STANDARD_FACT_RULES:
         fact = attempt(*rule)
         if fact:
             qualified.append(fact)
     components = [attempt(name, family, code) for name, family, code in DEBT_COMPONENT_RULES]
-    if all(components):
+    if all(components) and len({(item["currency"], item["unit_scale"]) for item in components}) == 1:
         short, long = components
         qualified.append({
             "canonical_metric": "total_interest_bearing_debt", "value": short["value"] + long["value"],
-            "currency": currency, "unit_scale": unit_scale, "reporting_period": reporting_period,
+            "currency": short["currency"], "unit_scale": short["unit_scale"], "reporting_period": reporting_period,
             "statement_family": "balance_sheet", "qualification_state": "QUALIFIED",
             "reason_codes": ["OFFICIAL_EVIDENCE_QUALIFIED", "IMAGE_ONLY_TSV_OCR_GEOMETRY", "EXPLICIT_DEBT_COMPONENT_SUM"],
             "debt_components": components,
             "source_lineage": {"document_sha256": materialization["document_sha256"], "source_page": short["source_lineage"]["source_page"],
                 "source_pages": [short["source_lineage"]["source_page"], long["source_lineage"]["source_page"]],
                 "row_object": short["source_lineage"]["row_object"], "source_image_evidence": short["source_lineage"]["source_image_evidence"],
-                "ocr_derived_text_evidence": short["source_lineage"]["ocr_derived_text_evidence"], "debt_component_lineages": [short["source_lineage"], long["source_lineage"]]},
+                "ocr_derived_text_evidence": short["source_lineage"]["ocr_derived_text_evidence"], "unit_evidence": short["source_lineage"]["unit_evidence"], "debt_component_lineages": [short["source_lineage"], long["source_lineage"]]},
         })
     else:
         blocked.append({"canonical_metric": "total_interest_bearing_debt", "state": "BLOCKED", "reason": "DEBT_COMPONENT_INCOMPLETE"})
@@ -385,6 +412,7 @@ def panel_facts_from_qualified_ocr(
                 "document_sha256": document_sha, "citation_id": citation_id, "evidence_id": citation_id,
                 "source_page": lineage.get("source_page"), "line_code": lineage.get("line_code"),
                 "row_object": row, "source_image_evidence": source_image,
-                "ocr_derived_text_evidence": ocr, "extraction_method": "image_only_tsv_ocr_geometry"},
+                "ocr_derived_text_evidence": ocr, "unit_evidence": lineage.get("unit_evidence"),
+                "extraction_method": "image_only_tsv_ocr_geometry"},
         })
     return output
