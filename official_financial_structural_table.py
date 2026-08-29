@@ -42,6 +42,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import date
 from typing import Any, Mapping, Sequence
 
 from annual_financial_ocr_materialization import parse_accounting_integer, verified_extraction
@@ -59,7 +60,7 @@ from financial_statement_template_recognizer import (
 
 VERSION = "official_financial_structural_table/v2"
 EXTRACTION_METHOD = "pypdf_native_text_structural_v2"
-GEOMETRY_RECOGNIZER_VERSION = "column_major_geometry/v1"
+GEOMETRY_RECOGNIZER_VERSION = "column_major_geometry/v2"
 
 #: The 7-metric AAA/P3-F13 corporate contract, minus total_interest_bearing_debt.
 #: Debt's two-component aggregation (GENERIC_DEBT_COMPONENTS) is Vietnamese-anchor-only
@@ -593,7 +594,7 @@ def _x_clusters(tokens: Sequence[Mapping[str, Any]], gap: float = 35.0) -> list[
     return clusters
 
 
-def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str) -> dict[str, Any] | None:
+def _discover_column_bands_with_year(lines: Sequence[Mapping[str, Any]], target_period: str) -> dict[str, Any] | None:
     """Discover code/note/value x-bands with explicit two-period header evidence."""
     # Header labels can occupy two nearby physical baselines (year above VND).  This
     # is a semantic header group, not a relaxation of physical-line reconstruction:
@@ -761,6 +762,233 @@ def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str
     }
 
 
+_PERIOD_DATE_MONTHS = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+}
+
+
+def _period_header_span(tokens: Sequence[Mapping[str, Any]], *, header_line_id: int,
+                        header_class: str, parsed_date: date | None = None) -> dict[str, Any]:
+    """Preserve actual positioned header tokens; the synthetic binding tokens stay internal."""
+    return {
+        "header_class": header_class,
+        "raw_text": " ".join(str(token["text"]).strip() for token in tokens),
+        "x0": min(float(token["x0"]) for token in tokens),
+        "x1": max(float(token["x1"]) for token in tokens),
+        "header_line_id": int(header_line_id),
+        "source_token_orders": [int(token.get("raw_token_order", 0)) for token in tokens],
+        "parsed_date": parsed_date.isoformat() if parsed_date is not None else None,
+    }
+
+
+def _parse_explicit_header_date(text: str) -> date | None:
+    """Parse only explicit complete date forms; no OCR correction belongs here."""
+    raw = str(text).strip()
+    numeric = re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](20[0-3]\d)", raw)
+    if numeric:
+        day, month, year = (int(item) for item in numeric.groups())
+        try:
+            return date(year, month, day)
+        except ValueError:
+            return None
+    english = re.fullmatch(r"(\d{1,2})\s+([A-Za-z]+)\s+(20[0-3]\d)", raw)
+    if english:
+        day, month_name, year = english.groups()
+        month = _PERIOD_DATE_MONTHS.get(_normalize_text(month_name))
+        if month is None:
+            return None
+        try:
+            return date(int(year), month, int(day))
+        except ValueError:
+            return None
+    return None
+
+
+def _date_header_spans(header_lines: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    seen: set[tuple[int, ...]] = set()
+    for line in header_lines:
+        tokens = list(line["tokens"])
+        for start in range(len(tokens)):
+            for end in range(start + 1, min(len(tokens), start + 3) + 1):
+                span = tokens[start:end]
+                parsed = _parse_explicit_header_date(" ".join(str(token["text"]).strip() for token in span))
+                if parsed is None:
+                    continue
+                key = tuple(int(token.get("raw_token_order", 0)) for token in span)
+                if key not in seen:
+                    seen.add(key)
+                    found.append(_period_header_span(span, header_line_id=int(line["line_id"]),
+                                                    header_class="EXPLICIT_FULL_DATE", parsed_date=parsed))
+    return found
+
+
+def _semantic_header_spans(header_lines: Sequence[Mapping[str, Any]], *, phrases: Sequence[str],
+                           header_class: str) -> list[dict[str, Any]]:
+    """Match exact normalized header-token sequences, never page-wide prose."""
+    phrase_tokens = sorted((tuple(_normalize_text(item).split()) for item in phrases), key=lambda item: (-len(item), item))
+    matches: list[dict[str, Any]] = []
+    for line in header_lines:
+        tokens = list(line["tokens"])
+        words = [_normalize_text(str(token["text"])) for token in tokens]
+        for token, word in zip(tokens, words):
+            if any(len(phrase) > 1 and word == " ".join(phrase) for phrase in phrase_tokens):
+                matches.append(_period_header_span([token], header_line_id=int(line["line_id"]), header_class=header_class))
+        for start in range(len(tokens)):
+            for phrase in phrase_tokens:
+                end = start + len(phrase)
+                if tuple(words[start:end]) == phrase:
+                    matches.append(_period_header_span(tokens[start:end], header_line_id=int(line["line_id"]), header_class=header_class))
+                    break
+    unique = {(item["header_line_id"], item["x0"], item["x1"], item["raw_text"]): item for item in matches}
+    return [unique[key] for key in sorted(unique)]
+
+
+def _semantic_period_header_candidates(lines: Sequence[Mapping[str, Any]], *, target_period: str,
+                                       statement_family: str | None) -> list[dict[str, Any]]:
+    """Find one table-local non-year period pair before feeding the existing band engine."""
+    try:
+        target_year = int(target_period)
+    except (TypeError, ValueError):
+        return []
+    all_tokens = [token for line in lines for token in line["tokens"]]
+    page_form_code_header = bool(re.search(r"form\s*b\s*0[1-3]", _normalize_text(" ".join(str(token["text"]) for token in all_tokens))))
+    heights = sorted(max(0.1, float(token["bottom"]) - float(token["top"])) for token in all_tokens)
+    median_height = heights[len(heights) // 2] if heights else 1.0
+    page_height = max((float(token["bottom"]) for token in all_tokens), default=0.0) - min((float(token["top"]) for token in all_tokens), default=0.0)
+    header_span = min(page_height * 0.03, max(8.0, median_height * 3.0))
+    family = str(statement_family or "").strip().lower()
+    candidates: list[dict[str, Any]] = []
+    for start in range(len(lines)):
+        group = [lines[start]]
+        for line in lines[start + 1:]:
+            if abs(float(line["baseline"]) - float(group[0]["baseline"])) <= header_span:
+                group.append(line)
+            else:
+                break
+        text = " ".join(str(line["text"]) for line in group)
+        normalized = _normalize_text(text)
+        has_code_header = "code" in normalized or ("ma" in normalized and "thuyet" in normalized)
+        form_code_header = page_form_code_header or bool(re.search(r"form\s*b\s*0[1-3]", normalized))
+        if not (has_code_header or form_code_header):
+            continue
+        dates = _date_header_spans(group)
+        current_dates = [item for item in dates if item["parsed_date"] and int(item["parsed_date"][:4]) == target_year]
+        comparative_dates = [item for item in dates if item not in current_dates]
+        if len(dates) == 2 and len(current_dates) == 1 and len(comparative_dates) == 1:
+            comparative_year = int(comparative_dates[0]["parsed_date"][:4])
+            if family == "balance_sheet" or comparative_year < target_year:
+                candidates.append({"header_class": "EXPLICIT_FULL_DATE", "header_lines": group,
+                                   "current": current_dates[0], "comparative": comparative_dates[0]})
+        if family == "balance_sheet":
+            closing = _semantic_header_spans(group, phrases=("closing balance", "so cuoi nam", "cuoi nam"), header_class="CLOSING_BALANCE")
+            opening = _semantic_header_spans(group, phrases=("opening balance", "so dau nam", "dau nam"), header_class="OPENING_BALANCE")
+            if len(closing) == 1 and len(opening) == 1:
+                candidates.append({"header_class": "CLOSING_OPENING_BALANCE", "header_lines": group,
+                                   "current": closing[0], "comparative": opening[0]})
+        if family in {"balance_sheet", "income_statement", "cash_flow"}:
+            current = _semantic_header_spans(group, phrases=("current year", "this year", "nam nay", "current"), header_class="CURRENT_PERIOD")
+            prior = _semantic_header_spans(group, phrases=("previous year", "prior year", "last year", "nam truoc", "prior"), header_class="COMPARATIVE_PERIOD")
+            if len(current) == 1 and len(prior) == 1:
+                candidates.append({"header_class": "CURRENT_PRIOR", "header_lines": group,
+                                   "current": current[0], "comparative": prior[0]})
+    unique = {
+        # A multiline OCR header can be reached from more than one physical-line
+        # start.  Those are the same candidate when their exact spans coincide;
+        # different spans remain competing candidates and therefore fail closed.
+        json.dumps({"header_class": item["header_class"], "current": item["current"],
+                    "comparative": item["comparative"]}, sort_keys=True): item
+        for item in candidates
+    }
+    return [unique[key] for key in sorted(unique)]
+
+
+def _contains_nonyear_period_header_evidence(lines: Sequence[Mapping[str, Any]]) -> bool:
+    """Prevent a malformed or competing explicit date from falling through to year text."""
+    all_tokens = [token for line in lines for token in line["tokens"]]
+    heights = sorted(max(0.1, float(token["bottom"]) - float(token["top"])) for token in all_tokens)
+    median_height = heights[len(heights) // 2] if heights else 1.0
+    page_height = max((float(token["bottom"]) for token in all_tokens), default=0.0) - min((float(token["top"]) for token in all_tokens), default=0.0)
+    header_span = min(page_height * 0.03, max(8.0, median_height * 3.0))
+    for start in range(len(lines)):
+        group = [lines[start]]
+        for line in lines[start + 1:]:
+            if abs(float(line["baseline"]) - float(group[0]["baseline"])) <= header_span:
+                group.append(line)
+            else:
+                break
+        text = _normalize_text(" ".join(str(line["text"]) for line in group))
+        has_code_header = "code" in text or ("ma" in text and "thuyet" in text)
+        if not has_code_header:
+            continue
+        if re.search(r"\b\d{1,2}[/-]\d{1,2}[/-]20[0-3]\d\b", text) or re.search(
+            r"\b\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+20[0-3]\d\b", text
+        ):
+            return True
+    return False
+
+
+def _with_period_binding_tokens(lines: Sequence[Mapping[str, Any]], *, candidate: Mapping[str, Any],
+                                target_period: str) -> list[dict[str, Any]]:
+    """Inject ephemeral, positioned binding markers for the existing year-band engine."""
+    try:
+        comparative_marker = str(int(target_period) - 1)
+    except (TypeError, ValueError):
+        return []
+    source_orders = set(candidate["current"]["source_token_orders"] + candidate["comparative"]["source_token_orders"])
+    markers_by_line: dict[int, list[tuple[str, Mapping[str, Any]]]] = {}
+    markers_by_line.setdefault(int(candidate["current"]["header_line_id"]), []).append((target_period, candidate["current"]))
+    markers_by_line.setdefault(int(candidate["comparative"]["header_line_id"]), []).append((comparative_marker, candidate["comparative"]))
+    result: list[dict[str, Any]] = []
+    for line in lines:
+        copied = {**line, "tokens": []}
+        for token in line["tokens"]:
+            token_copy = dict(token)
+            # A date phrase may include a standalone year token.  It is source
+            # evidence retained above, but must not become a duplicate synthetic
+            # year marker in the internal compatibility route.
+            if int(token.get("raw_token_order", 0)) in source_orders and re.fullmatch(r"20[0-3][0-9]", str(token_copy["text"]).strip()):
+                token_copy["text"] = "period_source_year"
+            copied["tokens"].append(token_copy)
+        if int(line["line_id"]) in markers_by_line:
+            for offset, (marker, span) in enumerate(markers_by_line[int(line["line_id"])]):
+                template = next((item for item in line["tokens"] if int(item.get("raw_token_order", 0)) in span["source_token_orders"]), line["tokens"][0])
+                # A date span's left edge is its conventional column alignment;
+                # semantic labels may be wider and therefore bind by their center.
+                anchor = float(span["x0"]) if span["header_class"] == "EXPLICIT_FULL_DATE" else (float(span["x0"]) + float(span["x1"])) / 2.0
+                copied["tokens"].append({**dict(template), "text": marker, "x0": anchor, "x1": anchor + 1.0,
+                                         "raw_token_order": 9_000_000 + int(line["line_id"]) * 10 + offset})
+        copied["text"] = " ".join(str(token["text"]) for token in copied["tokens"])
+        result.append(copied)
+    return result
+
+
+def discover_column_bands(lines: Sequence[Mapping[str, Any]], target_period: str, *,
+                          statement_family: str | None = None) -> dict[str, Any] | None:
+    """Resolve one table-local period header pair and bind it through the established geometry engine."""
+    semantic_candidates = _semantic_period_header_candidates(lines, target_period=target_period, statement_family=statement_family)
+    if len(semantic_candidates) > 1:
+        return None
+    if len(semantic_candidates) == 1:
+        candidate = semantic_candidates[0]
+        resolved = _discover_column_bands_with_year(
+            _with_period_binding_tokens(lines, candidate=candidate, target_period=target_period), target_period,
+        )
+        if resolved is None:
+            return None
+        resolved["current_period_label"] = candidate["current"]["raw_text"]
+        resolved["comparative_period_label"] = candidate["comparative"]["raw_text"]
+        resolved["header_evidence"] = {
+            **resolved["header_evidence"], "period_header_class": candidate["header_class"],
+            "period_identities": {"current": candidate["current"], "comparative": candidate["comparative"]},
+        }
+        return resolved
+    if _contains_nonyear_period_header_evidence(lines):
+        return None
+    return _discover_column_bands_with_year(lines, target_period)
+
+
 def _in_band(token: Mapping[str, Any], band: Mapping[str, float] | None) -> bool:
     if band is None:
         return False
@@ -793,7 +1021,7 @@ def match_geometry_table_row(
         return None
     reconstruction = reconstruct_physical_lines(tokens)
     lines = reconstruction["lines"]
-    discovered = discover_column_bands(lines, target_period)
+    discovered = discover_column_bands(lines, target_period, statement_family=page.get("statement_family"))
     if discovered is None:
         return None
     bands = discovered["bands"]
@@ -884,7 +1112,7 @@ def match_geometry_ambiguous_line_code_cell(
         return None
     reconstruction = reconstruct_physical_lines(tokens)
     lines = reconstruction["lines"]
-    discovered = discover_column_bands(lines, target_period)
+    discovered = discover_column_bands(lines, target_period, statement_family=page.get("statement_family"))
     if discovered is None:
         return None
     bands = discovered["bands"]
@@ -957,7 +1185,7 @@ def _geometry_column_major_match(page: Mapping[str, Any], metric: str, target_pe
         return None
     reconstruction = reconstruct_physical_lines(tokens)
     lines = reconstruction["lines"]
-    discovered = discover_column_bands(lines, target_period)
+    discovered = discover_column_bands(lines, target_period, statement_family=_METRIC_STATEMENT[metric].value)
     if discovered is None:
         return None
     bands = discovered["bands"]
