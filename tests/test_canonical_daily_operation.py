@@ -215,6 +215,75 @@ def test_one_valid_exact_session_acquisition_phase_b_ready(tmp_path, monkeypatch
     assert record["_calls"]["acquire"] == 1
 
 
+def test_backdated_retained_session_uses_exact_evidence_and_preserves_requested_session(tmp_path, monkeypatch):
+    backdated_now = datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ)
+    seen_sessions = []
+
+    def acquire(_root, requested_session, *_args, **_kwargs):
+        seen_sessions.append(requested_session)
+        return _acquired(tmp_path, requested_session, reused=True)
+
+    record = _run(
+        tmp_path,
+        monkeypatch,
+        now=backdated_now,
+        working=_working_dates("2026-08-31", "2026-09-01"),
+        exact=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00+07:00"),
+        acquire_fn=acquire,
+    )
+    assert record["phase_a"]["status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert record["phase_b"]["status"] == gate.STATUS_READY
+    assert seen_sessions == [SESSION]
+
+
+def test_2026_08_26_retained_artifact_is_loaded_read_only_without_regeneration(tmp_path, monkeypatch):
+    nodash = SESSION.replace("-", "")
+    retained = (
+        tmp_path / "operations-review" / "canonical-post-close-v1" / SESSION
+        / "post-close-attempt-191900" / "operations-review"
+        / f"p3f9b-market-wide-exact-session-scaleout-{nodash}"
+        / "p3f9b_market_wide_exact_session_scaleout_artifact.json"
+    )
+    retained.parent.mkdir(parents=True)
+    retained.write_text(gate.canonical_dump({
+        "artifact_identity": "p3f9b_market_wide_exact_session_scaleout:" + "c" * 64,
+        "artifact_sha256": "c" * 64,
+        "contract_version": "p3f9b_market_wide_exact_session_scaleout/v1",
+        "execution_timestamp": "2026-08-26T19:19:00+07:00",
+        "exact_session_coverage": {"attempted_candidate_count": 1683, "exact_session_observed_count": 889},
+        "resolved_session": {
+            "resolved_completed_session": SESSION,
+            "retained_snapshot_session": SESSION,
+            "execution_timestamp": "2026-08-26T19:19:00+07:00",
+        },
+        "snapshot_identity": "p3f9_exact_session_snapshot:" + "c" * 64,
+    }), encoding="utf-8")
+    original_bytes = retained.read_bytes()
+    record = _run(
+        tmp_path,
+        monkeypatch,
+        now=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        working=_working_dates("2026-08-31", "2026-09-01"),
+    )
+    assert record["phase_a"]["status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert retained.read_bytes() == original_bytes
+
+
+def test_backdated_historical_session_without_exact_evidence_skips_acquisition(tmp_path, monkeypatch):
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("acquisition_must_not_run")
+
+    with pytest.raises(cdo.CanonicalDailyOperationError) as exc:
+        _run(
+            tmp_path,
+            monkeypatch,
+            now=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+            working=_working_dates("2026-08-31", "2026-09-01"),
+            acquire_fn=forbidden,
+        )
+    assert exc.value.stage == cdo.STAGE_PROVIDER_EVIDENCE_UNAVAILABLE
+
+
 def test_stale_prior_session_response_fails(tmp_path, monkeypatch):
     def acquire(*a, **k):
         return _acquired(tmp_path, "2026-08-21", requested_at="2026-08-21T19:19:00+07:00")
@@ -273,6 +342,10 @@ def test_no_duplicate_capability_first_and_canonical_collection():
     assert "from tools import collect_market_evidence" not in source
     assert "run_capability_first_eod_operation" not in inspect.getsource(cdo.run_canonical_daily_operation)
     assert cdo.MARKET_ACQUISITION_OWNER == "canonical_p3f9b_exact_session"
+
+
+def test_canonical_path_never_falls_back_to_legacy_provider_pipeline():
+    assert "vn_stock_pipeline.py" not in inspect.getsource(cdo.run_canonical_daily_operation)
 
 
 def test_registration_only_after_phase_b(tmp_path, monkeypatch):

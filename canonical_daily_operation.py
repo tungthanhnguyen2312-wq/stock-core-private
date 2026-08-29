@@ -77,6 +77,7 @@ from completed_market_session_gate import (
     CompletedSessionGateError,
     evaluate_attempt_eligibility,
     evaluate_completed_market_session_gate,
+    load_exact_session_evidence_from_root,
     load_json_mapping,
     parse_requested_at,
     parse_session_date,
@@ -305,6 +306,13 @@ def run_canonical_daily_operation(
         probe = _working_dates_probe
 
     explicit_session = parse_session_date(session) if session else None
+    # A historical completed session may have fallen out of DNSE's current
+    # forward working_dates window.  Reuse only the existing retained DNSE
+    # exact-session evidence for that exact request; this is read-only and
+    # never turns a different session, a weekday, or civil time into proof.
+    resolved_exact_evidence = exact_session_evidence
+    if resolved_exact_evidence is None and explicit_session:
+        resolved_exact_evidence = load_exact_session_evidence_from_root(root, explicit_session)
     try:
         phase_a = evaluate_attempt_eligibility(
             requested_at=instant,
@@ -312,7 +320,7 @@ def run_canonical_daily_operation(
             timezone_name=OPERATING_TIMEZONE,
             safety_floor=DEFAULT_SAFETY_FLOOR,
             working_dates_evidence=working_dates_evidence,
-            exact_session_evidence=exact_session_evidence,
+            exact_session_evidence=resolved_exact_evidence,
             working_dates_fetcher=probe,
             allow_provider_probe=allow_provider_probe,
         )

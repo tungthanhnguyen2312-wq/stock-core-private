@@ -104,6 +104,29 @@ def test_phase_a_before_floor_is_too_early_and_not_attempt_eligible():
     assert result["attempt_gate_status"] != gate.STATUS_ATTEMPT_ELIGIBLE
 
 
+def test_phase_a_historical_completed_session_outside_current_window_is_eligible():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00+07:00"),
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert result["resolved_session"] == SESSION
+    assert "RETAINED_HISTORICAL_EXACT_SESSION_IDENTITY_CONFIRMED" in result["reason_codes"]
+
+
+def test_phase_a_historical_session_without_qualified_evidence_fails_closed():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+    assert "WORKING_DATES_WINDOW_DOES_NOT_COVER_SESSION" in result["reason_codes"]
+    assert "EXACT_SESSION_EVIDENCE_ABSENT" in result["reason_codes"]
+
+
 def test_valid_working_date_exact_session_after_floor_is_ready():
     result = gate.evaluate_completed_market_session_gate(
         requested_at=POST_CLOSE,
@@ -119,6 +142,17 @@ def test_valid_working_date_exact_session_after_floor_is_ready():
     assert result["authority_statement"]["provider_confirmed_completed"] is False
     assert result["authority_statement"]["safety_floor_is_not_session_authority"] is True
     assert "market_session_completed" in result["authority_statement"]["working_dates_does_not_prove"]
+
+
+def test_phase_b_historical_completed_session_outside_current_window_is_ready():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00+07:00"),
+    )
+    assert result["completion_gate_status"] == gate.STATUS_READY
+    assert result["resolved_session"] == SESSION
 
 
 def test_working_date_mismatch_fails_closed():

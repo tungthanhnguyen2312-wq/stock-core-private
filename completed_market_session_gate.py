@@ -15,8 +15,10 @@ DESIGN
         Answers only: may the operator attempt the bounded post-close acquisition now?
         Eligible when requested_at is at/after the safety floor, the intended session
         is not future, the session has qualified working-date identity under the DNSE
-        working_dates contract, there is no contradictory session evidence, and the
-        provider/session route is operationally available.
+        working_dates contract *or* has sufficient retained DNSE exact-session
+        evidence when the forward calendar no longer covers that historical date,
+        there is no contradictory session evidence, and the provider/session route
+        is operationally available.
         ATTEMPT_ELIGIBLE does not mean market close, completed session, or exact-session
         data is proven. Time alone never produces Phase-B READY.
 
@@ -811,9 +813,24 @@ def evaluate_attempt_eligibility(
         if resolved not in dates:
             if in_window(resolved) or resolved >= local_date:
                 return emit(STATUS_NON_WORKING_DATE, ["NOT_IN_WORKING_DATES"], resolved, method)
+            # A current forward calendar has no authority over a historical date
+            # that it no longer covers.  A retained, post-floor DNSE exact-session
+            # artifact for that exact date is already qualified trading-session
+            # evidence; it is not a civil-time or weekday inference.
+            sufficient, exact_reasons = _exact_session_sufficient(exact, resolved, safety_floor=safety_floor)
+            if sufficient:
+                return emit(
+                    STATUS_ATTEMPT_ELIGIBLE,
+                    [
+                        "ATTEMPT_ELIGIBLE_AFTER_SAFETY_FLOOR",
+                        "RETAINED_HISTORICAL_EXACT_SESSION_IDENTITY_CONFIRMED",
+                    ],
+                    resolved,
+                    method,
+                )
             return emit(
                 STATUS_PROVIDER_EVIDENCE_UNAVAILABLE,
-                ["WORKING_DATES_WINDOW_DOES_NOT_COVER_SESSION"],
+                ["WORKING_DATES_WINDOW_DOES_NOT_COVER_SESSION", *exact_reasons],
                 resolved,
                 method,
             )
