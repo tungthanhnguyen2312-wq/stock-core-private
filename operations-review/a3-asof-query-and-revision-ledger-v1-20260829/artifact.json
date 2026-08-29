@@ -1,0 +1,110 @@
+{
+  "artifact_identity": "a3_asof_query_and_revision_ledger:v1:20260829",
+  "contract": "asof_query_ledger/v1",
+  "milestone": "A3_ASOF_QUERY_AND_REVISION_LEDGER_V1",
+
+  "authority_invariants": {
+    "raw_as_traded": "NOT_PROMOTED",
+    "historical_price_pit": "BLOCKED",
+    "historical_full_system_backtest": "BLOCKED",
+    "same_session_close_execution": "NOT_ESTABLISHED",
+    "invariant": "ASOF_QUERY_DOES_NOT_PROMOTE_ANY_AUTHORITY",
+    "note": "This milestone is infrastructure/semantic capability only. No authority is promoted by its existence."
+  },
+
+  "scope": "deterministic_as_of_query_and_revision_ledger_over_retained_a1_a2_temporal_evidence",
+
+  "new_files": [
+    "asof_query_ledger.py",
+    "tests/test_asof_query_ledger.py"
+  ],
+  "modified_files": [
+    "docs/STATE.md"
+  ],
+
+  "public_api": {
+    "query_as_of": "Deterministic knowledge-cutoff query returning AsofQueryResult with one of: READY, UNKNOWN_TEMPORAL, NOT_YET_KNOWABLE, NO_QUALIFYING_OBSERVATION, CONFLICT",
+    "build_revision_ledger": "Full ordered revision ledger with per-entry knowability flags at a given cutoff",
+    "deterministic_ledger_hash": "Stable SHA-256 of canonical serialised ledger",
+    "canonical_result_identity": "Stable identity string for a complete as-of query result"
+  },
+
+  "result_codes": {
+    "READY": "Exactly one qualifying observation is knowable as of the cutoff",
+    "UNKNOWN_TEMPORAL": "Temporal evidence present but insufficient; fail closed",
+    "NOT_YET_KNOWABLE": "Observation exists but knowledge boundary is after the cutoff",
+    "NO_QUALIFYING_OBSERVATION": "No observation present in the supplied evidence set",
+    "CONFLICT": "Multiple knowable candidates, deterministic resolution not permitted"
+  },
+
+  "pit_safety_invariants": [
+    "Never selects an observation whose knowledge_available_research_session is after as_of_research_session",
+    "knowledge_time_status == KNOWLEDGE_UNKNOWN always fails closed",
+    "historical_reconstruction_scope == NONE blocks eligibility",
+    "HTTP Date/Last-Modified/ETag are never used for knowledge determination",
+    "research_session_eligibility does not imply same_session_close_execution",
+    "query_as_of does not backfill or infer from current file/db state",
+    "ordering is deterministic: by knowledge_session asc, then observation_identity as tiebreaker",
+    "identical inputs produce byte-identical outputs (determinism)"
+  ],
+
+  "test_summary": {
+    "total_tests": 25,
+    "passed": 25,
+    "failed": 0,
+    "test_classes": [
+      "TestFutureRevisionExclusion (2 tests)",
+      "TestIdenticalReacquisition (2 tests)",
+      "TestChangedObservation (3 tests)",
+      "TestMissingTemporalEvidence (4 tests)",
+      "TestPublicationVsTransportMetadata (2 tests)",
+      "TestResearchVsExecution (2 tests)",
+      "TestDeterminism (3 tests)",
+      "TestConflictCase (2 tests)",
+      "TestRevisionLedgerSemantics (3 tests)",
+      "TestContractVersion (2 tests)"
+    ]
+  },
+
+  "a1_a2_regression": {
+    "a1_tests": 9,
+    "a2_tests": 8,
+    "status": "ALL_PASSED_ZERO_REGRESSIONS"
+  },
+
+  "validation_vectors": {
+    "case1_single_READY": {
+      "code": "READY",
+      "selected": "sha256:AAA_v1_2026Q1",
+      "result_identity": "asof_query_ledger/v1:10cb1105f6754932080eafb3817db24c0bd519e2507b47a75dcc3e5aa23d24ea"
+    },
+    "case2_early_READY_future_excluded": {
+      "code": "READY",
+      "selected": "sha256:VNM_v1",
+      "excluded": ["sha256:VNM_v2"]
+    },
+    "case2_late_READY_supersession": {
+      "code": "READY",
+      "selected": "sha256:VNM_v2",
+      "warning": "SUPERSESSION_CHAIN_RESOLVED_SINGLE_NON_SUPERSEDED"
+    },
+    "case3_NOT_YET_KNOWABLE": {
+      "code": "NOT_YET_KNOWABLE",
+      "excluded": ["sha256:future"]
+    },
+    "case4_UNKNOWN_TEMPORAL": {
+      "code": "UNKNOWN_TEMPORAL"
+    },
+    "case5_NO_QUALIFYING_OBSERVATION": {
+      "code": "NO_QUALIFYING_OBSERVATION"
+    },
+    "case6_CONFLICT": {
+      "code": "CONFLICT",
+      "conflict_ids": ["sha256:conflict_A", "sha256:conflict_B"]
+    },
+    "ledger_hash_single": "ed21d98d1d8836b539d8b4141b744e40e9e2e5989081b7014410ee9e6e569a7a",
+    "ledger_hash_revision_chain": "31e0d762064587e14f97c82abc9218687a39bdd4438e0b24a2cdce85b568ddbc"
+  },
+
+  "outcome": "OUTCOME_A3_ASOF_QUERY_AND_REVISION_LEDGER_ACTIVE_NO_AUTHORITY_PROMOTED"
+}
