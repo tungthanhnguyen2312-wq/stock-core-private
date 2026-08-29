@@ -145,6 +145,11 @@ from current_research_scenario_context import (
 from shadow_security_recommendation import (
     content_identity as shadow_security_recommendation_content_identity,
 )
+from correlation_concentration_guard import (
+    CONTRACT_VERSION as CORRELATION_CONCENTRATION_GUARD_CONTRACT_VERSION,
+    SUPPORTED_LOOKBACKS as CORRELATION_CONCENTRATION_GUARD_SUPPORTED_LOOKBACKS,
+    content_identity as correlation_concentration_guard_content_identity,
+)
 from current_financial_momentum_context import (
     content_identity as current_financial_momentum_context_content_identity,
 )
@@ -3785,6 +3790,52 @@ def attach_shadow_security_recommendation(bundle_entries: dict[str, dict], inclu
     return bundle_entries
 
 
+def load_correlation_concentration_guard_artifact(
+    path: Path, *, lookback: int,
+) -> Mapping[str, Any] | None:
+    """Load one self-verifying C2 artifact for its explicitly selected horizon.
+
+    This is intentionally a serialization boundary only.  It never derives
+    correlations, thresholds, groups, or recommendation context from the C2
+    payload; it preserves the retained numerical authority verbatim.
+    """
+    if lookback not in CORRELATION_CONCENTRATION_GUARD_SUPPORTED_LOOKBACKS:
+        return None
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict):
+            return None
+        if artifact.get("contract_version") != CORRELATION_CONCENTRATION_GUARD_CONTRACT_VERSION:
+            return None
+        if ((artifact.get("metadata") or {}).get("selected_lookback_sessions") != lookback):
+            return None
+        identity = correlation_concentration_guard_content_identity(artifact)
+        if (identity.get("artifact_sha256") != artifact.get("artifact_sha256") or
+                identity.get("artifact_identity") != artifact.get("artifact_identity")):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def attach_correlation_concentration_guard(
+    analysis_bundle: dict[str, Any], *, include: bool, artifact_path: str | None,
+    lookback: int | None,
+) -> dict[str, Any]:
+    """Opt-in top-level C2 attachment for the Consumer's canonical adapter.
+
+    The Consumer chooses ticker-relevant pairs and groups from this one whole
+    artifact.  Projecting it per ticker here would duplicate C2 semantics and
+    risk a divergent numerical authority.
+    """
+    if not include or not artifact_path or lookback is None:
+        return analysis_bundle
+    artifact = load_correlation_concentration_guard_artifact(Path(artifact_path), lookback=lookback)
+    if artifact is not None:
+        analysis_bundle["correlation_concentration_guard"] = copy.deepcopy(artifact)
+    return analysis_bundle
+
+
 def load_current_research_scenario_context_artifact(path: Path) -> Mapping[str, Any] | None:
     try:
         artifact = json.loads(path.read_text(encoding="utf-8"))
@@ -4769,6 +4820,19 @@ def main() -> int:
                         help="Opt-in, disabled by default: attach self-verifying shadow security recommendation packets; research-only and never execution, allocation, sizing, target, or probability authority.")
     parser.add_argument("--shadow-security-recommendation-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained shadow_security_recommendation artifact.")
+    parser.add_argument("--include-correlation-concentration-guard", action="store_true",
+                        help="Opt-in, disabled by default: attach one whole self-verifying"
+                             " correlation_concentration_guard/v1 artifact at the analysis-bundle"
+                             " root for Consumer ticker-level projection. It only carries existing"
+                             " C2 research context; never allocation, sizing, execution, or"
+                             " recommendation authority.")
+    parser.add_argument("--correlation-concentration-guard-path", metavar="PATH",
+                        help="Explicit path to a retained correlation_concentration_guard/v1 artifact;"
+                             " required only with --include-correlation-concentration-guard.")
+    parser.add_argument("--correlation-concentration-lookback", type=int,
+                        choices=CORRELATION_CONCENTRATION_GUARD_SUPPORTED_LOOKBACKS,
+                        help="Explicit C2 horizon required with --include-correlation-concentration-guard"
+                             " (one of 20, 60, 120, 250); never inferred.")
     parser.add_argument("--include-current-research-scenario-context", action="store_true",
                         help="Opt-in, disabled by default: attach a retained CONSERVATIVE/BASE/SPECULATIVE current research scenario context; descriptive only, never probability, target, expected return, action, priority, eligibility, or sizing.")
     parser.add_argument("--current-research-scenario-context-path", metavar="PATH",
@@ -4957,6 +5021,13 @@ def main() -> int:
                              " file hiện tại trên đĩa ('checksum dependency'); exit 0 nếu khớp"
                              " hết, 1 nếu có lệch.")
     args = parser.parse_args()
+
+    if args.include_correlation_concentration_guard and (
+            not args.correlation_concentration_guard_path or
+            args.correlation_concentration_lookback is None):
+        parser.error("--include-correlation-concentration-guard requires both "
+                     "--correlation-concentration-guard-path and "
+                     "--correlation-concentration-lookback")
 
     if args.verify:
         manifest_path = Path(args.verify)
@@ -5424,6 +5495,12 @@ def main() -> int:
             " đừng chỉ đọc phần 'tickers'.",
         ],
     }
+    attach_correlation_concentration_guard(
+        analysis_bundle,
+        include=args.include_correlation_concentration_guard,
+        artifact_path=args.correlation_concentration_guard_path,
+        lookback=args.correlation_concentration_lookback,
+    )
     attach_daily_opportunity_decision_queue(analysis_bundle)
     bundle_path = output_dir / 'analysis_bundle.json'
     serialization_started = time.perf_counter()
