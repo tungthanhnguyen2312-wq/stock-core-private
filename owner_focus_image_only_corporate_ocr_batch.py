@@ -36,6 +36,7 @@ BATCH_TICKERS = ("PNJ", "PVD", "NVL", "POW")
 REGRESSION_TICKERS = ("FPT",)
 CORE_METRICS = ("revenue", "gross_profit", "profit_before_tax", "net_income", "cash_and_equivalents", "total_assets", "shareholders_equity", "total_interest_bearing_debt", "operating_cash_flow")
 DISCOVERY_CONFIG = {"dpi": 50, "colorspace": "gray", "language": "vie+eng", "psm": 11, "max_front_pages": 20, "purpose": "STATEMENT_ROUTING_ONLY_NOT_FACT_EXTRACTION", "early_termination": "ALL_REQUIRED_STATEMENT_FAMILIES_INDEPENDENTLY_IDENTIFIED"}
+DISCOVERY_FALLBACK_CONFIG = {"dpi": 100, "colorspace": "gray", "language": "vie+eng", "psm": 11, "max_front_pages": 20, "purpose": "STATEMENT_ROUTING_ONLY_NOT_FACT_EXTRACTION", "early_termination": "ALL_REQUIRED_STATEMENT_FAMILIES_INDEPENDENTLY_IDENTIFIED", "requires_circular_issuance_attestation": True}
 _DISCOVERY_ANCHORS = {
     "balance_sheet": ("balance sheet", "bang can doi ke toan"),
     "income_statement": ("income statement", "bao cao ket qua hoat dong kinh doanh", "bao cao ket qua kinh doanh"),
@@ -54,7 +55,8 @@ def _hash(value: Any) -> str:
 
 def _norm(value: str) -> str:
     import unicodedata
-    return " ".join("".join(ch for ch in unicodedata.normalize("NFKD", value.lower()) if not unicodedata.combining(ch)).split())
+    normalized = "".join(ch for ch in unicodedata.normalize("NFKD", value.lower()) if not unicodedata.combining(ch))
+    return " ".join(normalized.replace("đ", "d").split())
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -75,6 +77,61 @@ def _discovery_complete(statement_pages: Sequence[Mapping[str, Any]]) -> bool:
         if family in _DISCOVERY_ANCHORS
     }
     return identified == set(_DISCOVERY_ANCHORS)
+
+
+def _statement_families_from_text(raw: str, *, requires_circular_issuance_attestation: bool) -> list[str]:
+    """Apply unchanged heading semantics with an optional issuance attestation.
+
+    The higher-resolution pass can read narrative mentions in contents and notes;
+    binding that pass to an exact Circular issuance attestation on the same
+    heading page avoids treating contents or narrative mentions as a routing
+    candidate, even if those pages list a statement form elsewhere.
+    """
+    text = _norm(raw)
+    anchored = {family for family, anchors in _DISCOVERY_ANCHORS.items() if any(anchor in text for anchor in anchors)}
+    if requires_circular_issuance_attestation:
+        circular_attested = "issued under circular" in text or "ban hanh theo thong tu" in text
+        return sorted(anchored) if circular_attested else []
+    forms = {family for form, family in _FORM_FAMILY.items()
+             if re.search(rf"\bb\s*0?{form[-1]}(?:\s*[-/]?\s*(?:dn|hn))?\b", text)}
+    return sorted(anchored | forms)
+
+
+def _merge_discovery_pages(existing: Sequence[Mapping[str, Any]], candidate: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Merge one page deterministically without losing the route that found it."""
+    by_page = {int(item["page_number"]): dict(item) for item in existing}
+    number = int(candidate["page_number"])
+    prior = by_page.get(number)
+    if prior is None:
+        by_page[number] = dict(candidate)
+    else:
+        prior["statement_families"] = sorted(set(prior.get("statement_families", [])) | set(candidate.get("statement_families", [])))
+        prior["routing_passes"] = sorted(set(prior.get("routing_passes", [])) | set(candidate.get("routing_passes", [])))
+        by_page[number] = prior
+    return [by_page[number] for number in sorted(by_page)]
+
+
+def _scan_discovery_pass(document: fitz.Document, *, page_count: int, config: Mapping[str, Any], engine: Path,
+                         seed_pages: Sequence[Mapping[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """One bounded, deterministic OCR pass."""
+    pages = [dict(item) for item in seed_pages]
+    scanned = []
+    config_id = _hash(dict(config))
+    for number in range(1, min(int(page_count), int(config["max_front_pages"])) + 1):
+        if _discovery_complete(pages):
+            break
+        pixmap = document[number - 1].get_pixmap(matrix=fitz.Matrix(int(config["dpi"]) / 72, int(config["dpi"]) / 72), colorspace=fitz.csGRAY, alpha=False)
+        image = pixmap.tobytes("png")
+        raw = subprocess.run([str(engine), "stdin", "stdout", "-l", str(config["language"]), "--psm", str(config["psm"])], input=image, capture_output=True, check=True).stdout.decode("utf-8", errors="replace")
+        scanned.append(number)
+        families = _statement_families_from_text(raw, requires_circular_issuance_attestation=bool(config.get("requires_circular_issuance_attestation", False)))
+        if families:
+            pages = _merge_discovery_pages(pages, {"page_number": number, "statement_families": families,
+                                                     "routing_text_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest(),
+                                                     "routing_passes": [config_id]})
+    return pages, {"config": dict(config), "config_id": config_id, "pages_ocrd": scanned,
+                   "page_count": len(scanned),
+                   "statement_pages_after_pass": [int(item["page_number"]) for item in pages]}
 
 
 def build_batch_manifest(*, inventory: Mapping[str, Any], official_manifest: Mapping[str, Any], owner_focus_artifact: Mapping[str, Any]) -> dict[str, Any]:
@@ -107,31 +164,28 @@ def build_batch_manifest(*, inventory: Mapping[str, Any], official_manifest: Map
 
 
 def discover_statement_pages(record: Mapping[str, Any], *, evidence_root: Path = EVIDENCE_ROOT, engine: Path = DEFAULT_ENGINE) -> dict[str, Any]:
-    """Use one fixed low-resolution OCR route solely to locate statement pages."""
+    """Route with a cheap pass and bounded strict high-resolution escalation."""
     source = (Path(evidence_root) / str(record["retained_path"])).resolve()
     if not source.is_file() or sha256_file(source) != str(record["document_sha256"]):
         raise ValueError("RETAINED_SOURCE_HASH_MISMATCH")
-    document = fitz.open(source); pages = []
+    document = fitz.open(source)
     try:
-        for number in range(1, min(int(record["page_count"]), DISCOVERY_CONFIG["max_front_pages"]) + 1):
-            pixmap = document[number - 1].get_pixmap(matrix=fitz.Matrix(DISCOVERY_CONFIG["dpi"] / 72, DISCOVERY_CONFIG["dpi"] / 72), colorspace=fitz.csGRAY, alpha=False)
-            image = pixmap.tobytes("png")
-            raw = subprocess.run([str(engine), "stdin", "stdout", "-l", DISCOVERY_CONFIG["language"], "--psm", str(DISCOVERY_CONFIG["psm"])], input=image, capture_output=True, check=True).stdout.decode("utf-8", errors="replace")
-            text = _norm(raw); families = [family for family, anchors in _DISCOVERY_ANCHORS.items() if any(anchor in text for anchor in anchors)]
-            for form, family in _FORM_FAMILY.items():
-                if re.search(rf"\b{form}\b", text.replace(" ", "")) and family not in families:
-                    families.append(family)
-            if families:
-                pages.append({"page_number": number, "statement_families": sorted(families), "routing_text_sha256": hashlib.sha256(raw.encode("utf-8")).hexdigest()})
-            # This is deliberately after recording the page.  Stop only once
-            # all three independently anchored statement families are present;
-            # weak or absent OCR matches keep scanning through the fixed cap.
-            if _discovery_complete(pages):
-                break
+        pages, primary = _scan_discovery_pass(document, page_count=int(record["page_count"]), config=DISCOVERY_CONFIG, engine=engine, seed_pages=[])
+        passes = [primary]
+        # A low-cost, independently anchored statement candidate is already a
+        # usable routing result.  Escalation is reserved for the known all-page
+        # OCR-readability failure, not for filling every family speculatively.
+        if not pages:
+            pages, fallback = _scan_discovery_pass(document, page_count=int(record["page_count"]), config=DISCOVERY_FALLBACK_CONFIG, engine=engine, seed_pages=pages)
+            passes.append(fallback)
     finally:
         document.close()
-    return {"config": DISCOVERY_CONFIG, "document_sha256": record["document_sha256"], "statement_pages": pages,
-            "discovery_id": _hash({"document_sha256": record["document_sha256"], "config": DISCOVERY_CONFIG, "statement_pages": pages})}
+    identity = {"document_sha256": record["document_sha256"], "primary_config": DISCOVERY_CONFIG,
+                "fallback_config": DISCOVERY_FALLBACK_CONFIG, "statement_pages": pages,
+                "fallback_used": len(passes) > 1}
+    return {"config": DISCOVERY_CONFIG, "fallback_config": DISCOVERY_FALLBACK_CONFIG,
+            "document_sha256": record["document_sha256"], "statement_pages": pages, "routing_passes": passes,
+            "fallback_used": len(passes) > 1, "discovery_id": _hash(identity)}
 
 
 def _candidate_rows(qualification: Mapping[str, Any], record: Mapping[str, Any]) -> list[dict[str, Any]]:

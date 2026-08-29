@@ -5,8 +5,10 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import inspect
+
 import owner_focus_image_only_corporate_ocr_batch as batch
-from owner_focus_image_only_corporate_ocr_batch import BATCH_TICKERS, CORE_METRICS, DISCOVERY_CONFIG, build_batch_manifest
+from owner_focus_image_only_corporate_ocr_batch import BATCH_TICKERS, CORE_METRICS, DISCOVERY_CONFIG, DISCOVERY_FALLBACK_CONFIG, build_batch_manifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,10 +100,72 @@ def test_discovery_preserves_order_and_does_not_stop_on_weak_or_missing_family(m
     assert result["statement_pages"][1]["statement_families"] == ["balance_sheet"]
 
 
-def test_discovery_scans_to_cap_when_one_required_family_is_absent(monkeypatch, tmp_path):
+def test_discovery_scans_to_cap_without_fallback_when_cheap_path_has_a_valid_candidate(monkeypatch, tmp_path):
     result, calls = _discover(monkeypatch, tmp_path, {2: "Balance sheet", 6: "Income statement"})
     assert calls == list(range(1, DISCOVERY_CONFIG["max_front_pages"] + 1))
+    assert result["fallback_used"] is False
     assert not batch._discovery_complete(result["statement_pages"])
+
+
+def test_primary_failure_uses_strict_high_resolution_fallback_and_recovers(monkeypatch, tmp_path):
+    # The fake output distinguishes the second bounded pass by invocation count.
+    source = tmp_path / "retained.pdf"; source.write_bytes(b"fixture")
+    calls = []
+    def fake_run(_args, *, input, **_kwargs):
+        page = int(input.decode("ascii")); calls.append(page)
+        if len(calls) <= 8:
+            return SimpleNamespace(stdout=b"unreadable")
+        fallback = {2: "ISSUED UNDER CIRCULAR FORM B 01-DN/HN CONSOLIDATED BALANCE SHEET", 4: "ISSUED UNDER CIRCULAR FORM B 02-DN/HN CONSOLIDATED INCOME STATEMENT", 6: "ISSUED UNDER CIRCULAR FORM B 03-DN/HN CONSOLIDATED CASH FLOW STATEMENT"}
+        return SimpleNamespace(stdout=fallback.get(page, "notes to financial statements").encode())
+    monkeypatch.setattr(batch, "sha256_file", lambda _path: "fixture-sha")
+    monkeypatch.setattr(batch.fitz, "open", lambda _path: _Document())
+    monkeypatch.setattr(batch.subprocess, "run", fake_run)
+    result = batch.discover_statement_pages({"retained_path": source.name, "document_sha256": "fixture-sha", "page_count": 8}, evidence_root=tmp_path)
+    assert result["fallback_used"] is True
+    assert [row["page_number"] for row in result["statement_pages"]] == [2, 4, 6]
+    assert [row["page_count"] for row in result["routing_passes"]] == [8, 6]
+
+
+def test_empty_primary_still_blocks_after_one_finite_fallback(monkeypatch, tmp_path):
+    result, calls = _discover(monkeypatch, tmp_path, {})
+    assert result["fallback_used"] is True
+    assert calls == list(range(1, DISCOVERY_CONFIG["max_front_pages"] + 1)) * 2
+    assert result["statement_pages"] == []
+
+
+def test_fallback_does_not_run_when_cheap_path_succeeds(monkeypatch, tmp_path):
+    result, calls = _discover(monkeypatch, tmp_path, {2: "Balance sheet", 4: "Income statement", 6: "Cash flow"})
+    assert result["fallback_used"] is False
+    assert len(result["routing_passes"]) == 1 and calls == [1, 2, 3, 4, 5, 6]
+
+
+def test_routing_identity_is_deterministic(monkeypatch, tmp_path):
+    first, _ = _discover(monkeypatch, tmp_path, {2: "Balance sheet", 4: "Income statement", 6: "Cash flow"})
+    second, _ = _discover(monkeypatch, tmp_path, {2: "Balance sheet", 4: "Income statement", 6: "Cash flow"})
+    assert first["discovery_id"] == second["discovery_id"]
+
+
+def test_strict_fallback_recognizes_english_and_vietnamese_circular_200_forms():
+    assert batch._statement_families_from_text("ISSUED UNDER CIRCULAR FORM B 01-DN/HN CONSOLIDATED BALANCE SHEET", requires_circular_issuance_attestation=True) == ["balance_sheet"]
+    assert batch._statement_families_from_text("BAN HANH THEO THONG TU MAU SO B 02-DN/HN BAO CAO KET QUA HOAT DONG KINH DOANH", requires_circular_issuance_attestation=True) == ["income_statement"]
+
+
+def test_strict_fallback_rejects_notes_and_front_matter_mentions():
+    assert batch._statement_families_from_text("TABLE OF CONTENTS FORM B 01-DN/HN CONSOLIDATED BALANCE SHEET INCOME STATEMENT CASH FLOW", requires_circular_issuance_attestation=True) == []
+    assert batch._statement_families_from_text("FORM B 09-DN/HN NOTES TO THE FINANCIAL STATEMENTS balance sheet income statement", requires_circular_issuance_attestation=True) == []
+
+
+def test_no_fuzzy_heading_broadening_or_ticker_specific_fallback_logic():
+    source = inspect.getsource(batch._statement_families_from_text) + inspect.getsource(batch._scan_discovery_pass)
+    assert "SequenceMatcher" not in source and "edit_distance" not in source and "ticker ==" not in source
+    assert "PVD" not in source and "POW" not in source
+
+
+def test_fallback_budget_is_finite_and_empty_ocr_fails_closed():
+    assert DISCOVERY_CONFIG["max_front_pages"] == DISCOVERY_FALLBACK_CONFIG["max_front_pages"] == 20
+    assert DISCOVERY_CONFIG["dpi"] == 50 and DISCOVERY_FALLBACK_CONFIG["dpi"] == 100
+    assert DISCOVERY_FALLBACK_CONFIG["requires_circular_issuance_attestation"] is True
+    assert batch._statement_families_from_text("", requires_circular_issuance_attestation=True) == []
 
 
 def test_reconciliation_result_shape_translates_to_an_eligible_ingress_key():
