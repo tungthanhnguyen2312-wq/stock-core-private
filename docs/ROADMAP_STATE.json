@@ -1,0 +1,188 @@
+{
+  "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
+  "roadmap_id": "stock-core-private",
+  "roadmap_version": "2026.08.30.1",
+  "narrative_authority": {
+    "strategic_roadmap": "docs/ROADMAP.md",
+    "operational_narrative": "docs/STATE.md",
+    "decision_record": "docs/DECISIONS.md",
+    "ai_rules": "docs/AI_RULES.md",
+    "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
+  },
+  "implementation_lineage_head": "HEAD",
+  "last_updated_checkpoint": "HEAD",
+  "known_operational_diff_allowlist": [
+    "config/daily_research_session_input_registry.json"
+  ],
+  "current": {
+    "milestone": "ROADMAP_EXECUTION_CONTROL_PLANE_V1",
+    "state": "COMPLETE",
+    "executor": "Claude Code",
+    "base_checkpoint": "c9412833bb12d35facf866b7a84fa371e7520f1a",
+    "checkpoint": "HEAD",
+    "dependency_status": "SATISFIED"
+  },
+  "queued_next": [
+    "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"
+  ],
+  "milestones": [
+    {
+      "milestone_id": "MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PARTIAL_BY_EVIDENCE / PROSPECTIVE_RETAINED_CONTINUITY_ACTIVE",
+      "checkpoint": "7163686f3dda60503d58ce401236477318104833",
+      "dependencies": [],
+      "unlocks": ["SESSION_BUNDLE_DECISION_CONTEXT_AND_LIFECYCLE_ENRICHMENT_V1"],
+      "authority_effect": "NONE",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-30, Multi-session thesis and recommendation lifecycle V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Bootstrap origin of the tracked lineage: retained-only continuity layer comparing governed session pairs (58 comparable, 48 unchanged, 10 neutral transitions). Earlier project history exists but is not reconstructed here (see docs/STATE.md/docs/DECISIONS.md for full narrative)."
+    },
+    {
+      "milestone_id": "SESSION_BUNDLE_DECISION_CONTEXT_AND_LIFECYCLE_ENRICHMENT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PARTIAL_BY_EVIDENCE / RETENTION_CONTRACT_ACTIVE",
+      "checkpoint": "1ad378ab59dadb4e7b7273e97bd93b37ceb92f47",
+      "dependencies": ["MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1"],
+      "unlocks": ["DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1"],
+      "authority_effect": "NONE",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-30, Session Bundle decision-context and lifecycle enrichment V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Session Bundle retains shadow-recommendation/fundamental-invalidation identities verbatim; both replayed sessions reported 100% SESSION_MISMATCH because no same-session shadow-recommendation artifact existed yet -- the genuine gap the next milestone closed."
+    },
+    {
+      "milestone_id": "DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS",
+      "checkpoint": "f4a2d8161cfffbded48ac0c8190342d3927645f8",
+      "dependencies": ["SESSION_BUNDLE_DECISION_CONTEXT_AND_LIFECYCLE_ENRICHMENT_V1"],
+      "unlocks": ["CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1"],
+      "authority_effect": "NONE",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-30, Daily-session shadow recommendation and invalidation production V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "shadow_security_recommendation/v1 now runs per Daily Producer session instead of once against a frozen cohort; 75/106 and 83/123 same-session retention on the 27/28 replay."
+    },
+    {
+      "milestone_id": "CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS",
+      "checkpoint": "1282fd4a6e7011136333c85a30ec6edd3ccc45c6",
+      "dependencies": ["DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1"],
+      "unlocks": ["MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1"],
+      "authority_effect": "NONE",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-30, Canonical daily shadow-recommendation autosourcing V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Canonical Daily Producer auto-resolves/builds the daily_session_shadow_recommendation chain before the Daily Product/Session Bundle step; fails closed on corrupt or session-mismatched lineage."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS",
+      "checkpoint": "4b5d460a2f545662c1e0cb642df91270f8a5e7f2",
+      "dependencies": ["CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1"],
+      "unlocks": ["CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1"],
+      "authority_effect": "NONE",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-30, Market-wide fundamental research cohort scale-out V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Fixed an accidental hardcoded default-path ceiling (523-member frozen snapshot); widened the governed fundamental cross-sectional cohort 523 -> 1,507 (984 newly admitted, residual zero). Narrow 523 cohort remained the live canonical default until the next milestone's explicit cutover."
+    },
+    {
+      "milestone_id": "CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS",
+      "checkpoint": "c9412833bb12d35facf866b7a84fa371e7520f1a",
+      "dependencies": ["MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1"],
+      "unlocks": ["ROADMAP_EXECUTION_CONTROL_PLANE_V1"],
+      "narrative_next_gate": "docs/STATE.md's own text names a distinct RESEARCH-track next gate ('targeted qualified evidence acquisition for genuinely unavailable names, not another cohort/default change'); ROADMAP_EXECUTION_CONTROL_PLANE_V1 is a separate, owner-authorized GOVERNANCE-track milestone opened in parallel, not a continuation of that research gate. Both remain legitimate; this field exists so the two tracks are never silently conflated.",
+      "authority_effect": "CURRENT_RESEARCH_DEFAULT_COHORT_CUTOVER_ONLY",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md / docs/ROADMAP.md / docs/DECISIONS.md (2026-08-30, Canonical Wide Fundamental Research Cohort Cutover V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "The accepted checkpoint this whole control-plane milestone was branched from (BASE). Prospective current research now resolves CURRENT_WIDE_GOVERNED_V1 through fundamental_research_cohort_selection.py's versioned fail-closed resolver; LEGACY_HISTORICAL_FROZEN_523_V1 remains explicit replay-only."
+    },
+    {
+      "milestone_id": "ROADMAP_EXECUTION_CONTROL_PLANE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS",
+      "checkpoint": "HEAD",
+      "dependencies": ["CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1"],
+      "unlocks": ["ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"],
+      "authority_effect": "NONE",
+      "governance_effect": "INTRODUCES_ROADMAP_EXECUTION_STATE_AUTHORITY",
+      "owner_authorized": true,
+      "source_doc": "docs/ROADMAP_STATE.json (this milestone); docs/STATE.md and docs/DECISIONS.md governance closeout entries",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Introduces this file (docs/ROADMAP_STATE.json), roadmap_execution_state.py, and tools/stocklookup_roadmap.py as the machine-readable roadmap execution-state authority. No research, scoring, recommendation, valuation, liquidity, PIT, RAW_AS_TRADED, or provider authority changed. 'checkpoint': 'HEAD' is the documented self-referential sentinel (see roadmap_execution_state.resolve_checkpoint docstring) because a commit cannot embed its own hash; resolve it to a literal SHA the next time this record is edited."
+    },
+    {
+      "milestone_id": "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1",
+      "state": "NEXT",
+      "narrative_disposition": null,
+      "checkpoint": null,
+      "dependencies": ["ROADMAP_EXECUTION_CONTROL_PLANE_V1"],
+      "unlocks": [],
+      "authority_effect": null,
+      "owner_authorized": false,
+      "source_doc": "This milestone's own directive (ROADMAP_EXECUTION_CONTROL_PLANE_V1 objective, section 10)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Not started. Recorded NEXT only; per AGENTS.md and this file's own invariant, no new roadmap milestone may begin until this control plane says it is NEXT/ALLOWED (python tools/stocklookup_roadmap.py --can-start ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1), except explicit owner override."
+    }
+  ],
+  "blocked_capabilities": [
+    {
+      "capability": "RAW_AS_TRADED_AND_HISTORICAL_PIT",
+      "state": "NOT_PROMOTED",
+      "reason": "docs/STATE.md Section 3 Invariant 1 (Price Basis Invariant): RAW_AS_TRADED is NOT PROMOTED; bounded REST OHLC remains ADJUSTED_RETROSPECTIVE. HISTORICAL_PIT_RAW_AS_TRADED_AND_CORPORATE_ACTION_EVIDENCE_V1 = OUTCOME_D (2026-08-24): retained VSDC event evidence has a record date but no explicit ex-date and no pre-event raw snapshot pair.",
+      "reopen_gate": "An explicit official ex-date plus matching pre-event raw price snapshot evidence for the same ticker/event window.",
+      "reference_checkpoint": null
+    },
+    {
+      "capability": "LIQUIDITY_AND_POSITION_SIZING_AUTHORITY",
+      "state": "BLOCKED",
+      "reason": "docs/STATE.md Section 3 Invariant 2: QUALIFIED_LIQUIDITY_INPUTS = NO and POSITION_SIZING_IS_SAFE = NO. HISTORICAL_MATCHED_TRADED_VALUE_AND_ADV_AUTHORITY_V1 and ADTV20_EXACT_RECONCILED_TRAILING_WINDOW_RECOVERY_V1 (2026-08-27) both remain Outcome C: the retained 40-session corpus is insufficient for the 20-session ADV20 denominator (FHSC omits expected session 2026-08-06).",
+      "reopen_gate": "A sufficiently deep exact-reconciled G1 matched-value cohort, or an independent anchor supplying the missing 2026-08-06 session.",
+      "reference_checkpoint": null
+    },
+    {
+      "capability": "ACTIVE_UNIVERSE_AUTHORITY",
+      "state": "UNKNOWN",
+      "reason": "docs/STATE.md Section 3 Invariant 3: ACTIVE_UNIVERSE remains UNKNOWN for all instruments because DNSE feeds do not carry official exchange or listing-status proof.",
+      "reopen_gate": "An official exchange/listing-status source route, not another empirical-cohort widening.",
+      "reference_checkpoint": null
+    },
+    {
+      "capability": "REVERSE_VALUATION_INTRINSIC_OUTPUTS",
+      "state": "BLOCKED",
+      "reason": "MARKET_WIDE_IMPLIED_GROWTH_AND_REVERSE_VALUATION_RESEARCH_V1 = PARTIAL_BY_EVIDENCE / NO_QUALIFIED_INTRINSIC_OUTPUTS (2026-08-30): 0 READY / 0 PARTIAL / 4 BLOCKED / 519 UNAVAILABLE because no governed record retains an intrinsic evaluator output or the fixed FCFF (forecast, WACC, terminal growth) inputs.",
+      "reopen_gate": "An upstream qualified current intrinsic-input/output envelope -- not another reverse-model assumption or proxy expansion.",
+      "reference_checkpoint": "47a6fdd85a17314a154b4db19289b3b91ab6af0d"
+    },
+    {
+      "capability": "OFFICIAL_FINANCIAL_OCR_DEFAULT_SCALEOUT",
+      "state": "DEPRIORITIZED_TERMINAL",
+      "reason": "docs/STATE.md OCR/PDF scope note (2026-08-28): the owner-focus image-only OCR batch (commit 6c6755f) is the final default OCR scale-out milestone. financial_operational_proxy.py's provider-tier research layer is now the default path for market-wide financial coverage growth.",
+      "reopen_gate": "Triggered, bounded use only: important owner-focus/portfolio candidates, provider conflict resolution, critical metric verification, or PIT/audit-sensitive authority -- never reopened as a default coverage-growth lane.",
+      "reference_checkpoint": null
+    },
+    {
+      "capability": "MARKET_DATA_PROVIDER_EXPANSION",
+      "state": "CLOSED_REJECTED",
+      "reason": "docs/AI_RULES.md rule 8 / AGENTS.md: DNSE/Livespeed is the provider direction; do not add another provider without a new owner decision. EODHD is explicitly rejected (REJECTED_BY_OWNER).",
+      "reopen_gate": "A new, explicit owner decision naming a specific additional provider and use case.",
+      "reference_checkpoint": null
+    }
+  ]
+}

@@ -66,3 +66,13 @@ counter-theses, and surface anomalies. AI may **not** invent facts, convert `UNK
 `QUALIFIED`, fabricate values/target prices/probabilities, infer source semantics from labels, or
 override deterministic risk gates. Strategy/portfolio/dashboard output must preserve the source
 status and lineage that bounds it.
+
+## Roadmap execution authority
+
+11. `docs/ROADMAP_STATE.json` is the machine-readable roadmap EXECUTION-STATE authority
+    (current/active/next/blocked/deferred/superseded milestone sequencing and Git-checkpoint
+    verification), queried via `python tools/stocklookup_roadmap.py` (`--check`,
+    `--can-start MILESTONE_ID`). No new roadmap milestone may start unless it reports
+    NEXT/ALLOWED, except an explicit, recorded owner override -- never inferred from a Git
+    commit, a completed dependency alone, or an agent's own judgment that a milestone is ready.
+    It supplements `docs/ROADMAP.md`/`docs/STATE.md`/`docs/DECISIONS.md` and never overrides them.

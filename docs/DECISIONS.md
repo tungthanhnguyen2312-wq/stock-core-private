@@ -1,5 +1,16 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-30 - Roadmap Execution Control Plane V1
+
+`ROADMAP_EXECUTION_CONTROL_PLANE_V1 = COMPLETE` (`push = NO`).
+
+1. Added `docs/ROADMAP_STATE.json` as the machine-readable EXECUTION-STATE authority: current/active/next/blocked/deferred/superseded milestone sequencing, per-milestone Git checkpoints, dependency/unlocks edges, and a `blocked_capabilities` register for standing invariants (RAW_AS_TRADED/historical PIT, liquidity/sizing, `ACTIVE_UNIVERSE`, reverse-valuation intrinsic outputs, OCR/PDF default-scaleout deprioritization, market-data provider expansion). It does not restate or supersede `docs/ROADMAP.md`, `docs/STATE.md`, or this file; those remain the narrative/strategic/decision authority.
+2. Bootstrapped the tracked lineage from the six-milestone chain culminating in this checkpoint (multi-session thesis/recommendation lifecycle -> Session Bundle decision-context retention -> daily-session recommendation/invalidation production -> canonical recommendation autosourcing -> fundamental research cohort scaleout -> canonical wide cohort cutover), each checkpoint verified against real Git ancestry (`git merge-base --is-ancestor`), not narrative inference alone. Older project history is not reconstructed.
+3. New `roadmap_execution_state.py` (validator/query engine, stdlib-only, reuses `subprocess_capture.run_utf8` and `field_temporal_contract.stable_id`) and `tools/stocklookup_roadmap.py` (owner-facing CLI: default human report, `--json`, `--check` preflight gate, `--can-start MILESTONE_ID`) implement nine deterministic checks (multiple-active-milestones, active/next dependency consistency, closed-milestone-reopened, unknown-milestone references, stale-NEXT-pointer, checkpoint-missing/not-in-Git, recorded-HEAD-divergence, multiple-source-writers) and classify Git/worktree findings INFO/WARNING/FAIL rather than treating every dirty file as fatal -- the pre-existing primary-checkout `config/daily_research_session_input_registry.json` diff is explicitly allowlisted as known operational state, not drift. 29 focused tests pass (temporary Git repos only; no real worktree mutated), plus `py_compile` and `git diff --cached --check`.
+4. A commit cannot embed its own hash; `"checkpoint": "HEAD"` is a documented self-referential sentinel the tool resolves against live `git rev-parse HEAD`, with a `ROADMAP_UNRESOLVED_HEAD_SENTINEL_STALE` warning if a later commit lands without first freezing it to a literal SHA.
+5. New standing invariant recorded in `docs/AI_RULES.md`: no new roadmap milestone may start unless `docs/ROADMAP_STATE.json` (via `tools/stocklookup_roadmap.py --can-start`) says it is NEXT/ALLOWED, except explicit owner override. `queued_next = ["ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"]`; that milestone is NOT started here.
+6. Authority effect is exactly `NONE`; this is governance/process infrastructure only. No research, scoring, recommendation, valuation, liquidity, PIT, RAW_AS_TRADED, or provider authority changed. No network, registry mutation, runtime write, push, merge, or publication occurred; the primary Producer checkout and its pre-existing registry diff are untouched.
+
 ## 2026-08-30 - Canonical Wide Fundamental Research Cohort Cutover V1
 
 `CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1 = PASS` (`push = NO`).
