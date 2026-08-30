@@ -17,9 +17,9 @@
   "current": {
     "milestone": "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1",
     "state": "COMPLETE",
-    "executor": "Codex",
+    "executor": "Codex, Claude Code",
     "base_checkpoint": "fcf9e459c6a3cd6673111cef2d231f8c28312aeb",
-    "checkpoint": "HEAD",
+    "checkpoint": "52a31f0364836249408c3e54f97ddf3568af7d69",
     "dependency_status": "SATISFIED"
   },
   "queued_next": [],
@@ -128,7 +128,7 @@
       "milestone_id": "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1",
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
-      "checkpoint": "HEAD",
+      "checkpoint": "52a31f0364836249408c3e54f97ddf3568af7d69",
       "dependencies": ["ROADMAP_EXECUTION_CONTROL_PLANE_V1"],
       "unlocks": [],
       "authority_effect": "OPERATIONAL_SERVING_ONLY",
@@ -136,7 +136,7 @@
       "source_doc": "This milestone's own directive (ROADMAP_EXECUTION_CONTROL_PLANE_V1 objective, section 10)",
       "state_history": [],
       "owner_override": null,
-      "notes": "COMPLETE. Intermediate implementation checkpoint: ce52e7cc58db6770548fd65ec8d65412a3afccef. Owner CLI and private-Git transport compose existing canonical outputs; bounded 27/28 retained local replay proves publication, previous-session linkage, LATEST and idempotence/conflict handling. HEAD is the documented self-reference sentinel for this terminal checkpoint. Next gate is OWNER_INTEGRATION_RELEASE_REVIEW; no substantive milestone is started."
+      "notes": "COMPLETE. Intermediate implementation checkpoint: ce52e7cc58db6770548fd65ec8d65412a3afccef. Owner CLI and private-Git transport compose existing canonical outputs; bounded 27/28 retained local replay proves publication, previous-session linkage, LATEST and idempotence/conflict handling. OWNER_INTEGRATION_RELEASE_REVIEW closeout (2026-08-30, docs/DECISIONS.md 'Owner Integration Release Review (Interrupted-Session Takeover)') resolved the checkpoint off the HEAD sentinel after two additional source fixes discovered during live verification -- exact-Producer-run binding for runtime materialization (38981ab) and P3F9B snapshot resolution for reused-retained-evidence sessions (52a31f0) -- then ran a real stocklookup.ps1 daily end to end: session 2026-08-28 published to the private handoff repo (handoff_build_5c41b201c84b12e9c535f8d9915e824c6ef6dc15b73e22986a4f999fb664c07d) with the legacy package verified byte-identical and every hash reconciled against the Producer's own output, and a second run correctly returned NO_OP_ALREADY_PUBLISHED. Next gate is OWNER_ROADMAP_SELECTION; no new milestone is started."
     }
   ],
   "blocked_capabilities": [
