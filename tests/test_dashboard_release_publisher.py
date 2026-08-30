@@ -106,6 +106,82 @@ def test_publish_dashboard_release_fails_on_mixed_session(tmp_path):
     assert "MIXED_SESSION_DASHBOARD_RELEASE" in str(excinfo.value)
 
 
+def _seed_release_inputs(runtime_root: Path, session: str) -> None:
+    (runtime_root / "screen_snapshot.csv").write_text(
+        f"ticker,exchange,date,structure,rs_rating,close\nVNM,HSX,{session},UP,85,72000\n", encoding="utf-8")
+    (runtime_root / "market_breadth.csv").write_text(
+        f"ticker,exchange,date\nVNM,HSX,{session}\n", encoding="utf-8")
+    (runtime_root / "analysis_latest.json").write_text(
+        json.dumps({"summary": {"session_date": session}}), encoding="utf-8")
+    (runtime_root / "bundle_manifest.json").write_text(
+        json.dumps({"freshness": {"reference_session": session}}), encoding="utf-8")
+
+
+def test_stale_signal_json_and_js_are_removed_and_never_current(tmp_path):
+    runtime_root, web_root, operation = tmp_path / "runtime", tmp_path / "web", tmp_path / "operation"
+    runtime_root.mkdir(); web_root.mkdir(); operation.mkdir()
+    session = "2026-08-28"
+    _seed_release_inputs(runtime_root, session)
+    for name in ("candle_signals", "sector_heatmap", "candlestick_patterns"):
+        path = runtime_root / "data" / f"{name}.json"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(json.dumps({"scan_date": "2026-08-25", "generated_at": "2026-08-26T00:00:00Z"}), encoding="utf-8")
+        stale_js = web_root / "data" / f"{name}.js"
+        stale_js.parent.mkdir(exist_ok=True)
+        stale_js.write_text("window.STALE = true;", encoding="utf-8")
+
+    publish_dashboard_release(session, operation, runtime_root, web_root, replay_local=True)
+    info = json.loads((web_root / "data/build_info.json").read_text(encoding="utf-8"))
+    assert info["domains"]["signals"]["status"] == "STALE"
+    assert info["domains"]["signals"]["components"]["candle_signals"]["source_session"] == "2026-08-25"
+    for name in ("candle_signals", "sector_heatmap", "candlestick_patterns"):
+        assert not (web_root / "data" / f"{name}.json").exists()
+        assert not (web_root / "data" / f"{name}.js").exists()
+
+
+def test_exact_signal_pairs_and_exact_cockpit_are_published(tmp_path):
+    runtime_root, web_root, operation = tmp_path / "runtime", tmp_path / "web", tmp_path / "operation"
+    runtime_root.mkdir(); web_root.mkdir(); operation.mkdir()
+    session = "2026-08-28"
+    _seed_release_inputs(runtime_root, session)
+    for name in ("candle_signals", "sector_heatmap", "candlestick_patterns"):
+        path = runtime_root / "data" / f"{name}.json"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(json.dumps({"scan_date": session, "generated_at": "2026-08-28T00:00:00Z"}), encoding="utf-8")
+    (operation / "current_decision_cockpit_projection.json").write_text(
+        json.dumps({"schema_version": "current_decision_cockpit_projection/v2", "session": session}), encoding="utf-8")
+
+    publish_dashboard_release(session, operation, runtime_root, web_root, replay_local=True)
+    info = json.loads((web_root / "data/build_info.json").read_text(encoding="utf-8"))
+    assert info["domains"]["signals"]["status"] == "CURRENT"
+    assert info["domains"]["cockpit"]["status"] == "CURRENT"
+    assert json.loads((web_root / "data/current_decision_cockpit.json").read_text(encoding="utf-8"))["session"] == session
+    for name in ("candle_signals", "sector_heatmap", "candlestick_patterns"):
+        assert (web_root / "data" / f"{name}.json").exists()
+        assert (web_root / "data" / f"{name}.js").exists()
+
+
+def test_macro_domain_is_cadence_aware_at_release_session(tmp_path):
+    runtime_root, web_root, operation = tmp_path / "runtime", tmp_path / "web", tmp_path / "operation"
+    runtime_root.mkdir(); web_root.mkdir(); operation.mkdir()
+    session = "2026-08-28"
+    _seed_release_inputs(runtime_root, session)
+    macro = {"schema_version": 1, "generated_at": "2026-08-19T00:00:00+07:00", "data_as_of": "2026-08-19",
+             "indicators": [
+                 {"key": "vix", "status": "available", "period": "2026-08-19", "freshness": {"stale_after_days": 7}},
+                 {"key": "cpi", "status": "available", "period": "2026-07-01", "freshness": {"stale_after_days": 62}},
+             ], "quality": {"catalog_count": 2, "available_count": 2, "missing_count": 0}}
+    path = runtime_root / "data" / "macro_snapshot.json"; path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps(macro), encoding="utf-8")
+
+    publish_dashboard_release(session, operation, runtime_root, web_root, replay_local=True)
+    info = json.loads((web_root / "data/build_info.json").read_text(encoding="utf-8"))
+    snapshot = json.loads((web_root / "data/macro_snapshot.json").read_text(encoding="utf-8"))
+    assert info["domains"]["macro"]["status"] == "PARTIAL"
+    assert snapshot["indicators"][0]["freshness"]["status"] == "stale"
+    assert snapshot["indicators"][1]["freshness"]["status"] == "current"
+
+
 def _git(cwd: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", *args], cwd=cwd, capture_output=True, text=True, check=True,

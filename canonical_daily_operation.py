@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -137,6 +138,27 @@ def _write_json(path: Path, value: Mapping[str, Any]) -> None:
         raise CanonicalDailyOperationError("IMMUTABLE_OPERATION_RECORD_CONFLICT", path.name)
     if not path.exists():
         path.write_text(encoded, encoding="utf-8")
+
+
+def refresh_macro_snapshot(root: Path, runtime_root: Path) -> dict[str, Any]:
+    """Run the existing bounded macro synchronizer once, without blocking core research.
+
+    Macro is optional context: a source failure is recorded for the presentation contract,
+    while the exact-session market/research path remains authoritative and completes.
+    """
+    env = os.environ.copy()
+    env["STOCK_LOOKUP_RUNTIME_ROOT"] = str(runtime_root)
+    try:
+        result = subprocess.run(
+            [sys.executable, str(root / "macro_sync.py")], cwd=root, env=env,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+        )
+    except OSError as exc:
+        return {"status": "FAILED", "reason_code": "MACRO_SYNC_EXECUTION_FAILED", "detail": type(exc).__name__}
+    if result.returncode:
+        return {"status": "FAILED", "reason_code": "MACRO_SYNC_EXTERNAL_OR_PIPELINE_FAILURE",
+                "returncode": result.returncode, "detail": (result.stderr or result.stdout).strip()[-500:]}
+    return {"status": "REFRESHED", "reason_code": None}
 
 
 def _working_dates_probe() -> dict[str, Any]:
@@ -286,6 +308,7 @@ def run_canonical_daily_operation(
     runtime_fn: Callable[..., Mapping[str, Any]] | None = None,
     trusted_fn: Callable[..., Mapping[str, Any]] | None = None,
     publication_runner: Callable[[list[str]], Any] | None = None,
+    macro_refresh_fn: Callable[[Path, Path], Mapping[str, Any]] | None = None,
     web_dir: Path | None = None,
     out_dir: Path | str | None = None,
     consumer_root: Path | None = None,
@@ -448,6 +471,10 @@ def run_canonical_daily_operation(
             f"DAILY_PRODUCER_SESSION_MISMATCH:expected={resolved_session}:observed={producer_session}",
         )
 
+    # The existing macro synchronizer is an optional, bounded current-research refresh.
+    # Its failure never weakens or blocks the exact-session deterministic core.
+    macro_refresh = dict((macro_refresh_fn or refresh_macro_snapshot)(root, runtime_root))
+
     shadow_autosourcing = (
         (producer_result.get("manifest") or {}).get("daily_session_shadow_recommendation")
         if isinstance(producer_result, Mapping) else None
@@ -609,6 +636,7 @@ def run_canonical_daily_operation(
         "prospective_cohort_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
         "runtime_release_status": "READY" if runtime_release.get("ready") else "NOT_READY",
         "runtime_release": runtime_release,
+        "macro_refresh": macro_refresh,
         "trusted_subset_status": "READY" if trusted.get("trusted_subset_ready") else "NOT_READY",
         "trusted_subset": {
             "session": trusted_session,

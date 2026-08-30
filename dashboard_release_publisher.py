@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -173,7 +173,8 @@ def _publish_generated_release(
     for rel in staged:
         target = web_root / rel
         if not target.is_file():
-            byte_mismatches.append(rel)
+            # Removing an obsolete generated sidecar is a valid, governed release
+            # transition.  The allowlist and staged-path checks above still bind it.
             continue
         blob = subprocess.run(
             ["git", "cat-file", "blob", f":{rel}"], cwd=web_root,
@@ -242,6 +243,123 @@ def _load_json_object(path: Path, code: str) -> dict[str, Any]:
     return value
 
 
+_SIGNAL_COMPONENTS = (
+    ("candle_signals", "data/candle_signals.json", "data/candle_signals.js", "CANDLE_SIGNALS"),
+    ("sector_heatmap", "data/sector_heatmap.json", "data/sector_heatmap.js", "SECTOR_HEATMAP"),
+    ("candlestick_patterns", "data/candlestick_patterns.json", "data/candlestick_patterns.js", "CANDLESTICK_PATTERNS"),
+)
+
+
+def _remove_if_present(path: Path) -> None:
+    if path.is_file():
+        path.unlink()
+
+
+def _sidecar_candidates(runtime_root: Path, operation_dir: Path, relpath: str) -> list[Path]:
+    """Return explicit lineage locations only; never use a latest-file search."""
+    candidates = [runtime_root / relpath, operation_dir / relpath, operation_dir.parent / relpath]
+    unique: list[Path] = []
+    for candidate in candidates:
+        if candidate.is_file() and candidate not in unique:
+            unique.append(candidate)
+    return unique
+
+
+def _signal_component_state(runtime_root: Path, operation_dir: Path, relpath: str, session: str) -> tuple[Path | None, dict[str, Any]]:
+    """Select one exact signal payload or retain only its stale metadata for disclosure."""
+    exact: list[tuple[Path, dict[str, Any]]] = []
+    observed: dict[str, Any] = {"status": "UNAVAILABLE_FOR_CURRENT_SESSION", "source_session": None,
+                                "generated_at": None, "reason_codes": ["EXACT_SESSION_SIGNAL_ARTIFACT_UNAVAILABLE"]}
+    for candidate in _sidecar_candidates(runtime_root, operation_dir, relpath):
+        try:
+            payload = _load_json_object(candidate, "SIGNAL_SIDECAR")
+        except DashboardReleaseError:
+            continue
+        source_session = payload.get("scan_date")
+        generated_at = payload.get("generated_at")
+        if observed["source_session"] is None:
+            observed.update({"source_session": source_session, "generated_at": generated_at})
+        if source_session == session:
+            exact.append((candidate, payload))
+    if len(exact) > 1:
+        hashes = {_sha256(path) for path, _payload in exact}
+        if len(hashes) != 1:
+            raise DashboardReleaseError(f"AMBIGUOUS_EXACT_SIGNAL_SIDECAR:{relpath}")
+    if exact:
+        path, payload = exact[0]
+        return path, {"status": "CURRENT", "source_session": session,
+                      "generated_at": payload.get("generated_at"), "freshness": "EXACT_SESSION",
+                      "reason_codes": []}
+    if observed["source_session"]:
+        observed["status"] = "STALE"
+        observed["reason_codes"] = ["SIGNAL_SOURCE_SESSION_MISMATCH"]
+    return None, observed
+
+
+def _write_signal_pair(web_root: Path, json_relpath: str, js_relpath: str, global_name: str, source: Path | None) -> None:
+    """Publish JSON and file:// JS as one derived pair; a stale JS cannot survive alone."""
+    json_target, js_target = web_root / json_relpath, web_root / js_relpath
+    if source is None:
+        _remove_if_present(json_target)
+        _remove_if_present(js_target)
+        return
+    payload = _load_json_object(source, "SIGNAL_SIDECAR")
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    _atomic_write_text(json_target, encoded + "\n")
+    _atomic_write_text(js_target, f"window.{global_name} = {encoded};\n")
+
+
+def _macro_domain_state(source: Path | None, session: str) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Evaluate the existing per-series cadence contract at the Dashboard release session."""
+    unavailable = {"status": "UNAVAILABLE", "source_session": None, "data_as_of": None,
+                   "generated_at": None, "freshness": "UNAVAILABLE",
+                   "reason_codes": ["MACRO_SNAPSHOT_UNAVAILABLE"]}
+    if source is None:
+        return unavailable, None
+    try:
+        snapshot = _load_json_object(source, "MACRO_SNAPSHOT")
+        as_of = date.fromisoformat(session)
+    except (DashboardReleaseError, ValueError):
+        return {**unavailable, "reason_codes": ["MACRO_SNAPSHOT_UNREADABLE"]}, None
+    stale = 0
+    available = 0
+    for item in snapshot.get("indicators") or []:
+        if not isinstance(item, dict):
+            continue
+        freshness = item.get("freshness") if isinstance(item.get("freshness"), dict) else {}
+        threshold = freshness.get("stale_after_days")
+        period = item.get("period")
+        try:
+            age_days = max(0, (as_of - date.fromisoformat(str(period))).days)
+        except ValueError:
+            age_days = None
+        status = "unknown"
+        if isinstance(threshold, int) and age_days is not None:
+            status = "stale" if age_days > threshold else "current"
+        item["freshness"] = {"status": status, "age_days": age_days, "stale_after_days": threshold}
+        if item.get("status") == "available":
+            available += 1
+        if status == "stale":
+            stale += 1
+    quality = snapshot.get("quality") if isinstance(snapshot.get("quality"), dict) else {}
+    quality["stale_count"] = stale
+    quality["is_partial"] = bool(quality.get("missing_count") or stale)
+    snapshot["quality"] = quality
+    snapshot["dashboard_freshness_evaluated_at"] = session
+    if not available:
+        status = "UNAVAILABLE"
+        reasons = ["MACRO_NO_AVAILABLE_SERIES"]
+    elif stale:
+        status = "PARTIAL"
+        reasons = ["MACRO_CADENCE_STALE_SERIES_PRESENT"]
+    else:
+        status = "CURRENT"
+        reasons = []
+    return {"status": status, "source_session": None, "data_as_of": snapshot.get("data_as_of"),
+            "generated_at": snapshot.get("generated_at"), "freshness": "CADENCE_AWARE",
+            "reason_codes": reasons, "stale_series_count": stale}, snapshot
+
+
 def publish_dashboard_release(
     session: str,
     operation_dir: Path | str,
@@ -300,55 +418,55 @@ def publish_dashboard_release(
             dst = web_root / name
             _atomic_copy(src, dst)
 
-    # 3. Synchronize / generate data/ companions
-    # Candle signals, sector heatmap, candlestick patterns, macro
-    signal_files = (
-        ("data/candle_signals.json", ("scan_date",)),
-        ("data/candle_signals.js", None),
-        ("data/sector_heatmap.json", ("scan_date",)),
-        ("data/sector_heatmap.js", None),
-        ("data/candlestick_patterns.json", ("scan_date",)),
-        ("data/candlestick_patterns.js", None),
-        ("data/macro_snapshot.json", None),
-        ("data/macro_snapshot.js", None),
-        ("data/current_decision_cockpit.json", None),
+    # 3. Synchronize presentation sidecars only from their own governed contracts.
+    # A JSON/JS pair is atomic: stale file:// fallbacks may never survive a rejected JSON.
+    signal_components: dict[str, dict[str, Any]] = {}
+    for component, json_name, js_name, global_name in _SIGNAL_COMPONENTS:
+        source, state = _signal_component_state(runtime_root, operation_dir, json_name, session)
+        _write_signal_pair(web_root, json_name, js_name, global_name, source)
+        signal_components[component] = state
+    signal_status = "CURRENT" if all(item["status"] == "CURRENT" for item in signal_components.values()) else (
+        "STALE" if any(item["status"] == "STALE" for item in signal_components.values()) else "UNAVAILABLE_FOR_CURRENT_SESSION"
     )
-    for name, date_accessor in signal_files:
-        src = runtime_root / name
-        if not src.is_file():
-            alt = operation_dir / name
-            if alt.is_file():
-                src = alt
-            else:
-                alt2 = operation_dir.parent / name
-                if alt2.is_file():
-                    src = alt2
+    domains: dict[str, dict[str, Any]] = {
+        "screening": {"status": "CURRENT", "source_session": session, "freshness": "EXACT_SESSION", "reason_codes": []},
+        "breadth": {"status": "CURRENT", "source_session": session, "freshness": "EXACT_SESSION", "reason_codes": []},
+        "analysis": {"status": "CURRENT", "source_session": session, "freshness": "EXACT_SESSION", "reason_codes": []},
+        "signals": {"status": signal_status, "source_session": session if signal_status == "CURRENT" else None,
+                    "freshness": "EXACT_SESSION", "reason_codes": ["SIGNAL_COMPONENT_NOT_EXACT_SESSION"] if signal_status != "CURRENT" else [],
+                    "components": signal_components},
+    }
 
-        dst = web_root / name
-        if src.is_file():
-            # If JSON has scan_date, verify it matches session
-            if date_accessor and src.suffix == ".json":
-                try:
-                    payload = json.loads(src.read_text(encoding="utf-8"))
-                    scan_d = payload.get("scan_date")
-                    if scan_d and scan_d != session:
-                        if dst.is_file():
-                            dst.unlink()
-                        continue
-                except Exception:
-                    pass
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            _atomic_copy(src, dst)
+    macro_source = next(iter(_sidecar_candidates(runtime_root, operation_dir, "data/macro_snapshot.json")), None)
+    macro_state, macro_snapshot = _macro_domain_state(macro_source, session)
+    domains["macro"] = macro_state
+    macro_json, macro_js = web_root / "data/macro_snapshot.json", web_root / "data/macro_snapshot.js"
+    if macro_snapshot is None:
+        _remove_if_present(macro_json)
+        _remove_if_present(macro_js)
+    else:
+        macro_encoded = json.dumps(macro_snapshot, ensure_ascii=False, indent=2, allow_nan=False)
+        _atomic_write_text(macro_json, macro_encoded + "\n")
+        _atomic_write_text(macro_js, f"window.MACRO_SNAPSHOT = {macro_encoded};\n")
+
+    # The cockpit comes only from this exact Daily Research Session Operation.
+    cockpit_target = web_root / "data/current_decision_cockpit.json"
+    cockpit_source = operation_dir / "current_decision_cockpit_projection.json"
+    if cockpit_source.is_file():
+        cockpit = _load_json_object(cockpit_source, "CURRENT_COCKPIT")
+        if cockpit.get("session") == session:
+            _atomic_copy(cockpit_source, cockpit_target)
+            domains["cockpit"] = {"status": "CURRENT", "source_session": session,
+                                  "freshness": "EXACT_SESSION", "generated_at": cockpit.get("generated_at"),
+                                  "reason_codes": []}
         else:
-            # If destination already has an old/stale file from another session, remove it
-            if dst.is_file() and date_accessor and dst.suffix == ".json":
-                try:
-                    payload = json.loads(dst.read_text(encoding="utf-8"))
-                    scan_d = payload.get("scan_date")
-                    if scan_d and scan_d != session:
-                        dst.unlink()
-                except Exception:
-                    pass
+            _remove_if_present(cockpit_target)
+            domains["cockpit"] = {"status": "UNAVAILABLE", "source_session": cockpit.get("session"),
+                                  "freshness": "EXACT_SESSION", "reason_codes": ["COCKPIT_SESSION_MISMATCH"]}
+    else:
+        _remove_if_present(cockpit_target)
+        domains["cockpit"] = {"status": "UNAVAILABLE", "source_session": None,
+                              "freshness": "EXACT_SESSION", "reason_codes": ["EXACT_COCKPIT_PROJECTION_UNAVAILABLE"]}
 
     # Try generating HTML report companion if retained canonical handoff is available
     companion_paths = companion_relpaths(session)
@@ -423,13 +541,7 @@ def publish_dashboard_release(
         "generated_at": now_iso,
         "published_at": now_iso,
         "release_status": "READY",
-        "domains": {
-            "screening": "current",
-            "breadth": "current",
-            "analysis": "current",
-            "signals": "current",
-            "macro": "current",
-        },
+        "domains": domains,
         "files": files_meta,
         "hero_summary": {
             "market_session": session,
