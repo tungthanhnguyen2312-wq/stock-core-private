@@ -20,6 +20,10 @@ def _latest_operation() -> tuple[str,Path]:
 def main(argv=None)->int:
  p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="command",required=True); d=sub.add_parser("daily"); d.add_argument("--session"); d.add_argument("--replay-local",action="store_true"); d.add_argument("--replay-operation",type=Path); d.add_argument("--replay-root",type=Path,default=ROOT); sub.add_parser("roadmap"); a=p.parse_args(argv)
  if a.command=="roadmap": return subprocess.run([sys.executable,str(ROOT/"tools/stocklookup_roadmap.py")]).returncode
+ try:
+  from stocklookup_preflight import check
+  check(producer_root=a.replay_root if a.replay_operation else ROOT,runtime_root=_runtime(),transport_root=_handoff(),replay_local=a.replay_local)
+ except Exception as exc: print(f"STATUS: {exc}"); return 2
  if a.replay_operation:
   if not a.replay_local or not a.session: print("STATUS: FAILED_PRECHECK\nREASON: replay requires --replay-local and --session"); return 2
   session,operation=a.session,a.replay_operation

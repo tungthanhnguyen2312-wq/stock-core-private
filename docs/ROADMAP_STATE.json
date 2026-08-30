@@ -136,7 +136,7 @@
       "source_doc": "This milestone's own directive (ROADMAP_EXECUTION_CONTROL_PLANE_V1 objective, section 10)",
       "state_history": [],
       "owner_override": null,
-      "notes": "COMPLETE. Owner CLI and private-Git transport compose existing canonical outputs; bounded 27/28 retained local replay proves publication, previous-session linkage, LATEST and idempotence/conflict handling. HEAD is the documented self-reference sentinel for this checkpoint. Next gate is OWNER_ROADMAP_SELECTION; no substantive milestone is started."
+      "notes": "COMPLETE. Intermediate implementation checkpoint: ce52e7cc58db6770548fd65ec8d65412a3afccef. Owner CLI and private-Git transport compose existing canonical outputs; bounded 27/28 retained local replay proves publication, previous-session linkage, LATEST and idempotence/conflict handling. HEAD is the documented self-reference sentinel for this terminal checkpoint. Next gate is OWNER_INTEGRATION_RELEASE_REVIEW; no substantive milestone is started."
     }
   ],
   "blocked_capabilities": [
