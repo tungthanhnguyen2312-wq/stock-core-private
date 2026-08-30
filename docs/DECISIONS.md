@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-30 - One-Command Daily Research to AI Handoff V1
+
+`ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1 = PASS` (`push = NO`).
+
+1. `stocklookup.ps1 daily` delegates all numerical/session authority to the existing canonical operation, then publishes only its verified AI handoff files through the separate private transport repository. Transport is not factual authority.
+2. Session packages are immutable: identical content returns `NO_OP_ALREADY_PUBLISHED`; conflicting same-session content fails closed. `LATEST` is a pointer only and is advanced only with the coherent session commit.
+3. Retained 27/28 replay through local fake Git verifies previous-session linkage, LATEST, idempotence and conflict behavior. No real GitHub write or provider acquisition occurred. Authority effect: `OPERATIONAL_SERVING_ONLY`; stronger promotion: `NONE`.
+
 ## 2026-08-30 - Roadmap Execution Control Plane V1
 
 `ROADMAP_EXECUTION_CONTROL_PLANE_V1 = COMPLETE` (`push = NO`).

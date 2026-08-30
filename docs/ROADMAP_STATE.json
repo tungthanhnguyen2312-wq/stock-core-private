@@ -15,16 +15,14 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "ROADMAP_EXECUTION_CONTROL_PLANE_V1",
+    "milestone": "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1",
     "state": "COMPLETE",
-    "executor": "Claude Code",
-    "base_checkpoint": "c9412833bb12d35facf866b7a84fa371e7520f1a",
+    "executor": "Codex",
+    "base_checkpoint": "fcf9e459c6a3cd6673111cef2d231f8c28312aeb",
     "checkpoint": "HEAD",
     "dependency_status": "SATISFIED"
   },
-  "queued_next": [
-    "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"
-  ],
+  "queued_next": [],
   "milestones": [
     {
       "milestone_id": "MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1",
@@ -115,7 +113,7 @@
       "milestone_id": "ROADMAP_EXECUTION_CONTROL_PLANE_V1",
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
-      "checkpoint": "HEAD",
+      "checkpoint": "fcf9e459c6a3cd6673111cef2d231f8c28312aeb",
       "dependencies": ["CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1"],
       "unlocks": ["ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"],
       "authority_effect": "NONE",
@@ -124,21 +122,21 @@
       "source_doc": "docs/ROADMAP_STATE.json (this milestone); docs/STATE.md and docs/DECISIONS.md governance closeout entries",
       "state_history": [],
       "owner_override": null,
-      "notes": "Introduces this file (docs/ROADMAP_STATE.json), roadmap_execution_state.py, and tools/stocklookup_roadmap.py as the machine-readable roadmap execution-state authority. No research, scoring, recommendation, valuation, liquidity, PIT, RAW_AS_TRADED, or provider authority changed. 'checkpoint': 'HEAD' is the documented self-referential sentinel (see roadmap_execution_state.resolve_checkpoint docstring) because a commit cannot embed its own hash; resolve it to a literal SHA the next time this record is edited."
+      "notes": "Introduces this file (docs/ROADMAP_STATE.json), roadmap_execution_state.py, and tools/stocklookup_roadmap.py as the machine-readable roadmap execution-state authority. No research, scoring, recommendation, valuation, liquidity, PIT, RAW_AS_TRADED, or provider authority changed. Its prior HEAD sentinel is frozen to the literal completed checkpoint before the successor begins."
     },
     {
       "milestone_id": "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1",
-      "state": "NEXT",
-      "narrative_disposition": null,
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS",
+      "checkpoint": "HEAD",
       "dependencies": ["ROADMAP_EXECUTION_CONTROL_PLANE_V1"],
       "unlocks": [],
-      "authority_effect": null,
-      "owner_authorized": false,
+      "authority_effect": "OPERATIONAL_SERVING_ONLY",
+      "owner_authorized": true,
       "source_doc": "This milestone's own directive (ROADMAP_EXECUTION_CONTROL_PLANE_V1 objective, section 10)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Not started. Recorded NEXT only; per AGENTS.md and this file's own invariant, no new roadmap milestone may begin until this control plane says it is NEXT/ALLOWED (python tools/stocklookup_roadmap.py --can-start ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1), except explicit owner override."
+      "notes": "COMPLETE. Owner CLI and private-Git transport compose existing canonical outputs; bounded 27/28 retained local replay proves publication, previous-session linkage, LATEST and idempotence/conflict handling. HEAD is the documented self-reference sentinel for this checkpoint. Next gate is OWNER_ROADMAP_SELECTION; no substantive milestone is started."
     }
   ],
   "blocked_capabilities": [

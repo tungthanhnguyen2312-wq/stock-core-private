@@ -462,7 +462,8 @@ def can_start(state: Mapping[str, Any], milestone_id: str, *, owner_override: bo
         return False, [f"ROADMAP_UNKNOWN_MILESTONE:{milestone_id}"]
     st = target.get("state")
     if st == "ACTIVE":
-        return False, ["ALREADY_ACTIVE"]
+        current = state.get("current") or {}
+        return (current.get("milestone") == milestone_id), ([] if current.get("milestone") == milestone_id else ["ACTIVE_NOT_CURRENT"])
     if st in CLOSED_STATES and not owner_override:
         reasons.append(f"ROADMAP_CLOSED_MILESTONE_REOPENED_WOULD_RESULT:current_state={st}")
     if st != "NEXT" and not owner_override and st not in CLOSED_STATES:
