@@ -48,6 +48,9 @@ DASHBOARD_RELEASE_ALLOWLIST = (
     "market_breadth.csv",
     "analysis_latest.json",
     "bundle_manifest.json",
+    "analysis_bundle.json",
+    "focus_extract.json",
+    "statement_taxonomy_sidecar.json",
     "data/candle_signals.json",
     "data/candle_signals.js",
     "data/sector_heatmap.json",
@@ -282,7 +285,16 @@ def publish_dashboard_release(
     web_data_dir.mkdir(parents=True, exist_ok=True)
 
     # Core runtime artifacts
-    for name in ("screen_snapshot.csv", "screen_snapshot_live.csv", "market_breadth.csv", "analysis_latest.json", "bundle_manifest.json"):
+    for name in (
+        "screen_snapshot.csv",
+        "screen_snapshot_live.csv",
+        "market_breadth.csv",
+        "analysis_latest.json",
+        "bundle_manifest.json",
+        "analysis_bundle.json",
+        "focus_extract.json",
+        "statement_taxonomy_sidecar.json",
+    ):
         src = runtime_root / name
         if src.is_file():
             dst = web_root / name
