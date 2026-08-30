@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.08.30.1",
+  "roadmap_version": "2026.08.30.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -14,7 +14,12 @@
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
-  "current": null,
+  "current": {
+    "milestone": "NEXT_SESSION_DECISION_BRIEF_V1",
+    "state": "ACTIVE",
+    "selection": "OWNER_SELECTED",
+    "selection_checkpoint": "8c153ccb53a7141f2833f737933e83b9a50eee4f"
+  },
   "queued_next": [],
   "milestones": [
     {
@@ -144,6 +149,19 @@
       "state_history": [],
       "owner_override": null,
       "notes": "COMPLETE. Unified Dashboard release rooted in exact Producer run identity; dynamic hero banner; centralized Vietnamese presentation layer in value-format.js; screener controls/columns fully localized; fail-closed release_session_contract across all 7 pages; stocklookup.py daily integration and deterministic local replay."
+    },
+    {
+      "milestone_id": "NEXT_SESSION_DECISION_BRIEF_V1",
+      "state": "ACTIVE",
+      "narrative_disposition": "OWNER_SELECTED / READY_BY_EVIDENCE / IMPLEMENTATION_NOT_STARTED",
+      "dependencies": ["DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md / docs/ROADMAP.md (2026-08-30, owner roadmap selection)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Owner selected this bounded downstream decision-brief milestone after the accepted read-only contract audit. This records implementation authorization only: no implementation result, source/provider promotion, recommendation-rule change, valuation, liquidity, sizing, execution, PIT, RAW_AS_TRADED, Dashboard, or Consumer authority change has occurred."
     }
   ],
   "blocked_capabilities": [
