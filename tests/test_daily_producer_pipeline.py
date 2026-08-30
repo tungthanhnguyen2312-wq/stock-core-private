@@ -25,12 +25,23 @@ def _registry():
     return load_registry(ROOT)
 
 
+def _latest_governed_completed_session(registry):
+    """The governed ledger's own latest COMPLETED_RETAINED_EVIDENCE session -- computed the
+    same way resolve_latest_registered_completed_session does, so this assertion tracks
+    whatever the ledger actually contains (it grows as new sessions complete) instead of
+    pinning a specific date that goes stale the moment the ledger grows past it. This is
+    still a real regression check: a wall-clock-based implementation would not generally
+    equal this value, so it still proves the "no clock inference" property the test names."""
+    eligible = [session for session, row in registry["completed_sessions"].items() if row.get("status") == "COMPLETED_RETAINED_EVIDENCE"]
+    return sorted(eligible)[-1]
+
+
 def test_completed_session_gate_uses_governed_ledger_not_clock_inference():
     gate = completed_session_gate(_registry(), "2026-08-21", now=datetime(2026, 8, 24, 9, 0, tzinfo=VN_TZ))
     assert gate["status"] == "PASS"
     assert gate["completion_status"] == "COMPLETED_RETAINED_EVIDENCE"
     # The latest session is read from the governed ledger, never inferred from the wall clock.
-    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-26"
+    assert resolve_latest_registered_completed_session(_registry()) == _latest_governed_completed_session(_registry())
 
 
 def test_completed_session_gate_refuses_incomplete_session():
@@ -91,7 +102,7 @@ def test_gate_D_prior_day_completed_session_behavior_unchanged():
     before this fix (session > local_date is False either way for a prior day)."""
     gate = completed_session_gate(_registry(), "2026-08-21", now=datetime(2026, 8, 25, 9, 0, tzinfo=VN_TZ))
     assert gate["status"] == "PASS"
-    assert resolve_latest_registered_completed_session(_registry()) == "2026-08-26"
+    assert resolve_latest_registered_completed_session(_registry()) == _latest_governed_completed_session(_registry())
 
 
 def test_gate_E_same_day_gate_pass_does_not_bypass_exact_session_input_coherence():

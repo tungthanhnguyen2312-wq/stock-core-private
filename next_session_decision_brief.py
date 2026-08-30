@@ -141,7 +141,7 @@ def _market_transition(*, root: Path, registry: Mapping[str, Any], current_sessi
         return _section(availability=PARTIAL, reason_codes=["PREVIOUS_DESCRIPTIVE_ARTIFACT_NOT_REGISTERED"], previous=None, current=current_view, transition=None, source_lineage=lineage)
     previous_view = _breadth_view(previous_descriptive["market_breadth"])
     lineage["previous_descriptive_artifact_identity"] = previous_descriptive.get("artifact_identity")
-    ratio_delta = (
+    ratio_delta_raw = (
         current_view["advance_ratio"] - previous_view["advance_ratio"]
         if isinstance(current_view["advance_ratio"], (int, float)) and isinstance(previous_view["advance_ratio"], (int, float))
         else None
@@ -152,8 +152,16 @@ def _market_transition(*, root: Path, registry: Mapping[str, Any], current_sessi
         current=current_view,
         transition={
             "advance_ratio_direction": _delta_label(previous_view["advance_ratio"], current_view["advance_ratio"]),
-            "advance_ratio_delta": ratio_delta,
-            "technical_coverage_delta": current_view["same_session_technical_feature_available_count"] - previous_view["same_session_technical_feature_available_count"],
+            # Explicitly named and unit-labeled so a reader never has to guess what a bare
+            # "delta" means or infer units from magnitude: advance_ratio is a 0-1 share, so
+            # the raw delta and its *100 percentage-point restatement are both spelled out.
+            "advance_ratio_delta_raw": ratio_delta_raw,
+            "advance_ratio_delta_percentage_points": ratio_delta_raw * 100 if ratio_delta_raw is not None else None,
+            "technical_covered_count_previous": previous_view["same_session_technical_feature_available_count"],
+            "technical_covered_count_current": current_view["same_session_technical_feature_available_count"],
+            "technical_covered_count_delta": current_view["same_session_technical_feature_available_count"] - previous_view["same_session_technical_feature_available_count"],
+            "observed_session_cohort_previous": previous_view["observed_session_cohort"],
+            "observed_session_cohort_current": current_view["observed_session_cohort"],
             "observed_session_cohort_delta": current_view["observed_session_cohort"] - previous_view["observed_session_cohort"],
         },
         source_lineage=lineage,
@@ -182,6 +190,11 @@ def _sector_pair(previous_row: Mapping[str, Any] | None, current_row: Mapping[st
     return {"previous": previous_view, "current": current_view, "transition": transition}
 
 
+def _sector_counts(descriptive: Mapping[str, Any]) -> dict[str, int]:
+    breadth = descriptive["sector_breadth"]
+    return {"sector_count_total": breadth.get("sector_count_total"), "sector_count_available": breadth.get("sector_count_available")}
+
+
 def _sector_transition(*, root: Path, registry: Mapping[str, Any], current_session: str, previous_session: str | None) -> dict[str, Any]:
     current_descriptive = _resolve_registered_artifact(root=root, registry=registry, session=current_session, name="descriptive")
     if current_descriptive is None:
@@ -189,15 +202,17 @@ def _sector_transition(*, root: Path, registry: Mapping[str, Any], current_sessi
     current_sectors = current_descriptive["sector_breadth"]["sectors"]
     if previous_session is None:
         sectors = {key: _sector_pair(None, row) for key, row in sorted(current_sectors.items())}
-        return _section(availability=UNAVAILABLE, reason_codes=["NO_PREVIOUS_QUALIFIED_SESSION"], sectors=sectors)
+        return _section(availability=UNAVAILABLE, reason_codes=["NO_PREVIOUS_QUALIFIED_SESSION"], sectors=sectors, current_counts=_sector_counts(current_descriptive))
     previous_descriptive = _resolve_registered_artifact(root=root, registry=registry, session=previous_session, name="descriptive")
     if previous_descriptive is None:
-        return _section(availability=PARTIAL, reason_codes=["PREVIOUS_DESCRIPTIVE_ARTIFACT_NOT_REGISTERED"], sectors={})
+        return _section(availability=PARTIAL, reason_codes=["PREVIOUS_DESCRIPTIVE_ARTIFACT_NOT_REGISTERED"], sectors={}, current_counts=_sector_counts(current_descriptive))
     previous_sectors = previous_descriptive["sector_breadth"]["sectors"]
     sectors = {key: _sector_pair(previous_sectors.get(key), current_sectors.get(key)) for key in sorted(set(current_sectors) | set(previous_sectors))}
     return _section(
         availability=AVAILABLE,
         sectors=sectors,
+        previous_counts=_sector_counts(previous_descriptive),
+        current_counts=_sector_counts(current_descriptive),
         source_lineage={"previous_descriptive_artifact_identity": previous_descriptive.get("artifact_identity"), "current_descriptive_artifact_identity": current_descriptive.get("artifact_identity")},
     )
 
@@ -229,7 +244,20 @@ def _opportunity_transition(current_queue: Mapping[str, Any] | None, previous_qu
         new_high_priority=sorted(current_high_priority - previous_high_priority),
         persisting_high_priority=sorted(current_high_priority & previous_high_priority),
         lost_high_priority=sorted(previous_high_priority - current_high_priority),
-        source_lineage={"previous_opportunity_decision_queue_identity": previous_queue.get("artifact_identity"), "current_opportunity_decision_queue_identity": current_queue.get("artifact_identity")},
+        # Explicit counts on both sides, alongside the artifact identities, so a mismatch
+        # against any other computation is mechanically diagnosable without re-deriving the
+        # sets by hand: a caller comparing against a different (e.g. stale/narrower) queue
+        # artifact will see it immediately in record_count/entry_relevant_count here.
+        source_lineage={
+            "previous_opportunity_decision_queue_identity": previous_queue.get("artifact_identity"),
+            "current_opportunity_decision_queue_identity": current_queue.get("artifact_identity"),
+            "previous_record_count": len(previous_records),
+            "current_record_count": len(current_records),
+            "previous_entry_relevant_count": len(previous_entry_relevant),
+            "current_entry_relevant_count": len(current_entry_relevant),
+            "previous_high_priority_count": len(previous_high_priority),
+            "current_high_priority_count": len(current_high_priority),
+        },
     )
 
 
@@ -321,7 +349,14 @@ def _tactical_transition(*, root: Path, registry: Mapping[str, Any], current_ses
         gained_confirmation=sorted(current_confirmed - previous_confirmed),
         retained_confirmation=sorted(current_confirmed & previous_confirmed),
         lost_confirmation=sorted(previous_confirmed - current_confirmed),
-        source_lineage={"previous_tactical_artifact_identity": previous_tactical.get("artifact_identity"), "current_tactical_artifact_identity": current_tactical.get("artifact_identity")},
+        source_lineage={
+            "previous_tactical_artifact_identity": previous_tactical.get("artifact_identity"),
+            "current_tactical_artifact_identity": current_tactical.get("artifact_identity"),
+            "previous_record_count": len(previous_records),
+            "current_record_count": len(current_records),
+            "previous_confirmed_count": len(previous_confirmed),
+            "current_confirmed_count": len(current_confirmed),
+        },
     )
 
 

@@ -51,19 +51,19 @@ def _previous(session: str, root: Path) -> Path | None:
     return max(candidates, key=lambda item: item[0])[1] if candidates else None
 
 
-def _latest_operation() -> tuple[str, Path, str]:
-    pointer = json.loads((ROOT / "operations-review/daily-producer-runs-v1/LATEST_COMPLETED_RUN.json").read_text(encoding="utf-8"))
+def _latest_operation(root: Path = ROOT) -> tuple[str, Path, str]:
+    pointer = json.loads((root / "operations-review/daily-producer-runs-v1/LATEST_COMPLETED_RUN.json").read_text(encoding="utf-8"))
     session = pointer["session"]
-    run = ROOT / "operations-review/daily-producer-runs-v1" / pointer["relative_directory"] / "run_manifest.json"
+    run = root / "operations-review/daily-producer-runs-v1" / pointer["relative_directory"] / "run_manifest.json"
     manifest = json.loads(run.read_text(encoding="utf-8"))
-    return session, ROOT / manifest["daily_session_operation"]["directory"], pointer["run_identity"]
+    return session, root / manifest["daily_session_operation"]["directory"], pointer["run_identity"]
 
 
-def _decision_brief(session: str, operation: Path, previous_bundle: Path | None, run_identity: str | None) -> Path | None:
+def _decision_brief(session: str, operation: Path, previous_bundle: Path | None, run_identity: str | None, root: Path = ROOT) -> Path | None:
     """Best-effort, non-blocking: the brief is derived evidence, never a gate on publication."""
     try:
         from next_session_decision_brief import build_from_previous_bundle_path
-        brief = build_from_previous_bundle_path(root=ROOT, session=session, source=operation, previous=previous_bundle, run_identity=run_identity)
+        brief = build_from_previous_bundle_path(root=root, session=session, source=operation, previous=previous_bundle, run_identity=run_identity)
         payload = json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
         path = operation / "next_session_decision_brief.json"
         if path.exists() and path.read_text(encoding="utf-8") != payload:

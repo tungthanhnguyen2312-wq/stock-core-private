@@ -17,14 +17,25 @@ from next_session_decision_brief import (
     build_from_previous_bundle_path,
     content_identity,
 )
-from stocklookup import ROOT, _latest_operation, _previous
+from stocklookup import _latest_operation, _previous
 
 CURRENT_SESSION = "2026-08-28"
 PREVIOUS_SESSION = "2026-08-27"
 
+# The governed, gitignored operations-review/ evidence this suite replays against is
+# local to the primary checkout -- git worktrees only carry tracked files, so a fresh
+# worktree (this one included) never has it. `next_session_decision_brief.build_artifact`
+# itself is fully parameterized by `root`/`source`/`previous` and has no opinion about
+# where evidence lives; this constant exists only so the *test* can point at real data
+# while exercising the *worktree's* corrected code. Skip cleanly wherever that data isn't
+# available (a different machine, a true CI checkout) rather than failing opaquely.
+ROOT = Path("C:/Projects/StockLookup/stock-core-private")
+_LATEST_POINTER = ROOT / "operations-review/daily-producer-runs-v1/LATEST_COMPLETED_RUN.json"
+pytestmark = pytest.mark.skipif(not _LATEST_POINTER.is_file(), reason="real 2026-08-27/2026-08-28 operations-review evidence not present at " + str(ROOT))
+
 
 def _current_and_previous_dirs() -> tuple[Path, Path]:
-    session, operation_dir, _run_identity = _latest_operation()
+    session, operation_dir, _run_identity = _latest_operation(ROOT)
     assert session == CURRENT_SESSION, "fixture assumption: LATEST_COMPLETED_RUN.json still points at 2026-08-28"
     previous_bundle = _previous(session, ROOT)
     assert previous_bundle is not None
@@ -74,12 +85,40 @@ class TestReal27To28Replay:
         assert market["transition"]["advance_ratio_direction"] == "WEAKENING"
         assert market["current"]["same_session_technical_feature_available_count"] == 942
         assert market["previous"]["same_session_technical_feature_available_count"] == 838
-        assert market["transition"]["technical_coverage_delta"] == 942 - 838
+
+    def test_market_transition_advance_ratio_delta_units_are_explicit_and_correct(self, brief):
+        """E/F: raw delta (0-1 share) vs its *100 percentage-point restatement must both be
+        present, separately labeled, and numerically consistent -- never an unlabeled bare
+        delta a reader has to guess the unit of."""
+        transition = brief["market_transition"]["transition"]
+        raw = transition["advance_ratio_delta_raw"]
+        pct_points = transition["advance_ratio_delta_percentage_points"]
+        assert raw == pytest.approx(0.321656050955414 - 0.34009546539379476)
+        assert raw == pytest.approx(-0.018439414438380758)
+        assert pct_points == pytest.approx(raw * 100)
+        assert pct_points == pytest.approx(-1.8439414438380758)
+
+    def test_market_transition_technical_coverage_is_an_unambiguous_previous_current_delta_triplet(self, brief):
+        """G/H: technical coverage must be exposed as three explicitly named fields, and the
+        delta must be the real 838->942 count difference (+104), never an overloaded or
+        differently-sourced number masquerading under the same name."""
+        transition = brief["market_transition"]["transition"]
+        assert transition["technical_covered_count_previous"] == 838
+        assert transition["technical_covered_count_current"] == 942
+        assert transition["technical_covered_count_delta"] == 104
+        assert transition["technical_covered_count_delta"] == transition["technical_covered_count_current"] - transition["technical_covered_count_previous"]
+        assert transition["observed_session_cohort_previous"] == 839
+        assert transition["observed_session_cohort_current"] == 943
+        assert transition["observed_session_cohort_delta"] == 104
 
     def test_sector_transition_covers_24_sectors_with_a_real_insufficient_evidence_case(self, brief):
         sector = brief["sector_transition"]
         assert sector["availability"] == AVAILABLE
         assert len(sector["sectors"]) == 24
+        assert sector["previous_counts"]["sector_count_total"] == 24
+        assert sector["current_counts"]["sector_count_total"] == 24
+        assert sector["previous_counts"]["sector_count_available"] == 21
+        assert sector["current_counts"]["sector_count_available"] == 20
         telecom = next(row for key, row in sector["sectors"].items() if key.endswith("|viễn thông"))
         assert telecom["previous"]["status"] == "AVAILABLE"
         assert telecom["current"]["status"] == "UNAVAILABLE_INSUFFICIENT_COVERAGE"
@@ -95,6 +134,51 @@ class TestReal27To28Replay:
         assert len(opportunity["lost_high_priority"]) == 20
         assert len(opportunity["persisting_high_priority"]) == 131
         assert opportunity["new_entry_relevant"] == sorted(opportunity["new_entry_relevant"])
+
+    def test_opportunity_transition_consumes_the_full_governed_queue_not_a_session_bundle_subset(self, brief):
+        """A/B/C/D: the corrective concern was that opportunity_transition might silently
+        collapse onto the narrower Session Bundle `ticker_research_contexts` cohort (106/123
+        tickers) instead of the full governed `daily_opportunity_decision_queue_artifact.json`
+        (1,507 tickers). Prove the record counts and totals match the full queue, and that they
+        are NOT the much-smaller Session Bundle card counts."""
+        current_dir, previous_dir = _current_and_previous_dirs()
+        current_queue = json.loads((current_dir / "daily_opportunity_decision_queue_artifact.json").read_text(encoding="utf-8"))
+        previous_queue = json.loads((previous_dir / "daily_opportunity_decision_queue_artifact.json").read_text(encoding="utf-8"))
+        lineage = brief["opportunity_transition"]["source_lineage"]
+        assert lineage["current_record_count"] == len(current_queue["records"]) == 1507
+        assert lineage["previous_record_count"] == len(previous_queue["records"]) == 1507
+        assert lineage["current_entry_relevant_count"] == 113
+        assert lineage["previous_entry_relevant_count"] == 96
+        assert lineage["current_high_priority_count"] == 164
+        assert lineage["previous_high_priority_count"] == 151
+        # The Session Bundle cohort (106/123 cards) is a much smaller, different number --
+        # confirm the Brief's counts are NOT that narrower cohort.
+        current_bundle = json.loads((current_dir / "ai_research_session_bundle.json").read_text(encoding="utf-8"))
+        previous_bundle = json.loads((previous_dir / "ai_research_session_bundle.json").read_text(encoding="utf-8"))
+        assert len(current_bundle["ticker_research_contexts"]) == 123
+        assert len(previous_bundle["ticker_research_contexts"]) == 106
+        assert lineage["current_record_count"] != len(current_bundle["ticker_research_contexts"])
+        assert lineage["previous_record_count"] != len(previous_bundle["ticker_research_contexts"])
+        # Reconciliation arithmetic: new + persisting == current total; lost + persisting == previous total.
+        opportunity = brief["opportunity_transition"]
+        assert len(opportunity["new_entry_relevant"]) + len(opportunity["persisting_entry_relevant"]) == lineage["current_entry_relevant_count"]
+        assert len(opportunity["lost_entry_relevant"]) + len(opportunity["persisting_entry_relevant"]) == lineage["previous_entry_relevant_count"]
+        assert len(opportunity["new_high_priority"]) + len(opportunity["persisting_high_priority"]) == lineage["current_high_priority_count"]
+        assert len(opportunity["lost_high_priority"]) + len(opportunity["persisting_high_priority"]) == lineage["previous_high_priority_count"]
+
+    def test_source_identities_present_on_both_sides_for_every_comparative_section(self, brief):
+        """I: every comparative section names its exact source artifact identity on both sides
+        -- never a generic 'current data' label."""
+        assert set(brief["market_transition"]["source_lineage"]) >= {"previous_descriptive_artifact_identity", "current_descriptive_artifact_identity"}
+        assert set(brief["sector_transition"]["source_lineage"]) >= {"previous_descriptive_artifact_identity", "current_descriptive_artifact_identity"}
+        assert set(brief["opportunity_transition"]["source_lineage"]) >= {"previous_opportunity_decision_queue_identity", "current_opportunity_decision_queue_identity"}
+        assert set(brief["tactical_transition"]["source_lineage"]) >= {"previous_tactical_artifact_identity", "current_tactical_artifact_identity"}
+        assert brief["lifecycle"]["source_lineage"]["source_artifacts"]["previous"] is not None
+        assert brief["lifecycle"]["source_lineage"]["source_artifacts"]["current"] is not None
+        for section_name in ("market_transition", "sector_transition", "opportunity_transition", "tactical_transition"):
+            for identity in brief[section_name]["source_lineage"].values():
+                if isinstance(identity, str):
+                    assert identity, f"{section_name} has a blank source identity"
 
     def test_lifecycle_reuses_existing_artifact_with_58_comparable_records(self, brief):
         lifecycle = brief["lifecycle"]
@@ -243,6 +327,21 @@ class TestFailClosed:
             build_artifact(root=ROOT, current_session=CURRENT_SESSION, current_source=current_dir, previous_session=PREVIOUS_SESSION, previous_source=None)
 
 
+class TestRegistryUntouched:
+    """J: the governed input registry is existing operational state (see
+    known_operational_diff_allowlist in docs/ROADMAP_STATE.json) -- this module must only ever
+    read it, never write it, regardless of how many times a brief is built."""
+
+    def test_building_briefs_never_writes_the_registry(self):
+        registry_path = ROOT / "config" / "daily_research_session_input_registry.json"
+        before = registry_path.read_bytes()
+        current_dir, previous_dir = _current_and_previous_dirs()
+        build_artifact(root=ROOT, current_session=CURRENT_SESSION, current_source=current_dir, previous_session=PREVIOUS_SESSION, previous_source=previous_dir)
+        build_artifact(root=ROOT, current_session=CURRENT_SESSION, current_source=current_dir)
+        after = registry_path.read_bytes()
+        assert after == before
+
+
 def _copy_operation_dir(source: Path, destination: Path) -> None:
     import shutil
 
@@ -263,11 +362,11 @@ class TestDailyIntegrationHelper:
         current_dir, previous_dir = _current_and_previous_dirs()
         scratch = tmp_path / "operation_copy"
         _copy_operation_dir(current_dir, scratch)
-        path = _decision_brief(CURRENT_SESSION, scratch, previous_dir / "ai_research_session_bundle.json", "daily_producer_run:test")
+        path = _decision_brief(CURRENT_SESSION, scratch, previous_dir / "ai_research_session_bundle.json", "daily_producer_run:test", root=ROOT)
         assert path == scratch / "next_session_decision_brief.json"
         assert path.is_file()
         first_bytes = path.read_bytes()
-        again = _decision_brief(CURRENT_SESSION, scratch, previous_dir / "ai_research_session_bundle.json", "daily_producer_run:test")
+        again = _decision_brief(CURRENT_SESSION, scratch, previous_dir / "ai_research_session_bundle.json", "daily_producer_run:test", root=ROOT)
         assert again == path
         assert path.read_bytes() == first_bytes
 
@@ -276,10 +375,10 @@ class TestDailyIntegrationHelper:
 
         empty = tmp_path / "empty_operation"
         empty.mkdir()
-        assert _decision_brief(CURRENT_SESSION, empty, None, None) is None
+        assert _decision_brief(CURRENT_SESSION, empty, None, None, root=ROOT) is None
 
     def test_latest_operation_returns_run_identity(self):
-        session, operation_dir, run_identity = _latest_operation()
+        session, operation_dir, run_identity = _latest_operation(ROOT)
         assert session == CURRENT_SESSION
         assert operation_dir.is_dir()
         assert run_identity.startswith("daily_producer_run:")
