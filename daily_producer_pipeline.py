@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
+from daily_session_shadow_recommendation import DailySessionShadowRecommendationError, resolve_or_build as resolve_or_build_daily_session_shadow_recommendation
 from daily_research_session_operations import load_registry, resolve_inputs, run_session_operation, validate_coherence
 from field_temporal_contract import stable_id
 from vn_time import VN_TZ, vn_now
@@ -148,12 +149,13 @@ def _dependency_graph(plan: Mapping[str, Any]) -> dict[str, Any]:
         "optional_local_failures": [row["input_class"] for row in plan["items"] if not row.get("required_for_core_operation")],
         "topology": [
             {"stage": "retained_source_evidence", "depends_on": upstream},
-            {"stage": "daily_session_operation", "depends_on": ["retained_source_evidence"]},
+            {"stage": "daily_session_shadow_recommendation", "depends_on": ["retained_source_evidence"]},
+            {"stage": "daily_session_operation", "depends_on": ["daily_session_shadow_recommendation"]},
             {"stage": "peer_scenario_strategy_product", "depends_on": ["daily_session_operation"]},
             {"stage": "ai_delivery_and_dashboard_projection", "depends_on": ["peer_scenario_strategy_product"]},
             {"stage": "daily_producer_manifest_and_parity", "depends_on": ["ai_delivery_and_dashboard_projection"]},
         ],
-        "failure_policy": "Required exact-session lineage failures stop the operation. Optional macro, flow, corporate-intelligence, catalyst, strict-valuation, and portfolio states remain localized and explicitly labelled.",
+        "failure_policy": "Required exact-session lineage and daily-shadow artifact-integrity failures stop the operation. Per-security recommendation/invalidation unavailability and optional macro, flow, corporate-intelligence, catalyst, strict-valuation, and portfolio states remain localized and explicitly labelled.",
     }
 
 
@@ -189,6 +191,35 @@ def _run_identity(session: str, producer_head: str, consumer_head: str, plan: Ma
     return "daily_producer_run:" + stable_id({"contract_version": CONTRACT_VERSION, "implementation_revision": IMPLEMENTATION_REVISION, "session": session, "producer_head": producer_head, "consumer_head": consumer_head, "plan": plan, "operation_identity": operation_identity})
 
 
+def _same_session_shadow_recommendation(
+    explicit: Mapping[str, Any] | None,
+    autosourced: Mapping[str, Any],
+    *,
+    session: str,
+) -> Mapping[str, Any]:
+    """Use the auto-resolved packet unless an identical validated override is supplied."""
+    chain = autosourced.get("chain") if isinstance(autosourced, Mapping) else None
+    automatic = chain.get("shadow_security_recommendation") if isinstance(chain, Mapping) else None
+    automatic_session = ((automatic or {}).get("metadata") or {}).get("as_of_session") if isinstance(automatic, Mapping) else None
+    if not isinstance(automatic, Mapping) or automatic_session != session or not isinstance(automatic.get("artifact_identity"), str):
+        raise DailyProducerError("DAILY_SHADOW_AUTOSOURCE_INVALID")
+    if explicit is None:
+        return automatic
+    explicit_session = ((explicit.get("metadata") or {}).get("as_of_session") if isinstance(explicit, Mapping) else None)
+    if explicit_session != session or not isinstance(explicit.get("artifact_identity") if isinstance(explicit, Mapping) else None, str):
+        raise DailyProducerError("DAILY_SHADOW_EXPLICIT_SESSION_OR_IDENTITY_INVALID")
+    if explicit.get("artifact_identity") != automatic.get("artifact_identity"):
+        raise DailyProducerError("DAILY_SHADOW_EXPLICIT_AUTOSOURCE_CONFLICT")
+    return explicit
+
+
+def _relative_or_absolute(root: Path, path: Path) -> str:
+    try:
+        return str(path.relative_to(root)).replace("\\", "/")
+    except ValueError:
+        return str(path)
+
+
 def run_daily_producer(
     root: Path,
     *,
@@ -199,8 +230,10 @@ def run_daily_producer(
     registry_path: Path | None = None,
     output_root: Path | None = None,
     operation_output_root: Path | None = None,
+    shadow_artifact_output_root: Path | None = None,
     portfolio: Mapping[str, Any] | None = None,
     macro: Mapping[str, Any] | None = None,
+    shadow_security_recommendation: Mapping[str, Any] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Run the one-command retained completed-session producer pipeline."""
@@ -216,6 +249,18 @@ def run_daily_producer(
     graph = _dependency_graph(plan)
     output_root = output_root or root / "operations-review" / "daily-producer-runs-v1"
     operation_output_root = operation_output_root or root / "operations-review" / "daily-research-session-operations-v1"
+    try:
+        shadow_resolution = resolve_or_build_daily_session_shadow_recommendation(
+            root,
+            session=selected,
+            inputs=inputs,
+            output_root=shadow_artifact_output_root,
+        )
+        resolved_shadow_security_recommendation = _same_session_shadow_recommendation(
+            shadow_security_recommendation, shadow_resolution, session=selected,
+        )
+    except DailySessionShadowRecommendationError as exc:
+        raise DailyProducerError("DAILY_SHADOW_AUTOSOURCE_INTEGRITY_FAILURE:" + str(exc)) from exc
     operation, operation_dir = run_session_operation(
         root,
         session=selected,
@@ -226,6 +271,7 @@ def run_daily_producer(
         generation_context="DAILY_PRODUCER_RETAINED_COMPLETED_SESSION",
         portfolio=portfolio,
         macro=macro,
+        shadow_security_recommendation=resolved_shadow_security_recommendation,
     )
     parity = _verify_delivery(operation, operation_dir)
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])
@@ -260,7 +306,16 @@ def run_daily_producer(
         "dependency_graph": graph,
         "source_acquisition_result": {"status": "REUSED_RETAINED_EVIDENCE", "acquired": [], "reused": [row["input_class"] for row in plan["items"] if row["input_class"] not in {"macro", "explicit_portfolio"}], "blocked_or_unavailable": [row["input_class"] for row in plan["items"] if row["execution_disposition"] in {"BLOCKED", "OPTIONAL_UNAVAILABLE", "NOT_APPLICABLE"}]},
         "upstream_artifact_identities": copy.deepcopy(operation["manifest"]["input_artifacts"]),
-        "daily_session_operation": {"identity": operation["manifest"]["operation_identity"], "directory": str(operation_dir.relative_to(root)).replace("\\", "/")},
+        "daily_session_shadow_recommendation": {
+            "status": shadow_resolution["status"],
+            "session": selected,
+            "path": _relative_or_absolute(root, Path(shadow_resolution["path"])),
+            "artifact_identity": shadow_resolution["chain"]["artifact_identity"],
+            "shadow_security_recommendation_identity": resolved_shadow_security_recommendation["artifact_identity"],
+            "fundamental_invalidation_identity": shadow_resolution["chain"]["fundamental_thesis_invalidation_precision"]["artifact_identity"],
+            "source_artifact_identities": copy.deepcopy(shadow_resolution["chain"]["source_artifact_identities"]),
+        },
+        "daily_session_operation": {"identity": operation["manifest"]["operation_identity"], "directory": _relative_or_absolute(root, operation_dir)},
         "daily_product_identity": operation["product"]["artifact_identity"],
         "ai_delivery": copied,
         "dashboard_projection": {"identity": json.loads(projection)["projection_identity"], **copied["dashboard/current_decision_cockpit_projection.json"]},

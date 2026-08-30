@@ -90,7 +90,16 @@ def _producer(tmp_path: Path, session: str = SESSION) -> dict:
             "opportunity": None,
             "manifest": {"operation_identity": "daily_research_session_operation:1883a16b50f0ef2d8e367391811ad164c1742532b7d4ae3c72fe6e3c218c30e0"},
         },
-        "manifest": {},
+        "manifest": {
+            "daily_session_shadow_recommendation": {
+                "status": "REUSED",
+                "session": session,
+                "artifact_identity": "daily_session_shadow_recommendation:test",
+                "shadow_security_recommendation_identity": "shadow_security_recommendation:test",
+                "fundamental_invalidation_identity": "fundamental_thesis_invalidation_precision:test",
+                "source_artifact_identities": {},
+            },
+        },
     }
 
 

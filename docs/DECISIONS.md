@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-30 - Canonical Daily Shadow-Recommendation Autosourcing V1
+
+`CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1 = PASS` (`push = NO`).
+
+1. The auto-source insertion point is `daily_producer_pipeline.run_daily_producer()` immediately after completed-session registry input resolution/coherence validation and before `run_session_operation()`; this preserves the required dependency order and avoids building recommendation context inside Session Bundle construction.
+2. The existing `daily_session_shadow_recommendation/v1` engine chain is reused without rule changes. Exact session market/tactical evidence comes from the registered session selection; its pre-existing session-independent retained contexts are explicitly named, not discovered by glob/latest or acquired. One immutable per-session retained chain is reused only when full canonical content/source identities match; a same-session difference, corruption, or session mismatch is an explicit integrity failure.
+3. Normal canonical production supplies no manual parameter. The retained explicit seam remains for bounded/test/debug injection but is accepted only if it is the identical same-session auto-resolved `shadow_security_recommendation/v1` artifact; a conflict fails closed. Individual missing/not-ready recommendation records remain explicit local research absence and do not fail the market-data pipeline.
+4. The bounded 27/28 canonical-producer replay auto-sourced the chain and retained recommendation/invalidation for 75/106 and 83/123 cards. It confirms lifecycle compatibility at 58 comparable names (41 `UNCHANGED` recommendation contexts, 17 `MISSING`); neither the 523-name upstream cohort boundary nor any authority was widened.
+
 ## 2026-08-30 - Daily-Session Shadow Recommendation and Invalidation Production V1
 
 `DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1 = PASS` (`push = NO`).

@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 from typing import Any, Mapping
 
 import action_instrumentation
@@ -37,6 +38,21 @@ import shadow_security_recommendation
 import thesis_catalyst_downside_research_cases
 
 CONTRACT_VERSION = "daily_session_shadow_recommendation/v1"
+
+# These are the existing governed, session-independent research contexts consumed
+# by the proven daily-session chain.  They are deliberately explicit rather than
+# discovered by glob/latest selection.  Market and tactical inputs come from the
+# completed-session registry and remain exact-session inputs.
+SHARED_CONTEXT_RELATIVE_PATHS = {
+    "fundamental": "operations-review/fundamental-cross-sectional-scoring-and-ranking-v1-20260828/artifact.json",
+    "valuation": "operations-review/current-valuation-research-proxy-and-relative-value-axis-v1-20260828/artifact.json",
+    "events": "operations-review/current-corporate-event-context-v1/current_corporate_event_context_artifact.json",
+    "ttm": "operations-review/financial-flow-semantics-and-ttm-bridge-foundation-v1-20260828/artifact.json",
+    "risk_research": "operations-review/current-portfolio-risk-research-v1-20260829/artifact.json",
+    "a1_temporal": "operations-review/a1-bitemporal-semantic-contract-v1-20260828/artifact.json",
+    "a2_temporal": "operations-review/a2-provider-publication-first-seen-retention-v1-20260829/artifact.json",
+}
+RETAINED_ARTIFACT_DIRECTORY = "daily-session-shadow-recommendation-v1"
 
 
 class DailySessionShadowRecommendationError(ValueError):
@@ -51,6 +67,87 @@ def _identity(value: Mapping[str, Any]) -> dict[str, str]:
     payload = {key: item for key, item in value.items() if key not in {"artifact_sha256", "artifact_identity"}}
     digest = hashlib.sha256(_canonical(payload).encode("utf-8")).hexdigest()
     return {"artifact_sha256": digest, "artifact_identity": f"daily_session_shadow_recommendation:{digest}"}
+
+
+def _canonical_bytes(value: Mapping[str, Any]) -> bytes:
+    return (_canonical(value) + "\n").encode("utf-8")
+
+
+def _load_retained_context(root: Path, name: str, relative_path: str) -> dict[str, Any]:
+    path = root / relative_path
+    try:
+        raw = path.read_bytes()
+        value = json.loads(raw)
+    except FileNotFoundError as exc:
+        raise DailySessionShadowRecommendationError("RETAINED_CONTEXT_MISSING:" + name) from exc
+    except json.JSONDecodeError as exc:
+        raise DailySessionShadowRecommendationError("RETAINED_CONTEXT_CORRUPT:" + name) from exc
+    if not isinstance(value, dict):
+        raise DailySessionShadowRecommendationError("RETAINED_CONTEXT_INVALID:" + name)
+    value.setdefault("source_artifact_sha256", hashlib.sha256(raw).hexdigest())
+    return value
+
+
+def _source_identity(value: Mapping[str, Any] | None) -> str | None:
+    source = value or {}
+    return source.get("artifact_identity") or source.get("artifact_sha256") or source.get("source_artifact_sha256")
+
+
+def resolve_or_build(
+    root: Path,
+    *,
+    session: str,
+    inputs: Mapping[str, Any],
+    output_root: Path | None = None,
+    shared_context_paths: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Resolve the exact-session chain, then immutably build or reuse it.
+
+    This is the canonical Producer integration point.  It performs no provider
+    acquisition: ``inputs`` are already registry-resolved and every remaining
+    context is an explicitly named retained artifact.  A session directory is
+    intentionally single-identity: changed same-session lineage is an integrity
+    conflict, not an invitation to silently replace historical research.
+    """
+    source_root = Path(root)
+    if not isinstance(inputs.get("descriptive"), Mapping) or not isinstance(inputs.get("tactical"), Mapping):
+        raise DailySessionShadowRecommendationError("SESSION_RESEARCH_INPUTS_MISSING")
+    if inputs["descriptive"].get("session") != session or inputs["tactical"].get("session") != session:
+        raise DailySessionShadowRecommendationError("SESSION_RESEARCH_INPUTS_MISMATCH")
+    paths = dict(SHARED_CONTEXT_RELATIVE_PATHS if shared_context_paths is None else shared_context_paths)
+    if set(paths) != set(SHARED_CONTEXT_RELATIVE_PATHS):
+        raise DailySessionShadowRecommendationError("RETAINED_CONTEXT_PATH_SET_INVALID")
+    shared = {name: _load_retained_context(source_root, name, paths[name]) for name in sorted(paths)}
+    chain = build(
+        market=inputs["descriptive"], tactical=inputs["tactical"],
+        fundamental=shared["fundamental"], valuation=shared["valuation"], events=shared["events"], ttm=shared["ttm"],
+        risk_research=shared["risk_research"], valuation_research=shared["valuation"],
+        a1_temporal=shared["a1_temporal"], a2_temporal=shared["a2_temporal"],
+    )
+    if chain.get("session") != session or (chain.get("shadow_security_recommendation", {}).get("metadata") or {}).get("as_of_session") != session:
+        raise DailySessionShadowRecommendationError("AUTOSOURCED_OUTPUT_SESSION_MISMATCH")
+    target_root = Path(output_root) if output_root is not None else source_root / "operations-review"
+    path = target_root / RETAINED_ARTIFACT_DIRECTORY / session / "daily_session_shadow_recommendation.json"
+    payload = _canonical_bytes(chain)
+    if path.exists():
+        try:
+            retained = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise DailySessionShadowRecommendationError("RETAINED_DAILY_SHADOW_ARTIFACT_CORRUPT") from exc
+        retained_identity = _identity(retained) if isinstance(retained, Mapping) else {}
+        if (
+            not isinstance(retained, Mapping)
+            or retained_identity.get("artifact_identity") != retained.get("artifact_identity")
+            or retained_identity.get("artifact_sha256") != retained.get("artifact_sha256")
+            or retained.get("session") != session
+            or retained.get("source_artifact_identities") != chain.get("source_artifact_identities")
+            or _canonical_bytes(retained) != payload
+        ):
+            raise DailySessionShadowRecommendationError("IMMUTABLE_DAILY_SESSION_SHADOW_RECOMMENDATION_CONFLICT")
+        return {"status": "REUSED", "path": path, "chain": retained}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return {"status": "BUILT", "path": path, "chain": chain}
 
 
 def build(
@@ -106,16 +203,16 @@ def build(
         "contract_version": CONTRACT_VERSION,
         "session": session,
         "source_artifact_identities": {
-            "market": market.get("artifact_identity"),
-            "tactical": tactical.get("artifact_identity"),
-            "fundamental": fundamental.get("artifact_identity"),
-            "valuation": valuation.get("artifact_identity"),
-            "events": events.get("artifact_identity"),
-            "ttm": ttm.get("artifact_identity"),
-            "risk_research": (risk_research or {}).get("artifact_identity"),
-            "valuation_research": (valuation_research or {}).get("artifact_identity") or (valuation_research or {}).get("artifact_sha256"),
-            "a1_temporal": (a1_temporal or {}).get("artifact_identity"),
-            "a2_temporal": (a2_temporal or {}).get("artifact_identity"),
+            "market": _source_identity(market),
+            "tactical": _source_identity(tactical),
+            "fundamental": _source_identity(fundamental),
+            "valuation": _source_identity(valuation),
+            "events": _source_identity(events),
+            "ttm": _source_identity(ttm),
+            "risk_research": _source_identity(risk_research),
+            "valuation_research": _source_identity(valuation_research),
+            "a1_temporal": _source_identity(a1_temporal),
+            "a2_temporal": _source_identity(a2_temporal),
         },
         "denominator_by_stage": {
             "opportunity_ranking": len(opportunity.get("records") or {}),

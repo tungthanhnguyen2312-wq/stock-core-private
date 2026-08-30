@@ -425,6 +425,16 @@ def run_canonical_daily_operation(
             f"DAILY_PRODUCER_SESSION_MISMATCH:expected={resolved_session}:observed={producer_session}",
         )
 
+    shadow_autosourcing = (
+        (producer_result.get("manifest") or {}).get("daily_session_shadow_recommendation")
+        if isinstance(producer_result, Mapping) else None
+    )
+    if not isinstance(shadow_autosourcing, Mapping) or shadow_autosourcing.get("session") != resolved_session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_DAILY_PRODUCER,
+            "DAILY_SHADOW_AUTOSOURCE_LINEAGE_MISSING_OR_SESSION_MISMATCH",
+        )
+
     try:
         runtime_materialized = runtime_materialize(root, runtime_root, resolved_session)
     except CanonicalRuntimeReleaseError as exc:
@@ -524,6 +534,7 @@ def run_canonical_daily_operation(
         "phase_b_identity": phase_b.get("gate_identity"),
         "acquisition_identity": snapshot.get("snapshot_identity") or snapshot.get("artifact_identity"),
         "daily_producer_run_identity": producer_result.get("run_identity"),
+        "daily_session_shadow_recommendation_identity": shadow_autosourcing.get("artifact_identity"),
         "decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
         "prospective_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
         "runtime_session": runtime_session,
@@ -567,6 +578,7 @@ def run_canonical_daily_operation(
         "daily_producer_run_identity": producer_result.get("run_identity"),
         "daily_producer_operation_identity": ((operation.get("manifest") or {}).get("operation_identity")
                                               if isinstance(operation, Mapping) else None),
+        "daily_session_shadow_recommendation": dict(shadow_autosourcing),
         "decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
         "prospective_cohort_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
         "runtime_release_status": "READY" if runtime_release.get("ready") else "NOT_READY",
@@ -597,6 +609,7 @@ def run_canonical_daily_operation(
         "session_gate_phase_b": phase_b.get("gate_identity"),
         "acquisition": snapshot.get("snapshot_identity") or snapshot.get("artifact_identity"),
         "daily_producer": producer_result.get("run_identity"),
+        "daily_session_shadow_recommendation": shadow_autosourcing.get("artifact_identity"),
         "decision_packet": (decision_packet or {}).get("artifact_identity"),
         "prospective_cohort": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
         "runtime_release_session": runtime_session,

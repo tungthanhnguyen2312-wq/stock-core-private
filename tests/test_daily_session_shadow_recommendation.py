@@ -136,10 +136,10 @@ class DailySessionShadowRecommendationTest(unittest.TestCase):
         )
 
     def test_no_hidden_file_or_clock_io_no_future_leakage_possible(self):
-        """Pure in-memory orchestration over its explicit arguments only: no read_text/open/
-        Path/datetime call exists in the module, so it cannot pick up a later date's data by
-        itself -- every input is exactly what the caller passed in."""
-        source = inspect.getsource(daily_session_shadow_recommendation)
+        """The engine chain itself is pure over explicit arguments.  The separately tested
+        canonical resolver may read explicitly named retained inputs, but it cannot alter this
+        build function's session semantics or discover a later session by itself."""
+        source = inspect.getsource(daily_session_shadow_recommendation.build)
         for forbidden in ("datetime", ".now(", "open(", "read_text", "read_bytes", "Path("):
             self.assertNotIn(forbidden, source, f"unexpected {forbidden!r} in daily_session_shadow_recommendation.py")
 
