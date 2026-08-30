@@ -120,14 +120,20 @@ def _producer_run(
     return manifest_path, manifest, bundle_path, bundle
 
 
-def _p3_snapshot(session: str, sources: Mapping[str, tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
-    """Resolve P3F9B inside the frozen descriptive input's attempt root, never by latest glob."""
+def _p3_snapshot(root: Path, session: str, sources: Mapping[str, tuple[Path, dict[str, Any]]]) -> dict[str, Any]:
+    """Resolve P3F9B under the frozen descriptive input's own live-acquisition attempt root when
+    one exists; otherwise fall back to the exact session-derived retained scaleout directory that
+    a reused-retained-evidence session (never a live attempt) still deterministically produces.
+    Both roots are narrowed to one session-identity-verified file -- never a latest-mtime or
+    cross-session glob.
+    """
     descriptive_path = sources["descriptive"][0]
     attempt_root = next((parent for parent in descriptive_path.parents if parent.name.startswith("post-close-attempt-")), None)
-    if attempt_root is None:
+    search_root = attempt_root or (root / "operations-review" / f"p3f9b-market-wide-exact-session-scaleout-{session.replace('-', '')}")
+    if not search_root.is_dir():
         raise CanonicalRuntimeReleaseError("FROZEN_DESCRIPTIVE_ATTEMPT_ROOT_MISSING")
     candidates = []
-    for path in attempt_root.glob("**/p3f9b_mva_exact_session_snapshot.json"):
+    for path in search_root.glob("**/p3f9b_mva_exact_session_snapshot.json"):
         source = _load(path)
         if source.get("resolved_completed_session") == session and source.get("retained_snapshot_session") == session:
             candidates.append(source)
@@ -171,7 +177,7 @@ def _build_release(root: Path, session: str, staging: Path, *, producer_run_iden
     sources, _registry = _source_paths(root, session)
     run_path, run_manifest, bundle_path, producer_bundle = _producer_run(root, session, sources, run_identity=producer_run_identity)
     tier_lineage = _verify_retained_tier_lineage(root, session, run_manifest)
-    snapshot = _p3_snapshot(session, sources)
+    snapshot = _p3_snapshot(root, session, sources)
     descriptive = sources["descriptive"][1]
     tactical_records = sources["tactical"][1].get("records") or {}
     official_records = sources["official_universe"][1].get("records") or {}

@@ -89,6 +89,31 @@ def test_selecting_current_run_does_not_delete_other_retained_runs(tmp_path):
     assert (old_run / "ai_research_session_bundle.json").is_file()
 
 
+def _flat_descriptive_source(tmp_path, session):
+    descriptive_path = (tmp_path / "operations-review"
+                         / f"market-wide-current-descriptive-research-v1-{session.replace('-', '')}" / "artifact.json")
+    descriptive_path.parent.mkdir(parents=True)
+    descriptive_path.write_text("{}", encoding="utf-8")
+    return {"descriptive": (descriptive_path, {})}
+
+
+def test_p3_snapshot_falls_back_to_retained_scaleout_when_no_attempt_root(tmp_path):
+    session = "2026-08-28"
+    sources = _flat_descriptive_source(tmp_path, session)
+    scaleout_dir = tmp_path / "operations-review" / f"p3f9b-market-wide-exact-session-scaleout-{session.replace('-', '')}"
+    scaleout_dir.mkdir(parents=True)
+    snapshot = {"resolved_completed_session": session, "retained_snapshot_session": session, "records": {}}
+    (scaleout_dir / "p3f9b_mva_exact_session_snapshot.json").write_text(json.dumps(snapshot), encoding="utf-8")
+    assert runtime_release._p3_snapshot(tmp_path, session, sources) == snapshot
+
+
+def test_p3_snapshot_fails_closed_when_neither_attempt_root_nor_retained_scaleout_exists(tmp_path):
+    session = "2026-08-28"
+    sources = _flat_descriptive_source(tmp_path, session)
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError, match="FROZEN_DESCRIPTIVE_ATTEMPT_ROOT_MISSING"):
+        runtime_release._p3_snapshot(tmp_path, session, sources)
+
+
 def test_retained_canonical_session_materializes_exact_runtime_contract(tmp_path):
     result = runtime_release.materialize_canonical_runtime_release(ROOT, tmp_path, SESSION)
     report = release_session_contract.resolve_release_session(tmp_path, runtime_release.RELEASE_SESSION_FILES, today=SESSION)
