@@ -11,7 +11,9 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
@@ -20,10 +22,14 @@ PRODUCER_ROOT = Path(__file__).resolve().parent
 if str(PRODUCER_ROOT) not in sys.path:
     sys.path.insert(0, str(PRODUCER_ROOT))
 
-from atomic_io import atomic_copy_file, atomic_write_file, atomic_write_json
 from canonical_dashboard_runtime_release import (
     CanonicalRuntimeReleaseError,
     materialize_canonical_runtime_release,
+)
+from dashboard_session_companions import companion_relpaths
+from release_checkout_identity import (
+    CANONICAL_BRANCH,
+    assert_web_checkout_identity,
 )
 import release_session_contract
 
@@ -32,12 +38,146 @@ class DashboardReleaseError(RuntimeError):
     pass
 
 
+# This is deliberately a literal boundary rather than a scan of Dashboard source.
+# The Daily command is allowed to publish only these generated current-release
+# artifacts, plus the two exact-session companions derived from the same Producer
+# run.  Source, workflow and presentation files are committed separately.
+DASHBOARD_RELEASE_ALLOWLIST = (
+    "screen_snapshot.csv",
+    "screen_snapshot_live.csv",
+    "market_breadth.csv",
+    "analysis_latest.json",
+    "bundle_manifest.json",
+    "data/candle_signals.json",
+    "data/candle_signals.js",
+    "data/sector_heatmap.json",
+    "data/sector_heatmap.js",
+    "data/candlestick_patterns.json",
+    "data/candlestick_patterns.js",
+    "data/macro_snapshot.json",
+    "data/macro_snapshot.js",
+    "data/current_decision_cockpit.json",
+    "data/screener_data.js",
+    "data/build_info.json",
+    "data/build_info.js",
+)
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _atomic_write_bytes(target: Path, content: bytes) -> None:
+    """Write one Dashboard artifact without emitting Producer observability files there."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, raw_tmp = tempfile.mkstemp(dir=target.parent, prefix=f".tmp-{target.name}-", suffix=".tmp")
+    tmp = Path(raw_tmp)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, target)
+    except Exception:
+        if tmp.exists():
+            tmp.unlink()
+        raise
+
+
+def _atomic_copy(source: Path, target: Path) -> None:
+    _atomic_write_bytes(target, source.read_bytes())
+
+
+def _atomic_write_text(target: Path, content: str) -> None:
+    _atomic_write_bytes(target, content.encode("utf-8"))
+
+
+def _git(web_root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=web_root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode:
+        raise DashboardReleaseError(
+            f"DASHBOARD_GIT_FAILED:{' '.join(args)}:{result.stderr.strip() or result.stdout.strip()}"
+        )
+    return result.stdout.strip()
+
+
+def _dashboard_preflight(web_root: Path) -> None:
+    """Refuse a live publish unless the canonical Dashboard checkout starts clean."""
+    top = Path(_git(web_root, "rev-parse", "--show-toplevel"))
+    branch = _git(web_root, "branch", "--show-current")
+    origin = _git(web_root, "remote", "get-url", "origin")
+    _git(web_root, "fetch", "origin", CANONICAL_BRANCH)
+    relation = _git(web_root, "rev-list", "--left-right", "--count", f"HEAD...origin/{CANONICAL_BRANCH}")
+    ahead, behind = (int(value) for value in relation.split())
+    if behind:
+        raise DashboardReleaseError("DASHBOARD_REMOTE_AHEAD_OR_DIVERGED")
+    try:
+        assert_web_checkout_identity(
+            web_root,
+            origin_url=origin,
+            branch=branch,
+            live=True,
+            git_toplevel=top,
+        )
+    except Exception as exc:
+        raise DashboardReleaseError(f"DASHBOARD_CHECKOUT_IDENTITY_FAILED:{exc}") from exc
+    if _git(web_root, "status", "--porcelain", "--untracked-files=all"):
+        raise DashboardReleaseError("DASHBOARD_CHECKOUT_NOT_CLEAN")
+
+
+def _changed_paths(web_root: Path) -> list[str]:
+    changed = set(filter(None, _git(web_root, "diff", "--name-only").splitlines()))
+    changed.update(filter(None, _git(web_root, "diff", "--cached", "--name-only").splitlines()))
+    changed.update(filter(None, _git(web_root, "ls-files", "--others", "--exclude-standard").splitlines()))
+    return sorted(changed)
+
+
+def _publish_generated_release(
+    web_root: Path,
+    *,
+    session: str,
+    release_id: str,
+    companion_paths: tuple[str, ...],
+) -> dict[str, Any]:
+    """Commit and push exactly one verified generated Dashboard release."""
+    allowed = set(DASHBOARD_RELEASE_ALLOWLIST) | set(companion_paths)
+    changed = _changed_paths(web_root)
+    escaped = sorted(set(changed) - allowed)
+    if escaped:
+        raise DashboardReleaseError(
+            "DASHBOARD_RELEASE_ALLOWLIST_VIOLATION:" + ",".join(escaped)
+        )
+    if not changed:
+        return {"status": "NO_OP_ALREADY_PUBLISHED", "commit": _git(web_root, "rev-parse", "HEAD")}
+
+    _git(web_root, "add", "--", *changed)
+    staged = sorted(filter(None, _git(web_root, "diff", "--cached", "--name-only").splitlines()))
+    if set(staged) != set(changed) or set(staged) - allowed:
+        raise DashboardReleaseError("DASHBOARD_RELEASE_STAGING_VIOLATION")
+    _git(web_root, "commit", "-m", f"data(daily): publish dashboard {session}")
+    commit = _git(web_root, "rev-parse", "HEAD")
+    _git(web_root, "push", "origin", f"HEAD:{CANONICAL_BRANCH}")
+    remote = _git(web_root, "ls-remote", "origin", f"refs/heads/{CANONICAL_BRANCH}").split()
+    if not remote or remote[0] != commit:
+        raise DashboardReleaseError("DASHBOARD_PUSH_VERIFICATION_FAILED")
+    return {
+        "status": "PUBLISHED_READY",
+        "commit": commit,
+        "release_identity": release_id,
+        "staged": staged,
+    }
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, Any]]:
@@ -62,6 +202,18 @@ def publish_dashboard_release(
 
     if not web_root.is_dir():
         raise DashboardReleaseError(f"WEB_ROOT_NOT_DIRECTORY:{web_root}")
+    if push:
+        _dashboard_preflight(web_root)
+
+    previous_build_info: dict[str, Any] | None = None
+    existing_build_info = web_root / "data" / "build_info.json"
+    if existing_build_info.is_file():
+        try:
+            parsed = json.loads(existing_build_info.read_text(encoding="utf-8"))
+            if isinstance(parsed, dict):
+                previous_build_info = parsed
+        except (OSError, json.JSONDecodeError):
+            pass
 
     # 1. Materialize canonical runtime release in runtime_root if needed
     runtime_manifest = runtime_root / "bundle_manifest.json"
@@ -81,7 +233,7 @@ def publish_dashboard_release(
         src = runtime_root / name
         if src.is_file():
             dst = web_root / name
-            atomic_copy_file(src, dst)
+            _atomic_copy(src, dst)
 
     # 3. Synchronize / generate data/ companions
     # Candle signals, sector heatmap, candlestick patterns, macro
@@ -121,7 +273,7 @@ def publish_dashboard_release(
                 except Exception:
                     pass
             dst.parent.mkdir(parents=True, exist_ok=True)
-            atomic_copy_file(src, dst)
+            _atomic_copy(src, dst)
         else:
             # If destination already has an old/stale file from another session, remove it
             if dst.is_file() and date_accessor and dst.suffix == ".json":
@@ -136,7 +288,6 @@ def publish_dashboard_release(
     # Try generating HTML report companion if retained canonical handoff is available
     try:
         from dashboard_session_companions import (
-            apply_session_companions,
             compute_session_companions,
             producer_git_head,
             producer_git_subject,
@@ -149,7 +300,8 @@ def publish_dashboard_release(
             build_id=f"build_{session.replace('-', '')}",
         )
         if not plan.omitted:
-            apply_session_companions(web_root, plan)
+            _atomic_write_text(web_root / plan.manifest_relpath, plan.manifest_text)
+            _atomic_write_text(web_root / plan.report_relpath, plan.report_html)
     except Exception:
         pass
 
@@ -164,27 +316,18 @@ def publish_dashboard_release(
             f"window.SCREEN_ROWS = {json.dumps(screen_rows, ensure_ascii=False)};\n"
             f"window.BREADTH_ROWS = {json.dumps(breadth_rows, ensure_ascii=False)};\n"
         )
-        atomic_write_file(web_root / "data" / "screener_data.js", screener_js_content)
+        _atomic_write_text(web_root / "data" / "screener_data.js", screener_js_content)
 
     # 5. Compute artifact hashes and summary counts
     files_meta: dict[str, dict[str, Any]] = {}
-    for rel in (
-        "screen_snapshot.csv",
-        "market_breadth.csv",
-        "analysis_latest.json",
-        "data/screener_data.js",
-        "data/candle_signals.json",
-        "data/sector_heatmap.json",
-        "data/candlestick_patterns.json",
-        "data/macro_snapshot.json",
-    ):
+    for rel in DASHBOARD_RELEASE_ALLOWLIST:
+        if rel.startswith("data/build_info"):
+            continue
         p = web_root / rel
         if p.is_file():
-            stat = p.stat()
             files_meta[rel] = {
                 "sha256": _sha256(p),
-                "size_bytes": stat.st_size,
-                "mtime": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+                "size_bytes": p.stat().st_size,
             }
 
     # Summary counts
@@ -200,7 +343,7 @@ def publish_dashboard_release(
         "session": session,
         "producer_run_identity": producer_run_id,
         "files": files_meta,
-    }, sort_keys=True).encode("utf-8")
+    }, sort_keys=True, separators=(",", ":")).encode("utf-8")
     release_digest = hashlib.sha256(manifest_bytes).hexdigest()
     release_id = f"dashboard_release:{release_digest}"
     build_id = release_digest[:10]
@@ -230,10 +373,27 @@ def publish_dashboard_release(
         },
     }
 
-    # Write data/build_info.json & data/build_info.js
-    atomic_write_json(web_root / "data" / "build_info.json", build_info_payload)
-    build_info_js = f"window.BUILD_INFO = {json.dumps(build_info_payload, ensure_ascii=False, indent=2)};\n"
-    atomic_write_file(web_root / "data" / "build_info.js", build_info_js)
+    # A repeated exact release must not generate new timestamps or new bytes.  If
+    # the release identity already exists but its governed file hashes differ,
+    # refuse instead of silently replacing a conflicting release.
+    previous_id = (previous_build_info or {}).get("dashboard_release_identity")
+    if previous_id == release_id:
+        previous_files = (previous_build_info or {}).get("files")
+        previous_hashes = {
+            rel: value.get("sha256")
+            for rel, value in previous_files.items()
+            if isinstance(value, dict)
+        } if isinstance(previous_files, dict) else {}
+        current_hashes = {rel: value["sha256"] for rel, value in files_meta.items()}
+        if previous_hashes != current_hashes:
+            raise DashboardReleaseError("FAIL_CLOSED_DASHBOARD_RELEASE_IDENTITY_CONFLICT")
+    else:
+        _atomic_write_text(
+            web_root / "data" / "build_info.json",
+            json.dumps(build_info_payload, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+        )
+        build_info_js = f"window.BUILD_INFO = {json.dumps(build_info_payload, ensure_ascii=False, indent=2)};\n"
+        _atomic_write_text(web_root / "data" / "build_info.js", build_info_js)
 
     # 6. Validate session coherence across web_root
     required_session_files = ["screen_snapshot.csv", "market_breadth.csv", "analysis_latest.json"]
@@ -249,7 +409,7 @@ def publish_dashboard_release(
             f"MIXED_SESSION_DASHBOARD_RELEASE: expected {session}, found issues:\n" + "\n".join(mismatches)
         )
 
-    return {
+    result = {
         "status": "DASHBOARD_RELEASE_READY",
         "market_session": session,
         "producer_run_identity": producer_run_id,
@@ -258,3 +418,12 @@ def publish_dashboard_release(
         "web_root": str(web_root),
         "validated_artifacts": [r.name for r in report.results if r.status == "ok"],
     }
+    if push:
+        companion_paths = tuple(companion_relpaths(session))
+        result.update(_publish_generated_release(
+            web_root,
+            session=session,
+            release_id=release_id,
+            companion_paths=companion_paths,
+        ))
+    return result
