@@ -118,10 +118,10 @@ def _patch_downstream(monkeypatch, tmp_path: Path) -> None:
 
 def _run(tmp_path: Path, monkeypatch, *, now=POST_CLOSE, session=SESSION, complete_publication=False,
          acquire_fn=None, producer_fn=None, runtime_fn=None, trusted_fn=None, publication_runner=None,
-         working=None, exact=None, **kwargs):
+         working=None, exact=None, runtime_session=None, **kwargs):
     _patch_downstream(monkeypatch, tmp_path)
     runtime = tmp_path / "runtime"
-    _write_runtime(runtime, session)
+    _write_runtime(runtime, runtime_session or session)
 
     calls = {"acquire": 0, "runtime": 0, "trusted": 0, "producer": 0, "publication": []}
 
@@ -180,6 +180,56 @@ def _run(tmp_path: Path, monkeypatch, *, now=POST_CLOSE, session=SESSION, comple
     )
     record["_calls"] = calls
     return record
+
+
+def _completed_registry(root: Path, *sessions: str) -> None:
+    path = root / "config" / "daily_research_session_input_registry.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"completed_sessions": {
+        session: {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True,
+                  "completion_evidence": {"basis": "EXACT_SESSION_UPSTREAM_ARTIFACT_REGISTRY"}}
+        for session in sessions
+    }}), encoding="utf-8")
+
+
+def test_sunday_auto_resolves_latest_governed_completed_session_without_floor(monkeypatch, tmp_path):
+    sunday = datetime(2026, 8, 30, 13, 0, tzinfo=VN_TZ)
+    target = "2026-08-28"
+    _completed_registry(tmp_path, target)
+    exact = _p3f9b(target, requested_at="2026-08-28T19:19:00+07:00")
+    monkeypatch.setattr(gate, "load_exact_session_evidence_from_root", lambda *_args: exact)
+    resolution = gate.resolve_latest_qualified_completed_session(tmp_path, sunday.date().isoformat())
+    assert resolution and resolution["session"] == target
+    monkeypatch.setattr(cdo, "resolve_latest_qualified_completed_session", lambda *_args: resolution)
+    record = _run(
+        tmp_path, monkeypatch, now=sunday, session=None, runtime_session=target,
+        working=_working_dates("2026-08-31", "2026-09-01"),
+        acquire_fn=lambda *_args, **_kwargs: _acquired(tmp_path, target, reused=True),
+        producer_fn=lambda *_args, **_kwargs: _producer(tmp_path, target),
+        runtime_fn=lambda *_args, **_kwargs: {"session": target, "live_count": 889},
+        trusted_fn=lambda *_args, **_kwargs: {"session": target, "trusted_subset_ready": True},
+    )
+    assert record["session"] == target
+    assert record["phase_a"]["automatic_non_trading_resolution"]["session"] == target
+
+
+def test_holiday_auto_resolution_uses_ledger_not_calendar_day_subtraction(monkeypatch, tmp_path):
+    holiday = datetime(2026, 9, 2, 13, 0, tzinfo=VN_TZ)
+    target = "2026-08-28"
+    _completed_registry(tmp_path, "2026-08-27", target)
+    exact = _p3f9b(target, requested_at="2026-08-28T19:19:00+07:00")
+    monkeypatch.setattr(gate, "load_exact_session_evidence_from_root", lambda _root, session: exact if session == target else None)
+    resolution = gate.resolve_latest_qualified_completed_session(tmp_path, holiday.date().isoformat())
+    assert resolution and resolution["session"] == target
+
+
+def test_non_trading_day_without_qualified_ledger_evidence_fails_closed():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=datetime(2026, 8, 30, 13, 0, tzinfo=VN_TZ),
+        working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+    assert "NON_TRADING_DAY_NO_QUALIFIED_COMPLETED_SESSION" in result["reason_codes"]
 
 
 def test_before_safety_floor_no_acquisition(tmp_path, monkeypatch):

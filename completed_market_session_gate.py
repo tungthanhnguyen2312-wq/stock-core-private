@@ -427,6 +427,47 @@ def load_exact_session_evidence_from_root(root: Path, session: str) -> dict[str,
     return found[-1]
 
 
+def resolve_latest_qualified_completed_session(root: Path, before_session: str) -> dict[str, Any] | None:
+    """Return the latest governed completed session strictly before ``before_session``.
+
+    This is the non-trading-day owner-flow resolver.  It consumes the existing
+    governed completed-session ledger, whose exact-session upstream evidence is
+    already the completion contract, and attaches the retained exact envelope
+    when it is separately available.  It never derives a session from a
+    weekday or calendar-day subtraction.
+    """
+    registry_path = Path(root) / "config" / "daily_research_session_input_registry.json"
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    completed = registry.get("completed_sessions") if isinstance(registry, Mapping) else None
+    if not isinstance(completed, Mapping):
+        return None
+    for candidate in sorted((str(key) for key in completed), reverse=True):
+        try:
+            candidate = parse_session_date(candidate)
+        except CompletedSessionGateError:
+            continue
+        if candidate >= before_session:
+            continue
+        record = completed.get(candidate)
+        if not isinstance(record, Mapping):
+            continue
+        completion = record.get("completion_evidence") if isinstance(record.get("completion_evidence"), Mapping) else {}
+        if record.get("status") != "COMPLETED_RETAINED_EVIDENCE" or record.get("trading_day_valid") is not True:
+            continue
+        if completion.get("basis") != "EXACT_SESSION_UPSTREAM_ARTIFACT_REGISTRY":
+            continue
+        evidence = load_exact_session_evidence_from_root(Path(root), candidate)
+        return {
+            "session": candidate,
+            "exact_session_evidence": evidence,
+            "selection_basis": "GOVERNED_COMPLETED_SESSION_LEDGER",
+        }
+    return None
+
+
 def _gate_record(
     *,
     requested_at: datetime,
@@ -852,6 +893,13 @@ def evaluate_attempt_eligibility(
             if item < local_date or (item == local_date and safety_floor_pass)
         ]
         if not candidates:
+            if local_date not in dates:
+                return emit(
+                    STATUS_PROVIDER_EVIDENCE_UNAVAILABLE,
+                    ["NON_TRADING_DAY_NO_QUALIFIED_COMPLETED_SESSION"],
+                    None,
+                    method,
+                )
             if not safety_floor_pass:
                 return emit(STATUS_TOO_EARLY, ["BEFORE_SAFETY_FLOOR", "NO_DEFENSIBLE_INTENDED_SESSION"], None, method)
             return emit(STATUS_BLOCKED, ["NO_DEFENSIBLE_INTENDED_SESSION"], None, method)

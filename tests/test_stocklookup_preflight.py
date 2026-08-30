@@ -7,9 +7,12 @@ def make(tmp_path):
 def test_pass_and_replay_does_not_require_credentials(tmp_path,monkeypatch):
  p,r,t=make(tmp_path); monkeypatch.delenv('DNSE_TOKEN',raising=False); assert check(producer_root=p,runtime_root=r,transport_root=t,replay_local=True)['status']=='PASS'
 def test_credentials_runtime_lock_transport_fail_closed(tmp_path,monkeypatch):
- p,r,t=make(tmp_path); monkeypatch.delenv('DNSE_TOKEN',raising=False)
+ p,r,t=make(tmp_path)
+ for key in ('DNSE_TOKEN','DNSE_API_KEY','DNSE_API_SECRET','LIVESPEED_API_KEY','LIVESPEED_API_SECRET'):
+  monkeypatch.delenv(key,raising=False)
+ monkeypatch.setenv('STOCK_LOOKUP_SECRETS_FILE',str(tmp_path/'missing-secrets.env'))
  with pytest.raises(PreflightError,match='CREDENTIALS'): check(producer_root=p,runtime_root=r,transport_root=t)
- monkeypatch.setenv('DNSE_TOKEN','never-print-this');
+ monkeypatch.setenv('DNSE_API_KEY','never-print-this'); monkeypatch.setenv('DNSE_API_SECRET','never-print-this')
  with pytest.raises(PreflightError,match='RUNTIME'): check(producer_root=p,runtime_root=tmp_path/'missing',transport_root=t)
  (p/'locks').mkdir(); (p/'locks'/'daily.lock').write_text('x')
  with pytest.raises(PreflightError,match='LOCK'): check(producer_root=p,runtime_root=r,transport_root=t)

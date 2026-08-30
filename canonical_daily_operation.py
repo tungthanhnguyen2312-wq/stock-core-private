@@ -79,8 +79,10 @@ from completed_market_session_gate import (
     evaluate_completed_market_session_gate,
     load_exact_session_evidence_from_root,
     load_json_mapping,
+    normalize_working_dates_evidence,
     parse_requested_at,
     parse_session_date,
+    resolve_latest_qualified_completed_session,
 )
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
 from field_temporal_contract import stable_id
@@ -313,13 +315,26 @@ def run_canonical_daily_operation(
     resolved_exact_evidence = exact_session_evidence
     if resolved_exact_evidence is None and explicit_session:
         resolved_exact_evidence = load_exact_session_evidence_from_root(root, explicit_session)
+    phase_working_dates = working_dates_evidence
+    if phase_working_dates is None and probe is not None:
+        phase_working_dates = probe()
+        probe = None
+    phase_session = explicit_session
+    automatic_non_trading_resolution: dict[str, Any] | None = None
+    if phase_session is None:
+        current_calendar = normalize_working_dates_evidence(phase_working_dates, retrieved_at=instant.isoformat())
+        if current_calendar.get("status") == "OBSERVED" and instant.date().isoformat() not in current_calendar.get("working_dates", []):
+            automatic_non_trading_resolution = resolve_latest_qualified_completed_session(root, instant.date().isoformat())
+            if automatic_non_trading_resolution is not None:
+                phase_session = str(automatic_non_trading_resolution["session"])
+                resolved_exact_evidence = automatic_non_trading_resolution["exact_session_evidence"]
     try:
         phase_a = evaluate_attempt_eligibility(
             requested_at=instant,
-            requested_session=explicit_session,
+            requested_session=phase_session,
             timezone_name=OPERATING_TIMEZONE,
             safety_floor=DEFAULT_SAFETY_FLOOR,
-            working_dates_evidence=working_dates_evidence,
+            working_dates_evidence=phase_working_dates,
             exact_session_evidence=resolved_exact_evidence,
             working_dates_fetcher=probe,
             allow_provider_probe=allow_provider_probe,
@@ -334,6 +349,14 @@ def run_canonical_daily_operation(
             ",".join(phase_a.get("reason_codes") or [str(phase_a.get("attempt_gate_status"))]),
             local_state={"phase_a": phase_a},
         )
+    if automatic_non_trading_resolution is not None:
+        phase_a = {
+            **phase_a,
+            "automatic_non_trading_resolution": {
+                "session": automatic_non_trading_resolution["session"],
+                "selection_basis": automatic_non_trading_resolution["selection_basis"],
+            },
+        }
     resolved_session = str(phase_a.get("resolved_session") or "")
     if not resolved_session:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_PRE_ACQUISITION, "INTENDED_SESSION_UNRESOLVED")
@@ -556,6 +579,7 @@ def run_canonical_daily_operation(
             "identity": phase_a.get("gate_identity"),
             "status": phase_a.get("attempt_gate_status"),
             "resolved_session": phase_a.get("resolved_session"),
+            "automatic_non_trading_resolution": phase_a.get("automatic_non_trading_resolution"),
         },
         "phase_b": {
             "identity": phase_b.get("gate_identity"),
