@@ -96,6 +96,8 @@ def build_artifact(*, p3f10_frozen: Mapping[str, Any], p3f13_current: Mapping[st
     return artifact
 
 
-def execute(*, requested_at: str = "2026-08-28T00:00:00+07:00") -> dict[str, Any]:
+def execute(*, requested_at: str = "2026-08-28T00:00:00+07:00", cohort_selector: str | None = None) -> dict[str, Any]:
+    if cohort_selector != "LEGACY_HISTORICAL_FROZEN_523_V1":
+        raise ValueError("LEGACY_HISTORICAL_COHORT_REQUIRES_EXPLICIT_SELECTOR")
     frozen = json.loads(research.DEFAULT_P3F10_FROZEN.read_text(encoding="utf-8"))
     return build_artifact(p3f10_frozen=frozen, p3f13_current=p3f13.execute(), requested_at=requested_at)

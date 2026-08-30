@@ -36,6 +36,10 @@ import fundamental_thesis_invalidation_precision
 import shadow_action_readiness
 import shadow_security_recommendation
 import thesis_catalyst_downside_research_cases
+from fundamental_research_cohort_selection import (
+    FundamentalResearchCohortSelectionError,
+    resolve_current_fundamental_cohort,
+)
 
 CONTRACT_VERSION = "daily_session_shadow_recommendation/v1"
 
@@ -44,7 +48,6 @@ CONTRACT_VERSION = "daily_session_shadow_recommendation/v1"
 # discovered by glob/latest selection.  Market and tactical inputs come from the
 # completed-session registry and remain exact-session inputs.
 SHARED_CONTEXT_RELATIVE_PATHS = {
-    "fundamental": "operations-review/fundamental-cross-sectional-scoring-and-ranking-v1-20260828/artifact.json",
     "valuation": "operations-review/current-valuation-research-proxy-and-relative-value-axis-v1-20260828/artifact.json",
     "events": "operations-review/current-corporate-event-context-v1/current_corporate_event_context_artifact.json",
     "ttm": "operations-review/financial-flow-semantics-and-ttm-bridge-foundation-v1-20260828/artifact.json",
@@ -100,6 +103,7 @@ def resolve_or_build(
     inputs: Mapping[str, Any],
     output_root: Path | None = None,
     shared_context_paths: Mapping[str, str] | None = None,
+    fundamental_cohort_selector: str | None = None,
 ) -> dict[str, Any]:
     """Resolve the exact-session chain, then immutably build or reuse it.
 
@@ -117,7 +121,14 @@ def resolve_or_build(
     paths = dict(SHARED_CONTEXT_RELATIVE_PATHS if shared_context_paths is None else shared_context_paths)
     if set(paths) != set(SHARED_CONTEXT_RELATIVE_PATHS):
         raise DailySessionShadowRecommendationError("RETAINED_CONTEXT_PATH_SET_INVALID")
+    try:
+        fundamental_selection = resolve_current_fundamental_cohort(
+            source_root, selector=fundamental_cohort_selector,
+        )
+    except FundamentalResearchCohortSelectionError as exc:
+        raise DailySessionShadowRecommendationError("FUNDAMENTAL_COHORT_SELECTION_FAILURE:" + str(exc)) from exc
     shared = {name: _load_retained_context(source_root, name, paths[name]) for name in sorted(paths)}
+    shared["fundamental"] = fundamental_selection["artifact"]
     chain = build(
         market=inputs["descriptive"], tactical=inputs["tactical"],
         fundamental=shared["fundamental"], valuation=shared["valuation"], events=shared["events"], ttm=shared["ttm"],
@@ -126,6 +137,10 @@ def resolve_or_build(
     )
     if chain.get("session") != session or (chain.get("shadow_security_recommendation", {}).get("metadata") or {}).get("as_of_session") != session:
         raise DailySessionShadowRecommendationError("AUTOSOURCED_OUTPUT_SESSION_MISMATCH")
+    chain["fundamental_cohort_selection"] = {
+        key: value for key, value in fundamental_selection.items() if key != "artifact"
+    }
+    chain.update(_identity(chain))
     target_root = Path(output_root) if output_root is not None else source_root / "operations-review"
     path = target_root / RETAINED_ARTIFACT_DIRECTORY / session / "daily_session_shadow_recommendation.json"
     payload = _canonical_bytes(chain)

@@ -7,6 +7,7 @@ import pytest
 
 import daily_producer_pipeline as producer
 import daily_session_shadow_recommendation as daily_shadow
+import fundamental_research_cohort_selection as cohort_selection
 
 
 SESSION = "2026-08-28"
@@ -29,6 +30,11 @@ def _chain(inputs: dict, *, session: str = SESSION) -> dict:
         "contract_version": daily_shadow.CONTRACT_VERSION,
         "session": session,
         "source_artifact_identities": sources,
+        "fundamental_cohort_selection": {
+            "selector": cohort_selection.CURRENT_WIDE_GOVERNED_V1,
+            "selection_status": "CURRENT_RESEARCH_DEFAULT",
+            "cohort_artifact_identity": "fundamental:retained",
+        },
         "fundamental_thesis_invalidation_precision": {"artifact_identity": "invalidation:retained"},
         "shadow_security_recommendation": {
             "artifact_identity": "shadow:" + inputs["descriptive"]["artifact_identity"],
@@ -45,6 +51,22 @@ def _write_contexts(root: Path) -> None:
         path = root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{}", encoding="utf-8")
+    fundamental = {
+        "contract_version": "fundamental_cross_sectional_scoring_and_ranking/v1",
+        "denominator": 0, "residual": 0, "records": {},
+    }
+    fundamental["artifact_sha256"] = cohort_selection._artifact_sha256(fundamental)
+    wide_path = root / cohort_selection.WIDE_COHORT_RELATIVE_PATH
+    wide_path.parent.mkdir(parents=True, exist_ok=True)
+    wide_path.write_text(json.dumps(fundamental), encoding="utf-8")
+    reconciliation = {
+        "report_sha256": "reconciliation:test",
+        "wide_cohort_identity": fundamental["artifact_sha256"],
+        "root_cause_reconciliation": {"wide_cohort_size": 0, "residual_zero": True},
+    }
+    reconciliation_path = root / cohort_selection.WIDE_RECONCILIATION_RELATIVE_PATH
+    reconciliation_path.parent.mkdir(parents=True, exist_ok=True)
+    reconciliation_path.write_text(json.dumps(reconciliation), encoding="utf-8")
 
 
 def test_resolver_builds_then_reuses_exact_same_session_artifact(monkeypatch, tmp_path):

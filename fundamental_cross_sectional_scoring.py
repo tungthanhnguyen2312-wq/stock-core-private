@@ -2,8 +2,12 @@
 from __future__ import annotations
 from collections import Counter
 import hashlib,json,statistics
+from pathlib import Path
 from typing import Any,Mapping
 import market_wide_historical_fundamentals_scaleout as source
+from fundamental_research_cohort_selection import resolve_current_fundamental_cohort
+
+ROOT = Path(__file__).resolve().parent
 
 AXES={"PROFITABILITY_QUALITY":("net_margin_period","roa_eop_proxy","roe_eop_proxy"),"CAPITAL_EFFICIENCY":("asset_turnover_eop_proxy",),"BALANCE_SHEET_TRAJECTORY":("total_assets_same_period_yoy","shareholders_equity_same_period_yoy"),"GROWTH_MOMENTUM":("revenue_same_period_yoy","net_income_same_period_yoy")}
 def _pct(values,value):
@@ -24,4 +28,6 @@ def build_artifact(*,base:Mapping[str,Any]):
         output[ticker]={"ticker":ticker,"entity_class":r["entity_type"],"feature_percentiles":{n:_pct(feature_values[n],features[n]["value"]) if features[n].get("research_eligible") else None for n in feature_values},"axes":axes,"data_confidence":{"status":"READY_RESEARCH_ONLY" if r["facts"] else "INSUFFICIENT_INPUTS","score":confidence,"method":"PROXY_FACT_COVERAGE_ONLY_NOT_INVESTMENT_QUALITY"},"warnings":[]}
     payload={"contract_version":"fundamental_cross_sectional_scoring_and_ranking/v1","denominator":len(records),"residual":0,"records":output,"coverage":{"axis_ready":dict(axis_coverage),"sector_relative_ranking":"NONE_INSUFFICIENT_RETAINED_COMPARABLE_SECTOR_COHORT","composite":"NONE"},"authority_boundary":{"research_only":True,"authoritative_counts_before":13,"authoritative_counts_after":13,"valuation_promoted":False,"recommendation_or_sizing":False,"network_ocr_pdf_vision":False}}
     payload["artifact_sha256"]=hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",",":")).encode()).hexdigest(); return payload
-def execute(): return build_artifact(base=source.execute())
+def execute(*, root: Path = ROOT, cohort_selector: str | None = None):
+    """Resolve the versioned current cohort; legacy use requires an explicit selector."""
+    return resolve_current_fundamental_cohort(root, selector=cohort_selector)["artifact"]

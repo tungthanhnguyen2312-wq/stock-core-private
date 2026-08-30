@@ -234,6 +234,7 @@ def run_daily_producer(
     portfolio: Mapping[str, Any] | None = None,
     macro: Mapping[str, Any] | None = None,
     shadow_security_recommendation: Mapping[str, Any] | None = None,
+    fundamental_cohort_selector: str | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Run the one-command retained completed-session producer pipeline."""
@@ -255,12 +256,15 @@ def run_daily_producer(
             session=selected,
             inputs=inputs,
             output_root=shadow_artifact_output_root,
+            fundamental_cohort_selector=fundamental_cohort_selector,
         )
         resolved_shadow_security_recommendation = _same_session_shadow_recommendation(
             shadow_security_recommendation, shadow_resolution, session=selected,
         )
     except DailySessionShadowRecommendationError as exc:
         raise DailyProducerError("DAILY_SHADOW_AUTOSOURCE_INTEGRITY_FAILURE:" + str(exc)) from exc
+    if not isinstance(shadow_resolution["chain"].get("fundamental_cohort_selection"), Mapping):
+        raise DailyProducerError("DAILY_SHADOW_AUTOSOURCE_FUNDAMENTAL_COHORT_LINEAGE_MISSING")
     operation, operation_dir = run_session_operation(
         root,
         session=selected,
@@ -313,6 +317,7 @@ def run_daily_producer(
             "artifact_identity": shadow_resolution["chain"]["artifact_identity"],
             "shadow_security_recommendation_identity": resolved_shadow_security_recommendation["artifact_identity"],
             "fundamental_invalidation_identity": shadow_resolution["chain"]["fundamental_thesis_invalidation_precision"]["artifact_identity"],
+            "fundamental_cohort_selection": copy.deepcopy(shadow_resolution["chain"]["fundamental_cohort_selection"]),
             "source_artifact_identities": copy.deepcopy(shadow_resolution["chain"]["source_artifact_identities"]),
         },
         "daily_session_operation": {"identity": operation["manifest"]["operation_identity"], "directory": _relative_or_absolute(root, operation_dir)},

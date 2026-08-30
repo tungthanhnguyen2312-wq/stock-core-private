@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-30 - Canonical Wide Fundamental Research Cohort Cutover V1
+
+`CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1 = PASS` (`push = NO`).
+
+1. The narrowest current-default boundary is `fundamental_research_cohort_selection.resolve_current_fundamental_cohort`: default `CURRENT_WIDE_GOVERNED_V1` reads the retained wide scoring artifact and its qualified scaleout reconciliation, verifies identity, denominator, and zero residual, and fails closed on absence, corruption, or disagreement. It has no ticker list and never falls back to legacy data.
+2. `fundamental_cross_sectional_scoring.execute()` and the canonical daily shadow resolver both use that selector. The daily chain and Producer manifest retain selector, cohort identity, denominator, and reconciliation identity. The normal canonical command has no new required option; the internal explicit `LEGACY_HISTORICAL_FROZEN_523_V1` seam is only for bounded replay/reproduction. Direct historical-base reproduction now also requires that explicit selector.
+3. Existing scaleout evidence is reused, not regenerated: 523 → 1,507, 984 newly admitted, 157 newly admitted names with `NO_ELIGIBLE_PROVIDER_FACTS`, and 88 sector-special/out-of-scope records. The bounded 27/28 retained comparison remains 75/106→106/106 and 83/123→123/123 recommendation/invalidation retention; lifecycle recommendation context is 58 `UNCHANGED`, 0 `MISSING` under wide. No engine code for scoring, opportunity, recommendation, invalidation, or lifecycle changes.
+4. Authority effect is exactly `CURRENT_RESEARCH_DEFAULT_COHORT_CUTOVER_ONLY`; stronger authority promotion is `NONE`. No provider/network work, registry mutation, canonical overwrite, primary checkout write, or reinterpretation/deletion of the frozen historical cohort occurred. The retained cutover validation artifact records the source identities and deterministic selector result.
+
 ## 2026-08-30 - Market-Wide Fundamental Research Cohort Scale-Out V1
 
 `MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1 = PASS` (`push = NO`).

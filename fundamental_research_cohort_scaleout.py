@@ -41,11 +41,15 @@ replacement or a silent authority promotion.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import json
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import financial_fact_coverage_recovery as ffcr
 import fundamental_cross_sectional_scoring as fcss
 import market_wide_historical_fundamentals_scaleout as mwhfs
+import p3f10_fundamental_evidence_scaleout as p3f10mod
+import p3f13_official_financial_evidence_scaleout as p3f13mod
 from field_temporal_contract import stable_id
 
 CONTRACT_VERSION = "fundamental_cross_sectional_scoring_and_ranking_cohort_scaleout/v1"
@@ -56,6 +60,47 @@ NARROW_COHORT_NAME = "2026-08-20 EMPIRICAL_ACTIVE_SHADOW_ONLY (frozen, 523-membe
 #: The four axes fundamental_cross_sectional_scoring.py defines. Reused verbatim -- this
 #: module never adds, removes, or reweights an axis.
 AXES = tuple(fcss.AXES)
+ROOT = Path(__file__).resolve().parent
+
+
+def rebuild_wide_governed_cohort_from_retained_root(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Deterministically reconstruct the current wide cohort only from local retained evidence.
+
+    This is an operational retention repair, not acquisition or a legacy fallback.  It
+    is intentionally restricted to the checkout owning the implementation because the
+    lower historical-fundamentals builder's retained-store contract is repository-local.
+    """
+    if Path(root).resolve() != ROOT.resolve():
+        raise ValueError("WIDE_COHORT_REBUILD_ROOT_MUST_MATCH_IMPLEMENTATION_ROOT")
+    def read(relative: Path) -> dict[str, Any]:
+        return json.loads((ROOT / relative).read_text(encoding="utf-8"))
+    official = read(Path("operations-review/current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json"))
+    official_tickers = ffcr.official_research_universe_tickers(official)
+    raw_state = read(p3f10mod.DEFAULT_RAW_STATE.relative_to(p3f10mod.ROOT))
+    canonical_state = read(p3f10mod.DEFAULT_CANONICAL_STATE.relative_to(p3f10mod.ROOT))
+    p3e = read(p3f10mod.DEFAULT_P3E.relative_to(p3f10mod.ROOT))
+    registry = read(p3f10mod.DEFAULT_REGISTRY.relative_to(p3f10mod.ROOT))
+    manifest = read(p3f13mod.DEFAULT_MANIFEST.relative_to(p3f13mod.ROOT))
+    wide_historical = build_wide_historical_fundamentals_artifact(
+        official_tickers=official_tickers, raw_state=raw_state, canonical_state=canonical_state,
+        p3e=p3e, registry=registry, manifest_records=manifest.get("records", []),
+        evidence_root=ROOT / p3f13mod.DEFAULT_EVIDENCE_ROOT.relative_to(p3f13mod.ROOT),
+        raw_obs_dir=ROOT / p3f13mod.DEFAULT_RAW_OBS_DIR.relative_to(p3f13mod.ROOT),
+        as_of_session="2026-08-30", requested_at="2026-08-30T00:00:00+07:00",
+    )
+    wide = build_wide_fundamental_cross_sectional_artifact(wide_historical_fundamentals=wide_historical)
+    narrow = mwhfs.execute(cohort_selector="LEGACY_HISTORICAL_FROZEN_523_V1")
+    reconciliation = {
+        "root_cause_reconciliation": build_root_cause_reconciliation(
+            universe_raw_denominator=len(official.get("records") or {}),
+            universe_candidate_count=sum(1 for row in (official.get("records") or {}).values() if row.get("stocklookup_candidate")),
+            official_tickers=official_tickers, narrow_cohort_tickers=sorted(narrow["operational_proxy"]["records"]),
+            wide_historical_fundamentals=wide_historical, wide_cross_sectional=wide,
+        ),
+        "wide_cohort_identity": wide["artifact_sha256"],
+    }
+    reconciliation["report_sha256"] = stable_id(reconciliation)
+    return wide, reconciliation
 
 
 def build_wide_historical_fundamentals_artifact(

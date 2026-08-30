@@ -54,7 +54,7 @@ class RealWideCohortTest(unittest.TestCase):
         registry = _read(p3f10mod.DEFAULT_REGISTRY)
         manifest = _read(p3f13mod.DEFAULT_MANIFEST)
 
-        cls.narrow_historical = mwhfs.execute()
+        cls.narrow_historical = mwhfs.execute(cohort_selector="LEGACY_HISTORICAL_FROZEN_523_V1")
         cls.narrow_cross_sectional = scaleout.build_wide_fundamental_cross_sectional_artifact(
             wide_historical_fundamentals=cls.narrow_historical)
         cls.narrow_tickers = sorted(cls.narrow_cross_sectional["records"])
@@ -196,10 +196,11 @@ class RealWideCohortTest(unittest.TestCase):
         self.assertEqual(newly_admitted["count"], self.reconciliation["wide_cohort_size"] - len(self.narrow_tickers))
         self.assertEqual(sum(newly_admitted["terminal_disposition_distribution"].values()), newly_admitted["count"])
 
-    def test_narrow_default_callers_unaffected(self):
-        """execute() with zero arguments still reproduces the narrow 523 cohort -- this module
-        does not rewire any existing default."""
-        narrow_again = mwhfs.execute()
+    def test_legacy_historical_reproduction_requires_an_explicit_selector(self):
+        """The frozen cohort remains reproducible, but cannot be the implicit default."""
+        with self.assertRaisesRegex(ValueError, "LEGACY_HISTORICAL_COHORT_REQUIRES_EXPLICIT_SELECTOR"):
+            mwhfs.execute()
+        narrow_again = mwhfs.execute(cohort_selector="LEGACY_HISTORICAL_FROZEN_523_V1")
         self.assertEqual(narrow_again["operational_proxy"]["records"].keys(), self.narrow_historical["operational_proxy"]["records"].keys())
         self.assertEqual(len(narrow_again["operational_proxy"]["records"]), 523)
 

@@ -104,7 +104,7 @@ def main() -> int:
     # Narrow (existing, untouched-default) run for the reconciliation/lineage-diff comparison --
     # calls the exact same unmodified engines with zero arguments, i.e. today's real production
     # default behavior, so "before" in this report is not a synthetic baseline.
-    narrow_historical_fundamentals = mwhfs.execute()
+    narrow_historical_fundamentals = mwhfs.execute(cohort_selector="LEGACY_HISTORICAL_FROZEN_523_V1")
     narrow_cross_sectional = scaleout.build_wide_fundamental_cross_sectional_artifact(
         wide_historical_fundamentals=narrow_historical_fundamentals,
     )
