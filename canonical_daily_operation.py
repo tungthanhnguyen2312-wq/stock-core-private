@@ -459,7 +459,9 @@ def run_canonical_daily_operation(
         )
 
     try:
-        runtime_materialized = runtime_materialize(root, runtime_root, resolved_session)
+        runtime_materialized = runtime_materialize(
+            root, runtime_root, resolved_session, producer_run_identity=producer_result.get("run_identity"),
+        )
     except CanonicalRuntimeReleaseError as exc:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_RUNTIME_RELEASE, str(exc)) from exc
 

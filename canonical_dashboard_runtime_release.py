@@ -91,14 +91,19 @@ def _source_paths(root: Path, session: str) -> tuple[dict[str, tuple[Path, dict[
     return result, registry
 
 
-def _producer_run(root: Path, session: str, sources: Mapping[str, tuple[Path, dict[str, Any]]]) -> tuple[Path, dict[str, Any], Path, dict[str, Any]]:
+def _producer_run(
+    root: Path, session: str, sources: Mapping[str, tuple[Path, dict[str, Any]]], *, run_identity: str | None = None,
+) -> tuple[Path, dict[str, Any], Path, dict[str, Any]]:
     candidates: list[tuple[Path, dict[str, Any]]] = []
     for manifest_path in (root / "operations-review" / "daily-producer-runs-v1" / session).glob("*/run_manifest.json"):
         manifest = _load(manifest_path)
         if manifest.get("target_market_session") == session:
             candidates.append((manifest_path, manifest))
+    if run_identity is not None:
+        candidates = [(path, manifest) for path, manifest in candidates if manifest.get("run_identity") == run_identity]
     if len(candidates) != 1:
-        raise CanonicalRuntimeReleaseError(f"DAILY_PRODUCER_RUN_AMBIGUOUS_OR_MISSING:{session}:count={len(candidates)}")
+        suffix = f":run_identity={run_identity}" if run_identity is not None else ""
+        raise CanonicalRuntimeReleaseError(f"DAILY_PRODUCER_RUN_AMBIGUOUS_OR_MISSING:{session}:count={len(candidates)}{suffix}")
     manifest_path, manifest = candidates[0]
     for name in ("descriptive", "screening", "tactical", "triage"):
         actual = ((manifest.get("upstream_artifact_identities") or {}).get(name) or {}).get("artifact_identity")
@@ -162,9 +167,9 @@ def _write_csv(path: Path, fields: tuple[str, ...], rows: list[dict[str, Any]]) 
     atomic_write_file(path, buffer.getvalue(), validator=lambda candidate: validate_csv_file(candidate, fields))
 
 
-def _build_release(root: Path, session: str, staging: Path) -> dict[str, Any]:
+def _build_release(root: Path, session: str, staging: Path, *, producer_run_identity: str | None = None) -> dict[str, Any]:
     sources, _registry = _source_paths(root, session)
-    run_path, run_manifest, bundle_path, producer_bundle = _producer_run(root, session, sources)
+    run_path, run_manifest, bundle_path, producer_bundle = _producer_run(root, session, sources, run_identity=producer_run_identity)
     tier_lineage = _verify_retained_tier_lineage(root, session, run_manifest)
     snapshot = _p3_snapshot(session, sources)
     descriptive = sources["descriptive"][1]
@@ -246,7 +251,9 @@ def _build_release(root: Path, session: str, staging: Path) -> dict[str, Any]:
     return {"session": session, "lineage": lineage, "live_count": len(live_rows), "snapshot_count": len(rows)}
 
 
-def materialize_canonical_runtime_release(root: Path, runtime_root: Path, session: str) -> dict[str, Any]:
+def materialize_canonical_runtime_release(
+    root: Path, runtime_root: Path, session: str, *, producer_run_identity: str | None = None,
+) -> dict[str, Any]:
     """Build and validate a retained session release, then promote only governed files.
 
     No network client is imported or invoked.  A staging failure occurs before any runtime
@@ -260,7 +267,8 @@ def materialize_canonical_runtime_release(root: Path, runtime_root: Path, sessio
     staging = Path(tempfile.mkdtemp(prefix=".canonical-runtime-stage-", dir=runtime_root.parent))
     backup = Path(tempfile.mkdtemp(prefix=".canonical-runtime-backup-", dir=runtime_root.parent))
     try:
-        result = _build_release(root, session, staging)
+        build_kwargs = {"producer_run_identity": producer_run_identity} if producer_run_identity is not None else {}
+        result = _build_release(root, session, staging, **build_kwargs)
         report = release_session_contract.resolve_release_session(staging, RELEASE_SESSION_FILES, today=session)
         if not report.ready or report.session != session:
             raise CanonicalRuntimeReleaseError(f"STAGED_RELEASE_SESSION_CONTRACT_FAILED:{report.render()}")
