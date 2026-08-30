@@ -14,14 +14,7 @@
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
-  "current": {
-    "milestone": "DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1",
-    "state": "COMPLETE_LOCALLY",
-    "executor": "Anti-Gravity",
-    "base_checkpoint": "62af6531a11acf635c0463f33cff374d861b9f6e",
-    "checkpoint": "HEAD",
-    "dependency_status": "SATISFIED"
-  },
+  "current": null,
   "queued_next": [],
   "milestones": [
     {
@@ -140,9 +133,9 @@
     },
     {
       "milestone_id": "DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1",
-      "state": "COMPLETE_LOCALLY",
+      "state": "COMPLETE",
       "narrative_disposition": "PASS",
-      "checkpoint": "HEAD",
+      "checkpoint": "c5cd55d90db5958d5288dba617082293422e8fd8",
       "dependencies": ["ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"],
       "unlocks": [],
       "authority_effect": "PRESENTATION_AND_SERVING_ONLY",
@@ -150,7 +143,7 @@
       "source_doc": "DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1 mission directive",
       "state_history": [],
       "owner_override": null,
-      "notes": "COMPLETE_LOCALLY. Unified Dashboard release rooted in exact Producer run identity; dynamic hero banner; centralized Vietnamese presentation layer in value-format.js; screener controls/columns fully localized; fail-closed release_session_contract across all 7 pages; stocklookup.py daily integration and deterministic local replay."
+      "notes": "COMPLETE. Unified Dashboard release rooted in exact Producer run identity; dynamic hero banner; centralized Vietnamese presentation layer in value-format.js; screener controls/columns fully localized; fail-closed release_session_contract across all 7 pages; stocklookup.py daily integration and deterministic local replay."
     }
   ],
   "blocked_capabilities": [
