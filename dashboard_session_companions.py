@@ -91,6 +91,7 @@ def compute_session_companions(
     producer_commit: str,
     producer_commit_summary: str,
     build_id: str,
+    producer_run_identity: str | None = None,
 ) -> SessionCompanionPlan:
     """Pure: load retained canonical evidence and compute both companion artifacts."""
     root = Path(producer_root).resolve()
@@ -117,13 +118,13 @@ def compute_session_companions(
     resolved = (handoff.get("market_session_proof") or {}).get("resolved_completed_session")
     if resolved != session:
         raise DashboardSessionCompanionError("HANDOFF_RESOLVED_SESSION_MISMATCH")
-    run_path, run_manifest = _unique_producer_run(root, session)
-    if (handoff.get("daily_producer") or {}).get("run_identity") != run_manifest.get("run_identity"):
-        raise DashboardSessionCompanionError("HANDOFF_DAILY_PRODUCER_LINEAGE_MISMATCH")
-    if (handoff.get("daily_producer") or {}).get("operation_identity") != (
-        (run_manifest.get("daily_session_operation") or {}).get("identity")
-    ):
-        raise DashboardSessionCompanionError("HANDOFF_OPERATION_LINEAGE_MISMATCH")
+    run_path, run_manifest = _unique_producer_run(root, session, run_identity=producer_run_identity)
+    handoff_sources = handoff.get("upstream_evidence_identities") or {}
+    run_sources = run_manifest.get("upstream_artifact_identities") or {}
+    for name in ("descriptive", "screening", "tactical", "triage"):
+        if ((handoff_sources.get(name) or {}).get("artifact_identity") !=
+                (run_sources.get(name) or {}).get("artifact_identity")):
+            raise DashboardSessionCompanionError(f"HANDOFF_SOURCE_LINEAGE_MISMATCH:{name}")
     registry = load_registry(root)
     completed = (registry.get("completed_sessions") or {}).get(session) or {}
     if completed.get("status") != "COMPLETED_RETAINED_EVIDENCE":
@@ -256,13 +257,17 @@ def _dump_json(payload: Mapping[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
 
 
-def _unique_producer_run(root: Path, session: str) -> tuple[Path, dict[str, Any]]:
+def _unique_producer_run(
+    root: Path, session: str, *, run_identity: str | None = None,
+) -> tuple[Path, dict[str, Any]]:
     matches: list[tuple[Path, dict[str, Any]]] = []
     base = root / "operations-review" / "daily-producer-runs-v1" / session
     for path in sorted(base.glob("*/run_manifest.json")):
         data = _load_object(path)
         if data.get("target_market_session") == session:
             matches.append((path, data))
+    if run_identity is not None:
+        matches = [(path, data) for path, data in matches if data.get("run_identity") == run_identity]
     if len(matches) != 1:
         raise DashboardSessionCompanionError(
             f"DAILY_PRODUCER_RUN_AMBIGUOUS_OR_MISSING:{session}:count={len(matches)}"

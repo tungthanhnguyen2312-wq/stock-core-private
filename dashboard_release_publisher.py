@@ -166,8 +166,29 @@ def _publish_generated_release(
     staged = sorted(filter(None, _git(web_root, "diff", "--cached", "--name-only").splitlines()))
     if set(staged) != set(changed) or set(staged) - allowed:
         raise DashboardReleaseError("DASHBOARD_RELEASE_STAGING_VIOLATION")
+    byte_mismatches = []
+    for rel in staged:
+        target = web_root / rel
+        if not target.is_file():
+            byte_mismatches.append(rel)
+            continue
+        blob = subprocess.run(
+            ["git", "cat-file", "blob", f":{rel}"], cwd=web_root,
+            capture_output=True, check=False,
+        )
+        if blob.returncode or hashlib.sha256(blob.stdout).hexdigest() != _sha256(target):
+            byte_mismatches.append(rel)
+    if byte_mismatches:
+        raise DashboardReleaseError(
+            "DASHBOARD_RELEASE_GIT_BYTE_MISMATCH:" + ",".join(byte_mismatches)
+        )
     _git(web_root, "commit", "-m", f"data(daily): publish dashboard {session}")
     commit = _git(web_root, "rev-parse", "HEAD")
+    remaining = _changed_paths(web_root)
+    if remaining:
+        raise DashboardReleaseError(
+            "DASHBOARD_RELEASE_POST_COMMIT_DIRTY:" + ",".join(remaining)
+        )
     _git(web_root, "push", "origin", f"HEAD:{CANONICAL_BRANCH}")
     remote = _git(web_root, "ls-remote", "origin", f"refs/heads/{CANONICAL_BRANCH}").split()
     if not remote or remote[0] != commit:
@@ -184,6 +205,38 @@ def _read_csv_rows(path: Path) -> list[dict[str, Any]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         return list(reader)
+
+
+def _current_producer_run_identity(session: str, operation_dir: Path) -> str:
+    pointer_path = PRODUCER_ROOT / "operations-review" / "daily-producer-runs-v1" / "LATEST_COMPLETED_RUN.json"
+    pointer = _load_json_object(pointer_path, "LATEST_COMPLETED_RUN")
+    if pointer.get("session") != session or not isinstance(pointer.get("run_identity"), str):
+        raise DashboardReleaseError("CURRENT_DAILY_PRODUCER_RUN_UNRESOLVED")
+    relative = pointer.get("relative_directory")
+    if not isinstance(relative, str):
+        raise DashboardReleaseError("CURRENT_DAILY_PRODUCER_POINTER_MALFORMED")
+    manifest = _load_json_object(
+        PRODUCER_ROOT / "operations-review" / "daily-producer-runs-v1" / relative / "run_manifest.json",
+        "CURRENT_DAILY_PRODUCER_MANIFEST",
+    )
+    expected_operation = ((manifest.get("daily_session_operation") or {}).get("directory"))
+    try:
+        actual_operation = str(operation_dir.resolve().relative_to(PRODUCER_ROOT.resolve())).replace("\\", "/")
+    except ValueError as exc:
+        raise DashboardReleaseError("CURRENT_DAILY_OPERATION_OUTSIDE_PRODUCER") from exc
+    if expected_operation != actual_operation:
+        raise DashboardReleaseError("CURRENT_DAILY_OPERATION_LINEAGE_MISMATCH")
+    return pointer["run_identity"]
+
+
+def _load_json_object(path: Path, code: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise DashboardReleaseError(f"{code}_UNREADABLE") from exc
+    if not isinstance(value, dict):
+        raise DashboardReleaseError(f"{code}_NOT_OBJECT")
+    return value
 
 
 def publish_dashboard_release(
@@ -286,7 +339,8 @@ def publish_dashboard_release(
                     pass
 
     # Try generating HTML report companion if retained canonical handoff is available
-    try:
+    companion_paths = companion_relpaths(session)
+    if not replay_local:
         from dashboard_session_companions import (
             compute_session_companions,
             producer_git_head,
@@ -298,12 +352,12 @@ def publish_dashboard_release(
             producer_commit=producer_git_head(PRODUCER_ROOT),
             producer_commit_summary=producer_git_subject(PRODUCER_ROOT),
             build_id=f"build_{session.replace('-', '')}",
+            producer_run_identity=_current_producer_run_identity(session, operation_dir),
         )
-        if not plan.omitted:
-            _atomic_write_text(web_root / plan.manifest_relpath, plan.manifest_text)
-            _atomic_write_text(web_root / plan.report_relpath, plan.report_html)
-    except Exception:
-        pass
+        if plan.omitted:
+            raise DashboardReleaseError(f"CANONICAL_SESSION_COMPANIONS_OMITTED:{plan.omit_reason}")
+        _atomic_write_text(web_root / plan.manifest_relpath, plan.manifest_text)
+        _atomic_write_text(web_root / plan.report_relpath, plan.report_html)
 
     # 4. Generate data/screener_data.js (file:// fallback for screener)
     screen_csv_path = web_root / "screen_snapshot.csv"
@@ -320,7 +374,7 @@ def publish_dashboard_release(
 
     # 5. Compute artifact hashes and summary counts
     files_meta: dict[str, dict[str, Any]] = {}
-    for rel in DASHBOARD_RELEASE_ALLOWLIST:
+    for rel in (*DASHBOARD_RELEASE_ALLOWLIST, *companion_paths):
         if rel.startswith("data/build_info"):
             continue
         p = web_root / rel
@@ -419,7 +473,6 @@ def publish_dashboard_release(
         "validated_artifacts": [r.name for r in report.results if r.status == "ok"],
     }
     if push:
-        companion_paths = tuple(companion_relpaths(session))
         result.update(_publish_generated_release(
             web_root,
             session=session,

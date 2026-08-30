@@ -146,7 +146,7 @@ def test_publish_dashboard_release_pushes_only_generated_files_and_is_idempotent
 
     first = publish_dashboard_release(
         session=session, operation_dir=operation, runtime_root=runtime_root,
-        web_root=web_root, replay_local=False, push=True,
+        web_root=web_root, replay_local=True, push=True,
     )
     assert first["status"] == "PUBLISHED_READY"
     assert set(first["staged"]).issubset({
@@ -158,7 +158,7 @@ def test_publish_dashboard_release_pushes_only_generated_files_and_is_idempotent
 
     second = publish_dashboard_release(
         session=session, operation_dir=operation, runtime_root=runtime_root,
-        web_root=web_root, replay_local=False, push=True,
+        web_root=web_root, replay_local=True, push=True,
     )
     assert second["status"] == "NO_OP_ALREADY_PUBLISHED"
     assert second["commit"] == first["commit"]
