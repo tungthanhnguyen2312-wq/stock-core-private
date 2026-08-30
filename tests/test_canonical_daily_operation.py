@@ -629,8 +629,10 @@ def test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch(tmp_
     if src_bctc.is_dir():
         shutil.copytree(src_bctc, runtime / "data_bctc")
 
-    def runtime_mat(root, runtime_root, session):
-        return runtime_release.materialize_canonical_runtime_release(ROOT, runtime_root, session)
+    def runtime_mat(root, runtime_root, session, *, producer_run_identity=None):
+        return runtime_release.materialize_canonical_runtime_release(
+            ROOT, runtime_root, session, producer_run_identity=producer_run_identity,
+        )
 
     def trusted_mat(producer_root, runtime_root, session, **kwargs):
         return trusted.materialize_canonical_trusted_subset(
