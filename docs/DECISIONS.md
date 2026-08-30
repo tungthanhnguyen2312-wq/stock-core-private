@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-30 - Market-wide Implied-Growth and Reverse-Valuation Research V1
+
+`MARKET_WIDE_IMPLIED_GROWTH_AND_REVERSE_VALUATION_RESEARCH_V1 = PARTIAL_BY_EVIDENCE` (`push = NO`).
+
+1. The new projection is an adapter over existing valuation semantics, not a third valuation ontology. `EXISTING_INTRINSIC_VALUE_GAP_V1` uses only an existing upstream per-share intrinsic result and an upstream current price; `REVERSE_FCFF_TERMINAL_GROWTH_V1` uses the existing FCFF perpetuity relationship and solves only terminal growth inside explicit supplied bounds.
+2. WACC, forecast FCFF, market enterprise value, source identities, and solver bounds are required inputs. Missing inputs, invalid price/economics, an inadmissible terminal-growth bound, no root, and non-convergence fail closed. Proxy multiples and fundamental scores are retained context only and never supply assumptions.
+3. The retained 2026-08-28 replay evaluates the 523-record current-valuation research denominator with 0 READY/0 PARTIAL/4 BLOCKED/519 UNAVAILABLE. No governed upstream intrinsic output or sourced FCFF fixed-input envelope exists, so no numeric value gap or implied growth is emitted.
+4. The result is `CURRENT_RESEARCH_ONLY`, `is_actionable=false`, and has authority effect `NONE`: no target, recommendation, sizing, probability, historical PIT, or RAW_AS_TRADED authority is created. Any future expansion requires an upstream qualified current intrinsic-input/output envelope; it is not an authorization to create assumptions or acquire data.
+
 ## 2026-08-28 - FPT FY2025 Debt Line-Code Cell Disambiguation V1
 
 `FPT_FY2025_DEBT_LINE_CODE_CELL_DISAMBIGUATION_V1 = OUTCOME_A_FPT_DEBT_QUALIFIED_BY_CELL_LEVEL_CODE_EVIDENCE` (`push = NO`).
