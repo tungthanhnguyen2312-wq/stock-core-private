@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-30 - Multi-Session Thesis and Recommendation Lifecycle V1
+
+`MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1 = PARTIAL_BY_EVIDENCE` (`push = NO`).
+
+1. Lifecycle V1 compares only retained qualified Session Bundle snapshots through an explicit governed session chain; it never uses calendar-day subtraction, reconstructs history, or recomputes an upstream research engine.
+2. Component transitions preserve exact upstream opportunity, tactical, strategy, scenario, recommendation, and structured-invalidation values where present. Missing dimensions are `MISSING`, not neutral or directional. No ordering is imposed on recommendation labels, high-risk states, WAIT, or AVOID; ambiguous changes remain `STATE_TRANSITION`.
+3. The only directional lifecycle semantics are an explicit newly triggered upstream fundamental invalidation (`INVALIDATED`) and a gain of the existing `BREAKOUT_READY` confirmation state (`CONFIRMED`). Recommendation-label changes, priority gain/loss, and confirmation loss are material-change reasons, not new actions.
+4. The retained 27→28 pair demonstrates 58 comparable records but lacks per-security shadow recommendation and structured invalidation outputs. The artifact remains prospective multi-session research only, with authority effect `NONE`: no new recommendation, target, sizing, probability, P&L, performance, backtest, PIT, or RAW_AS_TRADED claim is emitted.
+
 ## 2026-08-30 - Market-wide Implied-Growth and Reverse-Valuation Research V1
 
 `MARKET_WIDE_IMPLIED_GROWTH_AND_REVERSE_VALUATION_RESEARCH_V1 = PARTIAL_BY_EVIDENCE` (`push = NO`).
