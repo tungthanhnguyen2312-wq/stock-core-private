@@ -84,6 +84,9 @@ ARTIFACT_SESSION_RULES: dict[str, tuple[str, object]] = {
     "ta_signals.csv": ("csv", {"exclude_delisted": False}),
     "analysis_bundle.json": ("json", ("reference_session_date",)),
     "analysis_latest.json": ("json", ("summary", "session_date")),
+    "data/candle_signals.json": ("json", ("scan_date",)),
+    "data/sector_heatmap.json": ("json", ("scan_date",)),
+    "data/candlestick_patterns.json": ("json", ("scan_date",)),
 }
 
 
