@@ -44,6 +44,51 @@ def test_explicit_producer_run_identity_resolves_an_ambiguous_session(tmp_path):
     assert bundle["identity"] == "current"
 
 
+def test_run_identity_not_found_among_session_candidates_fails_closed(tmp_path):
+    session = "2026-08-28"
+    sources = {name: (tmp_path / f"{name}.json", {"artifact_identity": f"{name}:identity"})
+               for name in ("descriptive", "screening", "tactical", "triage")}
+    for path, payload in sources.values():
+        path.write_text(json.dumps(payload), encoding="utf-8")
+    run = tmp_path / "operations-review" / "daily-producer-runs-v1" / session / "only"
+    run.mkdir(parents=True)
+    bundle = run / "ai_research_session_bundle.json"
+    bundle.write_text(json.dumps({"session": session, "identity": "only"}), encoding="utf-8")
+    manifest = {
+        "target_market_session": session,
+        "run_identity": "daily_producer_run:only",
+        "upstream_artifact_identities": {name: {"artifact_identity": f"{name}:identity"} for name in sources},
+        "ai_delivery": {"ai_research_session_bundle.json": {"sha256": runtime_release._sha256(bundle)}},
+    }
+    (run / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError, match=r"AMBIGUOUS_OR_MISSING:.*count=0"):
+        runtime_release._producer_run(tmp_path, session, sources, run_identity="daily_producer_run:does-not-exist")
+
+
+def test_selecting_current_run_does_not_delete_other_retained_runs(tmp_path):
+    session = "2026-08-28"
+    sources = {name: (tmp_path / f"{name}.json", {"artifact_identity": f"{name}:identity"})
+               for name in ("descriptive", "screening", "tactical", "triage")}
+    for path, payload in sources.values():
+        path.write_text(json.dumps(payload), encoding="utf-8")
+    for identity in ("old", "current"):
+        run = tmp_path / "operations-review" / "daily-producer-runs-v1" / session / identity
+        run.mkdir(parents=True)
+        bundle = run / "ai_research_session_bundle.json"
+        bundle.write_text(json.dumps({"session": session, "identity": identity}), encoding="utf-8")
+        manifest = {
+            "target_market_session": session,
+            "run_identity": f"daily_producer_run:{identity}",
+            "upstream_artifact_identities": {name: {"artifact_identity": f"{name}:identity"} for name in sources},
+            "ai_delivery": {"ai_research_session_bundle.json": {"sha256": runtime_release._sha256(bundle)}},
+        }
+        (run / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    runtime_release._producer_run(tmp_path, session, sources, run_identity="daily_producer_run:current")
+    old_run = tmp_path / "operations-review" / "daily-producer-runs-v1" / session / "old"
+    assert (old_run / "run_manifest.json").is_file()
+    assert (old_run / "ai_research_session_bundle.json").is_file()
+
+
 def test_retained_canonical_session_materializes_exact_runtime_contract(tmp_path):
     result = runtime_release.materialize_canonical_runtime_release(ROOT, tmp_path, SESSION)
     report = release_session_contract.resolve_release_session(tmp_path, runtime_release.RELEASE_SESSION_FILES, today=SESSION)
