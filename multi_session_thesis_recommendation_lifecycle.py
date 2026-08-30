@@ -149,6 +149,8 @@ def _material(components: Sequence[Mapping[str, Any]]) -> list[str]:
             reasons.append("UPSTREAM_RECOMMENDATION_LABEL_CHANGED")
         elif item["dimension"] == "FUNDAMENTAL_INVALIDATION" and item["transition"] == "INVALIDATION_ACTIVATED":
             reasons.append("UPSTREAM_FUNDAMENTAL_INVALIDATION_ACTIVATED")
+        elif item["dimension"] == "FUNDAMENTAL_INVALIDATION" and item["transition"] == "INVALIDATION_CLEARED":
+            reasons.append("UPSTREAM_FUNDAMENTAL_INVALIDATION_CLEARED")
         elif item["dimension"] == "TACTICAL" and item["transition"] in {"CONFIRMATION_GAINED", "CONFIRMATION_LOST"}:
             reasons.append(f"TACTICAL_{item['transition']}")
         elif item["dimension"] == "OPPORTUNITY" and item["transition"] == "STATE_CHANGED":

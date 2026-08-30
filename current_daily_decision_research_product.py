@@ -8,8 +8,10 @@ from typing import Any, Mapping
 from field_temporal_contract import stable_id
 from current_research_decision_packet_product import attach_shadow_to_daily_product, markdown as packet_shadow_markdown
 from owner_research_focus import broader_watchlist, owner_focus_tickers
+from shadow_security_recommendation import content_identity as shadow_security_recommendation_content_identity
 
 CONTRACT_VERSION = "current_daily_decision_research_product/v2"
+SHADOW_SECURITY_RECOMMENDATION_CONTRACT = "shadow_security_recommendation/v1"
 WATCHLIST = broader_watchlist()
 OWNER_FOCUS_TICKERS = owner_focus_tickers()
 ABSENT_OWNER_FOCUS_STATUS = "OWNER_FOCUS_TICKER_ABSENT_FROM_CURRENT_SESSION_RESEARCH"
@@ -81,6 +83,99 @@ def _research_priority_summary(opportunity_record: Mapping[str, Any] | None) -> 
     return {"status": "AVAILABLE", "research_priority_tier": opportunity_record.get("research_priority_tier"), "eligible_strategies": list(opportunity_record.get("eligible_strategies") or []), "lane_specific_priority": dict(opportunity_record.get("lane_specific_priority") or {}), "entry_relevant": opportunity_record.get("entry_relevant"), "priority_reasons": list(opportunity_record.get("priority_reasons") or []), "blocking_reasons": list(opportunity_record.get("blocking_reasons") or []), "authority_note": "research_priority_tier is a research-lane priority signal; it is separate from current_decision_state (tactical_state/entry_action/position_sizing_status), and PRIORITY_NOW is never BUY_NOW, full-position-ready, or sizing-ready."}
 
 
+def _verified_shadow_security_recommendation(artifact: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    """Fail closed on a missing, malformed, or tampered shadow recommendation artifact."""
+    if not isinstance(artifact, Mapping):
+        return None
+    if artifact.get("contract_version") != SHADOW_SECURITY_RECOMMENDATION_CONTRACT:
+        return None
+    if shadow_security_recommendation_content_identity(artifact).get("artifact_sha256") != artifact.get("artifact_sha256"):
+        return None
+    if not isinstance(artifact.get("records"), Mapping):
+        return None
+    return artifact
+
+
+def _upstream_shadow_record(ticker: str, shadow: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    if shadow is None:
+        return None
+    record = shadow["records"].get(ticker)
+    return record if isinstance(record, Mapping) and record.get("ticker") == ticker else None
+
+
+def _retained_recommendation(ticker: str, session: str, shadow: Mapping[str, Any] | None) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Retain the existing shadow security recommendation for one ticker verbatim.
+
+    Never translates, derives, or recomputes a label. A non-matching session, an absent
+    upstream artifact, or an absent ticker all become explicit unavailability -- never a
+    silently relabeled or misdated "current" recommendation.
+    """
+    base = {"source_artifact_identity": (shadow or {}).get("artifact_identity"), "target_session": session}
+    if shadow is None:
+        return None, {**base, "status": "UNAVAILABLE", "reason": "UPSTREAM_SHADOW_SECURITY_RECOMMENDATION_NOT_SUPPLIED_OR_UNVERIFIED", "source_as_of_session": None}
+    record = _upstream_shadow_record(ticker, shadow)
+    if record is None:
+        return None, {**base, "status": "UNAVAILABLE", "reason": "TICKER_NOT_IN_UPSTREAM_SHADOW_SECURITY_RECOMMENDATION", "source_as_of_session": (shadow.get("metadata") or {}).get("as_of_session")}
+    rec = record.get("recommendation")
+    as_of = rec.get("as_of_session") if isinstance(rec, Mapping) else None
+    if not isinstance(rec, Mapping) or not isinstance(as_of, str):
+        return None, {**base, "status": "UNAVAILABLE", "reason": "UPSTREAM_RECOMMENDATION_MALFORMED", "source_as_of_session": as_of}
+    if as_of != session:
+        return None, {**base, "status": "UNAVAILABLE", "reason": "SESSION_MISMATCH_UPSTREAM_RECOMMENDATION_NOT_SAME_SESSION", "source_as_of_session": as_of}
+    retained = {
+        **copy.deepcopy(rec),
+        "source_contract_version": shadow.get("contract_version"),
+        "source_artifact_identity": shadow.get("artifact_identity"),
+        "source_artifact_sha256": shadow.get("artifact_sha256"),
+        "warnings": list(record.get("warnings") or []),
+        "authority_boundaries": copy.deepcopy(record.get("authority_boundaries") or {}),
+        "integrity_status": record.get("integrity_status"),
+    }
+    return retained, {**base, "status": "RETAINED", "reason": None, "source_as_of_session": as_of}
+
+
+def _retained_fundamental_invalidation(ticker: str, session: str, shadow: Mapping[str, Any] | None) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Retain the existing structured fundamental-invalidation boundary for one ticker verbatim.
+
+    Consumes shadow_security_recommendation's own retained `fundamental_invalidation` field
+    only; this bundle builder never derives or recomputes a boundary from raw fundamentals.
+    """
+    base = {"source_artifact_identity": (shadow or {}).get("artifact_identity"), "target_session": session}
+    if shadow is None:
+        return None, {**base, "status": "UNAVAILABLE", "reason": "UPSTREAM_SHADOW_SECURITY_RECOMMENDATION_NOT_SUPPLIED_OR_UNVERIFIED", "source_as_of_session": None}
+    record = _upstream_shadow_record(ticker, shadow)
+    if record is None:
+        return None, {**base, "status": "UNAVAILABLE", "reason": "TICKER_NOT_IN_UPSTREAM_SHADOW_SECURITY_RECOMMENDATION", "source_as_of_session": (shadow.get("metadata") or {}).get("as_of_session")}
+    inv = record.get("fundamental_invalidation")
+    rec = record.get("recommendation")
+    as_of = rec.get("as_of_session") if isinstance(rec, Mapping) else None
+    if not isinstance(inv, Mapping) or not isinstance(as_of, str):
+        return None, {**base, "status": "UNAVAILABLE", "reason": "UPSTREAM_FUNDAMENTAL_INVALIDATION_MALFORMED", "source_as_of_session": as_of}
+    if as_of != session:
+        return None, {**base, "status": "UNAVAILABLE", "reason": "SESSION_MISMATCH_UPSTREAM_FUNDAMENTAL_INVALIDATION_NOT_SAME_SESSION", "source_as_of_session": as_of}
+    retained = {
+        **copy.deepcopy(inv),
+        "source_contract_version": shadow.get("contract_version"),
+        "source_artifact_identity": shadow.get("artifact_identity"),
+        "source_artifact_sha256": shadow.get("artifact_sha256"),
+    }
+    return retained, {**base, "status": "RETAINED", "reason": None, "source_as_of_session": as_of}
+
+
+def attach_decision_context(cards: dict[str, dict[str, Any]], *, session: str, shadow_security_recommendation: Mapping[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """Retain existing shadow-recommendation and structured fundamental-invalidation context.
+
+    Opt-in and additive: absent/invalid upstream leaves every card with explicit, reason-coded
+    unavailability rather than a missing field. Mutates and returns `cards` in place so it can be
+    reused identically by the live builder and by bounded replay/validation reconstruction.
+    """
+    verified = _verified_shadow_security_recommendation(shadow_security_recommendation)
+    for ticker, card in cards.items():
+        card["recommendation"], card["recommendation_retention"] = _retained_recommendation(ticker, session, verified)
+        card["fundamental_invalidation"], card["fundamental_invalidation_retention"] = _retained_fundamental_invalidation(ticker, session, verified)
+    return cards
+
+
 def _card(ticker: str, tactical: Mapping[str, Any], peer: Mapping[str, Any] | None, fundamental: Mapping[str, Any] | None, valuation: Mapping[str, Any] | None, scenario: Mapping[str, Any] | None, corporate: Mapping[str, Any] | None = None, strategy: Mapping[str, Any] | None = None, flow: Mapping[str, Any] | None = None, opportunity_record: Mapping[str, Any] | None = None) -> dict[str, Any]:
     state = tactical.get("entry_state"); peer = peer or {}; fundamental = fundamental or {}; scenario = scenario or {}
     return {"ticker": ticker, "status": "AVAILABLE", "current_decision_state": {"ticker_structure_state": tactical.get("ticker_structure_state"), "entry_state": state, "entry_action": tactical.get("entry_action"), "entry_action_is_research_label_not_execution_instruction": True, "horizon": tactical.get("horizon"), "human_use_language": LANGUAGE.get(state, "technical evidence unavailable / no current tactical classification"), "is_actionable": False, "requires_human_review": True, "position_sizing_status": tactical.get("position_sizing_status", "NOT_EVALUATED")}, "why_it_is_on_radar": {"deterministic_reasons": tactical.get("evidence_for") or [], "evidence_for": tactical.get("evidence_for") or []}, "what_argues_against": {"evidence_against": tactical.get("evidence_against") or [], "conflicts": scenario.get("key_driver_conflicts") or [], "limitations": (tactical.get("data_quality") or {}).get("warnings") or []}, "peer_context": _peer_summary(peer, state), "fundamental_context": _fundamental_summary(fundamental), "valuation_context": _valuation_summary(valuation, peer), "market_flow_positioning": _flow_summary(flow), "corporate_intelligence_context": _corporate_summary(corporate), "strategy_fit": _strategy_summary(strategy), "research_priority": _research_priority_summary(opportunity_record), "scenario": {"bear_case": scenario.get("bear_case"), "base_case": scenario.get("base_case"), "bull_case": scenario.get("bull_case"), "probability_status": scenario.get("probability_status", "UNKNOWN_UNCALIBRATED")}, "trigger": tactical.get("confirmation_trigger"), "invalidation": tactical.get("invalidation"), "data_quality": tactical.get("data_quality") or {}, "thesis_counter_thesis": _claims(ticker, tactical, peer, fundamental), "authority_limitations": ["Strategy eligibility is distinct from entry action, scenario, and portfolio action.", "Research priority tier is distinct from entry action, is_full_position_ready, and position_sizing_status.", "Entry action is a tactical research-state label only, not a recommendation, suggested trade, or execution authority.", "No target, probability, ranking, recommendation, sizing, portfolio, or execution instruction."], "is_actionable": False, "entry_action_is_research_label_not_execution_instruction": True}
@@ -126,7 +221,7 @@ def _absent_owner_focus_card(ticker: str) -> dict[str, Any]:
     }
 
 
-def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], scenario: Mapping[str, Any], triage: Mapping[str, Any], corporate_intelligence: Mapping[str, Any] | None = None, strategy_classification: Mapping[str, Any] | None = None, portfolio_risk: Mapping[str, Any] | None = None, macro_context: Mapping[str, Any] | None = None, market_flow_positioning: Mapping[str, Any] | None = None, opportunity_decision_queue: Mapping[str, Any] | None = None, current_research_decision_packet: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_relative: Mapping[str, Any], fundamental: Mapping[str, Any], valuation: Mapping[str, Any], scenario: Mapping[str, Any], triage: Mapping[str, Any], corporate_intelligence: Mapping[str, Any] | None = None, strategy_classification: Mapping[str, Any] | None = None, portfolio_risk: Mapping[str, Any] | None = None, macro_context: Mapping[str, Any] | None = None, market_flow_positioning: Mapping[str, Any] | None = None, opportunity_decision_queue: Mapping[str, Any] | None = None, current_research_decision_packet: Mapping[str, Any] | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None) -> dict[str, Any]:
     d, t, p, f, v, s = descriptive["records"], tactical["records"], peer_relative["records"], fundamental["records"], valuation["records"], scenario["records"]
     groups = {"EARLY_REVERSAL": "EARLY_REVERSAL_CANDIDATE", "BASE_BUILDING": "BASE_BUILDING", "BREAKOUT_CONFIRMATION": "BREAKOUT_READY", "UPTREND_ESTABLISHED_STRENGTH": "UPTREND_CONFIRMED", "DISTRIBUTION_OR_BREAKDOWN_RISK": {"DISTRIBUTION_RISK", "BREAKDOWN_RISK", "DOWNTREND"}}
     cohorts = {name: [ticker for ticker in sorted(t) if (t[ticker].get("entry_state") in state if isinstance(state, set) else t[ticker].get("entry_state") == state)] for name, state in groups.items()}
@@ -146,9 +241,10 @@ def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_r
             cards[ticker] = _card(ticker, t.get(ticker) or {}, p.get(ticker), f.get(ticker), v.get(ticker), s.get(ticker), c.get(ticker), ({**strategies.get(ticker, {}), "source_artifact_identity": (strategy_classification or {}).get("artifact_identity")} if ticker in strategies else None), flows.get(ticker), opportunity_records.get(ticker))
         elif ticker in OWNER_FOCUS_TICKERS:
             cards[ticker] = _absent_owner_focus_card(ticker)
+    attach_decision_context(cards, session=descriptive["session"], shadow_security_recommendation=shadow_security_recommendation)
     breadth = descriptive["market_breadth"]
     market_brief = {"source_market_session": descriptive["session"], "coverage": {"input_candidates": descriptive["validation"]["coverage"]["input_candidates"], "current_active_equity_denominator": breadth["current_active_equity_denominator"], "observed_session_cohort": breadth["observed_session_cohort"], "same_session_technical_feature_available_count": breadth["same_session_technical_feature_available_count"]}, "breadth_state": breadth["breadth_descriptor"]["descriptor"], "momentum_state": breadth["momentum_descriptor"]["descriptor"], "trend_state": breadth["trend"], "volatility_context": breadth["volatility"], "market_scenario_context": tactical.get("market_state"), "data_quality_limitations": [breadth["quality_state"], "NOT_AUTHORITATIVE_ACTIVE_UNIVERSE", "VOLATILITY_CONTEMPORANEOUS_CROSS_SECTION_ONLY"]}
-    artifact = {"schema_version": "2.1.0", "contract_version": CONTRACT_VERSION, "session": descriptive["session"], "source_artifact_identities": {"descriptive": descriptive["artifact_identity"], "tactical": tactical["artifact_identity"], "peer_relative": peer_relative["artifact_identity"], "fundamental": fundamental["artifact_identity"], "valuation": valuation["artifact_identity"], "scenario": scenario["artifact_identity"], "triage": triage["artifact_identity"], "corporate_intelligence": (corporate_intelligence or {}).get("artifact_identity"), "strategy_classification": (strategy_classification or {}).get("artifact_identity"), "portfolio_risk": (portfolio_risk or {}).get("artifact_identity"), "market_flow_positioning": (market_flow_positioning or {}).get("artifact_identity")}, "market_brief": market_brief, "portfolio_risk": portfolio_risk, "research_cohorts": {name: {"membership_rule": "EXISTING_TACTICAL_ENTRY_STATE", "tickers": values, "count": len(values), "ordering": "TICKER_ASCENDING_NOT_RANKING"} for name, values in cohorts.items()}, "watchlist": {"tickers": list(WATCHLIST), "cards_available": sum(ticker in cards and is_present_research_card(cards.get(ticker)) for ticker in WATCHLIST), "role": "BROADER_WATCHLIST_NOT_PORTFOLIO_HOLDINGS", "is_portfolio_holdings": False}, "owner_focus": {"tickers": list(OWNER_FOCUS_TICKERS), "cards_available": sum(is_present_research_card(cards.get(ticker)) for ticker in OWNER_FOCUS_TICKERS), "missing": [ticker for ticker in OWNER_FOCUS_TICKERS if not is_present_research_card(cards.get(ticker))], "role": "OWNER_FOCUS_REVIEW_SCOPE", "is_portfolio_holdings": False, "is_actionable": False}, "high_priority_full_universe_review_set": {"tickers": high_priority, "count": len(high_priority), "outside_watchlist": sorted(set(high_priority) - set(WATCHLIST)), "meaning": "Candidates for human research, not portfolio/watchlist inclusion.", "relationship_to_research_priority_queue": "This is the pre-existing tactical entry-timing review policy (a subset of research priority scoped to entry-relevant tactical states); it is not the full research-priority dataset. See research_priority_queue for the complete PRIORITY_NOW set and lane-specific queues."}, "detailed_research_cards": cards, "aggregate_validation": {"entry_relevant_90_count": len(entry_90), "detailed_card_count": len(cards), "scenario_disposition_counts": dict(sorted(Counter((s.get(ticker) or {}).get("scenario_disposition", "UNAVAILABLE") for ticker in cards).items()))}, "risk_data_gap_panel": {"technical_unavailable": sum(not bool((row.get("data_quality") or {}).get("technical_eligible")) for row in t.values()), "peer_context_unavailable": sum((row.get("technical_peer_context") or {}).get("status") != "AVAILABLE" for row in p.values()), "fundamental_context_unavailable": sum(ticker not in f for ticker in d), "valuation_peer_context_unavailable": len(d), "strict_valuation_ready": 0, "corporate_intelligence_unavailable": sum(card["corporate_intelligence_context"]["status"] == "NO_RETAINED_INTELLIGENCE" for card in cards.values()), "strategy_classification_unavailable": sum(card["strategy_fit"]["status"] == "UNAVAILABLE" for card in cards.values()), "market_flow_unavailable": sum(card["market_flow_positioning"]["status"] == "FLOW_UNAVAILABLE" for card in cards.values())}, "what_to_verify_next": ["Use each card's exact confirmation trigger and invalidation; do not substitute new thresholds.", "Flow/positioning is descriptive provider evidence only; verify exact session, source and limitations before interpretation.", "Strategy fit is a deterministic research classification, not an entry action or BUY instruction.", "Resolve retained fundamental and peer-context gaps only through their source contracts.", "Verify corporate event execution only through retained approved official evidence; planned/approved is not executed.", "Strict valuation and peer valuation comparison remain unavailable under current share/financial authority."], "authority_boundary": {"research_human_review_only": True, "is_actionable": False, "recommendation": "NOT_EMITTED", "probability": "UNKNOWN_UNCALIBRATED", "target_price_ranking_sizing_execution": "NOT_EMITTED", "entry_action_is_research_label_not_execution_instruction": True, "owner_focus_is_not_portfolio_holdings": True}}
+    artifact = {"schema_version": "2.2.0", "contract_version": CONTRACT_VERSION, "session": descriptive["session"], "source_artifact_identities": {"descriptive": descriptive["artifact_identity"], "tactical": tactical["artifact_identity"], "peer_relative": peer_relative["artifact_identity"], "fundamental": fundamental["artifact_identity"], "valuation": valuation["artifact_identity"], "scenario": scenario["artifact_identity"], "triage": triage["artifact_identity"], "corporate_intelligence": (corporate_intelligence or {}).get("artifact_identity"), "strategy_classification": (strategy_classification or {}).get("artifact_identity"), "portfolio_risk": (portfolio_risk or {}).get("artifact_identity"), "market_flow_positioning": (market_flow_positioning or {}).get("artifact_identity")}, "market_brief": market_brief, "portfolio_risk": portfolio_risk, "research_cohorts": {name: {"membership_rule": "EXISTING_TACTICAL_ENTRY_STATE", "tickers": values, "count": len(values), "ordering": "TICKER_ASCENDING_NOT_RANKING"} for name, values in cohorts.items()}, "watchlist": {"tickers": list(WATCHLIST), "cards_available": sum(ticker in cards and is_present_research_card(cards.get(ticker)) for ticker in WATCHLIST), "role": "BROADER_WATCHLIST_NOT_PORTFOLIO_HOLDINGS", "is_portfolio_holdings": False}, "owner_focus": {"tickers": list(OWNER_FOCUS_TICKERS), "cards_available": sum(is_present_research_card(cards.get(ticker)) for ticker in OWNER_FOCUS_TICKERS), "missing": [ticker for ticker in OWNER_FOCUS_TICKERS if not is_present_research_card(cards.get(ticker))], "role": "OWNER_FOCUS_REVIEW_SCOPE", "is_portfolio_holdings": False, "is_actionable": False}, "high_priority_full_universe_review_set": {"tickers": high_priority, "count": len(high_priority), "outside_watchlist": sorted(set(high_priority) - set(WATCHLIST)), "meaning": "Candidates for human research, not portfolio/watchlist inclusion.", "relationship_to_research_priority_queue": "This is the pre-existing tactical entry-timing review policy (a subset of research priority scoped to entry-relevant tactical states); it is not the full research-priority dataset. See research_priority_queue for the complete PRIORITY_NOW set and lane-specific queues."}, "detailed_research_cards": cards, "aggregate_validation": {"entry_relevant_90_count": len(entry_90), "detailed_card_count": len(cards), "scenario_disposition_counts": dict(sorted(Counter((s.get(ticker) or {}).get("scenario_disposition", "UNAVAILABLE") for ticker in cards).items()))}, "risk_data_gap_panel": {"technical_unavailable": sum(not bool((row.get("data_quality") or {}).get("technical_eligible")) for row in t.values()), "peer_context_unavailable": sum((row.get("technical_peer_context") or {}).get("status") != "AVAILABLE" for row in p.values()), "fundamental_context_unavailable": sum(ticker not in f for ticker in d), "valuation_peer_context_unavailable": len(d), "strict_valuation_ready": 0, "corporate_intelligence_unavailable": sum(card["corporate_intelligence_context"]["status"] == "NO_RETAINED_INTELLIGENCE" for card in cards.values()), "strategy_classification_unavailable": sum(card["strategy_fit"]["status"] == "UNAVAILABLE" for card in cards.values()), "market_flow_unavailable": sum(card["market_flow_positioning"]["status"] == "FLOW_UNAVAILABLE" for card in cards.values())}, "what_to_verify_next": ["Use each card's exact confirmation trigger and invalidation; do not substitute new thresholds.", "Flow/positioning is descriptive provider evidence only; verify exact session, source and limitations before interpretation.", "Strategy fit is a deterministic research classification, not an entry action or BUY instruction.", "Resolve retained fundamental and peer-context gaps only through their source contracts.", "Verify corporate event execution only through retained approved official evidence; planned/approved is not executed.", "Strict valuation and peer valuation comparison remain unavailable under current share/financial authority."], "authority_boundary": {"research_human_review_only": True, "is_actionable": False, "recommendation": "NOT_EMITTED", "probability": "UNKNOWN_UNCALIBRATED", "target_price_ranking_sizing_execution": "NOT_EMITTED", "entry_action_is_research_label_not_execution_instruction": True, "owner_focus_is_not_portfolio_holdings": True}}
     if portfolio_risk is None:
         artifact["source_artifact_identities"].pop("portfolio_risk")
         artifact.pop("portfolio_risk")
@@ -168,6 +264,9 @@ def build(*, descriptive: Mapping[str, Any], tactical: Mapping[str, Any], peer_r
             "authority_boundary": dict(opportunity_decision_queue["authority_boundary"]),
         }
         artifact["source_artifact_identities"]["opportunity_decision_queue"] = opportunity_decision_queue["artifact_identity"]
+    verified_shadow_recommendation = _verified_shadow_security_recommendation(shadow_security_recommendation)
+    if verified_shadow_recommendation is not None:
+        artifact["source_artifact_identities"]["shadow_security_recommendation"] = verified_shadow_recommendation.get("artifact_identity")
     if current_research_decision_packet is not None:
         attach_shadow_to_daily_product(artifact, current_research_decision_packet)
     artifact.update(content_identity(artifact)); return artifact

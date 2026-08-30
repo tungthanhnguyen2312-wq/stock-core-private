@@ -126,3 +126,54 @@ def test_root_warnings_make_missing_dimensions_explicit():
         "FUNDAMENTAL_INVALIDATION_MISSING_FOR_1_CURRENT_RECORDS",
         "RECOMMENDATION_MISSING_FOR_1_CURRENT_RECORDS",
     ]
+
+
+def test_invalidation_cleared_is_a_material_change_symmetric_with_activated():
+    prior = bundle("2026-08-27", {"AAA": context(invalidation={"current_trigger_state": "TRIGGERED", "status": "READY"})})
+    now = bundle("2026-08-28", {"AAA": context(invalidation={"current_trigger_state": "NOT_TRIGGERED", "status": "READY"})})
+    record = build(prior, now)["records"]["AAA"]
+    assert component(record, "FUNDAMENTAL_INVALIDATION")["transition"] == "INVALIDATION_CLEARED"
+    assert "UPSTREAM_FUNDAMENTAL_INVALIDATION_CLEARED" in record["material_change_reasons"]
+    assert record["material_change"] is True
+
+
+def test_invalidation_activation_does_not_force_a_recommendation_transition():
+    prior = bundle("2026-08-27", {"AAA": context(recommendation="ACCUMULATE_RESEARCH_CANDIDATE", invalidation={"current_trigger_state": "NOT_TRIGGERED", "status": "READY"})})
+    now = bundle("2026-08-28", {"AAA": context(recommendation="ACCUMULATE_RESEARCH_CANDIDATE", invalidation={"current_trigger_state": "TRIGGERED", "status": "READY"})})
+    record = build(prior, now)["records"]["AAA"]
+    assert component(record, "FUNDAMENTAL_INVALIDATION")["transition"] == "INVALIDATION_ACTIVATED"
+    assert component(record, "RECOMMENDATION")["transition"] == "UNCHANGED"
+    assert record["current_recommendation"]["recommendation_label"] == "ACCUMULATE_RESEARCH_CANDIDATE"
+    assert "UPSTREAM_RECOMMENDATION_LABEL_CHANGED" not in record["material_change_reasons"]
+
+
+def test_recommendation_transition_is_separate_from_thesis_lifecycle_state():
+    # A recommendation-label change alone (no tactical confirmation gain, no invalidation
+    # activation) is STATE_TRANSITION, never the tactical-only CONFIRMED state.
+    prior = bundle("2026-08-27", {"AAA": context(recommendation="WAIT_FOR_CONFIRMATION")})
+    now = bundle("2026-08-28", {"AAA": context(recommendation="INITIATE_RESEARCH_CANDIDATE")})
+    record = build(prior, now)["records"]["AAA"]
+    assert record["thesis_lifecycle_state"] == "STATE_TRANSITION"
+    assert component(record, "RECOMMENDATION")["transition"] == "STATE_CHANGED"
+
+
+def test_deterministic_identity_with_full_retained_recommendation_and_invalidation_context():
+    rec = {
+        "recommendation_label": "ACCUMULATE_RESEARCH_CANDIDATE", "recommendation_readiness": "RECOMMENDATION_READY",
+        "as_of_session": "2026-08-28", "recommendation_reason_codes": ["X"], "warnings": ["W"],
+        "authority_boundaries": {"trade_execution_authority": False}, "source_artifact_identity": "shadow_security_recommendation:deadbeef",
+    }
+    inv = {
+        "status": "READY", "current_trigger_state": "NOT_TRIGGERED", "reason": "r", "rule_identity": "RULE/v1",
+        "source_artifact_identity": "shadow_security_recommendation:deadbeef",
+    }
+    previous = bundle("2026-08-27", {"AAA": context(recommendation="WAIT_FOR_CONFIRMATION", invalidation={"current_trigger_state": "UNKNOWN", "status": "CONDITIONAL"})})
+    current = bundle("2026-08-28", {"AAA": context(recommendation=None, invalidation=None)})
+    current["ticker_research_contexts"]["AAA"]["recommendation"] = rec
+    current["ticker_research_contexts"]["AAA"]["fundamental_invalidation"] = inv
+    first = build_artifact(previous_bundle=previous, current_bundle=current, qualified_session_chain=["2026-08-27", "2026-08-28"])
+    second = build_artifact(previous_bundle=previous, current_bundle=current, qualified_session_chain=["2026-08-27", "2026-08-28"])
+    assert first == second
+    assert first["artifact_sha256"] == second["artifact_sha256"]
+    assert first["records"]["AAA"]["current_recommendation"] == rec
+    assert first["records"]["AAA"]["current_invalidation_state"] == inv
