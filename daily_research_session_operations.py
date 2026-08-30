@@ -207,7 +207,7 @@ def validate_coherence(inputs: Mapping[str, Any], session: str) -> dict[str, Any
     return {"session": session, "technical_coverage_semantics": {"same_session_technical_feature_available_count": coverage, "current_active_equity_denominator": descriptive["market_breadth"]["current_active_equity_denominator"], "observed_session_cohort": descriptive["market_breadth"]["observed_session_cohort"], "semantic_note": "956 is same-session technical feature coverage and tactical classified count after retained technical recovery; 763 is superseded pre-recovery coverage and is rejected."}, "corporate_intelligence_coverage": corporate.get("coverage"), "accepted_degraded_inputs": {"catalyst": "EARLIER_RETAINED_CATALYST_CONTEXT"}, "incompatible_inputs": []}
 
 
-def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None) -> dict[str, Any]:
+def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None) -> dict[str, Any]:
     registry = registry if registry is not None else load_registry(root or MODULE_ROOT)
     assert_inputs_match_registered_session(session, inputs, registry)
     coherence = validate_coherence(inputs, session)
@@ -231,7 +231,7 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         decision_queue = build_decision_queue(opportunity=opportunity, triage=inputs["triage"])
         if decision_queue_identity(decision_queue)["artifact_sha256"] != decision_queue["artifact_sha256"]: raise ValueError("DECISION_QUEUE_ARTIFACT_SELF_VERIFICATION_FAILED")
         opportunity_snapshot = decision_queue_prospective_context(opportunity, decision_queue)
-    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context, market_flow_positioning=flow, opportunity_decision_queue=decision_queue)
+    product = build_product(descriptive=inputs["descriptive"], tactical=inputs["tactical"], peer_relative=peer, fundamental=inputs["fundamental"], valuation=inputs["valuation"], scenario=scenario, triage=inputs["triage"], corporate_intelligence=inputs["corporate_intelligence"], strategy_classification=strategy, portfolio_risk=portfolio_risk, macro_context=macro_context, market_flow_positioning=flow, opportunity_decision_queue=decision_queue, shadow_security_recommendation=shadow_security_recommendation)
     if product_identity(product)["artifact_sha256"] != product["artifact_sha256"]: raise ValueError("PRODUCT_ARTIFACT_SELF_VERIFICATION_FAILED")
     snapshot = freeze_current_decision_surface(inputs["tactical"], inputs["triage"], inputs["fundamental"], inputs["valuation"])
     corporate_snapshot = prospective_context(inputs["corporate_intelligence"])
@@ -314,12 +314,19 @@ def run_session_operation(
     generation_context: str = "RETAINED_FIXED_TIME_REPLAY",
     portfolio: Mapping[str, Any] | None = None,
     macro: Mapping[str, Any] | None = None,
+    shadow_security_recommendation: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     """Build, Consumer-validate, and immutably materialize one exact operation.
 
     This is the reusable foreground integration seam.  Callers supply resolved
     repository heads and explicit optional inputs; it never discovers a
     ``latest`` artifact or performs acquisition.
+
+    ``shadow_security_recommendation`` is an optional, already-built same-session
+    shadow_security_recommendation/v1 artifact (see daily_session_shadow_recommendation.py).
+    This function never computes one itself -- it only passes through whatever the caller
+    already produced, so an absent/unavailable value degrades to exactly the pre-existing
+    behavior (explicit per-ticker unavailability, never a global failure).
     """
     registry = load_registry(root, registry_path)
     inputs, _ = resolve_inputs(root, session, registry)
@@ -333,6 +340,7 @@ def run_session_operation(
         macro=macro,
         registry=registry,
         root=root,
+        shadow_security_recommendation=shadow_security_recommendation,
     )
     consumer_root = root.parent / "ai-core-private"
     if str(consumer_root) not in sys.path:
