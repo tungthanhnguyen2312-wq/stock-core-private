@@ -114,6 +114,47 @@ def test_p3_snapshot_fails_closed_when_neither_attempt_root_nor_retained_scaleou
         runtime_release._p3_snapshot(tmp_path, session, sources)
 
 
+def test_retained_tier_handoff_allows_a_new_exact_run_with_identical_sources(tmp_path):
+    session = "2026-08-28"
+    handoff = tmp_path / "operations-review" / "canonical-post-close-v1" / session / "session_handoff_bundle.json"
+    handoff.parent.mkdir(parents=True)
+    source_identities = {name: {"artifact_identity": f"{name}:identity"}
+                         for name in ("descriptive", "screening", "tactical", "triage")}
+    handoff.write_text(json.dumps({
+        "session": session,
+        "market_session_proof": {"resolved_completed_session": session},
+        "daily_producer": {"run_identity": "daily_producer_run:retained"},
+        "upstream_evidence_identities": source_identities,
+    }), encoding="utf-8")
+    result = runtime_release._verify_retained_tier_lineage(
+        tmp_path, session,
+        {"run_identity": "daily_producer_run:current", "upstream_artifact_identities": source_identities},
+    )
+    assert result["retained_daily_producer_run_identity"] == "daily_producer_run:retained"
+    assert result["runtime_daily_producer_run_identity"] == "daily_producer_run:current"
+    assert result["source_lineage_status"] == "PASS"
+
+
+def test_retained_tier_handoff_rejects_changed_sources(tmp_path):
+    session = "2026-08-28"
+    handoff = tmp_path / "operations-review" / "canonical-post-close-v1" / session / "session_handoff_bundle.json"
+    handoff.parent.mkdir(parents=True)
+    handoff.write_text(json.dumps({
+        "session": session,
+        "market_session_proof": {"resolved_completed_session": session},
+        "daily_producer": {"run_identity": "daily_producer_run:retained"},
+        "upstream_evidence_identities": {name: {"artifact_identity": f"{name}:old"}
+                                        for name in ("descriptive", "screening", "tactical", "triage")},
+    }), encoding="utf-8")
+    current = {name: {"artifact_identity": f"{name}:current"}
+               for name in ("descriptive", "screening", "tactical", "triage")}
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError, match="TIER_HANDOFF_SOURCE_LINEAGE_MISMATCH:descriptive"):
+        runtime_release._verify_retained_tier_lineage(
+            tmp_path, session,
+            {"run_identity": "daily_producer_run:current", "upstream_artifact_identities": current},
+        )
+
+
 def test_retained_canonical_session_materializes_exact_runtime_contract(tmp_path):
     result = runtime_release.materialize_canonical_runtime_release(ROOT, tmp_path, SESSION)
     report = release_session_contract.resolve_release_session(tmp_path, runtime_release.RELEASE_SESSION_FILES, today=SESSION)

@@ -154,11 +154,22 @@ def _verify_retained_tier_lineage(root: Path, session: str, run_manifest: Mappin
     handoff = _load(path)
     if handoff.get("session") != session or (handoff.get("market_session_proof") or {}).get("resolved_completed_session") != session:
         raise CanonicalRuntimeReleaseError("TIER_HANDOFF_SESSION_MISMATCH")
-    expected_run = run_manifest.get("run_identity")
-    observed_run = (handoff.get("daily_producer") or {}).get("run_identity")
-    if expected_run != observed_run:
-        raise CanonicalRuntimeReleaseError("TIER_HANDOFF_DAILY_PRODUCER_LINEAGE_MISMATCH")
+    # A normal Daily invocation deliberately creates a new immutable Producer run
+    # for the same retained session.  The older tier handoff is therefore context,
+    # not the runtime release's Producer-run authority.  It remains usable only
+    # when every required upstream evidence identity agrees with the exact current
+    # run; otherwise a historical handoff could silently mix source inputs.
+    handoff_sources = handoff.get("upstream_evidence_identities") or {}
+    run_sources = run_manifest.get("upstream_artifact_identities") or {}
+    for name in ("descriptive", "screening", "tactical", "triage"):
+        observed = (handoff_sources.get(name) or {}).get("artifact_identity")
+        expected = (run_sources.get(name) or {}).get("artifact_identity")
+        if not expected or observed != expected:
+            raise CanonicalRuntimeReleaseError(f"TIER_HANDOFF_SOURCE_LINEAGE_MISMATCH:{name}")
     return {"sha256": _sha256(path), "path": str(path.relative_to(root)),
+            "retained_daily_producer_run_identity": (handoff.get("daily_producer") or {}).get("run_identity"),
+            "runtime_daily_producer_run_identity": run_manifest.get("run_identity"),
+            "source_lineage_status": "PASS",
             "current_research_packet_identity": handoff.get("current_research_packet_identity"),
             "prospective_cohort_snapshot_identity": handoff.get("prospective_cohort_snapshot_identity")}
 
