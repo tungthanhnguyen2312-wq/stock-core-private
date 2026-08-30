@@ -51,12 +51,29 @@ def _previous(session: str, root: Path) -> Path | None:
     return max(candidates, key=lambda item: item[0])[1] if candidates else None
 
 
-def _latest_operation() -> tuple[str, Path]:
+def _latest_operation() -> tuple[str, Path, str]:
     pointer = json.loads((ROOT / "operations-review/daily-producer-runs-v1/LATEST_COMPLETED_RUN.json").read_text(encoding="utf-8"))
     session = pointer["session"]
     run = ROOT / "operations-review/daily-producer-runs-v1" / pointer["relative_directory"] / "run_manifest.json"
     manifest = json.loads(run.read_text(encoding="utf-8"))
-    return session, ROOT / manifest["daily_session_operation"]["directory"]
+    return session, ROOT / manifest["daily_session_operation"]["directory"], pointer["run_identity"]
+
+
+def _decision_brief(session: str, operation: Path, previous_bundle: Path | None, run_identity: str | None) -> Path | None:
+    """Best-effort, non-blocking: the brief is derived evidence, never a gate on publication."""
+    try:
+        from next_session_decision_brief import build_from_previous_bundle_path
+        brief = build_from_previous_bundle_path(root=ROOT, session=session, source=operation, previous=previous_bundle, run_identity=run_identity)
+        payload = json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+        path = operation / "next_session_decision_brief.json"
+        if path.exists() and path.read_text(encoding="utf-8") != payload:
+            print(f"STATUS: DECISION_BRIEF_CONTENT_CONFLICT_SKIPPED\nSESSION: {session}")
+            return None
+        path.write_text(payload, encoding="utf-8")
+        return path
+    except Exception as exc:
+        print(f"STATUS: DECISION_BRIEF_SKIPPED\nREASON: {exc}")
+        return None
 
 
 def main(argv=None) -> int:
@@ -89,7 +106,7 @@ def main(argv=None) -> int:
         if not a.replay_local or not a.session:
             print("STATUS: FAILED_PRECHECK\nREASON: replay requires --replay-local and --session")
             return 2
-        session, operation = a.session, a.replay_operation
+        session, operation, run_identity = a.session, a.replay_operation, None
     else:
         cmd = [sys.executable, str(ROOT / "daily_analysis_pipeline.py"), "--runtime-root", str(_runtime()), "--canonical-post-close"]
         if a.session:
@@ -98,7 +115,10 @@ def main(argv=None) -> int:
         if code:
             print("STATUS: FAILED_PRODUCER\nRECOVERY_ACTION: inspect canonical daily stage output")
             return code
-        session, operation = _latest_operation()
+        session, operation, run_identity = _latest_operation()
+
+    previous_bundle = _previous(session, a.replay_root)
+    decision_brief_path = _decision_brief(session, operation, previous_bundle, run_identity)
 
     try:
         from ai_handoff_publication import publish
@@ -106,9 +126,10 @@ def main(argv=None) -> int:
             _handoff(),
             operation,
             session,
-            previous=_previous(session, a.replay_root),
+            previous=previous_bundle,
             producer_checkpoint=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, encoding="utf-8").strip(),
             push=not a.replay_local,
+            decision_brief=decision_brief_path,
         )
     except Exception as exc:
         print(f"STATUS: FAILED_PUBLICATION\nREASON: {exc}\nRECOVERY_ACTION: verify private handoff repository")

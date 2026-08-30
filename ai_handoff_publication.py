@@ -25,22 +25,31 @@ def _manifest_lineage(source: Path, producer_checkpoint: str) -> dict[str, Any]:
     return {"producer_checkpoint":producer_checkpoint,"producer_head":manifest.get("producer_head"),"operation_identity":manifest.get("operation_identity"),"daily_product_identity":manifest.get("daily_product_identity")}
 def _identity(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",", ":")).encode("utf-8")).hexdigest()
-def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN") -> tuple[dict[str,Path],dict[str,Any]]:
+def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None) -> tuple[dict[str,Path],dict[str,Any]]:
     files={name:source/name for name in REQUIRED}
     if previous: files[f"previous_session_bundle_{previous.parent.parent.name}.json"]=previous
+    # next_session_decision_brief.json is a pure package-local derived projection (see
+    # next_session_decision_brief.py) -- optional and additive, exactly like `previous`, so a
+    # caller/test that never supplies one sees no behavior change at all.
+    if decision_brief: files["next_session_decision_brief.json"]=decision_brief
+    parsed: dict[str, Any] = {}
     for name,path in files.items():
         if not path.is_file(): raise HandoffPublicationError("HANDOFF_SOURCE_MISSING:"+name)
-        if _unsafe(json.loads(path.read_text(encoding="utf-8"))): raise HandoffPublicationError("HANDOFF_ABSOLUTE_PATH_FORBIDDEN:"+name)
+        parsed[name]=json.loads(path.read_text(encoding="utf-8"))
+        if _unsafe(parsed[name]): raise HandoffPublicationError("HANDOFF_ABSOLUTE_PATH_FORBIDDEN:"+name)
     hashes={name:sha(path) for name,path in files.items()}
     package_identity=_identity({"session":session,"files":hashes})
     lineage=_manifest_lineage(source,producer_checkpoint)
+    if decision_brief: lineage["next_session_decision_brief_identity"]=parsed["next_session_decision_brief.json"].get("artifact_identity")
     handoff_build_id="handoff_build_"+_identity({"session":session,"package_sha256":package_identity,"lineage":lineage})
     payload={"schema_version":CONTRACT_VERSION,"session":session,"status":"READY_FOR_AI","files":hashes,"package_sha256":package_identity,"lineage":lineage,"handoff_build_id":handoff_build_id}
     return files,payload
 def _latest_payload(session: str, payload: Mapping[str, Any], *, immutable_session_path: str, handoff_commit: str, previous: Path|None) -> dict[str, Any]:
-    return {"schema_version":"stocklookup_ai_handoff_latest/v2","latest_session":session,"status":"READY_FOR_AI","handoff_build_id":payload["handoff_build_id"],"immutable_session_path":immutable_session_path,"handoff_commit":handoff_commit,"producer_checkpoint":payload["lineage"]["producer_checkpoint"],"producer_lineage":payload["lineage"],"session_bundle_sha256":payload["files"]["ai_research_session_bundle.json"],"opportunity_artifact_sha256":payload["files"]["daily_opportunity_decision_queue_artifact.json"],"manifest_sha256":payload["files"]["ai_research_bundle_manifest.json"],"previous_session":previous.parent.parent.name if previous else None}
-def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True) -> dict[str,Any]:
-    files,payload=build_package(source,session,previous,producer_checkpoint=producer_checkpoint)
+    latest={"schema_version":"stocklookup_ai_handoff_latest/v2","latest_session":session,"status":"READY_FOR_AI","handoff_build_id":payload["handoff_build_id"],"immutable_session_path":immutable_session_path,"handoff_commit":handoff_commit,"producer_checkpoint":payload["lineage"]["producer_checkpoint"],"producer_lineage":payload["lineage"],"session_bundle_sha256":payload["files"]["ai_research_session_bundle.json"],"opportunity_artifact_sha256":payload["files"]["daily_opportunity_decision_queue_artifact.json"],"manifest_sha256":payload["files"]["ai_research_bundle_manifest.json"],"previous_session":previous.parent.parent.name if previous else None}
+    if "next_session_decision_brief.json" in payload["files"]: latest["decision_brief_sha256"]=payload["files"]["next_session_decision_brief.json"]
+    return latest
+def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, decision_brief: Path|None=None) -> dict[str,Any]:
+    files,payload=build_package(source,session,previous,producer_checkpoint=producer_checkpoint,decision_brief=decision_brief)
     target=repo/"sessions"/session/"builds"/payload["handoff_build_id"]
     if target.exists():
         current={name:sha(target/name) for name in files if (target/name).is_file()}

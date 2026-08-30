@@ -56,3 +56,19 @@ def test_absolute_paths_are_rejected(tmp_path):
     (s/"ai_research_session_bundle.json").write_text(json.dumps({"path":"D:\\private\\bundle"}),encoding="utf-8")
     with pytest.raises(HandoffPublicationError,match="ABSOLUTE_PATH"):
         publish(r,s,"2026-08-28",push=False)
+
+def test_decision_brief_is_optional_and_additive(tmp_path):
+    """A caller that never passes decision_brief sees byte-identical behavior (opt-in only)."""
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    without=build_package(s,"2026-08-28",producer_checkpoint="abc")
+    assert "next_session_decision_brief.json" not in without[0]
+    assert "next_session_decision_brief.json" not in without[1]["files"]
+
+def test_decision_brief_included_when_supplied(tmp_path):
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    brief=tmp_path/"next_session_decision_brief.json"; brief.write_text(json.dumps({"artifact_identity":"next_session_decision_brief:abc123"}),encoding="utf-8")
+    result=publish(r,s,"2026-08-28",producer_checkpoint="abc",push=False,decision_brief=brief)
+    assert (r/result["immutable_session_path"]/"next_session_decision_brief.json").is_file()
+    assert result["package"]["lineage"]["next_session_decision_brief_identity"]=="next_session_decision_brief:abc123"
+    latest=json.loads((r/"LATEST.json").read_text())
+    assert latest["decision_brief_sha256"]==result["package"]["files"]["next_session_decision_brief.json"]
