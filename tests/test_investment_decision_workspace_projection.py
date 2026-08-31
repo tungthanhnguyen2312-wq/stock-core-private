@@ -240,6 +240,16 @@ def test_research_stance_preserved_verbatim_from_decision_context():
     assert out["cards"]["AAA"]["research_stance"] == decision["records"]["AAA"]["research_stance"] == "AVOID_NEW_ENTRY"
 
 
+def test_why_section_carries_counterbalancing_context_from_decision_record():
+    # AAA is DOWNTREND (AVOID_NEW_ENTRY) with a profitable fundamental -- the positive evidence
+    # must reach the card's Why section as counterbalancing context, not be dropped by the join.
+    opportunity, decision = real_pair(tickers=("AAA",), behaviors={"AAA": "DOWNTREND"})
+    assert decision["records"]["AAA"]["counterbalancing_context"] == ["PROFITABLE_FUNDAMENTAL"]
+    card = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")["cards"]["AAA"]
+    assert card["why"]["counterbalancing_context"] == ["PROFITABLE_FUNDAMENTAL"]
+    assert "PROFITABLE_FUNDAMENTAL" not in card["why"]["deterministic_reasons"]
+
+
 def test_portfolio_fit_is_separate_from_and_never_mutates_security_stance():
     opportunity, decision = real_pair(tickers=("AAA",))
     portfolio_research = {

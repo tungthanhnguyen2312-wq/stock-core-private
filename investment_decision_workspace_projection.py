@@ -284,6 +284,7 @@ def build_ticker_card(
             },
             "catalyst_evidence": catalyst_view,
             "deterministic_reasons": list(reasons),
+            "counterbalancing_context": list(decision_record.get("counterbalancing_context") or []),
         },
         # C. Counter-thesis
         "counter_thesis": {
