@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.08.31.3",
+  "roadmap_version": "2026.08.31.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -16,7 +16,7 @@
   ],
   "current": null,
   "queued_next": [
-    "TACTICAL_AND_BEHAVIORAL_ENGINE_V2"
+    "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"
   ],
   "milestones": [
     {
@@ -289,22 +289,22 @@
     },
     {
       "milestone_id": "TACTICAL_AND_BEHAVIORAL_ENGINE_V2",
-      "state": "NEXT",
-      "narrative_disposition": "OWNER_SELECTED / NOT_STARTED",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "PARTIAL_BY_EVIDENCE / COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED",
+      "checkpoint": "HEAD",
       "dependencies": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
       "unlocks": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
       "authority_effect": "NONE / RESEARCH_PRODUCT_ONLY",
       "owner_authorized": true,
-      "source_doc": "Owner product-convergence direction (2026-08-31)",
+      "source_doc": "docs/STATE.md (2026-08-31, Tactical and Behavioral Engine V2)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Single current successor. Not started by Feature Store closeout."
+      "notes": "Four new bounded modules (technical_structure_context, tactical_setup_tags, tactical_confirmation_invalidation_boundaries, tactical_behavior_context) layered as secondary evidence around the unmodified, still-primary watchlist_tactical_entry_classifier entry_state. Real 2026-08-28 run: 1,683 candidates, 942 technical-eligible, confirmation READY 402 / CONDITIONAL 279 / UNAVAILABLE 1002, technical-invalidation READY 642 / CONDITIONAL 239 / UNAVAILABLE 802. Not wired into export_ai_bundle.py or any Consumer/Dashboard path this milestone."
     },
     {
       "milestone_id": "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1",
-      "state": "DEFERRED",
-      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
+      "state": "NEXT",
+      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE / NOT_STARTED",
       "checkpoint": null,
       "dependencies": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
       "unlocks": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
@@ -313,7 +313,7 @@
       "source_doc": "Owner product-convergence direction (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Future only; existing liquidity and sizing authority blockers remain intact."
+      "notes": "Dependency (TACTICAL_AND_BEHAVIORAL_ENGINE_V2) is now COMPLETE, so this graduates to queue position NEXT; owner_authorized remains false pending an explicit owner go-ahead (distinct from queue position) and no implementation has started."
     },
     {
       "milestone_id": "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1",
