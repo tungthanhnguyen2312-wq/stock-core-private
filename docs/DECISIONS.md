@@ -3273,3 +3273,10 @@ stays the product-convergence milestone; this is a correction within it, not a n
    (`DRIFT CHECK: PASS`) all clean.
 10. Terminal state unchanged: `PRODUCT_CONVERGENCE_COMPLETE`. No new milestone opened; no PIT,
     exact-execution-liquidity, valuation-coverage, or architecture work reopened.
+11. **Follow-up found during live-browser verification** (separate commit, same pass):
+    `investment_decision_workspace_projection.py::build_ticker_card()` builds its `why` block
+    field-by-field rather than passing `security_decision_context`'s decision record through
+    wholesale, so the new `counterbalancing_context` field was populated on the decision record
+    but never reached the card. Fixed by reading `decision_record.get("counterbalancing_context")`
+    into `why.counterbalancing_context`; confirmed live (AAS/NVL/PAN render it) and by a new
+    regression test. Display-plumbing only -- no stance or distribution change.
