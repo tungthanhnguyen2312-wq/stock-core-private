@@ -218,6 +218,40 @@ class DurableProspectiveResearchCaseStore:
             self._write_new_json(path, envelope)
         return self.load_case_envelope(case["case_id"])
 
+    def persist_policy_admitted_case(self, case: Mapping[str, Any], admission: Mapping[str, Any]) -> dict[str, Any]:
+        """Persist one policy-admitted immutable T0 case without inventing an AI draft.
+
+        This is intentionally separate from ``persist_case``: the caller has
+        already applied a versioned deterministic decision-workspace policy,
+        rather than pretending that an AI/human-review packet existed.
+        """
+        if not _case_identity_valid(case):
+            raise DurableCaseStoreError("CASE_CONTENT_IDENTITY_INVALID")
+        if admission.get("admission_status") != "ADMITTED" or admission.get("case_id") != case.get("case_id"):
+            raise DurableCaseStoreError("POLICY_ADMISSION_PROVENANCE_INVALID")
+        admission_body = {key: value for key, value in admission.items() if key not in {"admission_identity", "case"}}
+        admission_identity = admission.get("admission_identity")
+        if admission_identity != "prospective_case_admission:" + _hash(admission_body):
+            raise DurableCaseStoreError("POLICY_ADMISSION_IDENTITY_INVALID")
+        known_at = str(case.get("known_at") or "")
+        event = self._event(
+            case_id=case["case_id"], event_type="CASE_ADMITTED_BY_POLICY", observed_at=known_at, known_at=known_at,
+            actor_or_source="prospective_case_admission_policy/v1",
+            evidence_references=[str(admission.get("workspace_projection_identity") or "")], prior_event_id=None,
+            payload={"admission": dict(admission_body, admission_identity=admission_identity), "case_content_identity": case["case_content_identity"]}, fixture=False,
+        )
+        envelope = {
+            "schema_version": "1.0.0", "contract_version": METHOD + "/case_envelope", "record_type": "IMMUTABLE_T0_CASE",
+            "case": dict(case), "ai_draft": {"fixture": False, "admission_mode": "DETERMINISTIC_POLICY"},
+            "validation": None, "human_review": None, "policy_admission": dict(admission_body, admission_identity=admission_identity), "initial_events": [event],
+            "storage_boundary": "LOCAL_NON_PRODUCTION_RESEARCH_CASE_RECORD",
+        }
+        envelope["content_identity"] = "durable_research_case_envelope:" + _hash(envelope)
+        path = self._case_path(case["case_id"], self.cases_dir)
+        with self._writer():
+            self._write_new_json(path, envelope)
+        return self.load_case_envelope(case["case_id"])
+
     def load_case_envelope(self, case_id: str) -> dict[str, Any]:
         path = self._case_path(case_id, self.cases_dir)
         if not path.exists():
