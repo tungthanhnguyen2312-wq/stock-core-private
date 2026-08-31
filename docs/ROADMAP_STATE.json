@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.08.31.5",
+  "roadmap_version": "2026.08.31.6",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -368,6 +368,20 @@
       "state_history": [],
       "owner_override": null,
       "notes": "COMPLETE COHERENT PARTIAL. The deterministic admission policy and one-shot runner are operational and fail closed on stale workspace projections. The 2026-08-31 DNSE working-date response did not qualify that date; the latest retained ledger session was 2026-08-28, which cannot be retroactively admitted on 2026-08-31. Therefore zero genuine new T0 cases were created. No next milestone is queued; real activation awaits a future owner-run qualified current session."
+    },
+    {
+      "milestone_id": "DASHBOARD_PRODUCT_SURFACE_AND_PUBLICATION_CONVERGENCE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL / IN_APP_BROWSER_AUTOMATION_UNAVAILABLE",
+      "checkpoint": "HEAD",
+      "dependencies": ["INVESTMENT_DECISION_WORKSPACE_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / PRODUCT_PUBLICATION_SURFACE_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized Dashboard Product Surface and Publication Convergence V1 (2026-09-01)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "COMPLETE COHERENT PARTIAL. Producer publication now validates and atomically copies the explicitly supplied current investment_decision_workspace_dashboard_projection/v1 into the Dashboard allowlist, with session/coverage/zero-silent-drop checks. Dashboard primary surfaces (home summary, Analysis, Tactical Signals, Screener links, Workspace deep links, Portfolio, navigation, and About) consume the existing 1,699-card Workspace contract without score, rank, target, probability, sizing, or execution authority. Legacy candles/heatmap remain optional sidecars. Local static HTTP and automated contract acceptance passed; required in-app browser console/interaction acceptance could not run because the browser runtime failed before initialization. No new session, data generation, publication, push, deployment, or authority promotion occurred. No successor is queued."
     }
   ],
   "blocked_capabilities": [

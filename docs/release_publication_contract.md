@@ -27,8 +27,19 @@ only. Publisher authority is only:
 - `stock-core-private/tools/publish_release.py`
 
 A Dashboard checkout is a **target**, never a publisher. `web_dir/publish_dashboard.py` is
-not live authority. Whole-market `COPY_ARTIFACTS` includes `analysis_latest.json` (Producer
-copy). Validation, `git add`, commit, and push must use the same canonical checkout.
+not live authority. Validation, `git add`, commit, and push must use the same canonical checkout.
+
+## Current Workspace product projection
+
+`data/investment_decision_workspace.json` is the required current Dashboard product asset. It is
+not a Dashboard-generated report and is not inferred from `analysis_latest.json` or candle files.
+The Producer publisher accepts `--workspace-projection-source <path>` (otherwise the canonical
+runtime path), validates `investment_decision_workspace_dashboard_projection/v1`, a matching
+market session, a non-empty producer identity, card denominator equality, and the explicit
+zero-silent-drop assertion, then copies the verified bytes atomically into the served checkout.
+The asset is included in the served-file allowlist. A missing, malformed, stale, or incoherent
+projection fails publication before any public write. Candle and sector sidecars remain optional
+presentation data and cannot replace this current product contract.
 
 ## Workspace topology invariant
 

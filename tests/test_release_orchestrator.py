@@ -164,6 +164,16 @@ class ReleaseOrchestratorUnitTests(unittest.TestCase):
         self.assertIn(repr(str(ROOT / "publish_dashboard.py")), res.stdout)
         self.assertNotIn(repr(str(self.web_dir / "publish_dashboard.py")), res.stdout)
 
+    def test_whole_market_plan_forwards_explicit_workspace_projection(self):
+        projection = self.backend_dir / "investment_decision_workspace.json"
+        projection.write_text(json.dumps({"fixture": True}), encoding="utf-8")
+        args = release_orchestrator.build_parser().parse_args([
+            "whole-market", "--workspace-projection-source", str(projection),
+        ])
+        self.assertEqual(args.workspace_projection_source, projection)
+        source = ORCHESTRATOR.read_text(encoding="utf-8")
+        self.assertIn('cmd_pub += ["--workspace-projection-source", str(args.workspace_projection_source)]', source)
+
     def test_all_live_defers_trusted_git_publication_to_one_final_dashboard_commit(self):
         """``all`` keeps the trusted semantic gate but cannot create an intermediate push."""
         res = self.run_fixture(["all", "--live"])

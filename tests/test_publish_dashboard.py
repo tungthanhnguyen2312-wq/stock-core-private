@@ -46,6 +46,16 @@ def _write_min_fixture(root: Path) -> None:
         '{"summary": {"session_date": "2026-07-17", "generated_at": "2026-07-17 16:00"}}\n',
         encoding="utf-8",
     )
+    (root / "data" / "investment_decision_workspace.json").write_text(
+        json.dumps({
+            "schema_version": "investment_decision_workspace_dashboard_projection/v1",
+            "as_of_session": "2026-07-17",
+            "producer_artifact_identity": "investment_decision_workspace_projection/v1:fixture",
+            "cards": {"HPG": {"ticker": "HPG"}},
+            "coverage": {"ticker_denominator": 1, "zero_silent_ticker_drops": True},
+        }) + "\n",
+        encoding="utf-8",
+    )
     for name in (
         "app.js", "style.css", "assets/js/value-format.js",
         "assets/js/company-panel.js", "assets/css/tailwind.generated.css",
@@ -357,6 +367,14 @@ def _write_backend_fixture(root: Path, session: str, *, live_session: str | None
         json.dumps({"reference_session_date": session}), encoding="utf-8")
     (root / "analysis_latest.json").write_text(
         json.dumps({"summary": {"session_date": session}}), encoding="utf-8")
+    (root / "data").mkdir(parents=True, exist_ok=True)
+    (root / "data" / "investment_decision_workspace.json").write_text(json.dumps({
+        "schema_version": "investment_decision_workspace_dashboard_projection/v1",
+        "as_of_session": session,
+        "producer_artifact_identity": "investment_decision_workspace_projection/v1:fixture",
+        "cards": {"HPG": {"ticker": "HPG"}},
+        "coverage": {"ticker_denominator": 1, "zero_silent_ticker_drops": True},
+    }), encoding="utf-8")
 
 
 class SessionMismatchStopsBeforeAnyWriteTests(_PublishDashboardTestBase):
@@ -671,6 +689,29 @@ class AnalysisLatestPublicationContractTests(_PublishDashboardTestBase):
         self.assertEqual((self.tmp / "analysis_latest.json").read_bytes(), before_bytes)
         self.assertEqual((self.tmp / "analysis_latest.json").stat().st_mtime_ns, before_mtime_ns,
                           "no-op republish must not even rewrite identical bytes")
+
+
+class WorkspacePublicationContractTests(_PublishDashboardTestBase):
+    def test_workspace_projection_requires_matching_session_and_retained_identity(self):
+        source = self.backend / "data" / "investment_decision_workspace.json"
+        valid = pd.validate_workspace_projection(source, "2026-07-17")
+        self.assertEqual(valid["coverage"]["ticker_denominator"], 1)
+        invalid = dict(valid)
+        invalid["as_of_session"] = "2026-07-16"
+        source.write_text(json.dumps(invalid), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "CURRENT_PRODUCT_ARTIFACT_SESSION_MISMATCH"):
+            pd.validate_workspace_projection(source, "2026-07-17")
+
+    def test_workspace_projection_copy_is_explicit_and_byte_preserving(self):
+        source = self.backend / "data" / "investment_decision_workspace.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        payload["producer_artifact_identity"] = "investment_decision_workspace_projection/v1:changed-fixture"
+        source.write_text(json.dumps(payload), encoding="utf-8")
+        before = source.read_bytes()
+        self.assertTrue(pd.copy_workspace_projection(source))
+        target = self.tmp / "data" / "investment_decision_workspace.json"
+        self.assertEqual(target.read_bytes(), before)
+        self.assertFalse(pd.copy_workspace_projection(source))
 
 
 if __name__ == "__main__":

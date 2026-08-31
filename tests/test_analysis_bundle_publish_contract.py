@@ -30,6 +30,9 @@ class AnalysisBundlePublishContractTests(unittest.TestCase):
             publisher.SAFE_WEB_ARTIFACTS,
         )
 
+    def test_workspace_projection_is_a_required_current_product_asset(self):
+        self.assertIn("data/investment_decision_workspace.json", publisher.SAFE_WEB_ARTIFACTS)
+
     def test_copy_preserves_corporate_intelligence_payload(self):
         payload = {
             "tickers": {

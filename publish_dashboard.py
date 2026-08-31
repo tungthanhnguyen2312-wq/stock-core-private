@@ -89,8 +89,10 @@ COPY_ARTIFACTS = (
     "data/candle_signals.json", "data/candle_signals.js",
     "data/sector_heatmap.json", "data/sector_heatmap.js",
 )
+WORKSPACE_ASSET = "data/investment_decision_workspace.json"
+WORKSPACE_SCHEMA = "investment_decision_workspace_dashboard_projection/v1"
 SAFE_WEB_ARTIFACTS = set(COPY_ARTIFACTS) | {
-    "data/screener_data.js", "data/build_info.json", "data/build_info.js",
+    WORKSPACE_ASSET, "data/screener_data.js", "data/build_info.json", "data/build_info.js",
 }
 NEVER_PUBLISH = {
     "vn_stock.db", "config.json", "publish_log.txt", "tickers.txt",
@@ -225,6 +227,42 @@ def copy_public_artifacts() -> list[str]:
         copied.append(relative)
     log(f"Đã copy {len(copied)} artifact từ backend: {', '.join(copied) or '(không đổi)'}")
     return copied
+
+
+def validate_workspace_projection(source: Path, market_session: str) -> dict[str, object]:
+    """Fail closed before publishing the primary current-product static corpus."""
+    if not source.is_file():
+        raise ValueError(f"CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing {source}")
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: unreadable {source}") from exc
+    if not isinstance(payload, dict) or payload.get("schema_version") != WORKSPACE_SCHEMA:
+        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: unsupported workspace schema")
+    cards = payload.get("cards")
+    if not isinstance(cards, dict) or not cards:
+        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: empty workspace corpus")
+    if payload.get("as_of_session") != market_session:
+        raise ValueError(
+            "CURRENT_PRODUCT_ARTIFACT_SESSION_MISMATCH: "
+            f"workspace={payload.get('as_of_session')} market={market_session}"
+        )
+    if not isinstance(payload.get("producer_artifact_identity"), str) or not payload["producer_artifact_identity"]:
+        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing source artifact identity")
+    coverage = payload.get("coverage")
+    if not isinstance(coverage, dict) or coverage.get("ticker_denominator") != len(cards) or coverage.get("zero_silent_ticker_drops") is not True:
+        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: invalid denominator or silent-drop guard")
+    return payload
+
+
+def copy_workspace_projection(source: Path) -> bool:
+    """Materialize the validated, explicit Workspace projection as a governed web asset."""
+    target = WEB_ROOT / WORKSPACE_ASSET
+    if target.is_file() and sha256(target) == sha256(source):
+        return False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    atomic_copy_file(source, target, validator=validate_json_file)
+    return True
 
 
 def read_csv_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:
@@ -728,6 +766,8 @@ def main() -> int:
                         help="accepted for orchestrator compatibility; does not select a dashboard-repo publisher")
     parser.add_argument("--expected-cockpit-session", default=None)
     parser.add_argument("--expected-cockpit-operation-identity", default=None)
+    parser.add_argument("--workspace-projection-source", type=Path, default=None,
+                        help="Explicit validated Investment Workspace dashboard projection required for current product surfaces.")
     args = parser.parse_args()
 
     global LIVE_MODE
@@ -767,6 +807,8 @@ def main() -> int:
             sync_remote_before_live(branch)
             head = current_head()
         rows, breadth, market_session = validate_snapshot()
+        workspace_source = args.workspace_projection_source or (BACKEND_ROOT / WORKSPACE_ASSET)
+        workspace = validate_workspace_projection(workspace_source, market_session)
         copy_plan = plan_copy_artifacts()
         manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
@@ -787,6 +829,7 @@ def main() -> int:
             "HTML/CSS/JS, CHƯA git add/commit/push. Không file nào trên đĩa bị thay đổi.")
         log(f"[DRY-RUN] Sẽ copy {len(copy_plan)} artifact từ backend: "
             f"{', '.join(copy_plan) or '(không có — backend=web hoặc đã khớp)'}")
+        log(f"[DRY-RUN] Workspace product: {workspace_source} · {len(workspace['cards'])} cards · session {workspace['as_of_session']}")
         log(f"[DRY-RUN] Build id dự kiến (phiên {market_session}): {manifest['build_id']}")
         log(f"[DRY-RUN] Sẽ cập nhật asset-version trên {len(version_plan)} trang HTML: "
             f"{', '.join(version_plan) or '(không có)'}")
@@ -802,6 +845,8 @@ def main() -> int:
 
     try:
         copy_public_artifacts()
+        workspace_changed = copy_workspace_projection(workspace_source)
+        log(f"Workspace product: {'đã materialize' if workspace_changed else 'không đổi'} ({len(workspace['cards'])} cards).")
         write_build_manifest(manifest, screener_js_content)
         update_asset_versions(str(manifest["build_id"]))
         if not companion_plan.omitted:

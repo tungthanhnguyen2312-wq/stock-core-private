@@ -313,6 +313,8 @@ def build_parser() -> argparse.ArgumentParser:
                                     "reconstructs from --web-dir's currently served analysis bundle.")
     parent_parser.add_argument("--cockpit-projection-source", type=Path,
                                help="Explicit Producer current_decision_cockpit_projection.json for cockpit release only.")
+    parent_parser.add_argument("--workspace-projection-source", type=Path,
+                               help="Explicit validated Investment Workspace dashboard projection for whole-market/current product publication.")
     parent_parser.add_argument("--expected-cockpit-operation-identity",
                                help="Exact Daily Research Session Operation identity for cockpit release only.")
 
@@ -506,6 +508,8 @@ def orchestrate(args: argparse.Namespace) -> int:
             argv_plans.append(cmd_build)
 
             cmd_pub = [python_exe, str(producer_dir / "publish_dashboard.py")]
+            if args.workspace_projection_source:
+                cmd_pub += ["--workspace-projection-source", str(args.workspace_projection_source)]
             if group == "all":
                 # The final publisher owns the one commit/push and must stage the
                 # trusted subset explicitly, never merely because an HTML reference

@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-01 - Dashboard Product Surface And Publication Convergence V1
+
+`DASHBOARD_PRODUCT_SURFACE_AND_PUBLICATION_CONVERGENCE_V1 = COMPLETE / COHERENT_PARTIAL` (`push = NO`).
+
+1. **One current Dashboard contract.** The Producer-owned `investment_decision_workspace_dashboard_projection/v1` is the product source for the Dashboard's Home summary, Analysis, Tactical Signals, Screener deep links, Workspace detail view, Portfolio context, navigation, and About explanation. Analysis no longer treats the legacy quant `analysis_latest.json` as its primary rendered corpus; Tactical Signals does not make candlestick output the primary research table.
+2. **Publication remains Producer-only.** `publish_dashboard.py` validates an explicit Workspace source (schema, producer identity, exact `as_of_session`, card denominator, and zero-silent-drop assertion) and atomically copies it to `market-dashboard/data/investment_decision_workspace.json`. The asset is allowlisted as required current product data. `release_orchestrator.py` may pass the source through, but the public Dashboard checkout gains no publisher capability.
+3. **No actionability expansion.** Stance, entry state, Tactical V2, confirmation boundary, actual trigger state, invalidation, valuation methods, catalyst, downside, liquidity research proxy, portfolio availability, and freshness remain descriptive research context. No score, rank, target price, probability, sizing, execution command, live price, or hidden fallback was introduced. Legacy candle and sector artifacts remain explicitly optional sidecars.
+4. **Acceptance disposition.** Static local HTTP and automated contract acceptance passed against the existing 1,699-card, 2026-08-28 retained projection. The required in-app Browser could not initialize (`failed to write kernel assets` before a page session existed), so real browser-console and interaction acceptance is recorded as unavailable rather than claimed. No new data generation, release, push, deploy, runtime mutation, or authority promotion occurred.
+
 ## 2026-08-31 - Current Valuation And Opportunity Integration V1
 
 `CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1 = COMPLETE LOCALLY / COHERENT PARTIAL` (`push = NO`).
