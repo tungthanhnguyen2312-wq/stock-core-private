@@ -1,0 +1,183 @@
+{
+  "artifact_identity": "market_wide_fundamental_feature_store/v1:3a2c6273cf23015140e87229d3f4c5875db75d52ddb8115a564227db1e2a969e",
+  "artifact_sha256": "3a2c6273cf23015140e87229d3f4c5875db75d52ddb8115a564227db1e2a969e",
+  "artifact_type": "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE",
+  "authority_effect": "NONE / OPERATIONAL_PROVIDER_RESEARCH_ONLY",
+  "blocker_distribution": {
+    "CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE": 2984,
+    "GENERIC_CORPORATE_FEATURE_NOT_APPLICABLE": 24,
+    "MISSING_COMPATIBLE_POINT_IN_TIME_SERIES": 524,
+    "MISSING_COMPATIBLE_STANDALONE_QUARTER_SERIES": 239,
+    "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS": 3980,
+    "MISSING_SAME_NATIVE_PERIOD_SCOPE_SERIES": 6367,
+    "MISSING_SAME_QUARTER_PRIOR_YEAR": 2652,
+    "MISSING_STANDALONE_QUARTER_CFO": 1154,
+    "MISSING_STANDALONE_QUARTER_EARNINGS": 86
+  },
+  "compatibility_rule_version": "same_native_series_research_compatibility/v2",
+  "contract_version": "market_wide_fundamental_feature_store/v1",
+  "coverage": {
+    "compatibility_class_distribution": {
+      "BLOCKED_INCOMPATIBLE": 18010,
+      "POINT_IN_TIME_TRAJECTORY_COMPATIBLE": 3952,
+      "SAME_NATIVE_SERIES_RESEARCH_COMPATIBLE": 6386
+    },
+    "exact_vs_proxy_counts": {
+      "EXACT_TYPED_RESEARCH_COMPATIBLE": 0,
+      "RESEARCH_PROXY_COMPATIBLE": 10338
+    },
+    "feature_counts_by_family": {
+      "BALANCE_SHEET_HEALTH": 5968,
+      "CAPITAL_EFFICIENCY": 2984,
+      "CASH_EARNINGS_QUALITY": 5968,
+      "GROWTH_TRAJECTORY": 5968,
+      "LEVERAGE_SOLVENCY": 2984,
+      "PROFITABILITY": 1492,
+      "PROFITABILITY_MARGIN": 2984
+    },
+    "feature_status_distribution": {
+      "BLOCKED": 18010,
+      "PARTIAL_RESEARCH": 16,
+      "READY_RESEARCH_PROXY": 10322
+    },
+    "generic_corporate_applicability_exclusions": 12,
+    "period_semantic_coverage": {
+      "POINT_IN_TIME_BALANCE_SHEET": 6666,
+      "STANDALONE_QUARTER": 3672
+    },
+    "provider_source_coverage": {
+      "KBS": 1407,
+      "VCI": 1382
+    },
+    "ticker_denominator": 1492,
+    "ticker_record_count": 1492,
+    "tickers_with_product_ready_health_context": 1489,
+    "tickers_with_ready_feature": 1489,
+    "tickers_with_three_feature_families": 1373,
+    "total_emitted_feature_count": 28348,
+    "zero_silent_ticker_drops": true
+  },
+  "feature_definitions": "per-ticker feature records retain compatibility, input period, native/provider lineage, blockers, research fitness, and non-authoritative boundary",
+  "health_context_coverage": {
+    "INSUFFICIENT_DATA": 3,
+    "PRODUCT_READY_RESEARCH_CONTEXT": 1489
+  },
+  "input_period_semantics_identity": "market_wide_structured_financial_period_semantics/v1:b8fd01da9d485f3528d97f9d711425ba7ede3e37e65fcbc0597ce971877111fd",
+  "records_payload": {
+    "canonical_jsonl_sha256": "011f5283729eaf065b17ceed01bfe6361b4763e8c1553dce4be7b01e0404bac8",
+    "path": "market_wide_fundamental_feature_store_records.jsonl.gz",
+    "record_count": 1492
+  },
+  "representative_blocked_tickers": [
+    {
+      "ticker": "TC6",
+      "warnings_blockers": [
+        "CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE",
+        "MISSING_COMPATIBLE_POINT_IN_TIME_SERIES",
+        "MISSING_COMPATIBLE_STANDALONE_QUARTER_SERIES",
+        "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS",
+        "MISSING_SAME_NATIVE_PERIOD_SCOPE_SERIES",
+        "MISSING_STANDALONE_QUARTER_CFO",
+        "MISSING_STANDALONE_QUARTER_EARNINGS"
+      ]
+    },
+    {
+      "ticker": "TDN",
+      "warnings_blockers": [
+        "CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE",
+        "MISSING_COMPATIBLE_POINT_IN_TIME_SERIES",
+        "MISSING_COMPATIBLE_STANDALONE_QUARTER_SERIES",
+        "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS",
+        "MISSING_SAME_NATIVE_PERIOD_SCOPE_SERIES",
+        "MISSING_STANDALONE_QUARTER_CFO",
+        "MISSING_STANDALONE_QUARTER_EARNINGS"
+      ]
+    },
+    {
+      "ticker": "VMA",
+      "warnings_blockers": [
+        "CROSS_PROVIDER_OR_DURATION_INCOMPATIBLE",
+        "MISSING_COMPATIBLE_POINT_IN_TIME_SERIES",
+        "MISSING_COMPATIBLE_STANDALONE_QUARTER_SERIES",
+        "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS",
+        "MISSING_SAME_NATIVE_PERIOD_SCOPE_SERIES",
+        "MISSING_STANDALONE_QUARTER_CFO",
+        "MISSING_STANDALONE_QUARTER_EARNINGS"
+      ]
+    }
+  ],
+  "representative_successful_tickers": [
+    {
+      "health_axes": {
+        "BALANCE_SHEET_STATE": "IMPROVING",
+        "CAPITAL_EFFICIENCY_STATE": "INSUFFICIENT_DATA",
+        "CASH_QUALITY_STATE": "CASH_QUALITY_UNAVAILABLE",
+        "DATA_COVERAGE_STATE": "READY_RESEARCH_PROXY",
+        "GROWTH_STATE": "INSUFFICIENT_DATA",
+        "LEVERAGE_STATE": "INSUFFICIENT_DATA",
+        "MARGIN_STATE": "AVAILABLE",
+        "PROFITABILITY_STATE": "LOSS_MAKING"
+      },
+      "ready_feature_count": 11,
+      "ticker": "BDB"
+    },
+    {
+      "health_axes": {
+        "BALANCE_SHEET_STATE": "WEAKENING",
+        "CAPITAL_EFFICIENCY_STATE": "INSUFFICIENT_DATA",
+        "CASH_QUALITY_STATE": "CASH_QUALITY_UNAVAILABLE",
+        "DATA_COVERAGE_STATE": "READY_RESEARCH_PROXY",
+        "GROWTH_STATE": "INSUFFICIENT_DATA",
+        "LEVERAGE_STATE": "INSUFFICIENT_DATA",
+        "MARGIN_STATE": "AVAILABLE",
+        "PROFITABILITY_STATE": "PROFITABLE"
+      },
+      "ready_feature_count": 11,
+      "ticker": "BSC"
+    },
+    {
+      "health_axes": {
+        "BALANCE_SHEET_STATE": "IMPROVING",
+        "CAPITAL_EFFICIENCY_STATE": "INSUFFICIENT_DATA",
+        "CASH_QUALITY_STATE": "CASH_QUALITY_UNAVAILABLE",
+        "DATA_COVERAGE_STATE": "READY_RESEARCH_PROXY",
+        "GROWTH_STATE": "INSUFFICIENT_DATA",
+        "LEVERAGE_STATE": "INSUFFICIENT_DATA",
+        "MARGIN_STATE": "AVAILABLE",
+        "PROFITABILITY_STATE": "PROFITABLE"
+      },
+      "ready_feature_count": 11,
+      "ticker": "C92"
+    },
+    {
+      "health_axes": {
+        "BALANCE_SHEET_STATE": "WEAKENING",
+        "CAPITAL_EFFICIENCY_STATE": "INSUFFICIENT_DATA",
+        "CASH_QUALITY_STATE": "CASH_QUALITY_UNAVAILABLE",
+        "DATA_COVERAGE_STATE": "READY_RESEARCH_PROXY",
+        "GROWTH_STATE": "INSUFFICIENT_DATA",
+        "LEVERAGE_STATE": "INSUFFICIENT_DATA",
+        "MARGIN_STATE": "AVAILABLE",
+        "PROFITABILITY_STATE": "PROFITABLE"
+      },
+      "ready_feature_count": 11,
+      "ticker": "CMT"
+    },
+    {
+      "health_axes": {
+        "BALANCE_SHEET_STATE": "WEAKENING",
+        "CAPITAL_EFFICIENCY_STATE": "INSUFFICIENT_DATA",
+        "CASH_QUALITY_STATE": "CASH_QUALITY_UNAVAILABLE",
+        "DATA_COVERAGE_STATE": "READY_RESEARCH_PROXY",
+        "GROWTH_STATE": "LOSS_WIDENED",
+        "LEVERAGE_STATE": "INSUFFICIENT_DATA",
+        "MARGIN_STATE": "AVAILABLE",
+        "PROFITABILITY_STATE": "LOSS_MAKING"
+      },
+      "ready_feature_count": 11,
+      "ticker": "DLD"
+    }
+  ],
+  "requested_at": "2026-08-31T00:00:00+07:00",
+  "schema_version": "1.0.0"
+}

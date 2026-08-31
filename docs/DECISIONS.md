@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-31 - Market-Wide Fundamental Feature Store V1
+
+`MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1 = PASS` (`push = NO`).
+
+1. **Research compatibility, not authority.** Same-provider/source-file/native-field/scope/period-semantic combinations may support dimensionless `READY_RESEARCH_PROXY` features when representation is stable by the retained contract. Cross-provider, cross-duration, missing-identity, and unknown combinations stay blocked. Explicit currency/scale remains required for exact typed features; it is not invented merely to create proxy coverage.
+2. **Product context.** Every ticker gets a compact `fundamental_feature_context` with feature lineage, availability, health axes, source summary, and blockers. It contains no weighted score, authority promotion, valuation, recommendation, or action instruction.
+3. **Current planning.** The owner-selected current sequence is Fundamental Feature Store -> Tactical & Behavioral Engine V2 -> Research Liquidity + Explicit Portfolio -> Current Valuation & Opportunity Integration -> Investment Decision Workspace. The earlier deferred valuation/opportunity/portfolio chain is preserved as historical planning but marked `SUPERSEDED_AS_CURRENT_PLAN`; Tactical V2 is the only NEXT and is not started here.
+
 ## 2026-08-31 - Market-Wide Structured Financial Period Semantics V1
 
 `MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1 = PASS` (`push = NO`).

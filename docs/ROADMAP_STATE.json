@@ -16,7 +16,7 @@
   ],
   "current": null,
   "queued_next": [
-    "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"
+    "TACTICAL_AND_BEHAVIORAL_ENGINE_V2"
   ],
   "milestones": [
     {
@@ -233,22 +233,22 @@
     },
     {
       "milestone_id": "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1",
-      "state": "NEXT",
-      "narrative_disposition": "DEPENDENCY_LINKED_NEXT / NOT_STARTED",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS / RESEARCH_COMPATIBILITY_FEATURE_STORE_ACTIVE",
+      "checkpoint": "HEAD",
       "dependencies": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
-      "unlocks": ["CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1"],
+      "unlocks": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
       "authority_effect": "NONE / RESEARCH_ONLY",
       "owner_authorized": true,
-      "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
+      "source_doc": "docs/STATE.md / operations-review/market-wide-fundamental-feature-store-v1-20260831/ (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Backlog only: deterministic features must preserve value, status, method, source_lineage, period_semantics, and blockers."
+      "notes": "Versioned research-compatibility feature store over the complete 1,492-ticker period-semantics corpus. Dimensionless same-native-series and PIT trajectory proxies remain explicitly non-authoritative; blocked combinations retain exact reasons."
     },
     {
       "milestone_id": "CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1",
-      "state": "DEFERRED",
-      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "state": "SUPERSEDED",
+      "narrative_disposition": "SUPERSEDED_AS_CURRENT_PLAN",
       "checkpoint": null,
       "dependencies": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
       "unlocks": ["MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"],
@@ -257,12 +257,12 @@
       "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Backlog only: explicitly labelled proxy valuation research may not relabel shares, EPS, or accounting inputs as authoritative."
+      "notes": "Historical future-plan record preserved. Superseded as current planning by the owner-selected technical/product sequence beginning with TACTICAL_AND_BEHAVIORAL_ENGINE_V2."
     },
     {
       "milestone_id": "MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1",
-      "state": "DEFERRED",
-      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "state": "SUPERSEDED",
+      "narrative_disposition": "SUPERSEDED_AS_CURRENT_PLAN",
       "checkpoint": null,
       "dependencies": ["CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1"],
       "unlocks": ["PORTFOLIO_RISK_AND_CAPITAL_POLICY_RESEARCH_V1"],
@@ -271,12 +271,12 @@
       "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Backlog only: combine retained market, fundamental, valuation, sector-relative, and tactical evidence without fabricated target prices or probabilities."
+      "notes": "Historical future-plan record preserved. Superseded as current planning by the owner-selected technical/product sequence."
     },
     {
       "milestone_id": "PORTFOLIO_RISK_AND_CAPITAL_POLICY_RESEARCH_V1",
-      "state": "DEFERRED",
-      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "state": "SUPERSEDED",
+      "narrative_disposition": "SUPERSEDED_AS_CURRENT_PLAN",
       "checkpoint": null,
       "dependencies": ["MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"],
       "unlocks": [],
@@ -285,7 +285,63 @@
       "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Backlog only: portfolio constraints remain distinct from security attractiveness; existing liquidity/sizing authority blockers remain intact."
+      "notes": "Historical future-plan record preserved. Superseded as current planning by the owner-selected technical/product sequence."
+    },
+    {
+      "milestone_id": "TACTICAL_AND_BEHAVIORAL_ENGINE_V2",
+      "state": "NEXT",
+      "narrative_disposition": "OWNER_SELECTED / NOT_STARTED",
+      "checkpoint": null,
+      "dependencies": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
+      "unlocks": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
+      "authority_effect": "NONE / RESEARCH_PRODUCT_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner product-convergence direction (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Single current successor. Not started by Feature Store closeout."
+    },
+    {
+      "milestone_id": "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1",
+      "state": "DEFERRED",
+      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
+      "checkpoint": null,
+      "dependencies": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
+      "unlocks": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
+      "authority_effect": "NONE / RESEARCH_ONLY",
+      "owner_authorized": false,
+      "source_doc": "Owner product-convergence direction (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Future only; existing liquidity and sizing authority blockers remain intact."
+    },
+    {
+      "milestone_id": "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1",
+      "state": "DEFERRED",
+      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
+      "checkpoint": null,
+      "dependencies": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
+      "unlocks": ["INVESTMENT_DECISION_WORKSPACE_V1"],
+      "authority_effect": "NONE / RESEARCH_ONLY",
+      "owner_authorized": false,
+      "source_doc": "Owner product-convergence direction (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Future only; no valuation authority promotion is implied."
+    },
+    {
+      "milestone_id": "INVESTMENT_DECISION_WORKSPACE_V1",
+      "state": "DEFERRED",
+      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
+      "checkpoint": null,
+      "dependencies": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / PRODUCT_WORKSPACE_ONLY",
+      "owner_authorized": false,
+      "source_doc": "Owner product-convergence direction (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Future only; no Dashboard/Consumer implementation occurs in this selection."
     }
   ],
   "blocked_capabilities": [
