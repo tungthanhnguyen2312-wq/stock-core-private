@@ -16,7 +16,7 @@
   ],
   "current": null,
   "queued_next": [
-    "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"
+    "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"
   ],
   "milestones": [
     {
@@ -219,27 +219,27 @@
     },
     {
       "milestone_id": "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1",
-      "state": "NEXT",
-      "narrative_disposition": "OWNER_SELECTED / NOT_STARTED",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "PASS / OPERATIONAL_PROXY_RESEARCH_SEMANTICS_ONLY",
+      "checkpoint": "HEAD",
       "dependencies": ["FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1", "MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1"],
       "unlocks": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
       "authority_effect": "NONE / OPERATIONAL_PROXY_RESEARCH_SEMANTICS_ONLY",
       "owner_authorized": true,
-      "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
+      "source_doc": "docs/STATE.md / operations-review/market-wide-structured-financial-period-semantics-v1-20260831/ (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Only executable next gate. Version market-wide retained provider/API period representations as ANNUAL, STANDALONE_QUARTER, YTD_CUMULATIVE_INTERIM, POINT_IN_TIME_BALANCE_SHEET, or UNKNOWN_DURATION where evidence permits; preserve period_end, source, scope, currency/unit, and observation/retrieval time. No PDF-per-record verification, provider promotion, fact authority promotion, or milestone execution is performed by this rebaseline."
+      "notes": "Complete retained-only semantics projection: 195,552 facts / 1,492 tickers / zero silent drops. Semantic distribution: 86,912 POINT_IN_TIME_BALANCE_SHEET, 68,575 STANDALONE_QUARTER, 497 YTD_CUMULATIVE_INTERIM, 39,568 UNKNOWN_DURATION, 0 ANNUAL. Preserves 94,252 incomplete-lineage and 12,481 conflict records; no provider/official fact, feature, valuation, recommendation, PIT, or raw-as-traded authority changed."
     },
     {
       "milestone_id": "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1",
-      "state": "DEFERRED",
-      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "state": "NEXT",
+      "narrative_disposition": "DEPENDENCY_LINKED_NEXT / NOT_STARTED",
       "checkpoint": null,
       "dependencies": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
       "unlocks": ["CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1"],
       "authority_effect": "NONE / RESEARCH_ONLY",
-      "owner_authorized": false,
+      "owner_authorized": true,
       "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
       "state_history": [],
       "owner_override": null,

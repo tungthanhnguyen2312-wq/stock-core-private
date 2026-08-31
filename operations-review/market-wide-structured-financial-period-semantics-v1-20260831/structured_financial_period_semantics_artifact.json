@@ -1,0 +1,197 @@
+{
+  "artifact_identity": "market_wide_structured_financial_period_semantics/v1:b8fd01da9d485f3528d97f9d711425ba7ede3e37e65fcbc0597ce971877111fd",
+  "artifact_sha256": "b8fd01da9d485f3528d97f9d711425ba7ede3e37e65fcbc0597ce971877111fd",
+  "artifact_type": "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS",
+  "authority_boundary": {
+    "authoritative_namespace_overwritten": false,
+    "official_or_owner_promotion": false,
+    "pit_or_raw_as_traded_promoted": false,
+    "projection_only": true,
+    "recommendation_ranking_valuation_changed": false
+  },
+  "compatibility": {
+    "blocked_or_unresolved_fact_count": 113418,
+    "no_feature_values_calculated": true,
+    "period_margin_compatible_candidate_count": 0,
+    "point_in_time_balance_trajectory_compatible_candidate_count": 19702,
+    "same_period_yoy_compatible_candidate_count": 0
+  },
+  "contract_version": "market_wide_structured_financial_period_semantics/v1",
+  "coverage": {
+    "conflict_preserved_count": 12481,
+    "emitted_fact_count": 195552,
+    "input_fact_count": 195552,
+    "lineage_incomplete_count": 94252,
+    "metric_family_distribution": {
+      "amortization": 10864,
+      "attributable_net_income": 10864,
+      "capital_expenditure": 10864,
+      "cash_and_cash_equivalents": 10864,
+      "depreciation": 10864,
+      "depreciation_and_amortization": 10864,
+      "interest_expense": 10864,
+      "long_term_interest_bearing_debt": 10864,
+      "net_income": 10864,
+      "operating_cash_flow": 10864,
+      "profit_before_tax": 10864,
+      "retained_earnings": 10864,
+      "revenue": 10864,
+      "shareholders_equity": 10864,
+      "shares_outstanding": 10864,
+      "short_term_interest_bearing_debt": 10864,
+      "total_assets": 10864,
+      "total_interest_bearing_debt": 10864
+    },
+    "missing_currency_count": 195550,
+    "missing_metadata_distribution": {
+      "scope": 126702,
+      "timestamp": 94252,
+      "unit": 195550
+    },
+    "missing_scale_count": 195550,
+    "provider_distribution": {
+      "KBS": 27395,
+      "None": 94252,
+      "VCI": 73905
+    },
+    "provider_ticker_distribution": {
+      "KBS": 1407,
+      "None": 1492,
+      "VCI": 1382
+    },
+    "scope_distribution": {
+      "consolidated": 68850,
+      "unknown": 126702
+    },
+    "semantic_state_distribution": {
+      "POINT_IN_TIME_BALANCE_SHEET": 86912,
+      "STANDALONE_QUARTER": 68575,
+      "UNKNOWN_DURATION": 39568,
+      "YTD_CUMULATIVE_INTERIM": 497
+    },
+    "statement_type_distribution": {
+      "balance_sheet": 86912,
+      "cash_flow": 56748,
+      "income_statement": 51892
+    },
+    "ticker_count": 1492,
+    "unresolved_duration_count": 39568,
+    "zero_silent_drops": true
+  },
+  "facts_payload": {
+    "canonical_jsonl_sha256": "6f2e59b022c536ac8b3d42f7a7a077236347968b8ff1e06018b5360616c395f3",
+    "path": "structured_financial_period_semantics_facts.jsonl.gz",
+    "record_count": 195552
+  },
+  "input_artifact_identities": {
+    "canonical_contract_versions": {
+      "market-wide-financial-normalization/1.0.0": 195552
+    },
+    "canonical_fact_id_sequence_sha256": "27d1047e10562e752bd62c20bb5b6e6bb9f2342fbd5e40f6abb2a7de115ed3c9"
+  },
+  "provider_schema_rules_actually_used": [
+    {
+      "evidence": "retained_period_end",
+      "method": "balance_sheet_period_end/v1"
+    },
+    {
+      "evidence": "quarter_label_or_dates_not_sufficient",
+      "method": "duration_evidence_unavailable/v1"
+    },
+    {
+      "evidence": "provider_endpoint_period_contract",
+      "method": "kbs_income_statement_quarter_contract/v1"
+    },
+    {
+      "evidence": "cumulative_state_period_only_with_retained_bounds",
+      "method": "retained_cash_flow_cumulative_state_resolver/v1"
+    },
+    {
+      "evidence": "cumulative_state_ytd",
+      "method": "retained_cash_flow_cumulative_state_resolver/v1"
+    }
+  ],
+  "representative_stock_flow_examples": [
+    {
+      "blocker_reason_codes": [
+        "FINANCIAL_REVIEW_LINEAGE_INCOMPLETE",
+        "SOURCE_STATUS_UNAVAILABLE"
+      ],
+      "canonical_metric": "amortization",
+      "metric_nature": "FLOW_DURATION",
+      "period_end": "2024-06-30",
+      "period_semantic_method": "retained_cash_flow_cumulative_state_resolver/v1",
+      "period_semantic_state": "STANDALONE_QUARTER",
+      "statement_family": "cash_flow",
+      "ticker": "AAA"
+    },
+    {
+      "blocker_reason_codes": [
+        "FINANCIAL_REVIEW_LINEAGE_INCOMPLETE",
+        "SOURCE_STATUS_UNAVAILABLE"
+      ],
+      "canonical_metric": "amortization",
+      "metric_nature": "FLOW_DURATION",
+      "period_end": "2019-06-30",
+      "period_semantic_method": "retained_cash_flow_cumulative_state_resolver/v1",
+      "period_semantic_state": "YTD_CUMULATIVE_INTERIM",
+      "statement_family": "cash_flow",
+      "ticker": "CDG"
+    },
+    {
+      "blocker_reason_codes": [],
+      "canonical_metric": "cash_and_cash_equivalents",
+      "metric_nature": "STOCK_POINT_IN_TIME",
+      "period_end": "2024-06-30",
+      "period_semantic_method": "balance_sheet_period_end/v1",
+      "period_semantic_state": "POINT_IN_TIME_BALANCE_SHEET",
+      "statement_family": "balance_sheet",
+      "ticker": "AAA"
+    },
+    {
+      "blocker_reason_codes": [
+        "FINANCIAL_REVIEW_LINEAGE_INCOMPLETE",
+        "SOURCE_STATUS_UNAVAILABLE",
+        "PERIOD_DURATION_UNRESOLVED"
+      ],
+      "canonical_metric": "attributable_net_income",
+      "metric_nature": "FLOW_DURATION",
+      "period_end": "2024-06-30",
+      "period_semantic_method": "duration_evidence_unavailable/v1",
+      "period_semantic_state": "UNKNOWN_DURATION",
+      "statement_family": "income_statement",
+      "ticker": "AAA"
+    }
+  ],
+  "requested_at": "2026-08-31T00:00:00+07:00",
+  "schema_version": "1.0.0",
+  "semantic_rules": {
+    "date_range_alone_is_duration_evidence": false,
+    "feature_or_valuation_logic_changed": false,
+    "provider_authority_promoted": false,
+    "quarter_label_alone_is_duration_evidence": false,
+    "states": [
+      "ANNUAL",
+      "STANDALONE_QUARTER",
+      "YTD_CUMULATIVE_INTERIM",
+      "POINT_IN_TIME_BALANCE_SHEET",
+      "UNKNOWN_DURATION"
+    ]
+  },
+  "source_contract": {
+    "file_count": 1493,
+    "file_format": "jsonl.gz",
+    "network_used": false,
+    "producer_authority_widened": false,
+    "read_only": true,
+    "source_root_label": "retained_canonical_financial_facts/facts"
+  },
+  "unresolved_blocker_distribution": {
+    "FINANCIAL_REVIEW_LINEAGE_INCOMPLETE": 94252,
+    "PERIOD_DURATION_UNRESOLVED": 39568,
+    "SOURCE_STATUS_CONFLICTED": 12501,
+    "SOURCE_STATUS_NOT_PROVIDER_REPORTED": 2,
+    "SOURCE_STATUS_PARTIAL": 5004,
+    "SOURCE_STATUS_UNAVAILABLE": 84296
+  }
+}
