@@ -559,6 +559,8 @@ synthetic case cohort.
 
 ### Rebaselined Active Gates
 
+**Latest product-convergence milestone (2026-08-31):** `INVESTMENT_DECISION_WORKSPACE_V1 = OUTCOME_A_PRODUCT_CONVERGENCE_COMPLETE`. `investment_decision_workspace_projection.py` (Producer) plus `investment-workspace.html` (Dashboard) join the already-verified `opportunity_context/v1` + `security_decision_context/v1` pair into a seven-section per-ticker decision workspace over the real 1,699-ticker 2026-08-28 denominator; portfolio fit is always separate from and never mutates security research stance. Also fixed, at the source, a real market-cap-only valuation mislabel that had been silently affecting 440/1,699 tickers (25.9%) in `current_research_valuation_context.py::attach_peer_relative` — market cap and EV remain size context only, never a relative-value input. Full detail: `docs/DECISIONS.md` (2026-08-31, "Investment Decision Workspace V1"). This closes the product-convergence chain opened the same day; no next milestone is queued, and PIT/exact-execution-liquidity/backtest/another-architecture-milestone are explicitly not opened by it.
+
 **Latest bounded capability-first operational milestone:** `CAPABILITY_FIRST_EOD_1800_OPERATIONAL_SCHEDULING_V1 = COMPLETE_LOCALLY / SCHEDULER_READY`. A later milestone requires separate owner authorization. It does not promote RAW_AS_TRADED, PIT, liquidity/sizing, valuation, or recommendation authority.
 
 **Latest bounded daily-operation milestone:** `CANONICAL_DAILY_ONE_COMMAND_OPERATIONAL_CUTOVER_V1 = COMPLETE_LOCALLY / DAILY_ONE_COMMAND_READY`. The two-phase gate correction applies here; M1 completion semantics are unchanged. No RAW_AS_TRADED / PIT / liquidity / sizing / valuation / recommendation promotion.

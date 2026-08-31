@@ -450,6 +450,32 @@ def test_compact_projection_omits_full_histories():
     assert set(decision) >= {"ticker", "entry_state", "entry_action", "research_stance", "factual_axes"}
 
 
+def test_market_cap_percentile_alone_cannot_produce_attractive_or_expensive_relative_state():
+    # Five tickers with every true multiple (TTM P/E, TTM P/S, P/E, P/S, P/B, EV/Sales, EV/EBITDA)
+    # blocked, but a clean, cheap-to-expensive market-cap spread. Market cap and EV are size
+    # context, never a relative-value input (docs/DECISIONS.md's own corrective invariant) -- this
+    # must not yield ATTRACTIVE_RELATIVE_RESEARCH / EXPENSIVE_RELATIVE_RESEARCH. Regression for the
+    # live 2026-08-28 finding: 440/1699 real tickers (25.9%) had usable_relative_method_count == 0
+    # yet a market-cap-driven ATTRACTIVE_RELATIVE_RESEARCH label before this fix.
+    market_caps = [1000.0, 5000.0, 5000.0, 9000.0, 20000.0]
+    rows = {}
+    for index, cap in enumerate(market_caps):
+        ticker = f"MCAP{index}"
+        rows[ticker] = evaluate_ticker_valuation(
+            ticker=ticker, feature_record=feature_record(ticker, ttm_ni=None, ttm_rev=None),
+            valuation_record=valuation_record(ticker, market_cap=cap, pe=None, pb=None, ps=None, ev_ebitda=None),
+        )
+        assert rows[ticker]["usable_relative_method_count"] == 0
+    attach_peer_relative(rows)
+    cheapest, priciest = rows["MCAP0"], rows["MCAP4"]
+    assert cheapest["peer_relative"]["market_cap"]["status"] == "READY_RESEARCH_ONLY"
+    assert cheapest["peer_relative"]["market_cap"]["percentile"] <= 0.25
+    assert cheapest["relative_research_state"] not in {"ATTRACTIVE_RELATIVE_RESEARCH", "EXPENSIVE_RELATIVE_RESEARCH"}
+    assert priciest["peer_relative"]["market_cap"]["percentile"] >= 0.75
+    assert priciest["relative_research_state"] not in {"ATTRACTIVE_RELATIVE_RESEARCH", "EXPENSIVE_RELATIVE_RESEARCH"}
+    assert cheapest["relative_research_state"] == "UNAVAILABLE"
+
+
 def test_infer_stance_examples_do_not_default_to_wait():
     def opportunity(entry, profit="PROFITABLE", relative="ATTRACTIVE_RELATIVE_RESEARCH"):
         return {

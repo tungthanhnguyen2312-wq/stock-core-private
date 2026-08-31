@@ -327,9 +327,16 @@ def attach_peer_relative(rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any
                 "minimum_peer_count": MIN_COHORT_MEMBERS,
                 "percentile_formula": "(below + 0.5 * equal) / n",
             }
-        attractive = [item for item in relatives.values() if item.get("status") == "READY_RESEARCH_ONLY" and _numeric(item.get("percentile")) and item["percentile"] <= 0.25]
-        expensive = [item for item in relatives.values() if item.get("status") == "READY_RESEARCH_ONLY" and _numeric(item.get("percentile")) and item["percentile"] >= 0.75]
-        in_line = [item for item in relatives.values() if item.get("status") == "READY_RESEARCH_ONLY"]
+        # Market cap (and EV, if ever added here) is size context, never a relative-value input --
+        # same invariant current_valuation_research_proxy.py enforces via its own RELATIVE_MULTIPLES
+        # allowlist. Without this filter a ticker with zero usable P/E, P/S, P/B, or EV multiples can
+        # still be labelled ATTRACTIVE_RELATIVE_RESEARCH purely from a cheap-looking market-cap
+        # percentile against its peer cohort -- confirmed live on the 2026-08-28 opportunity_context
+        # artifact (440/1699 tickers, 25.9%, had usable_relative_method_count == 0 yet a market-cap-
+        # driven ATTRACTIVE_RELATIVE_RESEARCH label).
+        attractive = [item for method_id, item in relatives.items() if method_id in RELATIVE_METHODS and item.get("status") == "READY_RESEARCH_ONLY" and _numeric(item.get("percentile")) and item["percentile"] <= 0.25]
+        expensive = [item for method_id, item in relatives.items() if method_id in RELATIVE_METHODS and item.get("status") == "READY_RESEARCH_ONLY" and _numeric(item.get("percentile")) and item["percentile"] >= 0.75]
+        in_line = [item for method_id, item in relatives.items() if method_id in RELATIVE_METHODS and item.get("status") == "READY_RESEARCH_ONLY"]
         if attractive:
             relative_state = "ATTRACTIVE_RELATIVE_RESEARCH"
         elif expensive and not attractive:

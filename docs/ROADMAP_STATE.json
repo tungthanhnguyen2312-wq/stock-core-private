@@ -15,9 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": null,
-  "queued_next": [
-    "INVESTMENT_DECISION_WORKSPACE_V1"
-  ],
+  "queued_next": [],
   "milestones": [
     {
       "milestone_id": "MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1",
@@ -331,17 +329,17 @@
     },
     {
       "milestone_id": "INVESTMENT_DECISION_WORKSPACE_V1",
-      "state": "NEXT",
-      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "OUTCOME_A_PRODUCT_CONVERGENCE_COMPLETE",
+      "checkpoint": "HEAD",
       "dependencies": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
       "unlocks": [],
       "authority_effect": "NONE / PRODUCT_WORKSPACE_ONLY",
-      "owner_authorized": false,
-      "source_doc": "Owner product-convergence direction (2026-08-31)",
+      "owner_authorized": true,
+      "source_doc": "docs/DECISIONS.md (2026-08-31, Investment Decision Workspace V1)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Sole NEXT after current valuation/opportunity integration. Combines security_decision_context with portfolio_fit_context. No Dashboard/Consumer implementation until this milestone starts."
+      "notes": "COMPLETE. investment_decision_workspace_projection/v1 (Producer) + Dashboard investment-workspace.html join the already-verified opportunity_context/v1 + security_decision_context/v1 pair into a seven-section per-ticker decision workspace with client-side filters, portfolio-fit-separate-from-security-stance, mixed-session freshness, and a bounded T0 export. Found and fixed a real market-cap-only valuation mislabel at the source (current_research_valuation_context.py::attach_peer_relative): 440/1699 tickers (25.9%) affected before the fix, 0 after, verified on the real regenerated 2026-08-28 artifact. Real denominator 1,699, zero silent drops. Portfolio roundtrip CLI (tools/run_research_liquidity_explicit_portfolio.py --portfolio-input) validated against diversified/concentrated/policy-breach real scenarios. This closes the product-convergence chain the owner opened on 2026-08-31; no next milestone is queued."
     }
   ],
   "blocked_capabilities": [
