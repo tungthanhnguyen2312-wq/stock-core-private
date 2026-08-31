@@ -3168,3 +3168,108 @@ Also missing from DECISIONS.md despite `ROADMAP_STATE.json` recording `COMPLETE`
 7. Boundaries preserved and tested on both sides: no score/rank/probability/target price anywhere (`blocked_outputs`, Producer + Dashboard tests); `entry_state` = Tactical Setup State, `entry_action` = Entry Readiness, research stance = Research Stance, `setup_tags` = secondary tactical evidence (section 13's existing vocabulary, nothing new invented); `PRIORITY_NOW != BUY_NOW` / research stance is not an execution order, stated on-page and asserted by test.
 8. Tests: 21 new/changed Producer tests (1 regression added to `test_current_valuation_opportunity_integration.py`, 20 new in `test_investment_decision_workspace_projection.py`), 4 new Dashboard Python tests, 13 new Dashboard JS tests. Full existing suites re-verified: Dashboard's 200 `node --test` cases across `tests/*.test.js` (2 pre-existing skips, 0 failures) and 108 collectible Dashboard pytest cases (4 pre-existing failures confirmed byte-identical via `git stash` against the clean base -- cross-repo evidence/`publish_dashboard.py` dependencies unrelated to this milestone). Producer's **full** repo suite (5,087 cases, `python -m pytest`, 559s) was also run for extra rigor beyond the directly-affected suites: 4,806 passed, 467 failed, 69 errors, 192 skipped -- none of the 536 problem node IDs are in a file that imports `current_research_valuation_context.py`, `opportunity_context.py`, or `security_decision_context.py` (grep-verified across all 122 affected files), and re-running that exact `--lf` set against the git-stashed clean base reproduced the identical `467 failed, 69 errors` (163s), proving the whole set is pre-existing worktree/runtime-dependency baseline (missing `vn_stock.db`/cross-repo evidence, matching [[feedback_stocklookup_runtime_path_split]]), not a regression from this milestone. `py_compile`, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (`DRIFT CHECK: PASS`) all clean on the Producer side.
 9. Terminal state: `PRODUCT_CONVERGENCE_COMPLETE`. No PIT, exact-execution-liquidity, PDF-verification, backtest, or new architecture milestone is opened by this entry.
+
+## 2026-08-31 - Investment Decision Workspace V1: Decision-Quality Corrective Pass
+
+Bounded, same-milestone correction after a read-only real-corpus decision-quality review of the
+1,699 records found systematic (not edge-case) semantic defects in `security_decision_context.py`
+and `tactical_confirmation_invalidation_boundaries.py`. No architecture, valuation coverage,
+liquidity authority, PIT, or historical-evidence work reopened. `INVESTMENT_DECISION_WORKSPACE_V1`
+stays the product-convergence milestone; this is a correction within it, not a new milestone.
+
+1. **Confirmation semantics** (`security_decision_context.py`): `confirmation_boundary.status ==
+   READY` means the boundary is instrumented (a real baseline value/operator/metric exists) -- it
+   never meant the trigger fired. `BREAKOUT_READY` now requires the existing `_triggered()`
+   actual-trigger-state check (`current_trigger_state == TRIGGERED` or `status == TRIGGERED`,
+   already used elsewhere in this file for downside-invalidation triggers) to promote to
+   `INITIATE_RESEARCH_CANDIDATE`; a merely-instrumented boundary now preserves
+   `WAIT_FOR_CONFIRMATION`. `confirmation_boundary` gained a `confirmation_trigger_state` field
+   exposed as a sibling of the pre-existing `status`, never collapsed into one signal; all existing
+   numeric fields (`value`, `comparison_operator`, `source_metric`, ...) are untouched. New test
+   `test_breakout_ready_merely_instrumented_boundary_cannot_alone_initiate` proves the regression
+   directly; real effect on the 2026-08-28 corpus: 16 tickers (incl. QNS) move
+   `INITIATE_RESEARCH_CANDIDATE -> WAIT_FOR_CONFIRMATION`.
+2. **Fundamental missingness != observed weakness**: `FUNDAMENTAL_EVIDENCE_MISSING_STATES`
+   (axis unusable, or profitability itself indeterminate) is now strictly separate from
+   `FUNDAMENTAL_OBSERVED_WEAK_STATES` (`LOSS_MAKING`/`BREAK_EVEN`) and
+   `FUNDAMENTAL_OBSERVED_DETERIORATION_TRAJECTORY` (`TURNED_TO_LOSS`/`LOSS_WIDENED`). Constructive
+   tactical + fundamental merely unavailable now returns `INSUFFICIENT_EVIDENCE`
+   (`CONSTRUCTIVE_TACTICAL_WITH_FUNDAMENTAL_EVIDENCE_UNAVAILABLE`), never
+   `HIGH_RISK_SPECULATION_ONLY`; constructive tactical + an actually observed weak/loss/
+   deteriorating fundamental read is unchanged (`HIGH_RISK_SPECULATION_ONLY`, regression-tested via
+   AAV and HAP, both real LOSS_MAKING+constructive-tactical tickers that correctly stay HIGH_RISK).
+   Real effect: 17 tickers (incl. CKA, the canonical UPTREND_CONFIRMED + fundamental-UNAVAILABLE
+   case) move `HIGH_RISK_SPECULATION_ONLY -> INSUFFICIENT_EVIDENCE`.
+3. **Tactical missingness != insufficient evidence**: usable fundamental + tactical axis not
+   current now returns `WAIT_FOR_CONFIRMATION` with the existing `TACTICAL_AXIS_NOT_CURRENT` reason
+   (was `INSUFFICIENT_EVIDENCE`) -- research monitoring, not an invented entry signal. Real effect:
+   586 tickers (incl. ABR, the review's own named example) move
+   `INSUFFICIENT_EVIDENCE -> WAIT_FOR_CONFIRMATION`.
+4. **Deterministic multi-axis WHY / counter-thesis / counterbalancing context**: new
+   `_axis_evidence_tags()` reuses only fields already computed on the `opportunity_context` record
+   (fundamental state/trajectory, valuation relative-research state and earnings-state, tactical
+   `setup_tags` intersected with the existing `TECHNICAL_DETERIORATION`/
+   `PRICE_VOLUME_DISTRIBUTION_RISK` vocabulary from `tactical_setup_tags.py`, catalyst status,
+   market breadth regime, sector leadership state) and splits them into `constructive`/`adverse`.
+   No score, rank, or LLM prose. For `INITIATE`/`ACCUMULATE`, constructive tags extend
+   `deterministic_reasons` (e.g. `ATTRACTIVE_RELATIVE_RESEARCH` now appears in QNS's WHY) and
+   adverse tags extend `key_counter_thesis` (e.g. `EXPENSIVE_RELATIVE_RESEARCH` no longer silently
+   omitted for PVD/VNM, both real UPTREND_CONFIRMED+ACCUMULATE+expensive tickers that previously
+   rendered an empty counter-thesis). For `WAIT_FOR_CONFIRMATION`/`INSUFFICIENT_EVIDENCE`, both
+   constructive and adverse tags extend `deterministic_reasons` (ABC, a real LOSS_MAKING
+   SELLING_PRESSURE_EASING ticker, now carries `LOSS_MAKING`/`TURNAROUND_CONTEXT` in both WHY and
+   counter-thesis). For `AVOID_NEW_ENTRY`/`HIGH_RISK_SPECULATION_ONLY`, constructive tags go into a
+   new `counterbalancing_context` field instead, never diluting the tactical-veto reason itself
+   (AAS/ALC/NVL/PAN -- all real DOWNTREND-or-BREAKDOWN_RISK + profitable, sometimes also attractive,
+   tickers -- now carry `PROFITABLE_FUNDAMENTAL`/`ATTRACTIVE_RELATIVE_RESEARCH` as counterbalancing
+   context while `deterministic_reasons` stays the clean, unstated `ADVERSE_TACTICAL_ENTRY_STATE`).
+   `key_counter_thesis` still starts from the pre-existing `downside_invalidation.thesis_conflict`
+   evidence (thesis-case cohort, e.g. ASM's/AAH's `BOTTOM_QUARTILE_COMPARABLE_QUALITY` evidence) --
+   nothing removed, only extended.
+5. **Boundary text/value consistency** (`tactical_confirmation_invalidation_boundaries.py`): three
+   boundaries named by the review carried a broad disjunctive classifier sentence on a single
+   instrumented numeric trigger -- `BREAKOUT_READY` invalidation (said "MA20 or momentum", tested
+   only resistance-level or MA20-fallback), `BASE_BUILDING` invalidation (said "volume, momentum,
+   or support", tested only support-level or MA20-fallback), `SELLING_PRESSURE_EASING` confirmation
+   (said "momentum or MA20 reclaim", tested only MA20 reclaim). Text corrected to name only the
+   metric actually instrumented in each status; `_level_boundary()` gained an explicit
+   `fallback_reason` parameter so the MA20-fallback path gets its own accurate text instead of a
+   suffixed level-based sentence. No numeric boundary (value/operator/baseline) changed anywhere;
+   4 new regression tests assert the corrected text and its absence of the wrong metric name.
+6. **Stance-reconsideration watch vs. thesis invalidation**: `AVOID_NEW_ENTRY` has no long thesis
+   for its technical-invalidation boundary to invalidate. `technical_invalidation` gained a
+   `semantic` field (`STANCE_RECONSIDERATION_WATCH` when `research_stance == AVOID_NEW_ENTRY`, else
+   the pre-existing `THESIS_INVALIDATION`), exposed alongside the unchanged `status`/boundary
+   fields, for the Dashboard to relabel "what would improve/reconsider this stance" instead of a
+   thesis-invalidation trigger. Verified on real AAH/AAS/ALC/NVL/PAN (all AVOID_NEW_ENTRY).
+7. Preserved verbatim and re-verified: exact execution-capacity and PIT still never force WAIT;
+   missing valuation still never forces WAIT; market cap is still never valuation cheapness; zero
+   scores/ranks/probabilities/targets; security stance still separate from portfolio fit; adverse
+   tactical states (`DOWNTREND`/`BREAKDOWN_RISK`/`DISTRIBUTION_RISK`) are still an unconditional
+   new-entry veto regardless of fundamental/valuation quality (`ADVERSE` branch itself untouched);
+   raw `entry_state`/`entry_action` untouched.
+8. Real before/after on the same retained 2026-08-28 evidence (regenerated via
+   `tools/run_current_valuation_opportunity_integration.py` then
+   `tools/run_investment_decision_workspace_projection.py`; `opportunity_context` identity
+   unchanged -- `502ecce1...` -- confirming zero upstream recomputation):
+   `research_stance_distribution` ACCUMULATE 183->183, AVOID_NEW_ENTRY 344->344, HIGH_RISK
+   47->30, INITIATE 68->52, INSUFFICIENT_EVIDENCE 757->188, WAIT_FOR_CONFIRMATION 300->902 (denominator
+   1,699 both times, zero silent drops). All 18 representative real tickers named by the review
+   (QNS, PVD, VNM, ASM, AAA, A32, POW, ABC, AFX, AAV, HAP, CKA, AAH, AAS, ALC, NVL, PAN, ABR)
+   individually re-verified against the regenerated artifact and match the corrected semantics
+   exactly (see session transcript / regenerated `operations-review/current-valuation-and-
+   opportunity-integration-v1-20260831/` and `investment-decision-workspace-v1-20260831/`).
+9. Tests: 3 new focused tests in `test_current_valuation_opportunity_integration.py`'s
+   `infer_research_stance` suite plus 9 more covering the corrected routing/WHY/counter-thesis/
+   counterbalancing semantics; 12 new tests in new `tests/test_security_decision_context.py`
+   (confirmation trigger-state exposure, semantic labeling, full-record counterbalancing/counter-
+   thesis composition); 5 new tests in `test_tactical_confirmation_invalidation_boundaries.py`
+   (boundary text/metric consistency). 76 total directly-affected tests green. Full repo suite
+   re-run for extra rigor: 467 failed / 69 errors, byte-identical in count and file set to the
+   pre-existing baseline this same milestone entry already documented above (point 8) --
+   independently reproduced with `git stash` isolating this pass's 5 changed files from a sampled
+   14-file/170-case subset (87 failed both with and without this pass's changes) -- zero new
+   failures. `py_compile`, `git diff --check`, `tools/stocklookup_roadmap.py --check`
+   (`DRIFT CHECK: PASS`) all clean.
+10. Terminal state unchanged: `PRODUCT_CONVERGENCE_COMPLETE`. No new milestone opened; no PIT,
+    exact-execution-liquidity, valuation-coverage, or architecture work reopened.

@@ -98,14 +98,17 @@ def _momentum_boundary(*, boundary_type: str, direction: str, operator: str, ctx
                      baseline_period_session=ctx["session"], as_of=ctx["session"], method=METHOD, lineage=ctx["lineage"], reason=reason)
 
 
-def _level_boundary(*, boundary_type: str, direction: str, operator: str, level_name: str, ctx: Mapping[str, Any], reason: str) -> dict[str, Any]:
+def _level_boundary(*, boundary_type: str, direction: str, operator: str, level_name: str, ctx: Mapping[str, Any], reason: str,
+                    fallback_reason: str | None = None) -> dict[str, Any]:
     level = ctx.get(level_name)
     if not isinstance(level, (int, float)):
         # No qualified structural level for this ticker/session; fall back to the MA20 anchor rather
-        # than fabricating a level, matching this module's own no-fabrication invariant.
+        # than fabricating a level, matching this module's own no-fabrication invariant. The displayed
+        # text must name the metric this fallback actually tests (MA20), never the unavailable level --
+        # so a dedicated fallback_reason is required rather than reusing the level-based reason string.
         return _ma_boundary(boundary_type=boundary_type, direction=direction,
                             operator="FUTURE_CLOSE_GT_FUTURE_MA20" if "GT" in operator else "FUTURE_CLOSE_LT_FUTURE_MA20",
-                            ctx=ctx, reason=reason + " (structural level unavailable; MA20 fallback anchor.)")
+                            ctx=ctx, reason=(fallback_reason or reason) + " (structural level unavailable; MA20 fallback anchor.)")
     return _boundary(status="READY", boundary_type=boundary_type, direction=direction, value=level, unit="ADJUSTED_RETROSPECTIVE_PRICE",
                      comparison_operator=operator, source_rule=ctx["rule_id"], source_metric=level_name, baseline_value=level,
                      baseline_period_session=ctx["session"], as_of=ctx["session"], method="technical_structure_context/v1",
@@ -130,7 +133,8 @@ def _boundaries_for_state(ctx: Mapping[str, Any]) -> tuple[dict[str, Any], dict[
             reason="Next session extends the move on continued above-median relative volume.")
         invalidation = _level_boundary(boundary_type="BREAKOUT_LEVEL_FAILURE", direction="BELOW_TO_INVALIDATE",
             operator="FUTURE_CLOSE_LT_RESISTANCE_LEVEL", level_name="resistance", ctx=ctx,
-            reason="A session close back below the 20-day moving average, or 20-day momentum turning negative, invalidates the breakout-ready classification.")
+            reason="A session close back below the breakout's resistance level invalidates the breakout-ready classification.",
+            fallback_reason="A session close back below the 20-day moving average invalidates the breakout-ready classification.")
         return confirmation, invalidation
 
     if state == "UPTREND_CONFIRMED":
@@ -154,12 +158,13 @@ def _boundaries_for_state(ctx: Mapping[str, Any]) -> tuple[dict[str, Any], dict[
             lineage=ctx["lineage"], warnings=["DISJUNCTIVE_CONFIRMATION_NOT_A_SINGLE_FIXED_BOUNDARY"],
             reason="A 20-day momentum flip to positive, a provider-relative-volume-backed move back above the 20-day moving average, or a close above the base's own resistance level would confirm the base is resolving higher.")
         invalidation = _level_boundary(boundary_type="BASE_FAILURE", direction="BELOW_TO_INVALIDATE", operator="FUTURE_CLOSE_LT_SUPPORT_LEVEL", level_name="support", ctx=ctx,
-            reason="A provider-relative-volume-confirmed down session, or 20-day momentum dropping into the bottom same-session market quartile, or a close below the base's own support level invalidates the base.")
+            reason="A close below the base's own support level invalidates the base.",
+            fallback_reason="A session close back below the 20-day moving average invalidates the base.")
         return confirmation, invalidation
 
     if state == "SELLING_PRESSURE_EASING":
         confirmation = _ma_boundary(boundary_type="EASING_TO_REVERSAL_UPGRADE", direction="ABOVE_TO_CONFIRM", operator="FUTURE_CLOSE_GT_FUTURE_MA20", ctx=ctx,
-            reason="20-day momentum turning positive, or price reclaiming the 20-day moving average, would upgrade this to an early reversal candidate.")
+            reason="Price reclaiming the 20-day moving average would upgrade this to an early reversal candidate.")
         invalidation = _boundary(status="CONDITIONAL", boundary_type="RENEWED_BREAKDOWN_RISK", direction="STATE_TRANSITION",
             source_rule=ctx["rule_id"], source_metric="momentum_bucket_and_relative_volume", as_of=ctx["session"], method=METHOD,
             lineage=ctx["lineage"], warnings=["MULTI_SIGNAL_RULE_NOT_REDUCED_TO_A_SINGLE_THRESHOLD"],

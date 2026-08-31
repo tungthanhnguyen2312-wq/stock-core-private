@@ -491,3 +491,90 @@ def test_infer_stance_examples_do_not_default_to_wait():
     assert infer_research_stance(opportunity("DOWNTREND"))["research_stance"] == "AVOID_NEW_ENTRY"
     assert infer_research_stance(opportunity("EARLY_REVERSAL_CANDIDATE", profit="LOSS_MAKING"))["research_stance"] == "HIGH_RISK_SPECULATION_ONLY"
     assert infer_research_stance(opportunity("BASE_BUILDING"))["research_stance"] == "ACCUMULATE_RESEARCH_CANDIDATE"
+
+
+# ---------------------------------------------------------------------------
+# Decision-quality corrective pass (INVESTMENT_DECISION_WORKSPACE_V1 bounded correction):
+# confirmation semantics, fundamental/tactical missingness handling.
+# ---------------------------------------------------------------------------
+
+def _stance_input(entry, *, profit="PROFITABLE", relative="ATTRACTIVE_RELATIVE_RESEARCH", confirmation=None,
+                  tac_usable=True, fund_usable=True, setup_tags=None):
+    return {
+        "ticker": "X", "as_of_session": DECISION,
+        "fundamental": {"research_usable": fund_usable, "state": profit, "trajectory": "PROFIT_GROWTH", "readiness": "READY_RESEARCH_PROXY"},
+        "tactical": {"research_usable": tac_usable, "primary_entry_state": entry, "entry_action": None,
+                     "confirmation": confirmation or {}, "invalidation": {"status": "READY"}, "setup_tags": list(setup_tags or [])},
+        "valuation": {"peer_relative_context": {"relative_research_state": relative}, "share_basis": CURRENT_SHARE_RESEARCH_PROXY},
+        "liquidity": {"readiness": "LIQUIDITY_RESEARCH_PROXY", "exact_execution_capacity_status": "EXECUTION_CAPACITY_EXACT_BLOCKED"},
+        "downside_invalidation": {"technical": {"status": "READY"}, "fundamental": {"status": "CONDITIONAL"}, "thesis_conflict": []},
+    }
+
+
+def test_breakout_ready_merely_instrumented_boundary_cannot_alone_initiate():
+    # status == READY only means the boundary is instrumented (a real baseline value/operator
+    # exists); it is not evidence the trigger fired. A merely-instrumented boundary must preserve
+    # the existing WAIT_FOR_CONFIRMATION path, never promote straight to INITIATE.
+    result = infer_research_stance(_stance_input("BREAKOUT_READY", confirmation={"status": "READY"}))
+    assert result["research_stance"] == "WAIT_FOR_CONFIRMATION"
+    assert "BREAKOUT_READY_AWAITING_CONFIRMATION" in result["reasons"]
+
+
+def test_breakout_ready_actual_trigger_state_promotes_to_initiate():
+    result = infer_research_stance(_stance_input("BREAKOUT_READY", confirmation={"status": "READY", "current_trigger_state": "TRIGGERED"}))
+    assert result["research_stance"] == "INITIATE_RESEARCH_CANDIDATE"
+    result2 = infer_research_stance(_stance_input("BREAKOUT_READY", confirmation={"status": "TRIGGERED"}))
+    assert result2["research_stance"] == "INITIATE_RESEARCH_CANDIDATE"
+
+
+def test_breakout_ready_conditional_or_unavailable_boundary_also_waits():
+    for status in ("CONDITIONAL", "UNAVAILABLE"):
+        result = infer_research_stance(_stance_input("BREAKOUT_READY", confirmation={"status": status}))
+        assert result["research_stance"] == "WAIT_FOR_CONFIRMATION"
+
+
+def test_constructive_tactical_with_fundamental_missing_is_insufficient_not_high_risk():
+    # Missing/unusable fundamental evidence is not an observed weak fundamental.
+    result = infer_research_stance(_stance_input("BASE_BUILDING", fund_usable=False))
+    assert result["research_stance"] == "INSUFFICIENT_EVIDENCE"
+    assert result["research_stance"] != "HIGH_RISK_SPECULATION_ONLY"
+
+
+def test_constructive_tactical_with_observed_weak_fundamental_stays_high_risk():
+    # Regression guard: an actually-observed loss-making fundamental combined with constructive
+    # tactical evidence must still be reserved for HIGH_RISK_SPECULATION_ONLY.
+    result = infer_research_stance(_stance_input("BASE_BUILDING", profit="LOSS_MAKING"))
+    assert result["research_stance"] == "HIGH_RISK_SPECULATION_ONLY"
+
+
+def test_tactical_not_current_with_usable_fundamental_waits_not_insufficient():
+    result = infer_research_stance(_stance_input(None, tac_usable=False, fund_usable=True))
+    assert result["research_stance"] == "WAIT_FOR_CONFIRMATION"
+    assert "TACTICAL_AXIS_NOT_CURRENT" in result["reasons"]
+
+
+def test_expensive_relative_research_not_silently_omitted_from_counter_thesis():
+    # ACCUMULATE via BASE_BUILDING + usable fundamental, but valuation is expensive: the conflict
+    # must survive into key_counter_thesis, not disappear.
+    result = infer_research_stance(_stance_input("BASE_BUILDING", relative="EXPENSIVE_RELATIVE_RESEARCH"))
+    assert result["research_stance"] == "ACCUMULATE_RESEARCH_CANDIDATE"
+    assert "EXPENSIVE_RELATIVE_RESEARCH" in result["counter_thesis"]
+
+
+def test_attractive_relative_research_surfaces_in_why_when_constructive():
+    result = infer_research_stance(_stance_input("BASE_BUILDING", relative="ATTRACTIVE_RELATIVE_RESEARCH"))
+    assert "ATTRACTIVE_RELATIVE_RESEARCH" in result["reasons"]
+
+
+def test_avoid_new_entry_shows_positive_fundamental_as_counterbalancing_not_as_veto_reason():
+    result = infer_research_stance(_stance_input("DOWNTREND", profit="PROFITABLE"))
+    assert result["research_stance"] == "AVOID_NEW_ENTRY"
+    assert "PROFITABLE_FUNDAMENTAL" in result["counterbalancing_context"]
+    assert "PROFITABLE_FUNDAMENTAL" not in result["reasons"]
+
+
+def test_wait_for_confirmation_with_loss_making_fundamental_carries_weakness_in_why_and_counter_thesis():
+    result = infer_research_stance(_stance_input("SIDEWAYS_NEUTRAL", profit="LOSS_MAKING"))
+    assert result["research_stance"] == "WAIT_FOR_CONFIRMATION"
+    assert "LOSS_MAKING" in result["reasons"]
+    assert "LOSS_MAKING" in result["counter_thesis"]

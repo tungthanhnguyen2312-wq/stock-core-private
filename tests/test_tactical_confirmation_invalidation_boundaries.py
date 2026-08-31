@@ -129,6 +129,48 @@ class BoundaryTests(unittest.TestCase):
     def test_deterministic_identity(self) -> None:
         self.assertEqual(_build(with_structure=True)["artifact_sha256"], _build(with_structure=True)["artifact_sha256"])
 
+    # -----------------------------------------------------------------------
+    # Decision-quality corrective pass: displayed boundary text must name only the metric
+    # actually instrumented (value/operator/source_metric), never a broader disjunctive sentence
+    # pulled from the classifier's own multi-signal narrative.
+    # -----------------------------------------------------------------------
+
+    def test_breakout_ready_invalidation_text_names_resistance_not_momentum_when_level_available(self) -> None:
+        record = _build(with_structure=True)["records"]["T_BREAKOUT_READY"]
+        invalidation = record["technical_invalidation_boundary"]
+        self.assertEqual(invalidation["source_metric"], "resistance")
+        self.assertIn("resistance", invalidation["reason"])
+        self.assertNotIn("momentum", invalidation["reason"])
+
+    def test_breakout_ready_invalidation_text_names_ma20_only_when_level_unavailable(self) -> None:
+        record = _build(with_structure=False)["records"]["T_BREAKOUT_READY"]
+        invalidation = record["technical_invalidation_boundary"]
+        self.assertIn("moving average", invalidation["reason"])
+        self.assertNotIn("momentum", invalidation["reason"])
+        self.assertNotIn("resistance", invalidation["reason"])
+
+    def test_base_building_invalidation_text_names_support_only_when_level_available(self) -> None:
+        record = _build(with_structure=True)["records"]["T_BASE_BUILDING"]
+        invalidation = record["technical_invalidation_boundary"]
+        if invalidation["status"] != "READY" or invalidation.get("source_metric") != "support":
+            self.skipTest("no qualified support level for this ticker/session in the fixture")
+        self.assertIn("support", invalidation["reason"])
+        self.assertNotIn("momentum", invalidation["reason"])
+        self.assertNotIn("relative-volume", invalidation["reason"])
+
+    def test_base_building_invalidation_text_names_ma20_only_when_level_unavailable(self) -> None:
+        record = _build(with_structure=False)["records"]["T_BASE_BUILDING"]
+        invalidation = record["technical_invalidation_boundary"]
+        self.assertIn("moving average", invalidation["reason"])
+        self.assertNotIn("momentum", invalidation["reason"])
+        self.assertNotIn("relative-volume", invalidation["reason"])
+
+    def test_selling_pressure_easing_confirmation_text_names_ma20_reclaim_only(self) -> None:
+        record = _build(with_structure=False)["records"]["T_SELLING_PRESSURE_EASING"]
+        confirmation = record["confirmation_boundary"]
+        self.assertIn("moving average", confirmation["reason"])
+        self.assertNotIn("momentum", confirmation["reason"])
+
     def test_requested_at_excluded_from_identity(self) -> None:
         tactical_records = {"T_BREAKOUT_READY": {"entry_state": "BREAKOUT_READY", "rule_id": "R2"}}
         descriptive = _descriptive_source(list(tactical_records))

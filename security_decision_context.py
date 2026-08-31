@@ -20,7 +20,21 @@ AVOID_NEW_ENTRY = "AVOID_NEW_ENTRY"
 INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
 CONSTRUCTIVE = frozenset({"BREAKOUT_READY", "EARLY_REVERSAL_CANDIDATE", "UPTREND_CONFIRMED", "BASE_BUILDING"})
 ADVERSE = frozenset({"DOWNTREND", "BREAKDOWN_RISK", "DISTRIBUTION_RISK"})
-WEAK_FUNDAMENTAL = frozenset({"LOSS_MAKING", "BREAK_EVEN", "INSUFFICIENT_DATA", "UNAVAILABLE"})
+# Missing/unusable fundamental evidence (axis not usable, or the specific profitability read is
+# itself indeterminate) is NOT an observed negative signal. It must never be conflated with a
+# genuinely observed weak/loss reading when choosing between HIGH_RISK and INSUFFICIENT_EVIDENCE.
+FUNDAMENTAL_EVIDENCE_MISSING_STATES = frozenset({"INSUFFICIENT_DATA", "UNAVAILABLE"})
+FUNDAMENTAL_OBSERVED_WEAK_STATES = frozenset({"LOSS_MAKING", "BREAK_EVEN"})
+FUNDAMENTAL_OBSERVED_DETERIORATION_TRAJECTORY = frozenset({"TURNED_TO_LOSS", "LOSS_WIDENED"})
+_BREADTH_CONSTRUCTIVE = frozenset({"BROAD_PARTICIPATION"})
+_BREADTH_ADVERSE = frozenset({"DETERIORATING_BREADTH"})
+_SECTOR_LEADERSHIP_CONSTRUCTIVE = frozenset({"LEADING"})
+_SECTOR_LEADERSHIP_ADVERSE = frozenset({"WEAKENING"})
+_SETUP_TAGS_ADVERSE = frozenset({"TECHNICAL_DETERIORATION", "PRICE_VOLUME_DISTRIBUTION_RISK"})
+# A stance with no long thesis (AVOID_NEW_ENTRY) has nothing bullish for its technical boundary to
+# invalidate -- that boundary is honestly a reconsideration watch, not a thesis invalidation.
+STANCE_RECONSIDERATION_WATCH = "STANCE_RECONSIDERATION_WATCH"
+THESIS_INVALIDATION = "THESIS_INVALIDATION"
 
 
 def _triggered(boundary: Mapping[str, Any] | None) -> bool:
@@ -29,7 +43,74 @@ def _triggered(boundary: Mapping[str, Any] | None) -> bool:
     return boundary.get("current_trigger_state") == "TRIGGERED" or boundary.get("status") == "TRIGGERED"
 
 
-def infer_research_stance(opportunity: Mapping[str, Any]) -> dict[str, Any]:
+def _trigger_state(boundary: Mapping[str, Any] | None) -> str:
+    """Actual confirmation trigger state, kept distinct from the boundary's own ``status``.
+
+    ``status == READY`` only means a single clean numeric trigger has been instrumented (a real
+    baseline value/operator/metric) -- it is never itself evidence that the trigger has fired.
+    """
+    if not isinstance(boundary, Mapping):
+        return "NOT_AVAILABLE"
+    if _triggered(boundary):
+        return "TRIGGERED"
+    if boundary.get("current_trigger_state") is not None:
+        return str(boundary["current_trigger_state"])
+    return "NOT_AVAILABLE"
+
+
+def _axis_evidence_tags(opportunity: Mapping[str, Any]) -> dict[str, list[str]]:
+    """Deterministic evidence tags already present on the record, split by whether each
+    materially supports (``constructive``) or conflicts with (``adverse``) a constructive
+    research stance. Reuses existing governed vocabulary verbatim; computes nothing new."""
+    fundamental = opportunity.get("fundamental") or {}
+    tactical = opportunity.get("tactical") or {}
+    valuation = opportunity.get("valuation") or {}
+    market = opportunity.get("market_sector") or {}
+    catalyst = opportunity.get("catalyst") or {}
+    constructive: list[str] = []
+    adverse: list[str] = []
+
+    fund_usable = bool(fundamental.get("research_usable"))
+    profit_state = fundamental.get("state") if fund_usable else None
+    if profit_state == "PROFITABLE":
+        constructive.append("PROFITABLE_FUNDAMENTAL")
+    elif profit_state in FUNDAMENTAL_OBSERVED_WEAK_STATES:
+        adverse.append(profit_state)
+    trajectory = fundamental.get("trajectory") if fund_usable else None
+    if trajectory in FUNDAMENTAL_OBSERVED_DETERIORATION_TRAJECTORY:
+        adverse.append(trajectory)
+
+    relative = (valuation.get("peer_relative_context") or {}).get("relative_research_state")
+    if relative == "ATTRACTIVE_RELATIVE_RESEARCH":
+        constructive.append("ATTRACTIVE_RELATIVE_RESEARCH")
+    elif relative == "EXPENSIVE_RELATIVE_RESEARCH":
+        adverse.append("EXPENSIVE_RELATIVE_RESEARCH")
+    if valuation.get("earnings_state") == "TURNAROUND_CONTEXT":
+        adverse.append("TURNAROUND_CONTEXT")
+
+    setup_tags = set(tactical.get("setup_tags") or [])
+    for tag in sorted(setup_tags & _SETUP_TAGS_ADVERSE):
+        adverse.append(tag)
+
+    if catalyst.get("status") == "QUALIFIED_CATALYST" or catalyst.get("qualified_current_catalysts"):
+        constructive.append("QUALIFIED_CATALYST_PRESENT")
+
+    breadth = market.get("breadth_regime")
+    if breadth in _BREADTH_CONSTRUCTIVE:
+        constructive.append(f"MARKET_BREADTH_{breadth}")
+    elif breadth in _BREADTH_ADVERSE:
+        adverse.append(f"MARKET_BREADTH_{breadth}")
+
+    leadership = (market.get("sector_relative_context") or {}).get("leadership_state")
+    if leadership in _SECTOR_LEADERSHIP_CONSTRUCTIVE:
+        constructive.append(f"SECTOR_LEADERSHIP_{leadership}")
+    elif leadership in _SECTOR_LEADERSHIP_ADVERSE:
+        adverse.append(f"SECTOR_LEADERSHIP_{leadership}")
+
+    return {"constructive": constructive, "adverse": adverse}
+
+
+def _infer_stance_dict(opportunity: Mapping[str, Any]) -> dict[str, Any]:
     """Deterministic research stance from usable current axes. Liquidity/PIT never force WAIT."""
     fundamental = opportunity.get("fundamental") or {}
     tactical = opportunity.get("tactical") or {}
@@ -51,11 +132,14 @@ def infer_research_stance(opportunity: Mapping[str, Any]) -> dict[str, Any]:
     entry_state = tactical.get("primary_entry_state") if tac_usable else None
     entry_action = tactical.get("entry_action") if tac_usable else None
     confirmation = (tactical.get("confirmation") or {}) if tac_usable else {}
-    relative = (valuation.get("peer_relative_context") or {}).get("relative_research_state")
     profit_state = fundamental.get("state") if fund_usable else None
-    weak_fundamental = (not fund_usable) or profit_state in WEAK_FUNDAMENTAL or fundamental.get("trajectory") in {
-        "TURNED_TO_LOSS", "LOSS_WIDENED",
-    }
+    # Missing (axis unusable, or profitability itself indeterminate) is kept strictly separate
+    # from an observed weak/loss/deteriorating reading -- see the module-level constants' docstring.
+    fundamental_missing = (not fund_usable) or profit_state in FUNDAMENTAL_EVIDENCE_MISSING_STATES
+    fundamental_observed_weak = fund_usable and (
+        profit_state in FUNDAMENTAL_OBSERVED_WEAK_STATES
+        or fundamental.get("trajectory") in FUNDAMENTAL_OBSERVED_DETERIORATION_TRAJECTORY
+    )
 
     technical = downside.get("technical") or {}
     fundamental_inv = downside.get("fundamental") or {}
@@ -71,19 +155,28 @@ def infer_research_stance(opportunity: Mapping[str, Any]) -> dict[str, Any]:
         reasons.append("ADVERSE_TACTICAL_ENTRY_STATE")
         return _stance(AVOID_NEW_ENTRY, reasons, warnings, entry_state, entry_action)
 
-    if entry_state in CONSTRUCTIVE and weak_fundamental:
-        reasons.append("CONSTRUCTIVE_TACTICAL_WITH_WEAK_OR_LOSS_FUNDAMENTAL")
+    if entry_state in CONSTRUCTIVE and fundamental_observed_weak:
+        reasons.append("CONSTRUCTIVE_TACTICAL_WITH_OBSERVED_WEAK_OR_LOSS_FUNDAMENTAL")
         return _stance(HIGH_RISK, reasons, warnings, entry_state, entry_action)
+
+    if entry_state in CONSTRUCTIVE and fundamental_missing:
+        # Constructive tactical evidence with fundamental evidence merely unavailable is not a
+        # speculation signal -- it is an evidence gap. Reserve HIGH_RISK for an actually observed
+        # weak/loss/deteriorating fundamental read (handled above).
+        reasons.append("CONSTRUCTIVE_TACTICAL_WITH_FUNDAMENTAL_EVIDENCE_UNAVAILABLE")
+        return _stance(INSUFFICIENT_EVIDENCE, reasons, warnings, entry_state, entry_action)
 
     if entry_state == "EARLY_REVERSAL_CANDIDATE":
         reasons.append("EARLY_REVERSAL_CANDIDATE")
-        if relative == "ATTRACTIVE_RELATIVE_RESEARCH":
-            reasons.append("ATTRACTIVE_RELATIVE_RESEARCH")
         return _stance(INITIATE, reasons, warnings, entry_state, entry_action)
 
     if entry_state == "BREAKOUT_READY":
-        if confirmation.get("status") == "READY":
-            reasons.append("BREAKOUT_READY_CONFIRMATION_READY")
+        # confirmation["status"] == READY means the boundary is instrumented (a real baseline
+        # value/operator/metric exists) -- it is not evidence the trigger has actually fired.
+        # Only an actual TRIGGERED trigger state may promote to INITIATE; a merely-instrumented
+        # boundary preserves the existing WAIT_FOR_CONFIRMATION path.
+        if _triggered(confirmation):
+            reasons.append("BREAKOUT_READY_CONFIRMATION_TRIGGERED")
             return _stance(INITIATE, reasons, warnings, entry_state, entry_action)
         reasons.append("BREAKOUT_READY_AWAITING_CONFIRMATION")
         return _stance(WAIT_FOR_CONFIRMATION, reasons, warnings, entry_state, entry_action)
@@ -97,11 +190,42 @@ def infer_research_stance(opportunity: Mapping[str, Any]) -> dict[str, Any]:
         return _stance(WAIT_FOR_CONFIRMATION, reasons, warnings, entry_state, entry_action)
 
     if not tac_usable and fund_usable:
+        # Usable fundamental evidence with the tactical axis simply not current is research
+        # monitoring, not INSUFFICIENT_EVIDENCE -- it is not permission to enter either.
         reasons.append("TACTICAL_AXIS_NOT_CURRENT")
-        return _stance(INSUFFICIENT_EVIDENCE, reasons, warnings, None, None)
+        return _stance(WAIT_FOR_CONFIRMATION, reasons, warnings, None, None)
 
     reasons.append("NO_MAPPED_RESEARCH_STANCE")
     return _stance(INSUFFICIENT_EVIDENCE, reasons, warnings, entry_state, entry_action)
+
+
+def infer_research_stance(opportunity: Mapping[str, Any]) -> dict[str, Any]:
+    """Deterministic research stance, upgraded with multi-axis WHY / counter-thesis /
+    counterbalancing-context evidence already present on the record (see
+    ``_axis_evidence_tags``). The stance label itself comes from ``_infer_stance_dict`` alone."""
+    stance = _infer_stance_dict(opportunity)
+    axis_tags = _axis_evidence_tags(opportunity)
+    downside = opportunity.get("downside_invalidation") or {}
+    label = stance["research_stance"]
+
+    counter_thesis = list(downside.get("thesis_conflict") or [])
+    for tag in axis_tags["adverse"]:
+        if tag not in counter_thesis:
+            counter_thesis.append(tag)
+    stance["counter_thesis"] = counter_thesis
+
+    # Positive evidence on an adverse stance is shown as counterbalancing context, distinct from
+    # the tactical-veto reason itself -- it never dilutes or overrides the veto.
+    stance["counterbalancing_context"] = list(axis_tags["constructive"]) if label in {AVOID_NEW_ENTRY, HIGH_RISK} else []
+
+    if label in {WAIT_FOR_CONFIRMATION, INSUFFICIENT_EVIDENCE}:
+        extra = axis_tags["adverse"] + axis_tags["constructive"]
+    elif label in {INITIATE, ACCUMULATE}:
+        extra = axis_tags["constructive"]
+    else:
+        extra = []
+    stance["reasons"] = stance["reasons"] + [tag for tag in extra if tag not in stance["reasons"]]
+    return stance
 
 
 def _stance(label: str, reasons: list[str], warnings: list[str], entry_state: str | None,
@@ -135,6 +259,15 @@ def build_ticker_decision(opportunity: Mapping[str, Any]) -> dict[str, Any]:
     liquidity = opportunity.get("liquidity") or {}
     downside = opportunity.get("downside_invalidation") or {}
     confirmation = tactical.get("confirmation") or {}
+    # Boundary availability/status (the pre-existing "status" field) and the actual trigger state
+    # are exposed as distinct sibling fields -- never collapsed into one signal.
+    confirmation_boundary = {**confirmation, "confirmation_trigger_state": _trigger_state(confirmation)}
+    technical_invalidation = (tactical.get("invalidation") if tactical.get("research_usable") else None) \
+        or downside.get("technical") or {"status": "UNAVAILABLE"}
+    technical_invalidation = {
+        **technical_invalidation,
+        "semantic": STANCE_RECONSIDERATION_WATCH if inference["research_stance"] == AVOID_NEW_ENTRY else THESIS_INVALIDATION,
+    }
     return {
         "ticker": opportunity["ticker"],
         "as_of_session": opportunity["as_of_session"],
@@ -159,17 +292,18 @@ def build_ticker_decision(opportunity: Mapping[str, Any]) -> dict[str, Any]:
             "research_stance": inference["research_stance"],
             "reasons": inference["reasons"],
             "confirmation_status": confirmation.get("status"),
+            "confirmation_trigger_state": confirmation_boundary["confirmation_trigger_state"],
             "relative_valuation": (valuation.get("peer_relative_context") or {}).get("relative_research_state"),
         },
         "warnings_counter_thesis": {
             "warnings": inference["warnings"],
-            "counter_thesis": downside.get("thesis_conflict") or [],
+            "counter_thesis": inference["counter_thesis"],
         },
-        "confirmation_boundary": confirmation,
-        "technical_invalidation": (tactical.get("invalidation") if tactical.get("research_usable") else None)
-            or downside.get("technical") or {"status": "UNAVAILABLE"},
+        "counterbalancing_context": inference["counterbalancing_context"],
+        "confirmation_boundary": confirmation_boundary,
+        "technical_invalidation": technical_invalidation,
         "fundamental_invalidation": downside.get("fundamental") or {"status": "UNAVAILABLE"},
-        "key_counter_thesis": downside.get("thesis_conflict") or [],
+        "key_counter_thesis": inference["counter_thesis"],
         "per_axis_freshness": (opportunity.get("data_authority") or {}).get("per_axis_freshness") or {},
         "authority_boundary": {
             "is_actionable": False, "research_support_not_execution": True,
@@ -190,7 +324,9 @@ def compact_decision(record: Mapping[str, Any]) -> dict[str, Any]:
         "factual_axes": record["factual_axes"],
         "deterministic_research_inference": record["deterministic_research_inference"],
         "warnings": record["warnings_counter_thesis"]["warnings"],
+        "counterbalancing_context": record.get("counterbalancing_context") or [],
         "confirmation_status": (record.get("confirmation_boundary") or {}).get("status"),
+        "confirmation_trigger_state": (record.get("confirmation_boundary") or {}).get("confirmation_trigger_state"),
         "technical_invalidation_status": (record.get("technical_invalidation") or {}).get("status"),
         "fundamental_invalidation_status": (record.get("fundamental_invalidation") or {}).get("status"),
         "counter_thesis_present": bool(record.get("key_counter_thesis")),
