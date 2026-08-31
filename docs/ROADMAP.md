@@ -406,3 +406,7 @@ The next real-data gate is a bounded, rate-safe full supported-universe retained
 ### Current Market Flow / Positioning Scaleout V1 (Terminally Closed)
 
 The scaleout attempt is terminally `COHERENT_PARTIAL_PROVIDER_LIMITED`: retained same-session evidence materially expands traded-value context but does not establish full-universe all-dimension availability. Do not start another arbitrary flow cohort. The next real-data gate, only with owner authorization, is one governed broad full-universe session packet under demonstrated provider rate/session safety; it remains a promotion-review candidate only for any later liquidity-authority program.
+
+### Prospective Decision Outcome Measurement V1 (Complete / Coherent Partial by Evidence)
+
+`PROSPECTIVE_DECISION_OUTCOME_MEASUREMENT_V1` is the owner-authorized post-convergence measurement contract. It evaluates only a validated durable immutable T0 case and later explicit completed-session evidence, with exact T+5/T+20/T+60 session counts, compatible retained close-price basis, close-path-only research proxies, retained T0 confirmation/invalidation boundaries, and descriptive cohorts. It is not a historical backtest and cannot fabricate a T0 case from prior workspace exports or snapshots. The local retained durable store currently has **zero** real non-fixture cases; therefore its terminal disposition is `COHERENT_PARTIAL_BY_EVIDENCE`, not an inferred performance claim. No successor is queued: outcome calibration, threshold retuning, exact execution capacity, and PIT require a new owner decision.

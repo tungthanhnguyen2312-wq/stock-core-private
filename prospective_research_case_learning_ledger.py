@@ -88,7 +88,8 @@ def case_readiness(decision_artifact: Mapping[str, Any], ai_input_collection: Ma
 
 def create_research_case(decision_artifact: Mapping[str, Any], ai_input: Mapping[str, Any], *,
                          created_at: str, known_at: str, validated_draft: Mapping[str, Any] | None = None,
-                         validation: Mapping[str, Any] | None = None, human_review: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                         validation: Mapping[str, Any] | None = None, human_review: Mapping[str, Any] | None = None,
+                         outcome_measurement_t0: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """Freeze a prospective T0 case from already-qualified packet identities."""
     if _time(created_at) != _time(known_at):
         raise ValueError("CASE_CREATED_AT_MUST_EQUAL_KNOWN_AT")
@@ -121,6 +122,12 @@ def create_research_case(decision_artifact: Mapping[str, Any], ai_input: Mapping
         ai_provenance = {"draft_identity": None, "validation_identity": None, "human_review_identity": None,
                          "human_review_state": "HUMAN_REVIEW_REQUIRED", "human_reviewer": None, "human_modifications": []}
     lifecycle = "NEEDS_MORE_EVIDENCE" if ai_input["blocked_dimensions"] else "OPEN"
+    if outcome_measurement_t0 is not None:
+        if not isinstance(outcome_measurement_t0.get("completed_session"), str):
+            raise ValueError("OUTCOME_MEASUREMENT_T0_COMPLETED_SESSION_REQUIRED")
+        close = outcome_measurement_t0.get("close")
+        if close is not None and (not isinstance(close, Mapping) or not close.get("price_basis_identity") or not close.get("source_identity")):
+            raise ValueError("OUTCOME_MEASUREMENT_T0_CLOSE_BASIS_IDENTITY_REQUIRED")
     case = {"schema_version": "1.0.0", "contract_version": METHOD + "/case", "ticker": ticker,
             "created_at": created_at, "known_at": known_at, "as_of": decision_artifact["as_of"],
             "source_decision_workflow_identity": decision_artifact["artifact_identity"], "source_ai_input_identity": ai_input["ai_input_identity"],
@@ -132,6 +139,7 @@ def create_research_case(decision_artifact: Mapping[str, Any], ai_input: Mapping
             "thesis_claim_ids": [claim["claim_id"] for claim in claims if claim.get("section") == "THESIS"],
             "counter_thesis_claim_ids": [claim["claim_id"] for claim in claims if claim.get("section") == "COUNTER_THESIS"],
             "ai_human_provenance": ai_provenance, "lifecycle_state": lifecycle,
+            "outcome_measurement_t0": dict(outcome_measurement_t0) if outcome_measurement_t0 is not None else None,
             "authority_boundary": {"research_snapshot_not_recommendation": True, "no_historical_pit_backfill": True,
                                    "price_movement_is_not_thesis_proof": True, "portfolio_sizing_execution": "NOT_EMITTED"}}
     case["case_id"] = "prospective_research_case:" + _hash(case)

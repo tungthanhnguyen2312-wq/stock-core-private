@@ -9,8 +9,8 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "HEAD",
-  "last_updated_checkpoint": "HEAD",
+  "implementation_lineage_head": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
+  "last_updated_checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
@@ -219,7 +219,7 @@
       "milestone_id": "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1",
       "state": "COMPLETE",
       "narrative_disposition": "PASS / OPERATIONAL_PROXY_RESEARCH_SEMANTICS_ONLY",
-      "checkpoint": "HEAD",
+      "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
       "dependencies": ["FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1", "MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1"],
       "unlocks": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
       "authority_effect": "NONE / OPERATIONAL_PROXY_RESEARCH_SEMANTICS_ONLY",
@@ -233,7 +233,7 @@
       "milestone_id": "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1",
       "state": "COMPLETE",
       "narrative_disposition": "PASS / RESEARCH_COMPATIBILITY_FEATURE_STORE_ACTIVE",
-      "checkpoint": "HEAD",
+      "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
       "dependencies": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
       "unlocks": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
       "authority_effect": "NONE / RESEARCH_ONLY",
@@ -289,7 +289,7 @@
       "milestone_id": "TACTICAL_AND_BEHAVIORAL_ENGINE_V2",
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED",
-      "checkpoint": "HEAD",
+      "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
       "dependencies": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
       "unlocks": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
       "authority_effect": "NONE / RESEARCH_PRODUCT_ONLY",
@@ -317,7 +317,7 @@
       "milestone_id": "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED",
-      "checkpoint": "HEAD",
+      "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
       "dependencies": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
       "unlocks": ["INVESTMENT_DECISION_WORKSPACE_V1"],
       "authority_effect": "NONE / RESEARCH_ONLY",
@@ -331,7 +331,7 @@
       "milestone_id": "INVESTMENT_DECISION_WORKSPACE_V1",
       "state": "COMPLETE",
       "narrative_disposition": "OUTCOME_A_PRODUCT_CONVERGENCE_COMPLETE",
-      "checkpoint": "HEAD",
+      "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
       "dependencies": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
       "unlocks": [],
       "authority_effect": "NONE / PRODUCT_WORKSPACE_ONLY",
@@ -340,6 +340,20 @@
       "state_history": [],
       "owner_override": null,
       "notes": "COMPLETE. investment_decision_workspace_projection/v1 (Producer) + Dashboard investment-workspace.html join the already-verified opportunity_context/v1 + security_decision_context/v1 pair into a seven-section per-ticker decision workspace with client-side filters, portfolio-fit-separate-from-security-stance, mixed-session freshness, and a bounded T0 export. Found and fixed a real market-cap-only valuation mislabel at the source (current_research_valuation_context.py::attach_peer_relative): 440/1699 tickers (25.9%) affected before the fix, 0 after, verified on the real regenerated 2026-08-28 artifact. Real denominator 1,699, zero silent drops. Portfolio roundtrip CLI (tools/run_research_liquidity_explicit_portfolio.py --portfolio-input) validated against diversified/concentrated/policy-breach real scenarios. This closes the product-convergence chain the owner opened on 2026-08-31; no next milestone is queued. SAME-DAY BOUNDED CORRECTIVE PASS (2026-08-31): a read-only real-corpus decision-quality review found systematic stance-semantic defects, fixed in security_decision_context.py + tactical_confirmation_invalidation_boundaries.py -- BREAKOUT_READY now requires an actual trigger state (not merely an instrumented boundary) to INITIATE; missing fundamental evidence routes to INSUFFICIENT_EVIDENCE not HIGH_RISK_SPECULATION_ONLY; tactical-not-current routes to WAIT_FOR_CONFIRMATION not INSUFFICIENT_EVIDENCE; deterministic multi-axis WHY/counter-thesis/counterbalancing-context coverage added; 3 boundary-text/metric mismatches fixed; AVOID_NEW_ENTRY's technical-invalidation boundary relabeled a stance-reconsideration watch. Real 2026-08-28 re-derivation, same 1,699 denominator, zero silent drops, opportunity_context identity unchanged: research_stance_distribution INITIATE 68->52, HIGH_RISK 47->30, INSUFFICIENT_EVIDENCE 757->188, WAIT_FOR_CONFIRMATION 300->902 (ACCUMULATE 183 and AVOID_NEW_ENTRY 344 unchanged). All 18 representative real tickers named by the review individually reverified. Still COMPLETE / OUTCOME_A_PRODUCT_CONVERGENCE_COMPLETE; no new milestone."
+    },
+    {
+      "milestone_id": "PROSPECTIVE_DECISION_OUTCOME_MEASUREMENT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL_BY_EVIDENCE",
+      "checkpoint": "HEAD",
+      "dependencies": ["INVESTMENT_DECISION_WORKSPACE_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / PROSPECTIVE_DESCRIPTIVE_MEASUREMENT_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized post-product-convergence milestone (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "COMPLETE. A deterministic prospective_decision_outcome/v1 evaluator reads only validated durable immutable T0 case envelopes and explicit retained completed-session evidence. It never converts historic snapshots or workspace export candidates into cases. The retained local store contains zero genuine non-fixture cases, so real outcome coverage remains zero; this is the truthful coherent-partial evidence disposition. No next milestone is queued; calibration, retuning, execution capacity, and PIT require a separate owner decision."
     }
   ],
   "blocked_capabilities": [

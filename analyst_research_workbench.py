@@ -231,7 +231,8 @@ class AnalystResearchWorkbench:
         return _with_identity(result, "workbench_human_review_identity", "analyst_human_review:")
 
     def create_case(self, ticker: str, draft: Mapping[str, Any], validation_result: Mapping[str, Any], human_review: Mapping[str, Any], *,
-                    created_at: str, known_at: str, as_of: str | Mapping[str, Any] | None = CURRENT_RETAINED_SNAPSHOT) -> dict[str, Any]:
+                    created_at: str, known_at: str, as_of: str | Mapping[str, Any] | None = CURRENT_RETAINED_SNAPSHOT,
+                    outcome_measurement_t0: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """Create one local immutable case only from a validated reviewed draft."""
         _, packet = self._resolve_ticker_as_of(ticker, as_of)
         expected_validation = validate_external_ai_draft(packet, draft)
@@ -246,7 +247,8 @@ class AnalystResearchWorkbench:
         if human_review.get("review_packet_identity") not in self._human_reviews.get(ticker, {}):
             raise ValueError("CASE_REQUIRES_RECORDED_HUMAN_REVIEW_STATE")
         case = create_research_case(self.decision_artifact, packet, created_at=created_at, known_at=known_at,
-                                    validated_draft=draft, validation=expected_validation, human_review=human_review)
+                                    validated_draft=draft, validation=expected_validation, human_review=human_review,
+                                    outcome_measurement_t0=outcome_measurement_t0)
         if self.case_store is not None:
             self.case_store.persist_case(case, draft, expected_validation, human_review)
         self._cases.setdefault(case["case_id"], case)

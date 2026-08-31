@@ -3280,3 +3280,13 @@ stays the product-convergence milestone; this is a correction within it, not a n
     but never reached the card. Fixed by reading `decision_record.get("counterbalancing_context")`
     into `why.counterbalancing_context`; confirmed live (AAS/NVL/PAN render it) and by a new
     regression test. Display-plumbing only -- no stance or distribution change.
+
+## 2026-08-31 - Prospective Decision Outcome Measurement V1
+
+`PROSPECTIVE_DECISION_OUTCOME_MEASUREMENT_V1 = COMPLETE / COHERENT_PARTIAL_BY_EVIDENCE` (`push = NO`).
+
+1. `prospective_decision_outcome_measurement.py` evaluates only a valid `IMMUTABLE_T0_CASE` durable envelope. A workspace T0 candidate, the old 2026-08-20/21 research snapshots, and test fixtures cannot be promoted or backfilled into a measurement case. The durable creation path can seal an optional `outcome_measurement_t0` block at T0; it is content-addressed as part of the immutable case.
+2. Every outcome consumes explicitly retained `READY` completed sessions. T+5/T+20/T+60 use the fifth, twentieth, and sixtieth later completed session only; insufficient evidence is `PENDING_NOT_ENOUGH_FUTURE_SESSIONS`. Forward return is `future_close / T0_close - 1` only where the same retained price-basis identity is compatible. Close-path favorable/adverse observations are named research proxies; true MFE/MAE remains `UNAVAILABLE_HIGH_LOW_BASIS`.
+3. Confirmation and invalidation evaluate only the retained T0 boundary. Missing T0 boundaries, non-evaluable conditions, and next-compatible-financial-observation waits remain localized. Cohort output is descriptive, always carries N with observed rates, contains no probability-of-success field, and cannot retune any strategy/risk/entry/valuation rule.
+4. Real retained validation found **0** non-fixture durable cases. The older ledger is not a competing T0 case store and cannot supply retroactive case identity. No horizons, event outcomes, price paths, benchmark-relative outcomes, or cohort statistics are therefore mature in the real corpus. This is a truthful evidence limit, not zero-valued return data.
+5. Terminal state is `COHERENT_PARTIAL_BY_EVIDENCE`; no successor is queued. Outcome calibration, tactical retuning, exact execution capacity, and PIT remain separate owner decisions.
