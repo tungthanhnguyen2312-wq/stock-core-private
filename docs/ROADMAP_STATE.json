@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.08.30.2",
+  "roadmap_version": "2026.08.31.3",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,7 +15,9 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": null,
-  "queued_next": [],
+  "queued_next": [
+    "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"
+  ],
   "milestones": [
     {
       "milestone_id": "MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1",
@@ -158,6 +160,132 @@
       "state_history": [],
       "owner_override": null,
       "notes": "COMPLETE. Cherry-picked cefe3d8 (add next_session_decision_brief.py) and d7a1db3 (reconciliation + generic latest-session test fix) from feature/next-session-decision-brief-v1 onto production main; integrated diff scope identical to the original feature diff (6 files, no Dashboard/registry contamination). Real 2026-08-27->2026-08-28 replay rebuilt directly against primary governed evidence exactly reproduced every required comparative figure (market/opportunity/lifecycle/tactical/recommendation/C2). 92/92 focused tests pass; py_compile, git diff --check, roadmap --check all clean. Live stocklookup.ps1 daily published next_session_decision_brief.json to the private AI-handoff repository (producer_checkpoint=5bebfaa, decision_brief identity recorded in LATEST.json, sessions 2026-08-28/2026-08-27); a second Daily returned NO_OP_ALREADY_PUBLISHED with zero new commits, proving idempotence. Both Daily runs' separate Dashboard-release leg failed on a pre-existing, unrelated DASHBOARD_REMOTE_AHEAD_OR_DIVERGED condition (local market-dashboard checkout one commit behind its own origin/main from an unrelated concurrent test-file push) -- confirmed out of this milestone's scope per the objective's own boundary, left untouched. Authority effect remains NONE: derived evidence only, never gating Session Bundle/Dashboard publication."
+    },
+    {
+      "milestone_id": "FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "OUTCOME_A_OPERATIONAL_FINANCIAL_PROXY_RESEARCH_TIER_ACTIVE",
+      "checkpoint": "a46354e81e2e7cede177e8e828f8a39c53e85707",
+      "dependencies": [],
+      "unlocks": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
+      "authority_effect": "NONE / OPERATIONAL_PROXY_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-28, Financial operational proxy foundation and research tier activation V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Completed provider-tier foundation: OPERATIONAL_PROXY, VERIFIED_RESEARCH_EVIDENCE, and AUTHORITATIVE_EVIDENCE remain distinct with purpose-specific fitness. Provider facts are not silently promoted."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "OUTCOME_A_QUARTERLY_FUNDAMENTAL_FEATURES_MATERIAL_COVERAGE",
+      "checkpoint": "4d131298b1f75d3e57fba42821b0cd31664f0dcb",
+      "dependencies": ["FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1"],
+      "unlocks": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
+      "authority_effect": "NONE / RESEARCH_ONLY",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-28, Market-wide quarterly fundamental research features V1)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Completed same-period/EOP proxy research layer. It corrected retained period-depth claims away from annual-history terminology and leaves unresolved duration explicit."
+    },
+    {
+      "milestone_id": "HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / RAW_ROUTE_AUTHORITY_ONLY",
+      "checkpoint": "a0fcf8957c6e2d1bb541b93c136ce65b6d4223a2",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "RAW_DOCUMENT_ROUTE_AUTHORITY_PROMOTED_WITHIN_OWNER_APPROVED_SCOPE / FINANCIAL_FACT_AUTHORITY_UNCHANGED",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-31, HNX terminal closeout recorded by owner rebaseline)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Terminal raw-acquisition verification asset: 160 targets, 155 immutable retained documents, 30 text-native, 125 image-only, and no financial-fact authority promotion."
+    },
+    {
+      "milestone_id": "TEXT_NATIVE_OFFICIAL_FINANCIAL_TABLE_EXTRACTION_SCALEOUT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PARTIAL_BY_EVIDENCE / OFFICIAL_FINANCIAL_VERIFICATION_UTILITY_RETAINED_UNMERGED",
+      "checkpoint": "2507c86a3a8b07f6c09133097e799c5bd194f063",
+      "dependencies": ["HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / FINANCIAL_FACT_AUTHORITY_UNCHANGED",
+      "owner_authorized": true,
+      "source_doc": "Claude terminal result (2026-08-31), recorded in docs/STATE.md by owner rebaseline",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Terminal unmerged feature utility: 30 text-native documents processed, 14 statement tables detected, 10 recognized, 0 candidates, and 0 qualification-ready facts. It is not a default financial ingestion or critical-path dependency."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1",
+      "state": "NEXT",
+      "narrative_disposition": "OWNER_SELECTED / NOT_STARTED",
+      "checkpoint": null,
+      "dependencies": ["FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1", "MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1"],
+      "unlocks": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
+      "authority_effect": "NONE / OPERATIONAL_PROXY_RESEARCH_SEMANTICS_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Only executable next gate. Version market-wide retained provider/API period representations as ANNUAL, STANDALONE_QUARTER, YTD_CUMULATIVE_INTERIM, POINT_IN_TIME_BALANCE_SHEET, or UNKNOWN_DURATION where evidence permits; preserve period_end, source, scope, currency/unit, and observation/retrieval time. No PDF-per-record verification, provider promotion, fact authority promotion, or milestone execution is performed by this rebaseline."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1",
+      "state": "DEFERRED",
+      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "checkpoint": null,
+      "dependencies": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
+      "unlocks": ["CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1"],
+      "authority_effect": "NONE / RESEARCH_ONLY",
+      "owner_authorized": false,
+      "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Backlog only: deterministic features must preserve value, status, method, source_lineage, period_semantics, and blockers."
+    },
+    {
+      "milestone_id": "CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1",
+      "state": "DEFERRED",
+      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "checkpoint": null,
+      "dependencies": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
+      "unlocks": ["MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"],
+      "authority_effect": "NONE / VALUATION_RESEARCH_PROXY_RESTRICTED_ONLY",
+      "owner_authorized": false,
+      "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Backlog only: explicitly labelled proxy valuation research may not relabel shares, EPS, or accounting inputs as authoritative."
+    },
+    {
+      "milestone_id": "MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1",
+      "state": "DEFERRED",
+      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "checkpoint": null,
+      "dependencies": ["CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1"],
+      "unlocks": ["PORTFOLIO_RISK_AND_CAPITAL_POLICY_RESEARCH_V1"],
+      "authority_effect": "NONE / RESEARCH_ONLY",
+      "owner_authorized": false,
+      "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Backlog only: combine retained market, fundamental, valuation, sector-relative, and tactical evidence without fabricated target prices or probabilities."
+    },
+    {
+      "milestone_id": "PORTFOLIO_RISK_AND_CAPITAL_POLICY_RESEARCH_V1",
+      "state": "DEFERRED",
+      "narrative_disposition": "DEPENDENCY_LINKED_BACKLOG",
+      "checkpoint": null,
+      "dependencies": ["MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / RESEARCH_ONLY",
+      "owner_authorized": false,
+      "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
+      "state_history": [],
+      "owner_override": null,
+      "notes": "Backlog only: portfolio constraints remain distinct from security attractiveness; existing liquidity/sizing authority blockers remain intact."
     }
   ],
   "blocked_capabilities": [
