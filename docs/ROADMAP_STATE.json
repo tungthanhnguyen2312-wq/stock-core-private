@@ -303,21 +303,21 @@
     },
     {
       "milestone_id": "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1",
-      "state": "NEXT",
-      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE / NOT_STARTED",
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL / RESEARCH_PORTFOLIO_CONTEXT",
       "checkpoint": null,
       "dependencies": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
       "unlocks": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
       "authority_effect": "NONE / RESEARCH_ONLY",
-      "owner_authorized": false,
+      "owner_authorized": true,
       "source_doc": "Owner product-convergence direction (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Dependency (TACTICAL_AND_BEHAVIORAL_ENGINE_V2) is now COMPLETE, so this graduates to queue position NEXT; owner_authorized remains false pending an explicit owner go-ahead (distinct from queue position) and no implementation has started."
+      "notes": "Explicit-portfolio risk context and a browser-local Portfolio Editor are available; liquidity research remains descriptive and execution capacity stays blocked."
     },
     {
       "milestone_id": "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1",
-      "state": "DEFERRED",
+      "state": "NEXT",
       "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
       "checkpoint": null,
       "dependencies": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
