@@ -1,5 +1,14 @@
 # Decisions & Architectural Decision Records
 
+## 2026-08-31 - Current Valuation And Opportunity Integration V1
+
+`CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1 = COMPLETE LOCALLY / COHERENT PARTIAL` (`push = NO`).
+
+1. **Mixed-session evidence is first-class.** Opportunity axes keep their source artifact identity, source session/period, known-at/freshness, and compatibility. They are never coerced into one fictitious same-session snapshot. Future information relative to `as_of_session` is prohibited. Older evidence is usable only under the axis contract (financials/liquidity/catalyst may be `STALE_BUT_RESEARCH_USABLE`; tactical/market structure is session-sensitive). A stale axis is localized.
+2. **Valuation is method-level, not a ticker-level veto.** Compatible TTM P/E and P/S are emitted only when Feature Store TTM sums and a research-usable market-cap/share basis exist. Negative/zero earnings yield `PE_NOT_MEANINGFUL` without blocking P/S or other applicable methods. Share basis is explicit (`EXACT_OR_QUALIFIED` / `CURRENT_SHARE_RESEARCH_PROXY` / `PROVIDER_VALUATION_PROXY` / `UNAVAILABLE`). Entity-class applicability is `APPLICABLE` / `NOT_APPLICABLE` / `INPUT_BLOCKED`; banks and securities companies do not receive industrial EV/EBITDA or P/S. Peer comparison requires the same method, entity class, share-basis class, period/method identity, and `MIN_COHORT_MEMBERS=5`, using Tactical V2 percentile `(below + 0.5 * equal) / n`. Implied expectations remain `IMPLIED_EXPECTATIONS_UNAVAILABLE` (no manufactured reverse-DCF).
+3. **Research stance reuses governed vocabulary.** `security_decision_context/v1` keeps `entry_state`/`entry_action` as tactical source truth and maps to the existing shadow-recommendation labels. Exact ADTV20, historical PIT, and execution-capacity blocks never force `WAIT`. Portfolio availability (`AVAILABLE` / `NOT_PROVIDED` / `STALE` / `NOT_APPLICABLE`) is exposed separately from security attractiveness. No score, rank, probability, or target price.
+4. **Product boundary.** Producer-only. Dashboard hosting of the Decision Card belongs to `INVESTMENT_DECISION_WORKSPACE_V1`, the sole NEXT, not started here.
+
 ## 2026-08-31 - Market-Wide Fundamental Feature Store V1
 
 `MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1 = PASS` (`push = NO`).

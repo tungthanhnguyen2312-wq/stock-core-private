@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.08.31.4",
+  "roadmap_version": "2026.08.31.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -16,7 +16,7 @@
   ],
   "current": null,
   "queued_next": [
-    "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"
+    "INVESTMENT_DECISION_WORKSPACE_V1"
   ],
   "milestones": [
     {
@@ -305,7 +305,7 @@
       "milestone_id": "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL / RESEARCH_PORTFOLIO_CONTEXT",
-      "checkpoint": null,
+      "checkpoint": "af0e9e4bcd18c938c702fbc605beee8e3c828245",
       "dependencies": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
       "unlocks": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
       "authority_effect": "NONE / RESEARCH_ONLY",
@@ -313,25 +313,25 @@
       "source_doc": "Owner product-convergence direction (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Explicit-portfolio risk context and a browser-local Portfolio Editor are available; liquidity research remains descriptive and execution capacity stays blocked."
+      "notes": "COMPLETE at af0e9e4bcd18c938c702fbc605beee8e3c828245. Descriptive liquidity research proxy is usable; exact execution capacity remains separately blocked. Explicit portfolio context is availability-only and is not a security-attractiveness input."
     },
     {
       "milestone_id": "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1",
-      "state": "NEXT",
-      "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED",
+      "checkpoint": "HEAD",
       "dependencies": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
       "unlocks": ["INVESTMENT_DECISION_WORKSPACE_V1"],
       "authority_effect": "NONE / RESEARCH_ONLY",
-      "owner_authorized": false,
-      "source_doc": "Owner product-convergence direction (2026-08-31)",
+      "owner_authorized": true,
+      "source_doc": "docs/STATE.md (2026-08-31, Current valuation and opportunity integration V1)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Future only; no valuation authority promotion is implied."
+      "notes": "Producer-only opportunity_context/v1 and security_decision_context/v1 over mixed-session retained axes. Real denominator 1699; zero silent drops; method-level valuation with explicit share basis and entity-class applicability; governed research-stance vocabulary; exact execution capacity is not a WAIT gate. Dashboard/Consumer unchanged."
     },
     {
       "milestone_id": "INVESTMENT_DECISION_WORKSPACE_V1",
-      "state": "DEFERRED",
+      "state": "NEXT",
       "narrative_disposition": "OWNER_SELECTED_FUTURE_SEQUENCE",
       "checkpoint": null,
       "dependencies": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
@@ -341,7 +341,7 @@
       "source_doc": "Owner product-convergence direction (2026-08-31)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Future only; no Dashboard/Consumer implementation occurs in this selection."
+      "notes": "Sole NEXT after current valuation/opportunity integration. Combines security_decision_context with portfolio_fit_context. No Dashboard/Consumer implementation until this milestone starts."
     }
   ],
   "blocked_capabilities": [
