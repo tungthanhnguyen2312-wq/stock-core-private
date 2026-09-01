@@ -277,6 +277,37 @@ def _pit_ratio_direction(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                     inputs=[prior_equity, prior_assets, current_equity, current_assets], growth_basis="POINT_IN_TIME_YOY")
 
 
+def _pit_ratio_direction_for(rows: Sequence[Mapping[str, Any]], numerator_metric: str,
+                             denominator_metric: str, feature_id: str) -> dict[str, Any]:
+    """Directional change for two explicit, same-source P-I-T balance-sheet facts."""
+    numerator = _groups(rows, numerator_metric, PIT)
+    denominator = _groups(rows, denominator_metric, PIT)
+    candidates = []
+    for key in set(numerator) & set(denominator):
+        periods = sorted(set(numerator[key]) & set(denominator[key]))
+        if len(periods) < 2:
+            continue
+        current_label = periods[-1]
+        quarter = _quarter(current_label)
+        prior_label = f"{quarter[0] - 1}-Q{quarter[1]}" if quarter else None
+        if not prior_label or prior_label not in numerator[key] or prior_label not in denominator[key]:
+            continue
+        prior_num, prior_den = numerator[key][prior_label], denominator[key][prior_label]
+        current_num, current_den = numerator[key][current_label], denominator[key][current_label]
+        if prior_den["reported_value"] == 0 or current_den["reported_value"] == 0:
+            continue
+        candidates.append((current_label, prior_num, prior_den, current_num, current_den))
+    if not candidates:
+        return _blocked(feature_id, "MISSING_SAME_POINT_IN_TIME_PRIOR_YEAR_RATIO_PAIR")
+    _, prior_num, prior_den, current_num, current_den = max(candidates, key=lambda item: item[0])
+    value = (current_num["reported_value"] / current_den["reported_value"]
+             - prior_num["reported_value"] / prior_den["reported_value"])
+    return _feature(feature_id, value=value, fitness="READY",
+                    method="same_provider_point_in_time_explicit_debt_ratio_yoy/v2",
+                    inputs=[prior_num, prior_den, current_num, current_den],
+                    growth_basis="POINT_IN_TIME_YOY")
+
+
 def _direction(feature: Mapping[str, Any], positive: str, negative: str, stable: str) -> str:
     if feature["fitness"] != "READY" or not _numeric(feature.get("value")):
         return "UNAVAILABLE"
@@ -320,7 +351,10 @@ def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]
     cash_ratio = features["cfo_to_net_income"]
     cash = "HEALTHY" if cash_ratio["fitness"] == "RESEARCH_PROXY" and _numeric(cash_ratio.get("value")) and cash_ratio["value"] > 0 else "WEAK" if cash_ratio["fitness"] == "RESEARCH_PROXY" and _numeric(cash_ratio.get("value")) else "UNAVAILABLE"
     capital = "UNAVAILABLE"  # Cross-provider values remain explicitly proxies, never state-ready.
-    leverage = _direction(features["equity_to_assets_direction"], "IMPROVING", "WORSENING", "STABLE")
+    debt_direction = features["debt_to_equity_direction"]
+    leverage = _direction(debt_direction, "WORSENING", "IMPROVING", "STABLE")
+    if leverage == "UNAVAILABLE":
+        leverage = _direction(features["equity_to_assets_direction"], "IMPROVING", "WORSENING", "STABLE")
     resilience = "RESILIENT" if profitability == "PROFITABLE" and margin in {"MARGIN_EXPANDING", "MARGIN_STABLE"} and cash == "HEALTHY" and balance in {"STRENGTHENING", "STABLE"} else "STRESSED" if profitability == "LOSS_MAKING" and cash == "WEAK" else "UNAVAILABLE"
     return {"profitability_state": profitability, "margin_state": margin, "growth_state": growth,
             "balance_sheet_state": balance, "cash_conversion_state": cash,
@@ -353,7 +387,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
     family = INDUSTRIAL if normalized_type == "corporate" else LIMITED
     ids = ("net_income_sign", "net_margin", "pbt_margin", "net_margin_direction", "revenue_qoq", "net_income_qoq",
            "revenue_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "net_income_ttm_yoy", "revenue_ttm", "net_income_ttm", "operating_cash_flow_sign", "cfo_to_net_income",
-           "fcf", "equity_to_assets", "cash_to_assets", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
+           "fcf", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
            "cash_yoy", "same_provider_roa", "same_provider_roe", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy")
     if family == LIMITED:
         features = {feature_id: _not_applicable(feature_id) for feature_id in ids}
@@ -401,6 +435,9 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "fcf": _blocked("fcf", "FCF_BLOCKED_BY_EVIDENCE_CAPEX_SEMANTICS_UNAVAILABLE"),
             "equity_to_assets": _ratio("equity_to_assets", _same_period_pair(rows, "shareholders_equity", "total_assets", PIT), method="same_provider_same_period_equity_to_assets/v2"),
             "cash_to_assets": _ratio("cash_to_assets", _same_period_pair(rows, "cash_and_cash_equivalents", "total_assets", PIT), method="same_provider_same_period_cash_to_assets/v2"),
+            "debt_to_equity": _ratio("debt_to_equity", _same_period_pair(rows, "total_interest_bearing_debt", "shareholders_equity", PIT), method="same_provider_same_period_explicit_debt_to_equity/v2"),
+            "debt_to_assets": _ratio("debt_to_assets", _same_period_pair(rows, "total_interest_bearing_debt", "total_assets", PIT), method="same_provider_same_period_explicit_debt_to_assets/v2"),
+            "debt_to_equity_direction": _pit_ratio_direction_for(rows, "total_interest_bearing_debt", "shareholders_equity", "debt_to_equity_direction"),
             "equity_to_assets_direction": _pit_ratio_direction(rows),
             "assets_yoy": _pit_trajectory(rows, "total_assets"), "equity_yoy": _pit_trajectory(rows, "shareholders_equity"), "cash_yoy": _pit_trajectory(rows, "cash_and_cash_equivalents"),
             "same_provider_roa": _blocked("same_provider_roa", "SAME_PROVIDER_AVERAGE_BALANCE_INPUTS_UNAVAILABLE"),
@@ -416,7 +453,9 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
     if states["profitability_state"] == "LOSS_MAKING": valuation_hints.append("EARNINGS_NOT_MEANINGFUL_FOR_PE")
     if states["profitability_state"] == "TURNAROUND_CONTEXT": valuation_hints.append("TRAILING_EARNINGS_NOT_STABLE_RUN_RATE")
     if states["profitability_state"] == "LOSS_MAKING" and features["net_margin"]["fitness"] == "READY": valuation_hints.append("SALES_BASED_CONTEXT_PREFERRED")
-    warnings = ["PIT_AUTHORITY_NOT_GRANTED", "DEBT_EVIDENCE_UNAVAILABLE_NO_EXACT_DEBT_LEVERAGE"]
+    warnings = ["PIT_AUTHORITY_NOT_GRANTED"]
+    if features["debt_to_equity"]["fitness"] != "READY":
+        warnings.append("DEBT_EVIDENCE_UNAVAILABLE_NO_EXACT_DEBT_LEVERAGE")
     if any(feature["fitness"] == "RESEARCH_PROXY" for feature in features.values()): warnings.append("PROXY_FEATURES_REMAIN_DISTINCT_FROM_READY")
     return {"ticker": ticker, "issuer_type": normalized_type, "analysis_family": family,
             "current_research_ready": ready, "pit_authority": "NOT_GRANTED",
@@ -424,7 +463,9 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "states": states, "features": {key: features[key] for key in sorted(features)},
             **evidence, "warnings": warnings, "valuation_hints": valuation_hints,
             "source_identities": dict(source_identities),
-            "leverage_basis": "EQUITY_TO_ASSETS_STRUCTURAL_DIRECTION_ONLY_DEBT_UNAVAILABLE",
+            "leverage_basis": ("EXPLICIT_SAME_PROVIDER_SHORT_AND_LONG_TERM_BORROWINGS"
+                                if features["debt_to_equity"]["fitness"] == "READY"
+                                else "EQUITY_TO_ASSETS_STRUCTURAL_DIRECTION_ONLY_DEBT_UNAVAILABLE"),
             "authority_boundary": {"is_actionable": False, "financial_authority_promoted": False, "decision_integration": False}}
 
 

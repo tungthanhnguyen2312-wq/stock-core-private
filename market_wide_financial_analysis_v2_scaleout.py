@@ -93,7 +93,8 @@ def _refresh_states(record: dict[str, Any]) -> None:
 
 def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_records: Mapping[str, Mapping[str, Any]],
                    feature_store_artifact: Mapping[str, Any], period_semantics_identity: str,
-                   requested_at: str, legacy_records: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
+                   requested_at: str, legacy_records: Mapping[str, Mapping[str, Any]] | None = None,
+                   classification_diagnostics_identity: str | None = None) -> dict[str, Any]:
     names = sorted(feature_records)
     issuer_types = {ticker: feature_records[ticker].get("entity_type") for ticker in names}
     legacy_records = {ticker: record for ticker, record in (legacy_records or {}).items() if ticker in feature_records}
@@ -105,6 +106,7 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
             "period_semantics_identity": period_semantics_identity,
             "feature_store_contract": FEATURE_STORE_CONTRACT,
             "feature_store_artifact_identity": feature_store_artifact.get("artifact_identity"),
+            "classification_diagnostics_identity": classification_diagnostics_identity,
         }, requested_at=requested_at,
     )
     for ticker, record in artifact["records"].items():

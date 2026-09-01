@@ -241,6 +241,14 @@ METRIC_REGISTRY: dict[str, dict[str, Any]] = {
         "statement": BS,
         "candidates": [_c(BS, "cash_and_cash_equivalents", DIALECT_COMMON, 100)],
     },
+    "current_assets": {
+        "statement": BS,
+        "candidates": [_c(BS, "current_assets", DIALECT_COMMON, 100)],
+    },
+    "current_liabilities": {
+        "statement": BS,
+        "candidates": [_c(BS, "current_liabilities", DIALECT_COMMON, 100)],
+    },
     "short_term_interest_bearing_debt": {
         "statement": BS,
         "candidates": [_c(BS, "short_term_borrowings", DIALECT_COMMON, 100)],
@@ -248,6 +256,20 @@ METRIC_REGISTRY: dict[str, dict[str, Any]] = {
     "long_term_interest_bearing_debt": {
         "statement": BS,
         "candidates": [_c(BS, "long_term_borrowings", DIALECT_COMMON, 100)],
+    },
+    "short_term_finance_lease_liabilities": {
+        "statement": BS,
+        "candidates": [_c(BS, "short_term_finance_lease", DIALECT_COMMON, 100)],
+    },
+    "long_term_finance_lease_liabilities": {
+        "statement": BS,
+        "candidates": [_c(BS, "long_term_financial_lease", DIALECT_COMMON, 100)],
+    },
+    "finance_lease_liabilities": {
+        "statement": BS,
+        "candidates": [],
+        "derived_from": ("short_term_finance_lease_liabilities", "long_term_finance_lease_liabilities"),
+        "derivation": "sum",
     },
     "total_interest_bearing_debt": {
         "statement": BS,

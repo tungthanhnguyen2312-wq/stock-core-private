@@ -331,6 +331,22 @@ class FactStatusTests(unittest.TestCase):
                          ["short_term_interest_bearing_debt",
                           "long_term_interest_bearing_debt"])
 
+    def test_current_assets_and_current_liabilities_are_direct_not_debt_substitutes(self):
+        built = facts.build_facts("TST", _balanced_sheet(current_assets=700,
+                                                           current_liabilities=350))
+        by_metric = {fact["canonical_metric"]: fact for fact in built["facts"]}
+        self.assertEqual(by_metric["current_assets"]["value"], 700)
+        self.assertEqual(by_metric["current_liabilities"]["value"], 350)
+        self.assertEqual(by_metric["total_interest_bearing_debt"]["value"], 200)
+
+    def test_finance_leases_are_distinct_explicit_components(self):
+        built = facts.build_facts("TST", _balanced_sheet(short_term_finance_lease=12,
+                                                           long_term_financial_lease=8))
+        by_metric = {fact["canonical_metric"]: fact for fact in built["facts"]}
+        self.assertEqual(by_metric["short_term_finance_lease_liabilities"]["value"], 12)
+        self.assertEqual(by_metric["long_term_finance_lease_liabilities"]["value"], 8)
+        self.assertEqual(by_metric["finance_lease_liabilities"]["value"], 20)
+
     def test_derivation_blocked_when_a_component_is_missing(self):
         rows = [record for record in _balanced_sheet()
                 if record["raw_item_id"] != "long_term_borrowings"]

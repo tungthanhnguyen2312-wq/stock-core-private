@@ -16,7 +16,7 @@ RELATIVE_STORE = Path("data") / "financial-observations" / "observations.jsonl"
 METHODS = ("income_statement", "balance_sheet", "cash_flow")
 FREQUENCIES = ("year", "quarter")
 _CODES = {"net_cash_inflows_outflows_from_operating_activities", "net_cash_inflows_outflows_from_investing_activities", "net_cash_inflows_outflows_from_financing_activities", "net_cash_from_operating_activities", "net_cash_from_investing_activities", "purchases_of_fixed_assets_and_other_long_term_assets", "short_term_borrowings", "long_term_borrowings", "cash_and_cash_equivalents", "interest_expenses", "interest_and_similar_expenses", "attributable_to_parent_company",
-    "total_assets", "owners_equity", "minority_interests", "current_assets", "accounts_receivable", "inventories_net", "liabilities", "net_sales", "net_profit_loss_after_tax",
+    "total_assets", "owners_equity", "minority_interests", "current_assets", "current_liabilities", "accounts_receivable", "inventories_net", "liabilities", "short_term_finance_lease", "long_term_financial_lease", "net_sales", "net_profit_loss_after_tax",
     # Bank archetype (Circular 49/2014/TT-NHNN statement template) -- entity_type="bank" only,
     # selected via _BANK in cash_flow_debt_mapping.py. Raw VCI/KBS item_ids differ from the
     # corporate (Circular 200/202) template above even where the underlying concept is similar,

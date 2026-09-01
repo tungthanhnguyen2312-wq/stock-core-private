@@ -21,6 +21,12 @@ class CashFlowDebtMappingTests(unittest.TestCase):
         total=next(r for r in rows if r["canonical_metric"]=="total_interest_bearing_debt")
         self.assertEqual(total["value"],8); self.assertEqual(len(total["provenance"]["components"]),2)
 
+    def test_finance_lease_components_stay_distinct_from_borrowings(self):
+        rows=self.records([item("short_term_finance_lease",3,"balance_sheet"),
+                           item("long_term_financial_lease",4,"balance_sheet")])
+        self.assertEqual({row["canonical_metric"] for row in rows},
+                         {"short_term_finance_lease_liabilities", "long_term_finance_lease_liabilities"})
+
     def test_interest_is_not_finance_cost_and_attributable_is_explicit(self):
         rows=self.records([item("financial_expenses",9,"income_statement"),item("interest_expenses",2,"income_statement"),item("attributable_to_parent_company",0,"income_statement")])
         self.assertEqual({r["canonical_metric"] for r in rows},{"interest_expense","net_income_attributable_to_parent"})

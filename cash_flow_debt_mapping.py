@@ -13,6 +13,8 @@ _CORPORATE = {
     ("cash_flow", "purchases_of_fixed_assets_and_other_long_term_assets"): "capital_expenditure",
     ("balance_sheet", "short_term_borrowings"): "short_term_borrowings",
     ("balance_sheet", "long_term_borrowings"): "long_term_borrowings",
+    ("balance_sheet", "short_term_finance_lease"): "short_term_finance_lease_liabilities",
+    ("balance_sheet", "long_term_financial_lease"): "long_term_finance_lease_liabilities",
     ("balance_sheet", "cash_and_cash_equivalents"): "cash_and_equivalents",
     ("income_statement", "interest_expenses"): "interest_expense",
     ("income_statement", "attributable_to_parent_company"): "net_income_attributable_to_parent",
