@@ -466,6 +466,20 @@
       "state_history": [],
       "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH",
       "notes": "COMPLETE on Producer. screener_master_projection/v1 is a derived presentation read model over the current canonical screen-snapshot ticker set (1,683 unique, zero duplicates, zero silent drops, 16 Workspace-only extras excluded). Price 943 available / 740 explicit-unavailable; return remains a fraction; HNX_LISTED displays HNX for 299/299. True VCI industry labels 1,678 AVAILABLE / 5 UNKNOWN; entity class is independent and never used as sector. Research liquidity proxy 935 with 0 numeric ADV20/GTGD values; exact execution remains blocked on the full denominator. Workspace join 1,683/1,683. Financial V2 compact join 1,476 AVAILABLE / 207 ABSENT without dropping tickers. Naked required-null count 0. Identity screener_master_projection/v1:46df4fac43f206ebae554a0b8dbfe71f70634c4573c35e03ccc0613c0a53a2e2. No score/rank/target/probability, no stance retune, no Financial/Tactical V2 redesign, no VCI duration promotion. Dashboard Decision Drawer integration is the paired surface of this same milestone. No successor is queued."
+    },
+    {
+      "milestone_id": "QUALIFIED_TTM_VALUATION_RESEARCH_INTEGRATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_MONETARY_BASIS_EVIDENCE",
+      "checkpoint": "6486b6275a1b119f26ba17ddd443f5bf4a0ab742",
+      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1", "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / RESEARCH_VALUATION_CONTEXT_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized QUALIFIED_TTM_VALUATION_RESEARCH_INTEGRATION_V1 directive (2026-09-01)",
+      "state_history": [],
+      "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH",
+      "notes": "COMPLETE. Current valuation consumes Financial Analysis V2 qualified net-income/revenue TTM only when READY, records source/context/feature/method/period/provider/currency/scale/fitness/conflict lineage, and otherwise retains the old Feature Store TTM as an explicit fallback without mixing values. PBT TTM is exposed only as qualitative earnings context. A P/E or P/S calculation now requires independently compatible known currency and scale on both TTM and market cap; retained replay had 0 such compatible pairs, so the 18 former P/E-TTM and 32 former P/S-TTM outputs are fail-closed as TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE rather than fabricated. Financial V2 remains 1,492 and Product remains 1,699 with zero silent drops; stance distribution and working-capital/debt coverage are unchanged. VCI duration remains UNKNOWN and VCI flows never enter this path. No dashboard, AI-core, runtime, provider, score, rank, target, probability, stance-machine, or successor change."
     }
   ],
   "blocked_capabilities": [
