@@ -3300,6 +3300,16 @@ stays the product-convergence milestone; this is a correction within it, not a n
 4. Real retained validation found **0** non-fixture durable cases. The older ledger is not a competing T0 case store and cannot supply retroactive case identity. No horizons, event outcomes, price paths, benchmark-relative outcomes, or cohort statistics are therefore mature in the real corpus. This is a truthful evidence limit, not zero-valued return data.
 5. Terminal state is `COHERENT_PARTIAL_BY_EVIDENCE`; no successor is queued. Outcome calibration, tactical retuning, exact execution capacity, and PIT remain separate owner decisions.
 
+## 2026-09-01 - Market-wide Financial Analysis Engine V2
+
+`MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2 = COMPLETE / COHERENT_PARTIAL_BY_EVIDENCE` (`push = NO`).
+
+1. `financial_analysis_context/v2` is a generic deterministic research contract over retained structured financial period-semantics rows. Its accepted real replay is deliberately bounded to `LEGACY_HISTORICAL_FROZEN_523_V1`: 523 records, residual zero, 452 `INDUSTRIAL_FINANCIAL_ANALYSIS`, and 71 `OTHER_FINANCIAL_LIMITED_ANALYSIS`. It is not a current-production denominator claim.
+2. Flow growth is fail-closed: QoQ needs truly consecutive compatible standalone quarters (58 revenue and 58 net-income READY); 365 observed revenue Q3-to-following-Q1 gaps are retained as rejected non-consecutive candidates. Same-quarter YoY, equal-duration YTD YoY, four-consecutive-quarter TTM, and PIT-only balance trajectories are separate bases. Unknown duration never becomes duration-assuming growth.
+3. Same-representation ratios retain READY even when absolute scale cancels. Same-provider ROA/ROE remain zero READY. Mixed-provider ROA (412) and asset-turnover (409) are `RESEARCH_PROXY` only, marked `CROSS_PROVIDER_UNRESOLVED_SCALE`, cannot set capital-efficiency READY or research readiness alone, and are not valuation eligible.
+4. Cash and debt limits are explicit: 62 standalone OCF-sign observations are READY; no current replay row proves a same-representation CFO/net-income proxy; FCF remains blocked because qualified capex semantics are absent; and all cash-conversion/resilience states remain unavailable rather than inferred. Debt leverage is unavailable; the only leverage direction is explicitly equity/assets structural direction.
+5. The milestone adds no acquisition, source/schema widening, score, rank, target price, probability, actionability, financial/PIT authority, decision integration, Dashboard work, runtime/production write, push, merge, or deploy. No successor is queued; future integration is a separate owner decision.
+
 ## 2026-08-31 - Current-Session Decision Rollover and Prospective Case Capture V1
 
 `CURRENT_SESSION_DECISION_ROLLOVER_AND_PROSPECTIVE_CASE_CAPTURE_V1 = COMPLETE / COHERENT_PARTIAL_BY_EVIDENCE / CURRENT_SESSION_ACQUISITION_BLOCKED` (`push = NO`).

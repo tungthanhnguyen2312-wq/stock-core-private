@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.08.31.6",
+  "roadmap_version": "2026.09.01.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,8 +9,8 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "09612e4faaa820240f7056fc83bce7f2fc25e938",
-  "last_updated_checkpoint": "09612e4faaa820240f7056fc83bce7f2fc25e938",
+  "implementation_lineage_head": "af999e7731674b926075cc07ed5929a35081dab8",
+  "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
@@ -368,6 +368,20 @@
       "state_history": [],
       "owner_override": null,
       "notes": "COMPLETE COHERENT PARTIAL. The deterministic admission policy and one-shot runner are operational and fail closed on stale workspace projections. The 2026-08-31 DNSE working-date response did not qualify that date; the latest retained ledger session was 2026-08-28, which cannot be retroactively admitted on 2026-08-31. Therefore zero genuine new T0 cases were created. No next milestone is queued; real activation awaits a future owner-run qualified current session."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2",
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL_BY_EVIDENCE",
+      "checkpoint": "HEAD",
+      "dependencies": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2 directive (2026-09-01)",
+      "state_history": [],
+      "owner_override": "OWNER_DECISION_IMPLEMENT_NOW",
+      "notes": "COMPLETE. financial_analysis_context/v2 replays the explicit LEGACY_HISTORICAL_FROZEN_523_V1 validation cohort only (523/523, zero silent drops), preserves READY/RESEARCH_PROXY/BLOCKED_BY_EVIDENCE/NOT_APPLICABLE, and makes no financial authority, PIT, valuation, decision, Dashboard, runtime, or production promotion. No successor is queued."
     },
     {
       "milestone_id": "DASHBOARD_PRODUCT_SURFACE_AND_PUBLICATION_CONVERGENCE_V1",
