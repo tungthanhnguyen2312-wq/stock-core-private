@@ -57,6 +57,17 @@ def test_absolute_paths_are_rejected(tmp_path):
     with pytest.raises(HandoffPublicationError,match="ABSOLUTE_PATH"):
         publish(r,s,"2026-08-28",push=False)
 
+def test_compact_financial_identity_chain_is_validated_without_full_engine_dump(tmp_path):
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    identity="financial_analysis_context/v2:abc"
+    (s/"ai_research_session_bundle.json").write_text(json.dumps({"financial_analysis":{"source_context_identity":identity,"market_summary":{"source_context_identity":identity},"ticker_index":{"AAA":{"status":"AVAILABLE"}}}}),encoding="utf-8")
+    (s/"ai_research_bundle_manifest.json").write_text(json.dumps({"producer_head":"p","operation_identity":"o","daily_product_identity":"d","financial_analysis_source_context_identity":identity}),encoding="utf-8")
+    _, payload=build_package(s,"2026-08-28",producer_checkpoint="abc")
+    assert payload["lineage"]["financial_analysis_source_context_identity"] == identity
+    (s/"ai_research_bundle_manifest.json").write_text(json.dumps({"financial_analysis_source_context_identity":"other"}),encoding="utf-8")
+    with pytest.raises(HandoffPublicationError,match="FINANCIAL_ANALYSIS_IDENTITY_CHAIN"):
+        build_package(s,"2026-08-28",producer_checkpoint="abc")
+
 def test_decision_brief_is_optional_and_additive(tmp_path):
     """A caller that never passes decision_brief sees byte-identical behavior (opt-in only)."""
     s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)

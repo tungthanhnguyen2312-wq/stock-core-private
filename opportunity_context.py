@@ -319,6 +319,7 @@ def build_ticker_opportunity(
     portfolio: Mapping[str, Any] | None,
     portfolio_freshness: Mapping[str, Any],
     feature_store_identity: str | None,
+    financial_analysis: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     fundamental = _fundamental_axis(
         record=feature_record, peers=fundamental_peers, decision_session=decision_session,
@@ -380,6 +381,9 @@ def build_ticker_opportunity(
         "catalyst": catalyst,
         "downside_invalidation": downside,
         "liquidity": liquidity,
+        # Financial Analysis V2 is a sibling explanatory context. It deliberately
+        # does not participate in MAJOR_AXES, usable_major, or disposition.
+        "financial_analysis": dict(financial_analysis) if isinstance(financial_analysis, Mapping) else None,
         "portfolio_availability": {
             "status": portfolio_status,
             "freshness": dict(portfolio_freshness),
@@ -456,5 +460,6 @@ def compact_opportunity(record: Mapping[str, Any]) -> dict[str, Any]:
             "freshness_status": record["liquidity"]["freshness"]["freshness_status"],
         },
         "portfolio_availability": record["portfolio_availability"]["status"],
+        "financial_analysis": record.get("financial_analysis"),
         "authority_boundary": record["authority_boundary"],
     }

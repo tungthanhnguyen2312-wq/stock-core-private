@@ -384,6 +384,20 @@
       "notes": "COMPLETE. financial_analysis_context/v2 replays the explicit LEGACY_HISTORICAL_FROZEN_523_V1 validation cohort only (523/523, zero silent drops), preserves READY/RESEARCH_PROXY/BLOCKED_BY_EVIDENCE/NOT_APPLICABLE, and makes no financial authority, PIT, valuation, decision, Dashboard, runtime, or production promotion. No successor is queued."
     },
     {
+      "milestone_id": "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
+      "checkpoint": "HEAD",
+      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2", "INVESTMENT_DECISION_WORKSPACE_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / RESEARCH_ONLY_PRODUCT_ANNOTATION",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1 directive (2026-09-01)",
+      "state_history": [],
+      "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH",
+      "notes": "Financial V2 reaches the Producer AI product only through financial_analysis_product_integration/v1 compact/ABSENT records. The 523 retained engine cohort remains a sibling of the 1,699 product denominator; seven major axes and the six-label stance machine are unchanged. Mixed-provider ROA/asset-turnover remain RESEARCH_PROXY / CROSS_PROVIDER_UNRESOLVED_SCALE, no full validation artifact is published, and export_ai_bundle attachment is explicit opt-in only. No successor is queued."
+    },
+    {
       "milestone_id": "DASHBOARD_PRODUCT_SURFACE_AND_PUBLICATION_CONVERGENCE_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL / IN_APP_BROWSER_AUTOMATION_UNAVAILABLE",

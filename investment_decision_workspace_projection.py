@@ -256,6 +256,7 @@ def build_ticker_card(
     catalyst_view = _catalyst_view(opportunity_record)
     reasons = (decision_record.get("deterministic_research_inference") or {}).get("reasons") or []
     warnings = (decision_record.get("warnings_counter_thesis") or {}).get("warnings") or decision_record.get("warnings") or []
+    financial = decision_record.get("financial_analysis") or {"status": "NOT_SUPPLIED", "compact": None}
     return {
         "ticker": ticker,
         "as_of_session": decision_record.get("as_of_session") or opportunity_record.get("as_of_session"),
@@ -284,12 +285,21 @@ def build_ticker_card(
             },
             "catalyst_evidence": catalyst_view,
             "deterministic_reasons": list(reasons),
+            "financial_analysis": {
+                "status": financial.get("status"), "supporting": list(financial.get("supporting") or []),
+                "compact": financial.get("compact"),
+            },
             "counterbalancing_context": list(decision_record.get("counterbalancing_context") or []),
         },
         # C. Counter-thesis
         "counter_thesis": {
             "warnings": list(warnings),
             "key_counter_thesis": list(decision_record.get("key_counter_thesis") or []),
+            "financial_analysis": {
+                "counter_thesis": list(financial.get("counter_thesis") or []),
+                "missing_dimensions": list(financial.get("missing_dimensions") or []),
+                "current_financial_weakness": list(financial.get("current_financial_weakness") or []),
+            },
             "unavailable_dimensions": sorted(set(WORKSPACE_AXES) - usable_axes),
         },
         # D. Confirmation
@@ -298,6 +308,7 @@ def build_ticker_card(
         "invalidation": {
             "technical": dict(decision_record.get("technical_invalidation") or {"status": "UNAVAILABLE"}),
             "fundamental": dict(decision_record.get("fundamental_invalidation") or {"status": "UNAVAILABLE"}),
+            "future_financial_invalidation_watch": list(financial.get("future_financial_invalidation_watch") or []),
         },
         # Supporting axes shown alongside the card
         "fundamental": {
@@ -398,6 +409,7 @@ def build_artifacts(
         1 for card in cards.values()
         if any(status not in {None, "CURRENT"} for status in (card["lineage"]["per_axis_freshness"] or {}).values())
     )
+    financial_available_count = sum(card["why"]["financial_analysis"]["status"] == "AVAILABLE" for card in cards.values())
 
     source_artifacts = {
         "opportunity_context": opportunity_artifact.get("artifact_identity"),
@@ -422,6 +434,7 @@ def build_artifacts(
             "portfolio_evaluated_count": portfolio_evaluated_count,
             "prospective_cases_available_count": prospective_available_count,
             "stale_axis_present_count": stale_axis_count,
+            "financial_analysis_available_count": financial_available_count,
         },
         "blocked_outputs": {
             "universal_score": "SCORING_PROHIBITED", "ordinal_rank": "RANKING_PROHIBITED",

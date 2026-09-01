@@ -207,9 +207,15 @@ def validate_coherence(inputs: Mapping[str, Any], session: str) -> dict[str, Any
     return {"session": session, "technical_coverage_semantics": {"same_session_technical_feature_available_count": coverage, "current_active_equity_denominator": descriptive["market_breadth"]["current_active_equity_denominator"], "observed_session_cohort": descriptive["market_breadth"]["observed_session_cohort"], "semantic_note": "956 is same-session technical feature coverage and tactical classified count after retained technical recovery; 763 is superseded pre-recovery coverage and is rejected."}, "corporate_intelligence_coverage": corporate.get("coverage"), "accepted_degraded_inputs": {"catalyst": "EARLIER_RETAINED_CATALYST_CONTEXT"}, "incompatible_inputs": []}
 
 
-def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
     registry = registry if registry is not None else load_registry(root or MODULE_ROOT)
     assert_inputs_match_registered_session(session, inputs, registry)
+    # This product-only context is intentionally an explicit caller attachment,
+    # not a session registry input or a replacement for any authoritative axis.
+    if financial_analysis_product_context is not None:
+        from financial_analysis_product_projection import validate_product_context
+        validate_product_context(financial_analysis_product_context)
+        inputs = {**dict(inputs), "financial_analysis_product_context": financial_analysis_product_context}
     coherence = validate_coherence(inputs, session)
     peer = build_peer(descriptive=inputs["descriptive"], tactical=inputs["tactical"], fundamental=inputs["fundamental"], valuation=inputs["valuation"])
     if peer_identity(peer)["artifact_sha256"] != peer["artifact_sha256"]: raise ValueError("PEER_ARTIFACT_SELF_VERIFICATION_FAILED")
@@ -315,6 +321,7 @@ def run_session_operation(
     portfolio: Mapping[str, Any] | None = None,
     macro: Mapping[str, Any] | None = None,
     shadow_security_recommendation: Mapping[str, Any] | None = None,
+    financial_analysis_product_context: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     """Build, Consumer-validate, and immutably materialize one exact operation.
 
@@ -341,6 +348,7 @@ def run_session_operation(
         registry=registry,
         root=root,
         shadow_security_recommendation=shadow_security_recommendation,
+        financial_analysis_product_context=financial_analysis_product_context,
     )
     consumer_root = root.parent / "ai-core-private"
     if str(consumer_root) not in sys.path:

@@ -262,6 +262,7 @@ def build_ticker_decision(opportunity: Mapping[str, Any]) -> dict[str, Any]:
     # Boundary availability/status (the pre-existing "status" field) and the actual trigger state
     # are exposed as distinct sibling fields -- never collapsed into one signal.
     confirmation_boundary = {**confirmation, "confirmation_trigger_state": _trigger_state(confirmation)}
+    financial = _financial_analysis_annotation(opportunity.get("financial_analysis"))
     technical_invalidation = (tactical.get("invalidation") if tactical.get("research_usable") else None) \
         or downside.get("technical") or {"status": "UNAVAILABLE"}
     technical_invalidation = {
@@ -296,14 +297,15 @@ def build_ticker_decision(opportunity: Mapping[str, Any]) -> dict[str, Any]:
             "relative_valuation": (valuation.get("peer_relative_context") or {}).get("relative_research_state"),
         },
         "warnings_counter_thesis": {
-            "warnings": inference["warnings"],
-            "counter_thesis": inference["counter_thesis"],
+            "warnings": [*inference["warnings"], *financial["warnings"]],
+            "counter_thesis": [*inference["counter_thesis"], *financial["counter_thesis"]],
         },
         "counterbalancing_context": inference["counterbalancing_context"],
         "confirmation_boundary": confirmation_boundary,
         "technical_invalidation": technical_invalidation,
         "fundamental_invalidation": downside.get("fundamental") or {"status": "UNAVAILABLE"},
-        "key_counter_thesis": inference["counter_thesis"],
+        "key_counter_thesis": [*inference["counter_thesis"], *financial["counter_thesis"]],
+        "financial_analysis": financial,
         "per_axis_freshness": (opportunity.get("data_authority") or {}).get("per_axis_freshness") or {},
         "authority_boundary": {
             "is_actionable": False, "research_support_not_execution": True,
@@ -313,6 +315,51 @@ def build_ticker_decision(opportunity: Mapping[str, Any]) -> dict[str, Any]:
             "historical_pit_is_not_a_wait_gate": True,
         },
     }
+
+
+def _financial_analysis_annotation(context: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Fixed V2 explanatory templates; this deliberately does not infer stance."""
+    if not isinstance(context, Mapping):
+        return {"status": "NOT_SUPPLIED", "supporting": [], "counter_thesis": [], "warnings": [],
+                "missing_dimensions": [], "current_financial_weakness": [],
+                "future_financial_invalidation_watch": [], "compact": None, "is_actionable": False}
+    if context.get("status") == "ABSENT":
+        return {"status": "ABSENT", "supporting": [], "counter_thesis": [], "warnings": ["FA_V2_CONTEXT_ABSENT"],
+                "missing_dimensions": ["FA_V2_CONTEXT_ABSENT"], "current_financial_weakness": [],
+                "future_financial_invalidation_watch": [], "compact": dict(context), "is_actionable": False}
+    supporting, counter, missing, weakness, watches = [], [], [], [], []
+    state_map = {
+        "profitability_state": ("PROFITABLE", "FA_V2_PROFITABLE", "LOSS_MAKING", "FA_V2_LOSS_MAKING", "OBSERVED_LOSS_MAKING", "PROFITABILITY_REVERSAL_WATCH"),
+        "margin_state": ("MARGIN_EXPANDING", "FA_V2_MARGIN_EXPANDING", "MARGIN_COMPRESSING", "FA_V2_MARGIN_COMPRESSING", "OBSERVED_MARGIN_COMPRESSING", "MARGIN_COMPRESSION_TRANSITION_WATCH"),
+        "balance_sheet_state": ("STRENGTHENING", "FA_V2_BALANCE_SHEET_STRENGTHENING", "DETERIORATING", "FA_V2_BALANCE_SHEET_DETERIORATING", "OBSERVED_EQUITY_ASSETS_DETERIORATING", "EQUITY_ASSETS_DETERIORATION_WATCH"),
+    }
+    for key, (positive, positive_id, negative, negative_id, weakness_id, watch_id) in state_map.items():
+        value = context.get(key)
+        if value == positive:
+            supporting.append(positive_id)
+        elif value == negative:
+            counter.append(negative_id); weakness.append(weakness_id); watches.append(watch_id)
+    # Cash conversion is a V2 proxy.  It can describe an observed counter-thesis,
+    # but is never recast as READY supporting evidence.
+    if context.get("cash_conversion_state") == "WEAK":
+        counter.append("FA_V2_CASH_CONVERSION_WEAK"); weakness.append("OBSERVED_CASH_CONVERSION_WEAK"); watches.append("CASH_CONVERSION_DETERIORATION_WATCH")
+    elif context.get("cash_conversion_state") == "HEALTHY":
+        missing.append("FA_V2_CASH_CONVERSION_PROXY_NOT_READY")
+    if context.get("profitability_state") == "PROFITABLE" and context.get("cash_conversion_state") == "WEAK":
+        counter.append("FA_V2_PROFIT_CASH_CONFLICT"); weakness.append("OBSERVED_PROFIT_CASH_CONFLICT")
+    if context.get("growth_state") == "CONTRACTING":
+        weakness.append("OBSERVED_GROWTH_CONTRACTING")
+    if context.get("profitability_state") == "TURNAROUND_CONTEXT":
+        watches.append("TURNAROUND_FAILURE_WATCH")
+    if context.get("capital_efficiency_state") in {None, "UNAVAILABLE"}:
+        missing.append("FA_V2_CAPITAL_EFFICIENCY_UNAVAILABLE")
+    if any("DEBT_EVIDENCE_UNAVAILABLE" in str(item) for item in context.get("warnings") or []):
+        missing.append("FA_V2_DEBT_EVIDENCE_UNAVAILABLE")
+    return {"status": "AVAILABLE", "supporting": supporting, "counter_thesis": counter,
+            "warnings": list(context.get("warnings") or []), "missing_dimensions": missing,
+            "current_financial_weakness": weakness, "future_financial_invalidation_watch": watches,
+            "compact": dict(context), "is_actionable": False,
+            "turnaround_state": "FA_V2_TURNAROUND_CONTEXT" if context.get("profitability_state") == "TURNAROUND_CONTEXT" else None}
 
 
 def compact_decision(record: Mapping[str, Any]) -> dict[str, Any]:

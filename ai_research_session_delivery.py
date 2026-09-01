@@ -14,6 +14,7 @@ from typing import Any, Mapping
 from field_temporal_contract import stable_id
 from current_daily_decision_research_product import ABSENT_OWNER_FOCUS_STATUS, is_present_research_card
 from owner_research_focus import load_owner_research_focus, owner_focus_tickers
+from financial_analysis_product_projection import context_for_ticker, validate_product_context
 
 
 AI_CONTRACT = "ai_research_session_bundle/v1"
@@ -116,12 +117,23 @@ def _valuation_handoff(row: Any) -> dict[str, Any]:
     }
 
 
-def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> dict[str, Any]:
+def _delivery_financial_context(context: Mapping[str, Any] | None, ticker: str) -> dict[str, Any] | None:
+    compact = context_for_ticker(context, ticker)
+    if compact is None:
+        return None
+    # Deep lineage remains local/extractor-only.  Normal delivery retains the
+    # logical reference and engine identity, never filesystem paths or raw rows.
+    compact.pop("lineage", None)
+    return compact
+
+
+def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[str, Any],
+                     financial_analysis_product_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """One source-preserving compact context for an arbitrary universe ticker."""
     boundary = copy.deepcopy((operation.get("product") or {}).get("authority_boundary") or {})
     boundary["is_actionable"] = False
     boundary["entry_action_is_research_label_not_execution_instruction"] = True
-    return {
+    result = {
         "ticker": ticker,
         "companion_role": FULL_UNIVERSE_COMPANION_ROLE,
         "not_primary_human_review_input": True,
@@ -138,6 +150,12 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
         "corporate_intelligence_context": _slim(_records(inputs.get("corporate_intelligence")).get(ticker)),
         "authority_boundary": boundary,
     }
+    # This happens after _slim by construction, so the versioned compact
+    # contract cannot collapse to an empty nested map.
+    financial = _delivery_financial_context(financial_analysis_product_context, ticker)
+    if financial is not None:
+        result["financial_analysis"] = financial
+    return result
 
 
 def recommended_ai_inputs() -> dict[str, str]:
@@ -310,6 +328,12 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
     scope = _analysis_scope(product, full_universe_record_count=len(universe))
     routing = recommended_ai_inputs()
     boundary = _authority_boundary(product)
+    financial_context = validate_product_context(inputs.get("financial_analysis_product_context"))
+    financial_summary = None
+    financial_index = None
+    if financial_context is not None:
+        financial_summary = copy.deepcopy(financial_context.get("financial_analysis_market_summary"))
+        financial_index = copy.deepcopy(financial_context.get("financial_analysis_ticker_index"))
     primary: dict[str, Any] = {
         "schema_version": AI_CONTRACT,
         "artifact_role": PRIMARY_HUMAN_REVIEW_ROLE,
@@ -325,15 +349,20 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         "is_actionable": False,
         "no_alphabetical_sampling": True,
         "market": {"summary": copy.deepcopy(product["market_brief"]), "macro": copy.deepcopy(product.get("macro_context")), "flow_coverage": copy.deepcopy((manifest.get("coverage_summary") or {}).get("market_flow_positioning")), "limitations": copy.deepcopy(manifest["warnings"])},
+        "financial_analysis": {"market_summary": financial_summary, "ticker_index": financial_index,
+                               "source_context_identity": (financial_context or {}).get("source_context_identity")},
         "owner_focus_research_contexts": _owner_focus_contexts(product),
         "research_cohorts": {"watchlist": copy.deepcopy(product["watchlist"]), "owner_focus": copy.deepcopy(product.get("owner_focus") or {"tickers": list(owner_focus_tickers()), "is_portfolio_holdings": False}), "high_priority_review": copy.deepcopy(product["high_priority_full_universe_review_set"]), "deterministic_cohorts": copy.deepcopy(product["research_cohorts"]), "entry_relevant_90_count": product["aggregate_validation"]["entry_relevant_90_count"]},
-        "ticker_research_contexts": {ticker: copy.deepcopy(cards[ticker]) for ticker in useful_tickers},
+        "ticker_research_contexts": {
+            ticker: {**copy.deepcopy(cards[ticker]), **({"financial_analysis": _delivery_financial_context(financial_context, ticker)} if financial_context is not None else {})}
+            for ticker in useful_tickers
+        },
         "portfolio_risk": copy.deepcopy(operation.get("portfolio_risk") or {"status": "NO_EXPLICIT_PORTFOLIO_SUPPLIED", "is_actionable": False}),
         "lineage": {"input_artifacts": copy.deepcopy(manifest["input_artifacts"]), "output_artifacts": copy.deepcopy(manifest["outputs"]), "session_coherence": copy.deepcopy(manifest["session_coherence"])},
         "what_to_verify_next": copy.deepcopy(product["what_to_verify_next"]),
     }
     primary_bytes = (_canon(primary) + "\n").encode("utf-8")
-    rows = [_canon(_compact_context(ticker, operation, inputs)) for ticker in universe]
+    rows = [_canon(_compact_context(ticker, operation, inputs, financial_context)) for ticker in universe]
     full_bytes = (("\n".join(rows) + "\n") if rows else "").encode("utf-8")
     projection = build_dashboard_projection(operation)
     projection_bytes = (_canon(projection) + "\n").encode("utf-8")
@@ -368,6 +397,7 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
             "current_decision_cockpit_projection.json": {"bytes": len(projection_bytes), "sha256": _hash_bytes(projection_bytes), "projection_identity": projection["projection_identity"]},
         },
         "source_artifact_identities": copy.deepcopy(product["source_artifact_identities"]),
+        "financial_analysis_source_context_identity": (financial_context or {}).get("source_context_identity"),
         "authority_boundary": boundary,
         "warnings": copy.deepcopy(manifest["warnings"]),
         "created_at": created_at,

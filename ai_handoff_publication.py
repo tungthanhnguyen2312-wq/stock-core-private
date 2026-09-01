@@ -23,6 +23,19 @@ def _manifest_lineage(source: Path, producer_checkpoint: str) -> dict[str, Any]:
     manifest=json.loads((source/"ai_research_bundle_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, Mapping): raise HandoffPublicationError("HANDOFF_MANIFEST_NOT_OBJECT")
     return {"producer_checkpoint":producer_checkpoint,"producer_head":manifest.get("producer_head"),"operation_identity":manifest.get("operation_identity"),"daily_product_identity":manifest.get("daily_product_identity")}
+def _financial_lineage(parsed: Mapping[str, Any]) -> str | None:
+    """Validate the optional compact V2 identity chain without publishing its full replay."""
+    primary = parsed.get("ai_research_session_bundle.json") or {}
+    manifest = parsed.get("ai_research_bundle_manifest.json") or {}
+    financial = primary.get("financial_analysis") if isinstance(primary, Mapping) else None
+    if not isinstance(financial, Mapping): return None
+    source_identity = financial.get("source_context_identity")
+    if source_identity is None: return None
+    summary = financial.get("market_summary") or {}
+    if (not isinstance(summary, Mapping) or summary.get("source_context_identity") != source_identity
+            or manifest.get("financial_analysis_source_context_identity") != source_identity):
+        raise HandoffPublicationError("HANDOFF_FINANCIAL_ANALYSIS_IDENTITY_CHAIN_INVALID")
+    return str(source_identity)
 def _identity(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",", ":")).encode("utf-8")).hexdigest()
 def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None) -> tuple[dict[str,Path],dict[str,Any]]:
@@ -40,6 +53,8 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
     hashes={name:sha(path) for name,path in files.items()}
     package_identity=_identity({"session":session,"files":hashes})
     lineage=_manifest_lineage(source,producer_checkpoint)
+    financial_source_identity = _financial_lineage(parsed)
+    if financial_source_identity is not None: lineage["financial_analysis_source_context_identity"] = financial_source_identity
     if decision_brief: lineage["next_session_decision_brief_identity"]=parsed["next_session_decision_brief.json"].get("artifact_identity")
     handoff_build_id="handoff_build_"+_identity({"session":session,"package_sha256":package_identity,"lineage":lineage})
     payload={"schema_version":CONTRACT_VERSION,"session":session,"status":"READY_FOR_AI","files":hashes,"package_sha256":package_identity,"lineage":lineage,"handoff_build_id":handoff_build_id}

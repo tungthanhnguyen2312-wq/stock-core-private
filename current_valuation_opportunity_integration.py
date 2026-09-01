@@ -17,6 +17,7 @@ from opportunity_context import (
 from security_decision_context import (
     CONTRACT_VERSION as DECISION_CONTRACT, LABELS, build_ticker_decision, compact_decision,
 )
+from financial_analysis_product_projection import context_for_ticker, validate_product_context
 
 SCHEMA_VERSION = "1.0.0"
 MILESTONE = "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"
@@ -53,6 +54,7 @@ def build_artifacts(
     thesis_cases: Mapping[str, Any] | None = None,
     leadership: Mapping[str, Any] | None = None,
     portfolio: Mapping[str, Any] | None = None,
+    financial_analysis_product_context: Mapping[str, Any] | None = None,
     requested_at: str,
 ) -> dict[str, Any]:
     """Join retained current-research artifacts into opportunity and decision contexts.
@@ -70,6 +72,7 @@ def build_artifacts(
     assert_artifact_session_not_future(_session(portfolio, "as_of_session") or ((portfolio or {}).get("metadata") or {}).get("as_of_session"),
                                       decision_session=as_of_session, label="portfolio")
 
+    financial_analysis_product_context = validate_product_context(financial_analysis_product_context)
     features = _records(feature_store)
     behaviors = _records(tactical_behavior)
     watch_records = _records(watchlist)
@@ -137,6 +140,7 @@ def build_artifacts(
             portfolio=portfolio,
             portfolio_freshness=portfolio_freshness,
             feature_store_identity=feature_identity,
+            financial_analysis=context_for_ticker(financial_analysis_product_context, ticker),
         )
         opportunity_records[ticker] = opportunity
         decision_records[ticker] = build_ticker_decision(opportunity)
@@ -154,6 +158,7 @@ def build_artifacts(
         "thesis_catalyst_cases": thesis_identity,
         "market_sector_leadership": leadership_identity,
         "portfolio_research_context": (portfolio or {}).get("artifact_identity"),
+        "financial_analysis_product_integration": (financial_analysis_product_context or {}).get("artifact_identity"),
     }
     opportunity = _opportunity_artifact(
         as_of_session=as_of_session, requested_at=requested_at, records=opportunity_records,

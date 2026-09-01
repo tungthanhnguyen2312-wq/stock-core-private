@@ -126,6 +126,10 @@ from dnse_current_state_price_analytics import build_current_state_price_analyti
 from market_wide_current_liquidity_research import (
     content_identity as market_wide_current_liquidity_content_identity,
 )
+from financial_analysis_product_projection import (
+    context_for_ticker as financial_analysis_context_for_ticker,
+    validate_product_context as validate_financial_analysis_product_context,
+)
 from market_wide_current_descriptive_research import (
     content_identity as market_wide_current_descriptive_research_content_identity,
 )
@@ -2900,6 +2904,35 @@ def attach_current_daily_decision_research_product(bundle_entries: dict[str, dic
     return bundle_entries
 
 
+def load_financial_analysis_product_context_artifact(path: Path) -> Mapping[str, Any]:
+    """Load only the explicit compact contract; never discover a sibling worktree."""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"FINANCIAL_ANALYSIS_PRODUCT_CONTEXT_UNREADABLE:{exc}") from exc
+    try:
+        return validate_financial_analysis_product_context(payload)
+    except Exception as exc:
+        raise ValueError(f"FINANCIAL_ANALYSIS_PRODUCT_CONTEXT_INVALID:{exc}") from exc
+
+
+def attach_financial_analysis_v2_product_context(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> Mapping[str, Any] | None:
+    """Opt-in attach.  With the flag unset this performs no V2-specific file I/O."""
+    if not include:
+        return None
+    if not artifact_path:
+        raise ValueError("FINANCIAL_ANALYSIS_PRODUCT_CONTEXT_PATH_REQUIRED")
+    context = load_financial_analysis_product_context_artifact(Path(artifact_path))
+    for ticker, entry in bundle_entries.items():
+        try:
+            entry["financial_analysis"] = financial_analysis_context_for_ticker(context, ticker)
+        except Exception as exc:
+            raise ValueError(f"FINANCIAL_ANALYSIS_PRODUCT_CONTEXT_TICKER_MISMATCH:{ticker}:{exc}") from exc
+    return context
+
+
 DAILY_RESEARCH_SESSION_REGISTRY = (
     Path(__file__).resolve().parent / "config/daily_research_session_input_registry.json"
 )
@@ -4939,6 +4972,10 @@ def main() -> int:
                         help="Opt-in current daily decision-research card pass-through; human-review research only, never recommendation, probability, target, sizing, or execution.")
     parser.add_argument("--current-daily-decision-research-product-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained current daily decision-research product artifact.")
+    parser.add_argument("--include-financial-analysis-v2-product-context", action="store_true",
+                        help="Opt-in only: attach financial_analysis_product_integration/v1 from an explicit compact V2 product context. Never reads V2 files when omitted.")
+    parser.add_argument("--financial-analysis-v2-product-context-path", metavar="PATH",
+                        help="Explicit financial_analysis_product_integration/v1 path required only with the Financial Analysis V2 opt-in; no neighboring-worktree discovery.")
     parser.add_argument("--include-watchlist-tactical-entry-classifier", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].watchlist_tactical_entry_classifier from the"
@@ -5028,6 +5065,8 @@ def main() -> int:
         parser.error("--include-correlation-concentration-guard requires both "
                      "--correlation-concentration-guard-path and "
                      "--correlation-concentration-lookback")
+    if args.include_financial_analysis_v2_product_context and not args.financial_analysis_v2_product_context_path:
+        parser.error("--include-financial-analysis-v2-product-context requires --financial-analysis-v2-product-context-path")
 
     if args.verify:
         manifest_path = Path(args.verify)
@@ -5342,6 +5381,10 @@ def main() -> int:
         bundle_entries, args.include_current_daily_decision_research_product,
         args.current_daily_decision_research_product_path,
     )
+    financial_analysis_product_context = attach_financial_analysis_v2_product_context(
+        bundle_entries, args.include_financial_analysis_v2_product_context,
+        args.financial_analysis_v2_product_context_path,
+    )
     # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
     # market_wide_current_* siblings above.
     attach_watchlist_tactical_entry_classifier(
@@ -5480,6 +5523,13 @@ def main() -> int:
            if pillar_a_research_coverage is not None else {}),
         **({"historical_scaleout_coverage": scaleout_coverage} if scaleout_coverage is not None else {}),
         "tickers": bundle_entries,
+        **({"financial_analysis_v2": {
+            "market_summary": financial_analysis_product_context.get("financial_analysis_market_summary"),
+            "ticker_index": financial_analysis_product_context.get("financial_analysis_ticker_index"),
+            "source_context_identity": financial_analysis_product_context.get("source_context_identity"),
+            "contract_version": financial_analysis_product_context.get("contract_version"),
+            "is_actionable": False,
+        }} if financial_analysis_product_context is not None else {}),
         "opportunity_ranking": opportunity_ranking,
         "data_quality_flags": data_quality_flags,
         "provenance": manifest_files,
