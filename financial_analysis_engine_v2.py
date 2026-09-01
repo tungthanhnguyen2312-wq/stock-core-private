@@ -13,6 +13,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 import monetary_basis_contract as basis_contract
+import bank_financial_research_component as bank_component
 
 
 CONTRACT_VERSION = "financial_analysis_context/v2"
@@ -25,6 +26,30 @@ FLOW_STANDALONE = "STANDALONE_QUARTER"
 PIT = "POINT_IN_TIME_BALANCE_SHEET"
 UNKNOWN = "UNKNOWN_DURATION"
 PERIOD_SEMANTICS = frozenset({FLOW_STANDALONE, "YTD_CUMULATIVE_INTERIM", "ANNUAL", PIT, UNKNOWN})
+
+# --- Bank specialist research family (additive; never alters INDUSTRIAL/LIMITED) ---
+BANK = "bank"
+BANK_NPL_RATIO = "bank_npl_ratio"
+BANK_LDR = "bank_ldr"
+BANK_CIR = "bank_cir"
+BANK_PROVISION_COVERAGE = "bank_provision_coverage"
+BANK_LOAN_GROWTH = "bank_loan_growth"
+BANK_NIM_PROVIDER_PROXY = "bank_nim_provider_proxy"
+BANK_FEATURE_IDS = (BANK_NPL_RATIO, BANK_LDR, BANK_CIR, BANK_PROVISION_COVERAGE, BANK_LOAN_GROWTH, BANK_NIM_PROVIDER_PROXY)
+BANK_ASSET_QUALITY_STATE = "bank_asset_quality_state"
+BANK_FUNDING_STATE = "bank_funding_state"
+BANK_EFFICIENCY_STATE = "bank_efficiency_state"
+BANK_STATE_NAMES = (BANK_ASSET_QUALITY_STATE, BANK_FUNDING_STATE, BANK_EFFICIENCY_STATE)
+# Raw bank_financial_research_component/v1 metric_id vocabulary this milestone's
+# deterministic formulas read (see bank_financial_research_component.KNOWN_RAW_METRIC_IDS
+# for the full TCBS-probe-established universe, only part of which is consumed here).
+_CUSTOMER_LOAN = "customer_loan"
+_DEPOSIT = "deposit"
+_NON_PERFORMING_LOAN = "non_performing_loan"
+_PROVISION = "provision"
+_OPERATION_EXPENSE = "operation_expense"
+_TOTAL_OPERATION_INCOME = "total_operation_income"
+_NET_INTEREST_MARGIN_PROVIDER = "net_interest_margin"
 
 
 def _canonical(value: Any) -> str:
@@ -420,6 +445,216 @@ def _same_provider_eop_proxy(rows: Sequence[Mapping[str, Any]], numerator_metric
                     warnings=["END_OF_PERIOD_BALANCE_PROXY_NOT_AVERAGE_BALANCE_RETURN"])
 
 
+def _bank_usable(component: Mapping[str, Any], *, fitness: str) -> bool:
+    return (
+        component.get("contract_version") == bank_component.CONTRACT_VERSION
+        and component.get("fitness") == fitness
+        and _numeric(component.get("raw_value"))
+        and component.get("provider") not in (None, "", "unknown")
+        and component.get("source_identity") not in (None, "", "unknown")
+    )
+
+
+def _bank_period(component: Mapping[str, Any]) -> tuple[int, int | None] | None:
+    year = component.get("year")
+    if not isinstance(year, int) or isinstance(year, bool):
+        return None
+    quarter = component.get("quarter")
+    return (year, quarter if isinstance(quarter, int) and not isinstance(quarter, bool) else None)
+
+
+def _bank_group(components: Sequence[Mapping[str, Any]], metric_id: str, *,
+                fitness: str) -> dict[str, dict[tuple[int, int | None], Mapping[str, Any]]]:
+    grouped: dict[str, dict[tuple[int, int | None], Mapping[str, Any]]] = defaultdict(dict)
+    for component in components:
+        if not _bank_usable(component, fitness=fitness) or component.get("metric_id") != metric_id:
+            continue
+        period = _bank_period(component)
+        if period is None:
+            continue
+        key = f"{component.get('ticker')}|{component.get('provider')}"
+        grouped[key][period] = component
+    return grouped
+
+
+def _bank_same_period_pair(components: Sequence[Mapping[str, Any]], numerator_metric: str,
+                           denominator_metric: str) -> tuple[Mapping[str, Any], Mapping[str, Any]] | None:
+    """Same-provider, same-period pair of raw structured bank components.
+
+    Mirrors `_same_period_pair`'s same-source-key discipline: a pair can only
+    form within one (ticker, provider) group, at one shared (year, quarter)
+    period -- the same-representation guarantee that lets a same-row ratio
+    stay valid even when currency/scale are both UNKNOWN (they cancel).
+    """
+    left = _bank_group(components, numerator_metric, fitness=bank_component.STRUCTURED_RESEARCH_COMPONENT)
+    right = _bank_group(components, denominator_metric, fitness=bank_component.STRUCTURED_RESEARCH_COMPONENT)
+    candidates = [(period, left[key][period], right[key][period])
+                  for key in set(left) & set(right) for period in set(left[key]) & set(right[key])]
+    return max(candidates, key=lambda item: item[0])[1:] if candidates else None
+
+
+def _bank_feature(feature_id: str, *, value: Any = None, fitness: str = "BLOCKED_BY_EVIDENCE",
+                  method: str, inputs: Sequence[Mapping[str, Any]] = (),
+                  reason_codes: Sequence[str] = (), warnings: Sequence[str] = ()) -> dict[str, Any]:
+    return {
+        "feature_id": feature_id, "value": value, "fitness": fitness, "method": method,
+        "period_identity": [f"{c.get('year')}-Q{c['quarter']}" if c.get("quarter") else f"{c.get('year')}-FY" for c in inputs],
+        "provider_source_provenance": [
+            {"provider": c.get("provider"), "source_identity": c.get("source_identity"), "retrieved_at": c.get("retrieved_at")}
+            for c in inputs
+        ],
+        # Purely descriptive lineage, never a gate: a same-row ratio stays READY
+        # even when every input's status here reads UNKNOWN (see module docstring).
+        "period_semantics_status": sorted({str(c.get("period_semantics_status")) for c in inputs}),
+        "component_currency_status": sorted({str(c.get("currency_status")) for c in inputs}),
+        "component_scale_status": sorted({str(c.get("scale_status")) for c in inputs}),
+        "reason_codes": list(reason_codes), "warnings": list(warnings), "is_actionable": False,
+    }
+
+
+def _bank_blocked(feature_id: str, *codes: str, method: str = "bank_blocked_by_evidence/v1") -> dict[str, Any]:
+    return _bank_feature(feature_id, method=method, reason_codes=codes)
+
+
+def _bank_not_applicable(feature_id: str) -> dict[str, Any]:
+    return _bank_feature(feature_id, fitness="NOT_APPLICABLE", method="bank_entity_applicability/v1",
+                         reason_codes=["ISSUER_NOT_BANK"])
+
+
+def _bank_ratio(feature_id: str, pair: tuple[Mapping[str, Any], Mapping[str, Any]] | None, *,
+                method: str, abs_numerator: bool = False) -> dict[str, Any]:
+    if not pair:
+        return _bank_blocked(feature_id, "MISSING_SAME_PROVIDER_TICKER_PERIOD_BANK_COMPONENT_PAIR")
+    numerator, denominator = pair
+    if denominator["raw_value"] == 0:
+        return _bank_blocked(feature_id, "ZERO_DENOMINATOR")
+    numerator_value = abs(numerator["raw_value"]) if abs_numerator else numerator["raw_value"]
+    return _bank_feature(feature_id, value=numerator_value / denominator["raw_value"], fitness="READY",
+                         method=method, inputs=[numerator, denominator])
+
+
+def _bank_loan_growth(components: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Same-provider, same-quarter YoY customer-loan growth.
+
+    Quarter=5 (or any non-1..4 value) rows are excluded here even though the
+    same-row ratios above accept them: a growth comparison needs a genuine,
+    deterministically-checkable prior-year-same-quarter relationship, and
+    quarter=5's empirical FY behaviour is explicitly not a stable provider
+    contract (see module docstring / AI_RULES period-semantics boundary).
+    """
+    series = _bank_group(components, _CUSTOMER_LOAN, fitness=bank_component.STRUCTURED_RESEARCH_COMPONENT)
+    candidates = []
+    for periods in series.values():
+        for (year, quarter), current in periods.items():
+            if quarter not in (1, 2, 3, 4):
+                continue
+            prior = periods.get((year - 1, quarter))
+            if prior is not None:
+                candidates.append(((year, quarter), prior, current))
+    if not candidates:
+        return _bank_blocked(BANK_LOAN_GROWTH, "MISSING_COMPATIBLE_SAME_QUARTER_PRIOR_YEAR_LOAN_BALANCE")
+    _, prior, current = max(candidates, key=lambda item: item[0])
+    if prior["raw_value"] == 0:
+        return _bank_blocked(BANK_LOAN_GROWTH, "ZERO_DENOMINATOR")
+    return _bank_feature(BANK_LOAN_GROWTH, value=current["raw_value"] / prior["raw_value"] - 1, fitness="READY",
+                         method="same_provider_same_quarter_yoy_bank_loan_growth/v1", inputs=[prior, current])
+
+
+def _bank_nim_proxy(components: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """NIM is never computed. A retained provider NIM is a proxy, never READY.
+
+    The 2026-09-01 TCBS MCP probe could not independently reconstruct NIM from
+    raw components (unlike CIR/LDR/NPL, which matched exactly); only a
+    verbatim provider-derived value is ever surfaced here.
+    """
+    candidates = [c for c in components
+                  if _bank_usable(c, fitness=bank_component.PROVIDER_DERIVED_RESEARCH_PROXY)
+                  and c.get("metric_id") == _NET_INTEREST_MARGIN_PROVIDER and _bank_period(c)]
+    if not candidates:
+        return _bank_blocked(BANK_NIM_PROVIDER_PROXY, "MISSING_PROVIDER_DERIVED_NET_INTEREST_MARGIN_OBSERVATION")
+    latest = max(candidates, key=lambda c: _bank_period(c))
+    return _bank_feature(BANK_NIM_PROVIDER_PROXY, value=latest["raw_value"], fitness="RESEARCH_PROXY",
+                         method="provider_derived_net_interest_margin_proxy/v1", inputs=[latest],
+                         reason_codes=["PROVIDER_DERIVED_NOT_STOCKLOOKUP_DETERMINISTIC_AUTHORITY"],
+                         warnings=["NIM_NOT_INDEPENDENTLY_RECONSTRUCTED_FROM_COMPONENTS"])
+
+
+def _build_bank_features(components: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {
+        BANK_NPL_RATIO: _bank_ratio(BANK_NPL_RATIO, _bank_same_period_pair(components, _NON_PERFORMING_LOAN, _CUSTOMER_LOAN),
+                                    method="same_provider_same_period_bank_npl_ratio/v1"),
+        BANK_LDR: _bank_ratio(BANK_LDR, _bank_same_period_pair(components, _CUSTOMER_LOAN, _DEPOSIT),
+                              method="same_provider_same_period_bank_loan_to_deposit/v1"),
+        BANK_CIR: _bank_ratio(BANK_CIR, _bank_same_period_pair(components, _OPERATION_EXPENSE, _TOTAL_OPERATION_INCOME),
+                              method="same_provider_same_period_bank_cost_to_income/v1", abs_numerator=True),
+        BANK_PROVISION_COVERAGE: _bank_ratio(BANK_PROVISION_COVERAGE,
+                                             _bank_same_period_pair(components, _PROVISION, _NON_PERFORMING_LOAN),
+                                             method="same_provider_same_period_bank_provision_coverage/v1"),
+        BANK_LOAN_GROWTH: _bank_loan_growth(components),
+        BANK_NIM_PROVIDER_PROXY: _bank_nim_proxy(components),
+    }
+
+
+def _bank_ratio_trajectory(components: Sequence[Mapping[str, Any]], numerator_metric: str, denominator_metric: str,
+                           *, abs_numerator: bool = False) -> float | None:
+    """YoY delta of one same-provider, same-quarter bank ratio, or None.
+
+    Internal to state derivation only -- not one of the six named bank
+    features. Returns None (never a fabricated 0) whenever no compatible
+    prior-year-same-quarter pair exists, so a single retained period can
+    never present as a trajectory.
+    """
+    def _ratio(num: Mapping[str, Any], den: Mapping[str, Any]) -> float:
+        value = abs(num["raw_value"]) if abs_numerator else num["raw_value"]
+        return value / den["raw_value"]
+
+    numerator = _bank_group(components, numerator_metric, fitness=bank_component.STRUCTURED_RESEARCH_COMPONENT)
+    denominator = _bank_group(components, denominator_metric, fitness=bank_component.STRUCTURED_RESEARCH_COMPONENT)
+    candidates = []
+    for key in set(numerator) & set(denominator):
+        for (year, quarter), current_num in numerator[key].items():
+            if quarter not in (1, 2, 3, 4):
+                continue
+            current_den = denominator[key].get((year, quarter))
+            prior_num = numerator[key].get((year - 1, quarter))
+            prior_den = denominator[key].get((year - 1, quarter))
+            if not (current_den and prior_num and prior_den):
+                continue
+            if current_den["raw_value"] == 0 or prior_den["raw_value"] == 0:
+                continue
+            candidates.append(((year, quarter), _ratio(current_num, current_den) - _ratio(prior_num, prior_den)))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _bank_trend_state(feature: Mapping[str, Any], trajectory: float | None, *, improving_when_falling: bool) -> str:
+    if feature["fitness"] != "READY":
+        return "UNAVAILABLE"
+    if trajectory is None:
+        return "AVAILABLE"
+    if trajectory == 0:
+        return "STABLE"
+    falling = trajectory < 0
+    return "IMPROVING" if falling == improving_when_falling else "WORSENING"
+
+
+def _bank_feature_states(features: Mapping[str, Mapping[str, Any]],
+                         components: Sequence[Mapping[str, Any]]) -> dict[str, str]:
+    npl_trajectory = _bank_ratio_trajectory(components, _NON_PERFORMING_LOAN, _CUSTOMER_LOAN)
+    ldr_trajectory = _bank_ratio_trajectory(components, _CUSTOMER_LOAN, _DEPOSIT)
+    cir_trajectory = _bank_ratio_trajectory(components, _OPERATION_EXPENSE, _TOTAL_OPERATION_INCOME, abs_numerator=True)
+    return {
+        # Lower NPL/LDR/CIR is the improving direction in each case: fewer bad
+        # loans, a more conservative funding mix, a lower cost-to-income ratio.
+        # This is a *direction* classification (mirrors margin/leverage states
+        # elsewhere in this module), never a threshold-based investment label.
+        BANK_ASSET_QUALITY_STATE: _bank_trend_state(features[BANK_NPL_RATIO], npl_trajectory, improving_when_falling=True),
+        BANK_FUNDING_STATE: _bank_trend_state(features[BANK_LDR], ldr_trajectory, improving_when_falling=True),
+        BANK_EFFICIENCY_STATE: _bank_trend_state(features[BANK_CIR], cir_trajectory, improving_when_falling=True),
+    }
+
+
 def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]:
     income = features["net_income_sign"]
     income_value = income.get("value") if _numeric(income.get("value")) else 0
@@ -491,7 +726,8 @@ def _evidence(ticker: str, features: Mapping[str, Mapping[str, Any]], states: Ma
 
 
 def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issuer_type: str | None,
-                         source_identities: Mapping[str, Any]) -> dict[str, Any]:
+                         source_identities: Mapping[str, Any],
+                         bank_components: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
     normalized_type = str(issuer_type).lower() if issuer_type not in (None, "") else "unknown"
     family = INDUSTRIAL if normalized_type == "corporate" else LIMITED
     ids = ("net_income_sign", "net_margin", "pbt_margin", "net_margin_direction", "revenue_qoq", "profit_before_tax_qoq", "net_income_qoq",
@@ -588,6 +824,19 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "current_ratio_direction": _pit_ratio_direction_for(rows, "current_assets", "current_liabilities", "current_ratio_direction", method="same_provider_point_in_time_current_ratio_yoy/v2"),
         }
         states = _feature_states(features)
+
+    # Bank specialist family: purely additive over whatever the INDUSTRIAL/LIMITED
+    # branch above already produced.  Never runs for a non-bank ticker, even if
+    # bank_components was (incorrectly) supplied for one -- entity classification
+    # is the only gate, mirroring the same rule the corporate family already
+    # enforces the other way around (family == LIMITED never gets corporate ratios).
+    is_bank = normalized_type == BANK
+    bank_features = _build_bank_features(bank_components) if is_bank else {
+        feature_id: _bank_not_applicable(feature_id) for feature_id in BANK_FEATURE_IDS}
+    features.update(bank_features)
+    states.update(_bank_feature_states(bank_features, bank_components) if is_bank
+                  else {name: "NOT_APPLICABLE" for name in BANK_STATE_NAMES})
+
     readiness_features = ("net_margin", "pbt_margin", "equity_to_assets", "cash_to_assets", "assets_yoy", "equity_yoy", "current_ratio")
     ready = family == INDUSTRIAL and any(features[item]["fitness"] == "READY" for item in readiness_features)
     evidence = _evidence(ticker, features, states)
@@ -608,18 +857,27 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "leverage_basis": ("EXPLICIT_SAME_PROVIDER_SHORT_AND_LONG_TERM_BORROWINGS"
                                 if features["debt_to_equity"]["fitness"] == "READY"
                                 else "EQUITY_TO_ASSETS_STRUCTURAL_DIRECTION_ONLY_DEBT_UNAVAILABLE"),
+            "bank_specialist_contract_version": bank_component.CONTRACT_VERSION if is_bank else None,
             "authority_boundary": {"is_actionable": False, "financial_authority_promoted": False, "decision_integration": False}}
 
 
 def build_artifact(*, tickers: Sequence[str], rows: Sequence[Mapping[str, Any]], issuer_types: Mapping[str, str | None],
-                   source_identities: Mapping[str, Any], requested_at: str) -> dict[str, Any]:
+                   source_identities: Mapping[str, Any], requested_at: str,
+                   bank_components: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
     names = sorted({str(ticker).upper() for ticker in tickers})
     by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in rows:
         ticker = str(row.get("ticker") or "").upper()
         if ticker in names:
             by_ticker[ticker].append(row)
-    records = {ticker: build_ticker_context(ticker, by_ticker.get(ticker, []), issuer_type=issuer_types.get(ticker), source_identities=source_identities) for ticker in names}
+    bank_by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for component in bank_components:
+        ticker = str(component.get("ticker") or "").upper()
+        if ticker in names:
+            bank_by_ticker[ticker].append(component)
+    records = {ticker: build_ticker_context(ticker, by_ticker.get(ticker, []), issuer_type=issuer_types.get(ticker),
+                                            source_identities=source_identities,
+                                            bank_components=bank_by_ticker.get(ticker, [])) for ticker in names}
     all_features = [feature for record in records.values() for feature in record["features"].values()]
     artifact: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION,
         "requested_at": requested_at, "source_identities": dict(source_identities), "records": records,
