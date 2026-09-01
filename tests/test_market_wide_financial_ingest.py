@@ -154,6 +154,13 @@ class ExtractionTests(unittest.TestCase):
             self.assertIn("statement_scope_unknown", row["warnings"])
             self.assertIn("currency_and_scale_unknown", row["warnings"])
 
+    def test_period_metadata_is_retained_without_duration_inference(self):
+        extracted = _extract(period_metadata={"2026-Q1": {"yearReport": 2026, "lengthReport": 1,
+                                                        "publicDate": "2026-05-01"}})
+        row = next(item for item in extracted["observations"] if item["reporting_period"] == "2026-Q1")
+        self.assertEqual(row["provider_report_metadata"]["lengthReport"], 1)
+        self.assertEqual(row["cumulative_state"], "unknown")
+
     def test_english_label_absence_is_recorded_not_invented(self):
         row = _extract()["observations"][0]
         self.assertIsNone(row["raw_label_en"])

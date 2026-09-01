@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 
 
 CONTRACT_VERSION = "financial_analysis_context/v2"
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
 FITNESS = ("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE")
 INDUSTRIAL = "INDUSTRIAL_FINANCIAL_ANALYSIS"
 LIMITED = "OTHER_FINANCIAL_LIMITED_ANALYSIS"
@@ -379,6 +379,38 @@ def _mixed_provider_proxy(rows: Sequence[Mapping[str, Any]], numerator: str, den
                     warnings=["NOT_READY_NOT_VALUATION_ELIGIBLE_NOT_CURRENT_RESEARCH_READY_BY_ITSELF"])
 
 
+def _same_provider_eop_proxy(rows: Sequence[Mapping[str, Any]], numerator_metric: str,
+                             denominator_metric: str, feature_id: str) -> dict[str, Any]:
+    """One compatible standalone flow divided by its ending same-provider balance sheet.
+
+    This is deliberately an *EOP proxy*.  It must never be relabelled as an average-balance
+    ROA/ROE/turnover measure simply because both inputs share a quarter label.
+    """
+    def index(metric: str, semantic: str) -> dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]]:
+        result: dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
+        for row in rows:
+            if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
+                unit = row.get("normalized_candidate_unit") or {}
+                key = (str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
+                       str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")))
+                result[key][str(row.get("native_period_label") or row.get("period_end"))] = row
+        return result
+    flows = index(numerator_metric, FLOW_STANDALONE)
+    stocks = index(denominator_metric, PIT)
+    candidates = []
+    for key in set(flows) & set(stocks):
+        for label in set(flows[key]) & set(stocks[key]):
+            candidates.append((label, flows[key][label], stocks[key][label]))
+    if not candidates:
+        return _blocked(feature_id, "MISSING_SAME_PROVIDER_FLOW_AND_ENDING_BALANCE_SHEET_INPUT")
+    _, flow, stock = max(candidates, key=lambda item: item[0])
+    if stock["reported_value"] == 0:
+        return _blocked(feature_id, "ZERO_DENOMINATOR")
+    return _feature(feature_id, value=flow["reported_value"] / stock["reported_value"], fitness="READY",
+                    method="same_provider_standalone_flow_end_of_period_balance_proxy/v2", inputs=[flow, stock],
+                    warnings=["END_OF_PERIOD_BALANCE_PROXY_NOT_AVERAGE_BALANCE_RETURN"])
+
+
 def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]:
     income = features["net_income_sign"]
     income_value = income.get("value") if _numeric(income.get("value")) else 0
@@ -454,7 +486,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
     ids = ("net_income_sign", "net_margin", "pbt_margin", "net_margin_direction", "revenue_qoq", "net_income_qoq",
            "revenue_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "net_income_ttm_yoy", "revenue_ttm", "net_income_ttm", "operating_cash_flow_sign", "cfo_to_net_income",
            "fcf", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
-           "cash_yoy", "same_provider_roa", "same_provider_roe", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy",
+           "cash_yoy", "same_provider_roa", "same_provider_roe", "same_provider_roa_eop_proxy", "same_provider_roe_eop_proxy", "same_provider_asset_turnover_eop_proxy", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy",
            "net_working_capital", "current_ratio", "net_working_capital_direction", "current_ratio_direction")
     if family == LIMITED:
         features = {feature_id: _not_applicable(feature_id) for feature_id in ids}
@@ -500,7 +532,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "revenue_ttm": revenue_ttm, "net_income_ttm": income_ttm,
             "revenue_ttm_yoy": _ttm_yoy("revenue_ttm_yoy", revenue), "net_income_ttm_yoy": _ttm_yoy("net_income_ttm_yoy", income),
             "operating_cash_flow_sign": _feature("operating_cash_flow_sign", value=_latest(ocf)["reported_value"], fitness="READY", method="latest_compatible_standalone_cfo_sign/v2", inputs=[_latest(ocf)]) if _latest(ocf) else _blocked("operating_cash_flow_sign", "MISSING_STANDALONE_OPERATING_CASH_FLOW"),
-            "cfo_to_net_income": _feature("cfo_to_net_income", value=cash_pair[0]["reported_value"] / cash_pair[1]["reported_value"], fitness="RESEARCH_PROXY", method="same_provider_cross_statement_cash_earnings_proxy/v2", inputs=list(cash_pair), warnings=["CROSS_STATEMENT_SCALE_SEMANTICS_NOT_FULLY_AUTHORITATIVE"]) if cash_pair and cash_pair[1]["reported_value"] != 0 else _blocked("cfo_to_net_income", "MISSING_SAME_REPRESENTATION_CFO_AND_NET_INCOME"),
+            "cfo_to_net_income": (_feature("cfo_to_net_income", value=cash_pair[0]["reported_value"] / cash_pair[1]["reported_value"], fitness="READY", method="same_provider_cross_statement_cash_earnings_ratio/v2", inputs=list(cash_pair), warnings=["NEGATIVE_NET_INCOME_RATIO_RETAINED_AS_REPORTED"] if cash_pair[1]["reported_value"] < 0 else []) if cash_pair and cash_pair[1]["reported_value"] != 0 else _blocked("cfo_to_net_income", "ZERO_NET_INCOME_DENOMINATOR" if cash_pair else "MISSING_SAME_PROVIDER_CFO_AND_NET_INCOME")),
             "fcf": _blocked("fcf", "FCF_BLOCKED_BY_EVIDENCE_CAPEX_SEMANTICS_UNAVAILABLE"),
             "equity_to_assets": _ratio("equity_to_assets", _same_period_pair(rows, "shareholders_equity", "total_assets", PIT), method="same_provider_same_period_equity_to_assets/v2"),
             "cash_to_assets": _ratio("cash_to_assets", _same_period_pair(rows, "cash_and_cash_equivalents", "total_assets", PIT), method="same_provider_same_period_cash_to_assets/v2"),
@@ -509,8 +541,13 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "debt_to_equity_direction": _pit_ratio_direction_for(rows, "total_interest_bearing_debt", "shareholders_equity", "debt_to_equity_direction"),
             "equity_to_assets_direction": _pit_ratio_direction(rows),
             "assets_yoy": _pit_trajectory(rows, "total_assets"), "equity_yoy": _pit_trajectory(rows, "shareholders_equity"), "cash_yoy": _pit_trajectory(rows, "cash_and_cash_equivalents"),
-            "same_provider_roa": _blocked("same_provider_roa", "SAME_PROVIDER_AVERAGE_BALANCE_INPUTS_UNAVAILABLE"),
-            "same_provider_roe": _blocked("same_provider_roe", "SAME_PROVIDER_AVERAGE_BALANCE_INPUTS_UNAVAILABLE"),
+            # Legacy IDs stay present as aliases for the explicitly named EOP proxies; the
+            # old average-balance implication is removed rather than silently retained.
+            "same_provider_roa": _same_provider_eop_proxy(rows, "net_income", "total_assets", "same_provider_roa"),
+            "same_provider_roe": _same_provider_eop_proxy(rows, "net_income", "shareholders_equity", "same_provider_roe"),
+            "same_provider_roa_eop_proxy": _same_provider_eop_proxy(rows, "net_income", "total_assets", "same_provider_roa_eop_proxy"),
+            "same_provider_roe_eop_proxy": _same_provider_eop_proxy(rows, "net_income", "shareholders_equity", "same_provider_roe_eop_proxy"),
+            "same_provider_asset_turnover_eop_proxy": _same_provider_eop_proxy(rows, "revenue", "total_assets", "same_provider_asset_turnover_eop_proxy"),
             "mixed_provider_roa_proxy": _mixed_provider_proxy(rows, "net_income", "total_assets", "mixed_provider_roa_proxy"),
             "mixed_provider_asset_turnover_proxy": _mixed_provider_proxy(rows, "revenue", "total_assets", "mixed_provider_asset_turnover_proxy"),
             "net_working_capital": _difference("net_working_capital", _same_period_pair(rows, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_net_working_capital/v2"),

@@ -58,7 +58,10 @@ import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-SCHEMA_VERSION = "1.0.0"
+# Changes to source metadata must invalidate every observation shard.  In particular, VCI
+# report metadata is evidence about the provider's representation, not a cosmetic payload
+# annotation, so a store built before it was retained cannot remain current.
+SCHEMA_VERSION = "1.1.0"
 
 #: The three statement families the retained payloads cover.
 STATEMENT_FAMILIES = ("balance_sheet", "income_statement", "cash_flow")
@@ -72,7 +75,7 @@ QUALIFICATION_STATE = "retained_raw"
 
 _PAYLOAD_NAME_RE = re.compile(
     r"^(?P<ticker>[A-Za-z0-9]+)_(?P<family>balance_sheet|income_statement|cash_flow)"
-    r"_(?P<frequency>quarter|year)$"
+    r"_(?P<frequency>quarter|year)(?:__(?P<provider>[A-Za-z0-9_-]+))?$"
 )
 
 # `2026-Q1`, `2025-Q4_1`, `2025Q4`, `2024`, `2024-Năm`, `2024_1`, `2024.1`
@@ -116,11 +119,14 @@ def parse_payload_name(stem: str) -> dict[str, str]:
     if match is None:
         raise PayloadNameError(
             f"payload name {stem!r} does not match <TICKER>_<family>_<frequency>")
-    return {
+    identity = {
         "ticker": match.group("ticker").upper(),
         "statement_family": match.group("family"),
         "reporting_frequency": match.group("frequency"),
     }
+    if match.group("provider"):
+        identity["provider_suffix"] = match.group("provider")
+    return identity
 
 
 def normalize_period_column(column: Any) -> dict[str, Any] | None:
@@ -170,7 +176,8 @@ def _text(value: Any) -> str | None:
 
 def extract_payload(frame: Any, *, ticker: str, statement_family: str,
                     reporting_frequency: str, source_file: str,
-                    source_sha256: str) -> dict[str, Any]:
+                    source_sha256: str,
+                    period_metadata: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Extract every raw observation carried by one retained statement payload.
 
     Pure: takes an already-loaded frame, performs no I/O, reads no clock. `frame` needs
@@ -266,6 +273,10 @@ def extract_payload(frame: Any, *, ticker: str, statement_family: str,
             if label_en is None:
                 warnings.append("raw_label_en_absent")
 
+            # A metadata sidecar is keyed by the already-normalised report period.  Its
+            # values are preserved verbatim; extraction deliberately does not translate
+            # `lengthReport` into standalone-quarter or YTD semantics.
+            metadata = dict((period_metadata or {}).get(period_column["reporting_period"], {}))
             observation = {
                 **identity,
                 "identity_key": _fingerprint(identity),
@@ -284,6 +295,7 @@ def extract_payload(frame: Any, *, ticker: str, statement_family: str,
                 "source_file": source_file,
                 "source_sha256": source_sha256,
                 "scraped_at": scraped_at,
+                "provider_report_metadata": metadata,
                 "warnings": sorted(set(warnings)),
             }
             observations.append(observation)

@@ -55,7 +55,7 @@ from raw_financial_observations import (
     sha256_file,
 )
 
-STORE_SCHEMA_VERSION = "1.0.0"
+STORE_SCHEMA_VERSION = "1.1.0"
 
 STORE_RELATIVE = Path("data") / "market-wide-financials"
 OBSERVATIONS_RELATIVE = STORE_RELATIVE / "observations"
@@ -135,6 +135,7 @@ def discover_payloads(runtime_root: Path | str) -> dict[str, Any]:
             "source_file": path.name,
             "statement_family": identity["statement_family"],
             "reporting_frequency": identity["reporting_frequency"],
+            "provider_suffix": identity.get("provider_suffix"),
         })
     for entries in by_ticker.values():
         entries.sort(key=lambda entry: entry["source_file"])
@@ -152,11 +153,15 @@ def _ticker_inputs(runtime_root: Path | str, entries: list[Mapping[str, Any]]) -
     inputs = []
     for entry in entries:
         path = root / str(entry["source_file"])
+        metadata = _period_metadata_path(path)
         inputs.append({
             "source_file": entry["source_file"],
             "statement_family": entry["statement_family"],
             "reporting_frequency": entry["reporting_frequency"],
             "source_sha256": sha256_file(path),
+            # Missing metadata is represented explicitly so adding a sidecar invalidates a
+            # previously built shard even though the Parquet bytes are unchanged.
+            "metadata_sha256": sha256_file(metadata) if metadata.is_file() else None,
         })
     inputs.sort(key=lambda item: item["source_file"])
     return inputs
@@ -174,8 +179,26 @@ def _inputs_fingerprint(inputs: list[Mapping[str, Any]]) -> str:
     return _fingerprint({
         "observation_schema_version": OBSERVATION_SCHEMA_VERSION,
         "store_schema_version": STORE_SCHEMA_VERSION,
-        "payloads": [[item["source_file"], item["source_sha256"]] for item in inputs],
+        "payloads": [[item["source_file"], item["source_sha256"], item.get("metadata_sha256")] for item in inputs],
     })
+
+
+def _period_metadata_path(path: Path) -> Path:
+    return path.with_suffix(".metadata.json")
+
+
+def _read_period_metadata(path: Path) -> Mapping[str, Mapping[str, Any]]:
+    """Read an optional retained per-period metadata sidecar without inventing defaults."""
+    sidecar = _period_metadata_path(path)
+    if not sidecar.is_file():
+        return {}
+    try:
+        payload = json.loads(sidecar.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    periods = payload.get("period_metadata") if isinstance(payload, Mapping) else None
+    return {str(period): dict(value) for period, value in (periods or {}).items()
+            if isinstance(value, Mapping)}
 
 
 def build_ticker_shard(runtime_root: Path | str, ticker: str,
@@ -195,6 +218,7 @@ def build_ticker_shard(runtime_root: Path | str, ticker: str,
                 reporting_frequency=str(item["reporting_frequency"]),
                 source_file=str(item["source_file"]),
                 source_sha256=str(item["source_sha256"]),
+                period_metadata=_read_period_metadata(path),
             )
         except Exception as exc:  # an unreadable payload is a reported failure, never a gap
             failures.append({"source_file": item["source_file"],

@@ -81,7 +81,7 @@ from canonical_financial_resolvers import (
     resolve_statement_scope,
 )
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 #: Bumped 2026-09-01: STRUCTURED_FINANCIAL_DEPTH_RECOVERY_V1 added `current_assets`,
 #: `current_liabilities`, and the finance-lease metrics to METRIC_REGISTRY without bumping
 #: this version, so `canonical_fact_store`'s incremental fingerprint (which keys on this
@@ -89,7 +89,7 @@ SCHEMA_VERSION = "1.0.0"
 #: under the old registry -- every shard kept reporting `unchanged` and silently continued
 #: to omit these metrics even though the mapping and the retained raw observations were both
 #: already correct. See the module docstring's "keying only on source payload hashes" warning.
-MAPPER_VERSION = "1.1.0"
+MAPPER_VERSION = "1.2.0"
 CONTRACT_VERSION = "market-wide-financial-normalization/1.0.0"
 
 STATUS_QUALIFIED = "qualified"
@@ -992,6 +992,9 @@ def _fact(*, ticker: str, metric: str, definition: Mapping[str, Any], period: st
         "source_observation_ids": (list(source_observation_ids) if source_observation_ids
                                    else ([observation["observation_id"]] if observation else [])),
         "observed_at": (observation or {}).get("scraped_at"),
+        # Retain provider-native report metadata distinctly from canonical period bounds.
+        # The mapper must never treat VCI `lengthReport` as a duration inference.
+        "provider_report_metadata": dict((observation or {}).get("provider_report_metadata") or {}),
 
         "reporting_frequency": (observation or {}).get("reporting_frequency"),
         "period_type": "quarterly" if "-Q" in period else "annual",

@@ -94,11 +94,50 @@ def test_non_positive_growth_base_is_a_semantic_transition_not_a_percentage():
     assert "GROWTH_BASE_NON_POSITIVE" in feature["warnings"]
 
 
-def test_ocf_sign_and_cross_statement_proxy_are_distinct():
+def test_ocf_sign_and_same_provider_cross_statement_ratio_are_distinct():
     rows = [row("operating_cash_flow", 8, source="AAA_cash"), row("net_income", 10, source="AAA_income")]
     result = context(rows)
     assert result["features"]["operating_cash_flow_sign"]["fitness"] == "READY"
-    assert result["features"]["cfo_to_net_income"]["fitness"] == "RESEARCH_PROXY"
+    assert result["features"]["cfo_to_net_income"]["fitness"] == "READY"
+
+
+def test_same_provider_eop_capital_efficiency_is_ready_and_explicitly_a_proxy():
+    rows = [
+        row("net_income", 10, provider="VCI", source="AAA_vci_income"),
+        row("revenue", 50, provider="VCI", source="AAA_vci_income"),
+        row("total_assets", 100, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+        row("shareholders_equity", 40, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+    ]
+    result = context(rows)
+    assert result["features"]["same_provider_roa_eop_proxy"]["value"] == pytest.approx(0.1)
+    assert result["features"]["same_provider_roe_eop_proxy"]["value"] == pytest.approx(0.25)
+    assert result["features"]["same_provider_asset_turnover_eop_proxy"]["value"] == pytest.approx(0.5)
+    assert "END_OF_PERIOD_BALANCE_PROXY_NOT_AVERAGE_BALANCE_RETURN" in result["features"]["same_provider_roa_eop_proxy"]["warnings"]
+
+
+def test_cfo_to_net_income_keeps_negative_ratio_and_blocks_zero_denominator():
+    negative = context([row("operating_cash_flow", 8, provider="VCI", source="AAA_vci_cash"),
+                        row("net_income", -10, provider="VCI", source="AAA_vci_income")])
+    assert negative["features"]["cfo_to_net_income"]["value"] == pytest.approx(-0.8)
+    assert "NEGATIVE_NET_INCOME_RATIO_RETAINED_AS_REPORTED" in negative["features"]["cfo_to_net_income"]["warnings"]
+    zero = context([row("operating_cash_flow", 8, provider="VCI", source="AAA_vci_cash"),
+                    row("net_income", 0, provider="VCI", source="AAA_vci_income")])
+    assert "ZERO_NET_INCOME_DENOMINATOR" in zero["features"]["cfo_to_net_income"]["reason_codes"]
+
+
+def test_unknown_duration_same_provider_flows_never_activate_capital_efficiency_or_cash_conversion():
+    rows = [
+        row("net_income", 10, provider="VCI", semantic="UNKNOWN_DURATION", source="AAA_vci_income"),
+        row("revenue", 50, provider="VCI", semantic="UNKNOWN_DURATION", source="AAA_vci_income"),
+        row("operating_cash_flow", 8, provider="VCI", semantic="UNKNOWN_DURATION", source="AAA_vci_cash"),
+        row("total_assets", 100, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+    ]
+    result = context(rows)
+    assert result["features"]["same_provider_roa_eop_proxy"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["same_provider_asset_turnover_eop_proxy"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["cfo_to_net_income"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["revenue_qoq"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["revenue_ttm"]["fitness"] == "BLOCKED_BY_EVIDENCE"
 
 
 def test_fcf_remains_blocked_without_capex_semantics():
