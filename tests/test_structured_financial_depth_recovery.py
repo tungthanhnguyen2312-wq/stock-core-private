@@ -63,6 +63,27 @@ def test_current_assets_and_liabilities_are_explicitly_source_exposes_not_retain
     assert dispositions["current_liabilities"] == "SOURCE_EXPOSES_NOT_RETAINED"
 
 
+def test_current_assets_and_liabilities_present_are_not_reported_missing():
+    rows = [_row("current_assets", 700), _row("current_liabilities", 350), _row("total_assets", 1000)]
+    result = recovery.recover(rows, requested_at="t")
+    missing = {item["canonical_metric"] for item in result["artifact"]["records"]["AAA"]["missing_components"]}
+    assert "current_assets" not in missing and "current_liabilities" not in missing
+    assert result["artifact"]["capability_matrix"]["VCI"]["balance_sheet"]["current_assets"] == "RETAINED_AND_CANONICALIZED"
+    assert result["artifact"]["capability_matrix"]["VCI"]["balance_sheet"]["current_liabilities"] == "RETAINED_AND_CANONICALIZED"
+    assert result["artifact"]["coverage"]["working_capital_retained_ticker_count"] == 1
+
+
+def test_finance_lease_present_is_not_reported_missing():
+    # canonical_financial_facts already derives `finance_lease_liabilities` (sum of the two
+    # explicit components) at layer 3, so it arrives here as its own canonical_metric row --
+    # this module never re-derives it.
+    rows = [_row("short_term_finance_lease_liabilities", 12), _row("long_term_finance_lease_liabilities", 8),
+            _row("finance_lease_liabilities", 20)]
+    result = recovery.recover(rows, requested_at="t")
+    missing = {item["canonical_metric"] for item in result["artifact"]["records"]["AAA"]["missing_components"]}
+    assert "finance_lease_liabilities" not in missing
+
+
 def test_recovery_identity_is_deterministic_and_not_actionable():
     rows = [_row("short_term_interest_bearing_debt", 30), _row("long_term_interest_bearing_debt", 20)]
     first = recovery.recover(rows, requested_at="one")["artifact"]

@@ -278,7 +278,8 @@ def _pit_ratio_direction(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 
 def _pit_ratio_direction_for(rows: Sequence[Mapping[str, Any]], numerator_metric: str,
-                             denominator_metric: str, feature_id: str) -> dict[str, Any]:
+                             denominator_metric: str, feature_id: str, *,
+                             method: str = "same_provider_point_in_time_explicit_debt_ratio_yoy/v2") -> dict[str, Any]:
     """Directional change for two explicit, same-source P-I-T balance-sheet facts."""
     numerator = _groups(rows, numerator_metric, PIT)
     denominator = _groups(rows, denominator_metric, PIT)
@@ -302,9 +303,52 @@ def _pit_ratio_direction_for(rows: Sequence[Mapping[str, Any]], numerator_metric
     _, prior_num, prior_den, current_num, current_den = max(candidates, key=lambda item: item[0])
     value = (current_num["reported_value"] / current_den["reported_value"]
              - prior_num["reported_value"] / prior_den["reported_value"])
-    return _feature(feature_id, value=value, fitness="READY",
-                    method="same_provider_point_in_time_explicit_debt_ratio_yoy/v2",
+    return _feature(feature_id, value=value, fitness="READY", method=method,
                     inputs=[prior_num, prior_den, current_num, current_den],
+                    growth_basis="POINT_IN_TIME_YOY")
+
+
+def _difference(feature_id: str, pair: tuple[Mapping[str, Any], Mapping[str, Any]] | None, *, method: str) -> dict[str, Any]:
+    """A single compatible same-representation (minuend - subtrahend) at one P-I-T period."""
+    if not pair:
+        return _blocked(feature_id, "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION")
+    minuend, subtrahend = pair
+    return _feature(feature_id, value=minuend["reported_value"] - subtrahend["reported_value"],
+                    fitness="READY", method=method, inputs=[minuend, subtrahend])
+
+
+def _pit_component_direction(rows: Sequence[Mapping[str, Any]], minuend_metric: str,
+                             subtrahend_metric: str, feature_id: str) -> dict[str, Any]:
+    """YoY change in (minuend - subtrahend) at two compatible same-representation P-I-T periods.
+
+    A plain value delta, not a percentage change: the underlying difference (e.g. net working
+    capital) may legitimately be negative, zero, or cross zero between periods, and a
+    percentage-of-prior formula is not meaningful in that case. Mirrors
+    `_pit_ratio_direction_for`'s pairing and YoY-quarter selection exactly, substituting a
+    subtraction for a division.
+    """
+    minuend = _groups(rows, minuend_metric, PIT)
+    subtrahend = _groups(rows, subtrahend_metric, PIT)
+    candidates = []
+    for key in set(minuend) & set(subtrahend):
+        periods = sorted(set(minuend[key]) & set(subtrahend[key]))
+        if len(periods) < 2:
+            continue
+        current_label = periods[-1]
+        quarter = _quarter(current_label)
+        prior_label = f"{quarter[0] - 1}-Q{quarter[1]}" if quarter else None
+        if not prior_label or prior_label not in minuend[key] or prior_label not in subtrahend[key]:
+            continue
+        candidates.append((current_label, minuend[key][prior_label], subtrahend[key][prior_label],
+                           minuend[key][current_label], subtrahend[key][current_label]))
+    if not candidates:
+        return _blocked(feature_id, "MISSING_SAME_POINT_IN_TIME_PRIOR_YEAR_RATIO_PAIR")
+    _, prior_min, prior_sub, current_min, current_sub = max(candidates, key=lambda item: item[0])
+    prior_value = prior_min["reported_value"] - prior_sub["reported_value"]
+    current_value = current_min["reported_value"] - current_sub["reported_value"]
+    return _feature(feature_id, value=current_value - prior_value, fitness="READY",
+                    method="same_provider_point_in_time_component_difference_yoy/v2",
+                    inputs=[prior_min, prior_sub, current_min, current_sub],
                     growth_basis="POINT_IN_TIME_YOY")
 
 
@@ -356,9 +400,21 @@ def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]
     if leverage == "UNAVAILABLE":
         leverage = _direction(features["equity_to_assets_direction"], "IMPROVING", "WORSENING", "STABLE")
     resilience = "RESILIENT" if profitability == "PROFITABLE" and margin in {"MARGIN_EXPANDING", "MARGIN_STABLE"} and cash == "HEALTHY" and balance in {"STRENGTHENING", "STABLE"} else "STRESSED" if profitability == "LOSS_MAKING" and cash == "WEAK" else "UNAVAILABLE"
+    nwc = features["net_working_capital"]
+    # Purely descriptive: a sign classification of the level, never a healthy/avoid verdict.
+    working_capital = ("POSITIVE_NET_WORKING_CAPITAL" if nwc["fitness"] == "READY" and nwc["value"] > 0
+                       else "NEGATIVE_NET_WORKING_CAPITAL" if nwc["fitness"] == "READY" and nwc["value"] < 0
+                       else "ZERO_NET_WORKING_CAPITAL" if nwc["fitness"] == "READY"
+                       else "WORKING_CAPITAL_UNAVAILABLE")
+    working_capital_trajectory = _direction(features["net_working_capital_direction"],
+                                            "WORKING_CAPITAL_IMPROVING", "WORKING_CAPITAL_WORSENING", "WORKING_CAPITAL_STABLE")
+    current_ratio_trajectory = _direction(features["current_ratio_direction"],
+                                          "CURRENT_RATIO_IMPROVING", "CURRENT_RATIO_WORSENING", "CURRENT_RATIO_STABLE")
     return {"profitability_state": profitability, "margin_state": margin, "growth_state": growth,
             "balance_sheet_state": balance, "cash_conversion_state": cash,
-            "capital_efficiency_state": capital, "leverage_state": leverage, "resilience_state": resilience}
+            "capital_efficiency_state": capital, "leverage_state": leverage, "resilience_state": resilience,
+            "working_capital_state": working_capital, "working_capital_trajectory_state": working_capital_trajectory,
+            "current_ratio_trajectory_state": current_ratio_trajectory}
 
 
 def _evidence(ticker: str, features: Mapping[str, Mapping[str, Any]], states: Mapping[str, str]) -> dict[str, list[str]]:
@@ -375,6 +431,16 @@ def _evidence(ticker: str, features: Mapping[str, Mapping[str, Any]], states: Ma
     if states["cash_conversion_state"] == "WEAK": negative.append(f"{ticker}: CFO/net-income proxy is weak")
     if states["profitability_state"] == "PROFITABLE" and states["cash_conversion_state"] == "WEAK": conflicts.append(f"{ticker}: profitable earnings conflict with weak cash conversion")
     if states["growth_state"] == "GROWING" and states["margin_state"] == "MARGIN_COMPRESSING": conflicts.append(f"{ticker}: growth conflicts with margin compression")
+    if states["working_capital_state"] == "POSITIVE_NET_WORKING_CAPITAL": positive.append(f"{ticker}: positive net working capital")
+    if states["working_capital_state"] == "NEGATIVE_NET_WORKING_CAPITAL": negative.append(f"{ticker}: negative net working capital")
+    # Thesis-context pairing only: describes co-movement of two already-computed dimensions,
+    # never a score, stance gate, or synthetic financial-health formula.
+    if states["leverage_state"] == "WORSENING" and states["working_capital_trajectory_state"] == "WORKING_CAPITAL_WORSENING":
+        negative.append(f"{ticker}: leverage worsening alongside working capital worsening")
+    if states["leverage_state"] == "IMPROVING" and states["working_capital_trajectory_state"] == "WORKING_CAPITAL_IMPROVING":
+        positive.append(f"{ticker}: leverage improving alongside working capital improving")
+    if states["leverage_state"] == "WORSENING" and states["working_capital_state"] == "POSITIVE_NET_WORKING_CAPITAL":
+        conflicts.append(f"{ticker}: leverage worsening despite positive net working capital")
     for feature_id, feature in sorted(features.items()):
         if feature["fitness"] == "BLOCKED_BY_EVIDENCE": missing.append(f"{feature_id}:{','.join(feature['reason_codes'][:1])}")
     return {"positive_evidence": positive[:6], "negative_evidence": negative[:6],
@@ -388,12 +454,15 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
     ids = ("net_income_sign", "net_margin", "pbt_margin", "net_margin_direction", "revenue_qoq", "net_income_qoq",
            "revenue_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "net_income_ttm_yoy", "revenue_ttm", "net_income_ttm", "operating_cash_flow_sign", "cfo_to_net_income",
            "fcf", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
-           "cash_yoy", "same_provider_roa", "same_provider_roe", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy")
+           "cash_yoy", "same_provider_roa", "same_provider_roe", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy",
+           "net_working_capital", "current_ratio", "net_working_capital_direction", "current_ratio_direction")
     if family == LIMITED:
         features = {feature_id: _not_applicable(feature_id) for feature_id in ids}
         states = {"profitability_state": "UNAVAILABLE", "margin_state": "UNAVAILABLE", "growth_state": "UNAVAILABLE",
                   "balance_sheet_state": "UNAVAILABLE", "cash_conversion_state": "UNAVAILABLE",
-                  "capital_efficiency_state": "UNAVAILABLE", "leverage_state": "UNAVAILABLE", "resilience_state": "UNAVAILABLE"}
+                  "capital_efficiency_state": "UNAVAILABLE", "leverage_state": "UNAVAILABLE", "resilience_state": "UNAVAILABLE",
+                  "working_capital_state": "WORKING_CAPITAL_UNAVAILABLE", "working_capital_trajectory_state": "UNAVAILABLE",
+                  "current_ratio_trajectory_state": "UNAVAILABLE"}
     else:
         revenue = _best_series(rows, "revenue", FLOW_STANDALONE)
         income = _best_series(rows, "net_income", FLOW_STANDALONE)
@@ -444,9 +513,13 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "same_provider_roe": _blocked("same_provider_roe", "SAME_PROVIDER_AVERAGE_BALANCE_INPUTS_UNAVAILABLE"),
             "mixed_provider_roa_proxy": _mixed_provider_proxy(rows, "net_income", "total_assets", "mixed_provider_roa_proxy"),
             "mixed_provider_asset_turnover_proxy": _mixed_provider_proxy(rows, "revenue", "total_assets", "mixed_provider_asset_turnover_proxy"),
+            "net_working_capital": _difference("net_working_capital", _same_period_pair(rows, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_net_working_capital/v2"),
+            "current_ratio": _ratio("current_ratio", _same_period_pair(rows, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_current_ratio/v2"),
+            "net_working_capital_direction": _pit_component_direction(rows, "current_assets", "current_liabilities", "net_working_capital_direction"),
+            "current_ratio_direction": _pit_ratio_direction_for(rows, "current_assets", "current_liabilities", "current_ratio_direction", method="same_provider_point_in_time_current_ratio_yoy/v2"),
         }
         states = _feature_states(features)
-    readiness_features = ("net_margin", "pbt_margin", "equity_to_assets", "cash_to_assets", "assets_yoy", "equity_yoy")
+    readiness_features = ("net_margin", "pbt_margin", "equity_to_assets", "cash_to_assets", "assets_yoy", "equity_yoy", "current_ratio")
     ready = family == INDUSTRIAL and any(features[item]["fitness"] == "READY" for item in readiness_features)
     evidence = _evidence(ticker, features, states)
     valuation_hints = []

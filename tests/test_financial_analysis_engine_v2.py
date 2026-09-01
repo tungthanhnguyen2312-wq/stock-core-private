@@ -168,3 +168,143 @@ def test_engine_does_not_mutate_retained_rows_or_emit_scores_targets_or_probabil
     assert rows == before
     assert result["authority_boundary"]["is_actionable"] is False
     assert "score" not in result and "target_price" not in result and "probability" not in result
+
+
+def _wc_row(metric, value, period, **kwargs):
+    return row(metric, value, period, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", **kwargs)
+
+
+def test_positive_net_working_capital_and_current_ratio_are_ready():
+    rows = [_wc_row("current_assets", 700, "2026-Q2"), _wc_row("current_liabilities", 350, "2026-Q2")]
+    result = context(rows)
+    nwc = result["features"]["net_working_capital"]
+    ratio = result["features"]["current_ratio"]
+    assert nwc["fitness"] == "READY" and nwc["value"] == 350
+    assert ratio["fitness"] == "READY" and ratio["value"] == pytest.approx(2.0)
+    assert result["states"]["working_capital_state"] == "POSITIVE_NET_WORKING_CAPITAL"
+    assert result["current_research_ready"] is True
+
+
+def test_negative_net_working_capital_state():
+    rows = [_wc_row("current_assets", 100, "2026-Q2"), _wc_row("current_liabilities", 250, "2026-Q2")]
+    result = context(rows)
+    assert result["features"]["net_working_capital"]["value"] == -150
+    assert result["states"]["working_capital_state"] == "NEGATIVE_NET_WORKING_CAPITAL"
+
+
+def test_zero_net_working_capital_state():
+    rows = [_wc_row("current_assets", 200, "2026-Q2"), _wc_row("current_liabilities", 200, "2026-Q2")]
+    result = context(rows)
+    assert result["features"]["net_working_capital"]["value"] == 0
+    assert result["states"]["working_capital_state"] == "ZERO_NET_WORKING_CAPITAL"
+
+
+def test_missing_current_liabilities_blocks_rather_than_substitutes_zero():
+    result = context([_wc_row("current_assets", 700, "2026-Q2")])
+    nwc = result["features"]["net_working_capital"]
+    assert nwc["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert nwc["value"] is None
+    assert result["states"]["working_capital_state"] == "WORKING_CAPITAL_UNAVAILABLE"
+    assert result["features"]["current_ratio"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_scope_mismatch_blocks_the_pair_not_a_false_positive():
+    rows = [_wc_row("current_assets", 700, "2026-Q2", scope="consolidated"),
+            _wc_row("current_liabilities", 350, "2026-Q2", scope="standalone")]
+    result = context(rows)
+    assert result["features"]["current_ratio"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["net_working_capital"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_current_ratio_zero_denominator_is_blocked_not_infinite():
+    rows = [_wc_row("current_assets", 700, "2026-Q2"), _wc_row("current_liabilities", 0, "2026-Q2")]
+    result = context(rows)
+    ratio = result["features"]["current_ratio"]
+    assert ratio["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert ratio["value"] is None
+    assert "ZERO_DENOMINATOR" in ratio["reason_codes"]
+    # Net working capital is a subtraction, not a ratio: a zero denominator on the ratio
+    # side must not block the independently well-defined difference.
+    assert result["features"]["net_working_capital"]["fitness"] == "READY"
+
+
+def test_working_capital_and_current_ratio_trajectory_improving():
+    rows = [_wc_row("current_assets", 500, "2025-Q2"), _wc_row("current_liabilities", 400, "2025-Q2"),
+            _wc_row("current_assets", 700, "2026-Q2"), _wc_row("current_liabilities", 350, "2026-Q2")]
+    result = context(rows)
+    # NWC: 100 -> 350 (improving). Current ratio: 1.25 -> 2.0 (improving).
+    assert result["features"]["net_working_capital_direction"]["fitness"] == "READY"
+    assert result["states"]["working_capital_trajectory_state"] == "WORKING_CAPITAL_IMPROVING"
+    assert result["states"]["current_ratio_trajectory_state"] == "CURRENT_RATIO_IMPROVING"
+
+
+def test_working_capital_trajectory_worsening_even_when_crossing_zero():
+    # NWC goes from +50 to -100: a real deterioration that a percentage-of-prior formula
+    # cannot express safely (the prior value is not the right denominator for a sign flip).
+    rows = [_wc_row("current_assets", 450, "2025-Q2"), _wc_row("current_liabilities", 400, "2025-Q2"),
+            _wc_row("current_assets", 300, "2026-Q2"), _wc_row("current_liabilities", 400, "2026-Q2")]
+    result = context(rows)
+    assert result["features"]["net_working_capital_direction"]["value"] == -150
+    assert result["states"]["working_capital_trajectory_state"] == "WORKING_CAPITAL_WORSENING"
+
+
+def test_trajectory_blocked_without_a_compatible_prior_year_pair():
+    rows = [_wc_row("current_assets", 700, "2026-Q2"), _wc_row("current_liabilities", 350, "2026-Q2")]
+    result = context(rows)
+    assert result["features"]["net_working_capital_direction"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["current_ratio_direction"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["states"]["working_capital_trajectory_state"] == "UNAVAILABLE"
+    assert result["states"]["current_ratio_trajectory_state"] == "UNAVAILABLE"
+
+
+def test_no_arbitrary_current_ratio_healthy_threshold_in_state_vocabulary():
+    rows = [_wc_row("current_assets", 100, "2026-Q2"), _wc_row("current_liabilities", 400, "2026-Q2")]
+    result = context(rows)
+    # A ratio well under any textbook "healthy" cutoff is still READY -- direction only,
+    # never a weak/healthy verdict baked into the engine.
+    assert result["features"]["current_ratio"]["fitness"] == "READY"
+    assert result["features"]["current_ratio"]["value"] == pytest.approx(0.25)
+    for state in result["states"].values():
+        assert state not in {"WEAK", "HEALTHY_LIQUIDITY", "UNHEALTHY"}
+
+
+def test_debt_and_working_capital_both_worsening_is_thesis_context_not_a_score():
+    rows = [
+        row("total_interest_bearing_debt", 100, "2025-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_bs"),
+        row("shareholders_equity", 500, "2025-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_bs"),
+        row("total_interest_bearing_debt", 300, "2026-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_bs"),
+        row("shareholders_equity", 500, "2026-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_bs"),
+        _wc_row("current_assets", 450, "2025-Q2", source="AAA_bs"), _wc_row("current_liabilities", 400, "2025-Q2", source="AAA_bs"),
+        _wc_row("current_assets", 300, "2026-Q2", source="AAA_bs"), _wc_row("current_liabilities", 400, "2026-Q2", source="AAA_bs"),
+    ]
+    result = context(rows)
+    assert result["states"]["leverage_state"] == "WORSENING"
+    assert result["states"]["working_capital_trajectory_state"] == "WORKING_CAPITAL_WORSENING"
+    assert any("leverage worsening alongside working capital worsening" in item for item in result["negative_evidence"])
+    assert "score" not in result and "recommendation" not in result and "target_price" not in result
+
+
+def test_limited_family_working_capital_features_are_not_applicable():
+    result = context([_wc_row("current_assets", 700, "2026-Q2"), _wc_row("current_liabilities", 350, "2026-Q2")], entity="bank")
+    assert result["features"]["current_ratio"]["fitness"] == "NOT_APPLICABLE"
+    assert result["features"]["net_working_capital"]["fitness"] == "NOT_APPLICABLE"
+    assert result["states"]["working_capital_state"] == "WORKING_CAPITAL_UNAVAILABLE"
+    assert result["states"]["working_capital_trajectory_state"] == "UNAVAILABLE"
+
+
+def test_current_liabilities_is_never_substituted_for_debt():
+    # Only current_liabilities is retained -- no total_interest_bearing_debt row at all.
+    # debt_to_equity must stay blocked, never silently pick up current_liabilities instead.
+    rows = [_wc_row("current_assets", 700, "2026-Q2"), _wc_row("current_liabilities", 350, "2026-Q2"),
+            row("shareholders_equity", 500, "2026-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET")]
+    result = context(rows)
+    assert result["features"]["debt_to_equity"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["current_ratio"]["fitness"] == "READY"  # unaffected by debt's absence
+
+
+def test_finance_lease_metrics_are_not_folded_into_total_interest_bearing_debt():
+    import canonical_financial_facts as canonical
+    definition = canonical.METRIC_REGISTRY["total_interest_bearing_debt"]
+    assert set(definition["derived_from"]) == {"short_term_interest_bearing_debt", "long_term_interest_bearing_debt"}
+    assert "short_term_finance_lease_liabilities" not in definition["derived_from"]
+    assert "long_term_finance_lease_liabilities" not in definition["derived_from"]

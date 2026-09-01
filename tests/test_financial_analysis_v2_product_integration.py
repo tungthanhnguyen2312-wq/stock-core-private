@@ -65,6 +65,23 @@ def test_export_opt_in_is_off_without_io_and_on_requires_valid_explicit_context(
         attach_financial_analysis_v2_product_context({}, True, None)
 
 
+def test_compact_projection_exposes_working_capital_states_not_raw_amounts():
+    current_assets = _row("current_assets", 700, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET")
+    current_liabilities = _row("current_liabilities", 350, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET")
+    # Both balance-sheet lines come from the same retained payload/source file in production;
+    # `_row()` defaults each metric to a distinct file, so align them for a same-representation pair.
+    current_liabilities["source_lineage"]["source_file"] = current_assets["source_lineage"]["source_file"]
+    rows = [_row("revenue", 100), _row("net_income", 10), current_assets, current_liabilities]
+    context = engine.build_artifact(tickers=["AAA"], rows=rows, issuer_types={"AAA": "corporate"},
+                                    source_identities={"retained": "x"}, requested_at="t")
+    product = build_product_projection(financial_context=context, product_tickers=["AAA"], requested_at="t")
+    compact = product["records"]["AAA"]
+    assert compact["working_capital_state"] == "POSITIVE_NET_WORKING_CAPITAL"
+    assert compact["feature_fitness"]["current_ratio"]["fitness"] == "READY"
+    # The compact contract exposes qualitative state/fitness only, never the raw statement figures.
+    assert "700" not in json.dumps(compact) and "350" not in json.dumps(compact)
+
+
 def test_delivery_attaches_compact_after_slim_and_retains_absent_ndjson_context():
     product = _product()
     operation = {"product": {"artifact_identity": "p", "authority_boundary": {}, "market_brief": {}, "macro_context": {},

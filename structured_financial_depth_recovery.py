@@ -86,6 +86,12 @@ def recover(rows: Sequence[Mapping[str, Any]], *, requested_at: str) -> dict[str
     components: dict[tuple[str, str, str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
     tickers = sorted({str(row.get("ticker") or "").upper() for row in rows if row.get("ticker")})
     existing_metrics: dict[str, set[str]] = defaultdict(set)
+    # Distinct from `existing_metrics`: Layer 3 emits a row for every registered metric on
+    # every ticker with any retained statement, including `unavailable`-status placeholders --
+    # so mere presence of a canonical_metric name no longer proves the field is actually
+    # retained for that ticker (it did before current_assets/current_liabilities/finance
+    # leases were registered, since those simply never appeared as a row at all until then).
+    usable_metrics: dict[str, set[str]] = defaultdict(set)
     retained_providers: dict[str, set[str]] = defaultdict(set)
     has_kbs_income: set[str] = set()
     has_vci_assets: set[str] = set()
@@ -104,6 +110,9 @@ def recover(rows: Sequence[Mapping[str, Any]], *, requested_at: str) -> dict[str
         if (ticker and provider == "VCI" and row.get("canonical_metric") == "total_assets"
                 and _usable_component(row)):
             has_vci_assets.add(ticker)
+        if (ticker and row.get("canonical_metric") in {*WORKING_CAPITAL_METRICS, "finance_lease_liabilities"}
+                and _usable_component(row)):
+            usable_metrics[ticker].add(str(row["canonical_metric"]))
         if row.get("canonical_metric") not in EXPLICIT_DEBT_COMPONENTS or not _usable_component(row):
             continue
         key = _component_key(row)
@@ -124,7 +133,7 @@ def recover(rows: Sequence[Mapping[str, Any]], *, requested_at: str) -> dict[str
         recovered_rows = by_ticker[ticker]
         missing = []
         for metric in WORKING_CAPITAL_METRICS:
-            if metric not in existing_metrics[ticker]:
+            if metric not in usable_metrics[ticker]:
                 missing.append({"canonical_metric": metric,
                                 "disposition": ("SOURCE_EXPOSES_NOT_RETAINED" if "VCI" in retained_providers[ticker]
                                                 else "SOURCE_ROUTE_DEPTH_LIMIT"),
@@ -135,10 +144,13 @@ def recover(rows: Sequence[Mapping[str, Any]], *, requested_at: str) -> dict[str
             missing.append({"canonical_metric": "total_interest_bearing_debt",
                             "disposition": "DEBT_COMPONENT_SET_INCOMPLETE" if ticker in incomplete else "RETAINED_ARTIFACT_MISSING",
                             "reason": "BOTH_EXPLICIT_SAME_PROVIDER_SHORT_AND_LONG_TERM_BORROWING_COMPONENTS_REQUIRED"})
+        if "finance_lease_liabilities" not in usable_metrics[ticker]:
+            missing.append({"canonical_metric": "finance_lease_liabilities",
+                            "disposition": "SOURCE_EXPOSES_NOT_RETAINED" if "VCI" in retained_providers[ticker] else "SOURCE_ROUTE_DEPTH_LIMIT",
+                            "reason": ("SAMPLE_VCI_SCHEMA_HAS_SHORT_AND_LONG_FINANCE_LEASE_LINES_RETAINED_FOR_SOME_TICKERS_BUT_NOT_THIS_ONE"
+                                       if "VCI" in retained_providers[ticker]
+                                       else "NO_RETAINED_VCI_BALANCE_SHEET_SOURCE_FOR_THIS_TICKER")})
         missing.extend([
-            {"canonical_metric": "finance_lease_liabilities",
-             "disposition": "SOURCE_EXPOSES_NOT_RETAINED" if "VCI" in retained_providers[ticker] else "SOURCE_ROUTE_DEPTH_LIMIT",
-             "reason": "SAMPLE_VCI_SCHEMA_HAS_SHORT_AND_LONG_FINANCE_LEASE_LINES_BUT_WIDE_CANONICAL_CORPUS_DOES_NOT_RETAIN_THEM"},
             {"canonical_metric": "same_provider_roa",
              "disposition": "PROVIDER_SCOPE_SPLIT" if ticker in has_kbs_income and ticker in has_vci_assets else "RETAINED_ARTIFACT_MISSING",
              "reason": ("RETAINED_USABLE_NET_INCOME_IS_KBS_WHILE_USABLE_TOTAL_ASSETS_ARE_VCI"
@@ -160,13 +172,22 @@ def recover(rows: Sequence[Mapping[str, Any]], *, requested_at: str) -> dict[str
                      "recovered_explicit_debt_fact_count": len(recovered),
                      "recovered_explicit_debt_ticker_count": len(by_ticker),
                      "debt_component_set_incomplete_ticker_count": len(incomplete),
-                     "working_capital_source_exposes_not_retained_ticker_count": sum("VCI" in retained_providers[ticker] for ticker in tickers),
+                     "vci_balance_sheet_route_ticker_count": sum("VCI" in retained_providers[ticker] for ticker in tickers),
+                     "working_capital_retained_ticker_count": sum(
+                         set(WORKING_CAPITAL_METRICS) <= usable_metrics[ticker] for ticker in tickers),
                      "same_provider_capital_efficiency_source_gap_ticker_count": len(has_kbs_income & has_vci_assets)},
+        # MARKET_WIDE_WORKING_CAPITAL_AND_SHORT_TERM_LIQUIDITY_V1 (2026-09-01) corrected
+        # current_assets/current_liabilities/finance_lease_liabilities from a hardcoded
+        # SOURCE_EXPOSES_NOT_RETAINED to RETAINED_AND_CANONICALIZED: the wide canonical corpus
+        # was stale (canonical_financial_facts.MAPPER_VERSION never bumped when this milestone
+        # added their METRIC_REGISTRY candidates), not missing the field. See MAPPER_VERSION's
+        # own comment. Per-ticker `missing_components` above was already evidence-based and
+        # unaffected by this staleness.
         "capability_matrix": {
             "VCI": {"income_statement": "SOURCE_ROUTE_DEPTH_LIMIT", "balance_sheet": {
-                "current_assets": "SOURCE_EXPOSES_NOT_RETAINED", "current_liabilities": "SOURCE_EXPOSES_NOT_RETAINED",
+                "current_assets": "RETAINED_AND_CANONICALIZED", "current_liabilities": "RETAINED_AND_CANONICALIZED",
                 "short_term_borrowings": "RETAINED_AND_CANONICALIZED", "long_term_borrowings": "RETAINED_AND_CANONICALIZED",
-                "finance_lease_liabilities": "SOURCE_EXPOSES_NOT_RETAINED"}},
+                "finance_lease_liabilities": "RETAINED_AND_CANONICALIZED"}},
             "KBS": {"income_statement": "RETAINED_AND_CANONICALIZED", "cash_flow": {
                 "operating_cash_flow": "RETAINED_AND_CANONICALIZED", "capital_expenditure": "RETAINED_AND_CANONICALIZED"},
                 "balance_sheet": "SOURCE_ROUTE_DEPTH_LIMIT"},

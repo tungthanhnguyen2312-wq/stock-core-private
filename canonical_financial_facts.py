@@ -82,7 +82,14 @@ from canonical_financial_resolvers import (
 )
 
 SCHEMA_VERSION = "1.0.0"
-MAPPER_VERSION = "1.0.0"
+#: Bumped 2026-09-01: STRUCTURED_FINANCIAL_DEPTH_RECOVERY_V1 added `current_assets`,
+#: `current_liabilities`, and the finance-lease metrics to METRIC_REGISTRY without bumping
+#: this version, so `canonical_fact_store`'s incremental fingerprint (which keys on this
+#: value, not on METRIC_REGISTRY's own content) never invalidated the persisted store built
+#: under the old registry -- every shard kept reporting `unchanged` and silently continued
+#: to omit these metrics even though the mapping and the retained raw observations were both
+#: already correct. See the module docstring's "keying only on source payload hashes" warning.
+MAPPER_VERSION = "1.1.0"
 CONTRACT_VERSION = "market-wide-financial-normalization/1.0.0"
 
 STATUS_QUALIFIED = "qualified"
