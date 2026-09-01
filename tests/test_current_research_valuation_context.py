@@ -1,0 +1,201 @@
+"""Focused tests for the TTM monetary-basis comparison in `current_research_valuation_context`."""
+from __future__ import annotations
+
+import pytest
+
+from current_research_valuation_context import (
+    INPUT_BLOCKED, PE_NOT_MEANINGFUL, PE_TTM, PS_TTM,
+    _monetary_basis_compatible, _select_ttm, evaluate_ticker_valuation,
+)
+import monetary_basis_contract as basis_contract
+
+BLOCKED_METHOD = {"status": "BLOCKED", "value": None, "blocked_reasons": []}
+
+
+def qualified_feature(value, *, currency="VND", scale="units", provider="KBS",
+                      periods=("2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4")):
+    return {"fitness": "READY", "value": value, "method": "four_consecutive_compatible_standalone_quarters/v2",
+            "period_identity": list(periods), "provider_source_provenance": [{"provider": provider}],
+            "currency": currency, "scale": scale, "reason_codes": []}
+
+
+def financial_analysis_record(*, net_income=None, revenue=None):
+    features = {}
+    if net_income is not None:
+        features["net_income_ttm"] = net_income
+    if revenue is not None:
+        features["revenue_ttm"] = revenue
+    return {"features": features}
+
+
+def market_cap_metric(value, *, status="RESEARCH_USABLE", currency="VND", scale="units", monetary_basis=None):
+    row = {"status": status, "value": value, "blocked_reasons": []}
+    if monetary_basis is not None:
+        row["monetary_basis"] = monetary_basis
+        row["currency"] = monetary_basis.get("currency")
+        row["scale"] = monetary_basis.get("native_scale")
+        row["monetary_basis_status"] = monetary_basis.get("basis_status")
+    else:
+        row["currency"] = currency
+        row["scale"] = scale
+    return row
+
+
+def valuation_record(market_cap):
+    share = {"authority": "provider_reported_lagged", "status": "PROVIDER_REPORTED_LAGGED",
+             "research_proxy_eligible": True, "authoritative_current_market_cap_eligible": False,
+             "share_concept": "ISSUED_SHARES"}
+    return {
+        "entity_class": "corporate", "share_basis_input": share,
+        "metrics": {
+            "market_cap": market_cap, "P/E": BLOCKED_METHOD, "P/B": BLOCKED_METHOD,
+            "P/S": BLOCKED_METHOD, "EV/Sales": BLOCKED_METHOD, "EV/EBITDA": BLOCKED_METHOD,
+        },
+    }
+
+
+def feature_record():
+    return {"features": {
+        "net_income_ttm_sum": {"status": "BLOCKED"},
+        "revenue_ttm_sum": {"status": "BLOCKED"},
+        "profit_state": {"status": "BLOCKED"},
+    }}
+
+
+def evaluate(*, net_income=None, revenue=None, market_cap_value=8_000_000, cap_currency="VND",
+            cap_scale="units", cap_monetary_basis=None):
+    market_cap = market_cap_metric(market_cap_value, currency=cap_currency, scale=cap_scale,
+                                   monetary_basis=cap_monetary_basis)
+    return evaluate_ticker_valuation(
+        ticker="AAA", feature_record=feature_record(), valuation_record=valuation_record(market_cap),
+        financial_analysis_record=financial_analysis_record(net_income=net_income, revenue=revenue),
+        financial_analysis_context_identity="fa:1",
+    )
+
+
+def test_compatible_normalized_bases_allow_pe_ttm():
+    row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    method = row["methods"][PE_TTM]
+    assert method["status"] == "RESEARCH_USABLE"
+    assert method["value"] == pytest.approx(20.0)
+
+
+def test_compatible_normalized_bases_allow_ps_ttm():
+    row = evaluate(revenue=qualified_feature(4_000_000), market_cap_value=8_000_000)
+    method = row["methods"][PS_TTM]
+    assert method["status"] == "RESEARCH_USABLE"
+    assert method["value"] == pytest.approx(2.0)
+
+
+def test_currency_mismatch_blocks_pe_ttm():
+    row = evaluate(net_income=qualified_feature(400_000, currency="USD"), market_cap_value=8_000_000)
+    method = row["methods"][PE_TTM]
+    assert method["status"] == INPUT_BLOCKED
+    assert "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE" in method["blocker_reason_codes"]
+
+
+def test_unknown_ttm_basis_blocks_even_though_market_cap_basis_is_known():
+    # `feature.get("currency")` missing entirely (as `resolve_currency_and_scale` leaves
+    # it absent an official-citation match) must never be treated as "matches VND".
+    row = evaluate(net_income=qualified_feature(400_000, currency=None, scale=None), market_cap_value=8_000_000)
+    method = row["methods"][PE_TTM]
+    assert method["status"] == INPUT_BLOCKED
+    assert "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE" in method["blocker_reason_codes"]
+
+
+def test_unknown_market_cap_basis_blocks_even_though_ttm_basis_is_known():
+    # The real production default today: market_wide_current_valuation_input_scaleout's
+    # market_cap carries monetary_basis_status == UNKNOWN (see that module's own tests).
+    unknown_cap_basis = basis_contract.build_basis(currency="VND", scale=None, basis_source="price scale undocumented")
+    row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000, cap_monetary_basis=unknown_cap_basis)
+    method = row["methods"][PE_TTM]
+    assert method["status"] == INPUT_BLOCKED
+    assert "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE" in method["blocker_reason_codes"]
+
+
+def test_different_native_scales_but_same_normalized_vnd_may_compare():
+    # TTM retained in native thousand-VND with a proven multiplier; market cap retained
+    # in native base VND. Native scales differ, but both reach the same normalized VND.
+    ttm_thousand = qualified_feature(4_000)  # will be overridden below with a richer basis
+    ttm_thousand["currency"], ttm_thousand["scale"] = "VND", "THOUSAND"
+    financial_record = {"features": {"net_income_ttm": ttm_thousand}}
+    cap_basis = basis_contract.build_basis(currency="VND", scale="units", multiplier_to_vnd=1,
+                                           normalized_unit="VND", basis_status=basis_contract.QUALIFIED,
+                                           basis_source="test: base-vnd market cap")
+    market_cap = market_cap_metric(8_000_000, monetary_basis=cap_basis)
+    row = evaluate_ticker_valuation(
+        ticker="AAA", feature_record=feature_record(), valuation_record=valuation_record(market_cap),
+        financial_analysis_record=financial_record, financial_analysis_context_identity="fa:1",
+    )
+    method = row["methods"][PE_TTM]
+    # THOUSAND vs units, with no proven multiplier on the THOUSAND side -> still blocked:
+    # a labelled scale alone (without a multiplier_to_vnd) is not by itself comparable.
+    assert method["status"] == INPUT_BLOCKED
+
+
+def test_monetary_basis_compatible_directly_with_a_proven_multiplier_on_both_sides():
+    thousand = basis_contract.build_basis(currency="VND", scale="THOUSAND", multiplier_to_vnd=1000,
+                                          normalized_unit="VND", basis_status=basis_contract.QUALIFIED, basis_source="a")
+    base = basis_contract.build_basis(currency="VND", scale="units", multiplier_to_vnd=1,
+                                      normalized_unit="VND", basis_status=basis_contract.QUALIFIED, basis_source="b")
+    ttm = {"ttm_currency": thousand["currency"], "ttm_scale": thousand["native_scale"], "ttm_monetary_basis": thousand}
+    market_cap = market_cap_metric(1, monetary_basis=base)
+    ok, reason = _monetary_basis_compatible(ttm, market_cap)
+    assert ok is True
+    assert reason is None
+
+
+def test_negative_ni_ttm_is_pe_not_meaningful_not_blocked():
+    row = evaluate(net_income=qualified_feature(-400_000), market_cap_value=8_000_000)
+    method = row["methods"][PE_TTM]
+    assert method["status"] == PE_NOT_MEANINGFUL
+    assert method["value"] is None
+
+
+def test_zero_ni_ttm_is_pe_not_meaningful_not_blocked():
+    row = evaluate(net_income=qualified_feature(0), market_cap_value=8_000_000)
+    method = row["methods"][PE_TTM]
+    assert method["status"] == PE_NOT_MEANINGFUL
+
+
+def test_no_value_magnitude_heuristic_a_plausible_looking_ratio_still_blocks():
+    # A market cap and TTM net income whose *ratio* looks like an entirely ordinary P/E
+    # must still block when the basis itself is unproven -- plausibility is never used
+    # as a substitute for a real currency/scale citation.
+    unknown_cap_basis = basis_contract.build_basis(currency="VND", scale=None, basis_source="undocumented")
+    row = evaluate(net_income=qualified_feature(1_000), market_cap_value=15_000, cap_monetary_basis=unknown_cap_basis)
+    method = row["methods"][PE_TTM]
+    assert method["status"] == INPUT_BLOCKED
+
+
+def test_old_ttm_fallback_precedence_unchanged_when_no_qualified_ttm_present():
+    old = {"status": "READY_RESEARCH_PROXY", "value": 500, "feature_id": "net_income_ttm_sum",
+           "provider_source_lineage": [{"provider": "LEGACY"}], "currency": "VND", "scale": "units"}
+    selected = _select_ttm(old=old, qualified=None)
+    assert selected["ttm_input_source"] == "OLD_TTM_FALLBACK_SELECTED"
+    assert selected["ttm_currency"] == "VND"
+    assert selected["ttm_scale"] == "units"
+
+
+def test_no_ttm_precedence_unchanged_when_neither_source_present():
+    old = {"status": "BLOCKED", "value": None, "feature_id": "net_income_ttm_sum"}
+    selected = _select_ttm(old=old, qualified=None)
+    assert selected["ttm_input_source"] == "NO_TTM"
+    assert selected["ttm_currency"] is None
+    assert selected["ttm_scale"] is None
+
+
+def test_both_present_new_qualified_ttm_still_preferred():
+    old = {"status": "READY_RESEARCH_PROXY", "value": 999, "feature_id": "net_income_ttm_sum",
+           "provider_source_lineage": [{"provider": "LEGACY"}], "currency": "VND", "scale": "units"}
+    qualified = {"status": "READY", "value": 400, "ttm_currency": "VND", "ttm_scale": "units"}
+    selected = _select_ttm(old=old, qualified=qualified)
+    assert selected["ttm_input_source"] == "BOTH_PRESENT_CONFLICT"
+    assert selected["value"] == 400
+    assert selected["old_ttm_value"] == 999
+
+
+def test_deterministic_identity_same_inputs_same_output():
+    first = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    second = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    assert first["methods"][PE_TTM] == second["methods"][PE_TTM]

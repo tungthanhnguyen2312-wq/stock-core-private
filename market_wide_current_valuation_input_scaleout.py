@@ -18,6 +18,7 @@ from collections import Counter, defaultdict
 from typing import Any, Mapping
 
 from field_temporal_contract import stable_id
+import monetary_basis_contract as basis_contract
 import mva_provider_share_proxy as issued_share_proxy
 import p3f_current_market_valuation as p3f
 from polymorphic_current_strategy_classification import _valuation_requirement
@@ -61,6 +62,29 @@ STALE_FAIL_CLOSED_AUTHORITIES = frozenset({
     "corporate_action_reconciliation_required",
     "semantic_identity_unresolved",
 })
+#: Share authority tiers backed by an independent, audited/official citation (see
+#: `current_common_shares_authority.py`'s `official_common` anchor and
+#: `docs/share_basis_qualification.md`'s literal Note-27-style count) -- the share
+#: *count* itself is a proven, unscaled number for these tiers. `provider_reported_*`
+#: tiers (VCI `issue_share`) are not: `financial_identity.qualify_capital_structure_
+#: observation` retains them with `"unit": "unknown"` explicitly, never inferring a
+#: basic-share-count identity from an unlabeled provider field.
+QUALIFIED_SHARE_COUNT_AUTHORITIES = frozenset({
+    "qualified_official",
+    "qualified_current_common_shares",
+    "qualified_official_anchor_not_current",
+})
+#: Retained `price_unit` tokens that independently prove the exact absolute scale of a
+#: DNSE current-session close (e.g. a documented request/response unit parameter, the
+#: way KBS's `unit=1000` is proven in `provider_financial_semantic_basis.py`). Empty
+#: today: `mva_exact_session_snapshot.py` retains every observation tagged
+#: `SOURCE_PRICE_UNIT_UNDOCUMENTED`, and `docs/DECISIONS.md` records that an earlier
+#: empirical thousands-of-VND guess (`P3F9B`) was identified as a
+#: `MIXED_SOURCE_REPRESENTATION_DEFECT` and removed -- an empirical cross-provider
+#: ratio is evidence, not a unit conversion. This set exists so a future milestone with
+#: a real documented unit contract only has to add the token here, not re-plumb this
+#: module.
+KNOWN_PRICE_SCALE_TOKENS: frozenset[str] = frozenset()
 RESEARCH_LABELS = (
     "CURRENT_RESEARCH_ONLY",
     "NOT_AUTHORITATIVE",
@@ -243,12 +267,14 @@ def _price_input(record: Mapping[str, Any], snapshot: Mapping[str, Any]) -> dict
     blocked: list[str] = []
     close = None
     ready = False
+    native_price_unit = None
     if disposition != "EXACT_SESSION_RETAINED":
         blocked = [f"PRICE_{disposition}"]
     elif len(matches) != 1:
         blocked = ["PRICE_SESSION_MISSING" if not matches else "PRICE_SESSION_AMBIGUOUS"]
     else:
         close = matches[0].get("close")
+        native_price_unit = matches[0].get("price_unit")
         if isinstance(close, bool) or not isinstance(close, (int, float)) or close <= 0:
             close, blocked = None, ["PRICE_CLOSE_INVALID"]
         else:
@@ -261,6 +287,10 @@ def _price_input(record: Mapping[str, Any], snapshot: Mapping[str, Any]) -> dict
         "basis": "CURRENT_SESSION_DESCRIPTIVE_CURRENT_VALUATION_PRICE_LEG",
         "currency": "VND",
         "price_unit": "snapshot_native_close",
+        # The retained observation's own scale-proof token (e.g. `SOURCE_PRICE_UNIT_
+        # UNDOCUMENTED`), distinct from `price_unit` above, which only labels *which
+        # field* this leg reads, not whether that field's absolute scale is proven.
+        "native_price_scale_token": native_price_unit,
         "raw_as_traded": "NOT_PROMOTED",
         "historical_pit_eligible": False,
         "source_snapshot_identity": snapshot.get("snapshot_identity"),
@@ -479,6 +509,34 @@ def _map_p3f_method(metric: str, method: Mapping[str, Any], *, research: bool, a
                          blockers=blockers, price=price, extra=extra)
 
 
+def _market_cap_monetary_basis(price: Mapping[str, Any], share: Mapping[str, Any]) -> dict[str, Any]:
+    """Honest currency/scale for `current_session_close * share_basis_value`.
+
+    Never inferred from magnitude. Both factors must independently prove their absolute
+    scale before their product can: the retained price observation must name a token in
+    `KNOWN_PRICE_SCALE_TOKENS` (empty today -- see that constant), and the share count
+    must come from an audited/official citation (`QUALIFIED_SHARE_COUNT_AUTHORITIES`),
+    not an unlabeled provider field. Currency reuses the price leg's existing VND
+    assumption -- a jurisdictional fact about which exchange this instrument trades on,
+    unrelated to the unresolved absolute-scale question.
+    """
+    price_scale_token = price.get("native_price_scale_token")
+    price_scale_known = price_scale_token in KNOWN_PRICE_SCALE_TOKENS
+    share_authority = str(share.get("authority") or "")
+    share_scale_known = share_authority in QUALIFIED_SHARE_COUNT_AUTHORITIES
+    both_known = price_scale_known and share_scale_known
+    return basis_contract.build_basis(
+        currency=price.get("currency"),
+        scale=basis_contract.BASE_UNIT_SCALE_LABEL if both_known else None,
+        multiplier_to_vnd=1 if both_known else None,
+        normalized_unit="VND" if both_known else None,
+        basis_source=(
+            f"price.native_price_scale_token={price_scale_token!r} (proven={price_scale_known}); "
+            f"share.authority={share_authority!r} (audited_citation={share_scale_known})"
+        ),
+    )
+
+
 def _build_metrics(*, entity: str, price: Mapping[str, Any], share: Mapping[str, Any],
                    financial: Mapping[str, Any], issuer: Mapping[str, Any] | None) -> dict[str, Any]:
     metrics: dict[str, Any] = {}
@@ -488,6 +546,16 @@ def _build_metrics(*, entity: str, price: Mapping[str, Any], share: Mapping[str,
     cap_value = None
     if price_ready and share.get("value") is not None and (research or authoritative):
         cap_value = price["value"] * share["value"]
+    cap_basis = _market_cap_monetary_basis(price, share)
+    cap_basis_fields = {
+        "currency": cap_basis.get("currency"),
+        "scale": cap_basis.get("native_scale"),
+        "normalized_currency": cap_basis.get("currency") if cap_basis.get("basis_status") != basis_contract.UNKNOWN else None,
+        "normalized_scale": basis_contract.BASE_UNIT_SCALE_LABEL if cap_basis.get("basis_status") != basis_contract.UNKNOWN else None,
+        "monetary_basis_status": cap_basis.get("basis_status"),
+        "monetary_basis_source": cap_basis.get("basis_source"),
+        "monetary_basis": cap_basis,
+    }
 
     for metric in METRICS:
         applicability = _applicability(entity, metric)
@@ -512,7 +580,7 @@ def _build_metrics(*, entity: str, price: Mapping[str, Any], share: Mapping[str,
                 metrics[metric] = _metric_shell(
                     metric, status="BLOCKED", applicability=applicability, blockers=blockers,
                     price=price, extra={"input_identities": _input_identities(metric, entity, share),
-                                        "share_identity": share.get("share_concept")},
+                                        "share_identity": share.get("share_concept"), **cap_basis_fields},
                 )
                 continue
             if share.get("authority") in STALE_FAIL_CLOSED_AUTHORITIES:
@@ -520,14 +588,14 @@ def _build_metrics(*, entity: str, price: Mapping[str, Any], share: Mapping[str,
                 metrics[metric] = _metric_shell(
                     metric, status="BLOCKED", applicability=applicability, blockers=blockers,
                     price=price, extra={"input_identities": _input_identities(metric, entity, share),
-                                        "share_identity": share.get("share_concept")},
+                                        "share_identity": share.get("share_concept"), **cap_basis_fields},
                 )
                 continue
             if not (research or authoritative) or share.get("value") is None:
                 blockers.extend(share.get("blocked_reasons") or ["CURRENT_SHARE_BASIS_UNAVAILABLE"])
                 metrics[metric] = _metric_shell(
                     metric, status="BLOCKED", applicability=applicability, blockers=blockers,
-                    price=price, extra={"input_identities": _input_identities(metric, entity, share)},
+                    price=price, extra={"input_identities": _input_identities(metric, entity, share), **cap_basis_fields},
                 )
                 continue
             status = "READY" if authoritative and price_ready else "RESEARCH_USABLE"
@@ -535,6 +603,7 @@ def _build_metrics(*, entity: str, price: Mapping[str, Any], share: Mapping[str,
                 "input_identities": _input_identities(metric, entity, share),
                 "share_identity": share.get("share_concept"),
                 "formula": "current_session_close * share_basis_value",
+                **cap_basis_fields,
             }
             if status == "RESEARCH_USABLE":
                 extra["warnings"] = list(share.get("blocked_reasons") or [])

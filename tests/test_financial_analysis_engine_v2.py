@@ -156,6 +156,66 @@ def test_ttm_requires_exactly_four_consecutive_standalone_quarters():
     assert blocked["features"]["revenue_ttm"]["fitness"] == "BLOCKED_BY_EVIDENCE"
 
 
+def test_ttm_currency_scale_stay_unknown_when_the_lowercase_unknown_sentinel_is_retained():
+    # `row()`'s default `normalized_candidate_unit` is the retained lowercase-"unknown"
+    # sentinel a real unresolved fact carries -- must surface as None, not the string.
+    result = context([row("revenue", value, label) for label, value in (
+        ("2025-Q3", 10), ("2025-Q4", 11), ("2026-Q1", 12), ("2026-Q2", 13),
+    )])
+    assert result["features"]["revenue_ttm"]["currency"] is None
+    assert result["features"]["revenue_ttm"]["scale"] is None
+
+
+def test_ttm_currency_scale_str_none_cannot_become_a_known_basis():
+    # A missing `normalized_candidate_unit` (Python None on `.get("currency")`, not the
+    # string "unknown") must not stringify to the fake shared value "None" and read
+    # back as a known, agreed-upon currency.
+    rows = []
+    for label, value in (("2025-Q3", 10), ("2025-Q4", 11), ("2026-Q1", 12), ("2026-Q2", 13)):
+        one = row("revenue", value, label)
+        del one["normalized_candidate_unit"]
+        rows.append(one)
+    result = context(rows)
+    feature = result["features"]["revenue_ttm"]
+    assert feature["fitness"] == "READY"
+    assert feature["currency"] is None
+    assert feature["currency"] != "None"
+    assert feature["scale"] is None
+    assert feature["scale"] != "None"
+
+
+def test_ttm_currency_scale_surface_a_real_known_agreed_basis():
+    rows = [row("revenue", value, label) for label, value in (
+        ("2025-Q3", 10), ("2025-Q4", 11), ("2026-Q1", 12), ("2026-Q2", 13),
+    )]
+    for one in rows:
+        one["normalized_candidate_unit"] = {"currency": "VND", "scale": "units"}
+    result = context(rows)
+    feature = result["features"]["revenue_ttm"]
+    assert feature["currency"] == "VND"
+    assert feature["scale"] == "units"
+
+
+def test_ttm_currency_disagreement_across_quarters_never_silently_sums():
+    # A currency-mismatched quarter cannot even join the same series: `_source_key`
+    # buckets by (ticker, provider, source_file, statement_scope, currency, scale), so
+    # a lone VND quarter among three USD ones leaves no single bucket with four
+    # consecutive quarters -- the TTM sum blocks outright rather than ever combining
+    # incompatible bases (belt-and-suspenders on top of `agree()`'s own unanimity rule,
+    # covered directly in test_monetary_basis_contract.py).
+    rows = [row("revenue", value, label) for label, value in (
+        ("2025-Q3", 10), ("2025-Q4", 11), ("2026-Q1", 12), ("2026-Q2", 13),
+    )]
+    rows[0]["normalized_candidate_unit"] = {"currency": "VND", "scale": "units"}
+    for one in rows[1:]:
+        one["normalized_candidate_unit"] = {"currency": "USD", "scale": "units"}
+    result = context(rows)
+    feature = result["features"]["revenue_ttm"]
+    assert feature["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert "MISSING_CONSECUTIVE_STANDALONE_QUARTER_INPUTS" in feature["reason_codes"]
+    assert feature["currency"] is None
+
+
 def test_pbt_ttm_margins_and_ttm_cash_conversion_use_four_compatible_quarters():
     rows = []
     for label in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"):

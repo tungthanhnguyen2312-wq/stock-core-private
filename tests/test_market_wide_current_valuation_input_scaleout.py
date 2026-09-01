@@ -108,6 +108,57 @@ def test_deterministic_and_lagged_shares_are_research_usable_not_ready():
     assert first["value_strategy_readiness"]["eligible"] == 0
 
 
+def test_market_cap_carries_an_honest_unknown_monetary_basis_by_default():
+    # AAA's price observation carries no proven scale token and its share tier is
+    # provider_reported_lagged (not an audited citation) -- the real, current-production
+    # default. `market_cap` must say so explicitly rather than silently omitting the
+    # fields the way the pre-fix code did.
+    aaa = _artifact()["records"]["AAA"]["metrics"]["market_cap"]
+    assert aaa["status"] == "RESEARCH_USABLE"
+    assert aaa["value"] == 10_000 * 100
+    assert aaa["monetary_basis_status"] == "UNKNOWN"
+    assert aaa["scale"] is None
+    assert aaa["normalized_currency"] is None
+    assert aaa["normalized_scale"] is None
+    # Currency is independently known (the price leg's pre-existing VND assumption) even
+    # though the pair as a whole is UNKNOWN -- real lineage is not erased just because
+    # the basis cannot yet be used for a comparison.
+    assert aaa["currency"] == "VND"
+    assert aaa["monetary_basis"]["basis_status"] == "UNKNOWN"
+    assert "provider_reported_lagged" in aaa["monetary_basis_source"]
+
+
+def test_market_cap_monetary_basis_present_even_when_blocked():
+    from market_wide_current_valuation_input_scaleout import _market_cap_monetary_basis
+    stale = _artifact()["records"]["STALE"]["metrics"]["market_cap"]
+    assert stale["status"] == "BLOCKED"
+    assert stale["monetary_basis_status"] == "UNKNOWN"
+    assert stale["currency"] == "VND"
+    # Directly exercising the helper confirms the same envelope independent of which
+    # blocked branch the caller took.
+    basis = _market_cap_monetary_basis({"currency": "VND", "native_price_scale_token": None},
+                                       {"authority": "provider_reported_stale"})
+    assert basis["basis_status"] == "UNKNOWN"
+
+
+def test_market_cap_monetary_basis_becomes_known_only_once_both_price_and_share_scale_are_proven(monkeypatch):
+    import market_wide_current_valuation_input_scaleout as scaleout
+    monkeypatch.setattr(scaleout, "KNOWN_PRICE_SCALE_TOKENS", frozenset({"PROVEN_TOKEN_FOR_TEST"}))
+    proven_price = {"currency": "VND", "native_price_scale_token": "PROVEN_TOKEN_FOR_TEST"}
+    audited_share = {"authority": "qualified_current_common_shares"}
+    basis = scaleout._market_cap_monetary_basis(proven_price, audited_share)
+    assert basis["basis_status"] != "UNKNOWN"
+    assert basis["currency"] == "VND"
+    assert basis["native_scale"] == "units"
+    assert basis["normalized_unit"] == "VND"
+    assert basis["multiplier_to_vnd"] == 1
+    # Proving only one side is still not enough.
+    half_proven = scaleout._market_cap_monetary_basis(proven_price, {"authority": "provider_reported_lagged"})
+    assert half_proven["basis_status"] == "UNKNOWN"
+    other_half = scaleout._market_cap_monetary_basis({"currency": "VND", "native_price_scale_token": None}, audited_share)
+    assert other_half["basis_status"] == "UNKNOWN"
+
+
 def test_stale_share_fail_closed_blocks_research_and_authoritative_metrics():
     stale = _artifact()["records"]["STALE"]
     assert stale["share_basis_input"]["status"] == "PROVIDER_REPORTED_STALE"

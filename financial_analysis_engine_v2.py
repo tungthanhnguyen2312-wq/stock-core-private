@@ -12,6 +12,8 @@ import json
 import re
 from typing import Any, Mapping, Sequence
 
+import monetary_basis_contract as basis_contract
+
 
 CONTRACT_VERSION = "financial_analysis_context/v2"
 SCHEMA_VERSION = "2.1.0"
@@ -83,8 +85,11 @@ def _feature(feature_id: str, *, value: Any = None, fitness: str = "BLOCKED_BY_E
              method: str, inputs: Sequence[Mapping[str, Any]] = (), reason_codes: Sequence[str] = (),
              warnings: Sequence[str] = (), growth_basis: str | None = None,
              semantic_transition: str | None = None) -> dict[str, Any]:
-    currencies = {str((row.get("normalized_candidate_unit") or {}).get("currency")) for row in inputs}
-    scales = {str((row.get("normalized_candidate_unit") or {}).get("scale")) for row in inputs}
+    # `agree()` treats every sentinel (missing key, None, "unknown", ...) as "no proof",
+    # never as a distinct-but-fake shared value -- a str(None) -> "None" stringification
+    # here must never read back as a known, agreed currency or scale.
+    currency = basis_contract.agree({(row.get("normalized_candidate_unit") or {}).get("currency") for row in inputs})
+    scale = basis_contract.agree({(row.get("normalized_candidate_unit") or {}).get("scale") for row in inputs})
     return {
         "feature_id": feature_id, "value": value, "fitness": fitness, "method": method,
         "growth_basis": growth_basis, "semantic_transition": semantic_transition,
@@ -96,8 +101,8 @@ def _feature(feature_id: str, *, value: Any = None, fitness: str = "BLOCKED_BY_E
              "fact_id": (row.get("source_lineage") or {}).get("fact_id")} for row in inputs
         ],
         "scope": sorted({str(row.get("statement_scope")) for row in inputs}),
-        "currency": next(iter(currencies)) if len(currencies) == 1 else None,
-        "scale": next(iter(scales)) if len(scales) == 1 else None,
+        "currency": currency,
+        "scale": scale,
         "period_semantics": sorted({str(row.get("period_semantic_state")) for row in inputs}),
         "reason_codes": list(reason_codes), "warnings": list(warnings), "is_actionable": False,
     }

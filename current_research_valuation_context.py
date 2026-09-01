@@ -10,6 +10,7 @@ from statistics import median
 from typing import Any, Mapping, Sequence
 
 from current_market_sector_leadership_context import _percentile
+import monetary_basis_contract as basis_contract
 from market_wide_current_valuation_input_scaleout import RESEARCH_SHARE_AUTHORITIES, _applicability
 from opportunity_axis_freshness import UNAVAILABLE, axis_is_research_usable, classify_axis_freshness
 from sector_relative_research_context import MIN_COHORT_MEMBERS
@@ -68,7 +69,21 @@ def _feature(record: Mapping[str, Any] | None, feature_id: str) -> Mapping[str, 
 
 
 def _known_basis(value: Any) -> bool:
-    return value not in (None, "", "unknown", "UNKNOWN")
+    """Delegates to the shared contract so "unknown" spellings are recognized in one place."""
+    return basis_contract.known(value)
+
+
+def _ttm_monetary_basis(*, currency: Any, scale: Any, feature_id: str, provider: Any) -> dict[str, Any]:
+    """A qualified-financial-analysis-v2 TTM feature's basis: never official, at most
+    RESEARCH_CONTRACT_QUALIFIED (see `provider_financial_semantic_basis.py` -- no
+    (provider, statement_family) shape reaches market-wide-generalized currency/scale
+    today, so this is `UNKNOWN` for every ticker until a real shape or per-fact
+    citation-backed proof exists; the code path stays correct for when one does).
+    """
+    return basis_contract.build_basis(
+        currency=currency, scale=scale,
+        basis_source=f"financial_analysis_engine_v2 feature={feature_id!r} provider={provider!r}",
+    )
 
 
 def _qualified_ttm(feature_id: str, record: Mapping[str, Any] | None, context_identity: str | None) -> dict[str, Any] | None:
@@ -77,12 +92,14 @@ def _qualified_ttm(feature_id: str, record: Mapping[str, Any] | None, context_id
         return None
     lineage = list(feature.get("provider_source_provenance") or [])
     provider = lineage[0].get("provider") if lineage else None
+    basis = _ttm_monetary_basis(currency=feature.get("currency"), scale=feature.get("scale"),
+                                feature_id=feature_id, provider=provider)
     return {"status": "READY", "value": feature.get("value"), "method": feature.get("method"),
             "input_periods": list(feature.get("period_identity") or []), "compatibility_class": "QUALIFIED_FINANCIAL_ANALYSIS_V2",
             "blocker_reason_codes": list(feature.get("reason_codes") or []), "ttm_input_source": "NEW_QUALIFIED_TTM_SELECTED",
             "ttm_source_context_identity": context_identity, "ttm_feature_id": feature_id,
-            "ttm_provider": provider, "ttm_currency": feature.get("currency"), "ttm_scale": feature.get("scale"),
-            "ttm_fitness": feature.get("fitness"), "ttm_source_conflict": False}
+            "ttm_provider": provider, "ttm_currency": basis["currency"], "ttm_scale": basis["native_scale"],
+            "ttm_fitness": feature.get("fitness"), "ttm_source_conflict": False, "ttm_monetary_basis": basis}
 
 
 def _select_ttm(*, old: Mapping[str, Any], qualified: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -95,23 +112,46 @@ def _select_ttm(*, old: Mapping[str, Any], qualified: Mapping[str, Any] | None) 
         result["old_ttm_value"] = old.get("value") if old_ready else None
         return result
     if old_ready:
+        old_provider = ((old.get("provider_source_lineage") or [{}])[0]).get("provider")
+        old_basis = _ttm_monetary_basis(currency=old.get("currency"), scale=old.get("scale"),
+                                        feature_id=str(old.get("feature_id")), provider=old_provider)
         return {**dict(old), "ttm_input_source": "OLD_TTM_FALLBACK_SELECTED", "ttm_source_context_identity": None,
-                "ttm_feature_id": old.get("feature_id"), "ttm_provider": ((old.get("provider_source_lineage") or [{}])[0]).get("provider"),
-                "ttm_currency": old.get("currency"), "ttm_scale": old.get("scale"), "ttm_fitness": old.get("status"),
-                "ttm_source_conflict": False}
+                "ttm_feature_id": old.get("feature_id"), "ttm_provider": old_provider,
+                "ttm_currency": old_basis["currency"], "ttm_scale": old_basis["native_scale"], "ttm_fitness": old.get("status"),
+                "ttm_source_conflict": False, "ttm_monetary_basis": old_basis}
+    no_ttm_basis = _ttm_monetary_basis(currency=None, scale=None, feature_id=str(old.get("feature_id")), provider=None)
     return {**dict(old), "ttm_input_source": "NO_TTM", "ttm_source_context_identity": None,
             "ttm_feature_id": old.get("feature_id"), "ttm_provider": None, "ttm_currency": None,
-            "ttm_scale": None, "ttm_fitness": old.get("status"), "ttm_source_conflict": False}
+            "ttm_scale": None, "ttm_fitness": old.get("status"), "ttm_source_conflict": False,
+            "ttm_monetary_basis": no_ttm_basis}
+
+
+def _market_cap_basis_envelope(market_cap: Mapping[str, Any]) -> dict[str, Any]:
+    """Reconstruct the market_cap metric's monetary basis from its own flat fields.
+
+    Prefers the richer `monetary_basis` envelope `market_wide_current_valuation_input_
+    scaleout.py` attaches when present; falls back to the flat `currency`/`scale` pair
+    (and, absent even those, UNKNOWN) so a caller supplying a minimal/synthetic
+    market_cap dict -- as tests do -- is judged on exactly the fields it declares.
+    """
+    envelope = market_cap.get("monetary_basis")
+    if isinstance(envelope, Mapping) and envelope.get("basis_status") in basis_contract.BASIS_STATUSES:
+        return dict(envelope)
+    return basis_contract.build_basis(
+        currency=market_cap.get("currency"), scale=market_cap.get("scale"),
+        basis_status=market_cap.get("monetary_basis_status"),
+        basis_source=str(market_cap.get("monetary_basis_source") or "market_cap.currency/scale"),
+    )
 
 
 def _monetary_basis_compatible(ttm: Mapping[str, Any], market_cap: Mapping[str, Any]) -> tuple[bool, str | None]:
-    ttm_currency, cap_currency = ttm.get("ttm_currency"), market_cap.get("currency")
-    ttm_scale, cap_scale = ttm.get("ttm_scale"), market_cap.get("scale")
-    if not _known_basis(ttm_currency) or not _known_basis(cap_currency) or ttm_currency != cap_currency:
-        return False, "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE"
-    if not _known_basis(ttm_scale) or not _known_basis(cap_scale) or ttm_scale != cap_scale:
-        return False, "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE"
-    return True, None
+    ttm_basis = ttm.get("ttm_monetary_basis")
+    if not isinstance(ttm_basis, Mapping):
+        ttm_basis = basis_contract.build_basis(
+            currency=ttm.get("ttm_currency"), scale=ttm.get("ttm_scale"),
+            basis_source=f"ttm_feature={ttm.get('ttm_feature_id')!r}",
+        )
+    return basis_contract.compatible(ttm_basis, _market_cap_basis_envelope(market_cap))
 
 
 def _entity(feature_record: Mapping[str, Any] | None, valuation_record: Mapping[str, Any] | None) -> str:
@@ -188,6 +228,8 @@ def _ttm_method(*, method_id: str, metric: str, ttm: Mapping[str, Any], market_c
         "ttm_feature_id": ttm.get("ttm_feature_id"), "ttm_provider": ttm.get("ttm_provider"),
         "ttm_currency": ttm.get("ttm_currency"), "ttm_scale": ttm.get("ttm_scale"), "ttm_fitness": ttm.get("ttm_fitness"),
         "ttm_source_conflict": bool(ttm.get("ttm_source_conflict")),
+        "ttm_monetary_basis": ttm.get("ttm_monetary_basis"),
+        "market_cap_monetary_basis": _market_cap_basis_envelope(market_cap),
     }
     if applicability == NOT_APPLICABLE:
         return _method_shell(method_id, applicability=applicability, status=NOT_APPLICABLE,
@@ -222,9 +264,15 @@ def _ttm_method(*, method_id: str, metric: str, ttm: Mapping[str, Any], market_c
     if denominator == 0:
         return _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
                              blockers=["ZERO_DENOMINATOR"], extra=extra)
+    # Normalize each side through its own proven multiplier before dividing (a no-op today,
+    # since no multiplier is ever proven -- see `_ttm_monetary_basis`/`_market_cap_monetary_
+    # basis` -- but correct once one is: two quantities that share one unproven native scale
+    # already divide validly without it, per `monetary_basis_contract.normalize_value`).
+    normalized_cap = basis_contract.normalize_value(market_cap["value"], _market_cap_basis_envelope(market_cap))
+    normalized_denominator = basis_contract.normalize_value(denominator, ttm.get("ttm_monetary_basis"))
     return _method_shell(
         method_id, applicability=applicability, status="RESEARCH_USABLE",
-        value=market_cap["value"] / denominator,
+        value=normalized_cap / normalized_denominator,
         extra={**extra, "formula": "research_usable_market_cap / compatible_ttm_sum",
                "limitations": ["CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NOT_FOR_TARGET_PRICE",
                                "SHARE_BASIS=" + share_class]},
@@ -507,6 +555,8 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
             "ttm_provider": method.get("ttm_provider"), "ttm_currency": method.get("ttm_currency"),
             "ttm_scale": method.get("ttm_scale"), "ttm_fitness": method.get("ttm_fitness"),
             "ttm_source_conflict": method.get("ttm_source_conflict"),
+            "ttm_monetary_basis": method.get("ttm_monetary_basis"),
+            "market_cap_monetary_basis": method.get("market_cap_monetary_basis"),
             "peer_relative": (row.get("peer_relative") or {}).get(method_id),
         }
         for method_id, method in (row.get("methods") or {}).items()
