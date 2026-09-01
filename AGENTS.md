@@ -65,6 +65,19 @@ reviews, handoffs, historical roadmaps, and Consumer/Dashboard notes are evidenc
 not competing current authority. If a prompt conflicts with `STATE.md`, surface the conflict and
 request an explicit owner override; do not silently change architecture.
 
+## AI context hygiene
+
+To minimize AI context waste and maintain repository cleanliness:
+
+- **No recursive `operations-review/` scan:** Do not recursively scan `operations-review/` by default.
+- **Exact evidence paths only:** Read exact evidence paths only when the task requires them.
+- **No root helpers:** Never create one-off helper scripts in the repository root.
+- **Temporary helpers:** Place temporary helpers outside the repository or in `.stocklookup/scratch/`.
+- **Reusable tools:** Reusable runners and developer tools belong in `tools/`.
+- **Single production entrypoint:** Do not create a new production entrypoint; `stocklookup.ps1 daily` remains the owner entrypoint.
+- **No blanket scans:** Do not scan all handoffs, decisions, or tests for a bounded milestone; use [`docs/SYSTEM_MAP.md`](docs/SYSTEM_MAP.md) for navigation.
+- **Edit over proliferate:** Prefer editing an existing capability module over creating a sibling module unless a distinct contract boundary genuinely exists.
+
 ## Repository boundaries
 
 ### First-party source-route qualification
