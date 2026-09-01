@@ -156,6 +156,19 @@ def test_ttm_requires_exactly_four_consecutive_standalone_quarters():
     assert blocked["features"]["revenue_ttm"]["fitness"] == "BLOCKED_BY_EVIDENCE"
 
 
+def test_pbt_ttm_margins_and_ttm_cash_conversion_use_four_compatible_quarters():
+    rows = []
+    for label in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"):
+        rows.extend([row("revenue", 100, label), row("profit_before_tax", 10, label), row("net_income", 8, label),
+                     row("operating_cash_flow", 12, label, source="AAA_cash")])
+    result = context(rows)
+    assert result["features"]["profit_before_tax_ttm"]["value"] == 40
+    assert result["features"]["ttm_pbt_margin"]["value"] == pytest.approx(.1)
+    assert result["features"]["ttm_net_margin"]["value"] == pytest.approx(.08)
+    assert result["features"]["cfo_to_net_income_ttm"]["value"] == pytest.approx(1.5)
+    assert result["states"]["cash_conversion_state"] == "HEALTHY"
+
+
 def test_balance_sheet_ratios_and_trajectory_are_ready_when_compatible():
     rows = [
         row("shareholders_equity", 40, "2025-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_balance"),

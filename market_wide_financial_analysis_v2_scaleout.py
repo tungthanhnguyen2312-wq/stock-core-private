@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import financial_analysis_engine_v2 as engine
+import financial_flow_semantics_ttm_bridge as qualified_flow
 
 FEATURE_STORE_CONTRACT = "market_wide_fundamental_feature_store/v1"
 GENERIC = "UNCLASSIFIED_GENERIC_FINANCIAL_ANALYSIS"
@@ -27,7 +28,11 @@ _FEATURE_MAP = {
     "cash_and_cash_equivalents_pit_trajectory": "cash_yoy", "roa_eop_proxy": "mixed_provider_roa_proxy",
     "roe_eop_proxy": "same_provider_roe",
 }
-_ADVANCED = frozenset({"revenue_qoq", "net_income_qoq", "revenue_ttm", "net_income_ttm", "revenue_ttm_yoy", "net_income_ttm_yoy"})
+_ADVANCED = frozenset({"revenue_qoq", "profit_before_tax_qoq", "net_income_qoq", "operating_cash_flow_qoq",
+                       "revenue_same_quarter_yoy", "profit_before_tax_same_quarter_yoy", "net_income_same_quarter_yoy", "operating_cash_flow_same_quarter_yoy",
+                       "revenue_ttm", "profit_before_tax_ttm", "net_income_ttm", "operating_cash_flow_ttm",
+                       "revenue_ttm_yoy", "profit_before_tax_ttm_yoy", "net_income_ttm_yoy", "operating_cash_flow_ttm_yoy",
+                       "ttm_net_margin", "ttm_pbt_margin", "cfo_to_net_income_ttm"})
 
 
 class FinancialAnalysisScaleoutError(ValueError):
@@ -94,23 +99,47 @@ def _refresh_states(record: dict[str, Any]) -> None:
 def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_records: Mapping[str, Mapping[str, Any]],
                    feature_store_artifact: Mapping[str, Any], period_semantics_identity: str,
                    requested_at: str, legacy_records: Mapping[str, Mapping[str, Any]] | None = None,
-                   classification_diagnostics_identity: str | None = None) -> dict[str, Any]:
+                   classification_diagnostics_identity: str | None = None,
+                   qualified_flow_artifact: Mapping[str, Any] | None = None) -> dict[str, Any]:
     names = sorted(feature_records)
     issuer_types = {ticker: feature_records[ticker].get("entity_type") for ticker in names}
     legacy_records = {ticker: record for ticker, record in (legacy_records or {}).items() if ticker in feature_records}
     issuer_types.update({ticker: record.get("issuer_type") for ticker, record in legacy_records.items() if ticker in issuer_types})
+    qualified_rows: list[Mapping[str, Any]] = []
+    qualified_coverage: Mapping[str, Any] | None = None
+    if qualified_flow_artifact is not None:
+        if qualified_flow_artifact.get("contract_version") != qualified_flow.CONTRACT_VERSION:
+            raise FinancialAnalysisScaleoutError("QUALIFIED_FLOW_CONTRACT_UNSUPPORTED")
+        expected = qualified_flow.content_identity(qualified_flow_artifact)
+        if qualified_flow_artifact.get("artifact_sha256") != expected["artifact_sha256"]:
+            raise FinancialAnalysisScaleoutError("QUALIFIED_FLOW_IDENTITY_MISMATCH")
+        qualified_rows = qualified_flow.engine_rows_from_artifact(qualified_flow_artifact)
+        qualified_coverage = ((qualified_flow_artifact.get("coverage") or {}).get("qualified_flow_before_after"))
+    # Flow rows are admitted only through the bridge when supplied.  P-I-T rows remain
+    # untouched, which locks working-capital and explicit-debt coverage.
+    bridge_metrics = set(qualified_flow.FLOW_METRICS)
+    engine_rows = ([row for row in semantic_rows if row.get("canonical_metric") not in bridge_metrics] + qualified_rows
+                   if qualified_flow_artifact is not None else list(semantic_rows))
     artifact = engine.build_artifact(
-        tickers=names, rows=semantic_rows, issuer_types=issuer_types,
+        tickers=names, rows=engine_rows, issuer_types=issuer_types,
         source_identities={
             "period_semantics_contract": "market_wide_structured_financial_period_semantics/v1",
             "period_semantics_identity": period_semantics_identity,
             "feature_store_contract": FEATURE_STORE_CONTRACT,
             "feature_store_artifact_identity": feature_store_artifact.get("artifact_identity"),
             "classification_diagnostics_identity": classification_diagnostics_identity,
+            "qualified_flow_artifact_identity": qualified_flow_artifact.get("artifact_identity") if qualified_flow_artifact else None,
         }, requested_at=requested_at,
     )
     for ticker, record in artifact["records"].items():
         store_record = feature_records[ticker]
+        if qualified_flow_artifact is not None:
+            flow_record = (qualified_flow_artifact.get("records") or {}).get(ticker) or {}
+            flow_state = ((flow_record.get("qualitative_states") or {}).get("earnings_turnaround_state"))
+            if flow_state and record["analysis_family"] == engine.INDUSTRIAL:
+                # The bridge owns exact quarter continuity and its loss-base transition;
+                # preserve that qualified state instead of reselecting another series here.
+                record["states"]["earnings_turnaround_state"] = flow_state
         # The named 523 replay is a semantic regression oracle, not fallback coverage.
         # Its existing V2 interpretation must remain byte-for-byte feature compatible.
         if ticker in legacy_records:
@@ -151,7 +180,8 @@ def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_record
             name: dict(sorted(Counter(record["states"][name] for record in artifact["records"].values()).items()))
             for name in sorted(next(iter(artifact["records"].values()))["states"])
         },
+        "qualified_flow_before_after": copy.deepcopy(qualified_coverage),
     })
-    artifact["scaleout"] = {"feature_source_priority": ["ADVANCED_TTM_OR_STANDALONE", "PERIOD_SEMANTIC_FACTS", "SAFE_FEATURE_STORE_FEATURE"], "feature_store_proxy_cannot_make_ready": True, "legacy_523_regression_ticker_count": len(legacy_records)}
+    artifact["scaleout"] = {"feature_source_priority": ["QUALIFIED_FLOW_TTM_AND_GROWTH", "PERIOD_SEMANTIC_FACTS", "SAFE_FEATURE_STORE_FEATURE"], "feature_store_proxy_cannot_make_ready": True, "legacy_523_regression_ticker_count": len(legacy_records), "qualified_flow_replaced_raw_flow_rows": qualified_flow_artifact is not None}
     artifact.update(engine.content_identity(artifact))
     return artifact

@@ -39,9 +39,18 @@ def test_compact_projection_preserves_proxy_and_explicit_absence_without_raw_rec
     assert product["coverage"] == {"ticker_denominator": 2, "compact_coverage": 1, "absent_coverage": 1, "zero_silent_ticker_drops": True}
     assert aaa["contract_version"] == "financial_analysis_compact/v1"
     assert aaa["feature_fitness"]["mixed_provider_roa_proxy"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert aaa["earnings_turnaround_state"] == "UNAVAILABLE"
     assert "features" not in aaa and "reported_value" not in json.dumps(aaa)
     assert bbb["status"] == "ABSENT" and bbb["reason"] == "FA_V2_CONTEXT_ABSENT"
     assert all(record["is_actionable"] is False for record in product["records"].values())
+
+
+def test_product_summary_passes_qualified_flow_coverage_to_ai_delivery_boundary():
+    context = _engine()
+    context["coverage"]["qualified_flow_before_after"] = {"before": {"revenue": 0}, "after": {"revenue": {"ttm_ticker_count": 1}}}
+    context.update(engine.content_identity(context))
+    product = build_product_projection(financial_context=context, product_tickers=["AAA"], requested_at="t")
+    assert product["financial_analysis_market_summary"]["qualified_flow_before_after"]["after"]["revenue"]["ttm_ticker_count"] == 1
 
 
 def test_raw_engine_is_rejected_and_proxy_never_becomes_supporting_evidence():

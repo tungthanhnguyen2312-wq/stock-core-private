@@ -91,6 +91,7 @@ def _compact(engine: Mapping[str, Any], ticker: str, record: Mapping[str, Any]) 
         "profitability_state": states.get("profitability_state"),
         "margin_state": states.get("margin_state"),
         "growth_state": states.get("growth_state"),
+        "earnings_turnaround_state": states.get("earnings_turnaround_state"),
         "growth_basis": _growth_basis(record),
         "cash_conversion_state": states.get("cash_conversion_state"),
         "balance_sheet_state": states.get("balance_sheet_state"),
@@ -171,6 +172,7 @@ def build_product_projection(*, financial_context: Mapping[str, Any], product_ti
             feature.get("fitness") == "RESEARCH_PROXY" and "CROSS_PROVIDER_UNRESOLVED_SCALE" in feature.get("reason_codes", [])
             for record in available for feature in record.get("feature_fitness", {}).values()
         ),
+        "qualified_flow_before_after": (financial_context.get("coverage") or {}).get("qualified_flow_before_after"),
         "is_actionable": False,
     }
     ticker_index = {

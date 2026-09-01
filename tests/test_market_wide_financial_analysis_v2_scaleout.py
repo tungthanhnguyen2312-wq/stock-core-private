@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import financial_analysis_engine_v2 as engine
+import financial_flow_semantics_ttm_bridge as bridge
 from market_wide_financial_analysis_v2_scaleout import GENERIC, build_scaleout
 
 
@@ -49,3 +50,19 @@ def test_original_engine_qoq_guard_is_unchanged():
     assert artifact["records"]["AAA"]["features"]["revenue_qoq"]["fitness"] == "BLOCKED_BY_EVIDENCE"
     assert artifact["coverage"]["zero_silent_ticker_drops"] is True
     assert artifact["contract_version"] == engine.CONTRACT_VERSION
+
+
+def test_qualified_flow_artifact_is_the_only_flow_input_and_carries_coverage():
+    facts = [{"ticker": "AAA", "canonical_metric": metric, "provider": "KBS", "statement_family": "income_statement",
+              "reporting_period": label, "value": value, "status": "provider_reported", "statement_scope": "consolidated",
+              "currency": "VND", "scale": "ONE", "source_sha256": "x", "source_file": "income", "fact_id": f"{metric}-{label}"}
+             for label in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2")
+             for metric, value in (("revenue", 100), ("profit_before_tax", 10), ("net_income", 8))]
+    qualified = bridge.build_artifact(tickers=["AAA"], facts_by_ticker={"AAA": facts}, entity_type_by_ticker={"AAA": "corporate"}, requested_at="t")
+    artifact = build_scaleout(semantic_rows=[_row("revenue", 999)], feature_records={"AAA": _store()},
+                              feature_store_artifact={"artifact_identity": "store:1"}, period_semantics_identity="sem:1",
+                              requested_at="t", qualified_flow_artifact=qualified)
+    assert artifact["records"]["AAA"]["features"]["revenue_ttm"]["value"] == 400
+    assert artifact["records"]["AAA"]["features"]["profit_before_tax_ttm"]["value"] == 40
+    assert artifact["coverage"]["qualified_flow_before_after"]["after"]["revenue"]["ttm_ticker_count"] == 1
+    assert artifact["records"]["AAA"]["states"]["earnings_turnaround_state"] == "UNAVAILABLE"

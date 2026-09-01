@@ -424,8 +424,8 @@ def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]
     directions = [item for item in directions if item != "UNAVAILABLE"]
     growth = directions[0] if directions and len(set(directions)) == 1 else "UNAVAILABLE" if not directions or len(set(directions)) > 1 else directions[0]
     balance = _direction(features["equity_to_assets_direction"], "STRENGTHENING", "DETERIORATING", "STABLE")
-    cash_ratio = features["cfo_to_net_income"]
-    cash = "HEALTHY" if cash_ratio["fitness"] == "RESEARCH_PROXY" and _numeric(cash_ratio.get("value")) and cash_ratio["value"] > 0 else "WEAK" if cash_ratio["fitness"] == "RESEARCH_PROXY" and _numeric(cash_ratio.get("value")) else "UNAVAILABLE"
+    cash_ratio = features["cfo_to_net_income_ttm"] if features["cfo_to_net_income_ttm"]["fitness"] == "READY" else features["cfo_to_net_income"]
+    cash = "HEALTHY" if cash_ratio["fitness"] in {"READY", "RESEARCH_PROXY"} and _numeric(cash_ratio.get("value")) and cash_ratio["value"] > 0 else "WEAK" if cash_ratio["fitness"] in {"READY", "RESEARCH_PROXY"} and _numeric(cash_ratio.get("value")) else "UNAVAILABLE"
     capital = "UNAVAILABLE"  # Cross-provider values remain explicitly proxies, never state-ready.
     debt_direction = features["debt_to_equity_direction"]
     leverage = _direction(debt_direction, "WORSENING", "IMPROVING", "STABLE")
@@ -442,7 +442,9 @@ def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]
                                             "WORKING_CAPITAL_IMPROVING", "WORKING_CAPITAL_WORSENING", "WORKING_CAPITAL_STABLE")
     current_ratio_trajectory = _direction(features["current_ratio_direction"],
                                           "CURRENT_RATIO_IMPROVING", "CURRENT_RATIO_WORSENING", "CURRENT_RATIO_STABLE")
+    turnaround = next((features[item].get("semantic_transition") for item in ("net_income_qoq", "net_income_same_quarter_yoy", "net_income_ttm_yoy") if features[item].get("semantic_transition")), "UNAVAILABLE")
     return {"profitability_state": profitability, "margin_state": margin, "growth_state": growth,
+            "earnings_turnaround_state": turnaround,
             "balance_sheet_state": balance, "cash_conversion_state": cash,
             "capital_efficiency_state": capital, "leverage_state": leverage, "resilience_state": resilience,
             "working_capital_state": working_capital, "working_capital_trajectory_state": working_capital_trajectory,
@@ -483,26 +485,29 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                          source_identities: Mapping[str, Any]) -> dict[str, Any]:
     normalized_type = str(issuer_type).lower() if issuer_type not in (None, "") else "unknown"
     family = INDUSTRIAL if normalized_type == "corporate" else LIMITED
-    ids = ("net_income_sign", "net_margin", "pbt_margin", "net_margin_direction", "revenue_qoq", "net_income_qoq",
-           "revenue_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "net_income_ttm_yoy", "revenue_ttm", "net_income_ttm", "operating_cash_flow_sign", "cfo_to_net_income",
+    ids = ("net_income_sign", "net_margin", "pbt_margin", "net_margin_direction", "revenue_qoq", "profit_before_tax_qoq", "net_income_qoq",
+           "revenue_same_quarter_yoy", "profit_before_tax_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "profit_before_tax_ttm_yoy", "net_income_ttm_yoy", "operating_cash_flow_ttm_yoy", "revenue_ttm", "profit_before_tax_ttm", "net_income_ttm", "operating_cash_flow_ttm", "ttm_net_margin", "ttm_pbt_margin", "operating_cash_flow_sign", "operating_cash_flow_qoq", "operating_cash_flow_same_quarter_yoy", "cfo_to_net_income", "cfo_to_net_income_ttm",
            "fcf", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
            "cash_yoy", "same_provider_roa", "same_provider_roe", "same_provider_roa_eop_proxy", "same_provider_roe_eop_proxy", "same_provider_asset_turnover_eop_proxy", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy",
            "net_working_capital", "current_ratio", "net_working_capital_direction", "current_ratio_direction")
     if family == LIMITED:
         features = {feature_id: _not_applicable(feature_id) for feature_id in ids}
-        states = {"profitability_state": "UNAVAILABLE", "margin_state": "UNAVAILABLE", "growth_state": "UNAVAILABLE",
+        states = {"profitability_state": "UNAVAILABLE", "margin_state": "UNAVAILABLE", "growth_state": "UNAVAILABLE", "earnings_turnaround_state": "UNAVAILABLE",
                   "balance_sheet_state": "UNAVAILABLE", "cash_conversion_state": "UNAVAILABLE",
                   "capital_efficiency_state": "UNAVAILABLE", "leverage_state": "UNAVAILABLE", "resilience_state": "UNAVAILABLE",
                   "working_capital_state": "WORKING_CAPITAL_UNAVAILABLE", "working_capital_trajectory_state": "UNAVAILABLE",
                   "current_ratio_trajectory_state": "UNAVAILABLE"}
     else:
         revenue = _best_series(rows, "revenue", FLOW_STANDALONE)
+        pbt = _best_series(rows, "profit_before_tax", FLOW_STANDALONE)
         income = _best_series(rows, "net_income", FLOW_STANDALONE)
         ocf = _best_series(rows, "operating_cash_flow", FLOW_STANDALONE)
         revenue_ytd = _best_series(rows, "revenue", "YTD_CUMULATIVE_INTERIM")
         income_ytd = _best_series(rows, "net_income", "YTD_CUMULATIVE_INTERIM")
-        revenue_ttm, _ = _ttm_sum(revenue, "revenue_ttm")
-        income_ttm, _ = _ttm_sum(income, "net_income_ttm")
+        revenue_ttm, revenue_ttm_inputs = _ttm_sum(revenue, "revenue_ttm")
+        pbt_ttm, pbt_ttm_inputs = _ttm_sum(pbt, "profit_before_tax_ttm")
+        income_ttm, income_ttm_inputs = _ttm_sum(income, "net_income_ttm")
+        ocf_ttm, ocf_ttm_inputs = _ttm_sum(ocf, "operating_cash_flow_ttm")
         net_margin = _ratio("net_margin", _same_period_pair(rows, "net_income", "revenue", FLOW_STANDALONE), method="same_provider_same_period_net_margin/v2")
         pbt_margin = _ratio("pbt_margin", _same_period_pair(rows, "profit_before_tax", "revenue", FLOW_STANDALONE), method="same_provider_same_period_pbt_margin/v2")
         previous_margin = None
@@ -520,19 +525,37 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
         else:
             margin_direction = _blocked("net_margin_direction", "MISSING_CONSECUTIVE_COMPATIBLE_MARGIN_PERIODS")
         cash_pair = _cross_statement_same_representation_pair(rows, "operating_cash_flow", "net_income", FLOW_STANDALONE)
+        def ttm_ratio(feature_id: str, numerator: Mapping[str, Any], numerator_inputs: Sequence[Mapping[str, Any]], denominator: Mapping[str, Any], denominator_inputs: Sequence[Mapping[str, Any]], method: str) -> dict[str, Any]:
+            if numerator["fitness"] != "READY" or denominator["fitness"] != "READY" or not numerator_inputs or not denominator_inputs:
+                return _blocked(feature_id, "MISSING_COMPATIBLE_TTM_INPUTS")
+            n_row, d_row = numerator_inputs[-1], denominator_inputs[-1]
+            n_key, d_key = _source_key(n_row), _source_key(d_row)
+            if n_key[0] != d_key[0] or n_key[1] != d_key[1] or n_key[3:] != d_key[3:]:
+                return _blocked(feature_id, "TTM_PROVIDER_SCOPE_CURRENCY_SCALE_INCOMPATIBLE")
+            if denominator["value"] == 0:
+                return _blocked(feature_id, "ZERO_DENOMINATOR")
+            return _feature(feature_id, value=numerator["value"] / denominator["value"], fitness="READY", method=method,
+                            inputs=list(numerator_inputs) + list(denominator_inputs), growth_basis="TTM")
         features = {
             "net_income_sign": _feature("net_income_sign", value=_latest(income)["reported_value"], fitness="READY", method="latest_compatible_standalone_sign/v2", inputs=[_latest(income)]) if _latest(income) else _blocked("net_income_sign", "MISSING_STANDALONE_NET_INCOME"),
             "net_margin": net_margin, "pbt_margin": pbt_margin, "net_margin_direction": margin_direction,
             "revenue_qoq": _growth("revenue_qoq", revenue, basis="QOQ_STANDALONE"),
+            "profit_before_tax_qoq": _growth("profit_before_tax_qoq", pbt, basis="QOQ_STANDALONE", earnings=True),
             "net_income_qoq": _growth("net_income_qoq", income, basis="QOQ_STANDALONE", earnings=True),
             "revenue_same_quarter_yoy": _growth("revenue_same_quarter_yoy", revenue, basis="SAME_QUARTER_YOY"),
+            "profit_before_tax_same_quarter_yoy": _growth("profit_before_tax_same_quarter_yoy", pbt, basis="SAME_QUARTER_YOY", earnings=True),
             "net_income_same_quarter_yoy": _growth("net_income_same_quarter_yoy", income, basis="SAME_QUARTER_YOY", earnings=True),
             "revenue_ytd_yoy": _growth("revenue_ytd_yoy", revenue_ytd, basis="YTD_YOY"),
             "net_income_ytd_yoy": _growth("net_income_ytd_yoy", income_ytd, basis="YTD_YOY", earnings=True),
-            "revenue_ttm": revenue_ttm, "net_income_ttm": income_ttm,
-            "revenue_ttm_yoy": _ttm_yoy("revenue_ttm_yoy", revenue), "net_income_ttm_yoy": _ttm_yoy("net_income_ttm_yoy", income),
+            "revenue_ttm": revenue_ttm, "profit_before_tax_ttm": pbt_ttm, "net_income_ttm": income_ttm, "operating_cash_flow_ttm": ocf_ttm,
+            "revenue_ttm_yoy": _ttm_yoy("revenue_ttm_yoy", revenue), "profit_before_tax_ttm_yoy": _ttm_yoy("profit_before_tax_ttm_yoy", pbt), "net_income_ttm_yoy": _ttm_yoy("net_income_ttm_yoy", income), "operating_cash_flow_ttm_yoy": _ttm_yoy("operating_cash_flow_ttm_yoy", ocf),
+            "ttm_net_margin": ttm_ratio("ttm_net_margin", income_ttm, income_ttm_inputs, revenue_ttm, revenue_ttm_inputs, "same_provider_ttm_net_margin/v2"),
+            "ttm_pbt_margin": ttm_ratio("ttm_pbt_margin", pbt_ttm, pbt_ttm_inputs, revenue_ttm, revenue_ttm_inputs, "same_provider_ttm_pbt_margin/v2"),
             "operating_cash_flow_sign": _feature("operating_cash_flow_sign", value=_latest(ocf)["reported_value"], fitness="READY", method="latest_compatible_standalone_cfo_sign/v2", inputs=[_latest(ocf)]) if _latest(ocf) else _blocked("operating_cash_flow_sign", "MISSING_STANDALONE_OPERATING_CASH_FLOW"),
+            "operating_cash_flow_qoq": _growth("operating_cash_flow_qoq", ocf, basis="QOQ_STANDALONE"),
+            "operating_cash_flow_same_quarter_yoy": _growth("operating_cash_flow_same_quarter_yoy", ocf, basis="SAME_QUARTER_YOY"),
             "cfo_to_net_income": (_feature("cfo_to_net_income", value=cash_pair[0]["reported_value"] / cash_pair[1]["reported_value"], fitness="READY", method="same_provider_cross_statement_cash_earnings_ratio/v2", inputs=list(cash_pair), warnings=["NEGATIVE_NET_INCOME_RATIO_RETAINED_AS_REPORTED"] if cash_pair[1]["reported_value"] < 0 else []) if cash_pair and cash_pair[1]["reported_value"] != 0 else _blocked("cfo_to_net_income", "ZERO_NET_INCOME_DENOMINATOR" if cash_pair else "MISSING_SAME_PROVIDER_CFO_AND_NET_INCOME")),
+            "cfo_to_net_income_ttm": ttm_ratio("cfo_to_net_income_ttm", ocf_ttm, ocf_ttm_inputs, income_ttm, income_ttm_inputs, "same_provider_cross_statement_ttm_cash_earnings_ratio/v2"),
             "fcf": _blocked("fcf", "FCF_BLOCKED_BY_EVIDENCE_CAPEX_SEMANTICS_UNAVAILABLE"),
             "equity_to_assets": _ratio("equity_to_assets", _same_period_pair(rows, "shareholders_equity", "total_assets", PIT), method="same_provider_same_period_equity_to_assets/v2"),
             "cash_to_assets": _ratio("cash_to_assets", _same_period_pair(rows, "cash_and_cash_equivalents", "total_assets", PIT), method="same_provider_same_period_cash_to_assets/v2"),
