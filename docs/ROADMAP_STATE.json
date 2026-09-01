@@ -398,6 +398,20 @@
       "notes": "Financial V2 reaches the Producer AI product only through financial_analysis_product_integration/v1 compact/ABSENT records. The 523 retained engine cohort remains a sibling of the 1,699 product denominator; seven major axes and the six-label stance machine are unchanged. Mixed-provider ROA/asset-turnover remain RESEARCH_PROXY / CROSS_PROVIDER_UNRESOLVED_SCALE, no full validation artifact is published, and export_ai_bundle attachment is explicit opt-in only. No successor is queued."
     },
     {
+      "milestone_id": "MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
+      "checkpoint": "HEAD",
+      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2", "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1 directive (2026-09-01)",
+      "state_history": [],
+      "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH",
+      "notes": "COMPLETE. financial_analysis_context/v2 remains V2 and expands retained coverage to the current 1,492-ticker structured/Feature Store universe with zero silent drops. Advanced/period-semantic V2 features take priority; Feature Store fallback is retained only as RESEARCH_PROXY and cannot create current_research_ready. The original 523 replay remains a separately rerun semantic regression oracle. Compact product coverage is 1,492/1,699 with 207 explicit ABSENT; the six-label security-stance distribution is unchanged. No Consumer, Dashboard, financial authority, PIT, valuation, actionability, provider, PDF/OCR, score/rank, target/probability, or successor work is opened."
+    },
+    {
       "milestone_id": "DASHBOARD_PRODUCT_SURFACE_AND_PUBLICATION_CONVERGENCE_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL / IN_APP_BROWSER_AUTOMATION_UNAVAILABLE",
