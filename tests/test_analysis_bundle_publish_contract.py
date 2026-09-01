@@ -33,6 +33,11 @@ class AnalysisBundlePublishContractTests(unittest.TestCase):
     def test_workspace_projection_is_a_required_current_product_asset(self):
         self.assertIn("data/investment_decision_workspace.json", publisher.SAFE_WEB_ARTIFACTS)
 
+    def test_screener_master_projection_is_optional_safe_web_artifact(self):
+        self.assertIn("data/screener_master_projection.json", publisher.OPTIONAL_SAFE_WEB_ARTIFACTS)
+        self.assertIn("data/screener_master_projection.js", publisher.OPTIONAL_SAFE_WEB_ARTIFACTS)
+        self.assertNotIn("data/screener_master_projection.json", publisher.SAFE_WEB_ARTIFACTS)
+
     def test_copy_preserves_corporate_intelligence_payload(self):
         payload = {
             "tickers": {

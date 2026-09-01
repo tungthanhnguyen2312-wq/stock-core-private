@@ -91,6 +91,13 @@ COPY_ARTIFACTS = (
 )
 WORKSPACE_ASSET = "data/investment_decision_workspace.json"
 WORKSPACE_SCHEMA = "investment_decision_workspace_dashboard_projection/v1"
+SCREENER_MASTER_ASSET = "data/screener_master_projection.json"
+SCREENER_MASTER_JS_ASSET = "data/screener_master_projection.js"
+SCREENER_MASTER_SCHEMA = "screener_master_projection/v1"
+OPTIONAL_SAFE_WEB_ARTIFACTS = {
+    SCREENER_MASTER_ASSET,
+    SCREENER_MASTER_JS_ASSET,
+}
 SAFE_WEB_ARTIFACTS = set(COPY_ARTIFACTS) | {
     WORKSPACE_ASSET, "data/screener_data.js", "data/build_info.json", "data/build_info.js",
 }
@@ -263,6 +270,51 @@ def copy_workspace_projection(source: Path) -> bool:
     target.parent.mkdir(parents=True, exist_ok=True)
     atomic_copy_file(source, target, validator=validate_json_file)
     return True
+
+
+def validate_screener_master_projection(source: Path, market_session: str) -> dict[str, object]:
+    """Fail closed when a Screener master projection is supplied for publication."""
+    if not source.is_file():
+        raise ValueError(f"SCREENER_MASTER_PROJECTION_NOT_PUBLISHED: missing {source}")
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"SCREENER_MASTER_PROJECTION_NOT_PUBLISHED: unreadable {source}") from exc
+    if not isinstance(payload, dict) or payload.get("contract_version") != SCREENER_MASTER_SCHEMA:
+        raise ValueError("SCREENER_MASTER_PROJECTION_NOT_PUBLISHED: unsupported contract")
+    cards = payload.get("cards")
+    if not isinstance(cards, dict) or not cards:
+        raise ValueError("SCREENER_MASTER_PROJECTION_NOT_PUBLISHED: empty screener corpus")
+    if payload.get("as_of_session") != market_session:
+        raise ValueError(
+            "SCREENER_MASTER_PROJECTION_SESSION_MISMATCH: "
+            f"projection={payload.get('as_of_session')} market={market_session}"
+        )
+    if not isinstance(payload.get("artifact_identity"), str) or not payload["artifact_identity"]:
+        raise ValueError("SCREENER_MASTER_PROJECTION_NOT_PUBLISHED: missing artifact identity")
+    coverage = payload.get("coverage")
+    if not isinstance(coverage, dict) or coverage.get("ticker_denominator") != len(cards) or coverage.get("zero_silent_drops") is not True:
+        raise ValueError("SCREENER_MASTER_PROJECTION_NOT_PUBLISHED: invalid denominator or silent-drop guard")
+    return payload
+
+
+def copy_screener_master_projection(source: Path) -> bool:
+    """Copy the Producer projection JSON and emit the identical JS fallback."""
+    from screener_master_projection import js_fallback
+
+    target = WEB_ROOT / SCREENER_MASTER_ASSET
+    js_target = WEB_ROOT / SCREENER_MASTER_JS_ASSET
+    payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    js_content = js_fallback(payload)
+    changed = False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not (target.is_file() and sha256(target) == sha256(source)):
+        atomic_copy_file(source, target, validator=validate_json_file)
+        changed = True
+    if not js_target.is_file() or content_sha256(js_target.read_text(encoding="utf-8")) != content_sha256(js_content):
+        atomic_write_file(js_target, js_content)
+        changed = True
+    return changed
 
 
 def read_csv_rows(path: Path) -> tuple[list[dict[str, str]], list[str]]:
@@ -579,11 +631,18 @@ def update_asset_versions(build_id: str) -> list[str]:
 
 
 def validate_json_artifacts() -> None:
-    for relative in sorted(SAFE_WEB_ARTIFACTS):
+    required = set(SAFE_WEB_ARTIFACTS)
+    optional_present = {
+        relative for relative in OPTIONAL_SAFE_WEB_ARTIFACTS
+        if (WEB_ROOT / relative).is_file()
+    }
+    for relative in sorted(required | optional_present):
         if not relative.endswith(".json"):
             continue
         path = WEB_ROOT / relative
         if not path.exists() or path.stat().st_size == 0:
+            if relative in OPTIONAL_SAFE_WEB_ARTIFACTS:
+                continue
             raise ValueError(f"artifact JSON thiếu/rỗng: {relative}")
         json.loads(path.read_text(encoding="utf-8-sig"))
 
@@ -591,6 +650,9 @@ def validate_json_artifacts() -> None:
 def build_whitelist() -> list[str]:
     pages = sorted(path.name for path in WEB_ROOT.glob("*.html"))
     paths = set(pages) | SAFE_WEB_ARTIFACTS
+    for relative in OPTIONAL_SAFE_WEB_ARTIFACTS:
+        if (WEB_ROOT / relative).is_file():
+            paths.add(relative)
     attr_re = re.compile(r'(?:src|href)=["\']([^"\']+)["\']', re.I)
     data_re = re.compile(r'["\']([\w./-]+\.(?:csv|json|md))["\']', re.I)
     for relative in pages:
@@ -768,6 +830,8 @@ def main() -> int:
     parser.add_argument("--expected-cockpit-operation-identity", default=None)
     parser.add_argument("--workspace-projection-source", type=Path, default=None,
                         help="Explicit validated Investment Workspace dashboard projection required for current product surfaces.")
+    parser.add_argument("--screener-projection-source", type=Path, default=None,
+                        help="Optional Producer screener_master_projection/v1 JSON copied into the Dashboard allowlist when present.")
     args = parser.parse_args()
 
     global LIVE_MODE
@@ -809,6 +873,10 @@ def main() -> int:
         rows, breadth, market_session = validate_snapshot()
         workspace_source = args.workspace_projection_source or (BACKEND_ROOT / WORKSPACE_ASSET)
         workspace = validate_workspace_projection(workspace_source, market_session)
+        screener_source = args.screener_projection_source or (BACKEND_ROOT / SCREENER_MASTER_ASSET)
+        screener = None
+        if screener_source.is_file():
+            screener = validate_screener_master_projection(screener_source, market_session)
         copy_plan = plan_copy_artifacts()
         manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
@@ -830,6 +898,10 @@ def main() -> int:
         log(f"[DRY-RUN] Sẽ copy {len(copy_plan)} artifact từ backend: "
             f"{', '.join(copy_plan) or '(không có — backend=web hoặc đã khớp)'}")
         log(f"[DRY-RUN] Workspace product: {workspace_source} · {len(workspace['cards'])} cards · session {workspace['as_of_session']}")
+        if screener is None:
+            log("[DRY-RUN] Screener master projection: optional / not supplied")
+        else:
+            log(f"[DRY-RUN] Screener master projection: {screener_source} · {len(screener['cards'])} cards · {screener['artifact_identity']}")
         log(f"[DRY-RUN] Build id dự kiến (phiên {market_session}): {manifest['build_id']}")
         log(f"[DRY-RUN] Sẽ cập nhật asset-version trên {len(version_plan)} trang HTML: "
             f"{', '.join(version_plan) or '(không có)'}")
@@ -847,6 +919,9 @@ def main() -> int:
         copy_public_artifacts()
         workspace_changed = copy_workspace_projection(workspace_source)
         log(f"Workspace product: {'đã materialize' if workspace_changed else 'không đổi'} ({len(workspace['cards'])} cards).")
+        if screener is not None:
+            screener_changed = copy_screener_master_projection(screener_source)
+            log(f"Screener master projection: {'đã materialize' if screener_changed else 'không đổi'} ({len(screener['cards'])} cards).")
         write_build_manifest(manifest, screener_js_content)
         update_asset_versions(str(manifest["build_id"]))
         if not companion_plan.omitted:

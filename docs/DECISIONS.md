@@ -1,5 +1,17 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-01 - Screener Master Projection And Decision Drawer Integration V1
+
+`SCREENER_MASTER_PROJECTION_AND_DECISION_DRAWER_INTEGRATION_V1` (`screener_master_projection.py`, `tools/run_screener_master_projection.py`, `tests/test_screener_master_projection.py`).
+
+1. **One derived presentation read model.** `screener_master_projection/v1` is a join over already-governed Producer artifacts. It is not a new source of factual authority and does not move analytical formulas into JavaScript.
+2. **Snapshot denominator, not Workspace denominator.** The Screener ticker set equals the current canonical screen snapshot (1,683 unique names on 2026-08-28). Workspace-only extras (16) are excluded. Missing join evidence stays on the snapshot row with an explicit status.
+3. **Listing vs display exchange.** `listing_exchange` is the official vocabulary (`HOSE`, `HNX_LISTED`, `UPCOM`, `DELISTED`). `display_exchange` is `HSX`/`HNX`/`UPCOM`/`DELISTED`. `HNX_LISTED` never falls through to `DELISTED` (299/299).
+4. **True sector is VCI industry, not entity class.** Sector labels come from retained `vnstock:Listing(source=VCI).symbols_by_industries`. Entity-class tokens (`corporate`/`bank`/`securities`/`insurance`/`finance_company`) and synthetic generics are rejected as sector. Absent evidence is `sector.label=null` / `status=UNKNOWN`.
+5. **Research liquidity stays descriptive.** `LIQUIDITY_RESEARCH_PROXY` is independent of `EXECUTION_CAPACITY_EXACT_BLOCKED`. No close×volume ADV20 and no revived `gtgd20_ty` numeric fill: `liquidity.research_value` is null with an explicit reason.
+6. **Compact reuse only.** Tactical, research stance, Financial V2, and Workspace identity are copied from existing contracts. Data READY is not BUY. VCI period-duration UNKNOWN remains fail-closed.
+7. **Publication.** Producer `publish_dashboard.py` may copy the projection JSON plus an identical JS fallback as optional SAFE web artifacts. Dashboard consumption is the paired surface.
+
 ## 2026-09-01 - Market-Wide Working Capital And Short-Term Liquidity V1
 
 `MARKET_WIDE_WORKING_CAPITAL_AND_SHORT_TERM_LIQUIDITY_V1 = COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE` (`push = YES`).
