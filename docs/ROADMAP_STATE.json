@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.01.1",
+  "roadmap_version": "2026.09.01.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -424,6 +424,20 @@
       "state_history": [],
       "owner_override": null,
       "notes": "COMPLETE COHERENT PARTIAL. Producer publication now validates and atomically copies the explicitly supplied current investment_decision_workspace_dashboard_projection/v1 into the Dashboard allowlist, with session/coverage/zero-silent-drop checks. Dashboard primary surfaces (home summary, Analysis, Tactical Signals, Screener links, Workspace deep links, Portfolio, navigation, and About) consume the existing 1,699-card Workspace contract without score, rank, target, probability, sizing, or execution authority. Legacy candles/heatmap remain optional sidecars. Local static HTTP and automated contract acceptance passed; required in-app browser console/interaction acceptance could not run because the browser runtime failed before initialization. No new session, data generation, publication, push, deployment, or authority promotion occurred. No successor is queued."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
+      "checkpoint": "HEAD",
+      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1 directive (2026-09-01)",
+      "state_history": [],
+      "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH",
+      "notes": "COMPLETE. Root cause of the 966-ticker UNCLASSIFIED_GENERIC_FINANCIAL_ANALYSIS bucket: evidence_backed_entity_classifier.py's multi-evidence engine existed and was tested but only ever reached 40 tickers (20 curated seed + 20 P2E3-promoted); every other ticker fell to GENERIC purely for lack of a resolved entity_type -- a classic METADATA_EXISTS_NOT_CONNECTED gap, not a missing capability. Adds a third Layered Authority Topology B tier (config/promoted_entity_classifications_scaleout_v1.json via a new Case B2 in entity_classification_contract.resolve_layered_entity_classification), strictly lower precedence than the seed CSV and the original promoted manifest and never overriding either, populated by tools/run_entity_classification_scaleout_v1.py reconciling three already-retained governed sources: exchange ICB industry-classification sync (vn_stock.db metadata.industry, new exchange_industry_classification.py -- 16 non-financial ICB sectors are positive CORPORATE evidence, Ngan hang/Bao hiem are positive BANK/INSURANCE evidence, Dich vu tai chinh 'Financial Services' is deliberately informative-only and never resolves a specific class by itself), retained statement-template evidence (statement_taxonomy_sidecar.py, reused unmodified), and specialized (non-general) legal-charter evidence (evidence_backed_entity_classifier.evaluate_legal_charter_evidence, deliberately excluding its general 'any joint-stock company' Case D fallback, which this milestone's evidentiary bar does not accept as sufficient for a new promotion though it remains valid and untouched for the 15 tickers already promoted under it). Real replay against the current 1,492-ticker structured/Feature Store universe (tests/test_entity_classification_scaleout_replay.py): entity-family distribution 455/71/966 (industrial/limited/generic) -> 1,382/85/25; newly industrial=927, newly limited-financial=14 (6 insurance, 8 securities), conflicts=0, not-applicable=0, remaining honestly unknown=25 (5 ambiguous-financial-sector tickers with no specialized corroboration + 20 tickers absent from the industry sync entirely). current_research_ready 455 -> 1,380, entirely from READY features these tickers already had under the unchanged V2 formulas -- classification never manufactures a feature. The original 520-ticker legacy regression oracle and the pre-existing 526 (455+71) already-classified tickers are verified byte-identical before/after. Product denominator remains 1,699/1,492 compact/207 ABSENT; the six-label security-stance distribution is unchanged (183/344/30/52/188/902). Zero authority promotion: research-context only, no score/rank/target/probability/actionability, no Consumer/Dashboard/Financial-V2-formula/stance change, no new provider, no PDF/OCR. No successor is queued."
     }
   ],
   "blocked_capabilities": [

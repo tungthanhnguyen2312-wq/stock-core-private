@@ -38,6 +38,7 @@ class ClassificationStatus(StrEnum):
 class EvidenceTier(StrEnum):
     DOCUMENTED_VERIFIED = "documented_verified"                # Official regulatory/exchange filing
     EXCHANGE_SECURITY_MASTER = "exchange_security_master"      # Official listing/security master charter
+    EXCHANGE_INDUSTRY_CLASSIFICATION = "exchange_industry_classification"  # Exchange-provider ICB sector/industry sync (see exchange_industry_classification.py)
     FINANCIAL_STATEMENT_TEMPLATE = "statement_template"        # BCTC Form codes & exclusive line-item markers
     CURATED_SEED_AUTHORITY = "curated_seed_authority"          # config/ticker_entity_profiles.csv seed baseline
 
@@ -118,6 +119,11 @@ class EntityClassificationRecord:
 ROOT_DIR = Path(__file__).resolve().parent
 DEFAULT_SEED_PROFILES_PATH = ROOT_DIR / "config" / "ticker_entity_profiles.csv"
 DEFAULT_PROMOTED_CLASSIFICATIONS_PATH = ROOT_DIR / "config" / "promoted_entity_classifications.json"
+#: Third authority tier (see MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1). Populated by
+#: tools/run_entity_classification_scaleout_v1.py from exchange industry-classification evidence
+#: (exchange_industry_classification.py) reconciled against retained statement-template evidence.
+#: Never overrides the seed CSV or the original promoted manifest; see resolve_layered_entity_classification.
+DEFAULT_SCALEOUT_PROMOTED_CLASSIFICATIONS_PATH = ROOT_DIR / "config" / "promoted_entity_classifications_scaleout_v1.json"
 
 AUTHORITY_SCOPE_CURRENT_STATE = "CURRENT_STATE_ONLY"
 HISTORICAL_PIT_NOT_ESTABLISHED = "NOT_ESTABLISHED"
@@ -210,13 +216,31 @@ def load_promoted_entity_classifications(
     return records
 
 
+def load_scaleout_promoted_entity_classifications(
+    manifest_path: Path | str | None = None,
+) -> dict[str, EntityClassificationRecord]:
+    """Load the scale-out promotion manifest (third authority tier).
+
+    Same shape and loader logic as `load_promoted_entity_classifications`, just a
+    separate file so the original 20 owner-approved P2E3 records stay byte-identical
+    and independently auditable. Missing file -> {} (fails closed, exactly like the
+    original promoted-classifications loader when its file is absent).
+    """
+    p = Path(manifest_path) if manifest_path else DEFAULT_SCALEOUT_PROMOTED_CLASSIFICATIONS_PATH
+    if not p.is_file():
+        return {}
+    return load_promoted_entity_classifications(p)
+
+
 def resolve_layered_entity_classification(
     ticker: str,
     *,
     seed_profiles: Mapping[str, str] | None = None,
     promoted_records: Mapping[str, EntityClassificationRecord] | None = None,
+    scaleout_promoted_records: Mapping[str, EntityClassificationRecord] | None = None,
     seed_path: Path | str | None = None,
     promoted_path: Path | str | None = None,
+    scaleout_promoted_path: Path | str | None = None,
     as_of: str | None = None,
     require_historical_pit: bool = False,
 ) -> LayeredClassificationResult:
@@ -225,7 +249,13 @@ def resolve_layered_entity_classification(
     Precedence:
     A. If seed authority exists: seed remains authoritative.
     B. If no seed exists and an explicitly promoted qualified record exists: use promoted record.
-    C. If seed and promoted record disagree: fail closed as CONFLICT. Do NOT silently override seed.
+    B2. If no seed and no original promoted record exists, and a scale-out promoted qualified
+        record exists (see MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1): use it.
+        Same qualification/temporal rules as B; strictly lower precedence than the original
+        promoted manifest so a future owner-approved P2E3-style promotion always wins.
+    C. If seed and promoted (original or scale-out) record disagree: fail closed as CONFLICT.
+       Do NOT silently override seed. If the original promoted manifest and the scale-out
+       manifest disagree on the same ticker, that too fails closed as CONFLICT.
     D. If promoted record is AMBIGUOUS / CONFLICT / UNKNOWN: must not supply positive classification.
     E. If neither authority exists: UNKNOWN.
     """
@@ -247,6 +277,8 @@ def resolve_layered_entity_classification(
 
     seeds = seed_profiles if seed_profiles is not None else load_seed_profiles(seed_path)
     promoted = promoted_records if promoted_records is not None else load_promoted_entity_classifications(promoted_path)
+    scaleout = (scaleout_promoted_records if scaleout_promoted_records is not None
+                else load_scaleout_promoted_entity_classifications(scaleout_promoted_path))
 
     seed_val = seeds.get(clean_sym)
     seed_class: EntityClass | None = None
@@ -256,6 +288,7 @@ def resolve_layered_entity_classification(
             seed_class = EntityClass(s_norm)
 
     prom_rec = promoted.get(clean_sym)
+    scaleout_rec = scaleout.get(clean_sym)
 
     # Case A: Seed authority exists
     if seed_class is not None:
@@ -271,6 +304,20 @@ def resolve_layered_entity_classification(
                     reason=f"CONFLICT: seed authority ({seed_class.value}) disagrees with promoted record ({prom_rec.entity_class.value}); fails closed",
                     seed_record=seed_class.value,
                     promoted_record=prom_rec,
+                    is_positive_authority=False,
+                )
+        if scaleout_rec is not None:
+            if scaleout_rec.classification_status == ClassificationStatus.QUALIFIED and scaleout_rec.entity_class != seed_class:
+                return LayeredClassificationResult(
+                    ticker=clean_sym,
+                    resolved_entity_class=EntityClass.UNKNOWN,
+                    classification_status=ClassificationStatus.CONFLICT,
+                    authority_tier="conflict",
+                    authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                    historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                    reason=f"CONFLICT: seed authority ({seed_class.value}) disagrees with scale-out promoted record ({scaleout_rec.entity_class.value}); fails closed",
+                    seed_record=seed_class.value,
+                    promoted_record=scaleout_rec,
                     is_positive_authority=False,
                 )
         return LayeredClassificationResult(
@@ -331,6 +378,51 @@ def resolve_layered_entity_classification(
                 is_positive_authority=False,
             )
 
+    # Case B2: No seed, no original promoted record -- check the scale-out promoted tier
+    if scaleout_rec is not None:
+        if as_of is not None:
+            k_avail = scaleout_rec.knowledge_available_at or scaleout_rec.verified_at
+            if k_avail and str(as_of).strip() < k_avail[:10]:
+                return LayeredClassificationResult(
+                    ticker=clean_sym,
+                    resolved_entity_class=EntityClass.UNKNOWN,
+                    classification_status=ClassificationStatus.UNKNOWN,
+                    authority_tier="prior_to_knowledge_availability",
+                    authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                    historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                    reason=f"as_of '{as_of}' is prior to knowledge_available_at/verified_at boundary '{k_avail}'; historical PIT not established",
+                    seed_record=None,
+                    promoted_record=scaleout_rec,
+                    is_positive_authority=False,
+                )
+
+        if scaleout_rec.classification_status == ClassificationStatus.QUALIFIED and scaleout_rec.entity_class != EntityClass.UNKNOWN:
+            return LayeredClassificationResult(
+                ticker=clean_sym,
+                resolved_entity_class=scaleout_rec.entity_class,
+                classification_status=ClassificationStatus.QUALIFIED,
+                authority_tier="scaleout_promoted_record_authority",
+                authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                reason=f"scaleout_promoted_record_authority:{scaleout_rec.classification_reason}",
+                seed_record=None,
+                promoted_record=scaleout_rec,
+                is_positive_authority=True,
+            )
+        else:
+            return LayeredClassificationResult(
+                ticker=clean_sym,
+                resolved_entity_class=EntityClass.UNKNOWN,
+                classification_status=scaleout_rec.classification_status,
+                authority_tier="scaleout_promoted_non_qualified",
+                authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                reason=f"scaleout_promoted_record_non_qualified:{scaleout_rec.classification_reason}",
+                seed_record=None,
+                promoted_record=scaleout_rec,
+                is_positive_authority=False,
+            )
+
     # Case C: Neither exists (or unpromoted classifier output)
     return LayeredClassificationResult(
         ticker=clean_sym,
@@ -349,38 +441,33 @@ def resolve_layered_entity_classification(
 def load_layered_entity_profiles(
     seed_path: Path | str | None = None,
     promoted_path: Path | str | None = None,
+    scaleout_promoted_path: Path | str | None = None,
 ) -> dict[str, str]:
     """Load merged positive entity profiles {TICKER: entity_type} under Layered Authority Topology B.
 
     Precedence:
     1. Seed authority from config/ticker_entity_profiles.csv (20 baseline issuers)
     2. Exact owner-approved promoted records from config/promoted_entity_classifications.json (20 promoted issuers)
-    3. Contradictory records across seed and promoted fail closed (omitted).
-    4. Unpromoted issuers are omitted (defaulting to unknown).
+    3. Scale-out promoted records from config/promoted_entity_classifications_scaleout_v1.json, when
+       present (MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1) -- strictly lower precedence
+       than 1 and 2, so it can only fill gaps, never override them.
+    4. Contradictory records across any two tiers fail closed (omitted).
+    5. Unpromoted issuers are omitted (defaulting to unknown).
     """
     seeds = load_seed_profiles(seed_path)
     promoted = load_promoted_entity_classifications(promoted_path)
+    scaleout = load_scaleout_promoted_entity_classifications(scaleout_promoted_path)
 
     merged: dict[str, str] = {}
 
-    # First apply all seed profiles
-    for sym in seeds.keys():
-        res = resolve_layered_entity_classification(
-            sym,
-            seed_profiles=seeds,
-            promoted_records=promoted,
-        )
-        if res.is_positive_authority and res.resolved_entity_class != EntityClass.UNKNOWN:
-            merged[sym] = res.resolved_entity_class.value
-
-    # Next apply promoted records for non-seed tickers
-    for sym in promoted.keys():
+    for sym in list(seeds.keys()) + list(promoted.keys()) + list(scaleout.keys()):
         if sym in merged:
             continue
         res = resolve_layered_entity_classification(
             sym,
             seed_profiles=seeds,
             promoted_records=promoted,
+            scaleout_promoted_records=scaleout,
         )
         if res.is_positive_authority and res.resolved_entity_class != EntityClass.UNKNOWN:
             merged[sym] = res.resolved_entity_class.value
