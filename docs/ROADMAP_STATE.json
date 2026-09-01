@@ -481,6 +481,21 @@
       "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH",
       "notes": "COMPLETE. Current valuation consumes Financial Analysis V2 qualified net-income/revenue TTM only when READY, records source/context/feature/method/period/provider/currency/scale/fitness/conflict lineage, and otherwise retains the old Feature Store TTM as an explicit fallback without mixing values. PBT TTM is exposed only as qualitative earnings context. A P/E or P/S calculation now requires independently compatible known currency and scale on both TTM and market cap; retained replay had 0 such compatible pairs, so the 18 former P/E-TTM and 32 former P/S-TTM outputs are fail-closed as TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE rather than fabricated. Financial V2 remains 1,492 and Product remains 1,699 with zero silent drops; stance distribution and working-capital/debt coverage are unchanged. VCI duration remains UNKNOWN and VCI flows never enter this path. No dashboard, AI-core, runtime, provider, score, rank, target, probability, stance-machine, or successor change."
     }
+    ,
+    {
+      "milestone_id": "CURRENT_RESEARCH_MONETARY_BASIS_NORMALIZATION_AND_VALUATION_RECOVERY_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_UNDOCUMENTED_PRICE_AND_SHARE_SCALE",
+      "checkpoint": "e74e58d0c9e2369b3db45bb3196268b6b2e5aea2",
+      "dependencies": ["QUALIFIED_TTM_VALUATION_RESEARCH_INTEGRATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_MONETARY_NORMALIZATION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized CURRENT_RESEARCH_MONETARY_BASIS_NORMALIZATION_AND_VALUATION_RECOVERY_V1 directive (2026-09-01)",
+      "state_history": [],
+      "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH_IF_TERMINAL_SAFE",
+      "notes": "COMPLETE. Traced the exact unit chain behind the predecessor's 0-compatible-pairs finding: market_wide_current_valuation_input_scaleout.py's market_cap metric never carried currency/scale fields at all (an unconditional omission), so the compatibility check never actually ran on real evidence. Added monetary_basis_contract.py (QUALIFIED/RESEARCH_CONTRACT_QUALIFIED/UNKNOWN, never magnitude-inferred) and fixed a latent str(None)->'None' stringification defect in financial_analysis_engine_v2.py's TTM currency/scale aggregation. Both market_cap and every qualified TTM feature now carry an honest, versioned monetary-basis envelope with full lineage. Real 2026-08-28 full-universe replay (identity-verified same retained inputs as the predecessor): 100% (231,526/231,526) of retained DNSE close observations are SOURCE_PRICE_UNIT_UNDOCUMENTED (a previously-reverted MIXED_SOURCE_REPRESENTATION_DEFECT guess is exactly why this stays fail-closed) and the majority provider-reported share count is retained unit:'unknown'; market_cap.monetary_basis_status is UNKNOWN for all 1,507/1,507 tickers, and TTM net_income/revenue carry the pre-existing 'unknown' currency/scale sentinel for all 120/90 READY tickers, verified directly against the retained financial_analysis_context_artifact.json. TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE stays exactly 18 (P/E-TTM) and 32 (P/S-TTM); P/E-TTM and P/S-TTM RESEARCH_USABLE stays 0/0 -- the same fail-closed outcome, now reached honestly rather than by omission. Financial V2 remains 1,492 and Product remains 1,699 with zero silent drops; research stance distribution (183/344/30/52/188/902), working-capital/debt coverage, peer machinery, and VCI duration UNKNOWN are unchanged and replay-confirmed. Real cases: ATG, APP, BCG (not in the 1,507-ticker universe; DNSE PROVIDER_REJECTED, unrelated to monetary basis), AAH. No dashboard, ai-core, runtime DB, acquisition, score/rank/target/probability, or stance-machine change. Artifact: operations-review/current-research-monetary-basis-normalization-v1-20260901/. No successor is queued."
+    }
   ],
   "blocked_capabilities": [
     {
