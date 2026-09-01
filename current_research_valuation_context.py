@@ -67,6 +67,53 @@ def _feature(record: Mapping[str, Any] | None, feature_id: str) -> Mapping[str, 
     return item if isinstance(item, Mapping) else {}
 
 
+def _known_basis(value: Any) -> bool:
+    return value not in (None, "", "unknown", "UNKNOWN")
+
+
+def _qualified_ttm(feature_id: str, record: Mapping[str, Any] | None, context_identity: str | None) -> dict[str, Any] | None:
+    feature = ((record or {}).get("features") or {}).get(feature_id) or {}
+    if feature.get("fitness") != "READY" or not _numeric(feature.get("value")):
+        return None
+    lineage = list(feature.get("provider_source_provenance") or [])
+    provider = lineage[0].get("provider") if lineage else None
+    return {"status": "READY", "value": feature.get("value"), "method": feature.get("method"),
+            "input_periods": list(feature.get("period_identity") or []), "compatibility_class": "QUALIFIED_FINANCIAL_ANALYSIS_V2",
+            "blocker_reason_codes": list(feature.get("reason_codes") or []), "ttm_input_source": "NEW_QUALIFIED_TTM_SELECTED",
+            "ttm_source_context_identity": context_identity, "ttm_feature_id": feature_id,
+            "ttm_provider": provider, "ttm_currency": feature.get("currency"), "ttm_scale": feature.get("scale"),
+            "ttm_fitness": feature.get("fitness"), "ttm_source_conflict": False}
+
+
+def _select_ttm(*, old: Mapping[str, Any], qualified: Mapping[str, Any] | None) -> dict[str, Any]:
+    old_ready = old.get("status") in READY_STATUSES and _numeric(old.get("value"))
+    if qualified:
+        conflict = old_ready and float(old["value"]) != float(qualified["value"])
+        result = dict(qualified)
+        result["ttm_input_source"] = "BOTH_PRESENT_CONFLICT" if conflict else ("BOTH_PRESENT_NEW_SELECTED" if old_ready else "NEW_QUALIFIED_TTM_SELECTED")
+        result["ttm_source_conflict"] = conflict
+        result["old_ttm_value"] = old.get("value") if old_ready else None
+        return result
+    if old_ready:
+        return {**dict(old), "ttm_input_source": "OLD_TTM_FALLBACK_SELECTED", "ttm_source_context_identity": None,
+                "ttm_feature_id": old.get("feature_id"), "ttm_provider": ((old.get("provider_source_lineage") or [{}])[0]).get("provider"),
+                "ttm_currency": old.get("currency"), "ttm_scale": old.get("scale"), "ttm_fitness": old.get("status"),
+                "ttm_source_conflict": False}
+    return {**dict(old), "ttm_input_source": "NO_TTM", "ttm_source_context_identity": None,
+            "ttm_feature_id": old.get("feature_id"), "ttm_provider": None, "ttm_currency": None,
+            "ttm_scale": None, "ttm_fitness": old.get("status"), "ttm_source_conflict": False}
+
+
+def _monetary_basis_compatible(ttm: Mapping[str, Any], market_cap: Mapping[str, Any]) -> tuple[bool, str | None]:
+    ttm_currency, cap_currency = ttm.get("ttm_currency"), market_cap.get("currency")
+    ttm_scale, cap_scale = ttm.get("ttm_scale"), market_cap.get("scale")
+    if not _known_basis(ttm_currency) or not _known_basis(cap_currency) or ttm_currency != cap_currency:
+        return False, "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE"
+    if not _known_basis(ttm_scale) or not _known_basis(cap_scale) or ttm_scale != cap_scale:
+        return False, "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE"
+    return True, None
+
+
 def _entity(feature_record: Mapping[str, Any] | None, valuation_record: Mapping[str, Any] | None) -> str:
     for source in (valuation_record, feature_record):
         entity = (source or {}).get("entity_class") or (source or {}).get("entity_type")
@@ -133,9 +180,14 @@ def _ttm_method(*, method_id: str, metric: str, ttm: Mapping[str, Any], market_c
         "ttm_status": ttm.get("status"),
         "ttm_compatibility_class": ttm.get("compatibility_class"),
         "input_periods": list(ttm.get("input_periods") or []),
+        "ttm_periods": list(ttm.get("input_periods") or []),
         "share_basis": share_class,
         "numerator": "RESEARCH_USABLE_MARKET_CAP",
         "denominator_feature": metric,
+        "ttm_input_source": ttm.get("ttm_input_source"), "ttm_source_context_identity": ttm.get("ttm_source_context_identity"),
+        "ttm_feature_id": ttm.get("ttm_feature_id"), "ttm_provider": ttm.get("ttm_provider"),
+        "ttm_currency": ttm.get("ttm_currency"), "ttm_scale": ttm.get("ttm_scale"), "ttm_fitness": ttm.get("ttm_fitness"),
+        "ttm_source_conflict": bool(ttm.get("ttm_source_conflict")),
     }
     if applicability == NOT_APPLICABLE:
         return _method_shell(method_id, applicability=applicability, status=NOT_APPLICABLE,
@@ -158,6 +210,10 @@ def _ttm_method(*, method_id: str, metric: str, ttm: Mapping[str, Any], market_c
     if share_class == SHARE_UNAVAILABLE:
         return _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
                              blockers=["SHARE_BASIS_UNAVAILABLE"], extra=extra)
+    basis_ok, basis_blocker = _monetary_basis_compatible(ttm, market_cap)
+    if not basis_ok:
+        return _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=[basis_blocker], extra=extra)
     denominator = ttm["value"]
     if method_id == PE_TTM and denominator <= 0:
         state = NEGATIVE_EARNINGS if denominator < 0 else ZERO_OR_NEAR_ZERO_EARNINGS
@@ -211,14 +267,18 @@ def _ev_ebitda(entity: str, existing: Mapping[str, Any] | None) -> dict[str, Any
 
 
 def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] | None,
-                              valuation_record: Mapping[str, Any] | None) -> dict[str, Any]:
+                              valuation_record: Mapping[str, Any] | None,
+                              financial_analysis_record: Mapping[str, Any] | None = None,
+                              financial_analysis_context_identity: str | None = None) -> dict[str, Any]:
     entity = _entity(feature_record, valuation_record)
     share = (valuation_record or {}).get("share_basis_input") or {}
     share_class = share_basis_class(share)
     metrics = (valuation_record or {}).get("metrics") or {}
     market_cap = metrics.get(MARKET_CAP) or {}
-    ttm_ni = _feature(feature_record, "net_income_ttm_sum")
-    ttm_rev = _feature(feature_record, "revenue_ttm_sum")
+    ttm_ni = _select_ttm(old=_feature(feature_record, "net_income_ttm_sum"),
+                         qualified=_qualified_ttm("net_income_ttm", financial_analysis_record, financial_analysis_context_identity))
+    ttm_rev = _select_ttm(old=_feature(feature_record, "revenue_ttm_sum"),
+                          qualified=_qualified_ttm("revenue_ttm", financial_analysis_record, financial_analysis_context_identity))
     profit = _feature(feature_record, "profit_state")
     earnings_state = _earnings_state(ttm_ni, profit)
     methods = {
@@ -241,6 +301,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         "share_concept": share.get("share_concept"),
         "authoritative_current_market_cap_eligible": bool(share.get("authoritative_current_market_cap_eligible")),
         "earnings_state": earnings_state,
+        "pbt_ttm_context": _qualified_ttm("profit_before_tax_ttm", financial_analysis_record, financial_analysis_context_identity),
         "methods": methods,
         "usable_relative_method_count": sum(item["method_id"] in RELATIVE_METHODS and item["status"] in {"RESEARCH_USABLE", "READY"} for item in methods.values()),
         "pe_not_meaningful": bool(not_meaningful),
@@ -440,6 +501,12 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
             "applicability": method["applicability"], "status": method["status"], "value": method.get("value"),
             "share_basis": method.get("share_basis"), "period_basis": method.get("period_basis"),
             "blocker_reason_codes": method.get("blocker_reason_codes"),
+            "ttm_input_source": method.get("ttm_input_source"), "ttm_source_context_identity": method.get("ttm_source_context_identity"),
+            "ttm_feature_id": method.get("ttm_feature_id"), "ttm_method": method.get("ttm_method"),
+            "ttm_periods": method.get("ttm_periods"),
+            "ttm_provider": method.get("ttm_provider"), "ttm_currency": method.get("ttm_currency"),
+            "ttm_scale": method.get("ttm_scale"), "ttm_fitness": method.get("ttm_fitness"),
+            "ttm_source_conflict": method.get("ttm_source_conflict"),
             "peer_relative": (row.get("peer_relative") or {}).get(method_id),
         }
         for method_id, method in (row.get("methods") or {}).items()
@@ -450,6 +517,7 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
         "entity_class": row.get("entity_class"),
         "share_basis": row.get("share_basis"),
         "earnings_state": row.get("earnings_state"),
+        "pbt_ttm_context": row.get("pbt_ttm_context"),
         "applicable_methods": methods_view,
         "absolute_research_context": {
             "usable_relative_method_count": row.get("usable_relative_method_count"),

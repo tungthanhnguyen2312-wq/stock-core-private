@@ -55,6 +55,7 @@ def build_artifacts(
     leadership: Mapping[str, Any] | None = None,
     portfolio: Mapping[str, Any] | None = None,
     financial_analysis_product_context: Mapping[str, Any] | None = None,
+    financial_analysis_context: Mapping[str, Any] | None = None,
     requested_at: str,
 ) -> dict[str, Any]:
     """Join retained current-research artifacts into opportunity and decision contexts.
@@ -73,6 +74,12 @@ def build_artifacts(
                                       decision_session=as_of_session, label="portfolio")
 
     financial_analysis_product_context = validate_product_context(financial_analysis_product_context)
+    financial_analysis_product_records = (financial_analysis_product_context or {}).get("records") or {}
+    if financial_analysis_context is not None and financial_analysis_context.get("contract_version") != "financial_analysis_context/v2":
+        raise ValueError("FINANCIAL_ANALYSIS_V2_CONTEXT_REQUIRED")
+    financial_analysis_records = (financial_analysis_context or {}).get("records") or {}
+    if not isinstance(financial_analysis_records, Mapping):
+        raise ValueError("FINANCIAL_ANALYSIS_V2_RECORDS_INVALID")
     features = _records(feature_store)
     behaviors = _records(tactical_behavior)
     watch_records = _records(watchlist)
@@ -91,6 +98,8 @@ def build_artifacts(
     valuation_rows = {
         ticker: evaluate_ticker_valuation(
             ticker=ticker, feature_record=features.get(ticker), valuation_record=valuation_records.get(ticker),
+            financial_analysis_record=financial_analysis_records.get(ticker),
+            financial_analysis_context_identity=(financial_analysis_context or {}).get("artifact_identity"),
         )
         for ticker in tickers
     }
@@ -116,6 +125,8 @@ def build_artifacts(
     opportunity_records: dict[str, Any] = {}
     decision_records: dict[str, Any] = {}
     for ticker in tickers:
+        if financial_analysis_product_context is not None and ticker not in financial_analysis_product_records:
+            raise ValueError("FINANCIAL_ANALYSIS_PRODUCT_SILENT_TICKER_DROP")
         opportunity = build_ticker_opportunity(
             ticker=ticker, decision_session=as_of_session,
             feature_record=features.get(ticker),
@@ -140,7 +151,8 @@ def build_artifacts(
             portfolio=portfolio,
             portfolio_freshness=portfolio_freshness,
             feature_store_identity=feature_identity,
-            financial_analysis=context_for_ticker(financial_analysis_product_context, ticker),
+            financial_analysis=(dict(financial_analysis_product_records[ticker])
+                                if isinstance(financial_analysis_product_records.get(ticker), Mapping) else None),
         )
         opportunity_records[ticker] = opportunity
         decision_records[ticker] = build_ticker_decision(opportunity)
@@ -159,6 +171,7 @@ def build_artifacts(
         "market_sector_leadership": leadership_identity,
         "portfolio_research_context": (portfolio or {}).get("artifact_identity"),
         "financial_analysis_product_integration": (financial_analysis_product_context or {}).get("artifact_identity"),
+        "financial_analysis_context": (financial_analysis_context or {}).get("artifact_identity"),
     }
     opportunity = _opportunity_artifact(
         as_of_session=as_of_session, requested_at=requested_at, records=opportunity_records,

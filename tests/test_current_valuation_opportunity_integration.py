@@ -31,6 +31,7 @@ def _feature(status, value=None, state=None, periods=None, method="same_native_s
         "feature_id": "x", "value": value, "categorical_state": state, "status": status, "method": method,
         "compatibility_class": compat, "input_periods": list(periods or []),
         "blocker_reason_codes": list(blockers or []), "research_fitness": status,
+        "currency": "VND", "scale": "ONE",
         "authoritative_financial_eligible": False, "is_actionable": False,
     }
 
@@ -83,7 +84,7 @@ def valuation_record(ticker, *, entity="corporate", market_cap=8000.0, pe=None, 
     }
     def metric(status, value=None, blockers=None, applicability="APPLICABLE"):
         return {"status": status, "value": value, "applicability": applicability, "blocked_reasons": blockers or [],
-                "share_identity": share["share_concept"]}
+                "share_identity": share["share_concept"], "currency": "VND", "scale": "ONE"}
     na = "NOT_APPLICABLE" if entity in {"bank", "securities", "insurance", "finance_company"} else "APPLICABLE"
     ev_na = "NOT_APPLICABLE" if entity in {"bank", "securities", "insurance", "finance_company"} else "APPLICABLE"
     return {
@@ -205,6 +206,24 @@ def test_compatible_ttm_valuation_and_share_basis_proxy_explicit():
     assert row["methods"][PE_TTM]["value"] == pytest.approx(20.0)
     assert row["methods"][PS_TTM]["value"] == pytest.approx(2.0)
     assert row["methods"][PE_TTM]["share_basis"] == CURRENT_SHARE_RESEARCH_PROXY
+
+
+def test_qualified_ttm_is_preferred_with_lineage_and_conflict_retained():
+    qualified = {"features": {"net_income_ttm": {"fitness": "READY", "value": 500, "method": "four_consecutive_compatible_standalone_quarters/v2", "period_identity": ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"], "provider_source_provenance": [{"provider": "KBS"}], "currency": "VND", "scale": "ONE", "reason_codes": []}, "revenue_ttm": {"fitness": "READY", "value": 4000, "method": "four_consecutive_compatible_standalone_quarters/v2", "period_identity": ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"], "provider_source_provenance": [{"provider": "KBS"}], "currency": "VND", "scale": "ONE", "reason_codes": []}}}
+    row = evaluate_ticker_valuation(ticker="AAA", feature_record=feature_record("AAA", ttm_ni=400), valuation_record=valuation_record("AAA"), financial_analysis_record=qualified, financial_analysis_context_identity="fa:1")
+    method = row["methods"][PE_TTM]
+    assert method["status"] == "RESEARCH_USABLE" and method["value"] == pytest.approx(16)
+    assert method["ttm_input_source"] == "BOTH_PRESENT_CONFLICT"
+    assert method["ttm_source_context_identity"] == "fa:1"
+
+
+def test_new_ttm_scale_or_currency_mismatch_is_blocked_and_old_fallback_remains_explicit():
+    qualified = {"features": {"net_income_ttm": {"fitness": "READY", "value": 400, "method": "four_consecutive_compatible_standalone_quarters/v2", "period_identity": ["2025-Q1"] * 4, "provider_source_provenance": [{"provider": "KBS"}], "currency": "USD", "scale": "THOUSAND", "reason_codes": []}}}
+    blocked = evaluate_ticker_valuation(ticker="AAA", feature_record=feature_record("AAA"), valuation_record=valuation_record("AAA"), financial_analysis_record=qualified, financial_analysis_context_identity="fa:1")
+    assert blocked["methods"][PE_TTM]["status"] == INPUT_BLOCKED
+    assert "TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE" in blocked["methods"][PE_TTM]["blocker_reason_codes"]
+    fallback = evaluate_ticker_valuation(ticker="AAA", feature_record=feature_record("AAA"), valuation_record=valuation_record("AAA"))
+    assert fallback["methods"][PE_TTM]["ttm_input_source"] == "OLD_TTM_FALLBACK_SELECTED"
 
 
 def test_negative_and_zero_earnings_pe_not_meaningful():

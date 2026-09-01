@@ -102,6 +102,8 @@ def main() -> int:
     parser.add_argument("--as-of-session", default=DECISION_SESSION)
     parser.add_argument("--requested-at", default="2026-08-31T00:00:00+07:00")
     parser.add_argument("--output-dir", type=Path, default=OUT)
+    parser.add_argument("--financial-analysis-context", type=Path)
+    parser.add_argument("--financial-analysis-product-context", type=Path)
     args = parser.parse_args()
 
     feature_store = load_feature_store(resolve(
@@ -139,16 +141,28 @@ def main() -> int:
     except FileNotFoundError:
         portfolio = None
 
+    financial_analysis_context = load_json(args.financial_analysis_context) if args.financial_analysis_context else None
+    financial_analysis_product_context = load_json(args.financial_analysis_product_context) if args.financial_analysis_product_context else None
     artifacts = build_artifacts(
         as_of_session=args.as_of_session, feature_store=feature_store, tactical_behavior=tactical,
         watchlist=watchlist, valuation=valuation, liquidity=liquidity, events=events, thesis_cases=thesis,
-        leadership=leadership, portfolio=portfolio, requested_at=args.requested_at,
+        leadership=leadership, portfolio=portfolio, financial_analysis_context=financial_analysis_context,
+        financial_analysis_product_context=financial_analysis_product_context, requested_at=args.requested_at,
     )
     opportunity, decision = artifacts["opportunity_context"], artifacts["security_decision_context"]
     cases = representative_cases(opportunity, decision)
     earnings = Counter(record["valuation"].get("earnings_state") for record in opportunity["records"].values())
     pe_status = Counter((record["valuation"].get("applicable_methods") or {}).get("P/E_TTM", {}).get("status")
                          for record in opportunity["records"].values())
+    qualified_ttm = Counter()
+    ttm_basis_blockers = Counter()
+    for record in opportunity["records"].values():
+        for method_id in ("P/E_TTM", "P/S_TTM"):
+            method = (record["valuation"].get("applicable_methods") or {}).get(method_id) or {}
+            qualified_ttm[f"{method_id}:{method.get('ttm_input_source')}"] += 1
+            for blocker in method.get("blocker_reason_codes") or []:
+                if blocker in {"TTM_MARKET_CAP_MONETARY_BASIS_INCOMPATIBLE", "MARKET_CAP_RESEARCH_INPUT_UNAVAILABLE", "SHARE_BASIS_UNAVAILABLE"}:
+                    ttm_basis_blockers[f"{method_id}:{blocker}"] += 1
     entity_methods = {}
     for record in opportunity["records"].values():
         entity = record["valuation"].get("entity_class") or "unknown"
@@ -189,6 +203,11 @@ def main() -> int:
         "negative_earnings_treatment": {
             "earnings_state": {str(key): count for key, count in earnings.items()},
             "pe_ttm_status": {str(key): count for key, count in pe_status.items()},
+        },
+        "qualified_ttm_valuation": {
+            "ttm_input_source": dict(sorted(qualified_ttm.items())),
+            "basis_and_input_blockers": dict(sorted(ttm_basis_blockers.items())),
+            "pbt_context_only": True,
         },
         "specialized_financial_applicability": specialized,
         "main_blockers": {str(key): count for key, count in blockers.most_common(20)},
