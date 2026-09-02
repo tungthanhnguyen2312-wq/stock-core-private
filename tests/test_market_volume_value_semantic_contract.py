@@ -78,12 +78,12 @@ class VolumeValueSemanticContractTests(unittest.TestCase):
         with self.assertRaisesRegex(contract.SemanticContractError, "derived_price_times_volume"):
             contract.assert_fail_closed(snapshot)
 
-    def test_dnse_daily_ohlc_volume_is_registered_but_execution_scope_is_unknown(self):
+    def test_dnse_daily_ohlc_volume_absolute_unit_is_unknown_but_relative_ratios_are_bounded(self):
         record = contract.field_contract("dnse.daily.ohlc.v").record()
         self.assertEqual("DNSE", record["provider"])
         self.assertEqual("daily OHLC v", record["field_identity"])
-        self.assertEqual("TRADED_VOLUME_SHARES", record["semantic_type"])
-        self.assertEqual("shares", record["unit"])
+        self.assertEqual("UNKNOWN_UNQUALIFIED", record["semantic_type"])
+        self.assertEqual("unknown", record["unit"])
         for dimension in (
             "session_scope", "board_scope", "put_through_inclusion", "odd_lot_inclusion",
             "auction_inclusion", "ato_inclusion", "atc_inclusion", "continuous_session_inclusion",
@@ -91,9 +91,14 @@ class VolumeValueSemanticContractTests(unittest.TestCase):
             self.assertEqual("unknown", record[dimension])
         with self.assertRaisesRegex(contract.SemanticContractError, "downstream_use_not_eligible"):
             contract.require(
-                "dnse.daily.ohlc.v", semantic_type=contract.SemanticType.TRADED_VOLUME_SHARES,
-                unit=contract.Unit.SHARES, downstream_use=contract.DownstreamUse.EXECUTION_SIZING,
+                "dnse.daily.ohlc.v", semantic_type=contract.SemanticType.UNKNOWN_UNQUALIFIED,
+                unit=contract.Unit.UNKNOWN, downstream_use=contract.DownstreamUse.EXECUTION_SIZING,
             )
+        relative = contract.require(
+            "dnse.daily.ohlc.v.relative_only", semantic_type=contract.SemanticType.RELATIVE_VOLUME,
+            unit=contract.Unit.RATIO, downstream_use=contract.DownstreamUse.PROVIDER_SCOPED_ANALYTICS,
+        )
+        self.assertEqual("ratio", relative.record()["unit"])
 
     def test_dnse_daily_value_field_stays_explicitly_not_confirmed(self):
         self.assertEqual("UNKNOWN/NOT_CONFIRMED", contract.DNSE_DAILY_TRADED_VALUE_FIELD)

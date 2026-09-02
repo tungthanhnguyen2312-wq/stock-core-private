@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.02.1",
+  "roadmap_version": "2026.09.02.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -528,7 +528,7 @@
       "milestone_id": "MARKET_WIDE_GROSS_MARGIN_DEPTH_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
-      "checkpoint": "HEAD",
+      "checkpoint": "16ea8ac58ef10231c21d279fc0567daa56f04027",
       "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1"],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
@@ -537,6 +537,20 @@
       "state_history": [],
       "owner_override": "OWNER_OVERRIDE_IMPLEMENT_TEST_REAL_REPLAY_LOCAL_CHECKPOINT_ROADMAP_CLOSEOUT_FAST_FORWARD_PUSH_IF_TERMINAL_SAFE",
       "notes": "COMPLETE. Retained KBS income-statement gross_profit was already read into canonical_financial_resolvers.resolve_sign_convention's identity check but never canonicalized as its own metric. Confirmed directly against data_bctc/AAA_income_statement_quarter.parquet (item_id=gross_profit, source=KBS, alongside revenue/cost_of_goods_sold) before any edit. Added gross_profit to canonical_financial_facts.METRIC_REGISTRY; because the identical raw item id is also carried verbatim by 47 of the 1,454 retained income-statement files whose source is VCI (confirmed by direct corpus scan), _Candidate gained an additive required_provider field (default None, zero behavior change for every pre-existing metric) so the new candidate is gated required_provider=KBS -- keeping VCI_PERIOD_DURATION_REMAINS_UNKNOWN intact rather than opportunistically mapping VCI gross profit. MAPPER_VERSION 1.2.0 -> 1.3.0 with a regression test proving the fingerprint changes. financial_analysis_engine_v2.py gains gross_margin (mirrors net_margin/pbt_margin exactly and joins readiness_features alongside them), gross_margin_direction (same-provider same-quarter prior-year comparison via _pit_ratio_direction_for generalized with an additive semantic parameter, default-preserving its two existing PIT callers), and a gross_margin_trajectory_state (mirrors working_capital_trajectory_state's naming). Negative gross profit correctly yields a negative margin rather than BLOCKED_BY_EVIDENCE. market_wide_fundamental_feature_store.py already carried a gross_profit/gross_margin feature written in anticipation of this canonical metric (its _ratio() unconditionally caps at READY_RESEARCH_PROXY) -- no code change needed there; a new test proves it can never reach READY, so it remains an explicitly-labelled fallback beneath Financial V2's READY-capable path with no merge between the two. Real replay against the full retained data_bctc/*.parquet corpus (zero network calls; a new tools/run_gross_margin_real_replay.py reads the retained parquet files directly rather than through canonical_fact_store's incremental cache, whose persisted ingest_state.json is stamped against an older, pre-existing raw_financial_store.STORE_SCHEMA_VERSION and reports itself empty -- a latent, unrelated staleness this milestone did not touch or attempt to repair): 1,387 raw gross-profit tickers (47 VCI-sourced, correctly excluded), 1,341 canonical gross-profit tickers, 2,942 canonical facts, and 1,338 compatible same-provider gross-profit/revenue ticker pairs -- matching the recon's ~1,338 expectation almost exactly. Entity classification for the replay was sourced from the immediately-preceding MARKET_WIDE_WORKING_CAPITAL_AND_SHORT_TERM_LIQUIDITY_V1 milestone's own retained full market-wide engine artifact (read-only, not regenerated), so the 1,382/110 INDUSTRIAL/LIMITED split matches the already-established 1,382/85/25 baseline exactly; gross_margin is 1,283 READY / 99 BLOCKED_BY_EVIDENCE / 110 NOT_APPLICABLE, gross_margin_direction is 45 READY, gross_margin_trajectory_state is 25 IMPROVING / 20 WORSENING. Financial V2's 1,492-ticker denominator and current_research_ready (1,380 -> 1,380, zero change, zero newly-ready tickers) are exactly regression-locked, cross-validated against the working-capital milestone's own retained current_research_ready_count=1380. All 6 real bank tickers (ABB, ACB, BID, MBB, TCB, VCB) get gross_margin=NOT_APPLICABLE, never accidentally READY. security_decision_context._financial_analysis_annotation reads a fixed, named set of state keys that does not include gross_margin_trajectory_state (mirroring how working_capital_trajectory_state was left unwired too), so the six-label research stance distribution is unchanged by construction; no stance, valuation, liquidity, portfolio, Tactical V2, provider, dashboard, ai-core, or bank-importer file is in this diff. VCI duration remains UNKNOWN; monetary basis remains UNKNOWN where already unknown; no authority promotion. Artifact: C:\\Projects\\StockLookup\\operations-review\\market-wide-gross-margin-depth-v1-20260902\\. No successor is queued."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_RELATIVE_VOLUME_RESEARCH_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_HISTORY",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / RELATIVE_DESCRIPTIVE_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized MARKET_WIDE_RELATIVE_VOLUME_RESEARCH_V1 directive (2026-09-02)",
+      "state_history": [],
+      "owner_override": "OWNER_OVERRIDE_IMPLEMENT_TEST_RETAINED_DATA_REPLAY_CHECKPOINT_ROADMAP_CLOSEOUT_FAST_FORWARD_PUSH_IF_TERMINAL_SAFE",
+      "notes": "COMPLETE. Adds only retained DNSE same-provider/same-native-field dimensionless volume comparisons: a deterministic tie-aware same-session cross-sectional percentile and current volume divided by the median of the immediately prior 20 completed sessions. DNSE OHLC v native absolute unit remains UNKNOWN; no shares/lots, monetary traded value, ADV/ADTV, liquidity, execution, sizing, tactic, valuation, portfolio, or stance authority is introduced. Retained 2026-08-28 P3F9B replay over the governed 1,683-ticker active-equity universe yields 943 current representations / percentile READY, 942 acceleration READY, 1 insufficient-history row, zero zero-baseline rows, and zero future-session violations. HPG, VCB, and FPT are representative READY rows. AI handoff is explicit opt-in, hash-verifies the retained artifact, copies compact explanatory fields only, and unconditionally sets is_actionable=false. Existing trades board-composition behavior is untouched. Financial V2 denominator remains 1,492; product denominator remains 1,699; gross-margin and bank-specialist capabilities are regression-locked. Artifact: C:\\Projects\\StockLookup\\operations-review\\market-wide-relative-volume-research-v1-20260902\\. No successor is queued."
     }
   ],
   "blocked_capabilities": [

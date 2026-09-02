@@ -18,7 +18,7 @@ from enum import Enum
 from typing import Any, Mapping
 
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # DNSE's retained daily-OHLC representation establishes ``v`` as the general
 # volume field.  No equally identified daily traded-value field is present in
@@ -180,11 +180,11 @@ def _contract(
 # provider-wide or exchange-wide claim.
 FIELD_CONTRACTS: dict[str, FieldContract] = {
     "dnse.daily.ohlc.v": _contract(
-        "dnse.daily.ohlc.v", "DNSE", "daily OHLC v", Unit.SHARES,
-        SemanticType.TRADED_VOLUME_SHARES, QualificationState.PARTIALLY_QUALIFIED,
-        # The source shape establishes the field and share-volume semantics,
-        # not its execution composition.  Every execution dimension therefore
-        # remains unknown until a separately bounded reconciliation proves it.
+        "dnse.daily.ohlc.v", "DNSE", "daily OHLC v", Unit.UNKNOWN,
+        SemanticType.UNKNOWN_UNQUALIFIED, QualificationState.UNQUALIFIED,
+        # The retained shape establishes a stable numeric representation, but
+        # not whether its magnitude is shares, lots, or another native unit.
+        # Every absolute/execution dimension therefore remains unknown.
         scope=ScopeMetadata(),
         pit_as_of_identity={
             "endpoint": "/price/ohlc",
@@ -196,7 +196,25 @@ FIELD_CONTRACTS: dict[str, FieldContract] = {
         prohibited_uses=_LIQUIDITY_AND_TURNOVER_USES,
         evidence=(
             "dnse_market_data.MARKET_DATA_ENDPOINTS['ohlc'] plus retained DNSE OHLC "
-            "schema/tests: daily array field v; execution scope not qualified"
+            "schema/tests: daily array field v; native absolute unit and execution scope unqualified"
+        ),
+    ),
+    "dnse.daily.ohlc.v.relative_only": _contract(
+        "dnse.daily.ohlc.v.relative_only", "DNSE", "daily OHLC v / same-field ratio", Unit.RATIO,
+        SemanticType.RELATIVE_VOLUME, QualificationState.PARTIALLY_QUALIFIED,
+        scope=ScopeMetadata(),
+        pit_as_of_identity={
+            "endpoint": "/price/ohlc",
+            "resolution": "1D",
+            "session_identity": "completed_provider_daily_bar",
+            "native_field": "v",
+            "comparison_constraint": "same_provider_same_field_same_representation_only",
+        },
+        eligible_uses=frozenset({DownstreamUse.DISPLAY, DownstreamUse.PROVIDER_SCOPED_ANALYTICS}),
+        prohibited_uses=_LIQUIDITY_AND_TURNOVER_USES,
+        evidence=(
+            "dimensionless same-provider/same-v-field ratios cancel an unknown constant native scale; "
+            "not an absolute-volume, traded-value, ADV, ADTV, liquidity, execution, or sizing metric"
         ),
     ),
     "vci.daily.v": _contract(
@@ -375,10 +393,10 @@ def assert_fail_closed(snapshot: Mapping[str, Any] | None = None) -> Mapping[str
                 raise SemanticContractError(f"derived_price_times_volume_cannot_become_traded_value:{key}")
     dnse_daily = fields.get("dnse.daily.ohlc.v")
     if dnse_daily is not None:
-        if dnse_daily.get("semantic_type") != SemanticType.TRADED_VOLUME_SHARES.value:
-            raise SemanticContractError("dnse_daily_ohlc_v_must_remain_traded_volume_shares")
-        if dnse_daily.get("unit") != Unit.SHARES.value:
-            raise SemanticContractError("dnse_daily_ohlc_v_must_remain_shares")
+        if dnse_daily.get("semantic_type") != SemanticType.UNKNOWN_UNQUALIFIED.value:
+            raise SemanticContractError("dnse_daily_ohlc_v_must_remain_absolute_unit_unknown")
+        if dnse_daily.get("unit") != Unit.UNKNOWN.value:
+            raise SemanticContractError("dnse_daily_ohlc_v_must_remain_unit_unknown")
         forbidden = {use.value for use in _LIQUIDITY_AND_TURNOVER_USES}
         eligible = set(dnse_daily.get("downstream_eligible_uses") or [])
         if eligible & forbidden:
@@ -389,6 +407,15 @@ def assert_fail_closed(snapshot: Mapping[str, Any] | None = None) -> Mapping[str
         ):
             if dnse_daily.get(dimension) != ScopeState.UNKNOWN.value:
                 raise SemanticContractError(f"dnse_daily_ohlc_v_scope_must_remain_unknown:{dimension}")
+    relative_only = fields.get("dnse.daily.ohlc.v.relative_only")
+    if relative_only is not None:
+        if relative_only.get("semantic_type") != SemanticType.RELATIVE_VOLUME.value:
+            raise SemanticContractError("dnse_relative_volume_semantic_type_changed")
+        if relative_only.get("unit") != Unit.RATIO.value:
+            raise SemanticContractError("dnse_relative_volume_must_remain_dimensionless")
+        forbidden = {use.value for use in _LIQUIDITY_AND_TURNOVER_USES}
+        if set(relative_only.get("downstream_eligible_uses") or []) & forbidden:
+            raise SemanticContractError("dnse_relative_volume_cannot_be_execution_eligible")
     if DNSE_DAILY_TRADED_VALUE_FIELD != "UNKNOWN/NOT_CONFIRMED":
         raise SemanticContractError("dnse_daily_traded_value_must_not_be_invented")
     return snap

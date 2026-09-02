@@ -126,6 +126,9 @@ from dnse_current_state_price_analytics import build_current_state_price_analyti
 from market_wide_current_liquidity_research import (
     content_identity as market_wide_current_liquidity_content_identity,
 )
+from market_wide_relative_volume_research import (
+    content_identity as market_wide_relative_volume_content_identity,
+)
 from financial_analysis_product_projection import (
     context_for_ticker as financial_analysis_context_for_ticker,
     validate_product_context as validate_financial_analysis_product_context,
@@ -3310,6 +3313,63 @@ def attach_market_wide_current_liquidity_research(
     return bundle_entries
 
 
+# ===========================================================================
+# Market-wide relative-volume research — opt-in (disabled by default)
+# ===========================================================================
+def load_market_wide_relative_volume_research_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Load only a self-verifying retained relative-volume artifact."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict):
+            return None
+        if market_wide_relative_volume_content_identity(artifact).get("artifact_sha256") != artifact.get("artifact_sha256"):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def build_market_wide_relative_volume_research_for_ticker_safe(
+    ticker: str, records: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Copy the retained descriptive feature without recalculation or actionability."""
+    try:
+        record = records.get(ticker)
+        if not isinstance(record, dict):
+            return None
+        compact = {
+            key: record.get(key)
+            for key in (
+                "relative_volume_percentile", "volume_acceleration_ratio", "fitness", "status", "session",
+                "percentile_status", "acceleration_status", "cohort_denominator", "limitations",
+            )
+        }
+        compact["is_actionable"] = False
+        return compact
+    except Exception:
+        return None
+
+
+def attach_market_wide_relative_volume_research(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> dict[str, dict]:
+    """Explicit opt-in retained-only relative-volume context for AI explanation.
+
+    No field is recalculated and this remains separate from tactic, stance,
+    valuation, execution, and sizing code paths.
+    """
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_market_wide_relative_volume_research_artifact(Path(artifact_path))
+    if artifact is None or not isinstance(artifact.get("records"), dict):
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        result = build_market_wide_relative_volume_research_for_ticker_safe(ticker, artifact["records"])
+        if result is not None:
+            entry["market_wide_relative_volume_research"] = result
+    return bundle_entries
+
+
 # ==========================================================================
 # Market-wide current descriptive research — opt-in (disabled by default)
 # ==========================================================================
@@ -4814,6 +4874,14 @@ def main() -> int:
                              " market_wide_current_liquidity_research_artifact.json, required only"
                              " with --include-market-wide-current-liquidity-research; never"
                              " inferred or hardcoded.")
+    parser.add_argument("--include-market-wide-relative-volume-research", action="store_true",
+                        help="Opt-in, disabled by default: attach retained DNSE same-field dimensionless "
+                             "relative-volume percentile and 20-session acceleration context. Always "
+                             "descriptive-only and is_actionable=false; never absolute volume, traded value, "
+                             "ADV/ADTV, liquidity, execution, sizing, tactic, or stance authority. Requires "
+                             "--market-wide-relative-volume-research-path.")
+    parser.add_argument("--market-wide-relative-volume-research-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained market_wide_relative_volume_research_artifact.json.")
     parser.add_argument("--include-market-wide-current-descriptive-research", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].market_wide_current_descriptive_research from the"
@@ -5309,6 +5377,10 @@ def main() -> int:
     attach_market_wide_current_liquidity_research(
         bundle_entries, args.include_market_wide_current_liquidity_research,
         args.market_wide_current_liquidity_research_path,
+    )
+    attach_market_wide_relative_volume_research(
+        bundle_entries, args.include_market_wide_relative_volume_research,
+        args.market_wide_relative_volume_research_path,
     )
     # Own dedicated flag; order relative to the others does not matter since nothing else reads
     # tickers[ticker].market_wide_current_descriptive_research. Same explicit-path convention as
