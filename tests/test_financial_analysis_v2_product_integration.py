@@ -91,6 +91,23 @@ def test_compact_projection_exposes_working_capital_states_not_raw_amounts():
     assert "700" not in json.dumps(compact) and "350" not in json.dumps(compact)
 
 
+def test_compact_projection_exposes_gross_margin_trajectory_state_not_raw_amounts():
+    gross_profit = _row("gross_profit", 837)
+    revenue = _row("revenue", 100)
+    # `_row()` defaults each metric to a distinct source file; align them so the
+    # same-representation pairing in `_same_period_pair` can actually form.
+    gross_profit["source_lineage"]["source_file"] = revenue["source_lineage"]["source_file"]
+    rows = [revenue, _row("net_income", 10), gross_profit]
+    context = engine.build_artifact(tickers=["AAA"], rows=rows, issuer_types={"AAA": "corporate"},
+                                    source_identities={"retained": "x"}, requested_at="t")
+    product = build_product_projection(financial_context=context, product_tickers=["AAA"], requested_at="t")
+    compact = product["records"]["AAA"]
+    assert compact["feature_fitness"]["gross_margin"]["fitness"] == "READY"
+    assert compact["gross_margin_trajectory_state"] == "UNAVAILABLE"  # only one retained period
+    # The compact contract exposes qualitative state/fitness only, never the raw amounts.
+    assert "837" not in json.dumps(compact)
+
+
 def test_delivery_attaches_compact_after_slim_and_retains_absent_ndjson_context():
     product = _product()
     operation = {"product": {"artifact_identity": "p", "authority_boundary": {}, "market_brief": {}, "macro_context": {},

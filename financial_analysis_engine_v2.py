@@ -313,10 +313,17 @@ def _pit_ratio_direction(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 def _pit_ratio_direction_for(rows: Sequence[Mapping[str, Any]], numerator_metric: str,
                              denominator_metric: str, feature_id: str, *,
-                             method: str = "same_provider_point_in_time_explicit_debt_ratio_yoy/v2") -> dict[str, Any]:
-    """Directional change for two explicit, same-source P-I-T balance-sheet facts."""
-    numerator = _groups(rows, numerator_metric, PIT)
-    denominator = _groups(rows, denominator_metric, PIT)
+                             method: str = "same_provider_point_in_time_explicit_debt_ratio_yoy/v2",
+                             semantic: str = PIT) -> dict[str, Any]:
+    """Directional change for two explicit, same-source facts at one shared period semantic.
+
+    Despite the name (kept for the two original P-I-T callers), this is not
+    intrinsically balance-sheet-specific: passing `semantic=FLOW_STANDALONE` gives the
+    same same-provider, same-quarter-prior-year comparison over a flow ratio such as
+    gross margin instead of a stock ratio.
+    """
+    numerator = _groups(rows, numerator_metric, semantic)
+    denominator = _groups(rows, denominator_metric, semantic)
     candidates = []
     for key in set(numerator) & set(denominator):
         periods = sorted(set(numerator[key]) & set(denominator[key]))
@@ -687,13 +694,16 @@ def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]
                                             "WORKING_CAPITAL_IMPROVING", "WORKING_CAPITAL_WORSENING", "WORKING_CAPITAL_STABLE")
     current_ratio_trajectory = _direction(features["current_ratio_direction"],
                                           "CURRENT_RATIO_IMPROVING", "CURRENT_RATIO_WORSENING", "CURRENT_RATIO_STABLE")
+    gross_margin_trajectory = _direction(features["gross_margin_direction"],
+                                         "GROSS_MARGIN_IMPROVING", "GROSS_MARGIN_WORSENING", "GROSS_MARGIN_STABLE")
     turnaround = next((features[item].get("semantic_transition") for item in ("net_income_qoq", "net_income_same_quarter_yoy", "net_income_ttm_yoy") if features[item].get("semantic_transition")), "UNAVAILABLE")
     return {"profitability_state": profitability, "margin_state": margin, "growth_state": growth,
             "earnings_turnaround_state": turnaround,
             "balance_sheet_state": balance, "cash_conversion_state": cash,
             "capital_efficiency_state": capital, "leverage_state": leverage, "resilience_state": resilience,
             "working_capital_state": working_capital, "working_capital_trajectory_state": working_capital_trajectory,
-            "current_ratio_trajectory_state": current_ratio_trajectory}
+            "current_ratio_trajectory_state": current_ratio_trajectory,
+            "gross_margin_trajectory_state": gross_margin_trajectory}
 
 
 def _evidence(ticker: str, features: Mapping[str, Mapping[str, Any]], states: Mapping[str, str]) -> dict[str, list[str]]:
@@ -731,7 +741,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                          bank_components: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
     normalized_type = str(issuer_type).lower() if issuer_type not in (None, "") else "unknown"
     family = INDUSTRIAL if normalized_type == "corporate" else LIMITED
-    ids = ("net_income_sign", "net_margin", "pbt_margin", "net_margin_direction", "revenue_qoq", "profit_before_tax_qoq", "net_income_qoq",
+    ids = ("net_income_sign", "net_margin", "pbt_margin", "gross_margin", "net_margin_direction", "gross_margin_direction", "revenue_qoq", "profit_before_tax_qoq", "net_income_qoq",
            "revenue_same_quarter_yoy", "profit_before_tax_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "profit_before_tax_ttm_yoy", "net_income_ttm_yoy", "operating_cash_flow_ttm_yoy", "revenue_ttm", "profit_before_tax_ttm", "net_income_ttm", "operating_cash_flow_ttm", "ttm_net_margin", "ttm_pbt_margin", "operating_cash_flow_sign", "operating_cash_flow_qoq", "operating_cash_flow_same_quarter_yoy", "cfo_to_net_income", "cfo_to_net_income_ttm",
            "fcf", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
            "cash_yoy", "same_provider_roa", "same_provider_roe", "same_provider_roa_eop_proxy", "same_provider_roe_eop_proxy", "same_provider_asset_turnover_eop_proxy", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy",
@@ -742,7 +752,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                   "balance_sheet_state": "UNAVAILABLE", "cash_conversion_state": "UNAVAILABLE",
                   "capital_efficiency_state": "UNAVAILABLE", "leverage_state": "UNAVAILABLE", "resilience_state": "UNAVAILABLE",
                   "working_capital_state": "WORKING_CAPITAL_UNAVAILABLE", "working_capital_trajectory_state": "UNAVAILABLE",
-                  "current_ratio_trajectory_state": "UNAVAILABLE"}
+                  "current_ratio_trajectory_state": "UNAVAILABLE", "gross_margin_trajectory_state": "UNAVAILABLE"}
     else:
         revenue = _best_series(rows, "revenue", FLOW_STANDALONE)
         pbt = _best_series(rows, "profit_before_tax", FLOW_STANDALONE)
@@ -756,6 +766,17 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
         ocf_ttm, ocf_ttm_inputs = _ttm_sum(ocf, "operating_cash_flow_ttm")
         net_margin = _ratio("net_margin", _same_period_pair(rows, "net_income", "revenue", FLOW_STANDALONE), method="same_provider_same_period_net_margin/v2")
         pbt_margin = _ratio("pbt_margin", _same_period_pair(rows, "profit_before_tax", "revenue", FLOW_STANDALONE), method="same_provider_same_period_pbt_margin/v2")
+        # Same-provider, same-period, standalone-quarter only: `gross_profit` is itself
+        # canonicalized KBS-only (canonical_financial_facts.METRIC_REGISTRY), and this
+        # pairing's own semantic gate independently keeps out any VCI-provider revenue a
+        # ticker might also carry, since VCI income-statement facts never reach
+        # `FLOW_STANDALONE` (structured_financial_period_semantics.py's provider-scoped
+        # contract). A negative gross profit is a valid input and yields a negative
+        # margin -- `_ratio` never special-cases the numerator's sign, only a zero
+        # denominator.
+        gross_margin = _ratio("gross_margin", _same_period_pair(rows, "gross_profit", "revenue", FLOW_STANDALONE), method="same_provider_same_period_gross_margin/v2")
+        gross_margin_direction = _pit_ratio_direction_for(rows, "gross_profit", "revenue", "gross_margin_direction",
+                                                           method="same_provider_same_quarter_yoy_gross_margin/v1", semantic=FLOW_STANDALONE)
         previous_margin = None
         pair = _same_period_pair(rows, "net_income", "revenue", FLOW_STANDALONE)
         if pair:
@@ -784,7 +805,8 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                             inputs=list(numerator_inputs) + list(denominator_inputs), growth_basis="TTM")
         features = {
             "net_income_sign": _feature("net_income_sign", value=_latest(income)["reported_value"], fitness="READY", method="latest_compatible_standalone_sign/v2", inputs=[_latest(income)]) if _latest(income) else _blocked("net_income_sign", "MISSING_STANDALONE_NET_INCOME"),
-            "net_margin": net_margin, "pbt_margin": pbt_margin, "net_margin_direction": margin_direction,
+            "net_margin": net_margin, "pbt_margin": pbt_margin, "gross_margin": gross_margin,
+            "net_margin_direction": margin_direction, "gross_margin_direction": gross_margin_direction,
             "revenue_qoq": _growth("revenue_qoq", revenue, basis="QOQ_STANDALONE"),
             "profit_before_tax_qoq": _growth("profit_before_tax_qoq", pbt, basis="QOQ_STANDALONE", earnings=True),
             "net_income_qoq": _growth("net_income_qoq", income, basis="QOQ_STANDALONE", earnings=True),
@@ -838,7 +860,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
     states.update(_bank_feature_states(bank_features, bank_components) if is_bank
                   else {name: "NOT_APPLICABLE" for name in BANK_STATE_NAMES})
 
-    readiness_features = ("net_margin", "pbt_margin", "equity_to_assets", "cash_to_assets", "assets_yoy", "equity_yoy", "current_ratio")
+    readiness_features = ("net_margin", "pbt_margin", "gross_margin", "equity_to_assets", "cash_to_assets", "assets_yoy", "equity_yoy", "current_ratio")
     ready = family == INDUSTRIAL and any(features[item]["fitness"] == "READY" for item in readiness_features)
     evidence = _evidence(ticker, features, states)
     valuation_hints = []

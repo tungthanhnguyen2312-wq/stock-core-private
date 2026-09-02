@@ -239,6 +239,65 @@ class DialectTests(unittest.TestCase):
                                  ["operating_cash_flow", "interest_paid"]), "mixed")
 
 
+class GrossProfitProviderGateTests(unittest.TestCase):
+    """`gross_profit` is canonicalized KBS-only: the raw item id is shared verbatim by
+    the retained VCI income-statement payloads too, but VCI's flow-statement duration
+    remains unresolved (`VCI_PERIOD_DURATION_REMAINS_UNKNOWN`), so mapping it would be
+    an opportunistic widening this milestone's scope explicitly forbids.
+    """
+
+    def test_gross_profit_maps_from_kbs_provider(self):
+        income = _income(dialect="vci_a")
+        for record in income:
+            record["provider"] = "KBS"
+        built = facts.build_facts("TST", [*_balanced_sheet(), *income])
+        gross_profit = next(f for f in built["facts"] if f["canonical_metric"] == "gross_profit")
+        self.assertEqual(gross_profit["status"], facts.STATUS_PROVIDER_REPORTED)
+        self.assertEqual(gross_profit["value"], 400)
+        self.assertEqual(gross_profit["provider"], "KBS")
+        self.assertEqual(gross_profit["raw_item_id"], "gross_profit")
+        self.assertTrue(gross_profit["source_observation_ids"])
+        self.assertTrue(gross_profit["source_file"])
+        self.assertTrue(gross_profit["source_sha256"])
+        self.assertEqual(gross_profit["mapper_version"], facts.MAPPER_VERSION)
+
+    def test_gross_profit_is_excluded_for_vci_provider(self):
+        # `_income()`'s observations default to `provider="VCI"` (see `_observation`);
+        # the exact same raw shape that maps cleanly under KBS above must not
+        # canonicalize here.
+        income = _income(dialect="vci_a")
+        self.assertTrue(all(record["provider"] == "VCI" for record in income))
+        built = facts.build_facts("TST", [*_balanced_sheet(), *income])
+        gross_profit = next(f for f in built["facts"] if f["canonical_metric"] == "gross_profit")
+        self.assertEqual(gross_profit["status"], facts.STATUS_UNAVAILABLE)
+
+    def test_gross_profit_is_excluded_for_other_providers(self):
+        income = _income(dialect="vci_a")
+        for record in income:
+            record["provider"] = "FHSC"
+        built = facts.build_facts("TST", [*_balanced_sheet(), *income])
+        gross_profit = next(f for f in built["facts"] if f["canonical_metric"] == "gross_profit")
+        self.assertEqual(gross_profit["status"], facts.STATUS_UNAVAILABLE)
+
+    def test_gross_profit_addition_is_covered_by_the_current_mapper_version(self):
+        """Regression for the exact failure MARKET_WIDE_WORKING_CAPITAL_AND_SHORT_TERM_
+        LIQUIDITY_V1 found: a METRIC_REGISTRY addition that does not bump MAPPER_VERSION
+        leaves canonical_fact_store's incremental fingerprint (keyed on the version
+        string, not on registry content) unable to tell the persisted store is stale.
+        """
+        applicability = {"archetype": {"template_family": None, "issuer_entity_type": None}}
+        current_fingerprint = fact_store._inputs_fingerprint("abc", applicability)
+        original = facts.MAPPER_VERSION
+        try:
+            fact_store.MAPPER_VERSION = "1.2.0"  # the version before this milestone
+            pre_milestone_fingerprint = fact_store._inputs_fingerprint("abc", applicability)
+        finally:
+            fact_store.MAPPER_VERSION = original
+        self.assertNotEqual(current_fingerprint, pre_milestone_fingerprint,
+                            "adding gross_profit must bump MAPPER_VERSION so every "
+                            "persisted shard is treated as stale and rebuilt")
+
+
 class FactStatusTests(unittest.TestCase):
     def test_provider_reported_is_the_ceiling_without_an_official_citation(self):
         built = facts.build_facts("TST", _balanced_sheet())

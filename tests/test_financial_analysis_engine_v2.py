@@ -420,3 +420,113 @@ def test_finance_lease_metrics_are_not_folded_into_total_interest_bearing_debt()
     assert set(definition["derived_from"]) == {"short_term_interest_bearing_debt", "long_term_interest_bearing_debt"}
     assert "short_term_finance_lease_liabilities" not in definition["derived_from"]
     assert "long_term_finance_lease_liabilities" not in definition["derived_from"]
+
+
+def test_gross_margin_ready_same_provider_same_period():
+    result = context([row("gross_profit", 400), row("revenue", 1000)])
+    feature = result["features"]["gross_margin"]
+    assert feature["fitness"] == "READY" and feature["value"] == pytest.approx(0.4)
+
+
+def test_negative_gross_profit_produces_negative_margin_not_unavailable():
+    # Negative gross profit is a valid input; `_ratio` never special-cases the
+    # numerator's sign, only a zero denominator.
+    result = context([row("gross_profit", -50), row("revenue", 1000)])
+    feature = result["features"]["gross_margin"]
+    assert feature["fitness"] == "READY" and feature["value"] == pytest.approx(-0.05)
+
+
+def test_gross_margin_cross_provider_is_blocked():
+    rows = [row("gross_profit", 400, provider="KBS"), row("revenue", 1000, provider="VCI", source="AAA_VCI_income")]
+    assert context(rows)["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_gross_margin_period_mismatch_is_blocked():
+    rows = [row("gross_profit", 400, "2026-Q1"), row("revenue", 1000, "2026-Q2")]
+    assert context(rows)["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_gross_margin_scope_mismatch_is_blocked():
+    rows = [row("gross_profit", 400, scope="consolidated"), row("revenue", 1000, scope="standalone")]
+    assert context(rows)["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_gross_margin_zero_revenue_is_blocked():
+    result = context([row("gross_profit", 400), row("revenue", 0)])
+    feature = result["features"]["gross_margin"]
+    assert feature["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert "ZERO_DENOMINATOR" in feature["reason_codes"]
+
+
+def test_gross_margin_missing_revenue_is_blocked():
+    assert context([row("gross_profit", 400)])["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_gross_margin_missing_gross_profit_is_blocked():
+    assert context([row("revenue", 1000)])["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_gross_margin_conflict_blocks_ready():
+    conflicted = row("gross_profit", 400)
+    conflicted["source_conflicts"] = [{"kind": "restated_period_column_disagrees"}]
+    result = context([conflicted, row("revenue", 1000)])
+    assert result["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_unknown_duration_gross_profit_never_activates_margin():
+    # Stands in for a VCI-sourced income statement: even if a ticker also retains a
+    # compatible-looking revenue row, an UNKNOWN_DURATION gross_profit (VCI's real
+    # period-semantics classification per structured_financial_period_semantics.py)
+    # must never form a READY gross margin.
+    rows = [row("gross_profit", 400, provider="VCI", semantic="UNKNOWN_DURATION", source="AAA_vci_income"),
+            row("revenue", 1000, provider="VCI", semantic="UNKNOWN_DURATION", source="AAA_vci_income")]
+    assert context(rows)["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_gross_margin_direction_same_quarter_prior_year():
+    rows = [row("gross_profit", 300, "2025-Q2"), row("revenue", 1000, "2025-Q2"),
+            row("gross_profit", 400, "2026-Q2"), row("revenue", 1000, "2026-Q2")]
+    result = context(rows)
+    feature = result["features"]["gross_margin_direction"]
+    # 0.4 - 0.3 = 0.1: margin improved year over year on the same quarter.
+    assert feature["fitness"] == "READY" and feature["value"] == pytest.approx(0.1)
+    assert result["states"]["gross_margin_trajectory_state"] == "GROSS_MARGIN_IMPROVING"
+
+
+def test_gross_margin_direction_worsening():
+    rows = [row("gross_profit", 400, "2025-Q2"), row("revenue", 1000, "2025-Q2"),
+            row("gross_profit", 300, "2026-Q2"), row("revenue", 1000, "2026-Q2")]
+    result = context(rows)
+    assert result["states"]["gross_margin_trajectory_state"] == "GROSS_MARGIN_WORSENING"
+
+
+def test_gross_margin_direction_wrong_quarter_comparison_is_blocked():
+    # Adjacent quarters (Q4 then Q1), not a same-quarter/prior-year pair -- must not be
+    # silently accepted as a QoQ substitute for the required YoY comparison.
+    rows = [row("gross_profit", 400, "2025-Q4"), row("revenue", 1000, "2025-Q4"),
+            row("gross_profit", 420, "2026-Q1"), row("revenue", 1000, "2026-Q1")]
+    result = context(rows)
+    assert result["features"]["gross_margin_direction"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["states"]["gross_margin_trajectory_state"] == "UNAVAILABLE"
+
+
+def test_gross_margin_direction_insufficient_history_is_blocked():
+    result = context([row("gross_profit", 400, "2026-Q2"), row("revenue", 1000, "2026-Q2")])
+    assert result["features"]["gross_margin_direction"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["states"]["gross_margin_trajectory_state"] == "UNAVAILABLE"
+
+
+def test_limited_family_gross_margin_is_not_applicable():
+    result = context([row("gross_profit", 400), row("revenue", 1000)], entity="bank")
+    assert result["features"]["gross_margin"]["fitness"] == "NOT_APPLICABLE"
+    assert result["features"]["gross_margin_direction"]["fitness"] == "NOT_APPLICABLE"
+    assert result["states"]["gross_margin_trajectory_state"] == "UNAVAILABLE"
+
+
+def test_gross_margin_alone_contributes_to_current_research_ready():
+    # No other readiness feature is retained -- net_margin/pbt_margin/balance-sheet
+    # ratios are all blocked -- so this isolates gross_margin's own contribution.
+    result = context([row("gross_profit", 400), row("revenue", 1000)])
+    assert result["features"]["net_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert result["features"]["gross_margin"]["fitness"] == "READY"
+    assert result["current_research_ready"] is True

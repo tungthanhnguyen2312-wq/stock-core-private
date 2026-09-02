@@ -89,7 +89,8 @@ SCHEMA_VERSION = "1.1.0"
 #: under the old registry -- every shard kept reporting `unchanged` and silently continued
 #: to omit these metrics even though the mapping and the retained raw observations were both
 #: already correct. See the module docstring's "keying only on source payload hashes" warning.
-MAPPER_VERSION = "1.2.0"
+#: Bumped again 2026-09-02: MARKET_WIDE_GROSS_MARGIN_DEPTH_V1 added `gross_profit`.
+MAPPER_VERSION = "1.3.0"
 CONTRACT_VERSION = "market-wide-financial-normalization/1.0.0"
 
 STATUS_QUALIFIED = "qualified"
@@ -165,10 +166,11 @@ class _Candidate:
     """
 
     __slots__ = ("statement_family", "raw_item_id", "dialect", "priority", "occurrence",
-                 "concept", "note")
+                 "concept", "note", "required_provider")
 
     def __init__(self, statement_family: str, raw_item_id: str, dialect: str, priority: int,
-                 *, occurrence: int | None = None, concept: str = "exact", note: str = "") -> None:
+                 *, occurrence: int | None = None, concept: str = "exact", note: str = "",
+                 required_provider: str | None = None) -> None:
         self.statement_family = statement_family
         self.raw_item_id = raw_item_id
         self.dialect = dialect
@@ -176,6 +178,17 @@ class _Candidate:
         self.occurrence = occurrence
         self.concept = concept          # "exact" | "substitute" | "narrower"
         self.note = note
+        # Almost every candidate matches on raw item id alone (see module docstring:
+        # dialect is a vocabulary property, not a provider filter). A small number of
+        # metrics are deliberately narrower than their vocabulary: `gross_profit` shares
+        # its raw item id across both providers' retained payloads, but only KBS's
+        # income-statement quarter carries the provider+statement-family period contract
+        # `structured_financial_period_semantics.py` recognizes as `STANDALONE_QUARTER`
+        # (VCI's flow-statement duration remains unresolved -- see
+        # `VCI_PERIOD_DURATION_REMAINS_UNKNOWN` in docs/STATE.md). Restricting the
+        # candidate itself keeps that boundary enforced at canonicalization time rather
+        # than relying only on a downstream consumer to notice.
+        self.required_provider = required_provider
 
 
 def _c(*args: Any, **kwargs: Any) -> _Candidate:
@@ -201,6 +214,21 @@ METRIC_REGISTRY: dict[str, dict[str, Any]] = {
                note="gross sales before deductions"),
         ],
         "revenue_resolution": True,
+    },
+    "gross_profit": {
+        "statement": IS,
+        # The retained payloads carry `gross_profit` under the *same* raw item id
+        # regardless of which provider produced the file (verified against the full
+        # retained income-statement corpus: 1,365 KBS files and 47 VCI files both carry
+        # this exact id). Matching would otherwise silently canonicalize the VCI files
+        # too -- exactly the "opportunistic VCI gross profit" mapping this milestone's
+        # scope forbids, since VCI's income-statement duration is unresolved the same
+        # way its cash-flow duration is (`VCI_PERIOD_DURATION_REMAINS_UNKNOWN`).
+        # `required_provider` keeps this metric KBS-only until a provider is
+        # independently qualified with its own duration evidence.
+        "candidates": [
+            _c(IS, "gross_profit", DIALECT_KBS, 100, required_provider="KBS"),
+        ],
     },
     "profit_before_tax": {
         "statement": IS,
@@ -426,6 +454,9 @@ def _match_candidates(metric: str, definition: Mapping[str, Any],
             if str(record["statement_family"]) != candidate.statement_family:
                 continue
             if candidate.occurrence is not None and int(record["item_id_occurrence"]) != candidate.occurrence:
+                continue
+            if (candidate.required_provider is not None
+                    and str(record.get("provider") or "").upper() != candidate.required_provider):
                 continue
             matches.append({"candidate": candidate, "observation": record,
                             "dialect": candidate.dialect})

@@ -102,6 +102,14 @@ def test_gross_margin_is_dimensionless_same_native_proxy():
     assert r["features"]["gross_margin"]["value"] == 0.35
 
 
+def test_gross_margin_status_is_always_proxy_never_ready():
+    # Financial Analysis V2's gross_margin can reach READY; this legacy Feature Store
+    # ratio must remain an explicitly labelled fallback and never compete with it.
+    r = record([row("revenue", 100), row("gross_profit", 35)])
+    assert r["features"]["gross_margin"]["status"] == store.PROXY
+    assert r["features"]["gross_margin"]["status"] != "READY"
+
+
 def test_pit_trajectory_uses_balance_only():
     r = record([row("total_assets", 120, semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_balance_sheet_quarter.parquet"), row("total_assets", 100, "2025-Q1", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_balance_sheet_quarter.parquet")])
     assert r["features"]["total_assets_pit_trajectory"]["compatibility_class"] == store.PIT

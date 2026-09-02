@@ -101,6 +101,7 @@ def _compact(engine: Mapping[str, Any], ticker: str, record: Mapping[str, Any]) 
         "working_capital_state": states.get("working_capital_state"),
         "working_capital_trajectory_state": states.get("working_capital_trajectory_state"),
         "current_ratio_trajectory_state": states.get("current_ratio_trajectory_state"),
+        "gross_margin_trajectory_state": states.get("gross_margin_trajectory_state"),
         "bank_asset_quality_state": states.get("bank_asset_quality_state"),
         "bank_funding_state": states.get("bank_funding_state"),
         "bank_efficiency_state": states.get("bank_efficiency_state"),
