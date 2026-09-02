@@ -163,6 +163,9 @@ from current_financial_momentum_context import (
 from current_corporate_event_context import (
     content_identity as current_corporate_event_context_content_identity,
 )
+from integrated_investment_decision_product import (
+    content_identity as integrated_investment_decision_product_content_identity,
+)
 from market_wide_historical_research_context import (
     content_identity as market_wide_historical_research_context_content_identity,
 )
@@ -2936,6 +2939,35 @@ def attach_financial_analysis_v2_product_context(
     return context
 
 
+def load_integrated_investment_decision_product_artifact(path: Path) -> Mapping[str, Any]:
+    """Load and verify integrated_investment_decision_product artifact fail-closed."""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"INTEGRATED_INVESTMENT_DECISION_PRODUCT_UNREADABLE:{exc}") from exc
+    if not isinstance(payload, Mapping) or payload.get("contract_version") != "integrated_investment_decision_product/v1":
+        raise ValueError("INTEGRATED_INVESTMENT_DECISION_PRODUCT_CONTRACT_INVALID")
+    if integrated_investment_decision_product_content_identity(payload).get("artifact_sha256") != payload.get("artifact_sha256"):
+        raise ValueError("INTEGRATED_INVESTMENT_DECISION_PRODUCT_IDENTITY_MISMATCH")
+    return payload
+
+
+def attach_integrated_investment_decision_product(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> Mapping[str, Any] | None:
+    """Opt-in attach of integrated_investment_decision_product."""
+    if not include:
+        return None
+    if not artifact_path:
+        raise ValueError("INTEGRATED_INVESTMENT_DECISION_PRODUCT_PATH_REQUIRED")
+    artifact = load_integrated_investment_decision_product_artifact(Path(artifact_path))
+    records = artifact.get("records") or {}
+    for ticker, entry in bundle_entries.items():
+        if ticker in records:
+            entry["integrated_investment_decision"] = copy.deepcopy(records[ticker])
+    return artifact
+
+
 DAILY_RESEARCH_SESSION_REGISTRY = (
     Path(__file__).resolve().parent / "config/daily_research_session_input_registry.json"
 )
@@ -5044,6 +5076,10 @@ def main() -> int:
                         help="Opt-in only: attach financial_analysis_product_integration/v1 from an explicit compact V2 product context. Never reads V2 files when omitted.")
     parser.add_argument("--financial-analysis-v2-product-context-path", metavar="PATH",
                         help="Explicit financial_analysis_product_integration/v1 path required only with the Financial Analysis V2 opt-in; no neighboring-worktree discovery.")
+    parser.add_argument("--include-integrated-investment-decision-product", action="store_true",
+                        help="Opt-in only: attach integrated_investment_decision_product/v1 from an explicit product artifact.")
+    parser.add_argument("--integrated-investment-decision-product-path", metavar="PATH",
+                        help="Explicit path to a self-verifying integrated_investment_decision_product artifact.")
     parser.add_argument("--include-watchlist-tactical-entry-classifier", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].watchlist_tactical_entry_classifier from the"
@@ -5135,6 +5171,8 @@ def main() -> int:
                      "--correlation-concentration-lookback")
     if args.include_financial_analysis_v2_product_context and not args.financial_analysis_v2_product_context_path:
         parser.error("--include-financial-analysis-v2-product-context requires --financial-analysis-v2-product-context-path")
+    if args.include_integrated_investment_decision_product and not args.integrated_investment_decision_product_path:
+        parser.error("--include-integrated-investment-decision-product requires --integrated-investment-decision-product-path")
 
     if args.verify:
         manifest_path = Path(args.verify)
@@ -5457,6 +5495,10 @@ def main() -> int:
         bundle_entries, args.include_financial_analysis_v2_product_context,
         args.financial_analysis_v2_product_context_path,
     )
+    integrated_decision_product = attach_integrated_investment_decision_product(
+        bundle_entries, args.include_integrated_investment_decision_product,
+        args.integrated_investment_decision_product_path,
+    )
     # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
     # market_wide_current_* siblings above.
     attach_watchlist_tactical_entry_classifier(
@@ -5602,6 +5644,12 @@ def main() -> int:
             "contract_version": financial_analysis_product_context.get("contract_version"),
             "is_actionable": False,
         }} if financial_analysis_product_context is not None else {}),
+        **({"integrated_investment_decision_product": {
+            "artifact_identity": integrated_decision_product.get("artifact_identity"),
+            "contract_version": integrated_decision_product.get("contract_version"),
+            "coverage": integrated_decision_product.get("coverage"),
+            "is_actionable": False,
+        }} if integrated_decision_product is not None else {}),
         "opportunity_ranking": opportunity_ranking,
         "data_quality_flags": data_quality_flags,
         "provenance": manifest_files,
