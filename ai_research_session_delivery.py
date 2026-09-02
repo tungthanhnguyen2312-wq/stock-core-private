@@ -398,6 +398,10 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         },
         "source_artifact_identities": copy.deepcopy(product["source_artifact_identities"]),
         "financial_analysis_source_context_identity": (financial_context or {}).get("source_context_identity"),
+        **({"integrated_investment_decision_product_identity": (
+            inputs.get("integrated_investment_decision_product_identity")
+            or (inputs.get("integrated_investment_decision_product") or {}).get("artifact_identity")
+        )} if (inputs.get("integrated_investment_decision_product_identity") or (inputs.get("integrated_investment_decision_product") or {}).get("artifact_identity")) else {}),
         "authority_boundary": boundary,
         "warnings": copy.deepcopy(manifest["warnings"]),
         "created_at": created_at,

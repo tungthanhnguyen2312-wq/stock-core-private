@@ -496,9 +496,35 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
         return build(universe_resolution_artifact=universe_resolution, p3f9b_snapshot=p3f9b_snapshot,
                      technical_history_recovery_artifact=technical_recovery, strategy_artifact=strategy)
 
+    def _integrated_investment_decision_product():
+        from integrated_investment_decision_product import build_artifact as build
+        tac = _load(paths["tactical_classifier"])
+        if not tac:
+            raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        fa = _load(retained_paths["fundamental"])
+        val = _load(paths["valuation"]) or _load(retained_paths["valuation"])
+        desc = _load(paths["descriptive_research"])
+        mkt = _load(paths["sector_leadership"])
+        opp = _load(paths["opportunity_prioritization"])
+        res = build(
+            session=session,
+            requested_at=f"{session}T15:00:00+07:00",
+            technical_structure_artifact=tac,
+            financial_analysis_artifact=fa,
+            current_valuation_artifact=val,
+            relative_volume_artifact=desc,
+            market_sector_artifact=mkt,
+            legacy_decision_artifact=opp,
+        )
+        if res.get("session") != session:
+            raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")
+        _write_json(paths["integrated_investment_decision_product"], res)
+        return res
+
     _attempt("financial_momentum", "financial_momentum", _financial_momentum)
     _attempt("corporate_event_context", "corporate_event_context", _corporate_event_context)
     _attempt("historical_context", "historical_context", _historical_context)
+    _attempt("integrated_investment_decision_product", "integrated_investment_decision_product", _integrated_investment_decision_product)
     return results
 
 
@@ -725,12 +751,16 @@ def build_tiered_bundle(
             "status": producer_result["status"],
         },
         "current_research_packet_identity": (decision_packet or {}).get("artifact_identity"),
+        "integrated_investment_decision_product_identity": (
+            (enrichment.get("integrated_investment_decision_product") or {}).get("artifact") or {}
+        ).get("artifact_identity"),
         "prospective_cohort_snapshot_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
         "enrichment_component_status": {name: row["status"] for name, row in enrichment.items()},
         "deeper_bundles": {
             "opportunity_research_bundle": _rel(root, bundle_dir / "opportunity_research_bundle.json"),
             "full_universe_bundle_index": _rel(root, bundle_dir / "full_universe_bundle_index.json"),
             "dashboard_release_set_index": _rel(root, bundle_dir / "dashboard_release_set_index.json"),
+            "integrated_investment_decision_product": _rel(root, level2_paths["integrated_investment_decision_product"]),
         },
         "primary_ai_input": _rel(root, producer_result["run_dir"] / "ai_research_session_bundle.json"),
         "recommended_ai_inputs": {

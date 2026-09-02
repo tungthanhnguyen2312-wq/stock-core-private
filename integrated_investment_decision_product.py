@@ -307,18 +307,25 @@ def evaluate_tactical_phase(tactical_rec: Mapping[str, Any] | None) -> tuple[str
         counters.append("MA20_SLOPE_FALLING")
 
     # Tactical Phase synthesis
-    if ms == "DOWNTREND" or bos == "BEARISH_BOS_DETECTED_BY_RULE":
+    if bos == "BEARISH_BOS_DETECTED_BY_RULE":
+        phase = TACTICAL_BREAKDOWN
+    elif brk_v3 == "FAILED_BREAKOUT":
+        phase = TACTICAL_DISTRIBUTION_RISK
+    elif brk_v3 == "EXTENDED_AFTER_BREAKOUT" or (dist_piv is not None and dist_piv > 0.05 and brk_v3 in ("BREAKOUT", "EXTENDED_AFTER_BREAKOUT")):
+        phase = TACTICAL_EXTENDED
+    elif brk_v3 == "BREAKOUT" or (trig == "TRIGGERED" and trig_type in ("PIVOT_BREAKOUT_TRIGGER", "CONFIRMED_BOS_TRIGGER")):
+        if ms == "DOWNTREND":
+            phase = TACTICAL_EARLY_REVERSAL
+        else:
+            phase = TACTICAL_BREAKOUT_CONFIRMED
+    elif trig_type == "RETEST_BROKEN_PIVOT" or (ms == "UPTREND" and brk_v3 == "TESTING_PIVOT"):
+        phase = TACTICAL_RETEST_AFTER_BREAKOUT
+    elif brk_v3 == "TESTING_PIVOT" or trig == "APPROACHING" or (base_st == "IN_BASE" and range_st == "RANGE_COMPRESSION"):
+        phase = TACTICAL_BREAKOUT_SETUP
+    elif ms == "DOWNTREND":
         phase = TACTICAL_BREAKDOWN
     elif ms == "EARLY_BEARISH_REVERSAL" or choch == "BEARISH_CHOCH_DETECTED_BY_RULE":
         phase = TACTICAL_DISTRIBUTION_RISK
-    elif brk_v3 == "EXTENDED_AFTER_BREAKOUT" or (dist_piv is not None and dist_piv > 0.05):
-        phase = TACTICAL_EXTENDED
-    elif brk_v3 == "BREAKOUT" or (trig == "TRIGGERED" and trig_type in ("PIVOT_BREAKOUT_TRIGGER", "CONFIRMED_BOS_TRIGGER")):
-        phase = TACTICAL_BREAKOUT_CONFIRMED
-    elif brk_v3 == "TESTING_PIVOT" or trig == "APPROACHING" or (base_st == "IN_BASE" and range_st == "RANGE_COMPRESSION"):
-        phase = TACTICAL_BREAKOUT_SETUP
-    elif brk_v3 == "FAILED_BREAKOUT" or trig_type == "RETEST_BROKEN_PIVOT" or (ms == "UPTREND" and brk_v3 == "BELOW_PIVOT" and dist_piv is not None and dist_piv >= -0.05):
-        phase = TACTICAL_RETEST_AFTER_BREAKOUT
     elif ms == "UPTREND" and slope == "RISING":
         phase = TACTICAL_TREND_CONTINUATION
     elif ms == "EARLY_BULLISH_REVERSAL" or choch == "BULLISH_CHOCH_DETECTED_BY_RULE":
@@ -467,7 +474,7 @@ def evaluate_participation(
         supports.append(f"ELEVATED_SESSION_RELATIVE_VOLUME_{rv_scoped:.2f}")
 
     summary = {
-        "status": "AVAILABLE" if (rv_scoped is not None or pctl is not None) else "NOT_AVAILABLE",
+        "status": "AVAILABLE" if (rv_scoped is not None or pctl is not None or accel is not None) else "NOT_AVAILABLE",
         "relative_volume_provider_scoped": rv_scoped,
         "relative_volume_percentile": pctl,
         "volume_acceleration_ratio": accel,
@@ -493,6 +500,8 @@ def decide_research_action_posture(
     val_counters: list[str],
     part_supports: list[str],
     part_counters: list[str],
+    participation_summary: Mapping[str, Any] | None = None,
+    market_sector_summary: Mapping[str, Any] | None = None,
 ) -> tuple[str, str, str]:
     """Pure deterministic research policy mapping explicit evidence into research_action_posture.
 
@@ -508,6 +517,33 @@ def decide_research_action_posture(
     bos = tactical_rec.get("bos_state")
     dist_piv = tactical_rec.get("distance_to_pivot_pct")
     dist_inv = tactical_rec.get("distance_to_invalidation_pct")
+    part_summary = participation_summary or {}
+    mkt_summary = market_sector_summary or {}
+    mkt_regime = mkt_summary.get("market_regime", "NEUTRAL_MIXED")
+    sector_lead = mkt_summary.get("sector_leadership", "IN_LINE")
+
+    part_available = part_summary.get("status") == "AVAILABLE"
+    vol_accel = part_summary.get("volume_acceleration_ratio")
+    vol_pctl = part_summary.get("relative_volume_percentile")
+    part_contradiction = False
+    part_contradiction_reason = ""
+    if part_available:
+        if isinstance(vol_accel, (int, float)) and vol_accel <= 0.60:
+            part_contradiction = True
+            part_contradiction_reason = f"VOLUME_CONTRACTION_{vol_accel:.2f}X"
+        elif isinstance(vol_pctl, (int, float)) and vol_pctl <= 0.25:
+            part_contradiction = True
+            part_contradiction_reason = f"LOW_RELATIVE_VOLUME_PCTL_{vol_pctl:.2f}"
+        elif any("VOLUME_CONTRACTION" in c or "RELATIVE_VOLUME_LOWER_QUARTILE" in c for c in part_counters):
+            part_contradiction = True
+            part_contradiction_reason = part_counters[0] if part_counters else "VOLUME_CONTRACTION"
+
+    is_bearish_market = (
+        mkt_regime in ("DEFENSIVE", "BEARISH", "WEAK", "DISTRIBUTION", "HIGH_RISK")
+        or "DEFENSIVE" in str(mkt_regime).upper()
+        or "BEARISH" in str(mkt_regime).upper()
+    )
+    is_sector_leader = sector_lead in ("LEADING", "LEADER", "STRONG_LEADERSHIP", "OUTPERFORMING")
 
     # 1. INSUFFICIENT CURRENT RESEARCH
     if not eligible and fundamental_state == FUNDAMENTAL_INSUFFICIENT:
@@ -516,11 +552,11 @@ def decide_research_action_posture(
 
     # 2. REAL ADVERSE EVIDENCE -> REDUCE / AVOID
     # Adverse requires real negative evidence, never missing data.
-    if tactical_phase == TACTICAL_BREAKDOWN or (ms == "DOWNTREND" and bos == "BEARISH_BOS_DETECTED_BY_RULE"):
+    if bos == "BEARISH_BOS_DETECTED_BY_RULE" or (ms == "DOWNTREND" and not (brk_v3 == "BREAKOUT" or trig_state == "TRIGGERED")):
         why = f"{ticker}: Bearish market structure breakdown with confirmed lower lows / bearish BOS; adverse entry environment."
         return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK
 
-    if fundamental_state == FUNDAMENTAL_DETERIORATING and (ms in ("DOWNTREND", "EARLY_BEARISH_REVERSAL") or tactical_phase == TACTICAL_DISTRIBUTION_RISK):
+    if fundamental_state == FUNDAMENTAL_DETERIORATING and (ms in ("DOWNTREND", "EARLY_BEARISH_REVERSAL") or tactical_phase in (TACTICAL_DISTRIBUTION_RISK, TACTICAL_BREAKDOWN)):
         why = f"{ticker}: Deteriorating fundamentals aligned with bearish structural pressure; research posture is to avoid new exposure."
         return POSTURE_AVOID, why, EFFECT_DOES_NOT_BLOCK
 
@@ -528,28 +564,49 @@ def decide_research_action_posture(
         why = f"{ticker}: Breakout attempt failed back below pivot while fundamentals are deteriorating; high rejection risk."
         return POSTURE_REDUCE, why, EFFECT_DOES_NOT_BLOCK
 
+    if brk_v3 == "FAILED_BREAKOUT":
+        why = f"{ticker}: Breakout attempt failed back below pivot resistance; wait for structural re-basing before considering re-entry."
+        return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+
     # 3. EXTENSION RISK -> HOLD_DO_NOT_ADD / HOLD
     # Distinguish SECURITY_ATTRACTIVE from CURRENT_ENTRY_ATTRACTIVE. Never AVOID solely for extension!
-    if tactical_phase == TACTICAL_EXTENDED or brk_v3 == "EXTENDED_AFTER_BREAKOUT" or (dist_piv is not None and dist_piv > 0.05):
+    if tactical_phase == TACTICAL_EXTENDED or brk_v3 == "EXTENDED_AFTER_BREAKOUT" or (dist_piv is not None and dist_piv > 0.05 and brk_v3 in ("BREAKOUT", "EXTENDED_AFTER_BREAKOUT")):
+        piv_str = f"{dist_piv*100:.1f}%" if dist_piv is not None else "extended"
         if fundamental_state != FUNDAMENTAL_DETERIORATING:
-            why = f"{ticker}: Structure is strong and breakout succeeded, but price is now extended past pivot ({dist_piv*100:.1f}%); hold existing thesis but do not chase new entry."
+            why = f"{ticker}: Structure is strong and breakout succeeded, but price is now extended past pivot ({piv_str}); hold existing thesis but do not chase new entry."
             return POSTURE_HOLD_DO_NOT_ADD, why, EFFECT_DOES_NOT_BLOCK
         else:
             why = f"{ticker}: Price extended into resistance with unconfirmed/mixed fundamentals; poor risk/reward asymmetry for new entry."
             return POSTURE_HOLD_DO_NOT_ADD, why, EFFECT_DOES_NOT_BLOCK
 
-    # 4. BREAKOUT TRIGGER FIRED -> INITIATE_ON_BREAKOUT
-    if (brk_v3 == "BREAKOUT" or trig_state == "TRIGGERED") and trig_type in ("PIVOT_BREAKOUT_TRIGGER", "CONFIRMED_BOS_TRIGGER"):
-        if fundamental_state != FUNDAMENTAL_DETERIORATING:
-            why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals; actionable initiation setup."
-            return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK
-        else:
-            why = f"{ticker}: Technical breakout trigger fired but fundamental deterioration creates divergence; awaiting confirmation."
+    # 4. BREAKOUT TRIGGER FIRED -> INITIATE_ON_BREAKOUT (with deterministic participation/market filtering)
+    if (brk_v3 == "BREAKOUT" or trig_state == "TRIGGERED") and (trig_type in ("PIVOT_BREAKOUT_TRIGGER", "CONFIRMED_BOS_TRIGGER") or tactical_phase == TACTICAL_BREAKOUT_CONFIRMED):
+        if fundamental_state == FUNDAMENTAL_DETERIORATING:
+            why = f"{ticker}: Technical breakout trigger fired but fundamental deterioration creates divergence; awaiting fundamental confirmation."
             return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+
+        if ms == "DOWNTREND" or tactical_phase in (TACTICAL_EARLY_REVERSAL, TACTICAL_BREAKOUT_SETUP):
+            why = f"{ticker}: Breakout attempt emerging from established downtrend structure; awaiting higher-low structural confirmation."
+            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+
+        if part_contradiction:
+            why = f"{ticker}: Breakout trigger fired, but participation shows volume contradiction ({part_contradiction_reason}); awaiting volume confirmation before initiating."
+            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+
+        if is_bearish_market:
+            why = f"{ticker}: Valid structural breakout trigger fired, but defensive/weak market regime ({mkt_regime}) creates headwind; awaiting broader market confirmation."
+            return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
+
+        lead_note = " with supportive sector leadership" if is_sector_leader else ""
+        why = f"{ticker}: Valid structural breakout trigger fired at pivot level with non-conflicting fundamentals and supportive participation{lead_note}; actionable initiation setup."
+        return POSTURE_INITIATE_ON_BREAKOUT, why, EFFECT_DOES_NOT_BLOCK
 
     # 5. RETEST OF BROKEN PIVOT -> ACCUMULATE_ON_RETEST
     if (tactical_phase == TACTICAL_RETEST_AFTER_BREAKOUT or brk_v3 == "TESTING_PIVOT" or trig_type == "RETEST_BROKEN_PIVOT") and ms in ("UPTREND", "EARLY_BULLISH_REVERSAL"):
         if dist_inv is not None and dist_inv > 0 and fundamental_state != FUNDAMENTAL_DETERIORATING:
+            if is_bearish_market:
+                why = f"{ticker}: Constructive retest of pivot, but defensive market regime requires confirmation."
+                return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
             why = f"{ticker}: Bullish market structure intact with price constructively testing/retesting pivot support above invalidation level; attractive accumulation location."
             return POSTURE_ACCUMULATE_ON_RETEST, why, EFFECT_DOES_NOT_BLOCK
 
@@ -649,6 +706,8 @@ def build_ticker_integrated_decision(
         val_counters=val_count,
         part_supports=part_supp,
         part_counters=part_count,
+        participation_summary=part_summary,
+        market_sector_summary=mkt_summary,
     )
 
     # 8. Trigger & Invalidation

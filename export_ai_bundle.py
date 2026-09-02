@@ -2952,15 +2952,48 @@ def load_integrated_investment_decision_product_artifact(path: Path) -> Mapping[
     return payload
 
 
-def attach_integrated_investment_decision_product(
-    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
-) -> Mapping[str, Any] | None:
-    """Opt-in attach of integrated_investment_decision_product."""
-    if not include:
+def resolve_integrated_investment_decision_product_path(root: Path, session: str | None) -> Path | None:
+    """Auto-resolve same-session integrated investment decision product artifact if available."""
+    if not session:
         return None
-    if not artifact_path:
-        raise ValueError("INTEGRATED_INVESTMENT_DECISION_PRODUCT_PATH_REQUIRED")
-    artifact = load_integrated_investment_decision_product_artifact(Path(artifact_path))
+    nodash = session.replace("-", "")
+    candidates = [
+        root / "operations-review" / f"integrated-investment-decision-product-v1-{nodash}" / "integrated_investment_decision_product_artifact.json",
+        root / "operations-review" / f"integrated-investment-decision-product-v1-{session}" / "integrated_investment_decision_product_artifact.json",
+        root / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / "integrated_investment_decision_product.json",
+        root / "integrated_investment_decision_product_artifact.json",
+    ]
+    for cand in candidates:
+        if cand.is_file():
+            return cand
+    return None
+
+
+def attach_integrated_investment_decision_product(
+    bundle_entries: dict[str, dict],
+    include: bool,
+    artifact_path: str | None,
+    *,
+    root: Path | None = None,
+    reference_session_date: str | None = None,
+) -> Mapping[str, Any] | None:
+    """Attach integrated_investment_decision_product either explicitly or via canonical same-session resolution."""
+    resolved_path: Path | None = None
+    if artifact_path:
+        resolved_path = Path(artifact_path)
+    elif include or (root is not None and reference_session_date is not None):
+        resolved_path = resolve_integrated_investment_decision_product_path(root, reference_session_date)
+        if include and not resolved_path:
+            raise ValueError("INTEGRATED_INVESTMENT_DECISION_PRODUCT_PATH_REQUIRED")
+
+    if not resolved_path:
+        return None
+
+    artifact = load_integrated_investment_decision_product_artifact(resolved_path)
+    if reference_session_date is not None and artifact.get("session") != reference_session_date:
+        raise ValueError(
+            f"INTEGRATED_INVESTMENT_DECISION_PRODUCT_SESSION_MISMATCH:expected={reference_session_date}:observed={artifact.get('session')}"
+        )
     records = artifact.get("records") or {}
     for ticker, entry in bundle_entries.items():
         if ticker in records:
@@ -5498,6 +5531,8 @@ def main() -> int:
     integrated_decision_product = attach_integrated_investment_decision_product(
         bundle_entries, args.include_integrated_investment_decision_product,
         args.integrated_investment_decision_product_path,
+        root=runtime_root(),
+        reference_session_date=latest_session,
     )
     # tickers[ticker].watchlist_tactical_entry_classifier. Same explicit-path convention as its
     # market_wide_current_* siblings above.
@@ -5737,6 +5772,7 @@ def main() -> int:
         "volume_basis_verified": price_basis["volume_basis_verified"],
         "price_basis_provenance": price_basis,
         "data_quality_flags": data_quality_flags,
+        **({"integrated_investment_decision_product_identity": integrated_decision_product.get("artifact_identity")} if integrated_decision_product is not None else {}),
         "files": manifest_files,
         "trusted_subset": trusted_subset,
     }

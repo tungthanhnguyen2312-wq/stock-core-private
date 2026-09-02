@@ -403,3 +403,205 @@ class TestGovernanceAndStructure:
         assert "integrated_investment_decision" in bundle_entries["HPG"]
         assert bundle_entries["HPG"]["integrated_investment_decision"]["ticker"] == "HPG"
         assert "integrated_investment_decision" not in bundle_entries["VNM"]
+
+    def test_export_ai_bundle_auto_resolution_without_flags(self, tmp_path) -> None:
+        """Defect 1: Verify export_ai_bundle auto-resolves integrated decision artifact for session without flags."""
+        import export_ai_bundle as eab
+
+        tac_art = {
+            "artifact_identity": "technical_structure_context/v2:fake",
+            "records": {"HPG": _sample_tactical_record()},
+        }
+        fa_art = {
+            "artifact_identity": "financial_analysis_product_integration/v1:fake",
+            "records": {"HPG": _sample_financial_record()},
+        }
+        art = iidp.build_artifact(
+            session="2026-08-28",
+            requested_at="2026-09-02T00:00:00Z",
+            technical_structure_artifact=tac_art,
+            financial_analysis_artifact=fa_art,
+        )
+        ops_dir = tmp_path / "operations-review" / "integrated-investment-decision-product-v1-20260828"
+        ops_dir.mkdir(parents=True, exist_ok=True)
+        art_path = ops_dir / "integrated_investment_decision_product_artifact.json"
+        art_path.write_text(json.dumps(art), encoding="utf-8")
+
+        # Auto-resolve with include=False, artifact_path=None
+        bundle_entries = {"HPG": {}}
+        res = eab.attach_integrated_investment_decision_product(
+            bundle_entries,
+            include=False,
+            artifact_path=None,
+            root=tmp_path,
+            reference_session_date="2026-08-28",
+        )
+        assert res is not None
+        assert "integrated_investment_decision" in bundle_entries["HPG"]
+        assert bundle_entries["HPG"]["integrated_investment_decision"]["ticker"] == "HPG"
+
+    def test_session_mismatch_fails_closed(self, tmp_path) -> None:
+        """Defect 1: Fail closed if artifact session != Daily Producer session."""
+        import export_ai_bundle as eab
+
+        tac_art = {
+            "artifact_identity": "technical_structure_context/v2:fake",
+            "records": {"HPG": _sample_tactical_record()},
+        }
+        art = iidp.build_artifact(
+            session="2026-08-20",
+            requested_at="2026-09-02T00:00:00Z",
+            technical_structure_artifact=tac_art,
+            financial_analysis_artifact={"artifact_identity": "fa:fake", "records": {}},
+        )
+        art_path = tmp_path / "integrated_investment_decision_product_artifact.json"
+        art_path.write_text(json.dumps(art), encoding="utf-8")
+
+        bundle_entries = {"HPG": {}}
+        with pytest.raises(ValueError, match="INTEGRATED_INVESTMENT_DECISION_PRODUCT_SESSION_MISMATCH"):
+            eab.attach_integrated_investment_decision_product(
+                bundle_entries,
+                include=True,
+                artifact_path=str(art_path),
+                reference_session_date="2026-08-28",
+            )
+
+    def test_current_event_overrides_lagged_structure_pnj_pattern(self) -> None:
+        """Defect 3: Current confirmed breakout overrides lagged descriptive structure (PNJ pattern)."""
+        tac = _sample_tactical_record(
+            market_structure_state="EARLY_BEARISH_REVERSAL",
+            breakout_state_v3="BREAKOUT",
+            trigger_state="TRIGGERED",
+            trigger_type="PIVOT_BREAKOUT_TRIGGER",
+            bos_state="NO_BOS",
+        )
+        dec = iidp.build_ticker_integrated_decision(
+            ticker="PNJ",
+            as_of_session="2026-08-20",
+            tactical_record=tac,
+            financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(),
+            relative_volume_record={"status": "AVAILABLE", "volume_acceleration_ratio": 1.4, "relative_volume_percentile": 0.8},
+            market_sector_record={"breadth_regime": "NEUTRAL_MIXED", "sector_leadership_state": "IN_LINE"},
+        )
+        assert dec["tactical_phase"] == iidp.TACTICAL_BREAKOUT_CONFIRMED
+        assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
+        assert "DISTRIBUTION_RISK" not in dec["tactical_phase"]
+
+    def test_breakout_inside_established_downtrend_qns_pattern(self) -> None:
+        """Defect 3: Breakout occurring inside established downtrend requires confirmation (QNS pattern)."""
+        tac = _sample_tactical_record(
+            market_structure_state="DOWNTREND",
+            breakout_state_v3="BREAKOUT",
+            trigger_state="TRIGGERED",
+            trigger_type="PIVOT_BREAKOUT_TRIGGER",
+            bos_state="NO_BOS",
+        )
+        dec = iidp.build_ticker_integrated_decision(
+            ticker="QNS",
+            as_of_session="2026-08-28",
+            tactical_record=tac,
+            financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(),
+            relative_volume_record=None,
+            market_sector_record=None,
+        )
+        # Not unhedged breakout confirmed, but early reversal / setup needing confirmation
+        assert dec["tactical_phase"] == iidp.TACTICAL_EARLY_REVERSAL
+        assert dec["research_action_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
+        assert "higher-low" in dec["why_now"]
+
+    def test_participation_contraction_downgrades_breakout(self) -> None:
+        """Defect 2: Material volume contraction downgrades breakout initiation to WAIT_FOR_CONFIRMATION."""
+        tac = _sample_tactical_record(
+            market_structure_state="UPTREND",
+            breakout_state_v3="BREAKOUT",
+            trigger_state="TRIGGERED",
+            trigger_type="PIVOT_BREAKOUT_TRIGGER",
+        )
+        rvol = {
+            "status": "AVAILABLE",
+            "volume_acceleration_ratio": 0.45,
+            "relative_volume_percentile": 0.15,
+        }
+        dec = iidp.build_ticker_integrated_decision(
+            ticker="HPG",
+            as_of_session="2026-08-28",
+            tactical_record=tac,
+            financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(),
+            relative_volume_record=rvol,
+            market_sector_record=None,
+        )
+        assert dec["research_action_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
+        assert "VOLUME_CONTRACTION" in dec["why_now"] or "volume contradiction" in dec["why_now"]
+
+    def test_bearish_market_regime_downgrades_fresh_entry_not_avoid(self) -> None:
+        """Defect 2: Defensive/bearish market regime downgrades breakout to WAIT_FOR_CONFIRMATION, NOT AVOID."""
+        tac = _sample_tactical_record(
+            market_structure_state="UPTREND",
+            breakout_state_v3="BREAKOUT",
+            trigger_state="TRIGGERED",
+            trigger_type="PIVOT_BREAKOUT_TRIGGER",
+        )
+        mkt = {
+            "breadth_regime": "DEFENSIVE",
+            "sector_leadership_state": "LEADING",
+        }
+        dec = iidp.build_ticker_integrated_decision(
+            ticker="HPG",
+            as_of_session="2026-08-28",
+            tactical_record=tac,
+            financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(),
+            relative_volume_record={"status": "AVAILABLE", "volume_acceleration_ratio": 1.5, "relative_volume_percentile": 0.85},
+            market_sector_record=mkt,
+        )
+        assert dec["research_action_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
+        assert dec["research_action_posture"] != iidp.POSTURE_AVOID
+        assert "defensive/weak market regime" in dec["why_now"]
+
+    def test_strong_sector_cannot_manufacture_bullish_on_breakdown(self) -> None:
+        """Defect 2: Strong sector leadership cannot manufacture a bullish posture for broken structure."""
+        tac = _sample_tactical_record(
+            market_structure_state="DOWNTREND",
+            breakout_state_v3="NO_VALID_PIVOT",
+            trigger_state="NOT_AVAILABLE",
+            bos_state="BEARISH_BOS_DETECTED_BY_RULE",
+        )
+        mkt = {
+            "breadth_regime": "EXPANSIVE",
+            "sector_leadership_state": "LEADING",
+        }
+        dec = iidp.build_ticker_integrated_decision(
+            ticker="NVL",
+            as_of_session="2026-08-28",
+            tactical_record=tac,
+            financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(),
+            relative_volume_record=None,
+            market_sector_record=mkt,
+        )
+        assert dec["research_action_posture"] == iidp.POSTURE_AVOID
+
+    def test_missing_participation_is_local_uncertainty_only(self) -> None:
+        """Defect 2: Missing participation is non-penalizing local uncertainty."""
+        tac = _sample_tactical_record(
+            market_structure_state="UPTREND",
+            breakout_state_v3="BREAKOUT",
+            trigger_state="TRIGGERED",
+            trigger_type="PIVOT_BREAKOUT_TRIGGER",
+        )
+        tac["relative_volume_provider_scoped"] = None
+        dec = iidp.build_ticker_integrated_decision(
+            ticker="HPG",
+            as_of_session="2026-08-28",
+            tactical_record=tac,
+            financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(),
+            relative_volume_record=None,
+            market_sector_record=None,
+        )
+        assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
+        assert dec["participation"]["status"] == "NOT_AVAILABLE"
+

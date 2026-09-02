@@ -22,7 +22,10 @@ def _unsafe(value: Any) -> bool:
 def _manifest_lineage(source: Path, producer_checkpoint: str) -> dict[str, Any]:
     manifest=json.loads((source/"ai_research_bundle_manifest.json").read_text(encoding="utf-8"))
     if not isinstance(manifest, Mapping): raise HandoffPublicationError("HANDOFF_MANIFEST_NOT_OBJECT")
-    return {"producer_checkpoint":producer_checkpoint,"producer_head":manifest.get("producer_head"),"operation_identity":manifest.get("operation_identity"),"daily_product_identity":manifest.get("daily_product_identity")}
+    res = {"producer_checkpoint":producer_checkpoint,"producer_head":manifest.get("producer_head"),"operation_identity":manifest.get("operation_identity"),"daily_product_identity":manifest.get("daily_product_identity")}
+    if manifest.get("integrated_investment_decision_product_identity"):
+        res["integrated_investment_decision_product_identity"] = manifest.get("integrated_investment_decision_product_identity")
+    return res
 def _financial_lineage(parsed: Mapping[str, Any]) -> str | None:
     """Validate the optional compact V2 identity chain without publishing its full replay."""
     primary = parsed.get("ai_research_session_bundle.json") or {}

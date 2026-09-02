@@ -183,6 +183,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "session_triage": ops / f"full-universe-entry-candidate-triage-v1-{nodash}" / f"full_universe_entry_candidate_triage_{nodash}.json",
         "named_20260824_triage": ops / "full-universe-entry-candidate-triage-20260824" / "full_universe_entry_candidate_triage_20260824.json",
         "postclose_20260824_triage": ops / "full-universe-entry-candidate-triage-postclose-20260824" / "full_universe_entry_candidate_triage_20260824.json",
+        "integrated_investment_decision_product": ops / f"integrated-investment-decision-product-v1-{nodash}" / "integrated_investment_decision_product_artifact.json",
     }
 
 
