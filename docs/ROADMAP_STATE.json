@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.02.4",
+  "roadmap_version": "2026.09.02.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "c1108b883db163976eb364da005e63a2b9c9599e",
-  "last_updated_checkpoint": "c1108b883db163976eb364da005e63a2b9c9599e",
+  "implementation_lineage_head": "7bd048040f7c60d3532176df8e0a0f7ca833bed7",
+  "last_updated_checkpoint": "7bd048040f7c60d3532176df8e0a0f7ca833bed7",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "QUALIFIED_FREE_CASH_FLOW_RESEARCH_PROXY_V1",
+    "milestone": "SECURITIES_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -26,7 +26,9 @@
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / PROSPECTIVE_RETAINED_CONTINUITY_ACTIVE",
       "checkpoint": "7163686f3dda60503d58ce401236477318104833",
       "dependencies": [],
-      "unlocks": ["SESSION_BUNDLE_DECISION_CONTEXT_AND_LIFECYCLE_ENRICHMENT_V1"],
+      "unlocks": [
+        "SESSION_BUNDLE_DECISION_CONTEXT_AND_LIFECYCLE_ENRICHMENT_V1"
+      ],
       "authority_effect": "NONE",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-30, Multi-session thesis and recommendation lifecycle V1)",
@@ -39,8 +41,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / RETENTION_CONTRACT_ACTIVE",
       "checkpoint": "1ad378ab59dadb4e7b7273e97bd93b37ceb92f47",
-      "dependencies": ["MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1"],
-      "unlocks": ["DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1"],
+      "dependencies": [
+        "MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1"
+      ],
+      "unlocks": [
+        "DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1"
+      ],
       "authority_effect": "NONE",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-30, Session Bundle decision-context and lifecycle enrichment V1)",
@@ -53,8 +59,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "f4a2d8161cfffbded48ac0c8190342d3927645f8",
-      "dependencies": ["SESSION_BUNDLE_DECISION_CONTEXT_AND_LIFECYCLE_ENRICHMENT_V1"],
-      "unlocks": ["CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1"],
+      "dependencies": [
+        "SESSION_BUNDLE_DECISION_CONTEXT_AND_LIFECYCLE_ENRICHMENT_V1"
+      ],
+      "unlocks": [
+        "CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1"
+      ],
       "authority_effect": "NONE",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-30, Daily-session shadow recommendation and invalidation production V1)",
@@ -67,8 +77,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "1282fd4a6e7011136333c85a30ec6edd3ccc45c6",
-      "dependencies": ["DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1"],
-      "unlocks": ["MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1"],
+      "dependencies": [
+        "DAILY_SESSION_SHADOW_RECOMMENDATION_AND_INVALIDATION_PRODUCTION_V1"
+      ],
+      "unlocks": [
+        "MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1"
+      ],
       "authority_effect": "NONE",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-30, Canonical daily shadow-recommendation autosourcing V1)",
@@ -81,8 +95,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "4b5d460a2f545662c1e0cb642df91270f8a5e7f2",
-      "dependencies": ["CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1"],
-      "unlocks": ["CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1"],
+      "dependencies": [
+        "CANONICAL_DAILY_SHADOW_RECOMMENDATION_AUTOSOURCING_V1"
+      ],
+      "unlocks": [
+        "CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1"
+      ],
       "authority_effect": "NONE",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-30, Market-wide fundamental research cohort scale-out V1)",
@@ -95,8 +113,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "c9412833bb12d35facf866b7a84fa371e7520f1a",
-      "dependencies": ["MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1"],
-      "unlocks": ["ROADMAP_EXECUTION_CONTROL_PLANE_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FUNDAMENTAL_RESEARCH_COHORT_SCALEOUT_V1"
+      ],
+      "unlocks": [
+        "ROADMAP_EXECUTION_CONTROL_PLANE_V1"
+      ],
       "narrative_next_gate": "docs/STATE.md's own text names a distinct RESEARCH-track next gate ('targeted qualified evidence acquisition for genuinely unavailable names, not another cohort/default change'); ROADMAP_EXECUTION_CONTROL_PLANE_V1 is a separate, owner-authorized GOVERNANCE-track milestone opened in parallel, not a continuation of that research gate. Both remain legitimate; this field exists so the two tracks are never silently conflated.",
       "authority_effect": "CURRENT_RESEARCH_DEFAULT_COHORT_CUTOVER_ONLY",
       "owner_authorized": true,
@@ -110,8 +132,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "fcf9e459c6a3cd6673111cef2d231f8c28312aeb",
-      "dependencies": ["CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1"],
-      "unlocks": ["ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"],
+      "dependencies": [
+        "CANONICAL_WIDE_FUNDAMENTAL_RESEARCH_COHORT_CUTOVER_V1"
+      ],
+      "unlocks": [
+        "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"
+      ],
       "authority_effect": "NONE",
       "governance_effect": "INTRODUCES_ROADMAP_EXECUTION_STATE_AUTHORITY",
       "owner_authorized": true,
@@ -125,8 +151,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "52a31f0364836249408c3e54f97ddf3568af7d69",
-      "dependencies": ["ROADMAP_EXECUTION_CONTROL_PLANE_V1"],
-      "unlocks": ["DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1"],
+      "dependencies": [
+        "ROADMAP_EXECUTION_CONTROL_PLANE_V1"
+      ],
+      "unlocks": [
+        "DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1"
+      ],
       "authority_effect": "OPERATIONAL_SERVING_ONLY",
       "owner_authorized": true,
       "source_doc": "This milestone's own directive (ROADMAP_EXECUTION_CONTROL_PLANE_V1 objective, section 10)",
@@ -139,7 +169,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "c5cd55d90db5958d5288dba617082293422e8fd8",
-      "dependencies": ["ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"],
+      "dependencies": [
+        "ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1"
+      ],
       "unlocks": [],
       "authority_effect": "PRESENTATION_AND_SERVING_ONLY",
       "owner_authorized": true,
@@ -153,7 +185,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS",
       "checkpoint": "5bebfaa19f20cf970c3b9c529ef8d8a92ce32058",
-      "dependencies": ["DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1"],
+      "dependencies": [
+        "DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE",
       "owner_authorized": true,
@@ -168,7 +202,9 @@
       "narrative_disposition": "OUTCOME_A_OPERATIONAL_FINANCIAL_PROXY_RESEARCH_TIER_ACTIVE",
       "checkpoint": "a46354e81e2e7cede177e8e828f8a39c53e85707",
       "dependencies": [],
-      "unlocks": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
+      "unlocks": [
+        "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"
+      ],
       "authority_effect": "NONE / OPERATIONAL_PROXY_RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-28, Financial operational proxy foundation and research tier activation V1)",
@@ -181,8 +217,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "OUTCOME_A_QUARTERLY_FUNDAMENTAL_FEATURES_MATERIAL_COVERAGE",
       "checkpoint": "4d131298b1f75d3e57fba42821b0cd31664f0dcb",
-      "dependencies": ["FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1"],
-      "unlocks": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
+      "dependencies": [
+        "FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1"
+      ],
+      "unlocks": [
+        "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"
+      ],
       "authority_effect": "NONE / RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-28, Market-wide quarterly fundamental research features V1)",
@@ -209,7 +249,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / OFFICIAL_FINANCIAL_VERIFICATION_UTILITY_RETAINED_UNMERGED",
       "checkpoint": "2507c86a3a8b07f6c09133097e799c5bd194f063",
-      "dependencies": ["HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1"],
+      "dependencies": [
+        "HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_FACT_AUTHORITY_UNCHANGED",
       "owner_authorized": true,
@@ -223,8 +265,13 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS / OPERATIONAL_PROXY_RESEARCH_SEMANTICS_ONLY",
       "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
-      "dependencies": ["FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1", "MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1"],
-      "unlocks": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
+      "dependencies": [
+        "FINANCIAL_OPERATIONAL_PROXY_FOUNDATION_AND_RESEARCH_TIER_ACTIVATION_V1",
+        "MARKET_WIDE_QUARTERLY_FUNDAMENTAL_RESEARCH_FEATURES_V1"
+      ],
+      "unlocks": [
+        "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"
+      ],
       "authority_effect": "NONE / OPERATIONAL_PROXY_RESEARCH_SEMANTICS_ONLY",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md / operations-review/market-wide-structured-financial-period-semantics-v1-20260831/ (2026-08-31)",
@@ -237,8 +284,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PASS / RESEARCH_COMPATIBILITY_FEATURE_STORE_ACTIVE",
       "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
-      "dependencies": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
-      "unlocks": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
+      "dependencies": [
+        "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"
+      ],
+      "unlocks": [
+        "TACTICAL_AND_BEHAVIORAL_ENGINE_V2"
+      ],
       "authority_effect": "NONE / RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md / operations-review/market-wide-fundamental-feature-store-v1-20260831/ (2026-08-31)",
@@ -251,8 +302,12 @@
       "state": "SUPERSEDED",
       "narrative_disposition": "SUPERSEDED_AS_CURRENT_PLAN",
       "checkpoint": null,
-      "dependencies": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
-      "unlocks": ["MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"
+      ],
+      "unlocks": [
+        "MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"
+      ],
       "authority_effect": "NONE / VALUATION_RESEARCH_PROXY_RESTRICTED_ONLY",
       "owner_authorized": false,
       "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
@@ -265,8 +320,12 @@
       "state": "SUPERSEDED",
       "narrative_disposition": "SUPERSEDED_AS_CURRENT_PLAN",
       "checkpoint": null,
-      "dependencies": ["CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1"],
-      "unlocks": ["PORTFOLIO_RISK_AND_CAPITAL_POLICY_RESEARCH_V1"],
+      "dependencies": [
+        "CURRENT_VALUATION_RESEARCH_PROXY_SCALEOUT_V1"
+      ],
+      "unlocks": [
+        "PORTFOLIO_RISK_AND_CAPITAL_POLICY_RESEARCH_V1"
+      ],
       "authority_effect": "NONE / RESEARCH_ONLY",
       "owner_authorized": false,
       "source_doc": "Owner financial data-path rebaseline (2026-08-31)",
@@ -279,7 +338,9 @@
       "state": "SUPERSEDED",
       "narrative_disposition": "SUPERSEDED_AS_CURRENT_PLAN",
       "checkpoint": null,
-      "dependencies": ["MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"],
+      "dependencies": [
+        "MARKET_FUNDAMENTAL_OPPORTUNITY_INTEGRATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / RESEARCH_ONLY",
       "owner_authorized": false,
@@ -293,8 +354,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED",
       "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
-      "dependencies": ["MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"],
-      "unlocks": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FUNDAMENTAL_FEATURE_STORE_V1"
+      ],
+      "unlocks": [
+        "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"
+      ],
       "authority_effect": "NONE / RESEARCH_PRODUCT_ONLY",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-31, Tactical and Behavioral Engine V2)",
@@ -307,8 +372,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL / RESEARCH_PORTFOLIO_CONTEXT",
       "checkpoint": "af0e9e4bcd18c938c702fbc605beee8e3c828245",
-      "dependencies": ["TACTICAL_AND_BEHAVIORAL_ENGINE_V2"],
-      "unlocks": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
+      "dependencies": [
+        "TACTICAL_AND_BEHAVIORAL_ENGINE_V2"
+      ],
+      "unlocks": [
+        "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"
+      ],
       "authority_effect": "NONE / RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "Owner product-convergence direction (2026-08-31)",
@@ -321,8 +390,12 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL / OWNER_REVIEW_REQUIRED",
       "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
-      "dependencies": ["RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"],
-      "unlocks": ["INVESTMENT_DECISION_WORKSPACE_V1"],
+      "dependencies": [
+        "RESEARCH_LIQUIDITY_AND_EXPLICIT_PORTFOLIO_V1"
+      ],
+      "unlocks": [
+        "INVESTMENT_DECISION_WORKSPACE_V1"
+      ],
       "authority_effect": "NONE / RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "docs/STATE.md (2026-08-31, Current valuation and opportunity integration V1)",
@@ -335,7 +408,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "OUTCOME_A_PRODUCT_CONVERGENCE_COMPLETE",
       "checkpoint": "5418cbd90a194ba374a7dbce22ba6ca0c00881bb",
-      "dependencies": ["CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
+      "dependencies": [
+        "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / PRODUCT_WORKSPACE_ONLY",
       "owner_authorized": true,
@@ -349,7 +424,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_EVIDENCE",
       "checkpoint": "09612e4faaa820240f7056fc83bce7f2fc25e938",
-      "dependencies": ["INVESTMENT_DECISION_WORKSPACE_V1"],
+      "dependencies": [
+        "INVESTMENT_DECISION_WORKSPACE_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / PROSPECTIVE_DESCRIPTIVE_MEASUREMENT_ONLY",
       "owner_authorized": true,
@@ -363,7 +440,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_EVIDENCE / CURRENT_SESSION_ACQUISITION_BLOCKED",
       "checkpoint": "aa7dd4ed31f2e73e49251d310ba2b75cde88c73b",
-      "dependencies": ["PROSPECTIVE_DECISION_OUTCOME_MEASUREMENT_V1"],
+      "dependencies": [
+        "PROSPECTIVE_DECISION_OUTCOME_MEASUREMENT_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / PROSPECTIVE_CASE_OPERATIONALIZATION_ONLY",
       "owner_authorized": true,
@@ -377,7 +456,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_EVIDENCE",
       "checkpoint": "aa7dd4ed31f2e73e49251d310ba2b75cde88c73b",
-      "dependencies": ["MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"],
+      "dependencies": [
+        "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
       "owner_authorized": true,
@@ -391,7 +472,10 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
       "checkpoint": "aa7dd4ed31f2e73e49251d310ba2b75cde88c73b",
-      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2", "INVESTMENT_DECISION_WORKSPACE_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2",
+        "INVESTMENT_DECISION_WORKSPACE_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / RESEARCH_ONLY_PRODUCT_ANNOTATION",
       "owner_authorized": true,
@@ -405,7 +489,10 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
       "checkpoint": "aa7dd4ed31f2e73e49251d310ba2b75cde88c73b",
-      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2", "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FINANCIAL_ANALYSIS_ENGINE_V2",
+        "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
       "owner_authorized": true,
@@ -419,7 +506,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL / IN_APP_BROWSER_AUTOMATION_UNAVAILABLE",
       "checkpoint": "aa7dd4ed31f2e73e49251d310ba2b75cde88c73b",
-      "dependencies": ["INVESTMENT_DECISION_WORKSPACE_V1"],
+      "dependencies": [
+        "INVESTMENT_DECISION_WORKSPACE_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / PRODUCT_PUBLICATION_SURFACE_ONLY",
       "owner_authorized": true,
@@ -433,7 +522,10 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
       "checkpoint": "aa7dd4ed31f2e73e49251d310ba2b75cde88c73b",
-      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1",
+        "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
       "owner_authorized": true,
@@ -447,7 +539,10 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
       "checkpoint": "HEAD",
-      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1",
+        "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
       "owner_authorized": true,
@@ -461,7 +556,11 @@
       "state": "COMPLETE",
       "narrative_disposition": "PRODUCER_COMPLETE / DASHBOARD_SURFACE_PENDING_SAME_MILESTONE",
       "checkpoint": "HEAD",
-      "dependencies": ["INVESTMENT_DECISION_WORKSPACE_V1", "MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "DASHBOARD_PRODUCT_SURFACE_AND_PUBLICATION_CONVERGENCE_V1"],
+      "dependencies": [
+        "INVESTMENT_DECISION_WORKSPACE_V1",
+        "MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1",
+        "DASHBOARD_PRODUCT_SURFACE_AND_PUBLICATION_CONVERGENCE_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / PRESENTATION_READ_MODEL_ONLY",
       "owner_authorized": true,
@@ -475,7 +574,11 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_MONETARY_BASIS_EVIDENCE",
       "checkpoint": "6486b6275a1b119f26ba17ddd443f5bf4a0ab742",
-      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1", "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1",
+        "FINANCIAL_ANALYSIS_V2_PRODUCT_AND_AI_BUNDLE_INTEGRATION_V1",
+        "CURRENT_VALUATION_AND_OPPORTUNITY_INTEGRATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / RESEARCH_VALUATION_CONTEXT_ONLY",
       "owner_authorized": true,
@@ -489,7 +592,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_UNDOCUMENTED_PRICE_AND_SHARE_SCALE",
       "checkpoint": "e74e58d0c9e2369b3db45bb3196268b6b2e5aea2",
-      "dependencies": ["QUALIFIED_TTM_VALUATION_RESEARCH_INTEGRATION_V1"],
+      "dependencies": [
+        "QUALIFIED_TTM_VALUATION_RESEARCH_INTEGRATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / CURRENT_RESEARCH_MONETARY_NORMALIZATION_ONLY",
       "owner_authorized": true,
@@ -517,7 +622,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE",
       "checkpoint": "964b0c75d994baa5a5a52b381cb1572386ac3161",
-      "dependencies": ["BANK_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1"],
+      "dependencies": [
+        "BANK_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / CURRENT_RESEARCH_BANK_INPUT_ONLY",
       "owner_authorized": true,
@@ -531,7 +638,10 @@
       "state": "COMPLETE",
       "narrative_disposition": "COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
       "checkpoint": "16ea8ac58ef10231c21d279fc0567daa56f04027",
-      "dependencies": ["MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1", "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1"],
+      "dependencies": [
+        "MARKET_WIDE_FINANCIAL_ANALYSIS_V2_SCALEOUT_V1",
+        "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_RESEARCH_CONTEXT_ONLY",
       "owner_authorized": true,
@@ -546,7 +656,9 @@
       "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_HISTORY",
       "checkpoint": "a385ed069017a2ac0f5f97af8ad7564abc2d959d",
       "dependencies": [],
-      "unlocks": ["CANONICAL_FINANCIAL_MATERIALIZATION_AND_ENTITY_REPRODUCIBILITY_RECOVERY_V1"],
+      "unlocks": [
+        "CANONICAL_FINANCIAL_MATERIALIZATION_AND_ENTITY_REPRODUCIBILITY_RECOVERY_V1"
+      ],
       "authority_effect": "NONE / RELATIVE_DESCRIPTIVE_RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "Owner-authorized MARKET_WIDE_RELATIVE_VOLUME_RESEARCH_V1 directive (2026-09-02)",
@@ -559,7 +671,11 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
       "checkpoint": "6b91aa47e29d229e466853b652ca0d6b3acca5da",
-      "dependencies": ["MARKET_WIDE_RELATIVE_VOLUME_RESEARCH_V1", "MARKET_WIDE_GROSS_MARGIN_DEPTH_V1", "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1"],
+      "dependencies": [
+        "MARKET_WIDE_RELATIVE_VOLUME_RESEARCH_V1",
+        "MARKET_WIDE_GROSS_MARGIN_DEPTH_V1",
+        "MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / OPERATIONAL_REPRODUCIBILITY_RECOVERY_ONLY",
       "owner_authorized": true,
@@ -573,7 +689,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_UNRECOVERABLE_LEGACY_AUTHORITY",
       "checkpoint": "d20bcbcf4674ef26007ed749cf15755fa9dceb7f",
-      "dependencies": ["CANONICAL_FINANCIAL_MATERIALIZATION_AND_ENTITY_REPRODUCIBILITY_RECOVERY_V1"],
+      "dependencies": [
+        "CANONICAL_FINANCIAL_MATERIALIZATION_AND_ENTITY_REPRODUCIBILITY_RECOVERY_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / PERSISTENCE_RECOVERY_OF_PREVIOUSLY_ACCEPTED_CURRENT_STATE_AUTHORITY",
       "owner_authorized": true,
@@ -587,7 +705,9 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
       "checkpoint": "c1108b883db163976eb364da005e63a2b9c9599e",
-      "dependencies": ["LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1"],
+      "dependencies": [
+        "LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / RESEARCH_ONLY_PROVIDER_NATIVE_SIGNED_CASH_FLOW_PROXY",
       "owner_authorized": true,
@@ -595,6 +715,22 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_IMPLEMENT_TEST_REAL_PERSISTED_READ_ONLY_REPLAY_ROADMAP_COMMIT_FAST_FORWARD_PUSH",
       "notes": "COMPLETE on corrected baseline d20bcbcf4674ef26007ed749cf15755fa9dceb7f. Financial V2 adds free_cash_flow_proxy only for corporate issuers as operating_cash_flow + provider-native signed capital_expenditure under the existing exact same-provider/source/scope/currency/scale/period/STANDALONE_QUARTER gate; no sign normalization, YTD/unknown-duration admission, cross-provider mix, or non-corporate admission occurs. The descriptive same-quarter-prior-year direction is a level delta only when both compatible component pairs exist. The compact product path surfaces status/method/period/reasons/warnings and direction state without any value or raw statement payload. Focused engine, scaleout, product, and roadmap suites: 105 passed; py_compile and diff check passed. Real persisted read-only Financial V2 replay through the current normal scaleout path: denominator 1,492, zero silent drops, 319 READY proxy records, 284 READY directions, current_research_ready unchanged at 1,380; entity families 1,382 industrial / 83 limited / 27 generic, yielding 110 explicit NOT_APPLICABLE proxy records. Direct standard canonical-store readers confirm current raw schema 1.1.0, canonical mapper 1.3.0, 1,493 raw/canonical ticker shards and both existing canonical raw-item routes; retained CapEx pair signs include negative, zero, and positive values and are preserved untouched. No provider, raw/canonical-store, database, UI, stance, valuation, tactical, portfolio, sizing, execution, or VCI-duration change. Artifacts: C:\\Projects\\StockLookup\\operations-review\\qualified-free-cash-flow-research-proxy-v1-20260902\\. The immediately preceding legacy entity-classification recovery checkpoint is frozen to d20bcbcf4674ef26007ed749cf15755fa9dceb7f."
+    },
+    {
+      "milestone_id": "SECURITIES_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
+      "checkpoint": "7bd048040f7c60d3532176df8e0a0f7ca833bed7",
+      "dependencies": [
+        "QUALIFIED_FREE_CASH_FLOW_RESEARCH_PROXY_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / RESEARCH_ONLY_PROVIDER_NATIVE_SECURITIES_SPECIALIST_COMPONENTS",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized SECURITIES_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1 directive (2026-09-02)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_IMPLEMENT_TEST_REAL_PERSISTED_READ_ONLY_REPLAY_ROADMAP_COMMIT_FAST_FORWARD_PUSH",
+      "notes": "COMPLETE on source head 852caac7da1662936ec304007c691d49680bec3c. Governed universe: 41 entity_class=securities tickers from the current tracked entity_classification_contract authority (no sibling artifact), cross-validated against the regression-locked 83 OTHER_FINANCIAL_LIMITED_ANALYSIS total (28 bank + 41 securities + 13 insurance + 1 finance_company). Adds securities_financial_research_component.py (provider-agnostic securities_financial_research_component/v1 contract mirroring bank_financial_research_component/v1) and securities_statement_capture_import.py (native-vocabulary importer mirroring tcbs_bank_capture_import.py). Reuses two already-shipped, item-id-agnostic period-semantics routes rather than reopening VCI_PERIOD_DURATION_REMAINS_UNKNOWN: balance-sheet point-in-time (provider-agnostic) and the KBS-quarterly STANDALONE_QUARTER income-statement contract (the same route gross_profit uses). total_securities_operating_income's denominator compatibility was arithmetic-verified against SSI's own retained statement subtotal before any mix ratio used it. financial_analysis_engine_v2.py gains an additive securities_* feature/state family (fvtpl_asset_intensity, margin_lending_asset_intensity, brokerage_revenue_mix, loan_interest_income_mix, three trajectory states), gated strictly on entity_class=securities, mirroring the bank family's wiring exactly; readiness_features/current_research_ready and the INDUSTRIAL/LIMITED split are untouched. SCHEMA_VERSION 2.1.0 -> 2.2.0. Real retained replay (tools/run_securities_specialist_real_replay.py, reads data_bctc directly, zero network calls, zero store writes): 41/41 governed tickers, 41/41 with both statement templates, fvtpl_asset_intensity 41/41 READY, margin_lending_asset_intensity 41/41 READY, brokerage_revenue_mix 41/41 READY, loan_interest_income_mix 38/41 READY / 3 BLOCKED_BY_EVIDENCE, specialist_context_available_count 41/41, current_research_ready 0/41 (unchanged by construction). Trajectory states show real RISING/FALLING/STABLE splits for the two balance-sheet ratios; brokerage_mix stays 100% AVAILABLE for all 41 tickers because retained KBS income-statement depth is shallow (at most 4 quarters, no same-quarter-prior-year pair) -- evidence-driven, not a defect. 70 new focused tests (19 contract, 19 importer, 32 engine) plus the full adjacent bank/engine/product-integration suite (130 tests) and the entity-classification/scaleout-adjacent suite (66 passed, 8 skipped, one pre-existing unrelated operations-review-artifact failure confirmed via git stash comparison) all pass; py_compile and git diff --check pass. Financial V2's 1,492 denominator, the 1,382/83/27 entity-family split, current_research_ready 1,380, gross_margin 1,283 READY, the FCF proxy's 319/284 READY counts, current_ratio/net_working_capital 1,276 READY, and bank specialist behavior are regression-locked by construction (zero modification to any pre-existing corporate/bank code path -- only additive fields, functions, and keyword-only parameters with defaults); not independently re-run at full 1,492-ticker scale this session, mirroring how the bank specialist milestone itself verified its own regression locks. No dashboard, ai-core, production database, stance, valuation, Tactical V2, portfolio, sizing, execution, or VCI-duration change. Artifacts: C:\\Projects\\StockLookup\\operations-review\\securities-specialist-financial-research-foundation-v1-20260902\\. No successor is queued."
     }
   ],
   "blocked_capabilities": [
