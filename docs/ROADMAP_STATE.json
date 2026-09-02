@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.02.3",
+  "roadmap_version": "2026.09.02.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,14 +9,14 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "d20bcbcf4674ef26007ed749cf15755fa9dceb7f",
-  "last_updated_checkpoint": "d20bcbcf4674ef26007ed749cf15755fa9dceb7f",
+  "implementation_lineage_head": "c1108b883db163976eb364da005e63a2b9c9599e",
+  "last_updated_checkpoint": "c1108b883db163976eb364da005e63a2b9c9599e",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
     "milestone": "QUALIFIED_FREE_CASH_FLOW_RESEARCH_PROXY_V1",
-    "state": "ACTIVE"
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
@@ -584,9 +584,9 @@
     },
     {
       "milestone_id": "QUALIFIED_FREE_CASH_FLOW_RESEARCH_PROXY_V1",
-      "state": "ACTIVE",
-      "narrative_disposition": "IMPLEMENTATION_AND_READ_ONLY_REPLAY_IN_PROGRESS",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
+      "checkpoint": "c1108b883db163976eb364da005e63a2b9c9599e",
       "dependencies": ["LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1"],
       "unlocks": [],
       "authority_effect": "NONE / RESEARCH_ONLY_PROVIDER_NATIVE_SIGNED_CASH_FLOW_PROXY",
@@ -594,7 +594,7 @@
       "source_doc": "Owner-authorized QUALIFIED_FREE_CASH_FLOW_RESEARCH_PROXY_V1 directive (2026-09-02)",
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_IMPLEMENT_TEST_REAL_PERSISTED_READ_ONLY_REPLAY_ROADMAP_COMMIT_FAST_FORWARD_PUSH",
-      "notes": "Active on corrected baseline d20bcbcf4674ef26007ed749cf15755fa9dceb7f. Scope is confined to Financial V2 and its compact product projection: canonical operating_cash_flow plus provider-native signed canonical capital_expenditure only, with existing same-provider/source/scope/currency/scale/exact-period/STANDALONE_QUARTER gates. Excludes YTD/unknown duration, non-corporate issuer families, readiness, valuation, stance, tactical, portfolio, sizing, execution, provider, store, database, and UI changes. The immediately preceding legacy entity-classification recovery checkpoint is frozen to d20bcbcf4674ef26007ed749cf15755fa9dceb7f before this implementation line advances."
+      "notes": "COMPLETE on corrected baseline d20bcbcf4674ef26007ed749cf15755fa9dceb7f. Financial V2 adds free_cash_flow_proxy only for corporate issuers as operating_cash_flow + provider-native signed capital_expenditure under the existing exact same-provider/source/scope/currency/scale/period/STANDALONE_QUARTER gate; no sign normalization, YTD/unknown-duration admission, cross-provider mix, or non-corporate admission occurs. The descriptive same-quarter-prior-year direction is a level delta only when both compatible component pairs exist. The compact product path surfaces status/method/period/reasons/warnings and direction state without any value or raw statement payload. Focused engine, scaleout, product, and roadmap suites: 105 passed; py_compile and diff check passed. Real persisted read-only Financial V2 replay through the current normal scaleout path: denominator 1,492, zero silent drops, 319 READY proxy records, 284 READY directions, current_research_ready unchanged at 1,380; entity families 1,382 industrial / 83 limited / 27 generic, yielding 110 explicit NOT_APPLICABLE proxy records. Direct standard canonical-store readers confirm current raw schema 1.1.0, canonical mapper 1.3.0, 1,493 raw/canonical ticker shards and both existing canonical raw-item routes; retained CapEx pair signs include negative, zero, and positive values and are preserved untouched. No provider, raw/canonical-store, database, UI, stance, valuation, tactical, portfolio, sizing, execution, or VCI-duration change. Artifacts: C:\\Projects\\StockLookup\\operations-review\\qualified-free-cash-flow-research-proxy-v1-20260902\\. The immediately preceding legacy entity-classification recovery checkpoint is frozen to d20bcbcf4674ef26007ed749cf15755fa9dceb7f."
     }
   ],
   "blocked_capabilities": [
