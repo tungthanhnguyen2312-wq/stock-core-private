@@ -1,5 +1,31 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-02 - Core Analytical Product Rebaseline V1
+
+`CORE_ANALYTICAL_PRODUCT_REBASELINE_V1 = APPLIED / PRODUCT_CRITICAL_FEATURE_EXPANSION_ONLY`.
+
+Applied onto `14cc93ccc5cec97c1de865b69eba958f5f18ee7a` after Claude's completed
+`CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1`. That completion record is not
+overwritten.
+
+Closed history used, not reopened: `SECURITIES_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1`
+and `CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1 = COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE`
+at checkpoint `5e58d79f69810d6800d1f58244c421acb0e4230f` (closeout `14cc93c`), recorded in
+`docs/STATE.md`, `docs/ROADMAP.md`, and `docs/ROADMAP_STATE.json`. This ADR does not
+reconstruct missing specialist decision records.
+
+1. **Priority.** `CURRENT DEVELOPMENT PRIORITY = CORE ANALYTICAL PRODUCT COMPLETION`. This is **PRODUCT-CRITICAL FEATURE EXPANSION ONLY**. It is not a feature freeze. `SUPERSEDED_AS_CURRENT_DEVELOPMENT_PRIORITY`: market-wide data expansion as the default near-term work queue.
+2. **Near-term chain, exact order.** `CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1` COMPLETE → `TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3` QUEUED_NEXT → `INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1` QUEUED_AFTER_TACTICAL. Queued does not mean started. Owner authorization is still required to start Tactical V3.
+3. **Two modes.** Current Research / Product Mode is separate from Audit / PIT / Exact Mode. Missing audit-grade authority blocks only the dependent exact use. Provider/research proxies may be used in Current Research when method, provenance, fitness, and limitations are explicit.
+4. **Units and peers.** Never invent monetary scale, unit compatibility, PIT authority, or execution authority. Peer comparisons require comparable metric method/provider/scope.
+5. **Layering.** Feature engines own measurements; the strategy layer owns thresholds and policy. Threshold values are not data authority. No universal scoring system is required.
+6. **Technical inference.** BOS / CHoCH / VCP are deterministic technical inference, not proof of institutional or order-flow behavior. Legacy `candle_scan` / `vn_indicators` / `stock_analyzer` SMC scoring is not governed product authority.
+7. **Decision feedback.** Prospective false-negative / false-positive review is a core product capability. It is not PIT backtest, calibration authority, or a license to retune thresholds from empty T0 coverage.
+8. **UI.** UI/Dashboard remains frozen until `INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1` reaches the final integration pass.
+9. **Out of default queue.** Do not open standalone Interest Coverage, Insurance, forensic-accounting, monetary-basis, VCI-duration, absolute-liquidity, or more specialist micro-milestones unless they directly block one of the three product milestones.
+10. **Authority unchanged.** RAW_AS_TRADED / historical PIT, exact execution-capacity liquidity, `ACTIVE_UNIVERSE`, reverse-valuation intrinsic outputs, OCR-default scaleout deprioritization, and market-data provider expansion remain as already recorded. `docs/DATA_FIRST_DOCTRINE.md` is not redefined.
+11. **Spec.** `docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md` is the product feature layout for the three-milestone chain. It does not promote any blocked exact use.
+
 ## 2026-09-01 - Screener Master Projection And Decision Drawer Integration V1
 
 `SCREENER_MASTER_PROJECTION_AND_DECISION_DRAWER_INTEGRATION_V1` (`screener_master_projection.py`, `tools/run_screener_master_projection.py`, `tests/test_screener_master_projection.py`).
