@@ -57,6 +57,15 @@ from raw_financial_observations import (
 
 STORE_SCHEMA_VERSION = "1.1.0"
 
+#: `inspect_state()` status values. A schema mismatch on an otherwise well-formed state file
+#: means the store was built by an earlier source contract and needs a rebuild -- it is not
+#: the same fact as "ingestion never ran" (`MISSING`), and collapsing the two loses exactly the
+#: distinction an operator needs to act correctly (see `inspect_state`).
+STATE_STATUS_CURRENT = "CURRENT"
+STATE_STATUS_STALE_SCHEMA_REBUILD_REQUIRED = "STALE_SCHEMA_REBUILD_REQUIRED"
+STATE_STATUS_MISSING = "MISSING"
+STATE_STATUS_CORRUPT = "CORRUPT"
+
 STORE_RELATIVE = Path("data") / "market-wide-financials"
 OBSERVATIONS_RELATIVE = STORE_RELATIVE / "observations"
 STATE_FILENAME = "ingest_state.json"
@@ -276,13 +285,58 @@ def _shard_record(ticker: str, inputs: list[Mapping[str, Any]], built: Mapping[s
     }
 
 
+def inspect_state(runtime_root: Path | str) -> dict[str, Any]:
+    """Classify the persisted `ingest_state.json` without collapsing every non-current case
+    into "missing".
+
+    An old-but-readable state file (a prior `STORE_SCHEMA_VERSION` this store once wrote) is a
+    different fact than a store that was never ingested at all, or one whose state file is
+    unreadable garbage: an operator needs to know which, because the fix differs (rebuild vs.
+    first ingest vs. investigate corruption). This is read-only and side-effect free; it never
+    treats an old schema as current evidence.
+    """
+    path = state_path(runtime_root)
+    if not path.is_file():
+        return {"status": STATE_STATUS_MISSING, "path": str(path),
+                "found_schema_version": None, "expected_schema_version": STORE_SCHEMA_VERSION}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {"status": STATE_STATUS_MISSING, "path": str(path),
+                "found_schema_version": None, "expected_schema_version": STORE_SCHEMA_VERSION}
+    try:
+        payload = json.loads(text)
+    except ValueError:
+        return {"status": STATE_STATUS_CORRUPT, "path": str(path),
+                "found_schema_version": None, "expected_schema_version": STORE_SCHEMA_VERSION}
+    if not isinstance(payload, Mapping):
+        return {"status": STATE_STATUS_CORRUPT, "path": str(path),
+                "found_schema_version": None, "expected_schema_version": STORE_SCHEMA_VERSION}
+    found = payload.get("schema_version")
+    if not isinstance(found, str) or not found:
+        return {"status": STATE_STATUS_CORRUPT, "path": str(path),
+                "found_schema_version": found, "expected_schema_version": STORE_SCHEMA_VERSION}
+    if found == STORE_SCHEMA_VERSION:
+        return {"status": STATE_STATUS_CURRENT, "path": str(path),
+                "found_schema_version": found, "expected_schema_version": STORE_SCHEMA_VERSION}
+    return {"status": STATE_STATUS_STALE_SCHEMA_REBUILD_REQUIRED, "path": str(path),
+            "found_schema_version": found, "expected_schema_version": STORE_SCHEMA_VERSION}
+
+
 def load_state(runtime_root: Path | str) -> dict[str, Any]:
+    """Current-schema state only. Fail-closed, byte-for-byte unchanged from before
+    `inspect_state()` existed: a stale-schema or corrupt file still yields `{}` here, so no
+    caller of this function silently starts consuming evidence from an earlier source
+    contract. Use `inspect_state()` when the caller needs to distinguish *why*.
+    """
+    if inspect_state(runtime_root)["status"] != STATE_STATUS_CURRENT:
+        return {}
     path = state_path(runtime_root)
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    if not isinstance(payload, Mapping) or payload.get("schema_version") != STORE_SCHEMA_VERSION:
+    if not isinstance(payload, Mapping):
         return {}
     return dict(payload)
 
@@ -398,9 +452,12 @@ def verify(runtime_root: Path | str) -> dict[str, Any]:
     relative to the current payloads) separately, because they mean different things.
     """
     runtime_root = Path(runtime_root)
+    inspection = inspect_state(runtime_root)
+    if inspection["status"] != STATE_STATUS_CURRENT:
+        return {"ok": False, "reason": inspection["status"], "status": inspection["status"],
+                "found_schema_version": inspection["found_schema_version"],
+                "expected_schema_version": inspection["expected_schema_version"], "findings": []}
     state = load_state(runtime_root)
-    if not state:
-        return {"ok": False, "reason": "state_missing_or_unsupported_schema", "findings": []}
     discovered = discover_payloads(runtime_root)
     findings: list[dict[str, Any]] = []
     checked = 0

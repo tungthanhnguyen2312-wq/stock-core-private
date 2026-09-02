@@ -67,6 +67,10 @@ from financial_entity_applicability import (
 )
 from semantic_evidence_bridge import financial_identity_is_stock_metric
 from raw_financial_store import (
+    STATE_STATUS_CORRUPT as RAW_STATE_STATUS_CORRUPT,
+    STATE_STATUS_MISSING as RAW_STATE_STATUS_MISSING,
+    STATE_STATUS_STALE_SCHEMA_REBUILD_REQUIRED as RAW_STATE_STATUS_STALE,
+    inspect_state as inspect_raw_state,
     load_state as load_raw_state,
     observations_root,
     read_shard,
@@ -305,6 +309,30 @@ def _promoted_official_facts(runtime_root: Path | str, ticker: str, *,
             "source_sha256": _fingerprint({"input_kind": "qualified_official_promotion_v1", "facts": source})}
 
 
+def _raw_store_failure_reason(runtime_root: Path | str) -> str:
+    """Precise diagnosis for why layer 3 cannot see a usable raw observation store.
+
+    A stale-but-real prior ingest and "layer 1 has never run" are different operator facts
+    with different fixes; reporting both as "missing" (the pre-2026-09 behavior) sent whoever
+    hit this straight at a raw-store re-acquisition when the actual fix was a one-line rebuild
+    command. `RAW_STORE_SCHEMA_STALE_REBUILD_REQUIRED` is the exact, matchable token for that
+    case.
+    """
+    inspection = inspect_raw_state(runtime_root)
+    status = inspection["status"]
+    if status == RAW_STATE_STATUS_STALE:
+        return (f"RAW_STORE_SCHEMA_STALE_REBUILD_REQUIRED: raw observation store schema is "
+                f"{inspection['found_schema_version']!r}, expected "
+                f"{inspection['expected_schema_version']!r}; run "
+                f"tools/ingest_market_wide_financials.py --runtime-root <runtime-root> --execute "
+                f"to rebuild it under the current contract")
+    if status == RAW_STATE_STATUS_CORRUPT:
+        return ("RAW_STORE_CORRUPT: raw observation store ingest_state.json could not be read "
+                "as valid JSON; investigate before re-ingesting")
+    return ("RAW_STORE_MISSING: raw observation store has not been ingested yet; run "
+            "tools/ingest_market_wide_financials.py --runtime-root <runtime-root> --execute")
+
+
 def ingest(runtime_root: Path | str, *, generated_at: str, execute: bool = False,
            tickers: Iterable[str] | None = None) -> dict[str, Any]:
     """Build canonical facts for every ticker with a raw shard, rebuilding only what changed."""
@@ -318,7 +346,7 @@ def ingest(runtime_root: Path | str, *, generated_at: str, execute: bool = False
     official_only = _promoted_official_facts(runtime_root, "POW", profiles=profiles) if "POW" not in raw_state else None
     if not raw_state and official_only is None:
         return {"executed": False, "ok": False,
-                "reason": "raw observation store is missing or has an unsupported schema",
+                "reason": _raw_store_failure_reason(runtime_root),
                 "counts": {}}
 
     records: list[dict[str, Any]] = []
