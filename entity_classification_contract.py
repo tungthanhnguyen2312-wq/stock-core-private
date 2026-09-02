@@ -41,6 +41,7 @@ class EvidenceTier(StrEnum):
     EXCHANGE_INDUSTRY_CLASSIFICATION = "exchange_industry_classification"  # Exchange-provider ICB sector/industry sync (see exchange_industry_classification.py)
     FINANCIAL_STATEMENT_TEMPLATE = "statement_template"        # BCTC Form codes & exclusive line-item markers
     CURATED_SEED_AUTHORITY = "curated_seed_authority"          # config/ticker_entity_profiles.csv seed baseline
+    LEGACY_ACCEPTED_MILESTONE_REPLAY = "legacy_accepted_milestone_replay"  # Byte-identical recovery of a previously owner-accepted engine replay (see LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1)
 
 
 class ConfidenceSemantics(StrEnum):
@@ -124,6 +125,15 @@ DEFAULT_PROMOTED_CLASSIFICATIONS_PATH = ROOT_DIR / "config" / "promoted_entity_c
 #: (exchange_industry_classification.py) reconciled against retained statement-template evidence.
 #: Never overrides the seed CSV or the original promoted manifest; see resolve_layered_entity_classification.
 DEFAULT_SCALEOUT_PROMOTED_CLASSIFICATIONS_PATH = ROOT_DIR / "config" / "promoted_entity_classifications_scaleout_v1.json"
+#: Fourth authority tier (see LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1). Recovers
+#: previously owner-accepted current-state classifications that MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1
+#: (94e6aba) itself consumed as pre-existing authority through market_wide_financial_analysis_v2_scaleout
+#: .build_scaleout()'s legacy_records parameter -- previously sourced only from an untracked sibling-worktree
+#: artifact at replay time. Never overrides the seed CSV or the original promoted manifest. Strictly HIGHER
+#: precedence than the scale-out promoted tier, preserving the historical relationship where the scale-out
+#: milestone classified only the population this recovery tier still leaves unclassified. Populated by
+#: tools/run_legacy_entity_classification_recovery_v1.py; see resolve_layered_entity_classification.
+DEFAULT_LEGACY_RECOVERY_CLASSIFICATIONS_PATH = ROOT_DIR / "config" / "promoted_entity_classifications_legacy_recovery_v1.json"
 
 AUTHORITY_SCOPE_CURRENT_STATE = "CURRENT_STATE_ONLY"
 HISTORICAL_PIT_NOT_ESTABLISHED = "NOT_ESTABLISHED"
@@ -232,15 +242,33 @@ def load_scaleout_promoted_entity_classifications(
     return load_promoted_entity_classifications(p)
 
 
+def load_legacy_recovery_entity_classifications(
+    manifest_path: Path | str | None = None,
+) -> dict[str, EntityClassificationRecord]:
+    """Load the legacy accepted-authority recovery manifest (fourth authority tier).
+
+    Same shape and loader logic as `load_promoted_entity_classifications`, just a separate
+    file so the original 20 owner-approved P2E3 records and the scale-out promotion stay
+    byte-identical and independently auditable. Missing file -> {} (fails closed, exactly
+    like the other layered loaders when their file is absent).
+    """
+    p = Path(manifest_path) if manifest_path else DEFAULT_LEGACY_RECOVERY_CLASSIFICATIONS_PATH
+    if not p.is_file():
+        return {}
+    return load_promoted_entity_classifications(p)
+
+
 def resolve_layered_entity_classification(
     ticker: str,
     *,
     seed_profiles: Mapping[str, str] | None = None,
     promoted_records: Mapping[str, EntityClassificationRecord] | None = None,
     scaleout_promoted_records: Mapping[str, EntityClassificationRecord] | None = None,
+    legacy_recovery_records: Mapping[str, EntityClassificationRecord] | None = None,
     seed_path: Path | str | None = None,
     promoted_path: Path | str | None = None,
     scaleout_promoted_path: Path | str | None = None,
+    legacy_recovery_path: Path | str | None = None,
     as_of: str | None = None,
     require_historical_pit: bool = False,
 ) -> LayeredClassificationResult:
@@ -249,13 +277,21 @@ def resolve_layered_entity_classification(
     Precedence:
     A. If seed authority exists: seed remains authoritative.
     B. If no seed exists and an explicitly promoted qualified record exists: use promoted record.
-    B2. If no seed and no original promoted record exists, and a scale-out promoted qualified
-        record exists (see MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1): use it.
-        Same qualification/temporal rules as B; strictly lower precedence than the original
-        promoted manifest so a future owner-approved P2E3-style promotion always wins.
-    C. If seed and promoted (original or scale-out) record disagree: fail closed as CONFLICT.
-       Do NOT silently override seed. If the original promoted manifest and the scale-out
-       manifest disagree on the same ticker, that too fails closed as CONFLICT.
+    B1. If no seed and no original promoted record exists, and a legacy-recovery qualified record
+        exists (see LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1): use it. Same
+        qualification/temporal rules as B; strictly lower precedence than the original promoted
+        manifest so a future owner-approved promotion always wins. Strictly HIGHER precedence than
+        the scale-out promoted tier (B2): this recovers a previously owner-accepted classification
+        that predates the scale-out milestone, which itself classified only the population this
+        tier still leaves unresolved.
+    B2. If no seed, no original promoted record, and no legacy-recovery record exists, and a
+        scale-out promoted qualified record exists (see
+        MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1): use it. Same qualification/
+        temporal rules as B; strictly lower precedence than the original promoted manifest and
+        the legacy-recovery tier so either always wins.
+    C. If seed and promoted (original, legacy-recovery, or scale-out) record disagree: fail closed
+       as CONFLICT. Do NOT silently override seed. If two lower tiers disagree on the same ticker,
+       that too fails closed as CONFLICT.
     D. If promoted record is AMBIGUOUS / CONFLICT / UNKNOWN: must not supply positive classification.
     E. If neither authority exists: UNKNOWN.
     """
@@ -279,6 +315,8 @@ def resolve_layered_entity_classification(
     promoted = promoted_records if promoted_records is not None else load_promoted_entity_classifications(promoted_path)
     scaleout = (scaleout_promoted_records if scaleout_promoted_records is not None
                 else load_scaleout_promoted_entity_classifications(scaleout_promoted_path))
+    legacy_recovery = (legacy_recovery_records if legacy_recovery_records is not None
+                       else load_legacy_recovery_entity_classifications(legacy_recovery_path))
 
     seed_val = seeds.get(clean_sym)
     seed_class: EntityClass | None = None
@@ -289,6 +327,7 @@ def resolve_layered_entity_classification(
 
     prom_rec = promoted.get(clean_sym)
     scaleout_rec = scaleout.get(clean_sym)
+    legacy_rec = legacy_recovery.get(clean_sym)
 
     # Case A: Seed authority exists
     if seed_class is not None:
@@ -304,6 +343,20 @@ def resolve_layered_entity_classification(
                     reason=f"CONFLICT: seed authority ({seed_class.value}) disagrees with promoted record ({prom_rec.entity_class.value}); fails closed",
                     seed_record=seed_class.value,
                     promoted_record=prom_rec,
+                    is_positive_authority=False,
+                )
+        if legacy_rec is not None:
+            if legacy_rec.classification_status == ClassificationStatus.QUALIFIED and legacy_rec.entity_class != seed_class:
+                return LayeredClassificationResult(
+                    ticker=clean_sym,
+                    resolved_entity_class=EntityClass.UNKNOWN,
+                    classification_status=ClassificationStatus.CONFLICT,
+                    authority_tier="conflict",
+                    authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                    historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                    reason=f"CONFLICT: seed authority ({seed_class.value}) disagrees with legacy-recovery record ({legacy_rec.entity_class.value}); fails closed",
+                    seed_record=seed_class.value,
+                    promoted_record=legacy_rec,
                     is_positive_authority=False,
                 )
         if scaleout_rec is not None:
@@ -378,7 +431,57 @@ def resolve_layered_entity_classification(
                 is_positive_authority=False,
             )
 
-    # Case B2: No seed, no original promoted record -- check the scale-out promoted tier
+    # Case B1: No seed, no original promoted record -- check the legacy-recovery tier. This
+    # recovers a previously owner-accepted classification (see
+    # LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1) and must resolve before the
+    # scale-out tier below, since the scale-out milestone classified only the population that
+    # was still unclassified after this legacy cohort.
+    if legacy_rec is not None:
+        if as_of is not None:
+            k_avail = legacy_rec.knowledge_available_at or legacy_rec.verified_at
+            if k_avail and str(as_of).strip() < k_avail[:10]:
+                return LayeredClassificationResult(
+                    ticker=clean_sym,
+                    resolved_entity_class=EntityClass.UNKNOWN,
+                    classification_status=ClassificationStatus.UNKNOWN,
+                    authority_tier="prior_to_knowledge_availability",
+                    authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                    historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                    reason=f"as_of '{as_of}' is prior to knowledge_available_at/verified_at boundary '{k_avail}'; historical PIT not established",
+                    seed_record=None,
+                    promoted_record=legacy_rec,
+                    is_positive_authority=False,
+                )
+
+        if legacy_rec.classification_status == ClassificationStatus.QUALIFIED and legacy_rec.entity_class != EntityClass.UNKNOWN:
+            return LayeredClassificationResult(
+                ticker=clean_sym,
+                resolved_entity_class=legacy_rec.entity_class,
+                classification_status=ClassificationStatus.QUALIFIED,
+                authority_tier="legacy_recovery_record_authority",
+                authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                reason=f"legacy_recovery_record_authority:{legacy_rec.classification_reason}",
+                seed_record=None,
+                promoted_record=legacy_rec,
+                is_positive_authority=True,
+            )
+        else:
+            return LayeredClassificationResult(
+                ticker=clean_sym,
+                resolved_entity_class=EntityClass.UNKNOWN,
+                classification_status=legacy_rec.classification_status,
+                authority_tier="legacy_recovery_non_qualified",
+                authority_scope=AUTHORITY_SCOPE_CURRENT_STATE,
+                historical_pit_authority=HISTORICAL_PIT_NOT_ESTABLISHED,
+                reason=f"legacy_recovery_record_non_qualified:{legacy_rec.classification_reason}",
+                seed_record=None,
+                promoted_record=legacy_rec,
+                is_positive_authority=False,
+            )
+
+    # Case B2: No seed, no original promoted record, no legacy-recovery record -- check the
+    # scale-out promoted tier
     if scaleout_rec is not None:
         if as_of is not None:
             k_avail = scaleout_rec.knowledge_available_at or scaleout_rec.verified_at
@@ -442,25 +545,30 @@ def load_layered_entity_profiles(
     seed_path: Path | str | None = None,
     promoted_path: Path | str | None = None,
     scaleout_promoted_path: Path | str | None = None,
+    legacy_recovery_path: Path | str | None = None,
 ) -> dict[str, str]:
     """Load merged positive entity profiles {TICKER: entity_type} under Layered Authority Topology B.
 
     Precedence:
     1. Seed authority from config/ticker_entity_profiles.csv (20 baseline issuers)
     2. Exact owner-approved promoted records from config/promoted_entity_classifications.json (20 promoted issuers)
-    3. Scale-out promoted records from config/promoted_entity_classifications_scaleout_v1.json, when
+    3. Legacy-recovery records from config/promoted_entity_classifications_legacy_recovery_v1.json, when
+       present (LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1) -- strictly lower precedence
+       than 1 and 2, so it can only fill gaps, never override them; strictly higher precedence than 4.
+    4. Scale-out promoted records from config/promoted_entity_classifications_scaleout_v1.json, when
        present (MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1) -- strictly lower precedence
-       than 1 and 2, so it can only fill gaps, never override them.
-    4. Contradictory records across any two tiers fail closed (omitted).
-    5. Unpromoted issuers are omitted (defaulting to unknown).
+       than 1, 2, and 3, so it can only fill gaps, never override them.
+    5. Contradictory records across any two tiers fail closed (omitted).
+    6. Unpromoted issuers are omitted (defaulting to unknown).
     """
     seeds = load_seed_profiles(seed_path)
     promoted = load_promoted_entity_classifications(promoted_path)
     scaleout = load_scaleout_promoted_entity_classifications(scaleout_promoted_path)
+    legacy_recovery = load_legacy_recovery_entity_classifications(legacy_recovery_path)
 
     merged: dict[str, str] = {}
 
-    for sym in list(seeds.keys()) + list(promoted.keys()) + list(scaleout.keys()):
+    for sym in list(seeds.keys()) + list(promoted.keys()) + list(legacy_recovery.keys()) + list(scaleout.keys()):
         if sym in merged:
             continue
         res = resolve_layered_entity_classification(
@@ -468,6 +576,7 @@ def load_layered_entity_profiles(
             seed_profiles=seeds,
             promoted_records=promoted,
             scaleout_promoted_records=scaleout,
+            legacy_recovery_records=legacy_recovery,
         )
         if res.is_positive_authority and res.resolved_entity_class != EntityClass.UNKNOWN:
             merged[sym] = res.resolved_entity_class.value

@@ -125,17 +125,23 @@ def test_promoted_records_resolution():
 
 
 def test_layered_profiles_merging():
-    """Merged layered profiles contain the 40 original records plus whatever the scale-out
-    tier (config/promoted_entity_classifications_scaleout_v1.json, see
-    MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1) currently adds -- the 40 seed
-    and original-promoted records are the fixed part of this invariant; the scale-out count
-    is read from its own manifest rather than hardcoded, since widening it is the entire
-    point of that milestone."""
-    from entity_classification_contract import load_scaleout_promoted_entity_classifications
+    """Merged layered profiles contain the 40 original records plus whatever the
+    legacy-recovery tier (config/promoted_entity_classifications_legacy_recovery_v1.json,
+    see LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1) and the scale-out tier
+    (config/promoted_entity_classifications_scaleout_v1.json, see
+    MARKET_WIDE_FINANCIAL_ENTITY_CLASSIFICATION_SCALEOUT_V1) currently add -- the 40 seed
+    and original-promoted records are the fixed part of this invariant; the other two
+    counts are read from their own manifests rather than hardcoded, since widening them is
+    the entire point of those milestones."""
+    from entity_classification_contract import (
+        load_legacy_recovery_entity_classifications,
+        load_scaleout_promoted_entity_classifications,
+    )
 
     profiles = load_layered_entity_profiles()
+    legacy_recovery_count = len(load_legacy_recovery_entity_classifications())
     scaleout_count = len(load_scaleout_promoted_entity_classifications())
-    assert len(profiles) == 40 + scaleout_count
+    assert len(profiles) == 40 + legacy_recovery_count + scaleout_count
     # All 20 seed profiles present
     for t, c in EXPECTED_SEED_PROFILES.items():
         assert profiles[t] == c

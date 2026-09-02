@@ -71,6 +71,7 @@ from entity_classification_contract import (  # noqa: E402
     EvidenceTier,
     DEFAULT_SCALEOUT_PROMOTED_CLASSIFICATIONS_PATH,
     load_layered_entity_profiles,
+    load_legacy_recovery_entity_classifications,
     load_promoted_entity_classifications,
     load_scaleout_promoted_entity_classifications,
     load_seed_profiles,
@@ -416,15 +417,20 @@ class GovernedRegistryLoadedFromTrackedFilesTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertGreater(len(first), 0)
 
-    def test_governed_distribution_matches_the_sum_of_the_three_tracked_tiers(self):
+    def test_governed_distribution_matches_the_sum_of_the_four_tracked_tiers(self):
         """Cross-validates the live registry arithmetic: every positively-classified
-        ticker traces to exactly one of the three tracked tiers, with no unexplained
-        extra classifications from an untracked source."""
+        ticker traces to exactly one of the four tracked tiers (seed, original promoted,
+        legacy-recovery -- see LEGACY_ENTITY_CLASSIFICATION_TRACKED_AUTHORITY_RECOVERY_V1
+        -- and scale-out), with no unexplained extra classifications from an untracked
+        source."""
         seed = load_seed_profiles()
         promoted = load_promoted_entity_classifications()
+        legacy_recovery = load_legacy_recovery_entity_classifications()
         scaleout = load_scaleout_promoted_entity_classifications()
         merged = load_layered_entity_profiles()
         tier_union = set(seed) | {t for t, r in promoted.items()
+                                  if r.classification_status == ClassificationStatus.QUALIFIED} \
+                              | {t for t, r in legacy_recovery.items()
                                   if r.classification_status == ClassificationStatus.QUALIFIED} \
                               | {t for t, r in scaleout.items()
                                   if r.classification_status == ClassificationStatus.QUALIFIED}
