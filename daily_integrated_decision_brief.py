@@ -181,6 +181,7 @@ def build_market_summary(*, descriptive: Mapping[str, Any] | None, sector_leader
     available_groups = ((sector_leadership or {}).get("groups") or {}).get("available_group_count") or 0
     phase_dist = Counter(record.get("tactical_phase") for record in current_records.values())
     posture_dist = Counter(record.get("research_action_posture") for record in current_records.values())
+    fundamental_dist = Counter(record.get("fundamental_state") for record in current_records.values())
     part_states = Counter(_participation_confirmation_state(record) for record in current_records.values())
     market_regime = market.get("current_breadth_state") or "NOT_AVAILABLE"
     return {
@@ -211,6 +212,7 @@ def build_market_summary(*, descriptive: Mapping[str, Any] | None, sector_leader
             "concentration_ratio": (leading_groups / available_groups) if available_groups else None,
         },
         "research_action_posture_distribution": dict(sorted(posture_dist.items())),
+        "fundamental_state_distribution": dict(sorted(fundamental_dist.items())),
         "authority_boundary": {"deterministic_technical_inference_only": True, "not_institutional_or_order_flow_proof": True, "sector_strength_never_a_buy_signal": True},
     }
 

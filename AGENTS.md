@@ -17,13 +17,18 @@ development workflow.
 near-term work queue. Coverage, extraction, and specialist work continue only when they
 directly block one of the three product milestones below.
 
-**Near-term roadmap (exact order, 2026-09-02 core-analytical-product rebaseline):**
-`CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1` = COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE
-(checkpoint `5e58d79f69810d6800d1f58244c421acb0e4230f`, closeout `14cc93ccc5cec97c1de865b69eba958f5f18ee7a`)
-→ `TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3` = QUEUED_NEXT (not started)
-→ `INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1` = QUEUED_AFTER_TACTICAL (not started).
-Queued does **not** mean started. Owner authorization is still required to start a
-later milestone.
+**Near-term roadmap (2026-09-02 core-analytical-product rebaseline; updated 2026-09-03):**
+`CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1` = COMPLETE
+(checkpoint `5e58d79f69810d6800d1f58244c421acb0e4230f`)
+→ `TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3` = COMPLETE (checkpoint `01ffdd5`)
+→ `INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1` = COMPLETE (checkpoint `5227207eec305b8ebfcbba065615e36a27a04b03`)
+→ `DAILY_INTEGRATED_DECISION_BRIEF_AND_PROSPECTIVE_FEEDBACK_V1` = COMPLETE (checkpoint `90e3260a5596fa02c210fcc13bb3d1b28d8b329f`)
+→ `CANONICAL_DAILY_FINANCIAL_V2_AND_CURRENT_RESEARCH_ENRICHMENT_V1` = COMPLETE
+(checkpoint `f3880c589d345ff20e67fd2df84acdaf57f4681e`).
+All three original product milestones plus their two owner-authorized follow-ons are
+complete; see `docs/ROADMAP_STATE.json` (`python tools/stocklookup_roadmap.py`) for the
+authoritative current/queued state. Queued does **not** mean started. Owner authorization
+is still required to start a later milestone.
 
 Do **not** open standalone Interest Coverage, Insurance, forensic-accounting,
 monetary-basis, VCI-duration, absolute-liquidity, or further specialist

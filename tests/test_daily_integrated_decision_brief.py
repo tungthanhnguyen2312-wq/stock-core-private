@@ -69,6 +69,26 @@ class TestFinancialEvidenceContext:
         assert art["source_artifact_identities"]["financial_analysis_product"] == "financial_analysis_product_integration/v1:cafebabe"
 
 
+class TestMarketSummaryFundamentalDistribution:
+    """Section 17: full-market cross-sectional fundamental context, now meaningful once real
+    fundamental_state flows through the integrated decision records this joins over."""
+
+    def test_fundamental_state_distribution_present_and_accurate(self):
+        records = {
+            "AAA": {**_record("AAA", posture="HOLD"), "fundamental_state": "IMPROVING"},
+            "BBB": {**_record("BBB", posture="AVOID"), "fundamental_state": "DETERIORATING"},
+            "CCC": {**_record("CCC", posture="HOLD"), "fundamental_state": "DETERIORATING"},
+            "DDD": {**_record("DDD", posture="WAIT_FOR_CONFIRMATION"), "fundamental_state": "INSUFFICIENT"},
+        }
+        summary = brief.build_market_summary(
+            descriptive={"market_breadth": {}}, sector_leadership=None,
+            current_records=records, market_transition=None,
+        )
+        assert summary["fundamental_state_distribution"] == {
+            "DETERIORATING": 2, "IMPROVING": 1, "INSUFFICIENT": 1,
+        }
+
+
 class TestClassifyOpportunitySet:
     def test_initiate_on_breakout_is_actionable_now(self):
         assert brief.classify_opportunity_set(_record("A", posture="INITIATE_ON_BREAKOUT")) == brief.ACTIONABLE_NOW
