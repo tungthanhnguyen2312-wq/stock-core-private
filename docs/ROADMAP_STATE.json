@@ -15,12 +15,10 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1",
+    "milestone": "TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3",
     "state": "COMPLETE"
   },
-  "queued_next": [
-    "TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3"
-  ],
+  "queued_next": [],
   "milestones": [
     {
       "milestone_id": "MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1",
@@ -628,17 +626,17 @@
     },
     {
       "milestone_id": "TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3",
-      "state": "NEXT",
-      "narrative_disposition": "OWNER_SELECTED / QUEUED_NEXT / NOT_STARTED / PRODUCT_CRITICAL_FEATURE_EXPANSION_ONLY",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
+      "checkpoint": "HEAD",
       "dependencies": ["CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1"],
       "unlocks": ["INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1"],
       "authority_effect": "NONE / RESEARCH_PRODUCT_ONLY",
       "owner_authorized": true,
-      "source_doc": "Owner core-analytical-product rebaseline (2026-09-02); docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md",
+      "source_doc": "Owner-authorized TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3 directive (2026-09-02); docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md",
       "state_history": [],
-      "owner_override": null,
-      "notes": "QUEUED_NEXT after CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1 COMPLETE at 5e58d79 / closeout 14cc93c. Not started by this rebaseline. Queued does not mean started. Extends governed Tactical V2 around the unmodified primary entry_state. Product-critical MA/ATR/NATR/RSI/MACD/relative strength, swings HH/HL/LH/LL, BOS/CHoCH, base/VCP/pivot/breakout/failed-breakout, relative-volume/acceleration/dry-up, OBV/CMF where supported, market/sector breadth and relative strength, trigger/invalidation. BOS/CHoCH/VCP are deterministic technical inference, not institutional/order-flow proof. True ATR remains blocked while HIGH_LOW_BASIS_NOT_COMPATIBLE. Legacy candle_scan/vn_indicators/stock_analyzer SMC scoring is not current product authority. Feature engine owns measurements; strategy owns thresholds/policy. No UI."
+      "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH_IF_TERMINAL_SAFE",
+      "notes": "COMPLETE. Extends technical_structure_context.py to v2 under this milestone per AGENTS.md edit-over-proliferate rule (price_structure_breakout_context.py belongs to the legacy daily research bundle; no competing tactical engine created). All V1 output keys preserved verbatim; additive V3 keys per eligible ticker: swing_structure (confirmed fractal swings N=2, no lookahead; UPTREND 185, DOWNTREND 372, EARLY_BULLISH_REVERSAL 173, EARLY_BEARISH_REVERSAL 181, INSUFFICIENT_HISTORY 31), bos_context (BULLISH 74 / BEARISH 71; close-through confirmed level by rule; not institutional activity), choch_context (BULLISH 53 / BEARISH 26; first structural break against established structure; not smart money), pivot_context (942 valid pivots; last confirmed swing high or V1 resistance fallback), breakout_state_v3 (BREAKOUT 123, EXTENDED_AFTER_BREAKOUT 35, FAILED_BREAKOUT 10, TESTING_PIVOT 272, BELOW_PIVOT 502; measurement only), trigger_context (PIVOT_BREAKOUT_TRIGGER 423, CONFIRMED_BOS_TRIGGER 69, RETEST_BROKEN_PIVOT 8, NO_TRIGGER 442; not execution authority), invalidation_context (911 available; analytical context, not a stop-loss). Full universe denominator 1,683 / 942 eligible (STRUCTURE_READY) / 741 not eligible. Zero silent drops. ATR/wick/H-L geometry remain NOT_AVAILABLE_HIGH_LOW_BASIS_NOT_COMPATIBLE throughout; candle_body_fraction blocked as NOT_AVAILABLE_OPEN_NOT_IN_RETAINED_SERIES. PNJ diagnostic: TACTICAL_SIGNAL_WAS_PRESENT (breakout onset 2026-08-20 close 37.30 over pivot 36.50; extended through 2026-08-27; pullback on as-of 2026-08-28 into UPTREND). Product projection: market_structure_breakout_product_projection.py emits compact tactical records without raw histories. 72/72 tests pass (18 V1 + 54 V3 additive); adjacent test suites pass. INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1 remains DEFERRED and unauthorized. Operations review artifact: operations-review/tactical-market-structure-breakout-v3-20260902/."
     },
     {
       "milestone_id": "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1",
