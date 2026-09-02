@@ -56,6 +56,7 @@ VALUATION_DIR = OPS_ROOT / "current-common-shares-authority-recovery-and-scaleou
 DESCRIPTIVE_PATH = OPS_ROOT / "market-wide-current-descriptive-research-v1-20260828/market_wide_current_descriptive_research_artifact.json"
 P3F9B_PATH = OPS_ROOT / "p3f9b-market-wide-exact-session-scaleout-20260828/p3f9b_mva_exact_session_snapshot.json"
 LEGACY_OPPORTUNITY_PATH = OPS_ROOT / "current-opportunity-prioritization-v1-20260824/current_opportunity_prioritization_artifact.json"
+SECTOR_LEADERSHIP_PATH = OPS_ROOT / "current-market-sector-leadership-context-v1-20260828/current_market_sector_leadership_context_artifact.json"
 
 
 def _load_json(path: Path) -> dict:
@@ -141,12 +142,16 @@ def load_inputs(session: str = "2026-08-28"):
         requested_at=f"{session}T00:00:00+07:00",
     )
 
-    # 5. Market / Sector
-    mkt_sector_art = {
+    # 5. Market / Sector: load the real retained current_market_sector_leadership_context/v1
+    # artifact when available so this replay exercises the same real market["market"].
+    # current_breadth_state / market["ticker_contexts"][ticker].sector_leadership_context.
+    # leadership_state shape build_ticker_integrated_decision actually reads in production
+    # (canonical_post_close_pipeline.py loads this same artifact), rather than a permanently
+    # neutral stand-in that could never exercise the market-regime/sector-leadership policy paths.
+    mkt_sector_art = _load_json(SECTOR_LEADERSHIP_PATH) if SECTOR_LEADERSHIP_PATH.exists() else {
         "artifact_identity": desc_art.get("artifact_identity"),
-        "breadth_regime": "NEUTRAL_MIXED",
-        "market_state": "NEUTRAL_MIXED",
-        "sector_leadership_state": "IN_LINE",
+        "market": {"current_breadth_state": "NEUTRAL_MIXED"},
+        "ticker_contexts": {},
     }
 
     # 6. Legacy decisions

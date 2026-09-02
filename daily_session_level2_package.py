@@ -184,6 +184,8 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "named_20260824_triage": ops / "full-universe-entry-candidate-triage-20260824" / "full_universe_entry_candidate_triage_20260824.json",
         "postclose_20260824_triage": ops / "full-universe-entry-candidate-triage-postclose-20260824" / "full_universe_entry_candidate_triage_20260824.json",
         "integrated_investment_decision_product": ops / f"integrated-investment-decision-product-v1-{nodash}" / "integrated_investment_decision_product_artifact.json",
+        "daily_integrated_decision_brief": ops / f"daily-integrated-decision-brief-v1-{nodash}" / "daily_integrated_decision_brief_artifact.json",
+        "market_structure_breakout_v3_projection": ops / f"integrated-investment-decision-product-v1-{nodash}" / "market_structure_breakout_v3_projection_artifact.json",
     }
 
 

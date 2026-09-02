@@ -8,23 +8,38 @@ module computes no score, forecast, probability, target, or sizing, and never in
 session from calendar-day subtraction or filesystem mtime; session identity always comes from the
 governed input registry (``config/daily_research_session_input_registry.json``) and the already
 materialized ``run_manifest.json``/``ai_research_session_bundle.json`` for each side.
+
+v2 (DAILY_INTEGRATED_DECISION_BRIEF_AND_PROSPECTIVE_FEEDBACK_V1) adds ``posture_transition``: a
+per-ticker deterministic named transition between the two sessions' own already-computed
+``integrated_investment_decision_product/v1`` records (``research_action_posture``/
+``tactical_phase``/``decision_identity``), resolved from the same session-scoped path
+``canonical_post_close_pipeline.py`` writes and ``export_ai_bundle.py`` auto-resolves. Every v1
+field/section is unchanged; this is purely additive.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping
 
+import daily_session_level2_package
 from correlation_concentration_guard import CONTRACT_VERSION as CORRELATION_CONCENTRATION_GUARD_CONTRACT_VERSION
 from daily_research_session_operations import frozen_input_identities, load_registry, registered_session_selection
 from field_temporal_contract import stable_id
 from multi_session_thesis_recommendation_lifecycle import CONFIRMATION_STATES as TACTICAL_CONFIRMATION_STATES
 from multi_session_thesis_recommendation_lifecycle import build_artifact as build_lifecycle_artifact
 
-CONTRACT_VERSION = "next_session_decision_brief/v1"
+CONTRACT_VERSION = "next_session_decision_brief/v2"
 HIGH_PRIORITY_TIER = "PRIORITY_NOW"
 AVAILABLE, PARTIAL, UNAVAILABLE, NOT_APPLICABLE = "AVAILABLE", "PARTIAL", "UNAVAILABLE", "NOT_APPLICABLE"
+_CONSTRUCTIVE_TACTICAL_PHASES = frozenset({"TREND_CONTINUATION", "BREAKOUT_CONFIRMED", "RETEST_AFTER_BREAKOUT", "EXTENDED", "BASE_BUILDING"})
+POSTURE_TRANSITION_LABELS = frozenset({
+    "NEW_BREAKOUT", "NEW_EARLY_WATCH", "NEW_RETEST_CANDIDATE", "WAIT_TO_INITIATE", "EARLY_WATCH_TO_INITIATE",
+    "INITIATE_TO_HOLD", "INITIATE_TO_EXTENDED", "BREAKOUT_FAILED", "UPTREND_TO_BREAKDOWN", "AVOID_TO_RECOVERY_WATCH",
+    "POSTURE_UNCHANGED", "NEWLY_AVAILABLE", "NO_LONGER_AVAILABLE", "POSTURE_CHANGED_OTHER",
+})
 
 
 class NextSessionDecisionBriefError(ValueError):
@@ -388,6 +403,112 @@ def _watch_conditions(current_bundle: Mapping[str, Any]) -> dict[str, Any]:
     )
 
 
+def _classify_posture_transition(previous: Mapping[str, Any] | None, current: Mapping[str, Any] | None) -> str:
+    """Deterministic (previous, current) integrated-decision-record pair -> named transition.
+
+    A pure lookup over the two sessions' own already-computed research_action_posture/
+    tactical_phase; never infers a causal story. UPTREND_TO_BREAKDOWN is checked first since it is
+    a tactical_phase signal that can co-occur with several different posture pairs. The specific
+    named pairs (WAIT_TO_INITIATE, EARLY_WATCH_TO_INITIATE, INITIATE_TO_HOLD, INITIATE_TO_EXTENDED,
+    BREAKOUT_FAILED, AVOID_TO_RECOVERY_WATCH) win over the more general NEW_*/POSTURE_CHANGED_OTHER
+    buckets.
+    """
+    if current is None:
+        return "NO_LONGER_AVAILABLE"
+    if previous is None:
+        return "NEWLY_AVAILABLE"
+    prev_posture, curr_posture = previous.get("research_action_posture"), current.get("research_action_posture")
+    prev_phase, curr_phase = previous.get("tactical_phase"), current.get("tactical_phase")
+    if prev_phase in _CONSTRUCTIVE_TACTICAL_PHASES and curr_phase == "BREAKDOWN":
+        return "UPTREND_TO_BREAKDOWN"
+    if prev_posture == curr_posture:
+        return "POSTURE_UNCHANGED"
+    if prev_posture == "WAIT_FOR_CONFIRMATION" and curr_posture == "INITIATE_ON_BREAKOUT":
+        return "WAIT_TO_INITIATE"
+    if prev_posture == "EARLY_WATCH" and curr_posture == "INITIATE_ON_BREAKOUT":
+        return "EARLY_WATCH_TO_INITIATE"
+    if prev_posture == "INITIATE_ON_BREAKOUT" and curr_posture == "HOLD":
+        return "INITIATE_TO_HOLD"
+    if prev_posture == "INITIATE_ON_BREAKOUT" and curr_posture == "HOLD_DO_NOT_ADD":
+        return "INITIATE_TO_EXTENDED"
+    if prev_posture == "INITIATE_ON_BREAKOUT" and curr_posture in ("WAIT_FOR_CONFIRMATION", "AVOID", "REDUCE"):
+        return "BREAKOUT_FAILED"
+    if prev_posture == "AVOID" and curr_posture in ("EARLY_WATCH", "WAIT_FOR_CONFIRMATION"):
+        return "AVOID_TO_RECOVERY_WATCH"
+    if curr_posture == "INITIATE_ON_BREAKOUT":
+        return "NEW_BREAKOUT"
+    if curr_posture == "EARLY_WATCH":
+        return "NEW_EARLY_WATCH"
+    if curr_posture == "ACCUMULATE_ON_RETEST":
+        return "NEW_RETEST_CANDIDATE"
+    return "POSTURE_CHANGED_OTHER"
+
+
+def _resolve_integrated_decision_artifact(root: Path, session: str | None) -> Mapping[str, Any] | None:
+    """Load the per-session integrated_investment_decision_product/v1 artifact if materialized.
+
+    Same canonical session-scoped path canonical_post_close_pipeline.py writes and
+    export_ai_bundle.py auto-resolves from (daily_session_level2_package.session_artifact_paths);
+    fails soft to None (not yet materialized) rather than guessing a different session's artifact.
+    """
+    if not session:
+        return None
+    path = daily_session_level2_package.session_artifact_paths(root, session)["integrated_investment_decision_product"]
+    if not path.is_file():
+        return None
+    artifact = _read_json(path)
+    if artifact.get("session") != session:
+        raise NextSessionDecisionBriefError(f"INTEGRATED_DECISION_ARTIFACT_SESSION_MISMATCH:expected={session}:observed={artifact.get('session')}")
+    return artifact
+
+
+def _posture_transition(*, root: Path, current_session: str, previous_session: str | None) -> dict[str, Any]:
+    current_integrated = _resolve_integrated_decision_artifact(root, current_session)
+    if current_integrated is None:
+        return _section(availability=UNAVAILABLE, reason_codes=["CURRENT_INTEGRATED_DECISION_ARTIFACT_NOT_MATERIALIZED"], transition_counts={}, records={})
+    current_records = current_integrated.get("records") or {}
+    if previous_session is None:
+        return _section(
+            availability=UNAVAILABLE, reason_codes=["NO_PREVIOUS_QUALIFIED_SESSION"], transition_counts={}, records={},
+            current_universe_count=len(current_records),
+            source_lineage={"current_integrated_decision_identity": current_integrated.get("artifact_identity")},
+        )
+    previous_integrated = _resolve_integrated_decision_artifact(root, previous_session)
+    if previous_integrated is None:
+        return _section(
+            availability=PARTIAL, reason_codes=["PREVIOUS_INTEGRATED_DECISION_ARTIFACT_NOT_MATERIALIZED"], transition_counts={}, records={},
+            current_universe_count=len(current_records),
+            source_lineage={"current_integrated_decision_identity": current_integrated.get("artifact_identity")},
+        )
+    previous_records = previous_integrated.get("records") or {}
+    records: dict[str, Any] = {}
+    counts: Counter = Counter()
+    for ticker in sorted(set(current_records) | set(previous_records)):
+        prev_rec, curr_rec = previous_records.get(ticker), current_records.get(ticker)
+        label = _classify_posture_transition(prev_rec, curr_rec)
+        counts[label] += 1
+        records[ticker] = {
+            "transition": label,
+            "previous_posture": (prev_rec or {}).get("research_action_posture"),
+            "current_posture": (curr_rec or {}).get("research_action_posture"),
+            "previous_tactical_phase": (prev_rec or {}).get("tactical_phase"),
+            "current_tactical_phase": (curr_rec or {}).get("tactical_phase"),
+            "previous_decision_identity": (prev_rec or {}).get("decision_identity"),
+            "current_decision_identity": (curr_rec or {}).get("decision_identity"),
+        }
+    return _section(
+        availability=AVAILABLE,
+        transition_counts=dict(sorted(counts.items())),
+        records=records,
+        current_universe_count=len(current_records),
+        previous_universe_count=len(previous_records),
+        source_lineage={
+            "previous_integrated_decision_identity": previous_integrated.get("artifact_identity"),
+            "current_integrated_decision_identity": current_integrated.get("artifact_identity"),
+        },
+    )
+
+
 def build_artifact(
     *,
     root: Path,
@@ -435,6 +556,7 @@ def build_artifact(
         "recommendation_transition": _retention_transition(current["bundle"], previous["bundle"] if previous else None, "recommendation_retention", "recommendation"),
         "invalidation_transition": _retention_transition(current["bundle"], previous["bundle"] if previous else None, "fundamental_invalidation_retention", "fundamental_invalidation"),
         "tactical_transition": _tactical_transition(root=root, registry=registry, current_session=current_session, previous_session=resolved_previous_session),
+        "posture_transition": _posture_transition(root=root, current_session=current_session, previous_session=resolved_previous_session),
         "correlation_concentration_context": _correlation_concentration_context(),
         "next_session_watch_conditions": _watch_conditions(current["bundle"]),
         "authority_boundary": {

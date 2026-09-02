@@ -76,6 +76,35 @@ def _decision_brief(session: str, operation: Path, previous_bundle: Path | None,
         return None
 
 
+def _daily_integrated_decision_brief(session: str, operation: Path, decision_brief_path: Path | None, root: Path = ROOT) -> Path | None:
+    """Best-effort, non-blocking: derived evidence riding alongside publication, never a gate on
+    it. Requires next_session_decision_brief/v2 to have built successfully (its market_transition/
+    sector_transition/posture_transition sections are reused verbatim, never recomputed) and this
+    session's own integrated_investment_decision_product to already be materialized by canonical
+    post-close -- if that is genuinely missing, this returns None rather than silently reusing a
+    stale prior-session product."""
+    if decision_brief_path is None:
+        print("STATUS: DAILY_INTEGRATED_DECISION_BRIEF_SKIPPED\nREASON: NEXT_SESSION_DECISION_BRIEF_NOT_AVAILABLE")
+        return None
+    try:
+        from daily_integrated_decision_brief import build_from_session
+        next_session_brief = json.loads(decision_brief_path.read_text(encoding="utf-8"))
+        brief = build_from_session(root=root, session=session, next_session_brief=next_session_brief)
+        if brief is None:
+            print(f"STATUS: DAILY_INTEGRATED_DECISION_BRIEF_SKIPPED\nREASON: INTEGRATED_INVESTMENT_DECISION_PRODUCT_NOT_MATERIALIZED\nSESSION: {session}")
+            return None
+        payload = json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+        path = operation / "daily_integrated_decision_brief.json"
+        if path.exists() and path.read_text(encoding="utf-8") != payload:
+            print(f"STATUS: DAILY_INTEGRATED_DECISION_BRIEF_CONTENT_CONFLICT_SKIPPED\nSESSION: {session}")
+            return None
+        path.write_text(payload, encoding="utf-8")
+        return path
+    except Exception as exc:
+        print(f"STATUS: DAILY_INTEGRATED_DECISION_BRIEF_SKIPPED\nREASON: {exc}")
+        return None
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="command", required=True)
@@ -119,6 +148,7 @@ def main(argv=None) -> int:
 
     previous_bundle = _previous(session, a.replay_root)
     decision_brief_path = _decision_brief(session, operation, previous_bundle, run_identity)
+    daily_integrated_brief_path = _daily_integrated_decision_brief(session, operation, decision_brief_path)
 
     try:
         from ai_handoff_publication import publish
@@ -130,6 +160,7 @@ def main(argv=None) -> int:
             producer_checkpoint=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, encoding="utf-8").strip(),
             push=not a.replay_local,
             decision_brief=decision_brief_path,
+            daily_integrated_decision_brief=daily_integrated_brief_path,
         )
     except Exception as exc:
         print(f"STATUS: FAILED_PUBLICATION\nREASON: {exc}\nRECOVERY_ACTION: verify private handoff repository")

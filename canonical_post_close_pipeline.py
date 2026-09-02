@@ -498,21 +498,48 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
 
     def _integrated_investment_decision_product():
         from integrated_investment_decision_product import build_artifact as build
-        tac = _load(paths["tactical_classifier"])
-        if not tac:
-            raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        import market_structure_breakout_product_projection as msb_proj
+        import market_wide_relative_volume_research as rvol_research
+        import technical_structure_context as tsc
+        # integrated_investment_decision_product.evaluate_tactical_phase/evaluate_participation read
+        # a FLAT compact shape (eligible, market_structure_state, breakout_state_v3, bos_state,
+        # choch_state, relative_volume_percentile, volume_acceleration_ratio, ...) -- the
+        # market_structure_breakout_product_projection/v1 (Tactical V3) and market_wide_relative_
+        # volume_research/v1 contracts, not watchlist_tactical_entry_classifier's own deeply nested
+        # nine-state entry_state shape (no eligible/market_structure_state/bos_state keys at all) or
+        # market_wide_current_descriptive_research's market-wide breadth shape (no per-ticker
+        # relative_volume_percentile at all). Neither V3 projection nor relative-volume research has
+        # its own canonical per-session materialization path yet, so both are built fresh here from
+        # already-registered raw inputs -- exactly this function's existing pattern for financial_
+        # momentum/corporate_event_context/historical_context above -- rather than loaded from a
+        # path that does not exist. Verified against real 2026-08-28/2026-08-25 retained evidence:
+        # the previous wiring produced research_action_posture=INSUFFICIENT_CURRENT_RESEARCH for
+        # every ticker (eligible/market_structure_state always absent -> always None -> always
+        # falsy), a silent, universe-wide defect this fix corrects.
         fa = _load(retained_paths["fundamental"])
         val = _load(paths["valuation"]) or _load(retained_paths["valuation"])
         desc = _load(paths["descriptive_research"])
+        p3f9b = _load(paths["exact_session_snapshot"])
         mkt = _load(paths["sector_leadership"])
         opp = _load(paths["opportunity_prioritization"])
+        if not desc or not p3f9b:
+            raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        requested_at = f"{session}T15:00:00+07:00"
+        technical_structure = tsc.build_artifact(current_descriptive=desc, p3f9b_snapshot=p3f9b, requested_at=requested_at)
+        tactical_projection = msb_proj.build_artifact(technical_structure=technical_structure, requested_at=requested_at)
+        relative_volume = rvol_research.build_artifact(candidates=sorted((p3f9b.get("records") or {}).keys()), records=p3f9b.get("records") or {}, session=session, requested_at=requested_at)
+        # Also retained under its own canonical per-session path (not just consumed here) so
+        # downstream consumers -- the daily_integrated_decision_brief CLI-level builder in
+        # particular, which needs BOS/CHoCH per watchlist ticker -- can load the same compact V3
+        # projection without rebuilding it from raw technical_structure_context.
+        _write_json(paths["market_structure_breakout_v3_projection"], tactical_projection)
         res = build(
             session=session,
-            requested_at=f"{session}T15:00:00+07:00",
-            technical_structure_artifact=tac,
+            requested_at=requested_at,
+            technical_structure_artifact=tactical_projection,
             financial_analysis_artifact=fa,
             current_valuation_artifact=val,
-            relative_volume_artifact=desc,
+            relative_volume_artifact=relative_volume,
             market_sector_artifact=mkt,
             legacy_decision_artifact=opp,
         )

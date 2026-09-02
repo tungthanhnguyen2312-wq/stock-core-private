@@ -83,3 +83,30 @@ def test_decision_brief_included_when_supplied(tmp_path):
     assert result["package"]["lineage"]["next_session_decision_brief_identity"]=="next_session_decision_brief:abc123"
     latest=json.loads((r/"LATEST.json").read_text())
     assert latest["decision_brief_sha256"]==result["package"]["files"]["next_session_decision_brief.json"]
+
+def test_daily_integrated_decision_brief_is_optional_and_additive(tmp_path):
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    without=build_package(s,"2026-08-28",producer_checkpoint="abc")
+    assert "daily_integrated_decision_brief.json" not in without[0]
+    assert "daily_integrated_decision_brief.json" not in without[1]["files"]
+    assert "daily_integrated_decision_brief_identity" not in without[1]["lineage"]
+
+def test_daily_integrated_decision_brief_included_when_supplied(tmp_path):
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    brief=tmp_path/"daily_integrated_decision_brief.json"
+    brief.write_text(json.dumps({"artifact_identity":"daily_integrated_decision_brief/v1:abc123","previous_qualified_session":"2026-08-27"}),encoding="utf-8")
+    result=publish(r,s,"2026-08-28",producer_checkpoint="abc",push=False,daily_integrated_decision_brief=brief)
+    assert (r/result["immutable_session_path"]/"daily_integrated_decision_brief.json").is_file()
+    assert result["package"]["lineage"]["daily_integrated_decision_brief_identity"]=="daily_integrated_decision_brief/v1:abc123"
+    assert result["package"]["lineage"]["daily_integrated_decision_brief_previous_qualified_session"]=="2026-08-27"
+    latest=json.loads((r/"LATEST.json").read_text())
+    assert latest["daily_integrated_decision_brief_sha256"]==result["package"]["files"]["daily_integrated_decision_brief.json"]
+
+def test_daily_integrated_decision_brief_alongside_decision_brief(tmp_path):
+    """Both optional artifacts can be published together; each is independently identified."""
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    decision_brief=tmp_path/"next_session_decision_brief.json"; decision_brief.write_text(json.dumps({"artifact_identity":"next_session_decision_brief:abc"}),encoding="utf-8")
+    daily_brief=tmp_path/"daily_integrated_decision_brief.json"; daily_brief.write_text(json.dumps({"artifact_identity":"daily_integrated_decision_brief/v1:xyz"}),encoding="utf-8")
+    result=publish(r,s,"2026-08-28",producer_checkpoint="abc",push=False,decision_brief=decision_brief,daily_integrated_decision_brief=daily_brief)
+    assert result["package"]["lineage"]["next_session_decision_brief_identity"]=="next_session_decision_brief:abc"
+    assert result["package"]["lineage"]["daily_integrated_decision_brief_identity"]=="daily_integrated_decision_brief/v1:xyz"

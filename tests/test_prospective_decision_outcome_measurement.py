@@ -7,9 +7,11 @@ import pytest
 
 from prospective_decision_outcome_measurement import (
     FIELD_NOT_RETAINED,
+    HORIZONS,
     PENDING,
     ProspectiveOutcomeError,
     build_outcome_artifact,
+    classify_feedback_taxonomy,
     evaluate_case,
     prospective_outcome_context,
 )
@@ -114,3 +116,112 @@ def test_non_case_cannot_be_retroactively_measured_and_product_context_is_compac
     group = artifact["cohort_observation_summary"]["groups"][0]
     assert group["OBSERVED_POSITIVE_RATE"]["N"] == 1
     assert "PROBABILITY_OF_SUCCESS" not in group
+
+
+# ── v2 additions: T10 horizon + feedback taxonomy (DAILY_INTEGRATED_DECISION_BRIEF_AND_PROSPECTIVE_FEEDBACK_V1) ──
+
+def test_t10_horizon_flows_through_every_existing_generic_path():
+    """T10 was added as one HORIZONS entry; every consumer already iterates HORIZONS generically."""
+    assert HORIZONS["T10"] == 10
+    artifact = build_outcome_artifact([_case()], _sessions())
+    row = artifact["outcomes"][0]
+    assert row["horizons"]["T10"]["future_session"] == "2026-01-11"
+    assert row["horizons"]["T10"]["status"] == "MATURE"
+    assert row["horizons"]["T10"]["return"] == pytest.approx(.10)
+    assert "T10" in row["close_path"]
+    assert "T10" in row["benchmark_relative"]
+    assert "T10" in artifact["coverage"]["horizons"]
+    context = prospective_outcome_context(artifact, row["case_id"])
+    assert "T10" in context["matured_horizon_results"]
+
+
+def test_t60_is_not_deleted_by_the_t10_addition():
+    artifact = build_outcome_artifact([_case()], _sessions())
+    assert artifact["outcomes"][0]["horizons"]["T60"]["status"] == "MATURE"
+
+
+def test_decision_identity_and_research_action_posture_t0_fields_default_to_not_retained():
+    """A case admitted before this milestone (the only real admission source today) never carries
+    these fields -- FIELD_NOT_RETAINED, never backfilled or inferred."""
+    row = evaluate_case(_case(), _sessions(5))
+    assert row["decision_identity_at_t0"] == FIELD_NOT_RETAINED
+    assert row["research_action_posture_at_t0"] == FIELD_NOT_RETAINED
+    assert row["policy_version_at_t0"] == FIELD_NOT_RETAINED
+
+
+def test_new_t0_fields_pass_through_verbatim_when_retained():
+    t0 = _t0()
+    t0["decision_identity"] = "decision:AAA:abc123"
+    t0["research_action_posture"] = "INITIATE_ON_BREAKOUT"
+    t0["policy_version"] = "v1"
+    row = evaluate_case(_case(t0=t0), _sessions(5))
+    assert row["decision_identity_at_t0"] == "decision:AAA:abc123"
+    assert row["research_action_posture_at_t0"] == "INITIATE_ON_BREAKOUT"
+    assert row["policy_version_at_t0"] == "v1"
+
+
+class TestClassifyFeedbackTaxonomy:
+    def _outcome(self, *, posture=FIELD_NOT_RETAINED, stance=FIELD_NOT_RETAINED, t5_status="MATURE", t5_return=0.0, confirmed=False, invalidated=False):
+        return {
+            "research_action_posture_at_t0": posture, "research_stance_at_t0": stance,
+            "horizons": {"T5": {"status": t5_status, "return": t5_return}},
+            "confirmation": {"status": "CONFIRMED" if confirmed else "NOT_CONFIRMED_YET"},
+            "invalidation": {"status": "INVALIDATED" if invalidated else "NOT_INVALIDATED_YET"},
+        }
+
+    def test_insufficient_when_t5_not_mature(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="INITIATE_ON_BREAKOUT", t5_status=PENDING, t5_return=None))
+        assert result["label"] == "INSUFFICIENT_OUTCOME_EVIDENCE"
+
+    def test_good_entry_signal(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="INITIATE_ON_BREAKOUT", t5_return=0.03, confirmed=True))
+        assert result["label"] == "GOOD_ENTRY_SIGNAL"
+
+    def test_false_positive_breakout_on_invalidation(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="INITIATE_ON_BREAKOUT", t5_return=-0.02, invalidated=True))
+        assert result["label"] == "FALSE_POSITIVE_BREAKOUT"
+
+    def test_adverse_outcome_after_initiation(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="INITIATE_ON_BREAKOUT", t5_return=-0.02))
+        assert result["label"] == "ADVERSE_OUTCOME_AFTER_INITIATION"
+
+    def test_successful_retest(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="ACCUMULATE_ON_RETEST", t5_return=0.02))
+        assert result["label"] == "SUCCESSFUL_RETEST"
+
+    def test_extension_warning_correct(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="HOLD_DO_NOT_ADD", t5_return=-0.04))
+        assert result["label"] == "EXTENSION_WARNING_CORRECT"
+
+    def test_missed_breakout_when_posture_retained_and_confirmed_favorable(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="AVOID", t5_return=0.05, confirmed=True))
+        assert result["label"] == "MISSED_BREAKOUT"
+
+    def test_tactical_signal_not_integrated_when_posture_missing(self):
+        """A pre-integrated-product case (only the old research_stance is retained) that missed a
+        favorable, confirmed move is diagnosed distinctly from a genuine MISSED_BREAKOUT."""
+        result = classify_feedback_taxonomy(self._outcome(posture=FIELD_NOT_RETAINED, stance="AVOID_NEW_ENTRY", t5_return=0.05, confirmed=True))
+        assert result["label"] == "TACTICAL_SIGNAL_NOT_INTEGRATED"
+
+    def test_policy_too_defensive_on_wait_with_favorable_unconfirmed_move(self):
+        result = classify_feedback_taxonomy(self._outcome(posture="WAIT_FOR_CONFIRMATION", t5_return=0.02))
+        assert result["label"] == "POLICY_TOO_DEFENSIVE"
+
+    def test_a_price_rise_after_avoid_does_not_automatically_prove_it_wrong(self):
+        """Section 11: without confirmation and without a favorable move, AVOID stays unlabeled
+        (never auto-classified as a false negative merely because price could theoretically rise)."""
+        result = classify_feedback_taxonomy(self._outcome(posture="AVOID", t5_return=0.0))
+        assert result["label"] == "INSUFFICIENT_OUTCOME_EVIDENCE"
+
+    def test_result_is_attached_to_evaluate_case_output(self):
+        row = evaluate_case(_case(), _sessions(10))
+        assert row["feedback_taxonomy"]["label"] in {
+            "GOOD_ENTRY_SIGNAL", "GOOD_EARLY_WATCH", "SUCCESSFUL_RETEST", "EXTENSION_WARNING_CORRECT",
+            "FALSE_POSITIVE_BREAKOUT", "FALSE_POSITIVE_EARLY_REVERSAL", "POSSIBLE_FALSE_NEGATIVE",
+            "MISSED_BREAKOUT", "POLICY_TOO_DEFENSIVE", "TACTICAL_SIGNAL_NOT_INTEGRATED",
+            "ADVERSE_OUTCOME_AFTER_INITIATION", "INSUFFICIENT_OUTCOME_EVIDENCE",
+        }
+
+    def test_taxonomy_distribution_is_in_build_outcome_artifact_coverage(self):
+        artifact = build_outcome_artifact([_case()], _sessions(10))
+        assert "feedback_taxonomy" in artifact["coverage"]

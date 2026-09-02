@@ -41,13 +41,17 @@ def _financial_lineage(parsed: Mapping[str, Any]) -> str | None:
     return str(source_identity)
 def _identity(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",", ":")).encode("utf-8")).hexdigest()
-def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None) -> tuple[dict[str,Path],dict[str,Any]]:
+def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None) -> tuple[dict[str,Path],dict[str,Any]]:
     files={name:source/name for name in REQUIRED}
     if previous: files[f"previous_session_bundle_{previous.parent.parent.name}.json"]=previous
     # next_session_decision_brief.json is a pure package-local derived projection (see
     # next_session_decision_brief.py) -- optional and additive, exactly like `previous`, so a
     # caller/test that never supplies one sees no behavior change at all.
     if decision_brief: files["next_session_decision_brief.json"]=decision_brief
+    # daily_integrated_decision_brief.json (see daily_integrated_decision_brief.py) is the compact
+    # AI-facing daily product -- optional and additive on the exact same pattern as decision_brief,
+    # so ChatGPT can answer the owner's 11-watchlist review from the published handoff directly.
+    if daily_integrated_decision_brief: files["daily_integrated_decision_brief.json"]=daily_integrated_decision_brief
     parsed: dict[str, Any] = {}
     for name,path in files.items():
         if not path.is_file(): raise HandoffPublicationError("HANDOFF_SOURCE_MISSING:"+name)
@@ -59,15 +63,20 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
     financial_source_identity = _financial_lineage(parsed)
     if financial_source_identity is not None: lineage["financial_analysis_source_context_identity"] = financial_source_identity
     if decision_brief: lineage["next_session_decision_brief_identity"]=parsed["next_session_decision_brief.json"].get("artifact_identity")
+    if daily_integrated_decision_brief:
+        brief_parsed=parsed["daily_integrated_decision_brief.json"]
+        lineage["daily_integrated_decision_brief_identity"]=brief_parsed.get("artifact_identity")
+        lineage["daily_integrated_decision_brief_previous_qualified_session"]=brief_parsed.get("previous_qualified_session")
     handoff_build_id="handoff_build_"+_identity({"session":session,"package_sha256":package_identity,"lineage":lineage})
     payload={"schema_version":CONTRACT_VERSION,"session":session,"status":"READY_FOR_AI","files":hashes,"package_sha256":package_identity,"lineage":lineage,"handoff_build_id":handoff_build_id}
     return files,payload
 def _latest_payload(session: str, payload: Mapping[str, Any], *, immutable_session_path: str, handoff_commit: str, previous: Path|None) -> dict[str, Any]:
     latest={"schema_version":"stocklookup_ai_handoff_latest/v2","latest_session":session,"status":"READY_FOR_AI","handoff_build_id":payload["handoff_build_id"],"immutable_session_path":immutable_session_path,"handoff_commit":handoff_commit,"producer_checkpoint":payload["lineage"]["producer_checkpoint"],"producer_lineage":payload["lineage"],"session_bundle_sha256":payload["files"]["ai_research_session_bundle.json"],"opportunity_artifact_sha256":payload["files"]["daily_opportunity_decision_queue_artifact.json"],"manifest_sha256":payload["files"]["ai_research_bundle_manifest.json"],"previous_session":previous.parent.parent.name if previous else None}
     if "next_session_decision_brief.json" in payload["files"]: latest["decision_brief_sha256"]=payload["files"]["next_session_decision_brief.json"]
+    if "daily_integrated_decision_brief.json" in payload["files"]: latest["daily_integrated_decision_brief_sha256"]=payload["files"]["daily_integrated_decision_brief.json"]
     return latest
-def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, decision_brief: Path|None=None) -> dict[str,Any]:
-    files,payload=build_package(source,session,previous,producer_checkpoint=producer_checkpoint,decision_brief=decision_brief)
+def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None) -> dict[str,Any]:
+    files,payload=build_package(source,session,previous,producer_checkpoint=producer_checkpoint,decision_brief=decision_brief,daily_integrated_decision_brief=daily_integrated_decision_brief)
     target=repo/"sessions"/session/"builds"/payload["handoff_build_id"]
     if target.exists():
         current={name:sha(target/name) for name in files if (target/name).is_file()}

@@ -16,9 +16,15 @@ from typing import Any, Mapping, Sequence
 from durable_prospective_research_case_store import DurableProspectiveResearchCaseStore
 
 
-CONTRACT_VERSION = "prospective_decision_outcome/v1"
-METHOD_VERSION = "prospective_decision_outcome_measurement/v1"
-HORIZONS = {"T5": 5, "T20": 20, "T60": 60}
+CONTRACT_VERSION = "prospective_decision_outcome/v2"
+METHOD_VERSION = "prospective_decision_outcome_measurement/v2"
+# v2 (DAILY_INTEGRATED_DECISION_BRIEF_AND_PROSPECTIVE_FEEDBACK_V1) adds T10, the product-critical
+# session-counted horizon docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md Section 6.3 calls for. T5/T20
+# semantics are byte-identical; T60 is kept (never deleted to force a 5/10/20-only schema). Every
+# consumer below (evaluate_case, cohort_observation_summary, build_outcome_artifact,
+# prospective_outcome_context) already iterates HORIZONS generically, so this is the only edit
+# needed for the new horizon to flow through coverage/close_path/benchmark_relative uniformly.
+HORIZONS = {"T5": 5, "T10": 10, "T20": 20, "T60": 60}
 PENDING = "PENDING_NOT_ENOUGH_FUTURE_SESSIONS"
 FIELD_NOT_RETAINED = "FIELD_NOT_RETAINED_AT_T0"
 UNAVAILABLE_HIGH_LOW = "UNAVAILABLE_HIGH_LOW_BASIS"
@@ -250,13 +256,82 @@ def evaluate_case(envelope: Mapping[str, Any], completed_sessions: Sequence[Mapp
                "entry_state_at_t0": _t0_value(case, "entry_state", FIELD_NOT_RETAINED), "entry_action_at_t0": _t0_value(case, "entry_action", FIELD_NOT_RETAINED),
                "setup_tags_at_t0": _t0_value(case, "setup_tags", FIELD_NOT_RETAINED), "fundamental_context_at_t0": _t0_value(case, "fundamental_state", FIELD_NOT_RETAINED),
                "valuation_context_at_t0": _t0_value(case, "valuation_state", FIELD_NOT_RETAINED), "confirmation": confirmation, "invalidation": invalidation,
+               # Additive v2 T0 passthrough for integrated_investment_decision_product/v1-sourced
+               # cases (decision_identity(), research_action_posture, policy_version). A case
+               # admitted before this field existed reads FIELD_NOT_RETAINED here, exactly like any
+               # other _t0_value miss -- never backfilled or inferred.
+               "decision_identity_at_t0": _t0_value(case, "decision_identity", FIELD_NOT_RETAINED),
+               "research_action_posture_at_t0": _t0_value(case, "research_action_posture", FIELD_NOT_RETAINED),
+               "policy_version_at_t0": _t0_value(case, "policy_version", FIELD_NOT_RETAINED),
                "event_ordering": _ordering(confirmation, invalidation), "horizons": horizons,
                "close_path": {name: _path(item, t0_price, later, case["ticker"]) for name, item in horizons.items()},
                "benchmark_relative": {name: _benchmark(item, t0, later) for name, item in horizons.items()},
                "data_limitations": list(t0.get("data_limitations") or []) + ([FIELD_NOT_RETAINED] if not t0_price else []),
                "source_identities": {"t0_case": case["case_content_identity"], "t0_price": t0_price.get("source_identity") if t0_price else None},
                "authority_boundary": {"prospective_retained_cases_only": True, "historical_backtest": "NOT_CREATED", "raw_as_traded_or_pit": "NOT_CLAIMED", "threshold_retuning": "NOT_PERMITTED", "close_path_is_not_intraday_mfe_mae": True}}
+    outcome["feedback_taxonomy"] = classify_feedback_taxonomy(outcome)
     return _identity(outcome, "prospective_decision_outcome:")
+
+
+# ── Feedback Taxonomy (DAILY_INTEGRATED_DECISION_BRIEF_AND_PROSPECTIVE_FEEDBACK_V1, additive) ──
+#
+# Research-evaluation labels, not causal proof: a price rise after AVOID does not by itself prove
+# the decision wrong. Evaluated strictly from what evidence/stance existed at T0 (research_action_
+# posture_at_t0 preferred, research_stance_at_t0 as fallback for pre-integrated-product cases) and
+# what happened afterward (T5 confirmation/invalidation status + forward_return sign) -- the same
+# fields this module already computes, nothing recalculated or backtested.
+FEEDBACK_TAXONOMY_LABELS = frozenset({
+    "GOOD_ENTRY_SIGNAL", "GOOD_EARLY_WATCH", "SUCCESSFUL_RETEST", "EXTENSION_WARNING_CORRECT",
+    "FALSE_POSITIVE_BREAKOUT", "FALSE_POSITIVE_EARLY_REVERSAL", "POSSIBLE_FALSE_NEGATIVE",
+    "MISSED_BREAKOUT", "POLICY_TOO_DEFENSIVE", "TACTICAL_SIGNAL_NOT_INTEGRATED",
+    "ADVERSE_OUTCOME_AFTER_INITIATION", "INSUFFICIENT_OUTCOME_EVIDENCE",
+})
+_INITIATE_LIKE = frozenset({"INITIATE_ON_BREAKOUT", "INITIATE_RESEARCH_CANDIDATE"})
+_RETEST_LIKE = frozenset({"ACCUMULATE_ON_RETEST", "ACCUMULATE_RESEARCH_CANDIDATE"})
+_WATCH_LIKE = frozenset({"EARLY_WATCH"})
+_WAIT_LIKE = frozenset({"WAIT_FOR_CONFIRMATION"})
+_EXTENDED_LIKE = frozenset({"HOLD_DO_NOT_ADD", "HOLD"})
+_DEFENSIVE_LIKE = frozenset({"WAIT_FOR_CONFIRMATION", "AVOID", "REDUCE", "AVOID_NEW_ENTRY", "HIGH_RISK_SPECULATION_ONLY", "INSUFFICIENT_CURRENT_RESEARCH", "INSUFFICIENT_EVIDENCE"})
+
+
+def classify_feedback_taxonomy(outcome: Mapping[str, Any]) -> dict[str, Any]:
+    """Deterministic taxonomy label from an already-computed outcome; T5 is the basis horizon."""
+    posture = outcome.get("research_action_posture_at_t0", FIELD_NOT_RETAINED)
+    stance = outcome.get("research_stance_at_t0", FIELD_NOT_RETAINED)
+    effective = posture if posture != FIELD_NOT_RETAINED else stance
+    t5 = outcome["horizons"]["T5"]
+    if effective == FIELD_NOT_RETAINED or t5["status"] != "MATURE":
+        label = "INSUFFICIENT_OUTCOME_EVIDENCE"
+    else:
+        forward_return = t5["return"]
+        confirmed = outcome["confirmation"]["status"] == "CONFIRMED"
+        invalidated = outcome["invalidation"]["status"] == "INVALIDATED"
+        favorable = isinstance(forward_return, (int, float)) and forward_return > 0
+        adverse = isinstance(forward_return, (int, float)) and forward_return < 0
+        posture_missing = posture == FIELD_NOT_RETAINED
+        if effective in _INITIATE_LIKE:
+            label = "FALSE_POSITIVE_BREAKOUT" if invalidated else "ADVERSE_OUTCOME_AFTER_INITIATION" if adverse else "GOOD_ENTRY_SIGNAL" if (confirmed or favorable) else "INSUFFICIENT_OUTCOME_EVIDENCE"
+        elif effective in _RETEST_LIKE:
+            label = "ADVERSE_OUTCOME_AFTER_INITIATION" if (invalidated or adverse) else "SUCCESSFUL_RETEST" if (confirmed or favorable) else "INSUFFICIENT_OUTCOME_EVIDENCE"
+        elif effective in _WATCH_LIKE:
+            label = "FALSE_POSITIVE_EARLY_REVERSAL" if (invalidated or adverse) else "GOOD_EARLY_WATCH" if (confirmed or favorable) else "INSUFFICIENT_OUTCOME_EVIDENCE"
+        elif effective in _EXTENDED_LIKE:
+            label = "EXTENSION_WARNING_CORRECT" if (adverse or invalidated) else "INSUFFICIENT_OUTCOME_EVIDENCE"
+        elif effective in _DEFENSIVE_LIKE:
+            if favorable and confirmed:
+                label = "TACTICAL_SIGNAL_NOT_INTEGRATED" if posture_missing else "MISSED_BREAKOUT"
+            elif favorable and not invalidated:
+                label = "TACTICAL_SIGNAL_NOT_INTEGRATED" if posture_missing else "POLICY_TOO_DEFENSIVE" if effective in _WAIT_LIKE else "POSSIBLE_FALSE_NEGATIVE"
+            else:
+                label = "INSUFFICIENT_OUTCOME_EVIDENCE"
+        else:
+            label = "INSUFFICIENT_OUTCOME_EVIDENCE"
+    return {
+        "label": label, "basis_horizon": "T5", "t0_posture_or_stance": effective,
+        "forward_return_T5": t5.get("return"), "confirmation_status": outcome["confirmation"]["status"],
+        "invalidation_status": outcome["invalidation"]["status"],
+        "authority_boundary": "RESEARCH_EVALUATION_LABEL_NOT_CAUSAL_PROOF_OR_WIN_RATE",
+    }
 
 
 def _median(values: Sequence[float]) -> float | None:
@@ -292,7 +367,7 @@ def build_outcome_artifact(envelopes: Sequence[Mapping[str, Any]], completed_ses
     coverage = {h: dict(Counter(item["horizons"][h]["status"] for item in ordered)) for h in HORIZONS}
     artifact = {"schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "method_version": METHOD_VERSION,
                 "evaluation_as_of_session": evaluation_as_of_session or (_completed_sessions(completed_sessions)[-1]["session"] if _completed_sessions(completed_sessions) else None),
-                "case_count": len(ordered), "outcomes": ordered, "coverage": {"horizons": coverage, "confirmation": dict(Counter(item["confirmation"]["status"] for item in ordered)), "invalidation": dict(Counter(item["invalidation"]["status"] for item in ordered)), "event_ordering": dict(Counter(item["event_ordering"] for item in ordered))},
+                "case_count": len(ordered), "outcomes": ordered, "coverage": {"horizons": coverage, "confirmation": dict(Counter(item["confirmation"]["status"] for item in ordered)), "invalidation": dict(Counter(item["invalidation"]["status"] for item in ordered)), "event_ordering": dict(Counter(item["event_ordering"] for item in ordered)), "feedback_taxonomy": dict(Counter(item["feedback_taxonomy"]["label"] for item in ordered))},
                 "cohort_observation_summary": cohort_observation_summary(ordered), "t0_immutability_verified": True,
                 "authority_boundary": {"genuine_retained_t0_cases_only": True, "no_retroactive_case_fabrication": True, "no_strategy_retuning": True, "no_probability_of_success": True}}
     return _identity(artifact, "prospective_decision_outcome_artifact:", "artifact_identity")
@@ -302,7 +377,8 @@ def prospective_outcome_context(artifact: Mapping[str, Any], case_id: str) -> di
     row = next((item for item in artifact.get("outcomes", []) if item.get("case_id") == case_id), None)
     if not isinstance(row, Mapping): raise ProspectiveOutcomeError("OUTCOME_CASE_NOT_FOUND")
     return _identity({"contract_version": "prospective_outcome_context/v1", "case_id": case_id, "outcome_identity": row.get("content_identity"),
-                      "case_status": {h: row["horizons"][h]["status"] for h in HORIZONS}, "t0": {key: row.get(key) for key in ("research_stance_at_t0", "entry_state_at_t0", "entry_action_at_t0", "setup_tags_at_t0")},
+                      "case_status": {h: row["horizons"][h]["status"] for h in HORIZONS}, "t0": {key: row.get(key) for key in ("research_stance_at_t0", "entry_state_at_t0", "entry_action_at_t0", "setup_tags_at_t0", "research_action_posture_at_t0", "decision_identity_at_t0")},
+                      "feedback_taxonomy": row.get("feedback_taxonomy"),
                       "confirmation_status": row["confirmation"]["status"], "invalidation_status": row["invalidation"]["status"], "event_ordering": row["event_ordering"],
                       "matured_horizon_results": {h: row["horizons"][h] for h in HORIZONS if row["horizons"][h]["status"] == "MATURE"},
                       "pending_horizons": [h for h in HORIZONS if row["horizons"][h]["status"] != "MATURE"], "close_path_research_proxy": row["close_path"], "benchmark_relative": row["benchmark_relative"],

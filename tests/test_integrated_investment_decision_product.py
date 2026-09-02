@@ -482,7 +482,10 @@ class TestGovernanceAndStructure:
             financial_record=_sample_financial_record(),
             valuation_record=_sample_valuation_record(),
             relative_volume_record={"status": "AVAILABLE", "volume_acceleration_ratio": 1.4, "relative_volume_percentile": 0.8},
-            market_sector_record={"breadth_regime": "NEUTRAL_MIXED", "sector_leadership_state": "IN_LINE"},
+            market_sector_record={
+                "market": {"current_breadth_state": "MIXED_BREADTH"},
+                "ticker_contexts": {"PNJ": {"sector_leadership_context": {"leadership_state": "MIXED"}}},
+            },
         )
         assert dec["tactical_phase"] == iidp.TACTICAL_BREAKOUT_CONFIRMED
         assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
@@ -545,8 +548,8 @@ class TestGovernanceAndStructure:
             trigger_type="PIVOT_BREAKOUT_TRIGGER",
         )
         mkt = {
-            "breadth_regime": "DEFENSIVE",
-            "sector_leadership_state": "LEADING",
+            "market": {"current_breadth_state": "DETERIORATING_BREADTH"},
+            "ticker_contexts": {"HPG": {"sector_leadership_context": {"leadership_state": "LEADING"}}},
         }
         dec = iidp.build_ticker_integrated_decision(
             ticker="HPG",
@@ -570,8 +573,8 @@ class TestGovernanceAndStructure:
             bos_state="BEARISH_BOS_DETECTED_BY_RULE",
         )
         mkt = {
-            "breadth_regime": "EXPANSIVE",
-            "sector_leadership_state": "LEADING",
+            "market": {"current_breadth_state": "BROAD_PARTICIPATION"},
+            "ticker_contexts": {"NVL": {"sector_leadership_context": {"leadership_state": "LEADING"}}},
         }
         dec = iidp.build_ticker_integrated_decision(
             ticker="NVL",

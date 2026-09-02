@@ -539,7 +539,11 @@ def decide_research_action_posture(
             part_contradiction_reason = part_counters[0] if part_counters else "VOLUME_CONTRACTION"
 
     is_bearish_market = (
-        mkt_regime in ("DEFENSIVE", "BEARISH", "WEAK", "DISTRIBUTION", "HIGH_RISK")
+        # DETERIORATING_BREADTH is the real current_market_sector_leadership_context/v1 value for a
+        # weak/negative-momentum, below-MA20 majority session. NARROW_LEADERSHIP is deliberately
+        # excluded: the same engine's own _leadership_state mapping treats it as LEADING, not
+        # bearish (advancers still exceed decliners; participation is merely less broad than ideal).
+        mkt_regime in ("DETERIORATING_BREADTH", "DEFENSIVE", "BEARISH", "WEAK", "DISTRIBUTION", "HIGH_RISK")
         or "DEFENSIVE" in str(mkt_regime).upper()
         or "BEARISH" in str(mkt_regime).upper()
     )
@@ -670,9 +674,18 @@ def build_ticker_integrated_decision(
     part_summary, part_supp, part_count = evaluate_participation(tactical, rvol)
 
     # 5. Market / Sector Context
+    # current_market_sector_leadership_context/v1's real shape (the artifact canonical_post_close_
+    # pipeline.py actually wires in as market_sector_artifact) carries market-wide regime at
+    # market["market"]["current_breadth_state"] and per-ticker sector leadership at
+    # market["ticker_contexts"][ticker]["sector_leadership_context"]["leadership_state"] -- not the
+    # flat breadth_regime/market_state/sector_relative_context/sector_leadership_state keys read
+    # previously (that shape matches opportunity_context.py's unrelated _market_axis() output, not
+    # this artifact), which made market_regime/sector_leadership silently constant defaults in
+    # production regardless of the real session's breadth/leadership.
+    ticker_sector_ctx = ((market.get("ticker_contexts") or {}).get(ticker) or {}).get("sector_leadership_context") or {}
     mkt_summary = {
-        "market_regime": market.get("breadth_regime") or market.get("market_state") or "NEUTRAL_MIXED",
-        "sector_leadership": (market.get("sector_relative_context") or {}).get("leadership_state") or market.get("sector_leadership_state") or "IN_LINE",
+        "market_regime": (market.get("market") or {}).get("current_breadth_state") or "NEUTRAL_MIXED",
+        "sector_leadership": ticker_sector_ctx.get("leadership_state") or "IN_LINE",
         "authority_tier": "CURRENT_RESEARCH_DESCRIPTIVE",
     }
 

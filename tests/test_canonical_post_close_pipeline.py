@@ -256,13 +256,39 @@ def test_enrichment_components_stamp_requested_session(tmp_path, monkeypatch):
     session = "2026-08-25"
     monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
     results = cpc.build_enrichment_components(ROOT, session)
-    field_by_name = {"financial_momentum": "session", "corporate_event_context": "research_session", "historical_context": "session"}
+    field_by_name = {"financial_momentum": "session", "corporate_event_context": "research_session", "historical_context": "session", "integrated_investment_decision_product": "session"}
     assert set(results) == set(field_by_name)
     for name, session_field in field_by_name.items():
         row = results[name]
         assert row["status"] in ("BUILT", "PRIOR_AS_OF_CONTEXT", "UNAVAILABLE")
         if row["status"] == "BUILT":
             assert row["artifact"].get(session_field) == session
+
+
+def test_integrated_decision_wiring_never_regresses_to_incompatible_tactical_shape():
+    """Regression guard for a real defect found and fixed alongside
+    DAILY_INTEGRATED_DECISION_BRIEF_AND_PROSPECTIVE_FEEDBACK_V1: the anti-gravity correction's
+    _integrated_investment_decision_product() fed integrated_investment_decision_product.
+    build_artifact() paths["tactical_classifier"] (watchlist_tactical_entry_classifier's own
+    deeply-nested nine-state entry_state shape -- no eligible/market_structure_state/bos_state
+    keys at all) as technical_structure_artifact, and paths["descriptive_research"] (market-wide
+    breadth, no per-ticker relative volume at all) as relative_volume_artifact. Both are structurally
+    incompatible with evaluate_tactical_phase/evaluate_participation's flat compact-projection
+    reads, so real research_action_posture came out INSUFFICIENT_CURRENT_RESEARCH for every single
+    ticker -- confirmed empirically against real retained 2026-08-25/2026-08-28 evidence via
+    tools/run_daily_integrated_decision_brief_replay.py before this fix. The fix builds the V3
+    projection (technical_structure_context + market_structure_breakout_product_projection) and
+    market_wide_relative_volume_research fresh from already-registered raw inputs instead."""
+    source = (ROOT / "canonical_post_close_pipeline.py").read_text(encoding="utf-8")
+    start = source.index("def _integrated_investment_decision_product")
+    end = source.index("\n    _attempt(", start)
+    body = source[start:end]
+    assert 'technical_structure_artifact=tac,' not in body
+    assert 'relative_volume_artifact=desc,' not in body
+    assert "market_structure_breakout_product_projection" in body
+    assert "market_wide_relative_volume_research" in body
+    assert "technical_structure_artifact=tactical_projection" in body
+    assert "relative_volume_artifact=relative_volume" in body
 
 
 # --- 7. component-local missing evidence does not globally reject unrelated uses ---
