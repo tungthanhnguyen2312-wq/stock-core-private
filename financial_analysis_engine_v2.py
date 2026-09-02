@@ -14,10 +14,14 @@ from typing import Any, Mapping, Sequence
 
 import monetary_basis_contract as basis_contract
 import bank_financial_research_component as bank_component
+import securities_financial_research_component as securities_component
 
 
 CONTRACT_VERSION = "financial_analysis_context/v2"
-SCHEMA_VERSION = "2.1.0"
+#: Bumped 2026-09-02: SECURITIES_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1 added the
+#: additive securities_* feature/state family and securities_specialist_contract_version,
+#: mirroring the bank specialist family's own additive shape.
+SCHEMA_VERSION = "2.2.0"
 FITNESS = ("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE")
 INDUSTRIAL = "INDUSTRIAL_FINANCIAL_ANALYSIS"
 LIMITED = "OTHER_FINANCIAL_LIMITED_ANALYSIS"
@@ -50,6 +54,29 @@ _PROVISION = "provision"
 _OPERATION_EXPENSE = "operation_expense"
 _TOTAL_OPERATION_INCOME = "total_operation_income"
 _NET_INTEREST_MARGIN_PROVIDER = "net_interest_margin"
+
+# --- Securities-firm specialist research family (additive; never alters INDUSTRIAL/LIMITED) ---
+SECURITIES = "securities"
+SECURITIES_FVTPL_ASSET_INTENSITY = "fvtpl_asset_intensity"
+SECURITIES_MARGIN_LENDING_ASSET_INTENSITY = "margin_lending_asset_intensity"
+SECURITIES_BROKERAGE_REVENUE_MIX = "brokerage_revenue_mix"
+SECURITIES_LOAN_INTEREST_INCOME_MIX = "loan_interest_income_mix"
+SECURITIES_FEATURE_IDS = (SECURITIES_FVTPL_ASSET_INTENSITY, SECURITIES_MARGIN_LENDING_ASSET_INTENSITY,
+                          SECURITIES_BROKERAGE_REVENUE_MIX, SECURITIES_LOAN_INTEREST_INCOME_MIX)
+SECURITIES_FVTPL_ASSET_INTENSITY_STATE = "fvtpl_asset_intensity_trajectory_state"
+SECURITIES_MARGIN_LENDING_INTENSITY_STATE = "margin_lending_intensity_trajectory_state"
+SECURITIES_BROKERAGE_MIX_STATE = "brokerage_mix_trajectory_state"
+SECURITIES_STATE_NAMES = (SECURITIES_FVTPL_ASSET_INTENSITY_STATE, SECURITIES_MARGIN_LENDING_INTENSITY_STATE,
+                          SECURITIES_BROKERAGE_MIX_STATE)
+# Raw securities_financial_research_component/v1 metric_id vocabulary this milestone's
+# deterministic formulas read (see securities_financial_research_component.KNOWN_RAW_METRIC_IDS
+# for the full retained-corpus-established universe, only part of which is consumed here).
+_FVTPL_FINANCIAL_ASSETS = "fvtpl_financial_assets"
+_SECURITIES_TOTAL_ASSETS = "total_assets"
+_MARGIN_LENDING_RECEIVABLE = "margin_lending_receivable"
+_BROKERAGE_REVENUE = "brokerage_revenue"
+_LOAN_RECEIVABLE_INTEREST_INCOME = "loan_receivable_interest_income"
+_TOTAL_SECURITIES_OPERATING_INCOME = "total_securities_operating_income"
 
 
 def _canonical(value: Any) -> str:
@@ -706,6 +733,183 @@ def _bank_feature_states(features: Mapping[str, Mapping[str, Any]],
     }
 
 
+def _securities_usable(component: Mapping[str, Any], *, fitness: str) -> bool:
+    return (
+        component.get("contract_version") == securities_component.CONTRACT_VERSION
+        and component.get("fitness") == fitness
+        and _numeric(component.get("raw_value"))
+        and component.get("provider") not in (None, "", "unknown")
+        and component.get("source_identity") not in (None, "", "unknown")
+    )
+
+
+def _securities_period(component: Mapping[str, Any]) -> tuple[int, int | None] | None:
+    year = component.get("year")
+    if not isinstance(year, int) or isinstance(year, bool):
+        return None
+    quarter = component.get("quarter")
+    return (year, quarter if isinstance(quarter, int) and not isinstance(quarter, bool) else None)
+
+
+def _securities_group(components: Sequence[Mapping[str, Any]], metric_id: str, *,
+                      fitness: str) -> dict[tuple[str, str, str], dict[tuple[int, int | None], Mapping[str, Any]]]:
+    # Keying on statement_family too (beyond ticker/provider) is a representation-
+    # compatibility guard: it costs nothing for this milestone's real ratios, since
+    # each named ratio's own metric ids are always drawn from one fixed statement
+    # family each, but it structurally blocks a hypothetical cross-statement-family
+    # pairing rather than relying on that never happening by convention alone.
+    grouped: dict[tuple[str, str, str], dict[tuple[int, int | None], Mapping[str, Any]]] = defaultdict(dict)
+    for component in components:
+        if not _securities_usable(component, fitness=fitness) or component.get("metric_id") != metric_id:
+            continue
+        period = _securities_period(component)
+        if period is None:
+            continue
+        key = (str(component.get("ticker")), str(component.get("provider")), str(component.get("statement_family")))
+        grouped[key][period] = component
+    return grouped
+
+
+def _securities_same_period_pair(components: Sequence[Mapping[str, Any]], numerator_metric: str,
+                                 denominator_metric: str) -> tuple[Mapping[str, Any], Mapping[str, Any]] | None:
+    """Same-provider, same-period pair of raw structured securities components.
+
+    Mirrors `_bank_same_period_pair`'s same-source-key discipline: a pair can only
+    form within one (ticker, provider) group, at one shared (year, quarter) period.
+    """
+    left = _securities_group(components, numerator_metric, fitness=securities_component.STRUCTURED_RESEARCH_COMPONENT)
+    right = _securities_group(components, denominator_metric, fitness=securities_component.STRUCTURED_RESEARCH_COMPONENT)
+    candidates = [(period, left[key][period], right[key][period])
+                  for key in set(left) & set(right) for period in set(left[key]) & set(right[key])]
+    return max(candidates, key=lambda item: item[0])[1:] if candidates else None
+
+
+def _securities_feature(feature_id: str, *, value: Any = None, fitness: str = "BLOCKED_BY_EVIDENCE",
+                        method: str, inputs: Sequence[Mapping[str, Any]] = (),
+                        reason_codes: Sequence[str] = (), warnings: Sequence[str] = ()) -> dict[str, Any]:
+    return {
+        "feature_id": feature_id, "value": value, "fitness": fitness, "method": method,
+        "period_identity": [f"{c.get('year')}-Q{c['quarter']}" if c.get("quarter") else f"{c.get('year')}-FY" for c in inputs],
+        "provider_source_provenance": [
+            {"provider": c.get("provider"), "source_identity": c.get("source_identity"), "retrieved_at": c.get("retrieved_at")}
+            for c in inputs
+        ],
+        "statement_families": sorted({str(c.get("statement_family")) for c in inputs}),
+        # Purely descriptive lineage, never a gate: a same-row ratio stays READY
+        # even when every input's status here reads UNKNOWN.
+        "period_semantics_status": sorted({str(c.get("period_semantics_status")) for c in inputs}),
+        "component_currency_status": sorted({str(c.get("currency_status")) for c in inputs}),
+        "component_scale_status": sorted({str(c.get("scale_status")) for c in inputs}),
+        "limitations": sorted({limitation for c in inputs for limitation in (c.get("limitations") or [])}),
+        "reason_codes": list(reason_codes), "warnings": list(warnings), "is_actionable": False,
+    }
+
+
+def _securities_blocked(feature_id: str, *codes: str, method: str = "securities_blocked_by_evidence/v1") -> dict[str, Any]:
+    return _securities_feature(feature_id, method=method, reason_codes=codes)
+
+
+def _securities_not_applicable(feature_id: str) -> dict[str, Any]:
+    return _securities_feature(feature_id, fitness="NOT_APPLICABLE", method="securities_entity_applicability/v1",
+                               reason_codes=["ISSUER_NOT_SECURITIES"])
+
+
+def _securities_ratio(feature_id: str, pair: tuple[Mapping[str, Any], Mapping[str, Any]] | None, *,
+                      method: str) -> dict[str, Any]:
+    if not pair:
+        return _securities_blocked(feature_id, "MISSING_SAME_PROVIDER_TICKER_PERIOD_SECURITIES_COMPONENT_PAIR")
+    numerator, denominator = pair
+    if denominator["raw_value"] == 0:
+        return _securities_blocked(feature_id, "ZERO_DENOMINATOR")
+    # Never abs()'d: a negative numerator or denominator is retained and surfaced
+    # exactly as reported, not silently normalized (task boundary: a negative
+    # FVTPL asset amount is treated according to source semantics, not coerced).
+    return _securities_feature(feature_id, value=numerator["raw_value"] / denominator["raw_value"], fitness="READY",
+                               method=method, inputs=[numerator, denominator])
+
+
+def _build_securities_features(components: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {
+        SECURITIES_FVTPL_ASSET_INTENSITY: _securities_ratio(
+            SECURITIES_FVTPL_ASSET_INTENSITY,
+            _securities_same_period_pair(components, _FVTPL_FINANCIAL_ASSETS, _SECURITIES_TOTAL_ASSETS),
+            method="same_provider_same_period_fvtpl_asset_intensity/v1"),
+        SECURITIES_MARGIN_LENDING_ASSET_INTENSITY: _securities_ratio(
+            SECURITIES_MARGIN_LENDING_ASSET_INTENSITY,
+            _securities_same_period_pair(components, _MARGIN_LENDING_RECEIVABLE, _SECURITIES_TOTAL_ASSETS),
+            method="same_provider_same_period_margin_lending_asset_intensity/v1"),
+        SECURITIES_BROKERAGE_REVENUE_MIX: _securities_ratio(
+            SECURITIES_BROKERAGE_REVENUE_MIX,
+            _securities_same_period_pair(components, _BROKERAGE_REVENUE, _TOTAL_SECURITIES_OPERATING_INCOME),
+            method="same_provider_same_period_brokerage_revenue_mix/v1"),
+        SECURITIES_LOAN_INTEREST_INCOME_MIX: _securities_ratio(
+            SECURITIES_LOAN_INTEREST_INCOME_MIX,
+            _securities_same_period_pair(components, _LOAN_RECEIVABLE_INTEREST_INCOME, _TOTAL_SECURITIES_OPERATING_INCOME),
+            method="same_provider_same_period_loan_interest_income_mix/v1"),
+    }
+
+
+def _securities_ratio_trajectory(components: Sequence[Mapping[str, Any]], numerator_metric: str,
+                                 denominator_metric: str) -> float | None:
+    """YoY delta of one same-provider, same-quarter securities ratio, or None.
+
+    Internal to state derivation only -- not one of the four named securities
+    features. Returns None (never a fabricated 0) whenever no compatible
+    prior-year-same-quarter pair exists, so a single retained period can never
+    present as a trajectory. Mirrors `_bank_ratio_trajectory` exactly.
+    """
+    numerator = _securities_group(components, numerator_metric, fitness=securities_component.STRUCTURED_RESEARCH_COMPONENT)
+    denominator = _securities_group(components, denominator_metric, fitness=securities_component.STRUCTURED_RESEARCH_COMPONENT)
+    candidates = []
+    for key in set(numerator) & set(denominator):
+        for (year, quarter), current_num in numerator[key].items():
+            if quarter not in (1, 2, 3, 4):
+                continue
+            current_den = denominator[key].get((year, quarter))
+            prior_num = numerator[key].get((year - 1, quarter))
+            prior_den = denominator[key].get((year - 1, quarter))
+            if not (current_den and prior_num and prior_den):
+                continue
+            if current_den["raw_value"] == 0 or prior_den["raw_value"] == 0:
+                continue
+            candidates.append(((year, quarter),
+                               current_num["raw_value"] / current_den["raw_value"] - prior_num["raw_value"] / prior_den["raw_value"]))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _securities_trend_state(feature: Mapping[str, Any], trajectory: float | None, *,
+                            rising: str, falling: str, stable: str) -> str:
+    if feature["fitness"] != "READY":
+        return "UNAVAILABLE"
+    if trajectory is None:
+        return "AVAILABLE"
+    if trajectory == 0:
+        return stable
+    return rising if trajectory > 0 else falling
+
+
+def _securities_feature_states(features: Mapping[str, Mapping[str, Any]],
+                               components: Sequence[Mapping[str, Any]]) -> dict[str, str]:
+    fvtpl_trajectory = _securities_ratio_trajectory(components, _FVTPL_FINANCIAL_ASSETS, _SECURITIES_TOTAL_ASSETS)
+    margin_trajectory = _securities_ratio_trajectory(components, _MARGIN_LENDING_RECEIVABLE, _SECURITIES_TOTAL_ASSETS)
+    brokerage_trajectory = _securities_ratio_trajectory(components, _BROKERAGE_REVENUE, _TOTAL_SECURITIES_OPERATING_INCOME)
+    return {
+        # No thresholds, no scoring: a pure sign-of-delta trajectory classification,
+        # exactly mirroring the bank/gross-margin/working-capital trajectory states.
+        SECURITIES_FVTPL_ASSET_INTENSITY_STATE: _securities_trend_state(
+            features[SECURITIES_FVTPL_ASSET_INTENSITY], fvtpl_trajectory,
+            rising="FVTPL_ASSET_INTENSITY_RISING", falling="FVTPL_ASSET_INTENSITY_FALLING", stable="FVTPL_ASSET_INTENSITY_STABLE"),
+        SECURITIES_MARGIN_LENDING_INTENSITY_STATE: _securities_trend_state(
+            features[SECURITIES_MARGIN_LENDING_ASSET_INTENSITY], margin_trajectory,
+            rising="MARGIN_LENDING_INTENSITY_RISING", falling="MARGIN_LENDING_INTENSITY_FALLING", stable="MARGIN_LENDING_INTENSITY_STABLE"),
+        SECURITIES_BROKERAGE_MIX_STATE: _securities_trend_state(
+            features[SECURITIES_BROKERAGE_REVENUE_MIX], brokerage_trajectory,
+            rising="BROKERAGE_MIX_RISING", falling="BROKERAGE_MIX_FALLING", stable="BROKERAGE_MIX_STABLE"),
+    }
+
+
 def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]:
     income = features["net_income_sign"]
     income_value = income.get("value") if _numeric(income.get("value")) else 0
@@ -784,7 +988,8 @@ def _evidence(ticker: str, features: Mapping[str, Mapping[str, Any]], states: Ma
 
 def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issuer_type: str | None,
                          source_identities: Mapping[str, Any],
-                         bank_components: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
+                         bank_components: Sequence[Mapping[str, Any]] = (),
+                         securities_components: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
     normalized_type = str(issuer_type).lower() if issuer_type not in (None, "") else "unknown"
     family = INDUSTRIAL if normalized_type == "corporate" else LIMITED
     ids = ("net_income_sign", "net_margin", "pbt_margin", "gross_margin", "net_margin_direction", "gross_margin_direction", "revenue_qoq", "profit_before_tax_qoq", "net_income_qoq",
@@ -914,6 +1119,16 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
     states.update(_bank_feature_states(bank_features, bank_components) if is_bank
                   else {name: "NOT_APPLICABLE" for name in BANK_STATE_NAMES})
 
+    # Securities specialist family: purely additive, mirrors the bank family above
+    # exactly (including the same one-way entity-classification gate: a non-securities
+    # ticker never gets securities ratios even if securities_components was supplied).
+    is_securities = normalized_type == SECURITIES
+    securities_features = _build_securities_features(securities_components) if is_securities else {
+        feature_id: _securities_not_applicable(feature_id) for feature_id in SECURITIES_FEATURE_IDS}
+    features.update(securities_features)
+    states.update(_securities_feature_states(securities_features, securities_components) if is_securities
+                  else {name: "NOT_APPLICABLE" for name in SECURITIES_STATE_NAMES})
+
     readiness_features = ("net_margin", "pbt_margin", "gross_margin", "equity_to_assets", "cash_to_assets", "assets_yoy", "equity_yoy", "current_ratio")
     ready = family == INDUSTRIAL and any(features[item]["fitness"] == "READY" for item in readiness_features)
     evidence = _evidence(ticker, features, states)
@@ -935,12 +1150,14 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                                 if features["debt_to_equity"]["fitness"] == "READY"
                                 else "EQUITY_TO_ASSETS_STRUCTURAL_DIRECTION_ONLY_DEBT_UNAVAILABLE"),
             "bank_specialist_contract_version": bank_component.CONTRACT_VERSION if is_bank else None,
+            "securities_specialist_contract_version": securities_component.CONTRACT_VERSION if is_securities else None,
             "authority_boundary": {"is_actionable": False, "financial_authority_promoted": False, "decision_integration": False}}
 
 
 def build_artifact(*, tickers: Sequence[str], rows: Sequence[Mapping[str, Any]], issuer_types: Mapping[str, str | None],
                    source_identities: Mapping[str, Any], requested_at: str,
-                   bank_components: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
+                   bank_components: Sequence[Mapping[str, Any]] = (),
+                   securities_components: Sequence[Mapping[str, Any]] = ()) -> dict[str, Any]:
     names = sorted({str(ticker).upper() for ticker in tickers})
     by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -952,9 +1169,15 @@ def build_artifact(*, tickers: Sequence[str], rows: Sequence[Mapping[str, Any]],
         ticker = str(component.get("ticker") or "").upper()
         if ticker in names:
             bank_by_ticker[ticker].append(component)
+    securities_by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for component in securities_components:
+        ticker = str(component.get("ticker") or "").upper()
+        if ticker in names:
+            securities_by_ticker[ticker].append(component)
     records = {ticker: build_ticker_context(ticker, by_ticker.get(ticker, []), issuer_type=issuer_types.get(ticker),
                                             source_identities=source_identities,
-                                            bank_components=bank_by_ticker.get(ticker, [])) for ticker in names}
+                                            bank_components=bank_by_ticker.get(ticker, []),
+                                            securities_components=securities_by_ticker.get(ticker, [])) for ticker in names}
     all_features = [feature for record in records.values() for feature in record["features"].values()]
     artifact: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION,
         "requested_at": requested_at, "source_identities": dict(source_identities), "records": records,
