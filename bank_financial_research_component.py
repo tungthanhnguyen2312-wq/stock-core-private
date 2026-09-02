@@ -41,6 +41,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import re
 from typing import Any, Mapping, Sequence
 
 import monetary_basis_contract as basis_contract
@@ -96,6 +98,12 @@ PRIVATE_FIELD_NAMES = frozenset({
     "personal_transaction_history", "oauth_token", "session_token",
     "iotp", "otp", "private_account_identity", "customer_id", "password",
 })
+_PRIVATE_FIELD_NORMALIZED = frozenset({
+    "accountnumber", "accountno", "customerid", "portfolio", "portfolioholdings",
+    "holdings", "assetallocation", "personalassetallocation", "transactionhistory",
+    "personaltransactionhistory", "oauthtoken", "accesstoken", "refreshtoken",
+    "sessiontoken", "iotp", "otp", "password", "privateaccountidentity",
+})
 
 
 class BankResearchComponentError(ValueError):
@@ -114,18 +122,38 @@ def _hash(value: Any) -> str:
     return hashlib.sha256(_canonical(value).encode("utf-8")).hexdigest()
 
 
+def _private_key(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(value).strip().lower())
+
+
+def private_field_paths(payload: Any, *, _path: str = "$") -> list[str]:
+    """Return key paths matching the public-company privacy denylist.
+
+    The scan is deliberately recursive and key-based: a diagnostic can name a
+    rejected key/path without ever exposing the associated account or token value.
+    """
+    found: list[str] = []
+    if isinstance(payload, Mapping):
+        for key, value in payload.items():
+            path = f"{_path}.{key}"
+            if _private_key(key) in _PRIVATE_FIELD_NORMALIZED:
+                found.append(path)
+            found.extend(private_field_paths(value, _path=path))
+    elif isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        for index, value in enumerate(payload):
+            found.extend(private_field_paths(value, _path=f"{_path}[{index}]"))
+    return found
+
+
 def reject_private_fields(payload: Mapping[str, Any] | None) -> None:
     """Raise the moment a private/account-level key is present anywhere in `payload`.
 
     This is the input-contract gate a future importer must run over a raw
     provider payload before any of it is normalized into an observation.
     """
-    if not payload:
-        return
-    present = {str(key).strip().lower() for key in payload}
-    rejected = PRIVATE_FIELD_NAMES & present
+    rejected = private_field_paths(payload)
     if rejected:
-        raise BankResearchComponentPrivacyError(f"PRIVATE_ACCOUNT_FIELDS_REJECTED:{','.join(sorted(rejected))}")
+        raise BankResearchComponentPrivacyError(f"PRIVATE_FIELD_REJECTED:{','.join(sorted(rejected))}")
 
 
 def normalize_period_semantics_status(value: Any) -> str:
@@ -164,7 +192,8 @@ def build_observation(*, provider: str, ticker: str, entity_type: str, year: int
         raise BankResearchComponentError("ENTITY_TYPE_MUST_BE_BANK")
     if period_kind not in PERIOD_KINDS:
         raise BankResearchComponentError("PERIOD_KIND_UNRECOGNIZED")
-    if not isinstance(raw_value, (int, float)) or isinstance(raw_value, bool):
+    if (not isinstance(raw_value, (int, float)) or isinstance(raw_value, bool)
+            or not math.isfinite(raw_value)):
         raise BankResearchComponentError("RAW_VALUE_MUST_BE_NUMERIC")
     if not str(metric_id or "").strip():
         raise BankResearchComponentError("METRIC_ID_REQUIRED")

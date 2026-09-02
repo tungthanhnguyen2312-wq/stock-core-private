@@ -449,6 +449,7 @@ def _bank_usable(component: Mapping[str, Any], *, fitness: str) -> bool:
     return (
         component.get("contract_version") == bank_component.CONTRACT_VERSION
         and component.get("fitness") == fitness
+        and component.get("conflict_status") != "CAPTURE_VALUE_CONFLICT"
         and _numeric(component.get("raw_value"))
         and component.get("provider") not in (None, "", "unknown")
         and component.get("source_identity") not in (None, "", "unknown")
