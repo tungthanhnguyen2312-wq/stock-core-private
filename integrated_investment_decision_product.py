@@ -28,8 +28,20 @@ import hashlib
 import json
 from typing import Any, Mapping, Sequence
 
+import financial_analysis_product_projection as fa_product_projection
+
 CONTRACT_VERSION = "integrated_investment_decision_product/v1"
 MILESTONE = "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1"
+
+# The one shape evaluate_fundamental_direction()/build_ticker_integrated_decision() actually
+# read: financial_analysis_product_projection's compact, flat financial_analysis_product_
+# integration/v1 record set. A real production defect fed the raw financial_analysis_context/
+# v2 engine artifact and the legacy market_wide_current_fundamental_research/v1 artifact here
+# instead -- both structurally incompatible, silently degrading fundamental_state to
+# INSUFFICIENT for every ticker. contract_version is intentionally checked leniently (absent
+# is allowed, so lightweight test fixtures that omit it keep working); only a PRESENT but
+# WRONG contract_version fails closed, which is exactly the shape of both real historical bugs.
+FINANCIAL_ANALYSIS_COMPACT_CONTRACT = fa_product_projection.INTEGRATION_CONTRACT
 
 # ── Research Action Posture Taxonomy ──────────────────────────────────────────
 POSTURE_EARLY_WATCH = "EARLY_WATCH"
@@ -818,6 +830,12 @@ def build_artifact(
     legacy_decision_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact."""
+    fa_contract = (financial_analysis_artifact or {}).get("contract_version")
+    if fa_contract is not None and fa_contract != FINANCIAL_ANALYSIS_COMPACT_CONTRACT:
+        raise IntegratedDecisionProductError(
+            "INCOMPATIBLE_FINANCIAL_ANALYSIS_CONTRACT:expected="
+            f"{FINANCIAL_ANALYSIS_COMPACT_CONTRACT}:got={fa_contract}"
+        )
     tac_records = technical_structure_artifact.get("records") or {}
     fa_records = (financial_analysis_artifact or {}).get("records") or {}
     val_records = (current_valuation_artifact or {}).get("records") or {}

@@ -291,6 +291,30 @@ def test_integrated_decision_wiring_never_regresses_to_incompatible_tactical_sha
     assert "relative_volume_artifact=relative_volume" in body
 
 
+def test_integrated_decision_wiring_never_regresses_to_legacy_fundamental_artifact():
+    """Regression guard for CANONICAL_DAILY_FINANCIAL_V2_AND_CURRENT_RESEARCH_ENRICHMENT_V1:
+    the closure previously loaded retained_paths["fundamental"] (the legacy, structurally
+    incompatible market_wide_current_fundamental_research/v1 523-record artifact) directly as
+    financial_analysis_artifact, and the raw per-session market_wide_current_valuation_input_
+    scaleout artifact directly as current_valuation_artifact (also structurally incompatible --
+    evaluate_valuation_context() needs the evaluated methods/peer_relative_context shape).
+    Both made fundamental_state INSUFFICIENT for every ticker every session. The fix builds the
+    canonical Financial V2 engine + compact product fresh via canonical_daily_financial_v2_
+    materialization, and evaluates the raw valuation artifact via current_research_valuation_
+    context before feeding either into integrated_investment_decision_product.build_artifact()."""
+    source = (ROOT / "canonical_post_close_pipeline.py").read_text(encoding="utf-8")
+    start = source.index("def _integrated_investment_decision_product")
+    end = source.index("\n    _attempt(", start)
+    body = source[start:end]
+    assert 'financial_analysis_artifact=fa,' not in body
+    assert 'retained_paths["fundamental"]' not in body
+    assert "canonical_daily_financial_v2_materialization" in body
+    assert "financial_v2_current_input_authority" in body
+    assert "build_evaluated_valuation_artifact" in body
+    assert 'financial_analysis_artifact=financial_session_artifact["financial_analysis_product"]' in body
+    assert "current_valuation_artifact=evaluated_valuation" in body
+
+
 # --- 7. component-local missing evidence does not globally reject unrelated uses ---
 
 def test_component_local_failure_does_not_block_unrelated_components(tmp_path, monkeypatch):

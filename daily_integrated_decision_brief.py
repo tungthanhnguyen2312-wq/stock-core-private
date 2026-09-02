@@ -401,6 +401,30 @@ def build_risk_summary(*, current_records: Mapping[str, Mapping[str, Any]], watc
     }
 
 
+# ── Financial evidence context (section 23: AI handoff must be able to say "fundamental
+# evidence is based on FY/Q reporting period X, while market/technical evidence is session Y"
+# without guessing) ──────────────────────────────────────────────────────────────────────────
+
+def build_financial_evidence_context(financial_analysis_product_current: Mapping[str, Any] | None) -> dict[str, Any]:
+    if not financial_analysis_product_current:
+        return {"status": "UNAVAILABLE", "reason_codes": ["FINANCIAL_ANALYSIS_PRODUCT_NOT_SUPPLIED"]}
+    compact = financial_analysis_product_current.get("financial_analysis_product") or {}
+    return {
+        "status": "AVAILABLE",
+        "financial_analysis_product_identity": compact.get("artifact_identity"),
+        "financial_v2_engine_identity": financial_analysis_product_current.get("financial_v2_engine_identity"),
+        "financial_evidence_as_of_period": financial_analysis_product_current.get("financial_evidence_as_of_period"),
+        "financial_evidence_period_range": financial_analysis_product_current.get("financial_evidence_period_range"),
+        "decision_session": financial_analysis_product_current.get("decision_session"),
+        "coverage": financial_analysis_product_current.get("coverage"),
+        "note": "Financial evidence is periodic: an identical financial_v2_engine_identity across "
+                "several consecutive decision sessions is normal and expected between real "
+                "financial reports. Fundamental evidence is dated by financial_evidence_as_of_"
+                "period; market/technical evidence is dated by session -- the two are not the "
+                "same clock.",
+    }
+
+
 # ── Top-level assembly ──────────────────────────────────────────────────────────────────────────
 
 def build_artifact(
@@ -414,6 +438,7 @@ def build_artifact(
     tactical_current: Mapping[str, Any] | None = None,
     opportunity_prioritization_current: Mapping[str, Any] | None = None,
     feedback_status: Mapping[str, Any] | None = None,
+    financial_analysis_product_current: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one daily_integrated_decision_brief/v1 artifact. Pure join; recomputes nothing."""
     if integrated_decision_current.get("session") != session:
@@ -442,6 +467,7 @@ def build_artifact(
         sector_transition=next_session_brief.get("sector_transition"), watchlist_tickers=watchlist_tickers,
     )
     risk_summary = build_risk_summary(current_records=current_records, watchlist_tickers=watchlist_tickers, what_changed_today=what_changed_today)
+    financial_evidence_context = build_financial_evidence_context(financial_analysis_product_current)
 
     artifact: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION,
@@ -450,7 +476,7 @@ def build_artifact(
         "market_summary": market_summary, "sector_summary": sector_summary,
         "opportunity_sets": opportunity_sets, "watchlist": watchlist,
         "decision_transitions": decision_transitions, "what_changed_today": what_changed_today,
-        "risk_summary": risk_summary,
+        "risk_summary": risk_summary, "financial_evidence_context": financial_evidence_context,
         "feedback_status": feedback_status if feedback_status is not None else {"availability": "UNAVAILABLE", "reason_codes": ["FEEDBACK_STATUS_NOT_SUPPLIED"]},
         "coverage": {
             "universe_denominator": integrated_decision_current.get("coverage", {}).get("universe_denominator"),
@@ -464,6 +490,7 @@ def build_artifact(
             "sector_leadership": (sector_leadership_current or {}).get("artifact_identity"),
             "tactical_classifier": (tactical_current or {}).get("artifact_identity"),
             "opportunity_prioritization": (opportunity_prioritization_current or {}).get("artifact_identity"),
+            "financial_analysis_product": financial_evidence_context.get("financial_analysis_product_identity"),
         },
         "authority_boundary": {
             "is_actionable": False, "no_universal_score_rank_target_or_probability": True,
@@ -496,6 +523,7 @@ def build_from_session(*, root: Path, session: str, next_session_brief: Mapping[
     sector_leadership_current = _load_json(paths["sector_leadership"])
     tactical_current = _load_json(paths["market_structure_breakout_v3_projection"])
     opportunity_prioritization_current = _load_json(paths["opportunity_prioritization"])
+    financial_analysis_product_current = _load_json(paths["financial_analysis_product"])
     p3f9b_snapshot = _load_json(paths["exact_session_snapshot"])
     governed_chain = feedback_bridge.governed_session_chain(root)
     watchlist_tickers = list(owner_research_focus.broader_watchlist())
@@ -508,5 +536,5 @@ def build_from_session(*, root: Path, session: str, next_session_brief: Mapping[
         integrated_decision_current=integrated_current, next_session_brief=next_session_brief,
         descriptive_current=descriptive_current, sector_leadership_current=sector_leadership_current,
         tactical_current=tactical_current, opportunity_prioritization_current=opportunity_prioritization_current,
-        feedback_status=feedback_status,
+        feedback_status=feedback_status, financial_analysis_product_current=financial_analysis_product_current,
     )

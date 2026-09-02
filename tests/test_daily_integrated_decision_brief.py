@@ -25,6 +25,50 @@ def _record(ticker: str, *, posture: str, phase: str = "TREND_CONTINUATION", tri
     }
 
 
+class TestFinancialEvidenceContext:
+    """Section 23: the AI handoff must be able to say 'fundamental evidence is based on FY/Q
+    reporting period X, while market/technical evidence is session Y' without guessing."""
+
+    def test_unavailable_when_not_supplied(self):
+        ctx = brief.build_financial_evidence_context(None)
+        assert ctx["status"] == "UNAVAILABLE"
+        assert "FINANCIAL_ANALYSIS_PRODUCT_NOT_SUPPLIED" in ctx["reason_codes"]
+
+    def test_available_exposes_identity_and_as_of_period_distinct_from_decision_session(self):
+        financial_session_artifact = {
+            "decision_session": "2026-08-28",
+            "financial_v2_engine_identity": "financial_analysis_context/v2:deadbeef",
+            "financial_evidence_as_of_period": "2026-Q2",
+            "financial_evidence_period_range": {"earliest_observed_period_identity": "2024-Q1", "latest_observed_period_identity": "2026-Q2"},
+            "coverage": {"financial_engine_denominator": 1492},
+            "financial_analysis_product": {"artifact_identity": "financial_analysis_product_integration/v1:cafebabe"},
+        }
+        ctx = brief.build_financial_evidence_context(financial_session_artifact)
+        assert ctx["status"] == "AVAILABLE"
+        assert ctx["financial_analysis_product_identity"] == "financial_analysis_product_integration/v1:cafebabe"
+        assert ctx["financial_v2_engine_identity"] == "financial_analysis_context/v2:deadbeef"
+        assert ctx["financial_evidence_as_of_period"] == "2026-Q2"
+        assert ctx["decision_session"] == "2026-08-28"
+        # The financial evidence period and the decision session are explicitly different clocks.
+        assert ctx["financial_evidence_as_of_period"] != ctx["decision_session"]
+
+    def test_build_artifact_exposes_financial_analysis_product_identity(self):
+        integrated = {"session": "2026-08-28", "artifact_identity": "integrated_investment_decision_product/v1:x", "records": {}, "coverage": {}}
+        next_brief = {"current_session": "2026-08-28", "artifact_identity": "next_session_decision_brief/v2:y", "previous_qualified_session": "2026-08-26"}
+        financial_session_artifact = {
+            "decision_session": "2026-08-28", "financial_v2_engine_identity": "financial_analysis_context/v2:deadbeef",
+            "financial_evidence_as_of_period": "2026-Q2", "coverage": {},
+            "financial_analysis_product": {"artifact_identity": "financial_analysis_product_integration/v1:cafebabe"},
+        }
+        art = brief.build_artifact(
+            session="2026-08-28", requested_at="2026-08-28T15:05:00+07:00",
+            integrated_decision_current=integrated, next_session_brief=next_brief,
+            financial_analysis_product_current=financial_session_artifact,
+        )
+        assert art["financial_evidence_context"]["status"] == "AVAILABLE"
+        assert art["source_artifact_identities"]["financial_analysis_product"] == "financial_analysis_product_integration/v1:cafebabe"
+
+
 class TestClassifyOpportunitySet:
     def test_initiate_on_breakout_is_actionable_now(self):
         assert brief.classify_opportunity_set(_record("A", posture="INITIATE_ON_BREAKOUT")) == brief.ACTIONABLE_NOW

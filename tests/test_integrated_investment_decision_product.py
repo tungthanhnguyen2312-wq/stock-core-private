@@ -587,6 +587,66 @@ class TestGovernanceAndStructure:
         )
         assert dec["research_action_posture"] == iidp.POSTURE_AVOID
 
+    def test_incompatible_legacy_financial_contract_fails_closed(self) -> None:
+        """Section 14 regression guard: the real historical defect fed the legacy 523-record
+        market_wide_current_fundamental_research/v1 artifact as financial_analysis_artifact.
+        A present-but-wrong contract_version must now fail closed, never silently degrade
+        every ticker to INSUFFICIENT."""
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        legacy_fa_art = {
+            "contract_version": "market_wide_current_fundamental_research/v1",
+            "artifact_identity": "market_wide_current_fundamental_research/v1:fake",
+            "records": {"AAA": {"status": "AVAILABLE"}},
+        }
+        with pytest.raises(iidp.IntegratedDecisionProductError, match="INCOMPATIBLE_FINANCIAL_ANALYSIS_CONTRACT"):
+            iidp.build_artifact(
+                session="2026-08-28", requested_at="2026-09-02T00:00:00Z",
+                technical_structure_artifact=tac_art, financial_analysis_artifact=legacy_fa_art,
+            )
+
+    def test_raw_financial_v2_engine_contract_fails_closed(self) -> None:
+        """The raw financial_analysis_context/v2 engine record is also structurally
+        incompatible with evaluate_fundamental_direction()'s flat-key reads and must be
+        rejected the same way as the legacy artifact."""
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        raw_engine_art = {
+            "contract_version": "financial_analysis_context/v2",
+            "artifact_identity": "financial_analysis_context/v2:fake",
+            "records": {"AAA": {"states": {}, "features": {}}},
+        }
+        with pytest.raises(iidp.IntegratedDecisionProductError, match="INCOMPATIBLE_FINANCIAL_ANALYSIS_CONTRACT"):
+            iidp.build_artifact(
+                session="2026-08-28", requested_at="2026-09-02T00:00:00Z",
+                technical_structure_artifact=tac_art, financial_analysis_artifact=raw_engine_art,
+            )
+
+    def test_correct_compact_financial_contract_is_accepted(self) -> None:
+        """The real financial_analysis_product_integration/v1 compact shape must pass the
+        contract assertion and flow through to fundamental_state normally."""
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        fa_art = {
+            "contract_version": "financial_analysis_product_integration/v1",
+            "artifact_identity": "financial_analysis_product_integration/v1:fake",
+            "records": {"AAA": _sample_financial_record()},
+        }
+        art = iidp.build_artifact(
+            session="2026-08-28", requested_at="2026-09-02T00:00:00Z",
+            technical_structure_artifact=tac_art, financial_analysis_artifact=fa_art,
+        )
+        assert art["records"]["AAA"]["fundamental_state"] != iidp.FUNDAMENTAL_INSUFFICIENT
+
+    def test_absent_contract_version_field_still_permitted(self) -> None:
+        """Lightweight fixtures/replay tools that omit contract_version entirely (the shape
+        every other test in this file already uses) must keep working -- only a PRESENT but
+        wrong contract_version fails closed, matching the exact shape of the real bug."""
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        fa_art_no_contract_version = {"artifact_identity": "fake:no-contract-version", "records": {"AAA": _sample_financial_record()}}
+        art = iidp.build_artifact(
+            session="2026-08-28", requested_at="2026-09-02T00:00:00Z",
+            technical_structure_artifact=tac_art, financial_analysis_artifact=fa_art_no_contract_version,
+        )
+        assert art["records"]["AAA"]["fundamental_state"] != iidp.FUNDAMENTAL_INSUFFICIENT
+
     def test_missing_participation_is_local_uncertainty_only(self) -> None:
         """Defect 2: Missing participation is non-penalizing local uncertainty."""
         tac = _sample_tactical_record(

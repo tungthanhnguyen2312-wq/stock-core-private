@@ -2922,15 +2922,67 @@ def load_financial_analysis_product_context_artifact(path: Path) -> Mapping[str,
         raise ValueError(f"FINANCIAL_ANALYSIS_PRODUCT_CONTEXT_INVALID:{exc}") from exc
 
 
+def resolve_financial_analysis_product_context_path(root: Path, session: str | None) -> Path | None:
+    """Auto-resolve the canonical same-session financial_analysis_product_integration/v1
+    context materialized by canonical_daily_financial_v2_materialization.py (registered via
+    daily_session_level2_package.session_artifact_paths()["financial_analysis_product"]), when
+    available. Mirrors resolve_integrated_investment_decision_product_path's same-session-only
+    resolution -- never a neighboring-worktree or cross-session discovery."""
+    if not session:
+        return None
+    nodash = session.replace("-", "")
+    candidates = [
+        root / "operations-review" / f"financial-analysis-product-v2-{nodash}" / "financial_analysis_product_artifact.json",
+        root / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / "financial_analysis_product.json",
+    ]
+    for cand in candidates:
+        if cand.is_file():
+            return cand
+    return None
+
+
 def attach_financial_analysis_v2_product_context(
     bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+    *, root: Path | None = None, reference_session_date: str | None = None,
 ) -> Mapping[str, Any] | None:
-    """Opt-in attach.  With the flag unset this performs no V2-specific file I/O."""
-    if not include:
+    """Attach financial_analysis_product_integration/v1.
+
+    Preserves the original opt-in contract exactly: with ``include`` False and no root/
+    session supplied, this performs no V2-specific file I/O at all, regardless of
+    ``artifact_path`` (a caller-supplied path is only consulted once genuinely opted in).
+    ``include`` True requires either an explicit ``artifact_path`` or a resolvable canonical
+    same-session artifact; failing to resolve either raises.
+
+    New: when ``root``/``reference_session_date`` are supplied and ``include`` is False (the
+    normal CLI call site, unconditionally), this additionally auto-attaches the canonical
+    same-session artifact when available and silently returns None when it is not --
+    mirroring attach_integrated_investment_decision_product's own explicit-or-auto-resolve
+    pattern, so a normal `stocklookup.ps1 daily` run needs no extra financial flags once the
+    canonical per-session materialization exists.
+    """
+    resolved_path: Path | None = None
+    if include:
+        if artifact_path:
+            resolved_path = Path(artifact_path)
+        elif root is not None:
+            resolved_path = resolve_financial_analysis_product_context_path(root, reference_session_date)
+        if not resolved_path:
+            raise ValueError("FINANCIAL_ANALYSIS_PRODUCT_CONTEXT_PATH_REQUIRED")
+    elif root is not None and reference_session_date is not None:
+        resolved_path = resolve_financial_analysis_product_context_path(root, reference_session_date)
+
+    if not resolved_path:
         return None
-    if not artifact_path:
-        raise ValueError("FINANCIAL_ANALYSIS_PRODUCT_CONTEXT_PATH_REQUIRED")
-    context = load_financial_analysis_product_context_artifact(Path(artifact_path))
+
+    # The canonical session artifact wraps the compact financial_analysis_product_integration/
+    # v1 payload alongside session-delivery/peer-context fields (see
+    # canonical_daily_financial_v2_materialization.build_session_artifact); unwrap it if present
+    # so validate_financial_analysis_product_context always sees the compact contract itself.
+    raw = json.loads(resolved_path.read_text(encoding="utf-8")) if resolved_path.is_file() else None
+    if isinstance(raw, Mapping) and isinstance(raw.get("financial_analysis_product"), Mapping):
+        context = validate_financial_analysis_product_context(raw["financial_analysis_product"])
+    else:
+        context = load_financial_analysis_product_context_artifact(resolved_path)
     for ticker, entry in bundle_entries.items():
         try:
             entry["financial_analysis"] = financial_analysis_context_for_ticker(context, ticker)
@@ -5106,9 +5158,9 @@ def main() -> int:
     parser.add_argument("--current-daily-decision-research-product-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained current daily decision-research product artifact.")
     parser.add_argument("--include-financial-analysis-v2-product-context", action="store_true",
-                        help="Opt-in only: attach financial_analysis_product_integration/v1 from an explicit compact V2 product context. Never reads V2 files when omitted.")
+                        help="Force-require financial_analysis_product_integration/v1: an explicit compact V2 product context path, or auto-resolved from the canonical same-session financial-analysis-product-v2-<session> materialization; raises if neither resolves. Omitting this flag still auto-attaches when the canonical same-session artifact exists (mirroring --include-integrated-investment-decision-product); it never performs cross-session or neighboring-worktree discovery.")
     parser.add_argument("--financial-analysis-v2-product-context-path", metavar="PATH",
-                        help="Explicit financial_analysis_product_integration/v1 path required only with the Financial Analysis V2 opt-in; no neighboring-worktree discovery.")
+                        help="Explicit financial_analysis_product_integration/v1 (or canonical financial-analysis-product-v2 session wrapper) path; overrides auto-resolution.")
     parser.add_argument("--include-integrated-investment-decision-product", action="store_true",
                         help="Opt-in only: attach integrated_investment_decision_product/v1 from an explicit product artifact.")
     parser.add_argument("--integrated-investment-decision-product-path", metavar="PATH",
@@ -5527,6 +5579,7 @@ def main() -> int:
     financial_analysis_product_context = attach_financial_analysis_v2_product_context(
         bundle_entries, args.include_financial_analysis_v2_product_context,
         args.financial_analysis_v2_product_context_path,
+        root=runtime_root(), reference_session_date=latest_session,
     )
     integrated_decision_product = attach_integrated_investment_decision_product(
         bundle_entries, args.include_integrated_investment_decision_product,

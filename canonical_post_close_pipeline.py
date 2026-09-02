@@ -498,6 +498,8 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
 
     def _integrated_investment_decision_product():
         from integrated_investment_decision_product import build_artifact as build
+        import canonical_daily_financial_v2_materialization as fin_v2_material
+        import financial_v2_current_input_authority as fin_v2_authority
         import market_structure_breakout_product_projection as msb_proj
         import market_wide_relative_volume_research as rvol_research
         import technical_structure_context as tsc
@@ -516,8 +518,7 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
         # the previous wiring produced research_action_posture=INSUFFICIENT_CURRENT_RESEARCH for
         # every ticker (eligible/market_structure_state always absent -> always None -> always
         # falsy), a silent, universe-wide defect this fix corrects.
-        fa = _load(retained_paths["fundamental"])
-        val = _load(paths["valuation"]) or _load(retained_paths["valuation"])
+        raw_val = _load(paths["valuation"]) or _load(retained_paths["valuation"])
         desc = _load(paths["descriptive_research"])
         p3f9b = _load(paths["exact_session_snapshot"])
         mkt = _load(paths["sector_leadership"])
@@ -527,18 +528,45 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
         requested_at = f"{session}T15:00:00+07:00"
         technical_structure = tsc.build_artifact(current_descriptive=desc, p3f9b_snapshot=p3f9b, requested_at=requested_at)
         tactical_projection = msb_proj.build_artifact(technical_structure=technical_structure, requested_at=requested_at)
-        relative_volume = rvol_research.build_artifact(candidates=sorted((p3f9b.get("records") or {}).keys()), records=p3f9b.get("records") or {}, session=session, requested_at=requested_at)
+        daily_denominator = sorted((p3f9b.get("records") or {}).keys())
+        relative_volume = rvol_research.build_artifact(candidates=daily_denominator, records=p3f9b.get("records") or {}, session=session, requested_at=requested_at)
         # Also retained under its own canonical per-session path (not just consumed here) so
         # downstream consumers -- the daily_integrated_decision_brief CLI-level builder in
         # particular, which needs BOS/CHoCH per watchlist ticker -- can load the same compact V3
         # projection without rebuilding it from raw technical_structure_context.
         _write_json(paths["market_structure_breakout_v3_projection"], tactical_projection)
+        # Financial V2 previously had NO canonical daily-materialization path anywhere in this
+        # pipeline: the prior wiring here loaded the legacy, structurally incompatible
+        # market_wide_current_fundamental_research/v1 artifact (523-record shape;
+        # evaluate_fundamental_direction() needs the flat financial_analysis_product_integration/v1
+        # compact shape instead), which made fundamental_state INSUFFICIENT for every ticker every
+        # session. Build the current Financial V2 engine + compact product fresh from the pinned
+        # financial_v2_current_input_authority evidence chain, over the SAME daily denominator as
+        # relative volume above -- every ticker gets an explicit AVAILABLE or ABSENT compact record,
+        # never a silent drop. The raw per-session valuation artifact is likewise not itself the
+        # shape evaluate_valuation_context() needs (methods/peer_relative_context); it must first
+        # pass through current_research_valuation_context.evaluate_ticker_valuation()/attach_peer_
+        # relative(), joined against this same engine artifact's TTM features -- mirroring
+        # tools/run_integrated_investment_decision_replay.py's own proven wiring, the one place both
+        # correct shapes are established end to end.
+        fin_authority = fin_v2_authority.resolve(root)
+        engine_artifact = fin_v2_material.build_engine_artifact(root=root, requested_at=requested_at, authority=fin_authority)
+        financial_session_artifact = fin_v2_material.build_session_artifact(
+            root=root, decision_session=session, product_tickers=daily_denominator,
+            requested_at=requested_at, authority=fin_authority, engine_artifact=engine_artifact,
+        )
+        evaluated_valuation = fin_v2_material.build_evaluated_valuation_artifact(
+            engine_artifact=engine_artifact, raw_valuation_artifact=raw_val,
+            product_tickers=daily_denominator, requested_at=requested_at,
+        )
+        _write_json(paths["financial_analysis_product"], financial_session_artifact)
+        _write_json(paths["current_valuation_evaluated"], evaluated_valuation)
         res = build(
             session=session,
             requested_at=requested_at,
             technical_structure_artifact=tactical_projection,
-            financial_analysis_artifact=fa,
-            current_valuation_artifact=val,
+            financial_analysis_artifact=financial_session_artifact["financial_analysis_product"],
+            current_valuation_artifact=evaluated_valuation,
             relative_volume_artifact=relative_volume,
             market_sector_artifact=mkt,
             legacy_decision_artifact=opp,

@@ -74,6 +74,43 @@ def test_export_opt_in_is_off_without_io_and_on_requires_valid_explicit_context(
         attach_financial_analysis_v2_product_context({}, True, None)
 
 
+def test_auto_resolves_canonical_session_artifact_without_include_flag(tmp_path):
+    """Section 24: a normal daily run passes no explicit financial flag at all; once the
+    canonical financial-analysis-product-v2-<session> artifact exists, it must still attach."""
+    session = "2026-08-28"
+    session_dir = tmp_path / "operations-review" / f"financial-analysis-product-v2-{session.replace('-', '')}"
+    session_dir.mkdir(parents=True)
+    wrapper = {
+        "contract_version": "canonical_daily_financial_v2_materialization/v1",
+        "decision_session": session, "financial_analysis_product": _product(),
+    }
+    (session_dir / "financial_analysis_product_artifact.json").write_text(json.dumps(wrapper), encoding="utf-8")
+
+    entries = {"AAA": {}}
+    attached = attach_financial_analysis_v2_product_context(
+        entries, include=False, artifact_path=None, root=tmp_path, reference_session_date=session,
+    )
+    assert attached is not None
+    assert entries["AAA"]["financial_analysis"]["status"] == "AVAILABLE"
+
+
+def test_auto_resolve_silently_returns_none_when_canonical_artifact_absent(tmp_path):
+    entries = {"AAA": {}}
+    attached = attach_financial_analysis_v2_product_context(
+        entries, include=False, artifact_path=None, root=tmp_path, reference_session_date="2026-08-28",
+    )
+    assert attached is None
+    assert "financial_analysis" not in entries["AAA"]
+
+
+def test_include_flag_off_ignores_explicit_path_exactly_as_before(tmp_path):
+    """The pre-existing opt-in contract must survive unmodified: include=False means no I/O
+    at all, even when an artifact_path is also supplied."""
+    entries = {"AAA": {}}
+    assert attach_financial_analysis_v2_product_context(entries, False, str(tmp_path / "does-not-exist.json")) is None
+    assert attach_financial_analysis_v2_product_context(entries, False, str(tmp_path / "does-not-exist.json"), root=tmp_path, reference_session_date="2026-08-28") is None
+
+
 def test_compact_projection_exposes_working_capital_states_not_raw_amounts():
     current_assets = _row("current_assets", 700, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET")
     current_liabilities = _row("current_liabilities", 350, provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET")
