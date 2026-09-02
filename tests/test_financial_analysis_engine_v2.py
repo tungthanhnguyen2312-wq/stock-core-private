@@ -606,3 +606,170 @@ def test_gross_margin_alone_contributes_to_current_research_ready():
     assert result["features"]["net_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
     assert result["features"]["gross_margin"]["fitness"] == "READY"
     assert result["current_research_ready"] is True
+
+
+# --- Average-balance ROE/ROA: exact-vs-EOP-proxy separation ---------------------------
+
+def test_avg_equity_roe_ready_and_distinct_from_eop_proxy():
+    rows = [
+        row("net_income", 15, "2026-Q2", provider="VCI", source="AAA_vci_income"),
+        row("shareholders_equity", 100, "2026-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+        row("shareholders_equity", 80, "2026-Q1", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+    ]
+    result = context(rows)
+    avg_equity = result["features"]["same_provider_roe_avg_equity"]
+    eop_proxy = result["features"]["same_provider_roe_eop_proxy"]
+    assert avg_equity["fitness"] == "READY" and avg_equity["value"] == pytest.approx(15 / 90)
+    assert eop_proxy["fitness"] == "READY" and eop_proxy["value"] == pytest.approx(0.15)
+    assert avg_equity["value"] != eop_proxy["value"]
+    assert avg_equity["method"] != eop_proxy["method"]
+    assert "AVERAGE_OF_PERIOD_BOUNDARY_BALANCES_NOT_MULTI_POINT_AVERAGE" in avg_equity["warnings"]
+
+
+def test_avg_equity_roe_blocks_without_prior_quarter_boundary_while_eop_proxy_stays_ready():
+    # Only the ending balance is retained -- the EOP proxy is still exactly what it was
+    # before this milestone; the new average-balance feature must not silently fall back
+    # to it, and must not be labelled READY off a single balance point.
+    rows = [
+        row("net_income", 15, "2026-Q2", provider="VCI", source="AAA_vci_income"),
+        row("shareholders_equity", 100, "2026-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+    ]
+    result = context(rows)
+    avg_equity = result["features"]["same_provider_roe_avg_equity"]
+    assert avg_equity["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert "MISSING_SAME_PROVIDER_CONSECUTIVE_PERIOD_BOUNDARY_BALANCES" in avg_equity["reason_codes"]
+    assert result["features"]["same_provider_roe_eop_proxy"]["fitness"] == "READY"
+    assert result["features"]["same_provider_roe_eop_proxy"]["value"] == pytest.approx(0.15)
+
+
+def test_avg_assets_roa_ready_and_distinct_from_eop_proxy():
+    rows = [
+        row("net_income", 20, "2026-Q2", provider="VCI", source="AAA_vci_income"),
+        row("total_assets", 200, "2026-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+        row("total_assets", 150, "2026-Q1", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+    ]
+    result = context(rows)
+    avg_assets = result["features"]["same_provider_roa_avg_assets"]
+    eop_proxy = result["features"]["same_provider_roa_eop_proxy"]
+    assert avg_assets["fitness"] == "READY" and avg_assets["value"] == pytest.approx(20 / 175)
+    assert eop_proxy["fitness"] == "READY" and eop_proxy["value"] == pytest.approx(0.1)
+    assert avg_assets["value"] != eop_proxy["value"]
+
+
+def test_avg_balance_return_blocks_on_zero_average_independent_of_eop_proxy():
+    # Equity swings from -50 to +50: the average of the two boundary balances is exactly
+    # zero even though neither individual balance is, and the EOP proxy (ending balance
+    # only) is unaffected by that cancellation.
+    rows = [
+        row("net_income", 5, "2026-Q2", provider="VCI", source="AAA_vci_income"),
+        row("shareholders_equity", 50, "2026-Q2", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+        row("shareholders_equity", -50, "2026-Q1", provider="VCI", semantic="POINT_IN_TIME_BALANCE_SHEET", source="AAA_vci_balance"),
+    ]
+    result = context(rows)
+    assert result["features"]["same_provider_roe_avg_equity"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert "ZERO_DENOMINATOR" in result["features"]["same_provider_roe_avg_equity"]["reason_codes"]
+    assert result["features"]["same_provider_roe_eop_proxy"]["fitness"] == "READY"
+    assert result["features"]["same_provider_roe_eop_proxy"]["value"] == pytest.approx(0.1)
+
+
+def test_limited_family_avg_balance_roe_roa_are_not_applicable():
+    result = context([row("net_income", 15), row("shareholders_equity", 100, semantic="POINT_IN_TIME_BALANCE_SHEET"),
+                      row("total_assets", 200, semantic="POINT_IN_TIME_BALANCE_SHEET")], entity="bank")
+    assert result["features"]["same_provider_roe_avg_equity"]["fitness"] == "NOT_APPLICABLE"
+    assert result["features"]["same_provider_roa_avg_assets"]["fitness"] == "NOT_APPLICABLE"
+
+
+# --- Own-history retrospective percentile/range context -------------------------------
+
+def _margin_rows(margins, periods, *, provider="VCI"):
+    rows = []
+    for margin, period in zip(margins, periods):
+        rows.append(row("revenue", 1000, period, provider=provider, source="AAA_vci_income"))
+        rows.append(row("gross_profit", margin * 1000, period, provider=provider, source="AAA_vci_income"))
+    return rows
+
+
+def test_history_context_available_with_at_least_six_retained_periods():
+    periods = ["2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"]
+    margins = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
+    result = context(_margin_rows(margins, periods))
+    entry = result["history_context"]["gross_margin"]
+    assert entry["status"] == "AVAILABLE"
+    assert entry["sample_count"] == 6
+    assert entry["subject_value"] == pytest.approx(0.40)
+    assert entry["percentile"] == pytest.approx(1.0)
+    assert entry["descriptive_bucket"] == "UPPER_QUARTILE"
+    assert entry["range_min"] == pytest.approx(0.10)
+    assert entry["range_max"] == pytest.approx(0.35)
+    assert entry["as_of_period"] == "2026-Q2"
+    assert entry["authority"] == "CURRENT_RESEARCH_RETROSPECTIVE_ONLY_NOT_PIT_HISTORICAL_CLAIM"
+
+
+def test_history_context_partial_with_three_to_five_retained_periods():
+    periods = ["2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"]
+    margins = [0.10, 0.15, 0.20, 0.25]
+    result = context(_margin_rows(margins, periods))
+    entry = result["history_context"]["gross_margin"]
+    assert entry["status"] == "PARTIAL"
+    assert entry["sample_count"] == 3
+    assert entry["percentile"] == pytest.approx(1.0)
+
+
+def test_history_context_insufficient_below_three_retained_periods():
+    periods = ["2026-Q1", "2026-Q2"]
+    margins = [0.10, 0.25]
+    result = context(_margin_rows(margins, periods))
+    entry = result["history_context"]["gross_margin"]
+    assert entry["status"] == "INSUFFICIENT_HISTORY"
+    assert entry["sample_count"] == 1
+    assert entry.get("percentile") is None
+
+
+def test_history_context_percentile_is_tie_aware():
+    periods = ["2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"]
+    margins = [0.20, 0.20, 0.30, 0.20]  # current (latest) repeats two prior observations
+    result = context(_margin_rows(margins, periods))
+    entry = result["history_context"]["gross_margin"]
+    assert entry["status"] == "PARTIAL" and entry["sample_count"] == 3
+    assert entry["percentile"] == pytest.approx((0 + 0.5 * 2) / 3)
+    assert entry["descriptive_bucket"] == "LOWER_MIDDLE"
+
+
+def test_history_context_unavailable_when_subject_feature_is_blocked():
+    result = context([row("revenue", 1000)])  # no gross_profit at all -> gross_margin BLOCKED
+    assert result["features"]["gross_margin"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    entry = result["history_context"]["gross_margin"]
+    assert entry["status"] == "UNAVAILABLE" and entry["reason"] == "SUBJECT_VALUE_UNAVAILABLE"
+
+
+def test_history_context_blocks_rather_than_compares_across_a_different_source_key():
+    # The subject value is the single latest-period observation from provider A; provider
+    # B independently retains a longer but strictly older series under a different source
+    # key. The longer series must never stand in as "history" for a value it never produced.
+    rows = [
+        row("revenue", 1000, "2026-Q2", provider="KBS", source="AAA_kbs_income"),
+        row("gross_profit", 500, "2026-Q2", provider="KBS", source="AAA_kbs_income"),
+        *_margin_rows([0.10, 0.15, 0.20, 0.25], ["2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4"], provider="VCI"),
+    ]
+    result = context(rows)
+    assert result["features"]["gross_margin"]["value"] == pytest.approx(0.5)
+    entry = result["history_context"]["gross_margin"]
+    assert entry["status"] == "UNAVAILABLE"
+    assert entry["reason"] == "SUBJECT_PERIOD_NOT_IN_RETAINED_HISTORY_SERIES"
+
+
+def test_limited_family_history_context_is_not_applicable():
+    result = context([row("gross_profit", 400), row("revenue", 1000)], entity="securities")
+    for feature_id in engine.HISTORY_CONTEXT_FEATURES:
+        assert result["history_context"][feature_id]["status"] == "NOT_APPLICABLE"
+
+
+def test_history_context_coverage_is_reported_in_artifact():
+    periods = ["2024-Q4", "2025-Q1", "2025-Q2", "2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"]
+    margins = [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
+    rows = _margin_rows(margins, periods)
+    artifact = engine.build_artifact(tickers=["AAA"], rows=rows, issuer_types={"AAA": "corporate"},
+                                     source_identities={"semantics": "x"}, requested_at="2026-09-02T00:00:00+07:00")
+    coverage = artifact["coverage"]["history_context_coverage"]
+    assert coverage["gross_margin"] == {"AVAILABLE": 1}
+    assert set(coverage) == set(engine.HISTORY_CONTEXT_FEATURES)

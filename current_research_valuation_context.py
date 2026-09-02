@@ -531,6 +531,104 @@ def attach_fundamental_peers(feature_records: Mapping[str, Mapping[str, Any]],
     return out
 
 
+#: financial_analysis_engine_v2 features this milestone exposes sector/industry peer
+#: context for. Deliberately the same already-READY-capable ratios `history_context`
+#: targets in that module -- not every feature the engine computes, to keep both
+#: additions bounded to metrics that are genuinely usable across a wide cohort.
+ENGINE_PEER_FEATURES = (
+    "gross_margin", "net_margin", "equity_to_assets", "current_ratio",
+    "same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
+)
+SECTOR_COHORT_LEVEL = "SECTOR_INDUSTRY_DESCRIPTIVE"
+ENTITY_CLASS_COHORT_LEVEL = "ENTITY_CLASS_FALLBACK"
+
+
+def _engine_cohort(ticker: str, record: Mapping[str, Any], industry_by_ticker: Mapping[str, str] | None) -> tuple[str, str]:
+    """(cohort_id, cohort_level): a retained descriptive sector/industry label when one is
+    available for this ticker, else the coarser entity-class grouping `attach_peer_relative`
+    already uses for valuation. Never a fabricated, inferred, or manually assigned sector --
+    absence of a retained label degrades only to the entity-class cohort, never to a guess.
+    """
+    industry = (industry_by_ticker or {}).get(ticker)
+    if isinstance(industry, str) and industry.strip():
+        return f"SECTOR:{industry.strip().casefold()}", SECTOR_COHORT_LEVEL
+    issuer_type = record.get("issuer_type") or record.get("entity_class") or "unknown"
+    return f"ENTITY_CLASS:{issuer_type}", ENTITY_CLASS_COHORT_LEVEL
+
+
+def _engine_feature(record: Mapping[str, Any] | None, feature_id: str) -> Mapping[str, Any]:
+    features = (record or {}).get("features") or {}
+    item = features.get(feature_id)
+    return item if isinstance(item, Mapping) else {}
+
+
+def _engine_peer_key(cohort_id: str, feature: Mapping[str, Any], feature_id: str) -> tuple[Any, ...] | None:
+    if feature.get("fitness") != "READY" or not _numeric(feature.get("value")):
+        return None
+    periods = tuple(feature.get("period_identity") or [])
+    latest = periods[-1] if periods else None
+    if not latest:
+        return None
+    return (feature_id, cohort_id, feature.get("method"), tuple(feature.get("scope") or []),
+            feature.get("currency"), feature.get("scale"), latest)
+
+
+def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, Any]],
+                                    *, industry_by_ticker: Mapping[str, str] | None = None) -> dict[str, dict[str, Any]]:
+    """Sector/industry (falling back to entity-class) peer median/tie-aware percentile/rank
+    for a curated set of already-READY `financial_analysis_engine_v2` features.
+
+    Deliberately additive and separate from `attach_fundamental_peers` above, which reads
+    the older market-wide fundamental feature store's differently-shaped and differently-
+    named features. Compares only rows sharing an identical feature method, cohort, scope,
+    currency, scale and latest retained period -- the same same-representation discipline
+    the engine itself enforces before computing any one ticker's own value. Missing peers
+    (or a subject feature that is not READY) degrade only that one metric's comparison,
+    never the ticker's other metrics.
+    """
+    cohorts: dict[tuple[Any, ...], list[float]] = defaultdict(list)
+    cohort_of: dict[str, tuple[str, str]] = {}
+    for ticker, record in engine_records.items():
+        cohort_id, cohort_level = _engine_cohort(ticker, record or {}, industry_by_ticker)
+        cohort_of[ticker] = (cohort_id, cohort_level)
+        for feature_id in ENGINE_PEER_FEATURES:
+            key = _engine_peer_key(cohort_id, _engine_feature(record, feature_id), feature_id)
+            if key is not None:
+                cohorts[key].append(float(_engine_feature(record, feature_id)["value"]))
+    out: dict[str, dict[str, Any]] = {}
+    for ticker, record in engine_records.items():
+        cohort_id, cohort_level = cohort_of[ticker]
+        relatives: dict[str, Any] = {}
+        for feature_id in ENGINE_PEER_FEATURES:
+            feature = _engine_feature(record, feature_id)
+            key = _engine_peer_key(cohort_id, feature, feature_id)
+            if key is None:
+                relatives[feature_id] = {
+                    "status": "NOT_COMPARABLE", "reason": list(feature.get("reason_codes") or ["FEATURE_NOT_COMPARABLE"]),
+                    "peer_count": 0, "cohort_id": cohort_id, "cohort_level": cohort_level,
+                    "method": feature.get("method"), "minimum_peer_count": MIN_COHORT_MEMBERS,
+                }
+                continue
+            values = cohorts[key]
+            if len(values) < MIN_COHORT_MEMBERS:
+                relatives[feature_id] = {
+                    "status": "INSUFFICIENT_PEER_COUNT", "peer_count": len(values),
+                    "minimum_peer_count": MIN_COHORT_MEMBERS, "cohort_id": cohort_id, "cohort_level": cohort_level,
+                    "method": feature.get("method"),
+                }
+                continue
+            subject = float(feature["value"])
+            relatives[feature_id] = {
+                "status": "READY_RESEARCH_ONLY", "peer_count": len(values),
+                "peer_median": median(values), "percentile": _percentile(values, subject),
+                "subject_value": subject, "cohort_id": cohort_id, "cohort_level": cohort_level,
+                "method": feature.get("method"), "as_of_period": (feature.get("period_identity") or [None])[-1],
+                "percentile_formula": "(below + 0.5 * equal) / n", "minimum_peer_count": MIN_COHORT_MEMBERS,
+            }
+        out[ticker] = relatives
+    return out
+
+
 def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Mapping[str, Any] | None,
                    feature_store: Mapping[str, Any] | None, row: Mapping[str, Any],
                    freshness: Mapping[str, Any]) -> dict[str, Any]:

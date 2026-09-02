@@ -1,11 +1,14 @@
-"""Focused tests for the TTM monetary-basis comparison in `current_research_valuation_context`."""
+"""Focused tests for `current_research_valuation_context`: the TTM monetary-basis
+comparison, and the sector/industry (entity-class fallback) engine-feature peer context.
+"""
 from __future__ import annotations
 
 import pytest
 
 from current_research_valuation_context import (
-    INPUT_BLOCKED, PE_NOT_MEANINGFUL, PE_TTM, PS_TTM,
-    _monetary_basis_compatible, _select_ttm, evaluate_ticker_valuation,
+    ENGINE_PEER_FEATURES, ENTITY_CLASS_COHORT_LEVEL, INPUT_BLOCKED, PE_NOT_MEANINGFUL, PE_TTM,
+    PS_TTM, SECTOR_COHORT_LEVEL, _monetary_basis_compatible, _select_ttm,
+    attach_engine_fundamental_peers, evaluate_ticker_valuation,
 )
 import monetary_basis_contract as basis_contract
 
@@ -199,3 +202,108 @@ def test_deterministic_identity_same_inputs_same_output():
     first = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
     second = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
     assert first["methods"][PE_TTM] == second["methods"][PE_TTM]
+
+
+# --- attach_engine_fundamental_peers: sector/industry peer context over engine_v2 -----
+
+def _engine_feature(value, *, fitness="READY", method="same_provider_same_period_gross_margin/v2",
+                    period="2026-Q2", scope=("consolidated",), currency="unknown", scale="unknown"):
+    return {"fitness": fitness, "value": value, "method": method, "period_identity": [period, period],
+           "scope": list(scope), "currency": currency, "scale": scale, "reason_codes": [] if fitness == "READY" else ["X"]}
+
+
+def _engine_record(gross_margin=None, *, issuer_type="corporate", **overrides):
+    features = {}
+    if gross_margin is not None:
+        features["gross_margin"] = gross_margin if isinstance(gross_margin, dict) else _engine_feature(gross_margin)
+    features.update(overrides)
+    return {"issuer_type": issuer_type, "features": features}
+
+
+def test_engine_peer_median_and_tie_aware_percentile():
+    values = [0.10, 0.20, 0.30, 0.40, 0.50, 0.60]
+    records = {f"T{i}": _engine_record(value) for i, value in enumerate(values)}
+    peers = attach_engine_fundamental_peers(records)
+    entry = peers["T2"]["gross_margin"]  # subject value 0.30
+    assert entry["status"] == "READY_RESEARCH_ONLY"
+    assert entry["peer_count"] == 6
+    assert entry["peer_median"] == pytest.approx(0.35)
+    assert entry["percentile"] == pytest.approx((2 + 0.5) / 6)
+    assert entry["cohort_level"] == ENTITY_CLASS_COHORT_LEVEL
+    assert entry["cohort_id"] == "ENTITY_CLASS:corporate"
+
+
+def test_engine_peer_percentile_is_tie_aware():
+    values = [0.20, 0.20, 0.20, 0.30, 0.40]
+    records = {f"T{i}": _engine_record(value) for i, value in enumerate(values)}
+    peers = attach_engine_fundamental_peers(records)
+    entry = peers["T0"]["gross_margin"]
+    assert entry["percentile"] == pytest.approx((0 + 0.5 * 3) / 5)
+
+
+def test_engine_peer_insufficient_below_minimum_cohort():
+    records = {f"T{i}": _engine_record(value) for i, value in enumerate([0.1, 0.2, 0.3, 0.4])}
+    peers = attach_engine_fundamental_peers(records)
+    entry = peers["T0"]["gross_margin"]
+    assert entry["status"] == "INSUFFICIENT_PEER_COUNT"
+    assert entry["peer_count"] == 4
+    assert entry.get("percentile") is None
+
+
+def test_engine_peer_not_comparable_when_feature_not_ready():
+    records = {f"T{i}": _engine_record(0.2 + i / 100) for i in range(5)}
+    records["T0"] = _engine_record(_engine_feature(None, fitness="BLOCKED_BY_EVIDENCE"))
+    peers = attach_engine_fundamental_peers(records)
+    assert peers["T0"]["gross_margin"]["status"] == "NOT_COMPARABLE"
+    assert peers["T0"]["gross_margin"]["peer_count"] == 0
+
+
+def test_engine_peer_missing_metric_degrades_only_that_metric():
+    records = {f"T{i}": _engine_record(0.2 + i / 100) for i in range(5)}
+    for ticker, record in records.items():
+        record["features"]["net_margin"] = _engine_feature(None, fitness="BLOCKED_BY_EVIDENCE")
+    peers = attach_engine_fundamental_peers(records)
+    assert peers["T0"]["gross_margin"]["status"] == "READY_RESEARCH_ONLY"
+    assert peers["T0"]["net_margin"]["status"] == "NOT_COMPARABLE"
+    assert set(peers["T0"]) == set(ENGINE_PEER_FEATURES)
+
+
+def test_engine_peer_incompatible_method_never_pooled_together():
+    records = {f"T{i}": _engine_record(0.2 + i / 100) for i in range(5)}
+    records["T5"] = _engine_record(_engine_feature(0.99, method="a_different_method/v9"))
+    peers = attach_engine_fundamental_peers(records)
+    assert peers["T0"]["gross_margin"]["peer_count"] == 5
+    assert peers["T5"]["gross_margin"]["status"] == "INSUFFICIENT_PEER_COUNT"
+    assert peers["T5"]["gross_margin"]["peer_count"] == 1
+
+
+def test_engine_peer_incompatible_monetary_basis_never_pooled_together():
+    # Same feature, same cohort, same method, same period -- but a different native
+    # currency/scale is a genuinely different monetary basis and must not be blended
+    # into one percentile, exactly as the pre-existing valuation route's monetary-basis
+    # compatibility gate already enforces for P/E, P/B, and P/S.
+    records = {f"T{i}": _engine_record(0.2 + i / 100) for i in range(5)}
+    records["T5"] = _engine_record(_engine_feature(0.99, currency="USD"))
+    records["T6"] = _engine_record(_engine_feature(0.98, scale="thousand"))
+    peers = attach_engine_fundamental_peers(records)
+    assert peers["T0"]["gross_margin"]["peer_count"] == 5
+    assert peers["T5"]["gross_margin"]["status"] == "INSUFFICIENT_PEER_COUNT"
+    assert peers["T5"]["gross_margin"]["peer_count"] == 1
+    assert peers["T6"]["gross_margin"]["status"] == "INSUFFICIENT_PEER_COUNT"
+    assert peers["T6"]["gross_margin"]["peer_count"] == 1
+
+
+def test_engine_peer_prefers_retained_sector_over_entity_class():
+    records = {f"T{i}": _engine_record(0.2 + i / 100) for i in range(5)}
+    industry = {ticker: "Bất động sản" for ticker in records}
+    peers = attach_engine_fundamental_peers(records, industry_by_ticker=industry)
+    entry = peers["T0"]["gross_margin"]
+    assert entry["cohort_level"] == SECTOR_COHORT_LEVEL
+    assert entry["cohort_id"] == f"SECTOR:{'bất động sản'}"
+    assert entry["status"] == "READY_RESEARCH_ONLY" and entry["peer_count"] == 5
+
+
+def test_engine_peer_falls_back_to_entity_class_without_retained_industry():
+    records = {f"T{i}": _engine_record(0.2 + i / 100) for i in range(5)}
+    peers = attach_engine_fundamental_peers(records, industry_by_ticker={"T0": "   "})
+    assert peers["T0"]["gross_margin"]["cohort_level"] == ENTITY_CLASS_COHORT_LEVEL

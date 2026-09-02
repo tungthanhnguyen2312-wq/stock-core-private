@@ -18,10 +18,12 @@ import securities_financial_research_component as securities_component
 
 
 CONTRACT_VERSION = "financial_analysis_context/v2"
-#: Bumped 2026-09-02: SECURITIES_SPECIALIST_FINANCIAL_RESEARCH_FOUNDATION_V1 added the
-#: additive securities_* feature/state family and securities_specialist_contract_version,
-#: mirroring the bank specialist family's own additive shape.
-SCHEMA_VERSION = "2.2.0"
+#: Bumped 2026-09-02: CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1 added average-balance
+#: ROE/ROA (same_provider_roe_avg_equity / same_provider_roa_avg_assets -- genuinely distinct
+#: from the pre-existing end-of-period proxies, never relabelled as one another) and a
+#: per-ticker retrospective own-history percentile/range context (history_context) over the
+#: headline corporate ratio features.
+SCHEMA_VERSION = "2.3.0"
 FITNESS = ("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE")
 INDUSTRIAL = "INDUSTRIAL_FINANCIAL_ANALYSIS"
 LIMITED = "OTHER_FINANCIAL_LIMITED_ANALYSIS"
@@ -522,6 +524,178 @@ def _same_provider_eop_proxy(rows: Sequence[Mapping[str, Any]], numerator_metric
                     warnings=["END_OF_PERIOD_BALANCE_PROXY_NOT_AVERAGE_BALANCE_RETURN"])
 
 
+def _avg_balance_series(rows: Sequence[Mapping[str, Any]], flow_metric: str,
+                        balance_metric: str) -> dict[str, tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]]:
+    """Every period's (flow, ending_balance, beginning_balance) triple for the single best
+    (longest, most-recently-ending) same-provider/scope/currency/scale source key.
+
+    `beginning_balance` is the immediately preceding quarter's own end-of-period balance --
+    a balance sheet has no separate "beginning of period" snapshot, so the prior period's
+    ending balance is the only retained value that can stand in for it. Shared by the
+    average-balance-return feature below and its own-history context so both read one
+    traversal instead of two.
+    """
+    def index(metric: str, semantic: str) -> dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]]:
+        result: dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
+        for row in rows:
+            if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
+                unit = row.get("normalized_candidate_unit") or {}
+                key = (str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
+                       str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")))
+                result[key][str(row.get("native_period_label") or row.get("period_end"))] = row
+        return result
+    flows, balances = index(flow_metric, FLOW_STANDALONE), index(balance_metric, PIT)
+    best_series: dict[str, tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]] = {}
+    for key in set(flows) & set(balances):
+        series: dict[str, tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]] = {}
+        for label, flow in flows[key].items():
+            quarter = _quarter(label)
+            prior_label = f"{_prior_quarter(quarter)[0]}-Q{_prior_quarter(quarter)[1]}" if quarter else None
+            if label in balances[key] and prior_label in balances[key]:
+                series[label] = (flow, balances[key][label], balances[key][prior_label])
+        candidate_rank = (len(series), max(series) if series else "")
+        best_rank = (len(best_series), max(best_series) if best_series else "")
+        if candidate_rank > best_rank:
+            best_series = series
+    return best_series
+
+
+def _avg_balance_ratio_map(series: Mapping[str, tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]]) -> dict[str, float]:
+    ratios: dict[str, float] = {}
+    for label, (flow, ending, beginning) in series.items():
+        average = (ending["reported_value"] + beginning["reported_value"]) / 2
+        if average != 0:
+            ratios[label] = flow["reported_value"] / average
+    return ratios
+
+
+def _same_provider_avg_balance_return(feature_id: str,
+                                      series: Mapping[str, tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]],
+                                      *, method: str) -> dict[str, Any]:
+    """Standalone-quarter flow divided by the average of its own period-start and
+    period-end same-provider balance -- genuinely distinct from `_same_provider_eop_proxy`,
+    which divides by the ending balance alone. Never relabelled as that proxy's method, and
+    blocks (rather than silently falling back to it) when only the ending balance is retained.
+    """
+    if not series:
+        return _blocked(feature_id, "MISSING_SAME_PROVIDER_CONSECUTIVE_PERIOD_BOUNDARY_BALANCES")
+    label = max(series)
+    flow, ending, beginning = series[label]
+    average = (ending["reported_value"] + beginning["reported_value"]) / 2
+    if average == 0:
+        return _blocked(feature_id, "ZERO_DENOMINATOR")
+    return _feature(feature_id, value=flow["reported_value"] / average, fitness="READY", method=method,
+                    inputs=[beginning, flow, ending],
+                    warnings=["AVERAGE_OF_PERIOD_BOUNDARY_BALANCES_NOT_MULTI_POINT_AVERAGE"])
+
+
+def _ratio_series(rows: Sequence[Mapping[str, Any]], numerator_metric: str, numerator_semantic: str,
+                  denominator_metric: str, denominator_semantic: str) -> dict[str, float]:
+    """Every period's ratio value for the single best (longest, most-recently-ending)
+    same-provider/scope/currency/scale source key -- the own-history basis for a same-
+    period ratio feature (a margin, a P-I-T stock ratio, or a cross-semantic EOP proxy).
+    """
+    def index(metric: str, semantic: str) -> dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]]:
+        result: dict[tuple[str, str, str, str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
+        for row in rows:
+            if _row_usable(row, semantic) and row.get("canonical_metric") == metric:
+                unit = row.get("normalized_candidate_unit") or {}
+                key = (str(row.get("ticker")), str((row.get("source_lineage") or {}).get("provider")),
+                       str(row.get("statement_scope")), str(unit.get("currency")), str(unit.get("scale")))
+                result[key][str(row.get("native_period_label") or row.get("period_end"))] = row
+        return result
+    numerators, denominators = index(numerator_metric, numerator_semantic), index(denominator_metric, denominator_semantic)
+    best_series: dict[str, float] = {}
+    for key in set(numerators) & set(denominators):
+        series: dict[str, float] = {}
+        for label in set(numerators[key]) & set(denominators[key]):
+            denominator = denominators[key][label]["reported_value"]
+            if denominator != 0:
+                series[label] = numerators[key][label]["reported_value"] / denominator
+        candidate_rank = (len(series), max(series) if series else "")
+        best_rank = (len(best_series), max(best_series) if best_series else "")
+        if candidate_rank > best_rank:
+            best_series = series
+    return best_series
+
+
+#: Minimum retained same-source-key periods (including the current one) for own-history
+#: context: below PARTIAL, a percentile would rest on too few points to mean anything; below
+#: AVAILABLE, it is real but thin. Deliberately lower than the 20/10 daily-price thresholds
+#: `market_wide_historical_research_context.py` uses -- quarterly financial history is
+#: inherently far shallower than daily price history, and that stricter bar would leave
+#: every ticker INSUFFICIENT_HISTORY given the retained KBS/VCI depth.
+HISTORY_MIN_AVAILABLE = 6
+HISTORY_MIN_PARTIAL = 3
+
+
+def _history_bucket(percentile: float) -> str:
+    if percentile < .25: return "LOWER_QUARTILE"
+    if percentile < .50: return "LOWER_MIDDLE"
+    if percentile < .75: return "UPPER_MIDDLE"
+    return "UPPER_QUARTILE"
+
+
+def _history_entry(feature: Mapping[str, Any], series: Mapping[str, float]) -> dict[str, Any]:
+    """Retrospective current-research percentile/range of one READY feature's current value
+    against its own retained same-source-key history.  Never a point-in-time historical
+    claim, and never compared against a different source key than the subject value's own
+    (a subject period absent from the retained series blocks rather than substitutes).
+    """
+    if feature.get("fitness") != "READY" or not _numeric(feature.get("value")):
+        return {"status": "UNAVAILABLE", "reason": "SUBJECT_VALUE_UNAVAILABLE", "sample_count": 0}
+    periods = feature.get("period_identity") or []
+    current_label = periods[-1] if periods else None
+    if current_label not in series:
+        return {"status": "UNAVAILABLE", "reason": "SUBJECT_PERIOD_NOT_IN_RETAINED_HISTORY_SERIES", "sample_count": 0}
+    history = [value for label, value in series.items() if label != current_label]
+    count = len(history)
+    if count < HISTORY_MIN_PARTIAL:
+        return {"status": "INSUFFICIENT_HISTORY", "reason": "BELOW_MINIMUM_PARTIAL_SAMPLE", "sample_count": count,
+                "subject_value": feature["value"], "minimum_partial_sample": HISTORY_MIN_PARTIAL,
+                "minimum_available_sample": HISTORY_MIN_AVAILABLE}
+    subject = feature["value"]
+    below = sum(value < subject for value in history)
+    equal = sum(value == subject for value in history)
+    percentile = (below + 0.5 * equal) / count
+    status = "AVAILABLE" if count >= HISTORY_MIN_AVAILABLE else "PARTIAL"
+    return {
+        "status": status, "sample_count": count, "subject_value": subject, "as_of_period": current_label,
+        "percentile": percentile, "descriptive_bucket": _history_bucket(percentile),
+        "range_min": min(history), "range_max": max(history),
+        "minimum_partial_sample": HISTORY_MIN_PARTIAL, "minimum_available_sample": HISTORY_MIN_AVAILABLE,
+        "methodology": "retrospective_own_history_same_source_key_percentile/v1",
+        "percentile_formula": "(below + 0.5 * equal) / n",
+        "authority": "CURRENT_RESEARCH_RETROSPECTIVE_ONLY_NOT_PIT_HISTORICAL_CLAIM",
+    }
+
+
+#: Headline corporate ratios own-history context is emitted for. Deliberately the same-
+#: shaped, already-READY-capable ratios this milestone's peer context also targets --
+#: not every feature this module computes, to keep the per-ticker payload bounded.
+HISTORY_CONTEXT_FEATURES = (
+    "gross_margin", "net_margin", "equity_to_assets", "current_ratio",
+    "same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
+    "same_provider_roe_eop_proxy", "same_provider_roa_eop_proxy",
+)
+
+
+def _build_history_context(rows: Sequence[Mapping[str, Any]], features: Mapping[str, Mapping[str, Any]],
+                           avg_equity_series: Mapping[str, tuple], avg_assets_series: Mapping[str, tuple]) -> dict[str, Any]:
+    series_by_feature = {
+        "gross_margin": _ratio_series(rows, "gross_profit", FLOW_STANDALONE, "revenue", FLOW_STANDALONE),
+        "net_margin": _ratio_series(rows, "net_income", FLOW_STANDALONE, "revenue", FLOW_STANDALONE),
+        "equity_to_assets": _ratio_series(rows, "shareholders_equity", PIT, "total_assets", PIT),
+        "current_ratio": _ratio_series(rows, "current_assets", PIT, "current_liabilities", PIT),
+        "same_provider_roe_avg_equity": _avg_balance_ratio_map(avg_equity_series),
+        "same_provider_roa_avg_assets": _avg_balance_ratio_map(avg_assets_series),
+        "same_provider_roe_eop_proxy": _ratio_series(rows, "net_income", FLOW_STANDALONE, "shareholders_equity", PIT),
+        "same_provider_roa_eop_proxy": _ratio_series(rows, "net_income", FLOW_STANDALONE, "total_assets", PIT),
+    }
+    return {feature_id: _history_entry(features[feature_id], series_by_feature[feature_id])
+            for feature_id in HISTORY_CONTEXT_FEATURES}
+
+
 def _bank_usable(component: Mapping[str, Any], *, fitness: str) -> bool:
     return (
         component.get("contract_version") == bank_component.CONTRACT_VERSION
@@ -996,6 +1170,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
            "revenue_same_quarter_yoy", "profit_before_tax_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "profit_before_tax_ttm_yoy", "net_income_ttm_yoy", "operating_cash_flow_ttm_yoy", "revenue_ttm", "profit_before_tax_ttm", "net_income_ttm", "operating_cash_flow_ttm", "ttm_net_margin", "ttm_pbt_margin", "operating_cash_flow_sign", "operating_cash_flow_qoq", "operating_cash_flow_same_quarter_yoy", "cfo_to_net_income", "cfo_to_net_income_ttm",
            "free_cash_flow_proxy", "free_cash_flow_proxy_direction", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
            "cash_yoy", "same_provider_roa", "same_provider_roe", "same_provider_roa_eop_proxy", "same_provider_roe_eop_proxy", "same_provider_asset_turnover_eop_proxy", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy",
+           "same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
            "net_working_capital", "current_ratio", "net_working_capital_direction", "current_ratio_direction")
     if family == LIMITED:
         features = {feature_id: _not_applicable(feature_id) for feature_id in ids}
@@ -1005,6 +1180,8 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                   "working_capital_state": "WORKING_CAPITAL_UNAVAILABLE", "working_capital_trajectory_state": "UNAVAILABLE",
                   "current_ratio_trajectory_state": "UNAVAILABLE", "gross_margin_trajectory_state": "UNAVAILABLE",
                   "free_cash_flow_proxy_direction_state": "UNAVAILABLE"}
+        history_context = {feature_id: {"status": "NOT_APPLICABLE", "reason": "ENTITY_TYPE_NOT_SUPPORTED_THIS_MILESTONE", "sample_count": 0}
+                           for feature_id in HISTORY_CONTEXT_FEATURES}
     else:
         revenue = _best_series(rows, "revenue", FLOW_STANDALONE)
         pbt = _best_series(rows, "profit_before_tax", FLOW_STANDALONE)
@@ -1055,6 +1232,8 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                 return _blocked(feature_id, "ZERO_DENOMINATOR")
             return _feature(feature_id, value=numerator["value"] / denominator["value"], fitness="READY", method=method,
                             inputs=list(numerator_inputs) + list(denominator_inputs), growth_basis="TTM")
+        avg_equity_series = _avg_balance_series(rows, "net_income", "shareholders_equity")
+        avg_assets_series = _avg_balance_series(rows, "net_income", "total_assets")
         features = {
             "net_income_sign": _feature("net_income_sign", value=_latest(income)["reported_value"], fitness="READY", method="latest_compatible_standalone_sign/v2", inputs=[_latest(income)]) if _latest(income) else _blocked("net_income_sign", "MISSING_STANDALONE_NET_INCOME"),
             "net_margin": net_margin, "pbt_margin": pbt_margin, "gross_margin": gross_margin,
@@ -1100,12 +1279,23 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "same_provider_asset_turnover_eop_proxy": _same_provider_eop_proxy(rows, "revenue", "total_assets", "same_provider_asset_turnover_eop_proxy"),
             "mixed_provider_roa_proxy": _mixed_provider_proxy(rows, "net_income", "total_assets", "mixed_provider_roa_proxy"),
             "mixed_provider_asset_turnover_proxy": _mixed_provider_proxy(rows, "revenue", "total_assets", "mixed_provider_asset_turnover_proxy"),
+            # Genuinely average-balance ROE/ROA, distinct from the end-of-period proxies above:
+            # standalone-quarter net income over the average of that quarter's own beginning
+            # (= the prior quarter's ending) and ending same-provider balance. Blocks rather
+            # than falling back to the EOP proxy when only the ending balance is retained.
+            "same_provider_roe_avg_equity": _same_provider_avg_balance_return(
+                "same_provider_roe_avg_equity", avg_equity_series,
+                method="same_provider_standalone_flow_average_of_period_boundary_balances/v1"),
+            "same_provider_roa_avg_assets": _same_provider_avg_balance_return(
+                "same_provider_roa_avg_assets", avg_assets_series,
+                method="same_provider_standalone_flow_average_of_period_boundary_balances/v1"),
             "net_working_capital": _difference("net_working_capital", _same_period_pair(rows, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_net_working_capital/v2"),
             "current_ratio": _ratio("current_ratio", _same_period_pair(rows, "current_assets", "current_liabilities", PIT), method="same_provider_same_period_current_ratio/v2"),
             "net_working_capital_direction": _pit_component_direction(rows, "current_assets", "current_liabilities", "net_working_capital_direction"),
             "current_ratio_direction": _pit_ratio_direction_for(rows, "current_assets", "current_liabilities", "current_ratio_direction", method="same_provider_point_in_time_current_ratio_yoy/v2"),
         }
         states = _feature_states(features)
+        history_context = _build_history_context(rows, features, avg_equity_series, avg_assets_series)
 
     # Bank specialist family: purely additive over whatever the INDUSTRIAL/LIMITED
     # branch above already produced.  Never runs for a non-bank ticker, even if
@@ -1144,6 +1334,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "current_research_ready": ready, "pit_authority": "NOT_GRANTED",
             "period_coverage": dict(sorted(Counter(normalize_period_semantic(row.get("period_semantic_state")) for row in rows).items())),
             "states": states, "features": {key: features[key] for key in sorted(features)},
+            "history_context": dict(history_context),
             **evidence, "warnings": warnings, "valuation_hints": valuation_hints,
             "source_identities": dict(source_identities),
             "leverage_basis": ("EXPLICIT_SAME_PROVIDER_SHORT_AND_LONG_TERM_BORROWINGS"
@@ -1188,7 +1379,11 @@ def build_artifact(*, tickers: Sequence[str], rows: Sequence[Mapping[str, Any]],
             "feature_ready_counts": dict(sorted(Counter(feature["feature_id"] for feature in all_features if feature["fitness"] == "READY").items())),
             "feature_proxy_counts": dict(sorted(Counter(feature["feature_id"] for feature in all_features if feature["fitness"] == "RESEARCH_PROXY").items())),
             "state_distribution": {name: dict(sorted(Counter(record["states"][name] for record in records.values()).items())) for name in sorted(next(iter(records.values()))["states"]) } if records else {},
-            "evidence_coverage": {name: sum(bool(record[name]) for record in records.values()) for name in ("positive_evidence", "negative_evidence", "conflicting_evidence", "missing_dimensions")}},
+            "evidence_coverage": {name: sum(bool(record[name]) for record in records.values()) for name in ("positive_evidence", "negative_evidence", "conflicting_evidence", "missing_dimensions")},
+            "history_context_coverage": {
+                feature_id: dict(sorted(Counter(record["history_context"][feature_id]["status"] for record in records.values()).items()))
+                for feature_id in HISTORY_CONTEXT_FEATURES
+            } if records else {}},
         "authority_boundary": {"is_actionable": False, "score_or_rank_emitted": False, "target_or_probability_emitted": False,
             "financial_authority_promoted": False, "pit_authority_granted": False, "decision_integration": False}}
     artifact.update(content_identity(artifact))

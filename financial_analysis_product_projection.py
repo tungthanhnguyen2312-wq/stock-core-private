@@ -114,6 +114,23 @@ def _compact(engine: Mapping[str, Any], ticker: str, record: Mapping[str, Any]) 
             "reason_codes": list(free_cash_flow_proxy.get("reason_codes") or []),
             "warnings": list(free_cash_flow_proxy.get("warnings") or []),
         },
+        # Unlike every feature above, these carry their actual numeric value -- CORE_
+        # FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1 deliberately does not reduce ROE/ROA or
+        # own-history context to a status-only annotation the way the pre-existing
+        # free_cash_flow_proxy view above does.
+        "capital_efficiency_context": {
+            feature_id: {
+                "value": (features.get(feature_id) or {}).get("value"),
+                "fitness": (features.get(feature_id) or {}).get("fitness"),
+                "method": (features.get(feature_id) or {}).get("method"),
+                "period_identity": list((features.get(feature_id) or {}).get("period_identity") or []),
+                "reason_codes": list((features.get(feature_id) or {}).get("reason_codes") or []),
+                "warnings": list((features.get(feature_id) or {}).get("warnings") or []),
+            }
+            for feature_id in ("same_provider_roe_avg_equity", "same_provider_roa_avg_assets",
+                              "same_provider_roe_eop_proxy", "same_provider_roa_eop_proxy")
+        },
+        "history_context": {feature_id: dict(entry) for feature_id, entry in (record.get("history_context") or {}).items()},
         "bank_asset_quality_state": states.get("bank_asset_quality_state"),
         "bank_funding_state": states.get("bank_funding_state"),
         "bank_efficiency_state": states.get("bank_efficiency_state"),
