@@ -10,12 +10,12 @@
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
   "implementation_lineage_head": "14cc93ccc5cec97c1de865b69eba958f5f18ee7a",
-  "last_updated_checkpoint": "HEAD",
+  "last_updated_checkpoint": "9160188f4d5df1d056d184eeef7f26f52afe3419",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3",
+    "milestone": "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -628,7 +628,7 @@
       "milestone_id": "TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3",
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / COHERENT_PARTIAL_BY_RETAINED_EVIDENCE",
-      "checkpoint": "HEAD",
+      "checkpoint": "01ffdd57900f0a777a59fbed0365d1a53c3a25c5",
       "dependencies": ["CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1"],
       "unlocks": ["INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1"],
       "authority_effect": "NONE / RESEARCH_PRODUCT_ONLY",
@@ -640,17 +640,17 @@
     },
     {
       "milestone_id": "INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1",
-      "state": "DEFERRED",
-      "narrative_disposition": "OWNER_SELECTED / QUEUED_AFTER_TACTICAL / NOT_STARTED",
-      "checkpoint": null,
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / FULL_UNIVERSE_INTEGRATED_PRODUCT_ACTIVE",
+      "checkpoint": "9160188f4d5df1d056d184eeef7f26f52afe3419",
       "dependencies": ["TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3"],
       "unlocks": [],
-      "authority_effect": "NONE / PRODUCT_INTEGRATION_ONLY",
-      "owner_authorized": false,
-      "source_doc": "Owner core-analytical-product rebaseline (2026-09-02); docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md",
+      "authority_effect": "NONE / RESEARCH_PRODUCT_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized INTEGRATED_INVESTMENT_DECISION_PRODUCT_V1 directive (2026-09-02); docs/ANALYTICS_AND_DECISION_FEATURE_SPEC.md",
       "state_history": [],
-      "owner_override": null,
-      "notes": "QUEUED_AFTER_TACTICAL. Not started. Sole UI/Dashboard unfreeze. Joins fundamental, valuation/peer, tactical V3, trigger/invalidation, portfolio interaction, and prospective forward-return/MFE-MAE/false-negative-false-positive review. Portfolio fit stays separate from security attractiveness. No universal score. Prospective review is a product capability, not PIT backtest or exact execution. True MFE/MAE remains UNAVAILABLE_HIGH_LOW_BASIS until high/low basis qualifies."
+      "owner_override": "OWNER_DECISION_IMPLEMENT_VALIDATE_CHECKPOINT_PUSH_IF_TERMINAL_SAFE",
+      "notes": "COMPLETE. Delivers integrated_investment_decision_product/v1 unifying Fundamental V2, Valuation & Peer Context, Tactical V3, Relative Volume, and Market/Sector context into a deterministic 9-state research_action_posture without universal scores, target prices, or probability claims. Universe denominator 1,683 tickers (zero silent drops). Tactical context available: 942, Fundamental context: 1,363, Valuation context: 955, Participation context: 943, Market/Sector: 1,683, Triggers: 942, Invalidations: 911, Portfolio: 1,683 not provided (non-penalizing). Posture distribution: WAIT_FOR_CONFIRMATION 679, AVOID 452, INSUFFICIENT_CURRENT_RESEARCH 200, ACCUMULATE_ON_RETEST 127, EARLY_WATCH 119, INITIATE_ON_BREAKOUT 75, HOLD_DO_NOT_ADD 24, HOLD 7. Extension risk is decoupled from fundamental rejection (extended securities receive HOLD_DO_NOT_ADD or WAIT_FOR_CONFIRMATION rather than AVOID). PNJ diagnostic confirms TACTICAL_INFORMATION_NOT_INTEGRATED as legacy miss reason, with integrated product producing INITIATE_ON_BREAKOUT on 2026-08-20 onset and transitioning to HOLD_DO_NOT_ADD on 2026-08-21. All 11 watchlist tickers replayed. export_ai_bundle.py integration verified. Test suite 13/13 passing across all policy regressions A-H. Operations review artifact: operations-review/integrated-investment-decision-product-v1-20260902/."
     }
   ],
   "blocked_capabilities": [
