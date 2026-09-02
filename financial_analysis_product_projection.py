@@ -74,6 +74,8 @@ def _lineage(engine: Mapping[str, Any], record: Mapping[str, Any]) -> dict[str, 
 
 def _compact(engine: Mapping[str, Any], ticker: str, record: Mapping[str, Any]) -> dict[str, Any]:
     states = record.get("states") if isinstance(record.get("states"), Mapping) else {}
+    features = record.get("features") if isinstance(record.get("features"), Mapping) else {}
+    free_cash_flow_proxy = features.get("free_cash_flow_proxy") if isinstance(features.get("free_cash_flow_proxy"), Mapping) else {}
     lineage = _lineage(engine, record)
     # Every value below is copied from the deterministic engine; numbers/statements
     # are intentionally not exposed for downstream AI recomputation.
@@ -102,6 +104,16 @@ def _compact(engine: Mapping[str, Any], ticker: str, record: Mapping[str, Any]) 
         "working_capital_trajectory_state": states.get("working_capital_trajectory_state"),
         "current_ratio_trajectory_state": states.get("current_ratio_trajectory_state"),
         "gross_margin_trajectory_state": states.get("gross_margin_trajectory_state"),
+        "free_cash_flow_proxy_direction_state": states.get("free_cash_flow_proxy_direction_state"),
+        # Product-safe status only: no value or raw-statement payload is released.
+        "free_cash_flow_proxy": {
+            "feature_id": free_cash_flow_proxy.get("feature_id"),
+            "fitness": free_cash_flow_proxy.get("fitness"),
+            "method": free_cash_flow_proxy.get("method"),
+            "period_identity": list(free_cash_flow_proxy.get("period_identity") or []),
+            "reason_codes": list(free_cash_flow_proxy.get("reason_codes") or []),
+            "warnings": list(free_cash_flow_proxy.get("warnings") or []),
+        },
         "bank_asset_quality_state": states.get("bank_asset_quality_state"),
         "bank_funding_state": states.get("bank_funding_state"),
         "bank_efficiency_state": states.get("bank_efficiency_state"),

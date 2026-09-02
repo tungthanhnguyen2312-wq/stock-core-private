@@ -140,8 +140,84 @@ def test_unknown_duration_same_provider_flows_never_activate_capital_efficiency_
     assert result["features"]["revenue_ttm"]["fitness"] == "BLOCKED_BY_EVIDENCE"
 
 
-def test_fcf_remains_blocked_without_capex_semantics():
-    assert context([])["features"]["fcf"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+def test_free_cash_flow_proxy_is_blocked_without_qualified_capex():
+    feature = context([])["features"]["free_cash_flow_proxy"]
+    assert feature["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION" in feature["reason_codes"]
+
+
+def test_free_cash_flow_proxy_uses_only_existing_canonical_ocf_and_capex_routes():
+    import canonical_financial_facts as canonical
+
+    routes = {
+        metric: {candidate.raw_item_id for candidate in canonical.METRIC_REGISTRY[metric]["candidates"]}
+        for metric in ("operating_cash_flow", "capital_expenditure")
+    }
+    assert routes == {
+        "operating_cash_flow": {"operating_cash_flow", "net_cash_inflows_outflows_from_operating_activities"},
+        "capital_expenditure": {
+            "payment_for_fixed_assets_constructions_and_other_long_term_assets",
+            "purchases_of_fixed_assets_and_other_long_term_assets",
+        },
+    }
+
+
+def test_free_cash_flow_proxy_adds_signed_capex_without_normalization():
+    result = context([row("operating_cash_flow", 100, source="AAA_cash"),
+                      row("capital_expenditure", -40, source="AAA_cash")])
+    feature = result["features"]["free_cash_flow_proxy"]
+    assert feature["fitness"] == "READY"
+    assert feature["value"] == 60
+    assert feature["method"] == "same_provider_same_period_operating_cash_flow_plus_signed_capex/v1"
+    assert "CAPEX_PROVIDER_SIGN_RETAINED_NO_NORMALIZATION" in feature["warnings"]
+    assert result["current_research_ready"] is False
+
+
+def test_free_cash_flow_proxy_preserves_positive_and_zero_capex_signs():
+    positive = context([row("operating_cash_flow", 100, source="AAA_cash"),
+                        row("capital_expenditure", 40, source="AAA_cash")])
+    zero = context([row("operating_cash_flow", 100, source="AAA_cash"),
+                    row("capital_expenditure", 0, source="AAA_cash")])
+    assert positive["features"]["free_cash_flow_proxy"]["value"] == 140
+    assert zero["features"]["free_cash_flow_proxy"]["value"] == 100
+
+
+def test_free_cash_flow_proxy_requires_same_source_provider_scope_period_and_standalone_semantics():
+    cases = [
+        [row("operating_cash_flow", 100, provider="KBS", source="AAA_cash"),
+         row("capital_expenditure", -40, provider="VCI", source="AAA_cash")],
+        [row("operating_cash_flow", 100, source="AAA_cash_one"),
+         row("capital_expenditure", -40, source="AAA_cash_two")],
+        [row("operating_cash_flow", 100, source="AAA_cash", scope="consolidated"),
+         row("capital_expenditure", -40, source="AAA_cash", scope="standalone")],
+        [row("operating_cash_flow", 100, "2026-Q1", source="AAA_cash"),
+         row("capital_expenditure", -40, "2026-Q2", source="AAA_cash")],
+        [row("operating_cash_flow", 100, source="AAA_cash", semantic="YTD_CUMULATIVE_INTERIM"),
+         row("capital_expenditure", -40, source="AAA_cash", semantic="YTD_CUMULATIVE_INTERIM")],
+        [row("operating_cash_flow", 100, provider="VCI", source="AAA_cash", semantic="UNKNOWN_DURATION"),
+         row("capital_expenditure", -40, provider="VCI", source="AAA_cash", semantic="UNKNOWN_DURATION")],
+    ]
+    for rows in cases:
+        assert context(rows)["features"]["free_cash_flow_proxy"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+
+
+def test_free_cash_flow_proxy_direction_is_same_quarter_yoy_level_delta_only():
+    ready = context([
+        row("operating_cash_flow", 100, "2025-Q2", source="AAA_cash"),
+        row("capital_expenditure", -30, "2025-Q2", source="AAA_cash"),
+        row("operating_cash_flow", 160, "2026-Q2", source="AAA_cash"),
+        row("capital_expenditure", -40, "2026-Q2", source="AAA_cash"),
+    ])
+    assert ready["features"]["free_cash_flow_proxy_direction"]["value"] == 50
+    assert ready["states"]["free_cash_flow_proxy_direction_state"] == "IMPROVING"
+    wrong_quarter = context([
+        row("operating_cash_flow", 100, "2025-Q4", source="AAA_cash"),
+        row("capital_expenditure", -30, "2025-Q4", source="AAA_cash"),
+        row("operating_cash_flow", 160, "2026-Q1", source="AAA_cash"),
+        row("capital_expenditure", -40, "2026-Q1", source="AAA_cash"),
+    ])
+    assert wrong_quarter["features"]["free_cash_flow_proxy_direction"]["fitness"] == "BLOCKED_BY_EVIDENCE"
+    assert wrong_quarter["states"]["free_cash_flow_proxy_direction_state"] == "UNAVAILABLE"
 
 
 def test_ttm_requires_exactly_four_consecutive_standalone_quarters():

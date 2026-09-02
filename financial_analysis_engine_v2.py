@@ -358,6 +358,49 @@ def _difference(feature_id: str, pair: tuple[Mapping[str, Any], Mapping[str, Any
                     fitness="READY", method=method, inputs=[minuend, subtrahend])
 
 
+def _signed_flow_sum(feature_id: str, pair: tuple[Mapping[str, Any], Mapping[str, Any]] | None, *,
+                     method: str) -> dict[str, Any]:
+    """Return a same-representation sum without changing either component's sign.
+
+    ``capital_expenditure`` stays in its provider-native signed cash-flow
+    representation. This is a research proxy, not a universal CapEx-sign claim.
+    """
+    if not pair:
+        return _blocked(feature_id, "MISSING_SAME_PROVIDER_TICKER_PERIOD_SCOPE_REPRESENTATION")
+    operating_cash_flow, capital_expenditure = pair
+    return _feature(feature_id,
+                    value=operating_cash_flow["reported_value"] + capital_expenditure["reported_value"],
+                    fitness="READY", method=method, inputs=[operating_cash_flow, capital_expenditure],
+                    warnings=["CAPEX_PROVIDER_SIGN_RETAINED_NO_NORMALIZATION"])
+
+
+def _signed_flow_sum_direction(rows: Sequence[Mapping[str, Any]], *, feature_id: str) -> dict[str, Any]:
+    """Same-provider, same-quarter YoY level delta for the qualified FCF proxy."""
+    operating_cash_flow = _groups(rows, "operating_cash_flow", FLOW_STANDALONE)
+    capital_expenditure = _groups(rows, "capital_expenditure", FLOW_STANDALONE)
+    candidates = []
+    for key in set(operating_cash_flow) & set(capital_expenditure):
+        periods = sorted(set(operating_cash_flow[key]) & set(capital_expenditure[key]))
+        for current_label in periods:
+            quarter = _quarter(current_label)
+            prior_label = f"{quarter[0] - 1}-Q{quarter[1]}" if quarter else None
+            if not prior_label or prior_label not in operating_cash_flow[key] or prior_label not in capital_expenditure[key]:
+                continue
+            candidates.append((current_label,
+                               operating_cash_flow[key][prior_label], capital_expenditure[key][prior_label],
+                               operating_cash_flow[key][current_label], capital_expenditure[key][current_label]))
+    if not candidates:
+        return _blocked(feature_id, "MISSING_SAME_PROVIDER_SAME_QUARTER_PRIOR_YEAR_FCF_PROXY_INPUTS")
+    _, prior_ocf, prior_capex, current_ocf, current_capex = max(candidates, key=lambda item: item[0])
+    prior_value = prior_ocf["reported_value"] + prior_capex["reported_value"]
+    current_value = current_ocf["reported_value"] + current_capex["reported_value"]
+    return _feature(feature_id, value=current_value - prior_value, fitness="READY",
+                    method="same_provider_same_quarter_free_cash_flow_proxy_direction/v1",
+                    inputs=[prior_ocf, prior_capex, current_ocf, current_capex],
+                    growth_basis="SAME_QUARTER_YOY",
+                    warnings=["CAPEX_PROVIDER_SIGN_RETAINED_NO_NORMALIZATION"])
+
+
 def _pit_component_direction(rows: Sequence[Mapping[str, Any]], minuend_metric: str,
                              subtrahend_metric: str, feature_id: str) -> dict[str, Any]:
     """YoY change in (minuend - subtrahend) at two compatible same-representation P-I-T periods.
@@ -696,6 +739,8 @@ def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]
                                           "CURRENT_RATIO_IMPROVING", "CURRENT_RATIO_WORSENING", "CURRENT_RATIO_STABLE")
     gross_margin_trajectory = _direction(features["gross_margin_direction"],
                                          "GROSS_MARGIN_IMPROVING", "GROSS_MARGIN_WORSENING", "GROSS_MARGIN_STABLE")
+    free_cash_flow_proxy_direction = _direction(features["free_cash_flow_proxy_direction"],
+                                                 "IMPROVING", "WORSENING", "STABLE")
     turnaround = next((features[item].get("semantic_transition") for item in ("net_income_qoq", "net_income_same_quarter_yoy", "net_income_ttm_yoy") if features[item].get("semantic_transition")), "UNAVAILABLE")
     return {"profitability_state": profitability, "margin_state": margin, "growth_state": growth,
             "earnings_turnaround_state": turnaround,
@@ -703,7 +748,8 @@ def _feature_states(features: Mapping[str, Mapping[str, Any]]) -> dict[str, str]
             "capital_efficiency_state": capital, "leverage_state": leverage, "resilience_state": resilience,
             "working_capital_state": working_capital, "working_capital_trajectory_state": working_capital_trajectory,
             "current_ratio_trajectory_state": current_ratio_trajectory,
-            "gross_margin_trajectory_state": gross_margin_trajectory}
+            "gross_margin_trajectory_state": gross_margin_trajectory,
+            "free_cash_flow_proxy_direction_state": free_cash_flow_proxy_direction}
 
 
 def _evidence(ticker: str, features: Mapping[str, Mapping[str, Any]], states: Mapping[str, str]) -> dict[str, list[str]]:
@@ -743,7 +789,7 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
     family = INDUSTRIAL if normalized_type == "corporate" else LIMITED
     ids = ("net_income_sign", "net_margin", "pbt_margin", "gross_margin", "net_margin_direction", "gross_margin_direction", "revenue_qoq", "profit_before_tax_qoq", "net_income_qoq",
            "revenue_same_quarter_yoy", "profit_before_tax_same_quarter_yoy", "net_income_same_quarter_yoy", "revenue_ytd_yoy", "net_income_ytd_yoy", "revenue_ttm_yoy", "profit_before_tax_ttm_yoy", "net_income_ttm_yoy", "operating_cash_flow_ttm_yoy", "revenue_ttm", "profit_before_tax_ttm", "net_income_ttm", "operating_cash_flow_ttm", "ttm_net_margin", "ttm_pbt_margin", "operating_cash_flow_sign", "operating_cash_flow_qoq", "operating_cash_flow_same_quarter_yoy", "cfo_to_net_income", "cfo_to_net_income_ttm",
-           "fcf", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
+           "free_cash_flow_proxy", "free_cash_flow_proxy_direction", "equity_to_assets", "cash_to_assets", "debt_to_equity", "debt_to_assets", "debt_to_equity_direction", "equity_to_assets_direction", "assets_yoy", "equity_yoy",
            "cash_yoy", "same_provider_roa", "same_provider_roe", "same_provider_roa_eop_proxy", "same_provider_roe_eop_proxy", "same_provider_asset_turnover_eop_proxy", "mixed_provider_roa_proxy", "mixed_provider_asset_turnover_proxy",
            "net_working_capital", "current_ratio", "net_working_capital_direction", "current_ratio_direction")
     if family == LIMITED:
@@ -752,7 +798,8 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
                   "balance_sheet_state": "UNAVAILABLE", "cash_conversion_state": "UNAVAILABLE",
                   "capital_efficiency_state": "UNAVAILABLE", "leverage_state": "UNAVAILABLE", "resilience_state": "UNAVAILABLE",
                   "working_capital_state": "WORKING_CAPITAL_UNAVAILABLE", "working_capital_trajectory_state": "UNAVAILABLE",
-                  "current_ratio_trajectory_state": "UNAVAILABLE", "gross_margin_trajectory_state": "UNAVAILABLE"}
+                  "current_ratio_trajectory_state": "UNAVAILABLE", "gross_margin_trajectory_state": "UNAVAILABLE",
+                  "free_cash_flow_proxy_direction_state": "UNAVAILABLE"}
     else:
         revenue = _best_series(rows, "revenue", FLOW_STANDALONE)
         pbt = _best_series(rows, "profit_before_tax", FLOW_STANDALONE)
@@ -824,7 +871,14 @@ def build_ticker_context(ticker: str, rows: Sequence[Mapping[str, Any]], *, issu
             "operating_cash_flow_same_quarter_yoy": _growth("operating_cash_flow_same_quarter_yoy", ocf, basis="SAME_QUARTER_YOY"),
             "cfo_to_net_income": (_feature("cfo_to_net_income", value=cash_pair[0]["reported_value"] / cash_pair[1]["reported_value"], fitness="READY", method="same_provider_cross_statement_cash_earnings_ratio/v2", inputs=list(cash_pair), warnings=["NEGATIVE_NET_INCOME_RATIO_RETAINED_AS_REPORTED"] if cash_pair[1]["reported_value"] < 0 else []) if cash_pair and cash_pair[1]["reported_value"] != 0 else _blocked("cfo_to_net_income", "ZERO_NET_INCOME_DENOMINATOR" if cash_pair else "MISSING_SAME_PROVIDER_CFO_AND_NET_INCOME")),
             "cfo_to_net_income_ttm": ttm_ratio("cfo_to_net_income_ttm", ocf_ttm, ocf_ttm_inputs, income_ttm, income_ttm_inputs, "same_provider_cross_statement_ttm_cash_earnings_ratio/v2"),
-            "fcf": _blocked("fcf", "FCF_BLOCKED_BY_EVIDENCE_CAPEX_SEMANTICS_UNAVAILABLE"),
+            # Direct canonical OCF + signed canonical CapEx in one exact compatible
+            # standalone-quarter representation. It never affects readiness or decisions.
+            "free_cash_flow_proxy": _signed_flow_sum(
+                "free_cash_flow_proxy",
+                _same_period_pair(rows, "operating_cash_flow", "capital_expenditure", FLOW_STANDALONE),
+                method="same_provider_same_period_operating_cash_flow_plus_signed_capex/v1"),
+            "free_cash_flow_proxy_direction": _signed_flow_sum_direction(
+                rows, feature_id="free_cash_flow_proxy_direction"),
             "equity_to_assets": _ratio("equity_to_assets", _same_period_pair(rows, "shareholders_equity", "total_assets", PIT), method="same_provider_same_period_equity_to_assets/v2"),
             "cash_to_assets": _ratio("cash_to_assets", _same_period_pair(rows, "cash_and_cash_equivalents", "total_assets", PIT), method="same_provider_same_period_cash_to_assets/v2"),
             "debt_to_equity": _ratio("debt_to_equity", _same_period_pair(rows, "total_interest_bearing_debt", "shareholders_equity", PIT), method="same_provider_same_period_explicit_debt_to_equity/v2"),

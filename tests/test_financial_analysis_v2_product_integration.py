@@ -108,6 +108,22 @@ def test_compact_projection_exposes_gross_margin_trajectory_state_not_raw_amount
     assert "837" not in json.dumps(compact)
 
 
+def test_compact_projection_exposes_fcf_proxy_status_method_and_direction_not_value():
+    operating_cash_flow = _row("operating_cash_flow", 100)
+    capital_expenditure = _row("capital_expenditure", -37)
+    capital_expenditure["source_lineage"]["source_file"] = operating_cash_flow["source_lineage"]["source_file"]
+    context = engine.build_artifact(tickers=["AAA"], rows=[_row("revenue", 100), _row("net_income", 10), operating_cash_flow, capital_expenditure],
+                                    issuer_types={"AAA": "corporate"}, source_identities={"retained": "x"}, requested_at="t")
+    product = build_product_projection(financial_context=context, product_tickers=["AAA"], requested_at="t")
+    compact = product["records"]["AAA"]
+    proxy = compact["free_cash_flow_proxy"]
+    assert proxy["feature_id"] == "free_cash_flow_proxy"
+    assert proxy["fitness"] == "READY"
+    assert proxy["method"] == "same_provider_same_period_operating_cash_flow_plus_signed_capex/v1"
+    assert compact["free_cash_flow_proxy_direction_state"] == "UNAVAILABLE"
+    assert "value" not in proxy and '"value": 63' not in json.dumps(compact)
+
+
 def test_delivery_attaches_compact_after_slim_and_retains_absent_ndjson_context():
     product = _product()
     operation = {"product": {"artifact_identity": "p", "authority_boundary": {}, "market_brief": {}, "macro_context": {},
