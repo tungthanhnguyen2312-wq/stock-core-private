@@ -15,9 +15,14 @@ This module is pure orchestration glue over already-existing, already-tested cap
         -> BUNDLE INDEX / AI HANDOFF (new: tiered index over already-materialized artifacts; no
            payload is duplicated, only paths + identities + hashes)
 
-No provider is added. DNSE/Livespeed is the only acquisition route this pipeline calls. The legacy
-VCI/KBS route (vn_stock_pipeline.py, driven from daily_analysis_pipeline.py's default step list)
-is never imported or invoked here -- see PROVIDER_ROLE_MATRIX below.
+No new provider is added. DNSE/Livespeed remains the primary, preferred full-universe acquisition
+route this pipeline calls (via daily_session_level2_package.ensure_exact_session_snapshot's own
+Pass 1). Since 2026-09-03 (MULTI_SOURCE_EXACT_SESSION_MARKET_EVIDENCE_AND_DAILY_RESILIENCE_V1),
+that same acquisition boundary also recovers DNSE's own exact-session gaps through this project's
+existing VCI/KBS capability (vn_stock_pipeline.py's fetch primitives, reused unmodified) for
+Current Research / Daily Product Mode only -- never Audit/PIT/Execution Mode, never a second
+full-universe acquisition owner, never concurrent. See PROVIDER_ROLE_MATRIX below and
+multi_source_exact_session_resolver.py's own module docstring for the four-pass strategy.
 """
 from __future__ import annotations
 
@@ -116,10 +121,12 @@ class PreCutoffArtifactError(CanonicalPostCloseError):
 
 PROVIDER_ROLE_MATRIX = {
     "DNSE_LIVESPEED": {
-        "role": "CANONICAL",
-        "scope": "Full-universe exact-session OHLC acquisition and every current-research artifact "
-                 "this pipeline builds or reuses (descriptive, screening, tactical, triage, "
-                 "corporate intelligence, valuation price leg, liquidity, technical recovery).",
+        "role": "CANONICAL_PRIMARY",
+        "scope": "Full-universe exact-session OHLC acquisition (Pass 1) and every current-research "
+                 "artifact this pipeline builds or reuses (descriptive, screening, tactical, "
+                 "triage, corporate intelligence, valuation price leg, liquidity, technical "
+                 "recovery). Preferred current-market source wherever it has exact-session "
+                 "evidence -- never re-queried or second-guessed once resolved.",
         "used_by_this_pipeline_for": ["session_acquisition", "runtime_evidence_input", "current_research"],
     },
     "FHSC": {
@@ -131,17 +138,25 @@ PROVIDER_ROLE_MATRIX = {
                        "ADTV20, or RAW_AS_TRADED authority as an operational side effect.",
     },
     "VNSTOCK_VCI_KBS": {
-        "role": "LEGACY_NON_CANONICAL",
-        "scope": "vn_stock_pipeline.py update (VCI primary, KBS failover) feeds only the legacy "
-                 "daily_analysis_pipeline.py default step list (indicators/candle_scan/"
-                 "stock_analyzer/export_ai_bundle) and vn_stock.db. It is read-only-consumed by "
-                 "this pipeline exactly once, as mva_exact_session_snapshot.canonical_candidates() "
-                 "reads vn_stock.db.metadata for the DNSE candidate ticker list -- never written, "
-                 "never used as a price/session-completeness authority.",
-        "used_by_this_pipeline_for": [],
-        "constraint": "--canonical-post-close never invokes vn_stock_pipeline.py and never routes "
-                       "through it, even as a fallback. Retained for legacy compatibility, bounded "
-                       "recovery, historical tooling, and tests -- not deleted by this milestone.",
+        "role": "CURRENT_RESEARCH_RECOVERY",
+        "scope": "2026-09-03 MULTI_SOURCE_EXACT_SESSION_MARKET_EVIDENCE_AND_DAILY_RESILIENCE_V1: "
+                 "vn_stock_pipeline.py's existing VCI/KBS fetch primitives (fetch_single_source, "
+                 "reused unmodified) now recover exactly the exact-session candidates DNSE did not "
+                 "resolve (multi_source_exact_session_resolver.py, invoked in-process from "
+                 "daily_session_level2_package.ensure_exact_session_snapshot -- never a second "
+                 "market-wide acquisition owner: DNSE Pass 1 always runs first and full-universe; "
+                 "VCI/KBS only ever touch DNSE's own gaps). vn_stock_pipeline.py's DB-writing "
+                 "update/backfill commands and vn_stock.db remain a wholly separate legacy path, "
+                 "never read or written by this recovery. Never promoted toward RAW_AS_TRADED, "
+                 "PIT, liquidity/ADTV20, or execution authority -- Current Research / Daily "
+                 "Product Mode only.",
+        "used_by_this_pipeline_for": ["exact_session_gap_recovery", "current_research"],
+        "constraint": "Recovery is per-ticker and bounded to DNSE's own gaps -- never a broad "
+                       "second full-universe pull, never concurrent (no evidence VCI/KBS tolerate "
+                       "concurrent access; see docs/DECISIONS.md "
+                       "MARKET_WIDE_ENRICHMENT_AND_CANONICALIZATION_V1 = PAUSED_RATE_LIMIT_CONSTRAINED), "
+                       "and volume is never synthesized across the DNSE/VCI-KBS provider families "
+                       "(see multi_source_market_evidence_contract.py).",
     },
 }
 
@@ -228,6 +243,22 @@ def _exact_session_coverage(snapshot: Mapping[str, Any]) -> tuple[int, int, floa
     exact = int(snapshot.get("exact_session_observed_count") or 0)
     ratio = (exact / total) if total else 0.0
     return exact, total, ratio
+
+
+def _provider_contribution_counts(snapshot: Mapping[str, Any]) -> dict[str, int]:
+    """Per-source count of EXACT_SESSION_RETAINED tickers in a (possibly multi-source-
+    resolved) exact-session snapshot. DNSE-only snapshots (contract unchanged) report
+    entirely under "DNSE"; a resolved snapshot's recovered records carry their own
+    honest observation-row provider (VCI/KBS) -- see multi_source_exact_session_resolver.py.
+    """
+    counts: dict[str, int] = {}
+    for record in (snapshot.get("records") or {}).values():
+        if record.get("disposition") != "EXACT_SESSION_RETAINED":
+            continue
+        observations = record.get("observations") or []
+        provider = observations[0].get("provider") if observations else "UNKNOWN"
+        counts[provider] = counts.get(provider, 0) + 1
+    return counts
 
 
 def assert_post_close_eligible(snapshot: Mapping[str, Any], session: str, *, now: datetime | None = None) -> None:
@@ -797,7 +828,8 @@ def build_tiered_bundle(
         "market_session_proof": {
             "resolved_completed_session": acquisition["resolved_completed_session"],
             "exact_session_coverage": acquisition["coverage"],
-            "provider": "DNSE",
+            "provider": "MULTI_SOURCE",
+            "provider_contribution_counts": _provider_contribution_counts(acquisition.get("snapshot") or {}),
         },
         "market_coverage": breadth,
         "breadth": {

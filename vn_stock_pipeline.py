@@ -426,11 +426,90 @@ def _record_provider_result(source, transient_failure=False, healthy_response=Fa
         )
 
 
+def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=False):
+    """Fetch history from exactly ONE named source (VCI or KBS): that source's own
+    retry budget, no cross-source failover. The caller decides source ordering and
+    whether to try a different source next -- this is the exact per-source retry/
+    classification logic fetch_one() below delegates to (extracted, not duplicated,
+    so a caller needing independent per-source evidence, e.g. the multi-source exact-
+    session resolver, gets the identical tested behavior fetch_one() has always used).
+
+    Pure return value: the only side effects are in-memory provider-health bookkeeping
+    (_record_provider_result/_provider_should_skip) and DEBUG-level request logging --
+    never a DB write.
+
+    ``bypass_circuit_check`` mirrors fetch_one()'s existing "force probe" behavior:
+    set only when a caller deliberately wants to re-test a provider mid-cooldown (e.g.
+    fetch_one() re-probing PRIMARY_SRC after FAILOVER_SRC alone returned no data).
+    """
+    errors = []
+    if not bypass_circuit_check and _provider_should_skip(source, ticker):
+        return FetchOutcome("failed", errors=[f"{source}:circuit_open"], transient_failure=True)
+    for attempt in range(1, MAX_RETRY + 1):
+        started = time.monotonic()
+        try:
+            raw = _quote(ticker, source).history(start=start, end=end, interval=INTERVAL)
+            if raw is None or len(raw) == 0:
+                _record_provider_result(source, healthy_response=True)
+                _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
+                return FetchOutcome("empty")  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
+            df = normalize(raw, ticker, source)
+            if df is not None and len(df):
+                retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+                lineage = build_ohlcv_lineage_records(
+                    df, source=source, endpoint=PROVIDER_ENDPOINT_HINT[source], retrieved_at=retrieved_at
+                )
+                _record_provider_result(source, healthy_response=True)
+                _request_log(ticker, source, attempt, "success", time.monotonic() - started)
+                return FetchOutcome("success", data=df, lineage=lineage)
+            if _valid_history_schema(raw):
+                # Payload đúng schema nhưng mọi bar bị lọc (volume=0/close rỗng) là
+                # không có phiên giao dịch, không phải lỗi schema và tuyệt đối không ghi DB.
+                _record_provider_result(source, healthy_response=True)
+                _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
+                return FetchOutcome("empty")
+            _record_provider_result(source, healthy_response=True)
+            errors.append(f"{source}:invalid_schema")
+            _request_log(
+                ticker, source, attempt, "failed", time.monotonic() - started,
+                PermanentRequestError("invalid_schema", PROVIDER_ENDPOINT_HINT.get(source, "provider-history"), 0.0),
+            )
+            return FetchOutcome("failed", errors=errors, transient_failure=False)
+        except Exception as e:
+            inner = _unwrap_retry_error(e)
+            message = str(inner).lower()
+            if any(k in message for k in ("dữ liệu trống", "không tìm thấy dữ liệu", "no data", "empty")):
+                _record_provider_result(source, healthy_response=True)
+                _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
+                return FetchOutcome("empty")  # nguồn này xác nhận không có dữ liệu -> sang nguồn dự phòng
+            error = inner if isinstance(inner, PipelineRequestError) else _legacy_request_error(inner, source)
+            errors.append(
+                f"{source}:{error.kind}" + (f":{error.status_code}" if error.status_code is not None else "")
+            )
+            if isinstance(error, TransientRequestError):
+                if attempt >= MAX_RETRY:
+                    _record_provider_result(source, transient_failure=True)
+                    _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
+                    return FetchOutcome("failed", errors=errors, transient_failure=True)
+                wait = _retry_delay(attempt, error)
+                _request_log(ticker, source, attempt, "retry", time.monotonic() - started, error, wait)
+                time.sleep(wait)
+                continue
+            _record_provider_result(source, healthy_response=True)
+            _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
+            return FetchOutcome("failed", errors=errors, transient_failure=False)
+    return FetchOutcome("failed", errors=errors, transient_failure=True)  # unreachable safety net
+
+
 def fetch_one(ticker, start, end):
+    """Blended two-source (VCI primary / KBS failover) fetch -- externally unchanged
+    behavior (prints, return shape, circuit-breaker interaction). Thin wrapper over
+    fetch_single_source(); see that function's own docstring for why the per-source
+    logic now lives there instead of inline here.
+    """
     empty_source_count = 0
     errors = []
     saw_transient = False
-    saw_permanent = False
     primary_deferred = _provider_circuit_open(PRIMARY_SRC)
     sources = (
         (FAILOVER_SRC, PRIMARY_SRC)
@@ -450,80 +529,17 @@ def fetch_one(ticker, start, end):
                 f"[fallback] {ticker}: {sources[0]} -> {source}",
                 flush=True,
             )
-        if not force_probe and _provider_should_skip(source, ticker):
-            errors.append(f"{source}:circuit_open")
-            saw_transient = True
+        outcome = fetch_single_source(ticker, source, start, end, bypass_circuit_check=force_probe)
+        if outcome.status == "success":
+            if primary_deferred and source == FAILOVER_SRC:
+                _provider_should_skip(PRIMARY_SRC, ticker)
+            return outcome
+        if outcome.status == "empty":
+            empty_source_count += 1
             continue
-        for attempt in range(1, MAX_RETRY + 1):
-            started = time.monotonic()
-            try:
-                raw = _quote(ticker, source).history(start=start, end=end, interval=INTERVAL)
-                if raw is None or len(raw) == 0:
-                    empty_source_count += 1
-                    _record_provider_result(source, healthy_response=True)
-                    _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                    break  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
-                df = normalize(raw, ticker, source)
-                if df is not None and len(df):
-                    retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-                    lineage = build_ohlcv_lineage_records(
-                        df, source=source, endpoint=PROVIDER_ENDPOINT_HINT[source], retrieved_at=retrieved_at
-                    )
-                    _record_provider_result(source, healthy_response=True)
-                    if primary_deferred and source == FAILOVER_SRC:
-                        _provider_should_skip(PRIMARY_SRC, ticker)
-                    _request_log(ticker, source, attempt, "success", time.monotonic() - started)
-                    return FetchOutcome("success", data=df, lineage=lineage)
-                if _valid_history_schema(raw):
-                    # Payload đúng schema nhưng mọi bar bị lọc (volume=0/close rỗng) là
-                    # không có phiên giao dịch, không phải lỗi schema và tuyệt đối không ghi DB.
-                    empty_source_count += 1
-                    _record_provider_result(source, healthy_response=True)
-                    _request_log(
-                        ticker, source, attempt, "empty", time.monotonic() - started
-                    )
-                    break
-                saw_permanent = True
-                _record_provider_result(source, healthy_response=True)
-                errors.append(f"{source}:invalid_schema")
-                _request_log(
-                    ticker,
-                    source,
-                    attempt,
-                    "failed",
-                    time.monotonic() - started,
-                    PermanentRequestError(
-                        "invalid_schema", PROVIDER_ENDPOINT_HINT.get(source, "provider-history"), 0.0
-                    ),
-                )
-                break
-            except Exception as e:
-                inner = _unwrap_retry_error(e)
-                message = str(inner).lower()
-                if any(k in message for k in ("dữ liệu trống", "không tìm thấy dữ liệu", "no data", "empty")):
-                    empty_source_count += 1
-                    _record_provider_result(source, healthy_response=True)
-                    _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                    break  # nguồn này xác nhận không có dữ liệu -> sang nguồn dự phòng
-                error = inner if isinstance(inner, PipelineRequestError) else _legacy_request_error(inner, source)
-                errors.append(
-                    f"{source}:{error.kind}"
-                    + (f":{error.status_code}" if error.status_code is not None else "")
-                )
-                if isinstance(error, TransientRequestError):
-                    saw_transient = True
-                    if attempt >= MAX_RETRY:
-                        _record_provider_result(source, transient_failure=True)
-                        _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
-                        break
-                    wait = _retry_delay(attempt, error)
-                    _request_log(ticker, source, attempt, "retry", time.monotonic() - started, error, wait)
-                    time.sleep(wait)
-                else:
-                    saw_permanent = True
-                    _record_provider_result(source, healthy_response=True)
-                    _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
-                    break
+        errors.extend(outcome.errors)
+        if outcome.transient_failure:
+            saw_transient = True
     if empty_source_count == 2:
         return FetchOutcome("empty")
     return FetchOutcome(

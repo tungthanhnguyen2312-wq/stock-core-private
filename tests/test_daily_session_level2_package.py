@@ -50,25 +50,82 @@ def test_run_cmd_executes_relative_tool_from_explicit_execution_root(tmp_path):
     assert mocked.call_args.kwargs["check"] is True
 
 
-def test_ensure_exact_session_snapshot_issues_the_real_cli_flags_and_returns_the_path(tmp_path):
+def _patch_resolved_acquisition(session: str, *, resolved_session: str | None = None, monkeypatch_target="patch"):
+    """Shared fake for the DNSE-Pass-1 + multi-source-resolver chain
+    ensure_exact_session_snapshot() now runs in-process. Returns the context managers
+    plus a `calls` list recording (dnse_candidates, resolver_target_session) so callers
+    can assert on what was actually invoked, mirroring the old fake_run() pattern this
+    replaces.
+    """
+    import dnse_access
+    import dnse_secrets_env
+    import multi_source_exact_session_resolver as resolver
+    import mva_exact_session_snapshot as snapshotter
+
+    calls: list[dict] = []
+    resolved_session = resolved_session or session
+
+    def fake_canonical_candidates(runtime_root):
+        return ["AAA", "BBB"]
+
+    def fake_ensure_credentials_loaded(*a, **k):
+        return {"configured": True}
+
+    def fake_credentials_for_request(*a, **k):
+        return ("key", "secret")
+
+    def fake_materialize_snapshot(*, candidates, requested_at, target_session, api_key, api_secret, workers=8, **kw):
+        calls.append({"stage": "dnse", "candidates": candidates, "target_session": target_session})
+        return {
+            "contract_version": "p3f9_exact_session_mva_snapshot/v2",
+            "resolved_completed_session": resolved_session, "retained_snapshot_session": resolved_session,
+            "requested_at": requested_at.isoformat(), "target_session": target_session,
+            "candidate_count": len(candidates), "attempted_candidate_count": len(candidates),
+            "materialization_scope": "FULL_CANONICAL_CANDIDATE_SET",
+            "unattempted_without_explicit_disposition": 0,
+            "source": {"provider": "DNSE"},
+            "authority_boundary": {"RAW_AS_TRADED": "NOT_PROMOTED", "HISTORICAL_PIT": "BLOCKED", "runtime_database_mutated": False},
+            "records": {t: {"status": "OBSERVED", "reason": None, "disposition": "EXACT_SESSION_RETAINED",
+                            "observations": [{"session": resolved_session, "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1,
+                                              "provider": "DNSE", "dataset": "DNSE_OHLC_1D"}],
+                            "payload_hash": "h", "request": {}, "provider_endpoint": "/price/ohlc"} for t in candidates},
+            "snapshot_sha256": "x", "snapshot_identity": "p3f9_exact_session_snapshot:x",
+        }
+
+    def fake_resolve(*, dnse_snapshot, target_session, requested_at, **kw):
+        calls.append({"stage": "resolver", "target_session": target_session})
+        projected = dict(dnse_snapshot)
+        projected["resolved_completed_session"] = resolved_session
+        return {"evidence": True}, projected
+
+    patches = [
+        patch.object(snapshotter, "canonical_candidates", fake_canonical_candidates),
+        patch.object(dnse_secrets_env, "ensure_credentials_loaded", fake_ensure_credentials_loaded),
+        patch.object(dnse_access, "credentials_for_request", fake_credentials_for_request),
+        patch.object(snapshotter, "materialize_snapshot", fake_materialize_snapshot),
+        patch.object(resolver, "resolve_multi_source_exact_session_snapshot", fake_resolve),
+    ]
+    return patches, calls
+
+
+def test_ensure_exact_session_snapshot_runs_dnse_then_resolver_and_returns_the_path(tmp_path):
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
-    calls: list[tuple[Path, list[str]]] = []
+    patches, calls = _patch_resolved_acquisition(session)
 
-    def fake_run(execution_root: Path, command: list[str]) -> None:
-        calls.append((execution_root, command))
-        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
-
-    with patch.object(level2, "run_cmd", fake_run):
+    with patches[0], patches[1], patches[2], patches[3], patches[4]:
         result = level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
 
     assert result == paths["exact_session_snapshot"]
-    assert len(calls) == 1
-    assert calls[0][0] == tmp_path
-    command = calls[0][1]
-    assert command[0] == "tools/run_p3f9b_market_wide_exact_session_scaleout.py"
-    assert command[command.index("--output-dir") + 1] == str(paths["exact_session_snapshot"].parent)
-    assert command[command.index("--session") + 1] == session
+    assert [c["stage"] for c in calls] == ["dnse", "resolver"]
+    assert calls[0]["target_session"] == session
+    assert calls[1]["target_session"] == session
+    # The resolved projection landed at the same path every existing Level-2 consumer reads.
+    written = json.loads(paths["exact_session_snapshot"].read_text(encoding="utf-8"))
+    assert written["resolved_completed_session"] == session
+    # DNSE Pass 1's own unmodified output is retained as a standalone diagnostic artifact.
+    dnse_only = json.loads(paths["dnse_only_exact_session_snapshot"].read_text(encoding="utf-8"))
+    assert dnse_only["resolved_completed_session"] == session
 
 
 def test_ensure_exact_session_snapshot_is_idempotent_when_already_present(tmp_path):
@@ -85,12 +142,9 @@ def test_ensure_exact_session_snapshot_is_idempotent_when_already_present(tmp_pa
 
 def test_ensure_exact_session_snapshot_raises_on_session_mismatch(tmp_path):
     session = "2026-08-26"
-    paths = level2.session_artifact_paths(tmp_path, session)
+    patches, _ = _patch_resolved_acquisition(session, resolved_session="2026-08-25")
 
-    def fake_run(execution_root: Path, command: list[str]) -> None:
-        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": "2026-08-25"})
-
-    with patch.object(level2, "run_cmd", fake_run):
+    with patches[0], patches[1], patches[2], patches[3], patches[4]:
         with pytest.raises(ValueError, match="P3F9B_ACQUIRED_SESSION_MISMATCH:requested=2026-08-26:resolved=2026-08-25"):
             level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
 
@@ -117,17 +171,19 @@ def test_materialize_independent_components_delegates_snapshot_acquisition_to_th
 
 
 def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp_path):
+    # ensure_exact_session_snapshot's DNSE+resolver acquisition (2026-09-03 rewrite) writes
+    # directly to absolute artifact_root paths -- it no longer shells out via run_cmd/execution_root
+    # at all, so this test now asserts the acquisition OUTPUT lands under attempt_root regardless
+    # of execution_root, and that every remaining (already-primed) step still never touches run_cmd.
     session = "2026-08-26"
     attempt_root = tmp_path / "operations-review" / "canonical-post-close-v1" / session / "post-close-attempt-190500"
     paths = level2.session_artifact_paths(attempt_root, session)
     _prime_materialization_outputs(paths)
-    calls: list[tuple[Path, list[str]]] = []
+    patches, calls = _patch_resolved_acquisition(session)
 
-    def fake_run(execution_root: Path, command: list[str]) -> None:
-        calls.append((execution_root, command))
-        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
-
-    with patch.object(level2, "run_cmd", fake_run):
+    with patches[0], patches[1], patches[2], patches[3], patches[4], \
+         patch.object(level2, "run_cmd") as mocked_run_cmd, \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"):
         level2.materialize_independent_components(
             attempt_root,
             session,
@@ -135,30 +191,27 @@ def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp
             execution_root=ROOT,
         )
 
-    assert len(calls) == 1
-    assert calls[0][0] == ROOT
-    command = calls[0][1]
-    assert command[0] == "tools/run_p3f9b_market_wide_exact_session_scaleout.py"
-    assert command[command.index("--output-dir") + 1] == str(paths["exact_session_snapshot"].parent)
-    assert str(attempt_root) in command[command.index("--output-dir") + 1]
-    assert command[command.index("--session") + 1] == session
+    mocked_run_cmd.assert_not_called()
+    assert [c["stage"] for c in calls] == ["dnse", "resolver"]
+    written = json.loads(paths["exact_session_snapshot"].read_text(encoding="utf-8"))
+    assert written["resolved_completed_session"] == session
+    assert str(attempt_root) in str(paths["exact_session_snapshot"])
 
 
 def test_ordinary_materialization_keeps_its_single_root_as_execution_root(tmp_path):
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
     _prime_materialization_outputs(paths)
-    calls: list[tuple[Path, list[str]]] = []
+    patches, calls = _patch_resolved_acquisition(session)
 
-    def fake_run(execution_root: Path, command: list[str]) -> None:
-        calls.append((execution_root, command))
-        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
-
-    with patch.object(level2, "run_cmd", fake_run), \
+    with patches[0], patches[1], patches[2], patches[3], patches[4], \
+         patch.object(level2, "run_cmd") as mocked_run_cmd, \
          patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"):
         level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
 
-    assert calls[0][0] == tmp_path
+    mocked_run_cmd.assert_not_called()
+    written = json.loads(paths["exact_session_snapshot"].read_text(encoding="utf-8"))
+    assert written["resolved_completed_session"] == session
 
 
 def test_named_20260824_triage_file_is_2026_08_21_session():

@@ -155,6 +155,8 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "exact_session_snapshot": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "p3f9b_mva_exact_session_snapshot.json",
         "p3f7_bundle": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "p3f7_mva_daily_research_bundle_exact_session.json",
         "p3f8_run": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "p3f8_mva_operational_run_exact_session.json",
+        "dnse_only_exact_session_snapshot": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "dnse_only_exact_session_snapshot.json",
+        "multi_source_market_evidence": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "multi_source_exact_session_market_evidence.json",
         "breadth_foundation": ops / f"current-market-universe-breadth-foundation-v1-{nodash}" / "current_market_universe_breadth_foundation_artifact.json",
         "universe_resolution": ops / f"current-universe-status-and-session-coverage-resolution-v1-{nodash}" / "current_universe_status_and_session_coverage_resolution_artifact.json",
         "liquidity_research": ops / f"market-wide-current-liquidity-research-v1-{nodash}" / "market_wide_current_liquidity_research_artifact.json",
@@ -872,40 +874,103 @@ def ensure_exact_session_snapshot(
     *,
     execution_root: Path | None = None,
 ) -> Path:
-    """Idempotently acquire the P3F9B exact-session snapshot for ``session`` under ``artifact_root``.
+    """Idempotently acquire the resolved exact-session snapshot for ``session`` under
+    ``artifact_root``.
 
     This is the exact-session acquisition boundary, extracted so a caller that only needs the
     snapshot itself (canonical_post_close_pipeline.acquire_and_materialize, in particular, so it
     can validate exact-session coverage before spending any liquidity or technical-recovery work)
-    can call it directly without running the rest of materialize_independent_components. An
-    existing on-disk snapshot is reused unconditionally -- no re-verification -- matching every
+    can call it directly without running the rest of materialize_independent_components.
+
+    2026-09-03 MULTI_SOURCE_EXACT_SESSION_MARKET_EVIDENCE_AND_DAILY_RESILIENCE_V1: previously this
+    ran the standalone DNSE-only P3F9B CLI tool as a subprocess and returned its output directly.
+    A single thin/lagging DNSE day (17/1683 on 2026-09-03 -- see the same-day investigation this
+    milestone's own brief cites) then stopped canonical Daily globally even though this project's
+    own existing VCI/KBS acquisition capability (vn_stock_pipeline.py) could independently supply
+    most of the same session. This function now runs the same DNSE acquisition in-process (Pass 1,
+    byte-identical mva_exact_session_snapshot.materialize_snapshot() logic, unchanged), retains
+    it unmodified as a standalone diagnostic artifact ("DNSE_PROVIDER_COVERAGE" -- see
+    dnse_only_exact_session_snapshot key), then recovers only DNSE's own gaps through VCI/KBS via
+    multi_source_exact_session_resolver.py (Passes 2-4; never re-queries a DNSE-resolved ticker;
+    no concurrency against VCI/KBS -- see that module's own docstring) and writes the RESOLVED
+    projection to this function's return path. The projected snapshot keeps the exact same
+    "p3f9_exact_session_mva_snapshot/v2" shape/contract every existing Level-2/current-research
+    tool already reads (assert_post_close_eligible, breadth foundation, universe status,
+    liquidity research, technical recovery, descriptive research, valuation, tactical classifier,
+    corporate intelligence, sector leadership) -- none of them change. Full multi-source evidence
+    (which source supplied each recovered bar, corroboration/conflict, what was blocked) is
+    retained separately -- see multi_source_market_evidence key.
+
+    An existing on-disk snapshot is reused unconditionally -- no re-verification -- matching every
     other step's own idempotent if-not-exists pattern in this module. Raises
     ValueError("P3F9B_ACQUIRED_SESSION_MISMATCH:...") if a freshly acquired snapshot's own resolved
     session does not exactly equal ``session``; no prior/latest substitution is ever silently
     accepted.
     """
     execution_root = execution_root or artifact_root
-    p3f9b_snapshot = session_artifact_paths(artifact_root, session)["exact_session_snapshot"]
+    paths = session_artifact_paths(artifact_root, session)
+    p3f9b_snapshot = paths["exact_session_snapshot"]
     if not p3f9b_snapshot.exists():
-        # P3F9B explicitly requests the canonical target session while retaining
-        # actual observed-at time independently. The returned snapshot must still
-        # prove exact equality below; no prior/latest substitution is allowed.
-        cmd = [
-            "tools/run_p3f9b_market_wide_exact_session_scaleout.py",
-            "--runtime-root", str(runtime_root),
-            "--output-dir", str(p3f9b_snapshot.parent),
-            "--workers", str(workers),
-            "--session", session,
+        import mva_exact_session_snapshot as snapshotter
+        import multi_source_exact_session_resolver as resolver
+        from dnse_access import credentials_for_request
+        from dnse_secrets_env import ensure_credentials_loaded
+
+        instant = now or vn_now()
+        dnse_only_path = paths["dnse_only_exact_session_snapshot"]
+        if dnse_only_path.exists():
+            # A prior attempt already completed Pass 1 and crashed/stopped before the resolved
+            # projection was written; reuse it rather than spending a second live DNSE
+            # acquisition -- this still satisfies "exactly one governed market-wide acquisition"
+            # upstream (canonical_daily_operation.py counts calls to acquire_and_materialize, not
+            # DNSE requests underneath it).
+            dnse_snapshot = json.loads(dnse_only_path.read_text(encoding="utf-8"))
+        else:
+            candidates = snapshotter.canonical_candidates(runtime_root)
+            status = ensure_credentials_loaded()
+            creds = credentials_for_request()
+            if not status.get("configured") or not creds:
+                raise RuntimeError("DNSE_CREDENTIAL_INJECTION_REQUIRED")
+            dnse_snapshot = snapshotter.materialize_snapshot(
+                candidates=candidates, requested_at=instant, target_session=session,
+                api_key=creds[0], api_secret=creds[1], workers=workers,
+            )
+            snapshotter.write_snapshot(dnse_snapshot, dnse_only_path)
+
+        all_tickers = list(dnse_snapshot["records"])
+        dnse_exact_tickers = [
+            t for t in all_tickers
+            if dnse_snapshot["records"][t].get("disposition") == "EXACT_SESSION_RETAINED"
         ]
-        if now is not None:
-            cmd += ["--requested-at", now.astimezone(VN_TZ).isoformat()]
-        run_cmd(execution_root, cmd)
-        acquired = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
+        candidate_metadata = resolver.read_candidate_metadata(runtime_root, all_tickers)
+        sentinel = resolver.select_sentinel_cohort(
+            candidate_metadata=candidate_metadata, dnse_exact_tickers=dnse_exact_tickers,
+        )
+        evidence, projected = resolver.resolve_multi_source_exact_session_snapshot(
+            dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
+            sentinel_cohort=sentinel["tickers"],
+        )
+        evidence_path = paths["multi_source_market_evidence"]
+        if not evidence_path.exists():
+            evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            evidence_path.write_text(
+                json.dumps(evidence, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8",
+            )
+        snapshotter.write_snapshot(projected, p3f9b_snapshot)
+        acquired = projected
         if acquired.get("resolved_completed_session") != session:
             raise ValueError(
                 "P3F9B_ACQUIRED_SESSION_MISMATCH:requested=" + session
                 + ":resolved=" + str(acquired.get("resolved_completed_session"))
             )
+        # Evidence/projected are now fully persisted regardless of outcome -- only now does a
+        # DNSE_BROAD_STALE_OR_INCOMPLETE_EOD verdict fail canonical Daily closed, the same
+        # fail-closed shape as this function's own P3F9B_ACQUIRED_SESSION_MISMATCH check just
+        # above: Daily must stop rather than either trust DNSE's unverified same-date bars
+        # broadly or silently launch a full-universe VCI/KBS pass inline. See
+        # multi_source_exact_session_resolver.WHEN_DNSE_DEGRADED_POLICY. Raises
+        # resolver.DnseProviderWideQualityDegraded, deliberately left uncaught here.
+        resolver.assert_dnse_quality_acceptable(evidence)
     return p3f9b_snapshot
 
 

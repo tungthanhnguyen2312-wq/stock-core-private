@@ -827,12 +827,22 @@ def test_tiered_bundle_never_invents_authority_only_passes_it_through(tmp_path):
 
 # --- bonus regression coverage for the two pre-existing Level-2 acquisition bugs fixed alongside this milestone ---
 
-def test_level2_p3f9b_acquisition_uses_real_cli_flags():
+def test_level2_p3f9b_acquisition_no_longer_shells_out_and_uses_the_resolver():
+    """2026-09-03 MULTI_SOURCE_EXACT_SESSION_MARKET_EVIDENCE_AND_DAILY_RESILIENCE_V1 superseded the
+    prior source-pattern guard this test replaces (test_level2_p3f9b_acquisition_uses_real_cli_flags,
+    itself already documented stale in docs/STATE.md before this milestone): ensure_exact_session_
+    snapshot() no longer shells out to tools/run_p3f9b_market_wide_exact_session_scaleout.py at all --
+    it acquires DNSE Pass 1 in-process (mva_exact_session_snapshot.materialize_snapshot) and recovers
+    gaps via multi_source_exact_session_resolver.py. See test_daily_session_level2_package.py::
+    test_ensure_exact_session_snapshot_runs_dnse_then_resolver_and_returns_the_path for the behavioral
+    (not source-pattern) equivalent of what the old test checked.
+    """
     source = (ROOT / "daily_session_level2_package.py").read_text(encoding="utf-8")
-    block = re.search(r"run_p3f9b_market_wide_exact_session_scaleout\.py.*?\]\)", source, re.S).group(0)
-    assert "--output-dir" in block
-    assert "--out-dir" not in block
-    assert '"--session", session' not in block
+    func = re.search(r"def ensure_exact_session_snapshot\(.*?\n\ndef ", source, re.S).group(0)
+    assert "run_p3f9b_market_wide_exact_session_scaleout.py" not in func
+    assert "run_cmd(" not in func
+    assert "mva_exact_session_snapshot" in func
+    assert "multi_source_exact_session_resolver" in func
 
 
 def test_level2_universe_resolution_uses_real_cli_flags():
