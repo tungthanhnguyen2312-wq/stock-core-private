@@ -141,17 +141,53 @@ def test_omitted_session_without_working_dates_fails_closed(capsys, tmp_path):
 
 # --- 2. same-day partial/intraday session fails closed ---
 
-def test_partial_session_evidence_fails_closed(tmp_path, monkeypatch):
+def test_low_coverage_fails_immediately_before_liquidity_technical_recovery_or_triage(tmp_path, monkeypatch):
+    # Real live-run regression (2026-09-03): P3F9B exact coverage 17/1683 must stop the pipeline
+    # right after the coverage check -- before any liquidity batch, technical-history recovery, or
+    # triage build ever runs. Today's incident ran 17 liquidity batches and technical-history
+    # recovery to completion on this exact snapshot before the coverage gate had a chance to fire.
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate; isolates the coverage check
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
-        _write_snapshot(paths, session, requested_at=f"{session}T16:07:09+07:00", exact=10, total=1683)
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        return _write_snapshot(paths, session, requested_at=f"{session}T16:07:09+07:00", exact=17, total=1683)
 
-    monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
+    def _forbidden(name):
+        def _boom(*args, **kwargs):
+            raise AssertionError(f"{name} must not run when exact-session coverage is below the floor")
+        return _boom
+
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
+    monkeypatch.setattr(cpc.level2, "materialize_independent_components", _forbidden("materialize_independent_components (liquidity/technical recovery)"))
+    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", _forbidden("maybe_build_triage_dependent (triage)"))
     with pytest.raises(cpc.CanonicalPostCloseError, match="PARTIAL_OR_INTRADAY_SESSION_EVIDENCE"):
         cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
+
+
+def test_low_coverage_retained_same_session_snapshot_is_preserved_and_redirects_to_fresh_attempt(tmp_path):
+    # RETAINED PARTIAL SNAPSHOT / RERUN SEMANTICS: a retained same-session snapshot with coverage
+    # below MIN_EXACT_SESSION_COVERAGE_RATIO (the real 2026-09-03 17/1683 shape) must never be
+    # silently reused on a later rerun, even though it was genuinely acquired after the 15:30
+    # cutoff -- coverage alone is disqualifying (assert_post_close_eligible reason 5). The old
+    # bytes stay untouched and a fresh, distinctly-named attempt root is selected instead.
+    session = "2026-09-03"
+    default_paths = level2.session_artifact_paths(tmp_path, session)
+    _write_snapshot(default_paths, session, requested_at=f"{session}T18:33:00+07:00", exact=17, total=1683)
+    original_bytes = default_paths["exact_session_snapshot"].read_bytes()
+
+    now = datetime(2026, 9, 3, 20, 0, tzinfo=VN_TZ)  # well past cutoff, same real-world day
+
+    root, info = cpc.resolve_acquisition_root(tmp_path, session, now=now)
+
+    assert root != tmp_path
+    assert info["redirected"] is True
+    assert info["pre_cutoff_artifact_classification"] == "PRE_CUTOFF_RETAINED_NOT_POST_CLOSE_ELIGIBLE"
+    assert "EXISTING_ARTIFACT_PARTIAL_OR_INTRADAY_EVIDENCE" in info["reason"]
+    assert "exact=17" in info["reason"] and "total=1683" in info["reason"]
+    # byte-preserved -- never overwritten, relabeled, or silently reused
+    assert default_paths["exact_session_snapshot"].read_bytes() == original_bytes
+    assert json.loads(original_bytes)["exact_session_observed_count"] == 17
 
 
 # --- 3. canonical mode does not use legacy VCI/KBS acquisition ---
@@ -206,17 +242,22 @@ def test_acquisition_provenance_passthrough(tmp_path, monkeypatch):
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
+    materialize_calls = []
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
-        _write_snapshot(
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        return _write_snapshot(
             paths, session, requested_at=f"{session}T19:05:00+07:00", exact=500, total=1000,
             provider="DNSE", artifact_identity="p3f9_exact_session_mva_snapshot:deadbeef",
         )
+
+    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        materialize_calls.append((root, sess))
 
     def fake_maybe_build_triage(root, s, execution_root=None):
         _write_triage(paths, s)
         return {"built": True}
 
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
     monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_maybe_build_triage)
 
@@ -224,6 +265,9 @@ def test_acquisition_provenance_passthrough(tmp_path, monkeypatch):
     assert result["snapshot"]["artifact_identity"] == "p3f9_exact_session_mva_snapshot:deadbeef"
     assert result["snapshot"]["provider"] == "DNSE"
     assert result["resolved_completed_session"] == session
+    # sufficient coverage (500/1000) must still proceed to the normal downstream materialization
+    # path -- the counterpart regression to the low-coverage fail-fast test above.
+    assert materialize_calls == [(tmp_path, session)]
 
 
 # --- 5. runtime materialization targets only canonical runtime ---
@@ -235,14 +279,18 @@ def test_acquisition_never_writes_into_runtime_root(tmp_path, monkeypatch):
     paths = level2.session_artifact_paths(tmp_path, session)
     now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)  # past the same-day gate
 
+    def fake_ensure_snapshot(root, sess, runtime_root_arg, workers=12, now=None, execution_root=None):
+        assert runtime_root_arg == runtime_root
+        return _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=50, total=100)
+
     def fake_materialize(root, sess, runtime_root_arg, workers=12, now=None, execution_root=None):
         assert runtime_root_arg == runtime_root
-        _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=50, total=100)
 
     def fake_maybe_build_triage(root, s, execution_root=None):
         _write_triage(paths, s)
         return {"built": True}
 
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
     monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_maybe_build_triage)
 
@@ -508,10 +556,10 @@ def test_acquired_session_mismatch_never_silently_substituted(tmp_path, monkeypa
     requested = "2026-08-27"
     now = datetime(2026, 8, 27, 19, 0, tzinfo=VN_TZ)
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         raise ValueError("P3F9B_ACQUIRED_SESSION_MISMATCH:requested=2026-08-27:resolved=2026-08-26")
 
-    monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
     with pytest.raises(cpc.CanonicalPostCloseError, match="never silently substituting"):
         cpc.acquire_and_materialize(tmp_path, requested, tmp_path / "runtime", now=now)
 
@@ -568,15 +616,16 @@ def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexis
 
     now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)  # past the cutoff
 
-    def fake_materialize(root, sess, runtime_root, workers=12, now=None, execution_root=None):
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
         fresh_paths = level2.session_artifact_paths(root, sess)
-        _write_snapshot(fresh_paths, session, requested_at=f"{session}T19:05:00+07:00", exact=1200, total=1683)
+        return _write_snapshot(fresh_paths, session, requested_at=f"{session}T19:05:00+07:00", exact=1200, total=1683)
 
     def fake_maybe_build_triage(root, s, execution_root=None):
         _write_triage(level2.session_artifact_paths(root, s), s)
         return {"built": True}
 
-    monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
+    monkeypatch.setattr(cpc.level2, "materialize_independent_components", lambda *a, **k: None)
     monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_maybe_build_triage)
 
     result = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
@@ -602,25 +651,30 @@ def test_redirected_attempt_propagates_artifact_and_execution_roots(tmp_path, mo
     calls = {}
     now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)
 
-    def fake_materialize(artifact_root, sess, runtime_root, workers=12, now=None, execution_root=None):
-        calls["materialize"] = (artifact_root, execution_root)
-        _write_snapshot(
+    def fake_ensure_snapshot(artifact_root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        calls["ensure_snapshot"] = (artifact_root, execution_root)
+        return _write_snapshot(
             level2.session_artifact_paths(artifact_root, sess),
             sess,
             requested_at=f"{session}T19:05:00+07:00", exact=1200, total=1683,
         )
+
+    def fake_materialize(artifact_root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        calls["materialize"] = (artifact_root, execution_root)
 
     def fake_triage(artifact_root, sess, execution_root=None):
         calls["triage"] = (artifact_root, execution_root)
         _write_triage(level2.session_artifact_paths(artifact_root, sess), sess)
         return {"built": True}
 
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
     monkeypatch.setattr(cpc.level2, "materialize_independent_components", fake_materialize)
     monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_triage)
 
     result = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
 
     assert result["artifact_root"] != tmp_path
+    assert calls["ensure_snapshot"] == (result["artifact_root"], tmp_path)
     assert calls["materialize"] == (result["artifact_root"], tmp_path)
     assert calls["triage"] == (result["artifact_root"], tmp_path)
 

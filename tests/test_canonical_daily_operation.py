@@ -391,6 +391,52 @@ def test_provider_evidence_unavailable_fails_precisely(tmp_path, monkeypatch):
     assert exc.value.stage == cdo.STAGE_PROVIDER_EVIDENCE_UNAVAILABLE
 
 
+def test_canonical_post_close_error_from_acquisition_is_classified_not_ready(tmp_path, monkeypatch):
+    # A deliberate, evidence-based refusal (thin/partial coverage, session mismatch, missing
+    # snapshot, ...) from acquire_and_materialize itself is genuinely "not ready yet".
+    def acquire(*a, **k):
+        raise cdo.CanonicalPostCloseError(
+            "REFUSE_CANONICAL_POST_CLOSE:PARTIAL_OR_INTRADAY_SESSION_EVIDENCE:"
+            "exact=17:total=1683:ratio=0.0101:floor=0.2"
+        )
+
+    with pytest.raises(cdo.CanonicalDailyOperationError) as exc:
+        _run(tmp_path, monkeypatch, acquire_fn=acquire)
+    assert exc.value.stage == cdo.STAGE_BLOCKED_ACQUISITION
+    assert exc.value.stage in cdo.POST_ACQUISITION_NOT_READY_STAGES
+    assert exc.value.stage in cdo.NOT_READY_STAGES
+
+
+@pytest.mark.parametrize("exc_factory", [
+    lambda: FileNotFoundError(
+        2, "No such file or directory",
+        "market-wide-current-technical-coverage-scaleout-v1-20260903/"
+        "market_wide_current_technical_coverage_recovery_artifact.json",
+    ),
+    lambda: __import__("subprocess").CalledProcessError(
+        1, ["python", "tools/run_market_wide_current_technical_coverage_scaleout.py", "--consolidate"],
+    ),
+    lambda: TypeError("unexpected keyword argument"),
+])
+def test_unexpected_exception_from_acquisition_is_a_genuine_pipeline_failure_not_data_not_ready(tmp_path, monkeypatch, exc_factory):
+    # Real live regression (2026-09-03): a FileNotFoundError raised deep inside acquire_and_
+    # materialize (technical-recovery consolidate() crashing on an absent output directory)
+    # surfaced as DAILY_OPERATION_STATE=BLOCKED_ACQUISITION / Status: POST_CLOSE_DATA_NOT_READY --
+    # indistinguishable from routine thin session evidence. Any unexpected exception type raised
+    # from the acquisition stage must classify as the distinct, non-"not-ready" failure stage
+    # instead, whatever its concrete type (FileNotFoundError; subprocess.CalledProcessError, the
+    # real shape run_cmd's subprocess.run(check=True) raises for a failing child tool; or a plain
+    # programming defect like TypeError).
+    def acquire(*a, **k):
+        raise exc_factory()
+
+    with pytest.raises(cdo.CanonicalDailyOperationError) as exc:
+        _run(tmp_path, monkeypatch, acquire_fn=acquire)
+    assert exc.value.stage == cdo.STAGE_FAILED_ACQUISITION_PIPELINE
+    assert exc.value.stage not in cdo.POST_ACQUISITION_NOT_READY_STAGES
+    assert exc.value.stage not in cdo.NOT_READY_STAGES
+
+
 def test_exactly_one_market_wide_acquisition(tmp_path, monkeypatch):
     record = _run(tmp_path, monkeypatch)
     assert record["market_acquisition_attempts"] == 1

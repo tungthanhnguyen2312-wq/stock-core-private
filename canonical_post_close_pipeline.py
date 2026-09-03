@@ -361,22 +361,24 @@ def acquire_and_materialize(
     """Stage 1-3: DNSE acquisition, runtime materialization, current-session analytics.
 
     Wholly delegates to daily_session_level2_package -- this pipeline adds no second research
-    engine. Raises CanonicalPostCloseError if the acquired snapshot's own resolved session does
-    not exactly equal the requested session (no silent prior-session substitution), or if an
-    existing same-session snapshot exists but is not post-close eligible and today's collection
-    cutoff has not yet passed (resolve_acquisition_root's same-day gate).
+    engine. The exact-session P3F9B snapshot is acquired and its coverage validated FIRST, before
+    any liquidity or technical-recovery work runs: a session whose coverage is already below
+    MIN_EXACT_SESSION_COVERAGE_RATIO stops immediately, so a thin/partial acquisition never spends
+    liquidity batches, technical-history recovery, or any other downstream current-session
+    analytics on evidence this function is about to reject anyway (2026-09-03 corrective fix --
+    the live defect this closes ran 17 liquidity batches and technical-history recovery to
+    completion on a 17/1683 exact-session snapshot before the coverage gate below ever ran).
+    Raises CanonicalPostCloseError if the acquired snapshot's own resolved session does not
+    exactly equal the requested session (no silent prior-session substitution), if an existing
+    same-session snapshot exists but is not post-close eligible and today's collection cutoff has
+    not yet passed (resolve_acquisition_root's same-day gate), or if coverage is insufficient.
     """
     now = now or vn_now()
     artifact_root, eligibility = resolve_acquisition_root(root, session, now=now)
     paths = level2.session_artifact_paths(artifact_root, session)
     try:
-        level2.materialize_independent_components(
-            artifact_root,
-            session,
-            runtime_root,
-            workers=workers,
-            now=now,
-            execution_root=root,
+        level2.ensure_exact_session_snapshot(
+            artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
         )
     except ValueError as exc:
         if str(exc).startswith("P3F9B_ACQUIRED_SESSION_MISMATCH"):
@@ -395,6 +397,14 @@ def acquire_and_materialize(
             f"REFUSE_CANONICAL_POST_CLOSE:PARTIAL_OR_INTRADAY_SESSION_EVIDENCE:"
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
         )
+    level2.materialize_independent_components(
+        artifact_root,
+        session,
+        runtime_root,
+        workers=workers,
+        now=now,
+        execution_root=root,
+    )
     triage_build_result = level2.maybe_build_triage_dependent(
         artifact_root,
         session,

@@ -201,14 +201,36 @@ class CanonicalPostCloseOwnerStatusTests(unittest.TestCase):
 
     def test_acquisition_not_ready_also_exits_2_not_1(self):
         # STAGE_BLOCKED_ACQUISITION is the other post-floor "not ready" stage (e.g. same-day
-        # partial/intraday evidence) -- must not be conflated with a hard pipeline failure.
-        rc, _out = self._run_with_stage(cdo.STAGE_BLOCKED_ACQUISITION, "PARTIAL_OR_INTRADAY_SESSION_EVIDENCE", {})
+        # partial/intraday evidence, the 17/1683 shape) -- must not be conflated with a hard
+        # pipeline failure.
+        rc, out = self._run_with_stage(cdo.STAGE_BLOCKED_ACQUISITION, "PARTIAL_OR_INTRADAY_SESSION_EVIDENCE:exact=17:total=1683:ratio=0.0101:floor=0.2", {})
         self.assertEqual(rc, 2)
+        self.assertIn("Status: POST_CLOSE_DATA_NOT_READY", out)
+        self.assertIn("Publication: BLOCKED", out)
+        self.assertNotIn("FAILED_PRODUCER", out)
+        self.assertNotIn("FAILED_ACQUISITION_PIPELINE", out)
 
     def test_genuine_pipeline_defect_still_exits_1_with_stage_named(self):
         rc, out = self._run_with_stage(cdo.STAGE_BLOCKED_DAILY_PRODUCER, "DAILY_PRODUCER_STATUS:FAILED", {})
         self.assertEqual(rc, 1)
         self.assertIn(f"Status: {cdo.STAGE_BLOCKED_DAILY_PRODUCER}", out)
+
+    def test_unexpected_acquisition_exception_reports_genuine_failure_not_data_not_ready(self):
+        # DAILY_LIVE_ACQUISITION_FAIL_FAST_AND_ZERO_RECOVERY_CORRECTIVE_V1 defect 3: today's real
+        # 2026-09-03 incident -- a FileNotFoundError inside acquire_and_materialize -- must print
+        # as a genuine pipeline failure and exit 1, never as routine POST_CLOSE_DATA_NOT_READY.
+        rc, out = self._run_with_stage(
+            cdo.STAGE_FAILED_ACQUISITION_PIPELINE,
+            "FileNotFoundError:[Errno 2] No such file or directory: "
+            "'market_wide_current_technical_coverage_recovery_artifact.json'",
+            {"phase_a": {"resolved_session": "2026-09-03"}},
+        )
+        self.assertEqual(rc, 1)
+        self.assertIn(f"Status: {cdo.STAGE_FAILED_ACQUISITION_PIPELINE}", out)
+        self.assertIn("FileNotFoundError", out)
+        self.assertIn("RECOVERY_ACTION", out)
+        self.assertNotIn("POST_CLOSE_DATA_NOT_READY", out)
+        self.assertNotIn("CURRENT_SESSION_STABILIZING", out)
 
 
 if __name__ == "__main__": unittest.main()

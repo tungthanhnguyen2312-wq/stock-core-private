@@ -105,6 +105,14 @@ STAGE_PROVIDER_EVIDENCE_UNAVAILABLE = "PROVIDER_EVIDENCE_UNAVAILABLE"
 STAGE_BLOCKED_PRE_ACQUISITION = "BLOCKED_PRE_ACQUISITION_SESSION_EVIDENCE"
 STAGE_BLOCKED_ACQUISITION = "BLOCKED_ACQUISITION"
 STAGE_BLOCKED_POST_ACQUISITION = "BLOCKED_POST_ACQUISITION_SESSION_MISMATCH"
+# An unexpected exception from the acquisition stage (FileNotFoundError, CalledProcessError, a
+# programming defect, ...) is a genuine pipeline failure, never routine thin/lagging session
+# evidence. Deliberately NOT a member of PRE_ACQUISITION_NOT_READY_STAGES/
+# POST_ACQUISITION_NOT_READY_STAGES/NOT_READY_STAGES below, so it prints as a real failure (not
+# POST_CLOSE_DATA_NOT_READY) and exits 1 (not the not-ready exit class). STAGE_BLOCKED_ACQUISITION
+# stays reserved for CanonicalPostCloseError -- acquire_and_materialize's own deliberate,
+# evidence-based refusals (thin coverage, session mismatch, missing snapshot, ...).
+STAGE_FAILED_ACQUISITION_PIPELINE = "FAILED_ACQUISITION_PIPELINE"
 STAGE_BLOCKED_INPUT_REGISTRATION = "BLOCKED_INPUT_REGISTRATION"
 STAGE_BLOCKED_DAILY_PRODUCER = "BLOCKED_DAILY_PRODUCER"
 STAGE_BLOCKED_RUNTIME_RELEASE = "BLOCKED_RUNTIME_RELEASE"
@@ -463,10 +471,17 @@ def run_canonical_daily_operation(
     try:
         acquisition = _acquire()
     except CanonicalPostCloseError as exc:
+        # A deliberate, evidence-based refusal (thin/partial coverage, session mismatch, missing
+        # snapshot after acquisition, pre-cutoff artifact, ...) -- genuinely "not ready yet".
         raise CanonicalDailyOperationError(STAGE_BLOCKED_ACQUISITION, str(exc), local_state={"phase_a": phase_a}) from exc
     except Exception as exc:
+        # Anything else (FileNotFoundError, subprocess.CalledProcessError, a programming defect,
+        # ...) is a genuine pipeline failure, never routine data lag -- see STAGE_FAILED_ACQUISITION_
+        # PIPELINE's own comment. Must never collapse into STAGE_BLOCKED_ACQUISITION here: today's
+        # live defect was exactly this collapse, which made a real FileNotFoundError print as
+        # POST_CLOSE_DATA_NOT_READY.
         raise CanonicalDailyOperationError(
-            STAGE_BLOCKED_ACQUISITION, f"{type(exc).__name__}:{exc}", local_state={"phase_a": phase_a},
+            STAGE_FAILED_ACQUISITION_PIPELINE, f"{type(exc).__name__}:{exc}", local_state={"phase_a": phase_a},
         ) from exc
 
     if acquisition_calls != 1:

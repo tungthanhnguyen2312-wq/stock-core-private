@@ -863,6 +863,52 @@ def run_cmd(execution_root: Path, cmd: list[str]) -> None:
     subprocess.run([sys.executable] + cmd, cwd=str(execution_root), check=True)
 
 
+def ensure_exact_session_snapshot(
+    artifact_root: Path,
+    session: str,
+    runtime_root: Path,
+    workers: int = 12,
+    now: datetime | None = None,
+    *,
+    execution_root: Path | None = None,
+) -> Path:
+    """Idempotently acquire the P3F9B exact-session snapshot for ``session`` under ``artifact_root``.
+
+    This is the exact-session acquisition boundary, extracted so a caller that only needs the
+    snapshot itself (canonical_post_close_pipeline.acquire_and_materialize, in particular, so it
+    can validate exact-session coverage before spending any liquidity or technical-recovery work)
+    can call it directly without running the rest of materialize_independent_components. An
+    existing on-disk snapshot is reused unconditionally -- no re-verification -- matching every
+    other step's own idempotent if-not-exists pattern in this module. Raises
+    ValueError("P3F9B_ACQUIRED_SESSION_MISMATCH:...") if a freshly acquired snapshot's own resolved
+    session does not exactly equal ``session``; no prior/latest substitution is ever silently
+    accepted.
+    """
+    execution_root = execution_root or artifact_root
+    p3f9b_snapshot = session_artifact_paths(artifact_root, session)["exact_session_snapshot"]
+    if not p3f9b_snapshot.exists():
+        # P3F9B explicitly requests the canonical target session while retaining
+        # actual observed-at time independently. The returned snapshot must still
+        # prove exact equality below; no prior/latest substitution is allowed.
+        cmd = [
+            "tools/run_p3f9b_market_wide_exact_session_scaleout.py",
+            "--runtime-root", str(runtime_root),
+            "--output-dir", str(p3f9b_snapshot.parent),
+            "--workers", str(workers),
+            "--session", session,
+        ]
+        if now is not None:
+            cmd += ["--requested-at", now.astimezone(VN_TZ).isoformat()]
+        run_cmd(execution_root, cmd)
+        acquired = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
+        if acquired.get("resolved_completed_session") != session:
+            raise ValueError(
+                "P3F9B_ACQUIRED_SESSION_MISMATCH:requested=" + session
+                + ":resolved=" + str(acquired.get("resolved_completed_session"))
+            )
+    return p3f9b_snapshot
+
+
 def materialize_independent_components(
     artifact_root: Path,
     session: str,
@@ -881,28 +927,9 @@ def materialize_independent_components(
     execution_root = execution_root or artifact_root
     paths = session_artifact_paths(artifact_root, session)
     retained_paths = session_artifact_paths(execution_root, session)
-    p3f9b_snapshot = paths["exact_session_snapshot"]
-    p3f9b_dir = p3f9b_snapshot.parent
-    if not p3f9b_snapshot.exists():
-        # P3F9B explicitly requests the canonical target session while retaining
-        # actual observed-at time independently. The returned snapshot must still
-        # prove exact equality below; no prior/latest substitution is allowed.
-        cmd = [
-            "tools/run_p3f9b_market_wide_exact_session_scaleout.py",
-            "--runtime-root", str(runtime_root),
-            "--output-dir", str(p3f9b_dir),
-            "--workers", str(workers),
-            "--session", session,
-        ]
-        if now is not None:
-            cmd += ["--requested-at", now.astimezone(VN_TZ).isoformat()]
-        run_cmd(execution_root, cmd)
-        acquired = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
-        if acquired.get("resolved_completed_session") != session:
-            raise ValueError(
-                "P3F9B_ACQUIRED_SESSION_MISMATCH:requested=" + session
-                + ":resolved=" + str(acquired.get("resolved_completed_session"))
-            )
+    p3f9b_snapshot = ensure_exact_session_snapshot(
+        artifact_root, session, runtime_root, workers, now, execution_root=execution_root,
+    )
     breadth_out = paths["breadth_foundation"]
     if not breadth_out.exists():
         run_cmd(execution_root, ["tools/build_current_market_universe_breadth_foundation.py", "--snapshot", str(p3f9b_snapshot), "--output", str(breadth_out)])

@@ -4,6 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 import daily_session_level2_package as level2
 from daily_research_session_operations import load_registry
 from daily_session_level2_package import (
@@ -46,6 +48,72 @@ def test_run_cmd_executes_relative_tool_from_explicit_execution_root(tmp_path):
     assert mocked.call_args.args[0] == [sys.executable, "tools/example.py", "--flag"]
     assert mocked.call_args.kwargs["cwd"] == str(execution_root)
     assert mocked.call_args.kwargs["check"] is True
+
+
+def test_ensure_exact_session_snapshot_issues_the_real_cli_flags_and_returns_the_path(tmp_path):
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    calls: list[tuple[Path, list[str]]] = []
+
+    def fake_run(execution_root: Path, command: list[str]) -> None:
+        calls.append((execution_root, command))
+        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
+
+    with patch.object(level2, "run_cmd", fake_run):
+        result = level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+    assert result == paths["exact_session_snapshot"]
+    assert len(calls) == 1
+    assert calls[0][0] == tmp_path
+    command = calls[0][1]
+    assert command[0] == "tools/run_p3f9b_market_wide_exact_session_scaleout.py"
+    assert command[command.index("--output-dir") + 1] == str(paths["exact_session_snapshot"].parent)
+    assert command[command.index("--session") + 1] == session
+
+
+def test_ensure_exact_session_snapshot_is_idempotent_when_already_present(tmp_path):
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
+
+    with patch.object(level2, "run_cmd") as mocked:
+        result = level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+    mocked.assert_not_called()
+    assert result == paths["exact_session_snapshot"]
+
+
+def test_ensure_exact_session_snapshot_raises_on_session_mismatch(tmp_path):
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+
+    def fake_run(execution_root: Path, command: list[str]) -> None:
+        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": "2026-08-25"})
+
+    with patch.object(level2, "run_cmd", fake_run):
+        with pytest.raises(ValueError, match="P3F9B_ACQUIRED_SESSION_MISMATCH:requested=2026-08-26:resolved=2026-08-25"):
+            level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+
+def test_materialize_independent_components_delegates_snapshot_acquisition_to_the_helper(tmp_path):
+    # Backward-compatibility contract: a standalone materialize_independent_components() caller
+    # (any pre-existing caller that never adopted ensure_exact_session_snapshot directly) must
+    # still get exactly the same acquisition behaviour through the extracted helper.
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    calls = []
+
+    def fake_ensure(artifact_root, sess, runtime_root, workers, now, *, execution_root=None):
+        calls.append((artifact_root, sess, execution_root))
+        _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
+        return paths["exact_session_snapshot"]
+
+    _prime_materialization_outputs(paths)
+    with patch.object(level2, "ensure_exact_session_snapshot", fake_ensure), \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"):
+        level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
+
+    assert calls == [(tmp_path, session, tmp_path)]
 
 
 def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp_path):

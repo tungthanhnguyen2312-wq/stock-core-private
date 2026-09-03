@@ -108,6 +108,11 @@ def consolidate(*, baseline: Mapping, snapshot: Mapping, out: Path, batch_size: 
         batches.append(_load(path))
     artifact = build_recovery_artifact(baseline_artifact=baseline, p3f9b_snapshot=snapshot, batch_records=batches)
     output = out / "market_wide_current_technical_coverage_recovery_artifact.json"
+    # Zero recovery candidates means run_batch() never ran, so `out` itself was never created (its
+    # only creator today is run_batch()'s own mkdir(parents=True) for the sibling batches/
+    # directory). A legitimate zero-candidate recovery cohort must still consolidate to the real
+    # empty artifact build_recovery_artifact already produces, not crash with FileNotFoundError.
+    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(artifact, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(artifact["artifact_identity"])
 
