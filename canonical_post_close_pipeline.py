@@ -26,7 +26,6 @@ import json
 import subprocess
 import sys
 from datetime import datetime
-from datetime import time as dt_time
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -36,6 +35,7 @@ from canonical_dashboard_runtime_release import (
     CanonicalRuntimeReleaseError,
     materialize_canonical_runtime_release,
 )
+from completed_market_session_gate import DEFAULT_POST_CLOSE_ATTEMPT_FLOOR
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
 from daily_research_session_operations import (
     load_registry,
@@ -96,8 +96,11 @@ DASHBOARD_RUNTIME_OPTIONAL_ARTIFACTS = ("screen_snapshot_live.csv",)
 # Owner operational collection cutoff: same-day session evidence is not treated as eligible for
 # canonical post-close use before this local time, regardless of DNSE credential/API availability
 # or of the exchange's own ~15:00 close. This is an operational collection policy, not a claim
-# that providers can never revise data after this point.
-POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME = dt_time(18, 0)
+# that providers can never revise data after this point. Single-sourced from
+# completed_market_session_gate.DEFAULT_POST_CLOSE_ATTEMPT_FLOOR (2026-09-03 rebaseline, was
+# 18:00) so this pipeline's own same-day gate and the Phase A/B gate never drift into two
+# competing floors.
+POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME = DEFAULT_POST_CLOSE_ATTEMPT_FLOOR
 
 
 class CanonicalPostCloseError(ValueError):

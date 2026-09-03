@@ -520,17 +520,23 @@ def test_acquired_session_mismatch_never_silently_substituted(tmp_path, monkeypa
 # Pre-cutoff artifact reuse fix: session identity alone is not post-close eligibility.
 # =====================================================================================
 
-# --- 1. same-day canonical run before 18:00 fails closed ---
+# --- 1. same-day canonical run before 15:30 fails closed (2026-09-03 rebaseline, was 18:00) ---
 
 def test_same_day_run_before_cutoff_fails_closed():
-    now = datetime(2026, 8, 26, 17, 59, tzinfo=VN_TZ)
+    now = datetime(2026, 8, 26, 15, 0, tzinfo=VN_TZ)
     with pytest.raises(cpc.CanonicalPostCloseError, match="COMPLETED_SESSION_EVIDENCE_NOT_YET_ELIGIBLE"):
         cpc.assert_same_day_post_close_eligible("2026-08-26", now=now)
 
 
 def test_same_day_run_at_or_after_cutoff_is_allowed():
-    now = datetime(2026, 8, 26, 18, 0, tzinfo=VN_TZ)
+    now = datetime(2026, 8, 26, 15, 30, tzinfo=VN_TZ)
     cpc.assert_same_day_post_close_eligible("2026-08-26", now=now)  # does not raise
+
+
+def test_cutoff_is_single_sourced_from_completed_market_session_gate():
+    import completed_market_session_gate as gate
+    assert cpc.POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME == gate.DEFAULT_POST_CLOSE_ATTEMPT_FLOOR
+    assert cpc.POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME == gate.time(15, 30)
 
 
 def test_past_session_is_never_gated_by_same_day_cutoff():
@@ -557,7 +563,7 @@ def test_gate_is_a_pure_function_of_session_and_clock_not_credentials(monkeypatc
 def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexists(tmp_path, monkeypatch):
     session = "2026-08-26"
     default_paths = level2.session_artifact_paths(tmp_path, session)
-    pre_cutoff = _write_snapshot(default_paths, session, requested_at=f"{session}T16:07:09+07:00", exact=889, total=1683)
+    pre_cutoff = _write_snapshot(default_paths, session, requested_at=f"{session}T15:10:00+07:00", exact=889, total=1683)
     original_bytes = default_paths["exact_session_snapshot"].read_bytes()
 
     now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)  # past the cutoff
@@ -592,7 +598,7 @@ def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexis
 def test_redirected_attempt_propagates_artifact_and_execution_roots(tmp_path, monkeypatch):
     session = "2026-08-26"
     default_paths = level2.session_artifact_paths(tmp_path, session)
-    _write_snapshot(default_paths, session, requested_at=f"{session}T16:07:09+07:00", exact=889, total=1683)
+    _write_snapshot(default_paths, session, requested_at=f"{session}T15:10:00+07:00", exact=889, total=1683)
     calls = {}
     now = datetime(2026, 8, 26, 19, 0, tzinfo=VN_TZ)
 
@@ -651,7 +657,7 @@ def test_registration_reads_from_the_redirected_artifact_root_not_the_default_pa
 def test_fresh_attempt_is_isolated_from_pre_cutoff_partial_liquidity_batches(tmp_path):
     session = "2026-08-26"
     default_paths = level2.session_artifact_paths(tmp_path, session)
-    _write_snapshot(default_paths, session, requested_at=f"{session}T16:07:09+07:00", exact=889, total=1683)
+    _write_snapshot(default_paths, session, requested_at=f"{session}T15:10:00+07:00", exact=889, total=1683)
     # simulate the genuinely partial liquidity-batch state left by the interrupted pre-cutoff run
     partial_batch = default_paths["liquidity_research"].parent / "batches" / "batch-000.json"
     partial_batch.parent.mkdir(parents=True, exist_ok=True)

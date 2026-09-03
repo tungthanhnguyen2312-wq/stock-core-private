@@ -1,8 +1,14 @@
 """Provider-aware completed-market-session gate for capability-first EOD operations.
 
 DESIGN
-    Provider/session evidence is primary. 18:00 Asia/Ho_Chi_Minh is a SAFETY FLOOR /
-    operational trigger window, never market-session factual authority.
+    Provider/session evidence is primary. 15:30 Asia/Ho_Chi_Minh (DEFAULT_POST_CLOSE_ATTEMPT_FLOOR)
+    is a POST-CLOSE ACQUISITION ATTEMPT FLOOR -- an operational trigger window, never market-session
+    factual authority and never provider-confirmed completion. It is deliberately 30 minutes after
+    the market-wide (HOSE/HNX/UPCoM) ~15:00 final-activity boundary, to allow a short provider
+    stabilization interval; it is not derived from HOSE's earlier ATC price-finalization time,
+    because Stock Lookup is full-universe first. The legacy name DEFAULT_SAFETY_FLOOR (and the
+    serialized `safety_floor` field) is kept only for backward compatibility -- both mean this same
+    post-close acquisition attempt floor, not session authority.
 
     DNSE `/market/working-dates` is retained as a forward calendar window. It can
     prove working-date identity and prior/next dates *inside the observed window*.
@@ -50,7 +56,14 @@ PROVIDER_SEMANTIC_STRENGTH_UNAVAILABLE = "UNAVAILABLE"
 READY_SEMANTIC = "EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR"
 ATTEMPT_ELIGIBLE_SEMANTIC = "PRE_ACQUISITION_ATTEMPT_ELIGIBLE"
 OPERATING_TIMEZONE = "Asia/Ho_Chi_Minh"
-DEFAULT_SAFETY_FLOOR = time(18, 0)
+# Owner operational post-close stabilization floor (2026-09-03 rebaseline, was 18:00): the earliest
+# local time a bounded post-close acquisition attempt may start. 30 minutes after the market-wide
+# (HOSE/HNX/UPCoM) ~15:00 final-activity boundary for provider stabilization. Not market-session
+# authority, not provider-confirmed completion, and not a claim that DNSE data is complete at this
+# instant -- only that an attempt may now be made. DEFAULT_SAFETY_FLOOR is a compatibility alias for
+# the same value; keep both in sync and never introduce a second, competing floor constant.
+DEFAULT_POST_CLOSE_ATTEMPT_FLOOR = time(15, 30)
+DEFAULT_SAFETY_FLOOR = DEFAULT_POST_CLOSE_ATTEMPT_FLOOR
 # Reuse the canonical post-close floor for full-universe snapshots only.
 MIN_P3F9B_EXACT_SESSION_COVERAGE_RATIO = 0.20
 MIN_PACKET_EXACT_SESSION_OBSERVATIONS = 1

@@ -40,6 +40,16 @@ def _handoff() -> Path:
     return ROOT.parent / "stocklookup-ai-handoffs"
 
 
+def _producer_failure_message(code: int) -> str | None:
+    """None when daily_analysis_pipeline.py already printed a complete owner-facing status for a
+    known not-ready session-gate stage (its own exit code 2 -- CURRENT_SESSION_STABILIZING before
+    the post-close floor, or POST_CLOSE_DATA_NOT_READY after it); the FAILED_PRODUCER trailer
+    otherwise. A routine early/lagging run must never be relabelled a generic failure."""
+    if code and code != 2:
+        return "STATUS: FAILED_PRODUCER\nRECOVERY_ACTION: inspect canonical daily stage output"
+    return None
+
+
 def _previous(session: str, root: Path) -> Path | None:
     candidates = []
     for manifest in sorted((root / "operations-review/daily-research-session-operations-v1").glob("*/*/run_manifest.json")):
@@ -142,7 +152,9 @@ def main(argv=None) -> int:
             cmd += ["--session", a.session]
         code = subprocess.run(cmd).returncode
         if code:
-            print("STATUS: FAILED_PRODUCER\nRECOVERY_ACTION: inspect canonical daily stage output")
+            message = _producer_failure_message(code)
+            if message:
+                print(message)
             return code
         session, operation, run_identity = _latest_operation()
 

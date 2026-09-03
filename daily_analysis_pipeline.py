@@ -251,6 +251,8 @@ def main(argv=None, runner=subprocess.run) -> int:
     if args.canonical_post_close:
         from canonical_daily_operation import (
             CanonicalDailyOperationError,
+            NOT_READY_STAGES,
+            format_owner_daily_status,
             print_daily_operation_handoff,
             run_canonical_daily_operation,
         )
@@ -276,10 +278,8 @@ def main(argv=None, runner=subprocess.run) -> int:
         except CanonicalDailyOperationError as exc:
             print(f"DAILY_OPERATION_STATE={exc.stage}", file=sys.stderr)
             print(f"[daily_analysis] {exc.stage}: {exc}", file=sys.stderr)
-            return 2 if exc.stage in {
-                "TOO_EARLY", "NON_WORKING_DATE", "FUTURE_SESSION",
-                "PROVIDER_EVIDENCE_UNAVAILABLE", "BLOCKED_PRE_ACQUISITION_SESSION_EVIDENCE",
-            } else 1
+            print(format_owner_daily_status(exc, now=instant, producer_root=SCRIPT_DIR))
+            return 2 if exc.stage in NOT_READY_STAGES else 1
         print_daily_operation_handoff(result)
         return 0
     tickers = [x.upper() for x in args.tickers]

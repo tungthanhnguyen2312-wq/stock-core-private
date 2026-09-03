@@ -1,8 +1,9 @@
 from __future__ import annotations
-import json, os, sqlite3, tempfile, unittest
+import contextlib, io, json, os, sqlite3, tempfile, unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
+import canonical_daily_operation as cdo
 import daily_analysis_pipeline as pipeline
 import export_ai_bundle as exporter
 
@@ -159,5 +160,55 @@ class PipelineTests(unittest.TestCase):
             self.assertTrue(events_file.is_file())
             content = events_file.read_text(encoding="utf-8")
             self.assertIn("test_step", content)
+
+class CanonicalPostCloseOwnerStatusTests(unittest.TestCase):
+    """DAILY_OWNER_FLOW_POST_CLOSE_STABILIZATION_GATE_V1: --canonical-post-close must never label a
+    routine pre-floor or data-lagging run FAILED_PRODUCER-style; it prints a distinct clean status."""
+
+    def _run_with_stage(self, stage, message, local_state):
+        def fake_run(*a, **k):
+            raise cdo.CanonicalDailyOperationError(stage, message, local_state=local_state)
+        with tempfile.TemporaryDirectory() as raw:
+            buf = io.StringIO()
+            with mock.patch.object(cdo, "run_canonical_daily_operation", fake_run), contextlib.redirect_stdout(buf):
+                rc = pipeline.main(["--runtime-root", raw, "--canonical-post-close", "--offline"])
+            return rc, buf.getvalue()
+
+    def test_too_early_prints_current_session_stabilizing_not_failed_producer(self):
+        rc, out = self._run_with_stage(
+            cdo.STAGE_TOO_EARLY, "BEFORE_SAFETY_FLOOR,NO_DEFENSIBLE_INTENDED_SESSION",
+            {"phase_a": {"resolved_session": None, "requested_session": None, "safety_floor": "15:30"}},
+        )
+        self.assertEqual(rc, 2)
+        self.assertIn("STOCK LOOKUP DAILY", out)
+        self.assertIn("Status: CURRENT_SESSION_STABILIZING", out)
+        self.assertIn("Earliest normal daily start: 15:30 Asia/Ho_Chi_Minh", out)
+        self.assertIn("Publication: NOT ATTEMPTED", out)
+        self.assertNotIn("FAILED_PRODUCER", out)
+
+    def test_post_close_data_not_ready_is_distinct_from_too_early(self):
+        rc, out = self._run_with_stage(
+            cdo.STAGE_BLOCKED_POST_ACQUISITION, "P3F9B_EXACT_SESSION_COVERAGE_INSUFFICIENT",
+            {"phase_a": {"resolved_session": "2026-09-03"},
+             "phase_b": {"reason_codes": ["P3F9B_EXACT_SESSION_COVERAGE_INSUFFICIENT"]}},
+        )
+        self.assertEqual(rc, 2)
+        self.assertIn("Status: POST_CLOSE_DATA_NOT_READY", out)
+        self.assertIn("Session: 2026-09-03", out)
+        self.assertIn("Publication: BLOCKED", out)
+        self.assertNotIn("CURRENT_SESSION_STABILIZING", out)
+        self.assertNotIn("FAILED_PRODUCER", out)
+
+    def test_acquisition_not_ready_also_exits_2_not_1(self):
+        # STAGE_BLOCKED_ACQUISITION is the other post-floor "not ready" stage (e.g. same-day
+        # partial/intraday evidence) -- must not be conflated with a hard pipeline failure.
+        rc, _out = self._run_with_stage(cdo.STAGE_BLOCKED_ACQUISITION, "PARTIAL_OR_INTRADAY_SESSION_EVIDENCE", {})
+        self.assertEqual(rc, 2)
+
+    def test_genuine_pipeline_defect_still_exits_1_with_stage_named(self):
+        rc, out = self._run_with_stage(cdo.STAGE_BLOCKED_DAILY_PRODUCER, "DAILY_PRODUCER_STATUS:FAILED", {})
+        self.assertEqual(rc, 1)
+        self.assertIn(f"Status: {cdo.STAGE_BLOCKED_DAILY_PRODUCER}", out)
+
 
 if __name__ == "__main__": unittest.main()

@@ -20,8 +20,8 @@ from vn_time import VN_TZ
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSION = "2026-08-26"
-BEFORE = datetime(2026, 8, 26, 17, 59, tzinfo=VN_TZ)
-AFTER = datetime(2026, 8, 26, 18, 5, tzinfo=VN_TZ)
+BEFORE = datetime(2026, 8, 26, 15, 29, tzinfo=VN_TZ)
+AFTER = datetime(2026, 8, 26, 15, 35, tzinfo=VN_TZ)
 POST_CLOSE = datetime(2026, 8, 26, 19, 19, tzinfo=VN_TZ)
 SOURCE_SHA = "534e4971edf2b9be62467ce89758b6625544558d"
 
@@ -275,7 +275,7 @@ def test_one_valid_exact_session_acquisition_phase_b_ready(tmp_path, monkeypatch
 
 
 def test_backdated_retained_session_uses_exact_evidence_and_preserves_requested_session(tmp_path, monkeypatch):
-    backdated_now = datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ)
+    backdated_now = datetime(2026, 8, 30, 20, 5, tzinfo=VN_TZ)
     seen_sessions = []
 
     def acquire(_root, requested_session, *_args, **_kwargs):
@@ -321,7 +321,7 @@ def test_2026_08_26_retained_artifact_is_loaded_read_only_without_regeneration(t
     record = _run(
         tmp_path,
         monkeypatch,
-        now=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        now=datetime(2026, 8, 30, 20, 5, tzinfo=VN_TZ),
         working=_working_dates("2026-08-31", "2026-09-01"),
     )
     assert record["phase_a"]["status"] == gate.STATUS_ATTEMPT_ELIGIBLE
@@ -338,7 +338,7 @@ def test_backdated_historical_session_without_exact_evidence_requests_exact_targ
     record = _run(
         tmp_path,
         monkeypatch,
-        now=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        now=datetime(2026, 8, 30, 20, 5, tzinfo=VN_TZ),
         working=_working_dates("2026-08-31", "2026-09-01"),
         acquire_fn=acquire,
     )
@@ -365,7 +365,7 @@ def test_weekend_fails(tmp_path, monkeypatch):
     with pytest.raises(cdo.CanonicalDailyOperationError) as exc:
         cdo.run_canonical_daily_operation(
             tmp_path, tmp_path / "runtime", "2026-08-29",
-            now=datetime(2026, 8, 29, 18, 5, tzinfo=VN_TZ),
+            now=datetime(2026, 8, 29, 20, 5, tzinfo=VN_TZ),
             working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
             acquire_fn=lambda *a, **k: (_ for _ in ()).throw(AssertionError("no acquire")),
             out_dir=tmp_path / "ops",
@@ -377,7 +377,7 @@ def test_holiday_in_observed_window_fails(tmp_path, monkeypatch):
     with pytest.raises(cdo.CanonicalDailyOperationError) as exc:
         cdo.run_canonical_daily_operation(
             tmp_path, tmp_path / "runtime", "2026-09-02",
-            now=datetime(2026, 9, 2, 18, 5, tzinfo=VN_TZ),
+            now=datetime(2026, 9, 2, 20, 5, tzinfo=VN_TZ),
             working_dates_evidence=_working_dates("2026-09-01", "2026-09-03"),
             acquire_fn=lambda *a, **k: (_ for _ in ()).throw(AssertionError("no acquire")),
             out_dir=tmp_path / "ops",

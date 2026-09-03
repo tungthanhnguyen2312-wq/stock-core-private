@@ -1,4 +1,5 @@
-"""Completed-market-session gate: provider evidence primary, 18:00 is a safety floor."""
+"""Completed-market-session gate: provider evidence primary, 15:30 is a post-close acquisition
+attempt floor (2026-09-03 rebaseline, was 18:00 -- see DEFAULT_POST_CLOSE_ATTEMPT_FLOOR)."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,8 +12,8 @@ import completed_market_session_gate as gate
 from vn_time import VN_TZ
 
 SESSION = "2026-08-26"
-BEFORE = datetime(2026, 8, 26, 17, 59, tzinfo=VN_TZ)
-AFTER = datetime(2026, 8, 26, 18, 5, tzinfo=VN_TZ)
+BEFORE = datetime(2026, 8, 26, 15, 29, tzinfo=VN_TZ)
+AFTER = datetime(2026, 8, 26, 15, 35, tzinfo=VN_TZ)
 POST_CLOSE = datetime(2026, 8, 26, 19, 19, tzinfo=VN_TZ)
 
 
@@ -106,7 +107,7 @@ def test_phase_a_before_floor_is_too_early_and_not_attempt_eligible():
 
 def test_phase_a_historical_completed_session_outside_current_window_is_eligible():
     result = gate.evaluate_attempt_eligibility(
-        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_at=datetime(2026, 8, 30, 20, 5, tzinfo=VN_TZ),
         requested_session=SESSION,
         working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
         exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00+07:00"),
@@ -118,7 +119,7 @@ def test_phase_a_historical_completed_session_outside_current_window_is_eligible
 
 def test_phase_a_historical_session_without_qualified_evidence_fails_closed():
     result = gate.evaluate_attempt_eligibility(
-        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_at=datetime(2026, 8, 30, 20, 5, tzinfo=VN_TZ),
         requested_session=SESSION,
         working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
     )
@@ -129,7 +130,7 @@ def test_phase_a_historical_session_without_qualified_evidence_fails_closed():
 
 def test_phase_a_historical_target_acquisition_is_explicitly_opt_in():
     result = gate.evaluate_attempt_eligibility(
-        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_at=datetime(2026, 8, 30, 20, 5, tzinfo=VN_TZ),
         requested_session=SESSION,
         working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
         allow_historical_target_session_acquisition=True,
@@ -157,7 +158,7 @@ def test_valid_working_date_exact_session_after_floor_is_ready():
 
 def test_phase_b_historical_completed_session_outside_current_window_is_ready():
     result = gate.evaluate_completed_market_session_gate(
-        requested_at=datetime(2026, 8, 30, 18, 5, tzinfo=VN_TZ),
+        requested_at=datetime(2026, 8, 30, 20, 5, tzinfo=VN_TZ),
         requested_session=SESSION,
         working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
         exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00+07:00"),
@@ -190,7 +191,7 @@ def test_explicit_future_session_is_blocked():
 
 def test_weekend_explicit_session_fails():
     result = gate.evaluate_completed_market_session_gate(
-        requested_at=datetime(2026, 8, 29, 18, 5, tzinfo=VN_TZ),
+        requested_at=datetime(2026, 8, 29, 20, 5, tzinfo=VN_TZ),
         requested_session="2026-08-29",
         working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
     )
@@ -201,7 +202,7 @@ def test_weekend_explicit_session_fails():
 def test_holiday_in_observed_window_fails():
     # 2026-09-02 is inside a forward window but omitted from workingDates.
     result = gate.evaluate_completed_market_session_gate(
-        requested_at=datetime(2026, 9, 2, 18, 5, tzinfo=VN_TZ),
+        requested_at=datetime(2026, 9, 2, 20, 5, tzinfo=VN_TZ),
         requested_session="2026-09-02",
         working_dates_evidence=_working_dates("2026-09-01", "2026-09-03"),
     )
@@ -223,7 +224,7 @@ def test_omitted_session_resolves_latest_defensible_completed_session():
 
 def test_omitted_session_on_weekend_uses_retained_exact_session_not_weekday_calendar():
     result = gate.evaluate_completed_market_session_gate(
-        requested_at=datetime(2026, 8, 29, 18, 5, tzinfo=VN_TZ),
+        requested_at=datetime(2026, 8, 29, 20, 5, tzinfo=VN_TZ),
         requested_session=None,
         working_dates_evidence=_working_dates("2026-08-31", "2026-09-01"),
         exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00+07:00"),
@@ -253,11 +254,13 @@ def test_stale_prior_session_packet_cannot_satisfy_current_session():
 
 
 def test_pre_cutoff_exact_session_is_insufficient():
+    # 15:20 is before the 15:30 floor: must not satisfy the same-day post-close stabilization
+    # requirement, even though it is well after the market-wide ~15:00 activity boundary.
     result = gate.evaluate_completed_market_session_gate(
         requested_at=POST_CLOSE,
         requested_session=SESSION,
         working_dates_evidence=_working_dates(SESSION),
-        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T16:07:09+07:00"),
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T15:20:00+07:00"),
     )
     assert result["completion_gate_status"] == gate.STATUS_EXACT_SESSION_EVIDENCE_INSUFFICIENT
     assert "EXACT_SESSION_ACQUIRED_BEFORE_SAFETY_FLOOR" in result["reason_codes"]
@@ -386,3 +389,110 @@ def test_loader_prefers_later_post_floor_scaleout_over_pre_floor_default(tmp_pat
     loaded = gate.load_exact_session_evidence_from_root(tmp_path, session)
     assert loaded is not None
     assert "19:19:00" in str(loaded.get("execution_timestamp"))
+
+
+# =====================================================================================
+# 2026-09-03 post-close stabilization gate rebaseline: floor moved 18:00 -> 15:30.
+# Required test matrix (DAILY_OWNER_FLOW_POST_CLOSE_STABILIZATION_GATE_V1).
+# =====================================================================================
+
+
+def test_default_floor_constant_is_15_30_not_18_00():
+    assert gate.DEFAULT_POST_CLOSE_ATTEMPT_FLOOR == gate.time(15, 30)
+    # Compatibility alias: any existing importer of the old name still gets the new value.
+    assert gate.DEFAULT_SAFETY_FLOOR == gate.DEFAULT_POST_CLOSE_ATTEMPT_FLOOR
+
+
+@pytest.mark.parametrize(
+    "hour,minute,second,expected_status",
+    [
+        (14, 59, 0, gate.STATUS_TOO_EARLY),
+        (15, 0, 0, gate.STATUS_TOO_EARLY),
+        (15, 15, 0, gate.STATUS_TOO_EARLY),
+        (15, 29, 59, gate.STATUS_TOO_EARLY),
+        (15, 30, 0, gate.STATUS_ATTEMPT_ELIGIBLE),
+        (15, 35, 0, gate.STATUS_ATTEMPT_ELIGIBLE),
+        (17, 0, 0, gate.STATUS_ATTEMPT_ELIGIBLE),
+    ],
+)
+def test_omitted_session_current_day_floor_boundary_sweep(hour, minute, second, expected_status):
+    """Owner flow (`stocklookup.ps1 daily`, no --session) on its own qualified working date.
+    14:59/15:00/15:15/15:29:59 stay TOO_EARLY (current-session stabilizing, no attempt). 15:30:00
+    becomes Phase-A attempt eligible for TODAY, and 15:35/17:00 keep the same eligible behavior --
+    17:00 must never regress to TOO_EARLY merely because the old rule required 18:00."""
+    requested_at = datetime(2026, 8, 26, hour, minute, second, tzinfo=VN_TZ)
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=requested_at,
+        requested_session=None,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+    )
+    assert result["attempt_gate_status"] == expected_status
+    if expected_status == gate.STATUS_ATTEMPT_ELIGIBLE:
+        assert result["resolved_session"] == SESSION
+    else:
+        assert "BEFORE_SAFETY_FLOOR" in result["reason_codes"]
+        # Not eligible means no session is surfaced as ready to acquire/publish.
+        assert result["resolved_session"] is None
+
+
+def test_explicit_session_today_floor_boundary_sweep():
+    """Same boundary, but with an explicit --session equal to today's qualified working date."""
+    for hour, minute, expected in ((15, 29, gate.STATUS_TOO_EARLY), (15, 30, gate.STATUS_ATTEMPT_ELIGIBLE)):
+        result = gate.evaluate_attempt_eligibility(
+            requested_at=datetime(2026, 8, 26, hour, minute, tzinfo=VN_TZ),
+            requested_session=SESSION,
+            working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+        )
+        assert result["attempt_gate_status"] == expected
+
+
+def test_exact_session_evidence_at_or_after_floor_satisfies_time_component():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=datetime(2026, 8, 26, 15, 40, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates(SESSION),
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T15:30:00+07:00"),
+    )
+    assert result["completion_gate_status"] == gate.STATUS_READY
+    assert result["ready_semantic"] == gate.READY_SEMANTIC
+
+
+def test_exact_session_evidence_before_floor_does_not_satisfy_time_component():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=datetime(2026, 8, 26, 15, 40, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates(SESSION),
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T15:20:00+07:00"),
+    )
+    assert result["completion_gate_status"] != gate.STATUS_READY
+    assert "EXACT_SESSION_ACQUIRED_BEFORE_SAFETY_FLOOR" in result["reason_codes"]
+
+
+def test_at_floor_with_no_exact_evidence_is_not_ready():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=datetime(2026, 8, 26, 15, 30, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+    )
+    assert result["completion_gate_status"] != gate.STATUS_READY
+    assert result["completion_gate_status"] == gate.STATUS_EXACT_SESSION_EVIDENCE_INSUFFICIENT
+
+
+def test_at_floor_with_insufficient_coverage_fails_closed():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=datetime(2026, 8, 26, 15, 30, tzinfo=VN_TZ),
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates(SESSION),
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T15:30:00+07:00", exact=10, total=1683),
+    )
+    assert result["completion_gate_status"] == gate.STATUS_EXACT_SESSION_EVIDENCE_INSUFFICIENT
+
+
+def test_no_test_requires_the_old_18_00_rule():
+    """No fixture in this module may depend on 18:00 -- the gate's own source is the only
+    place the retired value name may still appear, purely as a historical/compat comment."""
+    import re
+
+    assert "time(18, 0)" not in inspect.getsource(gate)
+    this_module_source = Path(__file__).read_text(encoding="utf-8")
+    assert not re.search(r"datetime\(2026, \d+, \d+, 18,", this_module_source)

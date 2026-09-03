@@ -65,7 +65,7 @@ from canonical_trusted_subset_release import (
 )
 from completed_market_session_gate import (
     AUTHORITY_BOUNDARIES,
-    DEFAULT_SAFETY_FLOOR,
+    DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
     OPERATING_TIMEZONE,
     READY_SEMANTIC,
     STATUS_ATTEMPT_ELIGIBLE,
@@ -110,6 +110,20 @@ STAGE_BLOCKED_DAILY_PRODUCER = "BLOCKED_DAILY_PRODUCER"
 STAGE_BLOCKED_RUNTIME_RELEASE = "BLOCKED_RUNTIME_RELEASE"
 STAGE_BLOCKED_TRUSTED_SUBSET = "BLOCKED_TRUSTED_SUBSET"
 STAGE_BLOCKED_SESSION_IDENTITY = "BLOCKED_SESSION_IDENTITY_MISMATCH"
+
+# Stages that mean "not ready yet" (pre-floor, non-working date, future, provider evidence
+# thin/absent, or evidence not yet sufficient after a genuine attempt) rather than a pipeline
+# defect. Owner CLIs (stocklookup.py, daily_analysis_pipeline.py) use this to avoid labelling a
+# routine early or lagging run as a generic failure; see docs/DECISIONS.md 2026-09-03 post-close
+# stabilization gate.
+PRE_ACQUISITION_NOT_READY_STAGES = frozenset({
+    STAGE_TOO_EARLY, STAGE_NON_WORKING_DATE, STAGE_FUTURE_SESSION,
+    STAGE_PROVIDER_EVIDENCE_UNAVAILABLE, STAGE_BLOCKED_PRE_ACQUISITION,
+})
+POST_ACQUISITION_NOT_READY_STAGES = frozenset({
+    STAGE_BLOCKED_ACQUISITION, STAGE_BLOCKED_POST_ACQUISITION,
+})
+NOT_READY_STAGES = PRE_ACQUISITION_NOT_READY_STAGES | POST_ACQUISITION_NOT_READY_STAGES
 
 
 class CanonicalDailyOperationError(CanonicalPostCloseError):
@@ -291,6 +305,61 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
         print(f"STAGE={record.get('stage')}")
 
 
+def format_owner_daily_status(
+    exc: "CanonicalDailyOperationError",
+    *,
+    now: datetime,
+    producer_root: Path | None = None,
+) -> str:
+    """Clean owner-facing block for a Phase A/B refusal, for stocklookup.py/daily_analysis_pipeline.py
+    to print verbatim instead of a generic FAILED_PRODUCER.
+
+    Distinguishes three cases: CURRENT_SESSION_STABILIZING (pre-floor, no acquisition attempted --
+    STAGE_TOO_EARLY), POST_CLOSE_DATA_NOT_READY (an attempt was made at/after the floor but exact-
+    session evidence is not yet sufficient -- PRE_ACQUISITION/POST_ACQUISITION_NOT_READY_STAGES
+    minus TOO_EARLY), and a genuine pipeline defect (everything else, e.g. producer/runtime/
+    trusted-subset/publication failure). Never claims a deeper stage is merely "not ready yet".
+    """
+    phase_a = exc.local_state.get("phase_a") if isinstance(exc.local_state.get("phase_a"), Mapping) else {}
+    phase_b = exc.local_state.get("phase_b") if isinstance(exc.local_state.get("phase_b"), Mapping) else {}
+    session = phase_a.get("resolved_session") or phase_a.get("requested_session") or now.date().isoformat()
+    lines = ["STOCK LOOKUP DAILY"]
+    if exc.stage == STAGE_TOO_EARLY:
+        latest_completed = None
+        if producer_root is not None:
+            try:
+                found = resolve_latest_qualified_completed_session(Path(producer_root), session)
+                latest_completed = found["session"] if found else None
+            except Exception:
+                latest_completed = None
+        floor_text = phase_a.get("safety_floor") or DEFAULT_POST_CLOSE_ATTEMPT_FLOOR.isoformat(timespec="minutes")
+        lines += [
+            "Status: CURRENT_SESSION_STABILIZING",
+            f"Current time: {now.isoformat(timespec='seconds')}",
+            f"Session candidate: {session}",
+            f"Earliest normal daily start: {floor_text} {OPERATING_TIMEZONE}",
+            f"Latest completed session: {latest_completed or 'none retained'}",
+            "Publication: NOT ATTEMPTED",
+            "Action: rerun at/after the stabilization floor",
+        ]
+    elif exc.stage in POST_ACQUISITION_NOT_READY_STAGES:
+        reasons = ",".join(phase_b.get("reason_codes") or []) or str(exc)
+        lines += [
+            "Status: POST_CLOSE_DATA_NOT_READY",
+            f"Session: {session}",
+            "Publication: BLOCKED",
+            f"Reason: {reasons}",
+            "Action: rerun later",
+        ]
+    else:
+        lines += [
+            f"Status: {exc.stage}",
+            f"Reason: {exc}",
+            "RECOVERY_ACTION: inspect canonical daily stage output",
+        ]
+    return "\n".join(lines)
+
+
 def run_canonical_daily_operation(
     root: Path,
     runtime_root: Path,
@@ -356,7 +425,7 @@ def run_canonical_daily_operation(
             requested_at=instant,
             requested_session=phase_session,
             timezone_name=OPERATING_TIMEZONE,
-            safety_floor=DEFAULT_SAFETY_FLOOR,
+            safety_floor=DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
             working_dates_evidence=phase_working_dates,
             exact_session_evidence=resolved_exact_evidence,
             working_dates_fetcher=probe,
@@ -425,7 +494,7 @@ def run_canonical_daily_operation(
         requested_at=instant,
         requested_session=resolved_session,
         timezone_name=OPERATING_TIMEZONE,
-        safety_floor=DEFAULT_SAFETY_FLOOR,
+        safety_floor=DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
         working_dates_evidence=phase_b_working,
         exact_session_evidence=snapshot,
         allow_provider_probe=False,
@@ -745,7 +814,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"DAILY_OPERATION_STATE={exc.stage}")
         print(f"STAGE={exc.stage}")
         print(f"REASON={exc}")
-        return 2 if exc.stage in {STAGE_TOO_EARLY, STAGE_NON_WORKING_DATE, STAGE_FUTURE_SESSION, STAGE_PROVIDER_EVIDENCE_UNAVAILABLE, STAGE_BLOCKED_PRE_ACQUISITION} else 1
+        print(format_owner_daily_status(exc, now=instant, producer_root=ROOT))
+        return 2 if exc.stage in NOT_READY_STAGES else 1
     print_daily_operation_handoff(record)
     return 0
 
