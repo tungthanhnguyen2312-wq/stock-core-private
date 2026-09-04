@@ -31,7 +31,16 @@ def _verify_p3f9b_identity(snapshot: Mapping[str, Any]) -> None:
 
 
 def recovery_candidates(*, baseline_artifact: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any]) -> list[str]:
-    """Return only current-session records missing the existing 20-observation feature window."""
+    """Return current-session records missing the existing 20-observation feature window.
+
+    Checks TONIGHT's own snapshot observations, not only the prior session's baseline status.
+    A target-session bar can arrive via KBS/VCI gap-recovery -- a single-bar projection, see
+    ``multi_source_exact_session_resolver._project_to_p3f9_shape`` -- instead of DNSE's own
+    richer retained series, so a ticker the baseline never flagged ``MISSING`` can still lack a
+    complete window tonight. This is not a hypothetical: 2026-09-04's wholesale DNSE-degraded
+    recovery left 951 such tickers with a valid target-session bar but zero prior baseline
+    ``MISSING`` flag, none of which the old baseline-only check would have selected for recovery.
+    """
     baseline_identity = content_identity(baseline_artifact)
     if baseline_artifact.get("artifact_sha256") != baseline_identity["artifact_sha256"]:
         raise ValueError("BASELINE_RESEARCH_ARTIFACT_IDENTITY_MISMATCH")
@@ -45,13 +54,21 @@ def recovery_candidates(*, baseline_artifact: Mapping[str, Any], p3f9b_snapshot:
         raise ValueError("RECOVERY_CANDIDATE_DENOMINATOR_MISMATCH")
     candidates = []
     for ticker in sorted(records):
-        technical = records[ticker].get("technical_features", {})
         source = snapshot_records[ticker]
         has_target = any(row.get("session") == target for row in source.get("observations", []) if isinstance(row, Mapping))
-        if (records[ticker].get("in_current_descriptive_scope")
-                and technical.get("status") == "MISSING"
+        if not (records[ticker].get("in_current_descriptive_scope")
                 and source.get("disposition") == "EXACT_SESSION_RETAINED"
                 and has_target):
+            continue
+        if records[ticker].get("technical_features", {}).get("status") == "MISSING":
+            candidates.append(ticker)
+            continue
+        tonight_rows = [
+            {"date": row["session"], "close": row.get("close"), "volume": row.get("volume")}
+            for row in source.get("observations", [])
+            if isinstance(row, Mapping) and row.get("session") is not None
+        ]
+        if market_features(tonight_rows).get("status") == "MISSING":
             candidates.append(ticker)
     return candidates
 

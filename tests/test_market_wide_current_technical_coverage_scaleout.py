@@ -28,18 +28,28 @@ def _baseline(records):
     return {**artifact, **identity}
 
 
+def _full_window_observations(count=20):
+    return [{"session": f"2026-07-{index + 1:02d}", "close": 10.0 + index, "volume": 1000 + index} for index in range(count)]
+
+
 def test_selects_only_observed_current_session_records_missing_technical_history():
     snapshot = _snapshot({
         "AAA": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": TARGET}]},
         "BBB": {"disposition": "SESSION_MISSING", "observations": []},
-        "CCC": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": TARGET}]},
+        "CCC": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": TARGET, "close": 10.0, "volume": 1000}]},
+        "DDD": {"disposition": "EXACT_SESSION_RETAINED", "observations": _full_window_observations()},
     })
     baseline = _baseline({
         "AAA": {"in_current_descriptive_scope": True, "technical_features": {"status": "MISSING"}},
         "BBB": {"in_current_descriptive_scope": True, "technical_features": {"status": "MISSING"}},
+        # CCC and DDD both looked fine as of the prior baseline (SHADOW_ONLY, not MISSING) --
+        # CCC's own tonight-snapshot only carries a single bar (e.g. a KBS/VCI gap-recovery
+        # projection, see multi_source_exact_session_resolver._project_to_p3f9_shape) and must
+        # still be selected; DDD genuinely has a full window tonight and must not be.
         "CCC": {"in_current_descriptive_scope": True, "technical_features": {"status": "SHADOW_ONLY"}},
+        "DDD": {"in_current_descriptive_scope": True, "technical_features": {"status": "SHADOW_ONLY"}},
     })
-    assert recovery_candidates(baseline_artifact=baseline, p3f9b_snapshot=snapshot) == ["AAA"]
+    assert recovery_candidates(baseline_artifact=baseline, p3f9b_snapshot=snapshot) == ["AAA", "CCC"]
 
 
 def test_recovery_record_requires_real_target_bar_and_complete_existing_feature_contract():

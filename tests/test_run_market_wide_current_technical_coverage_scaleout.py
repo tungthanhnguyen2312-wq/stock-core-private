@@ -61,14 +61,18 @@ def test_consolidate_zero_candidates_artifact_is_semantically_empty(tmp_path):
 
 def test_consolidate_zero_candidates_does_not_fabricate_recovered_records(tmp_path):
     # A ticker present in the universe but not itself eligible for recovery (already has a
-    # complete technical window) still yields a zero-candidate cohort. Zero candidates is not
-    # the same as zero tickers, and consolidate() must never invent a recovered record for it.
+    # complete technical window, tonight and at baseline) still yields a zero-candidate cohort.
+    # Zero candidates is not the same as zero tickers, and consolidate() must never invent a
+    # recovered record for it.
     out = tmp_path / "out"
     baseline = _baseline({
         "AAA": {"in_current_descriptive_scope": True, "technical_features": {"status": "SHADOW_ONLY"}},
     })
     snapshot = _snapshot({
-        "AAA": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": TARGET}]},
+        "AAA": {
+            "disposition": "EXACT_SESSION_RETAINED",
+            "observations": [{"session": f"2026-08-{index + 1:02d}", "close": 10.0 + index, "volume": 1000 + index} for index in range(20)],
+        },
     })
 
     runner.consolidate(baseline=baseline, snapshot=snapshot, out=out, batch_size=10)
