@@ -351,11 +351,20 @@ def evaluate_ev_ebitda(ebitda: Mapping[str, Any], enterprise_value: Mapping[str,
             terms={"enterprise_value": enterprise_value["value"], "ebitda": ebitda["value"]})
 
     blocked_by = list(enterprise_value["blocked_by"])
+    reason = "enterprise value or EBITDA is unavailable"
     if ebitda["readiness"] != READY:
         blocked_by.append("ebitda_not_ready")
+    elif float(ebitda["value"]) <= 0:
+        # EBITDA is a genuine, usable fact here -- just not a positive one. Falling through to
+        # the generic "unavailable" reason above would be indistinguishable from a missing
+        # input, when this is instead the explicit non-fabrication refusal the negative/zero
+        # denominator invariant requires: a negative or zero EBITDA multiple is not meaningful
+        # and is never computed, exactly like PE_NOT_MEANINGFUL for negative earnings elsewhere.
+        blocked_by.append("negative_or_zero_ebitda_denominator")
+        reason = "EBITDA is zero or negative; EV/EBITDA is not a meaningful multiple"
     return _result("ev_ebitda", BLOCKED, period=period, status=STATUS_UNAVAILABLE,
                    formula="enterprise_value / ebitda",
-                   reason="enterprise value or EBITDA is unavailable",
+                   reason=reason,
                    blocked_by=sorted(set(blocked_by)))
 
 

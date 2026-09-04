@@ -4,12 +4,27 @@ Reads `<runtime-root>/data/canonical-financial-facts/` and writes one artifact b
 
     calculation_readiness_report.json
 
-Read-only over everything else. It never opens `vn_stock.db`, never touches a published
-artifact, and never reaches the network. It computes no ranking and no score: every output is
-a count, a named blocker, or a value with its formula lineage.
+Read-only over everything else other than an explicit, read-only `vn_stock.db` open when
+`--session-date` is given (see below): it never touches a published artifact and never reaches
+the network. It computes no ranking and no score: every output is a count, a named blocker, or
+a value with its formula lineage.
+
+`--session-date` is optional and changes nothing about the price-independent capabilities
+(`ebitda`, `roe`): without it, `market_capitalisation`/`enterprise_value`/`pe`/`pb`/`ev_ebitda`
+report `blocked` for every ticker, exactly as before this flag existed, because
+`evaluate_ticker()`'s `session_price`/`effective_shares` default to `None`. With it, this tool
+resolves each ticker's real session price (`canonical_financial_bundle_section.
+_resolve_session_inputs`, which already existed and is the same resolver
+`canonical_financial_bundle_section.attach`'s opt-in bundle section uses -- reused, not
+reimplemented here) and effective shares (`market_wide_current_shares_resolver`), and passes
+them through so those five capabilities are actually measured rather than trivially blocked by
+omission. `--price-basis-verified` is a separate, explicit opt-in (default False): the price
+basis is not independently verified market-wide (see this module's own docstring), so results
+stay `provider_reported`, never `qualified`, unless the caller asserts otherwise.
 
 Usage:
   python tools/report_market_wide_readiness.py --runtime-root <path>
+  python tools/report_market_wide_readiness.py --runtime-root <path> --session-date 2026-08-25
   python tools/report_market_wide_readiness.py --runtime-root <path> --execute
   python tools/report_market_wide_readiness.py --runtime-root <path> --ticker HPG --detail
 
@@ -75,6 +90,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ticker", action="append", default=None)
     parser.add_argument("--detail", action="store_true",
                         help="print each selected ticker's per-period verdicts")
+    parser.add_argument("--session-date", default=None,
+                        help="resolve real session price/shares for this date (YYYY-MM-DD) "
+                             "so market_capitalisation/enterprise_value/pe/pb/ev_ebitda are "
+                             "actually measured instead of trivially blocked; omit to keep the "
+                             "price-independent-only behavior unchanged")
+    parser.add_argument("--price-basis-verified", action="store_true",
+                        help="assert the resolved price basis is independently verified "
+                             "(default False -- results stay provider_reported, never "
+                             "qualified, unless explicitly asserted)")
     args = parser.parse_args(argv)
 
     runtime_root = args.runtime_root
@@ -87,6 +111,15 @@ def main(argv: list[str] | None = None) -> int:
         print("canonical fact store is missing or has an unsupported schema", file=sys.stderr)
         return 1
 
+    shares_store = None
+    if args.session_date:
+        from canonical_financial_bundle_section import _resolve_session_inputs
+        try:
+            from market_wide_current_shares_resolver import _Store
+            shares_store = _Store(runtime_root)
+        except Exception:  # noqa: BLE001 - each ticker then resolves fail-closed on its own
+            shares_store = None
+
     wanted = {ticker.upper() for ticker in args.ticker} if args.ticker else None
     per_ticker = []
     for record in state.get("tickers") or []:
@@ -96,11 +129,23 @@ def main(argv: list[str] | None = None) -> int:
         facts = read_facts(runtime_root, ticker)
         if not facts:
             continue
-        per_ticker.append(evaluate_ticker(ticker, facts, _applicability_from_state(record)))
+        session_price, effective_shares = (None, None)
+        if args.session_date:
+            try:
+                session_price, effective_shares = _resolve_session_inputs(
+                    ticker, {}, runtime_root, args.session_date, shares_store)
+            except Exception:  # noqa: BLE001 - unresolved inputs fail closed to blocked, not a crash
+                session_price, effective_shares = (None, None)
+        per_ticker.append(evaluate_ticker(
+            ticker, facts, _applicability_from_state(record),
+            session_price=session_price, effective_shares=effective_shares,
+            price_basis_verified=args.price_basis_verified))
 
     report = build_readiness_report(per_ticker)
     report["generated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     report["fact_store_state_fingerprint"] = state.get("state_fingerprint")
+    report["session_date"] = args.session_date
+    report["price_basis_verified"] = args.price_basis_verified
 
     print("[calculation-readiness]")
     print(f"  tickers evaluated          : {report['ticker_count']}")

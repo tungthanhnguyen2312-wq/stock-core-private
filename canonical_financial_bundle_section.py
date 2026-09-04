@@ -46,6 +46,7 @@ from canonical_financial_facts import (
     STATUS_UNAVAILABLE,
 )
 from canonical_financial_resolvers import VERSION as RESOLVER_VERSION
+from price_representation_contract import RepresentationContractError, to_canonical as _to_canonical_price
 from market_wide_calculation_readiness import (
     CAPABILITIES,
     POLICY_VERSION,
@@ -164,6 +165,23 @@ def build_section(ticker: str, facts: Sequence[Mapping[str, Any]],
     }
 
 
+def _dnse_ohlc_close_to_vnd(raw_close: float) -> float | None:
+    """`vn_stock.db`'s ohlcv.close is DNSE's thousands-of-VND OHLC convention, unconverted.
+
+    Every other consumer of this exact (source, capability, instrument_class) reaches VND
+    through `price_representation_contract`'s single resolved contract, never a bare
+    magnitude-blind `* 1000` -- see that module's own docstring for the P3F9B defect
+    (non-uniform per-field scaling) this discipline exists to prevent.
+    """
+    try:
+        converted = _to_canonical_price(
+            raw_close, source="DNSE", capability_id="ohlc_1D",
+            instrument_class="VN_LISTED_EQUITY", field="close")
+    except RepresentationContractError:
+        return None
+    return float(converted["canonical_value"])
+
+
 def _resolve_session_inputs(ticker: str, entry: Mapping[str, Any], runtime_root: Path | str,
                             session_date: str,
                             shares_store: Any = None) -> tuple[float | None, dict[str, Any] | None]:
@@ -177,7 +195,7 @@ def _resolve_session_inputs(ticker: str, entry: Mapping[str, Any], runtime_root:
     t = str(ticker).upper()
     price = None
     if isinstance(entry, Mapping) and entry.get("close") is not None and not isinstance(entry.get("close"), bool) and float(entry.get("close")) > 0:
-        price = float(entry["close"])
+        price = _dnse_ohlc_close_to_vnd(float(entry["close"]))
     else:
         db_path = Path(runtime_root) / "vn_stock.db"
         if db_path.is_file():
@@ -193,7 +211,7 @@ def _resolve_session_inputs(ticker: str, entry: Mapping[str, Any], runtime_root:
                 finally:
                     conn.close()
                 if row and row[0] is not None and float(row[0]) > 0:
-                    price = float(row[0])
+                    price = _dnse_ohlc_close_to_vnd(float(row[0]))
             except Exception:
                 pass
 
