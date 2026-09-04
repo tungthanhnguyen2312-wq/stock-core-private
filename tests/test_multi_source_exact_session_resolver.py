@@ -5,8 +5,10 @@ from field_temporal_contract import stable_id
 from multi_source_exact_session_resolver import (
     DEGRADED_RECOVERY_COMPLETED,
     DEGRADED_RECOVERY_NOT_TRIGGERED,
+    DailyRecoveryRuntimeBudgetExceeded,
     DnseProviderWideQualityDegraded,
     MultiSourceResolverError,
+    _DailyRecoveryRuntimeGuard,
     assert_dnse_quality_acceptable,
     resolve_exact_session_with_autorecovery,
     resolve_multi_source_exact_session_snapshot,
@@ -609,7 +611,7 @@ def test_autorecovery_real_20260903_shape_needs_zero_new_fetches_and_is_accepted
 def test_autorecovery_partial_sentinel_overlap_expands_only_uncovered_dnse_exact_tickers():
     """General case: the sentinel's small cohort does NOT already cover every DNSE-exact ticker
     (unlike the real 2026-09-03 coincidence). Only the tickers outside the original cohort may be
-    newly queried; sentinel-covered ones must never be re-fetched."""
+    newly queried; they are VCI-first, while the original sentinel alone remains dual-source."""
     dnse_native_close = 10.0
     all_exact = [f"E{i:02d}" for i in range(10)]
     spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in all_exact}
@@ -629,30 +631,64 @@ def test_autorecovery_partial_sentinel_overlap_expands_only_uncovered_dnse_exact
     )
     assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
     assert evidence["degraded_provider_recovery"]["expanded_ticker_count"] == 4  # E06..E09
-    assert evidence["degraded_provider_recovery"]["expanded_recovery_attempts"] == {"VCI": 4, "KBS": 4}
-    # Every one of the 4 newly-covered tickers was queried exactly once per source -- never twice.
+    assert evidence["degraded_provider_recovery"]["expanded_recovery_attempts"] == {"VCI": 4, "KBS": 0}
+    # Every newly-covered ticker is VCI-first. KBS is not a market-wide corroborator: the only
+    # dual-source work is the retained, small health sentinel.
     newly_covered = [t for t in all_exact if t not in small_cohort]
     assert len(newly_covered) == 4
     for ticker in newly_covered:
         assert calls.count((ticker, "VCI")) == 1
-        assert calls.count((ticker, "KBS")) == 1
-    # No (ticker, source) pair anywhere in the run was ever fetched more than once, including the
-    # original 6-ticker cohort's own pairs (served from cache on the expansion's second pass).
+        assert calls.count((ticker, "KBS")) == 0
+        assert projected["records"][ticker]["observations"][0]["provider"] == "VCI"
+    # No (ticker, source) pair anywhere in the run was ever fetched more than once. The six
+    # sentinel names retain VCI+KBS; four recovered names add VCI only.
     assert len(calls) == len(set(calls))
-    assert len(calls) == 10 * 2
+    assert len(calls) == 6 * 2 + 4
     # Now every DNSE-exact ticker, not just the original small cohort, correctly distrusts DNSE.
-    for ticker in all_exact:
+    for ticker in small_cohort:
         assert projected["records"][ticker]["multi_source_recovery_result"] == \
             "CORROBORATED_NON_DNSE_CURRENT_RESEARCH_SENTINEL_OVERRIDE"
+    for ticker in newly_covered:
+        assert projected["records"][ticker]["multi_source_recovery_result"] == \
+            "DEGRADED_DNSE_QUARANTINED_SINGLE_SOURCE_VCI"
+    assert_self_consistent(projected)
+
+
+def test_autorecovery_uses_kbs_only_when_marketwide_vci_is_unusable():
+    """KBS remains a per-ticker failover, not a second market-wide verification pass."""
+    exact = [f"R{i:02d}" for i in range(8)]
+    sentinel = exact[:6]
+    dnse = make_dnse_snapshot({
+        ticker: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, 10.0)]) for ticker in exact
+    })
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        if ticker == "R06" and source == "VCI":
+            return FetchOutcome("empty")
+        return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
+                            lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+
+    evidence, projected = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda _seconds: None,
+        sentinel_cohort=sentinel,
+    )
+
+    recovery = evidence["degraded_provider_recovery"]
+    assert recovery["expanded_recovery_attempts"] == {"VCI": 2, "KBS": 1}
+    assert calls.count(("R06", "VCI")) == calls.count(("R06", "KBS")) == 1
+    assert calls.count(("R07", "VCI")) == 1
+    assert calls.count(("R07", "KBS")) == 0
+    assert projected["records"]["R06"]["observations"][0]["provider"] == "KBS"
+    assert projected["records"]["R07"]["observations"][0]["provider"] == "VCI"
     assert_self_consistent(projected)
 
 
 def test_autorecovery_never_duplicates_a_source_ticker_fetch_when_gap_recovery_and_sentinel_overlap():
-    """A DNSE-missing ticker already queried by Pass 3/4 gap recovery must never be re-queried by
-    the degraded-expansion pass either, even though both resolver calls inside the wrapper run
-    Pass 3/4 again internally over the identical DNSE-missing set. Sentinel cohort covers all 6
-    DNSE-exact tickers (>= DNSE_BROAD_MIN_ASSESSED_COUNT) so 100% conflict is classified BROAD and
-    the expansion pass genuinely runs a second resolver call."""
+    """A gap-recovery VCI result and the small exact-name sentinel remain disjoint, and no
+    ticker/source pair is requested more than once within the complete autorecovery run."""
     dnse_native_close = 10.0
     exact_tickers = [f"F{i:02d}" for i in range(6)]
     spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in exact_tickers}
@@ -671,20 +707,15 @@ def test_autorecovery_never_duplicates_a_source_ticker_fetch_when_gap_recovery_a
         sentinel_cohort=exact_tickers,
     )
     assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
-    # MISSING1 is DNSE-missing -- Pass 3/4 in BOTH resolver calls target it, but the shared
-    # memoizing cache must still collapse that to exactly one real VCI attempt (KBS never reached
-    # since VCI already succeeded).
+    # MISSING1 is DNSE-missing: its VCI success means no KBS attempt and no duplicated source pair.
     assert calls.count(("MISSING1", "VCI")) == 1
     assert calls.count(("MISSING1", "KBS")) == 0
     assert len(calls) == len(set(calls))  # no pair anywhere, from either pass or either call, twice
 
 
 def test_autorecovery_pacing_delay_spent_once_per_genuine_fetch_not_per_call():
-    """The shared memoizing cache must own pacing too, not just correctness: a cached (ticker,
-    source) pair must never sleep again on the expansion's second resolver call, or a fully-
-    degraded real-sized universe would burn its ENTIRE original Pass 3/4 pacing budget a second
-    time for zero new network activity. Sentinel cohort already covers every DNSE-exact ticker,
-    so the expansion pass's Pass 5 is 100% cache hits -- contributing zero additional sleeps."""
+    """The memoizing fetcher owns pacing: every genuine source request spends exactly one delay,
+    even when future recovery composition evolves; no duplicate work can add phantom pacing."""
     dnse_native_close = 10.0
     exact_tickers = [f"G{i:02d}" for i in range(6)]
     spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in exact_tickers}
@@ -701,11 +732,36 @@ def test_autorecovery_pacing_delay_spent_once_per_genuine_fetch_not_per_call():
         sentinel_cohort=exact_tickers,
     )
     assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
-    # Exactly one real sleep per genuine (ticker, source) fetch: 6 tickers x 2 sources = 12 total
-    # across the whole run, never doubled by the second resolver call re-processing the first
-    # pass's own already-cached pairs.
+    # Exactly one real sleep per genuine (ticker, source) fetch: six sentinel tickers x two
+    # sources, with no synthetic expansion pass adding a second pacing budget.
     assert len(sleeps) == 6 * 2
     assert all(s == 1.1 for s in sleeps)
+
+
+def test_runtime_guard_aborts_from_small_timed_sample_with_provider_telemetry():
+    """A slow first handful of sequential requests must stop Daily before a market-wide hour run."""
+    clock = [0.0]
+    guard = _DailyRecoveryRuntimeGuard(
+        request_delay=1.1, runtime_budget_seconds=300.0, clock=lambda: clock[0],
+    )
+    guard.set_plan(stage="DNSE_GAP_RECOVERY_VCI_FIRST", remaining_by_source={"VCI": 100, "KBS": 0})
+    with pytest.raises(DailyRecoveryRuntimeBudgetExceeded) as raised:
+        for _ in range(5):
+            guard.observe(
+                ticker="AAA", source="VCI",
+                outcome=FetchOutcome("failed", errors=["VCI:read_timeout"], transient_failure=True,
+                                     request_attempts=2, retry_count=1, timeout_count=2),
+                elapsed_seconds=45.0,
+            )
+            clock[0] += 46.1
+    diagnostic = raised.value.diagnostic
+    assert diagnostic["stage"] == "DNSE_GAP_RECOVERY_VCI_FIRST"
+    assert diagnostic["request_count"] == 5
+    assert diagnostic["providers"]["VCI"]["provider_attempts"] == 10
+    assert diagnostic["providers"]["VCI"]["retries"] == 5
+    assert diagnostic["providers"]["VCI"]["timeouts"] == 10
+    assert diagnostic["concurrency"]["enabled"] is False
+    assert diagnostic["projected_total_seconds"] > diagnostic["runtime_budget_seconds"]
 
 
 # ---- P0 DEFECT B integration: DNSE quarantined from FINAL resolution once broadly degraded ----

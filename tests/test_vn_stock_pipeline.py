@@ -86,6 +86,7 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual("success", outcome.status)
         self.assertEqual(1, provider.history.call_count)
         self.sleep.assert_not_called()
+        self.assertEqual((1, 0, 0), (outcome.request_attempts, outcome.retry_count, outcome.timeout_count))
 
     def test_connect_timeout_retries_then_succeeds(self):
         quote_patch, provider = self.quote_with_effects(
@@ -96,6 +97,7 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual("success", outcome.status)
         self.assertEqual(2, provider.history.call_count)
         self.sleep.assert_called_once_with(1.0)
+        self.assertEqual((2, 1, 1), (outcome.request_attempts, outcome.retry_count, outcome.timeout_count))
 
     def test_read_timeout_retries_then_succeeds(self):
         quote_patch, provider = self.quote_with_effects(
@@ -311,6 +313,22 @@ class FetchRetryTests(unittest.TestCase):
         self.assertIn("attempt=1/2", rendered)
         self.assertIn("connect_timeout=5.0s", rendered)
         self.assertIn("read_timeout=12.0s", rendered)
+
+
+class ScaleDiagnosticTests(unittest.TestCase):
+    def test_contracted_vci_penny_does_not_spam_normal_daily_output(self):
+        output = io.StringIO()
+        with mock.patch.object(pipeline, "LOG_LEVEL", "INFO"), redirect_stdout(output):
+            scale = pipeline.resolve_scale("AAA", "VCI", 0.75)
+        self.assertEqual(1000, scale)
+        self.assertNotIn("penny thật hay lệch scale", output.getvalue())
+
+    def test_genuine_scale_anomaly_remains_visible_in_debug(self):
+        output = io.StringIO()
+        with mock.patch.object(pipeline, "LOG_LEVEL", "DEBUG"), redirect_stdout(output):
+            scale = pipeline.resolve_scale("AAA", "VCI", 0.01)
+        self.assertEqual(1000, scale)
+        self.assertIn("quá nhỏ", output.getvalue())
 
 
 class TransportTests(unittest.TestCase):

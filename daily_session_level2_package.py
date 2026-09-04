@@ -18,6 +18,7 @@ from typing import Any, Mapping
 
 from daily_producer_pipeline import DailyProducerError, completed_session_gate
 from daily_research_session_operations import load_registry
+from field_temporal_contract import stable_id
 from mva_exact_session_snapshot import resolved_completed_session
 from vn_time import VN_TZ, vn_now
 
@@ -157,6 +158,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "p3f8_run": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "p3f8_mva_operational_run_exact_session.json",
         "dnse_only_exact_session_snapshot": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "dnse_only_exact_session_snapshot.json",
         "multi_source_market_evidence": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "multi_source_exact_session_market_evidence.json",
+        "multi_source_recovery_abort": ops / f"p3f9b-market-wide-exact-session-scaleout-{nodash}" / "multi_source_exact_session_recovery_runtime_budget_abort.json",
         "breadth_foundation": ops / f"current-market-universe-breadth-foundation-v1-{nodash}" / "current_market_universe_breadth_foundation_artifact.json",
         "universe_resolution": ops / f"current-universe-status-and-session-coverage-resolution-v1-{nodash}" / "current_universe_status_and_session_coverage_resolution_artifact.json",
         "liquidity_research": ops / f"market-wide-current-liquidity-research-v1-{nodash}" / "market_wide_current_liquidity_research_artifact.json",
@@ -947,8 +949,9 @@ def ensure_exact_session_snapshot(
     2026-09-04 MULTI_SOURCE_DAILY_DEGRADED_PROVIDER_AUTORECOVERY_AND_IDEMPOTENCY_CORRECTIVE_V1:
     a broadly degraded DNSE day (multi_source_exact_session_resolver.
     DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD) no longer stops here for an operator to re-run with
-    an expanded scope -- resolve_exact_session_with_autorecovery expands VCI/KBS verification to
-    every DNSE-exact ticker in the SAME call (see that function's own docstring). An existing
+    an expanded scope -- resolve_exact_session_with_autorecovery keeps its small VCI+KBS health
+    sentinel and recovers the remaining DNSE-exact names VCI-first, with KBS only when VCI is
+    missing/failed/unusable, in the SAME call (see that function's own docstring). An existing
     on-disk snapshot is reused only when _canonical_snapshot_gate_satisfied confirms it was never
     subject to an unresolved degradation -- fixing the prior idempotency escape where a projection
     written before the (then operator-gated) sentinel check could be silently reused on rerun with
@@ -1009,10 +1012,41 @@ def ensure_exact_session_snapshot(
     sentinel = resolver.select_sentinel_cohort(
         candidate_metadata=candidate_metadata, dnse_exact_tickers=dnse_exact_tickers,
     )
-    evidence, projected = resolver.resolve_exact_session_with_autorecovery(
-        dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
-        sentinel_cohort=sentinel["tickers"],
-    )
+    try:
+        evidence, projected = resolver.resolve_exact_session_with_autorecovery(
+            dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
+            sentinel_cohort=sentinel["tickers"],
+        )
+    except resolver.DailyRecoveryRuntimeBudgetExceeded as exc:
+        # Preserve the deterministic throughput/timeout/retry diagnostic while refusing to
+        # write a partially resolved canonical snapshot.  The file is write-once for the same
+        # attempt root, matching the existing immutable Daily artifact discipline.
+        diagnostic = {
+            "schema_version": "1.0.0",
+            "contract_version": "daily_multi_source_recovery_runtime_budget_abort/v1",
+            "artifact_type": "MULTI_SOURCE_RECOVERY_RUNTIME_BUDGET_ABORT",
+            "target_session": session,
+            "requested_at": dnse_snapshot.get("requested_at"),
+            "dnse_source_snapshot_identity": dnse_snapshot.get("snapshot_identity"),
+            "runtime_database_mutated": False,
+            "reason": "DAILY_RECOVERY_RUNTIME_BUDGET_EXCEEDED",
+            "throughput": exc.diagnostic,
+        }
+        diagnostic["abort_sha256"] = stable_id(diagnostic)
+        diagnostic["abort_identity"] = f"daily_multi_source_recovery_runtime_budget_abort:{diagnostic['abort_sha256']}"
+        abort_path = paths["multi_source_recovery_abort"]
+        if not abort_path.exists():
+            abort_path.parent.mkdir(parents=True, exist_ok=True)
+            abort_path.write_text(
+                json.dumps(diagnostic, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        raise ValueError(
+            "P3F9B_DAILY_RECOVERY_RUNTIME_BUDGET_EXCEEDED:session=" + session
+            + f":projected_seconds={exc.diagnostic['projected_total_seconds']:.1f}"
+            + f":budget_seconds={exc.diagnostic['runtime_budget_seconds']:.1f}"
+            + f":diagnostic={abort_path}"
+        ) from exc
     if not evidence_path.exists():
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(

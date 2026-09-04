@@ -114,6 +114,12 @@ class FetchOutcome:
     lineage: list = field(default_factory=list)
     errors: list = field(default_factory=list)
     transient_failure: bool = False
+    # Transport accounting is additive so callers that need a bounded operational
+    # throughput forecast do not have to infer retries from display-only logs.  The
+    # normal update/backfill consumers continue to use the original five fields.
+    request_attempts: int = 0
+    retry_count: int = 0
+    timeout_count: int = 0
 
 
 def _safe_endpoint(url):
@@ -254,7 +260,8 @@ def resolve_scale(ticker, source, med_close):
     - Chỉ số (VNINDEX...) tính bằng ĐIỂM -> không bao giờ scale.
     - <50đ sau scale: không tồn tại trên TTCK VN (tick tối thiểu 100đ) -> chắc chắn thiếu x1000.
     - >1.5 triệu đồng/cp sau scale: không tồn tại -> chắc chắn double-scale.
-    - Vùng 50đ..1000đ là mơ hồ (penny thật vs lệch chuẩn) -> GIỮ THEO MAP + in cảnh báo."""
+    - Vùng 50đ..1000đ là mơ hồ. Với nguồn đã có scale contract tường minh,
+      giữ map và không phát cảnh báo Daily lặp lại; DEBUG vẫn giữ các anomaly thật."""
     if ticker.upper() in INDEX_SYMBOLS:
         return 1
     scale = SOURCE_SCALES.get(source.upper(), 1)
@@ -262,12 +269,19 @@ def resolve_scale(ticker, source, med_close):
         return scale
     sm = med_close * scale
     if sm < 50:
-        print(f"   [scale] {ticker}@{source}: median {med_close:.3f} quá nhỏ -> ép x1000")
+        if LOG_LEVEL == "DEBUG":
+            print(f"   [scale] {ticker}@{source}: median {med_close:.3f} quá nhỏ -> ép x1000")
         return 1000
     if sm > 1_500_000:
-        print(f"   [scale] {ticker}@{source}: median {sm:,.0f} quá lớn -> hạ về x1")
+        if LOG_LEVEL == "DEBUG":
+            print(f"   [scale] {ticker}@{source}: median {sm:,.0f} quá lớn -> hạ về x1")
         return 1
-    if sm < 1000:
+    # VCI/KBS already have an explicit x1000 source contract.  A sub-1000 VND
+    # result is therefore not a scale alarm by itself and printing it for every
+    # Daily recovery ticker both obscures real transport diagnostics and invites
+    # a forbidden heuristic re-normalization.  Keep the legacy ambiguity note
+    # for an uncontracted source only.
+    if sm < 1000 and source.upper() not in SOURCE_SCALES:
         print(f"   [cảnh báo] {ticker}@{source}: trung vị {sm:,.0f}đ — penny thật hay lệch scale? nên kiểm tra tay")
     return scale
 
@@ -452,7 +466,8 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
             if raw is None or len(raw) == 0:
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                return FetchOutcome("empty")  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
+                return FetchOutcome("empty", request_attempts=attempt, retry_count=attempt - 1,
+                                    timeout_count=sum("timeout" in item for item in errors))  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
             df = normalize(raw, ticker, source)
             if df is not None and len(df):
                 retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -461,27 +476,33 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
                 )
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "success", time.monotonic() - started)
-                return FetchOutcome("success", data=df, lineage=lineage)
+                return FetchOutcome("success", data=df, lineage=lineage, request_attempts=attempt,
+                                    retry_count=attempt - 1,
+                                    timeout_count=sum("timeout" in item for item in errors))
             if _valid_history_schema(raw):
                 # Payload đúng schema nhưng mọi bar bị lọc (volume=0/close rỗng) là
                 # không có phiên giao dịch, không phải lỗi schema và tuyệt đối không ghi DB.
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                return FetchOutcome("empty")
+                return FetchOutcome("empty", request_attempts=attempt, retry_count=attempt - 1,
+                                    timeout_count=sum("timeout" in item for item in errors))
             _record_provider_result(source, healthy_response=True)
             errors.append(f"{source}:invalid_schema")
             _request_log(
                 ticker, source, attempt, "failed", time.monotonic() - started,
                 PermanentRequestError("invalid_schema", PROVIDER_ENDPOINT_HINT.get(source, "provider-history"), 0.0),
             )
-            return FetchOutcome("failed", errors=errors, transient_failure=False)
+            return FetchOutcome("failed", errors=errors, transient_failure=False,
+                                request_attempts=attempt, retry_count=attempt - 1,
+                                timeout_count=sum("timeout" in item for item in errors))
         except Exception as e:
             inner = _unwrap_retry_error(e)
             message = str(inner).lower()
             if any(k in message for k in ("dữ liệu trống", "không tìm thấy dữ liệu", "no data", "empty")):
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                return FetchOutcome("empty")  # nguồn này xác nhận không có dữ liệu -> sang nguồn dự phòng
+                return FetchOutcome("empty", request_attempts=attempt, retry_count=attempt - 1,
+                                    timeout_count=sum("timeout" in item for item in errors))  # nguồn này xác nhận không có dữ liệu -> sang nguồn dự phòng
             error = inner if isinstance(inner, PipelineRequestError) else _legacy_request_error(inner, source)
             errors.append(
                 f"{source}:{error.kind}" + (f":{error.status_code}" if error.status_code is not None else "")
@@ -490,15 +511,21 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
                 if attempt >= MAX_RETRY:
                     _record_provider_result(source, transient_failure=True)
                     _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
-                    return FetchOutcome("failed", errors=errors, transient_failure=True)
+                    return FetchOutcome("failed", errors=errors, transient_failure=True,
+                                        request_attempts=attempt, retry_count=attempt - 1,
+                                        timeout_count=sum("timeout" in item for item in errors))
                 wait = _retry_delay(attempt, error)
                 _request_log(ticker, source, attempt, "retry", time.monotonic() - started, error, wait)
                 time.sleep(wait)
                 continue
             _record_provider_result(source, healthy_response=True)
             _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
-            return FetchOutcome("failed", errors=errors, transient_failure=False)
-    return FetchOutcome("failed", errors=errors, transient_failure=True)  # unreachable safety net
+            return FetchOutcome("failed", errors=errors, transient_failure=False,
+                                request_attempts=attempt, retry_count=attempt - 1,
+                                timeout_count=sum("timeout" in item for item in errors))
+    return FetchOutcome("failed", errors=errors, transient_failure=True,
+                        request_attempts=MAX_RETRY, retry_count=max(0, MAX_RETRY - 1),
+                        timeout_count=sum("timeout" in item for item in errors))  # unreachable safety net
 
 
 def fetch_one(ticker, start, end):

@@ -128,6 +128,35 @@ def test_ensure_exact_session_snapshot_runs_dnse_then_resolver_and_returns_the_p
     assert dnse_only["resolved_completed_session"] == session
 
 
+def test_ensure_exact_session_snapshot_retains_runtime_budget_abort_not_partial_projection(tmp_path):
+    """A forecast abort is immutable diagnostic evidence, never a plausibly reusable snapshot."""
+    import multi_source_exact_session_resolver as resolver
+
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    patches, _ = _patch_resolved_acquisition(session)
+    diagnostic = {
+        "stage": "DNSE_GAP_RECOVERY_VCI_FIRST",
+        "projected_total_seconds": 8_000.0,
+        "runtime_budget_seconds": 2_700.0,
+        "request_count": 5,
+        "providers": {},
+    }
+    with patches[0], patches[1], patches[2], patches[3], \
+         patch.object(resolver, "resolve_exact_session_with_autorecovery",
+                      side_effect=resolver.DailyRecoveryRuntimeBudgetExceeded(diagnostic)):
+        with pytest.raises(ValueError, match="P3F9B_DAILY_RECOVERY_RUNTIME_BUDGET_EXCEEDED"):
+            level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+    assert paths["dnse_only_exact_session_snapshot"].is_file()
+    assert not paths["exact_session_snapshot"].exists()
+    abort = json.loads(paths["multi_source_recovery_abort"].read_text(encoding="utf-8"))
+    assert abort["reason"] == "DAILY_RECOVERY_RUNTIME_BUDGET_EXCEEDED"
+    assert abort["throughput"]["projected_total_seconds"] == 8_000.0
+    assert abort["runtime_database_mutated"] is False
+    assert abort["abort_identity"].startswith("daily_multi_source_recovery_runtime_budget_abort:")
+
+
 def test_ensure_exact_session_snapshot_is_idempotent_when_already_present(tmp_path):
     session = "2026-08-26"
     paths = level2.session_artifact_paths(tmp_path, session)
