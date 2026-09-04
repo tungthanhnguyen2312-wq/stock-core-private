@@ -245,6 +245,17 @@ class FetchRetryTests(unittest.TestCase):
         self.assertEqual("success", outcome.status)
         self.sleep.assert_called_once_with(pipeline.RETRY_AFTER_MAX)
 
+    def test_single_source_exposes_rate_limit_telemetry_after_retry_success(self):
+        quote_patch, _ = self.quote_with_effects(
+            [transient("http_status", 429, retry_after=7), raw_bar()]
+        )
+        with quote_patch:
+            outcome = pipeline.fetch_single_source("VNINDEX", "KBS", "2026-07-17", "2026-07-18")
+        self.assertEqual("success", outcome.status)
+        self.assertEqual(1, outcome.http_429_count)
+        self.assertEqual(0, outcome.http_5xx_count)
+        self.assertEqual(7.0, outcome.retry_after_seconds)
+
     def test_500_502_503_504_are_retried(self):
         for status in (500, 502, 503, 504):
             with self.subTest(status=status):
@@ -260,6 +271,8 @@ class FetchRetryTests(unittest.TestCase):
                 self.assertEqual("success", outcome.status)
                 self.assertEqual(2, provider.history.call_count)
                 self.sleep.assert_called_once()
+                self.assertEqual(1, outcome.http_5xx_count)
+                self.assertEqual(0, outcome.http_429_count)
 
     def test_400_401_403_do_not_retry_within_provider(self):
         for status in (400, 401, 403):

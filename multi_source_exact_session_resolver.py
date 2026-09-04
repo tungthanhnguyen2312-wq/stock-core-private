@@ -11,14 +11,14 @@ FOUR-PASS ACQUISITION STRATEGY (never re-fetches an already-resolved ticker)
             ``dnse_snapshot`` (mva_exact_session_snapshot.materialize_snapshot()'s own
             output; this module never re-implements DNSE's fetch).
     PASS 2  Identify candidates DNSE did not resolve (disposition != EXACT_SESSION_RETAINED).
-    PASS 3  KBS recovery for exactly those candidates, one bounded sequential request per
+    PASS 3  KBS recovery for exactly those candidates, with a bounded provider-qualified
+            concurrency-and-launch-pacing policy, per
             ticker (vn_stock_pipeline.fetch_single_source, reused unmodified -- same
             retry budget, same circuit breaker, same REQUEST_DELAY pacing already proven
             safe for this provider family; see docs/DECISIONS.md
             MARKET_WIDE_ENRICHMENT_AND_CANONICALIZATION_V1 = PAUSED_RATE_LIMIT_CONSTRAINED).
-            No concurrency: this repository has zero evidence VCI/KBS tolerate concurrent
-            access, so Pass 3/4 stay exactly as sequential/paced as vn_stock_pipeline.py's
-            own existing cmd_backfill/cmd_update commands.
+            KBS is capped at two workers after its bounded 2026-09-04 live qualification;
+            VCI remains sequential at its existing pacing.
     PASS 4  VCI recovery only for candidates still missing after Pass 3.
 
 RESOLUTION POLICY -- see multi_source_market_evidence_contract.resolve_ticker(). Per
@@ -56,6 +56,8 @@ scope authorizes fixing.
 """
 from __future__ import annotations
 
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from dataclasses import dataclass
 import sqlite3
 import time
 from datetime import datetime, timedelta
@@ -97,11 +99,40 @@ DEFAULT_RECOVERY_WINDOW_CALENDAR_DAYS = 15
 ARTIFACT_TYPE = "MULTI_SOURCE_EXACT_SESSION_MARKET_EVIDENCE"
 
 # Daily remains a one-command foreground operation, but it must not silently turn a
-# degraded provider into an unbounded multi-hour foreground job.  The guard is
-# intentionally sequential: it forecasts the selected primary/failover topology and never
-# creates an inference that either provider permits concurrency.
+# degraded provider into an unbounded multi-hour foreground job.  The guard forecasts the
+# selected primary/failover topology only from provider-specific policies supported by bounded
+# live evidence; unqualified sources remain sequential.
 DAILY_RECOVERY_RUNTIME_BUDGET_SECONDS = 45 * 60
 MIN_TIMED_REQUESTS_FOR_RUNTIME_PROJECTION = 5
+KBS_RECOVERY_MAX_WORKERS = 2
+KBS_RECOVERY_MIN_START_INTERVAL_SECONDS = 0.25
+KBS_SHARED_RATE_LIMIT_BACKOFF_SECONDS = 1.0
+
+
+@dataclass(frozen=True)
+class _ProviderSchedulePolicy:
+    """Bounded per-provider dispatch policy for Current Research recovery only."""
+
+    max_workers: int
+    min_start_interval_seconds: float
+    shared_rate_limit_backoff_seconds: float
+
+
+def _recovery_provider_policies(request_delay: float) -> dict[str, _ProviderSchedulePolicy]:
+    """Return the only provider schedule supported by retained/live evidence.
+
+    VCI has no concurrency evidence and therefore retains the existing sequential cadence.
+    KBS's two-worker / 0.25-second launch interval is deliberately a hard cap, not an
+    operator-tunable performance hint.
+    """
+    return {
+        "VCI": _ProviderSchedulePolicy(1, float(request_delay), float(request_delay)),
+        "KBS": _ProviderSchedulePolicy(
+            KBS_RECOVERY_MAX_WORKERS,
+            KBS_RECOVERY_MIN_START_INTERVAL_SECONDS,
+            KBS_SHARED_RATE_LIMIT_BACKOFF_SECONDS,
+        ),
+    }
 
 # Owner-directed watch cohort (canonical home -- tools/run_multi_source_exact_session_resolver.py
 # imports this rather than keeping its own copy).
@@ -308,19 +339,25 @@ class DailyRecoveryRuntimeBudgetExceeded(RuntimeError):
 
 
 class _DailyRecoveryRuntimeGuard:
-    """Sequential throughput accounting and fail-closed runtime projection.
+    """Provider-aware throughput accounting and fail-closed runtime projection.
 
     The forecast starts with a pacing-only lower bound, then switches to provider-specific
     median observed elapsed time after a small sample.  It is deterministic for a given
-    request trace, does not assume provider parallelism, and is deliberately re-planned at
-    the selected primary->fallback boundary once the real fallback count is known.
+    request trace, uses only each provider's bounded qualified dispatch policy, and is
+    deliberately re-planned at the selected primary->fallback boundary once the real fallback
+    count is known.
     """
 
     def __init__(self, *, request_delay: float, runtime_budget_seconds: float = DAILY_RECOVERY_RUNTIME_BUDGET_SECONDS,
-                 clock: Callable[[], float] = time.monotonic):
+                 clock: Callable[[], float] = time.monotonic,
+                 provider_policies: Mapping[str, _ProviderSchedulePolicy] | None = None):
         self._clock = clock
         self._started = clock()
         self.request_delay = float(request_delay)
+        self._provider_policies = dict(provider_policies or {
+            source: _ProviderSchedulePolicy(1, self.request_delay, self.request_delay)
+            for source in RECOVERY_SOURCES
+        })
         self.runtime_budget_seconds = float(runtime_budget_seconds)
         self.stage = "NOT_STARTED"
         self.remaining_by_source = {source: 0 for source in RECOVERY_SOURCES}
@@ -330,11 +367,13 @@ class _DailyRecoveryRuntimeGuard:
         self._retries = {source: 0 for source in RECOVERY_SOURCES}
         self._timeouts = {source: 0 for source in RECOVERY_SOURCES}
         self._circuit_skips = {source: 0 for source in RECOVERY_SOURCES}
+        self._http_429 = {source: 0 for source in RECOVERY_SOURCES}
+        self._http_5xx = {source: 0 for source in RECOVERY_SOURCES}
         self._target_session_usable = {source: 0 for source in RECOVERY_SOURCES}
         self._target_session_unusable = {source: 0 for source in RECOVERY_SOURCES}
         self._conditional_failover: tuple[str, str] | None = None
         self._cache_hits = 0
-        self._pacing_seconds_scheduled = 0.0
+        self._pacing_seconds_scheduled = {source: 0.0 for source in RECOVERY_SOURCES}
 
     @staticmethod
     def _median(values: Sequence[float]) -> float:
@@ -366,6 +405,11 @@ class _DailyRecoveryRuntimeGuard:
     def clear_conditional_failover(self) -> None:
         self._conditional_failover = None
 
+    def provider_policy(self, source: str) -> _ProviderSchedulePolicy:
+        return self._provider_policies.get(
+            source, _ProviderSchedulePolicy(1, self.request_delay, self.request_delay),
+        )
+
     def record_target_session_result(self, *, source: str, usable: bool) -> None:
         if source not in RECOVERY_SOURCES:
             return
@@ -379,7 +423,7 @@ class _DailyRecoveryRuntimeGuard:
             return
         self._network_calls[source] += 1
         self._elapsed_by_source[source].append(float(elapsed_seconds))
-        self._pacing_seconds_scheduled += self.request_delay
+        self._pacing_seconds_scheduled[source] += self.provider_policy(source).min_start_interval_seconds
         self.remaining_by_source[source] = max(0, self.remaining_by_source[source] - 1)
 
         errors = list(getattr(outcome, "errors", None) or [])
@@ -395,6 +439,8 @@ class _DailyRecoveryRuntimeGuard:
         self._provider_attempts[source] += attempts
         self._retries[source] += int(retries or 0)
         self._timeouts[source] += int(timeouts or 0)
+        self._http_429[source] += int(getattr(outcome, "http_429_count", 0) or 0)
+        self._http_5xx[source] += int(getattr(outcome, "http_5xx_count", 0) or 0)
         if len(errors) == 1 and errors[0].endswith(":circuit_open"):
             self._circuit_skips[source] += 1
         self._assert_within_budget()
@@ -402,17 +448,27 @@ class _DailyRecoveryRuntimeGuard:
     def _estimated_call_seconds(self, source: str) -> float:
         own = self._elapsed_by_source[source]
         if len(own) >= MIN_TIMED_REQUESTS_FOR_RUNTIME_PROJECTION:
-            return self._median(own) + self.request_delay
-        all_samples = [elapsed for values in self._elapsed_by_source.values() for elapsed in values]
-        if len(all_samples) >= MIN_TIMED_REQUESTS_FOR_RUNTIME_PROJECTION:
-            return self._median(all_samples) + self.request_delay
-        return self.request_delay
+            service_seconds = self._median(own)
+        else:
+            all_samples = [elapsed for values in self._elapsed_by_source.values() for elapsed in values]
+            service_seconds = self._median(all_samples) if len(all_samples) >= MIN_TIMED_REQUESTS_FOR_RUNTIME_PROJECTION else 0.0
+        policy = self.provider_policy(source)
+        if policy.max_workers == 1:
+            return service_seconds + policy.min_start_interval_seconds
+        # A globally paced concurrent provider cannot complete faster than either its launch
+        # interval or its measured service time divided across the hard worker cap.
+        return max(policy.min_start_interval_seconds, service_seconds / policy.max_workers)
 
     def _projection(self) -> tuple[float, float, float]:
         elapsed = self._clock() - self._started
         # The last request's pacing has been scheduled but may not yet have happened when the
         # post-request guard runs, so account for every genuine call exactly once here.
-        pending_pacing = max(0.0, self._pacing_seconds_scheduled - elapsed)
+        sequential_pacing = sum(
+            self._pacing_seconds_scheduled[source]
+            for source in RECOVERY_SOURCES
+            if self.provider_policy(source).max_workers == 1
+        )
+        pending_pacing = max(0.0, sequential_pacing - elapsed)
         remaining = sum(
             self.remaining_by_source[source] * self._estimated_call_seconds(source)
             for source in RECOVERY_SOURCES
@@ -449,11 +505,16 @@ class _DailyRecoveryRuntimeGuard:
         by_provider = {}
         for source in RECOVERY_SOURCES:
             samples = self._elapsed_by_source[source]
+            policy = self.provider_policy(source)
             by_provider[source] = {
+                "max_workers": policy.max_workers,
+                "minimum_start_interval_seconds": policy.min_start_interval_seconds,
                 "network_calls": self._network_calls[source],
                 "provider_attempts": self._provider_attempts[source],
                 "retries": self._retries[source],
                 "timeouts": self._timeouts[source],
+                "http_429": self._http_429[source],
+                "http_5xx": self._http_5xx[source],
                 "circuit_skips": self._circuit_skips[source],
                 "target_session_usable": self._target_session_usable[source],
                 "target_session_unusable": self._target_session_unusable[source],
@@ -466,7 +527,11 @@ class _DailyRecoveryRuntimeGuard:
             }
         return {
             "contract_version": "daily_multi_source_recovery_throughput/v1",
-            "concurrency": {"enabled": False, "reason": "NO_BOUNDED_LIVE_CONCURRENCY_SAFETY_EVIDENCE"},
+            "concurrency": {
+                "enabled": any(self.provider_policy(source).max_workers > 1 for source in RECOVERY_SOURCES),
+                "reason": "KBS_BOUNDED_LIVE_QUALIFIED_TWO_WORKER_CAP" if self.provider_policy("KBS").max_workers > 1
+                else "NO_BOUNDED_LIVE_CONCURRENCY_SAFETY_EVIDENCE",
+            },
             "stage": self.stage,
             "runtime_budget_seconds": self.runtime_budget_seconds,
             "elapsed_seconds": round(elapsed_seconds, 6),
@@ -474,7 +539,7 @@ class _DailyRecoveryRuntimeGuard:
             "projected_total_seconds": round(projected_total_seconds, 6),
             "request_count": sum(self._network_calls.values()),
             "provider_attempt_count": sum(self._provider_attempts.values()),
-            "pacing_seconds_scheduled": round(self._pacing_seconds_scheduled, 6),
+            "pacing_seconds_scheduled": round(sum(self._pacing_seconds_scheduled.values()), 6),
             "duplicate_work": {"cache_hits_prevented": self._cache_hits, "network_pair_duplicates": 0},
             "providers": by_provider,
         }
@@ -538,6 +603,7 @@ def resolve_multi_source_exact_session_snapshot(
     requested_at: str,
     recovery_window_days: int = DEFAULT_RECOVERY_WINDOW_CALENDAR_DAYS,
     fetch_single_source: Callable[..., Any] | None = None,
+    fetch_many: Callable[[Sequence[tuple[str, str, str, str]]], list[Any]] | None = None,
     request_delay: float | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
     max_recovery_candidates: int | None = None,
@@ -665,9 +731,14 @@ def resolve_multi_source_exact_session_snapshot(
         recovery_runtime_guard.set_primary_failover(primary_source, fallback_source)
     for pass_index, source in enumerate(MARKET_WIDE_RECOVERY_SOURCE_ORDER):
         next_round: list[str] = []
-        for ticker in still_missing:
+        outcomes = fetch_many(
+            [(ticker, source, window["start"], window["end"]) for ticker in still_missing]
+        ) if fetch_many is not None else None
+        for index, ticker in enumerate(still_missing):
             recovery_attempts[source] += 1
-            outcome = fetch(ticker, source, window["start"], window["end"])
+            outcome = outcomes[index] if outcomes is not None else fetch(
+                ticker, source, window["start"], window["end"],
+            )
             status, reason, native, lineage = _classify_recovery_outcome(
                 outcome=outcome, source=source, ticker=ticker, target_session=target_session,
             )
@@ -978,42 +1049,125 @@ DEGRADED_RECOVERY_NOT_TRIGGERED = "NOT_TRIGGERED"
 DEGRADED_RECOVERY_COMPLETED = "COMPLETED"
 
 
+class _ProviderAwareMemoizingFetch:
+    """One-run cache plus the only provider-qualified concurrent dispatch path.
+
+    Requests are keyed by ``(ticker, source)`` exactly as the predecessor memoizer was. A batch
+    may name the same pair more than once, but it produces one network call and fans that result
+    back to each input position. KBS batches hold no more than the proved-safe two requests in
+    flight and globally pace their *starts*. A 429 observed by any worker defers every subsequent
+    KBS dispatch by Retry-After (or the bounded shared backoff when absent); existing request-local
+    retries/timeouts and vnstock's circuit breaker remain the first line of defense.
+    """
+
+    def __init__(
+        self, fetch_single_source: Callable[..., Any], *, provider_policies: Mapping[str, _ProviderSchedulePolicy],
+        sleep_fn: Callable[[float], None], runtime_guard: _DailyRecoveryRuntimeGuard | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ):
+        self._fetch_single_source = fetch_single_source
+        self._provider_policies = dict(provider_policies)
+        self._sleep = sleep_fn
+        self._runtime_guard = runtime_guard
+        self._clock = clock
+        self._cache: dict[tuple[str, str], Any] = {}
+        self._next_start = {source: 0.0 for source in RECOVERY_SOURCES}
+        self._shared_not_before = {source: 0.0 for source in RECOVERY_SOURCES}
+
+    def _policy(self, source: str) -> _ProviderSchedulePolicy:
+        return self._provider_policies.get(source, _ProviderSchedulePolicy(1, 0.0, 0.0))
+
+    def _wait_for_dispatch(self, source: str) -> None:
+        wait_seconds = max(
+            0.0,
+            max(self._next_start[source], self._shared_not_before[source]) - self._clock(),
+        )
+        if wait_seconds:
+            self._sleep(wait_seconds)
+
+    def _record_completed(self, *, key: tuple[str, str], outcome: Any, elapsed_seconds: float) -> None:
+        ticker, source = key
+        self._cache[key] = outcome
+        if self._runtime_guard is not None:
+            self._runtime_guard.observe(
+                ticker=ticker, source=source, outcome=outcome, elapsed_seconds=elapsed_seconds,
+            )
+        rate_limit_count = int(getattr(outcome, "http_429_count", 0) or 0)
+        if rate_limit_count:
+            retry_after = float(getattr(outcome, "retry_after_seconds", 0.0) or 0.0)
+            self._shared_not_before[source] = max(
+                self._shared_not_before[source],
+                self._clock() + max(retry_after, self._policy(source).shared_rate_limit_backoff_seconds),
+            )
+
+    def _start(
+        self, pool: ThreadPoolExecutor, key: tuple[str, str], start: str, end: str,
+    ) -> tuple[Any, float]:
+        source = key[1]
+        self._wait_for_dispatch(source)
+        started = self._clock()
+        self._next_start[source] = started + self._policy(source).min_start_interval_seconds
+        return pool.submit(self._fetch_single_source, key[0], source, start, end), started
+
+    def _run_source_batch(
+        self, source: str, tasks: Sequence[tuple[tuple[str, str], str, str]],
+    ) -> None:
+        policy = self._policy(source)
+        pending = list(tasks)
+        in_flight: dict[Any, tuple[tuple[str, str], float]] = {}
+        with ThreadPoolExecutor(max_workers=policy.max_workers, thread_name_prefix=f"recovery-{source.lower()}") as pool:
+            while pending or in_flight:
+                while pending and len(in_flight) < policy.max_workers:
+                    key, start, end = pending.pop(0)
+                    future, started = self._start(pool, key, start, end)
+                    in_flight[future] = (key, started)
+                if not in_flight:
+                    continue
+                completed, _ = wait(in_flight, return_when=FIRST_COMPLETED)
+                # Completion order may vary; result placement and all evidence ordering stay
+                # keyed to the caller's input order below.
+                for future in sorted(completed, key=lambda item: in_flight[item][0]):
+                    key, started = in_flight.pop(future)
+                    self._record_completed(
+                        key=key, outcome=future.result(), elapsed_seconds=self._clock() - started,
+                    )
+
+    def fetch_many(self, requests: Sequence[tuple[str, str, str, str]]) -> list[Any]:
+        """Return results in request order, independently of worker completion order."""
+        result_by_key: dict[tuple[str, str], Any] = {}
+        requested_keys: list[tuple[str, str]] = []
+        missing_by_source: dict[str, list[tuple[tuple[str, str], str, str]]] = {}
+        scheduled_keys: set[tuple[str, str]] = set()
+        for ticker, source, start, end in requests:
+            key = (ticker, source)
+            requested_keys.append(key)
+            if key in self._cache:
+                result_by_key[key] = self._cache[key]
+                if self._runtime_guard is not None:
+                    self._runtime_guard.cache_hit(ticker, source)
+            elif key not in scheduled_keys:
+                scheduled_keys.add(key)
+                missing_by_source.setdefault(source, []).append((key, start, end))
+        for source in sorted(missing_by_source):
+            self._run_source_batch(source, missing_by_source[source])
+            result_by_key.update({key: self._cache[key] for key, _, _ in missing_by_source[source]})
+        return [result_by_key[key] for key in requested_keys]
+
+    def fetch(self, ticker: str, source: str, start: str, end: str) -> Any:
+        return self.fetch_many([(ticker, source, start, end)])[0]
+
+
 def _memoizing_fetch(
     fetch_single_source: Callable[..., Any], *, delay: float, sleep_fn: Callable[[float], None],
     runtime_guard: _DailyRecoveryRuntimeGuard | None = None,
 ) -> Callable[..., Any]:
-    """Wrap ``fetch_single_source`` so a (ticker, source) pair already fetched THIS RUN is never
-    requested twice, and so the pacing delay is only ever spent on a genuine network call.
-
-    ``resolve_exact_session_with_autorecovery`` may call resolve_multi_source_exact_session_
-    snapshot a second time over an expanded, overlapping candidate set (see its own docstring).
-    Passing this shared cache as both calls' fetch_single_source is what makes "Do NOT re-query a
-    source/ticker observation already retained for this run" (a hard milestone requirement, not
-    an optimization) hold across passes/calls rather than just within one. Both calls are given
-    sleep_fn=lambda s: None (their own internal pacing becomes a no-op) so the real REQUEST_DELAY
-    is spent exactly once per genuine fetch, here, rather than once per call that merely asks for
-    an already-cached pair -- otherwise a fully-cached second pass would still burn the entire
-    original pacing budget (thousands of seconds on a real ~1683-candidate universe) for zero new
-    network activity.
-    """
-    cache: dict[tuple[str, str], Any] = {}
-
-    def wrapped(ticker: str, source: str, start: str, end: str) -> Any:
-        key = (ticker, source)
-        if key in cache:
-            if runtime_guard is not None:
-                runtime_guard.cache_hit(ticker, source)
-            return cache[key]
-        started = time.monotonic()
-        result = fetch_single_source(ticker, source, start, end)
-        elapsed = time.monotonic() - started
-        cache[key] = result
-        if runtime_guard is not None:
-            runtime_guard.observe(ticker=ticker, source=source, outcome=result, elapsed_seconds=elapsed)
-        sleep_fn(delay)
-        return result
-
-    return wrapped
+    """Compatibility wrapper for callers that need only the single-request callable."""
+    return _ProviderAwareMemoizingFetch(
+        fetch_single_source,
+        provider_policies=_recovery_provider_policies(delay),
+        sleep_fn=sleep_fn,
+        runtime_guard=runtime_guard,
+    ).fetch
 
 
 def _no_sleep(_seconds: float) -> None:
@@ -1049,7 +1203,8 @@ def _mark_fallback_not_needed_after_primary(
 
 def _marketwide_degraded_primary_first_recovery(
     *, evidence: dict[str, Any], dnse_snapshot: Mapping[str, Any], target_session: str,
-    requested_at: str, original_sentinel_cohort: Sequence[str], fetch: Callable[..., Any],
+    requested_at: str, original_sentinel_cohort: Sequence[str],
+    fetch_many: Callable[[Sequence[tuple[str, str, str, str]]], list[Any]],
     runtime_guard: _DailyRecoveryRuntimeGuard,
 ) -> dict[str, Any]:
     """Recover DNSE-exact names once a small sentinel proves broad degradation.
@@ -1081,8 +1236,11 @@ def _marketwide_degraded_primary_first_recovery(
         remaining_by_source={primary_source: len(primary_targets), fallback_source: 0},
     )
     runtime_guard.set_primary_failover(primary_source, fallback_source)
-    for ticker in primary_targets:
-        outcome = fetch(ticker, primary_source, window["start"], window["end"])
+    primary_outcomes = fetch_many([
+        (ticker, primary_source, window["start"], window["end"])
+        for ticker in primary_targets
+    ])
+    for ticker, outcome in zip(primary_targets, primary_outcomes, strict=True):
         expanded_attempts[primary_source] += 1
         status, reason, native, lineage = _classify_recovery_outcome(
             outcome=outcome, source=primary_source, ticker=ticker, target_session=target_session,
@@ -1114,8 +1272,11 @@ def _marketwide_degraded_primary_first_recovery(
         remaining_by_source={primary_source: 0, fallback_source: len(primary_missing)},
     )
     runtime_guard.clear_conditional_failover()
-    for ticker in primary_missing:
-        outcome = fetch(ticker, fallback_source, window["start"], window["end"])
+    fallback_outcomes = fetch_many([
+        (ticker, fallback_source, window["start"], window["end"])
+        for ticker in primary_missing
+    ])
+    for ticker, outcome in zip(primary_missing, fallback_outcomes, strict=True):
         expanded_attempts[fallback_source] += 1
         status, reason, native, lineage = _classify_recovery_outcome(
             outcome=outcome, source=fallback_source, ticker=ticker, target_session=target_session,
@@ -1196,14 +1357,16 @@ def resolve_exact_session_with_autorecovery(
     """
     real_fetch = fetch_single_source or _default_fetch_single_source()
     delay = request_delay if request_delay is not None else _default_request_delay()
-    runtime_guard = _DailyRecoveryRuntimeGuard(request_delay=delay)
-    memoized_fetch = _memoizing_fetch(
-        real_fetch, delay=delay, sleep_fn=sleep_fn, runtime_guard=runtime_guard,
+    provider_policies = _recovery_provider_policies(delay)
+    runtime_guard = _DailyRecoveryRuntimeGuard(request_delay=delay, provider_policies=provider_policies)
+    memoized_fetcher = _ProviderAwareMemoizingFetch(
+        real_fetch, provider_policies=provider_policies, sleep_fn=sleep_fn, runtime_guard=runtime_guard,
     )
 
     evidence, projected = resolve_multi_source_exact_session_snapshot(
         dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
-        recovery_window_days=recovery_window_days, fetch_single_source=memoized_fetch,
+        recovery_window_days=recovery_window_days, fetch_single_source=memoized_fetcher.fetch,
+        fetch_many=memoized_fetcher.fetch_many,
         request_delay=0.0, sleep_fn=_no_sleep, max_recovery_candidates=max_recovery_candidates,
         sentinel_cohort=sentinel_cohort, recovery_runtime_guard=runtime_guard,
     )
@@ -1232,7 +1395,7 @@ def resolve_exact_session_with_autorecovery(
     recovery_info = _marketwide_degraded_primary_first_recovery(
         evidence=evidence, dnse_snapshot=dnse_snapshot, target_session=target_session,
         requested_at=requested_at, original_sentinel_cohort=sentinel_cohort,
-        fetch=memoized_fetch, runtime_guard=runtime_guard,
+        fetch_many=memoized_fetcher.fetch_many, runtime_guard=runtime_guard,
     )
     dnse_records = dnse_snapshot.get("records") or {}
 

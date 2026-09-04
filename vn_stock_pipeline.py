@@ -8,6 +8,7 @@ from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from threading import RLock
 from urllib.parse import urlsplit
 
 import pandas as pd
@@ -76,6 +77,7 @@ EXIT_PARTIAL = 2
 EXIT_SOURCE_UNAVAILABLE = 3
 
 _PROVIDER_HEALTH = {}
+_PROVIDER_HEALTH_LOCK = RLock()
 
 BATCH_SIZE = 300
 
@@ -120,6 +122,11 @@ class FetchOutcome:
     request_attempts: int = 0
     retry_count: int = 0
     timeout_count: int = 0
+    # Additive rate-limit telemetry lets a bounded higher-level scheduler share a provider
+    # cooldown even if this request later succeeds on its own existing retry path.
+    http_429_count: int = 0
+    http_5xx_count: int = 0
+    retry_after_seconds: float = 0.0
 
 
 def _safe_endpoint(url):
@@ -377,67 +384,72 @@ def _legacy_request_error(error, source):
 
 
 def _reset_provider_health():
-    _PROVIDER_HEALTH.clear()
+    with _PROVIDER_HEALTH_LOCK:
+        _PROVIDER_HEALTH.clear()
 
 
 def _provider_state(source):
-    return _PROVIDER_HEALTH.setdefault(
-        source,
-        {"strikes": 0, "skip_remaining": 0, "awaiting_probe": False},
-    )
+    with _PROVIDER_HEALTH_LOCK:
+        return _PROVIDER_HEALTH.setdefault(
+            source,
+            {"strikes": 0, "skip_remaining": 0, "awaiting_probe": False},
+        )
 
 
 def _provider_should_skip(source, ticker):
-    state = _provider_state(source)
-    if state["skip_remaining"] <= 0:
-        return False
-    state["skip_remaining"] -= 1
-    if LOG_LEVEL == "DEBUG":
-        print(
-            f"[provider-circuit] provider={source} ticker={ticker} result=skip "
-            f"remaining={state['skip_remaining']}",
-            flush=True,
-        )
-    return True
+    with _PROVIDER_HEALTH_LOCK:
+        state = _provider_state(source)
+        if state["skip_remaining"] <= 0:
+            return False
+        state["skip_remaining"] -= 1
+        if LOG_LEVEL == "DEBUG":
+            print(
+                f"[provider-circuit] provider={source} ticker={ticker} result=skip "
+                f"remaining={state['skip_remaining']}",
+                flush=True,
+            )
+        return True
 
 
 def _provider_circuit_open(source):
-    state = _PROVIDER_HEALTH.get(source)
-    return bool(state and state["skip_remaining"] > 0)
+    with _PROVIDER_HEALTH_LOCK:
+        state = _PROVIDER_HEALTH.get(source)
+        return bool(state and state["skip_remaining"] > 0)
 
 
 def _record_provider_result(source, transient_failure=False, healthy_response=False):
     """Theo dõi lỗi terminal liên tiếp của từng provider, không đếm từng attempt retry."""
-    state = _provider_state(source)
-    if healthy_response:
-        recovered = state["awaiting_probe"]
-        state["strikes"] = 0
-        state["skip_remaining"] = 0
-        state["awaiting_probe"] = False
-        if recovered:
+    with _PROVIDER_HEALTH_LOCK:
+        state = _provider_state(source)
+        if healthy_response:
+            recovered = state["awaiting_probe"]
+            state["strikes"] = 0
+            state["skip_remaining"] = 0
+            state["awaiting_probe"] = False
+            if recovered:
+                print(
+                    f"[provider-circuit] provider={source} result=recovered",
+                    flush=True,
+                )
+            return
+
+        if not transient_failure:
+            return
+
+        # Force-probe trong lúc cooldown thất bại không kéo dài cooldown vô hạn.
+        if state["skip_remaining"] > 0:
+            return
+
+        state["strikes"] += 1
+        if state["awaiting_probe"] or state["strikes"] >= PROVIDER_CIRCUIT_BUDGET:
+            state["strikes"] = 0
+            state["skip_remaining"] = PROVIDER_CIRCUIT_COOLDOWN
+            state["awaiting_probe"] = True
             print(
-                f"[provider-circuit] provider={source} result=recovered",
+                f"[provider-circuit] provider={source} result=open "
+                f"cooldown_tickers={PROVIDER_CIRCUIT_COOLDOWN}",
                 flush=True,
             )
-        return
-
-    if not transient_failure:
-        return
-
-    # Force-probe trong lúc cooldown thất bại không kéo dài cooldown vô hạn.
-    if state["skip_remaining"] > 0:
-        return
-
-    state["strikes"] += 1
-    if state["awaiting_probe"] or state["strikes"] >= PROVIDER_CIRCUIT_BUDGET:
-        state["strikes"] = 0
-        state["skip_remaining"] = PROVIDER_CIRCUIT_COOLDOWN
-        state["awaiting_probe"] = True
-        print(
-            f"[provider-circuit] provider={source} result=open "
-            f"cooldown_tickers={PROVIDER_CIRCUIT_COOLDOWN}",
-            flush=True,
-        )
 
 
 def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=False):
@@ -457,8 +469,21 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
     fetch_one() re-probing PRIMARY_SRC after FAILOVER_SRC alone returned no data).
     """
     errors = []
+    http_429_count = 0
+    http_5xx_count = 0
+    retry_after_seconds = 0.0
+
+    def _outcome(status, **kwargs):
+        return FetchOutcome(
+            status,
+            http_429_count=http_429_count,
+            http_5xx_count=http_5xx_count,
+            retry_after_seconds=retry_after_seconds,
+            **kwargs,
+        )
+
     if not bypass_circuit_check and _provider_should_skip(source, ticker):
-        return FetchOutcome("failed", errors=[f"{source}:circuit_open"], transient_failure=True)
+        return _outcome("failed", errors=[f"{source}:circuit_open"], transient_failure=True)
     for attempt in range(1, MAX_RETRY + 1):
         started = time.monotonic()
         try:
@@ -466,8 +491,8 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
             if raw is None or len(raw) == 0:
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                return FetchOutcome("empty", request_attempts=attempt, retry_count=attempt - 1,
-                                    timeout_count=sum("timeout" in item for item in errors))  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
+                return _outcome("empty", request_attempts=attempt, retry_count=attempt - 1,
+                                timeout_count=sum("timeout" in item for item in errors))  # nguồn này xác nhận rỗng -> sang nguồn dự phòng
             df = normalize(raw, ticker, source)
             if df is not None and len(df):
                 retrieved_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -476,56 +501,61 @@ def fetch_single_source(ticker, source, start, end, *, bypass_circuit_check=Fals
                 )
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "success", time.monotonic() - started)
-                return FetchOutcome("success", data=df, lineage=lineage, request_attempts=attempt,
-                                    retry_count=attempt - 1,
-                                    timeout_count=sum("timeout" in item for item in errors))
+                return _outcome("success", data=df, lineage=lineage, request_attempts=attempt,
+                                retry_count=attempt - 1,
+                                timeout_count=sum("timeout" in item for item in errors))
             if _valid_history_schema(raw):
                 # Payload đúng schema nhưng mọi bar bị lọc (volume=0/close rỗng) là
                 # không có phiên giao dịch, không phải lỗi schema và tuyệt đối không ghi DB.
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                return FetchOutcome("empty", request_attempts=attempt, retry_count=attempt - 1,
-                                    timeout_count=sum("timeout" in item for item in errors))
+                return _outcome("empty", request_attempts=attempt, retry_count=attempt - 1,
+                                timeout_count=sum("timeout" in item for item in errors))
             _record_provider_result(source, healthy_response=True)
             errors.append(f"{source}:invalid_schema")
             _request_log(
                 ticker, source, attempt, "failed", time.monotonic() - started,
                 PermanentRequestError("invalid_schema", PROVIDER_ENDPOINT_HINT.get(source, "provider-history"), 0.0),
             )
-            return FetchOutcome("failed", errors=errors, transient_failure=False,
-                                request_attempts=attempt, retry_count=attempt - 1,
-                                timeout_count=sum("timeout" in item for item in errors))
+            return _outcome("failed", errors=errors, transient_failure=False,
+                            request_attempts=attempt, retry_count=attempt - 1,
+                            timeout_count=sum("timeout" in item for item in errors))
         except Exception as e:
             inner = _unwrap_retry_error(e)
             message = str(inner).lower()
             if any(k in message for k in ("dữ liệu trống", "không tìm thấy dữ liệu", "no data", "empty")):
                 _record_provider_result(source, healthy_response=True)
                 _request_log(ticker, source, attempt, "empty", time.monotonic() - started)
-                return FetchOutcome("empty", request_attempts=attempt, retry_count=attempt - 1,
-                                    timeout_count=sum("timeout" in item for item in errors))  # nguồn này xác nhận không có dữ liệu -> sang nguồn dự phòng
+                return _outcome("empty", request_attempts=attempt, retry_count=attempt - 1,
+                                timeout_count=sum("timeout" in item for item in errors))  # nguồn này xác nhận không có dữ liệu -> sang nguồn dự phòng
             error = inner if isinstance(inner, PipelineRequestError) else _legacy_request_error(inner, source)
             errors.append(
                 f"{source}:{error.kind}" + (f":{error.status_code}" if error.status_code is not None else "")
             )
+            if error.status_code == 429:
+                http_429_count += 1
+                retry_after_seconds = max(retry_after_seconds, float(error.retry_after or 0.0))
+            elif error.status_code in {500, 502, 503, 504}:
+                http_5xx_count += 1
             if isinstance(error, TransientRequestError):
                 if attempt >= MAX_RETRY:
                     _record_provider_result(source, transient_failure=True)
                     _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
-                    return FetchOutcome("failed", errors=errors, transient_failure=True,
-                                        request_attempts=attempt, retry_count=attempt - 1,
-                                        timeout_count=sum("timeout" in item for item in errors))
+                    return _outcome("failed", errors=errors, transient_failure=True,
+                                    request_attempts=attempt, retry_count=attempt - 1,
+                                    timeout_count=sum("timeout" in item for item in errors))
                 wait = _retry_delay(attempt, error)
                 _request_log(ticker, source, attempt, "retry", time.monotonic() - started, error, wait)
                 time.sleep(wait)
                 continue
             _record_provider_result(source, healthy_response=True)
             _request_log(ticker, source, attempt, "failed", time.monotonic() - started, error)
-            return FetchOutcome("failed", errors=errors, transient_failure=False,
-                                request_attempts=attempt, retry_count=attempt - 1,
-                                timeout_count=sum("timeout" in item for item in errors))
-    return FetchOutcome("failed", errors=errors, transient_failure=True,
-                        request_attempts=MAX_RETRY, retry_count=max(0, MAX_RETRY - 1),
-                        timeout_count=sum("timeout" in item for item in errors))  # unreachable safety net
+            return _outcome("failed", errors=errors, transient_failure=False,
+                            request_attempts=attempt, retry_count=attempt - 1,
+                            timeout_count=sum("timeout" in item for item in errors))
+    return _outcome("failed", errors=errors, transient_failure=True,
+                    request_attempts=MAX_RETRY, retry_count=max(0, MAX_RETRY - 1),
+                    timeout_count=sum("timeout" in item for item in errors))  # unreachable safety net
 
 
 def fetch_one(ticker, start, end):

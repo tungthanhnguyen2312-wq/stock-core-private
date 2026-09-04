@@ -1,3 +1,6 @@
+import threading
+import time
+
 import pandas as pd
 import pytest
 
@@ -8,6 +11,8 @@ from multi_source_exact_session_resolver import (
     DailyRecoveryRuntimeBudgetExceeded,
     DnseProviderWideQualityDegraded,
     MultiSourceResolverError,
+    _ProviderAwareMemoizingFetch,
+    _ProviderSchedulePolicy,
     _DailyRecoveryRuntimeGuard,
     assert_dnse_quality_acceptable,
     resolve_exact_session_with_autorecovery,
@@ -716,8 +721,7 @@ def test_autorecovery_never_duplicates_a_source_ticker_fetch_when_gap_recovery_a
 
 
 def test_autorecovery_pacing_delay_spent_once_per_genuine_fetch_not_per_call():
-    """The memoizing fetcher owns pacing: every genuine source request spends exactly one delay,
-    even when future recovery composition evolves; no duplicate work can add phantom pacing."""
+    """The memoizing fetcher owns provider pacing without any duplicate-request sleeps."""
     dnse_native_close = 10.0
     exact_tickers = [f"G{i:02d}" for i in range(6)]
     spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in exact_tickers}
@@ -734,10 +738,80 @@ def test_autorecovery_pacing_delay_spent_once_per_genuine_fetch_not_per_call():
         sentinel_cohort=exact_tickers,
     )
     assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
-    # Exactly one real sleep per genuine (ticker, source) fetch: six sentinel tickers x two
-    # sources, with no synthetic expansion pass adding a second pacing budget.
-    assert len(sleeps) == 6 * 2
-    assert all(s == 1.1 for s in sleeps)
+    # One launch interval occurs between consecutive calls from each source: VCI retains its
+    # 1.1s sequential pace while qualified KBS uses its 0.25s policy.  No synthetic expansion
+    # pass or duplicate cache request contributes a further wait.
+    assert len(sleeps) == 2 * (len(exact_tickers) - 1)
+    assert sum(wait > 1.0 for wait in sleeps) == len(exact_tickers) - 1
+    assert sum(0.20 < wait < 0.30 for wait in sleeps) == len(exact_tickers) - 1
+
+
+def test_provider_scheduler_caps_workers_deduplicates_and_returns_input_order():
+    active = 0
+    maximum_active = 0
+    calls = []
+    lock = threading.Lock()
+
+    def fetch(ticker, source, start, end):
+        nonlocal active, maximum_active
+        del source, start, end
+        with lock:
+            active += 1
+            maximum_active = max(maximum_active, active)
+            calls.append(ticker)
+        time.sleep(0.02)
+        with lock:
+            active -= 1
+        return FetchOutcome("empty", errors=[ticker], request_attempts=1)
+
+    scheduler = _ProviderAwareMemoizingFetch(
+        fetch,
+        provider_policies={"KBS": _ProviderSchedulePolicy(2, 0.0, 1.0)},
+        sleep_fn=lambda _seconds: None,
+    )
+    outcomes = scheduler.fetch_many([
+        ("BBB", "KBS", "start", "end"),
+        ("AAA", "KBS", "start", "end"),
+        ("BBB", "KBS", "start", "end"),
+        ("CCC", "KBS", "start", "end"),
+    ])
+
+    assert maximum_active == 2
+    assert sorted(calls) == ["AAA", "BBB", "CCC"]
+    assert [outcome.errors for outcome in outcomes] == [["BBB"], ["AAA"], ["BBB"], ["CCC"]]
+
+
+def test_provider_scheduler_shares_retry_after_before_next_dispatch():
+    clock = [0.0]
+    waits = []
+    call_times = []
+
+    def sleep(seconds):
+        waits.append(seconds)
+        clock[0] += seconds
+
+    def fetch(ticker, source, start, end):
+        del source, start, end
+        call_times.append((ticker, clock[0]))
+        return FetchOutcome(
+            "empty", request_attempts=1,
+            http_429_count=1 if ticker == "AAA" else 0,
+            retry_after_seconds=5.0 if ticker == "AAA" else 0.0,
+        )
+
+    scheduler = _ProviderAwareMemoizingFetch(
+        fetch,
+        provider_policies={"KBS": _ProviderSchedulePolicy(1, 0.0, 1.0)},
+        sleep_fn=sleep,
+        clock=lambda: clock[0],
+    )
+    scheduler.fetch_many([
+        ("AAA", "KBS", "start", "end"),
+        ("BBB", "KBS", "start", "end"),
+    ])
+
+    assert waits == [5.0]
+    assert call_times == [("AAA", 0.0), ("BBB", 5.0)]
 
 
 def test_runtime_guard_aborts_from_small_timed_sample_with_provider_telemetry():
