@@ -11,6 +11,7 @@ import pandas as pd
 import requests
 
 import vn_stock_pipeline as pipeline
+import vnstock_rate_governor
 
 
 def raw_bar(symbol="VNINDEX", date="2026-07-18", volume=100):
@@ -403,6 +404,68 @@ class TransportTests(unittest.TestCase):
         self.assertNotIn("password", rendered)
         self.assertNotIn("account", rendered)
         self.assertNotIn("?", rendered)
+
+
+class RateGovernorWiringTests(unittest.TestCase):
+    """DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1 (2026-09-04): _bounded_send_request_direct is the
+    single real transport chokepoint every VCI/KBS call (and every retry) funnels through -- see
+    vnstock_rate_governor.py's own module docstring for why this is the correct hook point."""
+
+    def setUp(self):
+        self.addCleanup(vnstock_rate_governor.set_active_governor, vnstock_rate_governor.get_active_governor())
+
+    @mock.patch.object(pipeline.requests, "get")
+    def test_no_active_governor_is_byte_identical_to_pre_existing_behavior(self, get):
+        vnstock_rate_governor.set_active_governor(None)
+        get.return_value = FakeResponse(data={"ok": True})
+        result = pipeline._bounded_send_request_direct("https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart", {})
+        self.assertEqual({"ok": True}, result)
+
+    @mock.patch.object(pipeline.requests, "get")
+    def test_active_governor_is_consulted_before_every_request(self, get):
+        governor = vnstock_rate_governor.VnstockRateGovernor(limit=5, hard_ceiling=60)
+        vnstock_rate_governor.set_active_governor(governor)
+        get.return_value = FakeResponse(data={"ok": True})
+        for _ in range(3):
+            pipeline._bounded_send_request_direct("https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart", {})
+        self.assertEqual(3, governor.attempts)
+
+    @mock.patch.object(pipeline.requests, "get")
+    def test_provider_is_correctly_identified_for_diagnostics(self, get):
+        governor = vnstock_rate_governor.VnstockRateGovernor(limit=5, hard_ceiling=60)
+        vnstock_rate_governor.set_active_governor(governor)
+        get.return_value = FakeResponse(data={"ok": True})
+        pipeline._bounded_send_request_direct(pipeline.PROVIDER_ENDPOINT_HINT["VCI"], {})
+        pipeline._bounded_send_request_direct(pipeline.PROVIDER_ENDPOINT_HINT["KBS"], {})
+        pipeline._bounded_send_request_direct("https://something-else.test/path", {})
+        self.assertEqual({"VCI": 1, "KBS": 1, "UNKNOWN": 1}, governor.provider_counts)
+
+    @mock.patch.object(pipeline.requests, "get")
+    def test_acceptance_d_retries_each_consume_a_governor_slot(self, get):
+        """A transient failure followed by a retry is two real outbound requests -- each must
+        independently consult the governor, since vnai's own limiter counts both."""
+        governor = vnstock_rate_governor.VnstockRateGovernor(limit=5, hard_ceiling=60)
+        vnstock_rate_governor.set_active_governor(governor)
+        get.side_effect = [requests.exceptions.ConnectTimeout(), FakeResponse(data={"ok": True})]
+        with self.assertRaises(pipeline.TransientRequestError):
+            pipeline._bounded_send_request_direct("https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart", {})
+        self.assertEqual(1, governor.attempts)
+        result = pipeline._bounded_send_request_direct("https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart", {})
+        self.assertEqual({"ok": True}, result)
+        self.assertEqual(2, governor.attempts)
+
+    @mock.patch.object(pipeline.requests, "get")
+    def test_governor_pacing_is_actually_imposed_when_the_window_fills(self, get):
+        governor = vnstock_rate_governor.VnstockRateGovernor(
+            limit=2, hard_ceiling=60, window_seconds=0.05,
+        )
+        vnstock_rate_governor.set_active_governor(governor)
+        get.return_value = FakeResponse(data={"ok": True})
+        for _ in range(3):
+            pipeline._bounded_send_request_direct("https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart", {})
+        self.assertEqual(3, governor.attempts)
+        self.assertGreaterEqual(governor.waits, 1)
+        self.assertGreater(governor.total_wait_seconds, 0)
 
 
 class DatabaseSafetyTests(unittest.TestCase):

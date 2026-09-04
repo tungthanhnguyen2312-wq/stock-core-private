@@ -65,6 +65,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from field_temporal_contract import stable_id
+from vnstock_rate_governor import VnstockRateGovernor, get_active_governor, set_active_governor
 from multi_source_market_evidence_contract import (
     DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD,
     NATIVE_PRICE_UNIT_SCALE,
@@ -453,10 +454,16 @@ class _DailyRecoveryRuntimeGuard:
 
     def __init__(self, *, request_delay: float, runtime_budget_seconds: float = DAILY_RECOVERY_RUNTIME_BUDGET_SECONDS,
                  clock: Callable[[], float] = time.monotonic,
-                 provider_policies: Mapping[str, _ProviderSchedulePolicy] | None = None):
+                 provider_policies: Mapping[str, _ProviderSchedulePolicy] | None = None,
+                 rate_governor: VnstockRateGovernor | None = None):
         self._clock = clock
         self._started = clock()
         self.request_delay = float(request_delay)
+        # DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1 (2026-09-04): the governor imposes a SHARED,
+        # cross-provider pacing floor no per-provider policy above can see on its own -- two
+        # providers each individually well-paced can still combine to breach vnai's single
+        # library-wide 60-rpm counter. See _projection()'s use of this reference below.
+        self._rate_governor = rate_governor
         self._provider_policies = dict(provider_policies or {
             source: _ProviderSchedulePolicy(1, self.request_delay, self.request_delay)
             for source in RECOVERY_SOURCES
@@ -588,6 +595,14 @@ class _DailyRecoveryRuntimeGuard:
                     self.remaining_by_source[primary] * self._target_session_unusable[primary] / assessed
                 )
                 remaining += estimated_fallback * self._estimated_call_seconds(fallback)
+        if self._rate_governor is not None:
+            # The shared governor's own steady-state pacing (window_seconds / limit per request,
+            # summed across BOTH providers' remaining work) is a hard floor no per-provider
+            # estimate above can violate, precisely because it is the cross-provider constraint
+            # that caused the 2026-09-04 live failure in the first place.
+            total_remaining_requests = sum(self.remaining_by_source.values())
+            governor_floor = self._rate_governor.estimated_minimum_seconds_for(total_remaining_requests)
+            remaining = max(remaining, governor_floor)
         projected = elapsed + pending_pacing + remaining
         return elapsed, remaining, projected
 
@@ -645,6 +660,7 @@ class _DailyRecoveryRuntimeGuard:
             "pacing_seconds_scheduled": round(sum(self._pacing_seconds_scheduled.values()), 6),
             "duplicate_work": {"cache_hits_prevented": self._cache_hits, "network_pair_duplicates": 0},
             "providers": by_provider,
+            "rate_governor": self._rate_governor.diagnostic() if self._rate_governor is not None else None,
         }
 
 
@@ -714,7 +730,7 @@ def _classify_recovery_outcome(
     return STATUS_SOURCE_REJECTED, errors or "PERMANENT_FAILURE", None, []
 
 
-def resolve_multi_source_exact_session_snapshot(
+def _resolve_multi_source_exact_session_snapshot_core(
     *,
     dnse_snapshot: Mapping[str, Any],
     target_session: str,
@@ -729,8 +745,15 @@ def resolve_multi_source_exact_session_snapshot(
     recovery_runtime_guard: _DailyRecoveryRuntimeGuard | None = None,
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
+    rate_governor: VnstockRateGovernor,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Run Passes 2-4 over an already-materialized DNSE snapshot (Pass 1), plus an optional
+    """Implementation for ``resolve_multi_source_exact_session_snapshot`` (see that thin public
+    wrapper for the governor install/teardown contract -- this private function always receives
+    an already-installed, already-active ``rate_governor`` and only reads its diagnostic; it
+    never installs or tears one down itself, so it can never leak or clobber a caller's own
+    governor lifecycle regardless of whether this call returns normally or raises).
+
+    Runs Passes 2-4 over an already-materialized DNSE snapshot (Pass 1), plus an optional
     Pass 5 DNSE quality sentinel.
 
     Returns ``(evidence_artifact, projected_snapshot)``. Never mutates ``dnse_snapshot``.
@@ -1131,6 +1154,7 @@ def resolve_multi_source_exact_session_snapshot(
             for ticker in all_tickers
         },
     }
+    evidence["vnstock_rate_governor"] = rate_governor.diagnostic()
     evidence["evidence_sha256"] = stable_id(evidence)
     evidence["evidence_identity"] = f"multi_source_exact_session_market_evidence:{evidence['evidence_sha256']}"
 
@@ -1139,6 +1163,58 @@ def resolve_multi_source_exact_session_snapshot(
         per_ticker_observations=per_ticker_observations, requested_at=requested_at,
     )
     return evidence, projected
+
+
+def resolve_multi_source_exact_session_snapshot(
+    *,
+    dnse_snapshot: Mapping[str, Any],
+    target_session: str,
+    requested_at: str,
+    recovery_window_days: int = DEFAULT_RECOVERY_WINDOW_CALENDAR_DAYS,
+    fetch_single_source: Callable[..., Any] | None = None,
+    fetch_many: Callable[[Sequence[tuple[str, str, str, str]]], list[Any]] | None = None,
+    request_delay: float | None = None,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    max_recovery_candidates: int | None = None,
+    sentinel_cohort: Sequence[str] | None = None,
+    recovery_runtime_guard: _DailyRecoveryRuntimeGuard | None = None,
+    recovery_eligibility_projection: Mapping[str, Any] | None = None,
+    residual_yield_sentinel_tickers: Sequence[str] | None = None,
+    rate_governor: VnstockRateGovernor | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Public entrypoint: installs/owns the shared Vnstock rate governor, then delegates to
+    ``_resolve_multi_source_exact_session_snapshot_core`` for Passes 2-5. See that function for
+    the full behavioral contract of every other parameter; this wrapper only owns the governor's
+    lifecycle (DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1, 2026-09-04).
+
+    ``rate_governor``: every VCI/KBS request Passes 3-5 make shares this one process-wide budget
+    (see vnstock_rate_governor.py), installed as the module-global active governor for the
+    duration of this call. When omitted (the default), a fresh governor is created here and torn
+    down (restoring whatever was active before) once this call returns or raises -- so a
+    standalone caller (e.g. tools/run_multi_source_exact_session_resolver.py, or a test) is
+    automatically protected with its own clean budget, never inheriting or leaking state across
+    calls. When given explicitly (resolve_exact_session_with_autorecovery's own case), this
+    function installs and uses it but leaves it active for the caller to tear down -- so a
+    wrapper that also runs its own further VCI/KBS phase (Pass 6, degraded-provider market-wide
+    recovery) shares the identical budget, never a fresh quota.
+    """
+    owns_governor = rate_governor is None
+    governor = rate_governor or VnstockRateGovernor()
+    previous_governor = set_active_governor(governor)
+    try:
+        return _resolve_multi_source_exact_session_snapshot_core(
+            dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
+            recovery_window_days=recovery_window_days, fetch_single_source=fetch_single_source,
+            fetch_many=fetch_many, request_delay=request_delay, sleep_fn=sleep_fn,
+            max_recovery_candidates=max_recovery_candidates, sentinel_cohort=sentinel_cohort,
+            recovery_runtime_guard=recovery_runtime_guard,
+            recovery_eligibility_projection=recovery_eligibility_projection,
+            residual_yield_sentinel_tickers=residual_yield_sentinel_tickers,
+            rate_governor=governor,
+        )
+    finally:
+        if owns_governor:
+            set_active_governor(previous_governor)
 
 
 def _project_to_p3f9_shape(
@@ -1563,7 +1639,7 @@ def _marketwide_degraded_primary_first_recovery(
     }
 
 
-def resolve_exact_session_with_autorecovery(
+def _resolve_exact_session_with_autorecovery_core(
     *,
     dnse_snapshot: Mapping[str, Any],
     target_session: str,
@@ -1576,8 +1652,15 @@ def resolve_exact_session_with_autorecovery(
     max_recovery_candidates: int | None = None,
     recovery_eligibility_projection: Mapping[str, Any] | None = None,
     residual_yield_sentinel_tickers: Sequence[str] | None = None,
+    rate_governor: VnstockRateGovernor,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Product-critical Daily entrypoint (see daily_session_level2_package.
+    """Implementation for ``resolve_exact_session_with_autorecovery`` (see that thin public
+    wrapper for the shared-governor install/teardown contract -- this private function always
+    receives an already-installed, already-active ``rate_governor`` shared across BOTH the
+    inner resolve_multi_source_exact_session_snapshot call and Pass 6 (degraded-provider
+    market-wide recovery) below, so a broadly-degraded day never gets a second, fresh quota).
+
+    Product-critical Daily entrypoint (see daily_session_level2_package.
     ensure_exact_session_snapshot): Passes 1-5 exactly as resolve_multi_source_exact_session_
     snapshot, automatically followed by Pass 6 DEGRADED_PROVIDER_RECOVERY_MODE in the SAME
     invocation whenever Pass 5's sentinel finds DNSE_BROAD_STALE_OR_INCOMPLETE_EOD -- no operator
@@ -1616,7 +1699,9 @@ def resolve_exact_session_with_autorecovery(
     real_fetch = fetch_single_source or _default_fetch_single_source()
     delay = request_delay if request_delay is not None else _default_request_delay()
     provider_policies = _recovery_provider_policies(delay)
-    runtime_guard = _DailyRecoveryRuntimeGuard(request_delay=delay, provider_policies=provider_policies)
+    runtime_guard = _DailyRecoveryRuntimeGuard(
+        request_delay=delay, provider_policies=provider_policies, rate_governor=rate_governor,
+    )
     memoized_fetcher = _ProviderAwareMemoizingFetch(
         real_fetch, provider_policies=provider_policies, sleep_fn=sleep_fn, runtime_guard=runtime_guard,
     )
@@ -1629,6 +1714,7 @@ def resolve_exact_session_with_autorecovery(
         sentinel_cohort=sentinel_cohort, recovery_runtime_guard=runtime_guard,
         recovery_eligibility_projection=recovery_eligibility_projection,
         residual_yield_sentinel_tickers=residual_yield_sentinel_tickers,
+        rate_governor=rate_governor,
     )
     sentinel = evidence.get("dnse_quality_sentinel")
     health_state = sentinel["health"]["state"] if sentinel else None
@@ -1700,6 +1786,9 @@ def resolve_exact_session_with_autorecovery(
 
     evidence["degraded_provider_recovery"] = recovery_info
     evidence["recovery_throughput"] = runtime_guard.diagnostic()
+    # Refresh (Pass 6 above may have spent further shared-governor slots since the inner
+    # resolve_multi_source_exact_session_snapshot call last stamped this field).
+    evidence["vnstock_rate_governor"] = rate_governor.diagnostic()
     evidence["evidence_sha256"] = stable_id({k: v for k, v in evidence.items() if k != "evidence_sha256" and k != "evidence_identity"})
     evidence["evidence_identity"] = f"multi_source_exact_session_market_evidence:{evidence['evidence_sha256']}"
     projected["degraded_provider_recovery"] = dict(recovery_info)
@@ -1709,3 +1798,47 @@ def resolve_exact_session_with_autorecovery(
     projected["snapshot_sha256"] = stable_id(projected)
     projected["snapshot_identity"] = f"p3f9_exact_session_snapshot:{projected['snapshot_sha256']}"
     return evidence, projected
+
+
+def resolve_exact_session_with_autorecovery(
+    *,
+    dnse_snapshot: Mapping[str, Any],
+    target_session: str,
+    requested_at: str,
+    sentinel_cohort: Sequence[str],
+    recovery_window_days: int = DEFAULT_RECOVERY_WINDOW_CALENDAR_DAYS,
+    fetch_single_source: Callable[..., Any] | None = None,
+    request_delay: float | None = None,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    max_recovery_candidates: int | None = None,
+    recovery_eligibility_projection: Mapping[str, Any] | None = None,
+    residual_yield_sentinel_tickers: Sequence[str] | None = None,
+    rate_governor: VnstockRateGovernor | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Public entrypoint: installs/owns the ONE shared Vnstock rate governor for this whole
+    invocation (Passes 3-6 alike, healthy or degraded day), then delegates to
+    ``_resolve_exact_session_with_autorecovery_core``. See that function for the full
+    behavioral contract of every other parameter (DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1,
+    2026-09-04).
+
+    ``rate_governor``: when omitted (the default -- the real product path via
+    daily_session_level2_package.ensure_exact_session_snapshot), a fresh governor is created
+    and torn down here once this call returns or raises, restoring whatever was active before.
+    A caller may inject its own (real-clock or fake-clock, for deterministic tests) instead.
+    """
+    owns_governor = rate_governor is None
+    governor = rate_governor or VnstockRateGovernor()
+    previous_governor = set_active_governor(governor)
+    try:
+        return _resolve_exact_session_with_autorecovery_core(
+            dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
+            sentinel_cohort=sentinel_cohort, recovery_window_days=recovery_window_days,
+            fetch_single_source=fetch_single_source, request_delay=request_delay, sleep_fn=sleep_fn,
+            max_recovery_candidates=max_recovery_candidates,
+            recovery_eligibility_projection=recovery_eligibility_projection,
+            residual_yield_sentinel_tickers=residual_yield_sentinel_tickers,
+            rate_governor=governor,
+        )
+    finally:
+        if owns_governor:
+            set_active_governor(previous_governor)

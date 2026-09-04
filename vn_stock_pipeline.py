@@ -16,6 +16,7 @@ import requests
 from runtime_paths import runtime_root
 from market_data_lineage import build_ohlcv_lineage_records, init_ohlcv_lineage_schema, upsert_ohlcv_lineage
 from vn_time import vn_now, vn_today
+import vnstock_rate_governor
 
 # ==========================================
 # CẤU HÌNH HỆ THỐNG
@@ -157,12 +158,27 @@ def _retry_after_seconds(response):
             return None
 
 
+def _provider_for_endpoint(endpoint):
+    for provider, hint in PROVIDER_ENDPOINT_HINT.items():
+        if endpoint.startswith(_safe_endpoint(hint)):
+            return provider
+    return "UNKNOWN"
+
+
 def _bounded_send_request_direct(
     url, headers, method="GET", params=None, payload=None, timeout=30, proxies=None
 ):
     """Transport thay thế process-local cho vnstock, với timeout connect/read riêng."""
     del timeout  # Không dùng timeout đơn của package; dùng cấu hình tập trung ở trên.
     endpoint = _safe_endpoint(url)
+    # DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1: every VCI/KBS request -- every pass, every
+    # sentinel, every retry -- funnels through this one function, so this is the single place
+    # a shared, process-wide rate governor can guarantee the vnai 60-requests/minute hard
+    # ceiling is never reached. A caller that never installed a governor (most tests, ad-hoc
+    # scripts) sees byte-identical pre-existing behavior -- see vnstock_rate_governor.py.
+    governor = vnstock_rate_governor.get_active_governor()
+    if governor is not None:
+        governor.acquire(provider=_provider_for_endpoint(endpoint))
     started = time.monotonic()
     timeout_pair = (CONNECT_TIMEOUT, READ_TIMEOUT)
     try:

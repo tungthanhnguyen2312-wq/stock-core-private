@@ -25,6 +25,7 @@ from multi_source_exact_session_resolver import (
     select_sentinel_cohort,
 )
 from vn_stock_pipeline import FetchOutcome
+from vnstock_rate_governor import VnstockRateGovernor, get_active_governor
 
 TARGET = "2026-09-03"
 REQUESTED_AT = "2026-09-03T20:00:00+07:00"
@@ -1213,3 +1214,138 @@ def test_sentinel_members_never_double_fetched_by_expansion_round():
         residual_yield_sentinel_tickers=sentinel_tickers,
     )
     assert len(calls) == len(set(calls))  # every (ticker, source) pair appears at most once
+
+
+# ---- DAILY_GLOBAL_VNSTOCK_RATE_GOVERNOR_V1 (2026-09-04) ------------------------------------
+# Retained-failure replay: reproduce today's request topology deterministically with a fake
+# monotonic clock and confirm one shared budget governs every phase.
+
+class _FakeGovernorClock:
+    def __init__(self, start: float = 0.0):
+        self.t = start
+
+    def __call__(self) -> float:
+        return self.t
+
+    def advance(self, seconds: float) -> None:
+        self.t += seconds
+
+
+def _governed_fetch(outcome_for):
+    """A fake fetch_single_source that consults whatever governor is currently active, exactly
+    as the real vn_stock_pipeline._bounded_send_request_direct chokepoint does -- lets these
+    resolver-level tests exercise the real cross-module integration seam (get_active_governor)
+    without needing a real HTTP/vnstock layer underneath."""
+    def fetch(ticker, source, start, end):
+        active = get_active_governor()
+        if active is not None:
+            active.acquire(provider=source)
+        return outcome_for(ticker, source)
+    return fetch
+
+
+def test_acceptance_b_dnse_health_sentinel_and_residual_gap_sentinel_share_one_budget():
+    """The pre-existing DNSE quality/corroboration sentinel (Pass 5) and this milestone's own
+    residual-gap incremental-yield sentinel (Pass 3 gate) must draw from the SAME shared
+    governor, not each get a fresh quota -- this is precisely the 2026-09-04 live failure's
+    root cause (independent per-mechanism pacing that combined to exceed vnai's single
+    process-wide counter)."""
+    # 5 DNSE-exact tickers (feed the Pass 5 DNSE-health sentinel via DNSE_EXACT_SESSION_SAMPLE)
+    # + 6 DNSE-missing tickers (feed the residual-gap sentinel).
+    spec = {}
+    for i in range(5):
+        spec[f"E{i:03d}"] = ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, float(i))])
+    for i in range(6):
+        spec[f"M{i:03d}"] = ("SESSION_MISSING", [_dnse_obs("2026-08-28", float(i))])
+    dnse = make_dnse_snapshot(spec)
+
+    clock = _FakeGovernorClock()
+    governor = VnstockRateGovernor(limit=4, hard_ceiling=60, clock=clock, sleep_fn=lambda s: clock.advance(s))
+
+    def outcome_for(ticker, source):
+        return FetchOutcome("empty")  # clean miss everywhere -- isolates budget-sharing, not yield
+
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=_governed_fetch(outcome_for), request_delay=0.0, sleep_fn=lambda s: None,
+        sentinel_cohort=[f"E{i:03d}" for i in range(5)],
+        residual_yield_sentinel_tickers=[f"M{i:03d}" for i in range(6)],
+        rate_governor=governor,
+    )
+    # Pass 3 gate: 6 residual-gap-sentinel KBS calls, all clean SESSION_MISSING -> zero yield,
+    # never expands, never reaches VCI. Pass 5: 5 DNSE-exact tickers x 2 sources (VCI+KBS) = 10.
+    # Total genuine requests = 6 + 10 = 16, ALL through the one governor.
+    assert governor.attempts == 16
+    assert governor.max_window_utilization <= governor.limit
+    assert governor.waits > 0  # 16 requests against a limit of 4 must have imposed real pacing
+    assert evidence["vnstock_rate_governor"]["attempts"] == 16
+    assert evidence["residual_gap_sentinel"]["decision"] == ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN
+
+
+def test_acceptance_g_runtime_forecast_stops_impossible_broad_expansion_before_it_starts():
+    """When the shared governor's own steady-state pacing alone would blow the runtime budget,
+    the existing DailyRecoveryRuntimeBudgetExceeded guard must fire BEFORE a long fan-out is
+    launched -- not merely abort partway through hundreds of requests."""
+    # A large recovery-eligible population (400 gaps) with a positive-yield sentinel decision
+    # (so the code WOULD otherwise expand to all 400), a tiny runtime budget, and a governor
+    # limit low enough that 400 requests could never fit in budget.
+    spec = {"E000": ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, 1.0)])}
+    for i in range(400):
+        spec[f"M{i:03d}"] = ("SESSION_MISSING", [_dnse_obs("2026-08-28", float(i))])
+    dnse = make_dnse_snapshot(spec)
+
+    clock = _FakeGovernorClock()
+    governor = VnstockRateGovernor(limit=10, hard_ceiling=60, clock=clock, sleep_fn=lambda s: clock.advance(s))
+    runtime_guard = _DailyRecoveryRuntimeGuard(
+        request_delay=0.0, runtime_budget_seconds=30.0, clock=clock, rate_governor=governor,
+    )
+    calls = []
+
+    def outcome_for(ticker, source):
+        calls.append((ticker, source))
+        if ticker == "M000":
+            return FetchOutcome("success", data=make_df([(TARGET, 1000.0)]))  # sentinel: positive yield
+        return FetchOutcome("empty")
+
+    with pytest.raises(DailyRecoveryRuntimeBudgetExceeded) as raised:
+        resolve_multi_source_exact_session_snapshot(
+            dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+            fetch_single_source=_governed_fetch(outcome_for), request_delay=0.0, sleep_fn=lambda s: None,
+            residual_yield_sentinel_tickers=["M000", "M001", "M002", "M003"],
+            recovery_runtime_guard=runtime_guard, rate_governor=governor,
+        )
+    # 400 remaining requests at this governor's pacing (60/10 = 6s/request) alone project to
+    # 2400s, far over the 30s budget -- the guard must catch this before hundreds of requests.
+    assert raised.value.diagnostic["projected_total_seconds"] > runtime_guard.runtime_budget_seconds
+    assert len(calls) < 50  # aborted long before anything resembling a full 400-ticker fan-out
+
+
+def test_acceptance_h_activity_aware_semantics_unchanged_under_the_new_governor():
+    """Regression: every DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1 behavior (ineligible
+    exclusion, clean-KBS-miss never reaching VCI, zero-yield sentinel stopping fan-out,
+    SESSION_MISSING never becoming ZERO_TRADE) must hold identically now that a real governor
+    is active for the whole call."""
+    dnse = make_dnse_snapshot({
+        "AAA": ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, 1.0)]),
+        "DELISTED1": ("PROVIDER_REJECTED", []),
+        "GENUINE_GAP": ("SESSION_MISSING", [_dnse_obs("2026-08-28", 2.0)]),
+    })
+    clock = _FakeGovernorClock()
+    governor = VnstockRateGovernor(limit=5, hard_ceiling=60, clock=clock, sleep_fn=lambda s: clock.advance(s))
+
+    def outcome_for(ticker, source):
+        assert ticker != "DELISTED1"  # never spend a request on an ineligible ticker
+        return FetchOutcome("empty")  # clean miss for GENUINE_GAP on every source
+
+    projection = _eligibility_projection(ineligible={"DELISTED1": "RECOVERY_INELIGIBLE_INACTIVE_OR_DELISTED"})
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=_governed_fetch(outcome_for), request_delay=0.0, sleep_fn=lambda s: None,
+        recovery_eligibility_projection=projection, rate_governor=governor,
+    )
+    assert evidence["dnse_missing_excluded_by_recovery_ineligibility_count"] == 1
+    assert projected["records"]["DELISTED1"]["disposition"] == "PROVIDER_REJECTED"  # never relabeled
+    assert projected["records"]["GENUINE_GAP"]["disposition"] == "SESSION_MISSING"  # never ZERO_TRADE
+    vci_obs = next(o for o in evidence["records"]["GENUINE_GAP"]["observations"] if o["source"] == "VCI")
+    assert vci_obs["status"] == "NOT_APPLICABLE"  # clean KBS miss never reached VCI
+    assert governor.attempts == 1  # exactly one genuine request: GENUINE_GAP x KBS
