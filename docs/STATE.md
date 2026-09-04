@@ -1,5 +1,71 @@
 # Stock Lookup — Operational State
 
+**Daily 2026-09-04 terminal corrective and canonical operational acceptance (2026-09-04/05):**
+`DAILY_20260904_TERMINAL_CORRECTIVE_AND_ROADMAP_RESUME_V1 = ACCEPTED`. Closes the 2026-09-04
+incident this file's own preceding entries (`KBS_BOUNDED_CONCURRENCY_AND_PROVIDER_PACING_V1`,
+`DAILY_MARKET_SOURCE_ROUTING_AND_THROUGHPUT_V1`, and the same-day activity-aware/rate-governor
+correctives below) had left `BLOCKED`. An owner-directed incident report described "the latest
+canonical Daily invocation" as a single 24,246.5-second process ending in exit 1 with an apparent
+KBS fan-out defect. Reconciling every number against real retained evidence
+(`operations-review/p3f9b-market-wide-exact-session-scaleout-20260904/`,
+`operations-review/current-universe-status-and-session-coverage-resolution-v1-20260904/`)
+found no fan-out or runtime defect: no canonical `.\stocklookup.ps1 daily` invocation had actually
+run all day (no `canonical-daily-operation-v1/2026-09-04/` directory, no `2026-09-04` entry in
+`config/daily_research_session_input_registry.json`) -- individual stage tools had been run
+standalone while validating the day's two earlier correctives (activity-aware recovery `a6c8b9a`,
+Vnstock rate governor `2826660`), and `24,246.5s` is real wall-clock time spanning that whole
+evening (15:31:51 first same-day snapshot to ~22:15:58 final exception), not one process. The
+1506 KBS requests were correct, not a defect: DNSE genuinely returned 0 exact records for its own
+Pass-1 attempt that evening, the activity-aware residual-yield sentinel correctly sampled 16
+tickers, found real recoverable value (`POSITIVE_YIELD_EXPAND`, 7/16, 0 provider errors -- a
+different, healthier population than the specific hard 548-ticker residual cohort the same-day
+investigation had separately sampled at 0/55), and correctly expanded; KBS recovered 957/1506 in
+2064.3s (~34 minutes, under the existing 45-minute budget), landing at 958 exact -- matching the
+day's three independent manual DNSE observations exactly, via a different path. The Vnstock rate
+governor held its 45-effective/60-hard ceiling throughout, never breached.
+
+**Real defect found and fixed (commit `c7982bd`):**
+`market_wide_current_technical_coverage_scaleout.recovery_candidates()` selected which tickers
+needed an extended-lookback technical-history backfill by reading the **prior session's own
+baseline** `technical_features.status`, never the current session's own resolved snapshot. Safe
+on an ordinary night (DNSE's own retained series is already deep for nearly every ticker); wrong
+on 2026-09-04, where ~957 tickers got their target-session bar via KBS/VCI gap-recovery instead
+-- which projects only a single-bar observation
+(`multi_source_exact_session_resolver._project_to_p3f9_shape`, by design) -- so none of them had
+ever been baseline-`MISSING` and only 7 of the real ~951-958 affected tickers were selected,
+correctly tripping `market_wide_current_descriptive_research`'s existing
+`RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP` safety gate. Fix: `recovery_candidates()` now
+falls back to computing `market_features()` directly from the current session's own snapshot
+observations whenever the baseline status was not already `MISSING`, routing the full affected
+population into the existing, unmodified `RECOVERED_COMPLETE_TECHNICAL_HISTORY` /
+`INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK` contract. No change to the KBS/VCI resolver, the
+rate governor, or the eligibility/sentinel machinery. 138 adjacent tests plus the 3 directly-touched
+files pass; `py_compile`, `git diff --check`, `tools/stocklookup_roadmap.py --check` (drift `PASS`)
+all clean. Full findings: `operations-review/daily-20260904-terminal-corrective-and-roadmap-resume-v1/incident_reconciliation_and_root_cause_report.md`.
+
+**Live acceptance.** The first-ever canonical `.\stocklookup.ps1 daily` invocation for 2026-09-04
+(after the fix) completed end to end: `DAILY_OPERATION_STATE=LOCAL_COMPLETE`,
+`DAILY_PRODUCER=COMPLETED`, zero errors. Current-Research coverage: 958/1506 = 63.6% (explicit
+partial coverage, `quality_state=PARTIAL_COVERAGE_EXPLICIT` -- not a fabricated full-coverage
+claim). Technical-history recovery reached 952/958 (99.4%) of resolved tickers; the remaining 6
+are genuine thin/newly-covered names for which even the extended DNSE lookback cannot find a
+20-session window -- a legitimate data limitation, not a pipeline defect. No RAW_AS_TRADED, PIT,
+liquidity, sizing, execution, or provider-authority promotion occurred; Invariants 1-3
+(Section 3) are unchanged.
+
+**Operational side effect / prompt-contract deviation (recorded, not reverted).** Running the
+owner's own pre-existing `.\stocklookup.ps1 daily` command triggered its existing, long-standing
+built-in publish step (the same behavior `ONE_COMMAND_DAILY_RESEARCH_TO_AI_HANDOFF_V1` and
+`DASHBOARD_CANONICAL_DAILY_COHERENCE_AND_VI_LOCALIZATION_V1` already established as Daily's normal
+contract), pushing two commits already reconciled and verified read-only as containing only the
+normal generated Daily/handoff/dashboard artifacts (no source, config, or workflow changes):
+`stocklookup-ai-handoffs` commit `7da247be68131693f42028a316a899910928d26a` (`origin/main`) and
+`market-dashboard` commit `3329287833785e39734d7b6bd9a1e58729ec03e8` (`origin/main`). This
+executor's own session-scoped instruction separately said no publish was authorized; the two are
+reconciled as this being Daily's own existing, owner-approved contract, not a new push capability
+this session exercised -- neither repository was reverted, amended, or pushed to further, and no
+other push occurred (`stock-core-private` itself stayed local-only throughout, unpushed).
+
 **KBS bounded concurrency and provider pacing V1 (2026-09-04):** `KBS_BOUNDED_CONCURRENCY_AND_PROVIDER_PACING_V1 = COMPLETE_LOCAL / DAILY_2026_09_04_BLOCKED_SECONDARY_FALLBACK_THROUGHPUT`. This was a bounded, non-writing 30-name-per-cell KBS qualification against the 2026-09-04 exact-session window -- no Daily, production DB write, Dashboard/Consumer change, provider/authority promotion, or new source. The 1-worker/1.10-second baseline returned 20 exact / 10 target-session-missing / 0 failed in 64.59s (0.464 requests/s; p50/p90/p95 0.736/1.578/3.886s; 30 attempts; no retries, timeouts, 429s, or 5xx). A lower 1-worker/0.25-second cell returned 19/11/0 in 27.21s (1.102 requests/s; 0.563/1.635/3.707s; same zero error telemetry). The independently selected 2-worker/0.25-second cell returned 13/17/0 in 12.11s (2.478 requests/s; 0.592/0.856/1.715s; 30 attempts and zero retries/timeouts/429s/5xx). A 4-worker/0.25-second cell returned 0 exact / 0 missing / 30 immediate failures (7.27s; zero HTTP 429/5xx), so four workers are explicitly rejected rather than treated as rate-limit clearance. The resolver therefore has a hard KBS cap of two workers with 0.25-second globally paced starts, shared Retry-After-or-one-second 429 cooldown, locked provider circuit health, deterministic input-order evidence assembly, and one-run `(ticker, source)` memoization; VCI stays sequential at its existing request pacing and remains KBS fallback only. Request-local timeout/retry/circuit behavior and the 45-minute fail-closed runtime guard remain authoritative. KBS-primary alone projects 1,683 calls at 11.32 minutes, but the safe cells observed 38/90 KBS target-session misses. Even the optimistic retained VCI p50-plus-1.1-second sequential cadence applied to that observed fallback proportion adds 20.5 minutes, yielding a 31.8-minute lower-bound full topology forecast. The <=25-minute end-to-end target is therefore not demonstrated: Daily remains blocked. The next architectural option is separately qualifying FHSC for exact completed-session Current Research semantics; no additional vnstock micro-optimization is licensed.
 
 **Daily market source routing and throughput V1 (2026-09-04):** `DAILY_MARKET_SOURCE_ROUTING_AND_THROUGHPUT_V1 = COMPLETE_LOCAL / DAILY_2026_09_04_BLOCKED_RUNTIME_BUDGET`. The retained `p3f9b-market-wide-exact-session-scaleout-20260904/dnse_only_exact_session_snapshot.json` reports 0/1,683 DNSE exact bars, so this was a bounded non-writing source-routing investigation only -- no Daily, production DB write, provider/authority promotion, or new provider. Contract inventory confirms DNSE is the unchanged Pass-1 source; VCI/KBS are the only existing qualified exact-session Current Research secondary paths (`vn_stock_pipeline.fetch_single_source`); and FHSC is ineligible for this use: its daily history is retained `SHADOW_REFERENCE_PROVIDER` evidence with published price unit, adjustment, and finalization unresolved, while its realtime payload explicitly has no completed-session qualifier. A deterministic 30-symbol, sequentially paced 2026-09-04 probe against the same failed-universe snapshot found equal target-session coverage (VCI 27/30; KBS 27/30; 3 missing each; zero final failures/429s): VCI made 32 provider attempts with 2 retries/timeouts, p50/p90/p95 0.635/3.281/14.713s and 95.86s wall including 31.9s applied pacing; KBS made 30 attempts with 0 retries/timeouts, p50/p90/p95 0.634/1.712/3.937s and 65.10s wall including the same pacing. No 2/4-worker probe was authorized by that sequential evidence, so provider concurrency remains disabled. The resolver now keeps VCI+KBS only for the small DNSE-health sentinel, routes normal DNSE-gap and degraded market-wide recovery KBS-first, and calls VCI only for KBS missing/failed/unusable cases; source provenance/conflict/fail-closed behavior, DNSE quarantine, pair memoization, Pass-1 reuse, RAW_AS_TRADED/PIT boundaries, and the 0.20 gate remain unchanged. This removes VCI's unstable tail from the normal path but does **not** make the required run safe: at KBS p50 plus the existing 1.1-second pacing, 1,683 primary calls project 2,919.7s / 48.7m before any fallback; the sample's 10% KBS target-session-missing rate would add an estimated 4.9m at VCI p50, while KBS p95 alone projects 141.3m. The existing 45-minute sequential runtime guard correctly aborts once its five-request estimator confirms that forecast. Daily therefore remains blocked until an already-qualified, safely faster acquisition/pacing contract (or separately evidenced provider concurrency) exists; no claim of rerun readiness is made.
