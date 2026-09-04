@@ -108,11 +108,18 @@ WHEN_DNSE_HEALTHY_POLICY = (
     "the cheap path and remains the default for a healthy provider day."
 )
 WHEN_DNSE_DEGRADED_POLICY = (
-    "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD: resolve_multi_source_exact_session_snapshot raises "
-    "DnseProviderWideQualityDegraded instead of resolving remaining DNSE-exact tickers from "
-    "DNSE's own unverified same-date bars. Full-universe VCI recovery is acceptable as a bounded "
-    "foreground Daily operation once an operator explicitly re-runs with an expanded "
-    "sentinel_cohort (or the corresponding scope) -- never automatically inline in the same call."
+    "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD: the bare resolve_multi_source_exact_session_snapshot "
+    "call (this function's own low-level contract, unchanged -- still what the standalone "
+    "tools/run_multi_source_exact_session_resolver.py diagnostic uses) never resolves remaining "
+    "DNSE-exact tickers from DNSE's own unverified same-date bars by itself; a caller wanting "
+    "fail-closed-on-degraded semantics still calls assert_dnse_quality_acceptable(evidence) "
+    "explicitly. The product-critical Daily entrypoint "
+    "(daily_session_level2_package.ensure_exact_session_snapshot) instead calls "
+    "resolve_exact_session_with_autorecovery, which automatically enters "
+    "DEGRADED_PROVIDER_RECOVERY_MODE in the SAME foreground invocation -- no operator flag, no "
+    "second command -- expanding VCI/KBS verification to every DNSE-exact ticker (not just the "
+    "small sentinel sample) before the caller's own MIN_EXACT_SESSION_COVERAGE_RATIO gate makes "
+    "the final accept/reject decision over the fully-resolved snapshot."
 )
 
 
@@ -685,3 +692,161 @@ def _project_to_p3f9_shape(
     projected["snapshot_sha256"] = stable_id(projected)
     projected["snapshot_identity"] = f"p3f9_exact_session_snapshot:{projected['snapshot_sha256']}"
     return projected
+
+
+# ---------------------------------------------------------------------------
+# DEGRADED_PROVIDER_RECOVERY_MODE -- product-critical Daily auto-recovery (see
+# WHEN_DNSE_DEGRADED_POLICY above). Corrective fix for the P0 defect where a broadly
+# degraded DNSE day required an operator to explicitly re-run with an expanded scope:
+# the owner's normal `.\stocklookup.ps1 daily` / `--session` command must handle this
+# internally, in the same foreground invocation, with no second command.
+# ---------------------------------------------------------------------------
+DEGRADED_RECOVERY_NOT_TRIGGERED = "NOT_TRIGGERED"
+DEGRADED_RECOVERY_COMPLETED = "COMPLETED"
+
+
+def _memoizing_fetch(
+    fetch_single_source: Callable[..., Any], *, delay: float, sleep_fn: Callable[[float], None],
+) -> Callable[..., Any]:
+    """Wrap ``fetch_single_source`` so a (ticker, source) pair already fetched THIS RUN is never
+    requested twice, and so the pacing delay is only ever spent on a genuine network call.
+
+    ``resolve_exact_session_with_autorecovery`` may call resolve_multi_source_exact_session_
+    snapshot a second time over an expanded, overlapping candidate set (see its own docstring).
+    Passing this shared cache as both calls' fetch_single_source is what makes "Do NOT re-query a
+    source/ticker observation already retained for this run" (a hard milestone requirement, not
+    an optimization) hold across passes/calls rather than just within one. Both calls are given
+    sleep_fn=lambda s: None (their own internal pacing becomes a no-op) so the real REQUEST_DELAY
+    is spent exactly once per genuine fetch, here, rather than once per call that merely asks for
+    an already-cached pair -- otherwise a fully-cached second pass would still burn the entire
+    original pacing budget (thousands of seconds on a real ~1683-candidate universe) for zero new
+    network activity.
+    """
+    cache: dict[tuple[str, str], Any] = {}
+
+    def wrapped(ticker: str, source: str, start: str, end: str) -> Any:
+        key = (ticker, source)
+        if key in cache:
+            return cache[key]
+        result = fetch_single_source(ticker, source, start, end)
+        cache[key] = result
+        sleep_fn(delay)
+        return result
+
+    return wrapped
+
+
+def _no_sleep(_seconds: float) -> None:
+    return None
+
+
+def resolve_exact_session_with_autorecovery(
+    *,
+    dnse_snapshot: Mapping[str, Any],
+    target_session: str,
+    requested_at: str,
+    sentinel_cohort: Sequence[str],
+    recovery_window_days: int = DEFAULT_RECOVERY_WINDOW_CALENDAR_DAYS,
+    fetch_single_source: Callable[..., Any] | None = None,
+    request_delay: float | None = None,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    max_recovery_candidates: int | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Product-critical Daily entrypoint (see daily_session_level2_package.
+    ensure_exact_session_snapshot): Passes 1-5 exactly as resolve_multi_source_exact_session_
+    snapshot, automatically followed by Pass 6 DEGRADED_PROVIDER_RECOVERY_MODE in the SAME
+    invocation whenever Pass 5's sentinel finds DNSE_BROAD_STALE_OR_INCOMPLETE_EOD -- no operator
+    flag, no second command.
+
+    HEALTHY DAY (or no sentinel_cohort correlation to broad degradation): behaves exactly like a
+    single resolve_multi_source_exact_session_snapshot call -- the cheap path, no broader VCI/KBS
+    fetch, matching WHEN_DNSE_HEALTHY_POLICY.
+
+    DEGRADED DAY: re-resolves with sentinel_cohort expanded to cover EVERY DNSE-exact ticker (not
+    just the small diagnostic sample), so no DNSE-exact ticker is left blindly trusted once the
+    provider has been classified broadly degraded (see docs brief step 5: "Do NOT automatically
+    trust DNSE for non-sentinel names"). A shared memoizing fetch cache (_memoizing_fetch) is used
+    for BOTH resolver calls, so every (ticker, source) pair the first call already fetched --
+    normal gap recovery and sentinel corroboration alike -- is reused rather than re-queried, and
+    only the genuinely new tickers this expansion adds are fetched live (docs brief steps 1-4).
+
+    Returns (evidence, projected) exactly like resolve_multi_source_exact_session_snapshot, with
+    an added top-level ``degraded_provider_recovery`` block on both:
+        {"mode": "NOT_TRIGGERED" | "COMPLETED", "expanded_ticker_count": int,
+         "expanded_recovery_attempts": {"VCI": int, "KBS": int}}
+    and ``projected["dnse_provider_health_state"]`` mirroring the sentinel's own health state (or
+    None when no sentinel ran), so a canonical snapshot is self-describing about whether it was
+    ever subject to degraded-provider recovery -- see canonical_post_close_pipeline.
+    assert_post_close_eligible's own provider-health reuse check.
+
+    This function never raises on a degraded verdict, and never decides sufficiency -- exactly
+    like the function it wraps, it always returns real, honest evidence for the caller to persist;
+    coverage sufficiency remains the caller's own, unchanged, MIN_EXACT_SESSION_COVERAGE_RATIO
+    gate (docs brief: "Preserve the existing 0.20 coverage threshold").
+    """
+    real_fetch = fetch_single_source or _default_fetch_single_source()
+    delay = request_delay if request_delay is not None else _default_request_delay()
+    memoized_fetch = _memoizing_fetch(real_fetch, delay=delay, sleep_fn=sleep_fn)
+
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
+        recovery_window_days=recovery_window_days, fetch_single_source=memoized_fetch,
+        request_delay=0.0, sleep_fn=_no_sleep, max_recovery_candidates=max_recovery_candidates,
+        sentinel_cohort=sentinel_cohort,
+    )
+    sentinel = evidence.get("dnse_quality_sentinel")
+    health_state = sentinel["health"]["state"] if sentinel else None
+
+    if health_state != DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
+        recovery_info = {
+            "mode": DEGRADED_RECOVERY_NOT_TRIGGERED,
+            "expanded_ticker_count": 0,
+            "expanded_recovery_attempts": {"VCI": 0, "KBS": 0},
+        }
+        evidence["degraded_provider_recovery"] = recovery_info
+        evidence["evidence_sha256"] = stable_id({k: v for k, v in evidence.items() if k != "evidence_sha256" and k != "evidence_identity"})
+        evidence["evidence_identity"] = f"multi_source_exact_session_market_evidence:{evidence['evidence_sha256']}"
+        projected["degraded_provider_recovery"] = dict(recovery_info)
+        projected["dnse_provider_health_state"] = health_state
+        projected.pop("snapshot_sha256", None)
+        projected.pop("snapshot_identity", None)
+        projected["snapshot_sha256"] = stable_id(projected)
+        projected["snapshot_identity"] = f"p3f9_exact_session_snapshot:{projected['snapshot_sha256']}"
+        return evidence, projected
+
+    dnse_records = dnse_snapshot.get("records") or {}
+    all_dnse_exact_tickers = {
+        t for t, r in dnse_records.items() if r.get("disposition") == DNSE_EXACT_SESSION_DISPOSITION
+    }
+    original_cohort_set = set(sentinel_cohort)
+    expanded_new_tickers = all_dnse_exact_tickers - original_cohort_set
+    expanded_cohort = sorted(original_cohort_set | all_dnse_exact_tickers)
+
+    evidence2, projected2 = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse_snapshot, target_session=target_session, requested_at=requested_at,
+        recovery_window_days=recovery_window_days, fetch_single_source=memoized_fetch,
+        request_delay=0.0, sleep_fn=_no_sleep, max_recovery_candidates=max_recovery_candidates,
+        sentinel_cohort=expanded_cohort,
+    )
+    expanded_recovery_attempts = {"VCI": 0, "KBS": 0}
+    for ticker in expanded_new_tickers:
+        for obs in evidence2["records"].get(ticker, {}).get("observations", []):
+            source = obs.get("source")
+            if source in expanded_recovery_attempts and obs.get("status") != STATUS_NOT_APPLICABLE:
+                expanded_recovery_attempts[source] += 1
+
+    recovery_info = {
+        "mode": DEGRADED_RECOVERY_COMPLETED,
+        "expanded_ticker_count": len(expanded_new_tickers),
+        "expanded_recovery_attempts": expanded_recovery_attempts,
+    }
+    evidence2["degraded_provider_recovery"] = recovery_info
+    evidence2["evidence_sha256"] = stable_id({k: v for k, v in evidence2.items() if k != "evidence_sha256" and k != "evidence_identity"})
+    evidence2["evidence_identity"] = f"multi_source_exact_session_market_evidence:{evidence2['evidence_sha256']}"
+    projected2["degraded_provider_recovery"] = dict(recovery_info)
+    projected2["dnse_provider_health_state"] = evidence2["dnse_quality_sentinel"]["health"]["state"]
+    projected2.pop("snapshot_sha256", None)
+    projected2.pop("snapshot_identity", None)
+    projected2["snapshot_sha256"] = stable_id(projected2)
+    projected2["snapshot_identity"] = f"p3f9_exact_session_snapshot:{projected2['snapshot_sha256']}"
+    return evidence2, projected2

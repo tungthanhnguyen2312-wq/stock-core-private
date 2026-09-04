@@ -165,6 +165,37 @@ def test_low_coverage_fails_immediately_before_liquidity_technical_recovery_or_t
         cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
 
 
+def test_degraded_recovery_completed_but_still_insufficient_coverage_fails_closed_with_evidence(tmp_path, monkeypatch):
+    """Required matrix case: DNSE broad degraded + insufficient VCI/KBS recovery must fail closed
+    -- no accepted canonical snapshot, evidence-bearing message -- exactly like any other
+    below-floor coverage day, never silently accepted merely because degraded-provider recovery
+    itself ran to completion. DEGRADED_PROVIDER_RECOVERY_MODE completing is honesty about the
+    ATTEMPT, never a claim that the OUTCOME was sufficient."""
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    now = datetime(2026, 8, 27, 10, 0, tzinfo=VN_TZ)
+
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        return _write_snapshot(
+            paths, session, requested_at=f"{session}T16:07:09+07:00", exact=50, total=1683,
+            dnse_provider_health_state="DNSE_BROAD_STALE_OR_INCOMPLETE_EOD",
+            degraded_provider_recovery={"mode": "COMPLETED", "expanded_ticker_count": 1650},
+        )
+
+    def _forbidden(name):
+        def _boom(*args, **kwargs):
+            raise AssertionError(f"{name} must not run when exact-session coverage is below the floor")
+        return _boom
+
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
+    monkeypatch.setattr(cpc.level2, "materialize_independent_components", _forbidden("materialize_independent_components"))
+    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", _forbidden("maybe_build_triage_dependent"))
+    with pytest.raises(cpc.CanonicalPostCloseError, match="PARTIAL_OR_INTRADAY_SESSION_EVIDENCE") as excinfo:
+        cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
+    assert "DNSE_PROVIDER_HEALTH=DEGRADED" in str(excinfo.value)
+    assert "DEGRADED_PROVIDER_RECOVERY_MODE=COMPLETED" in str(excinfo.value)
+
+
 def test_low_coverage_retained_same_session_snapshot_is_preserved_and_redirects_to_fresh_attempt(tmp_path):
     # RETAINED PARTIAL SNAPSHOT / RERUN SEMANTICS: a retained same-session snapshot with coverage
     # below MIN_EXACT_SESSION_COVERAGE_RATIO (the real 2026-09-03 17/1683 shape) must never be
@@ -642,6 +673,100 @@ def test_pre_cutoff_artifact_not_reused_stays_preserved_and_fresh_attempt_coexis
     assert fresh_snapshot_path.is_file()
     assert result["snapshot"]["exact_session_observed_count"] == 1200
     assert result["snapshot"] != pre_cutoff
+
+
+# --- 5b. P0 DEFECT 2: an existing artifact reflecting an unresolved DNSE provider-health
+# degradation is never reused, even though it passes every one of the original 5 points ---
+
+def _write_degraded_companion_evidence(paths, *, resolved=False):
+    evidence = {
+        "dnse_quality_sentinel": {
+            "health": {"state": "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD", "conflict_count": 18, "dnse_assessed_count": 18},
+        },
+    }
+    paths["multi_source_market_evidence"].parent.mkdir(parents=True, exist_ok=True)
+    paths["multi_source_market_evidence"].write_text(json.dumps(evidence), encoding="utf-8")
+
+
+def test_degraded_unresolved_artifact_not_reused_stays_preserved_and_redirects(tmp_path, monkeypatch):
+    """MANDATORY regression coverage at the canonical_post_close_pipeline layer for the same P0
+    idempotency-escape defect: a retained default-path snapshot that is otherwise fully eligible
+    (correct session identity, lineage, contract version, scope, coverage, post-cutoff timestamp)
+    but whose sibling evidence proves DNSE was broadly degraded, with no completed
+    degraded-provider-recovery marker on the snapshot itself, must be classified ineligible and
+    redirected to a fresh attempt directory -- reusing the EXISTING fresh-attempt mechanism
+    (resolve_acquisition_root), never a new one.
+    """
+    session = "2026-09-03"
+    default_paths = level2.session_artifact_paths(tmp_path, session)
+    contaminated = _write_snapshot(
+        default_paths, session, requested_at=f"{session}T19:05:00+07:00", exact=772, total=1683,
+    )
+    _write_degraded_companion_evidence(default_paths)
+    original_bytes = default_paths["exact_session_snapshot"].read_bytes()
+
+    now = datetime(2026, 9, 3, 20, 0, tzinfo=VN_TZ)
+
+    def fake_ensure_snapshot(root, sess, runtime_root, workers=12, now=None, execution_root=None):
+        fresh_paths = level2.session_artifact_paths(root, sess)
+        snapshot = _write_snapshot(
+            fresh_paths, session, requested_at=f"{session}T20:05:00+07:00", exact=772, total=1683,
+            degraded_provider_recovery={"mode": "COMPLETED", "expanded_ticker_count": 0},
+        )
+        return fresh_paths["exact_session_snapshot"]
+
+    def fake_maybe_build_triage(root, s, execution_root=None):
+        _write_triage(level2.session_artifact_paths(root, s), s)
+        return {"built": True}
+
+    monkeypatch.setattr(cpc.level2, "ensure_exact_session_snapshot", fake_ensure_snapshot)
+    monkeypatch.setattr(cpc.level2, "materialize_independent_components", lambda *a, **k: None)
+    monkeypatch.setattr(cpc.level2, "maybe_build_triage_dependent", fake_maybe_build_triage)
+
+    result = cpc.acquire_and_materialize(tmp_path, session, tmp_path / "runtime", now=now)
+
+    assert result["artifact_root"] != tmp_path  # redirected to a fresh-attempt directory
+    assert result["eligibility"]["redirected"] is True
+    # old contaminated bytes are never touched by this redirect
+    assert default_paths["exact_session_snapshot"].read_bytes() == original_bytes
+    assert json.loads(original_bytes)["exact_session_observed_count"] == 772
+    # the fresh, properly-recovered artifact coexists at a distinct path
+    fresh_snapshot_path = level2.session_artifact_paths(result["artifact_root"], session)["exact_session_snapshot"]
+    assert fresh_snapshot_path != default_paths["exact_session_snapshot"]
+    assert result["snapshot"]["degraded_provider_recovery"]["mode"] == "COMPLETED"
+
+
+def test_degraded_but_recovery_completed_artifact_is_reused_without_redirect(tmp_path):
+    """The corrected policy still allows real idempotent reuse once degraded-provider recovery
+    genuinely completed -- the gate is about whether recovery ran, never about whether DNSE
+    happened to be healthy that day."""
+    session = "2026-09-03"
+    default_paths = level2.session_artifact_paths(tmp_path, session)
+    _write_snapshot(
+        default_paths, session, requested_at=f"{session}T19:05:00+07:00", exact=772, total=1683,
+        degraded_provider_recovery={"mode": "COMPLETED", "expanded_ticker_count": 0},
+    )
+    _write_degraded_companion_evidence(default_paths)
+
+    now = datetime(2026, 9, 3, 20, 0, tzinfo=VN_TZ)
+    artifact_root, info = cpc.resolve_acquisition_root(tmp_path, session, now=now)
+
+    assert artifact_root == tmp_path
+    assert info["redirected"] is False
+    assert info["reused_existing_eligible_artifact"] is True
+
+
+def test_assert_post_close_eligible_skips_provider_health_check_without_artifact_root(tmp_path):
+    """Backward compatibility: omitting artifact_root (any pre-existing caller/test that predates
+    this point) never activates the new check, even when a companion evidence file exists and
+    would otherwise fail it."""
+    session = "2026-09-03"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    snapshot = _write_snapshot(paths, session, requested_at=f"{session}T19:05:00+07:00", exact=772, total=1683)
+    _write_degraded_companion_evidence(paths)
+
+    now = datetime(2026, 9, 3, 20, 0, tzinfo=VN_TZ)
+    cpc.assert_post_close_eligible(snapshot, session, now=now)  # no artifact_root -- must not raise
 
 
 def test_redirected_attempt_propagates_artifact_and_execution_roots(tmp_path, monkeypatch):

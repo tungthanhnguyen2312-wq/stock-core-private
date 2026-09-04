@@ -865,6 +865,49 @@ def run_cmd(execution_root: Path, cmd: list[str]) -> None:
     subprocess.run([sys.executable] + cmd, cwd=str(execution_root), check=True)
 
 
+def _canonical_snapshot_gate_satisfied(snapshot_path: Path, evidence_path: Path) -> bool:
+    """Is an existing on-disk canonical exact-session snapshot safe to reuse unconditionally?
+
+    Corrective fix for the P0 idempotency-escape defect: the OLD ensure_exact_session_snapshot
+    wrote the canonical projection before ever checking DNSE provider-health, so a rerun that
+    merely found the file present would reuse a possibly-degraded-and-never-verified snapshot
+    with no re-verification at all. This function makes that reuse decision explicit by loading
+    the sibling multi-source evidence artifact (written alongside the snapshot -- see
+    multi_source_market_evidence key in session_artifact_paths) and checking its retained DNSE
+    quality sentinel verdict against the snapshot's OWN self-declared
+    ``degraded_provider_recovery`` marker (see multi_source_exact_session_resolver.
+    resolve_exact_session_with_autorecovery).
+
+    Missing or unreadable companion evidence is treated as "nothing to disprove trust with", not
+    as "untrustworthy" -- a bare snapshot fixture (this module's own existing tests, or any
+    artifact that predates the multi-source evidence artifact entirely) is reused exactly as
+    before this fix. A companion evidence file that DOES show DNSE_BROAD_STALE_OR_INCOMPLETE_EOD,
+    with no corresponding COMPLETED recovery marker on the snapshot itself, is exactly the
+    pre-corrective idempotency-escape shape (a projection written before the sentinel check ever
+    ran, or before this fix existed at all) -- never silently reused.
+    """
+    if not evidence_path.is_file():
+        return True
+    try:
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return True
+    sentinel = evidence.get("dnse_quality_sentinel") if isinstance(evidence, Mapping) else None
+    if not isinstance(sentinel, Mapping):
+        return True
+    from multi_source_market_evidence_contract import DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD
+    health = sentinel.get("health") or {}
+    if health.get("state") != DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
+        return True
+    try:
+        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    from multi_source_exact_session_resolver import DEGRADED_RECOVERY_COMPLETED
+    recovery = snapshot.get("degraded_provider_recovery") if isinstance(snapshot, Mapping) else None
+    return isinstance(recovery, Mapping) and recovery.get("mode") == DEGRADED_RECOVERY_COMPLETED
+
+
 def ensure_exact_session_snapshot(
     artifact_root: Path,
     session: str,
@@ -901,8 +944,19 @@ def ensure_exact_session_snapshot(
     (which source supplied each recovered bar, corroboration/conflict, what was blocked) is
     retained separately -- see multi_source_market_evidence key.
 
-    An existing on-disk snapshot is reused unconditionally -- no re-verification -- matching every
-    other step's own idempotent if-not-exists pattern in this module. Raises
+    2026-09-04 MULTI_SOURCE_DAILY_DEGRADED_PROVIDER_AUTORECOVERY_AND_IDEMPOTENCY_CORRECTIVE_V1:
+    a broadly degraded DNSE day (multi_source_exact_session_resolver.
+    DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD) no longer stops here for an operator to re-run with
+    an expanded scope -- resolve_exact_session_with_autorecovery expands VCI/KBS verification to
+    every DNSE-exact ticker in the SAME call (see that function's own docstring). An existing
+    on-disk snapshot is reused only when _canonical_snapshot_gate_satisfied confirms it was never
+    subject to an unresolved degradation -- fixing the prior idempotency escape where a projection
+    written before the (then operator-gated) sentinel check could be silently reused on rerun with
+    no re-verification at all. Raises ValueError("P3F9B_EXISTING_SNAPSHOT_PROVIDER_HEALTH_GATE_
+    UNRESOLVED:...") when an existing snapshot fails that check -- callers (canonical_post_close_
+    pipeline.resolve_acquisition_root, in particular) must redirect to a fresh attempt root rather
+    than call this function again on the same artifact_root; this function never overwrites,
+    relabels, or mutates the untrusted existing bytes itself. Raises
     ValueError("P3F9B_ACQUIRED_SESSION_MISMATCH:...") if a freshly acquired snapshot's own resolved
     session does not exactly equal ``session``; no prior/latest substitution is ever silently
     accepted.
@@ -910,67 +964,66 @@ def ensure_exact_session_snapshot(
     execution_root = execution_root or artifact_root
     paths = session_artifact_paths(artifact_root, session)
     p3f9b_snapshot = paths["exact_session_snapshot"]
-    if not p3f9b_snapshot.exists():
-        import mva_exact_session_snapshot as snapshotter
-        import multi_source_exact_session_resolver as resolver
-        from dnse_access import credentials_for_request
-        from dnse_secrets_env import ensure_credentials_loaded
-
-        instant = now or vn_now()
-        dnse_only_path = paths["dnse_only_exact_session_snapshot"]
-        if dnse_only_path.exists():
-            # A prior attempt already completed Pass 1 and crashed/stopped before the resolved
-            # projection was written; reuse it rather than spending a second live DNSE
-            # acquisition -- this still satisfies "exactly one governed market-wide acquisition"
-            # upstream (canonical_daily_operation.py counts calls to acquire_and_materialize, not
-            # DNSE requests underneath it).
-            dnse_snapshot = json.loads(dnse_only_path.read_text(encoding="utf-8"))
-        else:
-            candidates = snapshotter.canonical_candidates(runtime_root)
-            status = ensure_credentials_loaded()
-            creds = credentials_for_request()
-            if not status.get("configured") or not creds:
-                raise RuntimeError("DNSE_CREDENTIAL_INJECTION_REQUIRED")
-            dnse_snapshot = snapshotter.materialize_snapshot(
-                candidates=candidates, requested_at=instant, target_session=session,
-                api_key=creds[0], api_secret=creds[1], workers=workers,
-            )
-            snapshotter.write_snapshot(dnse_snapshot, dnse_only_path)
-
-        all_tickers = list(dnse_snapshot["records"])
-        dnse_exact_tickers = [
-            t for t in all_tickers
-            if dnse_snapshot["records"][t].get("disposition") == "EXACT_SESSION_RETAINED"
-        ]
-        candidate_metadata = resolver.read_candidate_metadata(runtime_root, all_tickers)
-        sentinel = resolver.select_sentinel_cohort(
-            candidate_metadata=candidate_metadata, dnse_exact_tickers=dnse_exact_tickers,
-        )
-        evidence, projected = resolver.resolve_multi_source_exact_session_snapshot(
-            dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
-            sentinel_cohort=sentinel["tickers"],
-        )
-        evidence_path = paths["multi_source_market_evidence"]
-        if not evidence_path.exists():
-            evidence_path.parent.mkdir(parents=True, exist_ok=True)
-            evidence_path.write_text(
-                json.dumps(evidence, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8",
-            )
-        snapshotter.write_snapshot(projected, p3f9b_snapshot)
-        acquired = projected
-        if acquired.get("resolved_completed_session") != session:
+    evidence_path = paths["multi_source_market_evidence"]
+    if p3f9b_snapshot.exists():
+        if not _canonical_snapshot_gate_satisfied(p3f9b_snapshot, evidence_path):
             raise ValueError(
-                "P3F9B_ACQUIRED_SESSION_MISMATCH:requested=" + session
-                + ":resolved=" + str(acquired.get("resolved_completed_session"))
+                "P3F9B_EXISTING_SNAPSHOT_PROVIDER_HEALTH_GATE_UNRESOLVED:session=" + session
+                + ":retained snapshot reflects an unresolved DNSE_BROAD_STALE_OR_INCOMPLETE_EOD "
+                  "verdict with no completed degraded-provider-recovery marker -- never reused "
+                  "as-is; caller must redirect to a fresh attempt root."
             )
-        # Evidence/projected are now fully persisted regardless of outcome -- only now does a
-        # DNSE_BROAD_STALE_OR_INCOMPLETE_EOD verdict fail canonical Daily closed, the same
-        # fail-closed shape as this function's own P3F9B_ACQUIRED_SESSION_MISMATCH check just
-        # above: Daily must stop rather than either trust DNSE's unverified same-date bars
-        # broadly or silently launch a full-universe VCI/KBS pass inline. See
-        # multi_source_exact_session_resolver.WHEN_DNSE_DEGRADED_POLICY. Raises
-        # resolver.DnseProviderWideQualityDegraded, deliberately left uncaught here.
-        resolver.assert_dnse_quality_acceptable(evidence)
+        return p3f9b_snapshot
+    import mva_exact_session_snapshot as snapshotter
+    import multi_source_exact_session_resolver as resolver
+    from dnse_access import credentials_for_request
+    from dnse_secrets_env import ensure_credentials_loaded
+
+    instant = now or vn_now()
+    dnse_only_path = paths["dnse_only_exact_session_snapshot"]
+    if dnse_only_path.exists():
+        # A prior attempt already completed Pass 1 and crashed/stopped before the resolved
+        # projection was written; reuse it rather than spending a second live DNSE
+        # acquisition -- this still satisfies "exactly one governed market-wide acquisition"
+        # upstream (canonical_daily_operation.py counts calls to acquire_and_materialize, not
+        # DNSE requests underneath it).
+        dnse_snapshot = json.loads(dnse_only_path.read_text(encoding="utf-8"))
+    else:
+        candidates = snapshotter.canonical_candidates(runtime_root)
+        status = ensure_credentials_loaded()
+        creds = credentials_for_request()
+        if not status.get("configured") or not creds:
+            raise RuntimeError("DNSE_CREDENTIAL_INJECTION_REQUIRED")
+        dnse_snapshot = snapshotter.materialize_snapshot(
+            candidates=candidates, requested_at=instant, target_session=session,
+            api_key=creds[0], api_secret=creds[1], workers=workers,
+        )
+        snapshotter.write_snapshot(dnse_snapshot, dnse_only_path)
+
+    all_tickers = list(dnse_snapshot["records"])
+    dnse_exact_tickers = [
+        t for t in all_tickers
+        if dnse_snapshot["records"][t].get("disposition") == "EXACT_SESSION_RETAINED"
+    ]
+    candidate_metadata = resolver.read_candidate_metadata(runtime_root, all_tickers)
+    sentinel = resolver.select_sentinel_cohort(
+        candidate_metadata=candidate_metadata, dnse_exact_tickers=dnse_exact_tickers,
+    )
+    evidence, projected = resolver.resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
+        sentinel_cohort=sentinel["tickers"],
+    )
+    if not evidence_path.exists():
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text(
+            json.dumps(evidence, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8",
+        )
+    snapshotter.write_snapshot(projected, p3f9b_snapshot)
+    if projected.get("resolved_completed_session") != session:
+        raise ValueError(
+            "P3F9B_ACQUIRED_SESSION_MISMATCH:requested=" + session
+            + ":resolved=" + str(projected.get("resolved_completed_session"))
+        )
     return p3f9b_snapshot
 
 

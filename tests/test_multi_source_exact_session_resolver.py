@@ -3,9 +3,12 @@ import pytest
 
 from field_temporal_contract import stable_id
 from multi_source_exact_session_resolver import (
+    DEGRADED_RECOVERY_COMPLETED,
+    DEGRADED_RECOVERY_NOT_TRIGGERED,
     DnseProviderWideQualityDegraded,
     MultiSourceResolverError,
     assert_dnse_quality_acceptable,
+    resolve_exact_session_with_autorecovery,
     resolve_multi_source_exact_session_snapshot,
     select_sentinel_cohort,
 )
@@ -501,3 +504,205 @@ def test_assert_dnse_quality_acceptable_is_noop_when_healthy_or_no_sentinel():
     assert_dnse_quality_acceptable({"dnse_quality_sentinel": None})  # no sentinel_cohort was run
     assert_dnse_quality_acceptable({"dnse_quality_sentinel": {"health": {"state": "DNSE_EXACT_AND_CORROBORATED"}}})
     assert_dnse_quality_acceptable({"dnse_quality_sentinel": {"health": {"state": "DNSE_MATERIAL_CONFLICT"}}})
+
+
+# ---- resolve_exact_session_with_autorecovery: P0 DEFECT 1 (automatic DEGRADED_PROVIDER_RECOVERY_MODE) ----
+
+def test_autorecovery_healthy_day_is_a_single_pass_and_not_triggered():
+    """A non-degraded sentinel verdict must behave exactly like a single
+    resolve_multi_source_exact_session_snapshot call -- the cheap path, per
+    WHEN_DNSE_HEALTHY_POLICY -- with no second resolver pass and no extra live fetch."""
+    dnse = make_dnse_snapshot({"HPG": ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, 25.0, volume=1000000)])})
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        return FetchOutcome("success", data=make_df([(TARGET, 25000.0)]),
+                             lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+
+    evidence, projected = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        sentinel_cohort=["HPG"],
+    )
+    assert calls == [("HPG", "VCI"), ("HPG", "KBS")]  # exactly Pass 5's own single round, never repeated
+    assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_NOT_TRIGGERED
+    assert evidence["degraded_provider_recovery"]["expanded_ticker_count"] == 0
+    assert projected["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_NOT_TRIGGERED
+    assert projected["dnse_provider_health_state"] == "DNSE_EXACT_AND_CORROBORATED"
+    assert_self_consistent(projected)
+
+
+def test_autorecovery_empty_sentinel_cohort_is_not_triggered():
+    """An empty sentinel_cohort still runs Pass 5 (0 members, 0 fetches) rather than skipping it
+    entirely -- health resolves to DNSE_EXACT_BUT_UNCORROBORATED (assessed=0), never
+    BROAD_STALE_OR_INCOMPLETE_EOD, so degraded-provider-recovery must not trigger."""
+    dnse = make_dnse_snapshot({"AAA": ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, 10.0)])})
+    evidence, projected = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=lambda *a: (_ for _ in ()).throw(AssertionError("no fetch expected")),
+        request_delay=0.0, sleep_fn=lambda s: None, sentinel_cohort=[],
+    )
+    assert evidence["dnse_quality_sentinel"]["health"]["state"] == "DNSE_EXACT_BUT_UNCORROBORATED"
+    assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_NOT_TRIGGERED
+    assert projected["dnse_provider_health_state"] == "DNSE_EXACT_BUT_UNCORROBORATED"
+
+
+def _real_20260903_shaped_degraded_scenario():
+    """Mirrors this milestone's own retained real 2026-09-03 evidence exactly (see
+    operations-review/multi-source-exact-session-market-evidence-and-daily-resilience-v1-20260903/
+    sentinel-validation-20260903/sentinel_result_BROAD.json): 18 DNSE-exact tickers, a sentinel
+    cohort whose DNSE_EXACT_SESSION_SAMPLE component happens to cover all 18 (DEFAULT_DNSE_EXACT_
+    SAMPLE_SIZE=18 == the real count that day), VCI==KBS agreeing with each other and materially
+    conflicting with DNSE for every one of them -> DNSE_BROAD_STALE_OR_INCOMPLETE_EOD with 18/18
+    conflict, 0/18 corroborated -- byte-identical to the real retained verdict."""
+    dnse_native_close = 10.0
+    tickers = [f"D{i:02d}" for i in range(18)]
+    spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in tickers}
+    dnse = make_dnse_snapshot(spec)
+
+    def fetch(ticker, source, start, end):
+        return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
+                             lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+
+    return dnse, fetch, tickers
+
+
+def test_autorecovery_real_20260903_shape_needs_zero_new_fetches_and_is_accepted():
+    """The decisive real-evidence validation this milestone requires: when the sentinel cohort's
+    DNSE_EXACT_SESSION_SAMPLE already covers 100% of DNSE's exact-session tickers (the real
+    2026-09-03 case), DEGRADED_PROVIDER_RECOVERY_MODE's expansion has nothing left to query --
+    every DNSE-exact ticker is already independently resolved from the sentinel pass alone, no
+    live probe is spent reproducing numbers already retained, and the corrected policy distrusts
+    DNSE's own bars in favor of the corroborated VCI/KBS value for every one of them."""
+    dnse, fetch, tickers = _real_20260903_shaped_degraded_scenario()
+    calls = []
+
+    def counting_fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        return fetch(ticker, source, start, end)
+
+    evidence, projected = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=counting_fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        sentinel_cohort=tickers,
+    )
+    assert evidence["dnse_quality_sentinel"]["health"]["state"] == "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD"
+    assert evidence["dnse_quality_sentinel"]["health"]["conflict_count"] == 18
+    assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
+    assert evidence["degraded_provider_recovery"]["expanded_ticker_count"] == 0
+    # Every (ticker, source) pair fetched exactly once across the WHOLE run, healthy-cohort pass
+    # and expansion pass combined -- the expansion pass added zero new live queries.
+    assert len(calls) == len(set(calls)) == 18 * 2
+    # DNSE is no longer blindly trusted for any of the 18 -- every one now resolves via the
+    # corroborated non-DNSE basis, matching the real retained per_ticker_resolution verdict.
+    for ticker in tickers:
+        assert projected["records"][ticker]["multi_source_recovery_result"] == \
+            "CORROBORATED_NON_DNSE_CURRENT_RESEARCH_SENTINEL_OVERRIDE"
+        assert projected["records"][ticker]["disposition"] == "EXACT_SESSION_RETAINED"
+    # Coverage is unaffected (still 18/18 EXACT_SESSION_RETAINED) -- only WHICH source each row
+    # trusts changed, matching the real 772/1683 (45.87%) retained finding's own composition.
+    assert projected["exact_session_observed_count"] == 18
+    assert_self_consistent(projected)
+
+
+def test_autorecovery_partial_sentinel_overlap_expands_only_uncovered_dnse_exact_tickers():
+    """General case: the sentinel's small cohort does NOT already cover every DNSE-exact ticker
+    (unlike the real 2026-09-03 coincidence). Only the tickers outside the original cohort may be
+    newly queried; sentinel-covered ones must never be re-fetched."""
+    dnse_native_close = 10.0
+    all_exact = [f"E{i:02d}" for i in range(10)]
+    spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in all_exact}
+    dnse = make_dnse_snapshot(spec)
+    small_cohort = all_exact[:6]  # sentinel only ever covered 6/10 DNSE-exact tickers
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
+                             lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+
+    evidence, projected = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        sentinel_cohort=small_cohort,
+    )
+    assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
+    assert evidence["degraded_provider_recovery"]["expanded_ticker_count"] == 4  # E06..E09
+    assert evidence["degraded_provider_recovery"]["expanded_recovery_attempts"] == {"VCI": 4, "KBS": 4}
+    # Every one of the 4 newly-covered tickers was queried exactly once per source -- never twice.
+    newly_covered = [t for t in all_exact if t not in small_cohort]
+    assert len(newly_covered) == 4
+    for ticker in newly_covered:
+        assert calls.count((ticker, "VCI")) == 1
+        assert calls.count((ticker, "KBS")) == 1
+    # No (ticker, source) pair anywhere in the run was ever fetched more than once, including the
+    # original 6-ticker cohort's own pairs (served from cache on the expansion's second pass).
+    assert len(calls) == len(set(calls))
+    assert len(calls) == 10 * 2
+    # Now every DNSE-exact ticker, not just the original small cohort, correctly distrusts DNSE.
+    for ticker in all_exact:
+        assert projected["records"][ticker]["multi_source_recovery_result"] == \
+            "CORROBORATED_NON_DNSE_CURRENT_RESEARCH_SENTINEL_OVERRIDE"
+    assert_self_consistent(projected)
+
+
+def test_autorecovery_never_duplicates_a_source_ticker_fetch_when_gap_recovery_and_sentinel_overlap():
+    """A DNSE-missing ticker already queried by Pass 3/4 gap recovery must never be re-queried by
+    the degraded-expansion pass either, even though both resolver calls inside the wrapper run
+    Pass 3/4 again internally over the identical DNSE-missing set. Sentinel cohort covers all 6
+    DNSE-exact tickers (>= DNSE_BROAD_MIN_ASSESSED_COUNT) so 100% conflict is classified BROAD and
+    the expansion pass genuinely runs a second resolver call."""
+    dnse_native_close = 10.0
+    exact_tickers = [f"F{i:02d}" for i in range(6)]
+    spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in exact_tickers}
+    spec["MISSING1"] = ("SESSION_MISSING", [_dnse_obs("2026-08-28", 1.0)])
+    dnse = make_dnse_snapshot(spec)
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
+                             lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+
+    evidence, projected = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        sentinel_cohort=exact_tickers,
+    )
+    assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
+    # MISSING1 is DNSE-missing -- Pass 3/4 in BOTH resolver calls target it, but the shared
+    # memoizing cache must still collapse that to exactly one real VCI attempt (KBS never reached
+    # since VCI already succeeded).
+    assert calls.count(("MISSING1", "VCI")) == 1
+    assert calls.count(("MISSING1", "KBS")) == 0
+    assert len(calls) == len(set(calls))  # no pair anywhere, from either pass or either call, twice
+
+
+def test_autorecovery_pacing_delay_spent_once_per_genuine_fetch_not_per_call():
+    """The shared memoizing cache must own pacing too, not just correctness: a cached (ticker,
+    source) pair must never sleep again on the expansion's second resolver call, or a fully-
+    degraded real-sized universe would burn its ENTIRE original Pass 3/4 pacing budget a second
+    time for zero new network activity. Sentinel cohort already covers every DNSE-exact ticker,
+    so the expansion pass's Pass 5 is 100% cache hits -- contributing zero additional sleeps."""
+    dnse_native_close = 10.0
+    exact_tickers = [f"G{i:02d}" for i in range(6)]
+    spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in exact_tickers}
+    dnse = make_dnse_snapshot(spec)
+    sleeps = []
+
+    def fetch(ticker, source, start, end):
+        return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
+                             lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+
+    evidence, _ = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=1.1, sleep_fn=sleeps.append,
+        sentinel_cohort=exact_tickers,
+    )
+    assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
+    # Exactly one real sleep per genuine (ticker, source) fetch: 6 tickers x 2 sources = 12 total
+    # across the whole run, never doubled by the second resolver call re-processing the first
+    # pass's own already-cached pairs.
+    assert len(sleeps) == 6 * 2
+    assert all(s == 1.1 for s in sleeps)

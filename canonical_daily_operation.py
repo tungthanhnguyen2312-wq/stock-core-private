@@ -296,6 +296,19 @@ def _producer_session(producer_result: Mapping[str, Any], fallback: str) -> str:
 
 def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
     publication = record.get("publication") if isinstance(record.get("publication"), Mapping) else {}
+    acquisition = record.get("acquisition") if isinstance(record.get("acquisition"), Mapping) else {}
+    health_state = acquisition.get("dnse_provider_health_state")
+    if health_state == "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD":
+        recovery = acquisition.get("degraded_provider_recovery") if isinstance(acquisition.get("degraded_provider_recovery"), Mapping) else {}
+        coverage = acquisition.get("coverage") if isinstance(acquisition.get("coverage"), Mapping) else {}
+        contributions = acquisition.get("provider_contribution_counts") if isinstance(acquisition.get("provider_contribution_counts"), Mapping) else {}
+        print("DNSE_PROVIDER_HEALTH: DEGRADED")
+        print(f"DEGRADED_PROVIDER_RECOVERY_MODE: {'ACTIVE' if recovery.get('mode') == 'COMPLETED' else 'INCOMPLETE'}")
+        print(f"DNSE_EXACT: {contributions.get('DNSE', 0)}")
+        print(f"VCI_RECOVERED: {contributions.get('VCI', 0)}")
+        print(f"KBS_RECOVERED: {contributions.get('KBS', 0)}")
+        print(f"FINAL_RESOLVED: {coverage.get('exact_session_retained_count')} / {coverage.get('total_candidates')}")
+        print(f"MISSING: {(coverage.get('total_candidates') or 0) - (coverage.get('exact_session_retained_count') or 0)}")
     print(f"DAILY_OPERATION_STATE={record.get('daily_operation_state')}")
     print(f"SESSION={record.get('session')}")
     print(f"SESSION_GATE={record.get('session_gate_semantic') or record.get('session_gate')}")
@@ -498,7 +511,10 @@ def run_canonical_daily_operation(
         )
     if snapshot.get("contract_version") == "p3f9_exact_session_mva_snapshot/v2":
         try:
-            assert_post_close_eligible(snapshot, resolved_session, now=instant)
+            assert_post_close_eligible(
+                snapshot, resolved_session, now=instant,
+                artifact_root=Path(acquisition.get("artifact_root") or root),
+            )
         except PreCutoffArtifactError as exc:
             raise CanonicalDailyOperationError(STAGE_BLOCKED_POST_ACQUISITION, str(exc), local_state={"phase_a": phase_a}) from exc
 
@@ -708,6 +724,9 @@ def run_canonical_daily_operation(
             "snapshot_identity": snapshot.get("snapshot_identity") or snapshot.get("artifact_identity"),
             "coverage": acquisition.get("coverage"),
             "eligibility": acquisition.get("eligibility"),
+            "dnse_provider_health_state": snapshot.get("dnse_provider_health_state"),
+            "degraded_provider_recovery": snapshot.get("degraded_provider_recovery"),
+            "provider_contribution_counts": acquisition.get("provider_contribution_counts"),
         },
         "registration": registration,
         "freeze": freeze,

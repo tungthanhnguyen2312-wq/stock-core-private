@@ -48,6 +48,8 @@ from daily_research_session_operations import (
     selection_identities,
     validate_coherence,
 )
+from multi_source_exact_session_resolver import DEGRADED_RECOVERY_COMPLETED
+from multi_source_market_evidence_contract import DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD
 from vn_time import VN_TZ, vn_now
 
 ROOT = Path(__file__).resolve().parent
@@ -261,14 +263,33 @@ def _provider_contribution_counts(snapshot: Mapping[str, Any]) -> dict[str, int]
     return counts
 
 
-def assert_post_close_eligible(snapshot: Mapping[str, Any], session: str, *, now: datetime | None = None) -> None:
-    """The 5-point contract an *existing* same-session P3F9B snapshot must satisfy before this
+def assert_post_close_eligible(
+    snapshot: Mapping[str, Any], session: str, *, now: datetime | None = None,
+    artifact_root: Path | None = None,
+) -> None:
+    """The 6-point contract an *existing* same-session P3F9B snapshot must satisfy before this
     pipeline may reuse it as canonical post-close evidence, rather than treating mere same-session
-    file presence as sufficient (that was the defect: an artifact genuinely acquired before the
-    owner's collection cutoff can still have resolved_completed_session == session and look
-    self-consistent). Raises PreCutoffArtifactError -- distinct from a hard pipeline failure --
+    file presence as sufficient (that was the original defect: an artifact genuinely acquired
+    before the owner's collection cutoff can still have resolved_completed_session == session and
+    look self-consistent). Raises PreCutoffArtifactError -- distinct from a hard pipeline failure --
     naming exactly which condition failed; callers should catch it and redirect to a fresh
     acquisition rather than propagate it.
+
+    2026-09-04 MULTI_SOURCE_DAILY_DEGRADED_PROVIDER_AUTORECOVERY_AND_IDEMPOTENCY_CORRECTIVE_V1:
+    point 6 (provider-health gate) closes a second idempotency escape -- an existing snapshot can
+    have session identity, lineage, contract version, scope, and coverage ratio all genuinely
+    correct while still reflecting DNSE_BROAD_STALE_OR_INCOMPLETE_EOD that was never resolved
+    (e.g. a pre-corrective artifact written before this milestone existed). ``artifact_root``,
+    when given, loads the sibling multi-source evidence artifact
+    (daily_session_level2_package.session_artifact_paths' own multi_source_market_evidence key,
+    same directory as this snapshot) and cross-checks its retained DNSE quality sentinel verdict
+    against ``snapshot``'s own self-declared ``degraded_provider_recovery`` marker -- identical
+    policy to daily_session_level2_package._canonical_snapshot_gate_satisfied, applied here so
+    resolve_acquisition_root's EXISTING fresh-attempt-directory redirect (today used only for a
+    pre-cutoff artifact) also covers this case, with no new mechanism. ``artifact_root`` omitted
+    (the default) or a missing/unreadable companion evidence file skips this point entirely --
+    "nothing to disprove trust with", never "untrustworthy" -- so this stays backward compatible
+    with every caller/test that predates this point and never wrote a companion evidence file.
     """
     now = now or vn_now()
     # 1. session identity
@@ -306,6 +327,23 @@ def assert_post_close_eligible(snapshot: Mapping[str, Any], session: str, *, now
             f"acquired_at_local={acquired_local.isoformat(timespec='seconds')}:"
             f"cutoff={POST_CLOSE_COLLECTION_CUTOFF_LOCAL_TIME.isoformat()}"
         )
+    # 6. provider-health gate: an existing snapshot that reflects an unresolved DNSE broad
+    # degradation is never eligible for reuse, even though points 1-5 above all pass.
+    if artifact_root is not None:
+        evidence_path = level2.session_artifact_paths(artifact_root, session)["multi_source_market_evidence"]
+        if evidence_path.is_file():
+            try:
+                evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                evidence = None
+            sentinel = evidence.get("dnse_quality_sentinel") if isinstance(evidence, Mapping) else None
+            health = sentinel.get("health") if isinstance(sentinel, Mapping) else None
+            if isinstance(health, Mapping) and health.get("state") == DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
+                recovery = snapshot.get("degraded_provider_recovery")
+                if not (isinstance(recovery, Mapping) and recovery.get("mode") == DEGRADED_RECOVERY_COMPLETED):
+                    raise PreCutoffArtifactError(
+                        f"EXISTING_ARTIFACT_DNSE_PROVIDER_HEALTH_GATE_NOT_SATISFIED:session={session}"
+                    )
 
 
 def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None = None) -> tuple[Path, dict[str, Any]]:
@@ -335,7 +373,7 @@ def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None =
                 if not isinstance(candidate, Mapping):
                     continue
                 try:
-                    assert_post_close_eligible(candidate, session, now=now)
+                    assert_post_close_eligible(candidate, session, now=now, artifact_root=candidate_root)
                 except PreCutoffArtifactError:
                     continue
                 return candidate_root, candidate
@@ -355,7 +393,7 @@ def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None =
             }
         return root, {"redirected": False, "reason": "NO_EXISTING_ARTIFACT_FOR_SESSION"}
     try:
-        assert_post_close_eligible(existing, session, now=now)
+        assert_post_close_eligible(existing, session, now=now, artifact_root=root)
     except PreCutoffArtifactError as exc:
         retained = retained_attempt_root()
         if retained is not None:
@@ -424,9 +462,16 @@ def acquire_and_materialize(
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXACT_SESSION_SNAPSHOT_MISSING_AFTER_ACQUISITION")
     exact, total, coverage_ratio = _exact_session_coverage(snapshot)
     if coverage_ratio < MIN_EXACT_SESSION_COVERAGE_RATIO:
+        health_state = snapshot.get("dnse_provider_health_state")
+        recovery = snapshot.get("degraded_provider_recovery") if isinstance(snapshot.get("degraded_provider_recovery"), Mapping) else {}
+        degraded_note = (
+            f":DNSE_PROVIDER_HEALTH=DEGRADED:DEGRADED_PROVIDER_RECOVERY_MODE={recovery.get('mode')}"
+            if health_state == DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD else ""
+        )
         raise CanonicalPostCloseError(
             f"REFUSE_CANONICAL_POST_CLOSE:PARTIAL_OR_INTRADAY_SESSION_EVIDENCE:"
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
+            f"{degraded_note}"
         )
     level2.materialize_independent_components(
         artifact_root,
@@ -454,6 +499,7 @@ def acquire_and_materialize(
         "snapshot": snapshot,
         "resolved_completed_session": snapshot.get("resolved_completed_session"),
         "coverage": {"exact_session_retained_count": exact, "total_candidates": total, "ratio": coverage_ratio},
+        "provider_contribution_counts": _provider_contribution_counts(snapshot),
         "triage_status": {"status": level2.EXACT_SESSION_CLEAN, "identity": triage_artifact.get("artifact_identity")},
         "triage_build_result": triage_build_result,
         "paths": paths,
@@ -830,6 +876,8 @@ def build_tiered_bundle(
             "exact_session_coverage": acquisition["coverage"],
             "provider": "MULTI_SOURCE",
             "provider_contribution_counts": _provider_contribution_counts(acquisition.get("snapshot") or {}),
+            "dnse_provider_health_state": (acquisition.get("snapshot") or {}).get("dnse_provider_health_state"),
+            "degraded_provider_recovery": (acquisition.get("snapshot") or {}).get("degraded_provider_recovery"),
         },
         "market_coverage": breadth,
         "breadth": {

@@ -140,6 +140,79 @@ def test_ensure_exact_session_snapshot_is_idempotent_when_already_present(tmp_pa
     assert result == paths["exact_session_snapshot"]
 
 
+def test_ensure_exact_session_snapshot_is_idempotent_when_companion_evidence_is_healthy(tmp_path):
+    """An existing snapshot with companion evidence showing a NON-degraded sentinel verdict is
+    reused exactly like a bare snapshot with no companion evidence at all."""
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    _write_json(paths["exact_session_snapshot"], {"resolved_completed_session": session})
+    _write_json(paths["multi_source_market_evidence"], {
+        "dnse_quality_sentinel": {"health": {"state": "DNSE_EXACT_AND_CORROBORATED"}},
+    })
+
+    with patch.object(level2, "run_cmd") as mocked:
+        result = level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+    mocked.assert_not_called()
+    assert result == paths["exact_session_snapshot"]
+
+
+def test_ensure_exact_session_snapshot_refuses_to_reuse_unresolved_degraded_existing_snapshot(tmp_path):
+    """MANDATORY regression test (P0 DEFECT 2): the exact idempotency-escape shape this corrective
+    milestone closes. A canonical snapshot exists at the default path (as the pre-corrective code
+    would have written it, BEFORE ever checking DNSE provider health) whose companion evidence
+    proves DNSE_BROAD_STALE_OR_INCOMPLETE_EOD was found for this session, but the snapshot itself
+    carries no completed degraded-provider-recovery marker (because the code that wrote it never
+    ran degraded-provider recovery, or predates this milestone entirely). A rerun must NOT silently
+    reuse it -- it must refuse loudly rather than let a contaminated session proceed.
+    """
+    session = "2026-09-03"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    _write_json(paths["exact_session_snapshot"], {
+        "resolved_completed_session": session,
+        "exact_session_observed_count": 772,
+        "attempted_candidate_count": 1683,
+        # No "degraded_provider_recovery" key at all -- exactly what pre-corrective code (or a
+        # write that crashed/stopped before the wrapper could stamp it) would have produced.
+    })
+    _write_json(paths["multi_source_market_evidence"], {
+        "dnse_quality_sentinel": {
+            "health": {"state": "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD", "conflict_count": 18, "dnse_assessed_count": 18},
+        },
+    })
+
+    with patch.object(level2, "run_cmd") as mocked:
+        with pytest.raises(ValueError, match="P3F9B_EXISTING_SNAPSHOT_PROVIDER_HEALTH_GATE_UNRESOLVED"):
+            level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+    mocked.assert_not_called()
+    # Old bytes are never touched by this refusal -- still exactly what was written above.
+    retained = json.loads(paths["exact_session_snapshot"].read_text(encoding="utf-8"))
+    assert retained["exact_session_observed_count"] == 772
+
+
+def test_ensure_exact_session_snapshot_reuses_degraded_snapshot_once_recovery_completed(tmp_path):
+    """The corrected policy DOES still allow idempotent reuse of a degraded day once it was
+    genuinely, honestly resolved via DEGRADED_PROVIDER_RECOVERY_MODE this run or a prior one --
+    the gate is about whether recovery ran to completion, never about whether DNSE happened to be
+    healthy."""
+    session = "2026-09-03"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    _write_json(paths["exact_session_snapshot"], {
+        "resolved_completed_session": session,
+        "degraded_provider_recovery": {"mode": "COMPLETED", "expanded_ticker_count": 0},
+    })
+    _write_json(paths["multi_source_market_evidence"], {
+        "dnse_quality_sentinel": {"health": {"state": "DNSE_BROAD_STALE_OR_INCOMPLETE_EOD", "conflict_count": 18}},
+    })
+
+    with patch.object(level2, "run_cmd") as mocked:
+        result = level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+    mocked.assert_not_called()
+    assert result == paths["exact_session_snapshot"]
+
+
 def test_ensure_exact_session_snapshot_raises_on_session_mismatch(tmp_path):
     session = "2026-08-26"
     patches, _ = _patch_resolved_acquisition(session, resolved_session="2026-08-25")
