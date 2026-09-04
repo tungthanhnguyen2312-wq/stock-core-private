@@ -8,15 +8,20 @@ from field_temporal_contract import stable_id
 from multi_source_exact_session_resolver import (
     DEGRADED_RECOVERY_COMPLETED,
     DEGRADED_RECOVERY_NOT_TRIGGERED,
+    POSITIVE_YIELD_EXPAND,
+    PROVIDER_ERROR_DOMINATED_NOT_ZERO_YIELD,
+    ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN,
     DailyRecoveryRuntimeBudgetExceeded,
     DnseProviderWideQualityDegraded,
     MultiSourceResolverError,
     _ProviderAwareMemoizingFetch,
     _ProviderSchedulePolicy,
     _DailyRecoveryRuntimeGuard,
+    _kbs_result_warrants_vci_fallback,
     assert_dnse_quality_acceptable,
     resolve_exact_session_with_autorecovery,
     resolve_multi_source_exact_session_snapshot,
+    select_residual_gap_sentinel,
     select_sentinel_cohort,
 )
 from vn_stock_pipeline import FetchOutcome
@@ -116,12 +121,15 @@ def test_kbs_recovers_dnse_missing_ticker_without_touching_vci():
     assert evidence["recovery_successes"] == {"VCI": 0, "KBS": 1}
 
 
-def test_vci_recovers_when_kbs_empty():
+def test_vci_recovers_when_kbs_fails_transport():
+    """DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1: VCI fallback fires for a genuine KBS
+    provider error (transport failure here), never for a clean KBS SESSION_MISSING -- see
+    test_vci_does_not_run_after_clean_kbs_session_missing for the negative case."""
     dnse = make_dnse_snapshot({"CCC": ("SESSION_MISSING", [_dnse_obs("2026-08-28", 30.0)])})
 
     def fetch(ticker, source, start, end):
         if source == "KBS":
-            return FetchOutcome("empty")
+            return FetchOutcome("failed", errors=["transient_network_error"], transient_failure=True)
         return FetchOutcome("success", data=make_df([(TARGET, 30300.0)]),
                              lineage=[{"trading_session_date": TARGET, "source_record_hash": "L2"}])
 
@@ -133,6 +141,32 @@ def test_vci_recovers_when_kbs_empty():
     assert rec["disposition"] == "EXACT_SESSION_RETAINED"
     assert rec["observations"][0]["provider"] == "VCI"
     assert evidence["recovery_attempts"] == {"VCI": 1, "KBS": 1}
+
+
+def test_vci_does_not_run_after_clean_kbs_session_missing():
+    """DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1: a clean KBS SESSION_MISSING must never
+    automatically trigger VCI -- 0/55 measured incremental recovery (operations-review/
+    same-session-gap-semantics-and-fallback-value-qualification-v1-20260904). The ticker stays
+    honestly SESSION_MISSING, never fabricated as exact or zero-trade."""
+    dnse = make_dnse_snapshot({"CCC": ("SESSION_MISSING", [_dnse_obs("2026-08-28", 30.0)])})
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append(source)
+        if source == "KBS":
+            return FetchOutcome("empty")
+        raise AssertionError("VCI must not be called after a clean KBS SESSION_MISSING")
+
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+    )
+    assert calls == ["KBS"]
+    assert evidence["recovery_attempts"] == {"VCI": 0, "KBS": 1}
+    assert projected["records"]["CCC"]["disposition"] == "SESSION_MISSING"
+    vci_obs = next(o for o in evidence["records"]["CCC"]["observations"] if o["source"] == "VCI")
+    assert vci_obs["status"] == "NOT_APPLICABLE"
+    assert vci_obs["reason_code"] == "NOT_ATTEMPTED_CLEAN_SESSION_MISSING_FALLBACK_POLICY_ERROR_ONLY"
 
 
 @pytest.mark.parametrize("dnse_disposition", ["SESSION_MISSING", "PROVIDER_REJECTED", "TRANSPORT_FAILED", "MALFORMED"])
@@ -190,8 +224,13 @@ def test_target_session_absent_from_history_is_session_missing_not_observed():
         dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
         fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
     )
+    # KBS (primary) genuinely queried: target-session-absent classifies SESSION_MISSING, never
+    # fabricated OBSERVED. A clean SESSION_MISSING is not a provider error, so VCI is never
+    # attempted (DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1) -- it gets an explicit stub instead.
+    kbs_obs = next(o for o in evidence["records"]["GGG"]["observations"] if o["source"] == "KBS")
+    assert kbs_obs["status"] == "SESSION_MISSING"
     vci_obs = next(o for o in evidence["records"]["GGG"]["observations"] if o["source"] == "VCI")
-    assert vci_obs["status"] == "SESSION_MISSING"
+    assert vci_obs["status"] == "NOT_APPLICABLE"
     assert projected["records"]["GGG"]["disposition"] == "SESSION_MISSING"
 
 
@@ -210,21 +249,31 @@ def test_generic_behavior_no_ticker_specific_branches():
 
     def fetch(ticker, source, start, end):
         calls.append((ticker, source))
-        # Odd-indexed missing tickers recover on KBS, even-indexed need VCI, one stays unresolved.
+        # Odd-indexed missing tickers recover cleanly on KBS. Even-indexed KBS calls fail with a
+        # genuine transport error (not a clean miss), so VCI fallback fires and recovers them --
+        # DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1: a clean KBS SESSION_MISSING must never
+        # reach VCI, so "needs VCI" can only be modeled here via a real provider error. One
+        # ticker fails cleanly on both and stays unresolved.
         idx = int(ticker[1:])
         if idx == 19:
             return FetchOutcome("empty")
-        if source == "KBS" and idx % 2 == 1:
-            return FetchOutcome("success", data=make_df([(TARGET, float(idx) * 1000)]))
-        if source == "VCI" and idx % 2 == 0:
-            return FetchOutcome("success", data=make_df([(TARGET, float(idx) * 1000)]))
-        return FetchOutcome("empty")
+        if idx % 2 == 1:
+            if source == "KBS":
+                return FetchOutcome("success", data=make_df([(TARGET, float(idx) * 1000)]))
+            raise AssertionError(f"VCI must not be called for odd-indexed {ticker} (clean KBS exact)")
+        if source == "KBS":
+            return FetchOutcome("failed", errors=["transient_network_error"], transient_failure=True)
+        return FetchOutcome("success", data=make_df([(TARGET, float(idx) * 1000)]))
 
     evidence, projected = resolve_multi_source_exact_session_snapshot(
         dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
         fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
     )
     assert {t for t, s in calls if s == "KBS"} == set(tickers[5:])  # every DNSE-missing ticker tried KBS
+    # Only the even-indexed (genuine KBS transport failure) tickers ever reach VCI -- the
+    # odd-indexed (clean KBS exact) and T019 (clean KBS miss) never do.
+    expected_vci_calls = {t for t in tickers[5:] if int(t[1:]) % 2 == 0 and int(t[1:]) != 19}
+    assert {t for t, s in calls if s == "VCI"} == expected_vci_calls
     resolved = [t for t in tickers if projected["records"][t]["disposition"] == "EXACT_SESSION_RETAINED"]
     assert "T019" not in resolved
     assert len(resolved) == 19  # 5 DNSE + 14 recovered (T005..T018 except the unresolvable one already excluded)
@@ -344,7 +393,10 @@ def test_production_default_has_no_recovery_bound_and_reports_are_consistent():
     )
     assert evidence["dnse_missing_excluded_by_recovery_bound_count"] == 0
     assert evidence["dnse_exact_session_count"] == 1
-    assert evidence["recovery_attempts"]["VCI"] == 1  # BBB was genuinely attempted, uncapped
+    # BBB was genuinely attempted at KBS, uncapped; its clean SESSION_MISSING never reaches VCI
+    # (DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1).
+    assert evidence["recovery_attempts"]["KBS"] == 1
+    assert evidence["recovery_attempts"]["VCI"] == 0
 
 
 # ---- select_sentinel_cohort: deterministic, versioned, no random sampling ----
@@ -927,3 +979,237 @@ def test_autorecovery_quarantines_dnse_across_all_four_degraded_mode_outcomes():
     assert evidence["authority_boundary"]["HISTORICAL_PIT"] == "BLOCKED"
     assert evidence["pit_backtest_eligible"] is False
     assert evidence["is_actionable_for_execution"] is False
+
+
+# ---- DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1 (2026-09-04) ----------------------------
+# recovery_eligibility_projection pre-filter, residual-gap sentinel gate, VCI-fallback-error-only.
+
+def _eligibility_projection(*, ineligible: dict[str, str]) -> dict:
+    """A minimal, already-``available`` projection shape -- see
+    daily_recovery_eligibility_projection.project_recovery_eligibility's real return shape."""
+    return {
+        "available": True,
+        "per_ticker": {
+            ticker: {"recovery_eligible": False, "reason_code": reason}
+            for ticker, reason in ineligible.items()
+        },
+        "source_evidence_identities": {"test_fixture": True},
+    }
+
+
+def test_non_current_recovery_exclusion_never_spends_a_request():
+    """A DNSE gap already known ineligible (e.g. corroborated delisted) must get zero KBS/VCI
+    requests, keep its true DNSE disposition, and carry an explicit ineligibility reason code."""
+    dnse = make_dnse_snapshot({
+        "AAA": ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, 1.0)]),
+        "DELISTED1": ("PROVIDER_REJECTED", []),
+        "GENUINE_GAP": ("SESSION_MISSING", [_dnse_obs("2026-08-28", 2.0)]),
+    })
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        if ticker == "GENUINE_GAP":
+            return FetchOutcome("success", data=make_df([(TARGET, 2000.0)]))
+        raise AssertionError(f"recovery-ineligible ticker {ticker} must never be fetched")
+
+    projection = _eligibility_projection(ineligible={"DELISTED1": "RECOVERY_INELIGIBLE_INACTIVE_OR_DELISTED"})
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        recovery_eligibility_projection=projection,
+    )
+    assert {t for t, _ in calls} == {"GENUINE_GAP"}
+    assert evidence["dnse_missing_excluded_by_recovery_ineligibility_count"] == 1
+    assert evidence["dnse_missing_excluded_by_recovery_ineligibility_tickers"] == ["DELISTED1"]
+    # True DNSE disposition preserved, never relabeled.
+    assert projected["records"]["DELISTED1"]["disposition"] == "PROVIDER_REJECTED"
+    for source in ("KBS", "VCI"):
+        stub = next(o for o in evidence["records"]["DELISTED1"]["observations"] if o["source"] == source)
+        assert stub["status"] == "NOT_APPLICABLE"
+        assert stub["reason_code"] == "NOT_ATTEMPTED_RECOVERY_INELIGIBLE_INACTIVE_OR_DELISTED"
+    assert projected["records"]["GENUINE_GAP"]["disposition"] == "EXACT_SESSION_RETAINED"
+
+
+def test_recovery_eligibility_projection_none_is_byte_identical_to_no_filter():
+    """The default (no projection given) must exercise every DNSE-missing ticker exactly as
+    before this milestone -- full backward compatibility for every existing caller."""
+    dnse = make_dnse_snapshot({"BBB": ("SESSION_MISSING", [_dnse_obs("2026-08-28", 1.0)])})
+
+    def fetch(ticker, source, start, end):
+        return FetchOutcome("empty")
+
+    evidence, _ = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+    )
+    assert evidence["dnse_missing_excluded_by_recovery_ineligibility_count"] == 0
+    assert evidence["recovery_eligibility_projection_summary"] is None
+    assert evidence["recovery_attempts"]["KBS"] == 1
+
+
+def _kbs_fallback_helper_cases():
+    return [
+        ("SESSION_MISSING", False), ("SOURCE_REJECTED", True),
+        ("TRANSPORT_FAILED", True), ("MALFORMED", True), ("EXACT_SESSION_OBSERVED", False),
+    ]
+
+
+@pytest.mark.parametrize("status,expected", _kbs_fallback_helper_cases())
+def test_kbs_result_warrants_vci_fallback_only_for_provider_errors(status, expected):
+    assert _kbs_result_warrants_vci_fallback(status) is expected
+
+
+# ---- select_residual_gap_sentinel: deterministic, versioned, stratified by recency ----------
+
+def _sentinel_dnse_snapshot(latest_session_by_ticker: dict[str, str | None]) -> dict:
+    records = {}
+    for ticker, latest in latest_session_by_ticker.items():
+        obs = [_dnse_obs(latest, 1.0)] if latest else []
+        records[ticker] = {"disposition": "SESSION_MISSING", "observations": obs}
+    return {"records": records}
+
+
+def test_select_residual_gap_sentinel_is_deterministic():
+    latest = {f"T{i:03d}": (None if i % 5 == 0 else f"2026-08-{20 + (i % 8):02d}") for i in range(40)}
+    snapshot = _sentinel_dnse_snapshot(latest)
+    metadata = {t: {"exchange": "HOSE" if i % 2 == 0 else "UPCOM"} for i, t in enumerate(latest)}
+    first = select_residual_gap_sentinel(
+        recovery_eligible_missing_tickers=list(latest), dnse_snapshot=snapshot,
+        candidate_metadata=metadata, target_session=TARGET, size=12,
+    )
+    second = select_residual_gap_sentinel(
+        recovery_eligible_missing_tickers=list(latest), dnse_snapshot=snapshot,
+        candidate_metadata=metadata, target_session=TARGET, size=12,
+    )
+    assert first == second
+    assert 0 < first["size"] <= 12
+    assert sum(first["pool_sizes"].values()) == len(latest)
+
+
+def test_select_residual_gap_sentinel_covers_no_observation_stratum():
+    latest = {"A": None, "B": "2026-08-28", "C": "2026-08-27", "D": None, "E": "2026-08-21"}
+    snapshot = _sentinel_dnse_snapshot(latest)
+    metadata = {t: {"exchange": "HOSE"} for t in latest}
+    cohort = select_residual_gap_sentinel(
+        recovery_eligible_missing_tickers=list(latest), dnse_snapshot=snapshot,
+        candidate_metadata=metadata, target_session=TARGET, size=8,
+    )
+    assert cohort["pool_sizes"]["no_observations"] == 2
+    assert set(cohort["stratum_picks"]["no_observations"]) <= {"A", "D"}
+
+
+# ---- residual-gap sentinel gate wired into resolve_multi_source_exact_session_snapshot ------
+
+def _make_missing_universe(n: int) -> dict:
+    spec = {}
+    for i in range(n):
+        spec[f"S{i:03d}"] = ("SESSION_MISSING", [_dnse_obs("2026-08-28", float(i))])
+    return make_dnse_snapshot(spec)
+
+
+def test_zero_yield_sentinel_stops_market_wide_kbs_fan_out():
+    """A sentinel that recovers zero exact bars and hits zero provider errors (a clean 100%
+    SESSION_MISSING sample) must stop KBS from ever being attempted on the rest -- no VCI either,
+    and every un-attempted ticker keeps its honest SESSION_MISSING disposition."""
+    dnse = _make_missing_universe(10)
+    sentinel_tickers = ["S000", "S001", "S002"]
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        return FetchOutcome("empty")  # clean miss for every sentinel member, every source
+
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        residual_yield_sentinel_tickers=sentinel_tickers,
+    )
+    assert {t for t, s in calls} == set(sentinel_tickers)  # nobody outside the sentinel was ever called
+    assert {s for _, s in calls} == {"KBS"}  # VCI never ran either (clean misses)
+    sentinel_result = evidence["residual_gap_sentinel"]
+    assert sentinel_result["decision"] == ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN
+    assert sentinel_result["exact_count"] == 0
+    assert sentinel_result["provider_error_count"] == 0
+    for ticker in [f"S{i:03d}" for i in range(3, 10)]:
+        assert projected["records"][ticker]["disposition"] == "SESSION_MISSING"
+        for source in ("KBS", "VCI"):
+            stub = next(o for o in evidence["records"][ticker]["observations"] if o["source"] == source)
+            assert stub["reason_code"] == "NOT_ATTEMPTED_ZERO_YIELD_SENTINEL_GATE"
+    assert evidence["recovery_attempts"] == {"KBS": 3, "VCI": 0}
+
+
+def test_positive_yield_sentinel_permits_full_expansion():
+    """One sentinel exact recovery must expand KBS to the rest of the eligible population."""
+    dnse = _make_missing_universe(6)
+    sentinel_tickers = ["S000", "S001"]
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        if ticker == "S000" and source == "KBS":
+            return FetchOutcome("success", data=make_df([(TARGET, 1000.0)]))
+        return FetchOutcome("empty")
+
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        residual_yield_sentinel_tickers=sentinel_tickers,
+    )
+    assert evidence["residual_gap_sentinel"]["decision"] == POSITIVE_YIELD_EXPAND
+    # every one of the 6 candidates got a genuine KBS attempt -- full expansion happened
+    assert {t for t, s in calls if s == "KBS"} == {f"S{i:03d}" for i in range(6)}
+    assert projected["records"]["S000"]["disposition"] == "EXACT_SESSION_RETAINED"
+
+
+def test_provider_error_dominated_sentinel_is_not_misclassified_as_zero_yield():
+    """A sentinel with zero exact hits but a genuine transport/provider error must NOT be
+    treated as zero-yield evidence -- it still expands to the rest, and the erroring sentinel
+    member correctly reaches VCI fallback."""
+    dnse = _make_missing_universe(6)
+    sentinel_tickers = ["S000", "S001"]
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        if ticker == "S000" and source == "KBS":
+            return FetchOutcome("failed", errors=["transient_network_error"], transient_failure=True)
+        if ticker == "S000" and source == "VCI":
+            return FetchOutcome("success", data=make_df([(TARGET, 500.0)]))
+        return FetchOutcome("empty")
+
+    evidence, projected = resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        residual_yield_sentinel_tickers=sentinel_tickers,
+    )
+    sentinel_result = evidence["residual_gap_sentinel"]
+    assert sentinel_result["decision"] == PROVIDER_ERROR_DOMINATED_NOT_ZERO_YIELD
+    assert sentinel_result["exact_count"] == 0
+    assert sentinel_result["provider_error_count"] == 1
+    # Expansion still happened -- every candidate got a genuine KBS attempt.
+    assert {t for t, s in calls if s == "KBS"} == {f"S{i:03d}" for i in range(6)}
+    # S000's genuine KBS error correctly reached VCI and recovered there.
+    assert projected["records"]["S000"]["disposition"] == "EXACT_SESSION_RETAINED"
+    assert projected["records"]["S000"]["observations"][0]["provider"] == "VCI"
+
+
+def test_sentinel_members_never_double_fetched_by_expansion_round():
+    """A sentinel member must be fetched at most once per source across the whole run, even
+    when the rest of the population expands -- no duplicate (ticker, source) network calls."""
+    dnse = _make_missing_universe(6)
+    sentinel_tickers = ["S000", "S001"]
+    calls = []
+
+    def fetch(ticker, source, start, end):
+        calls.append((ticker, source))
+        if ticker == "S000" and source == "KBS":
+            return FetchOutcome("success", data=make_df([(TARGET, 1000.0)]))
+        return FetchOutcome("empty")
+
+    resolve_multi_source_exact_session_snapshot(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        residual_yield_sentinel_tickers=sentinel_tickers,
+    )
+    assert len(calls) == len(set(calls))  # every (ticker, source) pair appears at most once

@@ -976,3 +976,36 @@ def test_level2_universe_resolution_uses_real_cli_flags():
     assert "--p3f9b-snapshot" in block
     assert "--breadth-foundation-artifact" in block
     assert '"--snapshot"' not in block
+
+
+# ---- _current_research_coverage: reporting-only, never the gate (DAILY_ACTIVITY_AWARE_ADAPTIVE_
+# GAP_RECOVERY_V1, 2026-09-04) ----
+
+def test_current_research_coverage_none_when_projection_absent():
+    assert cpc._current_research_coverage({"exact_session_observed_count": 5, "attempted_candidate_count": 10}) is None
+
+
+def test_current_research_coverage_none_when_projection_unavailable():
+    snapshot = {"recovery_eligibility": {"available": False}}
+    assert cpc._current_research_coverage(snapshot) is None
+
+
+def test_current_research_coverage_reports_narrower_ratio_never_touching_the_gate():
+    snapshot = {
+        "attempted_candidate_count": 1683,
+        "exact_session_observed_count": 958,
+        "recovery_eligibility": {
+            "available": True, "current_equity_denominator": 1506,
+            "current_equity_exact": 958, "current_equity_coverage_ratio": 0.636122,
+        },
+    }
+    # The raw gate denominator/ratio is completely untouched by this milestone.
+    exact, total, ratio = cpc._exact_session_coverage(snapshot)
+    assert (exact, total) == (958, 1683)
+    assert round(ratio, 6) == round(958 / 1683, 6)
+
+    coverage = cpc._current_research_coverage(snapshot)
+    assert coverage["current_equity_denominator"] == 1506
+    assert coverage["current_equity_exact"] == 958
+    assert coverage["current_equity_coverage_ratio"] == 0.636122
+    assert coverage["not_authoritative"] is True

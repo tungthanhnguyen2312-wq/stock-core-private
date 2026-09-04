@@ -149,6 +149,20 @@ DEFAULT_PER_EXCHANGE_SAMPLE_SIZE = 3
 DEFAULT_DNSE_EXACT_SAMPLE_SIZE = 18
 SENTINEL_EXCHANGES = ("HOSE", "HNX", "UPCOM")
 
+# ---------------------------------------------------------------------------
+# Residual-gap sentinel (DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1, 2026-09-04) -- distinct
+# from the DNSE quality sentinel above. That sentinel asks "is DNSE's OWN data trustworthy?";
+# this one asks "is it worth spending KBS/VCI requests on the residual gap at all today?", using
+# a small bounded KBS probe before committing to a full market-wide fan-out. See
+# select_residual_gap_sentinel and the ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN gate in
+# resolve_multi_source_exact_session_snapshot.
+# ---------------------------------------------------------------------------
+RESIDUAL_GAP_SENTINEL_VERSION = "residual_gap_sentinel/v1"
+DEFAULT_RESIDUAL_GAP_SENTINEL_SIZE = 16
+POSITIVE_YIELD_EXPAND = "POSITIVE_YIELD_EXPAND"
+PROVIDER_ERROR_DOMINATED_NOT_ZERO_YIELD = "PROVIDER_ERROR_DOMINATED_NOT_ZERO_YIELD"
+ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN = "ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN"
+
 WHEN_DNSE_HEALTHY_POLICY = (
     "DNSE_EXACT_AND_CORROBORATED or isolated DNSE_MATERIAL_CONFLICT (not broad/systemic): Lane A "
     "gap recovery stays scoped to DNSE's own SESSION_MISSING/rejected/failed tickers only. A "
@@ -275,6 +289,95 @@ def select_sentinel_cohort(
         "tickers": tickers,
         "size": len(tickers),
         "reasons": {ticker: sorted(rs) for ticker, rs in reasons.items()},
+    }
+
+
+def select_residual_gap_sentinel(
+    *,
+    recovery_eligible_missing_tickers: Sequence[str],
+    dnse_snapshot: Mapping[str, Any],
+    candidate_metadata: Mapping[str, Mapping[str, Any]],
+    target_session: str,
+    size: int = DEFAULT_RESIDUAL_GAP_SENTINEL_SIZE,
+) -> dict[str, Any]:
+    """Deterministic, versioned, bounded sample of the recovery-eligible SESSION_MISSING/
+    PROVIDER_REJECTED population, used to decide whether a full market-wide KBS fan-out is worth
+    its request/runtime cost this run, before spending it (see the Pass-3 gate in
+    ``resolve_multi_source_exact_session_snapshot``).
+
+    Stratifies each candidate by its own latest available DNSE session already retained in
+    ``dnse_snapshot`` (no new evidence, no re-fetch): the single most-recent distinct session
+    value observed anywhere in the eligible population is "recent"; the next five distinct
+    sessions are "moderately stale"; anything older is "long stale"; a candidate with zero
+    retained observations is its own stratum. Exchange (already-retained runtime metadata --
+    the same source ``select_sentinel_cohort`` already uses) is reported as observed spread, not
+    forced. Systematic alphabetical sampling within each stratum keeps this fully reproducible
+    from the same inputs -- never random.
+    """
+    records = dnse_snapshot.get("records") or {}
+    eligible = [t for t in recovery_eligible_missing_tickers if t in records]
+
+    latest_session: dict[str, str] = {}
+    for ticker in eligible:
+        sessions = [row["session"] for row in (records[ticker].get("observations") or []) if row.get("session")]
+        if sessions:
+            latest_session[ticker] = max(sessions)
+
+    distinct_sessions = sorted({s for s in latest_session.values()}, reverse=True)
+    recent_sessions = set(distinct_sessions[:1])
+    moderately_stale_sessions = set(distinct_sessions[1:6])
+
+    strata: dict[str, list[str]] = {"recent": [], "moderately_stale": [], "long_stale": [], "no_observations": []}
+    for ticker in eligible:
+        latest = latest_session.get(ticker)
+        if latest is None:
+            strata["no_observations"].append(ticker)
+        elif latest in recent_sessions:
+            strata["recent"].append(ticker)
+        elif latest in moderately_stale_sessions:
+            strata["moderately_stale"].append(ticker)
+        else:
+            strata["long_stale"].append(ticker)
+
+    per_stratum_size = max(1, size // 4)
+    stratum_picks: dict[str, list[str]] = {}
+    tickers: list[str] = []
+    for name, pool in strata.items():
+        pool_sorted = sorted(pool)
+        if not pool_sorted:
+            stratum_picks[name] = []
+            continue
+        n = min(per_stratum_size, len(pool_sorted))
+        stride = len(pool_sorted) / n
+        picks: list[str] = []
+        seen: set[str] = set()
+        for i in range(n):
+            candidate = pool_sorted[int(i * stride)]
+            if candidate not in seen:
+                picks.append(candidate)
+                seen.add(candidate)
+        stratum_picks[name] = picks
+        tickers.extend(picks)
+
+    tickers = sorted(set(tickers))
+    exchange_representation: dict[str, int] = {}
+    for ticker in tickers:
+        exchange = candidate_metadata.get(ticker, {}).get("exchange") or "UNKNOWN"
+        exchange_representation[exchange] = exchange_representation.get(exchange, 0) + 1
+
+    return {
+        "cohort_version": RESIDUAL_GAP_SENTINEL_VERSION,
+        "target_session": target_session,
+        "selection_rule": (
+            "Systematic alphabetical sampling within 4 latest-DNSE-session strata (recent / "
+            "moderately_stale / long_stale / no_observations), size//4 per stratum (min 1), "
+            "stride = pool_size / n, idx = floor(i * stride)."
+        ),
+        "pool_sizes": {name: len(pool) for name, pool in strata.items()},
+        "stratum_picks": stratum_picks,
+        "tickers": tickers,
+        "size": len(tickers),
+        "exchange_representation": exchange_representation,
     }
 
 
@@ -564,6 +667,21 @@ def _lineage_hash_for_session(lineage: list[Mapping[str, Any]], session: str) ->
     return None
 
 
+def _kbs_result_warrants_vci_fallback(status: str) -> bool:
+    """A clean SESSION_MISSING must never automatically trigger the fallback source -- only a
+    genuine provider-side problem does (DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1, 2026-09-04).
+
+    Live same-cohort evidence (operations-review/same-session-gap-semantics-and-fallback-value-
+    qualification-v1-20260904/kbs_vci_same_cohort_probe.json): 0/55 (0%) VCI incremental recovery
+    after a clean KBS SESSION_MISSING, with zero KBS transport/rejection errors observed in that
+    sample -- i.e. the current "any non-exact KBS result triggers VCI" policy pays VCI's full
+    request/runtime cost for measured-zero yield on this population. VCI remains available as a
+    genuine failover for TRANSPORT_FAILED/SOURCE_REJECTED/MALFORMED -- outcomes that mean the
+    primary source itself was unusable, not merely that it lacked the target session.
+    """
+    return status in (STATUS_TRANSPORT_FAILED, STATUS_SOURCE_REJECTED, STATUS_MALFORMED)
+
+
 def _classify_recovery_outcome(
     *, outcome: Any, source: str, ticker: str, target_session: str,
 ) -> tuple[str, str | None, Mapping[str, Any] | None, list[Mapping[str, Any]]]:
@@ -609,6 +727,8 @@ def resolve_multi_source_exact_session_snapshot(
     max_recovery_candidates: int | None = None,
     sentinel_cohort: Sequence[str] | None = None,
     recovery_runtime_guard: _DailyRecoveryRuntimeGuard | None = None,
+    recovery_eligibility_projection: Mapping[str, Any] | None = None,
+    residual_yield_sentinel_tickers: Sequence[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Run Passes 2-4 over an already-materialized DNSE snapshot (Pass 1), plus an optional
     Pass 5 DNSE quality sentinel.
@@ -630,6 +750,30 @@ def resolve_multi_source_exact_session_snapshot(
     calls ``assert_dnse_quality_acceptable(evidence)`` explicitly, AFTER persisting both
     artifacts. ``sentinel_cohort=None`` (the default) runs no Pass 5 at all and preserves this
     function's pre-sentinel behavior exactly.
+
+    ``recovery_eligibility_projection`` (see ``daily_recovery_eligibility_projection.
+    project_recovery_eligibility``; DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1, 2026-09-04),
+    when given and ``available``, removes from Pass 3/4's candidate scope any DNSE-missing ticker
+    that ticker's own current-universe/activity evidence already marks non-current (inactive/
+    delisted), non-equity, or unresolved-membership -- these can never be recovered by KBS/VCI
+    and never should be attempted. Excluded tickers keep their DNSE disposition (never relabeled)
+    and receive an explicit ``NOT_ATTEMPTED_<reason>`` stub for both recovery sources.
+    ``None`` (the default) or ``available=False`` filters nothing -- byte-identical to this
+    function's pre-existing behavior.
+
+    ``residual_yield_sentinel_tickers`` (see ``select_residual_gap_sentinel``), when given and
+    non-empty, gates Pass 3's market-wide KBS fan-out: KBS is attempted on this small subset of
+    the (post-eligibility-filter) missing population FIRST; if it recovers zero exact bars AND
+    encounters zero genuine provider errors (a clean 100% SESSION_MISSING sentinel), the
+    remaining candidates are classified ``ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN`` and KBS
+    is never attempted on them this run -- they keep their honest SESSION_MISSING/
+    PROVIDER_REJECTED disposition, never relabeled or fabricated as zero-trade or exact. Any
+    sentinel exact recovery expands KBS to the rest of the eligible population as normal; a
+    sentinel dominated by transport/provider errors is never treated as zero-yield evidence and
+    also expands normally (a provider outage says nothing about true yield). VCI fallback
+    (``_kbs_result_warrants_vci_fallback``) applies identically whether or not this gate ran.
+    ``None``/empty (the default) skips the gate entirely and preserves this function's
+    pre-existing full-fan-out behavior exactly.
     """
     fetch = fetch_single_source or _default_fetch_single_source()
     delay = request_delay if request_delay is not None else _default_request_delay()
@@ -649,23 +793,43 @@ def resolve_multi_source_exact_session_snapshot(
         t for t in all_tickers if dnse_records[t].get("disposition") != DNSE_EXACT_SESSION_DISPOSITION
     ]
     all_dnse_missing_set = set(all_dnse_missing_tickers)
+
+    # Recovery-eligibility pre-filter: a DNSE gap already known (from existing, non-circular
+    # current-universe evidence) to be non-current/non-equity/unresolved-membership is never
+    # worth a KBS/VCI request -- see the projection's own module docstring for why this is not
+    # circular with the exact-session coverage gate. Absent/degraded projection => no filter.
+    recovery_ineligible_reason: dict[str, str] = {}
+    if recovery_eligibility_projection is not None and recovery_eligibility_projection.get("available"):
+        per_ticker_eligibility = recovery_eligibility_projection.get("per_ticker") or {}
+        for ticker in all_dnse_missing_tickers:
+            row = per_ticker_eligibility.get(ticker)
+            if row is not None and not row.get("recovery_eligible", True):
+                recovery_ineligible_reason[ticker] = row.get("reason_code", "RECOVERY_INELIGIBLE_UNCLASSIFIED")
+    excluded_by_ineligibility_set = set(recovery_ineligible_reason)
+    recovery_eligible_missing_tickers = [
+        t for t in all_dnse_missing_tickers if t not in excluded_by_ineligibility_set
+    ]
+
     missing_tickers = (
-        all_dnse_missing_tickers[:max_recovery_candidates]
+        recovery_eligible_missing_tickers[:max_recovery_candidates]
         if max_recovery_candidates is not None
-        else all_dnse_missing_tickers
+        else recovery_eligible_missing_tickers
     )
     missing_set = set(missing_tickers)
     # Tickers this run is deliberately NOT attempting recovery for, distinct from tickers
     # DNSE already resolved -- only possible when max_recovery_candidates bounds a
     # diagnostic/test probe; always empty in production (max_recovery_candidates=None).
-    excluded_by_bound_set = all_dnse_missing_set - missing_set
+    excluded_by_bound_set = set(recovery_eligible_missing_tickers) - missing_set
 
     # Sentinel members DNSE already resolved -- these get a genuine Pass 5 VCI/KBS query below
     # instead of the usual "DNSE already resolved, never queried" stub. A sentinel member DNSE
     # did NOT resolve needs no special handling here: it is already in missing_set and gets a
     # real Pass 3/4 attempt like any other gap.
     sentinel_set = set(sentinel_cohort or [])
-    sentinel_dnse_exact_targets = {t for t in sentinel_set if t in all_tickers} - missing_set - excluded_by_bound_set
+    sentinel_dnse_exact_targets = (
+        {t for t in sentinel_set if t in all_tickers}
+        - missing_set - excluded_by_bound_set - excluded_by_ineligibility_set
+    )
 
     per_ticker_observations: dict[str, list[dict[str, Any]]] = {t: [] for t in all_tickers}
 
@@ -702,7 +866,15 @@ def resolve_multi_source_exact_session_snapshot(
         # max_recovery_candidates gets its own honest reason code -- never conflated with
         # "DNSE already resolved" (that conflation previously corrupted dnse_exact_session_count
         # under a bounded probe; see the accompanying test).
-        if ticker in excluded_by_bound_set:
+        if ticker in excluded_by_ineligibility_set:
+            for source in RECOVERY_SOURCES:
+                per_ticker_observations[ticker].append(build_source_observation(
+                    ticker=ticker, requested_session=target_session, observed_session=None,
+                    source=source, provider_interface=PROVIDER_INTERFACE[source], retrieved_at=requested_at,
+                    status=STATUS_NOT_APPLICABLE,
+                    reason_code=f"NOT_ATTEMPTED_{recovery_ineligible_reason[ticker]}",
+                ))
+        elif ticker in excluded_by_bound_set:
             for source in RECOVERY_SOURCES:
                 per_ticker_observations[ticker].append(build_source_observation(
                     ticker=ticker, requested_session=target_session, observed_session=None,
@@ -718,7 +890,9 @@ def resolve_multi_source_exact_session_snapshot(
                 ))
         # ticker in sentinel_dnse_exact_targets: no stub -- Pass 5 below genuinely queries it.
 
-    # Pass 3: selected-primary recovery for DNSE-missing tickers.
+    # Pass 3: selected-primary recovery for DNSE-missing tickers, subject to two independent
+    # cost controls (DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1, 2026-09-04): the eligibility
+    # pre-filter above, and the residual-gap sentinel gate below.
     still_missing = list(missing_tickers)
     recovery_attempts = {source: 0 for source in RECOVERY_SOURCES}
     recovery_successes = {source: 0 for source in RECOVERY_SOURCES}
@@ -729,12 +903,23 @@ def resolve_multi_source_exact_session_snapshot(
             remaining_by_source={primary_source: len(still_missing), fallback_source: 0},
         )
         recovery_runtime_guard.set_primary_failover(primary_source, fallback_source)
-    for pass_index, source in enumerate(MARKET_WIDE_RECOVERY_SOURCE_ORDER):
-        next_round: list[str] = []
+
+    def _attempt_round(tickers: list[str], source: str, *, stub_fallback: str | None) -> tuple[list[str], set[str]]:
+        """Fetch ``source`` for exactly ``tickers`` and record full evidence for each.
+
+        Returns ``(needs_fallback, clean_session_missing)`` -- disjoint from the exact-observed
+        subset, which is recorded here but not returned (callers only ever need to know who still
+        needs the next source). When ``stub_fallback`` is given, every ticker NOT added to
+        ``needs_fallback`` (whether exact or a clean miss) gets an explicit, honestly-reasoned
+        NOT_APPLICABLE stub for it immediately -- so a caller never has to reconstruct "who was
+        resolved this round" after the fact.
+        """
+        needs_fallback: list[str] = []
+        clean_miss: set[str] = set()
         outcomes = fetch_many(
-            [(ticker, source, window["start"], window["end"]) for ticker in still_missing]
+            [(ticker, source, window["start"], window["end"]) for ticker in tickers]
         ) if fetch_many is not None else None
-        for index, ticker in enumerate(still_missing):
+        for index, ticker in enumerate(tickers):
             recovery_attempts[source] += 1
             outcome = outcomes[index] if outcomes is not None else fetch(
                 ticker, source, window["start"], window["end"],
@@ -758,29 +943,90 @@ def resolve_multi_source_exact_session_snapshot(
             ))
             if status == STATUS_EXACT_SESSION_OBSERVED:
                 recovery_successes[source] += 1
+                if stub_fallback:
+                    per_ticker_observations[ticker].append(build_source_observation(
+                        ticker=ticker, requested_session=target_session, observed_session=None,
+                        source=stub_fallback, provider_interface=PROVIDER_INTERFACE[stub_fallback],
+                        retrieved_at=requested_at, status=STATUS_NOT_APPLICABLE,
+                        reason_code=f"NOT_ATTEMPTED_RESOLVED_BY_{source}",
+                    ))
+            elif _kbs_result_warrants_vci_fallback(status):
+                needs_fallback.append(ticker)
             else:
-                next_round.append(ticker)
-            if ticker != still_missing[-1] or pass_index < len(MARKET_WIDE_RECOVERY_SOURCE_ORDER) - 1:
+                clean_miss.add(ticker)
+                if stub_fallback:
+                    per_ticker_observations[ticker].append(build_source_observation(
+                        ticker=ticker, requested_session=target_session, observed_session=None,
+                        source=stub_fallback, provider_interface=PROVIDER_INTERFACE[stub_fallback],
+                        retrieved_at=requested_at, status=STATUS_NOT_APPLICABLE,
+                        reason_code="NOT_ATTEMPTED_CLEAN_SESSION_MISSING_FALLBACK_POLICY_ERROR_ONLY",
+                    ))
+            if index != len(tickers) - 1:
                 sleep_fn(delay)
-        # Every ticker not carried into the next round gets an explicit NOT_APPLICABLE
-        # stub for the remaining, un-attempted recovery source(s).
-        resolved_this_round = set(still_missing) - set(next_round)
-        for remaining_source in MARKET_WIDE_RECOVERY_SOURCE_ORDER[pass_index + 1:]:
-            for ticker in resolved_this_round:
-                per_ticker_observations[ticker].append(build_source_observation(
-                    ticker=ticker, requested_session=target_session, observed_session=None,
-                    source=remaining_source, provider_interface=PROVIDER_INTERFACE[remaining_source], retrieved_at=requested_at,
-                    status=STATUS_NOT_APPLICABLE, reason_code=f"NOT_ATTEMPTED_RESOLVED_BY_{source}",
-                ))
-        still_missing = next_round
-        if recovery_runtime_guard is not None and source == primary_source:
-            # The fallback is deliberately planned only after the primary's actual missing/failed outcomes are
-            # known.  This is both the recovery topology and the runtime forecast boundary.
-            recovery_runtime_guard.set_plan(
-                stage=f"DNSE_GAP_RECOVERY_{fallback_source}_FAILOVER",
-                remaining_by_source={primary_source: 0, fallback_source: len(still_missing)},
+        return needs_fallback, clean_miss
+
+    residual_gap_sentinel_result: dict[str, Any] | None = None
+    sentinel_set_for_gate = {t for t in (residual_yield_sentinel_tickers or ()) if t in missing_set}
+    if sentinel_set_for_gate:
+        sentinel_members = [t for t in still_missing if t in sentinel_set_for_gate]
+        rest_members = [t for t in still_missing if t not in sentinel_set_for_gate]
+        sentinel_needs_fallback, sentinel_clean_miss = _attempt_round(
+            sentinel_members, primary_source, stub_fallback=fallback_source,
+        )
+        exact_count = len(sentinel_members) - len(sentinel_needs_fallback) - len(sentinel_clean_miss)
+        if exact_count > 0:
+            decision = POSITIVE_YIELD_EXPAND
+        elif sentinel_needs_fallback:
+            decision = PROVIDER_ERROR_DOMINATED_NOT_ZERO_YIELD
+        else:
+            decision = ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN
+        residual_gap_sentinel_result = {
+            "cohort_version": RESIDUAL_GAP_SENTINEL_VERSION,
+            "cohort_size": len(sentinel_members),
+            "tickers": sentinel_members,
+            "primary_source": primary_source,
+            "exact_count": exact_count,
+            "provider_error_count": len(sentinel_needs_fallback),
+            "clean_session_missing_count": len(sentinel_clean_miss),
+            "decision": decision,
+            "remaining_eligible_population_count": len(rest_members),
+        }
+        if decision == ZERO_OBSERVED_INCREMENTAL_YIELD_FOR_THIS_RUN:
+            for ticker in rest_members:
+                for source in RECOVERY_SOURCES:
+                    per_ticker_observations[ticker].append(build_source_observation(
+                        ticker=ticker, requested_session=target_session, observed_session=None,
+                        source=source, provider_interface=PROVIDER_INTERFACE[source], retrieved_at=requested_at,
+                        status=STATUS_NOT_APPLICABLE, reason_code="NOT_ATTEMPTED_ZERO_YIELD_SENTINEL_GATE",
+                    ))
+            kbs_needs_fallback = sentinel_needs_fallback
+            if recovery_runtime_guard is not None:
+                recovery_runtime_guard.set_plan(
+                    stage="DNSE_GAP_RECOVERY_ZERO_YIELD_SENTINEL_GATE_STOPPED",
+                    remaining_by_source={primary_source: 0, fallback_source: len(kbs_needs_fallback)},
+                )
+        else:
+            rest_needs_fallback, _rest_clean_miss = _attempt_round(
+                rest_members, primary_source, stub_fallback=fallback_source,
             )
-            recovery_runtime_guard.clear_conditional_failover()
+            kbs_needs_fallback = sentinel_needs_fallback + rest_needs_fallback
+    else:
+        kbs_needs_fallback, _clean_miss_all = _attempt_round(
+            still_missing, primary_source, stub_fallback=fallback_source,
+        )
+
+    if recovery_runtime_guard is not None:
+        # The fallback is deliberately planned only after the primary's actual missing/failed
+        # outcomes are known. This is both the recovery topology and the runtime forecast boundary.
+        recovery_runtime_guard.set_plan(
+            stage=f"DNSE_GAP_RECOVERY_{fallback_source}_FAILOVER",
+            remaining_by_source={primary_source: 0, fallback_source: len(kbs_needs_fallback)},
+        )
+        recovery_runtime_guard.clear_conditional_failover()
+    still_missing = (
+        _attempt_round(kbs_needs_fallback, fallback_source, stub_fallback=None)[0]
+        if kbs_needs_fallback else []
+    )
 
     # Pass 5: DNSE quality sentinel. Independent of Pass 2-4's gap-recovery scope -- queries
     # VCI/KBS for sentinel members DNSE already resolved, purely to check same-date agreement.
@@ -853,7 +1099,17 @@ def resolve_multi_source_exact_session_snapshot(
         "dnse_source_snapshot_identity": dnse_snapshot.get("snapshot_identity"),
         "dnse_exact_session_count": len(all_tickers) - len(all_dnse_missing_tickers),
         "dnse_missing_total_count": len(all_dnse_missing_tickers),
+        "dnse_missing_excluded_by_recovery_ineligibility_count": len(excluded_by_ineligibility_set),
+        "dnse_missing_excluded_by_recovery_ineligibility_tickers": sorted(excluded_by_ineligibility_set),
+        "recovery_eligibility_projection_summary": (
+            {
+                "available": recovery_eligibility_projection.get("available"),
+                "source_evidence_identities": recovery_eligibility_projection.get("source_evidence_identities"),
+                "degraded_reason": recovery_eligibility_projection.get("degraded_reason"),
+            } if recovery_eligibility_projection is not None else None
+        ),
         "dnse_missing_excluded_by_recovery_bound_count": len(excluded_by_bound_set),
+        "residual_gap_sentinel": residual_gap_sentinel_result,
         "recovery_window": window,
         "recovery_attempts": recovery_attempts,
         "recovery_successes": recovery_successes,
@@ -1318,6 +1574,8 @@ def resolve_exact_session_with_autorecovery(
     request_delay: float | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
     max_recovery_candidates: int | None = None,
+    recovery_eligibility_projection: Mapping[str, Any] | None = None,
+    residual_yield_sentinel_tickers: Sequence[str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Product-critical Daily entrypoint (see daily_session_level2_package.
     ensure_exact_session_snapshot): Passes 1-5 exactly as resolve_multi_source_exact_session_
@@ -1369,6 +1627,8 @@ def resolve_exact_session_with_autorecovery(
         fetch_many=memoized_fetcher.fetch_many,
         request_delay=0.0, sleep_fn=_no_sleep, max_recovery_candidates=max_recovery_candidates,
         sentinel_cohort=sentinel_cohort, recovery_runtime_guard=runtime_guard,
+        recovery_eligibility_projection=recovery_eligibility_projection,
+        residual_yield_sentinel_tickers=residual_yield_sentinel_tickers,
     )
     sentinel = evidence.get("dnse_quality_sentinel")
     health_state = sentinel["health"]["state"] if sentinel else None

@@ -128,6 +128,31 @@ def test_ensure_exact_session_snapshot_runs_dnse_then_resolver_and_returns_the_p
     assert dnse_only["resolved_completed_session"] == session
 
 
+def test_ensure_exact_session_snapshot_stamps_recovery_eligibility_and_stays_self_consistent(tmp_path):
+    """DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1 (2026-09-04): the projected snapshot must
+    carry the new current-equity coverage/sentinel-decision fields, and its own hash must still
+    verify against its full final payload (the fields are added AFTER _project_to_p3f9_shape's
+    own hash stamp, so ensure_exact_session_snapshot must re-stamp it)."""
+    from field_temporal_contract import stable_id
+
+    session = "2026-08-26"
+    paths = level2.session_artifact_paths(tmp_path, session)
+    patches, _ = _patch_resolved_acquisition(session)
+
+    with patches[0], patches[1], patches[2], patches[3], patches[4]:
+        level2.ensure_exact_session_snapshot(tmp_path, session, tmp_path / "runtime")
+
+    written = json.loads(paths["exact_session_snapshot"].read_text(encoding="utf-8"))
+    assert "recovery_eligibility" in written
+    assert "residual_gap_sentinel_decision" in written
+    # Self-consistency: recomputing the hash over everything except the two identity fields
+    # must reproduce the recorded snapshot_sha256 -- the real (non-test-double) verification
+    # every consumer (e.g. current_universe_status_and_session_coverage_resolution) performs.
+    payload = {k: v for k, v in written.items() if k not in {"snapshot_sha256", "snapshot_identity"}}
+    assert written["snapshot_sha256"] == stable_id(payload)
+    assert written["snapshot_identity"] == f"p3f9_exact_session_snapshot:{written['snapshot_sha256']}"
+
+
 def test_ensure_exact_session_snapshot_retains_runtime_budget_abort_not_partial_projection(tmp_path):
     """A forecast abort is immutable diagnostic evidence, never a plausibly reusable snapshot."""
     import multi_source_exact_session_resolver as resolver

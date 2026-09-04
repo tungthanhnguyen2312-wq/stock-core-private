@@ -247,6 +247,34 @@ def _exact_session_coverage(snapshot: Mapping[str, Any]) -> tuple[int, int, floa
     return exact, total, ratio
 
 
+def _current_research_coverage(snapshot: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Reporting-only companion to ``_exact_session_coverage`` (DAILY_ACTIVITY_AWARE_ADAPTIVE_
+    GAP_RECOVERY_V1, 2026-09-04): the same exact-session numerator against the semantically
+    narrower current-equity/recovery-eligible denominator (daily_recovery_eligibility_projection,
+    stamped onto the snapshot by daily_session_level2_package.ensure_exact_session_snapshot),
+    instead of the raw attempted-candidate count.
+
+    Deliberately never consulted by ``assert_post_close_eligible``'s own MIN_EXACT_SESSION_
+    COVERAGE_RATIO gate -- that gate's raw-candidate denominator is an intentional, pre-existing
+    design choice (a narrower denominator computed from a downstream/resolved artifact would be
+    circular; see current_universe_status_and_session_coverage_resolution.py's own module note).
+    This function only surfaces the more honest Current-Research figure for callers/consumers
+    that display or reason about partial coverage -- it asserts nothing and blocks nothing.
+    Returns ``None`` when the snapshot predates this milestone or the projection was unavailable
+    (degraded to "no filter") for this session.
+    """
+    coverage = snapshot.get("recovery_eligibility")
+    if not isinstance(coverage, Mapping) or not coverage.get("available"):
+        return None
+    return {
+        "current_equity_denominator": coverage.get("current_equity_denominator"),
+        "current_equity_exact": coverage.get("current_equity_exact"),
+        "current_equity_coverage_ratio": coverage.get("current_equity_coverage_ratio"),
+        "not_authoritative": True,
+        "scope": "CURRENT_RESEARCH_REPORTING_ONLY_NEVER_A_GATE",
+    }
+
+
 def _provider_contribution_counts(snapshot: Mapping[str, Any]) -> dict[str, int]:
     """Per-source count of EXACT_SESSION_RETAINED tickers in a (possibly multi-source-
     resolved) exact-session snapshot. DNSE-only snapshots (contract unchanged) report

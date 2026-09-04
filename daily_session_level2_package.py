@@ -1012,10 +1012,30 @@ def ensure_exact_session_snapshot(
     sentinel = resolver.select_sentinel_cohort(
         candidate_metadata=candidate_metadata, dnse_exact_tickers=dnse_exact_tickers,
     )
+
+    # DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1 (2026-09-04): fed Pass 1's own dnse_snapshot
+    # only (never a resolved/recovered snapshot -- no circularity, see that module's docstring).
+    # Degrades to "no filter" on any missing/stale/mismatched retained evidence -- never a hard
+    # Daily dependency.
+    import daily_recovery_eligibility_projection as eligibility_projection
+    recovery_eligibility = eligibility_projection.project_recovery_eligibility(dnse_snapshot)
+    eligible_set = eligibility_projection.recovery_eligible_ticker_set(recovery_eligibility)
+    dnse_missing_tickers = [t for t in all_tickers if t not in set(dnse_exact_tickers)]
+    recovery_eligible_missing_tickers = (
+        [t for t in dnse_missing_tickers if t in eligible_set] if eligible_set is not None
+        else dnse_missing_tickers
+    )
+    residual_sentinel = resolver.select_residual_gap_sentinel(
+        recovery_eligible_missing_tickers=recovery_eligible_missing_tickers,
+        dnse_snapshot=dnse_snapshot, candidate_metadata=candidate_metadata, target_session=session,
+    )
+
     try:
         evidence, projected = resolver.resolve_exact_session_with_autorecovery(
             dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
             sentinel_cohort=sentinel["tickers"],
+            recovery_eligibility_projection=recovery_eligibility,
+            residual_yield_sentinel_tickers=residual_sentinel["tickers"],
         )
     except resolver.DailyRecoveryRuntimeBudgetExceeded as exc:
         # Preserve the deterministic throughput/timeout/retry diagnostic while refusing to
@@ -1052,6 +1072,33 @@ def ensure_exact_session_snapshot(
         evidence_path.write_text(
             json.dumps(evidence, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8",
         )
+
+    # DAILY_ACTIVITY_AWARE_ADAPTIVE_GAP_RECOVERY_V1 (2026-09-04): make the semantically-correct
+    # current-equity/recovery-eligible coverage explicitly visible on the artifact itself, without
+    # touching canonical_post_close_pipeline.MIN_EXACT_SESSION_COVERAGE_RATIO's own denominator
+    # (that gate stays the raw-candidate acquisition-completeness safety check it always was --
+    # see that module's _current_research_coverage for the reporting-only companion metric this
+    # feeds). Ineligible tickers can never become EXACT_SESSION_RETAINED (never attempted), so
+    # exact_session_observed_count already equals the eligible population's own exact count.
+    current_equity_denominator = len(dnse_exact_tickers) + len(recovery_eligible_missing_tickers)
+    current_equity_exact = projected.get("exact_session_observed_count", 0)
+    projected["recovery_eligibility"] = {
+        "available": recovery_eligibility.get("available"),
+        "counts": recovery_eligibility.get("counts"),
+        "source_evidence_identities": recovery_eligibility.get("source_evidence_identities"),
+        "current_equity_denominator": current_equity_denominator,
+        "current_equity_exact": current_equity_exact,
+        "current_equity_coverage_ratio": (
+            round(current_equity_exact / current_equity_denominator, 6) if current_equity_denominator else None
+        ),
+        "not_authoritative": True,
+    }
+    projected["residual_gap_sentinel_decision"] = evidence.get("residual_gap_sentinel")
+    projected.pop("snapshot_sha256", None)
+    projected.pop("snapshot_identity", None)
+    projected["snapshot_sha256"] = stable_id(projected)
+    projected["snapshot_identity"] = f"p3f9_exact_session_snapshot:{projected['snapshot_sha256']}"
+
     snapshotter.write_snapshot(projected, p3f9b_snapshot)
     if projected.get("resolved_completed_session") != session:
         raise ValueError(
