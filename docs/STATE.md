@@ -1,5 +1,79 @@
 # Stock Lookup — Operational State
 
+**Core valuation method coverage and consistency V1 (2026-09-05):**
+`CORE_VALUATION_METHOD_COVERAGE_AND_CONSISTENCY_V1 = COMPLETE`, checkpoint `35bb7e0`. Opened
+directly after the 2026-09-04 Daily terminal corrective closeout below, per explicit owner
+authorization, since `docs/ROADMAP_STATE.json` reported `queued_next=[]` with no conflicting
+named successor. Inventory found this repository already has two independent valuation lanes:
+`current_research_valuation_context.py` (P/E, P/B, P/S, EV/Sales, peer-relative, history-context
+-- complete via `CORE_FUNDAMENTAL_VALUATION_AND_PEER_CONTEXT_V1`, left entirely untouched here)
+and a second, separately complete engine, `market_wide_calculation_readiness.py` (EBITDA,
+enterprise value, EV/EBITDA, P/E, P/B, ROE -- sign-aware, cross-statement-coherent,
+currency/scale/period-compatible by construction), with its own CLI
+(`tools/report_market_wide_readiness.py`) and an opt-in bundle section
+(`canonical_financial_bundle_section.py`). Neither the engine nor its CLI had ever been
+registered in `docs/ROADMAP_STATE.json`, and a real pre-fix run showed its price-dependent
+capabilities had never actually been measured with real inputs -- **no new valuation model was
+built; this milestone activated a dormant one and fixed what running it for real revealed.**
+
+**Three real defects found and fixed, each confirmed against the real 1,492-ticker canonical
+fact store, not synthetic data.** (1) `canonical_financial_bundle_section._resolve_session_inputs`
+read `vn_stock.db`'s `ohlcv.close` (DNSE's established thousands-of-VND OHLC convention) with no
+unit conversion at all, on both its pre-supplied-entry and its SQLite-fallback path -- confirmed
+by two already-existing, already-failing tests (`test_p1h_valuation_readiness.py`: HPG price
+21.8 vs. expected 21800.0, VNM 61.2 vs. 61200.0). Fixed via the already-established
+`price_representation_contract.to_canonical` contract (`source=DNSE, capability_id=ohlc_1D,
+instrument_class=VN_LISTED_EQUITY`) -- the exact mechanism this repository already built to
+prevent non-uniform per-field price scaling -- never a magnitude-blind `* 1000`. (2)
+`tools/report_market_wide_readiness.py` never wired `session_price`/`effective_shares` into
+`evaluate_ticker()` at all, trivially blocking every price-dependent capability
+(`market_capitalisation`, `enterprise_value`, `pe`, `pb`, `ev_ebitda`) by omission, not by
+genuine data absence. Added an optional `--session-date` (reuses the now-fixed resolver and the
+existing, untouched `market_wide_current_shares_resolver` -- no new resolution logic was
+written) and `--price-basis-verified` (default `False`, so results stay `provider_reported`,
+never `qualified`, unless explicitly asserted); omitting `--session-date` is byte-identical to
+the tool's exact behavior before this milestone (regression-tested). (3)
+`evaluate_ev_ebitda`'s block-reason logic checked only `ebitda["readiness"] != READY`, never the
+case where EBITDA is genuinely `READY` and simply non-positive -- 13 real ticker-periods (AAH
+2026-Q1, ABS 2025-Q3/2026-Q1, and 10 others) got `ev_ebitda=blocked` with an **empty**
+`blocked_by` list: a correct refusal to compute a meaningless negative multiple, with no reason
+distinguishing it from a missing-input block. Added an explicit
+`negative_or_zero_ebitda_denominator` reason, mirroring how `PE_NOT_MEANINGFUL` already names
+negative earnings elsewhere in this codebase; confirmed against real data that all 13 cases now
+carry the explicit reason.
+
+**Real method-coverage impact, 1,492 tickers, session 2026-08-25 (price resolved for 850,
+shares for 1,474), all `status=provider_reported` (never `qualified` -- price basis is not
+independently verified market-wide, unchanged and consistent with every other valuation lane in
+this codebase; Invariant 1 below is unaffected):** `market_capitalisation` 0 -> 848 ready,
+`enterprise_value` 0 -> 786, `pe` 0 -> 839, `pb` 0 -> 825, `ev_ebitda` 0 -> 84; `ebitda` 231 and
+`roe` 1,321 unchanged (both price-independent). Bank/securities/insurance were already correctly
+`NOT_APPLICABLE` for `ebitda`/`ev_ebitda` via the pre-existing, untouched
+`financial_entity_applicability.CORPORATE_ONLY_METRICS` -- confirmed already working, not built
+here. Full numbers and top blockers per capability:
+`operations-review/core-valuation-method-coverage-and-consistency-v1-20260905/real_replay_before_after.json`.
+
+**Deliberately not opened this milestone:** flipping `canonical_financial_bundle_section.attach`'s
+`include=False` default to `True`, or wiring `market_wide_calculation_readiness.py` into any
+live product or Dashboard surface -- a distinct, larger, product/authority decision (which
+artifact gets it, at what tier, with what downstream implications) beyond a bounded
+coverage-and-consistency milestone's remit, flagged for a future owner-authorized milestone if
+wanted. P/S and EV/EBIT (not part of this engine; P/S is already served by the other, untouched
+lane). Cash-flow valuation (no upstream evidence in this replay makes one legitimate yet). No
+RAW_AS_TRADED, PIT, liquidity, sizing, execution, or provider-authority promotion occurred.
+
+**Verification.** 17 new/updated focused tests (9 `test_p1h_valuation_readiness` regression-fixed,
+5 new `test_market_wide_calculation_readiness` -- first dedicated unit coverage for that module,
+3 new `test_report_market_wide_readiness` for the CLI's new backward-compatible opt-in flag) all
+pass. Adjacent suites (`test_canonical_financial_facts`, `test_p1g/p1i/p1j_*`,
+`test_canonical_market_evidence_integration`, `test_collect_market_evidence`,
+`test_export_ai_bundle`) show zero new failures, confirmed via exact `git stash` comparison
+(`test_export_ai_bundle`'s pre-existing 12 failed/20 errors and `test_p1j`'s one date-drift test
+are byte-for-byte identical with or without this milestone's changes). `py_compile`,
+`git diff --check`, `tools/stocklookup_roadmap.py --check` (drift `PASS`) all clean. Artifact:
+`operations-review/core-valuation-method-coverage-and-consistency-v1-20260905/`. No successor is
+queued.
+
 **Daily 2026-09-04 terminal corrective and canonical operational acceptance (2026-09-04/05):**
 `DAILY_20260904_TERMINAL_CORRECTIVE_AND_ROADMAP_RESUME_V1 = ACCEPTED`. Closes the 2026-09-04
 incident this file's own preceding entries (`KBS_BOUNDED_CONCURRENCY_AND_PROVIDER_PACING_V1`,
