@@ -20,6 +20,7 @@ from multi_source_market_evidence_contract import (
     build_source_observation,
     classify_dnse_provider_health,
     resolve_ticker,
+    resolve_ticker_degraded_dnse,
 )
 
 SESSION = "2026-09-03"
@@ -345,3 +346,109 @@ def test_dnse_health_ticker_dnse_did_not_resolve_is_excluded_from_assessment():
     assert health["dnse_assessed_count"] == 0
     assert health["uncorroborated_count"] == 0
     assert health["per_ticker_resolution"] == {}
+
+
+# ---- resolve_ticker_degraded_dnse: P0 DEFECT B (DNSE quarantined once broadly degraded) ----
+# DAILY_GOVERNED_PREVIOUS_SESSION_AND_DEGRADED_SOURCE_FINAL_HARDENING_V1. DNSE's own value is
+# NEVER a resolution candidate here -- these tests deliberately construct DNSE observations that
+# would win under plain resolve_ticker's tie-break (agreeing with, or preferred over, a lone
+# secondary) to prove the quarantine actually changes the outcome, not merely that it doesn't
+# regress an already-non-DNSE case.
+
+_DNSE_NATIVE = {"open": 10.0, "high": 10.0, "low": 10.0, "close": 10.0, "volume": 1000}
+_SECONDARY_NATIVE_A = {"open": 8000.0, "high": 8000.0, "low": 8000.0, "close": 8000.0, "volume": 500000}
+_SECONDARY_NATIVE_B = {"open": 9000.0, "high": 9000.0, "low": 9000.0, "close": 9000.0, "volume": 700000}
+
+
+def test_degraded_vci_kbs_agree_resolves_non_dnse_even_when_dnse_also_agrees():
+    """Required regression 4: VCI+KBS corroborate -> non-DNSE result, even when DNSE's own value
+    would ALSO have agreed (passive agreement is not evidence DNSE is trustworthy this session --
+    plain resolve_ticker would pick DNSE by tie-break here since nothing conflicts)."""
+    dnse_native = dict(_SECONDARY_NATIVE_A, open=8000.0, high=8000.0, low=8000.0, close=8000.0)
+    result = resolve_ticker_degraded_dnse("HPG", [
+        obs("DNSE", STATUS_EXACT_SESSION_OBSERVED, native=dnse_native, unit_scale=1, ticker="HPG"),
+        obs("VCI", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+        obs("KBS", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+    ])
+    assert result["resolution"] == RESOLUTION_CORROBORATED_NON_DNSE
+    assert result["resolved_source"] == "VCI"
+    assert result["resolved_under_quarantine"] is True
+    assert "DNSE" in result["contributing_sources"]  # retained as evidence, never dropped
+
+
+def test_degraded_vci_kbs_agree_resolves_non_dnse_when_dnse_conflicts():
+    """Same rule, the more obvious direction: DNSE materially conflicts with a corroborated
+    VCI==KBS pair."""
+    result = resolve_ticker_degraded_dnse("HPG", [
+        obs("DNSE", STATUS_EXACT_SESSION_OBSERVED, native=_DNSE_NATIVE, unit_scale=1, ticker="HPG"),
+        obs("VCI", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+        obs("KBS", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+    ])
+    assert result["resolution"] == RESOLUTION_CORROBORATED_NON_DNSE
+    assert result["resolved_source"] == "VCI"
+
+
+def test_degraded_vci_only_resolves_single_source_vci_never_dnse():
+    """Required regression 5: exactly one usable secondary (VCI) -> single-source VCI Current
+    Research; DNSE retained as evidence but never the winner, even though plain resolve_ticker
+    would pick DNSE here (2 observed, no conflict -> RESOLUTION_CORROBORATED, DNSE preferred)."""
+    result = resolve_ticker_degraded_dnse("HPG", [
+        obs("DNSE", STATUS_EXACT_SESSION_OBSERVED, native=_DNSE_NATIVE, unit_scale=1, ticker="HPG"),
+        obs("VCI", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+        obs("KBS", STATUS_SESSION_MISSING, ticker="HPG"),
+    ])
+    assert result["resolution"] == RESOLUTION_SINGLE_SOURCE
+    assert result["resolved_source"] == "VCI"
+    assert result["resolved_under_quarantine"] is True
+    assert "DNSE" in result["contributing_sources"]
+
+
+def test_degraded_kbs_only_resolves_single_source_kbs_never_dnse():
+    """Required regression 6: same semantics with KBS as the sole usable secondary."""
+    result = resolve_ticker_degraded_dnse("HPG", [
+        obs("DNSE", STATUS_EXACT_SESSION_OBSERVED, native=_DNSE_NATIVE, unit_scale=1, ticker="HPG"),
+        obs("VCI", STATUS_TRANSPORT_FAILED, ticker="HPG"),
+        obs("KBS", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+    ])
+    assert result["resolution"] == RESOLUTION_SINGLE_SOURCE
+    assert result["resolved_source"] == "KBS"
+    assert result["resolved_under_quarantine"] is True
+
+
+def test_degraded_vci_kbs_conflict_is_unresolved_never_tiebroken_to_either():
+    """Required regression 7: VCI and KBS themselves materially conflict -> SOURCE_CONFLICT,
+    resolved_source/resolved_normalized both None -- never tie-broken to VCI, KBS, or DNSE."""
+    result = resolve_ticker_degraded_dnse("HPG", [
+        obs("DNSE", STATUS_EXACT_SESSION_OBSERVED, native=_DNSE_NATIVE, unit_scale=1, ticker="HPG"),
+        obs("VCI", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+        obs("KBS", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_B, unit_scale=1, ticker="HPG"),
+    ])
+    assert result["resolution"] == RESOLUTION_CONFLICT
+    assert result["resolved_source"] is None
+    assert result["resolved_normalized"] is None
+    assert result["cross_source_conflict"] is True
+    assert result["resolved_under_quarantine"] is True
+
+
+def test_degraded_no_secondary_is_unresolved_all_sources_missing_despite_dnse_value():
+    """Required regression 8: no usable secondary exact source -> SESSION_MISSING_ALL_SOURCES,
+    unresolved -- DNSE having a same-dated bar counts for nothing once quarantined."""
+    result = resolve_ticker_degraded_dnse("HPG", [
+        obs("DNSE", STATUS_EXACT_SESSION_OBSERVED, native=_DNSE_NATIVE, unit_scale=1, ticker="HPG"),
+        obs("VCI", STATUS_SESSION_MISSING, ticker="HPG"),
+        obs("KBS", STATUS_TRANSPORT_FAILED, ticker="HPG"),
+    ])
+    assert result["resolution"] == RESOLUTION_ALL_MISSING
+    assert result["resolved_source"] is None
+    assert result["resolved_under_quarantine"] is True
+    assert "DNSE" in result["contributing_sources"]
+
+
+def test_degraded_never_mutates_input():
+    observations = [
+        obs("DNSE", STATUS_EXACT_SESSION_OBSERVED, native=_DNSE_NATIVE, unit_scale=1, ticker="HPG"),
+        obs("VCI", STATUS_EXACT_SESSION_OBSERVED, native=_SECONDARY_NATIVE_A, unit_scale=1, ticker="HPG"),
+    ]
+    snapshot_before = [dict(o) for o in observations]
+    resolve_ticker_degraded_dnse("HPG", observations)
+    assert observations == snapshot_before

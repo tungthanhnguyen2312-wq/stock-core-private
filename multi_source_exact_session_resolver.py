@@ -79,6 +79,7 @@ from multi_source_market_evidence_contract import (
     build_source_observation,
     classify_dnse_provider_health,
     resolve_ticker,
+    resolve_ticker_degraded_dnse,
 )
 
 DNSE_EXACT_SESSION_DISPOSITION = "EXACT_SESSION_RETAINED"
@@ -595,36 +596,76 @@ def _project_to_p3f9_shape(
     lookback_sessions = 20
 
     for ticker, resolution in resolutions.items():
-        if resolution["resolution"] == RESOLUTION_ALL_MISSING:
-            # DNSE's own record (whatever it was) stands unchanged; add honest recovery-
-            # attempt metadata without touching status/reason/disposition.
+        if resolution["resolved_source"] is None:
+            # No justified value: either RESOLUTION_ALL_MISSING (no source at all -- DNSE's own
+            # record, whatever it independently is, already carries a non-retained disposition,
+            # so leaving it unchanged is already correct) or, once DNSE is quarantined for a
+            # broadly degraded session (resolve_ticker_degraded_dnse), a SOURCE_CONFLICT between
+            # VCI and KBS themselves with no DNSE fallback -- see docs brief P0 DEFECT B. In the
+            # quarantine case DNSE's ORIGINAL disposition here is still EXACT_SESSION_RETAINED
+            # (that is WHY it was quarantined at all), so it must be explicitly downgraded --
+            # never left standing as a retained bar this session no longer trusts as final -- and
+            # the target session's own now-untrusted DNSE row is stripped from `observations`
+            # (older lookback rows, if any, are preserved unchanged). DNSE's full observation is
+            # never lost: it remains verbatim in the caller's evidence["records"][ticker]
+            # ["observations"] artifact throughout -- this function only ever builds the
+            # DOWNSTREAM PROJECTION, never the evidence artifact itself.
+            quarantined = bool(resolution.get("resolved_under_quarantine"))
+            if quarantined:
+                original = records[ticker]
+                records[ticker] = {
+                    **original,
+                    "disposition": "SESSION_MISSING",
+                    "observations": [
+                        row for row in (original.get("observations") or [])
+                        if row.get("session") != target_session
+                    ],
+                }
             records[ticker]["multi_source_recovery_attempted"] = list(RECOVERY_SOURCES)
-            records[ticker]["multi_source_recovery_result"] = "ALL_SOURCES_MISSING"
+            records[ticker]["multi_source_recovery_result"] = (
+                "DEGRADED_DNSE_QUARANTINED_UNRESOLVED_SOURCE_CONFLICT" if quarantined
+                else "ALL_SOURCES_MISSING"
+            )
+            records[ticker]["multi_source_resolution_outcome"] = resolution["resolution"]
+            records[ticker]["cross_source_conflict"] = resolution["cross_source_conflict"]
+            records[ticker]["dnse_observation_overridden"] = quarantined
             continue
         source = resolution["resolved_source"]
         is_sentinel_override = resolution["resolution"] == RESOLUTION_CORROBORATED_NON_DNSE
+        resolved_under_quarantine = bool(resolution.get("resolved_under_quarantine"))
         if source == "DNSE":
             records[ticker]["multi_source_recovery_result"] = (
                 # DNSE, VCI, and KBS were all observed (sentinel ran) but there was no clean
                 # VCI==KBS pair to corroborate against -- conflict stays visible, DNSE's own
                 # bar is not promoted over an unresolved disagreement, but no source disproved
-                # it either, so DNSE's descriptive value is kept as the projected row.
+                # it either, so DNSE's descriptive value is kept as the projected row. Only
+                # reachable when NOT quarantined (resolve_ticker_degraded_dnse never returns
+                # source="DNSE" -- see its own docstring: DNSE is never a resolution candidate
+                # once quarantined).
                 "DNSE_RESOLVED_SENTINEL_CONFLICT_UNRESOLVED" if resolution["cross_source_conflict"]
                 else "DNSE_RESOLVED_NO_RECOVERY_NEEDED"
             )
             records[ticker]["multi_source_resolution_outcome"] = resolution["resolution"]
             records[ticker]["cross_source_conflict"] = resolution["cross_source_conflict"]
             continue
-        # A recovery source (VCI/KBS) supplied the target-session bar -- either because DNSE was
-        # missing it (ordinary gap recovery) or because the DNSE quality sentinel found DNSE's
-        # own bar conflicting with a corroborated VCI==KBS pair (is_sentinel_override). Either
-        # way the DNSE observation, if any, remains untouched in this ticker's full evidence
-        # record (evidence["records"][ticker]["observations"]) -- never erased, only outranked.
+        # A recovery source (VCI/KBS) supplied the target-session bar -- because DNSE was missing
+        # it (ordinary gap recovery), because the DNSE quality sentinel found DNSE's own bar
+        # conflicting with a corroborated VCI==KBS pair (is_sentinel_override), or because DNSE is
+        # quarantined for this degraded session (resolved_under_quarantine, single-source or
+        # corroborated-non-DNSE alike). Either way the DNSE observation, if any, remains untouched
+        # in this ticker's full evidence record (evidence["records"][ticker]["observations"]) --
+        # never erased, only outranked.
         winning = next(
             o for o in per_ticker_observations[ticker]
             if o["source"] == source and o["status"] == STATUS_EXACT_SESSION_OBSERVED
         )
         native = winning["native"]
+        if is_sentinel_override:
+            recovery_result = "CORROBORATED_NON_DNSE_CURRENT_RESEARCH_SENTINEL_OVERRIDE"
+        elif resolved_under_quarantine:
+            recovery_result = f"DEGRADED_DNSE_QUARANTINED_SINGLE_SOURCE_{source}"
+        else:
+            recovery_result = f"RECOVERED_BY_{source}"
         records[ticker] = {
             "status": "OBSERVED",
             "reason": None,
@@ -646,13 +687,10 @@ def _project_to_p3f9_shape(
             "payload_hash": winning.get("payload_hash"),
             "request": winning["provenance"].get("request"),
             "provider_endpoint": winning["provenance"].get("endpoint"),
-            "multi_source_recovery_result": (
-                "CORROBORATED_NON_DNSE_CURRENT_RESEARCH_SENTINEL_OVERRIDE" if is_sentinel_override
-                else f"RECOVERED_BY_{source}"
-            ),
+            "multi_source_recovery_result": recovery_result,
             "multi_source_resolution_outcome": resolution["resolution"],
             "cross_source_conflict": resolution["cross_source_conflict"],
-            "dnse_observation_overridden": is_sentinel_override,
+            "dnse_observation_overridden": is_sentinel_override or resolved_under_quarantine,
         }
 
     disposition_counts = {
@@ -769,6 +807,11 @@ def resolve_exact_session_with_autorecovery(
     for BOTH resolver calls, so every (ticker, source) pair the first call already fetched --
     normal gap recovery and sentinel corroboration alike -- is reused rather than re-queried, and
     only the genuinely new tickers this expansion adds are fetched live (docs brief steps 1-4).
+    Every DNSE-exact ticker's resolution is then quarantine-re-resolved via
+    multi_source_market_evidence_contract.resolve_ticker_degraded_dnse -- DNSE's own value is
+    never again a resolution candidate for this session, regardless of whether secondary
+    corroboration is complete, partial, conflicting, or entirely absent (P0 DEFECT B); DNSE's
+    observation itself is never dropped from the evidence artifact.
 
     Returns (evidence, projected) exactly like resolve_multi_source_exact_session_snapshot, with
     an added top-level ``degraded_provider_recovery`` block on both:
@@ -834,6 +877,46 @@ def resolve_exact_session_with_autorecovery(
             source = obs.get("source")
             if source in expanded_recovery_attempts and obs.get("status") != STATUS_NOT_APPLICABLE:
                 expanded_recovery_attempts[source] += 1
+
+    # P0 DEFECT B: DNSE has been classified provider-wide degraded for this session -- its
+    # same-date bar must not remain a resolving source merely because secondary corroboration is
+    # incomplete (docs brief). Re-resolve every ticker DNSE ORIGINALLY claimed
+    # (EXACT_SESSION_RETAINED) via resolve_ticker_degraded_dnse, which never consults DNSE's own
+    # value; a ticker DNSE never claimed keeps evidence2's own (already DNSE-free) gap-recovery
+    # resolution unchanged. By this point EVERY DNSE-exact ticker has genuine VCI/KBS observations
+    # attempted (expanded_cohort covers all of them), so this is never re-deriving a resolution
+    # from incomplete evidence.
+    quarantined_resolutions: dict[str, dict[str, Any]] = {}
+    for ticker, record in evidence2["records"].items():
+        if dnse_records.get(ticker, {}).get("disposition") == DNSE_EXACT_SESSION_DISPOSITION:
+            quarantined_resolutions[ticker] = resolve_ticker_degraded_dnse(ticker, record["observations"])
+        else:
+            quarantined_resolutions[ticker] = record["resolution"]
+    per_ticker_observations2 = {t: r["observations"] for t, r in evidence2["records"].items()}
+    projected2 = _project_to_p3f9_shape(
+        dnse_snapshot=dnse_snapshot, target_session=target_session,
+        resolutions=quarantined_resolutions, per_ticker_observations=per_ticker_observations2,
+        requested_at=requested_at,
+    )
+    for ticker, resolution in quarantined_resolutions.items():
+        evidence2["records"][ticker]["resolution"] = resolution
+    evidence2["resolution_counts"] = {
+        RESOLUTION_CORROBORATED: 0, "RESOLVED_SINGLE_SOURCE_RESEARCH": 0,
+        RESOLUTION_CONFLICT: 0, RESOLUTION_CORROBORATED_NON_DNSE: 0, RESOLUTION_ALL_MISSING: 0,
+    }
+    for resolution in quarantined_resolutions.values():
+        evidence2["resolution_counts"][resolution["resolution"]] += 1
+    # "Resolved" means a justified value exists (resolved_source is not None) -- for the ORIGINAL,
+    # non-quarantined resolve_ticker this is exactly equivalent to "resolution != ALL_MISSING"
+    # (resolved_source is None only in that one branch), but under quarantine a SOURCE_CONFLICT
+    # between VCI/KBS themselves is ALSO unresolved (resolved_source is None) despite carrying a
+    # different resolution label -- see resolve_ticker_degraded_dnse.
+    evidence2["resolved_exact_session_count"] = sum(
+        1 for r in quarantined_resolutions.values() if r["resolved_source"] is not None
+    )
+    evidence2["cross_source_conflict_count"] = sum(
+        1 for r in quarantined_resolutions.values() if r["cross_source_conflict"]
+    )
 
     recovery_info = {
         "mode": DEGRADED_RECOVERY_COMPLETED,

@@ -336,6 +336,96 @@ def resolve_ticker(ticker: str, observations: Sequence[Mapping[str, Any]]) -> di
     }
 
 
+def resolve_ticker_degraded_dnse(ticker: str, observations: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Re-resolve one ticker once DNSE has been classified provider-wide degraded
+    (``DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD``) for this session -- see
+    ``multi_source_exact_session_resolver.resolve_exact_session_with_autorecovery``, which calls
+    this ONLY for a ticker whose original DNSE disposition was ``EXACT_SESSION_RETAINED``; a
+    ticker DNSE never resolved anyway keeps ``resolve_ticker``'s ordinary (already DNSE-free)
+    outcome unchanged.
+
+    DNSE's own observation is NEVER a resolution candidate here -- quarantined from final
+    Current Research resolution, regardless of whether a secondary source happens to agree with
+    it -- while remaining fully retained as evidence: this function never inspects, mutates, or
+    drops DNSE's entry from ``observations``; the caller's evidence artifact keeps it verbatim.
+
+    Exactly four outcomes, driven ENTIRELY by VCI/KBS -- DNSE's own value is never consulted for
+    the winner decision, so DNSE can never become the fallback winner in any of them:
+      - VCI and KBS both ``EXACT_SESSION_OBSERVED`` and materially agree with each other
+        -> RESOLVED_CORROBORATED_NON_DNSE_CURRENT_RESEARCH (VCI's value; VCI ahead of KBS per
+           this module's own SOURCE_PREFERENCE_ORDER -- they agree, so which one is reported is a
+           formatting choice, never a claim that one is more correct). Applies even when DNSE
+           ALSO happens to agree with both -- passive agreement is not evidence DNSE is trustworthy
+           for THIS session, only that this particular bar happens to match.
+      - Exactly one of VCI/KBS is ``EXACT_SESSION_OBSERVED``
+        -> RESOLVED_SINGLE_SOURCE_RESEARCH using that one secondary source only -- the existing
+           Current Research single-source policy (see ``resolve_ticker``), just never DNSE.
+      - VCI and KBS both ``EXACT_SESSION_OBSERVED`` but materially conflict with each other
+        -> SOURCE_CONFLICT, unresolved (``resolved_source``/``resolved_normalized`` both None) --
+           a disagreement between the only two sources this session still trusts has no justified
+           resolution; never tie-broken toward either one, and never toward DNSE.
+      - Neither VCI nor KBS is ``EXACT_SESSION_OBSERVED``
+        -> SESSION_MISSING_ALL_SOURCES, unresolved -- DNSE having a same-dated bar is not evidence
+           of anything once the provider is broadly degraded for this session.
+    Every returned dict carries ``resolved_under_quarantine: True`` so
+    ``multi_source_exact_session_resolver._project_to_p3f9_shape`` can label/downgrade the
+    projected row correctly without re-deriving which tickers were quarantine-processed.
+    """
+    observed_by_source = {
+        o["source"]: o for o in observations if o.get("status") == STATUS_EXACT_SESSION_OBSERVED
+    }
+    contributing_sources = sorted(observed_by_source)
+    vci_ob, kbs_ob = observed_by_source.get("VCI"), observed_by_source.get("KBS")
+
+    if vci_ob is not None and kbs_ob is not None:
+        if _price_fields_agree(vci_ob["native"], kbs_ob["native"]):
+            volume_status = "AGREE" if _volumes_agree(vci_ob["normalized"], kbs_ob["normalized"]) else "DISAGREE"
+            return {
+                "ticker": ticker,
+                "resolution": RESOLUTION_CORROBORATED_NON_DNSE,
+                "resolved_source": "VCI",
+                "resolved_normalized": vci_ob["normalized"],
+                "cross_source_conflict": False,
+                "cross_source_volume_comparability": volume_status,
+                "contributing_sources": contributing_sources,
+                "resolved_under_quarantine": True,
+            }
+        return {
+            "ticker": ticker,
+            "resolution": RESOLUTION_CONFLICT,
+            "resolved_source": None,
+            "resolved_normalized": None,
+            "cross_source_conflict": True,
+            "cross_source_volume_comparability": "NOT_ESTABLISHED",
+            "contributing_sources": contributing_sources,
+            "resolved_under_quarantine": True,
+        }
+
+    winner = vci_ob if vci_ob is not None else kbs_ob
+    if winner is not None:
+        return {
+            "ticker": ticker,
+            "resolution": RESOLUTION_SINGLE_SOURCE,
+            "resolved_source": winner["source"],
+            "resolved_normalized": winner["normalized"],
+            "cross_source_conflict": False,
+            "cross_source_volume_comparability": "NOT_APPLICABLE_SINGLE_SOURCE",
+            "contributing_sources": contributing_sources,
+            "resolved_under_quarantine": True,
+        }
+
+    return {
+        "ticker": ticker,
+        "resolution": RESOLUTION_ALL_MISSING,
+        "resolved_source": None,
+        "resolved_normalized": None,
+        "cross_source_conflict": False,
+        "cross_source_volume_comparability": "NOT_APPLICABLE_NO_OBSERVED_SOURCE",
+        "contributing_sources": contributing_sources,
+        "resolved_under_quarantine": True,
+    }
+
+
 def classify_dnse_provider_health(sentinel_observations: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[str, Any]:
     """Reduce a bounded sentinel cohort's per-ticker observations to one DNSE same-date
     provider-health verdict for the session.

@@ -706,3 +706,92 @@ def test_autorecovery_pacing_delay_spent_once_per_genuine_fetch_not_per_call():
     # pass's own already-cached pairs.
     assert len(sleeps) == 6 * 2
     assert all(s == 1.1 for s in sleeps)
+
+
+# ---- P0 DEFECT B integration: DNSE quarantined from FINAL resolution once broadly degraded ----
+# DAILY_GOVERNED_PREVIOUS_SESSION_AND_DEGRADED_SOURCE_FINAL_HARDENING_V1
+
+def test_autorecovery_quarantines_dnse_across_all_four_degraded_mode_outcomes():
+    """End-to-end proof that resolve_exact_session_with_autorecovery wires
+    resolve_ticker_degraded_dnse in, covering the required regressions in one real run: 6
+    DNSE-exact tickers, sentinel_cohort covers all 6 (>= DNSE_BROAD_MIN_ASSESSED_COUNT=5), each
+    ticker exercises a DIFFERENT one of the four degraded-mode rules."""
+    dnse_native = 10.0
+    tickers = [f"Q{i}" for i in range(6)]
+    spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native)]) for t in tickers}
+    dnse = make_dnse_snapshot(spec)
+
+    def fetch(ticker, source, start, end):
+        if ticker == "Q0":  # VCI+KBS agree with each other, conflict with DNSE
+            return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
+                                 lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+        if ticker == "Q1":  # VCI+KBS agree with each other AND with DNSE (passive agreement)
+            return FetchOutcome("success", data=make_df([(TARGET, dnse_native * 1000)]),
+                                 lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+        if ticker == "Q2":  # VCI only
+            if source == "VCI":
+                return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
+                                     lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+            return FetchOutcome("empty")
+        if ticker == "Q3":  # KBS only
+            if source == "KBS":
+                return FetchOutcome("success", data=make_df([(TARGET, 9000.0)]),
+                                     lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+            return FetchOutcome("empty")
+        if ticker == "Q4":  # VCI and KBS both present but conflict with EACH OTHER
+            value = 8000.0 if source == "VCI" else 9500.0
+            return FetchOutcome("success", data=make_df([(TARGET, value)]),
+                                 lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
+        # Q5: neither VCI nor KBS available
+        return FetchOutcome("empty")
+
+    evidence, projected = resolve_exact_session_with_autorecovery(
+        dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
+        fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
+        sentinel_cohort=tickers,
+    )
+
+    assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
+
+    # Q0 and Q1: corroborated non-DNSE, counted as exact -- including the passive-agreement case.
+    for ticker in ("Q0", "Q1"):
+        rec = projected["records"][ticker]
+        assert rec["disposition"] == "EXACT_SESSION_RETAINED"
+        assert rec["multi_source_recovery_result"] == "CORROBORATED_NON_DNSE_CURRENT_RESEARCH_SENTINEL_OVERRIDE"
+        assert rec["observations"][0]["provider"] == "VCI"
+
+    # Q2/Q3: single usable secondary wins, DNSE never the resolved provider.
+    q2, q3 = projected["records"]["Q2"], projected["records"]["Q3"]
+    assert q2["disposition"] == "EXACT_SESSION_RETAINED"
+    assert q2["observations"][0]["provider"] == "VCI"
+    assert q2["multi_source_recovery_result"] == "DEGRADED_DNSE_QUARANTINED_SINGLE_SOURCE_VCI"
+    assert q3["disposition"] == "EXACT_SESSION_RETAINED"
+    assert q3["observations"][0]["provider"] == "KBS"
+    assert q3["multi_source_recovery_result"] == "DEGRADED_DNSE_QUARANTINED_SINGLE_SOURCE_KBS"
+
+    # Q4: VCI/KBS conflict -- unresolved, downgraded off EXACT_SESSION_RETAINED, never DNSE either.
+    q4 = projected["records"]["Q4"]
+    assert q4["disposition"] == "SESSION_MISSING"
+    assert q4["multi_source_recovery_result"] == "DEGRADED_DNSE_QUARANTINED_UNRESOLVED_SOURCE_CONFLICT"
+    assert not any(row["session"] == TARGET for row in q4["observations"])
+
+    # Q5: no secondary at all -- unresolved despite DNSE's own same-dated bar.
+    q5 = projected["records"]["Q5"]
+    assert q5["disposition"] == "SESSION_MISSING"
+    assert not any(row["session"] == TARGET for row in q5["observations"])
+
+    # Required regression 10: final coverage counts only the 4 justified resolutions, never all 6.
+    assert projected["exact_session_observed_count"] == 4
+    assert evidence["resolved_exact_session_count"] == 4
+
+    # DNSE's own observation is retained as evidence for every ticker, including the two
+    # downgraded ones -- never deleted, only excluded from winning.
+    for ticker in tickers:
+        dnse_ob = next(o for o in evidence["records"][ticker]["observations"] if o["source"] == "DNSE")
+        assert dnse_ob["status"] == "EXACT_SESSION_OBSERVED"
+
+    # Required regression 11: RAW_AS_TRADED/PIT authority boundary is untouched by this milestone.
+    assert evidence["authority_boundary"]["RAW_AS_TRADED"] == "NOT_PROMOTED"
+    assert evidence["authority_boundary"]["HISTORICAL_PIT"] == "BLOCKED"
+    assert evidence["pit_backtest_eligible"] is False
+    assert evidence["is_actionable_for_execution"] is False
