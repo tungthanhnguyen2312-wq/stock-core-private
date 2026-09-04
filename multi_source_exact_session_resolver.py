@@ -11,7 +11,7 @@ FOUR-PASS ACQUISITION STRATEGY (never re-fetches an already-resolved ticker)
             ``dnse_snapshot`` (mva_exact_session_snapshot.materialize_snapshot()'s own
             output; this module never re-implements DNSE's fetch).
     PASS 2  Identify candidates DNSE did not resolve (disposition != EXACT_SESSION_RETAINED).
-    PASS 3  VCI recovery for exactly those candidates, one bounded sequential request per
+    PASS 3  KBS recovery for exactly those candidates, one bounded sequential request per
             ticker (vn_stock_pipeline.fetch_single_source, reused unmodified -- same
             retry budget, same circuit breaker, same REQUEST_DELAY pacing already proven
             safe for this provider family; see docs/DECISIONS.md
@@ -19,7 +19,7 @@ FOUR-PASS ACQUISITION STRATEGY (never re-fetches an already-resolved ticker)
             No concurrency: this repository has zero evidence VCI/KBS tolerate concurrent
             access, so Pass 3/4 stay exactly as sequential/paced as vn_stock_pipeline.py's
             own existing cmd_backfill/cmd_update commands.
-    PASS 4  KBS recovery only for candidates still missing after Pass 3.
+    PASS 4  VCI recovery only for candidates still missing after Pass 3.
 
 RESOLUTION POLICY -- see multi_source_market_evidence_contract.resolve_ticker(). Per
 ticker: RESOLVED_SINGLE_SOURCE_RESEARCH (the overwhelmingly common case, by design --
@@ -83,14 +83,23 @@ from multi_source_market_evidence_contract import (
 )
 
 DNSE_EXACT_SESSION_DISPOSITION = "EXACT_SESSION_RETAINED"
+# All qualified secondary sources, kept in established observation/tie-break order.
 RECOVERY_SOURCES = ("VCI", "KBS")
+# The small provider-health classifier always checks both independently. Its source order is
+# deliberately separate from market-wide routing: a sentinel is corroboration, not a recovery
+# preference.
+SENTINEL_SOURCES = ("VCI", "KBS")
+# 2026-09-04 bounded 30-ticker live evidence: KBS matched VCI's 27/30 exact coverage with no
+# retries/timeouts and materially lower p95. This is Current Research routing only; it neither
+# changes SOURCE_PREFERENCE_ORDER nor promotes either source beyond its existing contract.
+MARKET_WIDE_RECOVERY_SOURCE_ORDER = ("KBS", "VCI")
 DEFAULT_RECOVERY_WINDOW_CALENDAR_DAYS = 15
 ARTIFACT_TYPE = "MULTI_SOURCE_EXACT_SESSION_MARKET_EVIDENCE"
 
 # Daily remains a one-command foreground operation, but it must not silently turn a
 # degraded provider into an unbounded multi-hour foreground job.  The guard is
-# intentionally sequential: it forecasts the already-authorized VCI-first/KBS-failover
-# topology and never creates an inference that either provider permits concurrency.
+# intentionally sequential: it forecasts the selected primary/failover topology and never
+# creates an inference that either provider permits concurrency.
 DAILY_RECOVERY_RUNTIME_BUDGET_SECONDS = 45 * 60
 MIN_TIMED_REQUESTS_FOR_RUNTIME_PROJECTION = 5
 
@@ -126,7 +135,7 @@ WHEN_DNSE_DEGRADED_POLICY = (
     "resolve_exact_session_with_autorecovery, which automatically enters "
     "DEGRADED_PROVIDER_RECOVERY_MODE in the SAME foreground invocation -- no operator flag, no "
     "second command -- keeping the small VCI+KBS sentinel while recovering every other DNSE-exact "
-    "ticker VCI-first, with KBS only after a VCI missing/failed/unusable result, before the "
+    "ticker KBS-first, with VCI only after a KBS missing/failed/unusable result, before the "
     "caller\'s own MIN_EXACT_SESSION_COVERAGE_RATIO gate makes the final decision."
 )
 
@@ -304,7 +313,7 @@ class _DailyRecoveryRuntimeGuard:
     The forecast starts with a pacing-only lower bound, then switches to provider-specific
     median observed elapsed time after a small sample.  It is deterministic for a given
     request trace, does not assume provider parallelism, and is deliberately re-planned at
-    the VCI->KBS boundary once the real fallback count is known.
+    the selected primary->fallback boundary once the real fallback count is known.
     """
 
     def __init__(self, *, request_delay: float, runtime_budget_seconds: float = DAILY_RECOVERY_RUNTIME_BUDGET_SECONDS,
@@ -348,9 +357,11 @@ class _DailyRecoveryRuntimeGuard:
     def cache_hit(self, _ticker: str, _source: str) -> None:
         self._cache_hits += 1
 
-    def set_vci_first_failover(self) -> None:
-        """Forecast KBS only to the extent completed VCI calls actually need it."""
-        self._conditional_failover = ("VCI", "KBS")
+    def set_primary_failover(self, primary: str, fallback: str) -> None:
+        """Forecast fallback only to the extent completed primary calls actually need it."""
+        if primary not in RECOVERY_SOURCES or fallback not in RECOVERY_SOURCES:
+            raise MultiSourceResolverError(f"UNKNOWN_RECOVERY_SOURCE_PAIR:{primary}:{fallback}")
+        self._conditional_failover = (primary, fallback)
 
     def clear_conditional_failover(self) -> None:
         self._conditional_failover = None
@@ -406,10 +417,10 @@ class _DailyRecoveryRuntimeGuard:
             self.remaining_by_source[source] * self._estimated_call_seconds(source)
             for source in RECOVERY_SOURCES
         )
-        # During VCI-first recovery, a target-session-missing VCI response is the relevant
+        # During primary-first recovery, a target-session-missing primary response is the relevant
         # failure signal, not merely FetchOutcome.status (a history request can succeed while
         # legitimately lacking the requested session).  Once five such outcomes are known,
-        # include the deterministic observed KBS failover rate in the pre-completion forecast.
+        # include the deterministic observed fallback rate in the pre-completion forecast.
         if self._conditional_failover is not None:
             primary, fallback = self._conditional_failover
             assessed = self._target_session_usable[primary] + self._target_session_unusable[primary]
@@ -641,17 +652,18 @@ def resolve_multi_source_exact_session_snapshot(
                 ))
         # ticker in sentinel_dnse_exact_targets: no stub -- Pass 5 below genuinely queries it.
 
-    # Pass 3: VCI recovery for DNSE-missing tickers.
+    # Pass 3: selected-primary recovery for DNSE-missing tickers.
     still_missing = list(missing_tickers)
-    recovery_attempts = {"VCI": 0, "KBS": 0}
-    recovery_successes = {"VCI": 0, "KBS": 0}
+    recovery_attempts = {source: 0 for source in RECOVERY_SOURCES}
+    recovery_successes = {source: 0 for source in RECOVERY_SOURCES}
+    primary_source, fallback_source = MARKET_WIDE_RECOVERY_SOURCE_ORDER
     if recovery_runtime_guard is not None:
         recovery_runtime_guard.set_plan(
-            stage="DNSE_GAP_RECOVERY_VCI_FIRST",
-            remaining_by_source={"VCI": len(still_missing), "KBS": 0},
+            stage=f"DNSE_GAP_RECOVERY_{primary_source}_FIRST",
+            remaining_by_source={primary_source: len(still_missing), fallback_source: 0},
         )
-        recovery_runtime_guard.set_vci_first_failover()
-    for pass_index, source in enumerate(RECOVERY_SOURCES):
+        recovery_runtime_guard.set_primary_failover(primary_source, fallback_source)
+    for pass_index, source in enumerate(MARKET_WIDE_RECOVERY_SOURCE_ORDER):
         next_round: list[str] = []
         for ticker in still_missing:
             recovery_attempts[source] += 1
@@ -659,9 +671,9 @@ def resolve_multi_source_exact_session_snapshot(
             status, reason, native, lineage = _classify_recovery_outcome(
                 outcome=outcome, source=source, ticker=ticker, target_session=target_session,
             )
-            if recovery_runtime_guard is not None and source == "VCI":
+            if recovery_runtime_guard is not None and source == primary_source:
                 recovery_runtime_guard.record_target_session_result(
-                    source="VCI", usable=status == STATUS_EXACT_SESSION_OBSERVED,
+                    source=primary_source, usable=status == STATUS_EXACT_SESSION_OBSERVED,
                 )
             payload_hash = _lineage_hash_for_session(lineage, target_session) if lineage else None
             per_ticker_observations[ticker].append(build_source_observation(
@@ -677,12 +689,12 @@ def resolve_multi_source_exact_session_snapshot(
                 recovery_successes[source] += 1
             else:
                 next_round.append(ticker)
-            if ticker != still_missing[-1] or pass_index < len(RECOVERY_SOURCES) - 1:
+            if ticker != still_missing[-1] or pass_index < len(MARKET_WIDE_RECOVERY_SOURCE_ORDER) - 1:
                 sleep_fn(delay)
         # Every ticker not carried into the next round gets an explicit NOT_APPLICABLE
         # stub for the remaining, un-attempted recovery source(s).
         resolved_this_round = set(still_missing) - set(next_round)
-        for remaining_source in RECOVERY_SOURCES[pass_index + 1:]:
+        for remaining_source in MARKET_WIDE_RECOVERY_SOURCE_ORDER[pass_index + 1:]:
             for ticker in resolved_this_round:
                 per_ticker_observations[ticker].append(build_source_observation(
                     ticker=ticker, requested_session=target_session, observed_session=None,
@@ -690,12 +702,12 @@ def resolve_multi_source_exact_session_snapshot(
                     status=STATUS_NOT_APPLICABLE, reason_code=f"NOT_ATTEMPTED_RESOLVED_BY_{source}",
                 ))
         still_missing = next_round
-        if recovery_runtime_guard is not None and source == "VCI":
-            # KBS is deliberately planned only after VCI's actual missing/failed outcomes are
+        if recovery_runtime_guard is not None and source == primary_source:
+            # The fallback is deliberately planned only after the primary's actual missing/failed outcomes are
             # known.  This is both the recovery topology and the runtime forecast boundary.
             recovery_runtime_guard.set_plan(
-                stage="DNSE_GAP_RECOVERY_KBS_FAILOVER",
-                remaining_by_source={"VCI": 0, "KBS": len(still_missing)},
+                stage=f"DNSE_GAP_RECOVERY_{fallback_source}_FAILOVER",
+                remaining_by_source={primary_source: 0, fallback_source: len(still_missing)},
             )
             recovery_runtime_guard.clear_conditional_failover()
 
@@ -706,10 +718,10 @@ def resolve_multi_source_exact_session_snapshot(
         recovery_runtime_guard.clear_conditional_failover()
         recovery_runtime_guard.set_plan(
             stage="DNSE_HEALTH_SENTINEL_DUAL_SOURCE",
-            remaining_by_source={source: len(sentinel_targets_needing_fetch) for source in RECOVERY_SOURCES},
+            remaining_by_source={source: len(sentinel_targets_needing_fetch) for source in SENTINEL_SOURCES},
         )
     for ticker in sentinel_targets_needing_fetch:
-        for source in RECOVERY_SOURCES:
+        for source in SENTINEL_SOURCES:
             outcome = fetch(ticker, source, window["start"], window["end"])
             status, reason, native, lineage = _classify_recovery_outcome(
                 outcome=outcome, source=source, ticker=ticker, target_session=target_session,
@@ -1026,24 +1038,27 @@ def _replace_source_stub(observations: list[dict[str, Any]], *, source: str,
     observations.append(dict(replacement))
 
 
-def _mark_kbs_not_needed_after_vci(observations: list[dict[str, Any]]) -> None:
-    """Keep full source accounting honest when VCI supplied the usable market-wide bar."""
+def _mark_fallback_not_needed_after_primary(
+    observations: list[dict[str, Any]], *, primary: str, fallback: str,
+) -> None:
+    """Keep full source accounting honest when the primary supplied the usable bar."""
     for observation in observations:
-        if observation.get("source") == "KBS" and observation.get("status") == STATUS_NOT_APPLICABLE:
-            observation["reason_code"] = "NOT_ATTEMPTED_VCI_RECOVERED_DEGRADED_DNSE"
+        if observation.get("source") == fallback and observation.get("status") == STATUS_NOT_APPLICABLE:
+            observation["reason_code"] = f"NOT_ATTEMPTED_{primary}_RECOVERED_DEGRADED_DNSE"
 
 
-def _marketwide_degraded_vci_first_recovery(
+def _marketwide_degraded_primary_first_recovery(
     *, evidence: dict[str, Any], dnse_snapshot: Mapping[str, Any], target_session: str,
     requested_at: str, original_sentinel_cohort: Sequence[str], fetch: Callable[..., Any],
     runtime_guard: _DailyRecoveryRuntimeGuard,
 ) -> dict[str, Any]:
     """Recover DNSE-exact names once a small sentinel proves broad degradation.
 
-    The sentinel itself remains deliberately VCI+KBS.  Every other DNSE-exact name receives
-    VCI first and receives KBS only when VCI is missing, failed, or unusable for the target
-    session.  This is intentionally not implemented as a giant second sentinel, because a
-    sentinel is a health-classification tool whereas this is market-wide recovery.
+    The sentinel itself remains deliberately VCI+KBS. Every other DNSE-exact name receives the
+    selected primary first and receives its fallback only when the primary is missing, failed, or
+    unusable for the target session. This is intentionally not implemented as a giant second
+    sentinel, because a sentinel is a health-classification tool whereas this is market-wide
+    recovery.
     """
     dnse_records = dnse_snapshot.get("records") or {}
     all_dnse_exact_tickers = {
@@ -1053,76 +1068,81 @@ def _marketwide_degraded_vci_first_recovery(
     original_sentinel_set = set(original_sentinel_cohort)
     expanded_tickers = sorted(all_dnse_exact_tickers - original_sentinel_set)
     window = evidence["recovery_window"]
-    expanded_attempts = {"VCI": 0, "KBS": 0}
-    vci_missing: list[str] = []
+    expanded_attempts = {source: 0 for source in RECOVERY_SOURCES}
+    primary_source, fallback_source = MARKET_WIDE_RECOVERY_SOURCE_ORDER
+    primary_missing: list[str] = []
 
-    vci_targets = [
+    primary_targets = [
         ticker for ticker in expanded_tickers
-        if not _has_live_observation(evidence["records"][ticker]["observations"], "VCI")
+        if not _has_live_observation(evidence["records"][ticker]["observations"], primary_source)
     ]
     runtime_guard.set_plan(
-        stage="DEGRADED_DNSE_MARKET_WIDE_VCI_FIRST",
-        remaining_by_source={"VCI": len(vci_targets), "KBS": 0},
+        stage=f"DEGRADED_DNSE_MARKET_WIDE_{primary_source}_FIRST",
+        remaining_by_source={primary_source: len(primary_targets), fallback_source: 0},
     )
-    runtime_guard.set_vci_first_failover()
-    for ticker in vci_targets:
-        outcome = fetch(ticker, "VCI", window["start"], window["end"])
-        expanded_attempts["VCI"] += 1
+    runtime_guard.set_primary_failover(primary_source, fallback_source)
+    for ticker in primary_targets:
+        outcome = fetch(ticker, primary_source, window["start"], window["end"])
+        expanded_attempts[primary_source] += 1
         status, reason, native, lineage = _classify_recovery_outcome(
-            outcome=outcome, source="VCI", ticker=ticker, target_session=target_session,
+            outcome=outcome, source=primary_source, ticker=ticker, target_session=target_session,
         )
         runtime_guard.record_target_session_result(
-            source="VCI", usable=status == STATUS_EXACT_SESSION_OBSERVED,
+            source=primary_source, usable=status == STATUS_EXACT_SESSION_OBSERVED,
         )
         payload_hash = _lineage_hash_for_session(lineage, target_session) if lineage else None
         observations = evidence["records"][ticker]["observations"]
-        _replace_source_stub(observations, source="VCI", replacement=build_source_observation(
+        _replace_source_stub(observations, source=primary_source, replacement=build_source_observation(
             ticker=ticker, requested_session=target_session,
             observed_session=target_session if status == STATUS_EXACT_SESSION_OBSERVED else None,
-            source="VCI", provider_interface=PROVIDER_INTERFACE["VCI"], retrieved_at=requested_at,
-            status=status, native=native, unit_scale=NATIVE_PRICE_UNIT_SCALE["VCI"],
+            source=primary_source, provider_interface=PROVIDER_INTERFACE[primary_source], retrieved_at=requested_at,
+            status=status, native=native, unit_scale=NATIVE_PRICE_UNIT_SCALE[primary_source],
             price_basis="CURRENT_DESCRIPTIVE_NOT_PROMOTED_RAW_AS_TRADED",
-            provenance={"endpoint": PROVIDER_ENDPOINT["VCI"], "request": window,
-                        "purpose": "DEGRADED_DNSE_MARKET_WIDE_VCI_FIRST"},
+            provenance={"endpoint": PROVIDER_ENDPOINT[primary_source], "request": window,
+                        "purpose": f"DEGRADED_DNSE_MARKET_WIDE_{primary_source}_FIRST"},
             payload_hash=payload_hash, reason_code=reason,
         ))
         if status == STATUS_EXACT_SESSION_OBSERVED:
-            _mark_kbs_not_needed_after_vci(observations)
+            _mark_fallback_not_needed_after_primary(
+                observations, primary=primary_source, fallback=fallback_source,
+            )
         else:
-            vci_missing.append(ticker)
+            primary_missing.append(ticker)
 
     runtime_guard.set_plan(
-        stage="DEGRADED_DNSE_MARKET_WIDE_KBS_FAILOVER",
-        remaining_by_source={"VCI": 0, "KBS": len(vci_missing)},
+        stage=f"DEGRADED_DNSE_MARKET_WIDE_{fallback_source}_FAILOVER",
+        remaining_by_source={primary_source: 0, fallback_source: len(primary_missing)},
     )
     runtime_guard.clear_conditional_failover()
-    for ticker in vci_missing:
-        outcome = fetch(ticker, "KBS", window["start"], window["end"])
-        expanded_attempts["KBS"] += 1
+    for ticker in primary_missing:
+        outcome = fetch(ticker, fallback_source, window["start"], window["end"])
+        expanded_attempts[fallback_source] += 1
         status, reason, native, lineage = _classify_recovery_outcome(
-            outcome=outcome, source="KBS", ticker=ticker, target_session=target_session,
+            outcome=outcome, source=fallback_source, ticker=ticker, target_session=target_session,
         )
         payload_hash = _lineage_hash_for_session(lineage, target_session) if lineage else None
         observations = evidence["records"][ticker]["observations"]
-        _replace_source_stub(observations, source="KBS", replacement=build_source_observation(
+        _replace_source_stub(observations, source=fallback_source, replacement=build_source_observation(
             ticker=ticker, requested_session=target_session,
             observed_session=target_session if status == STATUS_EXACT_SESSION_OBSERVED else None,
-            source="KBS", provider_interface=PROVIDER_INTERFACE["KBS"], retrieved_at=requested_at,
-            status=status, native=native, unit_scale=NATIVE_PRICE_UNIT_SCALE["KBS"],
+            source=fallback_source, provider_interface=PROVIDER_INTERFACE[fallback_source], retrieved_at=requested_at,
+            status=status, native=native, unit_scale=NATIVE_PRICE_UNIT_SCALE[fallback_source],
             price_basis="CURRENT_DESCRIPTIVE_NOT_PROMOTED_RAW_AS_TRADED",
-            provenance={"endpoint": PROVIDER_ENDPOINT["KBS"], "request": window,
-                        "purpose": "DEGRADED_DNSE_MARKET_WIDE_KBS_FAILOVER"},
+            provenance={"endpoint": PROVIDER_ENDPOINT[fallback_source], "request": window,
+                        "purpose": f"DEGRADED_DNSE_MARKET_WIDE_{fallback_source}_FAILOVER"},
             payload_hash=payload_hash, reason_code=reason,
         ))
 
     runtime_guard.set_plan(stage="DEGRADED_DNSE_MARKET_WIDE_RECOVERY_COMPLETE", remaining_by_source={})
     return {
         "mode": DEGRADED_RECOVERY_COMPLETED,
-        "topology": "SMALL_SENTINEL_VCI_PLUS_KBS_THEN_MARKET_WIDE_VCI_FIRST_KBS_ON_VCI_MISSING_FAILED_OR_UNUSABLE",
+        "topology": "SMALL_SENTINEL_VCI_PLUS_KBS_THEN_MARKET_WIDE_KBS_FIRST_VCI_ON_KBS_MISSING_FAILED_OR_UNUSABLE",
         "expanded_ticker_count": len(expanded_tickers),
         "expanded_recovery_attempts": expanded_attempts,
-        "expanded_vci_recovered_count": len(expanded_tickers) - len(vci_missing),
-        "expanded_kbs_failover_candidate_count": len(vci_missing),
+        "expanded_primary_source": primary_source,
+        "expanded_fallback_source": fallback_source,
+        "expanded_primary_recovered_count": len(expanded_tickers) - len(primary_missing),
+        "expanded_fallback_candidate_count": len(primary_missing),
     }
 
 
@@ -1149,8 +1169,9 @@ def resolve_exact_session_with_autorecovery(
     fetch, matching WHEN_DNSE_HEALTHY_POLICY.
 
     DEGRADED DAY: keeps the small VCI+KBS sentinel that produced the health verdict, then recovers
-    every other DNSE-exact ticker VCI-first. KBS is attempted only when that ticker's VCI result is
-    missing, failed, or unusable for the target session -- no full-universe dual-source sentinel.
+    every other DNSE-exact ticker through the selected primary source. Its fallback is attempted
+    only when that primary result is missing, failed, or unusable for the target session -- no
+    full-universe dual-source sentinel.
     A shared memoizing fetch cache (_memoizing_fetch) still guarantees a (ticker, source) pair is
     never re-requested within this invocation. Every DNSE-exact ticker's resolution is then
     quarantine-re-resolved via
@@ -1192,9 +1213,9 @@ def resolve_exact_session_with_autorecovery(
     if health_state != DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD:
         recovery_info = {
             "mode": DEGRADED_RECOVERY_NOT_TRIGGERED,
-            "topology": "DNSE_GAPS_VCI_FIRST_KBS_ON_VCI_MISSING_FAILED_OR_UNUSABLE_PLUS_SMALL_VCI_KBS_SENTINEL",
+            "topology": "DNSE_GAPS_KBS_FIRST_VCI_ON_KBS_MISSING_FAILED_OR_UNUSABLE_PLUS_SMALL_VCI_KBS_SENTINEL",
             "expanded_ticker_count": 0,
-            "expanded_recovery_attempts": {"VCI": 0, "KBS": 0},
+            "expanded_recovery_attempts": {source: 0 for source in RECOVERY_SOURCES},
         }
         evidence["degraded_provider_recovery"] = recovery_info
         evidence["recovery_throughput"] = runtime_guard.diagnostic()
@@ -1208,7 +1229,7 @@ def resolve_exact_session_with_autorecovery(
         projected["snapshot_identity"] = f"p3f9_exact_session_snapshot:{projected['snapshot_sha256']}"
         return evidence, projected
 
-    recovery_info = _marketwide_degraded_vci_first_recovery(
+    recovery_info = _marketwide_degraded_primary_first_recovery(
         evidence=evidence, dnse_snapshot=dnse_snapshot, target_session=target_session,
         requested_at=requested_at, original_sentinel_cohort=sentinel_cohort,
         fetch=memoized_fetch, runtime_guard=runtime_guard,
@@ -1220,8 +1241,8 @@ def resolve_exact_session_with_autorecovery(
     # incomplete (docs brief). Re-resolve every ticker DNSE ORIGINALLY claimed
     # (EXACT_SESSION_RETAINED) via resolve_ticker_degraded_dnse, which never consults DNSE's own
     # value; a ticker DNSE never claimed keeps its already-DNSE-free gap-recovery resolution.
-    # Every DNSE-exact name now has a VCI attempt; KBS is present only for the sentinel or where
-    # VCI was unusable, which is the explicit VCI-first recovery contract.
+    # Every DNSE-exact name now has a selected-primary attempt; its fallback is present only for
+    # the sentinel or where the primary was unusable, which is the explicit recovery contract.
     quarantined_resolutions: dict[str, dict[str, Any]] = {}
     for ticker, record in evidence["records"].items():
         if dnse_records.get(ticker, {}).get("disposition") == DNSE_EXACT_SESSION_DISPOSITION:

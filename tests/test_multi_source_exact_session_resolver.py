@@ -89,7 +89,7 @@ def test_dnse_resolved_ticker_is_never_recovery_queried():
     assert evidence["recovery_attempts"] == {"VCI": 0, "KBS": 0}
 
 
-def test_vci_recovers_dnse_missing_ticker_without_touching_kbs():
+def test_kbs_recovers_dnse_missing_ticker_without_touching_vci():
     dnse = make_dnse_snapshot({"BBB": ("SESSION_MISSING", [_dnse_obs("2026-08-28", 20.0)])})
     calls = []
 
@@ -102,20 +102,20 @@ def test_vci_recovers_dnse_missing_ticker_without_touching_kbs():
         dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
         fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
     )
-    assert calls == [("BBB", "VCI")]
+    assert calls == [("BBB", "KBS")]
     rec = projected["records"]["BBB"]
     assert rec["disposition"] == "EXACT_SESSION_RETAINED"
-    assert rec["observations"][0]["provider"] == "VCI"
+    assert rec["observations"][0]["provider"] == "KBS"
     assert rec["observations"][0]["close"] == 20.5  # native scale, matching DNSE's own convention
     assert rec["payload_hash"] == "L1"
-    assert evidence["recovery_successes"] == {"VCI": 1, "KBS": 0}
+    assert evidence["recovery_successes"] == {"VCI": 0, "KBS": 1}
 
 
-def test_kbs_recovers_when_vci_empty():
+def test_vci_recovers_when_kbs_empty():
     dnse = make_dnse_snapshot({"CCC": ("SESSION_MISSING", [_dnse_obs("2026-08-28", 30.0)])})
 
     def fetch(ticker, source, start, end):
-        if source == "VCI":
+        if source == "KBS":
             return FetchOutcome("empty")
         return FetchOutcome("success", data=make_df([(TARGET, 30300.0)]),
                              lineage=[{"trading_session_date": TARGET, "source_record_hash": "L2"}])
@@ -126,7 +126,7 @@ def test_kbs_recovers_when_vci_empty():
     )
     rec = projected["records"]["CCC"]
     assert rec["disposition"] == "EXACT_SESSION_RETAINED"
-    assert rec["observations"][0]["provider"] == "KBS"
+    assert rec["observations"][0]["provider"] == "VCI"
     assert evidence["recovery_attempts"] == {"VCI": 1, "KBS": 1}
 
 
@@ -205,13 +205,13 @@ def test_generic_behavior_no_ticker_specific_branches():
 
     def fetch(ticker, source, start, end):
         calls.append((ticker, source))
-        # Odd-indexed missing tickers recover on VCI, even-indexed need KBS, one stays unresolved.
+        # Odd-indexed missing tickers recover on KBS, even-indexed need VCI, one stays unresolved.
         idx = int(ticker[1:])
         if idx == 19:
             return FetchOutcome("empty")
-        if source == "VCI" and idx % 2 == 1:
+        if source == "KBS" and idx % 2 == 1:
             return FetchOutcome("success", data=make_df([(TARGET, float(idx) * 1000)]))
-        if source == "KBS" and idx % 2 == 0:
+        if source == "VCI" and idx % 2 == 0:
             return FetchOutcome("success", data=make_df([(TARGET, float(idx) * 1000)]))
         return FetchOutcome("empty")
 
@@ -219,7 +219,7 @@ def test_generic_behavior_no_ticker_specific_branches():
         dnse_snapshot=dnse, target_session=TARGET, requested_at=REQUESTED_AT,
         fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
     )
-    assert {t for t, s in calls if s == "VCI"} == set(tickers[5:])  # every DNSE-missing ticker tried VCI
+    assert {t for t, s in calls if s == "KBS"} == set(tickers[5:])  # every DNSE-missing ticker tried KBS
     resolved = [t for t in tickers if projected["records"][t]["disposition"] == "EXACT_SESSION_RETAINED"]
     assert "T019" not in resolved
     assert len(resolved) == 19  # 5 DNSE + 14 recovered (T005..T018 except the unresolvable one already excluded)
@@ -454,7 +454,7 @@ def test_sentinel_reuses_pass_3_4_observations_for_a_dnse_missing_sentinel_membe
         fetch_single_source=fetch, request_delay=0.0, sleep_fn=lambda s: None,
         sentinel_cohort=["BBB"],
     )
-    assert calls == [("BBB", "VCI")]  # exactly Pass 3's own single attempt -- no Pass 5 repeat
+    assert calls == [("BBB", "KBS")]  # exactly Pass 3's own single attempt -- no Pass 5 repeat
 
 
 def _broad_conflict_dnse_and_fetch():
@@ -611,7 +611,7 @@ def test_autorecovery_real_20260903_shape_needs_zero_new_fetches_and_is_accepted
 def test_autorecovery_partial_sentinel_overlap_expands_only_uncovered_dnse_exact_tickers():
     """General case: the sentinel's small cohort does NOT already cover every DNSE-exact ticker
     (unlike the real 2026-09-03 coincidence). Only the tickers outside the original cohort may be
-    newly queried; they are VCI-first, while the original sentinel alone remains dual-source."""
+    newly queried; they are KBS-first, while the original sentinel alone remains dual-source."""
     dnse_native_close = 10.0
     all_exact = [f"E{i:02d}" for i in range(10)]
     spec = {t: ("EXACT_SESSION_RETAINED", [_dnse_obs(TARGET, dnse_native_close)]) for t in all_exact}
@@ -631,17 +631,17 @@ def test_autorecovery_partial_sentinel_overlap_expands_only_uncovered_dnse_exact
     )
     assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
     assert evidence["degraded_provider_recovery"]["expanded_ticker_count"] == 4  # E06..E09
-    assert evidence["degraded_provider_recovery"]["expanded_recovery_attempts"] == {"VCI": 4, "KBS": 0}
-    # Every newly-covered ticker is VCI-first. KBS is not a market-wide corroborator: the only
+    assert evidence["degraded_provider_recovery"]["expanded_recovery_attempts"] == {"VCI": 0, "KBS": 4}
+    # Every newly-covered ticker is KBS-first. VCI is not a market-wide corroborator: the only
     # dual-source work is the retained, small health sentinel.
     newly_covered = [t for t in all_exact if t not in small_cohort]
     assert len(newly_covered) == 4
     for ticker in newly_covered:
-        assert calls.count((ticker, "VCI")) == 1
-        assert calls.count((ticker, "KBS")) == 0
-        assert projected["records"][ticker]["observations"][0]["provider"] == "VCI"
+        assert calls.count((ticker, "KBS")) == 1
+        assert calls.count((ticker, "VCI")) == 0
+        assert projected["records"][ticker]["observations"][0]["provider"] == "KBS"
     # No (ticker, source) pair anywhere in the run was ever fetched more than once. The six
-    # sentinel names retain VCI+KBS; four recovered names add VCI only.
+    # sentinel names retain VCI+KBS; four recovered names add KBS only.
     assert len(calls) == len(set(calls))
     assert len(calls) == 6 * 2 + 4
     # Now every DNSE-exact ticker, not just the original small cohort, correctly distrusts DNSE.
@@ -650,12 +650,12 @@ def test_autorecovery_partial_sentinel_overlap_expands_only_uncovered_dnse_exact
             "CORROBORATED_NON_DNSE_CURRENT_RESEARCH_SENTINEL_OVERRIDE"
     for ticker in newly_covered:
         assert projected["records"][ticker]["multi_source_recovery_result"] == \
-            "DEGRADED_DNSE_QUARANTINED_SINGLE_SOURCE_VCI"
+            "DEGRADED_DNSE_QUARANTINED_SINGLE_SOURCE_KBS"
     assert_self_consistent(projected)
 
 
-def test_autorecovery_uses_kbs_only_when_marketwide_vci_is_unusable():
-    """KBS remains a per-ticker failover, not a second market-wide verification pass."""
+def test_autorecovery_uses_vci_only_when_marketwide_kbs_is_unusable():
+    """VCI remains a per-ticker failover, not a second market-wide verification pass."""
     exact = [f"R{i:02d}" for i in range(8)]
     sentinel = exact[:6]
     dnse = make_dnse_snapshot({
@@ -665,7 +665,7 @@ def test_autorecovery_uses_kbs_only_when_marketwide_vci_is_unusable():
 
     def fetch(ticker, source, start, end):
         calls.append((ticker, source))
-        if ticker == "R06" and source == "VCI":
+        if ticker == "R06" and source == "KBS":
             return FetchOutcome("empty")
         return FetchOutcome("success", data=make_df([(TARGET, 8000.0)]),
                             lineage=[{"trading_session_date": TARGET, "source_record_hash": "L"}])
@@ -677,17 +677,19 @@ def test_autorecovery_uses_kbs_only_when_marketwide_vci_is_unusable():
     )
 
     recovery = evidence["degraded_provider_recovery"]
-    assert recovery["expanded_recovery_attempts"] == {"VCI": 2, "KBS": 1}
+    assert recovery["expanded_recovery_attempts"] == {"VCI": 1, "KBS": 2}
+    assert recovery["expanded_primary_source"] == "KBS"
+    assert recovery["expanded_fallback_source"] == "VCI"
     assert calls.count(("R06", "VCI")) == calls.count(("R06", "KBS")) == 1
-    assert calls.count(("R07", "VCI")) == 1
-    assert calls.count(("R07", "KBS")) == 0
-    assert projected["records"]["R06"]["observations"][0]["provider"] == "KBS"
-    assert projected["records"]["R07"]["observations"][0]["provider"] == "VCI"
+    assert calls.count(("R07", "KBS")) == 1
+    assert calls.count(("R07", "VCI")) == 0
+    assert projected["records"]["R06"]["observations"][0]["provider"] == "VCI"
+    assert projected["records"]["R07"]["observations"][0]["provider"] == "KBS"
     assert_self_consistent(projected)
 
 
 def test_autorecovery_never_duplicates_a_source_ticker_fetch_when_gap_recovery_and_sentinel_overlap():
-    """A gap-recovery VCI result and the small exact-name sentinel remain disjoint, and no
+    """A gap-recovery KBS result and the small exact-name sentinel remain disjoint, and no
     ticker/source pair is requested more than once within the complete autorecovery run."""
     dnse_native_close = 10.0
     exact_tickers = [f"F{i:02d}" for i in range(6)]
@@ -707,9 +709,9 @@ def test_autorecovery_never_duplicates_a_source_ticker_fetch_when_gap_recovery_a
         sentinel_cohort=exact_tickers,
     )
     assert evidence["degraded_provider_recovery"]["mode"] == DEGRADED_RECOVERY_COMPLETED
-    # MISSING1 is DNSE-missing: its VCI success means no KBS attempt and no duplicated source pair.
-    assert calls.count(("MISSING1", "VCI")) == 1
-    assert calls.count(("MISSING1", "KBS")) == 0
+    # MISSING1 is DNSE-missing: its KBS success means no VCI attempt and no duplicated source pair.
+    assert calls.count(("MISSING1", "KBS")) == 1
+    assert calls.count(("MISSING1", "VCI")) == 0
     assert len(calls) == len(set(calls))  # no pair anywhere, from either pass or either call, twice
 
 
@@ -744,22 +746,22 @@ def test_runtime_guard_aborts_from_small_timed_sample_with_provider_telemetry():
     guard = _DailyRecoveryRuntimeGuard(
         request_delay=1.1, runtime_budget_seconds=300.0, clock=lambda: clock[0],
     )
-    guard.set_plan(stage="DNSE_GAP_RECOVERY_VCI_FIRST", remaining_by_source={"VCI": 100, "KBS": 0})
+    guard.set_plan(stage="DNSE_GAP_RECOVERY_KBS_FIRST", remaining_by_source={"VCI": 0, "KBS": 100})
     with pytest.raises(DailyRecoveryRuntimeBudgetExceeded) as raised:
         for _ in range(5):
             guard.observe(
-                ticker="AAA", source="VCI",
-                outcome=FetchOutcome("failed", errors=["VCI:read_timeout"], transient_failure=True,
+                ticker="AAA", source="KBS",
+                outcome=FetchOutcome("failed", errors=["KBS:read_timeout"], transient_failure=True,
                                      request_attempts=2, retry_count=1, timeout_count=2),
                 elapsed_seconds=45.0,
             )
             clock[0] += 46.1
     diagnostic = raised.value.diagnostic
-    assert diagnostic["stage"] == "DNSE_GAP_RECOVERY_VCI_FIRST"
+    assert diagnostic["stage"] == "DNSE_GAP_RECOVERY_KBS_FIRST"
     assert diagnostic["request_count"] == 5
-    assert diagnostic["providers"]["VCI"]["provider_attempts"] == 10
-    assert diagnostic["providers"]["VCI"]["retries"] == 5
-    assert diagnostic["providers"]["VCI"]["timeouts"] == 10
+    assert diagnostic["providers"]["KBS"]["provider_attempts"] == 10
+    assert diagnostic["providers"]["KBS"]["retries"] == 5
+    assert diagnostic["providers"]["KBS"]["timeouts"] == 10
     assert diagnostic["concurrency"]["enabled"] is False
     assert diagnostic["projected_total_seconds"] > diagnostic["runtime_budget_seconds"]
 

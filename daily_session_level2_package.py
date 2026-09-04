@@ -950,7 +950,7 @@ def ensure_exact_session_snapshot(
     a broadly degraded DNSE day (multi_source_exact_session_resolver.
     DNSE_HEALTH_BROAD_STALE_OR_INCOMPLETE_EOD) no longer stops here for an operator to re-run with
     an expanded scope -- resolve_exact_session_with_autorecovery keeps its small VCI+KBS health
-    sentinel and recovers the remaining DNSE-exact names VCI-first, with KBS only when VCI is
+    sentinel and recovers the remaining DNSE-exact names KBS-first, with VCI only when KBS is
     missing/failed/unusable, in the SAME call (see that function's own docstring). An existing
     on-disk snapshot is reused only when _canonical_snapshot_gate_satisfied confirms it was never
     subject to an unresolved degradation -- fixing the prior idempotency escape where a projection
