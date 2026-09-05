@@ -14,9 +14,11 @@ from pathlib import Path
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
+from vn_time import vn_today
+
 CONTRACT_VERSION = "hose_public_xhr_and_periodic_series_recon/v1"
 LANGUAGE = "1"
-AS_OF_DATE = "2026-08-24"
+DISCLOSURE_WINDOW_START_DATE = "2026-02-24"
 PUBLIC_XHR = {
     # The SPA explicitly calls this aggregate dashboard with getUrlApi(LISTING, false),
     # unlike the language-scoped listing grids below.
@@ -28,10 +30,21 @@ PUBLIC_XHR = {
     "hpg_foreign_room": "https://api.hsx.vn/mk/api/v1/market/securities/foreign/HPG?pageSize=100",
     "hpg_current_market": "https://api.hsx.vn/mk/api/v1/market/securities/HPG",
     "hpg_rights": f"https://api.hsx.vn/l/api/v1/{LANGUAGE}/securities/dividend/2458",
-    "market_disclosures": f"https://api.hsx.vn/n/api/v1/{LANGUAGE}/news/securitiesType/1?pageIndex=1&pageSize=1000&startDate=2026-02-24&endDate={AS_OF_DATE}",
-    "hpg_disclosures": f"https://api.hsx.vn/n/api/v1/{LANGUAGE}/news/securities/2458/1?pageIndex=1&pageSize=100&startDate=2026-02-24&endDate={AS_OF_DATE}",
     "rss_index": "https://api.hsx.vn/n/api/v1/News/NewsFeed",
 }
+
+
+def _disclosure_urls(as_of_date: str) -> dict[str, str]:
+    """The two disclosure-window surfaces take an explicit end date. Previously frozen as a
+    module-level ``AS_OF_DATE = "2026-08-24"`` constant, which permanently capped every future
+    disclosure fetch at that literal date regardless of when the acquisition actually ran --
+    the exact staleness bug OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1
+    fixes. Defaults to the real current Vietnam civil date; a caller may still pass an explicit
+    date for deterministic/historical replay."""
+    return {
+        "market_disclosures": f"https://api.hsx.vn/n/api/v1/{LANGUAGE}/news/securitiesType/1?pageIndex=1&pageSize=1000&startDate={DISCLOSURE_WINDOW_START_DATE}&endDate={as_of_date}",
+        "hpg_disclosures": f"https://api.hsx.vn/n/api/v1/{LANGUAGE}/news/securities/2458/1?pageIndex=1&pageSize=100&startDate={DISCLOSURE_WINDOW_START_DATE}&endDate={as_of_date}",
+    }
 
 
 def _canonical(value: Any) -> bytes:
@@ -136,9 +149,12 @@ def _hnx_tickers(path: Path) -> set[str]:
     return tickers
 
 
-def build(*, destination: Path, stocklookup_universe: Path, hnx_universe: Path, fetcher=fetch) -> dict[str, Any]:
+def build(*, destination: Path, stocklookup_universe: Path, hnx_universe: Path, fetcher=fetch,
+          as_of_date: str | None = None) -> dict[str, Any]:
+    resolved_as_of_date = as_of_date or vn_today()
+    public_xhr = {**PUBLIC_XHR, **_disclosure_urls(resolved_as_of_date)}
     captures: dict[str, dict[str, Any]] = {}
-    for surface, url in PUBLIC_XHR.items():
+    for surface, url in public_xhr.items():
         response = fetcher(url)
         if response.get("http_status") != 200 or not response.get("data"):
             raise ValueError(f"PUBLIC_XHR_FETCH_FAILED:{surface}")
@@ -183,7 +199,7 @@ def build(*, destination: Path, stocklookup_universe: Path, hnx_universe: Path, 
                        "qualification": "PUBLIC_FOREIGN_ROOM_SERIES_NOT_SHARE_OUTSTANDING"} for row in foreign_rows]
 
     artifact = {
-        "schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "as_of_date": AS_OF_DATE,
+        "schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "as_of_date": resolved_as_of_date,
         "captures": list(captures.values()),
         "source_surface_inventory/v1": [
             {"surface": "stock_master", "role": "UNIVERSE_ENUMERATION", "public": True, "full_accounted": True},

@@ -78,6 +78,16 @@ REQUIRED_REGISTRY_KEYS = (
 )
 OPTIONAL_REGISTRY_KEYS = ("official_universe", "event_context")
 
+# daily_session_level2_package.session_triage_status() and daily_research_session_operations'
+# own input-manifest freshness labelling already document these two keys as
+# ACCEPTED_CURRENT_ASOF_BUILD_NOT_SESSION_LOCKED: their value is expected to reflect whatever the
+# latest retained build currently is, never a value frozen at the moment a historical session
+# completed. Before OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1, event_context
+# resolved to one single, never-changing snapshot directory, so this tension never surfaced; a real
+# second acquisition now legitimately advances its identity over calendar time, which the mutation
+# check below must not reject as if it were an accidental rewrite of a locked historical session.
+NOT_SESSION_LOCKED_REGISTRY_KEYS = frozenset({"official_universe", "event_context"})
+
 # These Level-2 keys are governed retained inputs, not outputs of a redirected
 # canonical attempt. They must continue to resolve under the Producer root.
 RETAINED_LEVEL2_INPUT_KEYS = frozenset({
@@ -868,7 +878,9 @@ def register_session_inputs(
     completed = (registry.get("completed_sessions") or {}).get(session)
     if isinstance(completed, Mapping) and completed.get("status") == "COMPLETED_RETAINED_EVIDENCE":
         lock = completed.get("frozen_input_identities") or {}
-        if selection_identities(selection) != {k: v for k, v in lock.items()}:
+        comparable_selection = {k: v for k, v in selection_identities(selection).items() if k not in NOT_SESSION_LOCKED_REGISTRY_KEYS}
+        comparable_lock = {k: v for k, v in lock.items() if k not in NOT_SESSION_LOCKED_REGISTRY_KEYS}
+        if comparable_selection != comparable_lock:
             raise CanonicalPostCloseError("COMPLETED_SESSION_INPUT_MUTATION_REJECTED:" + session)
         return {"status": "ALREADY_FROZEN_IDENTICAL", "session": session, "selection": selection}
     existing = (registry.get("sessions") or {}).get(session)

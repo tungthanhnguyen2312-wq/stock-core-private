@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from hose_public_xhr_and_periodic_series_recon import PUBLIC_XHR, build, replay
+from hose_public_xhr_and_periodic_series_recon import PUBLIC_XHR, _disclosure_urls, build, replay
 
 
 def _response(url: str):
@@ -42,4 +42,31 @@ def test_public_xhr_snapshot_replays_and_preserves_share_boundary(tmp_path: Path
     assert artifact["coverage"]["hose_public_universe_rows"] == 1
     assert artifact["coverage"]["public_issued_share_rows"] == 0
     assert artifact["share_semantics"]["public_current_kllh_result"].startswith("HOSE_OUTSTANDING_VOLUME")
-    assert set(PUBLIC_XHR) == {capture["surface"] for capture in artifact["captures"]}
+    expected_surfaces = set(PUBLIC_XHR) | set(_disclosure_urls("2026-08-24"))
+    assert expected_surfaces == {capture["surface"] for capture in artifact["captures"]}
+
+
+def test_as_of_date_defaults_to_today_and_accepts_explicit_override(tmp_path: Path):
+    """Regression guard for OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1:
+    AS_OF_DATE used to be a permanently frozen 2026-08-24 module constant, so every disclosure
+    fetch stayed capped at that literal date forever regardless of when the acquisition actually
+    ran. build() now defaults to the real current Vietnam civil date and still accepts an explicit
+    override for deterministic/historical replay."""
+    universe = tmp_path / "universe.json"
+    universe.write_text(json.dumps({"records": {f"T{i:04}": {} for i in range(1683)}}), encoding="utf-8")
+    hnx = tmp_path / "hnx.json"
+    hnx.write_text(json.dumps({"datasets": {"hnx_official_equity_universe/v1": [{"ticker": "T0000"}]}}), encoding="utf-8")
+    seen_urls: list[str] = []
+
+    def _tracking_response(url: str):
+        seen_urls.append(url)
+        return _response(url)
+
+    explicit = build(destination=tmp_path / "explicit", stocklookup_universe=universe, hnx_universe=hnx,
+                      fetcher=_tracking_response, as_of_date="2026-01-15")
+    assert explicit["as_of_date"] == "2026-01-15"
+    assert any("endDate=2026-01-15" in url for url in seen_urls)
+
+    default = build(destination=tmp_path / "default", stocklookup_universe=universe, hnx_universe=hnx, fetcher=_response)
+    from vn_time import vn_today
+    assert default["as_of_date"] == vn_today()

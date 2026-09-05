@@ -225,7 +225,8 @@ def _read_stocklookup_tickers(path: Path) -> set[str]:
     return {str(ticker).upper() for ticker in records}
 
 
-def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True) -> dict[str, Any]:
+def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True,
+          include_disclosures: bool = True) -> dict[str, Any]:
     if not execute:
         raise ValueError("LIVE_HNX_ACQUISITION_REQUIRES_EXECUTE_TRUE")
     captures: list[dict[str, Any]] = []
@@ -266,15 +267,25 @@ def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True
 
     disclosures: list[dict[str, Any]] = []
     disclosure_totals: dict[str, int] = {}
-    for market, (landing, endpoint) in DISCLOSURES.items():
-        landing_response = fetch(BASE + landing)
-        if landing_response["http_status"] != 200:
-            raise ValueError(f"DISCLOSURE_LANDING_FETCH_FAILED:{market}")
-        captures.append(retain(response=landing_response, destination=destination, surface=f"{market.lower()}_disclosure_landing", page=None, request_body=None))
-        responses, page_captures, total = _post_pages(endpoint=endpoint, surface=f"{market.lower()}_disclosures", destination=destination,
-            base_body={"pAction": "0", "pNhomTin": "", "pTieuDeTin": "", "pMaChungKhoan": "", "pFromDate": "", "pToDate": "", "pOrderBy": "", "pNumRecord": "1000"})
-        captures.extend(page_captures); disclosure_totals[market] = total
-        disclosures.extend(row for document, capture in responses for row in parse_disclosures(document, market=market, capture=capture))
+    if include_disclosures:
+        # The disclosure-index endpoints carry no date-range parameter (unlike HOSE's
+        # equivalent), so a full walk always re-fetches HNX's entire historical corpus from
+        # page 1 -- 441+ pages of 1000 records as of a real 2026-09-05 acquisition attempt
+        # (OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1), which is neither
+        # bounded nor needed: current_official_event_context.py's own contract reads only
+        # hnx_official_rights_event_index/v1, never the disclosure index. include_disclosures
+        # defaults to True so any existing caller's behavior is unchanged; the incremental
+        # acquisition wrapper explicitly opts out rather than silently truncating or working
+        # around the real page-count growth.
+        for market, (landing, endpoint) in DISCLOSURES.items():
+            landing_response = fetch(BASE + landing)
+            if landing_response["http_status"] != 200:
+                raise ValueError(f"DISCLOSURE_LANDING_FETCH_FAILED:{market}")
+            captures.append(retain(response=landing_response, destination=destination, surface=f"{market.lower()}_disclosure_landing", page=None, request_body=None))
+            responses, page_captures, total = _post_pages(endpoint=endpoint, surface=f"{market.lower()}_disclosures", destination=destination,
+                base_body={"pAction": "0", "pNhomTin": "", "pTieuDeTin": "", "pMaChungKhoan": "", "pFromDate": "", "pToDate": "", "pOrderBy": "", "pNumRecord": "1000"})
+            captures.extend(page_captures); disclosure_totals[market] = total
+            disclosures.extend(row for document, capture in responses for row in parse_disclosures(document, market=market, capture=capture))
 
     if len(events) != sum(event_totals.values()) or len(disclosures) != sum(disclosure_totals.values()):
         raise ValueError("PAGINATED_SOURCE_ACCOUNTING_MISMATCH")
@@ -287,7 +298,7 @@ def build(*, destination: Path, stocklookup_universe: Path, execute: bool = True
                 "hnx_official_equity_universe": {"dataset": "hnx_official_equity_universe/v1", "records": universe,
                     "scope": "CURRENT_HNX_LISTED_AND_UPCOM_ISSUER_LIST_SURFACES", "instrument_class_boundary": "COMMON_EQUITY_CANDIDATE_ONLY_NOT_A_SECURITY_MASTER_OR_COMMON_SHARES_AUTHORITY"},
                 "rights_event_index": {"dataset": "hnx_official_rights_event_index/v1", "records": events, "source_totals": event_totals},
-                "disclosure_index": {"dataset": "hnx_official_disclosure_index/v1", "records": disclosures, "source_totals": disclosure_totals},
+                "disclosure_index": {"dataset": "hnx_official_disclosure_index/v1", "records": disclosures, "source_totals": disclosure_totals, "attempted": include_disclosures},
                 "coverage": {"listed_source_total": list_totals["HNX_LISTED"], "upcom_source_total": list_totals["UPCOM"],
                     "common_equity_candidates": len(universe), "non_common_equity": 0, "instrument_class_unresolved": 0,
                     "kllh_present": sum(row["hnx_kllh_shares"] is not None for row in universe), "klny_present": sum(row["market"] == "HNX_LISTED" and row["source_listing_or_registration_quantity"] is not None for row in universe),

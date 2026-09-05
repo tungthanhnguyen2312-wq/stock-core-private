@@ -627,6 +627,38 @@ def test_registration_and_freeze_idempotent_on_rerun(tmp_path):
     assert freeze2["status"] == "ALREADY_COMPLETED"
 
 
+def test_not_session_locked_keys_are_excluded_from_the_frozen_mutation_check(tmp_path):
+    """Regression guard for OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1:
+    official_universe and event_context are explicitly documented elsewhere in this codebase
+    (daily_session_level2_package.session_triage_status, daily_research_session_operations' own
+    input-manifest freshness labelling) as ACCEPTED_CURRENT_ASOF_BUILD_NOT_SESSION_LOCKED -- their
+    value is expected to reflect whatever the latest retained build currently is, never a value
+    frozen at the moment a historical session completed. Before this milestone, event_context
+    resolved to one single, never-changing snapshot directory, so re-registering an already-
+    completed historical session never actually observed a changed event_context identity in
+    practice; a real incremental acquisition now legitimately advances it (proven live this
+    milestone: research_session advanced 2026-08-21 -> 2026-09-05), and register_session_inputs()
+    must not reject that as COMPLETED_SESSION_INPUT_MUTATION_REJECTED. A genuinely session-locked
+    REQUIRED key must still be protected."""
+    session = "2026-08-25"
+    registry_path = _registry_copy_at(tmp_path)
+    registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    registry["completed_sessions"][session]["frozen_input_identities"]["event_context"] = (
+        "current_official_event_context:DELIBERATELY_STALE_LOCK_VALUE"
+    )
+    registry_path.write_text(json.dumps(registry), encoding="utf-8")
+    result = cpc.register_session_inputs(ROOT, session, registry_path=registry_path)
+    assert result["status"] == "ALREADY_FROZEN_IDENTICAL"
+
+    registry2 = json.loads(registry_path.read_text(encoding="utf-8"))
+    registry2["completed_sessions"][session]["frozen_input_identities"]["descriptive"] = (
+        "market_wide_current_descriptive_research:DELIBERATELY_WRONG"
+    )
+    registry_path.write_text(json.dumps(registry2), encoding="utf-8")
+    with pytest.raises(cpc.CanonicalPostCloseError, match="COMPLETED_SESSION_INPUT_MUTATION_REJECTED"):
+        cpc.register_session_inputs(ROOT, session, registry_path=registry_path)
+
+
 # --- 13. no Dashboard publication occurs ---
 
 def test_module_never_invokes_dashboard_publication():
