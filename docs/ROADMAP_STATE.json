@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "f2bb599",
-  "last_updated_checkpoint": "f2bb599",
+  "implementation_lineage_head": "3d1b41d9d41e5e0b08ada79d12bc33643e00d419",
+  "last_updated_checkpoint": "3d1b41d9d41e5e0b08ada79d12bc33643e00d419",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1",
+    "milestone": "PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -800,6 +800,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1",
       "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization opened this bounded integration milestone despite queued_next=[]; no dependency or successor was inferred. The canonical post-close closure now builds, retains, and supplies the existing tactical_momentum_context/v1 and tactical_confirmation_context/v1 from the same retained descriptive/snapshot/technical-recovery/Tactical-V3/relative-volume evidence to Integrated Decision; no new provider, indicator, financial engine, database write, publication, or authority promotion. Integrated records expose distinct fundamental, valuation, tactical structure, momentum, participation/confirmation, market/sector, opportunity priority, and optional portfolio-fit axes, with qualitative no-score/no-vote coherence. Primary retained 2026-09-04 local replay: 1,683 records; Fundamental 1,363; Valuation 1,009; Structure 952; Momentum 952; Participation/Confirmation 915; Market/Sector 1,683; Opportunity Priority 1,507; all major axes 797; coherence ALIGNED 116 / PARTIALLY_ALIGNED 529 / MIXED 0 / CONTRADICTED 307 / INSUFFICIENT_EVIDENCE 731. Same-input before/after reports zero action-posture, why_now, trigger, or invalidation changes. Priority axis reads standing research_priority_tier with older priority_tier compatibility (162 PRIORITY_NOW records). Temporal 2026-08-25 detects a retained financial period labelled 2026-Q4 and excludes financial/valuation axes fail-closed; technical future-session violations 0 and future_leak_admitted 0. This is an explicit PIT_ONLY_GAP, not a promotion. Local AI brief passes contexts through. Evidence: operations-review/integrated-decision-evidence-axis-coherence-v1-20260905/. Focused/adjacent tests pass; no successor queued."
+    },
+    {
+      "milestone_id": "PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / PARTIAL_BY_EVIDENCE",
+      "starting_checkpoint": "5e5d4656cedc1f76c2e2fcaa19705a23d54ea39e",
+      "checkpoint": "3d1b41d9d41e5e0b08ada79d12bc33643e00d419",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / DOWNSTREAM_RESEARCH_DIAGNOSTICS_ONLY / NO_POLICY_MUTATION",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1 directive (2026-09-05)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1",
+      "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization opened this bounded milestone despite queued_next=[]; no successor is inferred. A retained-only corpus gate requires canonical-handoff identity, retained completed Daily-operation identity, and same-session observed timestamp; replays/current-view copies/unknown temporal candidates are explicitly inventoried and excluded. Of six retained artifacts, only the 2026-09-03 canonical artifact (1,683 decisions) qualifies. The 2026-09-04 candidate fails closed on handoff/artifact identity mismatch. No later temporally-qualified completed session exists, so T+1/T+3/T+5/T+10/T+20 are pending. Existing qualified records lack additive evidence-axis snapshots and forward-evaluable trigger/invalidation operators; no backfill occurs. The existing prospective bridge now emits retained exact-session close endpoint lineage/fitness and close-only CLOSE_MFE/CLOSE_MAE, never intraday MFE/MAE. Canonical post-close rolls the immutable diagnostic forward only after Daily Producer and before current handoff persistence, so feedback cannot affect current decision policy. False-negative/failed-setup samples are empty; posture/coherence/axis summaries remain descriptive with no probabilities; disposition is MORE_PROSPECTIVE_EVIDENCE_REQUIRED and policy_mutated=false. Evidence: operations-review/prospective-decision-outcome-feedback-policy-diagnostics-v1-20260905/. No provider, authority, PIT/RAW_AS_TRADED, score, target, probability, execution, database, remote, publication, deployment, or strategy-policy change."
     },
     {
       "milestone_id": "MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1",

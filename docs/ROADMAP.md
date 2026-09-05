@@ -1,5 +1,26 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Prospective decision outcome feedback and policy diagnostics V1 (2026-09-05):**
+`PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` at local checkpoint `3d1b41d`, begun from owner-specified
+`5e5d4656cedc1f76c2e2fcaa19705a23d54ea39e`. Explicit owner authorization opened it despite
+`queued_next=[]`
+(`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1`);
+no dependency or successor is inferred. The extension reuses the standing prospective close bridge
+and retained exact-session P3F9B evidence, adds session-counted T+1/T+3/T+5/T+10/T+20 endpoint
+lineage/fitness plus close-only `CLOSE_MFE`/`CLOSE_MAE`, and admits only a canonical-handoff /
+Daily-operation / observed-time-bound decision artifact. It is downstream of Daily decision
+production and is rolled forward post-Producer before the current handoff is written. Real corpus:
+one genuine 2026-09-03 artifact / 1,683 decisions; three current-view copies, one unknown, and
+the 2026-09-04 candidate excluded on handoff/artifact identity mismatch. With no later genuine
+completed session, every forward horizon is pending; no false-negative, failed-setup,
+posture/coherence/axis differentiation, or policy change is claimed. The older artifact lacks
+additive axis snapshots and forward-evaluable trigger/invalidation conditions, recorded fail
+closed rather than reconstructed. Evidence:
+`operations-review/prospective-decision-outcome-feedback-policy-diagnostics-v1-20260905/`.
+No provider, policy, score, target, probability, execution, PIT, RAW_AS_TRADED, database,
+publication, deployment, or authority change.
+
 **Integrated Decision evidence-axis coherence V1 (2026-09-05):**
 `INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE` at local
 checkpoint `f2bb599`, begun from owner-specified `bc9e5a05ab14b060163128d73243c08e4fedea0b`.

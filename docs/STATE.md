@@ -1,5 +1,39 @@
 # Stock Lookup — Operational State
 
+**Prospective decision outcome feedback and policy diagnostics V1 (2026-09-05):**
+`PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE`, begun at owner-specified `5e5d4656cedc1f76c2e2fcaa19705a23d54ea39e`
+(`HEAD == origin/main`) and implemented at local checkpoint `3d1b41d`. The explicit empty-queue
+override is
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1`;
+it authorizes this milestone only and opens no successor.
+
+**Retained-only temporal gate and downstream roll-forward.**
+`prospective_decision_outcome_feedback.py` inventories every retained Integrated Decision artifact,
+admits only an exact canonical-handoff identity paired with its retained completed Daily-operation
+identity and same-session observed timestamp, and reuses the existing prospective close bridge.
+The bridge now exposes trading-session T+1/T+3/T+5/T+10/T+20 endpoint price, basis, fitness, and
+provider/snapshot lineage; it joins exact retained session snapshots only where price basis and
+normalization transform are compatible. Close-only excursions are explicitly `CLOSE_MFE`/
+`CLOSE_MAE`, never intraday MFE/MAE. Canonical post-close rolls the immutable feedback artifact
+forward only after Daily Producer and before the current handoff exists, so it can observe prior
+decisions but cannot influence the current decision.
+
+**Evidence outcome.** Six retained artifacts were inventoried: one genuine 2026-09-03 canonical
+artifact (1,683 decisions), three `CURRENT_VIEW_OF_OLD_SESSION`, one
+`UNKNOWN_TEMPORAL_STATUS`, and the 2026-09-04 candidate
+`EXCLUDE_TEMPORAL_PROVENANCE_UNQUALIFIED` because its handoff identity does not match the retained
+artifact. There is therefore no later temporally-qualified completed session after 2026-09-03;
+all genuine T+1/T+3/T+5/T+10/T+20 outcomes remain pending. The qualified source predates additive
+evidence-axis retention and forward-evaluable trigger/invalidation conditions, both recorded as
+T0 fields not retained rather than backfilled. FPT, HPG, SSI, QNS, PVD, PNJ, and VNM are retained
+in that genuine pending corpus. No false negative, failed setup, differentiated posture/coherence/
+axis result, or policy-change candidate is evidenced; disposition is
+`MORE_PROSPECTIVE_EVIDENCE_REQUIRED` and policy is unchanged. Evidence:
+`operations-review/prospective-decision-outcome-feedback-policy-diagnostics-v1-20260905/`.
+No provider, authority, PIT/RAW_AS_TRADED, score, target, probability, execution, database,
+publication, deployment, or policy change occurred.
+
 **Integrated Decision evidence-axis coherence V1 (2026-09-05):**
 `INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`, started at
 the owner-specified `bc9e5a05ab14b060163128d73243c08e4fedea0b` (`HEAD == origin/main`) and

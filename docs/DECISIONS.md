@@ -1,5 +1,43 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Prospective Decision Outcome Feedback And Policy Diagnostics V1
+
+`PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` (`push = NO`, started from owner checkpoint
+`5e5d4656cedc1f76c2e2fcaa19705a23d54ea39e`, implementation checkpoint `3d1b41d`). The explicit
+owner override is
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1`;
+it authorizes no successor.
+
+1. **Only a retained prospective identity may enter evaluation.**
+   `prospective_decision_outcome_feedback.py` requires canonical-handoff identity equality, a
+   completed same-session Daily-operation identity with
+   `DAILY_PRODUCER_RETAINED_COMPLETED_SESSION`, and an ISO same-session artifact observed time.
+   It explicitly inventories replay/current-view/unknown candidates and excludes temporal failures;
+   Git and filesystem time are never evidence.
+2. **Forward outcomes reuse existing close machinery and remain current-research-only.** The
+   existing bridge now emits trading-session T+1/T+3/T+5/T+10/T+20 endpoint close/basis/fitness and
+   retained provider/snapshot lineage. Exact P3F9B session snapshots join only under compatible
+   normalized price-basis plus transform identity. Close-path fields are `CLOSE_MFE`/`CLOSE_MAE`;
+   intraday MFE/MAE, RAW_AS_TRADED, and historical PIT authority are not claimed.
+3. **Real evidence is deliberately thin.** Of six artifacts, only the 2026-09-03 identity-bound
+   1,683-decision artifact qualifies. The 2026-09-04 candidate is excluded because its handoff
+   and artifact identities differ; no substitution is made. There is no later qualified completed
+   session, so all horizons are pending. Existing qualified records predate additive evidence-axis
+   snapshots and forward-evaluable trigger/invalidation operators; both remain
+   `FIELD_NOT_RETAINED_AT_T0`/not evaluable rather than inferred.
+4. **Diagnostics cannot retune policy.** Outcome-label constants are explicit/versioned and
+   descriptive. No false-negative or failed-setup case is mature; posture, coherence, and
+   evidence-axis summaries retain sample size but emit no zero-sample statistic or probability.
+   The sole policy record is `MORE_PROSPECTIVE_EVIDENCE_REQUIRED`, `policy_mutated=false`.
+5. **Continuation is automatic but not a feedback loop.** Canonical post-close invokes the
+   immutable roll-forward after Daily Producer and before current handoff persistence, links its
+   artifact as downstream observation, and keeps current Daily action policy untouched. The exact
+   evidence package is
+   `operations-review/prospective-decision-outcome-feedback-policy-diagnostics-v1-20260905/`.
+   No provider, database, authority, strategy-policy, score, target, probability, execution,
+   publication, deployment, or remote change occurred.
+
 ## 2026-09-05 - Integrated Decision Evidence-Axis Coherence V1
 
 `INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
