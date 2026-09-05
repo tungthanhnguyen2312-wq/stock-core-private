@@ -131,6 +131,33 @@ def _verify_p3f9b_identity(snapshot: Mapping[str, Any]) -> None:
         raise TechnicalStructureContextError("P3F9B_SNAPSHOT_IDENTITY_MISMATCH")
 
 
+def _recovery_overrides(
+    recovery: Mapping[str, Any] | None, *, target_session: str, snapshot_identity: str | None,
+) -> tuple[Mapping[str, Any], str | None]:
+    """Validate the exact retained-history recovery contract before consuming it.
+
+    The descriptive-research builder already uses this recovery artifact to calculate
+    same-session features.  Tactical structure must use the *same retained close
+    series*, rather than the one-bar exact-session projection, otherwise a ticker can
+    be eligible for Tactical V3 while every structural field is necessarily blocked.
+    """
+    if recovery is None:
+        return {}, None
+    import market_wide_current_technical_coverage_scaleout as recovery_module
+
+    identity = recovery_module.content_identity(recovery)
+    if recovery.get("artifact_sha256") != identity["artifact_sha256"]:
+        raise TechnicalStructureContextError("TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH")
+    if recovery.get("target_session") != target_session:
+        raise TechnicalStructureContextError("TECHNICAL_HISTORY_RECOVERY_SESSION_MISMATCH")
+    if recovery.get("source_lineage", {}).get("p3f9b_snapshot_identity") != snapshot_identity:
+        raise TechnicalStructureContextError("TECHNICAL_HISTORY_RECOVERY_SNAPSHOT_IDENTITY_MISMATCH")
+    overrides = recovery.get("recovered_history_overrides")
+    if not isinstance(overrides, Mapping):
+        raise TechnicalStructureContextError("TECHNICAL_HISTORY_RECOVERY_OVERRIDES_INVALID")
+    return overrides, recovery.get("artifact_identity")
+
+
 # ── Close series extraction (V1 unchanged) ────────────────────────────────────
 
 def _closes(pf_record: Mapping[str, Any] | None) -> tuple[list[str], list[float]]:
@@ -540,15 +567,26 @@ def _insufficient_record(ticker: str, reason: str, depth: int) -> dict[str, Any]
 def _classify_ticker(
     ticker: str, *, descriptive_record: Mapping[str, Any],
     pf_record: Mapping[str, Any] | None, target_session: str,
+    recovery_override: Mapping[str, Any] | None = None, recovery_identity: str | None = None,
 ) -> dict[str, Any]:
     technical = descriptive_record.get("technical_features", {})
     eligible = technical.get("status") == "SHADOW_ONLY" and technical.get("is_current_session") is True
     if not eligible:
         return _insufficient_record(ticker, "TECHNICAL_FEATURES_UNAVAILABLE_OR_NOT_CURRENT_SESSION", 0)
 
-    sessions, closes = _closes(pf_record)
+    history_source = "P3F9B_EXACT_SESSION_RECORD"
+    history_record = pf_record
+    if isinstance(recovery_override, Mapping) and recovery_override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
+        history_record = {"observations": recovery_override.get("observations")}
+        history_source = "RETAINED_TECHNICAL_HISTORY_RECOVERY"
+    sessions, closes = _closes(history_record)
     if not sessions or sessions[-1] != target_session:
-        return _insufficient_record(ticker, "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION", len(closes))
+        record = _insufficient_record(ticker, "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION", len(closes))
+        record["technical_history_lineage"] = {
+            "source": history_source, "recovery_artifact_identity": recovery_identity,
+            "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
+        }
+        return record
     if len(closes) > MAX_LOOKBACK_SESSIONS:
         closes = closes[-MAX_LOOKBACK_SESSIONS:]
         sessions = sessions[-MAX_LOOKBACK_SESSIONS:]
@@ -606,6 +644,10 @@ def _classify_ticker(
 
     return {
         "ticker": ticker, "eligibility": {"status": "ELIGIBLE"}, "close_history_depth": depth,
+        "technical_history_lineage": {
+            "source": history_source, "recovery_artifact_identity": recovery_identity,
+            "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
+        },
         # V1 keys (unchanged)
         "trend_context": trend_context, "structure_context": structure_context,
         "contraction_context": contraction_context, "base_context": base_context,
@@ -639,7 +681,10 @@ def _classify_ticker(
 
 # ── Public build_artifact ─────────────────────────────────────────────────────
 
-def build_artifact(*, current_descriptive: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any], requested_at: str) -> dict[str, Any]:
+def build_artifact(
+    *, current_descriptive: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any], requested_at: str,
+    technical_history_recovery_artifact: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Build the complete technical structure context artifact.
 
     Zero silent drops: every candidate gets a record, eligible or not.
@@ -655,6 +700,11 @@ def build_artifact(*, current_descriptive: Mapping[str, Any], p3f9b_snapshot: Ma
     if expected_snapshot_identity and expected_snapshot_identity != p3f9b_snapshot.get("snapshot_identity"):
         raise TechnicalStructureContextError("P3F9B_SNAPSHOT_LINEAGE_MISMATCH")
 
+    recovery_overrides, recovery_identity = _recovery_overrides(
+        technical_history_recovery_artifact, target_session=target_session,
+        snapshot_identity=p3f9b_snapshot.get("snapshot_identity"),
+    )
+
     descriptive_records = current_descriptive.get("records")
     pf_records = p3f9b_snapshot.get("records")
     if not isinstance(descriptive_records, Mapping) or not isinstance(pf_records, Mapping):
@@ -665,6 +715,7 @@ def build_artifact(*, current_descriptive: Mapping[str, Any], p3f9b_snapshot: Ma
         records[ticker] = _classify_ticker(
             ticker, descriptive_record=descriptive_records[ticker],
             pf_record=pf_records.get(ticker), target_session=target_session,
+            recovery_override=recovery_overrides.get(ticker), recovery_identity=recovery_identity,
         )
 
     eligible_count = sum(1 for r in records.values() if r["eligibility"]["status"] == "ELIGIBLE")
@@ -690,6 +741,7 @@ def build_artifact(*, current_descriptive: Mapping[str, Any], p3f9b_snapshot: Ma
         "source_artifacts": {
             "current_descriptive": current_descriptive.get("artifact_identity"),
             "p3f9b_snapshot": p3f9b_snapshot.get("snapshot_identity"),
+            "technical_history_recovery": recovery_identity,
         },
         "coverage": {
             "candidate_count": len(records), "eligible_count": eligible_count,

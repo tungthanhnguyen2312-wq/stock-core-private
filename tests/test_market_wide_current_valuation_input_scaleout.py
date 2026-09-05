@@ -97,7 +97,7 @@ def test_deterministic_and_lagged_shares_are_research_usable_not_ready():
     aaa = first["records"]["AAA"]
     assert aaa["share_basis_input"]["status"] == "PROVIDER_REPORTED_LAGGED"
     assert aaa["metrics"]["market_cap"]["status"] == "RESEARCH_USABLE"
-    assert aaa["metrics"]["market_cap"]["value"] == 10_000 * 100
+    assert aaa["metrics"]["market_cap"]["value"] == 10_000 * 1_000 * 100
     assert aaa["metrics"]["P/E"]["status"] == "RESEARCH_USABLE"
     assert "NOT_COMMON_OUTSTANDING_SHARE_BASIS" in aaa["metrics"]["P/E"]["labels"]
     assert aaa["metrics"]["P/E"]["input_identities"]["earnings"] == "net_income"
@@ -113,9 +113,10 @@ def test_market_cap_carries_an_honest_unknown_monetary_basis_by_default():
     # provider_reported_lagged (not an audited citation) -- the real, current-production
     # default. `market_cap` must say so explicitly rather than silently omitting the
     # fields the way the pre-fix code did.
-    aaa = _artifact()["records"]["AAA"]["metrics"]["market_cap"]
+    record = _artifact()["records"]["AAA"]
+    aaa = record["metrics"]["market_cap"]
     assert aaa["status"] == "RESEARCH_USABLE"
-    assert aaa["value"] == 10_000 * 100
+    assert aaa["value"] == 10_000 * 1_000 * 100
     assert aaa["monetary_basis_status"] == "UNKNOWN"
     assert aaa["scale"] is None
     assert aaa["normalized_currency"] is None
@@ -126,6 +127,23 @@ def test_market_cap_carries_an_honest_unknown_monetary_basis_by_default():
     assert aaa["currency"] == "VND"
     assert aaa["monetary_basis"]["basis_status"] == "UNKNOWN"
     assert "provider_reported_lagged" in aaa["monetary_basis_source"]
+    assert record["price_input"]["price_representation"]["contract_id"] == "DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1"
+    assert record["price_input"]["provider_native_value"] == "10000"
+
+
+def test_cross_currency_financial_inputs_fail_closed_instead_of_emitting_a_multiple():
+    prices, fundamentals, shares, p3e = _inputs()
+    issuer = next(item for item in p3e["refreshed_panel_data"]["issuers"] if item["issuer_identity"]["ticker"] == "HPG")
+    for fact in issuer["facts"]:
+        fact["currency"] = "USD"
+    artifact = build_current_valuation_artifact(
+        price_snapshot=prices, fundamental_artifact=fundamentals,
+        share_promotion_artifact=shares, p3e_artifact=p3e,
+    )
+    method = artifact["records"]["HPG"]["metrics"]["P/E"]
+    assert method["status"] == "BLOCKED"
+    assert method["value"] is None
+    assert "PRICE_FINANCIAL_CURRENCY_MISMATCH_NO_FX_CONVERSION_CONTRACT" in method["blocked_reasons"]
 
 
 def test_market_cap_monetary_basis_present_even_when_blocked():
@@ -339,7 +357,7 @@ def test_exact_session_price_required_and_stale_prior_session_cannot_substitute(
     artifact = build_current_valuation_artifact(
         price_snapshot=prices, fundamental_artifact=fundamentals, share_promotion_artifact=shares, p3e_artifact=p3e,
     )
-    assert artifact["records"]["AAA"]["price_input"]["value"] == 10_000
+    assert artifact["records"]["AAA"]["price_input"]["value"] == 10_000 * 1_000
     assert artifact["records"]["AAA"]["price_input"]["session"] == "2026-08-21"
     assert artifact["records"]["VCB"]["price_input"]["status"] == "PRICE_UNAVAILABLE"
     assert artifact["records"]["VCB"]["price_input"]["value"] is None

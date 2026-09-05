@@ -7,12 +7,29 @@ import pytest
 
 from current_research_valuation_context import (
     ENGINE_PEER_FEATURES, ENTITY_CLASS_COHORT_LEVEL, INPUT_BLOCKED, PE_NOT_MEANINGFUL, PE_TTM,
-    PS_TTM, SECTOR_COHORT_LEVEL, _monetary_basis_compatible, _select_ttm,
+    PS_TTM, SECTOR_COHORT_LEVEL, _calculation_readiness_reconciliation, _monetary_basis_compatible, _select_ttm,
     attach_engine_fundamental_peers, evaluate_ticker_valuation,
 )
 import monetary_basis_contract as basis_contract
 
 BLOCKED_METHOD = {"status": "BLOCKED", "value": None, "blocked_reasons": []}
+
+
+def test_readiness_reconciliation_compares_only_same_period_methods():
+    methods = {
+        "P/E": {"status": "RESEARCH_USABLE", "value": 12.0, "period_basis": "2025"},
+        "P/S": {"status": "RESEARCH_USABLE", "value": 2.0, "period_basis": "2025"},
+    }
+    context = {"status": "AVAILABLE", "calculation_readiness": [{
+        "reporting_period": "2025",
+        "pe": {"readiness": "ready", "status": "provider_reported", "value": 12.0, "blocked_by": []},
+    }]}
+    result = _calculation_readiness_reconciliation(methods, context)
+    assert result["P/E"]["comparison_status"] == "AGREES_WITHIN_REPRESENTATION_TOLERANCE"
+    assert result["P/S"]["comparison_status"] == "NOT_SEMANTICALLY_EQUIVALENT"
+    context["calculation_readiness"][0]["reporting_period"] = "2026-Q1"
+    result = _calculation_readiness_reconciliation(methods, context)
+    assert result["P/E"]["comparison_status"] == "NOT_COMPARABLE_DIFFERENT_REPORTING_PERIOD"
 
 
 def qualified_feature(value, *, currency="VND", scale="units", provider="KBS",

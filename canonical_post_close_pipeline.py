@@ -547,7 +547,10 @@ def enrichment_output_path(root: Path, session: str, name: str) -> Path:
     return root / "operations-review" / "canonical-post-close-v1" / session / "enrichment" / f"{name}.json"
 
 
-def build_enrichment_components(root: Path, session: str, *, artifact_root: Path | None = None) -> dict[str, Any]:
+def build_enrichment_components(
+    root: Path, session: str, *, artifact_root: Path | None = None, runtime_root: Path | None = None,
+    priority_queue_artifact: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Best-effort materialize the three current-research components no orchestrator wires today
     (historical context, financial momentum, corporate event context). Each is fully independent;
     a failure in one never blocks the others or the rest of the pipeline -- component-local
@@ -639,12 +642,16 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
         raw_val = _load(paths["valuation"]) or _load(retained_paths["valuation"])
         desc = _load(paths["descriptive_research"])
         p3f9b = _load(paths["exact_session_snapshot"])
+        technical_recovery = _load(paths["technical_recovery"])
         mkt = _load(paths["sector_leadership"])
         opp = _load(paths["opportunity_prioritization"])
         if not desc or not p3f9b:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
         requested_at = f"{session}T15:00:00+07:00"
-        technical_structure = tsc.build_artifact(current_descriptive=desc, p3f9b_snapshot=p3f9b, requested_at=requested_at)
+        technical_structure = tsc.build_artifact(
+            current_descriptive=desc, p3f9b_snapshot=p3f9b, requested_at=requested_at,
+            technical_history_recovery_artifact=technical_recovery,
+        )
         tactical_projection = msb_proj.build_artifact(technical_structure=technical_structure, requested_at=requested_at)
         daily_denominator = sorted((p3f9b.get("records") or {}).keys())
         relative_volume = rvol_research.build_artifact(candidates=daily_denominator, records=p3f9b.get("records") or {}, session=session, requested_at=requested_at)
@@ -673,9 +680,16 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
             root=root, decision_session=session, product_tickers=daily_denominator,
             requested_at=requested_at, authority=fin_authority, engine_artifact=engine_artifact,
         )
+        readiness_context = (
+            fin_v2_material.build_calculation_readiness_context(
+                runtime_root=runtime_root, decision_session=session, raw_valuation_artifact=raw_val,
+                product_tickers=daily_denominator, requested_at=requested_at,
+            ) if runtime_root is not None else None
+        )
         evaluated_valuation = fin_v2_material.build_evaluated_valuation_artifact(
             engine_artifact=engine_artifact, raw_valuation_artifact=raw_val,
             product_tickers=daily_denominator, requested_at=requested_at,
+            calculation_readiness_context=readiness_context,
         )
         _write_json(paths["financial_analysis_product"], financial_session_artifact)
         _write_json(paths["current_valuation_evaluated"], evaluated_valuation)
@@ -688,6 +702,7 @@ def build_enrichment_components(root: Path, session: str, *, artifact_root: Path
             relative_volume_artifact=relative_volume,
             market_sector_artifact=mkt,
             legacy_decision_artifact=opp,
+            priority_queue_artifact=priority_queue_artifact,
         )
         if res.get("session") != session:
             raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")
@@ -1023,7 +1038,10 @@ def run_canonical_post_close(
         raise CanonicalPostCloseError(
             "REFUSE_CANONICAL_POST_CLOSE:CANONICAL_RUNTIME_RELEASE_INTEGRITY_FAILURE:" + str(exc)
         ) from exc
-    enrichment = build_enrichment_components(root, session, artifact_root=artifact_root)
+    enrichment = build_enrichment_components(
+        root, session, artifact_root=artifact_root, runtime_root=runtime_root,
+        priority_queue_artifact=producer_result["operation"].get("decision_queue"),
+    )
     decision_packet = build_decision_packet(
         root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,

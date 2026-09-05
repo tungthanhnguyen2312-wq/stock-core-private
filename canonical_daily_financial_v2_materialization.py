@@ -154,9 +154,73 @@ def build_peer_context(
     )
 
 
+def build_calculation_readiness_context(
+    *, runtime_root: Path, decision_session: str, raw_valuation_artifact: Mapping[str, Any] | None,
+    product_tickers: Sequence[str], requested_at: str,
+) -> dict[str, Any]:
+    """Project the existing readiness engine into the Current-Research valuation path.
+
+    ``canonical_financial_bundle_section`` already owns the governed, read-only bridge
+    from canonical facts to ``market_wide_calculation_readiness``.  This wrapper merely
+    supplies the exact retained native close for the decision session and projects one
+    explicit context record for every Daily ticker; it does not reproduce a formula or
+    create a valuation lane.
+    """
+    from canonical_financial_bundle_section import SECTION_KEY, attach
+
+    raw_records = (raw_valuation_artifact or {}).get("records") or {}
+    entries: dict[str, dict[str, Any]] = {}
+    for ticker in product_tickers:
+        price = (raw_records.get(ticker) or {}).get("price_input") or {}
+        native_close = price.get("provider_native_value")
+        entries[ticker] = {"close": native_close} if price.get("status") == "PRICE_READY" and native_close is not None else {}
+    attach(entries, runtime_root, include=True, session_date=decision_session, price_basis_verified=False)
+
+    records: dict[str, dict[str, Any]] = {}
+    for ticker in product_tickers:
+        section = entries[ticker].get(SECTION_KEY)
+        if not isinstance(section, Mapping):
+            records[ticker] = {
+                "status": "UNAVAILABLE", "reason": "CANONICAL_FACTS_OR_EXACT_NATIVE_CLOSE_UNAVAILABLE",
+                "calculation_readiness": [],
+            }
+            continue
+        records[ticker] = {
+            "status": "AVAILABLE",
+            "latest_reporting_period": section.get("latest_reporting_period"),
+            "calculation_readiness": list(section.get("calculation_readiness") or []),
+            "still_blocked_by_price_basis": list(section.get("still_blocked_by_price_basis") or []),
+            "limitations": list(section.get("limitations") or []),
+            "readiness_policy_version": section.get("readiness_policy_version"),
+            "fact_store_state_fingerprint": section.get("fact_store_state_fingerprint"),
+        }
+    payload: dict[str, Any] = {
+        "contract_version": "canonical_daily_calculation_readiness_context/v1",
+        "requested_at": requested_at,
+        "decision_session": decision_session,
+        "source_raw_valuation_identity": (raw_valuation_artifact or {}).get("artifact_identity"),
+        "coverage": {
+            "decision_denominator": len(product_tickers),
+            "available": sum(record["status"] == "AVAILABLE" for record in records.values()),
+            "unavailable": sum(record["status"] != "AVAILABLE" for record in records.values()),
+            "zero_silent_ticker_drops": len(records) == len(product_tickers),
+        },
+        "records": records,
+        "authority_boundary": {
+            "calculation_engine_reused_without_formula_changes": True,
+            "provider_reported_remains_current_research_only": True,
+            "price_basis_verified": False,
+            "no_authority_promotion": True,
+        },
+    }
+    payload.update(_identity(payload))
+    return payload
+
+
 def build_evaluated_valuation_artifact(
     *, engine_artifact: Mapping[str, Any], raw_valuation_artifact: Mapping[str, Any] | None,
     product_tickers: Sequence[str], requested_at: str,
+    calculation_readiness_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Evaluate the raw ``market_wide_current_valuation_input_scaleout`` per-ticker records
     into the ``current_research_valuation_context/v1`` shape (``methods``, ``peer_relative_
@@ -177,6 +241,7 @@ def build_evaluated_valuation_artifact(
             valuation_record=valuation_records.get(ticker),
             financial_analysis_record=engine_records.get(ticker),
             financial_analysis_context_identity=engine_artifact.get("artifact_identity"),
+            calculation_readiness_record=((calculation_readiness_context or {}).get("records") or {}).get(ticker),
         )
         for ticker in product_tickers
     }
@@ -186,6 +251,7 @@ def build_evaluated_valuation_artifact(
         "requested_at": requested_at,
         "source_valuation_identity": (raw_valuation_artifact or {}).get("artifact_identity"),
         "source_financial_v2_identity": engine_artifact.get("artifact_identity"),
+        "source_calculation_readiness_identity": (calculation_readiness_context or {}).get("artifact_identity"),
         "records": rows,
     }
     payload.update(_identity(payload))

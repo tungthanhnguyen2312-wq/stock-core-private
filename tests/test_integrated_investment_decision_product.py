@@ -21,6 +21,17 @@ import pytest
 import integrated_investment_decision_product as iidp
 
 
+def test_priority_posture_reconciliation_keeps_priority_distinct_from_actionability():
+    queue = {"research_priority_tier": "PRIORITY_NOW", "entry_relevant": True,
+             "entry_action": "EARLY_ENTRY", "priority_reasons": ["EARLY_REVERSAL=PRIORITY_NOW"]}
+    result = iidp._priority_posture_reconciliation(
+        queue, posture=iidp.POSTURE_WAIT_FOR_CONFIRMATION,
+        tactical={"eligible": True, "market_structure_state": "UPTREND"}, why_now="Waiting for confirmation.",
+    )
+    assert result["reconciliation_category"] == "LEGITIMATE_POLICY_OUTCOME"
+    assert result["integrated_posture"] == iidp.POSTURE_WAIT_FOR_CONFIRMATION
+
+
 def _sample_tactical_record(
     *,
     eligible: bool = True,
@@ -667,4 +678,3 @@ class TestGovernanceAndStructure:
         )
         assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
         assert dec["participation"]["status"] == "NOT_AVAILABLE"
-

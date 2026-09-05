@@ -449,6 +449,7 @@ def evaluate_valuation_context(
         "ps_multiple": ps_val,
         "earnings_state": val_rec.get("earnings_state"),
         "limitations": uncertainties,
+        "valuation_method_reconciliation": val_rec.get("valuation_method_reconciliation") or {},
     }
     return summary, supports, counters, uncertainties
 
@@ -652,6 +653,43 @@ def decide_research_action_posture(
     return POSTURE_WAIT_FOR_CONFIRMATION, why, EFFECT_DOES_NOT_BLOCK
 
 
+def _priority_posture_reconciliation(
+    queue_record: Mapping[str, Any] | None, *, posture: str, tactical: Mapping[str, Any], why_now: str,
+) -> dict[str, Any]:
+    """Compact, deterministic explanation of priority versus action posture.
+
+    Priority selects research review lanes; it never relaxes the integrated posture
+    policy.  Keeping this join in the integrated record means a reviewer need not
+    reconstruct it from the separate Daily queue and technical artifacts.
+    """
+    queue_record = queue_record or {}
+    tier = queue_record.get("research_priority_tier")
+    entry_relevant = queue_record.get("entry_relevant") is True
+    base = {
+        "research_priority_tier": tier,
+        "entry_relevant": entry_relevant,
+        "entry_action": queue_record.get("entry_action"),
+        "lane_specific_priority": queue_record.get("lane_specific_priority") or {},
+        "priority_reasons": list(queue_record.get("priority_reasons") or []),
+        "integrated_posture": posture,
+        "integrated_posture_reason": why_now,
+    }
+    if not queue_record:
+        return {**base, "reconciliation_category": "CONTRACT_SHAPE_MISMATCH",
+                "reason": "PRIORITY_QUEUE_CONTEXT_NOT_PROVIDED_TO_INTEGRATED_BUILDER"}
+    if not (tier == "PRIORITY_NOW" and entry_relevant):
+        return {**base, "reconciliation_category": "LEGITIMATE_POLICY_OUTCOME",
+                "reason": "NOT_PRIORITY_NOW_ENTRY_RELEVANT"}
+    if posture in {POSTURE_INITIATE_ON_BREAKOUT, POSTURE_ACCUMULATE_ON_RETEST, POSTURE_EARLY_WATCH}:
+        return {**base, "reconciliation_category": "LEGITIMATE_POLICY_OUTCOME",
+                "reason": "PRIORITY_RESEARCH_LANE_AND_CURRENT_ACTION_POSTURE_ALIGNED"}
+    if tactical.get("eligible") is not True or tactical.get("market_structure_state") == "INSUFFICIENT_HISTORY":
+        return {**base, "reconciliation_category": "MISSING_HISTORY_OR_FEATURE_FITNESS",
+                "reason": "TACTICAL_STRUCTURE_NOT_FIT_FOR_CURRENT_ACTION_POSTURE"}
+    return {**base, "reconciliation_category": "LEGITIMATE_POLICY_OUTCOME",
+            "reason": "PRIORITY_REVIEW_REMAINS_DISTINCT_FROM_ACTION_READINESS"}
+
+
 # ── Single Ticker Decision Record Builder ─────────────────────────────────────
 
 def build_ticker_integrated_decision(
@@ -665,6 +703,7 @@ def build_ticker_integrated_decision(
     market_sector_record: Mapping[str, Any] | None,
     portfolio_record: Mapping[str, Any] | None = None,
     legacy_opportunity_record: Mapping[str, Any] | None = None,
+    priority_queue_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record."""
     tactical = tactical_record or {}
@@ -734,6 +773,9 @@ def build_ticker_integrated_decision(
         participation_summary=part_summary,
         market_sector_summary=mkt_summary,
     )
+    priority_posture = _priority_posture_reconciliation(
+        priority_queue_record, posture=posture, tactical=tactical, why_now=why_now,
+    )
 
     # 8. Trigger & Invalidation
     trigger = {
@@ -779,9 +821,13 @@ def build_ticker_integrated_decision(
         "market_structure_state": tactical.get("market_structure_state", "INSUFFICIENT_HISTORY"),
         "breakout_state_v3": tactical.get("breakout_state_v3", "NO_VALID_PIVOT"),
         "why_now": why_now,
+        "priority_posture_reconciliation": priority_posture,
         "fundamental_support": fund_supp,
         "technical_support": tac_supp,
         "valuation_context_summary": val_summary,
+        "valuation_methods": valuation.get("methods") or {},
+        "valuation_method_reconciliation": valuation.get("valuation_method_reconciliation") or {},
+        "calculation_readiness_context": valuation.get("calculation_readiness_context") or {},
         "participation_support": part_supp,
         "counter_thesis": all_counter_thesis,
         "material_uncertainties": all_uncertainties,
@@ -802,6 +848,7 @@ def build_ticker_integrated_decision(
             "financial_analysis_identity": financial.get("source_context_identity") or financial.get("artifact_identity"),
             "valuation_identity": valuation.get("artifact_identity"),
             "relative_volume_identity": rvol.get("artifact_identity"),
+            "priority_queue_record_identity": (priority_queue_record or {}).get("content_identity"),
         },
         "authority_boundary": {
             "is_actionable": False,
@@ -828,6 +875,7 @@ def build_artifact(
     market_sector_artifact: Mapping[str, Any] | None = None,
     portfolio_artifact: Mapping[str, Any] | None = None,
     legacy_decision_artifact: Mapping[str, Any] | None = None,
+    priority_queue_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact."""
     fa_contract = (financial_analysis_artifact or {}).get("contract_version")
@@ -841,6 +889,9 @@ def build_artifact(
     val_records = (current_valuation_artifact or {}).get("records") or {}
     rvol_records = (relative_volume_artifact or {}).get("records") or {}
     legacy_records = (legacy_decision_artifact or {}).get("records") or {}
+    priority_records = (priority_queue_artifact or {}).get("records") or {}
+    if priority_queue_artifact is not None and not isinstance(priority_records, Mapping):
+        raise IntegratedDecisionProductError("PRIORITY_QUEUE_RECORDS_INVALID")
 
     # All tickers present in technical structure or financial analysis
     all_tickers = sorted(set(tac_records.keys()) | set(fa_records.keys()))
@@ -879,6 +930,7 @@ def build_artifact(
             market_sector_record=market_sector_artifact,
             portfolio_record=portfolio_artifact,
             legacy_opportunity_record=leg_rec,
+            priority_queue_record=priority_records.get(ticker),
         )
         records[ticker] = dec
 
@@ -939,6 +991,7 @@ def build_artifact(
             "current_valuation": (current_valuation_artifact or {}).get("artifact_identity"),
             "relative_volume": (relative_volume_artifact or {}).get("artifact_identity"),
             "market_sector": (market_sector_artifact or {}).get("artifact_identity"),
+            "priority_queue": (priority_queue_artifact or {}).get("artifact_identity"),
         },
         "authority_boundary": {
             "is_actionable": False,

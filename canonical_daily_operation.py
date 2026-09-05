@@ -625,8 +625,11 @@ def run_canonical_daily_operation(
             ),
         )
 
-    enrichment = build_enrichment_components(root, resolved_session, artifact_root=artifact_root)
     operation = producer_result.get("operation") if isinstance(producer_result.get("operation"), Mapping) else {}
+    enrichment = build_enrichment_components(
+        root, resolved_session, artifact_root=artifact_root, runtime_root=runtime_root,
+        priority_queue_artifact=operation.get("decision_queue"),
+    )
     decision_packet = build_decision_packet(
         root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,

@@ -288,6 +288,10 @@ def _existing_method(method_id: str, metric: Mapping[str, Any], *, entity: str, 
         "p3f_method_status": metric.get("p3f_method_status") or metric.get("status"),
         "formula": metric.get("formula"),
         "source_status": metric.get("status"),
+        "financial_inputs": metric.get("financial_inputs"),
+        "price_representation": metric.get("price_representation"),
+        "monetary_compatibility": metric.get("monetary_compatibility"),
+        "price_session": metric.get("price_session"),
     }
     source_status = metric.get("status")
     if applicability == NOT_APPLICABLE or source_status == "NOT_APPLICABLE":
@@ -314,10 +318,83 @@ def _ev_ebitda(entity: str, existing: Mapping[str, Any] | None) -> dict[str, Any
     return _method_shell(EV_EBITDA, applicability=APPLICABLE, status=INPUT_BLOCKED, blockers=blockers, extra=extra)
 
 
+_READINESS_EQUIVALENTS = {
+    PE_EXISTING: "pe",
+    PB: "pb",
+    MARKET_CAP: "market_capitalisation",
+    EV_EBITDA: "ev_ebitda",
+}
+
+
+def _calculation_readiness_reconciliation(
+    methods: Mapping[str, Mapping[str, Any]], readiness_record: Mapping[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
+    """State exactly whether two existing valuation methods are comparable.
+
+    The readiness engine and the retained-current valuation lane may use different
+    reporting periods.  A numerical comparison is made only when both name the same
+    period and are ready; otherwise the reason is retained rather than silently
+    preferring either figure.
+    """
+    readiness_record = readiness_record or {}
+    periods = readiness_record.get("calculation_readiness") or []
+    period = periods[-1] if isinstance(periods, list) and periods else {}
+    out: dict[str, dict[str, Any]] = {}
+    for method_id, current in methods.items():
+        readiness_metric = _READINESS_EQUIVALENTS.get(method_id)
+        base = {
+            "current_research_method_id": method_id,
+            "readiness_method_id": readiness_metric,
+            "current_research_period": current.get("period_basis"),
+            "readiness_reporting_period": period.get("reporting_period") if isinstance(period, Mapping) else None,
+            "current_research_value": current.get("value"),
+        }
+        if readiness_metric is None:
+            out[method_id] = {
+                **base, "comparison_status": "NOT_SEMANTICALLY_EQUIVALENT",
+                "reason": "NO_EQUIVALENT_METHOD_IN_CALCULATION_READINESS_ENGINE",
+            }
+            continue
+        engine = period.get(readiness_metric) if isinstance(period, Mapping) else None
+        if not isinstance(engine, Mapping):
+            out[method_id] = {
+                **base, "comparison_status": "READINESS_CONTEXT_UNAVAILABLE",
+                "reason": readiness_record.get("reason") or "READINESS_METHOD_NOT_RETAINED",
+            }
+            continue
+        base.update({
+            "readiness_value": engine.get("value"),
+            "readiness_state": engine.get("readiness"),
+            "readiness_status": engine.get("status"),
+            "readiness_blockers": list(engine.get("blocked_by") or []),
+        })
+        if current.get("status") not in {"RESEARCH_USABLE", "READY"} or not _numeric(current.get("value")):
+            out[method_id] = {**base, "comparison_status": "CURRENT_RESEARCH_METHOD_NOT_USABLE",
+                              "reason": "CURRENT_RESEARCH_METHOD_BLOCKED_OR_NOT_MEANINGFUL"}
+        elif engine.get("readiness") != "ready" or not _numeric(engine.get("value")):
+            out[method_id] = {**base, "comparison_status": "READINESS_METHOD_NOT_READY",
+                              "reason": engine.get("reason") or "READINESS_METHOD_BLOCKED"}
+        elif str(current.get("period_basis")) != str(period.get("reporting_period")):
+            out[method_id] = {**base, "comparison_status": "NOT_COMPARABLE_DIFFERENT_REPORTING_PERIOD",
+                              "reason": "METHODS_USE_DIFFERENT_RETAINED_REPORTING_PERIODS"}
+        else:
+            delta = float(current["value"]) - float(engine["value"])
+            tolerance = 1e-6 * max(1.0, abs(float(current["value"])), abs(float(engine["value"])))
+            out[method_id] = {
+                **base,
+                "comparison_status": "AGREES_WITHIN_REPRESENTATION_TOLERANCE" if abs(delta) <= tolerance else "MISMATCH_EXPLICIT_REVIEW_REQUIRED",
+                "reason": "SAME_PERIOD_DETERMINISTIC_REPRESENTATION_COMPARISON",
+                "value_delta": delta,
+                "tolerance": tolerance,
+            }
+    return out
+
+
 def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] | None,
                               valuation_record: Mapping[str, Any] | None,
                               financial_analysis_record: Mapping[str, Any] | None = None,
-                              financial_analysis_context_identity: str | None = None) -> dict[str, Any]:
+                              financial_analysis_context_identity: str | None = None,
+                              calculation_readiness_record: Mapping[str, Any] | None = None) -> dict[str, Any]:
     entity = _entity(feature_record, valuation_record)
     share = (valuation_record or {}).get("share_basis_input") or {}
     share_class = share_basis_class(share)
@@ -341,6 +418,7 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         EV_EBITDA: _ev_ebitda(entity, metrics.get("EV/EBITDA")),
         MARKET_CAP: _existing_method(MARKET_CAP, market_cap, entity=entity, share_class=share_class),
     }
+    readiness_reconciliation = _calculation_readiness_reconciliation(methods, calculation_readiness_record)
     usable = [item for item in methods.values() if item["status"] in {"RESEARCH_USABLE", "READY"}]
     not_meaningful = [item for item in methods.values() if item["status"] == PE_NOT_MEANINGFUL]
     return {
@@ -351,6 +429,8 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         "earnings_state": earnings_state,
         "pbt_ttm_context": _qualified_ttm("profit_before_tax_ttm", financial_analysis_record, financial_analysis_context_identity),
         "methods": methods,
+        "calculation_readiness_context": dict(calculation_readiness_record or {}),
+        "valuation_method_reconciliation": readiness_reconciliation,
         "usable_relative_method_count": sum(item["method_id"] in RELATIVE_METHODS and item["status"] in {"RESEARCH_USABLE", "READY"} for item in methods.values()),
         "pe_not_meaningful": bool(not_meaningful),
         "implied_expectations": {

@@ -22,6 +22,7 @@ import monetary_basis_contract as basis_contract
 import mva_provider_share_proxy as issued_share_proxy
 import p3f_current_market_valuation as p3f
 from polymorphic_current_strategy_classification import _valuation_requirement
+from price_representation_contract import RepresentationContractError, to_canonical
 
 CONTRACT_VERSION = "market_wide_current_valuation/v1"
 ARTIFACT_TYPE = "MARKET_WIDE_CURRENT_VALUATION"
@@ -268,6 +269,8 @@ def _price_input(record: Mapping[str, Any], snapshot: Mapping[str, Any]) -> dict
     close = None
     ready = False
     native_price_unit = None
+    representation = None
+    observation_provider = None
     if disposition != "EXACT_SESSION_RETAINED":
         blocked = [f"PRICE_{disposition}"]
     elif len(matches) != 1:
@@ -275,18 +278,37 @@ def _price_input(record: Mapping[str, Any], snapshot: Mapping[str, Any]) -> dict
     else:
         close = matches[0].get("close")
         native_price_unit = matches[0].get("price_unit")
+        observation_provider = matches[0].get("provider")
         if isinstance(close, bool) or not isinstance(close, (int, float)) or close <= 0:
             close, blocked = None, ["PRICE_CLOSE_INVALID"]
         else:
-            ready = True
+            source_descriptor = snapshot.get("source")
+            representation_source = (
+                source_descriptor.get("provider") if isinstance(source_descriptor, Mapping)
+                else source_descriptor
+            )
+            try:
+                representation = to_canonical(
+                    close, source=str(representation_source or ""), capability_id="ohlc_1D",
+                    instrument_class="VN_LISTED_EQUITY", field="close",
+                )
+                close = float(representation["canonical_value"])
+                ready = True
+            except RepresentationContractError as exc:
+                close = None
+                blocked = ["PRICE_REPRESENTATION_CONTRACT_UNAVAILABLE", str(exc)]
     return {
         "status": "PRICE_READY" if ready else "PRICE_UNAVAILABLE",
         "value": close,
         "session": session,
         "source": snapshot.get("source") or "DNSE",
+        "observation_provider": observation_provider,
         "basis": "CURRENT_SESSION_DESCRIPTIVE_CURRENT_VALUATION_PRICE_LEG",
         "currency": "VND",
-        "price_unit": "snapshot_native_close",
+        "price_unit": "vnd_per_share" if ready else "snapshot_native_close",
+        "provider_native_value": None if representation is None else representation["provider_native_value"],
+        "provider_native_unit": None if representation is None else representation["provider_native_unit"],
+        "price_representation": representation,
         # The retained observation's own scale-proof token (e.g. `SOURCE_PRICE_UNIT_
         # UNDOCUMENTED`), distinct from `price_unit` above, which only labels *which
         # field* this leg reads, not whether that field's absolute scale is proven.
@@ -487,6 +509,41 @@ def _map_p3f_method(metric: str, method: Mapping[str, Any], *, research: bool, a
     if p3f_status == "VALUATION_READY" and metric == "enterprise_value" and value is None:
         p3f_status = "VALUATION_BLOCKED"
         blockers.append("ENTERPRISE_VALUE_NOT_EMITTED_WITHOUT_EV_SALES_INPUTS")
+    financial_inputs = method.get("financial_inputs") or []
+    financial_currencies = sorted({
+        str(item.get("currency")).upper() for item in financial_inputs
+        if isinstance(item, Mapping) and isinstance(item.get("currency"), str) and item.get("currency").strip()
+    })
+    price_currency = str(price.get("currency") or "").upper() or None
+    financial_scales = sorted({
+        str(item.get("unit_scale")) for item in financial_inputs
+        if isinstance(item, Mapping) and item.get("unit_scale") is not None
+    })
+    currency_compatible = not financial_currencies or (
+        price_currency is not None and all(currency == price_currency for currency in financial_currencies)
+    )
+    # `p3f_current_market_valuation` divides the retained `value` fields directly.  A
+    # non-unit `unit_scale` is therefore only usable when the producer has explicitly
+    # established that `value` was already canonicalized.  The legacy p3e leg does not
+    # carry that representation proof (VNM 2024 revenue is the retained counterexample),
+    # so refuse it rather than guessing whether to multiply it here.
+    scale_compatible = not financial_scales or all(scale in {"1", "1.0"} for scale in financial_scales)
+    monetary_compatibility = {
+        "status": (
+            "COMPATIBLE" if currency_compatible and scale_compatible
+            else "BLOCKED_CURRENCY_MISMATCH" if not currency_compatible
+            else "BLOCKED_FINANCIAL_VALUE_SCALE_UNRESOLVED"
+        ),
+        "price_currency": price_currency,
+        "financial_currencies": financial_currencies,
+        "financial_input_unit_scales": financial_scales,
+        "price_representation_contract_id": (price.get("price_representation") or {}).get("contract_id"),
+        "reason": (
+            None if currency_compatible and scale_compatible
+            else "PRICE_FINANCIAL_CURRENCY_MISMATCH_NO_FX_CONVERSION_CONTRACT" if not currency_compatible
+            else "FINANCIAL_VALUE_SCALE_NOT_CANONICAL_FOR_CURRENT_VALUATION"
+        ),
+    }
     status = "BLOCKED"
     if p3f_status == "VALUATION_READY":
         if authoritative:
@@ -497,13 +554,19 @@ def _map_p3f_method(metric: str, method: Mapping[str, Any], *, research: bool, a
             blockers.extend(share.get("blocked_reasons") or [])
     elif not blockers:
         blockers.extend(share.get("blocked_reasons") or method.get("blockers") or ["VALUATION_INPUT_BLOCKED"])
+    if not currency_compatible or not scale_compatible:
+        status = "BLOCKED"
+        value = None
+        blockers.append(monetary_compatibility["reason"])
     extra = {
         "input_identities": _input_identities(metric, entity, share),
         "share_identity": share.get("share_concept"),
         "financial_period": method.get("financial_period"),
-        "financial_inputs": method.get("financial_inputs"),
+        "financial_inputs": financial_inputs,
         "formula": method.get("formula") or ("market_cap + total_interest_bearing_debt - cash_and_equivalents" if metric == "enterprise_value" else None),
         "p3f_method_status": p3f_status,
+        "price_representation": price.get("price_representation"),
+        "monetary_compatibility": monetary_compatibility,
     }
     return _metric_shell(metric, status=status, applicability=applicability, value=value,
                          blockers=blockers, price=price, extra=extra)
@@ -603,6 +666,7 @@ def _build_metrics(*, entity: str, price: Mapping[str, Any], share: Mapping[str,
                 "input_identities": _input_identities(metric, entity, share),
                 "share_identity": share.get("share_concept"),
                 "formula": "current_session_close * share_basis_value",
+                "price_representation": price.get("price_representation"),
                 **cap_basis_fields,
             }
             if status == "RESEARCH_USABLE":

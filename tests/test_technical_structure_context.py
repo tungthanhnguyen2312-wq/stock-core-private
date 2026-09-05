@@ -13,6 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import market_wide_current_descriptive_research as descriptive_module
+import market_wide_current_technical_coverage_scaleout as recovery_module
 import technical_structure_context as structure
 from field_temporal_contract import stable_id
 
@@ -69,6 +70,29 @@ def _build(tickers: dict[str, dict], closes: dict[str, list[float] | None]) -> d
 
 
 class StructureFeatureTests(unittest.TestCase):
+    def test_recovered_history_is_the_tactical_close_series_when_lineage_matches(self) -> None:
+        descriptive = _descriptive_source({"REC": {"technical": {"close": 119.0, "ma20": 110.0, "momentum": 0.1, "return_1d": 0.01}}})
+        p3f9b = _p3f9b_snapshot({"REC": [119.0]})
+        observations = [
+            {"session": f"2026-08-{day:02d}", "close": float(100 + day)} for day in range(1, 20)
+        ] + [{"session": SESSION, "close": 119.0}]
+        recovery = {
+            "target_session": SESSION,
+            "source_lineage": {"p3f9b_snapshot_identity": p3f9b["snapshot_identity"]},
+            "recovered_history_overrides": {
+                "REC": {"state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "payload_sha256": "payload:rec", "observations": observations}
+            },
+        }
+        recovery.update(recovery_module.content_identity(recovery))
+        artifact = structure.build_artifact(
+            current_descriptive=descriptive, p3f9b_snapshot=p3f9b,
+            technical_history_recovery_artifact=recovery, requested_at="2026-08-31T00:00:00+00:00",
+        )
+        record = artifact["records"]["REC"]
+        self.assertEqual(record["close_history_depth"], 20)
+        self.assertEqual(record["technical_history_lineage"]["source"], "RETAINED_TECHNICAL_HISTORY_RECOVERY")
+        self.assertEqual(record["structure_context"]["status"], "AVAILABLE")
+
     def test_breakout_confirmed_by_rule(self) -> None:
         # 19 prior closes oscillating 95-105 (max 105), current close 115 -> above prior max.
         prior = [95.0, 100.0, 105.0, 98.0, 102.0] * 3 + [100.0, 101.0, 99.0, 100.0]
