@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.03.1",
+  "roadmap_version": "2026.09.05.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "21ae21de11ea91832cab8768e3312cda6529ea31",
-  "last_updated_checkpoint": "21ae21de11ea91832cab8768e3312cda6529ea31",
+  "implementation_lineage_head": "2bbdade99cecfcf14ab40ce1a318fa89f72d6d31",
+  "last_updated_checkpoint": "2bbdade99cecfcf14ab40ce1a318fa89f72d6d31",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1",
+    "milestone": "CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -755,6 +755,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1",
       "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization opened this bounded milestone despite queued_next=[]; no dependency was inferred. Extends the existing technical-history recovery path with historical_series_failover/v1, retaining DNSE/KBS/VCI series independently and selecting only an exact-target-close-compatible single source (no fragments/splicing). Bounded 2026-09-04 live cohort FPT, HPG, QNS, STB, LPB, SSI, PVD, PNJ, IDC, VGI, VNZ: DNSE 11/11, KBS 11/11, VCI 11/11 complete close histories with exact target equality. KBS endpoint end-date exclusivity was found and corrected by requesting through the next calendar date while preserving logical target end and rejecting future rows. DNSE primary -> KBS fallback -> VCI only after non-clean KBS failure; VCI is compatible but KBS wins this cohort by precedence. KBS/VCI are feature-safe only for Current-Research close history, tactical structure, and momentum. Their volume, participation, OHLC geometry, PIT, execution/liquidity, RAW_AS_TRADED, score, target, probability, and authority-promotion uses remain blocked; DNSE remains the only participation-volume route. Daily now invokes the existing recovery runner once with --all, providing one invocation-scoped Vnstock rate governor. Qualification: 22 Vnstock attempts, 45 effective/60 hard RPM, max window 22, no waits. Retained 2026-09-04 replay restores actual structure/momentum availability 0 -> 918/952, with 34 target-close mismatches fail-closed; governed 2026-08-25 temporal replay has zero future rows and preserves 888 already-available records. 125 focused tests pass. No production DB write, deployment, publish, push, new provider, or authority promotion. Artifact: operations-review/market-data-historical-series-redundancy-and-feature-safe-failover-v1-20260905/. Pre-existing config/daily_research_session_input_registry.json diff untouched; no successor opened."
+    },
+    {
+      "milestone_id": "CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / PARTIAL_BY_EVIDENCE / CURRENT_RESEARCH_LOCAL_AI_HANDOFF_ONLY",
+      "starting_checkpoint": "b6d28608f8550c09fb725f64f33884c868b5754d",
+      "checkpoint": "2bbdade99cecfcf14ab40ce1a318fa89f72d6d31",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_ONLY / NO_PROMOTION",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 directive (2026-09-05)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1",
+      "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization opened this bounded milestone despite queued_next=[]; no dependency or successor was inferred. Reused the retained market-wide structured financial period semantics, Financial V2 engine/product projection, current-research valuation/peer gates, calculation-readiness context, and Daily integrated product. Added only a pass-through local-AI handoff extension: Daily watchlist records now carry their existing compact Financial V2 context (direction states, fitness, own-history context, blockers, and lineage) plus existing method-level valuation status/reconciliation; prohibited fair-value, target-price, and probability fields are excluded. Feature-input-fitness is expanded as a registry/catalog, not a new authority, for revenue/earnings growth, margins, ROE/ROA, leverage/liquidity, cash quality, FCF proxy, EV/EV-Sales, peer, own-history, and explicitly BLOCKED financial PIT backtest uses. Retained primary 2026-09-04 inventory: 195,552 semantic facts / 1,492 tickers; Financial V2 compact 1,476 AVAILABLE plus 207 explicit ABSENT over 1,683 Daily tickers; integrated fundamental context 1,363. Daily local-AI watchlist financial and method-level valuation exposure is 0->11. Retained 2026-08-25 temporal replay: 101,300 timestamped facts at/before target, zero post-target facts used, 94,252 missing-timestamp facts rejected fail-closed, and the valuation artifact's own share-resolution session is 2026-08-25 (no 2026-09-04 share data joined backward). Financial/valuation/PIT authority, provider set, formulae, target/probability, database, remote, publication, deployment, and score authority are unchanged. Artifact: operations-review/core-financial-data-to-fundamental-valuation-scaleout-v1-20260905/. Focused direct tests: 51 passed; the longer canonical-materialization suites were intentionally terminated at runner timeout and not treated as a failure. No successor is queued."
     }
   ],
   "blocked_capabilities": [

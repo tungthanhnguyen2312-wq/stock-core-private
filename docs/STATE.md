@@ -1,5 +1,36 @@
 # Stock Lookup — Operational State
 
+**Core financial data to fundamental valuation scaleout V1 (2026-09-05):**
+`CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`,
+starting at owner checkpoint `b6d28608f8550c09fb725f64f33884c868b5754d` and implemented at
+`2bbdade99cecfcf14ab40ce1a318fa89f72d6d31`. The explicit `queued_next=[]` override is recorded
+as `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1`;
+no predecessor or successor is inferred. This is a consumer-scaleout over the existing Financial
+V2 evidence chain, not a financial engine or authority rewrite. The retained primary 2026-09-04
+inventory has 195,552 semantic fact metadata rows across 1,492 tickers: 68,575
+`QUARTERLY_STANDALONE`, 497 `QUARTERLY_YTD`, 86,912 `POINT_IN_TIME_BALANCE_SHEET`, and 39,568
+`INTERIM_UNKNOWN_DURATION`; no annual result is inferred from a quarter label. The compact product
+retains 1,476 `AVAILABLE` and 207 explicit `ABSENT` contexts over the 1,683 Daily denominator;
+the existing integrated product has 1,363 non-insufficient fundamental contexts. The added Daily
+brief join exposes per-watchlist compact Financial V2 direction, feature fitness, own-history,
+blockers, and lineage, together with existing valuation method status, peer gate, and
+reconciliation; it does not recalculate a financial feature or select a valuation conclusion.
+It explicitly removes fair value, target price, and probability fields from that AI-facing view.
+
+The fitness catalog now names revenue/earnings growth, margin, ROE/ROA, leverage/liquidity,
+cash-quality, FCF-proxy, enterprise value, EV/Sales, peer, own-history, and financial PIT
+backtest use cases, each pointing to an existing authority. PIT remains fail-closed. The retained
+2026-08-25 temporal replay has 101,300 fact timestamps at or before target, zero post-target
+facts, and rejects all 94,252 timestamp-missing facts; the historical valuation artifact's own
+share-resolution date is 2026-08-25, so no current 2026-09-04 share count is joined backward.
+Primary residuals remain explicit: unknown/absent financial metadata, provider/method monetary and
+share-basis limits, entity applicability, price absence, and exact-EBITDA blockers. No provider,
+authority tier, valuation formula, target/probability, database, remote, publication, deployment,
+score, execution, or portfolio authority changed. Focused direct tests: 51 passed. The longer
+canonical-materialization test process exceeded the local runner window and was terminated rather
+than recorded as a failure; there was no orphan process. Full artifacts:
+`operations-review/core-financial-data-to-fundamental-valuation-scaleout-v1-20260905/`.
+
 **Market-data historical-series redundancy and feature-safe failover V1 (2026-09-05):**
 `MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE`, started from the owner-specified `fe1997961fdac3376a100cc987e77d97060d25b9`

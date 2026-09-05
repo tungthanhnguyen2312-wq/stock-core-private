@@ -1,5 +1,39 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Core Financial Data To Fundamental Valuation Scaleout V1
+
+`CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
+at local checkpoint `2bbdade99cecfcf14ab40ce1a318fa89f72d6d31` (start
+`b6d28608f8550c09fb725f64f33884c868b5754d`; `push = NO`).
+
+1. **The empty-queue authorization is explicit.** The owner authorized the milestone despite
+   `queued_next=[]`, recorded as
+   `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1`.
+   No dependency, successor, or authority change follows from that override.
+2. **Financial semantics and computation stay where they already are.** The implementation reuses
+   structured period semantics, Financial V2, the compact product projection, valuation/peer
+   context, calculation readiness, and the integrated decision product. The added fitness families
+   are a pointer catalog to those authorities, never a parallel calculator.
+3. **AI receives a safe ticker-level pass-through, not a valuation opinion.** Daily watchlist
+   records now include compact Financial V2 direction/fitness/history/blocker/lineage context and
+   existing valuation method/reconciliation state. Fair value, target price, and probability keys
+   are removed. Blocked, proxy, not-applicable, and absent states remain unchanged.
+4. **PIT stays blocked while temporal evidence is measured, not assumed.** For the retained
+   2026-08-25 replay, 101,300 timestamped facts are at/before target, zero are post-target, and
+   94,252 without timestamps are rejected. The historical valuation artifact is bound to its own
+   2026-08-25 share-resolution date; no 2026-09-04 current share basis is reused backward. This
+   validates the replay guard only; it does not promote general financial PIT/backtest authority.
+5. **Partial result is the deliberate boundary.** The retained 2026-09-04 inventory is 195,552
+   fact metadata rows / 1,492 tickers; the Daily product has 1,476 available plus 207 explicit
+   absent contexts over 1,683 ticker records, and 1,363 integrated fundamental contexts. The
+   supported local-AI watchlist exposure is 0 -> 11. Remaining source timestamp, scope, unit,
+   currency/scale, price/share-basis, entity, and exact-EBITDA limits are retained as blockers.
+
+No provider, formula, source authority, database, remote state, publication, deployment, target,
+probability, score, liquidity, execution, or portfolio authority changed. Artifact:
+`operations-review/core-financial-data-to-fundamental-valuation-scaleout-v1-20260905/`. No
+successor is queued.
+
 ## 2026-09-05 - Market Data Historical Series Redundancy And Feature-Safe Failover V1
 
 `MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1 = COMPLETE /

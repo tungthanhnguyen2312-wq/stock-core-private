@@ -1,5 +1,25 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Core financial data to fundamental valuation scaleout V1 (2026-09-05):**
+`CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
+at local checkpoint `2bbdade99cecfcf14ab40ce1a318fa89f72d6d31`, begun from owner-specified
+`b6d28608f8550c09fb725f64f33884c868b5754d`. Explicit owner authorization opened it despite
+`queued_next=[]` (`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1`);
+no dependency or successor is inferred. The retained Financial V2 semantic fact store, engine,
+compact product, valuation/peer gates, and calculation-readiness lane are reused unchanged.
+The additive product change exposes the existing compact Financial V2 context and existing
+method-level valuation/reconciliation gates per Daily watchlist ticker, excluding fair value,
+target-price, and probability fields. The feature-fitness catalog now explicitly names the
+financial families and records financial PIT backtesting as blocked rather than inferring an
+as-of claim. Retained 2026-09-04 evidence: 195,552 semantic facts / 1,492 tickers; 1,476
+Financial V2 AVAILABLE plus 207 explicit ABSENT contexts over 1,683 Daily tickers; 1,363 integrated
+fundamental contexts; watchlist local-AI financial and method-level valuation exposure 0 -> 11.
+The 2026-08-25 replay rejects 94,252 missing-timestamp facts, uses 101,300 timestamped facts at
+or before target with zero post-target facts, and uses the target session's own share-resolution
+artifact. No provider, financial/valuation/PIT authority, formula, target/probability, database,
+remote, publication, or deployment action was added. See
+`operations-review/core-financial-data-to-fundamental-valuation-scaleout-v1-20260905/`.
+
 **Market-data historical-series redundancy and feature-safe failover V1 (2026-09-05):**
 `MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE`, begun at the owner-specified `fe199796` and implemented at `21ae21d`.
