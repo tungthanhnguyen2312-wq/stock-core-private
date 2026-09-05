@@ -2,7 +2,8 @@
 
 **Core Daily decision coherence and valuation integration V1 (2026-09-05):**
 `CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE` at
-`dbad7c386cea10e752ff26abcecd6f0635ba6e89`. Explicit owner authorization opened
+`dbad7c386cea10e752ff26abcecd6f0635ba6e89`, started at
+`62db133e00bb83ae12b93ed3f31628b133d66daa`. Explicit owner authorization opened
 this milestone despite `queued_next=[]`; no dependency was inferred. The retained 2026-09-04
 replay found that 952 Tactical V3 eligible tickers were reaching the structure consumer with only
 one observation despite a retained complete-history recovery artifact. The pipeline now validates

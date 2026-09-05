@@ -1,8 +1,8 @@
 # Stock Lookup — Operational State
 
 **Core Daily decision coherence and valuation integration V1 (2026-09-05):**
-`CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE`, implementation
-checkpoint `dbad7c3`. This was an explicit owner override of `queued_next=[]`, recorded as
+`CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE`, started at `62db133`
+with implementation checkpoint `dbad7c3`. This was an explicit owner override of `queued_next=[]`, recorded as
 `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1`;
 it is not an inferred dependency. Retained 2026-09-04 evidence showed the technical consumer
 received a one-bar P3F projection for every one of 952 Tactical V3 eligible names while the

@@ -2,7 +2,8 @@
 
 ## 2026-09-05 - Core Daily Decision Coherence And Valuation Integration V1
 
-`CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE` at `dbad7c3`.
+`CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE`: started at `62db133`,
+implementation checkpoint `dbad7c3`.
 
 1. **The queued-next override is explicit and recorded, not inferred.** The owner authorized this
    milestone although `docs/ROADMAP_STATE.json` reported `queued_next=[]`; the state record uses
