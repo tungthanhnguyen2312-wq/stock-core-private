@@ -337,11 +337,43 @@ def test_enrichment_components_stamp_requested_session(tmp_path, monkeypatch):
     results = cpc.build_enrichment_components(ROOT, session)
     field_by_name = {"financial_momentum": "session", "corporate_event_context": "research_session", "historical_context": "session", "integrated_investment_decision_product": "session"}
     assert set(results) == set(field_by_name)
+    # corporate_event_context intentionally does NOT stamp the requested `session`: since
+    # CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1, it binds to retained
+    # official_event_context's own evidence session instead of fabricating today's date over
+    # frozen evidence -- exactly mirroring current_corporate_intelligence_axis's own build below.
+    official_event_context = json.loads(
+        level2.session_artifact_paths(ROOT, session)["official_event_context"].read_text(encoding="utf-8")
+    )
+    expected_session = {
+        "financial_momentum": session, "historical_context": session,
+        "integrated_investment_decision_product": session,
+        "corporate_event_context": official_event_context.get("research_session"),
+    }
     for name, session_field in field_by_name.items():
         row = results[name]
         assert row["status"] in ("BUILT", "PRIOR_AS_OF_CONTEXT", "UNAVAILABLE")
         if row["status"] == "BUILT":
-            assert row["artifact"].get(session_field) == session
+            assert row["artifact"].get(session_field) == expected_session[name]
+
+
+def test_corporate_event_context_builds_fresh_with_supplemental_events(tmp_path, monkeypatch):
+    """Regression guard for CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1:
+    before this fix, _corporate_event_context() always called build_artifact() with
+    research_session=<today's session>, which never matches the frozen official_event_context's
+    own research_session=2026-08-21, so it always raised EVENT_CONTEXT_SESSION_MISMATCH and
+    silently degraded to a stale PRIOR_AS_OF_CONTEXT copy every day -- confirmed empirically by the
+    literal absence of a corporate_event_context.json file under canonical-post-close-v1/2026-09-04/
+    enrichment/ before this fix. It also never activated supplemental_events, so
+    current_research_risk_register.py/current_research_decision_packet.py (the shared enrichment
+    component's consumers) never saw the HPG/VNM/VCB retained issuer/VSDC chains
+    current_corporate_intelligence_axis.py already surfaces separately."""
+    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
+    results = cpc.build_enrichment_components(ROOT, "2026-09-04")
+    row = results["corporate_event_context"]
+    assert row["status"] == "BUILT"
+    hpg = row["artifact"]["records"].get("HPG")
+    assert hpg is not None and hpg["events"]
+    assert any(event.get("source") == "ISSUER_IR_AND_OFFICIAL_LEDGER" for event in hpg["events"])
 
 
 def test_integrated_decision_wiring_never_regresses_to_incompatible_tactical_shape():

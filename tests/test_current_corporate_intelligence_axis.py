@@ -81,6 +81,19 @@ class CanonicalTaxonomyTests(unittest.TestCase):
         self.assertEqual(axis.canonical_event_type("RIGHTS"), axis.RIGHTS_ISSUE)
         self.assertEqual(axis.canonical_event_type("AGM"), axis.MANAGEMENT_GOVERNANCE)
 
+    def test_bonus_issue_alias_convergence(self) -> None:
+        """CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1 Section 3: five live
+        raw "bonus issue" spellings across the wider corporate-action stack (bonus_issue,
+        bonus_shares, bonus_share, BONUS/BONUS_OR_STOCK_DIVIDEND, stock_dividend_bonus_issue) must
+        converge onto one canonical event family, never independently as OTHER_MATERIAL_EVENT."""
+        aliases = (
+            "BONUS_ISSUE", "BONUS", "BONUS_OR_STOCK_DIVIDEND", "STOCK_DIVIDEND",
+            "BONUS_SHARES", "BONUS_SHARE", "STOCK_DIVIDEND_BONUS_ISSUE",
+            "bonus_issue", "bonus_shares", "bonus_share", "stock_dividend_bonus_issue",
+        )
+        for alias in aliases:
+            self.assertEqual(axis.canonical_event_type(alias), axis.BONUS_ISSUE, msg=alias)
+
     def test_unmapped_or_ambiguous_falls_back_to_other_material_event(self) -> None:
         self.assertEqual(axis.canonical_event_type("SOMETHING_NEW_NEVER_SEEN"), axis.OTHER_MATERIAL_EVENT)
         self.assertEqual(axis.canonical_event_type(None), axis.OTHER_MATERIAL_EVENT)

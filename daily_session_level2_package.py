@@ -149,6 +149,26 @@ def _source_identities(payload: Mapping[str, Any] | None) -> dict[str, Any]:
     return {}
 
 
+def _latest_official_event_context_dir(ops: Path) -> str:
+    """Resolve the most recently materialized current_official_event_context snapshot directory.
+
+    tools/run_current_official_event_context.py writes a new dated
+    current-official-event-context-integration-v1-{date} directory each time it is re-run.
+    Picking the lexicographically latest (YYYYMMDD sorts correctly as a string) means a future
+    fresh materialization is picked up automatically, with no hardcoded literal to update by
+    hand -- the CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1 fix for
+    LATEST_POINTER_STALE. Falls back to the one known-retained directory when no dated snapshot
+    exists yet (identical to the previous hardcoded literal, so existing callers over a root with
+    no such directory see no behavior change).
+    """
+    prefix = "current-official-event-context-integration-v1-"
+    candidates = sorted(
+        candidate.name for candidate in ops.glob(f"{prefix}*")
+        if candidate.is_dir() and (candidate / "current_official_event_context_artifact.json").exists()
+    )
+    return candidates[-1] if candidates else f"{prefix}20260824"
+
+
 def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
     ops = root / "operations-review"
     nodash = session.replace("-", "")
@@ -179,7 +199,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "technical_coverage_disposition": ops / f"same-session-technical-coverage-recovery-v1-{nodash}" / "same_session_technical_coverage_disposition_artifact.json",
         "fundamental": ops / "market-wide-current-fundamental-research-v1-20260823" / "market_wide_current_fundamental_research_artifact.json",
         "official_universe": ops / "current-official-market-universe-integration-v1-20260824" / "current_official_market_universe_artifact.json",
-        "official_event_context": ops / "current-official-event-context-integration-v1-20260824" / "current_official_event_context_artifact.json",
+        "official_event_context": ops / _latest_official_event_context_dir(ops) / "current_official_event_context_artifact.json",
         "catalyst": ops / "catalyst-event-research-context-v1-20260820" / "catalyst_event_research_context_artifact.json",
         "historical_context": ops / "market-wide-historical-research-context-v1-20260824" / "market_wide_historical_research_context_artifact.json",
         "financial_momentum": ops / "current-financial-momentum-context-v1" / "current_financial_momentum_context_artifact.json",

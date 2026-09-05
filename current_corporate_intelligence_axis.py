@@ -127,12 +127,30 @@ EVENT_TAXONOMY = (
 # Every already-canonical taxonomy value maps to itself first (idempotent: safe to call twice,
 # and forward-compatible if an upstream source ever starts emitting a canonical-shaped type
 # directly), then explicit raw-source spellings override/collapse onto their canonical bucket.
+#
+# CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1 root-caused five live raw
+# "bonus issue" spellings across the wider corporate-action stack: bonus_issue
+# (corporate_actions.py / share_basis_event_promotion.py -- already converges via the identity
+# seed above, since BONUS_ISSUE is itself a canonical taxonomy member), BONUS/BONUS_ISSUE
+# (current_official_event_context.py), BONUS_OR_STOCK_DIVIDEND (market_wide_current_corporate_
+# intelligence.py), and the two raw PIT-ledger spellings bonus_shares (official_corporate_
+# action_ledger.py, corporate_action_events.py) and bonus_share (corporate_action_ledger.py,
+# corporate_action_factors.py, distribution_evidence.py) -- plus the DNSE price-basis compound
+# stock_dividend_bonus_issue. Neither raw PIT ledger currently feeds this axis (see
+# ledger_reconciliation.json: they serve PIT/price-adjustment authority, a distinct use case,
+# and their own native vocabulary is preserved unmodified, per-module, per DATA_FIRST_DOCTRINE).
+# These three additional aliases guarantee that if a future milestone ever does connect that raw
+# vocabulary here, none of it silently falls into OTHER_MATERIAL_EVENT as an independent event
+# family instead of BONUS_ISSUE.
 _RAW_EVENT_TYPE_MAP: dict[str, str] = {value: value for value in EVENT_TAXONOMY}
 _RAW_EVENT_TYPE_MAP.update({
     "CASH_DIVIDEND": DIVIDEND,
     "STOCK_DIVIDEND": BONUS_ISSUE,
     "BONUS": BONUS_ISSUE,
     "BONUS_OR_STOCK_DIVIDEND": BONUS_ISSUE,
+    "BONUS_SHARES": BONUS_ISSUE,
+    "BONUS_SHARE": BONUS_ISSUE,
+    "STOCK_DIVIDEND_BONUS_ISSUE": BONUS_ISSUE,
     "RIGHTS": RIGHTS_ISSUE,
     "AGM": MANAGEMENT_GOVERNANCE,
     "CORPORATE_ACTION": OTHER_MATERIAL_EVENT,

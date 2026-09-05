@@ -513,3 +513,28 @@ def test_stale_scenario_is_not_advertised_exact_session_clean(tmp_path):
     assert "TACTICAL_CURRENT_SESSION_SIGNAL" in brief
     producer_dir = root / "operations-review" / "daily-producer-runs-v1"
     assert not producer_dir.exists()
+
+
+def test_official_event_context_resolves_latest_dated_snapshot(tmp_path):
+    """CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1: the previous hardcoded
+    literal never picked up a fresher current_official_event_context materialization without a
+    source-code edit (LATEST_POINTER_STALE). A newer dated snapshot directory must be resolved
+    automatically."""
+    ops = tmp_path / "operations-review"
+    older = ops / "current-official-event-context-integration-v1-20260824"
+    newer = ops / "current-official-event-context-integration-v1-20260910"
+    for directory in (older, newer):
+        directory.mkdir(parents=True)
+        (directory / "current_official_event_context_artifact.json").write_text("{}", encoding="utf-8")
+    paths = level2.session_artifact_paths(tmp_path, "2026-09-10")
+    assert paths["official_event_context"] == newer / "current_official_event_context_artifact.json"
+
+
+def test_official_event_context_falls_back_when_no_dated_snapshot_exists(tmp_path):
+    """No dated snapshot directory (e.g. a fresh tmp_path, as in every other test in this file)
+    must resolve to the one known-retained literal, unchanged from before this fix."""
+    paths = level2.session_artifact_paths(tmp_path, "2026-09-10")
+    assert paths["official_event_context"] == (
+        tmp_path / "operations-review" / "current-official-event-context-integration-v1-20260824"
+        / "current_official_event_context_artifact.json"
+    )

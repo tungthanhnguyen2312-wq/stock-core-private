@@ -231,5 +231,19 @@ class ExportAttachmentTests(unittest.TestCase):
             )
 
 
+class LedgerBoundaryTests(unittest.TestCase):
+    """CORPORATE_EVENT_CANONICAL_DATA_REFRESH_AND_LEDGER_CONSOLIDATION_V1 Section 2:
+    corporate_action_ledger.py and official_corporate_action_ledger.py are legitimately distinct
+    PIT/price-adjustment-authority ledgers (different upstream evidence, different consumers --
+    see ledger_reconciliation.json), not the current-research canonical event boundary. Neither
+    is imported here; this module's own current_official_event_context / market_wide_current_
+    corporate_intelligence inputs remain the one canonical projection for Current Research."""
+
+    def test_canonical_event_boundary_does_not_import_either_pit_ledger(self) -> None:
+        source = (ROOT / "current_corporate_event_context.py").read_text(encoding="utf-8")
+        self.assertNotIn("corporate_action_ledger", source)
+        self.assertNotIn("official_corporate_action_ledger", source)
+
+
 if __name__ == "__main__":
     unittest.main()

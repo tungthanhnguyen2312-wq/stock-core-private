@@ -600,12 +600,29 @@ def build_enrichment_components(
         return build(current_official_universe=official_universe, current_fundamental=fundamental, current_descriptive=descriptive)
 
     def _corporate_event_context():
-        from current_corporate_event_context import build_artifact as build
+        from current_corporate_event_context import build_artifact as build, load_supplemental_retained_events
         official_universe = _load(retained_paths["official_universe"])
         official_event_context = _load(retained_paths["official_event_context"])
         if not official_universe or not official_event_context:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
-        return build(official_universe=official_universe, official_event_context=official_event_context, research_session=session)
+        # official_event_context has been frozen at research_session=2026-08-21 since before
+        # CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 (no fresher retained
+        # official ex-date evidence exists yet). Bind to that evidence's own session -- never
+        # today's `session` -- exactly like current_corporate_intelligence_axis's build below, so
+        # this component actually builds instead of always failing closed on
+        # EVENT_CONTEXT_SESSION_MISMATCH and silently degrading to a frozen PRIOR_AS_OF copy every
+        # day. Also activate supplemental_events (the HPG/VNM/VCB retained issuer/VSDC chains),
+        # closing the gap the prior milestone explicitly left open for this shared component so
+        # current_research_risk_register.py/current_research_decision_packet.py see the same
+        # evidence current_corporate_intelligence_axis.py already does.
+        evidence_session = official_event_context.get("research_session")
+        supplemental = load_supplemental_retained_events(root, evidence_session) if evidence_session else None
+        return build(
+            official_universe=official_universe,
+            official_event_context=official_event_context,
+            supplemental_events=supplemental,
+            research_session=evidence_session,
+        )
 
     def _historical_context():
         from market_wide_historical_research_context import build_artifact as build
