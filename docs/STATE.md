@@ -1,5 +1,87 @@
 # Stock Lookup — Operational State
 
+**Financial temporal semantic normalization and analytical panel V1 (2026-09-05):**
+`FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`,
+started at owner checkpoint `f78bf4069abe7b0173b5aecbc350fcd270351087`. The owner explicitly
+authorized this bounded milestone despite `queued_next=[]`; recorded as
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1`,
+not as an inferred dependency. Root-caused, rather than merely re-measured, the 39,568/94,252
+unknown-duration/timestamp-missing corpus the prior milestone left unresolved.
+
+**Root cause, quantified against the real retained corpus (grown to 261,360 facts / 1,492
+tickers over the same underlying `data_bctc` evidence, verified read-only against the retained
+runtime -- no new acquisition).** Of 46,594 `UNKNOWN_DURATION` facts: 44,760 are zero-silent-drop
+placeholders with no raw observation at all (not duration-ambiguous, non-existent); 1,595 are
+genuinely-reported VCI income-statement facts whose source structurally lacks any standalone-vs-
+YTD marker, confirmed by reading the installed `vnstock` VCI explorer library itself, not
+inferred; 239 are thin same-year cash-flow history insufficient for the existing beginning-cash
+resolver. Of 135,135 timestamp-missing facts: 124,871 are the same no-evidence placeholders;
+10,264 are real facts whose retained raw observation predates/lacks a `scraped_at` column
+entirely. `structured_financial_period_semantics.py` now carries explicit
+`period_duration_root_cause`/`timestamp_root_cause` fields (owner directive's A-H taxonomy);
+verified zero uncaused facts across the full corpus.
+
+**Real, fixed defect: `observed_at` was a naive, non-timezone-aware string a strict bitemporal
+parser silently rejected.** `bctc_sync.py` stamped `scraped_at` as `"YYYY-MM-DD HH:MM"` Asia/
+Ho_Chi_Minh wall-clock time with no offset -- valid enough to pass the existing loose
+`_unknown()` check but rejected by `bitemporal_semantic_contract._parse_aware()` (requires
+`tzinfo is not None`), silently degrading a real timestamp to unusable for any strict PIT/
+bitemporal consumer. `canonical_financial_facts._normalize_observed_at()` now reattaches the
+known-correct offset to every already-retained value (never fabricates a new time; raw evidence
+is untouched); `bctc_sync.py` now emits `vn_time.vn_now_iso()` directly for future syncs.
+`MAPPER_VERSION` bumped `1.3.0` -> `1.4.0` so `canonical_fact_store`'s incremental fingerprint
+correctly rebuilt every shard rather than silently reporting `unchanged` forever (the exact
+failure mode this module's own prior changelog already warned about). Measured market-wide:
+126,070 facts moved from unparseable to genuinely timezone-aware and PIT-parseable; the
+135,135-fact missing-timestamp count is unchanged by design -- no fabrication.
+
+**A real regression found and fixed before this checkpoint, not shipped.** Wiring the
+already-built, already-tested `financial_flow_semantics_ttm_bridge.py` (TTM/de-cumulation --
+previously reachable by import but never invoked by any real `build_scaleout` caller) into
+production initially fed it `structured_financial_period_semantics`-reshaped rows directly. The
+bridge reads raw-canonical-fact field names (`value`, `status`, `provider`, `currency`, `scale`,
+`cumulative_state`) that don't exist under those names on a reshaped row, so every field
+resolved to `None`, the bridge silently qualified nothing, and -- because `build_scaleout`
+replaces the raw flow rows with the bridge's once supplied -- `current_research_ready_count`
+regressed from 1,380 to 1,276. Caught by the existing
+`test_engine_artifact_reproduces_regression_locked_figures` regression lock, not by inspection.
+Fixed with an explicit field adapter (`market_wide_financial_analysis_v2_scaleout._bridge_fact`)
+and a `reported_cumulative_state` passthrough added to the period-semantics projection; the
+regression test now passes at exactly 1,380 again, and `qualified_flow_replaced_raw_flow_rows`
+is `True` in the live Daily path (`canonical_daily_financial_v2_materialization.py`) and three
+replay tools. Measured market-wide impact on TTM-ready counts: zero for this corpus --
+`PARTIAL_BY_EVIDENCE`, not a wiring defect: KBS facts already arrive as direct standalone
+quarters (nothing to de-cumulate) and VCI duration is structurally unknown (see above), so no
+retained fact currently needs the bridge's Q-from-YTD subtraction; it will contribute
+automatically, with no further code change, once any ticker retains >=2 consecutive same-year
+YTD facts.
+
+**New `canonical_financial_analytical_panel.py`: the one canonical financial analytical
+boundary, consolidating rather than duplicating.** A deterministic join of
+`structured_financial_period_semantics.py` (period/duration/scope/currency/scale/timestamp
+projection, now with root causes), `bitemporal_semantic_contract.py` (valid-time and
+knowledge-availability resolution over the now-fixed timestamps -- previously wired only into
+`asof_query_ledger.py`/`temporal_retention.py`, never the financial-fact path), and the TTM
+bridge's derived rows with explicit `derived_from` lineage. Cross-references
+`feature_input_fitness_contract.py` by name for which use-case families read each statement
+family rather than re-deriving fitness. Explicitly not a new authority tier; every value traces
+to one retained source observation or explicit derivation. `multi_period_financial_panel.py`
+(the closest named prior analog) was surveyed and confirmed to be a narrower, citation-based,
+~12-ticker capability with zero live consumers outside its own closed P2/P3c-e milestone loop --
+not extended, to avoid inheriting its weaker evidence model and non-market-wide coverage.
+
+Currency/scale/statement-scope were audited and confirmed genuinely, correctly unresolved from
+source (the only implemented currency/scale authority is official-citation digit-agreement,
+existing for HPG/VNM only; `statement_scope` can only ever resolve to `consolidated` or
+`UNKNOWN` from these payloads -- `separate` is structurally unreachable) -- not touched, since no
+new evidence exists to resolve them; reported explicitly rather than left silently unaddressed.
+`current_research_ready_count` is unchanged at 1,380/1,492 (this milestone improves evidence
+quality and lineage, not eligibility). Valuation formulas/currency-scale resolution untouched;
+no material valuation impact expected or found. Retained 2026-08-25 temporal replay: zero
+future-leak facts admitted; 155 genuinely-later (2026-09-01-dated) facts correctly rejected by
+the existing gate, not a leak. 266 focused/adjacent tests pass (0 new failures); full evidence
+package: `operations-review/financial-temporal-semantic-normalization-and-analytical-panel-v1-20260905/`.
+
 **Core financial data to fundamental valuation scaleout V1 (2026-09-05):**
 `CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`,
 starting at owner checkpoint `b6d28608f8550c09fb725f64f33884c868b5754d` and implemented at

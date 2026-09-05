@@ -1,5 +1,31 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Financial temporal semantic normalization and analytical panel V1 (2026-09-05):**
+`FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
+at local checkpoint `8f9be00`, begun from owner-specified
+`f78bf4069abe7b0173b5aecbc350fcd270351087`. Explicit owner authorization opened it despite
+`queued_next=[]`
+(`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1`);
+no dependency or successor is inferred. Root-caused the prior milestone's unresolved
+39,568/94,252 unknown-duration/timestamp-missing corpus using the A-H taxonomy: the dominant
+cause is a zero-silent-drop no-raw-evidence placeholder (not a semantic ambiguity); the two
+genuine ambiguity causes (VCI's structurally-absent duration marker, thin cash-flow depth) are
+both proven source-evidence ceilings via `structured_financial_period_semantics.py`'s new
+`period_duration_root_cause`/`timestamp_root_cause` fields (verified zero uncaused facts across
+261,360 facts / 1,492 tickers). Fixed a real timestamp-representation defect
+(`canonical_financial_facts._normalize_observed_at`, 126,070 facts recovered from unparseable to
+timezone-aware, zero fabricated) and wired the previously-unwired TTM/de-cumulation bridge into
+the live Financial V2 path -- catching and fixing a real regression
+(`current_research_ready_count` 1380->1276->1380) before this checkpoint. New
+`canonical_financial_analytical_panel.py` consolidates the period-semantics, bitemporal, and
+TTM-bridge layers into the one requested canonical boundary without duplicating any of them.
+Currency/scale/statement-scope confirmed genuinely unresolved from source, not touched.
+Financial/valuation/PIT authority, provider set, formulae, and score authority are unchanged;
+`current_research_ready_count` unchanged at 1,380/1,492. See `docs/STATE.md` and
+`docs/DECISIONS.md` for full detail and
+`operations-review/financial-temporal-semantic-normalization-and-analytical-panel-v1-20260905/`
+for evidence. No successor is queued.
+
 **Core financial data to fundamental valuation scaleout V1 (2026-09-05):**
 `CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
 at local checkpoint `48af3a41f1bd6bba46fb4ea569622dcd2c076fe7`, begun from owner-specified
