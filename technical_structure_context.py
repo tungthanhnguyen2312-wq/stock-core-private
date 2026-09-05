@@ -584,7 +584,7 @@ def resolve_target_session_observations(
     """Return (winning_record, source) -- the retained-observations record every
     Tactical V3 consumer (structure, momentum, participation) must use for one ticker.
 
-    The recovery batch is an independent single-provider (DNSE) fetch, never
+    The recovery batch is an independent single-provider historical fetch, never
     re-resolved against the multi-source exact-session snapshot that other current-
     research consumers (e.g. valuation) treat as this session's authoritative close.
     Confirmed against real 2026-09-04 evidence: 34/952 recovered tickers disagree
@@ -623,6 +623,7 @@ def _classify_ticker(
         record["technical_history_lineage"] = {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
             "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
+            "provider": recovery_override.get("provider") if isinstance(recovery_override, Mapping) else None,
         }
         return record
     if len(closes) > MAX_LOOKBACK_SESSIONS:
@@ -685,6 +686,7 @@ def _classify_ticker(
         "technical_history_lineage": {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
             "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
+            "provider": recovery_override.get("provider") if isinstance(recovery_override, Mapping) else None,
         },
         # V1 keys (unchanged)
         "trend_context": trend_context, "structure_context": structure_context,

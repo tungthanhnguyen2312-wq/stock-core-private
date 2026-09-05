@@ -135,6 +135,20 @@ def build_recovery_artifact(*, baseline_artifact: Mapping[str, Any], p3f9b_snaps
         if record.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY"
     }
     states = Counter(str(record.get("state")) for record in flattened.values())
+    history_provider_contributions = Counter(
+        str(record.get("provider")) for record in recovered.values() if record.get("provider")
+    )
+    history_fitness_blockers = Counter(
+        str(record.get("reason")) for record in flattened.values()
+        if record.get("state") != "RECOVERED_COMPLETE_TECHNICAL_HISTORY" and record.get("reason")
+    )
+    history_network_attempts = Counter()
+    for record in flattened.values():
+        for provider, series in (record.get("attempted_provider_series") or {}).items():
+            if isinstance(series, Mapping):
+                history_network_attempts[str(provider)] += int(
+                    (series.get("request_accounting") or {}).get("request_attempts", 0) or 0
+                )
     artifact: dict[str, Any] = {
         "schema_version": "1.0.0",
         "contract_version": CONTRACT_VERSION,
@@ -149,6 +163,13 @@ def build_recovery_artifact(*, baseline_artifact: Mapping[str, Any], p3f9b_snaps
             "tickers": candidates,
         },
         "acquisition_results": {state: states[state] for state in sorted(states)},
+        "operational_summary": {
+            "TECHNICAL_HISTORY_MODE": "DNSE_PRIMARY_KBS_VCI_FEATURE_SAFE_FAILOVER",
+            "HISTORY_PROVIDER_CONTRIBUTIONS": dict(sorted(history_provider_contributions.items())),
+            "HISTORY_NETWORK_ATTEMPTS": dict(sorted(history_network_attempts.items())),
+            "HISTORY_CACHE_REUSE": sum(1 for batch in batch_records if batch.get("reused_existing_batch")),
+            "HISTORY_FITNESS_BLOCKERS": dict(sorted(history_fitness_blockers.items())),
+        },
         "recovered_history_overrides": recovered,
         "records": {ticker: dict(record) for ticker, record in sorted(flattened.items())},
         "authority_boundary": {

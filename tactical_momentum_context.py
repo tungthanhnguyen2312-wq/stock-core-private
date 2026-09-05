@@ -353,6 +353,7 @@ def _classify_ticker(
         record["technical_history_lineage"] = {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
             "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
+            "provider": recovery_override.get("provider") if isinstance(recovery_override, Mapping) else None,
         }
         return record
     if len(closes) > MAX_LOOKBACK_SESSIONS:
@@ -368,6 +369,7 @@ def _classify_ticker(
         "technical_history_lineage": {
             "source": history_source, "recovery_artifact_identity": recovery_identity,
             "recovery_payload_sha256": recovery_override.get("payload_sha256") if isinstance(recovery_override, Mapping) else None,
+            "provider": recovery_override.get("provider") if isinstance(recovery_override, Mapping) else None,
         },
         "price_direction_1d": _price_direction_1d(closes),
         "rsi": rsi_context,

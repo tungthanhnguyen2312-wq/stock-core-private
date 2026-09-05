@@ -1161,21 +1161,10 @@ def materialize_independent_components(
     tech_dir = tech_out.parent
     baseline_desc = _prior_completed_descriptive(execution_root, session)
     if not tech_out.exists():
-        from market_wide_current_technical_coverage_scaleout import recovery_candidates
-        b_data = json.loads(baseline_desc.read_text(encoding="utf-8"))
-        s_data = json.loads(p3f9b_snapshot.read_text(encoding="utf-8"))
-        candidates = recovery_candidates(baseline_artifact=b_data, p3f9b_snapshot=s_data)
-        num_batches = math.ceil(len(candidates) / 10) if candidates else 0
-        for i in range(num_batches):
-            run_cmd(execution_root, [
-                "tools/run_market_wide_current_technical_coverage_scaleout.py",
-                "--baseline", str(baseline_desc), "--snapshot", str(p3f9b_snapshot),
-                "--out-dir", str(tech_dir), "--batch", str(i), "--batch-size", "10",
-            ])
         run_cmd(execution_root, [
             "tools/run_market_wide_current_technical_coverage_scaleout.py",
             "--baseline", str(baseline_desc), "--snapshot", str(p3f9b_snapshot),
-            "--out-dir", str(tech_dir), "--consolidate", "--batch-size", "10",
+            "--out-dir", str(tech_dir), "--all",
         ])
     desc_out = paths["descriptive_research"]
     if not desc_out.exists():

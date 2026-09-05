@@ -149,11 +149,20 @@ def _feature_rows(pf_record: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def _technical_features(pf_record: Mapping[str, Any], *, target_session: str,
-                        provenance: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                        provenance: Mapping[str, Any] | None = None,
+                        provider_volume_compatible: bool = True) -> dict[str, Any]:
     rows = _feature_rows(pf_record)
     result = market_features(rows)
     dates = sorted(str(row["date"]) for row in rows)
     latest = dates[-1] if dates else None
+    if not provider_volume_compatible and isinstance(result.get("values"), Mapping):
+        # KBS/VCI history can qualify for close-only Current Research after the exact-session
+        # compatibility gate. It does not qualify a cross-family volume baseline, so preserve
+        # the close-derived features while blocking this descriptive relative-volume field.
+        result = dict(result)
+        result["values"] = dict(result["values"])
+        result["values"]["relative_volume_provider_scoped"] = None
+        result["provider_volume_fitness"] = "BLOCKED_VOLUME_FAMILY_NOT_COMPATIBLE"
     return {
         **result,
         "feature_as_of_session": latest,
@@ -329,13 +338,19 @@ def build_artifact(
                 pf_record=pf_records[ticker], recovery_override=override, target_session=target_session,
             )
             if history_source == "RETAINED_TECHNICAL_HISTORY_RECOVERY":
+                history_provider = (override.get("provider") if isinstance(override, Mapping) else None) or "DNSE"
                 technical = _technical_features(
                     {"observations": winning_record.get("observations", [])}, target_session=target_session,
                     provenance={
-                        "source": "RETAINED_DNSE_EXTENDED_HISTORY_RECOVERY",
+                        "source": (
+                            "RETAINED_DNSE_EXTENDED_HISTORY_RECOVERY"
+                            if history_provider == "DNSE" else "RETAINED_PROVIDER_EXTENDED_HISTORY_RECOVERY"
+                        ),
+                        "provider": history_provider,
                         "recovery_artifact_identity": recovery_identity,
                         "recovery_payload_sha256": override.get("payload_sha256") if isinstance(override, Mapping) else None,
                     },
+                    provider_volume_compatible=history_provider == "DNSE",
                 )
             else:
                 if history_source == "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH":

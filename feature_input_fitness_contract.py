@@ -173,20 +173,20 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         ),
     ),
     TECHNICAL_CLOSE_HISTORY: _entry(
-        description="Whether a ticker's retained close series (possibly an extended-lookback recovery) is safe to use for any close-based technical/tactical feature.",
-        required_dimensions=("session", "historical_series_identity", "current_session_observation_identity", "target_close_compatibility", "provider"),
-        fitness_tiers=("RETAINED_TECHNICAL_HISTORY_RECOVERY", "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH", "P3F9B_EXACT_SESSION_RECORD"),
-        authoritative_module="technical_structure_context",
-        authoritative_functions=("resolve_target_session_observations", "_recovery_overrides"),
-        notes="The recovery series is adopted ONLY when its own target-session close matches the resolved exact-session snapshot's close exactly; any mismatch falls back to the pre-recovery P3F9B-only series. Shared verbatim by structure, momentum, and relative-volume/participation so this invariant cannot diverge per consumer.",
+        description="Whether a provider-native retained close series is safe for close-only technical/tactical use.",
+        required_dimensions=("session", "historical_series_identity", "current_session_observation_identity", "target_close_compatibility", "provider", "price_representation"),
+        fitness_tiers=("READY", "RETAINED_TECHNICAL_HISTORY_RECOVERY", "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH", "P3F9B_EXACT_SESSION_RECORD", "BLOCKED"),
+        authoritative_module="historical_series_failover",
+        authoritative_functions=("select_feature_safe_series", "build_provider_series"),
+        notes="One provider series is selected only after strict target-session-close compatibility with the resolved snapshot. DNSE remains primary; KBS/VCI can be Current-Research close-history fallbacks, never blended fragments or PIT facts.",
     ),
     TECHNICAL_VOLUME_HISTORY: _entry(
-        description="Whether a ticker's retained volume series across the technical lookback window is provider-consistent (never a current-KBS/historical-DNSE mix).",
+        description="Whether a ticker's retained volume series across the technical lookback window has qualified provider-family semantics.",
         required_dimensions=("provider", "session", "historical_series_identity", "field_identity"),
         fitness_tiers=("READY", "UNAVAILABLE", "BLOCKED"),
-        authoritative_module="market_wide_relative_volume_research",
-        authoritative_functions=("resolve_records_with_recovery",),
-        notes="Same authority and same target-close-agreement guard as TECHNICAL_CLOSE_HISTORY; every row is independently re-verified DNSE-native regardless of which branch supplied it.",
+        authoritative_module="historical_series_failover",
+        authoritative_functions=("build_provider_series",),
+        notes="DNSE-native recovery volume can remain ready. KBS/VCI history may be close-feature-safe but is deliberately BLOCKED here because cross-family volume semantics are not established.",
     ),
     OHLC_GEOMETRY: _entry(
         description="Whether high/low/open are usable for wick-based, true-range, or gap-geometry features.",
@@ -311,6 +311,19 @@ def evaluate_technical_close_history(
         pf_record=pf_record, recovery_override=recovery_override, target_session=target_session,
     )
     return {"winning_record": winning_record, "source": source}
+
+
+def evaluate_historical_provider_series(series: Mapping[str, Any], feature_family: str) -> dict[str, Any]:
+    """Read a retained provider-series verdict without re-deriving or widening it."""
+    import historical_series_failover
+
+    identity = historical_series_failover.content_identity(series)
+    if series.get("series_sha256") != identity["series_sha256"]:
+        raise FeatureInputFitnessError("HISTORICAL_PROVIDER_SERIES_IDENTITY_MISMATCH")
+    verdict = (series.get("fitness") or {}).get(feature_family)
+    if verdict is None:
+        raise FeatureInputFitnessError(f"HISTORICAL_FEATURE_FAMILY_UNKNOWN:{feature_family}")
+    return {"provider": series.get("provider"), "feature_family": feature_family, "fitness": verdict}
 
 
 def evaluate_valuation_monetary_basis(
