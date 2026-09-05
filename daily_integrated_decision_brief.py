@@ -352,12 +352,23 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
         # product must expose the joined fundamental+valuation composite read alongside its own
         # supporting/contradicting reasons and uncertainty -- passthrough only, no recomputation.
         "financial_composite_context": current.get("financial_composite_context"),
+        # The canonical Integrated Decision owns this compact evidence-axis mapping.  The local
+        # AI brief passes it through unchanged so a consumer can see disagreement without
+        # recomputing indicators, assigning a score, or changing the governed posture.
+        "evidence_axes": current.get("evidence_axes") or {},
+        "evidence_axis_coherence": current.get("evidence_axis_coherence") or {
+            "state": "INSUFFICIENT_EVIDENCE",
+            "reason_codes": ["EVIDENCE_AXIS_COHERENCE_NOT_AVAILABLE"],
+            "is_actionable": False,
+        },
         # Preserve every existing valuation method's status, basis, peer gate, and reconciliation
         # verbatim.  The brief does not choose a preferred multiple or convert blocked methods to
         # a conclusion.
         "valuation_methods": _research_safe_valuation_methods(current.get("valuation_methods")),
         "valuation_method_reconciliation": current.get("valuation_method_reconciliation") or {},
         "tactical_phase": current.get("tactical_phase"), "market_structure_state": current.get("market_structure_state"),
+        "momentum_context": current.get("momentum_context") or {},
+        "tactical_confirmation_context": current.get("tactical_confirmation_context") or {},
         "bos_state": (tactical_raw or {}).get("bos_state"), "choch_state": (tactical_raw or {}).get("choch_state"),
         "breakout_state": current.get("breakout_state_v3"),
         "participation": {

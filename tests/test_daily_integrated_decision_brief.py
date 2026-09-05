@@ -122,6 +122,25 @@ class TestFinancialEvidenceContext:
         assert row["valuation"]["ev_ebitda_multiple"] == 8.4
         assert row["financial_composite_context"]["financial_composite_state"] == "FUNDAMENTALS_IMPROVING"
 
+    def test_watchlist_passes_through_evidence_axes_and_coherence_without_recomputation(self):
+        integrated = _record("FPT", posture="HOLD")
+        integrated["evidence_axes"] = {
+            "MOMENTUM": {"state": "ELIGIBLE", "fitness": "ELIGIBLE", "lineage": {"technical_history": {"source": "RETAINED_TECHNICAL_HISTORY_RECOVERY"}}},
+            "VALUATION": {"state": "AVAILABLE", "fitness": "AVAILABLE", "context": {"peer_relative_state": "EXPENSIVE_VS_PEERS"}},
+        }
+        integrated["evidence_axis_coherence"] = {
+            "state": "MIXED",
+            "reason_codes": ["CONSTRUCTIVE_TECHNICAL_STRUCTURE_WITH_EXPENSIVE_PEER_RELATIVE_VALUATION"],
+            "is_actionable": False,
+        }
+        integrated["momentum_context"] = {"eligibility": {"status": "ELIGIBLE"}, "rsi": {"status": "AVAILABLE", "value": 61.0}}
+        integrated["tactical_confirmation_context"] = {"tactical_confirmation_state": "PARTIALLY_CONFIRMED"}
+        row = brief.build_watchlist_record(ticker="FPT", current=integrated, tactical_raw=None, sector_label=None, posture_transition_row=None)
+        assert row["evidence_axes"] == integrated["evidence_axes"]
+        assert row["evidence_axis_coherence"] == integrated["evidence_axis_coherence"]
+        assert row["momentum_context"]["rsi"]["value"] == 61.0
+        assert row["tactical_confirmation_context"]["tactical_confirmation_state"] == "PARTIALLY_CONFIRMED"
+
 
 class TestMarketSummaryFundamentalDistribution:
     """Section 17: full-market cross-sectional fundamental context, now meaningful once real

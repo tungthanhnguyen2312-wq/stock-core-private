@@ -623,6 +623,8 @@ def build_enrichment_components(
         import financial_v2_current_input_authority as fin_v2_authority
         import market_structure_breakout_product_projection as msb_proj
         import market_wide_relative_volume_research as rvol_research
+        import tactical_confirmation_context as confirmation_context
+        import tactical_momentum_context as momentum_context
         import technical_structure_context as tsc
         # integrated_investment_decision_product.evaluate_tactical_phase/evaluate_participation read
         # a FLAT compact shape (eligible, market_structure_state, breakout_state_v3, bos_state,
@@ -655,11 +657,24 @@ def build_enrichment_components(
         tactical_projection = msb_proj.build_artifact(technical_structure=technical_structure, requested_at=requested_at)
         daily_denominator = sorted((p3f9b.get("records") or {}).keys())
         relative_volume = rvol_research.build_artifact(candidates=daily_denominator, records=p3f9b.get("records") or {}, session=session, requested_at=requested_at)
+        # Both contexts consume the same already-qualified descriptive/snapshot/recovery evidence
+        # as Tactical V3.  They add no provider acquisition and preserve each ticker's local
+        # insufficient-history or participation limitation instead of dropping that ticker.
+        momentum = momentum_context.build_artifact(
+            current_descriptive=desc, p3f9b_snapshot=p3f9b, requested_at=requested_at,
+            technical_history_recovery_artifact=technical_recovery,
+        )
+        confirmation = confirmation_context.build_artifact(
+            structure_projection=tactical_projection, momentum=momentum,
+            participation=relative_volume, requested_at=requested_at,
+        )
         # Also retained under its own canonical per-session path (not just consumed here) so
         # downstream consumers -- the daily_integrated_decision_brief CLI-level builder in
         # particular, which needs BOS/CHoCH per watchlist ticker -- can load the same compact V3
         # projection without rebuilding it from raw technical_structure_context.
         _write_json(paths["market_structure_breakout_v3_projection"], tactical_projection)
+        _write_json(paths["tactical_momentum_context"], momentum)
+        _write_json(paths["tactical_confirmation_context"], confirmation)
         # Financial V2 previously had NO canonical daily-materialization path anywhere in this
         # pipeline: the prior wiring here loaded the legacy, structurally incompatible
         # market_wide_current_fundamental_research/v1 artifact (523-record shape;
@@ -703,6 +718,8 @@ def build_enrichment_components(
             market_sector_artifact=mkt,
             legacy_decision_artifact=opp,
             priority_queue_artifact=priority_queue_artifact,
+            momentum_artifact=momentum,
+            tactical_confirmation_artifact=confirmation,
         )
         if res.get("session") != session:
             raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")

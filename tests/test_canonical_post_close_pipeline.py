@@ -394,6 +394,30 @@ def test_integrated_decision_wiring_never_regresses_to_legacy_fundamental_artifa
     assert "current_valuation_artifact=evaluated_valuation" in body
 
 
+def test_canonical_integrated_decision_materializes_existing_momentum_and_confirmation_contexts():
+    """Regression guard for INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1: both established
+    contexts must be built from the same retained inputs, persisted, and passed to the standing
+    Integrated Decision builder.  This is wiring only; no second technical engine is permitted."""
+    source = (ROOT / "canonical_post_close_pipeline.py").read_text(encoding="utf-8")
+    start = source.index("def _integrated_investment_decision_product")
+    end = source.index("\n    _attempt(", start)
+    body = source[start:end]
+    assert "import tactical_momentum_context as momentum_context" in body
+    assert "import tactical_confirmation_context as confirmation_context" in body
+    assert "momentum_context.build_artifact(" in body
+    assert "technical_history_recovery_artifact=technical_recovery" in body
+    assert "confirmation_context.build_artifact(" in body
+    assert "structure_projection=tactical_projection" in body
+    assert "participation=relative_volume" in body
+    assert '_write_json(paths["tactical_momentum_context"], momentum)' in body
+    assert '_write_json(paths["tactical_confirmation_context"], confirmation)' in body
+    assert "momentum_artifact=momentum" in body
+    assert "tactical_confirmation_artifact=confirmation" in body
+    paths = level2.session_artifact_paths(ROOT, "2026-09-04")
+    assert paths["tactical_momentum_context"].name == "tactical_momentum_context_artifact.json"
+    assert paths["tactical_confirmation_context"].name == "tactical_confirmation_context_artifact.json"
+
+
 # --- 7. component-local missing evidence does not globally reject unrelated uses ---
 
 def test_component_local_failure_does_not_block_unrelated_components(tmp_path, monkeypatch):

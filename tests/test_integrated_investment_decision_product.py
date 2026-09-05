@@ -749,6 +749,93 @@ class TestMomentumParticipationConfirmationAdditive:
         assert art["source_artifacts"]["tactical_confirmation"] == "tactical_confirmation_context:fake"
 
 
+class TestEvidenceAxisCoherence:
+    """INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1: descriptive axis relationships are
+    deterministic and explicitly non-policy.  These cases exercise labels, not a signal score."""
+
+    @staticmethod
+    def _market(*, regime="MIXED_BREADTH", sector="MIXED") -> dict:
+        return {
+            "artifact_identity": "current_market_sector_leadership_context/v1:fake",
+            "market": {"current_breadth_state": regime},
+            "ticker_contexts": {"HPG": {"sector_leadership_context": {"leadership_state": sector}}},
+        }
+
+    def _decision(self, *, tactical=None, financial=None, valuation=None, market=None,
+                  momentum=None, confirmation=None) -> dict:
+        return iidp.build_ticker_integrated_decision(
+            ticker="HPG", as_of_session="2026-08-28",
+            tactical_record=tactical if tactical is not None else _sample_tactical_record(),
+            financial_record=financial if financial is not None else _sample_financial_record(),
+            valuation_record=valuation if valuation is not None else _sample_valuation_record(),
+            relative_volume_record=None, market_sector_record=market if market is not None else self._market(),
+            momentum_record=momentum if momentum is not None else {"eligibility": {"status": "ELIGIBLE"}},
+            tactical_confirmation_record=confirmation if confirmation is not None else {
+                "tactical_confirmation_state": "CONFIRMED", "supporting_reasons": ["MOMENTUM_DIRECTION_ALIGNED"],
+            },
+        )
+
+    def test_all_supported_axes_are_exposed_with_fitness_and_lineage(self) -> None:
+        dec = self._decision()
+        assert set(dec["evidence_axes"]) == {
+            "FUNDAMENTAL", "VALUATION", "TACTICAL_STRUCTURE", "MOMENTUM",
+            "PARTICIPATION_CONFIRMATION", "MARKET_SECTOR", "OPPORTUNITY_PRIORITY", "PORTFOLIO_FIT",
+        }
+        for axis in dec["evidence_axes"].values():
+            assert {"state", "fitness", "supporting_reason_codes", "contradicting_reason_codes", "blocker_reason_codes", "method", "lineage"} <= set(axis)
+        assert dec["evidence_axes"]["FUNDAMENTAL"]["state"] == dec["fundamental_state"]
+        assert dec["evidence_axes"]["VALUATION"]["context"]["peer_relative_state"] == dec["valuation_context_summary"]["peer_relative_state"]
+
+    def test_aligned_case_is_qualitative_not_a_score(self) -> None:
+        dec = self._decision()
+        coherence = dec["evidence_axis_coherence"]
+        assert coherence["state"] == iidp.EVIDENCE_AXIS_COHERENCE_ALIGNED
+        assert "score" not in coherence and "probability" not in coherence and "vote" not in coherence
+
+    def test_mixed_case_preserves_expensive_valuation_against_constructive_structure(self) -> None:
+        valuation = _sample_valuation_record(peer_relative_percentile=0.90)
+        dec = self._decision(valuation=valuation)
+        assert dec["evidence_axis_coherence"]["state"] == iidp.EVIDENCE_AXIS_COHERENCE_MIXED
+        assert "CONSTRUCTIVE_TECHNICAL_STRUCTURE_WITH_EXPENSIVE_PEER_RELATIVE_VALUATION" in dec["evidence_axis_coherence"]["reason_codes"]
+
+    def test_contradicted_case_preserves_confirmation_disagreement(self) -> None:
+        dec = self._decision(confirmation={
+            "tactical_confirmation_state": "CONTRADICTED",
+            "contradicting_reasons": ["MOMENTUM_DIRECTION_MISALIGNED"],
+        })
+        assert dec["evidence_axis_coherence"]["state"] == iidp.EVIDENCE_AXIS_COHERENCE_CONTRADICTED
+        assert dec["evidence_axes"]["PARTICIPATION_CONFIRMATION"]["contradicting_reason_codes"] == ["MOMENTUM_DIRECTION_MISALIGNED"]
+
+    def test_insufficient_technical_history_stays_feature_local(self) -> None:
+        dec = self._decision(tactical=_sample_tactical_record(eligible=False), momentum={"status": "NOT_AVAILABLE"})
+        assert dec["evidence_axis_coherence"]["state"] == iidp.EVIDENCE_AXIS_COHERENCE_INSUFFICIENT
+        assert dec["evidence_axes"]["TACTICAL_STRUCTURE"]["fitness"] == "INSUFFICIENT_EVIDENCE"
+        assert dec["evidence_axes"]["FUNDAMENTAL"]["fitness"] == "AVAILABLE"
+
+    def test_axes_never_change_posture_trigger_or_invalidation(self) -> None:
+        baseline = self._decision(confirmation={"tactical_confirmation_state": "INSUFFICIENT_EVIDENCE"})
+        contradicted = self._decision(confirmation={"tactical_confirmation_state": "CONTRADICTED"})
+        assert baseline["research_action_posture"] == contradicted["research_action_posture"]
+        assert baseline["trigger"] == contradicted["trigger"]
+        assert baseline["invalidation"] == contradicted["invalidation"]
+
+    def test_priority_axis_uses_standing_daily_queue_field_without_changing_posture(self) -> None:
+        base = self._decision()
+        priority = iidp.build_ticker_integrated_decision(
+            ticker="HPG", as_of_session="2026-08-28", tactical_record=_sample_tactical_record(),
+            financial_record=_sample_financial_record(), valuation_record=_sample_valuation_record(),
+            relative_volume_record=None, market_sector_record=self._market(),
+            priority_queue_record={
+                "research_priority_tier": "PRIORITY_NOW", "data_quality_status": "HIGH",
+                "priority_reasons": ["BASE_ACCUMULATION=PRIORITY_NOW"],
+            },
+            momentum_record={"eligibility": {"status": "ELIGIBLE"}},
+            tactical_confirmation_record={"tactical_confirmation_state": "CONFIRMED"},
+        )
+        assert priority["evidence_axes"]["OPPORTUNITY_PRIORITY"]["state"] == "PRIORITY_NOW"
+        assert priority["research_action_posture"] == base["research_action_posture"]
+
+
 # ── MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 (section 13 fix + section 14) ──
 
 class TestOwnHistoryPercentileFieldNameFix:

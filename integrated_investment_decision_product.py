@@ -134,6 +134,36 @@ TACTICAL_PHASES = frozenset({
     TACTICAL_INSUFFICIENT,
 })
 
+# Qualitative relationships among distinct evidence axes.  This is deliberately separate from
+# the existing action-posture policy: it makes agreement and disagreement inspectable without
+# turning correlated technical measurements into a score, a confidence value, or a vote.
+EVIDENCE_AXIS_COHERENCE_ALIGNED = "ALIGNED"
+EVIDENCE_AXIS_COHERENCE_PARTIALLY_ALIGNED = "PARTIALLY_ALIGNED"
+EVIDENCE_AXIS_COHERENCE_MIXED = "MIXED"
+EVIDENCE_AXIS_COHERENCE_CONTRADICTED = "CONTRADICTED"
+EVIDENCE_AXIS_COHERENCE_INSUFFICIENT = "INSUFFICIENT_EVIDENCE"
+EVIDENCE_AXIS_COHERENCE_STATES = frozenset({
+    EVIDENCE_AXIS_COHERENCE_ALIGNED,
+    EVIDENCE_AXIS_COHERENCE_PARTIALLY_ALIGNED,
+    EVIDENCE_AXIS_COHERENCE_MIXED,
+    EVIDENCE_AXIS_COHERENCE_CONTRADICTED,
+    EVIDENCE_AXIS_COHERENCE_INSUFFICIENT,
+})
+
+_CONSTRUCTIVE_TACTICAL_PHASES = frozenset({
+    TACTICAL_EARLY_REVERSAL,
+    TACTICAL_BREAKOUT_SETUP,
+    TACTICAL_BREAKOUT_CONFIRMED,
+    TACTICAL_RETEST_AFTER_BREAKOUT,
+    TACTICAL_TREND_CONTINUATION,
+    TACTICAL_EXTENDED,
+})
+_ADVERSE_MARKET_REGIMES = frozenset({"WEAK_BREADTH", "DETERIORATING_BREADTH", "RISK_OFF"})
+_WEAK_SECTOR_STATES = frozenset({"LAGGING", "WEAK", "DETERIORATING"})
+_AXIS_UNAVAILABLE_FITNESS = frozenset({
+    None, "UNAVAILABLE", "INSUFFICIENT_EVIDENCE", "NOT_PROVIDED", "ABSENT", "NOT_ELIGIBLE", "NOT_AVAILABLE", "INPUT_BLOCKED",
+})
+
 # ── Missing Evidence Effects ──────────────────────────────────────────────────
 EFFECT_DOES_NOT_BLOCK = "DOES_NOT_BLOCK_CURRENT_RESEARCH"
 EFFECT_BLOCKS_VALUATION_ONLY = "BLOCKS_VALUATION_COMPONENT_ONLY"
@@ -320,6 +350,240 @@ def evaluate_financial_composite_context(
         "methodology": "join_fundamental_state_and_valuation_context_no_vote_count/v1",
         "is_actionable": False,
     }
+
+
+# ── Evidence-axis inventory and qualitative coherence ─────────────────────────
+
+def _axis(
+    *, state: Any, fitness: Any, supporting: Sequence[str] = (), contradicting: Sequence[str] = (),
+    blockers: Sequence[str] = (), method: str, lineage: Mapping[str, Any] | None = None,
+    context: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return the compact, evidence-preserving shape shared by every decision axis.
+
+    The helper only normalizes presentation.  It does not derive an indicator, alter a source
+    state, or decide a research posture.
+    """
+    result: dict[str, Any] = {
+        "state": state,
+        "fitness": fitness,
+        "supporting_reason_codes": list(dict.fromkeys(str(item) for item in supporting if item)),
+        "contradicting_reason_codes": list(dict.fromkeys(str(item) for item in contradicting if item)),
+        "blocker_reason_codes": list(dict.fromkeys(str(item) for item in blockers if item)),
+        "method": method,
+        "lineage": dict(lineage or {}),
+        "is_actionable": False,
+    }
+    if context:
+        result["context"] = dict(context)
+    return result
+
+
+def build_evidence_axes(
+    *, fund_state: str, fund_supports: Sequence[str], fund_counters: Sequence[str],
+    financial: Mapping[str, Any], valuation: Mapping[str, Any], val_summary: Mapping[str, Any],
+    val_supports: Sequence[str], val_counters: Sequence[str], val_uncertainties: Sequence[str],
+    tactical: Mapping[str, Any], tactical_phase: str, tactical_supports: Sequence[str],
+    tactical_counters: Sequence[str], momentum: Mapping[str, Any], confirmation: Mapping[str, Any],
+    participation_summary: Mapping[str, Any], market_summary: Mapping[str, Any],
+    market_context_provided: bool, priority_record: Mapping[str, Any] | None,
+    portfolio_summary: Mapping[str, Any], source_artifact_identities: Mapping[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Expose standing decision evidence as distinct, source-preserving axes.
+
+    These are deliberately descriptive joins over already-governed producer outputs.  The action
+    policy remains upstream and consumes none of this structure.
+    """
+    identities = source_artifact_identities or {}
+    financial_status = financial.get("status") or (
+        "AVAILABLE" if fund_state != FUNDAMENTAL_INSUFFICIENT else "UNAVAILABLE"
+    )
+    valuation_status = val_summary.get("status") or valuation.get("status") or "UNAVAILABLE"
+    technical_fitness = "AVAILABLE" if tactical.get("eligible") else "INSUFFICIENT_EVIDENCE"
+    momentum_fitness = (momentum.get("eligibility") or {}).get("status") or momentum.get("status") or "UNAVAILABLE"
+    confirmation_state = confirmation.get("tactical_confirmation_state") or "INSUFFICIENT_EVIDENCE"
+    participation_status = participation_summary.get("status") or "UNAVAILABLE"
+    priority = priority_record or {}
+    priority_fitness = priority.get("data_quality_status") or ("AVAILABLE" if priority_record else "UNAVAILABLE")
+    sector_context = (market_summary.get("sector_leadership") if market_context_provided else None)
+    sector_fitness = "AVAILABLE" if market_context_provided and sector_context not in (None, "IN_LINE") else (
+        "PARTIAL" if market_context_provided else "UNAVAILABLE"
+    )
+
+    return {
+        "FUNDAMENTAL": _axis(
+            state=fund_state, fitness=financial_status, supporting=fund_supports, contradicting=fund_counters,
+            blockers=["FUNDAMENTAL_CONTEXT_ABSENT"] if fund_state == FUNDAMENTAL_INSUFFICIENT else [],
+            method="financial_analysis_product_integration/v1",
+            lineage={"source_artifact_identity": identities.get("financial_analysis") or financial.get("source_context_identity") or financial.get("artifact_identity")},
+        ),
+        "VALUATION": _axis(
+            state=valuation_status, fitness=valuation_status, supporting=val_supports, contradicting=val_counters,
+            blockers=val_uncertainties,
+            method="current_research_valuation_context/v1",
+            lineage={"source_artifact_identity": identities.get("current_valuation") or valuation.get("artifact_identity")},
+            context={
+                "peer_relative_state": val_summary.get("peer_relative_state"),
+                "own_history_state": val_summary.get("own_history_state"),
+                "method_statuses": {
+                    str(method_id): (method or {}).get("status")
+                    for method_id, method in (valuation.get("methods") or {}).items()
+                    if isinstance(method, Mapping)
+                },
+            },
+        ),
+        "TACTICAL_STRUCTURE": _axis(
+            state=tactical_phase, fitness=technical_fitness,
+            supporting=tactical_supports, contradicting=tactical_counters,
+            blockers=(tactical.get("blockers") or []) + (
+                ["INSUFFICIENT_TECHNICAL_STRUCTURE_SERIES"] if technical_fitness != "AVAILABLE" else []
+            ),
+            method="market_structure_breakout_product_projection/v1",
+            lineage={"source_artifact_identity": identities.get("technical_structure") or tactical.get("artifact_identity")},
+            context={
+                "market_structure_state": tactical.get("market_structure_state"),
+                "breakout_state_v3": tactical.get("breakout_state_v3"),
+                "bos_state": tactical.get("bos_state"),
+                "choch_state": tactical.get("choch_state"),
+            },
+        ),
+        "MOMENTUM": _axis(
+            state=momentum_fitness, fitness=momentum_fitness,
+            blockers=[] if momentum_fitness == "ELIGIBLE" else ["MOMENTUM_CONTEXT_UNAVAILABLE_OR_INSUFFICIENT_HISTORY"],
+            method="tactical_momentum_context/v1",
+            lineage={
+                "source_artifact_identity": identities.get("momentum") or momentum.get("artifact_identity"),
+                "technical_history": momentum.get("technical_history_lineage"),
+            },
+            context={
+                "price_direction_1d": momentum.get("price_direction_1d"),
+                "rsi_status": (momentum.get("rsi") or {}).get("status"),
+                "macd_status": (momentum.get("macd") or {}).get("status"),
+                "moving_average_status": (momentum.get("moving_average_ordering") or {}).get("status"),
+                "rsi_divergence_status": (momentum.get("rsi_divergence") or {}).get("status"),
+            },
+        ),
+        "PARTICIPATION_CONFIRMATION": _axis(
+            state=confirmation_state,
+            fitness={"participation": participation_status, "confirmation": confirmation_state},
+            supporting=confirmation.get("supporting_reasons") or [],
+            contradicting=confirmation.get("contradicting_reasons") or [],
+            blockers=[] if confirmation_state != "INSUFFICIENT_EVIDENCE" else ["PARTICIPATION_OR_CONFIRMATION_INSUFFICIENT_EVIDENCE"],
+            method="tactical_confirmation_context/v1",
+            lineage={
+                "source_artifact_identity": identities.get("tactical_confirmation") or confirmation.get("artifact_identity"),
+                "participation_artifact_identity": identities.get("relative_volume"),
+            },
+            context={
+                "participation_status": participation_status,
+                "participation_detail": confirmation.get("participation_detail"),
+                "structure_stance": confirmation.get("structure_stance"),
+            },
+        ),
+        "MARKET_SECTOR": _axis(
+            state=market_summary.get("market_regime") if market_context_provided else "UNAVAILABLE",
+            fitness=sector_fitness,
+            blockers=[] if market_context_provided else ["MARKET_SECTOR_CONTEXT_NOT_PROVIDED"],
+            method="current_market_sector_leadership_context/v1",
+            lineage={"source_artifact_identity": identities.get("market_sector")},
+            context={"market_regime": market_summary.get("market_regime"), "sector_leadership": sector_context},
+        ),
+        "OPPORTUNITY_PRIORITY": _axis(
+            # The standing Daily decision queue names this governed lane field
+            # `research_priority_tier`; retained older opportunity artifacts use `priority_tier`.
+            # Read both without rewriting either producer contract.
+            state=priority.get("research_priority_tier") or priority.get("priority_tier") or "UNAVAILABLE", fitness=priority_fitness,
+            supporting=priority.get("priority_reasons") or [],
+            blockers=priority.get("blocking_reasons") or ([] if priority_record else ["OPPORTUNITY_PRIORITY_NOT_PROVIDED"]),
+            method="daily_opportunity_decision_queue/v1",
+            lineage={"source_artifact_identity": identities.get("priority_queue"), "record_identity": priority.get("content_identity")},
+            context={"scenario_status": priority.get("scenario_status"), "entry_action": priority.get("entry_action")},
+        ),
+        "PORTFOLIO_FIT": _axis(
+            state=portfolio_summary.get("status", "NOT_PROVIDED"), fitness=portfolio_summary.get("status", "NOT_PROVIDED"),
+            blockers=[] if portfolio_summary.get("status") == "AVAILABLE" else ["PORTFOLIO_CONTEXT_NOT_PROVIDED"],
+            method="integrated_investment_decision_product/portfolio_context/v1",
+            lineage={},
+            context={
+                "is_held": portfolio_summary.get("is_held"),
+                "concentration_flag": portfolio_summary.get("concentration_flag"),
+                "sector_overlap": portfolio_summary.get("sector_overlap"),
+            },
+        ),
+    }
+
+
+def evaluate_evidence_axis_coherence(evidence_axes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Describe cross-axis relationships without scoring or changing posture policy.
+
+    A confirmation record is already the standing, correlation-aware technical synthesis.  This
+    function therefore reads its declared state once; it never re-counts RSI, MACD, moving average,
+    BOS, CHoCH, breakout, or participation measurements as separate votes.
+    """
+    fundamental = evidence_axes.get("FUNDAMENTAL") or {}
+    valuation = evidence_axes.get("VALUATION") or {}
+    technical = evidence_axes.get("TACTICAL_STRUCTURE") or {}
+    confirmation = evidence_axes.get("PARTICIPATION_CONFIRMATION") or {}
+    market = evidence_axes.get("MARKET_SECTOR") or {}
+    technical_phase = technical.get("state")
+    confirmation_state = confirmation.get("state")
+    market_context = market.get("context") or {}
+    market_regime = market_context.get("market_regime")
+    sector_state = market_context.get("sector_leadership")
+    valuation_context = valuation.get("context") or {}
+    reasons: list[str] = []
+
+    if technical.get("fitness") != "AVAILABLE":
+        state = EVIDENCE_AXIS_COHERENCE_INSUFFICIENT
+        reasons.append("TACTICAL_STRUCTURE_INSUFFICIENT_EVIDENCE")
+    elif confirmation_state == "CONTRADICTED":
+        state = EVIDENCE_AXIS_COHERENCE_CONTRADICTED
+        reasons.append("TACTICAL_CONFIRMATION_CONTRADICTED")
+    elif fundamental.get("state") == FUNDAMENTAL_DETERIORATING and technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES:
+        state = EVIDENCE_AXIS_COHERENCE_CONTRADICTED
+        reasons.append("FUNDAMENTALS_DETERIORATING_WHILE_TECHNICAL_STRUCTURE_IS_CONSTRUCTIVE")
+    elif technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES and (
+        market_regime in _ADVERSE_MARKET_REGIMES or sector_state in _WEAK_SECTOR_STATES
+    ):
+        state = EVIDENCE_AXIS_COHERENCE_MIXED
+        reasons.append("CONSTRUCTIVE_TECHNICAL_STRUCTURE_WITH_WEAK_MARKET_OR_SECTOR_CONTEXT")
+    elif technical_phase in _CONSTRUCTIVE_TACTICAL_PHASES and valuation_context.get("peer_relative_state") == "EXPENSIVE_VS_PEERS":
+        state = EVIDENCE_AXIS_COHERENCE_MIXED
+        reasons.append("CONSTRUCTIVE_TECHNICAL_STRUCTURE_WITH_EXPENSIVE_PEER_RELATIVE_VALUATION")
+    elif (
+        confirmation_state == "CONFIRMED"
+        and fundamental.get("state") in (FUNDAMENTAL_IMPROVING, FUNDAMENTAL_STABLE, FUNDAMENTAL_TURNAROUND)
+        and valuation_context.get("peer_relative_state") != "EXPENSIVE_VS_PEERS"
+        and market_regime not in _ADVERSE_MARKET_REGIMES
+        and sector_state not in _WEAK_SECTOR_STATES
+    ):
+        state = EVIDENCE_AXIS_COHERENCE_ALIGNED
+        reasons.append("STANDING_CONFIRMATION_AND_NON_CONTRADICTORY_CROSS_AXIS_CONTEXT")
+    else:
+        state = EVIDENCE_AXIS_COHERENCE_PARTIALLY_ALIGNED
+        reasons.append("NO_EXPLICIT_CROSS_AXIS_CONTRADICTION_BUT_FULL_ALIGNMENT_NOT_EVIDENCED")
+
+    return {
+        "state": state,
+        "reason_codes": reasons,
+        "methodology": "qualitative_cross_axis_relationships_no_scoring_or_vote_count/v1",
+        "axis_order": [
+            "FUNDAMENTAL", "VALUATION", "TACTICAL_STRUCTURE", "MOMENTUM",
+            "PARTICIPATION_CONFIRMATION", "MARKET_SECTOR", "OPPORTUNITY_PRIORITY", "PORTFOLIO_FIT",
+        ],
+        "is_actionable": False,
+    }
+
+
+def _evidence_axis_available(axis_name: str, axis: Mapping[str, Any] | None) -> bool:
+    """Availability is feature-local and never an action-policy gate."""
+    axis = axis or {}
+    if axis_name == "FUNDAMENTAL" and axis.get("state") == FUNDAMENTAL_INSUFFICIENT:
+        return False
+    fitness = axis.get("fitness")
+    if isinstance(fitness, Mapping):
+        return bool(fitness) and all(value not in _AXIS_UNAVAILABLE_FITNESS for value in fitness.values())
+    return fitness not in _AXIS_UNAVAILABLE_FITNESS
 
 
 # ── Tactical Phase Evaluator ──────────────────────────────────────────────────
@@ -798,6 +1062,7 @@ def build_ticker_integrated_decision(
     priority_queue_record: Mapping[str, Any] | None = None,
     momentum_record: Mapping[str, Any] | None = None,
     tactical_confirmation_record: Mapping[str, Any] | None = None,
+    producer_artifact_identities: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record."""
     tactical = tactical_record or {}
@@ -805,6 +1070,8 @@ def build_ticker_integrated_decision(
     valuation = valuation_record or {}
     rvol = relative_volume_record or {}
     market = market_sector_record or {}
+    momentum = momentum_record or {}
+    confirmation = tactical_confirmation_record or {}
 
     # 1. Fundamental
     fund_state, fund_supp, fund_count = evaluate_fundamental_direction(financial)
@@ -840,6 +1107,7 @@ def build_ticker_integrated_decision(
         "sector_leadership": ticker_sector_ctx.get("leadership_state") or "IN_LINE",
         "authority_tier": "CURRENT_RESEARCH_DESCRIPTIVE",
     }
+    market_context_provided = isinstance(market_sector_record, Mapping)
 
     # 6. Portfolio Context
     if portfolio_record is not None and isinstance(portfolio_record, Mapping) and portfolio_record.get("status") != "NOT_PROVIDED":
@@ -906,6 +1174,21 @@ def build_ticker_integrated_decision(
     all_counter_thesis = list(dict.fromkeys(fund_count + tac_count + val_count + part_count))
     all_uncertainties = list(dict.fromkeys(val_uncert + (tactical.get("blockers") or [])))
 
+    # Evidence axes are a strictly additive description of the already-computed inputs above.
+    # They are intentionally built after posture, trigger and invalidation so they cannot silently
+    # move those governed policy outputs.
+    evidence_axes = build_evidence_axes(
+        fund_state=fund_state, fund_supports=fund_supp, fund_counters=fund_count,
+        financial=financial, valuation=valuation, val_summary=val_summary,
+        val_supports=val_supp, val_counters=val_count, val_uncertainties=val_uncert,
+        tactical=tactical, tactical_phase=tac_phase, tactical_supports=tac_supp,
+        tactical_counters=tac_count, momentum=momentum, confirmation=confirmation,
+        participation_summary=part_summary, market_summary=mkt_summary,
+        market_context_provided=market_context_provided, priority_record=priority_queue_record,
+        portfolio_summary=portfolio_summary, source_artifact_identities=producer_artifact_identities,
+    )
+    evidence_axis_coherence = evaluate_evidence_axis_coherence(evidence_axes)
+
     # Legacy stance comparison
     legacy_stance = None
     legacy_entry_state = None
@@ -937,6 +1220,8 @@ def build_ticker_integrated_decision(
         # participation agree; see tactical_confirmation_context.py's own no-vote-counting design.
         "momentum_context": momentum_record if momentum_record is not None else {"status": "NOT_AVAILABLE", "reason": "MOMENTUM_CONTEXT_NOT_PROVIDED_TO_INTEGRATED_BUILDER"},
         "tactical_confirmation_context": tactical_confirmation_record if tactical_confirmation_record is not None else {"tactical_confirmation_state": "INSUFFICIENT_EVIDENCE", "reason": "TACTICAL_CONFIRMATION_CONTEXT_NOT_PROVIDED_TO_INTEGRATED_BUILDER"},
+        "evidence_axes": evidence_axes,
+        "evidence_axis_coherence": evidence_axis_coherence,
         "counter_thesis": all_counter_thesis,
         "material_uncertainties": all_uncertainties,
         "exact_capabilities_unavailable": exact_unavail,
@@ -957,6 +1242,8 @@ def build_ticker_integrated_decision(
             "valuation_identity": valuation.get("artifact_identity"),
             "relative_volume_identity": rvol.get("artifact_identity"),
             "priority_queue_record_identity": (priority_queue_record or {}).get("content_identity"),
+            "momentum_identity": (producer_artifact_identities or {}).get("momentum") or momentum.get("artifact_identity"),
+            "tactical_confirmation_identity": (producer_artifact_identities or {}).get("tactical_confirmation") or confirmation.get("artifact_identity"),
         },
         "authority_boundary": {
             "is_actionable": False,
@@ -1016,6 +1303,13 @@ def build_artifact(
     tac_counts: dict[str, int] = {}
     tactical_confirmation_counts: dict[str, int] = {}
     financial_composite_counts: dict[str, int] = {}
+    coherence_counts: dict[str, int] = {state: 0 for state in EVIDENCE_AXIS_COHERENCE_STATES}
+    axis_available_counts: dict[str, int] = {
+        "FUNDAMENTAL": 0, "VALUATION": 0, "TACTICAL_STRUCTURE": 0, "MOMENTUM": 0,
+        "PARTICIPATION_CONFIRMATION": 0, "MARKET_SECTOR": 0, "OPPORTUNITY_PRIORITY": 0,
+        "PORTFOLIO_FIT": 0,
+    }
+    all_major_axes_available = 0
 
     trigger_avail = 0
     inval_avail = 0
@@ -1047,6 +1341,16 @@ def build_artifact(
             priority_queue_record=priority_records.get(ticker),
             momentum_record=momentum_records.get(ticker),
             tactical_confirmation_record=tactical_confirmation_records.get(ticker),
+            producer_artifact_identities={
+                "technical_structure": technical_structure_artifact.get("artifact_identity"),
+                "financial_analysis": (financial_analysis_artifact or {}).get("artifact_identity"),
+                "current_valuation": (current_valuation_artifact or {}).get("artifact_identity"),
+                "relative_volume": (relative_volume_artifact or {}).get("artifact_identity"),
+                "market_sector": (market_sector_artifact or {}).get("artifact_identity"),
+                "priority_queue": (priority_queue_artifact or {}).get("artifact_identity"),
+                "momentum": (momentum_artifact or {}).get("artifact_identity"),
+                "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
+            },
         )
         records[ticker] = dec
 
@@ -1065,6 +1369,18 @@ def build_artifact(
 
         fc = (dec.get("financial_composite_context") or {}).get("financial_composite_state")
         financial_composite_counts[fc] = financial_composite_counts.get(fc, 0) + 1
+
+        coherence = (dec.get("evidence_axis_coherence") or {}).get("state")
+        coherence_counts[coherence] = coherence_counts.get(coherence, 0) + 1
+        axes = dec.get("evidence_axes") or {}
+        for axis_name in axis_available_counts:
+            if _evidence_axis_available(axis_name, axes.get(axis_name)):
+                axis_available_counts[axis_name] += 1
+        if all(_evidence_axis_available(axis_name, axes.get(axis_name)) for axis_name in (
+            "FUNDAMENTAL", "VALUATION", "TACTICAL_STRUCTURE", "MOMENTUM",
+            "PARTICIPATION_CONFIRMATION", "MARKET_SECTOR", "OPPORTUNITY_PRIORITY",
+        )):
+            all_major_axes_available += 1
 
         if (dec.get("trigger") or {}).get("trigger_state") not in (None, "NOT_AVAILABLE"):
             trigger_avail += 1
@@ -1091,6 +1407,9 @@ def build_artifact(
         "tactical_phase_distribution": dict(sorted(tac_counts.items())),
         "tactical_confirmation_state_distribution": dict(sorted((k, v) for k, v in tactical_confirmation_counts.items() if k is not None)),
         "financial_composite_state_distribution": dict(sorted((k, v) for k, v in financial_composite_counts.items() if k is not None)),
+        "evidence_axis_coherence_distribution": dict(sorted((k, v) for k, v in coherence_counts.items() if k is not None)),
+        "evidence_axis_available": dict(sorted(axis_available_counts.items())),
+        "all_major_evidence_axes_available": all_major_axes_available,
         "momentum_context_available": sum(1 for rec in momentum_records.values() if (rec or {}).get("eligibility", {}).get("status") == "ELIGIBLE"),
         "trigger_available": trigger_avail,
         "invalidation_available": inval_avail,
