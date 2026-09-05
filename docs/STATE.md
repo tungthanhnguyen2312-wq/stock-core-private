@@ -1,5 +1,146 @@
 # Stock Lookup — Operational State
 
+**Market-wide fundamental valuation analytical product V1 (2026-09-05):**
+`MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`,
+started at owner checkpoint `5438bc09dc288aaceb53e31b73e1bfdb610e2035` (HEAD == origin/main at
+start, one writer confirmed), implementation checkpoint
+`5201fb9463d683d20f4cb1f6c02113eaa39afe15`. Explicit owner authorization opened this large
+analytical-product milestone despite `docs/ROADMAP_STATE.json` reporting `queued_next=[]`;
+recorded as
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1`,
+not an inferred dependency.
+
+**Inventory found the upstream fundamental engine already essentially complete; the real job
+was three surgical, additive changes, not a rebuild.** `financial_analysis_engine_v2.py` and
+`current_research_valuation_context.py` already carry revenue/earnings growth (QoQ,
+same-quarter YoY, YTD-YoY, TTM-YoY), turnaround states (`LOSS_TO_PROFIT`/`PROFIT_TO_LOSS`/
+`LOSS_NARROWED`/`LOSS_WIDENED`), gross/PBT/net margins and direction, average-balance ROE/ROA
+distinct from named EOP proxies, CFO/earnings, a standalone-quarter FCF proxy, leverage/working
+capital, bank/securities specialist families, and both peer and own-history percentile context.
+DuPont was confirmed absent and deliberately not built (owner directive: do not build a large
+new subsystem for it when not already product-critical); inventory found no retained
+inventory/receivable canonical metric market-wide (an acquisition gap, out of scope). Full
+capability-by-capability inventory: `operations-review/market-wide-fundamental-valuation-
+analytical-product-v1-20260905/feature_inventory.json`.
+
+**Finding 1 -- promoted a dormant, already-activated valuation engine into a genuinely usable
+method.** `CORE_VALUATION_METHOD_COVERAGE_AND_CONSISTENCY_V1` activated `market_wide_
+calculation_readiness.py`'s sign-aware, cross-statement-coherent EV/EBITDA but explicitly
+deferred wiring it into any live product. New `EV_EBITDA_CALC_READY` method in
+`current_research_valuation_context.py` reuses the canonical Daily pipeline's own existing
+`calculation_readiness_record` (already flowing into `evaluate_ticker_valuation` for
+reconciliation only) and promotes it to a first-class, peer-eligible method via a new
+`_calculation_readiness_method` builder -- the pre-existing `EV/EBITDA` method_id is untouched
+and remains structurally always-blocked (its own upstream never retains an exact EBITDA
+figure), so the two identities can never be collapsed or confused. Real market-wide replay:
+**0 -> 51 tickers reach `RESEARCH_USABLE` on the non-degraded 2026-08-25 session** (0 on the
+primary 2026-09-04 session, which is independently documented in this file's own 2026-09-04
+entries as a DNSE price-degraded day -- confirmed by the price-independent `ebitda_not_ready`
+blocker count being byte-identical, 1,251, across both sessions, while price-dependent
+blockers differ exactly as expected). Automatically peer-eligible via the existing
+`attach_peer_relative` once added to `RELATIVE_METHODS` -- no new peer-comparison code. Added
+`earnings_yield_ttm` (1/P·E_TTM, a derived convenience) and reported `fcf_yield_ttm` as
+explicitly `BLOCKED` (`FCF_TTM_NOT_RETAINED_STANDALONE_QUARTER_PROXY_ONLY` -- no TTM sum exists
+for the FCF proxy; building one would be new regression-locked engine surface, not wiring).
+
+**Finding 2 -- a real, previously undiscovered defect: own-history valuation context has never
+activated in the Integrated Decision product.** `integrated_investment_decision_product.
+evaluate_valuation_context` read `hist_ctx[feature].get("percentile_in_history")`; the sole
+real producer of this shape (`financial_analysis_engine_v2._history_entry`, passed through
+verbatim by `financial_analysis_product_projection`) has only ever emitted `percentile` --
+confirmed by reading both producer and consumer, and by `percentile_in_history` appearing
+nowhere else in the repository. This axis (`own_history_state`, and the
+`RATIOS_LOW_VS_OWN_HISTORICAL_RANGE`/`RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE` evidence codes)
+has silently returned `UNAVAILABLE` for every ticker, every session, since `CORE_FUNDAMENTAL_
+VALUATION_AND_PEER_CONTEXT_V1` first shipped own-history context. Fixed to read the field the
+producer actually emits. Real market-wide impact: `equity_to_assets`/`current_ratio` own-history
+is now genuinely `AVAILABLE` for **1,093/1,683 tickers** in the Integrated Decision product
+(the underlying `financial_analysis_engine_v2` computation itself was always correct; only its
+consumption was broken).
+
+**Finding 3 -- new `financial_composite_context` (owner directive section 14), a pure additive
+join, not a new scoring engine.** New `evaluate_financial_composite_context` in
+`integrated_investment_decision_product.py` joins the already-governed, unmodified
+`fundamental_state` (earnings trajectory + profitability + balance sheet + cash quality) and
+`valuation_context_summary` (peer/own-history, including the now-fixed own-history axis above)
+into one of `FUNDAMENTALS_IMPROVING`/`FUNDAMENTALS_STABLE`/`FUNDAMENTALS_MIXED`/
+`FUNDAMENTALS_DETERIORATING`/`TURNAROUND_EVIDENCE`/`INSUFFICIENT_EVIDENCE`, with
+supporting/contradicting reason codes reused verbatim from both evaluators. Deliberately not a
+vote count across five indicators: the label is `fundamental_state`'s own already-governed
+synthesis with exactly one explicit override (corroborated `EXPENSIVE_VS_PEERS` downgrades an
+otherwise-`IMPROVING`/`STABLE` read to `MIXED`; cheap valuation never rescues a `DETERIORATING`
+read into a falsely-reassuring blended label). Wired additively into `build_ticker_integrated_
+decision`/`build_artifact` (new field, new coverage distribution) with zero changes to
+`decide_research_action_posture` -- proven by a test asserting posture is unaffected by the
+composite's own inputs -- and zero changes to `canonical_post_close_pipeline.py` (the composite
+is computed inline from already-present `financial_record`/`valuation_record` parameters, not a
+new source artifact). `decision_identity()`'s curated field subset excludes the new field, so
+existing identities are unchanged, mirroring the exact precedent `TACTICAL_MOMENTUM_
+PARTICIPATION_CONFIRMATION_V1` already established for `momentum_context`/`tactical_
+confirmation_context`. Passed through to the AI-facing Daily brief
+(`daily_integrated_decision_brief.py`: per-ticker watchlist field, new market-wide
+`financial_composite_state_distribution`) and to the new `ev_ebitda_multiple` convenience
+field. Real 2026-09-04 market-wide distribution (1,683 denominator, zero silent drops): 492
+`FUNDAMENTALS_STABLE`, 554 `FUNDAMENTALS_MIXED`, 320 `INSUFFICIENT_EVIDENCE`, 273
+`FUNDAMENTALS_DETERIORATING`, 38 `FUNDAMENTALS_IMPROVING`, 6 `TURNAROUND_EVIDENCE` -- identical
+to `fundamental_state` this session (the override never fired: no ticker had both a positive
+fundamental read and a corroborated expensive peer-relative reading simultaneously, an honest
+consequence of how sparse peer-relative coverage is market-wide today, not a defect --
+independently unit-tested regardless of today's real coverage).
+
+**Incidental, out-of-scope finding recorded for transparency, not fixed.** Regenerating the
+retained `operations-review/canonical-post-close-v1/2026-09-04/enrichment/integrated_
+investment_decision_product.json` via the standing production API
+(`canonical_post_close_pipeline.build_enrichment_components`, the sole production writer of
+that path) surfaced that `momentum_context`/`tactical_confirmation_context` are absent
+(`tactical_confirmation_state_distribution: {INSUFFICIENT_EVIDENCE: 1683}`,
+`momentum_context_available: 0`) even though `TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1`
+added that capability to `integrated_investment_decision_product.py`. Inventory confirms
+`build_artifact`'s `momentum_artifact`/`tactical_confirmation_artifact` parameters are supplied
+only by tests and by a separate, dedicated bounded replay tool
+(`tools/run_tactical_momentum_participation_confirmation_replay.py`) -- never by
+`canonical_post_close_pipeline.py`'s standing closure, unchanged since checkpoint `dbad7c3`,
+which predates that milestone's own commit. Pre-existing, not introduced or worsened by this
+milestone; not fixed here (tactical/momentum pipeline wiring, not fundamental/valuation). The
+dedicated momentum evidence remains fully intact and untouched at
+`operations-review/tactical-momentum-participation-confirmation-v1-20260905/`.
+
+**Retained real replay, before/after, both sessions.** Primary 2026-09-04 and temporal-boundary
+2026-08-25 were each rebuilt twice end to end through the real canonical Daily wiring
+(`canonical_post_close_pipeline.build_enrichment_components` -> `canonical_daily_financial_v2_
+materialization` -> `current_research_valuation_context` -> `integrated_investment_decision_
+product`) -- once against this milestone's pre-change code (via `git stash`) and once against
+its post-change code -- to isolate exactly this milestone's own contribution from every other
+already-merged commit's. `fundamental_context_available` (1,363/1,683) and `fundamental_state_
+distribution` are **byte-identical between the two sessions** and byte-identical before/after,
+as expected for Financial V2's genuinely periodic, pinned evidence chain -- strong empirical
+evidence against any session-dependent financial-fact leakage, alongside the identical
+price-independent EBITDA blocker count noted above. No new temporal/PIT/knowledge-availability
+authority was introduced; `financial_composite_context`/`EV_EBITDA_CALC_READY` inherit session
+identity verbatim from the same `financial_v2_current_input_authority`/`canonical_financial_
+bundle_section` evidence chain every other consumer already uses. Watchlist/sector regression
+(11 required tickers plus `VCB`/`BVH` covering bank/insurance, the only two entity classes not
+already represented) confirms entity-class applicability is exactly correct: all four
+non-corporate tickers (bank, securities, insurance, finance company) resolve `NOT_APPLICABLE`
+for `EV_EBITDA_CALC_READY`, identically to the pre-existing `EV/EBITDA` method and to
+`financial_entity_applicability.CORPORATE_ONLY_METRICS` -- the same gate, reused, never
+re-implemented; no ticker-specific rule was written for any of the 13 names.
+
+182 focused tests pass (108 new: 11 for `EV_EBITDA_CALC_READY`/`earnings_yield_ttm`/
+`fcf_yield_ttm` in `current_research_valuation_context`, 11 for the own-history bugfix and the
+full `financial_composite_context` state machine in `integrated_investment_decision_product`,
+2 for AI-facing passthrough in `daily_integrated_decision_brief`, plus 74 pre-existing tests in
+those three files re-run green). Adjacent regression suites (`test_canonical_daily_financial_v2_
+materialization`, `test_canonical_post_close_pipeline`, `test_current_valuation_opportunity_
+integration`, `test_financial_analysis_engine_v2`, `test_market_wide_calculation_readiness`,
+`test_p1h_valuation_readiness`, `test_stocklookup_daily_integrated_decision_brief`): 186 passed,
+zero new failures. `py_compile`, `git diff --check`, `tools/stocklookup_roadmap.py --check`
+(drift `PASS`) all clean. No provider, RAW_AS_TRADED/PIT, liquidity, sizing, execution,
+universal score, target price, probability, database, remote, publication, deployment, or
+authority-promotion change occurred anywhere in this milestone. No duplicate analytical engine
+was introduced. Full evidence: `operations-review/market-wide-fundamental-valuation-analytical-
+product-v1-20260905/`. No successor is opened.
+
 **Financial temporal semantic normalization and analytical panel V1 (2026-09-05):**
 `FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`,
 started at owner checkpoint `f78bf4069abe7b0173b5aecbc350fcd270351087`. The owner explicitly

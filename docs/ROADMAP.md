@@ -1,5 +1,38 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Market-wide fundamental valuation analytical product V1 (2026-09-05):**
+`MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
+at local checkpoint `5201fb9463d683d20f4cb1f6c02113eaa39afe15`, begun from owner-specified
+`5438bc09dc288aaceb53e31b73e1bfdb610e2035`. Explicit owner authorization opened this large
+analytical-product milestone despite `queued_next=[]`
+(`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1`);
+no dependency or successor is inferred. Inventory found the fundamental engine
+(`financial_analysis_engine_v2.py`, `current_research_valuation_context.py`) already carried
+essentially every capability the milestone named -- growth, turnaround states, margins,
+average-balance ROE/ROA, cash quality, FCF proxy, leverage, working capital, specialist
+families, and peer/own-history percentile context -- so the real work was three additive,
+surgical changes rather than a rebuild. Promoted `market_wide_calculation_readiness.py`'s
+already-activated-but-unwired EV/EBITDA into a new, separately-named, peer-eligible method
+(`EV/EBITDA_CALC_READY`; 0 -> 51 tickers ready on a non-degraded session). Found and fixed a
+real defect that silently disabled own-history valuation context for every ticker since it
+first shipped (a field-name mismatch, `percentile_in_history` vs. the real `percentile`); real
+impact is 1,093/1,683 tickers gaining genuine own-history evidence. Added
+`evaluate_financial_composite_context`, a pure additive join of the unmodified
+`fundamental_state` and `valuation_context_summary` into `FUNDAMENTALS_IMPROVING/STABLE/MIXED/
+DETERIORATING/TURNAROUND_EVIDENCE/INSUFFICIENT_EVIDENCE`, wired into the Integrated Decision
+product and the AI-facing Daily brief with zero change to `research_action_posture` or decision
+identity. An incidental, pre-existing, out-of-scope gap (the standing Daily pipeline never
+wires `momentum_context`/`tactical_confirmation_context` into the Integrated Decision artifact)
+was discovered and recorded transparently, not fixed. Retained real replay for 2026-09-04
+(primary) and 2026-08-25 (temporal boundary), each rebuilt before/after this milestone's code
+via `git stash` to isolate its own contribution; fundamental coverage is byte-identical across
+sessions, evidencing no temporal leakage. No provider, PIT, liquidity/sizing, execution,
+universal score, target price, probability, or authority-promotion change occurred; no
+duplicate analytical engine was introduced. See `docs/STATE.md` and `docs/DECISIONS.md` for
+full detail and
+`operations-review/market-wide-fundamental-valuation-analytical-product-v1-20260905/` for
+evidence. No successor is queued.
+
 **Financial temporal semantic normalization and analytical panel V1 (2026-09-05):**
 `FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
 at local checkpoint `8f9be00`, begun from owner-specified
