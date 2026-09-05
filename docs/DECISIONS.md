@@ -1,5 +1,115 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Core Operating Spine, Provider Resilience, Feature Fitness, And Publication V1
+
+`CORE_OPERATING_SPINE_PROVIDER_RESILIENCE_FEATURE_FITNESS_AND_PUBLICATION_V1 = COMPLETE`: started
+at `a032c49`, implementation checkpoint `ec86754`.
+
+1. **A self-recorded `COMPLETE` milestone is not the same as owner acceptance for push.** The
+   local candidate `TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1` (`6f08c17`/`a032c49`) had
+   already recorded itself `COMPLETE` in `docs/ROADMAP_STATE.json`/`docs/STATE.md` via its own
+   commits. This milestone's directive explicitly treated that self-report as WIP-under-acceptance
+   pending an independent review under new feature-fitness rules -- not a reinterpretation of
+   `STATE.md`'s cached truth (which correctly recorded what that milestone's own commits claimed),
+   but an exercise of `AI_RULES.md` rule 4's standing requirement that `READY_FOR_NEXT_MILESTONE`
+   (or a self-reported `COMPLETE`) never itself authorizes push. Disposition: `ACCEPT_AS_IS`,
+   recorded independently in
+   `operations-review/.../tactical_momentum_candidate_acceptance.json`.
+
+2. **The Daily execution graph was verified against code, not assumed from documentation.** Traced
+   `stocklookup.ps1 -> stocklookup.py -> daily_analysis_pipeline.py --canonical-post-close ->
+   canonical_daily_operation.py -> canonical_post_close_pipeline.py -> daily_session_level2_
+   package.py -> daily_producer_pipeline.py -> ai_handoff_publication.py -> dashboard_release_
+   publisher.py` stage by stage. Confirmed canonical Daily never touches `vn_stock.db` or calls
+   `vn_stock_pipeline.py`'s `update`/`backfill` (those live only in the `LEGACY_NON_CANONICAL`
+   branch of `daily_analysis_pipeline.py`, unreachable because `stocklookup.py` always passes
+   `--canonical-post-close`). Catalogued 8 independent idempotency guards explaining warm-rerun
+   speed. Full graph: `operations-review/.../daily_execution_graph.json`.
+
+3. **A real, previously-undiscovered defect was found by generalizing an already-fixed pattern,
+   not by inventing a new check.** `technical_structure_context.py`'s prior corrective (checkpoint
+   `9ab5a55`) proved that a DNSE technical-history recovery series must only be adopted when its
+   own target-session close agrees exactly with the multi-source-resolved snapshot's close, and
+   extracted this into a shared `resolve_target_session_observations()` function correctly reused
+   by `tactical_momentum_context.py` and `market_wide_relative_volume_research.py`. Sweeping for
+   "any other consumer that blindly accepts a recovered multi-session series" (this milestone's
+   own Section 8 mandate) found a fourth, *earlier* consumer -- `market_wide_current_descriptive_
+   research.py`, whose `technical_features.values`/`trend_state` feed breadth/screening -- that
+   adopted the recovery on state alone with no such check. Fixed by reusing the identical shared
+   function (not a new copy); a rejected ticker is tracked and exempted from the module's own
+   `RECOVERABLE_SAME_SESSION_TECHNICAL_HISTORY_GAP` assertion for the same reason a structurally-
+   insufficient recovery already is. `technical_structure_context.py`/`tactical_momentum_
+   context.py` were not contaminated in practice (they use `technical_features` only as an
+   eligibility gate and re-resolve their own close series independently) -- the real exposure was
+   limited to descriptive research's own directly-exposed fields. One pre-existing test's fixture
+   had accidentally relied on two disagreeing close series (undetected before this guard existed);
+   fixed to agree, plus one new dedicated rejection-path test. 255 tests across every direct/
+   indirect consumer pass with zero new failures. Commit `ec86754`.
+
+4. **Feature-specific input fitness is a consolidation registry over existing authorities, not a
+   new one.** `feature_input_fitness_contract.py` names the 19 owner-specified use-case families
+   and, for each, records the exact existing module/function this repository already uses to
+   answer its fitness question (`multi_source_market_evidence_contract.resolve_ticker`,
+   `technical_structure_context.resolve_target_session_observations`, `monetary_basis_contract.
+   compatible`, `financial_entity_applicability.metric_applicability`) -- deliberately never
+   re-implementing any of them, per `AI_RULES.md`'s "consumers pass through Producer verdicts,
+   never widen them" and this repository's own "edit over proliferate" convention. Thin
+   `evaluate_*` wrappers are tested byte-identical to the authority they delegate to; a separate
+   test asserts every registry pointer actually resolves in the real codebase, so the catalog
+   cannot silently drift from what it describes. This closes the concrete confusion Section 9 of
+   the directive named: a `CURRENT_SESSION_PRICE` resolution from a non-DNSE source can never be
+   mistaken for `RELATIVE_VOLUME` fitness -- the two are governed by structurally different
+   authorities, now named explicitly rather than left to be rediscovered per consumer.
+
+5. **A genuine local-only Daily mode required fixing two different publish functions in two
+   different ways, not one shared flag.** `ai_handoff_publication.publish()`'s existing `push`
+   parameter only ever gated the final `git push` -- `mkdir`/copy/two `git add`/`git commit` calls
+   ran unconditionally, so `--replay-local`'s `push=False` still left two real local commits.
+   `local_only=True` (new) now returns before any of that runs. `dashboard_release_publisher.
+   publish_dashboard_release()`'s `push` parameter already correctly gated its own Git calls, but
+   its local artifact writes into `web_root` (the real `market-dashboard` working tree) ran
+   unconditionally regardless of `push` -- so `local_only=True` (new) instead redirects every write
+   to a throwaway staging directory, seeded only with the one pre-existing file the function would
+   otherwise read (`data/build_info.json`), so the real checkout is never touched at all, not even
+   left dirty. Both `local_only` parameters always take precedence over `push` -- including
+   `push`'s own default of `True` in `ai_handoff_publication` -- so a caller never needs to
+   remember to also pass `push=False`; a first attempt at a mutual-exclusion `raise` was reverted
+   after discovering it made `local_only=True` alone (the natural call) trip on `push`'s own
+   default. `stocklookup.py --local-only` wires both and prints `REMOTE_PUBLICATION=
+   SKIPPED_LOCAL_MODE` plus a `LOCAL_AI_ARTIFACTS` block reusing the existing `ai_research_bundle_
+   manifest.json`/`build_package()` identity, not a second local-pointer format. 8 new tests each
+   diff a real Git repository's `HEAD`/status/file-listing before and after the call -- proving
+   zero mutation structurally, not merely asserting it in prose -- and prove `local_only` still
+   performs genuine validation (identical package/release identity to a real publish). Normal
+   (no-flag) Daily publication is unchanged; 40/40 tests across both publish modules pass.
+
+6. **Provider routing for 2026-09-04 was reported from the literal retained artifact, not
+   reconstructed from memory.** Extracted `operations-review/p3f9b-market-wide-exact-session-
+   scaleout-20260904/multi_source_exact_session_market_evidence.json` directly: DNSE 0/1683 exact
+   at the 15:31:51 ICT acquisition instant, KBS 1506 attempted/957 recovered, VCI 2 attempted/1
+   recovered (both inside the small quality sentinel -- confirming VCI never fires on a clean KBS
+   miss), final 958/1683 resolved, rate governor holding its 45-effective/60-hard rpm ceiling
+   throughout (`max_observed_window_utilization=45`, never breached). Every figure matches this
+   file's own previously-documented 2026-09-04 narrative exactly, now traced to its literal source.
+   No new live acquisition was performed to build this report, per the directive's own instruction.
+
+7. **A real residual risk was found and flagged, not silently absorbed into "no bypass found."**
+   `vnstock_rate_governor`'s single chokepoint (`vn_stock_pipeline._bounded_send_request_direct`)
+   genuinely covers every VCI/KBS call inside canonical Daily's own execution graph -- but roughly
+   15 standalone maintenance/sync scripts (`bctc_sync.py`, `meta_sync.py`, `company_profile_
+   sync.py`, and others) call `vnstock` directly in separate processes without ever installing that
+   monkeypatch. These scripts are outside canonical Daily's own execution graph and therefore out
+   of this milestone's scope to fix, but a script run concurrently with Daily could still
+   contribute to the same account-wide `vnai` 60-rpm ceiling outside the governor's own
+   accounting. Recorded as a residual limitation rather than silently omitted.
+
+8. **`TECHNICAL_HISTORY_BACKUP = NOT_QUALIFIED` for KBS/VCI was recorded as an explicit, standing
+   fact, not left implicit.** The extended-lookback technical-history recovery is DNSE-only by
+   design; when DNSE cannot supply a complete 20-session window, the recovery record's own state
+   (`INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK`) is explicit and dependent features correctly
+   report `INSUFFICIENT_HISTORY` -- KBS/VCI historical OHLC is never substituted. No new provider
+   was added or use-case-qualified; this is a documentation decision, not a code change.
+
 ## 2026-09-05 - Tactical Momentum And Participation Confirmation V1
 
 `TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1 = COMPLETE`: started at `18a88b2`,

@@ -1,5 +1,34 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Core operating spine, provider resilience, feature fitness, and publication V1 (2026-09-05):**
+`CORE_OPERATING_SPINE_PROVIDER_RESILIENCE_FEATURE_FITNESS_AND_PUBLICATION_V1 = COMPLETE` at
+`ec86754`, started at `a032c49`. Owner-authorized architecture-stabilization override, scoped to
+making the operating spine (acquisition -> retained evidence -> classification -> feature-specific
+fitness -> deterministic analytics -> strategy -> local AI artifacts -> Git transport/Dashboard)
+explicit and governed before further feature/analytical expansion. Reconstructed and verified the
+real Daily execution graph against code (canonical Daily never touches `vn_stock.db`; 8 idempotency
+guards explain warm-rerun speed). Found and fixed a real, previously-undiscovered defect:
+`market_wide_current_descriptive_research.py` (an earlier, independent consumer of the DNSE
+technical-history recovery artifact) lacked the target-session-close-agreement guard
+`technical_structure_context.py`'s own prior corrective already proved necessary and shared with
+`tactical_momentum_context.py`/`market_wide_relative_volume_research.py` -- now all four consumers
+enforce one invariant. New `feature_input_fitness_contract.py` consolidates 19 use-case families
+(`CURRENT_SESSION_PRICE`, `RELATIVE_VOLUME`, `TECHNICAL_CLOSE_HISTORY`, `VALUATION_PRICE`, etc.),
+each pointing at the exact existing authority that governs it, never re-implementing any of them.
+New genuine `--local-only` Daily mode: `ai_handoff_publication.publish(local_only=True)` and
+`dashboard_release_publisher.publish_dashboard_release(local_only=True)` provide a structural
+zero-Git-mutation guarantee (proven by diffing a real repository's HEAD/status/files before and
+after), closing the gap where `--replay-local`'s `push=False` still left two real local commits in
+the AI-handoff repo. Provider routing for 2026-09-04 extracted directly from retained real evidence
+(DNSE 0/1683 at acquisition, KBS 957/1506 recovered, VCI 1/2, final 958/1683 resolved, rate
+governor never breaching its 45/60 rpm ceiling); `TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1`
+independently re-verified `ACCEPT_AS_IS`. Residual, flagged-not-fixed finding: ~15 standalone
+`vnstock`-calling sync scripts never install the shared rate governor (out of canonical Daily's own
+execution graph, hence out of scope). No provider added; no RAW_AS_TRADED/PIT/liquidity/execution/
+score/target/probability authority promoted. Artifact:
+`operations-review/core-operating-spine-provider-resilience-feature-fitness-publication-v1-20260905/`.
+No successor was opened.
+
 **Tactical momentum and participation confirmation V1 (2026-09-05):**
 `TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1 = COMPLETE` at `6f08c17`, started at
 `18a88b2656bbfdca0fd64cfa7b6bf90a71578a26`. Explicit owner authorization opened this milestone
