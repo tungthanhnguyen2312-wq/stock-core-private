@@ -188,12 +188,37 @@ def _feature_fitness_matrix(product: Mapping[str, Any], valuation: Mapping[str, 
     matrix["FUNDAMENTAL_PEER_RELATIVE"] = {"authoritative_registry": fitness_contract.describe("FUNDAMENTAL_PEER_RELATIVE"), "pass_through_status_distribution": _counter_dict(peer_counts)}
     matrix["FUNDAMENTAL_OWN_HISTORY"] = {"authoritative_registry": fitness_contract.describe("FUNDAMENTAL_OWN_HISTORY"), "pass_through_status_distribution": _counter_dict(history_counts)}
     matrix["FINANCIAL_POINT_IN_TIME_BACKTEST"] = {"authoritative_registry": fitness_contract.describe("FINANCIAL_POINT_IN_TIME_BACKTEST"), "pass_through_status_distribution": _counter_dict(pit_counts)}
+    per_ticker: dict[str, Any] = {}
+    for ticker, row in sorted(records.items()):
+        source = row.get("feature_fitness") or {}
+        feature_families = {
+            family: {
+                feature_id: dict(source.get(feature_id) or {"fitness": "MISSING_FEATURE", "reason_codes": ["FEATURE_NOT_EMITTED"]})
+                for feature_id in feature_ids
+            }
+            for family, feature_ids in groups.items()
+        } if row.get("status") == "AVAILABLE" else {}
+        valuation_row = valuation_records.get(ticker) or {}
+        per_ticker[ticker] = {
+            "financial_product_status": row.get("status"),
+            "financial_source_context_identity": row.get("source_context_identity"),
+            "feature_fitness": feature_families,
+            "valuation_method_fitness": {
+                method_id: {"status": method.get("status"), "applicability": method.get("applicability"), "blocker_reason_codes": list(method.get("blocker_reason_codes") or [])}
+                for method_id, method in (valuation_row.get("methods") or {}).items() if isinstance(method, Mapping)
+            },
+            "peer_history_status": {
+                "peer_relative": {method_id: peer.get("status") for method_id, peer in (valuation_row.get("peer_relative") or {}).items() if isinstance(peer, Mapping)},
+                "own_history": {feature_id: history.get("status") for feature_id, history in (row.get("history_context") or {}).items() if isinstance(history, Mapping)},
+            },
+            "pit_backtest": "BLOCKED",
+        }
     matrix["product_integration"] = {
         "financial_product_coverage": compact.get("coverage"),
         "integrated_fundamental_context_available": (integrated.get("coverage") or {}).get("fundamental_context_available"),
         "authority_effect": "NONE",
     }
-    return {"contract_version": "financial_feature_fitness_matrix/v1", "primary_session": PRIMARY_SESSION, "families": matrix, "authority_effect": "NONE"}
+    return {"contract_version": "financial_feature_fitness_matrix/v1", "primary_session": PRIMARY_SESSION, "families": matrix, "per_ticker": per_ticker, "authority_effect": "NONE"}
 
 
 def _market_wide_method_coverage(artifact: Mapping[str, Any], method_ids: tuple[str, ...]) -> dict[str, dict[str, int]]:
@@ -228,7 +253,47 @@ def _research_safe_methods(methods: Mapping[str, Any]) -> dict[str, dict[str, An
     }
 
 
-def _watchlist_replay(product: Mapping[str, Any], valuation: Mapping[str, Any], integrated: Mapping[str, Any]) -> dict[str, Any]:
+def _fact_summary_by_ticker(rows: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Metadata-only financial-evidence summary for replay presentation; no values are copied."""
+    summary: dict[str, dict[str, Any]] = {}
+    latest: dict[str, dict[str, Mapping[str, Any]]] = defaultdict(dict)
+    for row in rows:
+        ticker = str(row.get("ticker"))
+        item = summary.setdefault(ticker, {
+            "period_semantics_distribution": Counter(), "statement_scope_distribution": Counter(),
+            "source_provider_distribution": Counter(), "authority_state_distribution": Counter(),
+        })
+        item["period_semantics_distribution"][str(row.get("period_semantics"))] += 1
+        item["statement_scope_distribution"][str(row.get("scope"))] += 1
+        item["source_provider_distribution"][str(row.get("source_provider") or "UNKNOWN_PROVIDER")] += 1
+        item["authority_state_distribution"][str(row.get("authority_state"))] += 1
+        metric = str(row.get("metric"))
+        previous = latest[ticker].get(metric)
+        if previous is None or str(row.get("period_end") or "") > str(previous.get("period_end") or ""):
+            latest[ticker][metric] = row
+    result: dict[str, dict[str, Any]] = {}
+    for ticker, item in summary.items():
+        result[ticker] = {
+            "period_semantics_distribution": _counter_dict(item["period_semantics_distribution"]),
+            "statement_scope_distribution": _counter_dict(item["statement_scope_distribution"]),
+            "source_provider_distribution": _counter_dict(item["source_provider_distribution"]),
+            "authority_state_distribution": _counter_dict(item["authority_state_distribution"]),
+            "latest_metric_metadata": {
+                metric: {
+                    "period": row.get("period"), "period_end": row.get("period_end"),
+                    "period_semantics": row.get("period_semantics"), "scope": row.get("scope"),
+                    "source_provider": row.get("source_provider"), "authority_state": row.get("authority_state"),
+                    "currency": row.get("currency"), "scale": row.get("scale"),
+                    "published_at": row.get("published_at"), "observed_at": row.get("observed_at"),
+                    "lineage_fact_id": (row.get("lineage") or {}).get("fact_id"),
+                }
+                for metric, row in sorted(latest[ticker].items())
+            },
+        }
+    return result
+
+
+def _watchlist_replay(product: Mapping[str, Any], valuation: Mapping[str, Any], integrated: Mapping[str, Any], fact_summary: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     compact_records = product["financial_analysis_product"].get("records") or {}
     valuation_records = valuation.get("records") or {}
     integrated_records = integrated.get("records") or {}
@@ -246,6 +311,7 @@ def _watchlist_replay(product: Mapping[str, Any], valuation: Mapping[str, Any], 
             "requested_watchlist": ticker in requested,
             "sector_example": ({"VCB": "bank", "SSI": "securities", "HPG": "industrial", "VNM": "consumer", "NVL": "real_estate"}.get(ticker)),
             "financial_analysis": financial if isinstance(financial, Mapping) else {"status": "UNAVAILABLE", "reason_codes": ["FINANCIAL_PRODUCT_TICKER_MISSING"]},
+            "financial_evidence_metadata": fact_summary.get(ticker, {"status": "FINANCIAL_FACTS_UNAVAILABLE"}),
             "fundamental_state": integrated_row.get("fundamental_state"),
             "valuation_methods": methods,
             "valuation_method_status": {method_id: method.get("status") for method_id, method in methods.items()},
@@ -345,7 +411,7 @@ def build(output: Path) -> dict[str, Any]:
     existing_daily_brief = _read(next((ROOT / "operations-review" / "daily-research-session-operations-v1" / PRIMARY_SESSION).rglob("daily_integrated_decision_brief.json")))
     old_watchlist = ((existing_daily_brief.get("watchlist") or {}).get("records") or [])
     old_per_ticker_financial = sum("financial_analysis" in row for row in old_watchlist)
-    replay = _watchlist_replay(product, valuation, integrated)
+    replay = _watchlist_replay(product, valuation, integrated, _fact_summary_by_ticker(rows))
     after_watchlist_financial = sum(row["financial_analysis"].get("status") in {"AVAILABLE", "ABSENT"} for row in replay["records"] if row["requested_watchlist"])
     coverage_fundamental = {
         "contract_version": "fundamental_coverage_before_after/v1", "primary_session": PRIMARY_SESSION,
