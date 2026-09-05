@@ -28,8 +28,17 @@ from typing import Any, Mapping, Sequence
 
 from prospective_decision_outcome_measurement import FIELD_NOT_RETAINED, PENDING, classify_feedback_taxonomy
 
-CONTRACT_VERSION = "integrated_decision_prospective_feedback/v1"
-FORWARD_HORIZONS = {"forward_close_return_5": 5, "forward_close_return_10": 10, "forward_close_return_20": 20}
+CONTRACT_VERSION = "integrated_decision_prospective_feedback/v2"
+# The close-return bridge is deliberately session-counted.  The prospective
+# diagnostics layer consumes the exact same mapping rather than maintaining a
+# second horizon vocabulary.
+FORWARD_HORIZONS = {
+    "forward_close_return_1": 1,
+    "forward_close_return_3": 3,
+    "forward_close_return_5": 5,
+    "forward_close_return_10": 10,
+    "forward_close_return_20": 20,
+}
 PENDING_FUTURE_SESSIONS = "PENDING_FUTURE_SESSIONS"
 SESSION_NOT_RETAINED = "T0_SESSION_NOT_IN_GOVERNED_CHAIN"
 PRICE_NOT_RETAINED = "CLOSE_PRICE_NOT_RETAINED"
@@ -70,8 +79,82 @@ def _price_observations(p3f9b_snapshot: Mapping[str, Any] | None, ticker: str) -
     return {row["session"]: row for row in (record.get("observations") or []) if isinstance(row, Mapping) and isinstance(row.get("session"), str)}
 
 
+def retained_session_price_observations(
+    snapshots_by_session: Mapping[str, Mapping[str, Any]] | None, ticker: str,
+) -> dict[str, Mapping[str, Any]]:
+    """Collect only an exact observation from each already-retained session snapshot.
+
+    P3F9B materializations are intentionally exact-session artifacts; they do
+    not promise that every later snapshot retains a complete history.  This
+    helper therefore joins their *same-session* observations under their
+    explicit resolved-session identities.  It is not a historical series
+    reconstruction and it never fills a missing session from another date.
+    """
+    if not snapshots_by_session:
+        return {}
+    rows: dict[str, Mapping[str, Any]] = {}
+    for expected_session, snapshot in snapshots_by_session.items():
+        if not isinstance(expected_session, str) or not isinstance(snapshot, Mapping):
+            continue
+        if snapshot.get("resolved_completed_session") != expected_session:
+            continue
+        record = (snapshot.get("records") or {}).get(ticker) or {}
+        matches = [
+            row for row in (record.get("observations") or [])
+            if isinstance(row, Mapping) and row.get("session") == expected_session
+        ]
+        if len(matches) != 1:
+            continue
+        row = dict(matches[0])
+        row["retained_snapshot_identity"] = snapshot.get("snapshot_identity")
+        row["retained_snapshot_session"] = expected_session
+        rows[expected_session] = row
+    return rows
+
+
+def _series_lineage(start: Mapping[str, Any] | None, end: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Retain endpoint source facts; compatibility stays fail-closed below."""
+    def endpoint(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
+        if row is None:
+            return None
+        return {
+            "snapshot_identity": row.get("retained_snapshot_identity"),
+            "provider": row.get("provider"), "dataset": row.get("dataset"),
+            "price_basis": row.get("price_basis"),
+            "transformation_identity": row.get("transformation_identity"),
+            "qualification": row.get("qualification"),
+        }
+    return {"start": endpoint(start), "end": endpoint(end)}
+
+
+def _compatible_close_series(start: Mapping[str, Any], end: Mapping[str, Any]) -> bool:
+    """Use the existing normalized price-basis contract without silent splicing.
+
+    A provider may change only when the retained observations declare the same
+    normalized price basis *and* transformation.  Endpoint providers remain in
+    the output so a consumer cannot mistake that governed failover for a
+    single-provider raw-as-traded series.
+    """
+    if not (start.get("price_basis") and start.get("price_basis") == end.get("price_basis")):
+        return False
+    start_transform, end_transform = start.get("transformation_identity"), end.get("transformation_identity")
+    # Older retained/test close records predate transformation identity.  They
+    # retain only the existing price-basis compatibility contract.  Once either
+    # endpoint declares a transform, both must declare the same one.
+    return not (start_transform or end_transform) or bool(start_transform and start_transform == end_transform)
+
+
 def _forward_horizon(*, as_of_session: str, horizon_sessions: int, chain: Sequence[str], observations: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
-    base = {"required_completed_future_sessions": horizon_sessions, "status": None, "future_session": None, "return": None, "price_basis": None}
+    start = observations.get(as_of_session)
+    base = {
+        "required_completed_future_sessions": horizon_sessions, "status": None,
+        "start_session": as_of_session, "end_session": None, "future_session": None,
+        "start_price": start.get("close") if start else None, "end_price": None,
+        "return": None, "price_basis": start.get("price_basis") if start else None,
+        "series_identity": start.get("retained_snapshot_identity") if start else None,
+        "series_fitness": "START_CLOSE_NOT_RETAINED" if start is None else "PENDING_FUTURE_SESSION",
+        "series_lineage": _series_lineage(start, None),
+    }
     if as_of_session not in chain:
         return {**base, "status": SESSION_NOT_RETAINED}
     index = chain.index(as_of_session)
@@ -79,18 +162,58 @@ def _forward_horizon(*, as_of_session: str, horizon_sessions: int, chain: Sequen
     if target_index >= len(chain):
         return {**base, "status": PENDING}
     future_session = chain[target_index]
-    t0_row, future_row = observations.get(as_of_session), observations.get(future_session)
+    t0_row, future_row = start, observations.get(future_session)
     if t0_row is None or future_row is None:
-        return {**base, "status": PRICE_NOT_RETAINED, "future_session": future_session}
+        return {
+            **base, "status": PRICE_NOT_RETAINED, "future_session": future_session,
+            "end_session": future_session, "series_fitness": "EXACT_CLOSE_MISSING",
+            "series_lineage": _series_lineage(t0_row, future_row),
+        }
     t0_close, future_close = t0_row.get("close"), future_row.get("close")
     if not isinstance(t0_close, (int, float)) or not isinstance(future_close, (int, float)) or t0_close == 0:
-        return {**base, "status": PRICE_NOT_RETAINED, "future_session": future_session}
-    if t0_row.get("price_basis") != future_row.get("price_basis"):
-        return {**base, "status": PRICE_BASIS_INCOMPATIBLE, "future_session": future_session}
-    return {**base, "status": MATURE, "future_session": future_session, "return": future_close / t0_close - 1, "price_basis": t0_row.get("price_basis")}
+        return {
+            **base, "status": PRICE_NOT_RETAINED, "future_session": future_session,
+            "end_session": future_session, "series_fitness": "CLOSE_VALUE_INVALID",
+            "series_lineage": _series_lineage(t0_row, future_row),
+        }
+    if not _compatible_close_series(t0_row, future_row):
+        return {
+            **base, "status": PRICE_BASIS_INCOMPATIBLE, "future_session": future_session,
+            "end_session": future_session, "end_price": future_close,
+            "series_fitness": "INCOMPATIBLE_PRICE_SERIES",
+            "series_lineage": _series_lineage(t0_row, future_row),
+        }
+    return {
+        **base, "status": MATURE, "future_session": future_session, "end_session": future_session,
+        "end_price": future_close, "return": future_close / t0_close - 1,
+        "price_basis": t0_row.get("price_basis"), "series_fitness": "COMPATIBLE_RETAINED_CLOSE_SERIES",
+        "series_lineage": _series_lineage(t0_row, future_row),
+    }
 
 
-def evaluate_decision_forward_outcome(*, decision_record: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any] | None, governed_chain: Sequence[str]) -> dict[str, Any]:
+def _close_excursion(*, as_of_session: str, horizon: Mapping[str, Any], chain: Sequence[str], observations: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Close-only excursion, explicitly not intraday MFE/MAE."""
+    if horizon.get("status") != MATURE:
+        return {
+            "status": horizon.get("status"), "CLOSE_MFE": None, "CLOSE_MAE": None,
+            "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE",
+        }
+    start = observations.get(as_of_session)
+    if start is None or as_of_session not in chain:
+        return {"status": PRICE_NOT_RETAINED, "CLOSE_MFE": None, "CLOSE_MAE": None, "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE"}
+    index = chain.index(as_of_session)
+    returns: list[float] = []
+    for session in chain[index + 1:index + horizon["required_completed_future_sessions"] + 1]:
+        row = observations.get(session)
+        if row is None or not _compatible_close_series(start, row) or not isinstance(row.get("close"), (int, float)):
+            return {"status": PRICE_BASIS_INCOMPATIBLE if row else PRICE_NOT_RETAINED, "CLOSE_MFE": None, "CLOSE_MAE": None, "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE"}
+        returns.append(row["close"] / start["close"] - 1)
+    return {"status": MATURE, "CLOSE_MFE": max(returns), "CLOSE_MAE": min(returns), "semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE"}
+
+
+def evaluate_decision_forward_outcome(*, decision_record: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any] | None,
+                                      governed_chain: Sequence[str],
+                                      retained_session_snapshots: Mapping[str, Mapping[str, Any]] | None = None) -> dict[str, Any]:
     """Forward close-return + close-path favorable/adverse excursion for one integrated decision.
 
     Names its close-path fields max_favorable_close_excursion/max_adverse_close_excursion (never
@@ -98,7 +221,9 @@ def evaluate_decision_forward_outcome(*, decision_record: Mapping[str, Any], p3f
     true intraday MFE/MAE, matching Section 10's explicit naming instruction.
     """
     ticker, as_of_session = decision_record["ticker"], decision_record["as_of_session"]
-    observations = _price_observations(p3f9b_snapshot, ticker)
+    observations = retained_session_price_observations(retained_session_snapshots, ticker)
+    if not observations:
+        observations = _price_observations(p3f9b_snapshot, ticker)
     horizons = {name: _forward_horizon(as_of_session=as_of_session, horizon_sessions=n, chain=governed_chain, observations=observations) for name, n in FORWARD_HORIZONS.items()}
     max_n = max(FORWARD_HORIZONS.values())
     index = governed_chain.index(as_of_session) if as_of_session in governed_chain else None
@@ -127,7 +252,21 @@ def evaluate_decision_forward_outcome(*, decision_record: Mapping[str, Any], p3f
         "max_adverse_close_excursion": min(close_path_returns) if close_path_returns else None,
         "semantics": "CLOSE_ONLY_PATH_STATISTIC_NOT_TRUE_INTRADAY_MFE_MAE",
     }
-    return {"ticker": ticker, "as_of_session": as_of_session, "decision_identity": decision_record.get("decision_identity"), "horizons": horizons, "close_path": close_path}
+    close_path_by_horizon = {
+        name.replace("forward_close_return_", "close_excursion_"): _close_excursion(
+            as_of_session=as_of_session, horizon=horizon, chain=governed_chain, observations=observations,
+        )
+        for name, horizon in horizons.items() if horizon["required_completed_future_sessions"] in {5, 10, 20}
+    }
+    return {
+        "ticker": ticker, "as_of_session": as_of_session, "decision_identity": decision_record.get("decision_identity"),
+        "horizons": horizons, "close_path": close_path, "close_path_by_horizon": close_path_by_horizon,
+        "authority_boundary": {
+            "close_only_excursions_not_intraday_mfe_mae": True,
+            "raw_as_traded_or_pit_not_claimed": True,
+            "provider_endpoint_lineage_retained": True,
+        },
+    }
 
 
 def classify_decision_feedback(*, decision_record: Mapping[str, Any], forward_outcome: Mapping[str, Any]) -> dict[str, Any]:

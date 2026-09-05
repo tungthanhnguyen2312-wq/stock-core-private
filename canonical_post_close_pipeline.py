@@ -11,7 +11,7 @@ This module is pure orchestration glue over already-existing, already-tested cap
         -> EXACT INPUT REGISTRATION (new: config/daily_research_session_input_registry.json writer;
            no such writer existed anywhere in the repository before this module)
         -> CANONICAL DAILY PRODUCER (existing daily_producer_pipeline.run_daily_producer, unmodified)
-        -> PROSPECTIVE COLLECTION (existing tools/run_prospective_research_cohort_collection.py, unmodified)
+        -> PROSPECTIVE COLLECTION (existing cohort collector plus retained-only outcome-feedback roll-forward)
         -> BUNDLE INDEX / AI HANDOFF (new: tiered index over already-materialized artifacts; no
            payload is duplicated, only paths + identities + hashes)
 
@@ -894,7 +894,26 @@ def run_prospective_collection(
         return {"status": "UNAVAILABLE", "reason": (result.stderr or result.stdout).strip()[-2000:]}
     output = root / "operations-review" / "prospective-research-cohort-collection-v1" / f"prospective_research_cohort_snapshot_{session}.json"
     snapshot = _load(output)
-    return {"status": "COLLECTED", "stdout": result.stdout, "snapshot": snapshot, "path": str(output)}
+    # The same bounded post-close hook rolls forward already-retained integrated
+    # decisions.  It scans only canonical handoffs from *earlier* sessions (the
+    # current handoff has not been written yet), so it cannot feed current or
+    # future outcome data back into today's decision.  A diagnostic failure is
+    # deliberately localized just like the existing prospective cohort step.
+    feedback_output = (
+        root / "operations-review" / "prospective-decision-outcome-feedback-v1" / session
+        / "prospective_decision_feedback_artifact.json"
+    )
+    feedback_cmd = [
+        sys.executable, "tools/run_prospective_decision_outcome_feedback.py",
+        "--root", str(root), "--output", str(feedback_output),
+    ]
+    feedback_result = subprocess.run(feedback_cmd, cwd=str(root), capture_output=True, text=True)
+    feedback = (
+        {"status": "COLLECTED", "path": str(feedback_output), "artifact": _load(feedback_output)}
+        if feedback_result.returncode == 0
+        else {"status": "UNAVAILABLE", "reason": (feedback_result.stderr or feedback_result.stdout).strip()[-2000:]}
+    )
+    return {"status": "COLLECTED", "stdout": result.stdout, "snapshot": snapshot, "path": str(output), "decision_feedback": feedback}
 
 
 def build_tiered_bundle(
@@ -963,12 +982,14 @@ def build_tiered_bundle(
             (enrichment.get("integrated_investment_decision_product") or {}).get("artifact") or {}
         ).get("artifact_identity"),
         "prospective_cohort_snapshot_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "prospective_decision_feedback_identity": (((prospective or {}).get("decision_feedback") or {}).get("artifact") or {}).get("artifact_identity"),
         "enrichment_component_status": {name: row["status"] for name, row in enrichment.items()},
         "deeper_bundles": {
             "opportunity_research_bundle": _rel(root, bundle_dir / "opportunity_research_bundle.json"),
             "full_universe_bundle_index": _rel(root, bundle_dir / "full_universe_bundle_index.json"),
             "dashboard_release_set_index": _rel(root, bundle_dir / "dashboard_release_set_index.json"),
             "integrated_investment_decision_product": _rel(root, level2_paths["integrated_investment_decision_product"]),
+            "prospective_decision_feedback": ((prospective or {}).get("decision_feedback") or {}).get("path"),
         },
         "primary_ai_input": _rel(root, producer_result["run_dir"] / "ai_research_session_bundle.json"),
         "recommended_ai_inputs": {
@@ -993,6 +1014,11 @@ def build_tiered_bundle(
         "prospective_cohort_snapshot": {
             "identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
             "path": (prospective or {}).get("path"),
+        },
+        "prospective_decision_feedback": {
+            "identity": (((prospective or {}).get("decision_feedback") or {}).get("artifact") or {}).get("artifact_identity"),
+            "path": ((prospective or {}).get("decision_feedback") or {}).get("path"),
+            "authority_boundary": "DOWNSTREAM_OBSERVATION_ONLY_NOT_A_CURRENT_DECISION_INPUT",
         },
         "authority_boundary": {"no_probability_target_expected_return_or_sizing": True, "is_actionable": False},
     }
