@@ -1,5 +1,84 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Tactical Momentum And Participation Confirmation V1
+
+`TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1 = COMPLETE`: started at `18a88b2`,
+implementation checkpoint `6f08c17`.
+
+1. **The queued-next override is explicit and recorded, not inferred.** The owner authorized
+   this milestone although `docs/ROADMAP_STATE.json` reported `queued_next=[]`; the state record
+   uses `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1`.
+   No predecessor was promoted into a dependency and no successor was opened.
+
+2. **Momentum is a distinct feature engine, not a second structure algorithm.** A new
+   `tactical_momentum_context.py` computes RSI-14 (Wilder), MA20/50/100/200, and MACD(12,26,9)
+   from the same retained close series `technical_structure_context.py` already resolves.
+   RSI divergence reuses the existing no-lookahead confirmed-swing machinery
+   (`technical_structure_context._confirm_swings`) for pivot identities rather than a second
+   pivot algorithm; a divergence candidate exists only once both confirmed price pivots are
+   known, and is always reported as of the target session (never backdated to an earlier pivot's
+   own session). The exact-session-close compatibility guard proven necessary for structure
+   (recovery adopted only when its target-session close agrees exactly with the multi-source
+   snapshot's resolved close) was extracted into a shared, importable function
+   (`technical_structure_context.resolve_target_session_observations`) so momentum and
+   participation enforce the identical invariant rather than a second, potentially-diverging
+   copy of it.
+
+3. **Participation coverage was recovered without touching participation's own semantics.** Real
+   2026-09-04 evidence: `market_wide_relative_volume_research.py`'s strict native-DNSE-volume
+   check correctly reported 0/1683 participation coverage that day, because the exact-session
+   snapshot's own bar was a wholesale non-DNSE (KBS) sole-source print for virtually the entire
+   universe (a known session-wide DNSE degradation, not a defect in that module). A new,
+   additive `resolve_records_with_recovery` helper feeds it the same recovery-resolved,
+   safety-checked series structure/momentum already use, recovering coverage to 918/1683 (917
+   `READY`) -- zero changes to the module's own volume-representation or percentile/acceleration
+   logic.
+
+4. **Tactical confirmation is evidence synthesis, not scoring.** A new
+   `tactical_confirmation_context.py` joins structure + momentum + participation into
+   `CONFIRMED`/`PARTIALLY_CONFIRMED`/`NEUTRAL`/`CONTRADICTED`/`INSUFFICIENT_EVIDENCE` with
+   explicit reason codes. RSI direction and MACD sign/cross are folded into one
+   `MOMENTUM_DIRECTION` axis because both derive from the same underlying close-price path; only
+   momentum-direction, RSI divergence, and participation (a genuinely separate volume-based
+   field) ever contribute a reason, and each contributes at most one support and one contradiction
+   -- never "N of M signals agree" vote-counting. Structure stance reuses the already-governed
+   `tactical_phase` classification (`integrated_investment_decision_product.evaluate_tactical_
+   phase`) rather than an independently-derived read that could silently disagree with the
+   `tactical_phase` already exposed on the same integrated record (an earlier draft that derived
+   stance directly from raw structure fields produced exactly this disagreement for BREAKDOWN-
+   phase tickers before being replaced).
+
+5. **Momentum and confirmation are additive to the integrated decision, never a policy input.**
+   `integrated_investment_decision_product.py` gained two new optional parameters, two new
+   output fields, two new coverage distributions, and two new `source_artifacts` identities.
+   `decide_research_action_posture` was not modified. Proven, not merely asserted: a new test
+   builds the same ticker decision three ways (no momentum/confirmation, `CONFIRMED`,
+   `CONTRADICTED`) and asserts `research_action_posture` and `why_now` are byte-identical across
+   all three. The real 2026-09-04 replay independently confirms this: several
+   `INITIATE_ON_BREAKOUT`/`BREAKOUT_CONFIRMED` names carry a `CONTRADICTED` tactical-confirmation
+   read today without their posture moving, and every `BASE_BUILDING` name lands on `NEUTRAL`
+   (never `CONTRADICTED`), since a non-directional structure stance never accumulates a
+   contradicting reason by construction.
+
+6. **Valuation and financial semantics are unchanged.** This milestone reuses
+   `CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1`'s retained financial/valuation
+   artifacts verbatim rather than recomputing them; nothing in `current_research_valuation_
+   context.py` or `market_wide_current_valuation_input_scaleout.py` was touched.
+
+7. **FVG/Order Block/liquidity-sweep remain deferred, not built.** The retained recovery series'
+   own high/low fields still carry the same `ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED`
+   basis with no additional wick-geometry compatibility proof, so `HIGH_LOW_BASIS_NOT_COMPATIBLE`
+   from `TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3` is unchanged. Disposition:
+   `DEFERRED_INPUT_BASIS_NOT_QUALIFIED`. No successor milestone was opened to build them.
+
+8. **Prospective feedback already accommodates the new context; nothing new was built.**
+   `integrated_decision_prospective_feedback.py`'s `evaluate_decision_forward_outcome`/
+   `classify_decision_feedback` take the whole `decision_record` as an opaque input, extracting
+   only the specific fields each needs -- `momentum_context`/`tactical_confirmation_context` are
+   therefore already retained and available to a future prospective-taxonomy extension without
+   any change here. `decision_identity()` uses an explicit curated field subset that does not
+   include either new field, so existing decision identities are unaffected.
+
 ## 2026-09-05 - Core Daily Decision Coherence And Valuation Integration V1
 
 `CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE`: started at `62db133`,

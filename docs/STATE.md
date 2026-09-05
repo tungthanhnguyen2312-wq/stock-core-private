@@ -1,5 +1,78 @@
 # Stock Lookup — Operational State
 
+**Tactical momentum and participation confirmation V1 (2026-09-05):**
+`TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1 = COMPLETE`, started at `18a88b2` with
+implementation checkpoint `6f08c17`. Explicit owner override of `queued_next=[]`,
+recorded as `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1`;
+not an inferred dependency. Adds RSI (Wilder-14), RSI divergence (reusing
+`technical_structure_context._confirm_swings`, the existing no-lookahead confirmed-swing
+machinery -- no second pivot algorithm), MA20/50/100/200, and MACD(12,26,9) as a new
+`tactical_momentum_context.py` feature engine, close-only, sharing the exact-session-close
+compatibility guard structure already enforces
+(`technical_structure_context.resolve_target_session_observations`, extracted from
+`technical_structure_context.py`'s prior corrective so the invariant is enforced exactly once
+across structure/momentum/participation). Feature engine only: no RSI/MACD threshold is asserted
+as buy/sell.
+
+Real 2026-09-04 evidence found the existing
+`market_wide_relative_volume_research/v1` had **0/1683 participation coverage** that day: the
+exact-session snapshot's own bar was a wholesale non-DNSE (KBS) sole-source print for virtually
+the entire universe (a known 2026-09-04 DNSE degradation), and that module's strict native-DNSE-
+volume check correctly refused it. A new `resolve_records_with_recovery` helper (additive, in
+`market_wide_relative_volume_research.py`) feeds it the same recovery-resolved, safety-checked
+series structure/momentum already use, recovering coverage to 918/1683 (917 `READY`) without
+changing the module's own volume-representation checks at all.
+
+A new `tactical_confirmation_context.py` joins structure + momentum + participation into
+`CONFIRMED` / `PARTIALLY_CONFIRMED` / `NEUTRAL` / `CONTRADICTED` / `INSUFFICIENT_EVIDENCE`, with
+explicit reason codes, never a numeric score. RSI direction and MACD sign/cross are folded into
+one `MOMENTUM_DIRECTION` axis (both derive from the same close-price path); only momentum-
+direction, RSI divergence, and participation (a genuinely separate volume-based provider field)
+ever contribute a reason -- never "N of M signals agree." Structure stance reuses the existing,
+already-governed `tactical_phase` classification
+(`integrated_investment_decision_product.evaluate_tactical_phase`) rather than a second,
+independently-derived structure read that could silently disagree with the `tactical_phase`
+already exposed on the same integrated record.
+
+`momentum_context` and `tactical_confirmation_context` are wired **additively** into
+`integrated_investment_decision_product.py`: new optional parameters on
+`build_ticker_integrated_decision`/`build_artifact`, two new output fields, two new coverage/
+distribution stats, two new `source_artifacts` identities. `decide_research_action_posture` is
+**unchanged** -- proven by a test asserting `research_action_posture` and `why_now` are
+byte-identical whether momentum/confirmation are `CONFIRMED`, `CONTRADICTED`, or omitted
+entirely. No threshold was loosened; the real 2026-09-04 replay shows this directly: some
+`INITIATE_ON_BREAKOUT`/`BREAKOUT_CONFIRMED` names carry a `CONTRADICTED` tactical-confirmation
+read today (weakening momentum or thin participation) without the posture itself moving, and
+`BASE_BUILDING` uniformly lands on `NEUTRAL` (never `CONTRADICTED`) since it carries no
+directional thesis to confirm or contradict.
+
+Retained 2026-09-04 replay, 1,683-ticker universe (952 Tactical-V3-eligible): RSI 918/1683,
+MACD 907/1683, MA20/50/100/200 918/874/787/630, RSI divergence 91 bullish- / 37
+bearish-candidates, participation 918/1683 (917 `READY`). Tactical-confirmation distribution:
+331 `CONFIRMED`, 272 `CONTRADICTED`, 185 `PARTIALLY_CONFIRMED`, 127 `NEUTRAL`, 768
+`INSUFFICIENT_EVIDENCE`. Structure stance: 590 `BULLISH`, 296 `BEARISH`, 29 `NEUTRAL` (all 29
+`BASE_BUILDING`), 768 `INSUFFICIENT_EVIDENCE`. Valuation and financial artifacts are reused
+verbatim from `CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1`'s retained evidence
+(unchanged semantics, not recomputed). 2026-08-25 temporal regression is clean: zero look-ahead
+violations, zero recovery/snapshot close-mismatch-guard violations, zero divergence-backdate
+violations, across 888 eligible tickers.
+
+FVG / Order Block / liquidity-sweep candidates remain `DEFERRED_INPUT_BASIS_NOT_QUALIFIED`: the
+retained recovery series' own high/low fields still carry the same
+`ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED` basis with no additional proof of wick-
+geometry compatibility, so `HIGH_LOW_BASIS_NOT_COMPATIBLE` is unchanged from
+`TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3`. Not implemented this milestone; no successor opened
+to build them. Prospective feedback: `integrated_decision_prospective_feedback.py`'s
+`evaluate_decision_forward_outcome`/`classify_decision_feedback` already take the whole
+`decision_record` as an opaque input (extracting only the specific fields they need), so
+`momentum_context`/`tactical_confirmation_context` are automatically retained and available to a
+future prospective-taxonomy extension without any change here; `decision_identity()` uses an
+explicit curated field subset that does not include either new field, so identities are
+unaffected. Artifact:
+`operations-review/tactical-momentum-participation-confirmation-v1-20260905/`. No provider,
+raw-as-traded/PIT, liquidity, sizing, execution, universal score, target, or probability
+authority was added; no successor was opened.
+
 **Core Daily decision coherence and valuation integration V1 (2026-09-05):**
 `CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE`, started at `62db133`
 with implementation checkpoint `dbad7c3`. This was an explicit owner override of `queued_next=[]`, recorded as

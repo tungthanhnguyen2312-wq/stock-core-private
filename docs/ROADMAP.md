@@ -1,5 +1,29 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Tactical momentum and participation confirmation V1 (2026-09-05):**
+`TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1 = COMPLETE` at `6f08c17`, started at
+`18a88b2656bbfdca0fd64cfa7b6bf90a71578a26`. Explicit owner authorization opened this milestone
+despite `queued_next=[]`. New `tactical_momentum_context.py` (RSI-14, RSI divergence via the
+existing confirmed-swing machinery, MA20/50/100/200, MACD 12/26/9) and `tactical_confirmation_
+context.py` (structure+momentum+participation synthesis into CONFIRMED/PARTIALLY_CONFIRMED/
+NEUTRAL/CONTRADICTED/INSUFFICIENT_EVIDENCE, no vote-counting) join the existing tactical
+structure engine. `market_wide_relative_volume_research.py` gains an additive
+`resolve_records_with_recovery` helper recovering participation coverage from 0/1683 to 918/1683
+on the real 2026-09-04 wholesale-KBS-degraded session, without changing its own volume checks.
+Both new engines and the participation fix reuse the exact-session-close compatibility guard
+(`technical_structure_context.resolve_target_session_observations`). Wired additively into
+`integrated_investment_decision_product.py`: `research_action_posture` is proven unchanged
+(identical with momentum/confirmation `CONFIRMED`, `CONTRADICTED`, or omitted). Retained replay:
+RSI 918/1683, MACD 907/1683, participation 918/1683; confirmation distribution 331 CONFIRMED /
+272 CONTRADICTED / 185 PARTIALLY_CONFIRMED / 127 NEUTRAL / 768 INSUFFICIENT_EVIDENCE. 2026-08-25
+temporal regression clean (zero look-ahead, mismatch-guard, or divergence-backdate violations).
+FVG/Order Block/liquidity-sweep stay `DEFERRED_INPUT_BASIS_NOT_QUALIFIED` (high/low basis
+unchanged); not built, no successor opened for them. Valuation/financial semantics unchanged
+(reused verbatim). Artifact:
+`operations-review/tactical-momentum-participation-confirmation-v1-20260905/`. No successor was
+opened and no execution, publication, raw-as-traded/PIT, liquidity/sizing, target, probability,
+or universal-score authority was added.
+
 **Core Daily decision coherence and valuation integration V1 (2026-09-05):**
 `CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE` at
 `dbad7c386cea10e752ff26abcecd6f0635ba6e89`, started at
