@@ -368,14 +368,42 @@ def publish_dashboard_release(
     *,
     replay_local: bool = True,
     push: bool = False,
+    local_only: bool = False,
 ) -> dict[str, Any]:
-    """Publish a canonical Dashboard release bound to the exact Producer run identity."""
+    """Publish a canonical Dashboard release bound to the exact Producer run identity.
+
+    ``local_only=True`` is a structural guarantee, not a caller convention: every write this
+    function makes below is redirected to a throwaway staging directory rather than the real
+    ``web_root`` Git working tree, by reassigning the local ``web_root`` name once, here, before
+    any write occurs. No later line needs to know local-only mode exists. The one piece of
+    pre-existing state this function reads before it would otherwise overwrite it
+    (``data/build_info.json``, for the repeated-exact-release check) is seeded into the staging
+    copy so that check still behaves realistically; nothing else is copied, so this stays cheap
+    even for a large checkout. ``local_only`` always takes precedence over ``push`` -- there is
+    nothing to push from a directory that was never the real repository, and a caller never
+    needs to remember to also pass ``push=False``; there is exactly one way to ask for zero Git
+    mutation, not two flags that must agree.
+    """
     operation_dir = Path(operation_dir)
     runtime_root = Path(runtime_root)
     web_root = Path(web_root)
 
     if not web_root.is_dir():
         raise DashboardReleaseError(f"WEB_ROOT_NOT_DIRECTORY:{web_root}")
+    if local_only:
+        push = False
+
+    real_web_root = web_root
+    local_only_staging: Path | None = None
+    if local_only:
+        local_only_staging = Path(tempfile.mkdtemp(prefix="stocklookup_dashboard_local_only_"))
+        existing_build_info_src = web_root / "data" / "build_info.json"
+        if existing_build_info_src.is_file():
+            staging_data_dir = local_only_staging / "data"
+            staging_data_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(existing_build_info_src, staging_data_dir / "build_info.json")
+        web_root = local_only_staging
+
     if push:
         _dashboard_preflight(web_root)
 
@@ -603,4 +631,9 @@ def publish_dashboard_release(
             release_id=release_id,
             companion_paths=companion_paths,
         ))
+    if local_only_staging is not None:
+        result["status"] = "LOCAL_VALIDATED_NO_GIT_MUTATION"
+        result["web_root"] = str(real_web_root)
+        result["local_only_staging_root"] = str(local_only_staging)
+        shutil.rmtree(local_only_staging, ignore_errors=True)
     return result

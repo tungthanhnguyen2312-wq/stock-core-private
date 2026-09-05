@@ -75,9 +75,20 @@ def _latest_payload(session: str, payload: Mapping[str, Any], *, immutable_sessi
     if "next_session_decision_brief.json" in payload["files"]: latest["decision_brief_sha256"]=payload["files"]["next_session_decision_brief.json"]
     if "daily_integrated_decision_brief.json" in payload["files"]: latest["daily_integrated_decision_brief_sha256"]=payload["files"]["daily_integrated_decision_brief.json"]
     return latest
-def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None) -> dict[str,Any]:
+def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, local_only: bool=False, decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None) -> dict[str,Any]:
+    """``local_only=True`` builds and validates the package (proving it is genuinely
+    publishable -- every required file present, every hash computed, the manifest lineage
+    chain checked) but returns before touching ``repo`` at all: no ``mkdir``, no file copy, no
+    ``git`` call of any kind, not even a commit. This is distinct from ``push=False``, which
+    still performs two real local commits (see the module docstring incident this parameter
+    exists to close) -- ``local_only`` is the genuine zero-Git-mutation contract. ``local_only``
+    always takes precedence over ``push`` -- including ``push``'s own default of ``True`` -- so
+    a caller never needs to remember to also pass ``push=False``; there is exactly one way to
+    ask for zero Git mutation, not two flags that must agree."""
     files,payload=build_package(source,session,previous,producer_checkpoint=producer_checkpoint,decision_brief=decision_brief,daily_integrated_decision_brief=daily_integrated_decision_brief)
     target=repo/"sessions"/session/"builds"/payload["handoff_build_id"]
+    if local_only:
+        return {"status":"LOCAL_VALIDATED_NO_GIT_MUTATION","session":session,"package":payload,"immutable_session_path":target.relative_to(repo).as_posix()}
     if target.exists():
         current={name:sha(target/name) for name in files if (target/name).is_file()}
         if current==payload["files"]: return {"status":"NO_OP_ALREADY_PUBLISHED","session":session,"package":payload,"immutable_session_path":target.relative_to(repo).as_posix()}

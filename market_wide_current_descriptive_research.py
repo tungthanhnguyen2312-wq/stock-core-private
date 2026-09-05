@@ -40,6 +40,7 @@ from market_regime_breadth_context import _descriptor
 from mva_daily_research_bundle import market_features
 import market_wide_current_liquidity_research as liquidity_module
 from sector_relative_research_context import MIN_COHORT_MEMBERS, _bucket
+from technical_structure_context import resolve_target_session_observations
 
 CONTRACT_VERSION = "market_wide_current_descriptive_research/v1"
 LOOKBACK_SESSIONS = 20
@@ -59,9 +60,13 @@ PROVEN_STRUCTURAL_TECHNICAL_INSUFFICIENCY_STATES = frozenset({
 def _assert_no_recoverable_same_session_technical_gap(
     records: Mapping[str, Mapping[str, Any]], snapshot_records: Mapping[str, Any],
     recovery_records: Mapping[str, Any] | None = None,
+    close_mismatch_rejected: frozenset[str] = frozenset(),
 ) -> None:
-    """Future sessions must not emit exact-session bars without same-session technicals unless unrecoverable."""
-    unrecoverable = set()
+    """Future sessions must not emit exact-session bars without same-session technicals unless
+    unrecoverable. ``close_mismatch_rejected`` (see ``resolve_target_session_observations``) is
+    unrecoverable for the identical reason ``INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK`` is: a
+    genuine, correctly-enforced safety refusal, not a code defect this gate should ever flag."""
+    unrecoverable = set(close_mismatch_rejected)
     if recovery_records:
         for ticker, rec in recovery_records.items():
             if isinstance(rec, Mapping) and rec.get("state") in PROVEN_STRUCTURAL_TECHNICAL_INSUFFICIENCY_STATES:
@@ -305,23 +310,36 @@ def build_artifact(
     observed_session_cohort_count = universe_resolution_artifact["observed_session_cohort"]["count"]
 
     records: dict[str, dict[str, Any]] = {}
+    close_mismatch_rejected: set[str] = set()
     for ticker in sorted(ur_records):
         ur = ur_records[ticker]
         activity_state = ur["activity_and_session_state"]
         in_scope = activity_state in IN_SCOPE_ACTIVITY_STATES
 
         if in_scope:
+            # Same invariant technical_structure_context/tactical_momentum_context/
+            # market_wide_relative_volume_research already enforce, via the identical shared
+            # function: the recovery series is a single-provider (DNSE) fetch independent of the
+            # multi-source exact-session snapshot other current-research consumers treat as this
+            # session's authoritative close. Adopting it here without this check would let a
+            # target-session close mismatch (real 2026-09-04 evidence: up to ~11% apart) silently
+            # flow into technical_features.values/trend_state instead of being rejected.
             override = recovery_overrides.get(ticker)
-            if isinstance(override, Mapping) and override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
+            winning_record, history_source = resolve_target_session_observations(
+                pf_record=pf_records[ticker], recovery_override=override, target_session=target_session,
+            )
+            if history_source == "RETAINED_TECHNICAL_HISTORY_RECOVERY":
                 technical = _technical_features(
-                    {"observations": override.get("observations", [])}, target_session=target_session,
+                    {"observations": winning_record.get("observations", [])}, target_session=target_session,
                     provenance={
                         "source": "RETAINED_DNSE_EXTENDED_HISTORY_RECOVERY",
                         "recovery_artifact_identity": recovery_identity,
-                        "recovery_payload_sha256": override.get("payload_sha256"),
+                        "recovery_payload_sha256": override.get("payload_sha256") if isinstance(override, Mapping) else None,
                     },
                 )
             else:
+                if history_source == "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH":
+                    close_mismatch_rejected.add(ticker)
                 technical = _technical_features(pf_records[ticker], target_session=target_session)
         else:
             technical = {"status": "NOT_APPLICABLE", "reason": "OUT_OF_CURRENT_DESCRIPTIVE_SCOPE",
@@ -344,7 +362,9 @@ def build_artifact(
         }
 
     recovery_all_records = technical_history_recovery_artifact.get("records", {}) if technical_history_recovery_artifact else None
-    _assert_no_recoverable_same_session_technical_gap(records, pf_records, recovery_all_records)
+    _assert_no_recoverable_same_session_technical_gap(
+        records, pf_records, recovery_all_records, close_mismatch_rejected=frozenset(close_mismatch_rejected),
+    )
 
     in_scope_records = [record for record in records.values() if record["in_current_descriptive_scope"]]
     same_session_records = [record for record in in_scope_records if record["technical_features"].get("is_current_session")]

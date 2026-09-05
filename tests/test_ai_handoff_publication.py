@@ -102,6 +102,52 @@ def test_daily_integrated_decision_brief_included_when_supplied(tmp_path):
     latest=json.loads((r/"LATEST.json").read_text())
     assert latest["daily_integrated_decision_brief_sha256"]==result["package"]["files"]["daily_integrated_decision_brief.json"]
 
+def test_local_only_makes_zero_git_mutation(tmp_path):
+    """The exact defect this parameter exists to close: push=False alone still leaves two real
+    commits in the handoff repo (see test_versioned_build... below); local_only=True must leave
+    the repository's HEAD, working tree, and sessions/ directory completely untouched."""
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    head_before = subprocess.run(["git","-C",str(r),"rev-parse","HEAD"],capture_output=True,text=True,check=True).stdout.strip()
+    status_before = subprocess.run(["git","-C",str(r),"status","--porcelain"],capture_output=True,text=True,check=True).stdout
+    result = publish(r,s,"2026-08-28",producer_checkpoint="abc",local_only=True)
+    assert result["status"] == "LOCAL_VALIDATED_NO_GIT_MUTATION"
+    head_after = subprocess.run(["git","-C",str(r),"rev-parse","HEAD"],capture_output=True,text=True,check=True).stdout.strip()
+    status_after = subprocess.run(["git","-C",str(r),"status","--porcelain"],capture_output=True,text=True,check=True).stdout
+    assert head_after == head_before
+    assert status_after == status_before
+    assert not (r/"sessions").exists()
+    assert not (r/"LATEST.json").exists()
+
+def test_local_only_still_computes_the_real_publishable_identity(tmp_path):
+    """local_only is genuine validation, not a stub: it must compute the exact same
+    handoff_build_id/package hashes a real publish would, proving the package is actually
+    publish-ready without ever publishing it."""
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    _files, direct_payload = build_package(s,"2026-08-28",producer_checkpoint="abc")
+    local_result = publish(r,s,"2026-08-28",producer_checkpoint="abc",local_only=True)
+    assert local_result["package"] == direct_payload
+    real_result = publish(r,s,"2026-08-28",producer_checkpoint="abc",push=False)
+    assert local_result["package"]["handoff_build_id"] == real_result["package"]["handoff_build_id"]
+    assert local_result["immutable_session_path"] == real_result["immutable_session_path"]
+
+def test_local_only_wins_even_when_push_defaults_true(tmp_path):
+    """push defaults to True; a caller must not need to remember push=False on top of
+    local_only=True for this to be genuinely zero-Git-mutation -- local_only alone is enough."""
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    head_before = subprocess.run(["git","-C",str(r),"rev-parse","HEAD"],capture_output=True,text=True,check=True).stdout.strip()
+    result = publish(r,s,"2026-08-28",producer_checkpoint="abc",local_only=True,push=True)
+    assert result["status"] == "LOCAL_VALIDATED_NO_GIT_MUTATION"
+    head_after = subprocess.run(["git","-C",str(r),"rev-parse","HEAD"],capture_output=True,text=True,check=True).stdout.strip()
+    assert head_after == head_before
+
+def test_local_only_still_fails_closed_on_invalid_package(tmp_path):
+    """local_only skips Git, never validation -- a genuinely broken source package must still
+    raise, not be silently reported as LOCAL_VALIDATED."""
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    (s/"ai_research_session_bundle.json").write_text(json.dumps({"path":"D:\\private\\bundle"}),encoding="utf-8")
+    with pytest.raises(HandoffPublicationError,match="ABSOLUTE_PATH"):
+        publish(r,s,"2026-08-28",local_only=True)
+
 def test_daily_integrated_decision_brief_alongside_decision_brief(tmp_path):
     """Both optional artifacts can be published together; each is independently identified."""
     s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)

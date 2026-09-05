@@ -117,6 +117,97 @@ def _seed_release_inputs(runtime_root: Path, session: str) -> None:
         json.dumps({"freshness": {"reference_session": session}}), encoding="utf-8")
 
 
+def _git(path, *args):
+    subprocess.run(["git", "-C", str(path), *args], check=True, capture_output=True)
+
+
+def test_local_only_never_touches_the_real_web_root(tmp_path):
+    """Structural guarantee, not caller discipline: local_only=True must leave a real Git
+    working tree (the actual market-dashboard checkout) byte-for-byte and commit-for-commit
+    unchanged, even though this function is handed that real directory as web_root."""
+    runtime_root, web_root, operation = tmp_path / "runtime", tmp_path / "web", tmp_path / "operation"
+    runtime_root.mkdir(); operation.mkdir()
+    session = "2026-08-28"
+    _seed_release_inputs(runtime_root, session)
+
+    web_root.mkdir()
+    _git(web_root, "init", "-q")
+    _git(web_root, "config", "user.email", "test@example.com")
+    _git(web_root, "config", "user.name", "Test")
+    (web_root / "README.md").write_text("real dashboard checkout\n", encoding="utf-8")
+    _git(web_root, "add", "README.md")
+    _git(web_root, "commit", "-qm", "init")
+
+    head_before = subprocess.run(["git", "-C", str(web_root), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    status_before = subprocess.run(["git", "-C", str(web_root), "status", "--porcelain", "--untracked-files=all"], capture_output=True, text=True, check=True).stdout
+    files_before = sorted(p.relative_to(web_root).as_posix() for p in web_root.rglob("*") if p.is_file() and ".git" not in p.parts)
+
+    result = publish_dashboard_release(
+        session=session, operation_dir=operation, runtime_root=runtime_root, web_root=web_root,
+        replay_local=True, local_only=True,
+    )
+
+    assert result["status"] == "LOCAL_VALIDATED_NO_GIT_MUTATION"
+    assert result["web_root"] == str(web_root)
+    head_after = subprocess.run(["git", "-C", str(web_root), "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    status_after = subprocess.run(["git", "-C", str(web_root), "status", "--porcelain", "--untracked-files=all"], capture_output=True, text=True, check=True).stdout
+    files_after = sorted(p.relative_to(web_root).as_posix() for p in web_root.rglob("*") if p.is_file() and ".git" not in p.parts)
+    assert head_after == head_before
+    assert status_after == status_before
+    assert files_after == files_before
+    assert not (web_root / "data").exists()
+
+
+def test_local_only_still_validates_real_release_content(tmp_path):
+    """local_only is genuine validation over a real sandbox build, not a stub: build_id/hashes
+    must match what a real (non-pushing) release would compute for identical inputs, given the
+    same producer_run_identity (the operation directory's own basename)."""
+    root_a, root_b = tmp_path / "a", tmp_path / "b"
+    runtime_a, web_a, op_a = root_a / "runtime", root_a / "web", root_a / "op-same-run-id"
+    runtime_b, web_b, op_b = root_b / "runtime", root_b / "web", root_b / "op-same-run-id"
+    for d in (runtime_a, web_a, op_a, runtime_b, web_b, op_b):
+        d.mkdir(parents=True)
+    session = "2026-08-28"
+    _seed_release_inputs(runtime_a, session)
+    _seed_release_inputs(runtime_b, session)
+
+    real = publish_dashboard_release(session=session, operation_dir=op_a, runtime_root=runtime_a, web_root=web_a, replay_local=True)
+    local = publish_dashboard_release(session=session, operation_dir=op_b, runtime_root=runtime_b, web_root=web_b, replay_local=True, local_only=True)
+
+    assert real["status"] == "DASHBOARD_RELEASE_READY"
+    assert local["status"] == "LOCAL_VALIDATED_NO_GIT_MUTATION"
+    assert real["producer_run_identity"] == local["producer_run_identity"] == "op-same-run-id"
+    assert real["dashboard_release_identity"] == local["dashboard_release_identity"]
+    assert real["build_id"] == local["build_id"]
+
+
+def test_local_only_wins_even_when_push_is_explicitly_true(tmp_path):
+    """A caller asking for both must not get a confusing low-level git error from a directory
+    that was never a real repository -- local_only silently and safely wins."""
+    runtime_root, web_root, operation = tmp_path / "runtime", tmp_path / "web", tmp_path / "operation"
+    runtime_root.mkdir(); web_root.mkdir(); operation.mkdir()
+    session = "2026-08-28"
+    _seed_release_inputs(runtime_root, session)
+    result = publish_dashboard_release(
+        session=session, operation_dir=operation, runtime_root=runtime_root, web_root=web_root,
+        local_only=True, push=True,
+    )
+    assert result["status"] == "LOCAL_VALIDATED_NO_GIT_MUTATION"
+    assert not (web_root / "data").exists()
+
+
+def test_local_only_still_fails_closed_on_mixed_session(tmp_path):
+    runtime_root, web_root, operation = tmp_path / "runtime", tmp_path / "web", tmp_path / "operation"
+    runtime_root.mkdir(); web_root.mkdir(); operation.mkdir()
+    _seed_release_inputs(runtime_root, "2026-08-28")
+    (runtime_root / "analysis_latest.json").write_text(json.dumps({"summary": {"session_date": "2026-08-27"}}), encoding="utf-8")
+    with pytest.raises(DashboardReleaseError, match="MIXED_SESSION_DASHBOARD_RELEASE"):
+        publish_dashboard_release(
+            session="2026-08-28", operation_dir=operation, runtime_root=runtime_root, web_root=web_root,
+            replay_local=True, local_only=True,
+        )
+
+
 def test_stale_signal_json_and_js_are_removed_and_never_current(tmp_path):
     runtime_root, web_root, operation = tmp_path / "runtime", tmp_path / "web", tmp_path / "operation"
     runtime_root.mkdir(); web_root.mkdir(); operation.mkdir()

@@ -236,11 +236,15 @@ def test_deterministic_identity_across_repeated_builds():
 
 def test_recovered_history_preserves_the_existing_feature_contract_and_provenance():
     ur, pf, liq, classifications = _build_scenario()
+    recovered_observations = _observations(TARGET, 20, start_close=100.0, step=-1.0)
     pf_records = dict(pf["records"])
-    pf_records["DEC1"] = {"disposition": "EXACT_SESSION_RETAINED", "observations": _observations(TARGET, 7, start_close=100.0, step=-1.0)}
+    # A real gap-recovered P3F9B record is a single-bar projection (see
+    # multi_source_exact_session_resolver._project_to_p3f9_shape) -- reuse the recovery's own
+    # target-session row so the two series genuinely agree, exactly like a real corroborated
+    # recovery would, rather than an arbitrary close that happens to differ.
+    pf_records["DEC1"] = {"disposition": "EXACT_SESSION_RETAINED", "observations": [recovered_observations[-1]]}
     pf = p3f9b_snapshot(pf_records)
     liq = liquidity_artifact(liq["records"], snapshot_identity=pf["snapshot_identity"])
-    recovered_observations = _observations(TARGET, 20, start_close=100.0, step=-1.0)
     recovery_payload = {
         "target_session": TARGET,
         "source_lineage": {"p3f9b_snapshot_identity": pf["snapshot_identity"]},
@@ -262,6 +266,42 @@ def test_recovered_history_preserves_the_existing_feature_contract_and_provenanc
     assert artifact["market_breadth"]["same_session_technical_feature_available_count"] == 6
     assert artifact["records"]["DEC1"]["technical_features"]["is_current_session"] is True
     assert artifact["records"]["DEC1"]["technical_features"]["technical_history_provenance"]["source"] == "RETAINED_DNSE_EXTENDED_HISTORY_RECOVERY"
+
+
+def test_recovery_rejected_when_target_session_close_disagrees_with_snapshot():
+    """Real 2026-09-04 evidence (see technical_structure_context.resolve_target_session_
+    observations): a recovery whose own target-session close disagrees with the resolved
+    P3F9B snapshot's close (up to ~11% apart in production) must never be adopted here either --
+    this module is a second, independent consumer of the same recovery artifact and must enforce
+    the identical invariant, not a diverging copy. The rejected ticker must fall back to the
+    plain snapshot record and must NOT trip the recoverable-gap safety assertion."""
+    ur, pf, liq, classifications = _build_scenario()
+    pf_records = dict(pf["records"])
+    pf_records["DEC1"] = {"disposition": "EXACT_SESSION_RETAINED", "observations": _observations(TARGET, 7, start_close=100.0, step=-1.0)}
+    pf = p3f9b_snapshot(pf_records)
+    liq = liquidity_artifact(liq["records"], snapshot_identity=pf["snapshot_identity"])
+    recovered_observations = _observations(TARGET, 20, start_close=100.0, step=-1.0)  # disagrees with pf_records["DEC1"]'s own close
+    recovery_payload = {
+        "target_session": TARGET,
+        "source_lineage": {"p3f9b_snapshot_identity": pf["snapshot_identity"]},
+        "recovered_history_overrides": {
+            "DEC1": {"state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "payload_sha256": "retained",
+                     "observations": recovered_observations}
+        },
+    }
+    recovery = {
+        **recovery_payload,
+        "artifact_sha256": _hash(recovery_payload),
+        "artifact_identity": "market_wide_current_technical_coverage_scaleout:retained",
+    }
+
+    artifact = build_artifact(
+        universe_resolution_artifact=ur, p3f9b_snapshot=pf, liquidity_artifact=liq,
+        entity_classifications=classifications, technical_history_recovery_artifact=recovery,
+    )
+    dec1 = artifact["records"]["DEC1"]["technical_features"]
+    assert dec1["technical_history_provenance"]["source"] == "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"
+    assert dec1["status"] != "SHADOW_ONLY"
 
 
 def test_tampered_inputs_are_rejected():

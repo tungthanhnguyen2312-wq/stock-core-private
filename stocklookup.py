@@ -140,6 +140,16 @@ def main(argv=None) -> int:
     d.add_argument("--replay-local", action="store_true")
     d.add_argument("--replay-operation", type=Path)
     d.add_argument("--replay-root", type=Path, default=ROOT)
+    d.add_argument(
+        "--local-only", action="store_true",
+        help=(
+            "Full local canonical pipeline with zero Git mutation in the AI-handoff or Dashboard "
+            "repositories: no commit, no push, no deploy. Stronger than --replay-local, which "
+            "still skips the push but leaves two local commits in the AI-handoff repo -- see "
+            "ai_handoff_publication.publish()'s local_only parameter for exactly what this "
+            "prevents. Local canonical artifacts, tests, and validation still run normally."
+        ),
+    )
     sub.add_parser("roadmap")
     a = p.parse_args(argv)
 
@@ -159,8 +169,8 @@ def main(argv=None) -> int:
         return 2
 
     if a.replay_operation:
-        if not a.replay_local or not a.session:
-            print("STATUS: FAILED_PRECHECK\nREASON: replay requires --replay-local and --session")
+        if not (a.replay_local or a.local_only) or not a.session:
+            print("STATUS: FAILED_PRECHECK\nREASON: replay requires --replay-local (or --local-only) and --session")
             return 2
         session, operation, run_identity = a.session, a.replay_operation, None
     else:
@@ -187,7 +197,8 @@ def main(argv=None) -> int:
             session,
             previous=previous_bundle,
             producer_checkpoint=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True, encoding="utf-8").strip(),
-            push=not a.replay_local,
+            push=not (a.replay_local or a.local_only),
+            local_only=a.local_only,
             decision_brief=decision_brief_path,
             daily_integrated_decision_brief=daily_integrated_brief_path,
         )
@@ -203,10 +214,36 @@ def main(argv=None) -> int:
             operation_dir=operation,
             runtime_root=_runtime(),
             web_root=web_root,
-            replay_local=a.replay_local,
-            push=not a.replay_local,
+            replay_local=a.replay_local or a.local_only,
+            push=not (a.replay_local or a.local_only),
+            local_only=a.local_only,
         )
-        print(f"STOCK LOOKUP DAILY\nSession: {session}\nAI Handoff: {result['status']}\nDashboard: {dash_res['status']}\nNext user action: Ask ChatGPT: Phân tích Stock Lookup phiên mới nhất.")
+        lines = [
+            "STOCK LOOKUP DAILY",
+            f"Session: {session}",
+            f"AI Handoff: {result['status']}",
+            f"Dashboard: {dash_res['status']}",
+            f"REMOTE_PUBLICATION={'SKIPPED_LOCAL_MODE' if a.local_only else 'PUBLISHED'}",
+        ]
+        if a.local_only:
+            # The local, session-scoped AI artifact pointer already exists on disk -- these are
+            # the exact files ai_handoff_publication.build_package() just hashed/validated above
+            # without ever touching a Git repository. See docs/STATE.md's LOCAL_AI_ARTIFACTS
+            # contract: session, operation identity, producer checkpoint, bundle/manifest/brief
+            # paths, and artifact hashes are all present in `result["package"]` below.
+            lines += [
+                "LOCAL_AI_ARTIFACTS:",
+                f"  operation_dir: {operation}",
+                f"  bundle: {operation / 'ai_research_session_bundle.json'}",
+                f"  manifest: {operation / 'ai_research_bundle_manifest.json'}",
+                f"  decision_brief: {decision_brief_path or 'NOT_AVAILABLE'}",
+                f"  daily_integrated_decision_brief: {daily_integrated_brief_path or 'NOT_AVAILABLE'}",
+                f"  producer_checkpoint: {result['package']['lineage'].get('producer_checkpoint')}",
+                f"  package_sha256: {result['package']['package_sha256']}",
+            ]
+        else:
+            lines.append("Next user action: Ask ChatGPT: Phân tích Stock Lookup phiên mới nhất.")
+        print("\n".join(lines))
         return 0
     except Exception as exc:
         print(f"STATUS: FAILED_DASHBOARD_RELEASE\nREASON: {exc}\nRECOVERY_ACTION: inspect Dashboard release contract and files")
