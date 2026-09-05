@@ -126,6 +126,9 @@ from dnse_current_state_price_analytics import build_current_state_price_analyti
 from market_wide_current_liquidity_research import (
     content_identity as market_wide_current_liquidity_content_identity,
 )
+from market_wide_historical_matched_liquidity import (
+    content_identity as market_wide_historical_matched_liquidity_content_identity,
+)
 from market_wide_relative_volume_research import (
     content_identity as market_wide_relative_volume_content_identity,
 )
@@ -3434,6 +3437,67 @@ def attach_market_wide_current_liquidity_research(
 
 
 # ===========================================================================
+# Market-wide historical matched-liquidity foundation — opt-in (disabled default)
+# ===========================================================================
+# This is an evidence-context handoff only.  It reads a self-verifying retained
+# artifact produced by tools/run_market_wide_historical_matched_liquidity.py;
+# it never acquires Trades, derives a feature, fills a missing session, or turns
+# a research/execution flag into an order, cap, or position size.  The explicit
+# path keeps the retained operations-review artifact out of the default product.
+
+def load_market_wide_historical_matched_liquidity_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Load only a self-verifying historical matched-liquidity artifact."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict):
+            return None
+        if (market_wide_historical_matched_liquidity_content_identity(artifact).get("artifact_sha256")
+                != artifact.get("artifact_sha256")):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def build_market_wide_historical_matched_liquidity_for_ticker_safe(
+    ticker: str, artifact: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Copy an existing evidence context without recomputing or promoting it."""
+    try:
+        records = artifact.get("records")
+        if not isinstance(records, dict):
+            return None
+        record = records.get(ticker)
+        if not isinstance(record, dict):
+            return None
+        result = dict(record)
+        result["source_artifact_identity"] = artifact.get("artifact_identity")
+        result["status"] = "available" if bool(result.get("research_liquidity_eligible")) else "not_available"
+        # Unconditional: the source contract never confers action, execution, or sizing authority.
+        result["is_actionable"] = False
+        result["position_sizing_eligible"] = False
+        return result
+    except Exception:
+        return None
+
+
+def attach_market_wide_historical_matched_liquidity(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> dict[str, dict]:
+    """Disabled-by-default, fail-closed pass-through of retained historical context."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_market_wide_historical_matched_liquidity_artifact(Path(artifact_path))
+    if artifact is None:
+        return bundle_entries
+    for ticker, entry in bundle_entries.items():
+        result = build_market_wide_historical_matched_liquidity_for_ticker_safe(ticker, artifact)
+        if result is not None:
+            entry["market_wide_historical_matched_liquidity"] = result
+    return bundle_entries
+
+
+# ===========================================================================
 # Market-wide relative-volume research — opt-in (disabled by default)
 # ===========================================================================
 def load_market_wide_relative_volume_research_artifact(path: Path) -> Mapping[str, Any] | None:
@@ -5070,6 +5134,16 @@ def main() -> int:
                              " market_wide_current_liquidity_research_artifact.json, required only"
                              " with --include-market-wide-current-liquidity-research; never"
                              " inferred or hardcoded.")
+    parser.add_argument("--include-market-wide-historical-matched-liquidity", action="store_true",
+                        help="Opt-in, disabled by default: attach retained per-ticker historical"
+                             " canonical-Trades matched-liquidity context. Reuses only the verified"
+                             " artifact's evidence state and lineage; never reacquires data, imputes"
+                             " sessions, creates ADV/ADTV, or grants action, execution, or sizing"
+                             " authority. Requires --market-wide-historical-matched-liquidity-path.")
+    parser.add_argument("--market-wide-historical-matched-liquidity-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained"
+                             " market_wide_historical_matched_liquidity artifact; required only with"
+                             " --include-market-wide-historical-matched-liquidity; never inferred.")
     parser.add_argument("--include-market-wide-relative-volume-research", action="store_true",
                         help="Opt-in, disabled by default: attach retained DNSE same-field dimensionless "
                              "relative-volume percentile and 20-session acceleration context. Always "
@@ -5588,6 +5662,10 @@ def main() -> int:
     attach_market_wide_current_liquidity_research(
         bundle_entries, args.include_market_wide_current_liquidity_research,
         args.market_wide_current_liquidity_research_path,
+    )
+    attach_market_wide_historical_matched_liquidity(
+        bundle_entries, args.include_market_wide_historical_matched_liquidity,
+        args.market_wide_historical_matched_liquidity_path,
     )
     attach_market_wide_relative_volume_research(
         bundle_entries, args.include_market_wide_relative_volume_research,
