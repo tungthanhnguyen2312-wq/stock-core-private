@@ -24,9 +24,18 @@ PS_EXISTING = "P/S"
 EV_EBITDA = "EV/EBITDA"
 EV_SALES = "EV/Sales"
 MARKET_CAP = "market_cap"
+# MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1: a second, genuinely distinct
+# EV/EBITDA method identity sourced from `market_wide_calculation_readiness.py` (sign-aware,
+# cross-statement-coherent, currency/scale/period-compatible by construction -- CORE_VALUATION_
+# METHOD_COVERAGE_AND_CONSISTENCY_V1 activated that engine but deliberately did not wire it into
+# any live product). `EV_EBITDA` above stays untouched: its own upstream (`market_wide_current_
+# valuation_input_scaleout`) structurally never retains an exact EBITDA figure, so it is always
+# INPUT_BLOCKED by construction -- never collapsed into or relabelled as this new method.
+EV_EBITDA_CALC_READY = "EV/EBITDA_CALC_READY"
 TTM_METHODS = (PE_TTM, PS_TTM)
 EXISTING_MULTIPLES = (PE_EXISTING, PS_EXISTING, PB, EV_SALES, EV_EBITDA)
-RELATIVE_METHODS = (PE_TTM, PS_TTM, PE_EXISTING, PS_EXISTING, PB, EV_SALES, EV_EBITDA)
+CALCULATION_READINESS_METHODS = (EV_EBITDA_CALC_READY,)
+RELATIVE_METHODS = (PE_TTM, PS_TTM, PE_EXISTING, PS_EXISTING, PB, EV_SALES, EV_EBITDA, EV_EBITDA_CALC_READY)
 APPLICABLE = "APPLICABLE"
 NOT_APPLICABLE = "NOT_APPLICABLE"
 INPUT_BLOCKED = "INPUT_BLOCKED"
@@ -318,6 +327,63 @@ def _ev_ebitda(entity: str, existing: Mapping[str, Any] | None) -> dict[str, Any
     return _method_shell(EV_EBITDA, applicability=APPLICABLE, status=INPUT_BLOCKED, blockers=blockers, extra=extra)
 
 
+def _latest_readiness_period(calculation_readiness_record: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    periods = (calculation_readiness_record or {}).get("calculation_readiness")
+    if not isinstance(periods, list) or not periods:
+        return None
+    latest = periods[-1]
+    return latest if isinstance(latest, Mapping) else None
+
+
+def _calculation_readiness_method(
+    *, capability: str, method_id: str, applicability_method_id: str, entity: str,
+    calculation_readiness_record: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """A method sourced directly from `market_wide_calculation_readiness.py`'s per-period
+    verdict -- never re-deriving the formula, only projecting its already-computed value.
+
+    Reuses this module's own `_method_applicability` (same metric concept, same entity gate
+    as the pre-existing `EV_EBITDA` method) rather than a second, independent entity-class
+    call, so the two EV/EBITDA method identities can never silently disagree on WHICH entities
+    the metric applies to -- only on whether a usable number exists for one that does.
+    """
+    applicability = _method_applicability(entity, applicability_method_id)
+    period = _latest_readiness_period(calculation_readiness_record)
+    extra = {
+        "period_basis": period.get("reporting_period") if period else None,
+        "source": "market_wide_calculation_readiness/v1",
+        "required_semantics": "SIGN_AWARE_CROSS_STATEMENT_COHERENT_CALCULATION_READINESS",
+    }
+    if applicability == NOT_APPLICABLE:
+        return _method_shell(method_id, applicability=NOT_APPLICABLE, status=NOT_APPLICABLE,
+                             blockers=["SECTOR_ENTITY_METHOD_NOT_SUPPORTED"], extra=extra)
+    verdict = period.get(capability) if period else None
+    if not isinstance(verdict, Mapping):
+        return _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=["CALCULATION_READINESS_CONTEXT_UNAVAILABLE"], extra=extra)
+    extra["formula"] = verdict.get("formula")
+    if verdict.get("readiness") == "not_applicable":
+        return _method_shell(method_id, applicability=NOT_APPLICABLE, status=NOT_APPLICABLE,
+                             blockers=list(verdict.get("blocked_by") or ["SECTOR_ENTITY_METHOD_NOT_SUPPORTED"]), extra=extra)
+    if verdict.get("readiness") != "ready" or not _numeric(verdict.get("value")):
+        return _method_shell(method_id, applicability=applicability, status=INPUT_BLOCKED,
+                             blockers=list(verdict.get("blocked_by") or ["CALCULATION_READINESS_NOT_READY"]), extra=extra)
+    return _method_shell(
+        method_id, applicability=applicability, status="RESEARCH_USABLE", value=verdict["value"],
+        extra={**extra, "readiness_status": verdict.get("status"),
+               # Own-history is explicitly not available for this method: the upstream
+               # canonical_daily_financial_v2_materialization.build_calculation_readiness_context
+               # pipeline retains only the LATEST reporting period per ticker (by
+               # canonical_financial_bundle_section.build_section's own deliberate "latest period
+               # only" contract), so no multi-period series exists here to compute a percentile
+               # from. Reported explicitly rather than silently omitted.
+               "own_history_status": "UNAVAILABLE_LATEST_PERIOD_ONLY_PIPELINE",
+               "limitations": ["CURRENT_RESEARCH_ONLY", "NOT_AUTHORITATIVE", "NOT_FOR_TARGET_PRICE",
+                               "PROVIDER_REPORTED_PRICE_BASIS_NOT_INDEPENDENTLY_VERIFIED",
+                               "OWN_HISTORY_UNAVAILABLE_LATEST_PERIOD_ONLY_PIPELINE"]},
+    )
+
+
 _READINESS_EQUIVALENTS = {
     PE_EXISTING: "pe",
     PB: "pb",
@@ -416,11 +482,29 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         PB: _existing_method(PB, metrics.get("P/B") or {}, entity=entity, share_class=share_class),
         EV_SALES: _existing_method(EV_SALES, metrics.get("EV/Sales") or {}, entity=entity, share_class=share_class),
         EV_EBITDA: _ev_ebitda(entity, metrics.get("EV/EBITDA")),
+        EV_EBITDA_CALC_READY: _calculation_readiness_method(
+            capability="ev_ebitda", method_id=EV_EBITDA_CALC_READY, applicability_method_id=EV_EBITDA,
+            entity=entity, calculation_readiness_record=calculation_readiness_record),
         MARKET_CAP: _existing_method(MARKET_CAP, market_cap, entity=entity, share_class=share_class),
     }
     readiness_reconciliation = _calculation_readiness_reconciliation(methods, calculation_readiness_record)
     usable = [item for item in methods.values() if item["status"] in {"RESEARCH_USABLE", "READY"}]
     not_meaningful = [item for item in methods.values() if item["status"] == PE_NOT_MEANINGFUL]
+    # Earnings yield (section 11): the reciprocal of a usable P/E_TTM. A pure derived
+    # convenience field, not a new formula or a peer/history-eligible method -- P/E_TTM
+    # already carries its own peer/history context, and inverting it would only duplicate
+    # that comparison on a rescaled axis.
+    pe_ttm_method = methods[PE_TTM]
+    earnings_yield_ttm = (
+        {"status": "RESEARCH_USABLE", "value": 1.0 / pe_ttm_method["value"], "basis": "1_DIVIDED_BY_PE_TTM"}
+        if pe_ttm_method["status"] == "RESEARCH_USABLE" and _numeric(pe_ttm_method.get("value")) and pe_ttm_method["value"] > 0
+        else {"status": "BLOCKED", "value": None, "blocker_reason_codes": list(pe_ttm_method.get("blocker_reason_codes") or ["PE_TTM_NOT_RESEARCH_USABLE"])}
+    )
+    # FCF yield (section 11): explicitly not built. financial_analysis_engine_v2 only retains
+    # a standalone-quarter free_cash_flow_proxy, never a TTM sum (no _ttm_sum call exists for
+    # it) -- adding one would be new engine surface inside the regression-locked FA V2 core,
+    # not a wiring/join task. Reported as a named, honest residual rather than fabricated.
+    fcf_yield_ttm = {"status": "BLOCKED", "value": None, "blocker_reason_codes": ["FCF_TTM_NOT_RETAINED_STANDALONE_QUARTER_PROXY_ONLY"]}
     return {
         "ticker": ticker, "entity_class": entity, "share_basis": share_class,
         "share_authority": share.get("authority"), "share_status": share.get("status"),
@@ -433,6 +517,8 @@ def evaluate_ticker_valuation(*, ticker: str, feature_record: Mapping[str, Any] 
         "valuation_method_reconciliation": readiness_reconciliation,
         "usable_relative_method_count": sum(item["method_id"] in RELATIVE_METHODS and item["status"] in {"RESEARCH_USABLE", "READY"} for item in methods.values()),
         "pe_not_meaningful": bool(not_meaningful),
+        "earnings_yield_ttm": earnings_yield_ttm,
+        "fcf_yield_ttm": fcf_yield_ttm,
         "implied_expectations": {
             "status": IMPLIED_EXPECTATIONS_UNAVAILABLE,
             "reason": "NO_QUALIFIED_INTRINSIC_OUTPUTS",

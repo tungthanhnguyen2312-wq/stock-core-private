@@ -83,6 +83,30 @@ FUNDAMENTAL_STATES = frozenset({
     FUNDAMENTAL_INSUFFICIENT,
 })
 
+# ── Financial Composite Context Taxonomy (MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_
+# PRODUCT_V1, section 14) ─────────────────────────────────────────────────────────────
+# Deliberately a DISTINCT vocabulary from FUNDAMENTAL_STATES above, even though it joins the
+# same fundamental evidence plus valuation: `fundamental_state` already feeds
+# decide_research_action_posture and must never be retuned by this milestone (section 17 --
+# any policy change requires a demonstrated defect, a counterexample, and a regression test,
+# none of which apply here). The composite is a strictly downstream, additive read of
+# `fundamental_state`/`valuation_context_summary`, never a replacement for either.
+COMPOSITE_FUNDAMENTALS_IMPROVING = "FUNDAMENTALS_IMPROVING"
+COMPOSITE_FUNDAMENTALS_STABLE = "FUNDAMENTALS_STABLE"
+COMPOSITE_FUNDAMENTALS_MIXED = "FUNDAMENTALS_MIXED"
+COMPOSITE_FUNDAMENTALS_DETERIORATING = "FUNDAMENTALS_DETERIORATING"
+COMPOSITE_TURNAROUND_EVIDENCE = "TURNAROUND_EVIDENCE"
+COMPOSITE_INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+
+FINANCIAL_COMPOSITE_STATES = frozenset({
+    COMPOSITE_FUNDAMENTALS_IMPROVING,
+    COMPOSITE_FUNDAMENTALS_STABLE,
+    COMPOSITE_FUNDAMENTALS_MIXED,
+    COMPOSITE_FUNDAMENTALS_DETERIORATING,
+    COMPOSITE_TURNAROUND_EVIDENCE,
+    COMPOSITE_INSUFFICIENT_EVIDENCE,
+})
+
 # ── Tactical Phase Taxonomy ───────────────────────────────────────────────────
 TACTICAL_BASE_BUILDING = "BASE_BUILDING"
 TACTICAL_EARLY_REVERSAL = "EARLY_REVERSAL"
@@ -241,6 +265,63 @@ def evaluate_fundamental_direction(fa_context: Mapping[str, Any] | None) -> tupl
     return state, supports, counters
 
 
+# ── Financial Composite Context Evaluator (section 14) ────────────────────────
+
+def evaluate_financial_composite_context(
+    *, fund_state: str, fund_supports: Sequence[str], fund_counters: Sequence[str],
+    val_summary: Mapping[str, Any] | None, val_supports: Sequence[str], val_counters: Sequence[str],
+) -> dict[str, Any]:
+    """Join earnings trajectory + profitability + balance sheet + cash quality (already
+    synthesized into `fund_state` by `evaluate_fundamental_direction`, UNCHANGED) with
+    valuation (`val_summary`, from `evaluate_valuation_context`, UNCHANGED) into one
+    descriptive label. Recomputes no ratio and reuses both evaluators' own outputs verbatim
+    -- this function only reads their return values, never their inputs.
+
+    Deliberately NOT a vote count across five indicators: the label is fund_state's own
+    (already-governed, non-reopened) synthesis, with exactly one explicit override --
+    corroborated expensive peer-relative valuation downgrades an otherwise-positive read to
+    MIXED, since "cheap/expensive" and "improving/deteriorating" are evidence a research
+    reader must be able to tell apart (section 17), not two votes to blend into one score.
+    Valuation cheapness never upgrades a deteriorating fundamental read, and never manufactures
+    TURNAROUND_EVIDENCE or INSUFFICIENT_EVIDENCE by itself.
+    """
+    val_summary = val_summary or {}
+    supporting = list(dict.fromkeys(list(fund_supports) + list(val_supports)))
+    contradicting = list(dict.fromkeys(list(fund_counters) + list(val_counters)))
+    valuation_expensive = val_summary.get("peer_relative_state") == "EXPENSIVE_VS_PEERS"
+
+    if fund_state == FUNDAMENTAL_INSUFFICIENT:
+        label = COMPOSITE_INSUFFICIENT_EVIDENCE
+    elif fund_state == FUNDAMENTAL_TURNAROUND:
+        label = COMPOSITE_TURNAROUND_EVIDENCE
+    elif fund_state == FUNDAMENTAL_DETERIORATING:
+        # Valuation is reported as a separate, visible axis (val_summary/valuation_context_
+        # summary on the same record) -- a cheap price never rescues a deteriorating
+        # fundamental read into a blended, falsely-reassuring label here.
+        label = COMPOSITE_FUNDAMENTALS_DETERIORATING
+    elif fund_state == FUNDAMENTAL_MIXED:
+        label = COMPOSITE_FUNDAMENTALS_MIXED
+    elif fund_state == FUNDAMENTAL_IMPROVING:
+        label = COMPOSITE_FUNDAMENTALS_MIXED if valuation_expensive else COMPOSITE_FUNDAMENTALS_IMPROVING
+    elif fund_state == FUNDAMENTAL_STABLE:
+        label = COMPOSITE_FUNDAMENTALS_MIXED if valuation_expensive else COMPOSITE_FUNDAMENTALS_STABLE
+    else:
+        label = COMPOSITE_INSUFFICIENT_EVIDENCE
+
+    return {
+        "financial_composite_state": label,
+        "supporting_reason_codes": supporting[:10],
+        "contradicting_reason_codes": contradicting[:10],
+        "joined_axes": {
+            "fundamental_state": fund_state,
+            "valuation_peer_relative_state": val_summary.get("peer_relative_state"),
+            "valuation_own_history_state": val_summary.get("own_history_state"),
+        },
+        "methodology": "join_fundamental_state_and_valuation_context_no_vote_count/v1",
+        "is_actionable": False,
+    }
+
+
 # ── Tactical Phase Evaluator ──────────────────────────────────────────────────
 
 def evaluate_tactical_phase(tactical_rec: Mapping[str, Any] | None) -> tuple[str, list[str], list[str]]:
@@ -369,10 +450,16 @@ def evaluate_valuation_context(
     pe_item = methods.get("P/E") or methods.get("P/E_TTM") or {}
     pb_item = methods.get("P/B") or {}
     ps_item = methods.get("P/S") or methods.get("P/S_TTM") or {}
+    # EV/EBITDA_CALC_READY (MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1) is the
+    # genuinely computable EV/EBITDA method; the older "EV/EBITDA" method_id is retained for
+    # its own always-blocked reason and is only a fallback here for a hypothetical future
+    # session where it becomes usable.
+    ev_ebitda_item = methods.get("EV/EBITDA_CALC_READY") or methods.get("EV/EBITDA") or {}
 
     pe_val = val_rec.get("pe") or pe_item.get("value")
     pb_val = val_rec.get("pb") or pb_item.get("value")
     ps_val = val_rec.get("ps") or ps_item.get("value")
+    ev_ebitda_val = ev_ebitda_item.get("value") if ev_ebitda_item.get("status") in {"RESEARCH_USABLE", "READY"} else None
 
     peer_rel = (val_rec.get("peer_relative_context") or {})
     rel_state = peer_rel.get("relative_research_state")
@@ -399,10 +486,14 @@ def evaluate_valuation_context(
         peer_interpretation = "EXPENSIVE_VS_PEERS"
         counters.append("EXPENSIVE_RELATIVE_RESEARCH_PEER_VALUATION")
 
-    # Own history interpretation
+    # Own history interpretation. `financial_analysis_engine_v2._history_entry()` (the sole
+    # producer of this shape, passed through verbatim by financial_analysis_product_projection)
+    # names this field "percentile", never "percentile_in_history" -- the prior key name never
+    # matched a single real record, so this axis silently never activated. Confirmed by reading
+    # both producers; fixed to read the field that is actually emitted.
     own_history_interpretation = "UNAVAILABLE"
     if hist_ctx:
-        pctls = [v.get("percentile_in_history") for v in hist_ctx.values() if isinstance(v, Mapping) and isinstance(v.get("percentile_in_history"), (int, float))]
+        pctls = [v.get("percentile") for v in hist_ctx.values() if isinstance(v, Mapping) and isinstance(v.get("percentile"), (int, float))]
         if pctls:
             avg_pctl = sum(pctls) / len(pctls)
             if avg_pctl <= 0.33:
@@ -447,6 +538,7 @@ def evaluate_valuation_context(
         "pe_multiple": pe_val,
         "pb_multiple": pb_val,
         "ps_multiple": ps_val,
+        "ev_ebitda_multiple": ev_ebitda_val,
         "earnings_state": val_rec.get("earnings_state"),
         "limitations": uncertainties,
         "valuation_method_reconciliation": val_rec.get("valuation_method_reconciliation") or {},
@@ -723,6 +815,13 @@ def build_ticker_integrated_decision(
     # 3. Valuation
     val_summary, val_supp, val_count, val_uncert = evaluate_valuation_context(valuation, financial)
 
+    # 3b. Financial composite context (section 14): a pure join of 1 and 3 above, computed
+    # from their own already-produced outputs. Additive only -- feeds nothing below.
+    financial_composite_context = evaluate_financial_composite_context(
+        fund_state=fund_state, fund_supports=fund_supp, fund_counters=fund_count,
+        val_summary=val_summary, val_supports=val_supp, val_counters=val_count,
+    )
+
     # 4. Participation
     part_summary, part_supp, part_count = evaluate_participation(tactical, rvol)
 
@@ -827,6 +926,7 @@ def build_ticker_integrated_decision(
         "fundamental_support": fund_supp,
         "technical_support": tac_supp,
         "valuation_context_summary": val_summary,
+        "financial_composite_context": financial_composite_context,
         "valuation_methods": valuation.get("methods") or {},
         "valuation_method_reconciliation": valuation.get("valuation_method_reconciliation") or {},
         "calculation_readiness_context": valuation.get("calculation_readiness_context") or {},
@@ -915,6 +1015,7 @@ def build_artifact(
     fund_counts: dict[str, int] = {}
     tac_counts: dict[str, int] = {}
     tactical_confirmation_counts: dict[str, int] = {}
+    financial_composite_counts: dict[str, int] = {}
 
     trigger_avail = 0
     inval_avail = 0
@@ -962,6 +1063,9 @@ def build_artifact(
         c = (dec.get("tactical_confirmation_context") or {}).get("tactical_confirmation_state")
         tactical_confirmation_counts[c] = tactical_confirmation_counts.get(c, 0) + 1
 
+        fc = (dec.get("financial_composite_context") or {}).get("financial_composite_state")
+        financial_composite_counts[fc] = financial_composite_counts.get(fc, 0) + 1
+
         if (dec.get("trigger") or {}).get("trigger_state") not in (None, "NOT_AVAILABLE"):
             trigger_avail += 1
         if (dec.get("invalidation") or {}).get("invalidation_level") is not None:
@@ -986,6 +1090,7 @@ def build_artifact(
         "fundamental_state_distribution": dict(sorted(fund_counts.items())),
         "tactical_phase_distribution": dict(sorted(tac_counts.items())),
         "tactical_confirmation_state_distribution": dict(sorted((k, v) for k, v in tactical_confirmation_counts.items() if k is not None)),
+        "financial_composite_state_distribution": dict(sorted((k, v) for k, v in financial_composite_counts.items() if k is not None)),
         "momentum_context_available": sum(1 for rec in momentum_records.values() if (rec or {}).get("eligibility", {}).get("status") == "ELIGIBLE"),
         "trigger_available": trigger_avail,
         "invalidation_available": inval_avail,

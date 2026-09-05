@@ -105,6 +105,23 @@ class TestFinancialEvidenceContext:
         assert context["status"] == "UNAVAILABLE"
         assert context["reason_codes"] == ["FINANCIAL_ANALYSIS_PRODUCT_NOT_SUPPLIED"]
 
+    def test_watchlist_passes_through_financial_composite_context_and_ev_ebitda_multiple(self):
+        # MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 section 18: the AI-facing
+        # watchlist must expose the joined financial composite read and the new calc-ready
+        # EV/EBITDA multiple, passthrough only.
+        integrated = _record("FPT", posture="HOLD")
+        integrated["valuation_context_summary"]["ev_ebitda_multiple"] = 8.4
+        integrated["financial_composite_context"] = {
+            "financial_composite_state": "FUNDAMENTALS_IMPROVING",
+            "supporting_reason_codes": ["PROFITABLE_CORE_OPERATIONS"],
+            "contradicting_reason_codes": [],
+        }
+        row = brief.build_watchlist_record(
+            ticker="FPT", current=integrated, tactical_raw=None, sector_label=None, posture_transition_row=None,
+        )
+        assert row["valuation"]["ev_ebitda_multiple"] == 8.4
+        assert row["financial_composite_context"]["financial_composite_state"] == "FUNDAMENTALS_IMPROVING"
+
 
 class TestMarketSummaryFundamentalDistribution:
     """Section 17: full-market cross-sectional fundamental context, now meaningful once real
@@ -123,6 +140,20 @@ class TestMarketSummaryFundamentalDistribution:
         )
         assert summary["fundamental_state_distribution"] == {
             "DETERIORATING": 2, "IMPROVING": 1, "INSUFFICIENT": 1,
+        }
+
+    def test_financial_composite_state_distribution_present_and_accurate(self):
+        records = {
+            "AAA": {**_record("AAA", posture="HOLD"), "financial_composite_context": {"financial_composite_state": "FUNDAMENTALS_IMPROVING"}},
+            "BBB": {**_record("BBB", posture="AVOID"), "financial_composite_context": {"financial_composite_state": "FUNDAMENTALS_DETERIORATING"}},
+            "CCC": {**_record("CCC", posture="HOLD")},  # no financial_composite_context at all
+        }
+        summary = brief.build_market_summary(
+            descriptive={"market_breadth": {}}, sector_leadership=None,
+            current_records=records, market_transition=None,
+        )
+        assert summary["financial_composite_state_distribution"] == {
+            "FUNDAMENTALS_DETERIORATING": 1, "FUNDAMENTALS_IMPROVING": 1,
         }
 
 

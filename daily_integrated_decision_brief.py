@@ -182,6 +182,7 @@ def build_market_summary(*, descriptive: Mapping[str, Any] | None, sector_leader
     phase_dist = Counter(record.get("tactical_phase") for record in current_records.values())
     posture_dist = Counter(record.get("research_action_posture") for record in current_records.values())
     fundamental_dist = Counter(record.get("fundamental_state") for record in current_records.values())
+    composite_dist = Counter((record.get("financial_composite_context") or {}).get("financial_composite_state") for record in current_records.values())
     part_states = Counter(_participation_confirmation_state(record) for record in current_records.values())
     market_regime = market.get("current_breadth_state") or "NOT_AVAILABLE"
     return {
@@ -213,6 +214,7 @@ def build_market_summary(*, descriptive: Mapping[str, Any] | None, sector_leader
         },
         "research_action_posture_distribution": dict(sorted(posture_dist.items())),
         "fundamental_state_distribution": dict(sorted(fundamental_dist.items())),
+        "financial_composite_state_distribution": dict(sorted((k, v) for k, v in composite_dist.items() if k is not None)),
         "authority_boundary": {"deterministic_technical_inference_only": True, "not_institutional_or_order_flow_proof": True, "sector_strength_never_a_buy_signal": True},
     }
 
@@ -342,9 +344,14 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
         }),
         "valuation": {
             "status": val.get("status"), "pe_multiple": val.get("pe_multiple"), "pb_multiple": val.get("pb_multiple"),
-            "ps_multiple": val.get("ps_multiple"), "peer_relative_state": val.get("peer_relative_state"),
+            "ps_multiple": val.get("ps_multiple"), "ev_ebitda_multiple": val.get("ev_ebitda_multiple"),
+            "peer_relative_state": val.get("peer_relative_state"),
             "own_history_state": val.get("own_history_state"),
         },
+        # MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 section 18: the AI-facing
+        # product must expose the joined fundamental+valuation composite read alongside its own
+        # supporting/contradicting reasons and uncertainty -- passthrough only, no recomputation.
+        "financial_composite_context": current.get("financial_composite_context"),
         # Preserve every existing valuation method's status, basis, peer gate, and reconciliation
         # verbatim.  The brief does not choose a preferred multiple or convert blocked methods to
         # a conclusion.

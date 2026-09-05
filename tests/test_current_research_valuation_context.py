@@ -6,9 +6,10 @@ from __future__ import annotations
 import pytest
 
 from current_research_valuation_context import (
-    ENGINE_PEER_FEATURES, ENTITY_CLASS_COHORT_LEVEL, INPUT_BLOCKED, PE_NOT_MEANINGFUL, PE_TTM,
-    PS_TTM, SECTOR_COHORT_LEVEL, _calculation_readiness_reconciliation, _monetary_basis_compatible, _select_ttm,
-    attach_engine_fundamental_peers, evaluate_ticker_valuation,
+    ENGINE_PEER_FEATURES, ENTITY_CLASS_COHORT_LEVEL, EV_EBITDA, EV_EBITDA_CALC_READY, INPUT_BLOCKED,
+    NOT_APPLICABLE, PE_NOT_MEANINGFUL, PE_TTM, PS_TTM, SECTOR_COHORT_LEVEL,
+    _calculation_readiness_method, _calculation_readiness_reconciliation, _monetary_basis_compatible,
+    _select_ttm, attach_engine_fundamental_peers, attach_peer_relative, evaluate_ticker_valuation,
 )
 import monetary_basis_contract as basis_contract
 
@@ -324,3 +325,109 @@ def test_engine_peer_falls_back_to_entity_class_without_retained_industry():
     records = {f"T{i}": _engine_record(0.2 + i / 100) for i in range(5)}
     peers = attach_engine_fundamental_peers(records, industry_by_ticker={"T0": "   "})
     assert peers["T0"]["gross_margin"]["cohort_level"] == ENTITY_CLASS_COHORT_LEVEL
+
+
+# --- MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1: EV/EBITDA_CALC_READY ---------
+# Wires market_wide_calculation_readiness.py's own EV/EBITDA verdict into a genuinely usable,
+# separately-named method. The pre-existing EV_EBITDA method_id must remain untouched.
+
+def _readiness_context(*, period="2026-Q1", readiness="ready", value=8.5, status="provider_reported",
+                       blocked_by=()):
+    return {
+        "status": "AVAILABLE",
+        "calculation_readiness": [{
+            "reporting_period": period,
+            "ev_ebitda": {"readiness": readiness, "status": status, "value": value,
+                         "formula": "enterprise_value / ebitda", "blocked_by": list(blocked_by)},
+        }],
+    }
+
+
+def test_calculation_readiness_method_ready_is_research_usable():
+    method = _calculation_readiness_method(
+        capability="ev_ebitda", method_id=EV_EBITDA_CALC_READY, applicability_method_id=EV_EBITDA,
+        entity="corporate", calculation_readiness_record=_readiness_context(value=7.25))
+    assert method["status"] == "RESEARCH_USABLE"
+    assert method["value"] == pytest.approx(7.25)
+    assert method["applicability"] == "APPLICABLE"
+    assert method["own_history_status"] == "UNAVAILABLE_LATEST_PERIOD_ONLY_PIPELINE"
+
+
+def test_calculation_readiness_method_not_applicable_for_bank():
+    method = _calculation_readiness_method(
+        capability="ev_ebitda", method_id=EV_EBITDA_CALC_READY, applicability_method_id=EV_EBITDA,
+        entity="bank", calculation_readiness_record=_readiness_context())
+    assert method["status"] == NOT_APPLICABLE
+    assert method["applicability"] == NOT_APPLICABLE
+
+
+def test_calculation_readiness_method_blocked_when_not_ready():
+    method = _calculation_readiness_method(
+        capability="ev_ebitda", method_id=EV_EBITDA_CALC_READY, applicability_method_id=EV_EBITDA,
+        entity="corporate", calculation_readiness_record=_readiness_context(
+            readiness="blocked", value=None, blocked_by=["negative_or_zero_ebitda_denominator"]))
+    assert method["status"] == INPUT_BLOCKED
+    assert "negative_or_zero_ebitda_denominator" in method["blocker_reason_codes"]
+
+
+def test_calculation_readiness_method_blocked_when_context_absent():
+    method = _calculation_readiness_method(
+        capability="ev_ebitda", method_id=EV_EBITDA_CALC_READY, applicability_method_id=EV_EBITDA,
+        entity="corporate", calculation_readiness_record=None)
+    assert method["status"] == INPUT_BLOCKED
+    assert "CALCULATION_READINESS_CONTEXT_UNAVAILABLE" in method["blocker_reason_codes"]
+
+
+def test_evaluate_ticker_valuation_wires_calculation_readiness_method_end_to_end():
+    row = evaluate_ticker_valuation(
+        ticker="AAA", feature_record=feature_record(), valuation_record=valuation_record(market_cap_metric(8_000_000)),
+        financial_analysis_record=financial_analysis_record(), financial_analysis_context_identity="fa:1",
+        calculation_readiness_record=_readiness_context(value=9.1),
+    )
+    method = row["methods"][EV_EBITDA_CALC_READY]
+    assert method["status"] == "RESEARCH_USABLE"
+    assert method["value"] == pytest.approx(9.1)
+    # The always-blocked, structurally-distinct legacy method is untouched by this wiring.
+    assert row["methods"][EV_EBITDA]["status"] == INPUT_BLOCKED
+    assert row["usable_relative_method_count"] >= 1
+
+
+def test_evaluate_ticker_valuation_ev_ebitda_calc_ready_absent_stays_blocked_not_crashing():
+    row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    assert row["methods"][EV_EBITDA_CALC_READY]["status"] == INPUT_BLOCKED
+
+
+def test_ev_ebitda_calc_ready_participates_in_peer_relative_cohort():
+    rows = {
+        f"T{i}": evaluate_ticker_valuation(
+            ticker=f"T{i}", feature_record=feature_record(), valuation_record=valuation_record(market_cap_metric(8_000_000)),
+            financial_analysis_record=financial_analysis_record(), financial_analysis_context_identity="fa:1",
+            calculation_readiness_record=_readiness_context(value=value),
+        )
+        for i, value in enumerate([5.0, 6.0, 7.0, 8.0, 9.0, 10.0])
+    }
+    rows = attach_peer_relative(rows)
+    entry = rows["T2"]["peer_relative"][EV_EBITDA_CALC_READY]  # subject value 7.0
+    assert entry["status"] == "READY_RESEARCH_ONLY"
+    assert entry["peer_count"] == 6
+    assert entry["percentile"] == pytest.approx((2 + 0.5) / 6)
+
+
+def test_earnings_yield_ttm_is_reciprocal_of_usable_pe_ttm():
+    row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    assert row["methods"][PE_TTM]["value"] == pytest.approx(20.0)
+    assert row["earnings_yield_ttm"]["status"] == "RESEARCH_USABLE"
+    assert row["earnings_yield_ttm"]["value"] == pytest.approx(0.05)
+
+
+def test_earnings_yield_ttm_blocked_when_pe_ttm_not_meaningful():
+    row = evaluate(net_income=qualified_feature(-400_000), market_cap_value=8_000_000)
+    assert row["methods"][PE_TTM]["status"] == PE_NOT_MEANINGFUL
+    assert row["earnings_yield_ttm"]["status"] == "BLOCKED"
+    assert row["earnings_yield_ttm"]["value"] is None
+
+
+def test_fcf_yield_ttm_is_explicitly_blocked_no_ttm_fcf_retained():
+    row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    assert row["fcf_yield_ttm"]["status"] == "BLOCKED"
+    assert row["fcf_yield_ttm"]["blocker_reason_codes"] == ["FCF_TTM_NOT_RETAINED_STANDALONE_QUARTER_PROXY_ONLY"]

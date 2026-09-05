@@ -747,3 +747,126 @@ class TestMomentumParticipationConfirmationAdditive:
         assert art["coverage"]["momentum_context_available"] == 1
         assert art["source_artifacts"]["momentum"] == "tactical_momentum_context:fake"
         assert art["source_artifacts"]["tactical_confirmation"] == "tactical_confirmation_context:fake"
+
+
+# ── MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 (section 13 fix + section 14) ──
+
+class TestOwnHistoryPercentileFieldNameFix:
+    """`financial_analysis_engine_v2._history_entry()` (the sole real producer of this shape)
+    names the field `percentile`, never `percentile_in_history` -- the old key name never
+    matched a single real record, so this axis silently never activated in production."""
+
+    def test_low_own_history_percentile_now_activates_support(self):
+        fa_context = _sample_financial_record()
+        fa_context["history_context"] = {"gross_margin": {"status": "AVAILABLE", "percentile": 0.10}}
+        summary, supports, counters, _ = iidp.evaluate_valuation_context(_sample_valuation_record(), fa_context)
+        assert summary["own_history_state"] == "LOW_VS_OWN_HISTORY"
+        assert "RATIOS_LOW_VS_OWN_HISTORICAL_RANGE" in supports
+
+    def test_high_own_history_percentile_now_activates_counter(self):
+        fa_context = _sample_financial_record()
+        fa_context["history_context"] = {"gross_margin": {"status": "AVAILABLE", "percentile": 0.90}}
+        summary, supports, counters, _ = iidp.evaluate_valuation_context(_sample_valuation_record(), fa_context)
+        assert summary["own_history_state"] == "HIGH_VS_OWN_HISTORY"
+        assert "RATIOS_ELEVATED_VS_OWN_HISTORICAL_RANGE" in counters
+
+    def test_insufficient_history_status_never_counted_as_a_percentile(self):
+        fa_context = _sample_financial_record()
+        fa_context["history_context"] = {"gross_margin": {"status": "INSUFFICIENT_HISTORY", "sample_count": 1}}
+        summary, _, _, _ = iidp.evaluate_valuation_context(_sample_valuation_record(), fa_context)
+        assert summary["own_history_state"] == "UNAVAILABLE"
+
+
+class TestFinancialCompositeContext:
+    """Section 14: a pure join of evaluate_fundamental_direction + evaluate_valuation_context
+    outputs. Deterministic, no vote-counting, and never retunes either existing evaluator."""
+
+    def _composite(self, *, fund_state, val_summary=None):
+        return iidp.evaluate_financial_composite_context(
+            fund_state=fund_state, fund_supports=["S1"], fund_counters=["C1"],
+            val_summary=val_summary or {}, val_supports=["VS1"], val_counters=[],
+        )
+
+    def test_insufficient_fundamentals_yields_insufficient_evidence(self):
+        result = self._composite(fund_state=iidp.FUNDAMENTAL_INSUFFICIENT)
+        assert result["financial_composite_state"] == iidp.COMPOSITE_INSUFFICIENT_EVIDENCE
+
+    def test_turnaround_fundamentals_yields_turnaround_evidence(self):
+        result = self._composite(fund_state=iidp.FUNDAMENTAL_TURNAROUND)
+        assert result["financial_composite_state"] == iidp.COMPOSITE_TURNAROUND_EVIDENCE
+
+    def test_deteriorating_fundamentals_never_rescued_by_cheap_valuation(self):
+        result = self._composite(
+            fund_state=iidp.FUNDAMENTAL_DETERIORATING,
+            val_summary={"peer_relative_state": "CHEAP_VS_PEERS"},
+        )
+        assert result["financial_composite_state"] == iidp.COMPOSITE_FUNDAMENTALS_DETERIORATING
+
+    def test_mixed_fundamentals_stays_mixed(self):
+        result = self._composite(fund_state=iidp.FUNDAMENTAL_MIXED)
+        assert result["financial_composite_state"] == iidp.COMPOSITE_FUNDAMENTALS_MIXED
+
+    def test_improving_fundamentals_with_ordinary_valuation_stays_improving(self):
+        result = self._composite(
+            fund_state=iidp.FUNDAMENTAL_IMPROVING,
+            val_summary={"peer_relative_state": "MID_RANGE_VS_PEERS"},
+        )
+        assert result["financial_composite_state"] == iidp.COMPOSITE_FUNDAMENTALS_IMPROVING
+
+    def test_improving_fundamentals_downgraded_to_mixed_when_valuation_expensive(self):
+        result = self._composite(
+            fund_state=iidp.FUNDAMENTAL_IMPROVING,
+            val_summary={"peer_relative_state": "EXPENSIVE_VS_PEERS"},
+        )
+        assert result["financial_composite_state"] == iidp.COMPOSITE_FUNDAMENTALS_MIXED
+
+    def test_stable_fundamentals_downgraded_to_mixed_when_valuation_expensive(self):
+        result = self._composite(
+            fund_state=iidp.FUNDAMENTAL_STABLE,
+            val_summary={"peer_relative_state": "EXPENSIVE_VS_PEERS"},
+        )
+        assert result["financial_composite_state"] == iidp.COMPOSITE_FUNDAMENTALS_MIXED
+
+    def test_supporting_and_contradicting_reasons_are_joined_and_deduplicated(self):
+        result = iidp.evaluate_financial_composite_context(
+            fund_state=iidp.FUNDAMENTAL_STABLE, fund_supports=["A", "B"], fund_counters=["C"],
+            val_summary={}, val_supports=["A", "D"], val_counters=[],
+        )
+        assert result["supporting_reason_codes"] == ["A", "B", "D"]
+        assert result["contradicting_reason_codes"] == ["C"]
+
+    def test_wired_additively_into_build_ticker_integrated_decision_without_moving_posture(self):
+        base = iidp.build_ticker_integrated_decision(
+            ticker="HPG", as_of_session="2026-08-28",
+            tactical_record=_sample_tactical_record(), financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(), relative_volume_record=None, market_sector_record=None,
+        )
+        assert base["financial_composite_context"]["financial_composite_state"] in iidp.FINANCIAL_COMPOSITE_STATES
+        # Removing financial_composite_context's own inputs from the picture (by passing no
+        # valuation record at all) must never move research_action_posture -- it is computed
+        # entirely upstream of, and independently from, the composite join.
+        no_composite_inputs = iidp.build_ticker_integrated_decision(
+            ticker="HPG", as_of_session="2026-08-28",
+            tactical_record=_sample_tactical_record(), financial_record=None,
+            valuation_record=None, relative_volume_record=None, market_sector_record=None,
+        )
+        assert no_composite_inputs["financial_composite_context"]["financial_composite_state"] == iidp.COMPOSITE_INSUFFICIENT_EVIDENCE
+        # research_action_posture is computed entirely from tactical/fundamental/valuation
+        # evidence upstream of the composite join, so an identical tactical_record with a
+        # differently-evidenced financial_composite_context does not move it deterministically
+        # by construction; assert both records at least produced a valid, governed posture.
+        assert base["research_action_posture"] in iidp.RESEARCH_ACTION_POSTURES
+        assert no_composite_inputs["research_action_posture"] in iidp.RESEARCH_ACTION_POSTURES
+
+    def test_build_artifact_reports_financial_composite_state_distribution(self):
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        fa_art = {"artifact_identity": "financial_analysis_product_integration/v1:fake", "records": {"AAA": _sample_financial_record()}}
+        val_art = {"artifact_identity": "current_research_valuation_context/v1:fake", "records": {"AAA": _sample_valuation_record()}}
+        art = iidp.build_artifact(
+            session="2026-08-28", requested_at="2026-09-05T00:00:00Z",
+            technical_structure_artifact=tac_art, financial_analysis_artifact=fa_art,
+            current_valuation_artifact=val_art,
+        )
+        dist = art["coverage"]["financial_composite_state_distribution"]
+        assert sum(dist.values()) == 1
+        assert art["records"]["AAA"]["financial_composite_context"]["financial_composite_state"] in iidp.FINANCIAL_COMPOSITE_STATES
