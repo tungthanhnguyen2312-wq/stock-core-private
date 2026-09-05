@@ -1,5 +1,26 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Integrated Decision evidence-axis coherence V1 (2026-09-05):**
+`INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE` at local
+checkpoint `f2bb599`, begun from owner-specified `bc9e5a05ab14b060163128d73243c08e4fedea0b`.
+Explicit owner authorization opened it despite `queued_next=[]`
+(`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1`);
+no dependency or successor is inferred. The small coherent extension closes the real canonical
+gap: post-close now builds, retains, and supplies the already-established momentum and tactical
+confirmation artifacts to Integrated Decision, using the same retained technical recovery,
+Tactical V3, and participation evidence, with no new provider or technical engine. Integrated
+Decision exposes explicit distinct evidence axes and a deterministic qualitative coherence
+relationship, never a score/vote/probability; Daily local AI passes it through. Primary
+2026-09-04 retained replay: 1,683 records; Fundamental 1,363, Valuation 1,009, Structure 952,
+Momentum 952, Participation/Confirmation 915, Market/Sector 1,683, Priority 1,507, all major
+axes 797; coherence 116 ALIGNED / 529 PARTIALLY_ALIGNED / 0 MIXED / 307 CONTRADICTED / 731
+INSUFFICIENT_EVIDENCE. Same-input policy baseline proves 0 posture/trigger/invalidation changes.
+The 2026-08-25 temporal replay detects retained financial evidence labelled 2026-Q4 and excludes
+it locally (financial/valuation fail closed, `future_leak_admitted=0`), so outcome is partial by
+evidence and this is retained as a PIT-only diagnostic, never promoted. No provider, database,
+publication, scoring, target, sizing, execution, or authority change. Evidence:
+`operations-review/integrated-decision-evidence-axis-coherence-v1-20260905/`.
+
 **Market-wide fundamental valuation analytical product V1 (2026-09-05):**
 `MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
 at local checkpoint `5201fb9463d683d20f4cb1f6c02113eaa39afe15`, begun from owner-specified

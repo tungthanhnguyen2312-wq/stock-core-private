@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.05.3",
+  "roadmap_version": "2026.09.05.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "5201fb9463d683d20f4cb1f6c02113eaa39afe15",
-  "last_updated_checkpoint": "5201fb9463d683d20f4cb1f6c02113eaa39afe15",
+  "implementation_lineage_head": "f2bb599",
+  "last_updated_checkpoint": "f2bb599",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1",
+    "milestone": "INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -785,6 +785,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1",
       "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization opened this bounded milestone despite queued_next=[]; no dependency or successor was inferred. Root-caused (not merely re-measured) the prior milestone's unresolved 39,568/94,252 unknown-duration/timestamp-missing corpus using the owner's A-H taxonomy: of the now-46,594 UNKNOWN_DURATION facts (corpus grown to 261,360 facts / 1,492 tickers on the same underlying data_bctc evidence, no new acquisition), 44,760 are zero-silent-drop no-raw-evidence placeholders, 1,595 are genuinely-reported VCI facts whose source structurally lacks a duration marker (confirmed against the installed vnstock library itself), and 239 are thin same-year cash-flow history; verified zero uncaused facts across the full corpus. Fixed a real timestamp-representation defect: canonical_financial_facts.py's observed_at was a naive, non-timezone-aware string a strict bitemporal parser silently rejected; 126,070 facts recovered to genuinely timezone-aware, zero fabricated, missing-timestamp count unchanged by design. Wired the previously-unwired financial_flow_semantics_ttm_bridge.py into the live Financial V2 path (canonical_daily_financial_v2_materialization.py plus 3 replay tools); a first wiring attempt regressed current_research_ready_count 1380->1276 (bridge silently qualified nothing when fed reshaped rows lacking its expected raw-fact field names), caught by the existing regression-lock test and fixed with an explicit field adapter before this checkpoint -- current_research_ready_count is 1380 again. Measured bridge impact on this corpus is zero (PARTIAL_BY_EVIDENCE: KBS is already standalone, VCI duration is structurally unknown, so no fact needs de-cumulation yet). New canonical_financial_analytical_panel.py consolidates the period-semantics, bitemporal, and TTM-bridge layers into one canonical boundary without duplicating any of them; multi_period_financial_panel.py was surveyed and confirmed unsuitable to extend (narrow ~12-ticker citation model, zero live consumers). Currency/scale/statement-scope audited and confirmed genuinely unresolved from source, not touched. financial_v2_current_input_authority.py advanced to a new pinned semantics snapshot (operations-review/market-wide-structured-financial-period-semantics-v1-20260905/, force-tracked) per its own never-edit-in-place rule; the 20260831 snapshot is preserved untouched. Retained 2026-08-25 temporal replay: zero future-leak facts admitted; 155 genuinely-later (2026-09-01-dated) facts correctly rejected by the existing gate. Financial/valuation/PIT authority, provider set, formulae, target/probability, database, remote, publication, deployment, and score authority are unchanged. Artifact: operations-review/financial-temporal-semantic-normalization-and-analytical-panel-v1-20260905/ (local-only, not force-tracked, matching the prior milestone's own evidence-package convention). 266 focused/adjacent tests pass, 0 new failures. No successor is queued."
+    },
+    {
+      "milestone_id": "INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / PARTIAL_BY_EVIDENCE",
+      "starting_checkpoint": "bc9e5a05ab14b060163128d73243c08e4fedea0b",
+      "checkpoint": "f2bb599",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_ONLY / NO_PROMOTION",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1 directive (2026-09-05)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1",
+      "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization opened this bounded integration milestone despite queued_next=[]; no dependency or successor was inferred. The canonical post-close closure now builds, retains, and supplies the existing tactical_momentum_context/v1 and tactical_confirmation_context/v1 from the same retained descriptive/snapshot/technical-recovery/Tactical-V3/relative-volume evidence to Integrated Decision; no new provider, indicator, financial engine, database write, publication, or authority promotion. Integrated records expose distinct fundamental, valuation, tactical structure, momentum, participation/confirmation, market/sector, opportunity priority, and optional portfolio-fit axes, with qualitative no-score/no-vote coherence. Primary retained 2026-09-04 local replay: 1,683 records; Fundamental 1,363; Valuation 1,009; Structure 952; Momentum 952; Participation/Confirmation 915; Market/Sector 1,683; Opportunity Priority 1,507; all major axes 797; coherence ALIGNED 116 / PARTIALLY_ALIGNED 529 / MIXED 0 / CONTRADICTED 307 / INSUFFICIENT_EVIDENCE 731. Same-input before/after reports zero action-posture, why_now, trigger, or invalidation changes. Priority axis reads standing research_priority_tier with older priority_tier compatibility (162 PRIORITY_NOW records). Temporal 2026-08-25 detects a retained financial period labelled 2026-Q4 and excludes financial/valuation axes fail-closed; technical future-session violations 0 and future_leak_admitted 0. This is an explicit PIT_ONLY_GAP, not a promotion. Local AI brief passes contexts through. Evidence: operations-review/integrated-decision-evidence-axis-coherence-v1-20260905/. Focused/adjacent tests pass; no successor queued."
     },
     {
       "milestone_id": "MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1",

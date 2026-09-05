@@ -1,5 +1,50 @@
 # Stock Lookup — Operational State
 
+**Integrated Decision evidence-axis coherence V1 (2026-09-05):**
+`INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`, started at
+the owner-specified `bc9e5a05ab14b060163128d73243c08e4fedea0b` (`HEAD == origin/main`) and
+implemented at local checkpoint `f2bb599`. The owner explicitly authorized this milestone while
+`queued_next=[]`, recorded as
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1`;
+no successor is inferred.
+
+**Closed the real canonical wiring gap without changing technical or action policy.**
+`canonical_post_close_pipeline.build_enrichment_components` now builds the existing
+`tactical_momentum_context/v1` and `tactical_confirmation_context/v1` over the same retained
+descriptive, exact-session, technical-recovery, Tactical V3, and relative-volume evidence it
+already uses, persists both session artifacts, and passes them to the standing Integrated
+Decision builder. No provider request, new indicator, technical recomputation inside Integrated
+Decision, database write, publication, or authority promotion was added. Missing technical
+history and participation stay ticker-local. The product now exposes distinct Fundamental,
+Valuation, Tactical Structure, Momentum, Participation/Confirmation, Market/Sector, Opportunity
+Priority, and (when supplied) Portfolio Fit axes, each with state, fitness, reason codes,
+blockers, method, and lineage. It also exposes a qualitative `ALIGNED`/`PARTIALLY_ALIGNED`/
+`MIXED`/`CONTRADICTED`/`INSUFFICIENT_EVIDENCE` relationship read that reuses the existing
+correlation-aware confirmation contract; it is not a score, probability, vote, or policy gate.
+The Daily local-AI watchlist passes these compact contexts through verbatim.
+
+**Retained evidence outcome.** The 2026-09-04 local-only replay produced 1,683 decision records:
+Fundamental 1,363; Valuation 1,009; Tactical Structure 952; Momentum 952;
+Participation/Confirmation 915; Market/Sector 1,683; Opportunity Priority 1,507; all major
+axes 797; Portfolio Fit 0 (not supplied). Coherence is 116 `ALIGNED`, 529
+`PARTIALLY_ALIGNED`, 0 `MIXED`, 307 `CONTRADICTED`, and 731 `INSUFFICIENT_EVIDENCE`.
+Same-input baseline versus enriched replay reports zero changes to action posture, `why_now`,
+trigger, or invalidation. The older retained artifact has different upstream relative-volume
+identity and is explicitly non-comparable for policy attribution. Priority-Now is correctly
+exposed for 162 records through the standing `research_priority_tier` field (the new axis also
+accepts retained `priority_tier`); this does not alter actionability.
+
+**Temporal boundary remains partial by evidence.** The retained 2026-08-25 Financial V2 source
+names `2026-Q4`, later than the replay session. It is detected and excluded: financial and
+valuation axes fail closed locally, no current shares/current-research valuation are promoted to
+PIT, technical future-session violations are zero, and `future_leak_admitted=0`. An admissible
+as-of financial/valuation version is therefore the explicit `PIT_ONLY_GAP`, not an authority
+promotion. Full inventory, cohort review, required 12-ticker replay, temporal validation, and
+residual-gap matrix are retained in
+`operations-review/integrated-decision-evidence-axis-coherence-v1-20260905/`. Focused/adjacent
+tests: 103 passed plus 19 targeted new/changed contract tests; `py_compile` and `git diff --check`
+pass. No successor is queued.
+
 **Market-wide fundamental valuation analytical product V1 (2026-09-05):**
 `MARKET_WIDE_FUNDAMENTAL_VALUATION_ANALYTICAL_PRODUCT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`,
 started at owner checkpoint `5438bc09dc288aaceb53e31b73e1bfdb610e2035` (HEAD == origin/main at

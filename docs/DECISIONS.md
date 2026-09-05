@@ -1,5 +1,64 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Integrated Decision Evidence-Axis Coherence V1
+
+`INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
+(`push = NO`, started from owner checkpoint
+`bc9e5a05ab14b060163128d73243c08e4fedea0b`, implementation checkpoint `f2bb599`). The explicit
+owner override is
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_INTEGRATED_DECISION_EVIDENCE_AXIS_COHERENCE_V1`;
+it authorizes only this completed milestone and no successor.
+
+1. **Canonical post-close must consume existing momentum and confirmation products, not rebuild
+their indicators.** The accepted `tactical_momentum_context/v1` and
+`tactical_confirmation_context/v1` are now materialized from the already-present same-session
+descriptive, P3F9B snapshot, technical-history recovery, Tactical V3, and relative-volume inputs,
+retained at session-scoped Level-2 paths, and supplied as artifacts to
+`integrated_investment_decision_product.build_artifact`. This preserves feature fitness, source
+series lineage, provider-selected recovered history, reason codes, and local insufficient states.
+It adds no network acquisition and does not calculate RSI/MA/MACD/BOS/CHoCH/participation in the
+consumer.
+2. **Evidence axes are a transparent descriptive projection, not another strategy.** Integrated
+Decision now emits Fundamental, Valuation, Tactical Structure, Momentum,
+Participation/Confirmation, Market/Sector, Opportunity Priority, and optional Portfolio Fit.
+Each has state, fitness, supporting/contradicting and blocker reason codes, producer method, and
+lineage. The `evidence_axis_coherence` taxonomy is strictly qualitative:
+`ALIGNED`, `PARTIALLY_ALIGNED`, `MIXED`, `CONTRADICTED`, or `INSUFFICIENT_EVIDENCE`.
+It consumes the standing correlation-aware confirmation state once; it never counts correlated
+RSI/MACD/MA/BOS/CHoCH/breakout signals as votes and has no score, confidence, probability,
+target, position-size, or execution effect.
+3. **Action policy, trigger, and invalidation remain immutable under this extension.** Axis and
+coherence construction occurs after the standing posture/trigger/invalidation calculations and
+does not feed `decide_research_action_posture`. The retained same-input before/after replay covers
+all 1,683 records and reports 0 changed posture, `why_now`, trigger, and invalidation fields.
+A distinct older retained artifact comparison has 13 posture/why differences but is explicitly
+non-comparable for attribution because the replayed relative-volume source identity differs; it
+is recorded rather than used as a policy claim.
+4. **Priority uses the real standing queue field.** The new Opportunity Priority axis reads
+`research_priority_tier` from `daily_opportunity_decision_queue/v1`, while retaining
+`priority_tier` compatibility for older opportunity artifacts. This closes a presentation wiring
+detail (162 real `PRIORITY_NOW` records in the primary replay) and leaves priority distinct from
+actionability/posture.
+5. **Temporal replay is fail-closed, not an implicit PIT promotion.** The only retained Financial
+V2 source for 2026-08-25 identifies `financial_evidence_as_of_period=2026-Q4`, later than the
+target session. It is excluded entirely from that temporal Integrated Decision: financial and
+valuation axes are `UNAVAILABLE`, current shares and current-research valuation are not treated
+as historical evidence, technical future-session violations are zero, and
+`future_leak_admitted=0`. This leaves a `PIT_ONLY_GAP` for an admissible as-of financial/valuation
+version and makes the milestone `PARTIAL_BY_EVIDENCE`; it does not weaken Current Research or
+promote any authority.
+6. **Local AI remains a consumer of compact producer output.** `daily_integrated_decision_brief`
+passes the axes, coherence, momentum, and confirmation contexts alongside the existing posture,
+priority, financial/valuation, trigger, invalidation, uncertainty, and blockers. It does not
+redesign the bundle or compute a conclusion. The retained primary evidence package contains the
+full axis inventory, coverage/blocker and coherence distributions, priority/action cohort review,
+12-ticker replay (EVF/FPT/HPG/NVL/PAN/PNJ/POW/PVD/QNS/SSI/VNM/VCB), and residual-gap matrix.
+
+Focused/adjacent verification: 103 passing existing focused tests plus 19 new/changed targeted
+contract tests; `py_compile` and `git diff --check` pass. No provider, new indicator family,
+financial engine, registry edit, database write, remote mutation, publication, deployment, or
+authority promotion occurred.
+
 ## 2026-09-05 - Financial Temporal Semantic Normalization And Analytical Panel V1
 
 `FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
