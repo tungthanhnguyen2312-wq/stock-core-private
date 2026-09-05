@@ -3,7 +3,7 @@
 ## 2026-09-05 - Core Financial Data To Fundamental Valuation Scaleout V1
 
 `CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
-at local checkpoint `2bbdade99cecfcf14ab40ce1a318fa89f72d6d31` (start
+at local checkpoint `48af3a41f1bd6bba46fb4ea569622dcd2c076fe7` (start
 `b6d28608f8550c09fb725f64f33884c868b5754d`; `push = NO`).
 
 1. **The empty-queue authorization is explicit.** The owner authorized the milestone despite

@@ -9,8 +9,8 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "2bbdade99cecfcf14ab40ce1a318fa89f72d6d31",
-  "last_updated_checkpoint": "2bbdade99cecfcf14ab40ce1a318fa89f72d6d31",
+  "implementation_lineage_head": "48af3a41f1bd6bba46fb4ea569622dcd2c076fe7",
+  "last_updated_checkpoint": "48af3a41f1bd6bba46fb4ea569622dcd2c076fe7",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
@@ -761,7 +761,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / PARTIAL_BY_EVIDENCE / CURRENT_RESEARCH_LOCAL_AI_HANDOFF_ONLY",
       "starting_checkpoint": "b6d28608f8550c09fb725f64f33884c868b5754d",
-      "checkpoint": "2bbdade99cecfcf14ab40ce1a318fa89f72d6d31",
+      "checkpoint": "48af3a41f1bd6bba46fb4ea569622dcd2c076fe7",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / CURRENT_RESEARCH_ONLY / NO_PROMOTION",

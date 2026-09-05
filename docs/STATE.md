@@ -3,7 +3,7 @@
 **Core financial data to fundamental valuation scaleout V1 (2026-09-05):**
 `CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`,
 starting at owner checkpoint `b6d28608f8550c09fb725f64f33884c868b5754d` and implemented at
-`2bbdade99cecfcf14ab40ce1a318fa89f72d6d31`. The explicit `queued_next=[]` override is recorded
+`48af3a41f1bd6bba46fb4ea569622dcd2c076fe7`. The explicit `queued_next=[]` override is recorded
 as `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1`;
 no predecessor or successor is inferred. This is a consumer-scaleout over the existing Financial
 V2 evidence chain, not a financial engine or authority rewrite. The retained primary 2026-09-04

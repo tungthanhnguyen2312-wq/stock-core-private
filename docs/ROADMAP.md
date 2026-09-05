@@ -2,7 +2,7 @@
 
 **Core financial data to fundamental valuation scaleout V1 (2026-09-05):**
 `CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`
-at local checkpoint `2bbdade99cecfcf14ab40ce1a318fa89f72d6d31`, begun from owner-specified
+at local checkpoint `48af3a41f1bd6bba46fb4ea569622dcd2c076fe7`, begun from owner-specified
 `b6d28608f8550c09fb725f64f33884c868b5754d`. Explicit owner authorization opened it despite
 `queued_next=[]` (`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_FINANCIAL_DATA_TO_FUNDAMENTAL_VALUATION_SCALEOUT_V1`);
 no dependency or successor is inferred. The retained Financial V2 semantic fact store, engine,
