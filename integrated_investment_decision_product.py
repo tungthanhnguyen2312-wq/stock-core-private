@@ -202,7 +202,9 @@ def decision_identity(record: Mapping[str, Any]) -> str:
         "tactical_phase": record.get("tactical_phase"),
         "trigger_state": (record.get("trigger") or {}).get("trigger_state"),
         "trigger_type": (record.get("trigger") or {}).get("trigger_type"),
+        "trigger_condition_identity": ((record.get("trigger") or {}).get("condition") or {}).get("condition_identity"),
         "invalidation_level": (record.get("invalidation") or {}).get("invalidation_level"),
+        "invalidation_condition_identity": ((record.get("invalidation") or {}).get("condition") or {}).get("condition_identity"),
         "source_identities": record.get("source_identities"),
     }
     return f"decision:{record.get('ticker')}:{_sha256(fields)[:16]}"
@@ -1062,6 +1064,8 @@ def build_ticker_integrated_decision(
     priority_queue_record: Mapping[str, Any] | None = None,
     momentum_record: Mapping[str, Any] | None = None,
     tactical_confirmation_record: Mapping[str, Any] | None = None,
+    tactical_boundaries_record: Mapping[str, Any] | None = None,
+    tactical_boundaries_identity: str | None = None,
     producer_artifact_identities: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record."""
@@ -1146,19 +1150,32 @@ def build_ticker_integrated_decision(
         priority_queue_record, posture=posture, tactical=tactical, why_now=why_now,
     )
 
-    # 8. Trigger & Invalidation
+    # 8. Trigger & Invalidation.  The condition serialization is deliberately
+    # delegated to the standing tactical boundary contract.  It preserves its
+    # own operator/reference semantics (or the fact that it is narrative or
+    # dynamic), and does not create a second trigger/invalidation engine.
+    from prospective_decision_retention import serialize_boundary_condition
+    boundaries = tactical_boundaries_record or {}
     trigger = {
         "trigger_type": tactical.get("trigger_type", "NO_TRIGGER"),
         "trigger_level": tactical.get("trigger_level"),
         "trigger_state": tactical.get("trigger_state", "NOT_AVAILABLE"),
         "distance_to_trigger_pct": tactical.get("distance_to_trigger_pct"),
         "warning": "TRIGGER_IS_RESEARCH_MEASUREMENT_NOT_EXECUTION_AUTHORITY",
+        "condition": serialize_boundary_condition(
+            boundaries.get("confirmation_boundary") if isinstance(boundaries, Mapping) else None,
+            role="trigger", source_strategy_identity=tactical_boundaries_identity,
+        ),
     }
     invalidation = {
         "invalidation_level": tactical.get("invalidation_level"),
         "invalidation_method": tactical.get("invalidation_method") or "CONFIRMED_SWING_LEVEL_OR_SUPPORT_FALLBACK",
         "distance_to_invalidation_pct": tactical.get("distance_to_invalidation_pct"),
         "warning": "STRUCTURAL_INVALIDATION_LEVEL_NOT_A_STOP_LOSS",
+        "condition": serialize_boundary_condition(
+            boundaries.get("technical_invalidation_boundary") if isinstance(boundaries, Mapping) else None,
+            role="invalidation", source_strategy_identity=tactical_boundaries_identity,
+        ),
     }
 
     # 9. Exact capabilities unavailable list
@@ -1244,6 +1261,7 @@ def build_ticker_integrated_decision(
             "priority_queue_record_identity": (priority_queue_record or {}).get("content_identity"),
             "momentum_identity": (producer_artifact_identities or {}).get("momentum") or momentum.get("artifact_identity"),
             "tactical_confirmation_identity": (producer_artifact_identities or {}).get("tactical_confirmation") or confirmation.get("artifact_identity"),
+            "tactical_boundaries_identity": tactical_boundaries_identity,
         },
         "authority_boundary": {
             "is_actionable": False,
@@ -1273,6 +1291,7 @@ def build_artifact(
     priority_queue_artifact: Mapping[str, Any] | None = None,
     momentum_artifact: Mapping[str, Any] | None = None,
     tactical_confirmation_artifact: Mapping[str, Any] | None = None,
+    tactical_boundaries_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact."""
     fa_contract = (financial_analysis_artifact or {}).get("contract_version")
@@ -1291,6 +1310,7 @@ def build_artifact(
         raise IntegratedDecisionProductError("PRIORITY_QUEUE_RECORDS_INVALID")
     momentum_records = (momentum_artifact or {}).get("records") or {}
     tactical_confirmation_records = (tactical_confirmation_artifact or {}).get("records") or {}
+    tactical_boundaries_records = (tactical_boundaries_artifact or {}).get("records") or {}
 
     # All tickers present in technical structure or financial analysis
     all_tickers = sorted(set(tac_records.keys()) | set(fa_records.keys()))
@@ -1341,6 +1361,8 @@ def build_artifact(
             priority_queue_record=priority_records.get(ticker),
             momentum_record=momentum_records.get(ticker),
             tactical_confirmation_record=tactical_confirmation_records.get(ticker),
+            tactical_boundaries_record=tactical_boundaries_records.get(ticker),
+            tactical_boundaries_identity=(tactical_boundaries_artifact or {}).get("artifact_identity"),
             producer_artifact_identities={
                 "technical_structure": technical_structure_artifact.get("artifact_identity"),
                 "financial_analysis": (financial_analysis_artifact or {}).get("artifact_identity"),
@@ -1350,6 +1372,7 @@ def build_artifact(
                 "priority_queue": (priority_queue_artifact or {}).get("artifact_identity"),
                 "momentum": (momentum_artifact or {}).get("artifact_identity"),
                 "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
+                "tactical_boundaries": (tactical_boundaries_artifact or {}).get("artifact_identity"),
             },
         )
         records[ticker] = dec
@@ -1438,6 +1461,7 @@ def build_artifact(
             "priority_queue": (priority_queue_artifact or {}).get("artifact_identity"),
             "momentum": (momentum_artifact or {}).get("artifact_identity"),
             "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
+            "tactical_boundaries": (tactical_boundaries_artifact or {}).get("artifact_identity"),
         },
         "authority_boundary": {
             "is_actionable": False,

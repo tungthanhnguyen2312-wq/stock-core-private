@@ -624,6 +624,7 @@ def build_enrichment_components(
         import market_structure_breakout_product_projection as msb_proj
         import market_wide_relative_volume_research as rvol_research
         import tactical_confirmation_context as confirmation_context
+        import tactical_confirmation_invalidation_boundaries as boundary_context
         import tactical_momentum_context as momentum_context
         import technical_structure_context as tsc
         # integrated_investment_decision_product.evaluate_tactical_phase/evaluate_participation read
@@ -668,6 +669,19 @@ def build_enrichment_components(
             structure_projection=tactical_projection, momentum=momentum,
             participation=relative_volume, requested_at=requested_at,
         )
+        tactical_boundaries = None
+        tactical_classifier = _load(paths["tactical_classifier"])
+        if tactical_classifier:
+            try:
+                # Reuse the standing boundary engine's own semantics.  This is
+                # retention instrumentation only; a missing boundary input may
+                # not alter the already-determined action posture.
+                tactical_boundaries = boundary_context.build_artifact(
+                    tactical=tactical_classifier, current_descriptive=desc,
+                    technical_structure=technical_structure, requested_at=requested_at,
+                )
+            except Exception:
+                tactical_boundaries = None
         # Also retained under its own canonical per-session path (not just consumed here) so
         # downstream consumers -- the daily_integrated_decision_brief CLI-level builder in
         # particular, which needs BOS/CHoCH per watchlist ticker -- can load the same compact V3
@@ -675,6 +689,8 @@ def build_enrichment_components(
         _write_json(paths["market_structure_breakout_v3_projection"], tactical_projection)
         _write_json(paths["tactical_momentum_context"], momentum)
         _write_json(paths["tactical_confirmation_context"], confirmation)
+        if tactical_boundaries is not None:
+            _write_json(paths["tactical_confirmation_invalidation_boundaries"], tactical_boundaries)
         # Financial V2 previously had NO canonical daily-materialization path anywhere in this
         # pipeline: the prior wiring here loaded the legacy, structurally incompatible
         # market_wide_current_fundamental_research/v1 artifact (523-record shape;
@@ -720,6 +736,7 @@ def build_enrichment_components(
             priority_queue_artifact=priority_queue_artifact,
             momentum_artifact=momentum,
             tactical_confirmation_artifact=confirmation,
+            tactical_boundaries_artifact=tactical_boundaries,
         )
         if res.get("session") != session:
             raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")
@@ -731,6 +748,38 @@ def build_enrichment_components(
     _attempt("historical_context", "historical_context", _historical_context)
     _attempt("integrated_investment_decision_product", "integrated_investment_decision_product", _integrated_investment_decision_product)
     return results
+
+
+def retain_prospective_decision_snapshot(
+    root: Path, session: str, *, producer_result: Mapping[str, Any],
+    enrichment: Mapping[str, Any], exact_session_snapshot: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Seal the current Integrated Decision at T0 before its handoff is written.
+
+    A content-addressed path makes an identical warm rerun idempotent and a
+    genuinely changed decision a distinct snapshot; no session-shaped working
+    artifact can silently rewrite the original T0 decision.
+    """
+    from prospective_decision_retention import build_snapshot, write_immutable_snapshot
+
+    integrated = (enrichment.get("integrated_investment_decision_product") or {}).get("artifact")
+    operation = producer_result.get("operation") or {}
+    operation_identity = (operation.get("manifest") or {}).get("operation_identity")
+    if not isinstance(integrated, Mapping):
+        # Daily Producer is already complete.  Like downstream outcome
+        # feedback, retention instrumentation must surface its own failure
+        # without revising or blocking today's governed decision.
+        return {"status": "UNAVAILABLE", "reason": "INTEGRATED_DECISION_ARTIFACT_UNAVAILABLE"}
+    try:
+        snapshot = build_snapshot(
+            session=session, operation_identity=operation_identity,
+            producer_run_identity=producer_result.get("run_identity"), integrated_artifact=integrated,
+            exact_session_snapshot=exact_session_snapshot,
+        )
+        path = write_immutable_snapshot(root, snapshot)
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "reason": f"PROSPECTIVE_SNAPSHOT_RETENTION_FAILED:{type(exc).__name__}:{exc}"}
+    return {"status": "RETAINED", "artifact": snapshot, "path": path}
 
 
 def register_session_inputs(
@@ -921,6 +970,7 @@ def build_tiered_bundle(
     acquisition: Mapping[str, Any], producer_result: Mapping[str, Any],
     decision_packet: Mapping[str, Any] | None, prospective: Mapping[str, Any] | None,
     enrichment: Mapping[str, Any], producer_head: str | None, consumer_head: str | None,
+    prospective_snapshot: Mapping[str, Any] | None = None,
     artifact_root: Path | None = None, runtime_release: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     artifact_root = artifact_root or root
@@ -981,6 +1031,14 @@ def build_tiered_bundle(
         "integrated_investment_decision_product_identity": (
             (enrichment.get("integrated_investment_decision_product") or {}).get("artifact") or {}
         ).get("artifact_identity"),
+        "prospective_decision_snapshot": {
+            "status": (prospective_snapshot or {}).get("status", "UNAVAILABLE"),
+            "reason": (prospective_snapshot or {}).get("reason"),
+            "identity": ((prospective_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
+            "path": _rel(root, (prospective_snapshot or {}).get("path")) if (prospective_snapshot or {}).get("path") else None,
+            "source_integrated_decision_artifact_identity": (((prospective_snapshot or {}).get("artifact") or {}).get("source_integrated_decision_artifact") or {}).get("artifact_identity"),
+            "authority_boundary": "IMMUTABLE_T0_SNAPSHOT_NOT_A_CURRENT_DECISION_INPUT",
+        },
         "prospective_cohort_snapshot_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
         "prospective_decision_feedback_identity": (((prospective or {}).get("decision_feedback") or {}).get("artifact") or {}).get("artifact_identity"),
         "enrichment_component_status": {name: row["status"] for name, row in enrichment.items()},
@@ -990,6 +1048,7 @@ def build_tiered_bundle(
             "dashboard_release_set_index": _rel(root, bundle_dir / "dashboard_release_set_index.json"),
             "integrated_investment_decision_product": _rel(root, level2_paths["integrated_investment_decision_product"]),
             "prospective_decision_feedback": ((prospective or {}).get("decision_feedback") or {}).get("path"),
+            "prospective_decision_snapshot": _rel(root, (prospective_snapshot or {}).get("path")) if (prospective_snapshot or {}).get("path") else None,
         },
         "primary_ai_input": _rel(root, producer_result["run_dir"] / "ai_research_session_bundle.json"),
         "recommended_ai_inputs": {
@@ -1020,6 +1079,7 @@ def build_tiered_bundle(
             "path": ((prospective or {}).get("decision_feedback") or {}).get("path"),
             "authority_boundary": "DOWNSTREAM_OBSERVATION_ONLY_NOT_A_CURRENT_DECISION_INPUT",
         },
+        "prospective_decision_snapshot": tier1["prospective_decision_snapshot"],
         "authority_boundary": {"no_probability_target_expected_return_or_sizing": True, "is_actionable": False},
     }
 
@@ -1085,6 +1145,10 @@ def run_canonical_post_close(
         root, session, artifact_root=artifact_root, runtime_root=runtime_root,
         priority_queue_artifact=producer_result["operation"].get("decision_queue"),
     )
+    prospective_snapshot = retain_prospective_decision_snapshot(
+        root, session, producer_result=producer_result, enrichment=enrichment,
+        exact_session_snapshot=acquisition.get("snapshot"),
+    )
     decision_packet = build_decision_packet(
         root, session, opportunity=producer_result["operation"].get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
@@ -1094,13 +1158,15 @@ def run_canonical_post_close(
     tiers = build_tiered_bundle(
         root, session, acquisition=acquisition, producer_result=producer_result,
         decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
-        producer_head=producer_head, consumer_head=consumer_head, artifact_root=artifact_root,
+        producer_head=producer_head, consumer_head=consumer_head, prospective_snapshot=prospective_snapshot,
+        artifact_root=artifact_root,
         runtime_release=runtime_release,
     )
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
         "producer_result": producer_result, "decision_packet": decision_packet,
-        "prospective": prospective, "runtime_release": runtime_release, "tiers": tiers,
+        "prospective": prospective, "prospective_snapshot": prospective_snapshot,
+        "runtime_release": runtime_release, "tiers": tiers,
         "producer_head": producer_head, "consumer_head": consumer_head,
     }
 

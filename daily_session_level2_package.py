@@ -192,6 +192,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "market_structure_breakout_v3_projection": ops / f"integrated-investment-decision-product-v1-{nodash}" / "market_structure_breakout_v3_projection_artifact.json",
         "tactical_momentum_context": ops / f"integrated-investment-decision-product-v1-{nodash}" / "tactical_momentum_context_artifact.json",
         "tactical_confirmation_context": ops / f"integrated-investment-decision-product-v1-{nodash}" / "tactical_confirmation_context_artifact.json",
+        "tactical_confirmation_invalidation_boundaries": ops / f"integrated-investment-decision-product-v1-{nodash}" / "tactical_confirmation_invalidation_boundaries_artifact.json",
         "financial_analysis_product": ops / f"financial-analysis-product-v2-{nodash}" / "financial_analysis_product_artifact.json",
         "current_valuation_evaluated": ops / f"financial-analysis-product-v2-{nodash}" / "current_research_valuation_context_artifact.json",
     }
