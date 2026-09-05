@@ -1,5 +1,45 @@
 # Stock Lookup — Operational State
 
+**Prospective decision retention and outcome maturation V1 (2026-09-05):**
+`PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE`, started at owner-specified checkpoint
+`c7ce041d7a6fefe84fb1afcb94dfc3d4dc95a90c` (`HEAD == origin/main`) and implemented at local
+checkpoint `9f98ac2`. The explicit empty-queue override is
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1`;
+it authorizes this milestone only and opens no successor.
+
+**Future T0 retention is now content-addressed and operation-bound.** Canonical post-close seals
+the just-built `integrated_investment_decision_product/v1` before writing the session handoff as
+`prospective_decision_snapshot/v1`. Each append-only snapshot binds session, ticker, Integrated
+Decision identity, completed Daily operation, source decision-artifact identity, full T0 record,
+evidence-axis snapshot, existing trigger/invalidation condition semantics, and exact T0 close
+observation. A byte-identical warm rerun reuses the snapshot; a different decision creates a
+different identity/version. Handoff binds snapshot/source/operation identities, so a mutable
+session-shaped working artifact can no longer become the factual T0 source later.
+
+**Existing strategy semantics only; downstream session-counted maturation.** Integrated Decision
+now retains serializations from the standing
+`tactical_confirmation_invalidation_boundaries/v1` artifact. Only existing `READY`, fixed-T0,
+close-vs-level boundaries are machine-evaluable from compatible retained closes; dynamic,
+disjunctive, conditional, unavailable, or narrative boundaries remain explicitly
+`NOT_MACHINE_EVALUABLE`. The downstream feedback artifact maps the existing governed close bridge
+to `PENDING`, `MATURED`, `INSUFFICIENT_FUTURE_DEPTH`, `PRICE_SERIES_UNQUALIFIED`, or
+`TEMPORAL_PROVENANCE_UNQUALIFIED`; it observes later completed trading sessions only and never
+mutates the T0 snapshot or today's policy.
+
+**Sep-04 and retained evidence.** The 2026-09-04 handoff identity `55173…` points to a legacy
+session-shaped path whose current content identity is `8a0e…` (also the enrichment current view).
+The original handoff content is not retained at that bound path. This is classified
+`RECOVERABLE_IDENTITY_BINDING_DEFECT`; its exact historical writer is not proven, and the
+candidate remains `EXCLUDE_TEMPORAL_PROVENANCE_UNQUALIFIED`. No historical artifact was rewritten
+or qualified. Current retained evidence has one legacy 2026-09-03 qualified artifact (1,683
+decisions), no modern immutable snapshot, and no mature future session set; its missing modern
+axes/conditions remain `FIELD_NOT_RETAINED_AT_T0`. FPT, HPG, SSI, QNS, PVD, PNJ, and VNM remain in
+that legacy pending corpus. Evidence:
+`operations-review/prospective-decision-retention-outcome-maturation-v1-20260905/`.
+No provider, policy, score, probability, target, sizing, execution, PIT/RAW_AS_TRADED, database,
+publication, deployment, or authority change occurred.
+
 **Prospective decision outcome feedback and policy diagnostics V1 (2026-09-05):**
 `PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE`, begun at owner-specified `5e5d4656cedc1f76c2e2fcaa19705a23d54ea39e`

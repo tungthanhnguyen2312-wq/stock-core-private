@@ -1,5 +1,25 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Prospective decision retention and outcome maturation V1 (2026-09-05):**
+`PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` at local checkpoint `9f98ac2`, begun from owner-specified
+`c7ce041d7a6fefe84fb1afcb94dfc3d4dc95a90c`. Explicit owner authorization opened it despite
+`queued_next=[]`
+(`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1`);
+no dependency or successor is inferred. The extension adds one content-addressed immutable T0
+snapshot at canonical post-close, before its handoff, binding each record to session, ticker,
+Integrated Decision, Daily operation, source artifact, all retained axes/coherence/priority/why-now
+context, existing boundary semantics, and T0 close lineage. Identical warm reruns reuse bytes;
+changed decisions get a distinct snapshot. It reuses the existing tactical-boundary contract and
+close bridge: fixed existing close/level conditions may evaluate downstream; dynamic/narrative
+conditions remain explicitly non-evaluable; horizons are governed trading-session maturity only.
+The Sep-04 `55173…` handoff versus `8a0e…` mutable working-artifact mismatch is a
+`RECOVERABLE_IDENTITY_BINDING_DEFECT`, but lacks immutable historic provenance and remains
+excluded. The present retained corpus has no new snapshot or mature outcomes, so readiness—not
+policy performance—is proven. No provider, policy, score, target, probability, execution, PIT,
+RAW_AS_TRADED, database, publication, deployment, or authority change. Evidence:
+`operations-review/prospective-decision-retention-outcome-maturation-v1-20260905/`.
+
 **Prospective decision outcome feedback and policy diagnostics V1 (2026-09-05):**
 `PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE` at local checkpoint `3d1b41d`, begun from owner-specified

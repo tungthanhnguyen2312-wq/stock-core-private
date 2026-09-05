@@ -1,5 +1,46 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Prospective Decision Retention And Outcome Maturation V1
+
+`PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` (`push = NO`, started from owner checkpoint
+`c7ce041d7a6fefe84fb1afcb94dfc3d4dc95a90c`, implementation checkpoint `9f98ac2`). The explicit
+owner override is
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1`;
+it authorizes no successor.
+
+1. **A prospective T0 decision is a content-addressed snapshot, not a mutable path.**
+   `prospective_decision_snapshot/v1` seals the complete known-at-T0 Integrated Decision record
+   before canonical handoff persistence and binds session, ticker, decision identity, operation
+   identity, source artifact identity, T0 evidence axes, serialized existing strategy conditions,
+   and exact T0 close observation. It is append-only: identical reruns preserve the same bytes;
+   a different decision creates a distinct identity. Outcome feedback references the exact snapshot
+   and never writes future observations into it.
+2. **The Sep-04 mismatch is a recoverable future binding defect, not a basis for historical
+   reconstruction.** The retained handoff's `55173…` Integrated Decision identity disagrees with
+   the `8a0e…` content currently present at its static session-shaped path (and the enrichment
+   current view). The original content is not retained at the handoff-bound path, and the exact
+   historical writer is not proven. The candidate therefore remains excluded; future handoffs bind
+   the immutable snapshot directly, preventing recurrence without a special case.
+3. **Condition semantics are reused, not invented.** The existing
+   `tactical_confirmation_invalidation_boundaries/v1` remains the sole source of operator,
+   reference, level/state, method, and lineage. Only its already-`READY` fixed-level close
+   boundaries are evaluable from retained closes. Dynamic MA/momentum, disjunctive, conditional,
+   unavailable, or narrative rules stay explicitly non-machine-evaluable; no stop, trigger engine,
+   execution inference, or policy change was created.
+4. **Maturation remains downstream current-research diagnostics.** The standing compatible
+   retained close-series bridge supplies T+1/T+3/T+5/T+10/T+20 trading-session observations.
+   The added mapping distinguishes `PENDING`, `INSUFFICIENT_FUTURE_DEPTH`, `MATURED`,
+   `PRICE_SERIES_UNQUALIFIED`, and `TEMPORAL_PROVENANCE_UNQUALIFIED`. It runs after Daily Producer,
+   cannot affect today's decision, and does not claim intraday MFE/MAE, RAW_AS_TRADED, PIT, or
+   policy effectiveness.
+5. **Evidence remains prospective-only.** The sole genuine legacy Sep-03 artifact remains intact
+   with 1,683 pending records; its missing modern axes and conditions stay
+   `FIELD_NOT_RETAINED_AT_T0`. No new Daily session was fabricated, no mature forward corpus exists,
+   and readiness for posture/coherence/axis/false-negative/failed-setup/trigger/invalidation
+   outcomes is not evidence of their performance. Evidence package:
+   `operations-review/prospective-decision-retention-outcome-maturation-v1-20260905/`.
+
 ## 2026-09-05 - Prospective Decision Outcome Feedback And Policy Diagnostics V1
 
 `PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1 = COMPLETE /

@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.05.4",
+  "roadmap_version": "2026.09.05.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,17 +9,31 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "3d1b41d9d41e5e0b08ada79d12bc33643e00d419",
-  "last_updated_checkpoint": "3d1b41d9d41e5e0b08ada79d12bc33643e00d419",
+  "implementation_lineage_head": "9f98ac2ca6e07b5327a80afadc78085c43633c29",
+  "last_updated_checkpoint": "9f98ac2ca6e07b5327a80afadc78085c43633c29",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PROSPECTIVE_DECISION_OUTCOME_FEEDBACK_AND_POLICY_DIAGNOSTICS_V1",
+    "milestone": "PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / PARTIAL_BY_EVIDENCE",
+      "checkpoint": "9f98ac2ca6e07b5327a80afadc78085c43633c29",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_RESEARCH_DIAGNOSTIC_RETENTION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1 directive (2026-09-05)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1",
+      "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Canonical post-close seals an append-only prospective_decision_snapshot/v1 before handoff, binding session, ticker, Integrated Decision and source-artifact identity, completed Daily operation identity, full T0 evidence axes/coherence/context, existing serialized tactical boundary semantics, and T0 close lineage. Handoff binds the snapshot directly; identical warm reruns are byte-idempotent and a changed decision yields a distinct identity. Feedback v2 consumes the immutable snapshot rather than a later mutable session path and maps the existing session-counted close bridge to PENDING/MATURED/INSUFFICIENT_FUTURE_DEPTH/PRICE_SERIES_UNQUALIFIED/TEMPORAL_PROVENANCE_UNQUALIFIED. Existing fixed READY close-vs-level boundaries may evaluate; dynamic/narrative boundaries stay explicitly non-evaluable. Sep-04 handoff 55173... versus working artifact 8a0e... is RECOVERABLE_IDENTITY_BINDING_DEFECT, but the original content is not retained so historic exclusion remains. Present corpus has no modern snapshot or mature outcome; readiness only, no policy/provider/authority/PIT/RAW_AS_TRADED/execution/probability/score change. Evidence: operations-review/prospective-decision-retention-outcome-maturation-v1-20260905/. No successor is queued."
+    },
     {
       "milestone_id": "MULTI_SESSION_THESIS_AND_RECOMMENDATION_LIFECYCLE_V1",
       "state": "COMPLETE",
