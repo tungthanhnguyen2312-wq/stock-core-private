@@ -1,5 +1,46 @@
 # Stock Lookup — Operational State
 
+**Market-data historical-series redundancy and feature-safe failover V1 (2026-09-05):**
+`MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE`, started from the owner-specified `fe1997961fdac3376a100cc987e77d97060d25b9`
+(implementation checkpoint `21ae21d`). The owner explicitly authorized this bounded milestone
+despite `queued_next=[]`; recorded as
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1`,
+not as an inferred dependency. It supersedes the earlier narrow statement
+`TECHNICAL_HISTORY_BACKUP = NOT_QUALIFIED` only for the precisely evidenced, Current-Research,
+close-only failover route below; it does not promote a provider or reopen any other feature family.
+
+New `historical_series_failover/v1` extends the existing technical-history recovery record rather
+than creating a parallel framework. It retains each provider series independently, prohibits
+duplicate/future rows and cross-provider splicing, and selects a series only when its target-session
+close equals the existing exact-session snapshot. DNSE remains primary; KBS is the first fallback;
+VCI is tried only after a non-clean KBS outcome. A live 11-ticker cross-exchange/thin-name cohort
+(`FPT, HPG, QNS, STB, LPB, SSI, PVD, PNJ, IDC, VGI, VNZ`) for 2026-09-04 found DNSE 11/11,
+KBS 11/11, and VCI 11/11 complete, exact-target-close-compatible close series. It also exposed
+and fixed KBS's exclusive-end-date behavior by requesting its endpoint through the next calendar
+date while retaining the logical target end and rejecting any future row. VCI is qualified as a
+contingent close-only fallback; KBS wins that cohort's route by precedence. All 22 Vnstock calls
+ran under one active governor (45 effective / 60 hard rpm; maximum observed window 22; no waits).
+
+Feature scope is deliberately narrow: KBS/VCI are `READY` only for current-research close history,
+momentum, and tactical structure after exact-close compatibility. Their volume, participation,
+OHLC geometry, PIT, execution/liquidity, RAW_AS_TRADED, and authority-promotion paths remain
+blocked. DNSE volume remains the sole route for participation. `feature_input_fitness_contract.py`
+now exposes that distinction; descriptive research clears provider-scoped relative-volume values
+when the selected history is KBS/VCI. Tactical V3 and momentum consume the same selected recovery
+record and retain provider lineage.
+
+Daily recovery now invokes the existing runner once with `--all`, so all KBS/VCI fallback requests
+share one invocation-scoped Vnstock governor rather than resetting at each old ten-ticker batch;
+existing batch/consolidation behavior stays compatible. Retained 2026-09-04 replay restores actual
+structure and momentum availability from 0 to 918 of 952 technically eligible tickers; the 34
+target-close mismatches stay fail-closed. The 2026-08-25 governed temporal replay has zero future
+rows and preserves its 888 already-available records. No production database write, deployment,
+publication, push, new provider, score, target, probability, or authority promotion occurred.
+Evidence package: `operations-review/market-data-historical-series-redundancy-and-feature-safe-failover-v1-20260905/`.
+The pre-existing `config/daily_research_session_input_registry.json` operational diff remains
+untouched. No successor is opened.
+
 **Core operating spine, provider resilience, feature fitness, and publication V1 (2026-09-05):**
 `CORE_OPERATING_SPINE_PROVIDER_RESILIENCE_FEATURE_FITNESS_AND_PUBLICATION_V1 = COMPLETE`, started
 at `a032c49` (implementation checkpoint `ec86754`). Explicit owner-authorized roadmap override

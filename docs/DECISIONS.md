@@ -1,5 +1,39 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Market Data Historical Series Redundancy And Feature-Safe Failover V1
+
+`MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE`: owner-specified start `fe1997961fdac3376a100cc987e77d97060d25b9`,
+implementation checkpoint `21ae21d`.
+
+1. **The roadmap override is explicit.** The owner authorized this milestone with
+   `queued_next=[]`; the state record uses
+   `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1`.
+   No dependency or successor is inferred.
+
+2. **Historical redundancy is provider-attributable and feature-specific.** The extension reuses
+   the existing recovery record and Vnstock/DNSE adapters. Each source retains a complete
+   independent series; the selector accepts one series only after exact target-close agreement,
+   never a cross-provider splice. DNSE remains primary, KBS is first fallback, and VCI follows
+   only a non-clean KBS failure. KBS/VCI qualify for Current-Research close features only;
+   volume/participation remain DNSE-only and OHLC geometry, PIT, execution, RAW_AS_TRADED, scores,
+   targets, probabilities, and authority promotion remain blocked.
+
+3. **Bounded evidence passed with a real adapter correction.** The 11-name 2026-09-04 cohort
+   produced target-compatible DNSE, KBS, and VCI close histories for every name. KBS initially
+   omitted the target because its `end` is exclusive; the adapter now requests through the next
+   calendar date while preserving the logical target boundary and rejecting any future row.
+   All 22 Vnstock qualification calls used one rate governor (45 effective / 60 hard rpm; max
+   window 22; no waits). VCI is proven compatible but is not selected where KBS already succeeds.
+
+4. **Consumer and temporal boundaries remain fail-closed.** Tactical structure/momentum receive
+   the selected history and provider lineage. Descriptive relative-volume fields are cleared for
+   non-DNSE history, preventing a close-history fallback from leaking into participation.
+   Retained 2026-09-04 replay restores 918/952 actual structure and momentum records; 34
+   snapshot-close mismatches remain unavailable. The 2026-08-25 governed replay has no future
+   rows and preserves 888 already-available records. No production DB write, publish, deploy, or
+   push occurred. Evidence: `operations-review/market-data-historical-series-redundancy-and-feature-safe-failover-v1-20260905/`.
+
 ## 2026-09-05 - Core Operating Spine, Provider Resilience, Feature Fitness, And Publication V1
 
 `CORE_OPERATING_SPINE_PROVIDER_RESILIENCE_FEATURE_FITNESS_AND_PUBLICATION_V1 = COMPLETE`: started

@@ -1,5 +1,22 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Market-data historical-series redundancy and feature-safe failover V1 (2026-09-05):**
+`MARKET_DATA_HISTORICAL_SERIES_REDUNDANCY_AND_FEATURE_SAFE_FAILOVER_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE`, begun at the owner-specified `fe199796` and implemented at `21ae21d`.
+Explicit owner authorization opened it despite `queued_next=[]`; no predecessor was inferred.
+The existing DNSE technical-history recovery is extended with independently retained KBS/VCI
+provider series, exact target-session-close compatibility, no series splicing, and an ordered
+DNSE -> KBS -> VCI route (a KBS clean miss does not spend VCI). Bounded live 2026-09-04 evidence
+for 11 diverse tickers found all three providers' close histories target-compatible; KBS's
+exclusive-end query boundary was corrected. KBS/VCI are therefore feature-safe only for
+Current-Research close history, Tactical V3 structure, and momentum; their volume, participation,
+OHLC geometry, PIT, execution/liquidity, and RAW_AS_TRADED uses remain blocked. The canonical
+Daily entrypoint now runs the existing recovery tool once under a single Vnstock governor scope.
+Retained 2026-09-04 replay restores structure/momentum availability 0 -> 918 of 952 eligible,
+with 34 exact-close mismatches correctly unavailable; 2026-08-25 temporal replay is clean.
+No provider or authority was promoted and no successor is queued. Artifact:
+`operations-review/market-data-historical-series-redundancy-and-feature-safe-failover-v1-20260905/`.
+
 **Core operating spine, provider resilience, feature fitness, and publication V1 (2026-09-05):**
 `CORE_OPERATING_SPINE_PROVIDER_RESILIENCE_FEATURE_FITNESS_AND_PUBLICATION_V1 = COMPLETE` at
 `ec86754`, started at `a032c49`. Owner-authorized architecture-stabilization override, scoped to
