@@ -155,6 +155,54 @@ def test_modern_snapshot_is_the_t0_source_and_t_plus_one_matures_by_trading_sess
     assert artifact["prospective_corpus"]["genuine_immutable_snapshot_count"] == 2
 
 
+def test_corporate_intelligence_axis_is_retained_and_tracked_when_present():
+    """CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1: a FUTURE modern T0
+    snapshot must retain the new axis (mission Section 21) with zero code change to the
+    verbatim `integrated_decision_at_t0` copy, and _axis_completeness must track it."""
+    integrated = _integrated("2026-01-02", axes=True)
+    integrated["records"]["FPT"]["evidence_axes"]["CORPORATE_INTELLIGENCE"] = _axis(state="CATALYST_PRESENT")
+    snapshot = retention.build_snapshot(
+        session="2026-01-02", operation_identity="daily-operation:2026-01-02", producer_run_identity="daily-run:2026-01-02",
+        integrated_artifact=integrated, exact_session_snapshot=_price_snapshot("2026-01-02", 100.0),
+    )
+    item = snapshot["records"]["FPT"]["evidence_axis_snapshot"]
+    assert item["corporate_intelligence_retained"] is True
+    assert item["status"] == "COMPLETE"
+    assert "CORPORATE_INTELLIGENCE" not in item["missing_axes"]
+    # Verbatim capture requires no producer-side code change: the T0 copy already carries it.
+    assert snapshot["records"]["FPT"]["integrated_decision_at_t0"]["evidence_axes"]["CORPORATE_INTELLIGENCE"]["state"] == "CATALYST_PRESENT"
+
+
+def test_no_qualified_corporate_event_state_is_still_a_complete_retained_axis():
+    """A definitive NO_QUALIFIED_CORPORATE_EVENT read is a resolved result, not an incomplete
+    one -- it must not be conflated with the axis never having been attempted (NOT_PROVIDED)."""
+    integrated = _integrated("2026-01-02", axes=True)
+    integrated["records"]["FPT"]["evidence_axes"]["CORPORATE_INTELLIGENCE"] = _axis(state="NO_QUALIFIED_CORPORATE_EVENT")
+    snapshot = retention.build_snapshot(
+        session="2026-01-02", operation_identity="daily-operation:2026-01-02", producer_run_identity="daily-run:2026-01-02",
+        integrated_artifact=integrated, exact_session_snapshot=_price_snapshot("2026-01-02", 100.0),
+    )
+    item = snapshot["records"]["FPT"]["evidence_axis_snapshot"]
+    assert item["corporate_intelligence_retained"] is True
+    assert item["status"] == "COMPLETE"
+
+
+def test_legacy_snapshot_without_corporate_intelligence_axis_is_not_retrofitted():
+    """A legacy (pre-milestone) integrated decision that never had a CORPORATE_INTELLIGENCE
+    axis at all must not be penalized as incomplete, and must not be silently backfilled --
+    mission Section 21: legacy snapshots are not reconstructed."""
+    integrated = _integrated("2026-01-02", axes=True)
+    assert "CORPORATE_INTELLIGENCE" not in integrated["records"]["FPT"]["evidence_axes"]
+    snapshot = retention.build_snapshot(
+        session="2026-01-02", operation_identity="daily-operation:2026-01-02", producer_run_identity="daily-run:2026-01-02",
+        integrated_artifact=integrated, exact_session_snapshot=_price_snapshot("2026-01-02", 100.0),
+    )
+    item = snapshot["records"]["FPT"]["evidence_axis_snapshot"]
+    assert item["corporate_intelligence_retained"] is False
+    assert item["status"] == "COMPLETE"
+    assert "CORPORATE_INTELLIGENCE" not in snapshot["records"]["FPT"]["integrated_decision_at_t0"]["evidence_axes"]
+
+
 def test_pending_and_insufficient_depth_are_distinct():
     assert retention.maturity_state(horizon_status="PENDING_NOT_ENOUGH_FUTURE_SESSIONS", later_completed_sessions=0, required_sessions=1) == "PENDING"
     assert retention.maturity_state(horizon_status="PENDING_NOT_ENOUGH_FUTURE_SESSIONS", later_completed_sessions=1, required_sessions=5) == "INSUFFICIENT_FUTURE_DEPTH"

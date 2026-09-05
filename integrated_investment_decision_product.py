@@ -354,6 +354,52 @@ def evaluate_financial_composite_context(
     }
 
 
+# ── Corporate Intelligence context (Section 13: additive only) ───────────────
+
+def evaluate_corporate_intelligence_context(
+    corporate_intelligence_record: Mapping[str, Any] | None, *, as_of_session: str,
+) -> dict[str, Any]:
+    """Thin join over one current_corporate_intelligence_axis/v1 per-ticker record.
+
+    This module never computes catalyst/risk classification, materiality, or freshness itself
+    -- current_corporate_intelligence_axis.py owns those measurements; this function only
+    extracts the compact axis inputs and flags when the retained corporate-event evidence is
+    from an earlier session than today's decision (mission Section 10: freshness must be
+    explicit, never silently re-labelled current).
+    """
+    record = corporate_intelligence_record or {}
+    if not record:
+        return {
+            "state": "NOT_PROVIDED", "fitness": "NOT_PROVIDED",
+            "supporting_reason_codes": [], "contradicting_reason_codes": [],
+            "blocker_reason_codes": ["CORPORATE_INTELLIGENCE_CONTEXT_NOT_PROVIDED"],
+            "active_catalyst_count": 0, "active_risk_count": 0, "mixed_or_unresolved_count": 0,
+            "material_event_count": 0, "freshest_material_event": None, "event_identities": [],
+            "evidence_session": None, "evidence_session_stale": None, "limitations": [],
+        }
+    evidence_session = record.get("research_session")
+    stale = bool(evidence_session) and evidence_session != as_of_session
+    blockers = list(record.get("blockers") or [])
+    if stale:
+        blockers = blockers + ["CORPORATE_INTELLIGENCE_EVIDENCE_SESSION_STALE"]
+    return {
+        "state": record.get("state", "NO_QUALIFIED_CORPORATE_EVENT"),
+        "fitness": record.get("fitness", "CURRENT_RESEARCH_ONLY"),
+        "supporting_reason_codes": list(record.get("supporting_reason_codes") or []),
+        "contradicting_reason_codes": list(record.get("contradicting_reason_codes") or []),
+        "blocker_reason_codes": blockers,
+        "active_catalyst_count": len(record.get("active_catalysts") or []),
+        "active_risk_count": len(record.get("active_risks") or []),
+        "mixed_or_unresolved_count": len(record.get("mixed_or_unresolved_events") or []),
+        "material_event_count": record.get("material_event_count", 0),
+        "freshest_material_event": record.get("freshest_material_event"),
+        "event_identities": list(record.get("event_identities") or []),
+        "evidence_session": evidence_session,
+        "evidence_session_stale": stale,
+        "limitations": list(record.get("limitations") or []),
+    }
+
+
 # ── Evidence-axis inventory and qualitative coherence ─────────────────────────
 
 def _axis(
@@ -390,6 +436,7 @@ def build_evidence_axes(
     participation_summary: Mapping[str, Any], market_summary: Mapping[str, Any],
     market_context_provided: bool, priority_record: Mapping[str, Any] | None,
     portfolio_summary: Mapping[str, Any], source_artifact_identities: Mapping[str, Any] | None = None,
+    corporate_intelligence_summary: Mapping[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Expose standing decision evidence as distinct, source-preserving axes.
 
@@ -510,6 +557,27 @@ def build_evidence_axes(
                 "is_held": portfolio_summary.get("is_held"),
                 "concentration_flag": portfolio_summary.get("concentration_flag"),
                 "sector_overlap": portfolio_summary.get("sector_overlap"),
+            },
+        ),
+        # CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1: additive evidence
+        # axis only. current_corporate_intelligence_axis.py owns every catalyst/risk/materiality/
+        # freshness measurement; this axis only exposes its already-computed per-ticker read.
+        # decide_research_action_posture (called before this function, above) never reads this
+        # axis -- no automatic posture change merely because a catalyst/risk exists (Section 14).
+        "CORPORATE_INTELLIGENCE": _axis(
+            state=(corporate_intelligence_summary or {}).get("state", "NOT_PROVIDED"),
+            fitness=(corporate_intelligence_summary or {}).get("fitness", "NOT_PROVIDED"),
+            supporting=(corporate_intelligence_summary or {}).get("supporting_reason_codes") or [],
+            contradicting=(corporate_intelligence_summary or {}).get("contradicting_reason_codes") or [],
+            blockers=(corporate_intelligence_summary or {}).get("blocker_reason_codes") or [],
+            method="current_corporate_intelligence_axis/v1",
+            lineage={"source_artifact_identity": identities.get("corporate_intelligence")},
+            context={
+                "active_catalyst_count": (corporate_intelligence_summary or {}).get("active_catalyst_count"),
+                "active_risk_count": (corporate_intelligence_summary or {}).get("active_risk_count"),
+                "material_event_count": (corporate_intelligence_summary or {}).get("material_event_count"),
+                "freshest_material_event": (corporate_intelligence_summary or {}).get("freshest_material_event"),
+                "evidence_session_stale": (corporate_intelligence_summary or {}).get("evidence_session_stale"),
             },
         ),
     }
@@ -1066,6 +1134,7 @@ def build_ticker_integrated_decision(
     tactical_confirmation_record: Mapping[str, Any] | None = None,
     tactical_boundaries_record: Mapping[str, Any] | None = None,
     tactical_boundaries_identity: str | None = None,
+    corporate_intelligence_record: Mapping[str, Any] | None = None,
     producer_artifact_identities: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record."""
@@ -1128,6 +1197,13 @@ def build_ticker_integrated_decision(
             "is_held": False,
             "policy_note": "No explicit portfolio supplied; security attractiveness is independently evaluated.",
         }
+
+    # 6b. Corporate Intelligence (Section 13: additive only; computed here, but never passed
+    # into decide_research_action_posture below -- no automatic posture change merely because
+    # a catalyst/risk exists).
+    corporate_intelligence_summary = evaluate_corporate_intelligence_context(
+        corporate_intelligence_record, as_of_session=as_of_session,
+    )
 
     # 7. Posture & Why Now
     posture, why_now, missing_effect = decide_research_action_posture(
@@ -1203,6 +1279,7 @@ def build_ticker_integrated_decision(
         participation_summary=part_summary, market_summary=mkt_summary,
         market_context_provided=market_context_provided, priority_record=priority_queue_record,
         portfolio_summary=portfolio_summary, source_artifact_identities=producer_artifact_identities,
+        corporate_intelligence_summary=corporate_intelligence_summary,
     )
     evidence_axis_coherence = evaluate_evidence_axis_coherence(evidence_axes)
 
@@ -1248,6 +1325,7 @@ def build_ticker_integrated_decision(
         "participation": part_summary,
         "market_sector_context": mkt_summary,
         "portfolio_context": portfolio_summary,
+        "corporate_intelligence_context": corporate_intelligence_summary,
         "legacy_comparison": {
             "legacy_stance": legacy_stance,
             "legacy_entry_state": legacy_entry_state,
@@ -1262,6 +1340,7 @@ def build_ticker_integrated_decision(
             "momentum_identity": (producer_artifact_identities or {}).get("momentum") or momentum.get("artifact_identity"),
             "tactical_confirmation_identity": (producer_artifact_identities or {}).get("tactical_confirmation") or confirmation.get("artifact_identity"),
             "tactical_boundaries_identity": tactical_boundaries_identity,
+            "corporate_intelligence_identity": (producer_artifact_identities or {}).get("corporate_intelligence"),
         },
         "authority_boundary": {
             "is_actionable": False,
@@ -1292,6 +1371,7 @@ def build_artifact(
     momentum_artifact: Mapping[str, Any] | None = None,
     tactical_confirmation_artifact: Mapping[str, Any] | None = None,
     tactical_boundaries_artifact: Mapping[str, Any] | None = None,
+    corporate_intelligence_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact."""
     fa_contract = (financial_analysis_artifact or {}).get("contract_version")
@@ -1311,6 +1391,7 @@ def build_artifact(
     momentum_records = (momentum_artifact or {}).get("records") or {}
     tactical_confirmation_records = (tactical_confirmation_artifact or {}).get("records") or {}
     tactical_boundaries_records = (tactical_boundaries_artifact or {}).get("records") or {}
+    corporate_intelligence_records = (corporate_intelligence_artifact or {}).get("records") or {}
 
     # All tickers present in technical structure or financial analysis
     all_tickers = sorted(set(tac_records.keys()) | set(fa_records.keys()))
@@ -1327,7 +1408,7 @@ def build_artifact(
     axis_available_counts: dict[str, int] = {
         "FUNDAMENTAL": 0, "VALUATION": 0, "TACTICAL_STRUCTURE": 0, "MOMENTUM": 0,
         "PARTICIPATION_CONFIRMATION": 0, "MARKET_SECTOR": 0, "OPPORTUNITY_PRIORITY": 0,
-        "PORTFOLIO_FIT": 0,
+        "PORTFOLIO_FIT": 0, "CORPORATE_INTELLIGENCE": 0,
     }
     all_major_axes_available = 0
 
@@ -1340,6 +1421,12 @@ def build_artifact(
     mkt_avail = 1 if market_sector_artifact else 0
     port_avail = 0
     port_not_provided = 0
+    ci_evaluated = 0
+    ci_any_event = 0
+    ci_active_catalyst = 0
+    ci_active_risk = 0
+    ci_mixed_or_unresolved = 0
+    ci_material = 0
 
     for ticker in all_tickers:
         tac_rec = tac_records.get(ticker)
@@ -1363,6 +1450,7 @@ def build_artifact(
             tactical_confirmation_record=tactical_confirmation_records.get(ticker),
             tactical_boundaries_record=tactical_boundaries_records.get(ticker),
             tactical_boundaries_identity=(tactical_boundaries_artifact or {}).get("artifact_identity"),
+            corporate_intelligence_record=corporate_intelligence_records.get(ticker),
             producer_artifact_identities={
                 "technical_structure": technical_structure_artifact.get("artifact_identity"),
                 "financial_analysis": (financial_analysis_artifact or {}).get("artifact_identity"),
@@ -1373,6 +1461,7 @@ def build_artifact(
                 "momentum": (momentum_artifact or {}).get("artifact_identity"),
                 "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
                 "tactical_boundaries": (tactical_boundaries_artifact or {}).get("artifact_identity"),
+                "corporate_intelligence": (corporate_intelligence_artifact or {}).get("artifact_identity"),
             },
         )
         records[ticker] = dec
@@ -1421,6 +1510,19 @@ def build_artifact(
             port_avail += 1
         else:
             port_not_provided += 1
+        ci = dec.get("corporate_intelligence_context") or {}
+        if ci.get("state") not in (None, "NOT_PROVIDED"):
+            ci_evaluated += 1
+        if ci.get("event_identities"):
+            ci_any_event += 1
+        if ci.get("active_catalyst_count"):
+            ci_active_catalyst += 1
+        if ci.get("active_risk_count"):
+            ci_active_risk += 1
+        if ci.get("mixed_or_unresolved_count"):
+            ci_mixed_or_unresolved += 1
+        if ci.get("material_event_count"):
+            ci_material += 1
 
     coverage = {
         "universe_denominator": len(all_tickers),
@@ -1443,6 +1545,12 @@ def build_artifact(
         "market_sector_context_available": len(all_tickers) if mkt_avail else 0,
         "portfolio_context_available": port_avail,
         "portfolio_context_not_provided": port_not_provided,
+        "corporate_intelligence_context_evaluated": ci_evaluated,
+        "corporate_intelligence_any_event_count": ci_any_event,
+        "corporate_intelligence_active_catalyst_count": ci_active_catalyst,
+        "corporate_intelligence_active_risk_count": ci_active_risk,
+        "corporate_intelligence_mixed_or_unresolved_count": ci_mixed_or_unresolved,
+        "corporate_intelligence_material_event_count": ci_material,
     }
 
     payload: dict[str, Any] = {
@@ -1462,6 +1570,7 @@ def build_artifact(
             "momentum": (momentum_artifact or {}).get("artifact_identity"),
             "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
             "tactical_boundaries": (tactical_boundaries_artifact or {}).get("artifact_identity"),
+            "corporate_intelligence": (corporate_intelligence_artifact or {}).get("artifact_identity"),
         },
         "authority_boundary": {
             "is_actionable": False,

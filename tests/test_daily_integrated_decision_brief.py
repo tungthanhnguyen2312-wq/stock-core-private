@@ -122,6 +122,30 @@ class TestFinancialEvidenceContext:
         assert row["valuation"]["ev_ebitda_multiple"] == 8.4
         assert row["financial_composite_context"]["financial_composite_state"] == "FUNDAMENTALS_IMPROVING"
 
+    def test_watchlist_passes_through_corporate_intelligence_context_without_recomputation(self):
+        """CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 Section 20: the
+        AI-facing watchlist must expose the compact Corporate Intelligence read verbatim --
+        passthrough only, never a recomputed classification, materiality, or freshness."""
+        integrated = _record("FPT", posture="HOLD")
+        integrated["corporate_intelligence_context"] = {
+            "state": "CATALYST_PRESENT", "fitness": "AVAILABLE",
+            "active_catalyst_count": 1, "active_risk_count": 0,
+            "supporting_reason_codes": ["EXECUTED_REPURCHASE_RETURNS_CAPITAL_AND_REDUCES_SHARE_COUNT"],
+            "evidence_session_stale": False,
+        }
+        row = brief.build_watchlist_record(
+            ticker="FPT", current=integrated, tactical_raw=None, sector_label=None, posture_transition_row=None,
+        )
+        assert row["corporate_intelligence_context"] == integrated["corporate_intelligence_context"]
+
+    def test_watchlist_corporate_intelligence_context_absent_is_none_not_a_crash(self):
+        integrated = _record("FPT", posture="HOLD")
+        assert "corporate_intelligence_context" not in integrated
+        row = brief.build_watchlist_record(
+            ticker="FPT", current=integrated, tactical_raw=None, sector_label=None, posture_transition_row=None,
+        )
+        assert row["corporate_intelligence_context"] is None
+
     def test_watchlist_passes_through_evidence_axes_and_coherence_without_recomputation(self):
         integrated = _record("FPT", posture="HOLD")
         integrated["evidence_axes"] = {

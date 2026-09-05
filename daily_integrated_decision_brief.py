@@ -352,6 +352,10 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
         # product must expose the joined fundamental+valuation composite read alongside its own
         # supporting/contradicting reasons and uncertainty -- passthrough only, no recomputation.
         "financial_composite_context": current.get("financial_composite_context"),
+        # CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1: passthrough only.
+        # current_corporate_intelligence_axis.py owns every catalyst/risk/materiality/freshness
+        # measurement; the local AI brief never recomputes event completion or materiality.
+        "corporate_intelligence_context": current.get("corporate_intelligence_context"),
         # The canonical Integrated Decision owns this compact evidence-axis mapping.  The local
         # AI brief passes it through unchanged so a consumer can see disagreement without
         # recomputing indicators, assigning a score, or changing the governed posture.

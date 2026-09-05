@@ -184,6 +184,7 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "historical_context": ops / "market-wide-historical-research-context-v1-20260824" / "market_wide_historical_research_context_artifact.json",
         "financial_momentum": ops / "current-financial-momentum-context-v1" / "current_financial_momentum_context_artifact.json",
         "corporate_event_context": ops / "current-corporate-event-context-v1" / "current_corporate_event_context_artifact.json",
+        "corporate_intelligence_axis": ops / "current-corporate-intelligence-axis-v1" / "current_corporate_intelligence_axis_artifact.json",
         "session_triage": ops / f"full-universe-entry-candidate-triage-v1-{nodash}" / f"full_universe_entry_candidate_triage_{nodash}.json",
         "named_20260824_triage": ops / "full-universe-entry-candidate-triage-20260824" / "full_universe_entry_candidate_triage_20260824.json",
         "postclose_20260824_triage": ops / "full-universe-entry-candidate-triage-postclose-20260824" / "full_universe_entry_candidate_triage_20260824.json",

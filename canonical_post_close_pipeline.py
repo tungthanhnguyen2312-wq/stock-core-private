@@ -83,6 +83,7 @@ OPTIONAL_REGISTRY_KEYS = ("official_universe", "event_context")
 RETAINED_LEVEL2_INPUT_KEYS = frozenset({
     "fundamental", "official_universe", "official_event_context", "catalyst",
     "historical_context", "financial_momentum", "corporate_event_context",
+    "corporate_intelligence_axis",
 })
 
 # A completed-session snapshot with fewer than this fraction of the attempted DNSE candidate
@@ -724,6 +725,34 @@ def build_enrichment_components(
         )
         _write_json(paths["financial_analysis_product"], financial_session_artifact)
         _write_json(paths["current_valuation_evaluated"], evaluated_valuation)
+        # Corporate Intelligence axis (CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_
+        # INTEGRATION_V1). Built independently, with its own local try/except -- exactly the
+        # tactical_boundaries pattern above -- so a corporate-evidence failure never cascades
+        # into failing the whole Integrated Decision build. official_event_context has been
+        # frozen at research_session=2026-08-21 since before this milestone (verified: no
+        # fresher retained official ex-date evidence exists), so this is built AS OF THAT
+        # evidence's own session, not today's `session` -- current_corporate_event_context.
+        # build_artifact() fails closed on a session mismatch, and staleness is surfaced
+        # explicitly by evaluate_corporate_intelligence_context() below rather than papered
+        # over by silently re-labelling old evidence as current.
+        corporate_intelligence_artifact = None
+        try:
+            from current_corporate_intelligence_axis import build_artifact as build_corporate_intelligence_axis
+            official_universe_ci = _load(retained_paths["official_universe"])
+            official_event_context_ci = _load(retained_paths["official_event_context"])
+            market_wide_ci = _load(retained_paths["corporate_intelligence"])
+            if official_universe_ci and official_event_context_ci:
+                corporate_intelligence_artifact = build_corporate_intelligence_axis(
+                    official_universe=official_universe_ci,
+                    official_event_context=official_event_context_ci,
+                    root=root,
+                    research_session=official_event_context_ci.get("research_session"),
+                    market_wide_current_corporate_intelligence=market_wide_ci,
+                )
+        except Exception:
+            corporate_intelligence_artifact = None
+        if corporate_intelligence_artifact is not None:
+            _write_json(paths["corporate_intelligence_axis"], corporate_intelligence_artifact)
         res = build(
             session=session,
             requested_at=requested_at,
@@ -737,6 +766,7 @@ def build_enrichment_components(
             momentum_artifact=momentum,
             tactical_confirmation_artifact=confirmation,
             tactical_boundaries_artifact=tactical_boundaries,
+            corporate_intelligence_artifact=corporate_intelligence_artifact,
         )
         if res.get("session") != session:
             raise CanonicalPostCloseError(f"INTEGRATED_DECISION_SESSION_MISMATCH:expected={session}:observed={res.get('session')}")

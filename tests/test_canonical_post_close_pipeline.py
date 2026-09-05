@@ -418,6 +418,63 @@ def test_canonical_integrated_decision_materializes_existing_momentum_and_confir
     assert paths["tactical_confirmation_context"].name == "tactical_confirmation_context_artifact.json"
 
 
+def test_corporate_intelligence_axis_wired_into_integrated_decision_with_local_isolation():
+    """CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1: the axis build must
+    be wrapped in its own local try/except -- exactly the tactical_boundaries pattern -- so a
+    corporate-evidence failure can never cascade into failing the whole Integrated Decision
+    build, and its result must be threaded into the standing builder call by name."""
+    source = (ROOT / "canonical_post_close_pipeline.py").read_text(encoding="utf-8")
+    start = source.index("def _integrated_investment_decision_product")
+    end = source.index("\n    _attempt(", start)
+    body = source[start:end]
+    assert "from current_corporate_intelligence_axis import build_artifact as build_corporate_intelligence_axis" in body
+    assert "corporate_intelligence_artifact = None" in body
+    assert "except Exception:\n            corporate_intelligence_artifact = None" in body
+    assert "corporate_intelligence_artifact=corporate_intelligence_artifact" in body
+    # Built AS OF the retained official_event_context's OWN session, not today's `session` --
+    # current_corporate_event_context.build_artifact() fails closed on a session mismatch, and
+    # official_event_context has been frozen since before this milestone (verified live).
+    assert 'research_session=official_event_context_ci.get("research_session")' in body
+
+
+def test_corporate_intelligence_axis_failure_does_not_break_the_integrated_decision(monkeypatch, tmp_path):
+    """The single most important isolation guarantee for this milestone: a broken corporate-
+    evidence build must degrade corporate_intelligence_context to NOT_PROVIDED, never fail the
+    whole session's Integrated Decision (which succeeds every day today)."""
+    import current_corporate_intelligence_axis
+
+    def boom(**kwargs):
+        raise RuntimeError("SIMULATED_CORPORATE_INTELLIGENCE_FAILURE")
+
+    monkeypatch.setattr(current_corporate_intelligence_axis, "build_artifact", boom)
+    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
+    results = cpc.build_enrichment_components(ROOT, "2026-08-25")
+    idp = results["integrated_investment_decision_product"]
+    assert idp["status"] == "BUILT"
+    sample_ticker = next(iter(idp["artifact"]["records"]))
+    assert idp["artifact"]["records"][sample_ticker]["corporate_intelligence_context"]["state"] == "NOT_PROVIDED"
+    assert idp["artifact"]["source_artifacts"]["corporate_intelligence"] is None
+    assert idp["artifact"]["coverage"]["corporate_intelligence_context_evaluated"] == 0
+
+
+def test_live_replay_reports_corporate_intelligence_coverage_and_staleness(tmp_path, monkeypatch):
+    """Real retained-evidence replay (not a mock): every 2026-08-25 ticker gets a Corporate
+    Intelligence read, and it is honestly flagged stale because no fresher official ex-date
+    evidence has been retained since 2026-08-21 (verified live, not assumed)."""
+    monkeypatch.setattr(cpc, "enrichment_output_path", lambda root, s, name: tmp_path / f"{name}.json")
+    results = cpc.build_enrichment_components(ROOT, "2026-08-25")
+    idp = results["integrated_investment_decision_product"]
+    assert idp["status"] == "BUILT"
+    coverage = idp["artifact"]["coverage"]
+    assert coverage["corporate_intelligence_context_evaluated"] > 0
+    hpg = idp["artifact"]["records"].get("HPG")
+    assert hpg is not None
+    ci = hpg["corporate_intelligence_context"]
+    assert ci["state"] != "NOT_PROVIDED"
+    assert ci["evidence_session_stale"] is True
+    assert "CORPORATE_INTELLIGENCE_EVIDENCE_SESSION_STALE" in ci["blocker_reason_codes"]
+
+
 # --- 7. component-local missing evidence does not globally reject unrelated uses ---
 
 def test_component_local_failure_does_not_block_unrelated_components(tmp_path, monkeypatch):

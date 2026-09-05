@@ -780,6 +780,7 @@ class TestEvidenceAxisCoherence:
         assert set(dec["evidence_axes"]) == {
             "FUNDAMENTAL", "VALUATION", "TACTICAL_STRUCTURE", "MOMENTUM",
             "PARTICIPATION_CONFIRMATION", "MARKET_SECTOR", "OPPORTUNITY_PRIORITY", "PORTFOLIO_FIT",
+            "CORPORATE_INTELLIGENCE",
         }
         for axis in dec["evidence_axes"].values():
             assert {"state", "fitness", "supporting_reason_codes", "contradicting_reason_codes", "blocker_reason_codes", "method", "lineage"} <= set(axis)
@@ -956,4 +957,125 @@ class TestFinancialCompositeContext:
         )
         dist = art["coverage"]["financial_composite_state_distribution"]
         assert sum(dist.values()) == 1
+
+
+class TestCorporateIntelligenceWiring:
+    """CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1: additive only.
+
+    Corporate Intelligence must appear as its own evidence axis and its own compact
+    `corporate_intelligence_context` field, must never move `research_action_posture`, and
+    missing/absent corporate evidence must remain feature-local (never a global block)."""
+
+    @staticmethod
+    def _record(*, state="CATALYST_PRESENT", active_catalysts=None, active_risks=None,
+                mixed_or_unresolved_events=None, research_session="2026-08-28") -> dict:
+        return {
+            "ticker": "HPG", "research_session": research_session, "state": state,
+            "fitness": "AVAILABLE",
+            "active_catalysts": active_catalysts or [], "active_risks": active_risks or [],
+            "mixed_or_unresolved_events": mixed_or_unresolved_events or [],
+            "material_event_count": 1, "freshest_material_event": "current_corporate_event:e1",
+            "supporting_reason_codes": ["EXECUTED_REPURCHASE_RETURNS_CAPITAL_AND_REDUCES_SHARE_COUNT"],
+            "contradicting_reason_codes": [], "blockers": [],
+            "event_identities": ["current_corporate_event:e1"], "limitations": [],
+        }
+
+    def _decision(self, *, corporate_intelligence_record=None, as_of_session="2026-08-28") -> dict:
+        return iidp.build_ticker_integrated_decision(
+            ticker="HPG", as_of_session=as_of_session,
+            tactical_record=_sample_tactical_record(), financial_record=_sample_financial_record(),
+            valuation_record=_sample_valuation_record(), relative_volume_record=None, market_sector_record=None,
+            corporate_intelligence_record=corporate_intelligence_record,
+        )
+
+    def test_missing_corporate_intelligence_is_feature_local_not_a_crash_or_global_block(self):
+        dec = self._decision(corporate_intelligence_record=None)
+        assert dec["corporate_intelligence_context"]["state"] == "NOT_PROVIDED"
+        assert dec["evidence_axes"]["CORPORATE_INTELLIGENCE"]["state"] == "NOT_PROVIDED"
+        assert dec["research_action_posture"] in iidp.RESEARCH_ACTION_POSTURES
+
+    def test_no_qualified_event_is_the_correct_result(self):
+        dec = self._decision(corporate_intelligence_record=self._record(
+            state="NO_QUALIFIED_CORPORATE_EVENT", active_catalysts=[], active_risks=[],
+        ))
+        assert dec["corporate_intelligence_context"]["state"] == "NO_QUALIFIED_CORPORATE_EVENT"
+
+    def test_corporate_intelligence_axis_carries_catalyst_and_risk_counts(self):
+        dec = self._decision(corporate_intelligence_record=self._record(
+            state="MIXED_EVIDENCE", active_catalysts=["e1"], active_risks=["e2"],
+        ))
+        axis = dec["evidence_axes"]["CORPORATE_INTELLIGENCE"]
+        assert axis["state"] == "MIXED_EVIDENCE"
+        assert axis["context"]["active_catalyst_count"] == 1
+        assert axis["context"]["active_risk_count"] == 1
+        assert dec["corporate_intelligence_context"]["active_catalyst_count"] == 1
+        assert dec["corporate_intelligence_context"]["active_risk_count"] == 1
+
+    def test_stale_evidence_session_is_flagged_explicitly(self):
+        dec = self._decision(
+            corporate_intelligence_record=self._record(research_session="2026-08-21"),
+            as_of_session="2026-09-04",
+        )
+        assert dec["corporate_intelligence_context"]["evidence_session_stale"] is True
+        assert "CORPORATE_INTELLIGENCE_EVIDENCE_SESSION_STALE" in dec["corporate_intelligence_context"]["blocker_reason_codes"]
+
+    def test_same_session_evidence_is_not_flagged_stale(self):
+        dec = self._decision(
+            corporate_intelligence_record=self._record(research_session="2026-09-04"),
+            as_of_session="2026-09-04",
+        )
+        assert dec["corporate_intelligence_context"]["evidence_session_stale"] is False
+
+    def test_research_action_posture_never_moves_with_a_material_catalyst_or_risk_present(self):
+        """Mission Section 14 hard boundary: no automatic posture change merely because a
+        catalyst/risk exists. Same tactical/fundamental/valuation inputs, three very different
+        corporate-intelligence reads (none, catalyst-present, risk-present) must yield the
+        identical governed posture -- the axis is additive evidence, never a policy input."""
+        none_dec = self._decision(corporate_intelligence_record=None)
+        catalyst_dec = self._decision(corporate_intelligence_record=self._record(
+            state="CATALYST_PRESENT", active_catalysts=["e1"],
+        ))
+        risk_dec = self._decision(corporate_intelligence_record=self._record(
+            state="RISK_PRESENT", active_risks=["e1"],
+        ))
+        assert none_dec["research_action_posture"] == catalyst_dec["research_action_posture"] == risk_dec["research_action_posture"]
+        assert none_dec["why_now"] == catalyst_dec["why_now"] == risk_dec["why_now"]
+
+    def test_decide_research_action_posture_signature_has_no_corporate_input(self):
+        """Structural proof, not just behavioral: the posture function cannot read corporate
+        intelligence even if a future edit tried to smuggle it in via a kwarg typo."""
+        import inspect
+        params = set(inspect.signature(iidp.decide_research_action_posture).parameters)
+        assert not any("corporate" in name or "catalyst" in name for name in params)
+
+    def test_build_artifact_threads_corporate_intelligence_by_ticker(self):
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        fa_art = {"artifact_identity": "financial_analysis_product_integration/v1:fake", "records": {"AAA": _sample_financial_record()}}
+        ci_art = {
+            "artifact_identity": "current_corporate_intelligence_axis:fake",
+            "records": {"AAA": self._record(active_catalysts=["e1"])},
+        }
+        art = iidp.build_artifact(
+            session="2026-08-28", requested_at="2026-09-05T00:00:00Z",
+            technical_structure_artifact=tac_art, financial_analysis_artifact=fa_art,
+            corporate_intelligence_artifact=ci_art,
+        )
+        assert art["records"]["AAA"]["corporate_intelligence_context"]["active_catalyst_count"] == 1
+        assert art["source_artifacts"]["corporate_intelligence"] == "current_corporate_intelligence_axis:fake"
+        assert art["coverage"]["corporate_intelligence_context_evaluated"] == 1
+        assert art["coverage"]["corporate_intelligence_any_event_count"] == 1
+        assert art["coverage"]["corporate_intelligence_active_catalyst_count"] == 1
+        assert art["coverage"]["evidence_axis_available"]["CORPORATE_INTELLIGENCE"] == 1
+
+    def test_build_artifact_without_corporate_intelligence_artifact_stays_zero_silent_drop_free(self):
+        """No corporate_intelligence_artifact supplied at all (e.g. an older caller) must still
+        produce a complete, valid record per ticker -- never a KeyError or missing field."""
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        fa_art = {"artifact_identity": "financial_analysis_product_integration/v1:fake", "records": {"AAA": _sample_financial_record()}}
+        art = iidp.build_artifact(
+            session="2026-08-28", requested_at="2026-09-05T00:00:00Z",
+            technical_structure_artifact=tac_art, financial_analysis_artifact=fa_art,
+        )
+        assert art["records"]["AAA"]["corporate_intelligence_context"]["state"] == "NOT_PROVIDED"
+        assert art["coverage"]["corporate_intelligence_context_evaluated"] == 0
         assert art["records"]["AAA"]["financial_composite_context"]["financial_composite_state"] in iidp.FINANCIAL_COMPOSITE_STATES

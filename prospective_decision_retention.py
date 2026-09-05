@@ -160,12 +160,23 @@ def _axis_completeness(record: Mapping[str, Any]) -> dict[str, Any]:
         absent = [field for field in _REQUIRED_AXIS_FIELDS if field not in portfolio]
         if absent:
             incomplete["PORTFOLIO_FIT"] = absent
+    # CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1: same treatment as
+    # PORTFOLIO_FIT above, not REQUIRED_AXES -- NO_QUALIFIED_CORPORATE_EVENT is a legitimate,
+    # common, non-blocking result (mission Section 18), never a completeness penalty. Only
+    # genuinely absent (state NOT_PROVIDED, meaning the axis could not even be attempted this
+    # session) or structurally malformed is tracked here.
+    corporate_intelligence = axes.get("CORPORATE_INTELLIGENCE")
+    if isinstance(corporate_intelligence, Mapping) and corporate_intelligence.get("state") not in {None, "NOT_PROVIDED"}:
+        absent = [field for field in _REQUIRED_AXIS_FIELDS if field not in corporate_intelligence]
+        if absent:
+            incomplete["CORPORATE_INTELLIGENCE"] = absent
     return {
         "status": "COMPLETE" if not missing and not incomplete else "INCOMPLETE",
         "complete": not missing and not incomplete,
         "missing_axes": missing,
         "incomplete_axis_fields": incomplete,
         "portfolio_fit_retained": isinstance(portfolio, Mapping) and portfolio.get("state") != "NOT_PROVIDED",
+        "corporate_intelligence_retained": isinstance(corporate_intelligence, Mapping) and corporate_intelligence.get("state") != "NOT_PROVIDED",
     }
 
 

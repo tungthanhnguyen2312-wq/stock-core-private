@@ -163,6 +163,9 @@ from current_financial_momentum_context import (
 from current_corporate_event_context import (
     content_identity as current_corporate_event_context_content_identity,
 )
+from current_corporate_intelligence_axis import (
+    content_identity as current_corporate_intelligence_axis_content_identity,
+)
 from integrated_investment_decision_product import (
     content_identity as integrated_investment_decision_product_content_identity,
 )
@@ -3911,6 +3914,82 @@ def attach_current_corporate_event_context(
 
 
 # ===========================================================================
+# Current Corporate Intelligence axis — opt-in (disabled by default)
+# CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1
+
+
+def load_current_corporate_intelligence_axis_artifact(path: Path) -> Mapping[str, Any] | None:
+    """Fail closed unless the explicit retained Corporate Intelligence axis artifact verifies itself."""
+    try:
+        artifact = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(artifact, dict):
+            return None
+        if artifact.get("contract_version") != "current_corporate_intelligence_axis/v1":
+            return None
+        recomputed = current_corporate_intelligence_axis_content_identity(artifact)
+        if recomputed.get("artifact_sha256") != artifact.get("artifact_sha256"):
+            return None
+        if not isinstance(artifact.get("records"), Mapping) or not isinstance(artifact.get("coverage"), Mapping):
+            return None
+        return artifact
+    except Exception:
+        return None
+
+
+def build_current_corporate_intelligence_axis_for_ticker_safe(
+    ticker: str, artifact: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Pass through one ticker's already-classified catalyst/risk/materiality/freshness read;
+    never recompute a classification, infer event completion, or assign a probability/score."""
+    try:
+        records = artifact.get("records")
+        record = records.get(ticker) if isinstance(records, Mapping) else None
+        if not isinstance(record, Mapping) or record.get("ticker") != ticker:
+            return None
+        return {
+            "ticker": ticker,
+            "research_session": artifact.get("research_session"),
+            "source_artifact_identity": artifact.get("artifact_identity"),
+            "research_mode": artifact.get("research_mode"),
+            "state": record.get("state"),
+            "active_catalysts": copy.deepcopy(record.get("active_catalysts")),
+            "active_risks": copy.deepcopy(record.get("active_risks")),
+            "mixed_or_unresolved_events": copy.deepcopy(record.get("mixed_or_unresolved_events")),
+            "material_event_count": record.get("material_event_count"),
+            "freshest_material_event": record.get("freshest_material_event"),
+            "events": copy.deepcopy(record.get("events")),
+            "limitations": copy.deepcopy(record.get("limitations")),
+            "coverage": copy.deepcopy(artifact.get("coverage")),
+            "blocked_outputs": copy.deepcopy(artifact.get("blocked_outputs")),
+            "authority_boundary": copy.deepcopy(artifact.get("authority_boundary")),
+            "status": "available" if record.get("event_identities") else "no_qualified_corporate_event",
+            "is_actionable": False,
+        }
+    except Exception:
+        return None
+
+
+def attach_current_corporate_intelligence_axis(
+    bundle_entries: dict[str, dict], include: bool, artifact_path: str | None,
+) -> dict[str, dict]:
+    """Attach an independent explicit-path Corporate Intelligence sibling without changing
+    default bundles. Never fed into strategy, priority, entry_action, sizing, or posture."""
+    if not include or not artifact_path:
+        return bundle_entries
+    artifact = load_current_corporate_intelligence_axis_artifact(Path(artifact_path))
+    if artifact is None:
+        return bundle_entries
+    attached: dict[str, dict[str, Any]] = {}
+    for ticker in bundle_entries:
+        result = build_current_corporate_intelligence_axis_for_ticker_safe(ticker, artifact)
+        if result is not None:
+            attached[ticker] = result
+    for ticker, result in attached.items():
+        bundle_entries[ticker]["current_corporate_intelligence_axis"] = result
+    return bundle_entries
+
+
+# ===========================================================================
 # Current research risk register — opt-in (disabled by default)
 # ===========================================================================
 
@@ -5069,6 +5148,15 @@ def main() -> int:
                              "recommendation, or sizing.")
     parser.add_argument("--current-corporate-event-context-path", metavar="PATH",
                         help="Explicit path to a self-verifying retained current_corporate_event_context artifact.")
+    parser.add_argument("--include-current-corporate-intelligence-axis", action="store_true",
+                        help="Opt-in, disabled by default: attach a separately retained current "
+                             "Corporate Intelligence axis (catalyst/risk/materiality/freshness "
+                             "classification over retained corporate-event evidence). Never a "
+                             "universal score, probability, target price, EVENT_DRIVEN "
+                             "eligibility, research_priority, entry_action, recommendation, "
+                             "sizing, or posture change.")
+    parser.add_argument("--current-corporate-intelligence-axis-path", metavar="PATH",
+                        help="Explicit path to a self-verifying retained current_corporate_intelligence_axis artifact.")
     parser.add_argument("--include-market-wide-historical-research-context", action="store_true",
                         help="Opt-in, disabled by default: attach"
                              " tickers[ticker].market_wide_historical_research_context from the"
@@ -5535,6 +5623,10 @@ def main() -> int:
     attach_current_corporate_event_context(
         bundle_entries, args.include_current_corporate_event_context,
         args.current_corporate_event_context_path,
+    )
+    attach_current_corporate_intelligence_axis(
+        bundle_entries, args.include_current_corporate_intelligence_axis,
+        args.current_corporate_intelligence_axis_path,
     )
     # Own dedicated flag; order relative to the others does not matter since nothing else reads
     # tickers[ticker].market_wide_historical_research_context. Historical context is a sibling
