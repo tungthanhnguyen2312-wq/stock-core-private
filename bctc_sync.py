@@ -17,7 +17,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Literal
-from vn_time import vn_now
+from vn_time import vn_now, vn_now_iso
 
 import pandas as pd
 
@@ -147,7 +147,7 @@ def normalize_report(
     out.insert(0, "ticker", ticker.upper())
     out.insert(1, "report_type", report_type)
     out.insert(2, "source", source)
-    out.insert(3, "scraped_at", vn_now().strftime("%Y-%m-%d %H:%M"))
+    out.insert(3, "scraped_at", vn_now_iso())
     return out
 
 

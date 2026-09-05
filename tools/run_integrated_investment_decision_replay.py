@@ -98,6 +98,11 @@ def load_inputs(session: str = "2026-08-28"):
         if ticker in records_with_types:
             records_with_types[ticker]["entity_type"] = entity_type
 
+    qualified_flow_artifact = fa_scaleout.build_qualified_flow_artifact(
+        semantic_rows=sem_rows,
+        feature_records=records_with_types,
+        requested_at=f"{session}T00:00:00+07:00",
+    )
     fa_engine_art = fa_scaleout.build_scaleout(
         semantic_rows=sem_rows,
         feature_records=records_with_types,
@@ -105,6 +110,7 @@ def load_inputs(session: str = "2026-08-28"):
         period_semantics_identity=semantics_art["artifact_identity"],
         requested_at=f"{session}T00:00:00+07:00",
         classification_diagnostics_identity=classification_diag.get("diagnostics_identity"),
+        qualified_flow_artifact=qualified_flow_artifact,
     )
     all_candidate_tickers = sorted(p3f9b.get("records", {}).keys())
     fa_proj_art = fa_projection.build_product_projection(

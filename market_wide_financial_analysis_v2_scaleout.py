@@ -11,7 +11,7 @@ import copy
 import gzip
 import hashlib
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -94,6 +94,57 @@ def _refresh_states(record: dict[str, Any]) -> None:
         if value["fitness"] == "RESEARCH_PROXY" and value.get("semantic_transition") in {"IMPROVING", "WEAKENING", "STABLE"}:
             record["states"][state_name] = {"IMPROVING": "STRENGTHENING", "WEAKENING": "DETERIORATING", "STABLE": "STABLE"}[value["semantic_transition"]]
     record.update(engine._evidence(record["ticker"], features, record["states"]))
+
+
+def _bridge_fact(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Adapt one `structured_financial_period_semantics` row back into the raw-canonical-fact
+    field names `financial_flow_semantics_ttm_bridge.flow_semantics`/`_usable`/`_compatible`
+    actually read (`value`, `status`, `provider`, `currency`, `scale`, `reporting_period`,
+    `cumulative_state`, `source_sha256`, `source_file`, `fact_id`) -- NOT the reshaped
+    `reported_value`/`source_status`/`source_lineage.provider`/... names that module exposes
+    for its own consumers. Feeding the reshaped row directly (an earlier version of this
+    wiring did) makes every field the bridge reads resolve to `None`, so `_usable()` rejects
+    every fact and the bridge silently qualifies nothing -- discovered via a real regression on
+    `current_research_ready_count` (1380 -> 1276) in `test_canonical_daily_financial_v2_
+    materialization.py`, not by inspection alone. This performs no new resolution of its own;
+    every value already exists on `row`, just under a different key."""
+    lineage = row.get("source_lineage") or {}
+    unit = row.get("normalized_candidate_unit") or {}
+    return {
+        "ticker": row.get("ticker"), "canonical_metric": row.get("canonical_metric"),
+        "statement_family": row.get("statement_family"), "reporting_period": row.get("native_period_label"),
+        "period_start": row.get("period_start"), "period_end": row.get("period_end"),
+        "value": row.get("reported_value"), "status": row.get("source_status"),
+        "provider": lineage.get("provider"), "source_sha256": lineage.get("source_sha256"),
+        "source_file": lineage.get("source_file"), "fact_id": lineage.get("fact_id"),
+        "statement_scope": row.get("statement_scope"),
+        "currency": unit.get("currency", row.get("reported_currency")),
+        "scale": unit.get("scale", row.get("reported_scale")),
+        "cumulative_state": row.get("reported_cumulative_state"),
+    }
+
+
+def build_qualified_flow_artifact(*, semantic_rows: Sequence[Mapping[str, Any]],
+                                  feature_records: Mapping[str, Mapping[str, Any]],
+                                  requested_at: str) -> dict[str, Any]:
+    """Build the `financial_flow_semantics_ttm_bridge` artifact from the same `semantic_rows`/
+    `feature_records` a caller already has, so activating `build_scaleout`'s
+    `qualified_flow_artifact` is one extra call instead of every caller re-deriving
+    `facts_by_ticker`/`entity_type_by_ticker` independently (FINANCIAL_TEMPORAL_SEMANTIC_
+    NORMALIZATION_AND_ANALYTICAL_PANEL_V1: the bridge was previously built and tested but never
+    invoked by any real caller of `build_scaleout`, so it never actually qualified a flow row
+    market-wide despite being wired by import)."""
+    names = sorted(feature_records)
+    facts_by_ticker: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for row in semantic_rows:
+        ticker = str(row.get("ticker") or "").upper()
+        if ticker:
+            facts_by_ticker[ticker].append(_bridge_fact(row))
+    entity_type_by_ticker = {ticker: feature_records[ticker].get("entity_type") for ticker in names}
+    return qualified_flow.build_artifact(
+        tickers=names, facts_by_ticker=facts_by_ticker,
+        entity_type_by_ticker=entity_type_by_ticker, requested_at=requested_at,
+    )
 
 
 def build_scaleout(*, semantic_rows: Sequence[Mapping[str, Any]], feature_records: Mapping[str, Mapping[str, Any]],

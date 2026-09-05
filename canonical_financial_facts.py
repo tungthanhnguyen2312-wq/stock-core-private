@@ -67,7 +67,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import datetime
 from typing import Any, Iterable, Mapping, Sequence
+from zoneinfo import ZoneInfo
 
 from canonical_financial_resolvers import (
     UNKNOWN,
@@ -90,8 +92,39 @@ SCHEMA_VERSION = "1.1.0"
 #: to omit these metrics even though the mapping and the retained raw observations were both
 #: already correct. See the module docstring's "keying only on source payload hashes" warning.
 #: Bumped again 2026-09-02: MARKET_WIDE_GROSS_MARGIN_DEPTH_V1 added `gross_profit`.
-MAPPER_VERSION = "1.3.0"
+#: Bumped again 2026-09-05: FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1
+#: changed `_fact()`'s `observed_at` construction (see `_normalize_observed_at`) -- this must
+#: invalidate every existing shard, or `canonical_fact_store`'s incremental fingerprint (keyed
+#: on this string, not on the mapper's actual behavior) reports every shard `unchanged` and the
+#: store keeps serving facts built by the old, timezone-naive `observed_at` logic forever.
+MAPPER_VERSION = "1.4.0"
 CONTRACT_VERSION = "market-wide-financial-normalization/1.0.0"
+
+#: Retained payloads stamped `scraped_at` as a naive "YYYY-MM-DD HH:MM" Asia/Ho_Chi_Minh
+#: wall-clock string before this milestone (see `bctc_sync.normalize_report`/`vn_time.vn_now`).
+#: No source timestamp is ever fabricated here -- this only reattaches the offset that value
+#: always implicitly carried, so a strict tz-aware parser (`bitemporal_semantic_contract.py`)
+#: can accept an observation timestamp that was already correct except for its representation.
+_LEGACY_NAIVE_SCRAPED_AT = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
+_SCRAPED_AT_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def _normalize_observed_at(raw: Any) -> str | None:
+    """Canonicalize a raw observation's `scraped_at` into a timezone-aware ISO-8601 string.
+
+    Idempotent: an already-ISO-8601 value (future syncs, once `bctc_sync.py` emits
+    `vn_time.vn_now_iso()` directly) passes through unchanged. Anything not a non-empty string
+    stays `None` -- a missing source timestamp is never converted into a fabricated one.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    if _LEGACY_NAIVE_SCRAPED_AT.match(raw):
+        try:
+            naive = datetime.strptime(raw, "%Y-%m-%d %H:%M")
+        except ValueError:
+            return raw
+        return naive.replace(tzinfo=_SCRAPED_AT_TIMEZONE).isoformat()
+    return raw
 
 STATUS_QUALIFIED = "qualified"
 STATUS_PROVIDER_REPORTED = "provider_reported"
@@ -1022,7 +1055,7 @@ def _fact(*, ticker: str, metric: str, definition: Mapping[str, Any], period: st
         "raw_label_en": (observation or {}).get("raw_label_en"),
         "source_observation_ids": (list(source_observation_ids) if source_observation_ids
                                    else ([observation["observation_id"]] if observation else [])),
-        "observed_at": (observation or {}).get("scraped_at"),
+        "observed_at": _normalize_observed_at((observation or {}).get("scraped_at")),
         # Retain provider-native report metadata distinctly from canonical period bounds.
         # The mapper must never treat VCI `lengthReport` as a duration inference.
         "provider_report_metadata": dict((observation or {}).get("provider_report_metadata") or {}),

@@ -23,21 +23,39 @@ from pathlib import Path
 from typing import Any
 
 CONTRACT_VERSION = "financial_v2_current_input_authority/v1"
-AUTHORITY_VERSION = "2026-09-02.1"
+#: Advanced 2026-09-05 (FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1):
+#: semantics-only advance. The 20260831 directory is preserved, untouched, as historical
+#: evidence -- see that milestone's own docstring: "Never edit a resolved identity in place."
+#: Only `_SEMANTICS_DIRNAME`/`_EXPECTED_SEMANTICS_IDENTITY` moved; the feature-store and
+#: classification-diagnostics pins are unaffected by this milestone and stay exactly as they
+#: were, still resolved against their own original 20260831/20260901 directories.
+AUTHORITY_VERSION = "2026-09-05.1"
 
 # Pinned retained evidence directories under <root>/operations-review/. Each is force-tracked
 # in git (unlike ordinary gitignored operations-review/ output) specifically so this authority
 # resolves identically everywhere.
-_SEMANTICS_DIRNAME = "market-wide-structured-financial-period-semantics-v1-20260831"
+_SEMANTICS_DIRNAME = "market-wide-structured-financial-period-semantics-v1-20260905"
 _FEATURE_STORE_DIRNAME = "market-wide-fundamental-feature-store-v1-20260831"
 _CLASSIFICATION_DIRNAME = "market-wide-financial-entity-classification-scaleout-v1-20260901"
 
-# Pinned expected artifact identities (verified 2026-09-02 against the tracked worktree). A
-# mismatch means the retained evidence changed without this authority being deliberately
-# advanced to a new AUTHORITY_VERSION.
+# Pinned expected artifact identities. A mismatch means the retained evidence changed without
+# this authority being deliberately advanced to a new AUTHORITY_VERSION.
+#
+# `_EXPECTED_SEMANTICS_IDENTITY` (verified 2026-09-05 against the tracked worktree): rebuilt
+# from the same retained data_bctc raw evidence as the prior 20260831 snapshot, over the
+# corpus's natural growth since then (1,492 tickers / 261,360 facts vs. 1,492 / 195,552), plus
+# two additive, evidence-only changes this milestone made: (1) `canonical_financial_facts.py`
+# now normalizes `observed_at` into a timezone-aware ISO-8601 string instead of a naive
+# Asia/Ho_Chi_Minh string that a strict bitemporal parser silently rejected -- no new source
+# timestamp is created; (2) this projection now carries explicit
+# `period_duration_root_cause`/`timestamp_root_cause` fields, plus a `reported_cumulative_state`
+# passthrough (previously computed internally and never exposed) that
+# `market_wide_financial_analysis_v2_scaleout.build_qualified_flow_artifact`'s field adapter
+# needs to activate the TTM/de-cumulation bridge safely. No period-semantic STATE, no
+# statement-scope/currency/scale resolution, and no financial value changed.
 _EXPECTED_SEMANTICS_IDENTITY = (
     "market_wide_structured_financial_period_semantics/v1:"
-    "b8fd01da9d485f3528d97f9d711425ba7ede3e37e65fcbc0597ce971877111fd"
+    "ca7c2a28a9dd9e00774dcd10c2b9aa993a0fc4664e551236408287c830ad4457"
 )
 _EXPECTED_FEATURE_STORE_IDENTITY = (
     "market_wide_fundamental_feature_store/v1:"

@@ -204,3 +204,71 @@ def test_original_input_is_not_mutated():
     source = fact(); before = deepcopy(source)
     s.project_fact(source)
     assert source == before
+
+
+def test_resolved_duration_has_no_root_cause():
+    row = s.project_fact(fact())
+    assert row["period_semantic_state"] == s.STANDALONE_QUARTER
+    assert row["period_duration_root_cause"] is None
+
+
+def test_no_raw_observation_is_the_duration_root_cause_for_unavailable_facts():
+    row = s.project_fact(fact(status="unavailable", value=None, provider=None))
+    assert row["period_semantic_state"] == s.UNKNOWN_DURATION
+    assert row["period_duration_root_cause"] == s.DURATION_ROOT_CAUSE_NO_RAW_OBSERVATION
+
+
+def test_vci_no_basis_marker_is_distinct_from_no_raw_observation():
+    """A genuinely reported VCI value with unresolved duration is a different root cause than
+    a placeholder with no value at all -- both currently land on UNKNOWN_DURATION, but they
+    must not be reported as the same reason (owner directive section 4: not one homogeneous
+    blocker)."""
+    row = s.project_fact(fact(provider="VCI"))
+    assert row["period_semantic_state"] == s.UNKNOWN_DURATION
+    assert row["period_duration_root_cause"] == s.DURATION_ROOT_CAUSE_VCI_NO_BASIS_MARKER
+    placeholder = s.project_fact(fact(status="unavailable", value=None, provider=None))
+    assert placeholder["period_duration_root_cause"] != row["period_duration_root_cause"]
+
+
+def test_unsupported_provider_duration_root_cause():
+    row = s.project_fact(fact(provider="UNSUPPORTED", period_start=None, period_end="2025-06-30"))
+    assert row["period_duration_root_cause"] == s.DURATION_ROOT_CAUSE_UNSUPPORTED_PROVIDER
+
+
+def test_cash_flow_unresolved_cumulative_state_root_cause():
+    row = s.project_fact(fact(statement_family="cash_flow", canonical_metric="operating_cash_flow", cumulative_state="unknown"))
+    assert row["period_semantic_state"] == s.UNKNOWN_DURATION
+    assert row["period_duration_root_cause"] == s.DURATION_ROOT_CAUSE_CASH_FLOW_INSUFFICIENT_DEPTH
+
+
+def test_timestamp_root_cause_is_none_once_a_timestamp_exists():
+    row = s.project_fact(fact())
+    assert row["timestamp_root_cause"] is None
+
+
+def test_timestamp_root_cause_no_raw_observation_for_placeholder_facts():
+    row = s.project_fact(fact(status="unavailable", value=None, provider=None, observed_at=None))
+    assert row["timestamp_root_cause"] == s.TIMESTAMP_ROOT_CAUSE_NO_RAW_OBSERVATION
+
+
+def test_timestamp_root_cause_missing_scraped_at_for_real_facts_without_a_timestamp():
+    row = s.project_fact(fact(observed_at=None))
+    assert row["source_status"] == "provider_reported"
+    assert row["timestamp_root_cause"] == s.TIMESTAMP_ROOT_CAUSE_MISSING_SCRAPED_AT
+
+
+def test_root_cause_distributions_are_reported_in_artifact_coverage():
+    rows = [fact(provider="VCI"), fact(ticker="BBB", status="unavailable", value=None, provider=None)]
+    built = artifact(rows)
+    assert built["coverage"]["duration_root_cause_distribution"][s.DURATION_ROOT_CAUSE_VCI_NO_BASIS_MARKER] == 1
+    assert built["coverage"]["duration_root_cause_distribution"][s.DURATION_ROOT_CAUSE_NO_RAW_OBSERVATION] == 1
+
+
+def test_every_unknown_duration_record_gets_a_root_cause():
+    """No silent gap: every UNKNOWN_DURATION record must carry a non-null root cause."""
+    rows = [fact(provider="VCI"), fact(ticker="BBB", statement_family="balance_sheet",
+                                       canonical_metric="total_assets", period_end=None),
+            fact(ticker="CCC", status="unavailable", value=None, provider=None)]
+    for row in [s.project_fact(r) for r in rows]:
+        if row["period_semantic_state"] == s.UNKNOWN_DURATION:
+            assert row["period_duration_root_cause"] is not None

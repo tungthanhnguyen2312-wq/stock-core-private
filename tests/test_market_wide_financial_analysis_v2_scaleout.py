@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import financial_analysis_engine_v2 as engine
 import financial_flow_semantics_ttm_bridge as bridge
-from market_wide_financial_analysis_v2_scaleout import GENERIC, build_scaleout
+import market_wide_financial_analysis_v2_scaleout as scaleout
+import structured_financial_period_semantics as sem_semantics
+from market_wide_financial_analysis_v2_scaleout import GENERIC, build_qualified_flow_artifact, build_scaleout
 
 
 def _row(metric, value, period="2026-Q2", *, ticker="AAA", semantic="STANDALONE_QUARTER"):
@@ -66,3 +68,64 @@ def test_qualified_flow_artifact_is_the_only_flow_input_and_carries_coverage():
     assert artifact["records"]["AAA"]["features"]["profit_before_tax_ttm"]["value"] == 40
     assert artifact["coverage"]["qualified_flow_before_after"]["after"]["revenue"]["ttm_ticker_count"] == 1
     assert artifact["records"]["AAA"]["states"]["earnings_turnaround_state"] == "UNAVAILABLE"
+
+
+def _semantic_row(metric, value, label, *, ticker="AAA", cumulative_state="unknown"):
+    """A real structured_financial_period_semantics.project_fact() output -- the actual shape
+    every real build_qualified_flow_artifact caller passes, with its renamed/nested field names
+    (reported_value, source_status, source_lineage.provider, normalized_candidate_unit.*)."""
+    raw = {"ticker": ticker, "canonical_metric": metric, "provider": "KBS", "statement_family": "income_statement",
+           "statement_scope": "consolidated", "reporting_period": label, "period_type": "quarterly",
+           "source_sha256": "x" * 64, "source_file": "income", "fact_id": f"{metric}-{label}",
+           "source_observation_ids": ["o-1"], "status": "provider_reported",
+           "qualification_state": "provider_reported", "value": value, "currency": "VND", "scale": "ONE",
+           "observed_at": "2026-01-01T00:00:00+07:00", "conflicts": [], "warnings": [],
+           "cumulative_state": cumulative_state}
+    return sem_semantics.project_fact(raw)
+
+
+def test_build_qualified_flow_artifact_groups_semantic_rows_by_ticker():
+    """FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1: the bridge was
+    previously built and tested but never invoked by any real `build_scaleout` caller, because
+    each caller would have had to hand-derive `facts_by_ticker`/`entity_type_by_ticker` itself.
+    This proves the new one-call helper reproduces that same qualification end to end using the
+    REAL structured_financial_period_semantics row shape -- an earlier version of this helper
+    passed such rows to the bridge unadapted, which silently qualified nothing (every bridge
+    field read resolved to None) and caused a real production regression, only caught by the
+    end-to-end `current_research_ready_count` regression lock, not by a unit test in isolation."""
+    rows = [_semantic_row(metric, value, label)
+            for label in ("2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2")
+            for metric, value in (("revenue", 100), ("profit_before_tax", 10), ("net_income", 8))]
+    # A second ticker with no rows at all must not crash or appear with a spurious record.
+    qualified = build_qualified_flow_artifact(
+        semantic_rows=rows, feature_records={"AAA": _store(), "BBB": _store(ticker="BBB")}, requested_at="t",
+    )
+    assert qualified["records"]["AAA"]["ttm"]["revenue"]["value"] == 400
+    assert "BBB" in qualified["records"]
+    artifact = build_scaleout(semantic_rows=[_row("revenue", 999)], feature_records={"AAA": _store()},
+                              feature_store_artifact={"artifact_identity": "store:1"}, period_semantics_identity="sem:1",
+                              requested_at="t", qualified_flow_artifact=qualified)
+    assert artifact["records"]["AAA"]["features"]["revenue_ttm"]["value"] == 400
+    assert artifact["scaleout"]["qualified_flow_replaced_raw_flow_rows"] is True
+
+
+def test_build_qualified_flow_artifact_ignores_rows_with_no_ticker():
+    rows = [{"canonical_metric": "revenue", "value": 1}]  # malformed/missing ticker
+    qualified = build_qualified_flow_artifact(semantic_rows=rows, feature_records={"AAA": _store()}, requested_at="t")
+    assert qualified["records"]["AAA"]["ttm"] == {}
+
+
+def test_bridge_fact_adapter_recovers_the_fields_the_bridge_actually_reads():
+    """Regression guard for the exact bug this milestone found: feeding a reshaped
+    structured_financial_period_semantics row to the bridge unadapted makes every field the
+    bridge reads resolve to None."""
+    row = _semantic_row("revenue", 100.0, "2026-Q1", cumulative_state="period_only")
+    adapted = scaleout._bridge_fact(row)
+    assert adapted["value"] == 100.0
+    assert adapted["status"] == "provider_reported"
+    assert adapted["provider"] == "KBS"
+    assert adapted["currency"] == "VND"
+    assert adapted["scale"] == "ONE"
+    assert adapted["reporting_period"] == "2026-Q1"
+    assert adapted["cumulative_state"] == "period_only"
+    assert bridge._usable(adapted) is True

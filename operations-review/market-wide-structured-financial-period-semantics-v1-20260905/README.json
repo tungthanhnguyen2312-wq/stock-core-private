@@ -1,0 +1,5 @@
+{
+  "artifact": "structured_financial_period_semantics_artifact.json",
+  "boundary": "projection_only_no_feature_calculation_or_authority_promotion",
+  "facts_payload": "structured_financial_period_semantics_facts.jsonl.gz"
+}

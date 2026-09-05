@@ -105,10 +105,14 @@ def build_shared_financial_v2(requested_at: str, candidate_tickers: list[str]) -
     for ticker, entity_type in entity_classification.load_layered_entity_profiles().items():
         if ticker in records_with_types:
             records_with_types[ticker]["entity_type"] = entity_type
+    qualified_flow_artifact = fa_scaleout.build_qualified_flow_artifact(
+        semantic_rows=sem_rows, feature_records=records_with_types, requested_at=requested_at,
+    )
     engine_art = fa_scaleout.build_scaleout(
         semantic_rows=sem_rows, feature_records=records_with_types, feature_store_artifact=fs_art,
         period_semantics_identity=semantics_art["artifact_identity"], requested_at=requested_at,
         classification_diagnostics_identity=classification_diag.get("diagnostics_identity"),
+        qualified_flow_artifact=qualified_flow_artifact,
     )
     projection_art = fa_projection.build_product_projection(financial_context=engine_art, product_tickers=candidate_tickers, requested_at=requested_at)
     return {"engine": engine_art, "projection": projection_art}

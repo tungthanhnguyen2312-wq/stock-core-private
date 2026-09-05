@@ -13,9 +13,35 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
+#: Bumped 2026-09-05 (FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1):
+#: additive `period_duration_root_cause`/`timestamp_root_cause` fields (see
+#: `_duration_root_cause`/`_timestamp_root_cause`) so UNKNOWN_DURATION and timestamp-missing
+#: are no longer one homogeneous blocker; also exposes `reported_cumulative_state` (the raw
+#: fact's `cumulative_state`, previously consumed only internally by `_period_state` and never
+#: returned) so a consumer that needs the underlying flow-basis evidence -- e.g. wiring
+#: `financial_flow_semantics_ttm_bridge.py` -- does not have to re-read the raw canonical fact
+#: a second time. No existing field's meaning changed.
 CONTRACT_VERSION = "market_wide_structured_financial_period_semantics/v1"
 ARTIFACT_TYPE = "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS"
+
+#: Root-cause taxonomy for an unresolved period-duration classification (owner directive
+#: section 4, codes A-H). Assigned only when `period_semantic_state == UNKNOWN_DURATION`;
+#: `None` otherwise. Each value is proven against retained evidence -- see the real
+#: market-wide crosstab in this milestone's evidence package before treating any of these as
+#: an assumption rather than a measured finding.
+DURATION_ROOT_CAUSE_NO_RAW_OBSERVATION = "F_NO_RAW_OBSERVATION_RETRIEVED"
+DURATION_ROOT_CAUSE_VCI_NO_BASIS_MARKER = "F_PROVIDER_SCHEMA_HAS_NO_DURATION_BASIS_MARKER"
+DURATION_ROOT_CAUSE_CASH_FLOW_INSUFFICIENT_DEPTH = "F_INSUFFICIENT_SAME_YEAR_QUARTER_DEPTH_FOR_CUMULATIVE_STATE_RESOLVER"
+DURATION_ROOT_CAUSE_UNSUPPORTED_PROVIDER = "A_PROVIDER_SCHEMA_MAPPING_MISSING"
+DURATION_ROOT_CAUSE_BALANCE_SHEET_PERIOD_END_MISSING = "F_BALANCE_SHEET_PERIOD_END_MISSING"
+DURATION_ROOT_CAUSE_KBS_INCOME_NON_QUARTERLY = "H_KBS_INCOME_STATEMENT_NON_QUARTERLY_PERIOD_TYPE"
+DURATION_ROOT_CAUSE_UNCLASSIFIED = "H_UNCLASSIFIED_STATEMENT_FAMILY"
+
+#: Root-cause taxonomy for a missing observation/publication timestamp (owner directive
+#: section 5). Assigned only when both `observed_at` and `published_at` are unknown.
+TIMESTAMP_ROOT_CAUSE_NO_RAW_OBSERVATION = "F_NO_RAW_OBSERVATION_RETRIEVED"
+TIMESTAMP_ROOT_CAUSE_MISSING_SCRAPED_AT = "G_RAW_OBSERVATION_MISSING_SCRAPED_AT_COLUMN"
 
 ANNUAL = "ANNUAL"
 STANDALONE_QUARTER = "STANDALONE_QUARTER"
@@ -85,6 +111,52 @@ def _period_state(fact: Mapping[str, Any]) -> tuple[str, str, str]:
     return (UNKNOWN_DURATION, "duration_evidence_unavailable/v1", "quarter_label_or_dates_not_sufficient")
 
 
+def _duration_root_cause(fact: Mapping[str, Any], state: str) -> str | None:
+    """Classify WHY a fact's duration is unresolved (owner directive section 4). Never inferred
+    from a period label, magnitude, or Vietnamese accounting convention -- only from which
+    evidence dimension is actually absent. `None` when the state is already resolved."""
+    if state != UNKNOWN_DURATION:
+        return None
+    if str(fact.get("status") or "unknown") != "provider_reported":
+        # Zero-silent-drop placeholder: no raw item was ever matched for this ticker/metric/
+        # period slot, so there is no source evidence a duration basis could be read from.
+        # This is the large majority of the UNKNOWN_DURATION bucket -- see the evidence package.
+        return DURATION_ROOT_CAUSE_NO_RAW_OBSERVATION
+    family = fact.get("statement_family")
+    if family == "balance_sheet":
+        return DURATION_ROOT_CAUSE_BALANCE_SHEET_PERIOD_END_MISSING
+    if family == "income_statement":
+        provider = fact.get("provider")
+        if provider == "VCI":
+            return DURATION_ROOT_CAUSE_VCI_NO_BASIS_MARKER
+        if provider not in {"KBS", "VCI"}:
+            return DURATION_ROOT_CAUSE_UNSUPPORTED_PROVIDER
+        # A KBS income-statement fact reaching UNKNOWN_DURATION means period_type != "quarterly"
+        # -- not observed in the retained corpus today (KBS income-statement facts are always
+        # quarterly), kept explicit rather than silently folded into the VCI/no-evidence causes.
+        return DURATION_ROOT_CAUSE_KBS_INCOME_NON_QUARTERLY
+    if family == "cash_flow":
+        # resolve_cumulative_state (canonical_financial_resolvers.py) needs >=2 same-year
+        # quarters retaining a recognized beginning-of-period-cash line to distinguish
+        # standalone from YTD; a thin same-year history (either provider) leaves it UNKNOWN.
+        return DURATION_ROOT_CAUSE_CASH_FLOW_INSUFFICIENT_DEPTH
+    return DURATION_ROOT_CAUSE_UNCLASSIFIED
+
+
+def _timestamp_root_cause(fact: Mapping[str, Any]) -> str | None:
+    """Classify WHY a fact has neither a usable `observed_at` nor `published_at` (owner
+    directive section 5). `None` once either timestamp is present -- this never runs after a
+    timestamp already exists, so it can never override or re-derive one."""
+    if not _unknown(fact.get("observed_at")) or not _unknown(fact.get("published_at")):
+        return None
+    if str(fact.get("status") or "unknown") != "provider_reported":
+        return TIMESTAMP_ROOT_CAUSE_NO_RAW_OBSERVATION
+    # A real, provider-reported value exists, but its retained raw observation carries no
+    # `scraped_at` at all -- canonical_financial_facts._normalize_observed_at can only repair
+    # the REPRESENTATION of an existing value; it cannot recover one that was never retained.
+    return TIMESTAMP_ROOT_CAUSE_MISSING_SCRAPED_AT
+
+
 def project_fact(fact: Mapping[str, Any]) -> dict[str, Any]:
     """Pass through one retained canonical fact with an additive semantics envelope."""
     state, method, evidence = _period_state(fact)
@@ -121,9 +193,11 @@ def project_fact(fact: Mapping[str, Any]) -> dict[str, Any]:
         "period_semantic_state": state,
         "period_semantic_method": method,
         "period_semantic_evidence": evidence,
+        "period_duration_root_cause": _duration_root_cause(fact, state),
         "reported_value": fact.get("value"),
         "reported_currency": fact.get("currency"),
         "reported_scale": fact.get("scale"),
+        "reported_cumulative_state": fact.get("cumulative_state"),
         "normalized_candidate_value": fact.get("value"),
         "normalized_candidate_unit": {"currency": fact.get("currency"), "scale": fact.get("scale")},
         "normalization_method": "PASSTHROUGH_EXISTING_CANONICAL_FACT_NO_NEW_TRANSFORM",
@@ -140,6 +214,7 @@ def project_fact(fact: Mapping[str, Any]) -> dict[str, Any]:
         },
         "retrieval_or_observation_timestamp": fact.get("observed_at"),
         "published_timestamp": fact.get("published_at"),
+        "timestamp_root_cause": _timestamp_root_cause(fact),
         "lineage_complete": not missing_lineage,
         "missing_lineage_fields": missing_lineage,
         "metadata_missing": {"unit": unit_missing, "scope": scope_missing, "timestamp": timestamp_missing},
@@ -234,6 +309,12 @@ def _coverage(records: Sequence[Mapping[str, Any]], input_count: int) -> dict[st
         for key, value in row["metadata_missing"].items():
             if value:
                 missing[key] += 1
+    duration_root_cause = Counter(row["period_duration_root_cause"] for row in records if row["period_duration_root_cause"])
+    duration_root_cause_by_family = Counter(
+        (row["period_duration_root_cause"], str(row["statement_family"]))
+        for row in records if row["period_duration_root_cause"]
+    )
+    timestamp_root_cause = Counter(row["timestamp_root_cause"] for row in records if row["timestamp_root_cause"])
     return {
         "input_fact_count": input_count, "emitted_fact_count": len(records),
         "zero_silent_drops": input_count == len(records),
@@ -245,6 +326,11 @@ def _coverage(records: Sequence[Mapping[str, Any]], input_count: int) -> dict[st
         "statement_type_distribution": by(lambda row: str(row["statement_family"])),
         "scope_distribution": by(lambda row: str(row["statement_scope"])),
         "unresolved_duration_count": sum(row["period_semantic_state"] == UNKNOWN_DURATION for row in records),
+        "duration_root_cause_distribution": dict(sorted(duration_root_cause.items())),
+        "duration_root_cause_by_statement_family": {
+            f"{cause}|{family}": count for (cause, family), count in sorted(duration_root_cause_by_family.items())
+        },
+        "timestamp_root_cause_distribution": dict(sorted(timestamp_root_cause.items())),
         "missing_metadata_distribution": dict(sorted(missing.items())),
         "missing_currency_count": sum(_unknown(row["normalized_candidate_unit"]["currency"]) for row in records),
         "missing_scale_count": sum(_unknown(row["normalized_candidate_unit"]["scale"]) for row in records),

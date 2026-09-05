@@ -122,10 +122,14 @@ def build_engine_artifact(
     for ticker, entity_type in entity_classification.load_layered_entity_profiles().items():
         if ticker in records_with_types:
             records_with_types[ticker]["entity_type"] = entity_type
+    qualified_flow_artifact = scaleout.build_qualified_flow_artifact(
+        semantic_rows=rows, feature_records=records_with_types, requested_at=requested_at,
+    )
     return scaleout.build_scaleout(
         semantic_rows=rows, feature_records=records_with_types, feature_store_artifact=feature_store_artifact,
         period_semantics_identity=semantics_artifact["artifact_identity"], requested_at=requested_at,
         classification_diagnostics_identity=classification.get("diagnostics_identity"),
+        qualified_flow_artifact=qualified_flow_artifact,
     )
 
 

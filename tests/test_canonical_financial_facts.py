@@ -629,5 +629,47 @@ class ProductionStoreTests(unittest.TestCase):
             self.assertIn(record["status"], facts.SUPPORTED_STATUSES)
 
 
+class ObservedAtNormalizationTests(unittest.TestCase):
+    """FINANCIAL_TEMPORAL_SEMANTIC_NORMALIZATION_AND_ANALYTICAL_PANEL_V1: retained payloads
+    stamped `scraped_at` as a naive Asia/Ho_Chi_Minh string before this milestone; the
+    canonicalization boundary must repair the representation without fabricating a new time."""
+
+    def test_legacy_naive_string_gets_the_known_offset_attached(self):
+        self.assertEqual(facts._normalize_observed_at("2026-07-21 14:35"), "2026-07-21T14:35:00+07:00")
+
+    def test_already_iso_value_is_unchanged(self):
+        self.assertEqual(facts._normalize_observed_at("2026-07-21T14:35:00+07:00"), "2026-07-21T14:35:00+07:00")
+
+    def test_missing_value_stays_missing(self):
+        self.assertIsNone(facts._normalize_observed_at(None))
+        self.assertIsNone(facts._normalize_observed_at(""))
+
+    def test_unparseable_value_is_preserved_not_dropped(self):
+        self.assertEqual(facts._normalize_observed_at("not-a-date"), "not-a-date")
+
+    def test_normalized_value_is_strictly_timezone_aware(self):
+        import bitemporal_semantic_contract as bitemporal
+        fixed = facts._normalize_observed_at("2026-07-21 14:35")
+        self.assertIsNotNone(bitemporal._parse_aware(fixed))
+        self.assertIsNone(bitemporal._parse_aware("2026-07-21 14:35"))
+
+    def test_fact_id_is_unaffected_by_the_observed_at_representation(self):
+        """The timestamp representation must never change a fact's content identity."""
+        base = dict(ticker="AAA", metric="revenue", definition={"statement": "income_statement"},
+                    period="2025-Q1", status="provider_reported", candidate=None,
+                    value=100.0, evidence={"scope": {"statement_scope": "consolidated", "reason": "x"},
+                                          "sign": {"sign_convention": "unknown"},
+                                          "balance_identity": {"balance_identity": "unknown"},
+                                          "cross_statement": {"cross_statement_scale": "unknown"}},
+                    cumulative=resolvers.resolve_cumulative_state({}), reason="x", warnings=(),
+                    conflicts=(), authority="unknown", substitute_metrics=())
+        naive_obs = {"scraped_at": "2026-07-21 14:35", "observation_id": "o-1"}
+        iso_obs = {"scraped_at": "2026-07-21T14:35:00+07:00", "observation_id": "o-1"}
+        fact_naive = facts._fact(**base, observation=naive_obs)
+        fact_iso = facts._fact(**base, observation=iso_obs)
+        self.assertEqual(fact_naive["fact_id"], fact_iso["fact_id"])
+        self.assertNotEqual(fact_naive["observed_at"], "2026-07-21 14:35")
+
+
 if __name__ == "__main__":
     unittest.main()
