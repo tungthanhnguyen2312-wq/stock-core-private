@@ -578,6 +578,31 @@ def _insufficient_record(ticker: str, reason: str, depth: int) -> dict[str, Any]
 
 # ── Per-ticker classification ─────────────────────────────────────────────────
 
+def resolve_target_session_observations(
+    *, pf_record: Mapping[str, Any] | None, recovery_override: Mapping[str, Any] | None, target_session: str,
+) -> tuple[Mapping[str, Any] | None, str]:
+    """Return (winning_record, source) -- the retained-observations record every
+    Tactical V3 consumer (structure, momentum, participation) must use for one ticker.
+
+    The recovery batch is an independent single-provider (DNSE) fetch, never
+    re-resolved against the multi-source exact-session snapshot that other current-
+    research consumers (e.g. valuation) treat as this session's authoritative close.
+    Confirmed against real 2026-09-04 evidence: 34/952 recovered tickers disagree
+    with the snapshot's own close (up to ~11%), because the snapshot fell back to a
+    KBS sole-source print before DNSE had published that day. Only adopt the
+    recovery series when its target-session close matches the snapshot's exactly;
+    otherwise fall back to the pre-recovery P3F9B-only behavior. Shared by every
+    consumer of retained technical history so this invariant is enforced exactly once.
+    """
+    if isinstance(recovery_override, Mapping) and recovery_override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
+        recovered_close = _session_close(recovery_override, target_session)
+        resolved_close = _session_close(pf_record, target_session)
+        if recovered_close is not None and recovered_close == resolved_close:
+            return recovery_override, "RETAINED_TECHNICAL_HISTORY_RECOVERY"
+        return pf_record, "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH"
+    return pf_record, "P3F9B_EXACT_SESSION_RECORD"
+
+
 def _classify_ticker(
     ticker: str, *, descriptive_record: Mapping[str, Any],
     pf_record: Mapping[str, Any] | None, target_session: str,
@@ -588,24 +613,10 @@ def _classify_ticker(
     if not eligible:
         return _insufficient_record(ticker, "TECHNICAL_FEATURES_UNAVAILABLE_OR_NOT_CURRENT_SESSION", 0)
 
-    history_source = "P3F9B_EXACT_SESSION_RECORD"
-    history_record = pf_record
-    if isinstance(recovery_override, Mapping) and recovery_override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
-        # The recovery batch is an independent single-provider (DNSE) fetch, never
-        # re-resolved against the multi-source exact-session snapshot that other current-
-        # research consumers (e.g. valuation) treat as this session's authoritative close.
-        # Confirmed against real 2026-09-04 evidence: 34/952 recovered tickers disagree
-        # with the snapshot's own close (up to ~11%), because the snapshot fell back to a
-        # KBS sole-source print before DNSE had published that day. Only adopt the
-        # recovery series when its target-session close matches the snapshot's exactly;
-        # otherwise fall back to the pre-recovery P3F9B-only behavior.
-        recovered_close = _session_close(recovery_override, target_session)
-        resolved_close = _session_close(pf_record, target_session)
-        if recovered_close is not None and recovered_close == resolved_close:
-            history_record = {"observations": recovery_override.get("observations")}
-            history_source = "RETAINED_TECHNICAL_HISTORY_RECOVERY"
-        else:
-            history_source = "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH"
+    winning_record, history_source = resolve_target_session_observations(
+        pf_record=pf_record, recovery_override=recovery_override, target_session=target_session,
+    )
+    history_record = {"observations": winning_record.get("observations")} if history_source == "RETAINED_TECHNICAL_HISTORY_RECOVERY" else winning_record
     sessions, closes = _closes(history_record)
     if not sessions or sessions[-1] != target_session:
         record = _insufficient_record(ticker, "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION", len(closes))

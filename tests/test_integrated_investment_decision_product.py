@@ -678,3 +678,72 @@ class TestGovernanceAndStructure:
         )
         assert dec["research_action_posture"] == iidp.POSTURE_INITIATE_ON_BREAKOUT
         assert dec["participation"]["status"] == "NOT_AVAILABLE"
+
+
+class TestMomentumParticipationConfirmationAdditive:
+    """TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1: momentum_context and
+    tactical_confirmation_context are purely additive. research_action_posture must be byte-
+    identical whether or not they are supplied -- decide_research_action_posture never reads
+    either field."""
+
+    def _decision(self, *, momentum_record=None, tactical_confirmation_record=None) -> dict:
+        return iidp.build_ticker_integrated_decision(
+            ticker="HPG",
+            as_of_session="2026-08-28",
+            tactical_record=_sample_tactical_record(market_structure_state="UPTREND", breakout_state_v3="BREAKOUT", trigger_state="TRIGGERED"),
+            financial_record=_sample_financial_record(),
+            valuation_record=None,
+            relative_volume_record=None,
+            market_sector_record=None,
+            momentum_record=momentum_record,
+            tactical_confirmation_record=tactical_confirmation_record,
+        )
+
+    def test_posture_identical_with_and_without_momentum_confirmation(self) -> None:
+        without = self._decision()
+        confirmed = self._decision(
+            momentum_record={"eligibility": {"status": "ELIGIBLE"}, "rsi": {"status": "AVAILABLE", "direction": "RISING"}},
+            tactical_confirmation_record={"tactical_confirmation_state": "CONFIRMED", "supporting_reasons": ["MOMENTUM_DIRECTION_ALIGNED"]},
+        )
+        contradicted = self._decision(
+            momentum_record={"eligibility": {"status": "ELIGIBLE"}, "rsi": {"status": "AVAILABLE", "direction": "FALLING"}},
+            tactical_confirmation_record={"tactical_confirmation_state": "CONTRADICTED", "contradicting_reasons": ["MOMENTUM_DIRECTION_MISALIGNED"]},
+        )
+        assert without["research_action_posture"] == confirmed["research_action_posture"] == contradicted["research_action_posture"]
+        assert without["why_now"] == confirmed["why_now"] == contradicted["why_now"]
+
+    def test_momentum_and_confirmation_pass_through_when_provided(self) -> None:
+        dec = self._decision(
+            momentum_record={"eligibility": {"status": "ELIGIBLE"}, "rsi": {"status": "AVAILABLE", "value": 65.0}},
+            tactical_confirmation_record={"tactical_confirmation_state": "PARTIALLY_CONFIRMED", "supporting_reasons": ["X"], "contradicting_reasons": ["Y"]},
+        )
+        assert dec["momentum_context"]["rsi"]["value"] == 65.0
+        assert dec["tactical_confirmation_context"]["tactical_confirmation_state"] == "PARTIALLY_CONFIRMED"
+
+    def test_defaults_when_not_provided(self) -> None:
+        dec = self._decision()
+        assert dec["momentum_context"]["status"] == "NOT_AVAILABLE"
+        assert dec["tactical_confirmation_context"]["tactical_confirmation_state"] == "INSUFFICIENT_EVIDENCE"
+
+    def test_build_artifact_wires_momentum_and_confirmation_artifacts(self) -> None:
+        tac_art = {"artifact_identity": "technical_structure_context/v2:fake", "records": {"AAA": _sample_tactical_record()}}
+        fa_art = {"artifact_identity": "financial_analysis_product_integration/v1:fake", "records": {"AAA": _sample_financial_record()}}
+        momentum_art = {
+            "artifact_identity": "tactical_momentum_context:fake",
+            "records": {"AAA": {"eligibility": {"status": "ELIGIBLE"}, "rsi": {"status": "AVAILABLE", "value": 55.0}}},
+        }
+        confirmation_art = {
+            "artifact_identity": "tactical_confirmation_context:fake",
+            "records": {"AAA": {"tactical_confirmation_state": "CONFIRMED", "supporting_reasons": ["MOMENTUM_DIRECTION_ALIGNED"]}},
+        }
+        art = iidp.build_artifact(
+            session="2026-08-28", requested_at="2026-09-02T00:00:00Z",
+            technical_structure_artifact=tac_art, financial_analysis_artifact=fa_art,
+            momentum_artifact=momentum_art, tactical_confirmation_artifact=confirmation_art,
+        )
+        assert art["records"]["AAA"]["momentum_context"]["rsi"]["value"] == 55.0
+        assert art["records"]["AAA"]["tactical_confirmation_context"]["tactical_confirmation_state"] == "CONFIRMED"
+        assert art["coverage"]["tactical_confirmation_state_distribution"] == {"CONFIRMED": 1}
+        assert art["coverage"]["momentum_context_available"] == 1
+        assert art["source_artifacts"]["momentum"] == "tactical_momentum_context:fake"
+        assert art["source_artifacts"]["tactical_confirmation"] == "tactical_confirmation_context:fake"

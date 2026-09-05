@@ -150,6 +150,39 @@ def _ticker_record(ticker: str, observations: Any, session: str) -> dict[str, An
     return result
 
 
+def resolve_records_with_recovery(
+    *, p3f9b_snapshot: Mapping[str, Any], technical_history_recovery_artifact: Mapping[str, Any] | None,
+    candidates: list[str], target_session: str,
+) -> dict[str, Mapping[str, Any]]:
+    """Per-ticker ``records`` input for ``build_artifact``, preferring the retained
+    technical-history recovery's own observations only when its target-session close agrees
+    exactly with the exact-session snapshot's resolved close -- the same invariant Tactical V3
+    structure and momentum already enforce (``technical_structure_context.
+    resolve_target_session_observations``). A degraded session where the snapshot's own bar came
+    from a non-DNSE sole source (e.g. 2026-09-04's wholesale KBS fallback) would otherwise leave
+    this module's strict native-DNSE-volume check with a 1-bar, non-DNSE record for nearly every
+    ticker and zero participation coverage, even though a compatible multi-session DNSE volume
+    series was already retained and validated for the same tickers.  On a plain P3F9B session with
+    no recovery, this is equivalent to reading ``p3f9b_snapshot["records"]`` directly.
+    """
+    import technical_structure_context as structure
+
+    pf_records = p3f9b_snapshot.get("records") or {}
+    recovery_overrides: Mapping[str, Any] = {}
+    if technical_history_recovery_artifact is not None:
+        recovery_overrides, _identity = structure._recovery_overrides(
+            technical_history_recovery_artifact, target_session=target_session,
+            snapshot_identity=p3f9b_snapshot.get("snapshot_identity"),
+        )
+    resolved: dict[str, Mapping[str, Any]] = {}
+    for ticker in candidates:
+        winning_record, _source = structure.resolve_target_session_observations(
+            pf_record=pf_records.get(ticker), recovery_override=recovery_overrides.get(ticker), target_session=target_session,
+        )
+        resolved[ticker] = winning_record or {}
+    return resolved
+
+
 def build_artifact(*, candidates: list[str], records: Mapping[str, Mapping[str, Any]], session: str, requested_at: str) -> dict[str, Any]:
     """Build a full-universe, retained-session artifact with deterministic tie percentiles."""
     target_session = _valid_date(session)

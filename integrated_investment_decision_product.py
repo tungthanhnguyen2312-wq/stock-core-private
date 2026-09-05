@@ -704,6 +704,8 @@ def build_ticker_integrated_decision(
     portfolio_record: Mapping[str, Any] | None = None,
     legacy_opportunity_record: Mapping[str, Any] | None = None,
     priority_queue_record: Mapping[str, Any] | None = None,
+    momentum_record: Mapping[str, Any] | None = None,
+    tactical_confirmation_record: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble one complete, self-contained integrated investment decision record."""
     tactical = tactical_record or {}
@@ -829,6 +831,12 @@ def build_ticker_integrated_decision(
         "valuation_method_reconciliation": valuation.get("valuation_method_reconciliation") or {},
         "calculation_readiness_context": valuation.get("calculation_readiness_context") or {},
         "participation_support": part_supp,
+        # Additive analytical context (TACTICAL_MOMENTUM_PARTICIPATION_CONFIRMATION_V1). Neither
+        # field feeds decide_research_action_posture above -- research_action_posture is computed
+        # identically to before this milestone. A ticker is not upgraded merely because RSI/MACD/
+        # participation agree; see tactical_confirmation_context.py's own no-vote-counting design.
+        "momentum_context": momentum_record if momentum_record is not None else {"status": "NOT_AVAILABLE", "reason": "MOMENTUM_CONTEXT_NOT_PROVIDED_TO_INTEGRATED_BUILDER"},
+        "tactical_confirmation_context": tactical_confirmation_record if tactical_confirmation_record is not None else {"tactical_confirmation_state": "INSUFFICIENT_EVIDENCE", "reason": "TACTICAL_CONFIRMATION_CONTEXT_NOT_PROVIDED_TO_INTEGRATED_BUILDER"},
         "counter_thesis": all_counter_thesis,
         "material_uncertainties": all_uncertainties,
         "exact_capabilities_unavailable": exact_unavail,
@@ -876,6 +884,8 @@ def build_artifact(
     portfolio_artifact: Mapping[str, Any] | None = None,
     legacy_decision_artifact: Mapping[str, Any] | None = None,
     priority_queue_artifact: Mapping[str, Any] | None = None,
+    momentum_artifact: Mapping[str, Any] | None = None,
+    tactical_confirmation_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the market-wide integrated investment decision product artifact."""
     fa_contract = (financial_analysis_artifact or {}).get("contract_version")
@@ -892,6 +902,8 @@ def build_artifact(
     priority_records = (priority_queue_artifact or {}).get("records") or {}
     if priority_queue_artifact is not None and not isinstance(priority_records, Mapping):
         raise IntegratedDecisionProductError("PRIORITY_QUEUE_RECORDS_INVALID")
+    momentum_records = (momentum_artifact or {}).get("records") or {}
+    tactical_confirmation_records = (tactical_confirmation_artifact or {}).get("records") or {}
 
     # All tickers present in technical structure or financial analysis
     all_tickers = sorted(set(tac_records.keys()) | set(fa_records.keys()))
@@ -902,6 +914,7 @@ def build_artifact(
     posture_counts: dict[str, int] = {}
     fund_counts: dict[str, int] = {}
     tac_counts: dict[str, int] = {}
+    tactical_confirmation_counts: dict[str, int] = {}
 
     trigger_avail = 0
     inval_avail = 0
@@ -931,6 +944,8 @@ def build_artifact(
             portfolio_record=portfolio_artifact,
             legacy_opportunity_record=leg_rec,
             priority_queue_record=priority_records.get(ticker),
+            momentum_record=momentum_records.get(ticker),
+            tactical_confirmation_record=tactical_confirmation_records.get(ticker),
         )
         records[ticker] = dec
 
@@ -943,6 +958,9 @@ def build_artifact(
 
         t = dec["tactical_phase"]
         tac_counts[t] = tac_counts.get(t, 0) + 1
+
+        c = (dec.get("tactical_confirmation_context") or {}).get("tactical_confirmation_state")
+        tactical_confirmation_counts[c] = tactical_confirmation_counts.get(c, 0) + 1
 
         if (dec.get("trigger") or {}).get("trigger_state") not in (None, "NOT_AVAILABLE"):
             trigger_avail += 1
@@ -967,6 +985,8 @@ def build_artifact(
         "research_action_posture_distribution": dict(sorted(posture_counts.items())),
         "fundamental_state_distribution": dict(sorted(fund_counts.items())),
         "tactical_phase_distribution": dict(sorted(tac_counts.items())),
+        "tactical_confirmation_state_distribution": dict(sorted((k, v) for k, v in tactical_confirmation_counts.items() if k is not None)),
+        "momentum_context_available": sum(1 for rec in momentum_records.values() if (rec or {}).get("eligibility", {}).get("status") == "ELIGIBLE"),
         "trigger_available": trigger_avail,
         "invalidation_available": inval_avail,
         "valuation_context_available": val_avail,
@@ -992,6 +1012,8 @@ def build_artifact(
             "relative_volume": (relative_volume_artifact or {}).get("artifact_identity"),
             "market_sector": (market_sector_artifact or {}).get("artifact_identity"),
             "priority_queue": (priority_queue_artifact or {}).get("artifact_identity"),
+            "momentum": (momentum_artifact or {}).get("artifact_identity"),
+            "tactical_confirmation": (tactical_confirmation_artifact or {}).get("artifact_identity"),
         },
         "authority_boundary": {
             "is_actionable": False,

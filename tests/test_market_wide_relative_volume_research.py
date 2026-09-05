@@ -7,7 +7,9 @@ import unittest
 from pathlib import Path
 
 import export_ai_bundle as bundle
-from market_wide_relative_volume_research import build_artifact, content_identity
+import market_wide_current_technical_coverage_scaleout as recovery_module
+from field_temporal_contract import stable_id
+from market_wide_relative_volume_research import build_artifact, content_identity, resolve_records_with_recovery
 from tools.run_market_wide_relative_volume_research import replay
 
 
@@ -105,6 +107,80 @@ class RelativeVolumeResearchTests(unittest.TestCase):
             artifact = json.loads(replay(snapshot, root / "out").read_text(encoding="utf-8"))
         self.assertEqual(content_identity(artifact)["artifact_sha256"], artifact["artifact_sha256"])
         self.assertFalse(artifact["authority_boundary"]["is_actionable"])
+
+
+class ResolveRecordsWithRecoveryTests(unittest.TestCase):
+    """Real 2026-09-04 evidence: the exact-session snapshot's own target-session bar was a
+    non-DNSE (KBS) sole-source print for virtually the entire universe that day, so this
+    module's strict native-DNSE-volume check left participation coverage at 0/1683 even though
+    a compatible multi-session DNSE volume series was already retained for most tickers via the
+    technical-history recovery. resolve_records_with_recovery must recover that coverage while
+    enforcing the exact same target-session-close-agreement safety guard as structure/momentum."""
+
+    SESSION = "2026-08-28"
+
+    def _snapshot(self, records: dict) -> dict:
+        payload = {"resolved_completed_session": self.SESSION, "records": records}
+        digest = stable_id(payload)
+        return {**payload, "snapshot_sha256": digest, "snapshot_identity": f"p3f9_exact_session_snapshot:{digest}"}
+
+    def test_recovery_used_when_snapshot_is_non_dnse_sole_source(self) -> None:
+        snapshot_row = {  # KBS sole-source bar: fails the strict native-DNSE-volume check
+            "session": self.SESSION, "close": 99.0, "volume": 200, "provider": "KBS",
+            "field_identity": {"volume": "KBS_QUOTE.volume"}, "field_representation": {"volume": "KBS_NATIVE_SCALE"},
+        }
+        snapshot = self._snapshot({"KBS1": {"observations": [snapshot_row]}})
+        recovery_observations = [_row(f"2026-08-{day:02d}", (day + 1) * 100) for day in range(1, 21)] + [_row(self.SESSION, 99.0)]
+        # DNSE close for the target session AGREES with the snapshot's own resolved close (99.0).
+        recovery_observations[-1] = _row(self.SESSION, 5000)
+        recovery_observations[-1]["close"] = 99.0
+        recovery = {
+            "target_session": self.SESSION, "source_lineage": {"p3f9b_snapshot_identity": snapshot["snapshot_identity"]},
+            "recovered_history_overrides": {
+                "KBS1": {"state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": recovery_observations},
+            },
+        }
+        recovery.update(recovery_module.content_identity(recovery))
+        resolved = resolve_records_with_recovery(
+            p3f9b_snapshot=snapshot, technical_history_recovery_artifact=recovery,
+            candidates=["KBS1"], target_session=self.SESSION,
+        )
+        artifact = build_artifact(candidates=["KBS1"], records=resolved, session=self.SESSION, requested_at="test")
+        self.assertEqual(artifact["records"]["KBS1"]["acceleration_status"], "READY")
+
+    def test_snapshot_used_when_recovery_close_disagrees(self) -> None:
+        snapshot_row = {
+            "session": self.SESSION, "close": 99.0, "volume": 200, "provider": "KBS",
+            "field_identity": {"volume": "KBS_QUOTE.volume"}, "field_representation": {"volume": "KBS_NATIVE_SCALE"},
+        }
+        snapshot = self._snapshot({"KBS1": {"observations": [snapshot_row]}})
+        recovery_observations = [_row(f"2026-08-{day:02d}", (day + 1) * 100) for day in range(1, 21)] + [_row(self.SESSION, 5000)]
+        recovery_observations[-1]["close"] = 91.0  # disagrees with the snapshot's own 99.0
+        recovery = {
+            "target_session": self.SESSION, "source_lineage": {"p3f9b_snapshot_identity": snapshot["snapshot_identity"]},
+            "recovered_history_overrides": {
+                "KBS1": {"state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": recovery_observations},
+            },
+        }
+        recovery.update(recovery_module.content_identity(recovery))
+        resolved = resolve_records_with_recovery(
+            p3f9b_snapshot=snapshot, technical_history_recovery_artifact=recovery,
+            candidates=["KBS1"], target_session=self.SESSION,
+        )
+        self.assertEqual(resolved["KBS1"], snapshot["records"]["KBS1"])
+        artifact = build_artifact(candidates=["KBS1"], records=resolved, session=self.SESSION, requested_at="test")
+        self.assertEqual(artifact["records"]["KBS1"]["reason"], "PROVIDER_MISMATCH")
+
+    def test_no_recovery_artifact_falls_back_to_plain_snapshot(self) -> None:
+        snapshot_records = {"AAA": {"observations": _history(5)}}
+        payload = {"resolved_completed_session": "2026-01-21", "records": snapshot_records}
+        digest = stable_id(payload)
+        snapshot = {**payload, "snapshot_sha256": digest, "snapshot_identity": f"p3f9_exact_session_snapshot:{digest}"}
+        resolved = resolve_records_with_recovery(
+            p3f9b_snapshot=snapshot, technical_history_recovery_artifact=None,
+            candidates=["AAA"], target_session="2026-01-21",
+        )
+        self.assertEqual(resolved["AAA"], snapshot_records["AAA"])
 
 
 if __name__ == "__main__":
