@@ -93,6 +93,35 @@ class StructureFeatureTests(unittest.TestCase):
         self.assertEqual(record["technical_history_lineage"]["source"], "RETAINED_TECHNICAL_HISTORY_RECOVERY")
         self.assertEqual(record["structure_context"]["status"], "AVAILABLE")
 
+    def test_recovery_rejected_when_target_session_close_disagrees_with_snapshot(self) -> None:
+        """Real 2026-09-04 evidence: 34/952 recovered tickers had a DNSE recovery close that
+        disagreed with the multi-source-resolved P3F9B snapshot close for the same session
+        (the snapshot fell back to a KBS sole-source print before DNSE had published that day).
+        Adopting the recovery series there would price Tactical V3 off a close current-research
+        valuation never accepted. Must fall back to the P3F9B-only (here: 1-bar) behavior."""
+        descriptive = _descriptive_source({"DIS": {"technical": {"close": 91.0, "ma20": 90.0, "momentum": 0.1, "return_1d": 0.01}}})
+        p3f9b = _p3f9b_snapshot({"DIS": [99.0]})  # snapshot's own resolved close for SESSION
+        observations = [
+            {"session": f"2026-08-{day:02d}", "close": float(100 + day)} for day in range(1, 20)
+        ] + [{"session": SESSION, "close": 91.0}]  # recovery's own close disagrees (91.0 != 99.0)
+        recovery = {
+            "target_session": SESSION,
+            "source_lineage": {"p3f9b_snapshot_identity": p3f9b["snapshot_identity"]},
+            "recovered_history_overrides": {
+                "DIS": {"state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "payload_sha256": "payload:dis", "observations": observations}
+            },
+        }
+        recovery.update(recovery_module.content_identity(recovery))
+        artifact = structure.build_artifact(
+            current_descriptive=descriptive, p3f9b_snapshot=p3f9b,
+            technical_history_recovery_artifact=recovery, requested_at="2026-08-31T00:00:00+00:00",
+        )
+        record = artifact["records"]["DIS"]
+        self.assertEqual(record["eligibility"]["status"], "ELIGIBLE")
+        self.assertEqual(record["close_history_depth"], 1)
+        self.assertEqual(record["technical_history_lineage"]["source"], "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH")
+        self.assertEqual(record["structure_context"]["status"], "NOT_AVAILABLE")
+
     def test_breakout_confirmed_by_rule(self) -> None:
         # 19 prior closes oscillating 95-105 (max 105), current close 115 -> above prior max.
         prior = [95.0, 100.0, 105.0, 98.0, 102.0] * 3 + [100.0, 101.0, 99.0, 100.0]

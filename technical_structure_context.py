@@ -171,6 +171,20 @@ def _closes(pf_record: Mapping[str, Any] | None) -> tuple[list[str], list[float]
     return [str(row["session"]) for row in ordered], [float(row["close"]) for row in ordered]
 
 
+def _session_close(pf_record: Mapping[str, Any] | None, session: str) -> float | None:
+    """The single unambiguous close for `session`, or None if missing/ambiguous/malformed."""
+    observations = (pf_record or {}).get("observations")
+    if not isinstance(observations, list):
+        return None
+    matches = [
+        row for row in observations
+        if isinstance(row, Mapping) and row.get("session") == session and isinstance(row.get("close"), (int, float))
+    ]
+    if len(matches) != 1:
+        return None
+    return float(matches[0]["close"])
+
+
 # ── V1 structure helpers (all unchanged) ──────────────────────────────────────
 
 def _structure(window: Sequence[float]) -> dict[str, Any]:
@@ -577,8 +591,21 @@ def _classify_ticker(
     history_source = "P3F9B_EXACT_SESSION_RECORD"
     history_record = pf_record
     if isinstance(recovery_override, Mapping) and recovery_override.get("state") == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
-        history_record = {"observations": recovery_override.get("observations")}
-        history_source = "RETAINED_TECHNICAL_HISTORY_RECOVERY"
+        # The recovery batch is an independent single-provider (DNSE) fetch, never
+        # re-resolved against the multi-source exact-session snapshot that other current-
+        # research consumers (e.g. valuation) treat as this session's authoritative close.
+        # Confirmed against real 2026-09-04 evidence: 34/952 recovered tickers disagree
+        # with the snapshot's own close (up to ~11%), because the snapshot fell back to a
+        # KBS sole-source print before DNSE had published that day. Only adopt the
+        # recovery series when its target-session close matches the snapshot's exactly;
+        # otherwise fall back to the pre-recovery P3F9B-only behavior.
+        recovered_close = _session_close(recovery_override, target_session)
+        resolved_close = _session_close(pf_record, target_session)
+        if recovered_close is not None and recovered_close == resolved_close:
+            history_record = {"observations": recovery_override.get("observations")}
+            history_source = "RETAINED_TECHNICAL_HISTORY_RECOVERY"
+        else:
+            history_source = "RECOVERY_REJECTED_TARGET_SESSION_CLOSE_MISMATCH"
     sessions, closes = _closes(history_record)
     if not sessions or sessions[-1] != target_session:
         record = _insufficient_record(ticker, "RETAINED_CLOSE_SERIES_MISSING_OR_NOT_CURRENT_SESSION", len(closes))
