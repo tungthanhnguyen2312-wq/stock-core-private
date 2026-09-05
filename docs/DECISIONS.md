@@ -1,5 +1,40 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Market-Wide Historical Matched Liquidity And ADTV Foundation V1
+
+`MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` (`push = NO`, implementation checkpoint `8582810`). The explicit owner
+override is
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1`;
+it authorizes no successor.
+
+1. **Canonical Trades is primary input, but materialization coverage is part of the measurement.**
+   The retained Task-160 corpus is 18,109,141 rows over 40 sessions (2026-06-17..2026-08-11) with
+   66,400 explicit ticker-session units. A success, a confirmed selected-page empty result, a known
+   failure, and an absent unit are distinct states; no failed or absent cell may become zero.
+2. **Regular-board matched measures do not mix board families or infer units.** `G1` is the only
+   regular matched scope. `G4` and `T1/T3/T4/T6` remain separate, raw record identities deduplicate
+   retained prints, and source page/payload lineage stays with every daily cell. Generic matched
+   share volume remains `SEMANTICS_UNQUALIFIED` until an independent unit authority exists. The
+   exact G1 value cohort reuses the standing reconciliation formula and its 13,196 exact daily
+   cells; it neither re-derives nor promotes daily-provider `v` or `va`.
+3. **Trailing windows are governed-session windows and require every qualified observation.**
+   Windows use the injected canonical calendar rather than weekday arithmetic, report their exact
+   session list and identity, and emit no partial average. `NO_TRADES_CONFIRMED` contributes a
+   confirmed zero only where the materialization says so; known failures, missing cells, and unit or
+   reconciliation ambiguity stay visible blockers.
+4. **The retained history cannot answer either requested current target.** 2026-08-25 and
+   2026-09-04 are later than 2026-08-11. All four features therefore have zero exact coverage over
+   the 1,683-ticker current universe; temporal validation records zero future-trade and
+   future-liquidity-feature admission rather than filling the gap from a current snapshot.
+5. **AI consumption is a verified evidence pass-through, never a new authority lane.** The optional
+   `export_ai_bundle.py` path verifies the artifact hash, copies only per-ticker retained context,
+   and is disabled by default. It is unconditionally non-actionable and leaves execution and
+   position sizing false, even for a future exact research window. No current `Research Action
+   Posture`, strategy, or policy input changes.
+
+Evidence: `operations-review/market-wide-historical-matched-liquidity-adtv-foundation-v1-20260905/`.
+
 ## 2026-09-05 - Corporate Intelligence Catalyst/Event/Risk Decision Integration V1
 
 `CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 = COMPLETE /

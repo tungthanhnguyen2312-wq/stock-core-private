@@ -1,5 +1,20 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Market-wide historical matched liquidity and ADTV foundation V1 (2026-09-05):**
+`MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` at local checkpoint `8582810`, under explicit
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1`.
+The retained primary canonical DNSE Trades corpus is now governed as a 40-session, 18,109,141-row
+input with unit completeness and source identity, `G1` regular-board scope, and no board-family
+mixing. Existing exact-reconciled G1 value cells (13,196) are reusable only at their exact daily
+scope; generic matched-share volume remains unqualified. Since the corpus stops on 2026-08-11,
+both required replay targets (2026-08-25 and 2026-09-04) fail closed: 0 exact ADV20/ADV60/ADTV20/
+ADTV60 across the 1,683-ticker current governed universe. The only product wiring is disabled-by-
+default, self-verifying evidence-context pass-through; no provider, daily operation, database,
+PIT/RAW_AS_TRADED, execution, participation, slippage, sizing, ranking, score, target, policy,
+publication, or deployment authority changed. Evidence:
+`operations-review/market-wide-historical-matched-liquidity-adtv-foundation-v1-20260905/`.
+
 **Corporate Intelligence catalyst/event/risk decision axis V1 (2026-09-05):**
 `CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE` at local checkpoint `8d62313`, begun from owner-specified

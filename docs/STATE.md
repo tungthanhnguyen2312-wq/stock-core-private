@@ -1,5 +1,30 @@
 # Stock Lookup — Operational State
 
+**Market-wide historical matched liquidity and ADTV foundation V1 (2026-09-05):**
+`MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE`, implemented at local checkpoint `8582810`. The explicit empty-queue override
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1`
+authorized this milestone only; no successor is inferred.
+
+**Retained canonical-Trades evidence establishes the coverage ceiling.** The Task-160 primary
+canonical DNSE Trades materialization has 18,109,141 rows across 40 governed sessions
+(2026-06-17 through 2026-08-11) and 66,400 ticker-session units: 37,828 `COMPLETE`, 28,545
+`NO_TRADES_CONFIRMED`, and 27 `KNOWN_FAILED`. The contract retains regular-board `G1` separately
+from `G4` and `T1/T3/T4/T6`, deduplicates by retained raw-record identity, carries source-page
+lineage and explicit unit semantics, and never zero-fills missing or failed units. The existing
+independently exact-reconciled G1 value cohort has 13,196 daily cells; generic G1 matched-share
+quantity is not independently qualified, so no ADV field is emitted. Daily-provider `v`/`va` is
+not used or promoted.
+
+**Requested-session outcome is intentionally fail-closed.** Both replay targets, 2026-08-25 and
+2026-09-04, are after the canonical retention endpoint: all 1,683 current-universe ticker contexts
+(HOSE 403, HNX_LISTED 299, UPCOM 808, DELISTED 173) are `INCOMPLETE_TRADES_HISTORY`, and exact
+ADV20/ADV60/ADTV20/ADTV60 coverage is 0. The temporal replay admits zero future trades or
+liquidity features. An opt-in, self-verifying AI-bundle handoff can copy this deterministic context
+only; it remains non-actionable, creates no execution/participation/slippage/sizing authority, and
+keeps `position_sizing_eligible=false`. Evidence:
+`operations-review/market-wide-historical-matched-liquidity-adtv-foundation-v1-20260905/`.
+
 **Prospective decision retention and outcome maturation V1 (2026-09-05):**
 `PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE`, started at owner-specified checkpoint

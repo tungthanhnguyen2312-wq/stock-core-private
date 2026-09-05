@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.05.8",
+  "roadmap_version": "2026.09.05.9",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "23b35853dcff5aaa69e7c870368ba478553416b8",
-  "last_updated_checkpoint": "23b35853dcff5aaa69e7c870368ba478553416b8",
+  "implementation_lineage_head": "HEAD",
+  "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1",
+    "milestone": "MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -889,6 +889,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_OFFICIAL_CORPORATE_EVENT_INCREMENTAL_ACQUISITION_AND_FRESHNESS_V1",
       "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Converted the prior milestone's one-off HNX/HOSE acquisition into a repeatable, incremental, idempotent, versioned capability via new official_corporate_event_incremental_acquisition.py, reusing (not replacing) the exact existing hnx_enumerable_universe_kllh_event_disclosure_scaleout.build() and hose_public_xhr_and_periodic_series_recon.build() mechanisms. Each acquisition attempt is retained as an explicit session manifest; raw evidence stays content-addressed and immutable (both modules' own existing _atomic() writers, unmodified); compare_captures() (a pure, network-free function) classifies every surface UNCHANGED_REUSED/CHANGED_NEW_VERSION/NEW_SURFACE_OR_PAGE against the prior successful attempt; a failed attempt is retained explicitly and may be retried for the same calendar session (unlike a successful one, which is permanent evidence, never redone). materialize_current_official_event_context() writes to the exact directory-naming convention the prior milestone's latest-pointer resolver already scans for, requiring zero additional downstream wiring. Two real bugs found and fixed by actually running the mechanism live, not merely by code reading: (1) hose_public_xhr_and_periodic_series_recon.py's AS_OF_DATE was a frozen 2026-08-24 module constant baked into its disclosure-window URLs, permanently capping every future fetch at that date; now defaults to vn_time.vn_today(), still overridable. (2) A real acquisition attempt failed at SOURCE_FETCH_FAILED:hnx_listed_disclosures:441 -- the HNX disclosure-index endpoints carry no date filter, so a full walk now re-fetches HNX's entire historical corpus (440,000+ records, ~22x growth since 2026-08-24); current_official_event_context.py's own contract was confirmed to never read the disclosure index at all, so hnx_module.build() gained an additive include_disclosures parameter (default True, zero behavior change for its only other -- nonexistent -- caller) and this milestone's own acquisition defaults it False rather than attempting an unneeded, unbounded walk. A third real defect was found by this same live run: canonical_post_close_pipeline.register_session_inputs()'s completed-session mutation-rejection check compared official_universe/event_context identities as if they were session-locked, directly contradicting their own pre-existing, explicitly documented ACCEPTED_CURRENT_ASOF_BUILD_NOT_SESSION_LOCKED policy (daily_session_level2_package.session_triage_status, daily_research_session_operations' own input-manifest freshness labelling) -- this tension existed latently since the prior milestone's LATEST_POINTER_STALE fix but never manifested because event_context never actually changed value before now; fixed by excluding both keys from that specific comparison, verified against the real registry's 6 real completed sessions (2026-08-21 through 2026-09-04). A real, live, bounded acquisition attempt (retried once after the disclosure-index fix, per the mission's own 'do not loop/retry indefinitely' constraint -- not a blind repeat, a deliberate fix-then-single-retry) succeeded and genuinely advanced current_official_event_context's research_session from the frozen 2026-08-21 to 2026-09-05 (1,101 tickers, 4,444 event records -- within 0.2% of the frozen baseline's 4,453, consistent with the same real corpus now correctly evaluated as of today). Verified flowing through corporate_event_context (BUILT), the Corporate Intelligence axis, and Integrated Decision (BUILT, corporate_intelligence_context_evaluated=1,507, every sampled required ticker correctly stamped evidence_session=2026-09-05) with zero further wiring changes -- exactly what the prior milestone's fixes were designed to make automatic. Neither current_corporate_intelligence_axis.py nor integrated_investment_decision_product.py nor either PIT/price-adjustment ledger received any code change. future_event_leak_admitted=0 proven both with real data (three different outer sessions all resolve to the one honestly-dated artifact) and with a stronger fixture-based two-distinct-session test. 24 new/updated focused tests; 175 total pass across the 9 directly-relevant suites, 0 regressions. py_compile, git diff --check, tools/stocklookup_roadmap.py --check (drift PASS) all clean. No provider, RAW_AS_TRADED/PIT, liquidity, sizing, execution, universal score, target price, probability, authority-promotion, database, remote, publication, or deployment change occurred. No push. Residual, honestly reported and not fixed: HNX disclosure-index acquisition remains out of scope for routine incremental runs (its own no-date-filter design does not scale to a full walk every run); 2026-09-05's own other Daily inputs are not yet materialized, so the full Integrated Decision proof used the outer session 2026-09-04 instead, an unrelated pre-existing Daily-orchestration timing characteristic. Evidence: operations-review/official-corporate-event-incremental-acquisition-freshness-v1-20260905/ (local-only, gitignored). No successor is queued."
+    },
+    {
+      "milestone_id": "MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / PARTIAL_BY_EVIDENCE",
+      "starting_checkpoint": "bcc6a1dfec8d7923b7c61584f78beef9510c09fe",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "CURRENT_RESEARCH_EVIDENCE_CONTEXT_ONLY / NO_EXECUTION_OR_POSITION_SIZING_AUTHORITY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 directive (2026-09-05)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1",
+      "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization permits this milestone only despite queued_next=[]; no successor is inferred. Start HEAD and origin/main were both verified as bcc6a1dfec8d7923b7c61584f78beef9510c09fe. Retained Task-160 canonical DNSE Trades is the primary input: 18,109,141 rows across 40 governed sessions (2026-06-17..2026-08-11), with 66,400 ticker-session units classified 37,828 COMPLETE, 28,545 NO_TRADES_CONFIRMED, and 27 KNOWN_FAILED. G1 stays separate from G4/T1/T3/T4/T6; no missing or failed unit is zero-filled. Existing exact-reconciled G1 matched value is 13,196 daily cells; generic matched-share volume stays semantically unqualified and no ADV is emitted. Both required replay targets are beyond the retention endpoint, so all 1,683 current-universe contexts are incomplete and exact ADV20/ADV60/ADTV20/ADTV60 counts are 0. Temporal replay admits zero future trades/features. The optional AI-bundle attachment verifies the retained artifact identity and is non-actionable; it adds no execution, participation, slippage, sizing, price-basis, RAW_AS_TRADED, PIT, provider, database, publication, deployment, policy, score, target, probability, ranking, or Daily-operation authority. Evidence: operations-review/market-wide-historical-matched-liquidity-adtv-foundation-v1-20260905/ (local-only, gitignored). The protected pre-existing config/daily_research_session_input_registry.json worktree diff is preserved."
     }
   ],
   "blocked_capabilities": [
@@ -902,8 +917,8 @@
     {
       "capability": "LIQUIDITY_AND_POSITION_SIZING_AUTHORITY",
       "state": "BLOCKED",
-      "reason": "docs/STATE.md Section 3 Invariant 2: QUALIFIED_LIQUIDITY_INPUTS = NO and POSITION_SIZING_IS_SAFE = NO. HISTORICAL_MATCHED_TRADED_VALUE_AND_ADV_AUTHORITY_V1 and ADTV20_EXACT_RECONCILED_TRAILING_WINDOW_RECOVERY_V1 (2026-08-27) both remain Outcome C: the retained 40-session corpus is insufficient for the 20-session ADV20 denominator (FHSC omits expected session 2026-08-06).",
-      "reopen_gate": "A sufficiently deep exact-reconciled G1 matched-value cohort, or an independent anchor supplying the missing 2026-08-06 session.",
+      "reason": "docs/STATE.md Section 3 Invariant 2: QUALIFIED_LIQUIDITY_INPUTS = NO and POSITION_SIZING_IS_SAFE = NO. MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 (2026-09-05) confirms that the primary canonical Trades corpus ends 2026-08-11, before required 2026-08-25/2026-09-04 targets; generic matched-share volume remains unqualified and exact ADV/ADTV coverage at both targets is 0. Earlier historical matched-value/ADTV recovery lanes remain coverage-restricted, including the expected 2026-08-06 FHSC hole.",
+      "reopen_gate": "A current target-session canonical Trades history deep enough for exact governed windows, independently qualified generic matched-share semantics, and full exact-reconciled G1 value coverage; execution or sizing would still require separately authorized downstream models.",
       "reference_checkpoint": null
     },
     {
