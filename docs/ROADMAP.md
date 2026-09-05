@@ -13,11 +13,21 @@ now records the existing exact DNSE thousands-of-VND-to-VND representation contr
 provider-native inputs, and fails cross-currency or unproven-scale multiples closed (PVD and VNM)
 rather than guessing FX or a multiplier. The existing calculation-readiness engine is attached as
 a separate provider-reported, period-aware companion, never a replacement valuation authority.
-Retained 1,683-ticker replay: 50 `INITIATE_ON_BREAKOUT`, 75 `ACCUMULATE_ON_RETEST`, 186
-`EARLY_WATCH`; all 72 Priority-Now/entry-relevant records have explicit policy explanations.
+Retained 1,683-ticker replay: 47 `INITIATE_ON_BREAKOUT`, 74 `ACCUMULATE_ON_RETEST`, 180
+`EARLY_WATCH`; all 72 Priority-Now/entry-relevant records have an explicit explanation (70
+`LEGITIMATE_POLICY_OUTCOME`, 2 `MISSING_HISTORY_OR_FEATURE_FITNESS` after the terminal-review
+corrective below).
 Artifact: `operations-review/core-daily-decision-coherence-and-valuation-integration-v1-20260905/`.
 No successor was opened and no execution, publication, raw-as-traded/PIT, target, probability,
 or universal-score authority was added.
+
+**Terminal acceptance review corrective (2026-09-05) at `9ab5a55`:** the recovery
+override was being adopted even when its own target-session close disagreed with the multi-source
+exact-session snapshot's already-resolved close (34/952 recovered tickers, up to ~11% apart,
+because the snapshot fell back to a KBS sole-source print before DNSE published that day).
+`technical_structure_context.py` now requires exact agreement before adopting the recovery series;
+a mismatch falls back to the pre-recovery P3F9B-only (insufficient-structure) behavior. No
+temporal or look-ahead defect was found. See `docs/STATE.md` for detail.
 
 **Core valuation method coverage and consistency V1 (2026-09-05):**
 `CORE_VALUATION_METHOD_COVERAGE_AND_CONSISTENCY_V1 = COMPLETE` at `35bb7e066a7f2bf8d4db6dd924e6e10a241f7da6`.

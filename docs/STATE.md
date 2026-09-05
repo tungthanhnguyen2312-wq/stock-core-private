@@ -9,8 +9,8 @@ received a one-bar P3F projection for every one of 952 Tactical V3 eligible name
 already-retained technical-history recovery held their valid multi-session observations. The
 canonical producer-to-consumer edge now checks session and source identity and uses those retained
 observations. Tactical thresholds and classification policy are unchanged. The local-only replay
-restores 952 eligible histories and an evidence-driven posture distribution: 50
-`INITIATE_ON_BREAKOUT`, 75 `ACCUMULATE_ON_RETEST`, 186 `EARLY_WATCH`; the 2026-08-25 tactical
+restores 952 eligible histories and an evidence-driven posture distribution: 47
+`INITIATE_ON_BREAKOUT`, 74 `ACCUMULATE_ON_RETEST`, 180 `EARLY_WATCH`; the 2026-08-25 tactical
 projection regression has zero compared-field differences.
 
 The valuation integration now canonicalizes retained DNSE price evidence only through the existing
@@ -23,12 +23,34 @@ same reported period; mismatched periods, unavailable contexts, and unready meth
 explicitly non-comparable. It never substitutes an apparent valuation conclusion.
 
 Priority queue versus posture is now explained in every integrated record without collapsing
-research priority into action readiness: all 72 retained Priority-Now/entry-relevant names have a
-`LEGITIMATE_POLICY_OUTCOME` explanation. Retained local artifact:
+research priority into action readiness: all 72 retained Priority-Now/entry-relevant names have an
+explicit explanation (70 `LEGITIMATE_POLICY_OUTCOME`, 2 `MISSING_HISTORY_OR_FEATURE_FITNESS` after
+the terminal-review corrective below). Retained local artifact:
 `operations-review/core-daily-decision-coherence-and-valuation-integration-v1-20260905/primary_20260904_reconciliation_artifact.json`
-(`core_daily_decision_coherence_reconciliation:08f5975101db3e016e9db7dcb32fae587be285f361e00357e6571f70edd46ac1`).
+(`core_daily_decision_coherence_reconciliation:7a82c5cb1bf688049225c3419a2c047dc306461e7d56758cb1847d0864594615`).
 No provider, raw-as-traded/PIT, liquidity, sizing, execution, universal score, target, probability,
 publication, deployment, or database-write authority was added; no successor is opened.
+
+**Terminal acceptance review corrective (2026-09-05, checkpoint `9ab5a55`):** independent
+review found `technical_structure_context.py` adopted the recovery override even when its own
+target-session close disagreed with the multi-source exact-session snapshot's already-resolved
+close for that ticker/session -- 34/952 recovered tickers in the real 2026-09-04 evidence (up to
+~11% apart, e.g. TGP/PVY), because the snapshot had fallen back to a KBS sole-source print before
+DNSE published that day, while current-research valuation continued to price off the snapshot's
+own close unconditionally. Fixed by requiring the recovery's target-session close to match the
+snapshot's exactly before adopting it; a mismatch now falls back to the pre-recovery P3F9B-only
+behavior (insufficient structure), the same treatment already used for any other thin-history
+ticker -- not a new code path. 918/952 recover cleanly; 34 correctly fall back, of which 2 (EVE,
+VPI) were Priority-Now/entry-relevant and now honestly reconcile as
+`MISSING_HISTORY_OR_FEATURE_FITNESS` rather than a fabricated `LEGITIMATE_POLICY_OUTCOME`. No
+look-ahead, session-ordering, duplicate-session, or within-series basis defect was found across the
+full 952-ticker recovered cohort; this cross-consumer basis mismatch was the sole finding. New
+regression test
+(`tests/test_technical_structure_context.py::test_recovery_rejected_when_target_session_close_disagrees_with_snapshot`,
+confirmed to fail against the pre-fix code via git-stash). All previously-passing suites still
+pass; the 2026-08-25 regression is unaffected (zero compared-field differences). Retained artifact
+regenerated in place with the fix; the posture counts and artifact identity above are the
+post-corrective figures.
 
 **Core valuation method coverage and consistency V1 (2026-09-05):**
 `CORE_VALUATION_METHOD_COVERAGE_AND_CONSISTENCY_V1 = COMPLETE`, checkpoint `35bb7e0`. Opened

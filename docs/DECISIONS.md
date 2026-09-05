@@ -3,7 +3,8 @@
 ## 2026-09-05 - Core Daily Decision Coherence And Valuation Integration V1
 
 `CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE`: started at `62db133`,
-implementation checkpoint `dbad7c3`.
+implementation checkpoint `dbad7c3`, corrective checkpoint `9ab5a55` (terminal
+acceptance review, item 5 below).
 
 1. **The queued-next override is explicit and recorded, not inferred.** The owner authorized this
    milestone although `docs/ROADMAP_STATE.json` reported `queued_next=[]`; the state record uses
@@ -28,6 +29,23 @@ implementation checkpoint `dbad7c3`.
    a compact queue-to-posture explanation for Priority-Now/entry-relevant names. A research queue
    item can remain non-actionable under unchanged policy; the replay records that outcome rather
    than generating a recommendation, score, target, probability, sizing, or execution instruction.
+
+5. **Terminal acceptance review corrective, `9ab5a55` (2026-09-05).** Independent review
+   found the recovery override in `technical_structure_context.py` was adopted even when its own
+   target-session close disagreed with the multi-source exact-session snapshot's already-resolved
+   close for that ticker/session -- 34/952 recovered tickers in the real 2026-09-04 evidence (up
+   to ~11% apart), because the snapshot had fallen back to a KBS sole-source print before DNSE
+   published that day, while current-research valuation continued to price off the snapshot's own
+   close. Adopting the recovery series there would have priced Tactical V3's breakout and pivot
+   levels off a close no other consumer accepted. Fixed by requiring the recovery's target-session
+   close to match the snapshot's exactly before adopting it; a mismatch now falls back to the
+   pre-recovery P3F9B-only behavior (insufficient structure), identical to how any other
+   thin-history ticker is already treated. 918/952 recover cleanly; 34 correctly fall back, of
+   which 2 (EVE, VPI) were Priority-Now/entry-relevant and now honestly reconcile as
+   `MISSING_HISTORY_OR_FEATURE_FITNESS` rather than a fabricated `LEGITIMATE_POLICY_OUTCOME`. No
+   look-ahead, session-ordering, duplicate-session, or within-series basis defect was found across
+   the full 952-ticker recovered cohort -- this cross-consumer basis mismatch was the sole finding.
+   The 2026-08-25 regression replay is unaffected (still zero compared-field differences).
 
 ## 2026-09-04 - Daily Governed-Previous-Session And Degraded-Source Final Hardening V1
 
