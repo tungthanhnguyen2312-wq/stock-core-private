@@ -68,6 +68,43 @@ class TestFinancialEvidenceContext:
         assert art["financial_evidence_context"]["status"] == "AVAILABLE"
         assert art["source_artifact_identities"]["financial_analysis_product"] == "financial_analysis_product_integration/v1:cafebabe"
 
+    def test_watchlist_passes_compact_financial_context_and_method_fitness_without_recomputation(self):
+        compact = {
+            "contract_version": "financial_analysis_product_integration/v1",
+            "artifact_identity": "financial_analysis_product_integration/v1:compact",
+            "records": {
+                "FPT": {
+                    "contract_version": "financial_analysis_product_integration/v1",
+                    "ticker": "FPT", "status": "AVAILABLE", "growth_state": "IMPROVING",
+                    "feature_fitness": {"revenue_qoq": {"fitness": "READY", "reason_codes": []}},
+                    "history_context": {"gross_margin": {"status": "AVAILABLE", "percentile": 0.8}},
+                    "lineage_ref": "financial_analysis_lineage/v1:x", "raw_engine_record_exposed": False,
+                    "is_actionable": False,
+                },
+            },
+        }
+        integrated = _record("FPT", posture="HOLD")
+        integrated["valuation_methods"] = {"P/E": {"status": "INPUT_BLOCKED", "blocker_reason_codes": ["X"], "target_price": None, "probability": None}}
+        integrated["valuation_method_reconciliation"] = {"P/E": {"comparison_status": "CURRENT_RESEARCH_METHOD_NOT_USABLE"}}
+        row = brief.build_watchlist_record(
+            ticker="FPT", current=integrated, tactical_raw=None, sector_label=None,
+            posture_transition_row=None,
+            financial_analysis=brief._financial_context_for_ticker({"financial_analysis_product": compact}, "FPT"),
+        )
+        assert row["financial_analysis"]["growth_state"] == "IMPROVING"
+        assert row["financial_analysis"]["feature_fitness"]["revenue_qoq"]["fitness"] == "READY"
+        assert row["financial_analysis"]["history_context"]["gross_margin"]["percentile"] == 0.8
+        assert row["financial_analysis"]["raw_engine_record_exposed"] is False
+        assert row["valuation_methods"]["P/E"]["status"] == "INPUT_BLOCKED"
+        assert "target_price" not in row["valuation_methods"]["P/E"]
+        assert "probability" not in row["valuation_methods"]["P/E"]
+        assert row["valuation_method_reconciliation"]["P/E"]["comparison_status"] == "CURRENT_RESEARCH_METHOD_NOT_USABLE"
+
+    def test_watchlist_marks_financial_context_unavailable_when_no_session_delivery_exists(self):
+        context = brief._financial_context_for_ticker(None, "FPT")
+        assert context["status"] == "UNAVAILABLE"
+        assert context["reason_codes"] == ["FINANCIAL_ANALYSIS_PRODUCT_NOT_SUPPLIED"]
+
 
 class TestMarketSummaryFundamentalDistribution:
     """Section 17: full-market cross-sectional fundamental context, now meaningful once real

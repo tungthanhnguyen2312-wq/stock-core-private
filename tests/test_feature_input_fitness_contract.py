@@ -61,6 +61,21 @@ class RegistryShapeTests(unittest.TestCase):
         self.assertEqual(snap["authority_effect"], "NONE")
         self.assertIn(fitness.EXECUTION_LIQUIDITY, snap["standing_blocked_families"])
 
+    def test_financial_scaleout_families_are_explicit_and_keep_their_existing_authorities(self) -> None:
+        expected = {
+            fitness.FINANCIAL_REVENUE_GROWTH, fitness.FINANCIAL_EARNINGS_GROWTH,
+            fitness.FINANCIAL_MARGIN, fitness.FINANCIAL_ROE_ROA,
+            fitness.FINANCIAL_LEVERAGE_LIQUIDITY, fitness.FINANCIAL_CASH_FLOW_QUALITY,
+            fitness.FINANCIAL_FREE_CASH_FLOW_PROXY, fitness.ENTERPRISE_VALUE,
+            fitness.EV_SALES, fitness.FUNDAMENTAL_PEER_RELATIVE,
+            fitness.FUNDAMENTAL_OWN_HISTORY, fitness.FINANCIAL_POINT_IN_TIME_BACKTEST,
+        }
+        self.assertTrue(expected.issubset(fitness.USE_CASE_FAMILIES))
+        self.assertEqual(
+            fitness.describe(fitness.FINANCIAL_POINT_IN_TIME_BACKTEST)["fitness_tiers"],
+            ("BLOCKED",),
+        )
+
 
 class RegistryPointersAreRealTests(unittest.TestCase):
     """Every authoritative_module/authoritative_functions entry that names an importable Python

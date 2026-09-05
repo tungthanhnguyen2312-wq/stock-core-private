@@ -71,6 +71,18 @@ P_B = "P_B"
 P_S = "P_S"
 EV_EBITDA = "EV_EBITDA"
 FUNDAMENTAL_RATIO = "FUNDAMENTAL_RATIO"
+FINANCIAL_REVENUE_GROWTH = "FINANCIAL_REVENUE_GROWTH"
+FINANCIAL_EARNINGS_GROWTH = "FINANCIAL_EARNINGS_GROWTH"
+FINANCIAL_MARGIN = "FINANCIAL_MARGIN"
+FINANCIAL_ROE_ROA = "FINANCIAL_ROE_ROA"
+FINANCIAL_LEVERAGE_LIQUIDITY = "FINANCIAL_LEVERAGE_LIQUIDITY"
+FINANCIAL_CASH_FLOW_QUALITY = "FINANCIAL_CASH_FLOW_QUALITY"
+FINANCIAL_FREE_CASH_FLOW_PROXY = "FINANCIAL_FREE_CASH_FLOW_PROXY"
+ENTERPRISE_VALUE = "ENTERPRISE_VALUE"
+EV_SALES = "EV_SALES"
+FUNDAMENTAL_PEER_RELATIVE = "FUNDAMENTAL_PEER_RELATIVE"
+FUNDAMENTAL_OWN_HISTORY = "FUNDAMENTAL_OWN_HISTORY"
+FINANCIAL_POINT_IN_TIME_BACKTEST = "FINANCIAL_POINT_IN_TIME_BACKTEST"
 TACTICAL_STRUCTURE = "TACTICAL_STRUCTURE"
 MOMENTUM = "MOMENTUM"
 PARTICIPATION = "PARTICIPATION"
@@ -80,6 +92,10 @@ USE_CASE_FAMILIES: tuple[str, ...] = (
     CURRENT_SESSION_PRICE, CURRENT_SESSION_RETURN, MARKET_BREADTH, CURRENT_SESSION_VOLUME,
     RELATIVE_VOLUME, TECHNICAL_CLOSE_HISTORY, TECHNICAL_VOLUME_HISTORY, OHLC_GEOMETRY,
     VALUATION_PRICE, MARKET_CAP, P_E, P_B, P_S, EV_EBITDA, FUNDAMENTAL_RATIO,
+    FINANCIAL_REVENUE_GROWTH, FINANCIAL_EARNINGS_GROWTH, FINANCIAL_MARGIN,
+    FINANCIAL_ROE_ROA, FINANCIAL_LEVERAGE_LIQUIDITY, FINANCIAL_CASH_FLOW_QUALITY,
+    FINANCIAL_FREE_CASH_FLOW_PROXY, ENTERPRISE_VALUE, EV_SALES,
+    FUNDAMENTAL_PEER_RELATIVE, FUNDAMENTAL_OWN_HISTORY, FINANCIAL_POINT_IN_TIME_BACKTEST,
     TACTICAL_STRUCTURE, MOMENTUM, PARTICIPATION, EXECUTION_LIQUIDITY,
 )
 
@@ -250,6 +266,100 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         fitness_tiers=("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
         authoritative_module="financial_analysis_engine_v2",
         authoritative_functions=("build_ticker_context", "build_artifact"),
+    ),
+    FINANCIAL_REVENUE_GROWTH: _entry(
+        description="Revenue growth fitness for standalone-quarter QoQ/same-quarter YoY, YTD, or TTM only when Financial V2 emits the declared growth basis.",
+        required_dimensions=("provider", "period", "period_semantics", "statement_scope", "same_provider_series"),
+        fitness_tiers=("READY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+        known_blockers=("UNKNOWN_DURATION", "CROSS_PROVIDER_UNRESOLVED_SCALE"),
+    ),
+    FINANCIAL_EARNINGS_GROWTH: _entry(
+        description="Net-income/profit growth fitness with the same safe standalone-quarter, YTD, or TTM semantics gate as Financial V2.",
+        required_dimensions=("provider", "period", "period_semantics", "statement_scope", "same_provider_series"),
+        fitness_tiers=("READY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+        known_blockers=("UNKNOWN_DURATION", "SIGN_CROSSING_REQUIRES_DECLARED_STATE"),
+    ),
+    FINANCIAL_MARGIN: _entry(
+        description="Gross, operating/PBT, and net-margin fitness; a margin direction is usable only with Financial V2's declared compatible numerator/denominator pair.",
+        required_dimensions=("provider", "period", "period_semantics", "statement_scope", "numerator_denominator_pair"),
+        fitness_tiers=("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+    ),
+    FINANCIAL_ROE_ROA: _entry(
+        description="ROE/ROA fitness distinguishes same-provider average-balance exact features from explicit EOP and mixed-provider research proxies.",
+        required_dimensions=("provider", "period", "period_semantics", "same_provider_consecutive_balances", "entity_class_applicability"),
+        fitness_tiers=("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+        known_blockers=("MISSING_SAME_PROVIDER_CONSECUTIVE_PERIOD_BOUNDARY_BALANCES",),
+    ),
+    FINANCIAL_LEVERAGE_LIQUIDITY: _entry(
+        description="Explicit debt/equity, debt/assets, working-capital, and current-ratio fitness; total liabilities are never substituted for debt.",
+        required_dimensions=("provider", "period", "point_in_time_balance_semantics", "explicit_debt_identity", "entity_class_applicability"),
+        fitness_tiers=("READY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+        known_blockers=("TOTAL_LIABILITIES_NOT_DEBT",),
+    ),
+    FINANCIAL_CASH_FLOW_QUALITY: _entry(
+        description="Operating-cash-flow direction and CFO-to-earnings fitness, preserving native cash-flow period semantics and sign.",
+        required_dimensions=("provider", "period", "period_semantics", "statement_scope", "cash_flow_sign"),
+        fitness_tiers=("READY", "RESEARCH_PROXY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+        known_blockers=("UNKNOWN_DURATION",),
+    ),
+    FINANCIAL_FREE_CASH_FLOW_PROXY: _entry(
+        description="Provider-native signed OCF plus CapEx research proxy fitness; it is never promoted to authoritative free cash flow.",
+        required_dimensions=("provider", "period", "period_semantics", "native_capex_sign", "entity_class_applicability"),
+        fitness_tiers=("READY", "BLOCKED_BY_EVIDENCE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+        known_blockers=("PROXY_NOT_AUTHORITATIVE_FREE_CASH_FLOW",),
+    ),
+    ENTERPRISE_VALUE: _entry(
+        description="Enterprise-value fitness, preserving the calculation-readiness engine's price/share/freshness and debt/cash gates.",
+        required_dimensions=("currency", "scale", "price_representation", "share_basis", "freshness", "explicit_debt_identity"),
+        fitness_tiers=("ready", "blocked", "not_applicable"),
+        authoritative_module="market_wide_calculation_readiness",
+        authoritative_functions=("evaluate_ticker",),
+    ),
+    EV_SALES: _entry(
+        description="EV/Sales method fitness, preserving Current Research valuation's entity applicability, monetary basis, and period identity rather than inferring EV from another method.",
+        required_dimensions=("currency", "scale", "period", "share_basis", "entity_class_applicability", "monetary_basis_status"),
+        fitness_tiers=("RESEARCH_USABLE", "INPUT_BLOCKED", "NOT_APPLICABLE"),
+        authoritative_module="current_research_valuation_context",
+        authoritative_functions=("evaluate_ticker_valuation",),
+    ),
+    FUNDAMENTAL_PEER_RELATIVE: _entry(
+        description="Financial and valuation peer-relative fitness; only same method, provider/basis, scope, entity class, and period identity cohorts meet the existing compatibility gate.",
+        required_dimensions=("feature_or_method_identity", "provider", "period", "scope", "entity_class", "share_basis", "cohort_size"),
+        fitness_tiers=("READY_RESEARCH_ONLY", "NOT_COMPARABLE", "UNAVAILABLE"),
+        authoritative_module="current_research_valuation_context",
+        authoritative_functions=("attach_peer_relative", "attach_engine_fundamental_peers"),
+        known_blockers=("PEER_COHORT_BELOW_MINIMUM", "METHOD_OR_BASIS_MISMATCH"),
+    ),
+    FUNDAMENTAL_OWN_HISTORY: _entry(
+        description="Retrospective own-financial-history context for the Financial V2 ratios, explicitly Current Research only and never a point-in-time historical claim.",
+        required_dimensions=("feature_identity", "same_source_key", "period", "minimum_history", "pit_authority"),
+        fitness_tiers=("AVAILABLE", "UNAVAILABLE", "NOT_APPLICABLE"),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_ticker_context",),
+        known_blockers=("CURRENT_RESEARCH_RETROSPECTIVE_ONLY_NOT_PIT_HISTORICAL_CLAIM",),
+    ),
+    FINANCIAL_POINT_IN_TIME_BACKTEST: _entry(
+        description="Historical financial/valuation use requires source publication or observation time no later than the target session; the current retained Financial V2 engine does not grant this authority.",
+        required_dimensions=("target_session", "published_at_or_observed_at", "fact_lineage", "share_basis_as_of_target", "period_semantics"),
+        fitness_tiers=("BLOCKED",),
+        authoritative_module="financial_analysis_engine_v2",
+        authoritative_functions=("build_artifact",),
+        known_blockers=("PIT_AUTHORITY_NOT_GRANTED", "FACT_PUBLISHED_AFTER_TARGET_SESSION", "CURRENT_SHARE_USED_FOR_HISTORICAL_SESSION"),
+        notes="This catalog entry documents the fail-closed boundary. It does not transform current-known evidence into an as-of historical fact set.",
     ),
     TACTICAL_STRUCTURE: _entry(
         description="Swing/BOS/CHoCH/breakout structure fitness -- close-only, requires the same target-session-close-compatible history as TECHNICAL_CLOSE_HISTORY.",

@@ -256,12 +256,71 @@ def build_sector_summary(*, sector_leadership: Mapping[str, Any] | None, current
 
 # ── Watchlist-11 (section 6) ────────────────────────────────────────────────────────────────────
 
+def _financial_context_for_ticker(
+    financial_analysis_product_current: Mapping[str, Any] | None, ticker: str,
+) -> dict[str, Any]:
+    """Pass through the existing compact Financial V2 record for one AI-facing ticker.
+
+    The Daily brief must not reconstruct financial measurements from statements.  It only joins
+    the already product-safe ``financial_analysis_product_integration/v1`` projection, whose
+    record explicitly carries AVAILABLE/ABSENT and fitness/lineage limits.  This keeps the
+    financial reporting clock distinct from the Daily decision-session clock.
+    """
+    if not financial_analysis_product_current:
+        return {
+            "status": "UNAVAILABLE",
+            "reason_codes": ["FINANCIAL_ANALYSIS_PRODUCT_NOT_SUPPLIED"],
+            "is_actionable": False,
+        }
+    product = financial_analysis_product_current.get("financial_analysis_product") or {}
+    records = product.get("records") if isinstance(product, Mapping) else None
+    if not isinstance(records, Mapping):
+        return {
+            "status": "UNAVAILABLE",
+            "reason_codes": ["FINANCIAL_ANALYSIS_PRODUCT_RECORDS_INVALID"],
+            "source_context_identity": product.get("artifact_identity") if isinstance(product, Mapping) else None,
+            "is_actionable": False,
+        }
+    record = records.get(ticker)
+    if not isinstance(record, Mapping):
+        return {
+            "status": "UNAVAILABLE",
+            "reason_codes": ["FINANCIAL_ANALYSIS_PRODUCT_TICKER_MISSING"],
+            "source_context_identity": product.get("artifact_identity"),
+            "is_actionable": False,
+        }
+    # The compact projection intentionally excludes raw engine records.  A shallow copy avoids
+    # allowing later brief assembly to mutate the retained product payload.
+    return dict(record)
+
+
+def _research_safe_valuation_methods(methods: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Keep valuation method fitness/context while excluding prohibited target/probability fields.
+
+    Current Research uses the retained methods to explain availability, basis, peer compatibility,
+    and blockers.  It does not emit intrinsic value, fair value, target price, or probability.
+    """
+    result: dict[str, Any] = {}
+    for method_id, method in (methods or {}).items():
+        if isinstance(method, Mapping):
+            result[str(method_id)] = {
+                key: value for key, value in method.items()
+                if key not in {"fair_value", "target_price", "probability"}
+            }
+    return result
+
+
 def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, tactical_raw: Mapping[str, Any] | None,
-                            sector_label: str | None, posture_transition_row: Mapping[str, Any] | None) -> dict[str, Any]:
+                            sector_label: str | None, posture_transition_row: Mapping[str, Any] | None,
+                            financial_analysis: Mapping[str, Any] | None = None) -> dict[str, Any]:
     if current is None:
         return {
             "ticker": ticker, "status": "NOT_AVAILABLE_IN_CURRENT_INTEGRATED_DECISION", "sector": sector_label,
             "posture_transition": posture_transition_row or {"transition": "NO_LONGER_AVAILABLE"},
+            "financial_analysis": dict(financial_analysis or {
+                "status": "UNAVAILABLE", "reason_codes": ["FINANCIAL_ANALYSIS_PRODUCT_NOT_SUPPLIED"],
+                "is_actionable": False,
+            }),
         }
     val = current.get("valuation_context_summary") or {}
     trig = current.get("trigger") or {}
@@ -274,11 +333,23 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
         "legacy_stance": legacy.get("legacy_stance"),
         "posture_transition": (posture_transition_row or {}).get("transition", "UNAVAILABLE"),
         "fundamental_state": current.get("fundamental_state"), "fundamental_support": current.get("fundamental_support"),
+        # The compact Financial V2 context contains only deterministic direction/state, feature
+        # fitness, own-history context, blocker reasons, and lineage.  It is deliberately not a
+        # raw statement export or an invitation for AI to recompute a metric.
+        "financial_analysis": dict(financial_analysis or {
+            "status": "UNAVAILABLE", "reason_codes": ["FINANCIAL_ANALYSIS_PRODUCT_NOT_SUPPLIED"],
+            "is_actionable": False,
+        }),
         "valuation": {
             "status": val.get("status"), "pe_multiple": val.get("pe_multiple"), "pb_multiple": val.get("pb_multiple"),
             "ps_multiple": val.get("ps_multiple"), "peer_relative_state": val.get("peer_relative_state"),
             "own_history_state": val.get("own_history_state"),
         },
+        # Preserve every existing valuation method's status, basis, peer gate, and reconciliation
+        # verbatim.  The brief does not choose a preferred multiple or convert blocked methods to
+        # a conclusion.
+        "valuation_methods": _research_safe_valuation_methods(current.get("valuation_methods")),
+        "valuation_method_reconciliation": current.get("valuation_method_reconciliation") or {},
         "tactical_phase": current.get("tactical_phase"), "market_structure_state": current.get("market_structure_state"),
         "bos_state": (tactical_raw or {}).get("bos_state"), "choch_state": (tactical_raw or {}).get("choch_state"),
         "breakout_state": current.get("breakout_state_v3"),
@@ -304,7 +375,8 @@ def build_watchlist_record(*, ticker: str, current: Mapping[str, Any] | None, ta
 
 
 def build_watchlist(*, current_records: Mapping[str, Mapping[str, Any]], tactical_raw_records: Mapping[str, Any] | None,
-                     sector_leadership: Mapping[str, Any] | None, posture_transition: Mapping[str, Any] | None) -> dict[str, Any]:
+                     sector_leadership: Mapping[str, Any] | None, posture_transition: Mapping[str, Any] | None,
+                     financial_analysis_product_current: Mapping[str, Any] | None = None) -> dict[str, Any]:
     tickers = list(owner_research_focus.broader_watchlist())
     ticker_contexts = (sector_leadership or {}).get("ticker_contexts") or {}
     tac_records = (tactical_raw_records or {}).get("records") or {}
@@ -316,6 +388,7 @@ def build_watchlist(*, current_records: Mapping[str, Mapping[str, Any]], tactica
         records.append(build_watchlist_record(
             ticker=ticker, current=current_records.get(ticker), tactical_raw=tac_records.get(ticker),
             sector_label=sector_label, posture_transition_row=transition_records.get(ticker),
+            financial_analysis=_financial_context_for_ticker(financial_analysis_product_current, ticker),
         ))
     return {
         "tickers": tickers, "count": len(tickers), "records": records,
@@ -462,6 +535,7 @@ def build_artifact(
     watchlist = build_watchlist(
         current_records=current_records, tactical_raw_records=tactical_current, sector_leadership=sector_leadership_current,
         posture_transition=next_session_brief.get("posture_transition"),
+        financial_analysis_product_current=financial_analysis_product_current,
     )
     decision_transitions = build_decision_transitions(posture_transition=next_session_brief.get("posture_transition"), watchlist_tickers=watchlist_tickers)
     what_changed_today = build_what_changed_today(
