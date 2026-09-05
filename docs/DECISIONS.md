@@ -1,5 +1,71 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Corporate Intelligence Catalyst/Event/Risk Decision Integration V1
+
+`CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` (`push = NO`, started from owner checkpoint
+`3d9574942af1dc66b65771701a7e959aceca115b`, implementation checkpoint `8d62313`). The explicit
+owner override is
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1`;
+it authorizes no successor.
+
+1. **Inventory before implementation: reuse, do not duplicate.** The existing corporate-event
+   stack (`current_corporate_event_context.py`, `market_wide_current_corporate_intelligence.py`,
+   `official_corporate_action_ledger.py`, `bitemporal_semantic_contract.py`) already carried a
+   deduplicated, conflict-checked event evidence contract with a full temporal-field set. New
+   `current_corporate_intelligence_axis.py` adds only what genuinely did not exist anywhere: a
+   canonical 20-value event taxonomy, a 7-value status ladder, deterministic catalyst/risk/mixed/
+   informational classification, and materiality/freshness that reuse two already-established
+   windows rather than inventing a third.
+2. **Activating a dormant parameter is preferred over widening a shared component's contract.**
+   `current_corporate_event_context.build_artifact()`'s `supplemental_events` parameter existed but
+   was never populated by `canonical_post_close_pipeline`'s own daily enrichment build. Rather than
+   modifying that shared, already-consumed component (risking `current_research_risk_register.py`/
+   `current_research_decision_packet.py`), this milestone's new axis module calls the same public
+   function a second time with `supplemental_events` populated, producing its own independent,
+   richer artifact.
+3. **Catalyst/risk classification depends on event semantics, never keyword sentiment or
+   narrative text.** `classify_catalyst_risk(event_type, status, original_event_status,
+   materiality)` has no text parameter at all -- structurally incapable of reading a headline or
+   description. A dividend is never automatically bullish; new debt financing is never
+   automatically negative; a planned issuance is `POTENTIAL_RISK` while an executed one is `MIXED`
+   (capital raised and dilution both real); a routine, already-`NON_MATERIAL` governance notice
+   (the common case: an AGM) is `INFORMATIONAL`, not `MIXED` -- self-caught before commit after the
+   first version classified all 2,578 real retained AGM events `MIXED`.
+4. **Materiality fails closed to `POTENTIALLY_MATERIAL`, never `MATERIAL`.** No event in retained
+   evidence carries an independently qualified currency/scale anchor comparable to a market-cap or
+   revenue denominator, so the top rung is structurally unreachable today -- verified empirically:
+   `MATERIAL` does not appear anywhere in the real coverage distribution.
+5. **Corporate Intelligence is additive evidence, never a posture input.** The new
+   `CORPORATE_INTELLIGENCE` evidence axis is computed inside `build_ticker_integrated_decision()`
+   *after* `decide_research_action_posture()` is called; that function's exact 14-keyword-argument
+   signature is unchanged, verified by direct signature inspection (not just behavioral testing) and
+   by a live end-to-end proof that identical tactical/fundamental/valuation inputs yield an
+   identical posture regardless of whether a catalyst, a risk, or no corporate evidence is present.
+6. **A corporate-evidence failure must never cascade into failing the Integrated Decision.** The
+   axis is built inside `canonical_post_close_pipeline.py` with its own local try/except, mirroring
+   the pre-existing `tactical_boundaries` isolation pattern exactly; proven by a live monkeypatched-
+   failure test that the whole session's Integrated Decision still builds successfully with the
+   axis degrading to `NOT_PROVIDED`.
+7. **A frozen upstream evidence session is surfaced, not hidden.** `current_official_event_context`'s
+   retained artifact has had `research_session` frozen at `2026-08-21` since before this milestone
+   (verified by reading the live file) -- independently discovered evidence that the pre-existing
+   `corporate_event_context` enrichment component has been failing closed and silently degrading to
+   a frozen prior-as-of artifact every day since. Not fixed (out of this milestone's additive
+   scope); the new axis instead computes an explicit `evidence_session_stale` flag per ticker so no
+   downstream consumer can mistake stale evidence for current.
+8. **`NO_QUALIFIED_CORPORATE_EVENT` is a complete, retained result, never an incompleteness
+   penalty.** `prospective_decision_retention.py`'s `_axis_completeness()` gained a
+   `CORPORATE_INTELLIGENCE` special case mirroring the existing `PORTFOLIO_FIT` one: tracked for
+   structural completeness only, never penalized merely for resolving to a definitive negative.
+   Legacy (pre-milestone) snapshots correctly report the axis as not retained, without being
+   retrofitted.
+9. **Pre-existing test failures were verified independently, not assumed.** A broader
+   `test_export_ai_bundle.py` sweep found 32 failures/errors in test classes unrelated to corporate
+   intelligence (RS rating, financial period, share basis, intrinsic valuation). Confirmed
+   pre-existing by temporarily reverting `export_ai_bundle.py` to clean HEAD (a plain file swap, not
+   `git stash`) and reproducing byte-identical failures before restoring the edited file.
+
 ## 2026-09-05 - Prospective Decision Retention And Outcome Maturation V1
 
 `PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1 = COMPLETE /

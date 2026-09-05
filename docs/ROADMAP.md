@@ -1,5 +1,55 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Corporate Intelligence catalyst/event/risk decision axis V1 (2026-09-05):**
+`CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1 = COMPLETE /
+PARTIAL_BY_EVIDENCE` at local checkpoint `8d62313`, begun from owner-specified
+`3d9574942af1dc66b65771701a7e959aceca115b`. Explicit owner authorization opened it despite
+`queued_next=[]`
+(`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1`);
+no dependency or successor is inferred. Inventory first: the existing corporate-event stack
+(`current_corporate_event_context.py`, `market_wide_current_corporate_intelligence.py`,
+`official_corporate_action_ledger.py`, `bitemporal_semantic_contract.py`) already carried a rich,
+deduplicated, conflict-checked event evidence contract, already built fresh each session inside
+`canonical_post_close_pipeline.build_enrichment_components()` -- but never threaded into
+`integrated_investment_decision_product.build_artifact()` (confirmed by zero corporate/catalyst/
+event grep matches in either that file or `daily_integrated_decision_brief.py`). New
+`current_corporate_intelligence_axis.py` adds only the vocabulary that did not exist anywhere:
+a canonical 20-value event taxonomy, a 7-value status ladder, deterministic catalyst/risk/mixed/
+informational classification (never keyword sentiment), and materiality that fails closed to
+`POTENTIALLY_MATERIAL` (never `MATERIAL`). It activates `current_corporate_event_context`'s
+existing but previously-unused `supplemental_events` parameter to surface the retained HPG/VNM/VCB
+issuer chains, without modifying that shared component. Wired additively as a 9th
+`CORPORATE_INTELLIGENCE` evidence axis via the standing `_axis()` helper; built with its own local
+try/except in `canonical_post_close_pipeline.py` (mirroring the existing `tactical_boundaries`
+isolation pattern) so a corporate-evidence failure cannot cascade into failing the whole Integrated
+Decision build, proven both by source inspection and a live monkeypatched-failure test.
+`decide_research_action_posture`'s exact signature is unchanged, verified by direct inspection, not
+just behavior. Independently discovered, documented, not fixed: `current_official_event_context`'s
+retained artifact has had `research_session` frozen at `2026-08-21` since before this milestone, so
+the pre-existing `corporate_event_context` enrichment component has been silently degrading to a
+frozen prior-as-of artifact every day since; this axis surfaces that staleness explicitly per ticker
+(`evidence_session_stale`) instead of hiding it. Self-caught before commit: the first classification
+rule marked all 2,578 real retained AGM/governance events `MIXED`, inconsistent with their own
+pre-existing `NON_MATERIAL` materiality tag; fixed to be materiality-aware (real-corpus `MIXED`
+count dropped from 1,464 to 7). Real market-wide replay: 1,507 denominator, 1,103 tickers with
+retained evidence, 4,453 deduplicated events, 0 active-catalyst/active-risk tickers as of the
+frozen evidence session (reported honestly). Required case review confirmed live for FPT/HPG/SSI/
+QNS/PVD/PNJ/VNM/VCB with concrete dividend (VNM), capital/share-issuance (VCB), and corporate-action
+(HPG) examples. Temporal replay (2026-08-25): `future_event_leak_admitted = 0`, proven by unit
+tests plus a live pipeline replay. `prospective_decision_retention.py` tracks the new axis's T0
+completeness (mirroring the existing `PORTFOLIO_FIT` special case) without retrofitting legacy
+snapshots. `export_ai_bundle.py` and `daily_integrated_decision_brief.py` gain matching opt-in AI
+pass-through. 51 new tests in the new module plus 18 targeted additions across 4 adjacent files;
+every pre-existing adjacent test re-run passes unchanged except one expected 8-to-9-axis-set
+update. A broader `export_ai_bundle.py` sweep's 32 failures were independently verified pre-existing
+and unrelated (temporary single-file revert to clean HEAD reproduced identical failures). No
+provider, policy, score, target, probability, EVENT_DRIVEN eligibility, PIT, RAW_AS_TRADED,
+database, publication, deployment, or authority change; `research_action_posture` is unchanged.
+Flagged via `spawn_task`, not fixed: five live spellings of "bonus issue" and two independently-
+diverging corporate-action ledgers in the raw layer, pre-existing and out of this milestone's
+additive scope. Evidence:
+`operations-review/corporate-intelligence-catalyst-event-risk-decision-integration-v1-20260905/`.
+
 **Prospective decision retention and outcome maturation V1 (2026-09-05):**
 `PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE` at local checkpoint `9f98ac2`, begun from owner-specified
