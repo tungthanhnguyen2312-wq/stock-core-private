@@ -1,5 +1,35 @@
 # Stock Lookup — Operational State
 
+**Core Daily decision coherence and valuation integration V1 (2026-09-05):**
+`CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE`, implementation
+checkpoint `dbad7c3`. This was an explicit owner override of `queued_next=[]`, recorded as
+`OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1`;
+it is not an inferred dependency. Retained 2026-09-04 evidence showed the technical consumer
+received a one-bar P3F projection for every one of 952 Tactical V3 eligible names while the
+already-retained technical-history recovery held their valid multi-session observations. The
+canonical producer-to-consumer edge now checks session and source identity and uses those retained
+observations. Tactical thresholds and classification policy are unchanged. The local-only replay
+restores 952 eligible histories and an evidence-driven posture distribution: 50
+`INITIATE_ON_BREAKOUT`, 75 `ACCUMULATE_ON_RETEST`, 186 `EARLY_WATCH`; the 2026-08-25 tactical
+projection regression has zero compared-field differences.
+
+The valuation integration now canonicalizes retained DNSE price evidence only through the existing
+exact contract (`DNSE:ohlc_1D:VN_LISTED_EQUITY:kvnd_to_vnd/v1`), retains native provider values,
+and exposes price representation and monetary compatibility per method. PVD's USD financials
+against VND market price are blocked without an FX contract; VNM's unproven financial scale is
+blocked without a scale contract. The existing calculation-readiness engine remains a separate
+provider-reported context. Its method comparison is allowed only for equivalent methods in the
+same reported period; mismatched periods, unavailable contexts, and unready methods remain
+explicitly non-comparable. It never substitutes an apparent valuation conclusion.
+
+Priority queue versus posture is now explained in every integrated record without collapsing
+research priority into action readiness: all 72 retained Priority-Now/entry-relevant names have a
+`LEGITIMATE_POLICY_OUTCOME` explanation. Retained local artifact:
+`operations-review/core-daily-decision-coherence-and-valuation-integration-v1-20260905/primary_20260904_reconciliation_artifact.json`
+(`core_daily_decision_coherence_reconciliation:08f5975101db3e016e9db7dcb32fae587be285f361e00357e6571f70edd46ac1`).
+No provider, raw-as-traded/PIT, liquidity, sizing, execution, universal score, target, probability,
+publication, deployment, or database-write authority was added; no successor is opened.
+
 **Core valuation method coverage and consistency V1 (2026-09-05):**
 `CORE_VALUATION_METHOD_COVERAGE_AND_CONSISTENCY_V1 = COMPLETE`, checkpoint `35bb7e0`. Opened
 directly after the 2026-09-04 Daily terminal corrective closeout below, per explicit owner

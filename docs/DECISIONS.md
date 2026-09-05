@@ -1,5 +1,33 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-05 - Core Daily Decision Coherence And Valuation Integration V1
+
+`CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE` at `dbad7c3`.
+
+1. **The queued-next override is explicit and recorded, not inferred.** The owner authorized this
+   milestone although `docs/ROADMAP_STATE.json` reported `queued_next=[]`; the state record uses
+   `OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1`.
+   No predecessor was promoted into a dependency and no successor was opened.
+
+2. **Technical-history recovery is canonical input lineage, not an alternate technical policy.**
+   The 2026-09-04 retained evidence had a complete recovery artifact but the technical structure
+   consumer used the one-bar P3F projection instead. The fixed pipeline validates and consumes the
+   recovery observations for `RECOVERED_COMPLETE_TECHNICAL_HISTORY`; it does not change a Tactical
+   V3 threshold, phase rule, trigger, invalidation, or posture policy. The 952 affected tickers
+   therefore retain their multi-session evidence rather than receiving fabricated history.
+
+3. **Valuation representation remains contract-bound and failures are closed.** DNSE close is
+   translated only through the existing exact thousands-of-VND-to-VND contract, with native values
+   retained alongside it. A currency mismatch has no invented FX conversion (PVD); an unproven
+   financial-value scale has no inferred multiplier (VNM). Calculation readiness is provider
+   reported and reconciles only semantic equivalents with the same reported period; it cannot
+   overwrite the current-research valuation lane.
+
+4. **Research priority and action readiness remain separate facts.** Integrated records now give
+   a compact queue-to-posture explanation for Priority-Now/entry-relevant names. A research queue
+   item can remain non-actionable under unchanged policy; the replay records that outcome rather
+   than generating a recommendation, score, target, probability, sizing, or execution instruction.
+
 ## 2026-09-04 - Daily Governed-Previous-Session And Degraded-Source Final Hardening V1
 
 `DAILY_GOVERNED_PREVIOUS_SESSION_AND_DEGRADED_SOURCE_FINAL_HARDENING_V1 = COMPLETE` (push = YES). Owner-directed bounded corrective, triggered by real live evidence from the owner's own 2026-09-03 Daily run.

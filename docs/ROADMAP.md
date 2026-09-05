@@ -1,5 +1,23 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Core Daily decision coherence and valuation integration V1 (2026-09-05):**
+`CORE_DAILY_DECISION_COHERENCE_AND_VALUATION_INTEGRATION_V1 = COMPLETE` at
+`dbad7c386cea10e752ff26abcecd6f0635ba6e89`. Explicit owner authorization opened
+this milestone despite `queued_next=[]`; no dependency was inferred. The retained 2026-09-04
+replay found that 952 Tactical V3 eligible tickers were reaching the structure consumer with only
+one observation despite a retained complete-history recovery artifact. The pipeline now validates
+and consumes that existing recovery lineage, without changing tactical rules: all 952 recover
+multi-session history and the all-`INSUFFICIENT_HISTORY` failure disappears. The valuation lane
+now records the existing exact DNSE thousands-of-VND-to-VND representation contract, preserves
+provider-native inputs, and fails cross-currency or unproven-scale multiples closed (PVD and VNM)
+rather than guessing FX or a multiplier. The existing calculation-readiness engine is attached as
+a separate provider-reported, period-aware companion, never a replacement valuation authority.
+Retained 1,683-ticker replay: 50 `INITIATE_ON_BREAKOUT`, 75 `ACCUMULATE_ON_RETEST`, 186
+`EARLY_WATCH`; all 72 Priority-Now/entry-relevant records have explicit policy explanations.
+Artifact: `operations-review/core-daily-decision-coherence-and-valuation-integration-v1-20260905/`.
+No successor was opened and no execution, publication, raw-as-traded/PIT, target, probability,
+or universal-score authority was added.
+
 **Core valuation method coverage and consistency V1 (2026-09-05):**
 `CORE_VALUATION_METHOD_COVERAGE_AND_CONSISTENCY_V1 = COMPLETE` at `35bb7e066a7f2bf8d4db6dd924e6e10a241f7da6`.
 Activated a complete, previously-unregistered, never-run-with-real-inputs valuation engine
