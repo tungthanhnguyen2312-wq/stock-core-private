@@ -50,6 +50,8 @@ from __future__ import annotations
 import copy
 import io
 import json
+import os
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -77,6 +79,10 @@ class RawLakeImmutabilityError(RuntimeError):
     write being attempted -- the one condition this store must never allow."""
 
 
+class RunScopeLockedError(RuntimeError):
+    """Another local process owns this provider/dataset checkpoint scope."""
+
+
 def _slug(value: str) -> str:
     text = "".join(ch if ch.isalnum() or ch in _UNIT_SLUG_SAFE else "_" for ch in str(value))
     return text[:120] or "unit"
@@ -92,6 +98,63 @@ def raw_run_dir(runtime_root: Path | str, provider: str, dataset: str, run_id: s
 
 def checkpoint_path(runtime_root: Path | str, provider: str, dataset: str, run_scope_id: str) -> Path:
     return Path(runtime_root) / CHECKPOINTS_RELATIVE / f"{provider}__{dataset}__{_slug(run_scope_id)}.json"
+
+
+def run_scope_lock_path(runtime_root: Path | str, provider: str, dataset: str, run_scope_id: str) -> Path:
+    return checkpoint_path(runtime_root, provider, dataset, run_scope_id).with_suffix(".lock")
+
+
+def _lock_owner_is_definitely_dead(path: Path) -> bool:
+    """Only reclaim a lock with a locally provable dead owner; otherwise fail closed."""
+    try:
+        fields = dict(line.split("=", 1) for line in path.read_text(encoding="utf-8").splitlines()
+                      if "=" in line)
+        pid = int(fields["pid"])
+    except (OSError, ValueError, KeyError):
+        return False
+    if os.name == "nt":
+        import ctypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if handle:
+            kernel32.CloseHandle(handle)
+            return False
+        return ctypes.get_last_error() == 87  # ERROR_INVALID_PARAMETER
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except PermissionError:
+        return False
+    return False
+
+
+@contextmanager
+def exclusive_run_scope_lock(runtime_root: Path | str, provider: str, dataset: str, run_scope_id: str):
+    """Acquire one deterministic checkpoint-scope writer lock or fail closed.
+
+    A single stale-lock recovery attempt is allowed only for a verified dead
+    local PID.  There is no polling or unbounded contention retry.
+    """
+    path = run_scope_lock_path(runtime_root, provider, dataset, run_scope_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+    except FileExistsError as exc:
+        if _lock_owner_is_definitely_dead(path):
+            path.unlink()
+            try:
+                fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+            except FileExistsError as retry_exc:
+                raise RunScopeLockedError(f"run scope is already active: {run_scope_id}") from retry_exc
+        else:
+            raise RunScopeLockedError(f"run scope is already active: {run_scope_id}") from exc
+    try:
+        os.write(fd, f"run_scope_id={run_scope_id}\npid={os.getpid()}\n".encode("utf-8"))
+        yield
+    finally:
+        os.close(fd)
+        path.unlink(missing_ok=True)
 
 
 def manifest_path(runtime_root: Path | str, provider: str, dataset: str, run_id: str) -> Path:

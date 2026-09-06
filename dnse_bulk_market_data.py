@@ -42,6 +42,7 @@ per call, not retried invisibly underneath the orchestrator counting attempts.
 from __future__ import annotations
 
 import time
+import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -57,6 +58,7 @@ __all__ = [
     "PROVIDER",
     "PROVIDER_INTERFACE_VERSION",
     "fetch_capability_raw",
+    "is_retryable",
     "resolve_endpoint",
 ]
 
@@ -65,6 +67,24 @@ def _default_request_get(*args: Any, **kwargs: Any) -> Any:
     import requests
 
     return requests.get(*args, **kwargs)
+
+
+def _retry_after_seconds(response: Any) -> float | None:
+    """Return a usable numeric Retry-After value without retaining headers.
+
+    The bulk caller applies its own configured sleep cap.  This boundary only
+    exposes a finite, non-negative delta-seconds value, never an arbitrary
+    response-header collection or a provider quota claim.
+    """
+    headers = getattr(response, "headers", None)
+    try:
+        raw = headers.get("Retry-After") if headers is not None else None
+        value = float(str(raw).strip())
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if not math.isfinite(value) or value < 0:
+        return None
+    return value
 
 
 def fetch_capability_raw(
@@ -107,6 +127,9 @@ def fetch_capability_raw(
             return result
         if status_code == 429:
             result.update(ok=False, error_code="rate_limited")
+            retry_after = _retry_after_seconds(response)
+            if retry_after is not None:
+                result["retry_after_seconds"] = retry_after
             return result
         if status_code != 200:
             result.update(ok=False, error_code=f"http_status_{status_code}")

@@ -11,10 +11,11 @@ from dnse_bulk_market_data import (
 
 
 class _FakeResponse:
-    def __init__(self, status_code, payload=None, text=""):
+    def __init__(self, status_code, payload=None, text="", headers=None):
         self.status_code = status_code
         self._payload = payload
         self.text = text
+        self.headers = {} if headers is None else headers
 
     def json(self):
         if self._payload is None:
@@ -92,6 +93,19 @@ class RequestBehaviorTests(unittest.TestCase):
         )
         self.assertFalse(result["ok"])
         self.assertEqual("rate_limited", result["error_code"])
+
+    def test_429_exposes_only_usable_numeric_retry_after(self):
+        result = fetch_capability_raw(
+            "instruments", api_key="k", api_secret="s",
+            request_get=lambda *_a, **_k: _FakeResponse(429, {"message": "slow down"}, headers={"Retry-After": "2.5", "X-Secret": "nope"}),
+        )
+        self.assertEqual(2.5, result["retry_after_seconds"])
+        self.assertNotIn("headers", result)
+        invalid = fetch_capability_raw(
+            "instruments", api_key="k", api_secret="s",
+            request_get=lambda *_a, **_k: _FakeResponse(429, headers={"Retry-After": "not-a-number"}),
+        )
+        self.assertNotIn("retry_after_seconds", invalid)
 
     def test_result_never_contains_request_headers_signature_or_credentials(self):
         result = fetch_capability_raw(
