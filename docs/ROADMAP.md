@@ -1,5 +1,19 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Canonical Trades reconciler page-selection indexing performance fix V1 (2026-09-06):**
+`CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1 = COMPLETE` at source
+checkpoint `c4409e5`. This bounded corrective milestone removes the per-unit full session-directory
+scan that made Anti-Gravity's reconciliation validation stall. The new invocation-local, sorted,
+exact-symbol raw-page index preserves full candidate provenance/payload/page validation and all
+original/repair, empty, failed, duplicate, and deterministic ordering semantics. The retained
+baseline reconciliation terminates normally and matches the accepted 40-session output exactly:
+66,400 logical units, 209,193 selected pages, 28,545 confirmed-empty units, and 27 explicit
+remaining failures. It does not acquire Phase-A data or alter any liquidity, sizing, provider,
+PIT, RAW_AS_TRADED, policy, database, Dashboard, publication, deployment, or authority boundary.
+Evidence: `operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/`.
+The only next gate is `OWNER_REVIEW_FOR_ANTIGRAVITY_PHASE_A_RESUME`; Phase A/Phase B remain
+Anti-Gravity work.
+
 **Canonical Trades toolchain restoration and governed session calendar fix V1 (2026-09-06):**
 `CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1 = COMPLETE` at local
 checkpoint `6dce959`. Current main now carries the minimum Task-160 reconciliation and shadow

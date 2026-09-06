@@ -1,0 +1,39 @@
+{
+  "schema_version": "canonical_trades_real_sample_semantic_comparison_v1",
+  "accepted_baseline": "C:\\Projects\\StockLookup\\operations-review\\task-160-controlled-rerun-v1-20260817\\composite",
+  "optimized_temp_output": "operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/full-baseline-reconciliation",
+  "comparison_method": {
+    "coverage_key": "logical_unit_id",
+    "coverage_fields": [
+      "logical_status",
+      "instrument",
+      "session",
+      "selected_attempt",
+      "selected_raw_file",
+      "selected_observation_id",
+      "selected_raw_payload_hash",
+      "selected_raw_record_count",
+      "empty_evidence"
+    ],
+    "selected_page_comparison": "ordered exact comparison of all selected-page records, including raw path, raw-file SHA-256, expected observation ID, expected payload hash, selected attempt, status, and logical unit"
+  },
+  "real_retained_cases": [
+    {"case": "zero-known-failure session", "session": "2026-06-17"},
+    {"case": "known-failure-containing session", "session": "2026-07-13"},
+    {"case": "repair-recovered success", "logical_unit_id": "2026-06-17:SSI"},
+    {"case": "confirmed empty", "logical_unit_id": "2026-06-17:ACM"},
+    {"case": "remaining failed", "logical_unit_id": "2026-06-24:LPB"}
+  ],
+  "results": {
+    "logical_units_compared": 66400,
+    "coverage_semantic_mismatches": 0,
+    "selected_logical_units_compared": 66400,
+    "selected_logical_unit_mismatches": 0,
+    "selected_pages_compared": 209193,
+    "selected_page_mismatches": 0,
+    "ordered_selected_page_lists_exact_equal": true,
+    "reconciliation_output_identity_equal": true,
+    "selected_logical_units_sha256": "da2ecb70c4ce5df739bde3243c52d8d78a0fbe79ed533d540cf697e90f009aa2"
+  },
+  "verdict": "PASS_ZERO_SEMANTIC_MISMATCHES"
+}

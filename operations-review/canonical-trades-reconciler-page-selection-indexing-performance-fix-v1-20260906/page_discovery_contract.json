@@ -1,0 +1,32 @@
+{
+  "schema_version": "canonical_trades_page_discovery_contract_v1",
+  "producer": {
+    "module": "market_raw_lake.py",
+    "function": "raw_file_path",
+    "authoritative_filename_pattern": "<slug(unit_id)>__<observation_id[:16]>.parquet",
+    "observed_trades_unit_identity": "instrument",
+    "raw_lake_property": "one immutable parquet file per raw observation"
+  },
+  "consumer": {
+    "module": "dnse_trades_canonical_shadow.py",
+    "index_key": "path.stem.partition('__')[0].upper()",
+    "lookup_key": "coverage.instrument.upper()",
+    "path_normalization": "absolute resolved Path",
+    "ordering": "lexicographically sorted resolved paths",
+    "collision_rule": "exact prefix before the first double underscore; A, AA, and AAA remain separate keys"
+  },
+  "trust_boundary": {
+    "filename_use": "candidate discovery only",
+    "still_validated_for_each_candidate": [
+      "instrument",
+      "source_event_time/session",
+      "ingestion_run_id",
+      "checkpoint_identity",
+      "checkpoint_unit_id prefix",
+      "raw payload hash",
+      "page identity",
+      "record accounting"
+    ],
+    "anchor_guard": "The selected anchor must itself satisfy the producer filename contract or selection fails closed with SELECTED_ANCHOR_FILENAME_CONTRACT_VIOLATION."
+  }
+}

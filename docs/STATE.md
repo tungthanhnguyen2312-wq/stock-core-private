@@ -1,5 +1,20 @@
 # Stock Lookup — Operational State
 
+**Canonical Trades reconciler page-selection indexing performance fix V1 (2026-09-06):**
+`CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1 = COMPLETE` at local
+source checkpoint `c4409e5`. Anti-Gravity's retained recovery report isolated a reconciler-only
+stall: each non-empty logical unit scanned and parsed its whole raw-run directory. The corrected
+in-memory deterministic index enumerates each raw-run directory once and performs exact-symbol
+candidate lookup while retaining every existing row-level provenance, payload, page, record,
+empty, failed, and repair-precedence check. The one retained full 40-session reconciliation
+completed normally in 56m24s and compared with zero semantic mismatches across all 66,400 units
+and 209,193 selected pages; the 27 known failures remain explicit failures. A bounded current
+materializer smoke accepted the optimized manifest with unchanged schema and zero duplicate
+identities. No data was acquired, no authority or liquidity policy changed, and the existing
+canonical production materialization was not rewritten. Evidence:
+`operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/`.
+Phase A is not acquired or complete. Next gate: `OWNER_REVIEW_FOR_ANTIGRAVITY_PHASE_A_RESUME`.
+
 **Canonical Trades toolchain restoration and governed session calendar fix V1 (2026-09-06):**
 `CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1 = COMPLETE` at local
 checkpoint `6dce959`, under the explicit owner authorization for this bounded source-code repair.

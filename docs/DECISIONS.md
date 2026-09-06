@@ -1,5 +1,32 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-06 - Canonical Trades Reconciler Page-Selection Indexing Performance Fix V1
+
+`CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1 = COMPLETE`
+(`push = NO`, source checkpoint `c4409e5`). This owner-authorized repair fixes the reconciler
+only; it does not authorize Phase-A acquisition or a successor.
+
+1. The Anti-Gravity 132-minute/zero-output stall was candidate discovery, not an evidence-quality
+   failure: `_select_pages` repeatedly globbed every raw parquet in an anchor directory and loaded
+   each one merely to discover its symbol. The active raw-lake writer's immutable
+   `<instrument>__<observation-id>.parquet` filename contract is sufficient to narrow candidates,
+   but insufficient on its own to establish semantic validity.
+2. `_PageSelectionIndex` is consequently invocation-local and deterministic. It builds a sorted
+   exact-normalized-symbol lookup once per raw-run directory. Every candidate still receives the
+   existing instrument/session, run/checkpoint, payload, identity, and record-accounting checks;
+   anchor filename-contract violations fail closed. Prefix collisions such as `A`/`AA`/`AAA` are
+   separate keys, never substring matches.
+3. The retained full baseline completed normally and exactly preserves the accepted selection:
+   66,400 coverage units and 209,193 ordered selected pages have zero semantic mismatches, with
+   all 27 `REMAINING_FAILED` units still carrying no selected pages. A bounded materializer smoke
+   preserved its schema and duplicate behavior. No canonical production root was rewritten.
+4. This changes operational feasibility only. It creates no data, calendar, provider, liquidity,
+   ADTV, portfolio, risk, execution, policy, PIT, RAW_AS_TRADED, database, publication,
+   deployment, or authority effect. Phase A remains unacquired and awaits
+   `OWNER_REVIEW_FOR_ANTIGRAVITY_PHASE_A_RESUME`.
+
+Evidence: `operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/`.
+
 ## 2026-09-06 - Canonical Trades Toolchain Restoration And Governed Session Calendar Fix V1
 
 `CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1 = COMPLETE`

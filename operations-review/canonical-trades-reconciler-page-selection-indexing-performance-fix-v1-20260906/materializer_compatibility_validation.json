@@ -1,0 +1,30 @@
+{
+  "schema_version": "canonical_trades_materializer_compatibility_validation_v1",
+  "optimized_manifest": "operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/full-baseline-reconciliation/composite_cohort_manifest.json",
+  "bounded_smoke_input": "operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/materializer-smoke-cohort.json",
+  "bounded_smoke_output": "operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/materializer-smoke-output",
+  "input_contract": {
+    "schema_version": "trades_reconciliation_composite_cohort_v1",
+    "canonical_input_contract": "trades_canonical_shadow_v1",
+    "session": "2026-06-17",
+    "selected_pages": 2,
+    "logical_units": ["2026-06-17:A32", "2026-06-17:SSI"],
+    "selected_attempts": ["ORIGINAL", "REPAIR"]
+  },
+  "first_materialization": {
+    "source_records": 104,
+    "canonical_rows": 104,
+    "quarantined_records": 0,
+    "missing_records": 0,
+    "duplicate_identities": 0,
+    "output_bytes": 11035,
+    "canonical_schema_matches_current_contract": true,
+    "canonical_column_count": 16
+  },
+  "rerun": "SKIP_VERIFIED_MATERIALIZATION",
+  "known_failure_exclusion": {
+    "full_baseline_remaining_failed_units": 27,
+    "failed_selected_page_references": 0
+  },
+  "verdict": "PASS_BOUNDED_MATERIALIZATION_WITHOUT_PRODUCTION_REWRITE"
+}

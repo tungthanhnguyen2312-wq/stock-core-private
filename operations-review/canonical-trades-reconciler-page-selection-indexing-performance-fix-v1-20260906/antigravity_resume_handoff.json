@@ -1,0 +1,31 @@
+{
+  "schema_version": "canonical_trades_antigravity_resume_handoff_v1",
+  "performance_fix_identity": "CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1",
+  "expected_source_head_after_code_commit": "c4409e55b1560419956c8bf2cace369809da83a6",
+  "governed_calendar_identity": "governed_trading_session_calendar:53a8551a958d12fd542323fcc3f27385224da348302edc0384e68797adea3985",
+  "acquisition_entrypoint": "tools/bulk_ingest_dnse_intraday_history_raw.py",
+  "reconciliation_entrypoint": "tools/build_dnse_trades_reconciliation_composite_cohort.py",
+  "materializer_entrypoint": "tools/materialize_dnse_trades_canonical_shadow.py",
+  "phase_a_suffix_sessions": ["2026-08-12", "2026-08-13", "2026-08-14", "2026-08-17", "2026-08-18", "2026-08-19", "2026-08-20", "2026-08-21", "2026-08-24", "2026-08-25", "2026-08-26", "2026-08-27", "2026-08-28", "2026-09-03", "2026-09-04"],
+  "phase_a_planning_scope": "15 sessions x 1,660 eligible equity symbols = 24,900 logical units",
+  "safe_runtime_roots": {
+    "existing_baseline_reconciliation": "C:\\Projects\\StockLookup\\operations-review\\trades-post-repair-reconciliation-v1-20260815",
+    "existing_stage_a_checkpoint": "C:\\Projects\\StockLookup\\operations-review\\trades-final-composite-corpus-checkpoint-v1-20260815\\final_composite_corpus_checkpoint.json",
+    "required_new_phase_a_raw_runtime_root": "a new owner-approved runtime root; never overwrite Task160 or this fix validation root",
+    "required_new_reconciliation_output_root": "a new owner-approved evidence/runtime root; never overwrite Task160 or this fix validation root",
+    "required_new_materialization_root": "a new owner-approved shadow root; never overwrite Task160 canonical materialization"
+  },
+  "command_templates": {
+    "acquisition_per_session": "python tools\\bulk_ingest_dnse_intraday_history_raw.py --dataset trades_history --session-date <PHASE_A_SESSION> --universe-snapshot <APPROVED_1660_EQUITY_UNIVERSE_SNAPSHOT> --runtime-root <NEW_PHASE_A_RAW_RUNTIME_ROOT> --run-id <APPROVED_RUN_ID> --live",
+    "reconciliation": "python tools\\build_dnse_trades_reconciliation_composite_cohort.py --reconciliation-root <NEW_RECONCILIATION_ROOT> --output-root <NEW_RECONCILIATION_OUTPUT_ROOT> --stage-a-checkpoint <APPROVED_STAGE_A_CHECKPOINT> [--final-review-root <APPROVED_FINAL_REVIEW_ROOT>]",
+    "materialization": "python tools\\materialize_dnse_trades_canonical_shadow.py --cohort-manifest <NEW_RECONCILIATION_OUTPUT_ROOT>\\composite_cohort_manifest.json --shadow-root <NEW_SHADOW_ROOT> --workers <APPROVED_WORKER_COUNT>"
+  },
+  "failure_preservation_rule": "A REMAINING_FAILED unit remains explicit failed coverage with no selected raw pages. It must never be converted to confirmed empty because a candidate lookup is empty.",
+  "baseline_fix_proof": {
+    "full_reconciliation": "exit 0; 66,400 units; 209,193 selected pages; 0 semantic mismatches against accepted Task160 selection",
+    "directory_enumerations": 57,
+    "candidate_lookups": 37828
+  },
+  "recommended_next_action": "RESUME_PHASE_A_REAL_ACQUISITION",
+  "authorization_note": "This handoff does not itself authorize acquisition, provider use, credential access, materialization, or any authority promotion."
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": "canonical_trades_page_selection_root_cause_v1",
+  "milestone": "CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1",
+  "source_commit": "c4409e55b1560419956c8bf2cace369809da83a6",
+  "reported_by": "Anti-Gravity canonical-trades-real-recovery-20260906",
+  "defect": {
+    "module": "dnse_trades_canonical_shadow.py",
+    "function": "_select_pages",
+    "pre_fix_data_flow": [
+      "build_reconciliation_composite_cohort iterated 66,400 reconciliation units.",
+      "Each non-empty selected original or repair unit loaded its anchor raw page for anchor/provenance validation.",
+      "The same unit then globbed every parquet in the anchor page's raw-run directory.",
+      "Each discovered parquet was fully loaded to discover its instrument and session before provenance, payload, page identity, and record accounting could be applied.",
+      "Only pages matching the anchor's instrument, session, ingestion run, checkpoint identity, checkpoint-unit prefix, and payload contract survived selection."
+    ],
+    "observed_baseline": {
+      "logical_units": 66400,
+      "nonempty_successful_units": 37828,
+      "parquet_candidates_per_session_directory": 1660,
+      "redundant_unrelated_parquet_examinations_estimate": 62794480,
+      "anti_gravity_outcome": "cancelled after 132 minutes with 0 terminal bytes and 0 output files"
+    },
+    "root_cause": "The candidate-discovery key (instrument) was already encoded by the immutable raw-lake filename contract, but discovery instead inferred it by loading every file for every non-empty unit. The later row-level checks were necessary; the repeated unrelated-file discovery was not."
+  },
+  "existing_manifest_assessment": {
+    "result": "BUILD_EPHEMERAL_DETERMINISTIC_INDEX",
+    "checked_retained_artifacts": [
+      "task-160-controlled-rerun-v1-20260817/composite/composite_unit_coverage.json",
+      "task-160-controlled-rerun-v1-20260817/composite/selected_raw_pages.json",
+      "trades-post-repair-reconciliation-v1-20260815/reconciliation_units.json"
+    ],
+    "reason": "The accepted selected-pages artifact proves a prior selection but is not an authoritative candidate-discovery manifest for an arbitrary current original/repair raw-run directory. No active retained artifact supplied the exact current directory-to-symbol candidate mapping needed by the reconciler."
+  },
+  "scope_guardrails_observed": {
+    "network_or_provider_calls": 0,
+    "raw_acquisition": "NOT_EXECUTED",
+    "production_materialization": "NOT_EXECUTED",
+    "protected_registry_modified": false
+  }
+}

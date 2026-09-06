@@ -1,0 +1,27 @@
+{
+  "schema_version": "canonical_trades_page_selection_index_design_v1",
+  "decision": "BUILD_EPHEMERAL_DETERMINISTIC_INDEX",
+  "implementation": {
+    "class": "dnse_trades_canonical_shadow._PageSelectionIndex",
+    "lifetime": "one build_reconciliation_composite_cohort invocation",
+    "persistent_storage": "none",
+    "cache_key": "resolved raw-run directory",
+    "value": "sorted mapping of exact normalized instrument to tuple of resolved parquet candidate paths",
+    "directory_enumeration": "once per raw-run directory on first lookup",
+    "candidate_lookup": "exact uppercase instrument key",
+    "determinism": "directory paths, instruments, and candidate paths are sorted before use"
+  },
+  "semantic_preservation": {
+    "original_repair_precedence": "unchanged; _unit_selection chooses the selected anchor before indexed page discovery",
+    "confirmed_empty": "unchanged; validated anchor evidence returns an empty page set before candidate lookup",
+    "remaining_failed": "unchanged; no anchor/candidate lookup and no implicit empty reclassification",
+    "page_validation": "unchanged after candidate narrowing",
+    "artifact_identity_order": "unchanged; full selected-page list compared exactly against the accepted artifact"
+  },
+  "explicit_non_goals": [
+    "No database or persistent index.",
+    "No filename-only semantic acceptance.",
+    "No caching framework outside this invocation.",
+    "No acquisition, provider, materializer, liquidity, or calendar redesign."
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.06.1",
+  "roadmap_version": "2026.09.06.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,25 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1",
+    "milestone": "CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE",
+      "checkpoint": "c4409e55b1560419956c8bf2cace369809da83a6",
+      "dependencies": ["CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / RECONCILER_OPERATIONAL_FEASIBILITY_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1 directive (2026-09-06)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1",
+      "notes": "Complete bounded reconciler correction. Anti-Gravity identified repeated per-nonempty-unit raw-directory scans and parquet parsing in _select_pages. The invocation-local deterministic exact-symbol index enumerates 57 raw-run directories once and preserves full candidate row/provenance/payload/page/record validation. One retained 40-session baseline completed normally: 66,400 logical units and 209,193 ordered selected pages compare with zero semantic mismatches against accepted Task160; 28,545 confirmed empty units and 27 remaining failures are unchanged. Bounded materializer smoke is schema-compatible, idempotent, and has zero duplicate identities. No acquisition, authority, provider, policy, liquidity, canonical-production rewrite, or push occurred. Evidence: operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/. Phase A remains unexecuted. Next gate: OWNER_REVIEW_FOR_ANTIGRAVITY_PHASE_A_RESUME."
+    },
     {
       "milestone_id": "CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1",
       "state": "COMPLETE",

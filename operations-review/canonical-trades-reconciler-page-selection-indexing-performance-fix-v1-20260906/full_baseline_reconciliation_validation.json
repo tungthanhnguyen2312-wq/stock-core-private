@@ -1,0 +1,48 @@
+{
+  "schema_version": "canonical_trades_full_baseline_reconciliation_validation_v1",
+  "command": "python tools\\build_dnse_trades_reconciliation_composite_cohort.py --reconciliation-root C:\\Projects\\StockLookup\\operations-review\\trades-post-repair-reconciliation-v1-20260815 --output-root operations-review\\canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906\\full-baseline-reconciliation --stage-a-checkpoint C:\\Projects\\StockLookup\\operations-review\\trades-final-composite-corpus-checkpoint-v1-20260815\\final_composite_corpus_checkpoint.json",
+  "execution": {
+    "mode": "one foreground retained full-baseline run after code stabilization",
+    "start_observed": "2026-09-06T11:28:01+07:00",
+    "artifact_finalization_observed": "2026-09-06T12:24:25+07:00",
+    "artifact_finalization_elapsed": "56m24s",
+    "terminal_exit": "normal, exit code 0",
+    "old_reported_state": "132 minutes, 0 bytes, cancelled",
+    "new_state": "completed and emitted terminal result after writing artifacts"
+  },
+  "inputs": {
+    "reconciliation_root": "C:\\Projects\\StockLookup\\operations-review\\trades-post-repair-reconciliation-v1-20260815",
+    "stage_a_checkpoint": "C:\\Projects\\StockLookup\\operations-review\\trades-final-composite-corpus-checkpoint-v1-20260815\\final_composite_corpus_checkpoint.json",
+    "stage_a_checkpoint_sha256": "8f6c3cbba133c1baba26b65b60f99d6fda97077de4d8496a7c9ce7136cebc6c6"
+  },
+  "outputs": {
+    "root": "operations-review/canonical-trades-reconciler-page-selection-indexing-performance-fix-v1-20260906/full-baseline-reconciliation",
+    "files": {
+      "composite_cohort_manifest.json": 157590739,
+      "composite_unit_coverage.json": 259954769,
+      "selected_raw_pages.json": 339328797,
+      "task160_run_status.json": 165123831
+    },
+    "total_bytes": 921998136,
+    "reconciliation_output_identity": "82a11515a8a5f075fe999ed8c7d3ce461415f7296f39c0d4e60e79a8fc798ed2",
+    "coverage_sha256": "0f0ee12a3d969c5c0328a83fa1d722b76685abdb066266feba5e6ce31b27eb78"
+  },
+  "coverage": {
+    "sessions": 40,
+    "logical_units": 66400,
+    "ORIGINAL_SUCCESS": 32808,
+    "ORIGINAL_SUCCESS_EMPTY": 24539,
+    "REPAIR_RECOVERED_SUCCESS": 5020,
+    "REPAIR_RECOVERED_SUCCESS_EMPTY": 4006,
+    "REMAINING_FAILED": 27,
+    "successful_nonempty_units": 37828,
+    "confirmed_empty_units": 28545
+  },
+  "operation_counts": {
+    "directory_enumerations": 57,
+    "candidate_path_lookups": 37828,
+    "candidate_parquet_reads": 209193,
+    "indexed_directories": 57
+  },
+  "verdict": "PASS_COMPLETED_NORMALLY_AND_SEMANTICALLY_COMPATIBLE"
+}

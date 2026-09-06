@@ -1,0 +1,37 @@
+{
+  "schema_version": "canonical_trades_page_selection_operation_count_validation_v1",
+  "source_commit": "c4409e55b1560419956c8bf2cace369809da83a6",
+  "synthetic_test": {
+    "test": "tests/test_dnse_trades_canonical_shadow.py::test_page_index_is_once_per_directory_and_never_reads_unrelated_symbol",
+    "fixture": "one raw directory; AAA has two pages; BBB has one page; future suffix session 2026-09-04",
+    "asserted_counts": {
+      "directory_enumerations": 1,
+      "candidate_path_lookups": 2,
+      "candidate_parquet_reads": 3,
+      "indexed_directories": 1
+    },
+    "unrelated_read_proof": "BBB is read only for its anchor and its own candidate validation; it is never read while selecting AAA."
+  },
+  "additional_contract_tests": [
+    "Exact A/AA/AAA keys do not cross-match.",
+    "Repair pages win over original pages when repair selection is active.",
+    "Confirmed-empty and remaining-failed states remain distinct.",
+    "Missing candidate provenance fails closed.",
+    "Duplicate candidate identity behavior and sorted page order are preserved."
+  ],
+  "full_baseline_observed_counts": {
+    "logical_units": 66400,
+    "nonempty_candidate_lookups": 37828,
+    "directory_enumerations": 57,
+    "indexed_directories": 57,
+    "candidate_parquet_reads": 209193,
+    "separate_anchor_validations": 37828
+  },
+  "comparison_to_reported_pre_fix_shape": {
+    "pre_fix_directory_scans": 37828,
+    "pre_fix_unrelated_parquet_examinations_estimate": 62794480,
+    "post_fix_directory_scans": 57,
+    "post_fix_candidate_reads": 209193,
+    "conclusion": "No per-unit full-directory enumeration remains, and candidates are narrowed by exact symbol before any parquet row is parsed."
+  }
+}
