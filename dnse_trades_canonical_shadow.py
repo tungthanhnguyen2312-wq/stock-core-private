@@ -224,7 +224,61 @@ def _unit_selection(unit: Mapping[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _select_pages(coverage: dict[str, Any]) -> list[dict[str, Any]]:
+class _PageSelectionIndex:
+    """Invocation-local filename index for immutable raw-lake page discovery.
+
+    ``market_raw_lake.raw_file_path`` owns the required
+    ``<instrument>__<observation-id>.parquet`` filename contract.  The index
+    uses that proven contract only to avoid discovering unrelated pages.  Every
+    candidate is still opened and its instrument, session, provenance, payload
+    hash, and page identity are validated below before selection.
+    """
+
+    def __init__(self) -> None:
+        self._by_directory: dict[Path, dict[str, tuple[Path, ...]]] = {}
+        self.directory_enumerations = 0
+        self.candidate_path_lookups = 0
+        self.candidate_parquet_reads = 0
+
+    @staticmethod
+    def _instrument_key(path: Path) -> str | None:
+        prefix, separator, suffix = path.stem.partition("__")
+        if not separator or not prefix or not suffix:
+            return None
+        return prefix.upper()
+
+    def _directory_index(self, directory: Path) -> dict[str, tuple[Path, ...]]:
+        directory = directory.resolve()
+        cached = self._by_directory.get(directory)
+        if cached is not None:
+            return cached
+        groups: dict[str, list[Path]] = {}
+        for path in sorted(directory.glob("*.parquet"), key=lambda value: str(value)):
+            key = self._instrument_key(path)
+            if key is not None:
+                groups.setdefault(key, []).append(path.resolve())
+        index = {key: tuple(paths) for key, paths in sorted(groups.items())}
+        self._by_directory[directory] = index
+        self.directory_enumerations += 1
+        return index
+
+    def candidates(self, directory: Path, instrument: str) -> tuple[Path, ...]:
+        self.candidate_path_lookups += 1
+        return self._directory_index(directory).get(str(instrument).upper(), ())
+
+    def record_candidate_read(self) -> None:
+        self.candidate_parquet_reads += 1
+
+    def operation_counts(self) -> dict[str, int]:
+        return {
+            "directory_enumerations": self.directory_enumerations,
+            "candidate_path_lookups": self.candidate_path_lookups,
+            "candidate_parquet_reads": self.candidate_parquet_reads,
+            "indexed_directories": len(self._by_directory),
+        }
+
+
+def _select_pages(coverage: dict[str, Any], *, page_index: _PageSelectionIndex | None = None) -> list[dict[str, Any]]:
     if coverage["selected_attempt"] == REMAINING_FAILED:
         return []
     anchor_path = Path(_text(coverage.get("selected_raw_file"), "SELECTED_RAW_FILE")).resolve()
@@ -248,7 +302,12 @@ def _select_pages(coverage: dict[str, Any]) -> list[dict[str, Any]]:
         raise ReconciliationCanonicalAdapterError(f"SELECTED_ANCHOR_PROVENANCE_UNREADABLE:{coverage['logical_unit_id']}") from exc
     selected, total_records = [], 0
     prefix = f"{coverage['instrument']}__{coverage['session'].replace('-', '')}__"
-    for path in sorted(anchor_path.parent.glob("*.parquet"), key=str):
+    index = page_index if page_index is not None else _PageSelectionIndex()
+    candidate_paths = index.candidates(anchor_path.parent, coverage["instrument"])
+    if anchor_path not in candidate_paths:
+        raise ReconciliationCanonicalAdapterError(f"SELECTED_ANCHOR_FILENAME_CONTRACT_VIOLATION:{coverage['logical_unit_id']}")
+    for path in candidate_paths:
+        index.record_candidate_read()
         source = _source_row(path)
         if str(source.get("instrument") or "").upper() != coverage["instrument"] or str(source.get("source_event_time") or "") != coverage["session"]:
             continue
@@ -313,6 +372,7 @@ def build_reconciliation_composite_cohort(*, reconciliation_root: Path | str, ou
     stage_binding = _stage_a_binding(Path(stage_a_checkpoint_path))
     final_review = _final_review_snapshot(final_review_root, reconciliation_identity=recomputed_identity, session_universe=session_universe)
     coverage, selected_by_session, seen = [], {session: [] for session in session_universe}, set()
+    page_index = _PageSelectionIndex()
     for index, unit in enumerate(units):
         if not isinstance(unit, Mapping):
             raise ReconciliationCanonicalAdapterError("RECONCILIATION_UNIT_NOT_MAPPING")
@@ -321,7 +381,7 @@ def build_reconciliation_composite_cohort(*, reconciliation_root: Path | str, ou
         if item["session"] not in selected_by_session or key in seen:
             raise ReconciliationCanonicalAdapterError("RECONCILIATION_LOGICAL_UNIT_INVALID_OR_DUPLICATE")
         seen.add(key)
-        pages = _select_pages(item)
+        pages = _select_pages(item, page_index=page_index)
         selected_by_session[item["session"]].extend(pages)
         coverage.append(item)
         if on_progress is not None:
@@ -348,7 +408,8 @@ def build_reconciliation_composite_cohort(*, reconciliation_root: Path | str, ou
     atomic_write_json(selection_path, {"schema_version": COMPOSITE_COHORT_SCHEMA_VERSION, **selection_payload})
     atomic_write_json(cohort_path, cohort)
     return {"cohort_manifest": str(cohort_path), "coverage": str(coverage_path), "selection": str(selection_path), "cohort": cohort,
-            "coverage_summary": dict(Counter(item["logical_status"] for item in coverage))}
+            "coverage_summary": dict(Counter(item["logical_status"] for item in coverage)),
+            "operation_counts": page_index.operation_counts()}
 
 
 def _atomic_parquet(path: Path, rows: list[dict[str, Any]], schema: pa.Schema) -> None:
