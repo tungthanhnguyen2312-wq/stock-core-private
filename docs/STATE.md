@@ -1,5 +1,24 @@
 # Stock Lookup — Operational State
 
+**DNSE intraday history rate-limit resilience and resume integrity V1 (2026-09-06):**
+`DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1 = COMPLETE /
+SOURCE_CORRECTION_ONLY` at local source checkpoint `e01c06f` from required start/origin
+`1bd5ab9345c7a262e59c73173b0241e72b6cf6aa`. The DNSE intraday raw collector now
+retries only sanitized `rate_limited` / `request_failed_*` outcomes under capped exponential
+backoff, honors a usable numeric `Retry-After` within that cap, and applies one
+invocation-wide request delay at every actual HTTP attempt boundary. It reopens only
+retryable failed checkpoint roots, never refetches success/confirmed-empty roots, stops
+immediately for authentication failure, and has a fail-closed provider/dataset/scope writer
+lock. A write-ahead pending-page record validates and adopts the exact raw page after an
+interruption; missing pages resume from the saved cursor, while malformed/mismatched pages
+become explicit `ORPHAN_RAW_PAGE_UNREFERENCED` records. The existing accepted canonical
+reconciler page-selection/index semantics were not changed. Offline validation: 80 focused
+tests pass. Retained Phase A has 3,003 preserved successful roots and 21,897 retry-eligible
+failed roots (21,891 rate limits, 1 connection failure, 5 read timeouts); no data was acquired.
+The next and only gate is `OWNER_REVIEW_FOR_TARGETED_PHASE_A_RETRY`, with no Phase B,
+secondary-anchor, ADTV/G1, authority, provider, or canonical-materialization expansion.
+Evidence: `operations-review/dnse-intraday-history-rate-limit-resilience-resume-integrity-v1-20260906/`.
+
 **Canonical Trades reconciler page-selection indexing performance fix V1 (2026-09-06):**
 `CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1 = COMPLETE` at local
 source checkpoint `c4409e5`. Anti-Gravity's retained recovery report isolated a reconciler-only

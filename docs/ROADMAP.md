@@ -1,5 +1,18 @@
 # Stock Lookup — Architecture & Roadmap
 
+**DNSE intraday history rate-limit resilience and resume integrity V1 (2026-09-06):**
+`DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1 = COMPLETE /
+SOURCE_CORRECTION_ONLY` at local checkpoint `e01c06f`. This is a bounded corrective gate for
+the retained Phase A DNSE Trades acquisition only: retryable failed roots can resume under a
+scope lock, finite retry/backoff/pacing, and write-ahead raw-page integrity, while successes and
+confirmed empties remain immutable checkpoint facts. Direct checkpoint accounting sets the next
+retry-only universe at 21,897 roots (21,891 rate limited, 1 connection failure, 5 read timeouts)
+and preserves 3,003 already-successful roots. It does not acquire data or authorize a retry;
+Phase B, secondary anchor semantics, canonical-materialization changes, G1/ADTV, provider,
+liquidity, sizing, PIT, RAW_AS_TRADED, or authority promotion remain out of scope. Next gate:
+`OWNER_REVIEW_FOR_TARGETED_PHASE_A_RETRY`. Evidence:
+`operations-review/dnse-intraday-history-rate-limit-resilience-resume-integrity-v1-20260906/`.
+
 **Canonical Trades reconciler page-selection indexing performance fix V1 (2026-09-06):**
 `CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1 = COMPLETE` at source
 checkpoint `c4409e5`. This bounded corrective milestone removes the per-unit full session-directory

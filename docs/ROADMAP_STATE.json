@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.06.2",
+  "roadmap_version": "2026.09.06.3",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "HEAD",
-  "last_updated_checkpoint": "HEAD",
+  "implementation_lineage_head": "e01c06f",
+  "last_updated_checkpoint": "e01c06f",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1",
+    "milestone": "DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -932,6 +932,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_05_QUEUED_NEXT_EMPTY_MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1",
       "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner authorization permits this milestone only despite queued_next=[]; no successor is inferred. Start HEAD and origin/main were both verified as bcc6a1dfec8d7923b7c61584f78beef9510c09fe. Retained Task-160 canonical DNSE Trades is the primary input: 18,109,141 rows across 40 governed sessions (2026-06-17..2026-08-11), with 66,400 ticker-session units classified 37,828 COMPLETE, 28,545 NO_TRADES_CONFIRMED, and 27 KNOWN_FAILED. G1 stays separate from G4/T1/T3/T4/T6; no missing or failed unit is zero-filled. Existing exact-reconciled G1 matched value is 13,196 daily cells; generic matched-share volume stays semantically unqualified and no ADV is emitted. Both required replay targets are beyond the retention endpoint, so all 1,683 current-universe contexts are incomplete and exact ADV20/ADV60/ADTV20/ADTV60 counts are 0. Temporal replay admits zero future trades/features. The optional AI-bundle attachment verifies the retained artifact identity and is non-actionable; it adds no execution, participation, slippage, sizing, price-basis, RAW_AS_TRADED, PIT, provider, database, publication, deployment, policy, score, target, probability, ranking, or Daily-operation authority. Evidence: operations-review/market-wide-historical-matched-liquidity-adtv-foundation-v1-20260905/ (local-only, gitignored). The protected pre-existing config/daily_research_session_input_registry.json worktree diff is preserved."
+    },
+    {
+      "milestone_id": "DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / SOURCE_CORRECTION_ONLY",
+      "starting_checkpoint": "1bd5ab9345c7a262e59c73173b0241e72b6cf6aa",
+      "checkpoint": "e01c06f",
+      "dependencies": ["CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / RETRY_OPERATIONAL_RESILIENCE_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1 directive (2026-09-06)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_06_DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1",
+      "notes": "COMPLETE / SOURCE_CORRECTION_ONLY. Start/origin were 1bd5ab9345c7a262e59c73173b0241e72b6cf6aa and protected config/daily_research_session_input_registry.json remains an untouched user worktree diff. The DNSE intraday collector now retries only sanitized rate_limited/request_failed_* errors with finite capped exponential backoff and invocation-wide HTTP-boundary pacing, honors usable numeric Retry-After under the local cap, reuses success/confirmed-empty roots, reopens only retryable failed roots, stops immediately on authentication failure, and exposes per-invocation/cumulative retry telemetry. An exact provider/dataset/scope lock fails closed for active/ambiguous owners. A write-ahead pending raw-page checkpoint validates and adopts only an exact post-interruption raw page; missing raw resumes from saved cursor, while mismatches are explicit ORPHAN_RAW_PAGE_UNREFERENCED. Existing canonical reconciler page-selection/index behavior is unchanged. Offline focused validation: 80 passed, compile and diff checks pass. Direct read-only Phase A checkpoint accounting: 24,900 planned roots, 3,003 preserved successes (reconciliation authority 1,679 non-empty plus 1,324 confirmed empty), and 21,897 retry-eligible failures (21,891 rate limited, 1 connection, 5 read timeout). No network acquisition, Phase B, secondary-anchor/G1/ADTV work, canonical-materialization change, provider, authority, policy, database, or deployment change. Next gate only: OWNER_REVIEW_FOR_TARGETED_PHASE_A_RETRY. Evidence: operations-review/dnse-intraday-history-rate-limit-resilience-resume-integrity-v1-20260906/."
     }
   ],
   "blocked_capabilities": [

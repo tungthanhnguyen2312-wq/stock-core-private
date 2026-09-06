@@ -1,5 +1,43 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-06 - DNSE Intraday History Rate-Limit Resilience And Resume Integrity V1
+
+`DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1 = COMPLETE /
+SOURCE_CORRECTION_ONLY` (`push = NO`, source checkpoint `e01c06f`, start/origin
+`1bd5ab9345c7a262e59c73173b0241e72b6cf6aa`).
+
+1. DNSE rate limits and transport failures are a retryable checkpoint state, not a completed
+   failure: only sanitized `rate_limited` and `request_failed_*` error codes reopen, under
+   finite exponential backoff and one invocation-wide request boundary pace. Numeric
+   `Retry-After` is honored only under the configured cap; response headers and credentials are
+   never retained. Authentication and all non-retryable/pagination/integrity failures stay
+   explicit and are not retried.
+2. One stable provider/dataset/scope lock owns each checkpoint mutation. An active or ambiguous
+   stale lock fails closed; a single reclaim is allowed only for a demonstrably dead local PID.
+   Successful and confirmed-empty roots are reused, not re-requested. A bounded invocation cap
+   accounts for roots actually begun, while manifest telemetry distinguishes current attempts
+   from cumulative success/empty/failure facts.
+3. Every raw page is write-ahead checkpointed before immutable storage. On restart, only an exact
+   pending path whose raw row, provenance, page/cursor identity, response hash, and record count
+   all match may be adopted without HTTP. A missing page is refetched at the saved cursor; a
+   malformed/mismatched file is explicitly `ORPHAN_RAW_PAGE_UNREFERENCED` and never silently
+   adopted or deleted. Existing canonical shadow reconciliation page indexing was deliberately
+   retained unchanged.
+4. Direct read-only inspection of all 15 retained Phase A checkpoints sets the retry-only handoff
+   at 21,897 roots (21,891 `rate_limited`, 1 `request_failed_ConnectionError`, 5
+   `request_failed_ReadTimeout`), excluding 3,003 preserved successes. Reconciliation remains
+   authoritative for the 1,679 non-empty / 1,324 confirmed-empty split; the Phase A acquisition
+   summary's 1,682 non-empty field is recorded as an inconsistency, not propagated as fact.
+5. Offline-only focused validation passes 80 tests, including bounded 429/Retry-After behavior,
+   transport retry/exhaustion, auth/nonretry termination, success reuse, failed-root reopening,
+   cursor-only pagination resume, global pacing, active scope locking, raw-page interruption
+   adoption, and the pre-existing canonical shadow index suite. No live acquisition occurred.
+
+The next gate is `OWNER_REVIEW_FOR_TARGETED_PHASE_A_RETRY` only. This decision neither authorizes
+that run nor opens Phase B, secondary-anchor semantics, G1/ADTV work, provider expansion,
+liquidity/sizing/PIT/RAW_AS_TRADED, canonical-materialization change, or any authority promotion.
+Evidence: `operations-review/dnse-intraday-history-rate-limit-resilience-resume-integrity-v1-20260906/`.
+
 ## 2026-09-06 - Canonical Trades Reconciler Page-Selection Indexing Performance Fix V1
 
 `CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1 = COMPLETE`
