@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from atomic_io import atomic_write_file, atomic_write_json
+from governed_trading_session_calendar import load_governed_trading_session_calendar
 from market_wide_historical_matched_liquidity import (
     CONTRACT_VERSION,
     EXACT_WINDOW,
@@ -42,6 +43,7 @@ UNIT_COVERAGE = WORKSPACE / "operations-review" / "task-160-controlled-rerun-v1-
 MATCHED_VALUE_DIR = ROOT / "operations-review" / "fhsc-historical-matched-value-coverage-scaleout-v1"
 INTEGRATED_20260904 = ROOT / "operations-review" / "canonical-post-close-v1" / "2026-09-04" / "enrichment" / "integrated_investment_decision_product.json"
 OFFICIAL_UNIVERSE = ROOT / "operations-review" / "current-official-market-universe-integration-v1-20260824" / "current_official_market_universe_artifact.json"
+GOVERNED_CALENDAR = ROOT / "config" / "governed_trading_session_calendar_v1.json"
 
 
 def _load(path: Path) -> Any:
@@ -136,7 +138,7 @@ def _feature_counts(artifact: Mapping[str, Any]) -> dict[str, int]:
     return result
 
 
-def build(out_dir: Path = EVIDENCE_DIR) -> dict[str, Any]:
+def build(out_dir: Path = EVIDENCE_DIR, *, calendar_path: Path = GOVERNED_CALENDAR) -> dict[str, Any]:
     manifest_path = TASK160_DIR / "shadow" / "materialization_manifest.json"
     canonical_root = TASK160_DIR / "shadow" / "canonical" / "provider=DNSE" / "dataset=trades_history"
     reconciliation_path = MATCHED_VALUE_DIR / "historical_matched_value_reconciliation_artifact.json"
@@ -164,7 +166,8 @@ def build(out_dir: Path = EVIDENCE_DIR) -> dict[str, Any]:
     )
     if len(daily) != len(units):
         raise ValueError("DAILY_CELL_COVERAGE_RESIDUAL")
-    calendar = list(unit_payload["session_universe"])
+    observed_sessions = list(unit_payload["session_universe"])
+    calendar = load_governed_trading_session_calendar(calendar_path)
     universe = _universe(integrated, official)
     source_identities = {
         "canonical_trades_manifest": _source_identity(manifest_path, "sha256"),
@@ -172,6 +175,7 @@ def build(out_dir: Path = EVIDENCE_DIR) -> dict[str, Any]:
         "canonical_trades_reconciliation": _source_identity(reconciliation_path, "sha256"),
         "qualified_g1_matched_value_rows": _source_identity(qualified_path, "sha256"),
         "governed_current_universe": integrated.get("artifact_identity"),
+        "governed_trading_session_calendar": calendar.identity,
     }
     primary = build_artifact(target_session="2026-09-04", universe=universe, calendar=calendar, daily_cells=daily, source_identities=source_identities)
     temporal = build_artifact(target_session="2026-08-25", universe=universe, calendar=calendar, daily_cells=daily, source_identities=source_identities)
@@ -196,8 +200,9 @@ def build(out_dir: Path = EVIDENCE_DIR) -> dict[str, Any]:
         "dataset": "DNSE_CANONICAL_TRADES_40_SESSION",
         "source_kind": "CANONICAL_EXECUTION",
         "producer": "task-160 canonical Trades materialization",
-        "retained_session_range": [min(calendar), max(calendar)],
-        "retained_session_count": len(calendar),
+        "retained_session_range": [min(observed_sessions), max(observed_sessions)],
+        "retained_session_count": len(observed_sessions),
+        "analytical_session_calendar": calendar.to_dict(),
         "canonical_rows": manifest["aggregate"]["canonical_rows"],
         "schema_fields": schema,
         "identity_fields": ["symbol", "session_date", "raw_record_identity", "source_page_identity", "source_page_payload_hash", "source_record_index"],
@@ -228,7 +233,7 @@ def build(out_dir: Path = EVIDENCE_DIR) -> dict[str, Any]:
     ).items()))
     report = {
         "executor": "CODEX", "milestone": MILESTONE, "terminal_status": "PARTIAL_BY_EVIDENCE",
-        "canonical_trades_input": {"canonical_rows": canonical_contract["canonical_rows"], "retained_session_count": len(calendar), "first_session": min(calendar), "last_session": max(calendar)},
+        "canonical_trades_input": {"canonical_rows": canonical_contract["canonical_rows"], "retained_session_count": len(observed_sessions), "first_session": min(observed_sessions), "last_session": max(observed_sessions)},
         "daily_matched_value": daily_value,
         "market_wide_coverage": {
             "universe_denominator": len(universe),
@@ -265,10 +270,12 @@ def build(out_dir: Path = EVIDENCE_DIR) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", type=Path, default=EVIDENCE_DIR)
+    parser.add_argument("--calendar-path", type=Path, default=GOVERNED_CALENDAR,
+                        help="Explicit governed analytical session calendar; never infer it from Trades coverage.")
     parser.add_argument("--twice", action="store_true", help="prove deterministic output identity")
     args = parser.parse_args(argv)
-    first = build(args.out_dir)
-    if args.twice and build(args.out_dir)["artifact_identity"] != first["artifact_identity"]:
+    first = build(args.out_dir, calendar_path=args.calendar_path)
+    if args.twice and build(args.out_dir, calendar_path=args.calendar_path)["artifact_identity"] != first["artifact_identity"]:
         raise SystemExit("NONDETERMINISTIC_EVIDENCE_PACKAGE")
     print(json.dumps({"terminal_status": first["terminal_status"], "artifact_identity": first["artifact_identity"], "market_wide_coverage": first["market_wide_coverage"]}, sort_keys=True))
     return 0

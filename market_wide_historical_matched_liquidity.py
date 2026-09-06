@@ -284,17 +284,30 @@ def daily_cells_from_retained_evidence(
     return cells
 
 
-def resolve_trailing_window(*, calendar: Sequence[str], target_session: str, size: int) -> dict[str, Any]:
-    """Resolve an injected governed trading-session calendar without weekday fill."""
-    ordered = sorted({str(item) for item in calendar if item})
+def _calendar_sessions(calendar: Any) -> list[str]:
+    """Accept a legacy session sequence or the governed calendar contract."""
+    values = getattr(calendar, "sessions", calendar)
+    return sorted({str(item) for item in values if item})
+
+
+def _calendar_identity(calendar: Any, ordered: Sequence[str]) -> str:
+    return str(getattr(calendar, "identity", _identity("trading_session_calendar", {"sessions": list(ordered)})["artifact_identity"]))
+
+
+def resolve_trailing_window(*, calendar: Sequence[str] | Any, target_session: str, size: int) -> dict[str, Any]:
+    """Resolve a governed session calendar; never infer a session from data coverage."""
+    if hasattr(calendar, "resolve_window"):
+        return calendar.resolve_window(target_session, size)
+    ordered = _calendar_sessions(calendar)
     if target_session not in ordered:
         return {"state": "TARGET_SESSION_NOT_IN_GOVERNED_CALENDAR", "target_session": target_session,
-                "expected_sessions": size, "sessions": [], "calendar_identity": _identity("trading_session_calendar", {"sessions": ordered})["artifact_identity"]}
+                "expected_sessions": size, "sessions": [], "calendar_identity": _calendar_identity(calendar, ordered)}
     eligible = [session for session in ordered if session <= target_session]
     return {"state": "RESOLVED" if len(eligible) >= size else "INSUFFICIENT_CALENDAR_HISTORY",
             "target_session": target_session, "expected_sessions": size,
             "sessions": eligible[-size:],
-            "calendar_identity": _identity("trading_session_calendar", {"sessions": ordered})["artifact_identity"]}
+            "target_session_state": "TARGET_SESSION_VALID",
+            "calendar_identity": _calendar_identity(calendar, ordered)}
 
 
 def calculate_trailing_feature(
@@ -304,7 +317,7 @@ def calculate_trailing_feature(
     metric: str,
     unit: str,
     target_session: str,
-    calendar: Sequence[str],
+    calendar: Sequence[str] | Any,
     size: int,
     daily_cells: Mapping[tuple[str, str], Mapping[str, Any]],
 ) -> dict[str, Any]:
@@ -313,11 +326,14 @@ def calculate_trailing_feature(
     key_name = "regular_board_matched_volume_shares" if metric == "volume" else "regular_board_matched_value_vnd"
     state_name = "matched_volume_state" if metric == "volume" else "matched_value_state"
     qualified_state = QUALIFIED_MATCHED_VOLUME if metric == "volume" else QUALIFIED_MATCHED_VALUE
+    target_state = window.get("target_session_state", "TARGET_SESSION_INVALID")
     if window["state"] != "RESOLVED":
         return {
             "feature_id": feature_id, "ticker": ticker, "target_session": target_session,
             "status": INSUFFICIENT_WINDOW, "value": None, "unit": unit,
             "method": "trading_session_window_canonical_regular_board_matched/v1",
+            "target_session_calendar_state": target_state,
+            "data_availability_state": "NOT_EVALUATED_TARGET_SESSION_INVALID",
             "expected_sessions": size, "qualified_sessions": 0, "missing_sessions": size,
             "coverage_ratio": 0.0, "window_identity": window["calendar_identity"],
             "window_sessions": window["sessions"], "blockers": [window["state"]],
@@ -345,8 +361,11 @@ def calculate_trailing_feature(
             missing.append(session)
         else:
             semantic.append(session)
+    target_data_missing = (ticker, target_session) not in daily_cells
     exact = len(qualified) == size and not missing and not semantic and not failed
-    if exact:
+    if target_data_missing:
+        value, status, blockers = None, INSUFFICIENT_WINDOW, ["REQUIRED_SESSION_CANONICAL_DATA_MISSING"]
+    elif exact:
         value = sum(values) / Decimal(size)
         status, blockers = EXACT_WINDOW, []
     elif semantic:
@@ -361,6 +380,11 @@ def calculate_trailing_feature(
         "feature_id": feature_id, "ticker": ticker, "target_session": target_session,
         "status": status, "value": _number(value) if value is not None else None, "unit": unit,
         "method": "trading_session_window_canonical_regular_board_matched/v1",
+        "target_session_calendar_state": target_state,
+        "data_availability_state": (
+            "CANONICAL_TRADES_SESSION_AVAILABLE" if (ticker, target_session) in daily_cells
+            else "REQUIRED_SESSION_CANONICAL_DATA_MISSING"
+        ),
         "expected_sessions": size, "qualified_sessions": len(qualified),
         "missing_sessions": len(missing) + len(failed) + len(semantic),
         "coverage_ratio": len(qualified) / size, "window_identity": window["calendar_identity"],
@@ -371,7 +395,7 @@ def calculate_trailing_feature(
 
 
 def build_ticker_liquidity_context(
-    *, ticker: str, target_session: str, calendar: Sequence[str], daily_cells: Mapping[tuple[str, str], Mapping[str, Any]]
+    *, ticker: str, target_session: str, calendar: Sequence[str] | Any, daily_cells: Mapping[tuple[str, str], Mapping[str, Any]]
 ) -> dict[str, Any]:
     """The smallest additive Current-Research context; never emits a size."""
     features = {
@@ -404,7 +428,11 @@ def build_ticker_liquidity_context(
         "execution_liquidity_input_eligible": execution,
         "position_sizing_eligible": False, "fitness": "CURRENT_RESEARCH_MATCHED_LIQUIDITY" if research else "BLOCKED_BY_EVIDENCE",
         "blockers": blockers,
-        "lineage": {"daily_cell": (current or {}).get("source_lineage"), "calendar_sessions": len(set(calendar))},
+        "session_contract": {
+            "target_session_calendar_state": features["ADTV20_MATCHED_VND"]["target_session_calendar_state"],
+            "target_session_data_availability": features["ADTV20_MATCHED_VND"]["data_availability_state"],
+        },
+        "lineage": {"daily_cell": (current or {}).get("source_lineage"), "calendar_sessions": len(_calendar_sessions(calendar))},
     }
 
 
@@ -427,7 +455,7 @@ def build_artifact(
     *,
     target_session: str,
     universe: Mapping[str, Mapping[str, Any]],
-    calendar: Sequence[str],
+    calendar: Sequence[str] | Any,
     daily_cells: Mapping[tuple[str, str], Mapping[str, Any]],
     source_identities: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -442,7 +470,7 @@ def build_artifact(
     }
     payload: dict[str, Any] = {
         "schema_version": "1.0.0", "contract_version": CONTRACT_VERSION, "target_session": target_session,
-        "calendar": {"sessions": sorted({str(item) for item in calendar}), "calendar_day_imputation": False},
+        "calendar": {"sessions": _calendar_sessions(calendar), "calendar_identity": _calendar_identity(calendar, _calendar_sessions(calendar)), "calendar_day_imputation": False},
         "source_identities": dict(source_identities), "records": records,
         "coverage": {"universe_denominator": len(records), "liquidity_state_distribution": dict(sorted(states.items())),
                      "feature_status_distribution": feature_counts, "daily": coverage_distribution(daily_cells)},
