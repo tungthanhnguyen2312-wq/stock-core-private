@@ -8,6 +8,14 @@ The narrow file layout is the immutable Daily Session Operation directory produc
 ``release_acceptance_input.json`` there when an upstream contract exposes richer
 per-component metadata; this checker treats that document as evidence, never as a
 replacement for the operation manifest.
+
+Financial period semantics and knowledge timing are intentionally separate.  A future
+``financial_evidence_as_of_period`` is structurally impossible for a latest *actual*
+reported period, but is not evidence that future knowledge was admitted.  A knowledge
+timing violation requires a qualified availability field: direct
+``knowledge_available_at``/``effective_knowledge_at``/``known_at``, a qualified
+``knowledge_timing`` envelope, or an explicitly qualified publication timestamp.
+Materialization, generation, and retrieval times are never timing evidence by themselves.
 """
 from __future__ import annotations
 
@@ -56,6 +64,9 @@ _JSON_CANDIDATES = {
 _FUTURE_OUTCOME_STATES = frozenset({"PENDING_FUTURE_OBSERVATION", "NOT_YET_EVALUABLE", "PENDING", "UNAVAILABLE"})
 _EXACT_SIGNAL_STATES = frozenset({"CURRENT", "EXACT_SESSION", "NO_PATTERN_CURRENT_SESSION"})
 _PARTIAL_SIGNAL_STATES = frozenset({"STALE", "STALE_BUT_EXPLICITLY_LABELLED", "INSUFFICIENT_HISTORY", "UNAVAILABLE", "UNAVAILABLE_FOR_CURRENT_SESSION"})
+_DIRECT_KNOWLEDGE_TIME_FIELDS = ("knowledge_available_at", "effective_knowledge_at", "known_at")
+_QUALIFIED_TIMING_STATES = frozenset({"QUALIFIED", "CONTRACT_QUALIFIED", "EVIDENCE_KNOWLEDGE_AVAILABLE_AT"})
+_UNQUALIFIED_TIMING_FIELDS = ("materialized_at", "materialization_timestamp", "generated_at", "retrieved_at", "retrieval_timestamp", "observed_at")
 
 
 class ReleaseAcceptanceError(ValueError):
@@ -141,6 +152,67 @@ def _date_value(value: Any) -> date | None:
         return date.fromisoformat(text[:10])
     except ValueError:
         return None
+
+
+def _qualified_knowledge_timing(financial: Mapping[str, Any]) -> tuple[str | None, date | None, list[str]]:
+    """Return only timing facts whose field semantics say when evidence was knowable."""
+    for field in _DIRECT_KNOWLEDGE_TIME_FIELDS:
+        value = _date_value(financial.get(field))
+        if value:
+            return field, value, []
+    timing = _mapping(financial.get("knowledge_timing"))
+    qualification = _as_text(timing.get("status")) or _as_text(timing.get("qualification"))
+    if qualification in _QUALIFIED_TIMING_STATES:
+        for field in ("knowledge_available_at", "effective_knowledge_at", "available_at", "known_at"):
+            value = _date_value(timing.get(field))
+            if value:
+                return "knowledge_timing." + field, value, []
+    published_semantics = _as_text(financial.get("published_at_semantics")) or _as_text(financial.get("publication_timing_qualification"))
+    if published_semantics in _QUALIFIED_TIMING_STATES:
+        value = _date_value(financial.get("published_at"))
+        if value:
+            return "published_at", value, []
+    unqualified = [field for field in _UNQUALIFIED_TIMING_FIELDS if financial.get(field) is not None]
+    if financial.get("published_at") is not None:
+        unqualified.append("published_at")
+    return None, None, unqualified
+
+
+def _financial_identities(financial: Mapping[str, Any]) -> dict[str, str]:
+    fields = ("artifact_identity", "source_artifact_identity", "financial_analysis_product_identity", "financial_v2_engine_identity", "source_context_identity")
+    return {field: value for field in fields if (value := _as_text(financial.get(field)))}
+
+
+def _identity_values(value: Any) -> set[str]:
+    if text := _as_text(value):
+        return {text}
+    if isinstance(value, Mapping):
+        return {text for item in value.values() if (text := _as_text(item))}
+    return {text for item in _list(value) if (text := _as_text(item))}
+
+
+def _surface_financial_disposition(surface: Mapping[str, Any] | None, affected: set[str]) -> dict[str, Any]:
+    """Classify one consumer only from an explicit admission record or retained identity reference."""
+    if not surface:
+        return {"state": "UNPROVEN", "identity_matches": [], "explicit_state": None}
+    admission = _mapping(surface.get("financial_evidence_admission"))
+    explicit_state = _as_text(admission.get("state")) or _as_text(admission.get("status"))
+    explicit_ids = _identity_values(admission.get("artifact_identities")) | _identity_values([admission.get("artifact_identity")])
+    if explicit_state in {"EXCLUDED", "BLOCKED", "FAIL_CLOSED"} and (not explicit_ids or bool(explicit_ids & affected)):
+        return {"state": "EXCLUDED", "identity_matches": sorted(explicit_ids & affected), "explicit_state": explicit_state}
+    if explicit_state in {"ADMITTED", "AVAILABLE", "INCLUDED"} and (not explicit_ids or bool(explicit_ids & affected)):
+        return {"state": "ADMITTED", "identity_matches": sorted(explicit_ids & affected), "explicit_state": explicit_state}
+    references = _identity_values(surface.get("source_artifact_identities"))
+    references |= _identity_values(_get_path(surface, "source_artifact_identities.financial"))
+    references |= _identity_values(_get_path(surface, "financial_analysis.source_context_identity"))
+    references |= _identity_values(_get_path(surface, "financial_analysis.artifact_identity"))
+    references |= _identity_values(_get_path(surface, "lineage.source_artifact_identities"))
+    references |= _identity_values(_get_path(surface, "source.source_artifact_identities"))
+    references |= _identity_values(_get_path(surface, "source.financial_analysis.source_context_identity"))
+    matches = sorted(references & affected)
+    if matches:
+        return {"state": "ADMITTED", "identity_matches": matches, "explicit_state": explicit_state}
+    return {"state": "UNPROVEN", "identity_matches": [], "explicit_state": explicit_state}
 
 
 def _watchlist_tickers(value: Mapping[str, Any]) -> list[str]:
@@ -312,20 +384,77 @@ def _evaluate_financial(input_payload: Mapping[str, Any], brief: Mapping[str, An
     if not financial:
         return _reason_domain("EXPLICIT_PARTIAL", ["FINANCIAL_ARTIFACT_UNAVAILABLE"], {})
     reasons: list[str] = []
-    invalid = False
     release_date = _date_value(session)
     period = _as_text(financial.get("financial_evidence_as_of_period")) or _as_text(financial.get("as_of_period"))
-    known_at = _date_value(financial.get("knowledge_cutoff")) or _date_value(financial.get("known_at"))
     period_end = _date_value(period)
-    if release_date and ((known_at and known_at > release_date) or (period_end and period_end > release_date)):
-        invalid = True
-        reasons.append("FINANCIAL_KNOWLEDGE_CUTOFF_FUTURE")
+    timing_field, knowledge_available_at, unqualified_timing_fields = _qualified_knowledge_timing(financial)
+    if release_date and period_end and period_end > release_date:
+        reasons.append("FINANCIAL_PERIOD_NOT_YET_CONCLUDED")
+    if release_date and knowledge_available_at and knowledge_available_at > release_date:
+        reasons.append("FINANCIAL_KNOWLEDGE_TIMING_VIOLATION")
     status = _as_text(financial.get("status"))
     if status in {"UNAVAILABLE", "PARTIAL", "BLOCKED"}:
         reasons.append("FINANCIAL_" + status)
     if not period:
         reasons.append("FINANCIAL_AS_OF_PERIOD_MISSING")
-    return _reason_domain("INVALID" if invalid else "EXPLICIT_PARTIAL" if reasons else "EXACT_SESSION", reasons, {"financial_evidence_as_of_period": period, "knowledge_cutoff": financial.get("knowledge_cutoff") or financial.get("known_at"), "status": status}, fatal=invalid, producer_impact=invalid)
+    temporal_reasons = {"FINANCIAL_PERIOD_NOT_YET_CONCLUDED", "FINANCIAL_KNOWLEDGE_TIMING_VIOLATION"}
+    return _reason_domain(
+        "EXPLICIT_PARTIAL" if reasons else "EXACT_SESSION",
+        reasons,
+        {
+            "financial_evidence_as_of_period": period,
+            "period_state": "NOT_YET_CONCLUDED" if release_date and period_end and period_end > release_date else "CLOSED_OR_NOT_PROVEN",
+            "knowledge_timing": {
+                "state": "QUALIFIED_AFTER_CUTOFF" if release_date and knowledge_available_at and knowledge_available_at > release_date else "QUALIFIED_ON_OR_BEFORE_CUTOFF" if knowledge_available_at else "NOT_PROVEN",
+                "qualified_field": timing_field,
+                "knowledge_available_at": knowledge_available_at.isoformat() if knowledge_available_at else None,
+                "unqualified_observed_fields": unqualified_timing_fields,
+            },
+            "affected_evidence_identities": _financial_identities(financial),
+            "temporal_blocker": bool(temporal_reasons & set(reasons)),
+            "status": status,
+        },
+    )
+
+
+def _evaluate_financial_release_aggregation(
+    financial_domain: Mapping[str, Any], *, product: Mapping[str, Any] | None, brief: Mapping[str, Any] | None,
+    handoff: Mapping[str, Any] | None, dashboard: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Decide release scope only after a financial blocker is tied to retained consumers."""
+    evidence = _mapping(financial_domain.get("evidence"))
+    if not evidence.get("temporal_blocker"):
+        return {"state": "NOT_APPLICABLE", "reason_codes": [], "affected_reason_codes": [], "surfaces": {}}
+    identities = set(_mapping(evidence.get("affected_evidence_identities")).values())
+    affected_reasons = [reason for reason in _list(financial_domain.get("reason_codes")) if reason in {"FINANCIAL_PERIOD_NOT_YET_CONCLUDED", "FINANCIAL_KNOWLEDGE_TIMING_VIOLATION"}]
+    if not identities:
+        return {
+            "state": "UNPROVEN",
+            "reason_codes": ["FINANCIAL_EVIDENCE_DOWNSTREAM_DISPOSITION_UNPROVEN"],
+            "affected_reason_codes": affected_reasons,
+            "surfaces": {},
+        }
+    surfaces = {
+        "integrated_decision_product": _surface_financial_disposition(product, identities),
+        "decision_evidence_packet": _surface_financial_disposition(brief, identities),
+        "ai_handoff": _surface_financial_disposition(handoff, identities),
+        "dashboard_decision_release": _surface_financial_disposition(dashboard, identities),
+    }
+    if any(row["state"] == "ADMITTED" for row in surfaces.values()):
+        return {
+            "state": "ADMITTED",
+            "reason_codes": ["INVALID_FINANCIAL_EVIDENCE_ADMITTED_DOWNSTREAM"],
+            "affected_reason_codes": affected_reasons,
+            "surfaces": surfaces,
+        }
+    if all(row["state"] == "EXCLUDED" for row in surfaces.values()):
+        return {"state": "EXCLUDED", "reason_codes": [], "affected_reason_codes": affected_reasons, "surfaces": surfaces}
+    return {
+        "state": "UNPROVEN",
+        "reason_codes": ["FINANCIAL_EVIDENCE_DOWNSTREAM_DISPOSITION_UNPROVEN"],
+        "affected_reason_codes": affected_reasons,
+        "surfaces": surfaces,
+    }
 
 
 def _evaluate_corporate(input_payload: Mapping[str, Any], operation: Mapping[str, Any] | None, session: str | None) -> dict[str, Any]:
@@ -523,8 +652,15 @@ def evaluate_artifact_root(
         "dashboard_release": _evaluate_dashboard(dashboard.payload, dashboard_metadata.payload, session, operation_identity),
         "watchlist_authority": _evaluate_watchlist(input_payload, product, brief, dashboard.payload, authority),
     }
+    release_aggregation = _evaluate_financial_release_aggregation(
+        domains["financial_cutoff"], product=product, brief=brief, handoff=handoff, dashboard=dashboard.payload,
+    )
     if any(row["fatal_for_release"] for row in domains.values()):
         overall = "INVALID_RELEASE"
+    elif release_aggregation["state"] == "ADMITTED":
+        overall = "INVALID_RELEASE"
+    elif release_aggregation["state"] == "UNPROVEN":
+        overall = "BLOCKED"
     elif any(row["state"] == "BLOCKED" for row in domains.values()):
         overall = "BLOCKED"
     elif any(row["state"] == "EXPLICIT_PARTIAL" for row in domains.values()):
@@ -543,6 +679,7 @@ def evaluate_artifact_root(
         "current_research_state": "NOT_USABLE" if producer_invalid else "USABLE_WITH_EXPLICIT_PARTIALS" if producer_partials else "USABLE",
         "current_research_usable": not producer_invalid,
         "domains": domains,
+        "release_aggregation": release_aggregation,
         "artifacts_read": {
             name: {"path": item.relative_path, "error": item.error}
             for name, item in {**loaded, "dashboard": dashboard, "dashboard_metadata": dashboard_metadata, "acceptance_input": input_loaded}.items()
@@ -564,6 +701,7 @@ def human_summary(report: Mapping[str, Any]) -> str:
         "CANONICAL_DAILY_RELEASE_ACCEPTANCE=" + str(report.get("overall_state")),
         "SESSION=" + str(report.get("session") or "UNRESOLVED"),
         "CURRENT_RESEARCH=" + str(report.get("current_research_state")),
+        "RELEASE_AGGREGATION=" + str(_mapping(report.get("release_aggregation")).get("state") or "NOT_APPLICABLE"),
     ]
     for name in DOMAIN_KEYS:
         domain = _mapping(_mapping(report.get("domains")).get(name))

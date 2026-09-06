@@ -67,6 +67,16 @@ def _report(tmp_path: Path, **kwargs: object) -> dict:
     return evaluate_artifact_root(_fixture(tmp_path, **kwargs))
 
 
+def _financial_exclusion_overrides(identity: str) -> dict[str, dict]:
+    admission = {"financial_evidence_admission": {"state": "EXCLUDED", "artifact_identities": [identity]}}
+    return {
+        "current_daily_decision_research_product_artifact.json": dict(admission),
+        "daily_integrated_decision_brief.json": dict(admission),
+        "ai_research_session_bundle.json": dict(admission),
+        "current_decision_cockpit_projection.json": dict(admission),
+    }
+
+
 def test_coherent_exact_session_release_passes(tmp_path: Path) -> None:
     report = _report(tmp_path)
     assert report["contract_version"] == CONTRACT_VERSION
@@ -121,11 +131,102 @@ def test_valuation_session_mismatch_is_invalid(tmp_path: Path) -> None:
     assert report["overall_state"] == "INVALID_RELEASE"
 
 
-def test_future_financial_period_is_rejected(tmp_path: Path) -> None:
+def test_future_financial_period_without_downstream_lineage_is_blocked_not_called_future_knowledge(tmp_path: Path) -> None:
     report = _report(tmp_path, input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q4", "status": "AVAILABLE"}})
+    assert report["overall_state"] == "BLOCKED"
+    assert report["current_research_usable"] is True
+    assert report["domains"]["financial_cutoff"]["state"] == "EXPLICIT_PARTIAL"
+    assert "FINANCIAL_PERIOD_NOT_YET_CONCLUDED" in report["domains"]["financial_cutoff"]["reason_codes"]
+    assert "FINANCIAL_KNOWLEDGE_TIMING_VIOLATION" not in report["domains"]["financial_cutoff"]["reason_codes"]
+    assert report["domains"]["technical_target_close"]["state"] == "EXACT_SESSION"
+
+
+def test_future_financial_period_explicitly_excluded_downstream_is_release_partial(tmp_path: Path) -> None:
+    identity = "financial-evidence:q4"
+    report = _report(
+        tmp_path,
+        input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q4", "artifact_identity": identity}},
+        artifact_overrides=_financial_exclusion_overrides(identity),
+    )
+    assert report["overall_state"] == "PASS_WITH_EXPLICIT_PARTIALS"
+    assert report["release_aggregation"]["state"] == "EXCLUDED"
+    assert report["current_research_usable"] is True
+
+
+def test_future_financial_period_admitted_to_integrated_decision_invalidates_release(tmp_path: Path) -> None:
+    identity = "financial-evidence:q4"
+    report = _report(
+        tmp_path,
+        input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q4", "artifact_identity": identity}},
+        artifact_overrides={"current_daily_decision_research_product_artifact.json": {"source_artifact_identities": {"financial": identity}}},
+    )
     assert report["overall_state"] == "INVALID_RELEASE"
-    assert report["current_research_usable"] is False
-    assert "FINANCIAL_KNOWLEDGE_CUTOFF_FUTURE" in report["domains"]["financial_cutoff"]["reason_codes"]
+    assert report["release_aggregation"]["reason_codes"] == ["INVALID_FINANCIAL_EVIDENCE_ADMITTED_DOWNSTREAM"]
+
+
+def test_qualified_knowledge_available_after_cutoff_uses_true_timing_reason(tmp_path: Path) -> None:
+    identity = "financial-evidence:late-publication"
+    report = _report(
+        tmp_path,
+        input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q2", "artifact_identity": identity, "knowledge_available_at": "2026-09-05"}},
+        artifact_overrides=_financial_exclusion_overrides(identity),
+    )
+    financial = report["domains"]["financial_cutoff"]
+    assert report["overall_state"] == "PASS_WITH_EXPLICIT_PARTIALS"
+    assert "FINANCIAL_KNOWLEDGE_TIMING_VIOLATION" in financial["reason_codes"]
+    assert "FINANCIAL_PERIOD_NOT_YET_CONCLUDED" not in financial["reason_codes"]
+    assert financial["evidence"]["knowledge_timing"]["qualified_field"] == "knowledge_available_at"
+
+
+def test_true_timing_violation_excluded_before_downstream_remains_local_partial(tmp_path: Path) -> None:
+    identity = "financial-evidence:late-known"
+    report = _report(
+        tmp_path,
+        input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q2", "artifact_identity": identity, "known_at": "2026-09-05"}},
+        artifact_overrides=_financial_exclusion_overrides(identity),
+    )
+    assert report["domains"]["financial_cutoff"]["state"] == "EXPLICIT_PARTIAL"
+    assert report["overall_state"] == "PASS_WITH_EXPLICIT_PARTIALS"
+
+
+def test_qualified_publication_timestamp_can_supply_knowledge_timing(tmp_path: Path) -> None:
+    identity = "financial-evidence:qualified-publication"
+    report = _report(
+        tmp_path,
+        input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q2", "artifact_identity": identity, "published_at": "2026-09-05", "published_at_semantics": "EVIDENCE_KNOWLEDGE_AVAILABLE_AT"}},
+        artifact_overrides=_financial_exclusion_overrides(identity),
+    )
+    timing = report["domains"]["financial_cutoff"]["evidence"]["knowledge_timing"]
+    assert timing["qualified_field"] == "published_at"
+    assert timing["state"] == "QUALIFIED_AFTER_CUTOFF"
+
+
+def test_true_timing_violation_admitted_to_ai_handoff_invalidates_release(tmp_path: Path) -> None:
+    identity = "financial-evidence:late-handoff"
+    report = _report(
+        tmp_path,
+        input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q2", "artifact_identity": identity, "knowledge_available_at": "2026-09-05"}},
+        artifact_overrides={"ai_research_session_bundle.json": {"financial_analysis": {"source_context_identity": identity}}},
+    )
+    assert report["overall_state"] == "INVALID_RELEASE"
+    assert report["release_aggregation"]["state"] == "ADMITTED"
+
+
+def test_materialization_and_retrieval_times_do_not_prove_future_knowledge(tmp_path: Path) -> None:
+    report = _report(
+        tmp_path,
+        input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q2", "materialized_at": "2026-09-05T08:00:00+07:00", "retrieved_at": "2026-09-05T08:01:00+07:00"}},
+    )
+    financial = report["domains"]["financial_cutoff"]
+    assert report["overall_state"] == "PASS"
+    assert financial["evidence"]["knowledge_timing"]["state"] == "NOT_PROVEN"
+    assert "FINANCIAL_KNOWLEDGE_TIMING_VIOLATION" not in financial["reason_codes"]
+
+
+def test_closed_prior_financial_period_has_no_temporal_blocker(tmp_path: Path) -> None:
+    report = _report(tmp_path, input_overrides={"financial": {"financial_evidence_as_of_period": "2026-Q2", "status": "AVAILABLE"}})
+    assert report["overall_state"] == "PASS"
+    assert report["domains"]["financial_cutoff"]["reason_codes"] == []
 
 
 def test_explicitly_historical_corporate_context_is_partial_not_invalid(tmp_path: Path) -> None:
