@@ -1,5 +1,20 @@
 # Stock Lookup — Operational State
 
+**Canonical Trades toolchain restoration and governed session calendar fix V1 (2026-09-06):**
+`CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1 = COMPLETE` at local
+checkpoint `6dce959`, under the explicit owner authorization for this bounded source-code repair.
+The Task-160 reconciliation cohort builder, canonical-columnar materializer, and supporting module
+are restored on current main by a minimal manual port of the unmerged historical candidate; no
+branch merge or cherry-pick occurred. They preserve reconciliation-selected raw-page lineage,
+confirmed empty evidence, 27 remaining failures, deterministic identities, schema, and verified
+idempotence. A deterministic governed-session ledger is now separate from Canonical Trades
+availability: 2026-08-25 and 2026-09-04 are `TARGET_SESSION_VALID`, while their retained Trades
+state is `REQUIRED_SESSION_CANONICAL_DATA_MISSING` because the corpus ends on 2026-08-11. The
+65-session union is confirmed; exact ADTV20/60 remains 0, no future data was admitted, and no
+liquidity/sizing/PIT/RAW_AS_TRADED/provider/authority change occurred. Evidence:
+`operations-review/canonical-trades-toolchain-restoration-session-calendar-fix-v1-20260906/`.
+Next gate: `OWNER_REVIEW_FOR_ANTIGRAVITY_DATA_RESUME`.
+
 **Market-wide historical matched liquidity and ADTV foundation V1 (2026-09-05):**
 `MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE`, implemented at local checkpoint `8582810`. The explicit empty-queue override

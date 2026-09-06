@@ -1,5 +1,31 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-06 - Canonical Trades Toolchain Restoration And Governed Session Calendar Fix V1
+
+`CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1 = COMPLETE`
+(`push = NO`, source checkpoint `6dce959`). The owner authorization covers this source-code repair
+only; it does not authorize the successor acquisition.
+
+1. The historical Task-160 adapter branch was candidate prior art, not current authority. Git proves
+   `2b7b387` is not an ancestor of current main, and no current-main equivalent existed. The three
+   minimal tools were manually ported and adapted to the present `atomic_io` surface and foreground
+   execution; no merge, rebase, or cherry-pick occurred.
+2. The restored contract preserves `REMAINING_FAILED` as explicit coverage rather than data,
+   preserves verified `*_SUCCESS_EMPTY` pages as confirmed no-trade, and retains provider/dataset,
+   board ID, timestamps, source-run/page/payload lineage, and deterministic raw-record identity.
+   It does not zero-fill, delete failures, or promote provider semantics.
+3. Canonical Trades coverage is not a trading calendar. The old liquidity runner passed the
+   40-session `composite_unit_coverage.session_universe` as its calendar, so an absent partition
+   produced the misleading `TARGET_SESSION_NOT_IN_GOVERNED_CALENDAR`. The new governed-session
+   contract gives a valid target `TARGET_SESSION_VALID` and independently reports
+   `REQUIRED_SESSION_CANONICAL_DATA_MISSING`.
+4. The explicitly governed 2026 replay ledger confirms the 65-session union from 2026-06-03 through
+   2026-09-04. Both requested targets are valid; the retained Trades endpoint is still 2026-08-11,
+   so exact ADTV20/60 stays zero and temporal replay admits zero future Trades or liquidity values.
+   There is no liquidity, execution, sizing, PIT, RAW_AS_TRADED, provider, or data-authority change.
+
+Evidence: `operations-review/canonical-trades-toolchain-restoration-session-calendar-fix-v1-20260906/`.
+
 ## 2026-09-05 - Market-Wide Historical Matched Liquidity And ADTV Foundation V1
 
 `MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 = COMPLETE /

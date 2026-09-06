@@ -1,0 +1,18 @@
+{
+  "milestone": "CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1",
+  "scope": "Source/toolchain restoration only. No acquisition has been executed or authorized by this handoff.",
+  "current_acquisition_entrypoint": "python tools/bulk_ingest_dnse_intraday_history_raw.py",
+  "current_reconciler_entrypoint": "python tools/build_dnse_trades_reconciliation_composite_cohort.py",
+  "current_materializer_entrypoint": "python tools/materialize_dnse_trades_canonical_shadow.py",
+  "governed_calendar": {"module": "governed_trading_session_calendar.py", "function": "load_governed_trading_session_calendar", "config": "config/governed_trading_session_calendar_v1.json", "identity": "governed_trading_session_calendar:53a8551a958d12fd542323fcc3f27385224da348302edc0384e68797adea3985"},
+  "required_session_planner": {"function": "GovernedTradingSessionCalendar.resolve_window", "contract": "valid session x eligible instrument, with raw/checkpoint unit status retained separately", "required_union": "2026-06-03 through 2026-09-04; 65 sessions"},
+  "sanctioned_roots": {"raw": "C:/Projects/StockLookup/operations-review/dnse-market-wide-trades-multi-session-v1-20260812", "raw_repair": "C:/Projects/StockLookup/operations-review/dnse-trades-targeted-repair-live-v1-20260815", "reconciliation": "C:/Projects/StockLookup/operations-review/trades-post-repair-reconciliation-v1-20260815", "materialized": "C:/Projects/StockLookup/operations-review/task-160-canonical-materialization-v1-20260817/shadow", "known_failure_manifest": "C:/Projects/StockLookup/operations-review/task-160-controlled-rerun-v1-20260817/composite/composite_unit_coverage.json", "stage_a_checkpoint": "C:/Projects/StockLookup/operations-review/trades-final-composite-corpus-checkpoint-v1-20260815/final_composite_corpus_checkpoint.json"},
+  "safe_no_network_validation_command": "python tools/bulk_ingest_dnse_intraday_history_raw.py --dataset trades_history --session-date <YYYY-MM-DD> --universe-snapshot <eligible-equity-universe.parquet>",
+  "real_acquisition_command_template": "python tools/bulk_ingest_dnse_intraday_history_raw.py --dataset trades_history --session-date <YYYY-MM-DD> --universe-snapshot <eligible-equity-universe.parquet> --runtime-root <new-raw-runtime-root> --live",
+  "reconciliation_command_template": "python tools/build_dnse_trades_reconciliation_composite_cohort.py --reconciliation-root <reconciliation-root> --output-root <new-composite-root> --stage-a-checkpoint <stage-a-checkpoint> --final-review-root <final-review-root>",
+  "materialization_command_template": "python tools/materialize_dnse_trades_canonical_shadow.py --cohort-manifest <new-composite-root>/composite_cohort_manifest.json --shadow-root <new-shadow-root> --workers 1",
+  "liquidity_replay_command": "python tools/run_market_wide_historical_matched_liquidity.py --out-dir <evidence-root> --twice",
+  "non_negotiable_states": {"known_failed": "REMAINING_FAILED remains an unselected coverage record", "confirmed_no_trade": "*_SUCCESS_EMPTY retains verified empty-page evidence", "completed": "successful checkpoint units are skipped by the existing acquisition runner; do not reacquire them"},
+  "current_data_limit": "Canonical Trades retained endpoint remains 2026-08-11. Valid 2026-08-25 and 2026-09-04 targets report REQUIRED_SESSION_CANONICAL_DATA_MISSING, not invalid calendar.",
+  "secrets": "No secrets are stored in this handoff."
+}

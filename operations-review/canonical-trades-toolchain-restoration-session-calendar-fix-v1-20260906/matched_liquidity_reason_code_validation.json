@@ -1,0 +1,9 @@
+{
+  "runner": "python tools/run_market_wide_historical_matched_liquidity.py --out-dir operations-review/canonical-trades-toolchain-restoration-session-calendar-fix-v1-20260906/liquidity-replay --twice",
+  "terminal_status": "PARTIAL_BY_EVIDENCE",
+  "calendar_identity": "governed_trading_session_calendar:53a8551a958d12fd542323fcc3f27385224da348302edc0384e68797adea3985",
+  "2026-09-04": {"target_session_calendar_state": "TARGET_SESSION_VALID", "target_session_data_availability": "REQUIRED_SESSION_CANONICAL_DATA_MISSING", "ADTV20_exact_count": 0, "ADTV60_exact_count": 0, "required_blockers": ["REQUIRED_SESSION_CANONICAL_DATA_MISSING", "MISSING_OR_NOT_ACQUIRED_SESSION_IN_WINDOW"], "false_calendar_blocker_absent": true},
+  "2026-08-25": {"target_session_calendar_state": "TARGET_SESSION_VALID", "target_session_data_availability": "REQUIRED_SESSION_CANONICAL_DATA_MISSING", "ADTV20_exact_count": 0, "ADTV60_exact_count": 0, "required_blockers": ["REQUIRED_SESSION_CANONICAL_DATA_MISSING", "MISSING_OR_NOT_ACQUIRED_SESSION_IN_WINDOW"], "false_calendar_blocker_absent": true},
+  "weekend_2026-08-30": "TARGET_SESSION_NOT_IN_GOVERNED_CALENDAR",
+  "holiday_2026-09-02": "TARGET_SESSION_NOT_IN_GOVERNED_CALENDAR"
+}

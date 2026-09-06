@@ -1,0 +1,10 @@
+{
+  "classification": "NEVER_MERGED_FEATURE_BRANCH",
+  "historical_branch": "feature/trades-canonical-columnar-shadow-v1",
+  "historical_tip": "2b7b38772e16c434c8adf5288cbc46ef0f7f4c02",
+  "current_main": "68884935224323b3b96931a7fbce33f30e419384",
+  "merge_base": "f9e5c1b26d0737e19ddd59535bac639399c7b8d4",
+  "historical_tip_is_main_ancestor": false,
+  "evidence": "The three required source files exist on the local feature ref and the reported commit exists locally, but git merge-base --is-ancestor returns 1. Current main retains only downstream lineage references, including SOURCE_GENERATOR_NOT_IN_CURRENT_MAIN_ANCESTRY.",
+  "conclusion": "The accepted retained outputs were left behind after the generator branch was not merged. No evidence establishes an intentional supersession by a current-main equivalent."
+}

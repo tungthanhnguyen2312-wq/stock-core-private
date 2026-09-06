@@ -1,0 +1,21 @@
+{
+  "branch_exists": true,
+  "commit_exists": true,
+  "branch": "feature/trades-canonical-columnar-shadow-v1",
+  "tip": "2b7b38772e16c434c8adf5288cbc46ef0f7f4c02",
+  "merge_base_with_current_main": "f9e5c1b26d0737e19ddd59535bac639399c7b8d4",
+  "relevant_commits": [
+    "5714ed0162648c2c9430283b3bc0fa6edda43aec Add trades canonical columnar shadow",
+    "e7ab5a2c62f22ce26e1b566fead656c2e2cd4d73 Add trades canonical columnar shadow",
+    "1f8195c24364ebb02d03e289ea82990e540900ee feat(trades): add reconciliation-aware canonical adapter",
+    "53c8b9a3eb96b3e94b478a1ca83937e868f2af81 fix(trades): bind Stage-A writer attestation into Task 160",
+    "2b7b38772e16c434c8adf5288cbc46ef0f7f4c02 fix(trades): eliminate O(units x pages) rescan in Task 160 selected-page resolution"
+  ],
+  "manual_port": [
+    {"historical": "dnse_trades_canonical_shadow.py", "current": "dnse_trades_canonical_shadow.py", "adaptation": "uses current atomic_io surface and foreground sequential materialization; preserves schema, status, lineage, attestation, identity, and idempotence contracts"},
+    {"historical": "tools/build_dnse_trades_reconciliation_composite_cohort.py", "current": "tools/build_dnse_trades_reconciliation_composite_cohort.py", "adaptation": "current import path and terminal status record"},
+    {"historical": "tools/materialize_dnse_trades_canonical_shadow.py", "current": "tools/materialize_dnse_trades_canonical_shadow.py", "adaptation": "current import path and CLI compatibility"},
+    {"historical": "tests/test_dnse_trades_canonical_shadow.py", "current": "tests/test_dnse_trades_canonical_shadow.py", "adaptation": "focused current-contract fixtures for known failures, no-trade, board identity, lineage, and idempotence"}
+  ],
+  "excluded": ["No branch merge", "No cherry-pick", "No stale roadmap/docs", "No historical raw/runtime root hard-coding"]
+}

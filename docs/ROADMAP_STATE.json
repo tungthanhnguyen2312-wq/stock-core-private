@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.05.9",
+  "roadmap_version": "2026.09.06.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,25 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1",
+    "milestone": "CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE",
+      "checkpoint": "6dce959",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / TOOLCHAIN_REPRODUCIBILITY_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1 directive (2026-09-06)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1",
+      "notes": "Complete source repair only. Current main restores the Task-160 reconciler/materializer and a governed session contract. The 65-session union is confirmed. 2026-08-25 and 2026-09-04 are valid sessions but Canonical Trades data is missing after 2026-08-11, so exact ADTV20/60 remains zero and no future data is admitted. No acquisition, authority, provider, PIT/RAW_AS_TRADED, execution, sizing, policy, database, Dashboard, publish, deploy, or push occurred. Evidence: operations-review/canonical-trades-toolchain-restoration-session-calendar-fix-v1-20260906/. Next gate: OWNER_REVIEW_FOR_ANTIGRAVITY_DATA_RESUME."
+    },
     {
       "milestone_id": "PROSPECTIVE_DECISION_RETENTION_AND_OUTCOME_MATURATION_V1",
       "state": "COMPLETE",
@@ -895,7 +909,7 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / PARTIAL_BY_EVIDENCE",
       "starting_checkpoint": "bcc6a1dfec8d7923b7c61584f78beef9510c09fe",
-      "checkpoint": "HEAD",
+      "checkpoint": "858281039e3ac2f248f4c86d3f58ad506684b2b2",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "CURRENT_RESEARCH_EVIDENCE_CONTEXT_ONLY / NO_EXECUTION_OR_POSITION_SIZING_AUTHORITY",

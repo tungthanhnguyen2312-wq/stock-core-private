@@ -1,0 +1,10 @@
+{
+  "target_session": "2026-08-25",
+  "target_session_calendar_state": "TARGET_SESSION_VALID",
+  "canonical_trades_data_availability": "REQUIRED_SESSION_CANONICAL_DATA_MISSING",
+  "retained_canonical_endpoint": "2026-08-11",
+  "future_trade_leak_admitted": 0,
+  "future_liquidity_feature_leak_admitted": 0,
+  "verdict": "PASS",
+  "limitation": "Exact ADTV20/60 remains unavailable because the valid target and its required window are not retained in Canonical Trades. No current data was used to fill any historical hole."
+}

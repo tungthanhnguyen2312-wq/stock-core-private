@@ -1,0 +1,16 @@
+{
+  "method": "retained-manifest identity and schema validation; no production materialization rewrite",
+  "materialization_manifest": "C:/Projects/StockLookup/operations-review/task-160-canonical-materialization-v1-20260817/shadow/materialization_manifest.json",
+  "composite_manifest_sha256_matches_materialization_manifest": true,
+  "retained_session_count": 40,
+  "retained_session_range": ["2026-06-17", "2026-08-11"],
+  "canonical_rows": 18109141,
+  "source_records": 18109141,
+  "quarantined_records": 0,
+  "duplicate_identities": 0,
+  "canonical_schema_matches_restored_contract": true,
+  "logical_status_counts": {"ORIGINAL_SUCCESS": 32808, "ORIGINAL_SUCCESS_EMPTY": 24539, "REPAIR_RECOVERED_SUCCESS": 5020, "REPAIR_RECOVERED_SUCCESS_EMPTY": 4006, "REMAINING_FAILED": 27},
+  "final_logical_success": 66373,
+  "final_logical_failure": 27,
+  "verdict": "COMPATIBLE"
+}

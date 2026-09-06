@@ -1,0 +1,9 @@
+{
+  "classification": "CALENDAR_USES_CANONICAL_TRADES_OBSERVED_SESSIONS_ONLY",
+  "affected_consumer": "tools/run_market_wide_historical_matched_liquidity.py",
+  "before": "calendar = unit_payload['session_universe']; this is the 40-session Task-160 materialization coverage list ending 2026-08-11",
+  "effect": "A valid session lacking Canonical Trades was classified TARGET_SESSION_NOT_IN_GOVERNED_CALENDAR.",
+  "after": "The runner loads config/governed_trading_session_calendar_v1.json through governed_trading_session_calendar.py. Materialization coverage remains data availability only.",
+  "reason_code_contract": {"valid_target": "TARGET_SESSION_VALID", "missing_target_data": "REQUIRED_SESSION_CANONICAL_DATA_MISSING", "invalid_target": "TARGET_SESSION_NOT_IN_GOVERNED_CALENDAR"},
+  "no_weekday_or_holiday_algorithm": true
+}

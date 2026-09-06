@@ -1,5 +1,18 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Canonical Trades toolchain restoration and governed session calendar fix V1 (2026-09-06):**
+`CANONICAL_TRADES_TOOLCHAIN_RESTORATION_AND_GOVERNED_SESSION_CALENDAR_FIX_V1 = COMPLETE` at local
+checkpoint `6dce959`. Current main now carries the minimum Task-160 reconciliation and shadow
+materialization toolchain, manually ported from the unmerged historical candidate without merging
+or cherry-picking its branch. The reconciler/materializer preserve terminal logical-unit state,
+empty evidence, failures, board/time/source lineage, content identities, and idempotence. The
+matched-liquidity runner now uses one explicit governed analytical session ledger rather than its
+observed Canonical Trades partitions. Therefore 2026-08-25 and 2026-09-04 are valid targets but
+remain data-missing after the 2026-08-11 retained endpoint; ADTV20/60 is still zero with no future
+leak or authority promotion. The 65-session required union is confirmed. Next gate is owner review
+for Anti-Gravity data resumption only. Evidence:
+`operations-review/canonical-trades-toolchain-restoration-session-calendar-fix-v1-20260906/`.
+
 **Market-wide historical matched liquidity and ADTV foundation V1 (2026-09-05):**
 `MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 = COMPLETE /
 PARTIAL_BY_EVIDENCE` at local checkpoint `8582810`, under explicit
