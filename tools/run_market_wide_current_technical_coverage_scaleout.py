@@ -226,8 +226,8 @@ def run_all(*, baseline: Mapping, snapshot: Mapping, out: Path) -> None:
     artifact = build_recovery_artifact(
         baseline_artifact=baseline, p3f9b_snapshot=snapshot,
         batch_records=[{"records": records, "history_rate_governor": diagnostic}],
+        history_recovery_runtime=diagnostic,
     )
-    artifact["operational_summary"]["HISTORY_RECOVERY_RUNTIME"] = diagnostic
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(artifact, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     print(output)

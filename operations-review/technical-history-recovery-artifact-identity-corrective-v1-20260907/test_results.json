@@ -1,0 +1,25 @@
+{
+  "commands": [
+    "python -m pytest tests/test_run_market_wide_current_technical_coverage_scaleout.py tests/test_market_wide_current_technical_coverage_scaleout.py tests/test_market_wide_current_descriptive_research.py tests/test_export_ai_bundle_market_wide_current_descriptive_research.py tests/test_historical_series_failover.py -q",
+    "python -m py_compile market_wide_current_technical_coverage_scaleout.py tools/run_market_wide_current_technical_coverage_scaleout.py tests/test_run_market_wide_current_technical_coverage_scaleout.py",
+    "git diff --check",
+    "python tools/stocklookup_roadmap.py --check"
+  ],
+  "pytest_result": "59 passed in 2.17s",
+  "new_regression_test": "tests/test_run_market_wide_current_technical_coverage_scaleout.py::test_run_all_produces_a_self_consistent_artifact_that_downstream_accepts_and_rejects_when_mutated",
+  "regression_test_verified_against_pre_fix_code": true,
+  "regression_test_verification_method": "Set aside only the two source files (market_wide_current_technical_coverage_scaleout.py, tools/run_market_wide_current_technical_coverage_scaleout.py) via a uniquely tagged git stash entry, leaving the new test in place; ran the new test alone -- it failed with AssertionError: stored artifact_sha256 != recomputed artifact_sha256, reproducing the exact defect class. Reapplied the stash (git stash apply <sha>, not pop) and dropped it once confirmed identical to the working tree.",
+  "py_compile": "PASS (no output)",
+  "git_diff_check": "PASS (no output)",
+  "roadmap_check": {
+    "drift_check": "PASS",
+    "checks": {
+      "multiple_active_writers": "PASS",
+      "dependency_consistency": "PASS",
+      "checkpoint_existence": "PASS",
+      "stale_next_pointers": "PASS",
+      "git_worktree_consistency": "WARNING (expected: unallowlisted tracked-file change warnings for exactly the 3 files this milestone edited -- market_wide_current_technical_coverage_scaleout.py, tools/run_market_wide_current_technical_coverage_scaleout.py, tests/test_run_market_wide_current_technical_coverage_scaleout.py)"
+    }
+  },
+  "unrelated_pre_existing_failures_observed": "NONE (no broader test run was performed beyond the directly adjacent modules listed above, per scope control -- this milestone does not fix or classify unrelated fixtures)"
+}

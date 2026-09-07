@@ -1,0 +1,20 @@
+{
+  "corrective_semantics": {
+    "principle": "Artifact identity must cover the complete, final canonical payload. HISTORY_RECOVERY_RUNTIME is not marked non-canonical metadata anywhere in the existing contract (grep for HISTORY_RECOVERY_RUNTIME across the repo before this fix returns only the single mutation site in tools/run_market_wide_current_technical_coverage_scaleout.py::run_all) -- it is a genuine field of the persisted artifact and must be present before content_identity() is computed.",
+    "order_before_fix": [
+      "1. build_recovery_artifact() constructs the artifact dict and returns {**artifact, **content_identity(artifact)} -- identity finalized here, WITHOUT HISTORY_RECOVERY_RUNTIME.",
+      "2. run_all() then does artifact['operational_summary']['HISTORY_RECOVERY_RUNTIME'] = diagnostic -- payload mutated AFTER identity was finalized.",
+      "3. run_all() writes the now-inconsistent artifact to disk."
+    ],
+    "order_after_fix": [
+      "1. run_all() computes `diagnostic` (the Vnstock rate-governor summary) exactly as before.",
+      "2. run_all() calls build_recovery_artifact(..., history_recovery_runtime=diagnostic).",
+      "3. build_recovery_artifact() merges HISTORY_RECOVERY_RUNTIME into operational_summary as part of constructing the artifact dict, THEN calls content_identity(artifact) exactly once over the complete final payload.",
+      "4. run_all() writes the now self-consistent artifact to disk; no post-construction mutation occurs."
+    ],
+    "second_hash_convention_introduced": false,
+    "existing_helper_reused": "market_wide_current_technical_coverage_scaleout.content_identity() (unchanged)",
+    "second_path_unaffected": "build_recovery_artifact(history_recovery_runtime=None) (the default) preserves the exact prior artifact shape/identity for the --batch/--consolidate path and for the two direct build_recovery_artifact() unit tests in tests/test_market_wide_current_technical_coverage_scaleout.py, which do not pass this new keyword-only argument."
+  },
+  "downstream_consumer_change": "NONE. market_wide_current_descriptive_research.build_artifact() and its TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH fail-closed check are untouched by this corrective. A negative test (mutate the artifact after this fix's identity computation, i.e. simulate a genuinely corrupt/tampered artifact) still raises TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH -- see test step 5 in the new regression test."
+}

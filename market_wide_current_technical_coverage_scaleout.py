@@ -115,7 +115,8 @@ def recovery_record(*, ticker: str, response: Mapping[str, Any], target_session:
 
 
 def build_recovery_artifact(*, baseline_artifact: Mapping[str, Any], p3f9b_snapshot: Mapping[str, Any],
-                            batch_records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+                            batch_records: Sequence[Mapping[str, Any]],
+                            history_recovery_runtime: Mapping[str, Any] | None = None) -> dict[str, Any]:
     candidates = recovery_candidates(baseline_artifact=baseline_artifact, p3f9b_snapshot=p3f9b_snapshot)
     target = p3f9b_snapshot["resolved_completed_session"]
     flattened: dict[str, Mapping[str, Any]] = {}
@@ -169,6 +170,7 @@ def build_recovery_artifact(*, baseline_artifact: Mapping[str, Any], p3f9b_snaps
             "HISTORY_NETWORK_ATTEMPTS": dict(sorted(history_network_attempts.items())),
             "HISTORY_CACHE_REUSE": sum(1 for batch in batch_records if batch.get("reused_existing_batch")),
             "HISTORY_FITNESS_BLOCKERS": dict(sorted(history_fitness_blockers.items())),
+            **({"HISTORY_RECOVERY_RUNTIME": history_recovery_runtime} if history_recovery_runtime is not None else {}),
         },
         "recovered_history_overrides": recovered,
         "records": {ticker: dict(record) for ticker, record in sorted(flattened.items())},

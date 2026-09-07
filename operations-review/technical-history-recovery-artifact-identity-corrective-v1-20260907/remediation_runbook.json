@@ -1,0 +1,26 @@
+{
+  "strategy": "RERUN_FROM_CLEAN_SOURCE_ARTIFACT",
+  "invalid_retained_artifact": {
+    "target_session": "2026-09-07",
+    "stored_sha_prefix": "07cbc638...",
+    "recomputed_sha_prefix": "b26c5723...",
+    "disposition": "RETAINED_AS_IS, UNCHANGED, UNDELETED. This is immutable historical evidence of the failed 2026-09-07 recovery attempt. It must never be patched, re-signed, or normalized in place to make its stored and recomputed hashes agree post hoc."
+  },
+  "next_steps_for_a_later_execution_milestone": [
+    "1. Confirm this corrective (fix/technical-recovery-artifact-identity-v1) has been reviewed and merged to main.",
+    "2. Re-run tools/run_market_wide_current_technical_coverage_scaleout.py --all against the same baseline research artifact and the same (or a freshly resolved) P3F9B exact-session snapshot for 2026-09-07 under the corrected code. This produces a NEW recovery artifact at a NEW, self-consistent artifact_identity -- it does not overwrite or reconcile the old invalid one; the old one lives at its own retained evidence path from the failed attempt and the new one is written fresh.",
+    "3. Feed the new, self-consistent recovery artifact into market_wide_current_descriptive_research.build_artifact() for 2026-09-07; TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH should no longer trigger for a genuinely finalized artifact.",
+    "4. Proceed with the previously-blocked 2026-09-07 session freeze only after that downstream acceptance is confirmed, following the existing completion-gate reason codes already recorded (EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR, WORKING_DATE_IDENTITY_CONFIRMED_OR_RETAINED)."
+  ],
+  "explicitly_out_of_scope_for_this_corrective_milestone": [
+    "No DNSE network acquisition was performed.",
+    "No 2026-09-07 session completion was attempted or written.",
+    "No completed_sessions write occurred.",
+    "The protected Producer registry was not modified.",
+    "No governed-calendar projection writer was implemented.",
+    "Trades 2026-09-07, FHSC, G1/ADTV, and Daily publication were not run.",
+    "The Dashboard was not modified.",
+    "Technical calculation semantics were not changed."
+  ],
+  "owner_review_gate": "OWNER_REVIEW_THEN_CURRENT_SESSION_RERUN"
+}

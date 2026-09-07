@@ -1,0 +1,28 @@
+{
+  "milestone": "TECHNICAL_HISTORY_RECOVERY_ARTIFACT_IDENTITY_CORRECTIVE_V1",
+  "target_session_blocked": "2026-09-07",
+  "handoff_reported_hashes": {
+    "stored_sha_prefix": "07cbc638...",
+    "recomputed_sha_prefix": "b26c5723...",
+    "downstream_error": "TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH",
+    "downstream_consumer": "market_wide_current_descriptive_research.build_artifact"
+  },
+  "confirmed_root_cause": {
+    "file": "tools/run_market_wide_current_technical_coverage_scaleout.py",
+    "function": "run_all",
+    "sequence_before_fix": [
+      "artifact = build_recovery_artifact(...)  # computes and stamps artifact_sha256/artifact_identity via content_identity()",
+      "artifact[\"operational_summary\"][\"HISTORY_RECOVERY_RUNTIME\"] = diagnostic  # mutates the payload AFTER identity was already finalized",
+      "output.write_text(json.dumps(artifact, ...))  # persists a payload whose bytes no longer match its own stored artifact_sha256"
+    ],
+    "why_downstream_fails_closed": "market_wide_current_descriptive_research.build_artifact() calls content_identity(technical_history_recovery_artifact) (a generic whole-payload hash over every key except artifact_sha256/artifact_identity) and compares it to the stored artifact_sha256. Because HISTORY_RECOVERY_RUNTIME was added after that hash was computed, the fresh recomputation always disagrees with the stored value for every --all run.",
+    "scope_of_defect": "Only the --all (run_all) orchestration path is affected. The --batch/--consolidate path (run_batch + consolidate) never adds HISTORY_RECOVERY_RUNTIME at all, so it was never exposed to this mutation-after-identity bug (a separate, pre-existing shape inconsistency between the two paths, out of scope for this corrective milestone)."
+  },
+  "reproduction_method": "A new focused test (tests/test_run_market_wide_current_technical_coverage_scaleout.py::test_run_all_produces_a_self_consistent_artifact_that_downstream_accepts_and_rejects_when_mutated) drives the real runner.run_all() boundary with a monkeypatched DNSE fetch (no network) for one ticker (AAA). Verified the test fails against the pre-fix code (temporarily set aside via a tagged git stash, then reapplied) with a genuine stored-vs-recomputed hash mismatch, then passes against the corrected code.",
+  "local_controlled_reproduction_hashes": {
+    "note": "Different input fixture than the live 2026-09-07 handoff, but the same defect class; hashes will not match the handoff's own prefixes.",
+    "stored_sha256_before_fix": "764b621462c97b732464cc4a43984c1907256d68c355619cb8080bf4fc55327d",
+    "recomputed_sha256_before_fix": "4fa26f0b735c977c9d150662658c5b2b78709f1e8eb5823f2f68b0e2105620ba",
+    "match_after_fix": true
+  }
+}
