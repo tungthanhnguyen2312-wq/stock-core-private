@@ -98,6 +98,15 @@ def _load(path: Path) -> dict[str, Any] | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+class TechnicalRecoveryArtifactResolutionError(ValueError):
+    """The exact-session technical-recovery evidence has no unambiguous valid input."""
+
+    def __init__(self, reason_code: str, resolution: Mapping[str, Any]) -> None:
+        self.reason_code = reason_code
+        self.resolution = dict(resolution)
+        super().__init__(reason_code)
+
+
 def _rel(root: Path, path: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
@@ -105,34 +114,77 @@ def _rel(root: Path, path: Path) -> str:
         return path.as_posix()
 
 
+def _technical_recovery_revalidated_path(technical_recovery_path: Path) -> Path:
+    """The sole prospective replacement namespace created by this Level-2 producer.
+
+    This is deliberately an exact sibling path, not a directory scan, latest lookup, mtime
+    comparison, or lexical selection.  ``materialize_independent_components()`` creates this
+    namespace only after rejecting an occupied canonical artifact, preserving the old bytes.
+    """
+    return technical_recovery_path.parent.parent / (
+        f"{technical_recovery_path.parent.name}-revalidated"
+    ) / technical_recovery_path.name
+
+
+def _technical_recovery_validation(
+    path: Path, *, session: str, p3f9b_snapshot_identity: str | None,
+    expected_artifact_identity: str | None = None,
+) -> dict[str, Any]:
+    """Validate one exact technical-recovery candidate against its own contract and lineage."""
+    artifact = _load(path)
+    result: dict[str, Any] = {
+        "path": path,
+        "valid": False,
+        "reason_code": None,
+        "stored_artifact_sha256": None,
+        "stored_artifact_identity": None,
+        "recomputed_artifact_sha256": None,
+        "recomputed_artifact_identity": None,
+    }
+    if not isinstance(artifact, Mapping):
+        result["reason_code"] = "TECHNICAL_RECOVERY_ARTIFACT_UNAVAILABLE"
+        return result
+
+    # Use the recovery producer's own content-identity helper so both the digest and its
+    # contract-qualified identity are independently recomputed.  The descriptive-research
+    # consumer checks the same digest; this additionally proves the producer identity field.
+    from market_wide_current_technical_coverage_scaleout import content_identity
+    recomputed = content_identity(artifact)
+    result.update({
+        "stored_artifact_sha256": artifact.get("artifact_sha256"),
+        "stored_artifact_identity": artifact.get("artifact_identity"),
+        "recomputed_artifact_sha256": recomputed["artifact_sha256"],
+        "recomputed_artifact_identity": recomputed["artifact_identity"],
+    })
+    if artifact.get("artifact_sha256") != recomputed["artifact_sha256"]:
+        result["reason_code"] = "TECHNICAL_RECOVERY_STORED_HASH_MISMATCH"
+        return result
+    if artifact.get("artifact_identity") != recomputed["artifact_identity"]:
+        result["reason_code"] = "TECHNICAL_RECOVERY_STORED_IDENTITY_MISMATCH"
+        return result
+    if artifact.get("target_session") != session:
+        result["reason_code"] = "TECHNICAL_RECOVERY_TARGET_SESSION_MISMATCH"
+        return result
+    source_lineage = artifact.get("source_lineage")
+    if not isinstance(source_lineage, Mapping) or source_lineage.get("p3f9b_snapshot_identity") != p3f9b_snapshot_identity:
+        result["reason_code"] = "TECHNICAL_RECOVERY_P3F9B_LINEAGE_MISMATCH"
+        return result
+    if expected_artifact_identity is not None and artifact.get("artifact_identity") != expected_artifact_identity:
+        result["reason_code"] = "TECHNICAL_RECOVERY_FROZEN_LINEAGE_IDENTITY_MISMATCH"
+        return result
+    result["valid"] = True
+    result["reason_code"] = "VALID"
+    return result
+
+
 def _valid_technical_recovery_cache(
     tech_out: Path, *, session: str, p3f9b_snapshot_identity: str | None,
 ) -> Path | None:
-    """Return ``tech_out`` if it is a genuine reuse candidate, else ``None``.
-
-    Existence alone is not proof of validity: a technical-recovery artifact written by the
-    pre-fix producer (before 0a0fd2d, "fix(technical): finalize recovery artifact before
-    identity") has bytes on disk whose recomputed content hash disagrees with its own stored
-    ``artifact_sha256``. ``market_wide_current_descriptive_research.build_artifact()`` already
-    recomputes and rejects that mismatch (``TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH``); this
-    reuses the exact same ``content_identity()`` convention -- not a second hashing scheme -- so a
-    stale artifact is caught here, before it is ever handed downstream, instead of only there.
-    Session and P3F9B-snapshot lineage are checked with the identical fields
-    ``build_artifact()`` itself requires (``target_session`` /
-    ``source_lineage.p3f9b_snapshot_identity``).
-    """
-    artifact = _load(tech_out)
-    if not isinstance(artifact, Mapping):
-        return None
-    from market_wide_current_descriptive_research import content_identity
-    if artifact.get("artifact_sha256") != content_identity(artifact)["artifact_sha256"]:
-        return None
-    if artifact.get("target_session") != session:
-        return None
-    source_lineage = artifact.get("source_lineage")
-    if not isinstance(source_lineage, Mapping) or source_lineage.get("p3f9b_snapshot_identity") != p3f9b_snapshot_identity:
-        return None
-    return tech_out
+    """Compatibility wrapper for the Level-2 cache producer's reuse check."""
+    validation = _technical_recovery_validation(
+        tech_out, session=session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+    )
+    return tech_out if validation["valid"] else None
 
 
 def _artifact_identity(payload: Mapping[str, Any] | None) -> str | None:
@@ -247,6 +299,151 @@ def session_artifact_paths(root: Path, session: str) -> dict[str, Path]:
         "financial_analysis_product": ops / f"financial-analysis-product-v2-{nodash}" / "financial_analysis_product_artifact.json",
         "current_valuation_evaluated": ops / f"financial-analysis-product-v2-{nodash}" / "current_research_valuation_context_artifact.json",
     }
+
+
+def _frozen_technical_recovery_identity(
+    root: Path, session: str, *, p3f9b_snapshot_identity: str | None,
+) -> str | None:
+    """Return the technical identity already bound by frozen Daily descriptive lineage.
+
+    A completed-session registry does not carry a separate technical-recovery path.  It does,
+    however, freeze the exact descriptive artifact identity, whose ``input_lineage`` carries the
+    recovery identity actually consumed by that Daily.  This is the strongest available authority
+    for a completed session.  Sessions without such a frozen lineage continue through the normal
+    validated exact-session resolver, which is necessary while a new Daily is materializing.
+    """
+    if not (root / "config" / "daily_research_session_input_registry.json").is_file():
+        return None
+    registry = load_registry(root)
+    completed = (registry.get("completed_sessions") or {}).get(session)
+    selection = (registry.get("sessions") or {}).get(session)
+    if not isinstance(completed, Mapping) or not isinstance(selection, Mapping):
+        return None
+    frozen = completed.get("frozen_input_identities") or {}
+    descriptive_entry = selection.get("descriptive")
+    frozen_descriptive_identity = frozen.get("descriptive") if isinstance(frozen, Mapping) else None
+    if not isinstance(descriptive_entry, Mapping) or not isinstance(frozen_descriptive_identity, str):
+        return None
+    relative_path = descriptive_entry.get("path")
+    if not isinstance(relative_path, str):
+        raise TechnicalRecoveryArtifactResolutionError(
+            "FROZEN_DESCRIPTIVE_LINEAGE_PATH_UNAVAILABLE",
+            {"session": session, "frozen_descriptive_identity": frozen_descriptive_identity},
+        )
+    descriptive = _load(root / relative_path)
+    if not isinstance(descriptive, Mapping):
+        raise TechnicalRecoveryArtifactResolutionError(
+            "FROZEN_DESCRIPTIVE_LINEAGE_ARTIFACT_UNAVAILABLE",
+            {"session": session, "path": relative_path, "frozen_descriptive_identity": frozen_descriptive_identity},
+        )
+    if descriptive.get("artifact_identity") != frozen_descriptive_identity:
+        raise TechnicalRecoveryArtifactResolutionError(
+            "FROZEN_DESCRIPTIVE_LINEAGE_IDENTITY_MISMATCH",
+            {
+                "session": session,
+                "path": relative_path,
+                "frozen_descriptive_identity": frozen_descriptive_identity,
+                "stored_descriptive_identity": descriptive.get("artifact_identity"),
+            },
+        )
+    lineage = descriptive.get("input_lineage")
+    if isinstance(lineage, Mapping) and lineage.get("p3f9b_snapshot_identity") != p3f9b_snapshot_identity:
+        # An isolated materialization has a distinct snapshot and therefore cannot claim the
+        # completed Daily's frozen descriptive lineage.  It remains governed by exact-session
+        # producer validation until a future Daily freezes its own lineage.
+        return None
+    technical_identity = lineage.get("technical_history_recovery_artifact_identity") if isinstance(lineage, Mapping) else None
+    if not isinstance(technical_identity, str) or not technical_identity:
+        raise TechnicalRecoveryArtifactResolutionError(
+            "FROZEN_TECHNICAL_RECOVERY_LINEAGE_UNAVAILABLE",
+            {"session": session, "path": relative_path, "frozen_descriptive_identity": frozen_descriptive_identity},
+        )
+    return technical_identity
+
+
+def _resolve_technical_recovery_candidates(
+    *, canonical_path: Path, replacement_paths: tuple[Path, ...], session: str,
+    p3f9b_snapshot_identity: str | None, expected_artifact_identity: str | None,
+) -> dict[str, Any]:
+    """Resolve a canonical artifact and explicitly supplied qualified replacements.
+
+    ``replacement_paths`` is intentionally supplied by the caller rather than discovered.  The
+    production caller provides exactly the one ``-revalidated`` path emitted by this module;
+    accepting a tuple makes the conflict rule testable and prevents a future caller from silently
+    selecting between divergent replacements.
+    """
+    canonical = _technical_recovery_validation(
+        canonical_path, session=session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+        expected_artifact_identity=expected_artifact_identity,
+    )
+    base = {
+        "session": session,
+        "authority": "FROZEN_DAILY_DESCRIPTIVE_LINEAGE" if expected_artifact_identity else "EXACT_SESSION_P3F9B_VALIDATED_RESOLVER",
+        "expected_artifact_identity": expected_artifact_identity,
+        "canonical": canonical,
+        "replacements": [],
+    }
+    if canonical["valid"]:
+        return {
+            **base,
+            "status": "VALID_EXACT_SESSION_RETAINED_ARTIFACT",
+            "selected_path": canonical_path,
+            "selected_artifact_identity": canonical["stored_artifact_identity"],
+        }
+
+    replacements = [
+        _technical_recovery_validation(
+            path, session=session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+            expected_artifact_identity=expected_artifact_identity,
+        )
+        for path in replacement_paths
+    ]
+    base["replacements"] = replacements
+    valid_replacements = [candidate for candidate in replacements if candidate["valid"]]
+    if not valid_replacements:
+        raise TechnicalRecoveryArtifactResolutionError(
+            "INVALID_TECHNICAL_RECOVERY_NO_QUALIFIED_REPLACEMENT",
+            base,
+        )
+    identities = {str(candidate["stored_artifact_identity"]) for candidate in valid_replacements}
+    if len(identities) != 1:
+        raise TechnicalRecoveryArtifactResolutionError(
+            "CONFLICTING_QUALIFIED_TECHNICAL_RECOVERY_REPLACEMENTS",
+            base,
+        )
+    selected = valid_replacements[0]
+    return {
+        **base,
+        "status": "INVALID_RETAINED_ARTIFACT_QUALIFIED_REPLACEMENT",
+        "selected_path": selected["path"],
+        "selected_artifact_identity": selected["stored_artifact_identity"],
+    }
+
+
+def resolve_technical_recovery_artifact(
+    root: Path, session: str, *, p3f9b_snapshot_identity: str | None,
+    authority_root: Path | None = None,
+) -> dict[str, Any]:
+    """Resolve the sole technical-recovery artifact an Integrated Decision may consume.
+
+    Resolution is deterministic: the canonical exact-session path is evaluated first; only when
+    it is invalid may the exact sibling ``-revalidated`` replacement be considered.  Both paths
+    must recompute their producer identity, match the session and P3F9B lineage, and, when a
+    completed Daily froze the descriptive lineage, match that identity as well.  No mtime, glob,
+    latest pointer, lexical ordering, or arbitrary operations-review traversal is involved.
+    """
+    authority_root = authority_root or root
+    canonical_path = session_artifact_paths(root, session)["technical_recovery"]
+    expected_artifact_identity = _frozen_technical_recovery_identity(
+        authority_root, session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+    )
+    return _resolve_technical_recovery_candidates(
+        canonical_path=canonical_path,
+        replacement_paths=(_technical_recovery_revalidated_path(canonical_path),),
+        session=session,
+        p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+        expected_artifact_identity=expected_artifact_identity,
+    )
 
 
 def session_triage_status(root: Path, session: str, registry: Mapping[str, Any] | None = None) -> dict[str, Any]:
@@ -1215,30 +1412,32 @@ def materialize_independent_components(
     tech_dir = tech_out.parent
     baseline_desc = _prior_completed_descriptive(execution_root, session)
     p3f9b_snapshot_identity = (_load(p3f9b_snapshot) or {}).get("snapshot_identity")
-    # A retained technical_recovery artifact must prove it is a valid reuse candidate, not merely
-    # exist. Check the file at its original path first, then a prior invalidated-cache regeneration
-    # (below) so a second same-input invocation is idempotent once regeneration has happened once.
-    tech_regen_dir = tech_dir.parent / f"{tech_dir.name}-revalidated"
-    for candidate in (tech_out, tech_regen_dir / tech_out.name):
-        valid = _valid_technical_recovery_cache(candidate, session=session, p3f9b_snapshot_identity=p3f9b_snapshot_identity)
-        if valid is not None:
-            tech_out = valid
-            break
-    else:
-        # Neither candidate is valid. If tech_out exists it is a stale/invalid retained artifact
-        # (e.g. a pre-0a0fd2d build) -- it is left exactly as it is on disk as immutable historical
-        # evidence, never repaired, re-signed, or overwritten in place. run_all() in the recovery
-        # producer will not overwrite an existing output path (it prints "REUSED" and returns), so
-        # regeneration through the already-fixed builder must target a fresh sibling directory
-        # rather than tech_dir whenever tech_out is already occupied by an invalid artifact.
-        if tech_out.exists():
-            tech_out = tech_regen_dir / tech_out.name
+    # Use the same deterministic resolver the Integrated Decision consumer uses.  A new Daily
+    # is allowed to generate the one explicit replacement only when no qualified retained input
+    # exists; an already ambiguous set is never silently regenerated or selected between.
+    try:
+        technical_resolution = resolve_technical_recovery_artifact(
+            artifact_root, session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+            authority_root=execution_root,
+        )
+        tech_out = technical_resolution["selected_path"]
+    except TechnicalRecoveryArtifactResolutionError as exc:
+        if exc.reason_code != "INVALID_TECHNICAL_RECOVERY_NO_QUALIFIED_REPLACEMENT":
+            raise
+        canonical_tech_out = paths["technical_recovery"]
+        tech_out = _technical_recovery_revalidated_path(canonical_tech_out) if canonical_tech_out.exists() else canonical_tech_out
         if not tech_out.exists():
             run_cmd(execution_root, [
                 "tools/run_market_wide_current_technical_coverage_scaleout.py",
                 "--baseline", str(baseline_desc), "--snapshot", str(p3f9b_snapshot),
                 "--out-dir", str(tech_out.parent), "--all",
             ])
+        # A producer return is not itself proof of validity.  Re-enter the resolver so an invalid
+        # or wrong-lineage replacement fails closed before descriptive research sees it.
+        tech_out = resolve_technical_recovery_artifact(
+            artifact_root, session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+            authority_root=execution_root,
+        )["selected_path"]
     desc_out = paths["descriptive_research"]
     if not desc_out.exists():
         run_cmd(execution_root, [

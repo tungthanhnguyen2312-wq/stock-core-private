@@ -673,11 +673,23 @@ def build_enrichment_components(
         raw_val = _load(paths["valuation"]) or _load(retained_paths["valuation"])
         desc = _load(paths["descriptive_research"])
         p3f9b = _load(paths["exact_session_snapshot"])
-        technical_recovery = _load(paths["technical_recovery"])
         mkt = _load(paths["sector_leadership"])
         opp = _load(paths["opportunity_prioritization"])
         if not desc or not p3f9b:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
+        # The Level-2 materializer may have preserved an invalid historical recovery artifact at
+        # its canonical path while writing its validated same-session replacement into the one
+        # explicit ``-revalidated`` namespace.  Never bypass that resolver by loading the
+        # hardcoded path here: its exact frozen-Daily lineage contract is the authority for every
+        # technical consumer in this Integrated Decision build.
+        technical_resolution = level2.resolve_technical_recovery_artifact(
+            artifact_root, session,
+            p3f9b_snapshot_identity=p3f9b.get("snapshot_identity"),
+            authority_root=root,
+        )
+        technical_recovery = _load(technical_resolution["selected_path"])
+        if not technical_recovery:
+            raise CanonicalPostCloseError("RESOLVED_TECHNICAL_RECOVERY_ARTIFACT_UNAVAILABLE")
         requested_at = f"{session}T15:00:00+07:00"
         technical_structure = tsc.build_artifact(
             current_descriptive=desc, p3f9b_snapshot=p3f9b, requested_at=requested_at,

@@ -40,16 +40,6 @@ def _prime_materialization_outputs(paths: dict[str, Path]) -> None:
         _write_json(paths[key], {})
 
 
-def _reuse_existing_technical_cache(candidate, *, session, p3f9b_snapshot_identity):
-    """Test-only compatibility shim for tests that prime every independent-component output with
-    a placeholder ``{}`` and assert nothing about technical-recovery cache validity specifically
-    (they exercise snapshot-acquisition delegation / execution-root separation instead). It
-    reproduces the pre-fix exists()-only reuse so those tests keep asserting what they always
-    asserted. The new identity/session/lineage validation semantics themselves are exercised by
-    the dedicated test_technical_recovery_cache_* tests below, against real fixtures."""
-    return candidate if candidate.exists() else None
-
-
 def test_run_cmd_executes_relative_tool_from_explicit_execution_root(tmp_path):
     execution_root = tmp_path / "producer"
     execution_root.mkdir()
@@ -302,7 +292,7 @@ def test_materialize_independent_components_delegates_snapshot_acquisition_to_th
     _prime_materialization_outputs(paths)
     with patch.object(level2, "ensure_exact_session_snapshot", fake_ensure), \
          patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
-         patch.object(level2, "_valid_technical_recovery_cache", _reuse_existing_technical_cache):
+         patch.object(level2, "resolve_technical_recovery_artifact", return_value={"selected_path": paths["technical_recovery"]}):
         level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
 
     assert calls == [(tmp_path, session, tmp_path)]
@@ -322,7 +312,7 @@ def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp
     with patches[0], patches[1], patches[2], patches[3], patches[4], \
          patch.object(level2, "run_cmd") as mocked_run_cmd, \
          patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
-         patch.object(level2, "_valid_technical_recovery_cache", _reuse_existing_technical_cache):
+         patch.object(level2, "resolve_technical_recovery_artifact", return_value={"selected_path": paths["technical_recovery"]}):
         level2.materialize_independent_components(
             attempt_root,
             session,
@@ -346,7 +336,7 @@ def test_ordinary_materialization_keeps_its_single_root_as_execution_root(tmp_pa
     with patches[0], patches[1], patches[2], patches[3], patches[4], \
          patch.object(level2, "run_cmd") as mocked_run_cmd, \
          patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
-         patch.object(level2, "_valid_technical_recovery_cache", _reuse_existing_technical_cache):
+         patch.object(level2, "resolve_technical_recovery_artifact", return_value={"selected_path": paths["technical_recovery"]}):
         level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
 
     mocked_run_cmd.assert_not_called()
@@ -364,8 +354,8 @@ def test_ordinary_materialization_keeps_its_single_root_as_execution_root(tmp_pa
 # market_wide_current_descriptive_research.build_artifact() correctly rejects that mismatch with
 # TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH -- but only after the orchestrator had already
 # hardcoded it as this session's technical_recovery input. These tests exercise the fix directly
-# at the materialize_independent_components() boundary using the real
-# market_wide_current_descriptive_research.content_identity() convention (not a re-implementation).
+# at the materialize_independent_components() boundary using the recovery producer's real
+# market_wide_current_technical_coverage_scaleout.content_identity() helper (not a re-implementation).
 
 
 def _independent_component_session_paths(tmp_path, session):
@@ -390,7 +380,7 @@ def _write_valid_p3f9b_snapshot(path: Path, session: str) -> str:
 
 
 def _valid_technical_recovery_payload(session: str, snapshot_identity: str) -> dict:
-    from market_wide_current_descriptive_research import content_identity
+    from market_wide_current_technical_coverage_scaleout import content_identity
     payload = {
         "target_session": session,
         "source_lineage": {"p3f9b_snapshot_identity": snapshot_identity},
@@ -414,6 +404,81 @@ def _fake_ensure_exact_session_snapshot(paths):
     def fake_ensure(artifact_root, sess, runtime_root, workers, now, *, execution_root=None):
         return paths["exact_session_snapshot"]
     return fake_ensure
+
+
+def test_retained_technical_resolution_keeps_valid_canonical_path(tmp_path):
+    session = "2026-09-07"
+    snapshot_identity = "p3f9_exact_session_snapshot:test"
+    canonical = tmp_path / "canonical.json"
+    _write_json(canonical, _valid_technical_recovery_payload(session, snapshot_identity))
+
+    resolution = level2._resolve_technical_recovery_candidates(
+        canonical_path=canonical, replacement_paths=(), session=session,
+        p3f9b_snapshot_identity=snapshot_identity, expected_artifact_identity=None,
+    )
+
+    assert resolution["status"] == "VALID_EXACT_SESSION_RETAINED_ARTIFACT"
+    assert resolution["selected_path"] == canonical
+    assert resolution["canonical"]["stored_artifact_sha256"] == resolution["canonical"]["recomputed_artifact_sha256"]
+    assert resolution["canonical"]["stored_artifact_identity"] == resolution["canonical"]["recomputed_artifact_identity"]
+
+
+def test_retained_technical_resolution_selects_only_valid_same_lineage_replacement(tmp_path):
+    session = "2026-09-07"
+    snapshot_identity = "p3f9_exact_session_snapshot:test"
+    canonical = tmp_path / "canonical.json"
+    replacement = tmp_path / "canonical-revalidated.json"
+    _write_json(canonical, _stale_technical_recovery_payload(session, snapshot_identity))
+    replacement_payload = _valid_technical_recovery_payload(session, snapshot_identity)
+    _write_json(replacement, replacement_payload)
+
+    resolution = level2._resolve_technical_recovery_candidates(
+        canonical_path=canonical, replacement_paths=(replacement,), session=session,
+        p3f9b_snapshot_identity=snapshot_identity,
+        expected_artifact_identity=replacement_payload["artifact_identity"],
+    )
+
+    assert resolution["status"] == "INVALID_RETAINED_ARTIFACT_QUALIFIED_REPLACEMENT"
+    assert resolution["selected_path"] == replacement
+    assert resolution["canonical"]["reason_code"] == "TECHNICAL_RECOVERY_STORED_HASH_MISMATCH"
+    assert resolution["replacements"][0]["stored_artifact_sha256"] == resolution["replacements"][0]["recomputed_artifact_sha256"]
+    assert resolution["replacements"][0]["stored_artifact_identity"] == resolution["replacements"][0]["recomputed_artifact_identity"]
+
+
+def test_retained_technical_resolution_fails_closed_without_qualified_replacement(tmp_path):
+    session = "2026-09-07"
+    snapshot_identity = "p3f9_exact_session_snapshot:test"
+    canonical = tmp_path / "canonical.json"
+    _write_json(canonical, _stale_technical_recovery_payload(session, snapshot_identity))
+
+    with pytest.raises(level2.TechnicalRecoveryArtifactResolutionError,
+                       match="INVALID_TECHNICAL_RECOVERY_NO_QUALIFIED_REPLACEMENT"):
+        level2._resolve_technical_recovery_candidates(
+            canonical_path=canonical, replacement_paths=(), session=session,
+            p3f9b_snapshot_identity=snapshot_identity, expected_artifact_identity=None,
+        )
+
+
+def test_retained_technical_resolution_fails_closed_for_conflicting_replacements(tmp_path):
+    session = "2026-09-07"
+    snapshot_identity = "p3f9_exact_session_snapshot:test"
+    canonical = tmp_path / "canonical.json"
+    first = tmp_path / "first-revalidated.json"
+    second = tmp_path / "second-revalidated.json"
+    _write_json(canonical, _stale_technical_recovery_payload(session, snapshot_identity))
+    _write_json(first, _valid_technical_recovery_payload(session, snapshot_identity))
+    conflicting = _valid_technical_recovery_payload(session, snapshot_identity)
+    conflicting["recovered_history_overrides"] = {"AAA": {"history": [1]}}
+    from market_wide_current_technical_coverage_scaleout import content_identity
+    conflicting.update(content_identity(conflicting))
+    _write_json(second, conflicting)
+
+    with pytest.raises(level2.TechnicalRecoveryArtifactResolutionError,
+                       match="CONFLICTING_QUALIFIED_TECHNICAL_RECOVERY_REPLACEMENTS"):
+        level2._resolve_technical_recovery_candidates(
+            canonical_path=canonical, replacement_paths=(first, second), session=session,
+            p3f9b_snapshot_identity=snapshot_identity, expected_artifact_identity=None,
+        )
 
 
 def test_technical_recovery_cache_reused_when_identity_is_valid(tmp_path):

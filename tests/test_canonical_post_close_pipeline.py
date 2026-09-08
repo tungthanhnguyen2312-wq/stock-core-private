@@ -450,6 +450,19 @@ def test_canonical_integrated_decision_materializes_existing_momentum_and_confir
     assert paths["tactical_confirmation_context"].name == "tactical_confirmation_context_artifact.json"
 
 
+def test_integrated_decision_uses_validated_retained_technical_resolution():
+    """The Integrated Decision must not reload the canonical technical path after Level-2 has
+    selected a valid same-session replacement for an invalid immutable retained artifact."""
+    source = (ROOT / "canonical_post_close_pipeline.py").read_text(encoding="utf-8")
+    start = source.index("def _integrated_investment_decision_product")
+    end = source.index("\n    _attempt(", start)
+    body = source[start:end]
+    assert "level2.resolve_technical_recovery_artifact(" in body
+    assert "authority_root=root" in body
+    assert 'technical_recovery = _load(technical_resolution["selected_path"])' in body
+    assert 'technical_recovery = _load(paths["technical_recovery"])' not in body
+
+
 def test_corporate_intelligence_axis_wired_into_integrated_decision_with_local_isolation():
     """CORPORATE_INTELLIGENCE_CATALYST_EVENT_RISK_DECISION_INTEGRATION_V1: the axis build must
     be wrapped in its own local try/except -- exactly the tactical_boundaries pattern -- so a
