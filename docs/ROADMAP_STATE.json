@@ -9,8 +9,8 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "HEAD",
-  "last_updated_checkpoint": "HEAD",
+  "implementation_lineage_head": "f5771bbd51be50111c48bbcf3f523ca2fbb12c94",
+  "last_updated_checkpoint": "f5771bbd51be50111c48bbcf3f523ca2fbb12c94",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
@@ -968,8 +968,8 @@
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT",
       "starting_checkpoint": "f8532b7678f3f17b1a13c357c787fd1fde453c72",
-      "checkpoint": "HEAD",
-      "owner_input_semantics_corrective_base": "5b689ce30e2569bb7c7830a5a34bed03e81b69af",
+      "checkpoint": "f5771bbd51be50111c48bbcf3f523ca2fbb12c94",
+      "owner_input_semantics_corrective_base": "d4e462ff05cfbe6fd3054440a0784a2f730f9928",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / PRIVATE_LOCAL_CONTEXT_FOUNDATION_ONLY / NO_DAILY_DASHBOARD_AI_HANDOFF_OR_SIZING_CHANGE",
@@ -977,7 +977,7 @@
       "source_doc": "Owner-authorized PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1 directive (2026-09-08)",
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_08_PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
-      "notes": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, system_default_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Same-milestone owner-input semantics corrective maps current margin debt, minimum/maximum available margin, and annual percentage-number rate separately; VND is field-owned regardless of Excel number format or magnitude, and availability never implies debt. SYSTEM_DEFAULT_POLICY_V1 supplies only individually absent fields while retaining owner/default/effective policy provenance; no cap is an automatic sell instruction. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Next proposed gate only: PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1; it is not queued."
+      "notes": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, system_default_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Same-milestone owner-input semantics corrective maps current margin debt, minimum/maximum available margin, and annual percentage-number rate separately; VND is field-owned regardless of Excel number format or magnitude, and availability never implies debt. SYSTEM_DEFAULT_POLICY_V1 supplies only individually absent fields while retaining owner/default/effective policy provenance; no cap is an automatic sell instruction. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Next proposed gate only: PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1; it is not queued. Repository convergence (2026-09-08): originally developed on feature/private-portfolio-context-foundation-v1 (worktree commits 5b689ce/6264b8a) from base f8532b7678f3f17b1a13c357c787fd1fde453c72, which was already Producer main's exact HEAD at convergence time (verified ancestor, zero divergence). Ported via clean cherry-pick onto integrate/private-portfolio-context-foundation-v1 with identical content and no conflicts; the recorded checkpoint/owner_input_semantics_corrective_base above are the resulting integration-branch commit identities (d4e462f/f5771bb), which differ from the original feature-branch hashes only because their parent commit changed. Real private-workbook validation could not run this session: no workbook exists yet at %USERPROFILE%\\.stocklookup\\portfolio\\portfolio_input.xlsx (REAL_PRIVATE_IMPORT_STATUS = OWNER_INPUT_NOT_PRESENT); a dummy workbook was deliberately not created. Disposition is therefore COMPLETE_CODE / OWNER_INPUT_NOT_PRESENT, not COMPLETE / REAL_PRIVATE_INPUT_VALIDATED; V2 (PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1) remains not started and the actual next gate is REAL_PRIVATE_PORTFOLIO_INPUT_REQUIRED."
     }
   ],
   "blocked_capabilities": [
