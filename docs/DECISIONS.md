@@ -1,5 +1,91 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-08 - Liquidity Evidence Ceiling Closeout And State Synchronization V1
+
+`LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 = COMPLETE / TERMINAL_STATE_SYNC_ONLY`
+(`push = NO`, `merge = NO`, repository HEAD/origin-main unchanged at
+`0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752`). Authoritative documentation/state synchronization
+only — no network calls, no data acquisition, no analytical recomputation, no source-logic
+changes. This reconciles `docs/STATE.md`, `docs/ROADMAP.md`, and `docs/ROADMAP_STATE.json` against
+retained evidence from three local milestones that had already run
+(`t20-composite-corpus-and-fhsc-tail-conflict-diagnostic-v1-20260907`,
+`composite-g1-reconciliation-and-adtv20-state-correction-v1-20260908`,
+`fhsc-20260806-anchor-backfill-and-adtv20-unlock-v1-20260908`) plus Anti-Gravity's separately
+executed `CANONICAL_TRADES_CONTINUITY_AND_TARGET_SESSION_LIQUIDITY_RECOVERY_V1` targeted Phase-A
+retry, all independently re-read and re-verified against their own retained artifacts in this
+session (no figure was taken on faith; every headline number below was rechecked against a source
+file, including the external `antigravity-reports/canonical-trades-phase-a-targeted-retry-20260906/
+REPORT.md`, which matched exactly on recheck).
+
+1. **DNSE Trades Phase-A acquisition is terminal.** 24,894 / 24,900 logical root units succeeded
+   (14,208 non-empty, 10,686 confirmed empty) across the 15 suffix sessions 2026-08-12..2026-09-04;
+   6 units remain failed, all explicit provider HTTP 500 (`HHV` 2026-08-26; `SBS`/`SD4`/`SD5`/`SDU`/
+   `SEA` 2026-09-04). Zero rate-limited, zero transport-failed. Canonical shadow materialization:
+   6,615,107 rows, 0 duplicate identities, 0 quarantined, 0 timestamp violations.
+   `PHASE_B_NOT_YET_JUSTIFIED` stands. Any prior STATE/ROADMAP text describing Phase-A as
+   unacquired/blocked is **superseded**, not deleted.
+2. **Composite T20 corpus corrected.** For target 2026-09-04 the governed T20 window is exactly 20
+   sessions: 5 baseline (2026-08-05, 06, 07, 10, 11) + 15 Phase-A suffix (2026-08-12..2026-09-04),
+   all present and `CONSISTENT`. The earlier claim that 2026-08-05..08-11 needed new acquisition is
+   **superseded** — it came from inspecting only the Phase-A shadow directory, not the full
+   composite corpus.
+3. **Universe denominators corrected and kept distinct.** Governed Current Research
+   universe/ADTV20 denominator = 1,683 (`integrated_investment_decision_product.json`, via
+   `run_market_wide_historical_matched_liquidity.py::_universe()`). DNSE Trades acquisition
+   universe = 1,660 (must never substitute for 1,683 — an earlier claim that did so is
+   **superseded**). FHSC anchor cohort = 806 of 1,507 attempted; 877 governed tickers were never
+   FHSC-anchored and keep explicit `NO_ANCHOR` semantics.
+4. **FHSC 2026-08-06 is a confirmed permanent evidence gap.** A bounded real-network 10-ticker
+   canary (3 alphabetically-first non-watchlist cohort members + all 7 anchored watchlist members)
+   returned 10/10 HTTP 200, 10/10 well-formed, 10/10 zero-row for 2026-08-06 (0 rate limits, 0 auth
+   failures, 0 schema failures) — corroborating that 0 of 806 retained FHSC per-ticker files
+   contain any 2026-08-06 record despite each file's own request range covering that date, and that
+   FPT's own retained history skips 08-06 while carrying 08-05/08-07. Classification:
+   `FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE` / `PERMANENT_EVIDENCE_GAP_CURRENT_SCOPE`. The
+   canary's own stop rule correctly prevented the remaining ~796-ticker backfill; that backfill is
+   **not** authorized by this decision.
+5. **Exact ADTV20 for 2026-09-04 stays 0/1,683**, with 42 coverage-restricted (EXACT on 19/20
+   sessions, blocked only by the 2026-08-06 gap) and 1,641 semantics-unqualified, dual-run
+   hash-identical (`e6396a692b243bfe8cad06ebbc3008288cd1200c490b6eabd7b0eafaa289ef27`). This is an
+   evidence limitation, not a calculation defect; the existing whole-window exact contract is not
+   loosened, weakened, or given a partial-window/fallback-proxy exception.
+6. **Watchlist anchor status corrected.** Anchored (7): FPT, NVL, PAN, PNJ, PVD, QNS, VNM
+   (`COVERAGE_RESTRICTED`). Not anchored (4): EVF, HPG, POW, SSI (HTTP 429 during the 2026-08-21
+   acquisition wave, never retried; `SEMANTICS_UNQUALIFIED`). An earlier claim that all 11 watchlist
+   tickers were FHSC-anchored is **superseded**.
+7. **752 FHSC-vs-DNSE G1 tail conflicts (24.13% of comparable non-empty cells, 739/752 on the three
+   sessions bracketing the 08-28/09-03 governed-calendar gap, FHSC > G1 throughout) remain retained
+   as `UNEXPLAINED_BUT_LOCALIZED` evidence.** This decision does not open a conflict-investigation
+   milestone; it is a reopening candidate only if a concrete product capability needs those cells or
+   new evidence can distinguish source/basis semantics.
+8. **Terminal disposition:**
+   `MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE /
+   EVIDENCE_CEILING_REACHED`. Current Research may consume the explicitly-labelled 42-ticker
+   coverage-restricted context where the existing contract already permits it; this creates no
+   exact-liquidity, execution-readiness, position-sizing, PIT, or RAW_AS_TRADED authority.
+   `QUALIFIED_LIQUIDITY_INPUTS = NO`, `POSITION_SIZING_IS_SAFE = NO` (`docs/STATE.md` Section 3
+   Invariant 2) are unchanged; execution input remains false; position sizing remains
+   `NOT_EVALUATED`.
+9. **No further liquidity data scaleout is queued.** Phase B, FHSC 2026-08-06 full-cohort
+   acquisition, the 877-ticker FHSC expansion, alternate-provider search, further 2026-08-05..08-11
+   acquisition, and the tail-conflict investigation are explicitly NOT queued by this decision.
+   `docs/ROADMAP_STATE.json` `queued_next` was already empty and remains empty; no successor
+   milestone is manufactured merely because this one closes. Per `AGENTS.md`, near-term priority
+   reverts to core analytical product completeness; the next operational activity is the standing
+   Daily/Current Research product flow.
+
+`docs/ROADMAP_STATE.json` is updated in the same commit: `current.milestone` becomes
+`LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 = COMPLETE`, a new milestone record is
+appended, `queued_next` stays `[]`, and the `LIQUIDITY_AND_POSITION_SIZING_AUTHORITY` blocked
+capability's `reason`/`reopen_gate` are refreshed to this evidence. No source code, provider,
+authority, database, Dashboard, publication, or deployment change occurred. The pre-existing
+unrelated local modification to `config/daily_research_session_input_registry.json` was found via
+`git status` and left untouched throughout, and is not part of this commit. Evidence (read only,
+not modified): `operations-review/t20-composite-corpus-and-fhsc-tail-conflict-diagnostic-v1-20260907/`,
+`operations-review/composite-g1-reconciliation-and-adtv20-state-correction-v1-20260908/`,
+`operations-review/fhsc-20260806-anchor-backfill-and-adtv20-unlock-v1-20260908/`, and (external)
+`antigravity-reports/canonical-trades-phase-a-targeted-retry-20260906/`.
+
 ## 2026-09-06 - DNSE Intraday History Rate-Limit Resilience And Resume Integrity V1
 
 `DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1 = COMPLETE /

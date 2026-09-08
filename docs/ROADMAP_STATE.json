@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.06.3",
+  "roadmap_version": "2026.09.08.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "e01c06f",
-  "last_updated_checkpoint": "e01c06f",
+  "implementation_lineage_head": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752",
+  "last_updated_checkpoint": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1",
+    "milestone": "LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -947,6 +947,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_06_DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1",
       "notes": "COMPLETE / SOURCE_CORRECTION_ONLY. Start/origin were 1bd5ab9345c7a262e59c73173b0241e72b6cf6aa and protected config/daily_research_session_input_registry.json remains an untouched user worktree diff. The DNSE intraday collector now retries only sanitized rate_limited/request_failed_* errors with finite capped exponential backoff and invocation-wide HTTP-boundary pacing, honors usable numeric Retry-After under the local cap, reuses success/confirmed-empty roots, reopens only retryable failed roots, stops immediately on authentication failure, and exposes per-invocation/cumulative retry telemetry. An exact provider/dataset/scope lock fails closed for active/ambiguous owners. A write-ahead pending raw-page checkpoint validates and adopts only an exact post-interruption raw page; missing raw resumes from saved cursor, while mismatches are explicit ORPHAN_RAW_PAGE_UNREFERENCED. Existing canonical reconciler page-selection/index behavior is unchanged. Offline focused validation: 80 passed, compile and diff checks pass. Direct read-only Phase A checkpoint accounting: 24,900 planned roots, 3,003 preserved successes (reconciliation authority 1,679 non-empty plus 1,324 confirmed empty), and 21,897 retry-eligible failures (21,891 rate limited, 1 connection, 5 read timeout). No network acquisition, Phase B, secondary-anchor/G1/ADTV work, canonical-materialization change, provider, authority, policy, database, or deployment change. Next gate only: OWNER_REVIEW_FOR_TARGETED_PHASE_A_RETRY. Evidence: operations-review/dnse-intraday-history-rate-limit-resilience-resume-integrity-v1-20260906/."
+    },
+    {
+      "milestone_id": "LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / TERMINAL_STATE_SYNC_ONLY",
+      "starting_checkpoint": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752",
+      "checkpoint": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752",
+      "dependencies": ["MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1", "DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / DOCUMENTATION_AND_STATE_SYNCHRONIZATION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 directive (2026-09-08)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_08_LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1",
+      "notes": "COMPLETE / TERMINAL_STATE_SYNC_ONLY. No network calls, no data acquisition, no analytical recomputation, no source-logic changes; repository HEAD/origin-main unchanged at 0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752 before and after. Reconciles docs/STATE.md, docs/ROADMAP.md, and this file against three prior local milestones that ran ahead of recorded roadmap state (operations-review/t20-composite-corpus-and-fhsc-tail-conflict-diagnostic-v1-20260907/, operations-review/composite-g1-reconciliation-and-adtv20-state-correction-v1-20260908/, operations-review/fhsc-20260806-anchor-backfill-and-adtv20-unlock-v1-20260908/) plus Anti-Gravity's separately executed targeted Phase-A retry (antigravity-reports/canonical-trades-phase-a-targeted-retry-20260906/, independently re-verified, all figures matched). DNSE Trades Phase-A acquisition is now terminal: 24,894/24,900 logical units (14,208 non-empty, 10,686 confirmed empty, 6 remaining HTTP-500 failures, 0 rate-limited, 0 transport failures; 6,615,107 canonical rows across 15 suffix sessions 2026-08-12..2026-09-04); PHASE_B_NOT_YET_JUSTIFIED stands. The governed T20 composite corpus for target 2026-09-04 is confirmed correct (5 baseline 2026-08-05..08-11 sessions + 15 Phase-A suffix sessions, 20/20 present); the earlier '2026-08-05..08-11 missing' claim is superseded. Universe denominators are corrected and kept distinct: governed Current Research/ADTV20 denominator = 1,683, DNSE Trades acquisition universe = 1,660 (never a substitute denominator), FHSC anchor cohort = 806 (877 governed tickers never anchored). A bounded real-network 10-ticker canary confirmed FHSC has no 2026-08-06 record anywhere in its anchor cohort (FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE / PERMANENT_EVIDENCE_GAP_CURRENT_SCOPE); the remaining ~796-ticker backfill is correctly not attempted and not authorized here. Exact ADTV20 for 2026-09-04 stays 0/1,683 (42 coverage-restricted, 1,641 semantics-unqualified, 0 insufficient-window) -- an evidence limitation, not a calculation defect; the whole-window exact contract is not loosened. Watchlist anchor status corrected: anchored (7) FPT/NVL/PAN/PNJ/PVD/QNS/VNM, not anchored (4) EVF/HPG/POW/SSI -- the earlier 'all 11 anchored' claim is superseded. The 752 FHSC-vs-DNSE G1 tail conflicts (24.13% of comparable non-empty cells, 739/752 on the three sessions bracketing the 08-28/09-03 calendar gap) remain retained, unresolved, UNEXPLAINED_BUT_LOCALIZED evidence, not reopened as an investigation. Terminal disposition: MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE / EVIDENCE_CEILING_REACHED; execution input, position sizing (NOT_EVALUATED), PIT, and RAW_AS_TRADED authority remain unpromoted. No successor liquidity/data-acquisition milestone is queued (Phase B, FHSC 2026-08-06 full-cohort retry, 877-ticker FHSC expansion, alternate-provider search, 2026-08-05..08-11 acquisition, tail-conflict investigation all explicitly not queued); queued_next remains empty. Per AGENTS.md, near-term priority reverts to core analytical product completeness and the standing Daily/Current Research product flow. The pre-existing unrelated local modification to config/daily_research_session_input_registry.json was left untouched throughout and is not part of this milestone's commit. Next gate: RETURN_TO_STANDING_PRODUCT_DAILY_FLOW."
     }
   ],
   "blocked_capabilities": [
@@ -960,9 +975,9 @@
     {
       "capability": "LIQUIDITY_AND_POSITION_SIZING_AUTHORITY",
       "state": "BLOCKED",
-      "reason": "docs/STATE.md Section 3 Invariant 2: QUALIFIED_LIQUIDITY_INPUTS = NO and POSITION_SIZING_IS_SAFE = NO. MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV_FOUNDATION_V1 (2026-09-05) confirms that the primary canonical Trades corpus ends 2026-08-11, before required 2026-08-25/2026-09-04 targets; generic matched-share volume remains unqualified and exact ADV/ADTV coverage at both targets is 0. Earlier historical matched-value/ADTV recovery lanes remain coverage-restricted, including the expected 2026-08-06 FHSC hole.",
-      "reopen_gate": "A current target-session canonical Trades history deep enough for exact governed windows, independently qualified generic matched-share semantics, and full exact-reconciled G1 value coverage; execution or sizing would still require separately authorized downstream models.",
-      "reference_checkpoint": null
+      "reason": "docs/STATE.md Section 3 Invariant 2: QUALIFIED_LIQUIDITY_INPUTS = NO and POSITION_SIZING_IS_SAFE = NO. LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 (2026-09-08) confirms the evidence ceiling is now terminal, not merely a corpus-depth gap: DNSE Trades Phase-A acquisition is complete (24,894/24,900 units, 6 remaining HTTP-500 failures) and the governed T20 composite corpus is fully present (20/20 sessions) for target 2026-09-04, but exact ADTV20 stays 0/1,683 because the FHSC secondary matched-value anchor cohort (806 of 1,683) has a confirmed, real-network-verified permanent gap on 2026-08-06 (FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE) and 877 governed tickers were never FHSC-anchored at all. 42 tickers reach COVERAGE_RESTRICTED (exact on 19/20 sessions); 1,641 remain SEMANTICS_UNQUALIFIED. 752 FHSC-vs-DNSE G1 tail conflicts remain UNEXPLAINED_BUT_LOCALIZED. Terminal disposition: MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE / EVIDENCE_CEILING_REACHED.",
+      "reopen_gate": "New FHSC (or another independently qualified secondary matched-value) evidence that actually covers 2026-08-06 for the anchor cohort, or qualified generic matched-share semantics that remove the need for a secondary anchor entirely, plus resolution of the 877-ticker never-anchored population; execution or sizing would still require separately authorized downstream models. Not reopened merely by re-running the existing acquisition against already-exhausted retained/live evidence.",
+      "reference_checkpoint": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752"
     },
     {
       "capability": "ACTIVE_UNIVERSE_AUTHORITY",

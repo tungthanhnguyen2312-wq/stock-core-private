@@ -1,5 +1,103 @@
 # Stock Lookup — Operational State
 
+**Liquidity evidence ceiling closeout and state synchronization V1 (2026-09-08):**
+`LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 = COMPLETE / TERMINAL_STATE_SYNC_ONLY` at
+repository HEAD `0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752` (== origin/main; unchanged by this
+milestone). Documentation/authority-state synchronization only: no network calls, no data
+acquisition, no analytical recomputation, no source-logic changes. This entry reconciles three
+prior local evidence-gathering milestones that ran ahead of `docs/ROADMAP_STATE.json`'s recorded
+state (`t20-composite-corpus-and-fhsc-tail-conflict-diagnostic-v1-20260907`,
+`composite-g1-reconciliation-and-adtv20-state-correction-v1-20260908`,
+`fhsc-20260806-anchor-backfill-and-adtv20-unlock-v1-20260908`) plus the separately-run Anti-Gravity
+`CANONICAL_TRADES_CONTINUITY_AND_TARGET_SESSION_LIQUIDITY_RECOVERY_V1` targeted Phase-A retry
+(external report at `antigravity-reports/canonical-trades-phase-a-targeted-retry-20260906/`,
+independently re-read and re-verified in this session; every cited figure matched on recheck).
+
+**DNSE Trades Phase-A acquisition is terminal.** 24,894 / 24,900 logical root units succeeded
+(14,208 non-empty, 10,686 confirmed empty) across the 15 Phase-A suffix sessions (2026-08-12
+through 2026-09-04); only 6 units remain failed, all explicit provider HTTP 500 (`HHV` on
+2026-08-26; `SBS`, `SD4`, `SD5`, `SDU`, `SEA` on 2026-09-04). Zero units remain rate-limited and
+zero remain transport-failed. Canonical shadow materialization produced 6,615,107 canonical trade
+rows with zero duplicate identities, zero quarantined records, and zero timestamp violations.
+`PHASE_B_NOT_YET_JUSTIFIED` stands: acquiring the 10 prefix sessions would not unlock exact
+ADTV20/60 while the secondary matched-value anchor gate remains open. Any prior STATE/ROADMAP
+statement that Phase-A acquisition is unacquired, blocked, or rate-limited is **superseded** by
+this terminal outcome; those earlier statements are not deleted, only superseded as of this entry.
+
+**Composite T20 corpus is correct; the "2026-08-05..08-11 missing" claim is refuted.** The
+governed T20 window for target session 2026-09-04 is exactly 20 sessions: 5 baseline (2026-08-05,
+06, 07, 10, 11, from the 2026-08-15-frozen 40-session baseline checkpoint) plus 15 Phase-A suffix
+(2026-08-12 through 2026-09-04). All 20/20 governed sessions are present and `CONSISTENT`; DNSE
+Trades coverage exists for every one. The earlier claim that 2026-08-05..08-11 needed new
+acquisition came from inspecting only the Phase-A shadow directory instead of the full composite
+corpus, and is now formally superseded.
+
+**Universe semantics are corrected and must stay distinct.** Governed Current Research universe
+(the ADTV20 denominator) = **1,683** (`integrated_investment_decision_product.json` records, via
+`run_market_wide_historical_matched_liquidity.py::_universe()`). DNSE Trades acquisition universe
+= **1,660** — a materially different figure that must never be substituted as the 1,683
+denominator; an earlier claim that did so is superseded. FHSC retained anchor cohort = **806** (of
+1,507 attempted); the remaining **877** governed tickers were never FHSC-anchored and retain
+explicit `NO_ANCHOR` semantics rather than being silently dropped.
+
+**FHSC 2026-08-06 is a confirmed permanent evidence gap, not an acquisition failure.** A bounded,
+owner-authorized 10-ticker real-network canary (the 3 alphabetically-first non-watchlist cohort
+members plus all 7 anchored watchlist members) returned 10/10 HTTP 200, 10/10 well-formed
+responses, 10/10 zero-row/empty for 2026-08-06, with 0 rate limits, 0 auth failures, 0 schema
+failures. This corroborates the independent retained-evidence finding (0 of 806 raw FHSC
+per-ticker files contain any 2026-08-06 record, despite each file's own request range covering
+that date) and FPT's own retained history skipping 08-06 while carrying 08-05 and 08-07.
+Classification: `FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE` / `PERMANENT_EVIDENCE_GAP_CURRENT_SCOPE`.
+Per its own canary stop rule, the remaining ~796-ticker cohort backfill was correctly NOT
+attempted, and is **not** authorized here.
+
+**Exact ADTV20 for target 2026-09-04 remains 0; the reason is now precisely diagnosed.** Governed
+denominator 1,683: Exact = 0, Coverage-Restricted = 42, Semantics-Unqualified = 1,641,
+Insufficient-Window = 0 (dual-run hash-identical:
+`e6396a692b243bfe8cad06ebbc3008288cd1200c490b6eabd7b0eafaa289ef27`). The 42 coverage-restricted
+tickers are FHSC-anchored names that are EXACT on the other 19/20 sessions but permanently blocked
+from a full 20/20 window solely by the 2026-08-06 gap. The dominant blocker across the full
+universe is missing FHSC anchor coverage itself (877 never-anchored tickers, 52.1%), not the
+tail-conflict spike and not the 6 remaining provider failures. This is an evidence limitation, not
+a calculation defect; the existing whole-window exact contract is not loosened.
+
+**Watchlist anchor status is corrected.** The 11-ticker governed watchlist
+(`config/owner_research_focus.json::broader_watchlist`) is not uniformly FHSC-anchored. Anchored
+(7): FPT, NVL, PAN, PNJ, PVD, QNS, VNM — each `COVERAGE_RESTRICTED` (19 exact + 1 `NO_ANCHOR` cell
+on 2026-08-06). Not anchored (4): EVF, HPG, POW, SSI — HTTP 429 during the 2026-08-21 acquisition
+wave, never retried, `SEMANTICS_UNQUALIFIED` (20/20 `NO_ANCHOR`). Any prior claim that all 11
+watchlist tickers carry FHSC anchor coverage is **superseded**.
+
+**FHSC-vs-DNSE G1 tail conflicts remain retained, unresolved evidence.** 752 conflict cells
+(24.13% of comparable non-empty cells), 739/752 (98.3%) concentrated on 2026-08-28, 2026-09-03, and
+2026-09-04 — the three sessions bracketing the governed-calendar jump from 08-28 to 09-03 — with
+FHSC > DNSE G1 in every currently classified `UNEXPLAINED_RESIDUAL` cell. Classification:
+`UNEXPLAINED_BUT_LOCALIZED`. This closeout does **not** reopen it as an investigation milestone; it
+becomes a reopening candidate only if a concrete product capability needs those cells or new
+evidence can distinguish source/basis semantics.
+
+**Terminal disposition:
+`MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE /
+EVIDENCE_CEILING_REACHED`.** Current Research may consume the explicitly-labelled 42-ticker
+coverage-restricted liquidity context where the existing contract already permits it, and the
+1,641-ticker semantics-unqualified population stays explicitly unqualified. None of this implies
+exact liquidity authority, execution readiness, position-sizing readiness, PIT authority, or
+RAW_AS_TRADED authority: `QUALIFIED_LIQUIDITY_INPUTS = NO`, `POSITION_SIZING_IS_SAFE = NO` (Section
+3 Invariant 2, unchanged), execution input remains false, and position sizing remains
+`NOT_EVALUATED`.
+
+**No further liquidity data scaleout is queued.** Per this milestone's own directive, Phase B,
+FHSC 2026-08-06 full-cohort acquisition, the 877-ticker FHSC cohort expansion, alternate-provider
+search, further 2026-08-05..08-11 acquisition, and the 752-cell tail-conflict investigation are
+NOT queued; `docs/ROADMAP_STATE.json` `queued_next` was already empty and remains empty. Per
+`AGENTS.md`, current development priority reverts to core analytical product completeness; the
+next operational activity is the standing Daily/Current Research product flow and its existing
+roadmap state, not a new liquidity milestone. Evidence (read, not modified):
+`operations-review/t20-composite-corpus-and-fhsc-tail-conflict-diagnostic-v1-20260907/`,
+`operations-review/composite-g1-reconciliation-and-adtv20-state-correction-v1-20260908/`,
+`operations-review/fhsc-20260806-anchor-backfill-and-adtv20-unlock-v1-20260908/`, and (external,
+independently re-verified) `antigravity-reports/canonical-trades-phase-a-targeted-retry-20260906/`.
+
 **DNSE intraday history rate-limit resilience and resume integrity V1 (2026-09-06):**
 `DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1 = COMPLETE /
 SOURCE_CORRECTION_ONLY` at local source checkpoint `e01c06f` from required start/origin

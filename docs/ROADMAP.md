@@ -1,5 +1,41 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Liquidity evidence ceiling closeout and state synchronization V1 (2026-09-08):**
+`LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 = COMPLETE / TERMINAL_STATE_SYNC_ONLY` at
+repository HEAD `0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752` (== origin/main; unchanged). Doc/state
+synchronization only, no network calls, no acquisition, no recomputation, no source-logic changes.
+This closes out the recent Canonical Trades / FHSC liquidity program: DNSE Trades Phase-A
+acquisition is terminal at 24,894/24,900 logical units (14,208 non-empty, 10,686 confirmed empty,
+6 remaining HTTP-500 provider failures, 0 rate-limited, 0 transport failures; 6,615,107 canonical
+rows across the 15 suffix sessions 2026-08-12..2026-09-04), independently re-verified against
+`antigravity-reports/canonical-trades-phase-a-targeted-retry-20260906/`. The governed T20 composite
+corpus for target 2026-09-04 is correct as 5 baseline sessions (2026-08-05..08-11 minus 08-08/09
+weekend) plus 15 Phase-A suffix sessions, all 20/20 present; an earlier claim that 2026-08-05..
+08-11 needed re-acquisition is superseded. Universe semantics are fixed as three distinct figures
+that must never be conflated: governed Current Research universe (ADTV20 denominator) = 1,683,
+DNSE Trades acquisition universe = 1,660, FHSC anchor cohort = 806 (877 governed tickers remain
+never-anchored). A bounded real-network 10-ticker canary confirmed FHSC has no 2026-08-06 record
+for any of its anchor cohort (`FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE` /
+`PERMANENT_EVIDENCE_GAP_CURRENT_SCOPE`); the remaining ~796-ticker backfill is correctly not
+attempted and not authorized here. Exact ADTV20 for 2026-09-04 stays 0/1,683 (42
+coverage-restricted, 1,641 semantics-unqualified) — an evidence limitation, not a calculation
+defect; the whole-window exact contract is not loosened. Watchlist anchor status is corrected:
+anchored (7) FPT/NVL/PAN/PNJ/PVD/QNS/VNM, not anchored (4) EVF/HPG/POW/SSI — an earlier claim that
+all 11 were anchored is superseded. The 752 FHSC-vs-DNSE G1 tail conflicts (98.3% on three
+sessions bracketing the 08-28/09-03 calendar gap) remain retained, unresolved,
+`UNEXPLAINED_BUT_LOCALIZED` evidence and are not reopened as an investigation by this closeout.
+Terminal disposition:
+`MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE /
+EVIDENCE_CEILING_REACHED`; execution input, position sizing, PIT, and RAW_AS_TRADED authority
+remain unpromoted. No successor liquidity/data-acquisition milestone (Phase B, FHSC 2026-08-06
+full-cohort retry, 877-ticker FHSC expansion, alternate-provider search, 08-05..08-11 acquisition,
+tail-conflict investigation) is queued; `docs/ROADMAP_STATE.json` `queued_next` remains empty. Per
+`AGENTS.md`, near-term priority reverts to core analytical product completeness and the standing
+Daily/Current Research product flow. Full detail: `docs/STATE.md` (same date). Evidence (read
+only): `operations-review/t20-composite-corpus-and-fhsc-tail-conflict-diagnostic-v1-20260907/`,
+`operations-review/composite-g1-reconciliation-and-adtv20-state-correction-v1-20260908/`,
+`operations-review/fhsc-20260806-anchor-backfill-and-adtv20-unlock-v1-20260908/`.
+
 **DNSE intraday history rate-limit resilience and resume integrity V1 (2026-09-06):**
 `DNSE_INTRADAY_HISTORY_RATE_LIMIT_RESILIENCE_AND_RESUME_INTEGRITY_V1 = COMPLETE /
 SOURCE_CORRECTION_ONLY` at local checkpoint `e01c06f`. This is a bounded corrective gate for
