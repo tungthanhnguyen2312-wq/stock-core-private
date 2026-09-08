@@ -969,6 +969,7 @@
       "narrative_disposition": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT",
       "starting_checkpoint": "f8532b7678f3f17b1a13c357c787fd1fde453c72",
       "checkpoint": "HEAD",
+      "owner_input_semantics_corrective_base": "5b689ce30e2569bb7c7830a5a34bed03e81b69af",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / PRIVATE_LOCAL_CONTEXT_FOUNDATION_ONLY / NO_DAILY_DASHBOARD_AI_HANDOFF_OR_SIZING_CHANGE",
@@ -976,7 +977,7 @@
       "source_doc": "Owner-authorized PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1 directive (2026-09-08)",
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_08_PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
-      "notes": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Next proposed gate only: PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1; it is not queued."
+      "notes": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, system_default_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Same-milestone owner-input semantics corrective maps current margin debt, minimum/maximum available margin, and annual percentage-number rate separately; VND is field-owned regardless of Excel number format or magnitude, and availability never implies debt. SYSTEM_DEFAULT_POLICY_V1 supplies only individually absent fields while retaining owner/default/effective policy provenance; no cap is an automatic sell instruction. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Next proposed gate only: PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1; it is not queued."
     }
   ],
   "blocked_capabilities": [

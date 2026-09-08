@@ -123,8 +123,21 @@ def test_absent_account_and_policy_are_explicit_not_zero_filled(tmp_path: Path):
 
     assert result["account_snapshot"]["status"] == "NOT_PROVIDED"
     assert set(result["account_snapshot"]["fields"].values()) == {None}
-    assert result["policy"]["status"] == "NOT_PROVIDED"
-    assert set(result["policy"]["fields"].values()) == {None}
+    assert result["policy"]["status"] == "SYSTEM_DEFAULTS_APPLIED"
+    assert result["policy"]["owner_policy_status"] == "NOT_PROVIDED"
+    assert result["policy"]["owner_supplied_fields"]["max_single_position_weight"] is None
+    assert result["policy"]["effective_fields"]["max_single_position_weight"] == "0.30"
+    assert result["policy"]["field_provenance"]["max_single_position_weight"]["effective_source"] == "SYSTEM_DEFAULT_POLICY_V1"
+    assert result["system_default_policy"]["policy_version"] == "SYSTEM_DEFAULT_POLICY_V1"
+    assert result["system_default_policy"]["default_fields"] == {
+        "risk_budget_per_investment_decision_to_nav": "0.01",
+        "max_single_position_weight": "0.30",
+        "max_sector_weight": "0.45",
+        "max_gross_exposure_to_nav": "1.15",
+        "max_margin_debt_to_nav": "0.15",
+        "minimum_cash_reserve_to_nav": "0.05",
+        "max_margin_rate_percent_for_new_leveraged_exposure": "15.0",
+    }
 
 
 def test_account_snapshot_and_policy_are_optional_private_contracts(tmp_path: Path):
@@ -132,8 +145,110 @@ def test_account_snapshot_and_policy_are_optional_private_contracts(tmp_path: Pa
 
     assert result["account_snapshot"]["status"] == "PROVIDED"
     assert result["account_snapshot"]["fields"]["cash_available"] == "1000"
-    assert result["policy"]["status"] == "PROVIDED"
+    assert result["policy"]["status"] == "MIXED_OWNER_AND_SYSTEM_DEFAULTS"
     assert result["policy"]["fields"]["max_single_position_weight"] == "0.25"
+    assert result["policy"]["field_provenance"]["max_single_position_weight"]["effective_source"] == "OWNER_WORKBOOK"
+    assert result["policy"]["fields"]["minimum_cash_reserve_to_nav"] == "0.05"
+
+
+def test_account_snapshot_retains_distinct_margin_availability_and_rate_without_debt_inference(tmp_path: Path):
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    trade.append(["2026-01-01", "AAA", "BUY", 1, 100])
+    account = workbook.create_sheet("AccountSnapshot")
+    account.append(["As Of Date", "Cash Available", "Net Asset Value", "Margin Available Minimum", "Margin Available Maximum", "Annual Margin Rate Percent"])
+    account.append(["2026-01-02", 5000000, 10000000, 1000000, 7000000, 13.5])
+    # The workbook leaves all monetary cells unformatted (the Excel default).
+    assert account["B2"].number_format == "General"
+    path = tmp_path / "margin-account.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    fields = result["account_snapshot"]["fields"]
+
+    assert fields["cash_available"] == "5000000"
+    assert fields["margin_available_minimum"] == "1000000"
+    assert fields["margin_available_maximum"] == "7000000"
+    assert fields["annual_margin_rate_percent"] == "13.5"
+    assert fields["margin_debt"] is None
+    assert result["account_snapshot"]["field_semantics"]["annual_margin_rate_percent"]["unit_or_format"] == "PERCENT_PER_ANNUM_NUMBER"
+    assert result["account_snapshot"]["field_semantics"]["margin_debt"]["unit_or_format"] == "VND"
+
+
+def test_legacy_margin_sheet_fields_are_reused_without_duplicate_account_snapshot_input(tmp_path: Path):
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    trade.append(["2026-01-01", "AAA", "BUY", 1, 100])
+    margin = workbook.create_sheet("margin")
+    margin.append(["Field", "Value"])
+    margin.append(["Margin Available Minimum", 1000000])
+    margin.append(["Margin Available Maximum", 7000000])
+    margin.append(["Annual Margin Rate Percent", 13.5])
+    path = tmp_path / "legacy-margin-fields.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    fields = result["account_snapshot"]["fields"]
+
+    assert result["account_snapshot"]["source"] == {"sheets": ["margin"]}
+    assert fields["margin_available_minimum"] == "1000000"
+    assert fields["margin_available_maximum"] == "7000000"
+    assert fields["annual_margin_rate_percent"] == "13.5"
+    assert fields["margin_debt"] is None
+    assert result["account_snapshot"]["field_provenance"]["margin_available_minimum"] == {"selected_source": "margin", "value_origin": "OWNER_WORKBOOK_FIELD"}
+    assert result["account_snapshot"]["authority_boundary"]["margin_availability_is_not_margin_debt"] is True
+
+
+def test_money_amount_is_vnd_by_field_identity_without_format_or_magnitude_inference(tmp_path: Path):
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    trade.append(["2026-01-01", "AAA", "BUY", 1, 100])
+    money = workbook.create_sheet("Money")
+    money.append(["Date", "Type", "Amount"])
+    money.append(["2026-01-02", "cash transfer", 1234567])
+    assert money["C2"].number_format == "General"
+    path = tmp_path / "unformatted-vnd.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    movement = next(event for event in result["ledger"]["events"] if event["event_type"] == "MONEY_MOVEMENT")
+
+    assert movement["gross_amount"] == "1234567"
+    assert movement["monetary_currency"] == "VND"
+    assert movement["monetary_unit_basis"] == "WORKBOOK_FIELD_IDENTITY_VND_NO_FORMAT_OR_MAGNITUDE_INFERENCE"
+    assert result["ledger"]["authority_boundary"]["money_and_margin_currency_inference_from_cell_format_or_magnitude"] == "PROHIBITED"
+
+
+def test_partial_owner_policy_override_keeps_source_effective_values_and_provenance(tmp_path: Path):
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    trade.append(["2026-01-01", "AAA", "BUY", 1, 100])
+    policy = workbook.create_sheet("PortfolioPolicy")
+    policy.append(["Max Single Position Weight"])
+    policy.append([0.22])
+    path = tmp_path / "partial-policy.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    policy_result = result["policy"]
+
+    assert policy_result["status"] == "MIXED_OWNER_AND_SYSTEM_DEFAULTS"
+    assert policy_result["owner_supplied_fields"]["max_single_position_weight"] == "0.22"
+    assert policy_result["effective_fields"]["max_single_position_weight"] == "0.22"
+    assert policy_result["field_provenance"]["max_single_position_weight"]["effective_source"] == "OWNER_WORKBOOK"
+    assert policy_result["owner_supplied_fields"]["max_margin_debt_to_nav"] is None
+    assert policy_result["effective_fields"]["max_margin_debt_to_nav"] == "0.15"
+    assert policy_result["field_provenance"]["max_margin_debt_to_nav"]["effective_source"] == "SYSTEM_DEFAULT_POLICY_V1"
+    assert policy_result["effective_fields"]["max_margin_rate_percent_for_new_leveraged_exposure"] == "15.0"
+    assert policy_result["authority_boundary"]["existing_positions_above_policy_caps_are_not_automatic_sell_instructions"] is True
 
 
 def test_reimport_is_content_addressed_and_status_does_not_reopen_workbook(tmp_path: Path):
@@ -149,6 +264,23 @@ def test_reimport_is_content_addressed_and_status_does_not_reopen_workbook(tmp_p
     assert status["status"] == "READY"
     assert status["manifest"]["artifact_identity"] == first["manifest"]["artifact_identity"]
     assert json.loads((root / "latest_import.json").read_text(encoding="utf-8"))["workbook_sha256"] == first["manifest"]["workbook_sha256"]
+
+
+def test_corrective_import_layout_preserves_a_prior_same_workbook_sha_artifact(tmp_path: Path):
+    workbook = _workbook(tmp_path / "prior-layout.xlsx")
+    root = tmp_path / "private"
+    legacy_directory = root / "imports" / portfolio_context._sha256_file(workbook)
+    legacy_directory.mkdir(parents=True)
+    legacy_artifact = legacy_directory / "portfolio_event_ledger_v1.json"
+    legacy_artifact.write_text('{"legacy":"immutable"}\n', encoding="utf-8")
+
+    result = import_workbook(workbook_path=workbook, portfolio_root=root)
+
+    assert result["status"] == "IMPORTED"
+    assert result["private_artifact_directory"] != legacy_directory
+    assert legacy_artifact.read_text(encoding="utf-8") == '{"legacy":"immutable"}\n'
+    assert result["manifest"]["import_layout_version"] == "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V2"
+    assert result["private_artifact_directory"].parent == legacy_directory
 
 
 def test_owner_cli_portfolio_branch_uses_private_summary_without_daily_preflight(tmp_path: Path, capsys):

@@ -23,7 +23,9 @@ from typing import Any, Iterable, Mapping
 EVENT_LEDGER_CONTRACT = "portfolio_event_ledger/v1"
 SNAPSHOT_CONTRACT = "portfolio_snapshot/v1"
 POLICY_CONTRACT = "portfolio_policy/v1"
+SYSTEM_DEFAULT_POLICY_CONTRACT = "system_default_policy/v1"
 IMPORT_MANIFEST_CONTRACT = "portfolio_import_manifest/v1"
+IMPORT_LAYOUT_VERSION = "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V2"
 CURRENT_COST_BASIS_METHOD = "WEIGHTED_AVERAGE_CARRYING_COST"
 LIFETIME_BREAKEVEN_METHOD = "LIFETIME_NET_CASH_OUTFLOW_PER_CURRENT_SHARE"
 REPOSITORY_ROOT = Path(__file__).resolve().parent
@@ -162,7 +164,10 @@ ACCOUNT_FIELDS = {
     "currency": ("currency", "basecurrency", "tiente", "donvitien"),
     "cash_available": ("cashavailable", "cashbalance", "cash", "tienmat", "tiensan sang"),
     "cash_reserved": ("cashreserved", "reservedcash", "tienphongtoa", "tiencho"),
-    "margin_debt": ("margindebt", "marginloan", "marginbalance", "nodu", "nodmargin"),
+    "margin_debt": ("margindebt", "currentmargindebt", "marginloan", "currentmarginloan", "marginbalance", "nodu", "nodmargin"),
+    "margin_available_minimum": ("marginavailableminimum", "minmarginavailable", "minimumavailablemargin", "marginavailabilitymin", "marginavailablemin", "hanmucmarginconlaitoithieu", "sucmuatoithieu"),
+    "margin_available_maximum": ("marginavailablemaximum", "maxmarginavailable", "maximumavailablemargin", "marginavailabilitymax", "marginavailablemax", "hanmucmarginconlaitoida", "sucmuatoida"),
+    "annual_margin_rate_percent": ("annualmarginratepercent", "annualmarginrate", "marginratepercent", "margininterestrate", "laisuatmargin", "laivaymarginphantram"),
     "accrued_margin_interest": ("accruedmargininterest", "margininterest", "laivaymargin", "laitrich"),
     "net_asset_value": ("netassetvalue", "nav", "taisanrong"),
     "gross_market_value": ("grossmarketvalue", "marketvalue", "giatrithitruong"),
@@ -170,12 +175,55 @@ ACCOUNT_FIELDS = {
 POLICY_FIELDS = {
     "as_of_date": ACCOUNT_FIELDS["as_of_date"],
     "currency": ACCOUNT_FIELDS["currency"],
+    "risk_budget_per_investment_decision_to_nav": ("riskbudgetperinvestmentdecisiontonav", "riskbudgetperdecision", "riskbudgettonav", "ngansachruimoiquyetdinh"),
     "max_single_position_weight": ("maxsinglepositionweight", "maxsinglenameweight", "tytrongtoidamotma"),
     "max_gross_exposure_to_nav": ("maxgrossexposuretonav", "maxgrossleverage", "tongphoinhiemtoida"),
     "max_margin_debt_to_nav": ("maxmargindebttonav", "maxmarginratio", "marginno toida", "marginnotoida"),
     "max_sector_weight": ("maxsectorweight", "tytrongnganhtoida"),
+    "minimum_cash_reserve_to_nav": ("minimumcashreservetonav", "mincashreservetonav", "minimumcashreserve", "tienmatdutoithieutonnav"),
+    "max_margin_rate_percent_for_new_leveraged_exposure": ("maxmarginratepercentfornewleveragedexposure", "maxmarginratefornewleverage", "maxnewleveragemarginrate", "laisuatmarginmaxchodonbaymoi"),
     "max_ticker_financing_cost": ("maxtickerfinancingcost", "maxstockfinancingcost", "laivaymatotoida"),
     "max_account_margin_cost": ("maxaccountmargincost", "maxmargininterest", "laivaytaikhoantoida"),
+}
+
+# Monetary fields are VND because the workbook field contract says so.  The
+# importer deliberately never inspects Excel number formatting or magnitude to
+# guess a currency or rescale a numeric cell.
+ACCOUNT_FIELD_SEMANTICS = {
+    "as_of_date": "ISO_DATE",
+    "currency": "ISO_CURRENCY_CODE",
+    "cash_available": "VND",
+    "cash_reserved": "VND",
+    "margin_debt": "VND",
+    "margin_available_minimum": "VND",
+    "margin_available_maximum": "VND",
+    "annual_margin_rate_percent": "PERCENT_PER_ANNUM_NUMBER",
+    "accrued_margin_interest": "VND",
+    "net_asset_value": "VND",
+    "gross_market_value": "VND",
+}
+POLICY_FIELD_SEMANTICS = {
+    "as_of_date": "ISO_DATE",
+    "currency": "ISO_CURRENCY_CODE",
+    "risk_budget_per_investment_decision_to_nav": "NAV_FRACTION",
+    "max_single_position_weight": "NAV_FRACTION",
+    "max_gross_exposure_to_nav": "NAV_FRACTION",
+    "max_margin_debt_to_nav": "NAV_FRACTION",
+    "max_sector_weight": "NAV_FRACTION",
+    "minimum_cash_reserve_to_nav": "NAV_FRACTION",
+    "max_margin_rate_percent_for_new_leveraged_exposure": "PERCENT_PER_ANNUM_NUMBER",
+    "max_ticker_financing_cost": "VND",
+    "max_account_margin_cost": "VND",
+}
+SYSTEM_DEFAULT_POLICY_VERSION = "SYSTEM_DEFAULT_POLICY_V1"
+SYSTEM_DEFAULT_POLICY_V1 = {
+    "risk_budget_per_investment_decision_to_nav": "0.01",
+    "max_single_position_weight": "0.30",
+    "max_sector_weight": "0.45",
+    "max_gross_exposure_to_nav": "1.15",
+    "max_margin_debt_to_nav": "0.15",
+    "minimum_cash_reserve_to_nav": "0.05",
+    "max_margin_rate_percent_for_new_leveraged_exposure": "15.0",
 }
 
 
@@ -213,7 +261,7 @@ def _event_identity(event: Mapping[str, Any]) -> str:
     return "portfolio_event:" + _identity("portfolio_event", event)["artifact_sha256"]
 
 
-def _event(*, event_type: str, effective_date: str, source_sheet: str, source_row: int, ticker: str | None = None, quantity: Decimal | None = None, gross_amount: Decimal | None = None, fee: Decimal | None = None, tax: Decimal | None = None, note: str | None = None) -> dict[str, Any]:
+def _event(*, event_type: str, effective_date: str, source_sheet: str, source_row: int, ticker: str | None = None, quantity: Decimal | None = None, gross_amount: Decimal | None = None, fee: Decimal | None = None, tax: Decimal | None = None, note: str | None = None, monetary_currency: str | None = None, monetary_unit_basis: str | None = None) -> dict[str, Any]:
     body = {
         "event_type": event_type,
         "effective_date": effective_date,
@@ -224,6 +272,8 @@ def _event(*, event_type: str, effective_date: str, source_sheet: str, source_ro
         "tax": _number(tax),
         "source": {"sheet": source_sheet, "row": source_row},
         "note_class": note,
+        "monetary_currency": monetary_currency,
+        "monetary_unit_basis": monetary_unit_basis,
     }
     body["event_identity"] = _event_identity(body)
     return body
@@ -331,14 +381,31 @@ def _money_events(sheet: Any, warnings: list[dict[str, Any]], *, margin: bool = 
         else:
             event_type = "MONEY_MOVEMENT"
         retained_amount = amount if event_type == "MONEY_MOVEMENT" else abs(amount)
-        events.append(_event(event_type=event_type, effective_date=effective_date, source_sheet=sheet.title, source_row=source_row, ticker=ticker, gross_amount=retained_amount, note="OWNER_REPORTED_CASHFLOW"))
+        events.append(_event(
+            event_type=event_type,
+            effective_date=effective_date,
+            source_sheet=sheet.title,
+            source_row=source_row,
+            ticker=ticker,
+            gross_amount=retained_amount,
+            note="OWNER_REPORTED_CASHFLOW",
+            monetary_currency="VND",
+            monetary_unit_basis="WORKBOOK_FIELD_IDENTITY_VND_NO_FORMAT_OR_MAGNITUDE_INFERENCE",
+        ))
     return events
 
 
-def _optional_contract(sheet: Any | None, *, contract_version: str, fields: Mapping[str, Iterable[str]], label: str, warnings: list[dict[str, Any]]) -> dict[str, Any]:
+def _optional_contract(sheet: Any | None, *, contract_version: str, fields: Mapping[str, Iterable[str]], field_semantics: Mapping[str, str], label: str, warnings: list[dict[str, Any]]) -> dict[str, Any]:
     values: dict[str, Any] = {field: None for field in fields}
+    semantics = {
+        field: {
+            "unit_or_format": field_semantics.get(field, "UNSPECIFIED"),
+            "value_interpretation": "WORKBOOK_FIELD_IDENTITY_NO_CELL_FORMAT_OR_MAGNITUDE_INFERENCE",
+        }
+        for field in fields
+    }
     if sheet is None:
-        body = {"schema_version": contract_version.replace("/", "_"), "contract_version": contract_version, "status": "NOT_PROVIDED", "fields": values, "source": None}
+        body = {"schema_version": contract_version.replace("/", "_"), "contract_version": contract_version, "status": "NOT_PROVIDED", "fields": values, "field_semantics": semantics, "source": None}
         return {**body, **_identity(label, body)}
     header = _header_map(sheet, candidates=fields, required=set(), limit=10)
     if header is not None and header[1]:
@@ -370,8 +437,178 @@ def _optional_contract(sheet: Any | None, *, contract_version: str, fields: Mapp
     provided = any(value is not None for value in normalized.values())
     if not provided:
         warnings.append({"code": f"{label.upper()}_FIELDS_ABSENT", "sheet": sheet.title})
-    body = {"schema_version": contract_version.replace("/", "_"), "contract_version": contract_version, "status": "PROVIDED" if provided else "NOT_PROVIDED", "fields": normalized, "source": {"sheet": sheet.title} if provided else None}
+    body = {"schema_version": contract_version.replace("/", "_"), "contract_version": contract_version, "status": "PROVIDED" if provided else "NOT_PROVIDED", "fields": normalized, "field_semantics": semantics, "source": {"sheet": sheet.title} if provided else None}
     return {**body, **_identity(label, body)}
+
+
+def _system_default_policy() -> dict[str, Any]:
+    """Materialize the versioned system defaults without inventing owner input."""
+    body = {
+        "schema_version": "system_default_policy_v1",
+        "contract_version": SYSTEM_DEFAULT_POLICY_CONTRACT,
+        "policy_version": SYSTEM_DEFAULT_POLICY_VERSION,
+        "status": "ACTIVE_SYSTEM_DEFAULTS",
+        "default_fields": SYSTEM_DEFAULT_POLICY_V1,
+        "field_semantics": {field: POLICY_FIELD_SEMANTICS[field] for field in SYSTEM_DEFAULT_POLICY_V1},
+        "authority_boundary": {
+            "applies_only_when_owner_field_absent": True,
+            "owner_value_overrides_default_per_field": True,
+            "not_an_automatic_sell_or_trade_instruction": True,
+        },
+    }
+    return {**body, **_identity("system_default_policy", body)}
+
+
+def _import_layout() -> dict[str, Any]:
+    """Version the private artifact layout so a corrective never overwrites prior immutable output."""
+    body = {
+        "layout_version": IMPORT_LAYOUT_VERSION,
+        "artifact_contracts": [
+            EVENT_LEDGER_CONTRACT,
+            SNAPSHOT_CONTRACT,
+            POLICY_CONTRACT,
+            SYSTEM_DEFAULT_POLICY_CONTRACT,
+            "account_snapshot/v1",
+            IMPORT_MANIFEST_CONTRACT,
+        ],
+        "system_default_policy_version": SYSTEM_DEFAULT_POLICY_VERSION,
+    }
+    return {**body, **_identity("portfolio_import_layout", body)}
+
+
+def _effective_policy(owner_policy: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Keep raw owner values and individually resolve only documented defaults."""
+    system_default_policy = _system_default_policy()
+    owner_fields = dict(owner_policy.get("fields") or {})
+    defaults = system_default_policy["default_fields"]
+    effective_fields: dict[str, Any] = {}
+    provenance: dict[str, dict[str, Any]] = {}
+    for field in POLICY_FIELDS:
+        owner_value = owner_fields.get(field)
+        system_value = defaults.get(field)
+        if owner_value is not None:
+            effective_value, source = owner_value, "OWNER_WORKBOOK"
+        elif system_value is not None:
+            effective_value, source = system_value, SYSTEM_DEFAULT_POLICY_VERSION
+        else:
+            effective_value, source = None, "UNAVAILABLE_NO_OWNER_OR_SYSTEM_DEFAULT"
+        effective_fields[field] = effective_value
+        provenance[field] = {
+            "owner_supplied_value": owner_value,
+            "system_default_value": system_value,
+            "effective_value": effective_value,
+            "effective_source": source,
+            "unit_or_format": POLICY_FIELD_SEMANTICS[field],
+        }
+    owner_defaultable_count = sum(owner_fields.get(field) is not None for field in defaults)
+    if owner_defaultable_count == 0:
+        status = "SYSTEM_DEFAULTS_APPLIED"
+    elif owner_defaultable_count == len(defaults):
+        status = "OWNER_SUPPLIED_DEFAULTABLE_LIMITS"
+    else:
+        status = "MIXED_OWNER_AND_SYSTEM_DEFAULTS"
+    body = {
+        "schema_version": "portfolio_policy_v1",
+        "contract_version": POLICY_CONTRACT,
+        "status": status,
+        "owner_policy_status": owner_policy.get("status"),
+        "owner_policy_identity": owner_policy.get("artifact_identity"),
+        "owner_policy_source": owner_policy.get("source"),
+        "owner_supplied_fields": owner_fields,
+        "effective_fields": effective_fields,
+        # ``fields`` remains the policy that a future consumer must use; the
+        # unmodified owner values and their provenance are retained above.
+        "fields": effective_fields,
+        "field_provenance": provenance,
+        "system_default_policy_identity": system_default_policy["artifact_identity"],
+        "system_default_policy_version": SYSTEM_DEFAULT_POLICY_VERSION,
+        "authority_boundary": {
+            "owner_values_override_system_defaults_per_field": True,
+            "existing_positions_above_policy_caps_are_not_automatic_sell_instructions": True,
+            "decision_and_risk_sizing_are_successor_scope": "PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1",
+        },
+    }
+    return {**body, **_identity("portfolio_policy", body)}, system_default_policy
+
+
+def _has_account_snapshot_fields(sheet: Any | None) -> bool:
+    """Recognize account-labelled fields without mistaking a margin ledger date for a snapshot."""
+    if sheet is None:
+        return False
+    header = _header_map(sheet, candidates=ACCOUNT_FIELDS, required=set(), limit=10)
+    if header is not None and any(field not in {"as_of_date", "currency"} for field in header[1]):
+        return True
+    key_value_header = _header_map(sheet, candidates={"key": FIELD_ALIASES["key"], "value": FIELD_ALIASES["value"]}, required={"key", "value"}, limit=20)
+    if key_value_header is None:
+        return False
+    header_row, mapping = key_value_header
+    for row in sheet.iter_rows(min_row=header_row + 1, values_only=True):
+        field = _field_for_header(_cell(row, mapping, "key"), ACCOUNT_FIELDS)
+        if field not in {None, "as_of_date", "currency"}:
+            return True
+    return False
+
+
+def _account_snapshot_contract(account_sheet: Any | None, margin_sheet: Any | None, warnings: list[dict[str, Any]]) -> dict[str, Any]:
+    """Prefer the dedicated sheet but reuse distinctly labelled legacy margin fields."""
+    dedicated = _optional_contract(
+        account_sheet,
+        contract_version="account_snapshot/v1",
+        fields=ACCOUNT_FIELDS,
+        field_semantics=ACCOUNT_FIELD_SEMANTICS,
+        label="dedicated_account_snapshot",
+        warnings=warnings,
+    )
+    legacy_margin = None
+    if margin_sheet is not None and _has_account_snapshot_fields(margin_sheet):
+        legacy_margin = _optional_contract(
+            margin_sheet,
+            contract_version="account_snapshot/v1",
+            fields=ACCOUNT_FIELDS,
+            field_semantics=ACCOUNT_FIELD_SEMANTICS,
+            label="legacy_margin_account_snapshot",
+            warnings=warnings,
+        )
+    candidates = [candidate for candidate in (dedicated, legacy_margin) if candidate and candidate.get("status") == "PROVIDED"]
+    fields: dict[str, Any] = {field: None for field in ACCOUNT_FIELDS}
+    field_provenance: dict[str, dict[str, Any]] = {
+        field: {"selected_source": None, "value_origin": "UNAVAILABLE"}
+        for field in ACCOUNT_FIELDS
+    }
+    sources: list[str] = []
+    for candidate in candidates:
+        sheet_name = ((candidate.get("source") or {}).get("sheet"))
+        if sheet_name:
+            sources.append(sheet_name)
+        for field, value in (candidate.get("fields") or {}).items():
+            if value is None:
+                continue
+            if fields[field] is None:
+                fields[field] = value
+                field_provenance[field] = {"selected_source": sheet_name, "value_origin": "OWNER_WORKBOOK_FIELD"}
+            elif fields[field] != value:
+                warnings.append({"code": "ACCOUNT_SNAPSHOT_FIELD_CONFLICT", "field": field, "preferred_source": sources[0] if sources else "ACCOUNT_SNAPSHOT"})
+    provided = any(value is not None for value in fields.values())
+    body = {
+        "schema_version": "account_snapshot_v1",
+        "contract_version": "account_snapshot/v1",
+        "status": "PROVIDED" if provided else "NOT_PROVIDED",
+        "fields": fields,
+        "field_provenance": field_provenance,
+        "field_semantics": {
+            field: {
+                "unit_or_format": ACCOUNT_FIELD_SEMANTICS[field],
+                "value_interpretation": "WORKBOOK_FIELD_IDENTITY_NO_CELL_FORMAT_OR_MAGNITUDE_INFERENCE",
+            }
+            for field in ACCOUNT_FIELDS
+        },
+        "source": {"sheets": sources} if sources else None,
+        "authority_boundary": {
+            "margin_availability_is_not_margin_debt": True,
+            "dedicated_account_snapshot_precedes_legacy_margin_fields_on_conflict": True,
+        },
+    }
+    return {**body, **_identity("account_snapshot", body)}
 
 
 def _total_quantity_hint(sheet: Any | None, warnings: list[dict[str, Any]]) -> dict[str, Decimal]:
@@ -421,11 +658,22 @@ def build_event_ledger(*, workbook_path: Path, workbook_sha256: str) -> tuple[di
         events.extend(_dividend_events(dividend, warnings))
     if money is not None:
         events.extend(_money_events(money, warnings))
+    margin_has_account_fields = _has_account_snapshot_fields(margin)
     if margin is not None:
-        events.extend(_money_events(margin, warnings, margin=True))
+        margin_event_header = _header_map(margin, candidates=FIELD_ALIASES, required={"date", "amount"})
+        if margin_event_header is not None or not margin_has_account_fields:
+            events.extend(_money_events(margin, warnings, margin=True))
     events.sort(key=lambda item: (item["effective_date"], item["source"]["sheet"], item["source"]["row"], item["event_identity"]))
-    account = _optional_contract(_sheet_by_normalized_name(workbook, "AccountSnapshot"), contract_version="account_snapshot/v1", fields=ACCOUNT_FIELDS, label="account_snapshot", warnings=warnings)
-    policy = _optional_contract(_sheet_by_normalized_name(workbook, "PortfolioPolicy"), contract_version=POLICY_CONTRACT, fields=POLICY_FIELDS, label="portfolio_policy", warnings=warnings)
+    account = _account_snapshot_contract(_sheet_by_normalized_name(workbook, "AccountSnapshot"), margin, warnings)
+    owner_policy = _optional_contract(
+        _sheet_by_normalized_name(workbook, "PortfolioPolicy"),
+        contract_version=POLICY_CONTRACT,
+        fields=POLICY_FIELDS,
+        field_semantics=POLICY_FIELD_SEMANTICS,
+        label="owner_portfolio_policy",
+        warnings=warnings,
+    )
+    policy, system_default_policy = _effective_policy(owner_policy)
     total_hint = _total_quantity_hint(_sheet_by_normalized_name(workbook, "Total"), warnings)
     body = {
         "schema_version": "portfolio_event_ledger_v1",
@@ -439,6 +687,8 @@ def build_event_ledger(*, workbook_path: Path, workbook_sha256: str) -> tuple[di
         "authority_boundary": {
             "private_local_only": True,
             "total_sheet_is_view_hint_only": True,
+            "money_and_margin_monetary_fields_currency": "VND",
+            "money_and_margin_currency_inference_from_cell_format_or_magnitude": "PROHIBITED",
             "no_market_context_or_timing_classification": True,
             "no_daily_dashboard_or_ai_handoff_integration": True,
         },
@@ -446,7 +696,7 @@ def build_event_ledger(*, workbook_path: Path, workbook_sha256: str) -> tuple[di
     ledger = {**body, **_identity("portfolio_event_ledger", body)}
     # The Total data is intentionally held only in-process, never retained as authority.
     workbook.close()
-    return ledger, account, {"policy": policy, "total_quantity_hint": total_hint}
+    return ledger, account, {"policy": policy, "system_default_policy": system_default_policy, "total_quantity_hint": total_hint}
 
 
 def _amount_from_event(event: Mapping[str, Any], field: str = "gross_amount") -> Decimal:
@@ -565,6 +815,7 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
         "snapshot_as_of_basis": snapshot_as_of_basis,
         "positions": positions,
         "account_snapshot": account_snapshot,
+        "portfolio_policy": policy,
         "account_level_unallocated_margin_cost": _number(unallocated_margin_cost),
         "reconciliation": {"status": "WARNING" if warnings else "RECONCILED", "warning_counts": dict(warning_codes), "warning_count": len(warnings)},
         "authority_boundary": {
@@ -574,6 +825,7 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
             "market_timing_top_bottom_classification": "NOT_IMPLEMENTED_RETAIN_EVENTS_FOR_LATER_CONTEXT",
             "unrealized_pnl_requires_owner_supplied_mark_price": True,
             "no_position_sizing_or_investment_recommendation": True,
+            "policy_cap_excess_is_not_an_automatic_sell_instruction": True,
         },
     }
     return {**body, **_identity("portfolio_snapshot", body)}
@@ -615,14 +867,18 @@ def import_workbook(*, workbook_path: Path | None = None, portfolio_root: Path |
     workbook_sha256 = _sha256_file(workbook_path)
     ledger, account_snapshot, extras = build_event_ledger(workbook_path=workbook_path, workbook_sha256=workbook_sha256)
     policy = extras["policy"]
+    system_default_policy = extras["system_default_policy"]
     snapshot = _snapshot_from_ledger(ledger=ledger, account_snapshot=account_snapshot, policy=policy, total_quantity_hint=extras["total_quantity_hint"])
-    relative_directory = Path("imports") / workbook_sha256
+    import_layout = _import_layout()
+    relative_directory = Path("imports") / workbook_sha256 / import_layout["artifact_sha256"]
     manifest_body = {
         "schema_version": "portfolio_import_manifest_v1",
         "contract_version": IMPORT_MANIFEST_CONTRACT,
         "workbook_sha256": workbook_sha256,
         "workbook_filename": workbook_path.name,
-        "artifact_identities": {"portfolio_event_ledger_v1": ledger["artifact_identity"], "portfolio_snapshot_v1": snapshot["artifact_identity"], "portfolio_policy_v1": policy["artifact_identity"], "account_snapshot_v1": account_snapshot["artifact_identity"]},
+        "import_layout_version": IMPORT_LAYOUT_VERSION,
+        "import_layout_identity": import_layout["artifact_identity"],
+        "artifact_identities": {"portfolio_event_ledger_v1": ledger["artifact_identity"], "portfolio_snapshot_v1": snapshot["artifact_identity"], "portfolio_policy_v1": policy["artifact_identity"], "system_default_policy_v1": system_default_policy["artifact_identity"], "account_snapshot_v1": account_snapshot["artifact_identity"]},
         "relative_directory": relative_directory.as_posix(),
         "authority_boundary": {"local_only": True, "workbook_values_not_written_to_repository": True, "provider_calls": "NOT_USED", "daily_run": "NOT_USED"},
     }
@@ -632,6 +888,7 @@ def import_workbook(*, workbook_path: Path | None = None, portfolio_root: Path |
         _write_immutable_json(destination / "portfolio_event_ledger_v1.json", ledger),
         _write_immutable_json(destination / "portfolio_snapshot_v1.json", snapshot),
         _write_immutable_json(destination / "portfolio_policy_v1.json", policy),
+        _write_immutable_json(destination / "system_default_policy_v1.json", system_default_policy),
         _write_immutable_json(destination / "account_snapshot_v1.json", account_snapshot),
         _write_immutable_json(destination / "portfolio_import_manifest_v1.json", manifest),
     ]
@@ -643,6 +900,7 @@ def import_workbook(*, workbook_path: Path | None = None, portfolio_root: Path |
         "ledger": ledger,
         "snapshot": snapshot,
         "policy": policy,
+        "system_default_policy": system_default_policy,
         "account_snapshot": account_snapshot,
         "storage_root": portfolio_root,
         "private_artifact_directory": destination,
