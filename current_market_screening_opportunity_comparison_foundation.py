@@ -70,9 +70,42 @@ def _coverage(*, denominator: int, observed: int, eligible: int, session: str, s
     }
 
 
+def _finite_number(value: Any) -> float | None:
+    """Return ``value`` as a float, or ``None`` if it is missing/blocked/non-finite.
+
+    Feature fitness is local: a feature that is present but not a real number (``None`` when
+    upstream has blocked it, e.g. a provider-volume-family incompatibility) must be treated as
+    unavailable for that one feature, not coerced to 0.0 and not used to reject the whole record.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if number == number and number not in (float("inf"), float("-inf")) else None
+
+
 def _technical_eligible(record: Mapping[str, Any]) -> bool:
     technical = record.get("technical_features", {})
     return technical.get("status") == "SHADOW_ONLY" and technical.get("is_current_session") is True
+
+
+def _momentum_eligible(record: Mapping[str, Any]) -> bool:
+    if not _technical_eligible(record):
+        return False
+    values = record.get("technical_features", {}).get("values", {})
+    return _finite_number(values.get("momentum_20d")) is not None
+
+
+def _relative_volume_eligible(record: Mapping[str, Any]) -> bool:
+    """Same-session technical eligibility plus a numeric, provider-volume-fitness-compatible
+    relative-volume value. A blocked/incompatible provider-volume family (expressed by the
+    upstream ``provider_volume_fitness`` field) must localize to this feature only -- it must
+    never remove the record's momentum, trend, sector, or technical+liquidity eligibility."""
+    if not _technical_eligible(record):
+        return False
+    technical = record.get("technical_features", {})
+    if technical.get("provider_volume_fitness") is not None:
+        return False
+    return _finite_number(technical.get("values", {}).get("relative_volume_provider_scoped")) is not None
 
 
 def _unavailable_technical_reason(record: Mapping[str, Any]) -> str:
@@ -82,6 +115,21 @@ def _unavailable_technical_reason(record: Mapping[str, Any]) -> str:
     if record.get("activity_and_session_state") == "ACTIVE_LISTED_NO_QUALIFIED_SESSION_OBSERVATION":
         return "SESSION_MISSING_TECHNICAL_FEATURE_UNAVAILABLE"
     return "TECHNICAL_FEATURE_UNAVAILABLE"
+
+
+def _unavailable_momentum_reason(record: Mapping[str, Any], *, technical_ok: bool) -> str:
+    if not technical_ok:
+        return _unavailable_technical_reason(record)
+    return "MOMENTUM_FEATURE_UNAVAILABLE"
+
+
+def _unavailable_relative_volume_reason(record: Mapping[str, Any], *, technical_ok: bool) -> str:
+    if not technical_ok:
+        return _unavailable_technical_reason(record)
+    fitness = record.get("technical_features", {}).get("provider_volume_fitness")
+    if fitness:
+        return str(fitness)
+    return "RELATIVE_VOLUME_FEATURE_UNAVAILABLE"
 
 
 def _sector_positions(source: Mapping[str, Any]) -> tuple[dict[str, Mapping[str, Any]], dict[str, Mapping[str, Any]]]:
@@ -117,18 +165,20 @@ def build_artifact(source: Mapping[str, Any]) -> dict[str, Any]:
     if len(in_scope) != denominator:
         raise ValueError("CURRENT_DESCRIPTIVE_DENOMINATOR_MISMATCH")
     technical = {ticker: record for ticker, record in in_scope.items() if _technical_eligible(record)}
+    momentum_eligible = {ticker: record for ticker, record in technical.items() if _momentum_eligible(record)}
+    relative_volume_eligible = {ticker: record for ticker, record in technical.items() if _relative_volume_eligible(record)}
     liquidity = {ticker: record for ticker, record in in_scope.items() if record.get("liquidity", {}).get("status") == "ELIGIBLE"}
     technical_liquidity = set(technical) & set(liquidity)
     positions, sector_by_ticker = _sector_positions(source)
     sector_eligible = set(technical) & set(positions)
 
-    momentum = {ticker: float(record["technical_features"]["values"]["momentum_20d"]) for ticker, record in technical.items()}
+    momentum = {ticker: _finite_number(record["technical_features"]["values"]["momentum_20d"]) for ticker, record in momentum_eligible.items()}
     relative_volume = {
-        ticker: float(record["technical_features"]["values"]["relative_volume_provider_scoped"])
-        for ticker, record in technical.items()
+        ticker: _finite_number(record["technical_features"]["values"]["relative_volume_provider_scoped"])
+        for ticker, record in relative_volume_eligible.items()
     }
-    momentum_median = median(momentum.values())
-    relative_volume_median = median(relative_volume.values())
+    momentum_median = median(momentum.values()) if momentum else None
+    relative_volume_median = median(relative_volume.values()) if relative_volume else None
     common_quality = "PARTIAL_COVERAGE_EXPLICIT_CURRENT_SESSION_ONLY"
 
     screen_definitions = {
@@ -158,11 +208,11 @@ def build_artifact(source: Mapping[str, Any]) -> dict[str, Any]:
         },
     }
     screen_coverage = {
-        "TREND_AND_POSITIVE_MOMENTUM": _coverage(denominator=denominator, observed=observed, eligible=len(technical),
+        "TREND_AND_POSITIVE_MOMENTUM": _coverage(denominator=denominator, observed=observed, eligible=len(momentum_eligible),
                                                    session=session, source_identity=source_identity, quality_state=common_quality),
-        "MOMENTUM_ABOVE_COHORT_MEDIAN": _coverage(denominator=denominator, observed=observed, eligible=len(technical),
+        "MOMENTUM_ABOVE_COHORT_MEDIAN": _coverage(denominator=denominator, observed=observed, eligible=len(momentum_eligible),
                                                     session=session, source_identity=source_identity, quality_state=common_quality),
-        "RELATIVE_VOLUME_ABOVE_COHORT_MEDIAN": _coverage(denominator=denominator, observed=observed, eligible=len(technical),
+        "RELATIVE_VOLUME_ABOVE_COHORT_MEDIAN": _coverage(denominator=denominator, observed=observed, eligible=len(relative_volume_eligible),
                                                             session=session, source_identity=source_identity, quality_state=common_quality),
         "TECHNICAL_AND_CURRENT_DESCRIPTIVE_LIQUIDITY": _coverage(
             denominator=denominator, observed=observed, eligible=len(technical_liquidity), session=session,
@@ -184,33 +234,62 @@ def build_artifact(source: Mapping[str, Any]) -> dict[str, Any]:
             "sector_relative_comparison": {},
             "liquidity_context": {},
         }
-        if technical_ok:
+        momentum_ok = ticker in momentum_eligible
+        relative_volume_ok = ticker in relative_volume_eligible
+        # Momentum-gated screens and the relative-volume-gated screen are evaluated independently:
+        # a blocked/unavailable relative-volume feature must not remove a record's otherwise-valid
+        # momentum/trend eligibility, and vice versa (feature fitness is local).
+        if momentum_ok:
             momentum_value = momentum[ticker]
-            volume_value = relative_volume[ticker]
             momentum_percentile, momentum_bucket = _position(momentum, momentum_value)
-            volume_percentile, volume_bucket = _position(relative_volume, volume_value)
-            row["screen_membership"].update({
-                "TREND_AND_POSITIVE_MOMENTUM": {"status": "ELIGIBLE", "member": record.get("trend_state") == "ABOVE_MA20" and momentum_value > 0},
-                "MOMENTUM_ABOVE_COHORT_MEDIAN": {"status": "ELIGIBLE", "member": momentum_value > momentum_median},
-                "RELATIVE_VOLUME_ABOVE_COHORT_MEDIAN": {"status": "ELIGIBLE", "member": volume_value > relative_volume_median},
-            })
-            row["market_relative_comparison"] = {
-                "status": "AVAILABLE",
-                "momentum_20d": momentum_value,
-                "momentum_percentile_descriptive": momentum_percentile,
-                "momentum_bucket": momentum_bucket,
-                "momentum_cohort_median": momentum_median,
-                "relative_volume_provider_scoped": volume_value,
-                "relative_volume_percentile_descriptive": volume_percentile,
-                "relative_volume_bucket": volume_bucket,
-                "relative_volume_cohort_median": relative_volume_median,
-                "coverage": screen_coverage["MOMENTUM_ABOVE_COHORT_MEDIAN"],
-                "authority": "CURRENT_DESCRIPTIVE_SHADOW_ONLY_NOT_ORDINAL_RANKING",
+            row["screen_membership"]["TREND_AND_POSITIVE_MOMENTUM"] = {
+                "status": "ELIGIBLE", "member": record.get("trend_state") == "ABOVE_MA20" and momentum_value > 0,
+            }
+            row["screen_membership"]["MOMENTUM_ABOVE_COHORT_MEDIAN"] = {
+                "status": "ELIGIBLE", "member": momentum_value > momentum_median,
             }
         else:
+            momentum_reason = _unavailable_momentum_reason(record, technical_ok=technical_ok)
+            row["screen_membership"]["TREND_AND_POSITIVE_MOMENTUM"] = {"status": "UNAVAILABLE", "reason": momentum_reason, "member": None}
+            row["screen_membership"]["MOMENTUM_ABOVE_COHORT_MEDIAN"] = {"status": "UNAVAILABLE", "reason": momentum_reason, "member": None}
+
+        if relative_volume_ok:
+            volume_value = relative_volume[ticker]
+            volume_percentile, volume_bucket = _position(relative_volume, volume_value)
+            row["screen_membership"]["RELATIVE_VOLUME_ABOVE_COHORT_MEDIAN"] = {
+                "status": "ELIGIBLE", "member": volume_value > relative_volume_median,
+            }
+        else:
+            row["screen_membership"]["RELATIVE_VOLUME_ABOVE_COHORT_MEDIAN"] = {
+                "status": "UNAVAILABLE", "reason": _unavailable_relative_volume_reason(record, technical_ok=technical_ok), "member": None,
+            }
+
+        if momentum_ok or relative_volume_ok:
+            comparison: dict[str, Any] = {"status": "AVAILABLE", "coverage": screen_coverage["MOMENTUM_ABOVE_COHORT_MEDIAN"],
+                                            "authority": "CURRENT_DESCRIPTIVE_SHADOW_ONLY_NOT_ORDINAL_RANKING"}
+            if momentum_ok:
+                comparison.update({
+                    "momentum_20d": momentum_value,
+                    "momentum_percentile_descriptive": momentum_percentile,
+                    "momentum_bucket": momentum_bucket,
+                    "momentum_cohort_median": momentum_median,
+                })
+            else:
+                comparison["momentum_status"] = "UNAVAILABLE"
+                comparison["momentum_reason"] = _unavailable_momentum_reason(record, technical_ok=technical_ok)
+            if relative_volume_ok:
+                comparison.update({
+                    "relative_volume_provider_scoped": volume_value,
+                    "relative_volume_percentile_descriptive": volume_percentile,
+                    "relative_volume_bucket": volume_bucket,
+                    "relative_volume_cohort_median": relative_volume_median,
+                })
+            else:
+                comparison["relative_volume_status"] = "UNAVAILABLE"
+                comparison["relative_volume_reason"] = _unavailable_relative_volume_reason(record, technical_ok=technical_ok)
+            row["market_relative_comparison"] = comparison
+        else:
             reason = _unavailable_technical_reason(record)
-            for screen in ("TREND_AND_POSITIVE_MOMENTUM", "MOMENTUM_ABOVE_COHORT_MEDIAN", "RELATIVE_VOLUME_ABOVE_COHORT_MEDIAN"):
-                row["screen_membership"][screen] = {"status": "UNAVAILABLE", "reason": reason, "member": None}
             row["market_relative_comparison"] = {"status": "UNAVAILABLE", "reason": reason,
                                                    "coverage": screen_coverage["MOMENTUM_ABOVE_COHORT_MEDIAN"]}
         if technical_ok and liquidity_ok:
@@ -283,6 +362,8 @@ def build_artifact(source: Mapping[str, Any]) -> dict[str, Any]:
             "denominator": denominator,
             "observed_session_cohort": observed,
             "same_session_technical_feature_count": len(technical),
+            "momentum_eligible_count": len(momentum_eligible),
+            "relative_volume_eligible_count": len(relative_volume_eligible),
             "current_descriptive_liquidity_eligible_count": len(liquidity),
             "technical_and_liquidity_intersection_count": len(technical_liquidity),
             "sector_relative_eligible_count": len(sector_eligible),
