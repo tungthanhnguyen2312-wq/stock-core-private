@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.08.1",
+  "roadmap_version": "2026.09.08.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752",
-  "last_updated_checkpoint": "0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752",
+  "implementation_lineage_head": "HEAD",
+  "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1",
+    "milestone": "PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -962,6 +962,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_08_LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1",
       "notes": "COMPLETE / TERMINAL_STATE_SYNC_ONLY. No network calls, no data acquisition, no analytical recomputation, no source-logic changes; repository HEAD/origin-main unchanged at 0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752 before and after. Reconciles docs/STATE.md, docs/ROADMAP.md, and this file against three prior local milestones that ran ahead of recorded roadmap state (operations-review/t20-composite-corpus-and-fhsc-tail-conflict-diagnostic-v1-20260907/, operations-review/composite-g1-reconciliation-and-adtv20-state-correction-v1-20260908/, operations-review/fhsc-20260806-anchor-backfill-and-adtv20-unlock-v1-20260908/) plus Anti-Gravity's separately executed targeted Phase-A retry (antigravity-reports/canonical-trades-phase-a-targeted-retry-20260906/, independently re-verified, all figures matched). DNSE Trades Phase-A acquisition is now terminal: 24,894/24,900 logical units (14,208 non-empty, 10,686 confirmed empty, 6 remaining HTTP-500 failures, 0 rate-limited, 0 transport failures; 6,615,107 canonical rows across 15 suffix sessions 2026-08-12..2026-09-04); PHASE_B_NOT_YET_JUSTIFIED stands. The governed T20 composite corpus for target 2026-09-04 is confirmed correct (5 baseline 2026-08-05..08-11 sessions + 15 Phase-A suffix sessions, 20/20 present); the earlier '2026-08-05..08-11 missing' claim is superseded. Universe denominators are corrected and kept distinct: governed Current Research/ADTV20 denominator = 1,683, DNSE Trades acquisition universe = 1,660 (never a substitute denominator), FHSC anchor cohort = 806 (877 governed tickers never anchored). A bounded real-network 10-ticker canary confirmed FHSC has no 2026-08-06 record anywhere in its anchor cohort (FHSC_20260806_PROVIDER_EVIDENCE_UNAVAILABLE / PERMANENT_EVIDENCE_GAP_CURRENT_SCOPE); the remaining ~796-ticker backfill is correctly not attempted and not authorized here. Exact ADTV20 for 2026-09-04 stays 0/1,683 (42 coverage-restricted, 1,641 semantics-unqualified, 0 insufficient-window) -- an evidence limitation, not a calculation defect; the whole-window exact contract is not loosened. Watchlist anchor status corrected: anchored (7) FPT/NVL/PAN/PNJ/PVD/QNS/VNM, not anchored (4) EVF/HPG/POW/SSI -- the earlier 'all 11 anchored' claim is superseded. The 752 FHSC-vs-DNSE G1 tail conflicts (24.13% of comparable non-empty cells, 739/752 on the three sessions bracketing the 08-28/09-03 calendar gap) remain retained, unresolved, UNEXPLAINED_BUT_LOCALIZED evidence, not reopened as an investigation. Terminal disposition: MARKET_WIDE_HISTORICAL_MATCHED_LIQUIDITY_AND_ADTV = COMPLETE / PARTIAL_BY_EVIDENCE / EVIDENCE_CEILING_REACHED; execution input, position sizing (NOT_EVALUATED), PIT, and RAW_AS_TRADED authority remain unpromoted. No successor liquidity/data-acquisition milestone is queued (Phase B, FHSC 2026-08-06 full-cohort retry, 877-ticker FHSC expansion, alternate-provider search, 2026-08-05..08-11 acquisition, tail-conflict investigation all explicitly not queued); queued_next remains empty. Per AGENTS.md, near-term priority reverts to core analytical product completeness and the standing Daily/Current Research product flow. The pre-existing unrelated local modification to config/daily_research_session_input_registry.json was left untouched throughout and is not part of this milestone's commit. Next gate: RETURN_TO_STANDING_PRODUCT_DAILY_FLOW."
+    },
+    {
+      "milestone_id": "PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT",
+      "starting_checkpoint": "f8532b7678f3f17b1a13c357c787fd1fde453c72",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / PRIVATE_LOCAL_CONTEXT_FOUNDATION_ONLY / NO_DAILY_DASHBOARD_AI_HANDOFF_OR_SIZING_CHANGE",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1 directive (2026-09-08)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_08_PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
+      "notes": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Next proposed gate only: PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1; it is not queued."
     }
   ],
   "blocked_capabilities": [

@@ -172,10 +172,37 @@ def main(argv=None) -> int:
         ),
     )
     sub.add_parser("roadmap")
+    portfolio = sub.add_parser("portfolio", help="Private local-only workbook import and status; never enters Daily.")
+    portfolio_sub = portfolio.add_subparsers(dest="portfolio_action", required=True)
+    portfolio_import = portfolio_sub.add_parser("import", help="Import the owner workbook into private content-addressed local artifacts.")
+    portfolio_import.add_argument("--workbook", type=Path, default=None, help="Private workbook path (default: %USERPROFILE%\\.stocklookup\\portfolio\\portfolio_input.xlsx).")
+    portfolio_import.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %USERPROFILE%\\.stocklookup\\portfolio).")
+    portfolio_status = portfolio_sub.add_parser("status", help="Read the private latest-import pointer without opening the workbook.")
+    portfolio_status.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %USERPROFILE%\\.stocklookup\\portfolio).")
     a = p.parse_args(argv)
 
     if a.command == "roadmap":
         return subprocess.run([sys.executable, str(ROOT / "tools/stocklookup_roadmap.py")]).returncode
+
+    if a.command == "portfolio":
+        from private_portfolio_context import (
+            PortfolioImportError,
+            import_workbook,
+            portfolio_status as load_portfolio_status,
+            public_import_summary,
+            public_status_summary,
+        )
+        try:
+            if a.portfolio_action == "import":
+                result = import_workbook(workbook_path=a.workbook, portfolio_root=a.portfolio_root)
+                print(json.dumps(public_import_summary(result), ensure_ascii=False, sort_keys=True))
+            else:
+                result = load_portfolio_status(portfolio_root=a.portfolio_root)
+                print(json.dumps(public_status_summary(result), ensure_ascii=False, sort_keys=True))
+            return 0
+        except PortfolioImportError as exc:
+            print(f"STATUS: {exc}")
+            return 2
 
     try:
         from stocklookup_preflight import check

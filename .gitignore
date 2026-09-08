@@ -59,6 +59,7 @@ screen_snapshot_live.csv
 # Temporary scratch directories
 tmp/
 dev/
+.stocklookup/
 
 # Local-only forensic evidence and milestone run archives (tracked files remain tracked)
 operations-review/

@@ -12,6 +12,7 @@ pandas>=2.3
 numpy>=2.2
 requests>=2.33
 pyarrow>=24.0
+openpyxl>=3.1            # private local-only portfolio workbook import
 
 # --- Tùy chọn — chỉ cần khi dùng đúng tính năng tương ứng ---
 anthropic>=0.116          # chỉ cần cho ai_analyzer.py khi GỌI API THẬT (không cần cho --dry-run)

@@ -833,6 +833,10 @@ Execution focus strictly follows the ordered critical path:
 
 ---
 
+69. **Private Portfolio Context Foundation V1** — **COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT** (`private_portfolio_context.py`, `stocklookup.py portfolio`). Owner-authorized despite `queued_next=[]`; creates deterministic private workbook ledger/snapshot/policy/import-manifest contracts under `%USERPROFILE%\.stocklookup\portfolio\`, preserves `Trade`/`Dividend`/`Money`/`margin` and treats `Total` as a reconciliation hint only. Reuses the pre-existing explicit portfolio risk boundary without Daily, Dashboard, AI-handoff, provider, recommendation, sizing, execution, or authority change. Synthetic-only tests cover buys, partial sales, fee/tax and dividend cashflows, stock distributions, reopened positions, reconciliation warnings, missing account/policy input, and idempotent re-import. Next proposed dependency only: `PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1`.
+
+---
+
 ## 4. Acceptance Gates for Subsequent Phases
 
 ### Opening Phase 1 (Research Evidence Layer):
