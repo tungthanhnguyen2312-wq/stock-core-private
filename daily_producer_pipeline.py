@@ -180,6 +180,20 @@ def _verify_delivery(operation: Mapping[str, Any], operation_dir: Path) -> dict[
         raise DailyProducerError("AI_DASHBOARD_PARITY_PRODUCT_MISMATCH")
     if bundle.get("lineage", {}).get("input_artifacts") != projection.get("source", {}).get("input_artifacts"):
         raise DailyProducerError("AI_DASHBOARD_PARITY_UPSTREAM_IDENTITY_MISMATCH")
+    integrated_delivery = operation.get("integrated_delivery")
+    if isinstance(integrated_delivery, Mapping):
+        integrated_identity = integrated_delivery["integrated_investment_decision_product"]["artifact_identity"]
+        if bundle.get("integrated_decision_overlay_v1", {}).get("integrated_investment_decision_product_identity") != integrated_identity:
+            raise DailyProducerError("AI_INTEGRATED_DELIVERY_IDENTITY_MISMATCH")
+        if projection.get("source", {}).get("integrated_investment_decision_product_identity") != integrated_identity:
+            raise DailyProducerError("DASHBOARD_INTEGRATED_DELIVERY_IDENTITY_MISMATCH")
+        brief = integrated_delivery.get("daily_integrated_decision_brief")
+        if isinstance(brief, Mapping):
+            brief_identity = brief.get("artifact_identity")
+            if bundle.get("integrated_decision_overlay_v1", {}).get("daily_integrated_decision_brief_identity") != brief_identity:
+                raise DailyProducerError("AI_DAILY_INTEGRATED_BRIEF_IDENTITY_MISMATCH")
+            if not (operation_dir / "daily_integrated_decision_brief_artifact.json").is_file():
+                raise DailyProducerError("DAILY_INTEGRATED_BRIEF_RETENTION_MISSING")
     for filename, record in manifest.get("files", {}).items():
         path = operation_dir / filename
         if not path.is_file() or _sha(path.read_bytes()) != record.get("sha256"):
@@ -235,6 +249,8 @@ def run_daily_producer(
     macro: Mapping[str, Any] | None = None,
     shadow_security_recommendation: Mapping[str, Any] | None = None,
     fundamental_cohort_selector: str | None = None,
+    integrated_investment_decision_product: Mapping[str, Any] | None = None,
+    daily_integrated_decision_brief: Mapping[str, Any] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Run the one-command retained completed-session producer pipeline."""
@@ -276,6 +292,8 @@ def run_daily_producer(
         portfolio=portfolio,
         macro=macro,
         shadow_security_recommendation=resolved_shadow_security_recommendation,
+        integrated_investment_decision_product=integrated_investment_decision_product,
+        daily_integrated_decision_brief=daily_integrated_decision_brief,
     )
     parity = _verify_delivery(operation, operation_dir)
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])

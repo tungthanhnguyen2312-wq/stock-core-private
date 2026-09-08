@@ -1197,11 +1197,24 @@ def run_canonical_post_close(
     artifact_root = acquisition["artifact_root"]
     register_session_inputs(root, session, artifact_root=artifact_root)
     validate_and_freeze_completed_session(root, session)
+    # The rich Integrated Decision is an already-governed, exact-session
+    # enrichment surface.  Build it before the immutable Daily operation so
+    # the operation's AI handoff and cockpit can retain it as an additive
+    # overlay.  It is deliberately supplied by object identity below; neither
+    # the producer nor the delivery layer performs a "latest" lookup.
+    enrichment = build_enrichment_components(
+        root, session, artifact_root=artifact_root, runtime_root=runtime_root,
+        priority_queue_artifact=None,
+    )
+    integrated_delivery = (enrichment.get("integrated_investment_decision_product") or {}).get("artifact")
+    if not isinstance(integrated_delivery, Mapping) or integrated_delivery.get("session") != session:
+        raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:INTEGRATED_DECISION_DELIVERY_INPUT_UNAVAILABLE")
     producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
     try:
         producer_result = run_daily_producer(
             root, session=session, latest_completed_session=False,
             producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
+            integrated_investment_decision_product=integrated_delivery,
             now=now,
         )
     except DailyProducerError as exc:
@@ -1212,10 +1225,6 @@ def run_canonical_post_close(
         raise CanonicalPostCloseError(
             "REFUSE_CANONICAL_POST_CLOSE:CANONICAL_RUNTIME_RELEASE_INTEGRITY_FAILURE:" + str(exc)
         ) from exc
-    enrichment = build_enrichment_components(
-        root, session, artifact_root=artifact_root, runtime_root=runtime_root,
-        priority_queue_artifact=producer_result["operation"].get("decision_queue"),
-    )
     prospective_snapshot = retain_prospective_decision_snapshot(
         root, session, producer_result=producer_result, enrichment=enrichment,
         exact_session_snapshot=acquisition.get("snapshot"),

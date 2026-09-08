@@ -126,6 +126,27 @@ def _daily_integrated_decision_brief(session: str, operation: Path, decision_bri
             print(f"STATUS: DAILY_INTEGRATED_DECISION_BRIEF_CONTENT_CONFLICT_SKIPPED\nSESSION: {session}")
             return None
         path.write_text(payload, encoding="utf-8")
+        # Keep the exact rich brief in the freshly built Daily operation as an
+        # immutable, bound companion.  The resolver is session-addressed; it
+        # never scans operations-review for a newer or similar-looking result.
+        try:
+            from daily_research_session_operations import load_registry, retain_integrated_decision_brief
+            from daily_session_level2_package import session_artifact_paths
+            integrated_path = session_artifact_paths(root, session)["integrated_investment_decision_product"]
+            integrated = json.loads(integrated_path.read_text(encoding="utf-8"))
+            operation_manifest = json.loads((operation / "run_manifest.json").read_text(encoding="utf-8"))
+            retain_integrated_decision_brief(
+                operation,
+                session=session,
+                operation_manifest=operation_manifest,
+                integrated_investment_decision_product=integrated,
+                daily_integrated_decision_brief=brief,
+                registry=load_registry(root),
+            )
+        except Exception as retention_exc:
+            # Preserve the pre-existing non-blocking brief contract while
+            # making a failed companion retention visible to the owner.
+            print(f"STATUS: DAILY_INTEGRATED_DECISION_BRIEF_RETENTION_SKIPPED\nREASON: {retention_exc}\nSESSION: {session}")
         return path
     except Exception as exc:
         print(f"STATUS: DAILY_INTEGRATED_DECISION_BRIEF_SKIPPED\nREASON: {exc}")

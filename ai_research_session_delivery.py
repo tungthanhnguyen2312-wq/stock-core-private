@@ -23,6 +23,8 @@ PRIMARY_HUMAN_REVIEW_FILENAME = "ai_research_session_bundle.json"
 FULL_UNIVERSE_LOOKUP_FILENAME = "ai_research_full_universe.ndjson"
 FULL_UNIVERSE_COMPANION_ROLE = "FULL_UNIVERSE_LOOKUP_ONLY"
 PRIMARY_HUMAN_REVIEW_ROLE = "PRIMARY_NORMAL_HUMAN_REVIEW_INPUT"
+INTEGRATED_DELIVERY_CONTRACT = "integrated_decision_delivery_overlay/v1"
+DECISION_CARD_CONTRACT = "decision_card_v1"
 
 
 def _canon(value: Any) -> str:
@@ -41,6 +43,182 @@ def _records(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
         if isinstance(found, Mapping):
             return found
     return {}
+
+
+def _require_identity(value: Mapping[str, Any], *, field: str, error: str) -> str:
+    identity = value.get(field)
+    if not isinstance(identity, str) or not identity:
+        raise ValueError(error)
+    return identity
+
+
+def _integrated_delivery_inputs(session: str, inputs: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, Mapping[str, Any] | None]:
+    """Validate explicit, caller-provided rich-delivery inputs.
+
+    The Daily registry remains the sole selector of analytical inputs.  These
+    are downstream artifacts, intentionally supplied by the operation runner;
+    this function never searches a directory or substitutes another session.
+    """
+    integrated = inputs.get("integrated_investment_decision_product")
+    daily_brief = inputs.get("daily_integrated_decision_brief")
+    if integrated is None and daily_brief is None:
+        return None, None
+    if not isinstance(integrated, Mapping):
+        raise ValueError("INTEGRATED_DELIVERY_INPUT_REQUIRED")
+    if integrated.get("session") != session:
+        raise ValueError("INTEGRATED_DELIVERY_SESSION_MISMATCH")
+    if integrated.get("contract_version") != "integrated_investment_decision_product/v1":
+        raise ValueError("INTEGRATED_DELIVERY_CONTRACT_MISMATCH")
+    _require_identity(integrated, field="artifact_identity", error="INTEGRATED_DELIVERY_IDENTITY_MISSING")
+    if not isinstance(integrated.get("records"), Mapping):
+        raise ValueError("INTEGRATED_DELIVERY_RECORDS_MISSING")
+    if daily_brief is None:
+        return integrated, None
+    if not isinstance(daily_brief, Mapping):
+        raise ValueError("DAILY_INTEGRATED_BRIEF_INPUT_INVALID")
+    if daily_brief.get("session") != session:
+        raise ValueError("DAILY_INTEGRATED_BRIEF_SESSION_MISMATCH")
+    if daily_brief.get("contract_version") != "daily_integrated_decision_brief/v1":
+        raise ValueError("DAILY_INTEGRATED_BRIEF_CONTRACT_MISMATCH")
+    _require_identity(daily_brief, field="artifact_identity", error="DAILY_INTEGRATED_BRIEF_IDENTITY_MISSING")
+    source_ids = daily_brief.get("source_artifact_identities") or {}
+    if source_ids.get("integrated_investment_decision_product") != integrated.get("artifact_identity"):
+        raise ValueError("DAILY_INTEGRATED_BRIEF_SOURCE_IDENTITY_MISMATCH")
+    return integrated, daily_brief
+
+
+def _selected_fields(value: Any, fields: tuple[str, ...]) -> dict[str, Any] | None:
+    if not isinstance(value, Mapping):
+        return None
+    return {field: copy.deepcopy(value.get(field)) for field in fields if field in value}
+
+
+def _valuation_methods_for_delivery(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Pass through qualified valuation values and blocked states without a calculation."""
+    result: dict[str, Any] = {}
+    for name, method in sorted((record.get("valuation_methods") or {}).items()):
+        if not isinstance(method, Mapping):
+            continue
+        row = _selected_fields(method, (
+            "method_id", "status", "applicability", "blocker_reason_codes",
+            "period_basis", "value", "source_status", "p3f_method_status",
+        )) or {}
+        # Targets, fair values, and probabilities are deliberately not a delivery
+        # field, even when an upstream blocked row represents them as null.
+        result[str(name)] = row
+    return result
+
+
+def _integrated_record_for_delivery(record: Any) -> dict[str, Any] | None:
+    if not isinstance(record, Mapping):
+        return None
+    trigger = _selected_fields(record.get("trigger"), (
+        "trigger_type", "trigger_level", "trigger_state", "distance_to_trigger_pct",
+    ))
+    invalidation = _selected_fields(record.get("invalidation"), (
+        "invalidation_level", "invalidation_method", "distance_to_invalidation_pct",
+    ))
+    return {
+        "research_action_posture": record.get("research_action_posture"),
+        "tactical_phase": record.get("tactical_phase"),
+        "trigger": trigger,
+        "invalidation": invalidation,
+        "evidence_axis_coherence": copy.deepcopy(record.get("evidence_axis_coherence")),
+        "evidence_axes": copy.deepcopy(record.get("evidence_axes")),
+        "financial_composite_context": copy.deepcopy(record.get("financial_composite_context")),
+        "corporate_intelligence_context": copy.deepcopy(record.get("corporate_intelligence_context")),
+        "material_uncertainties": copy.deepcopy(record.get("material_uncertainties")),
+        "counter_thesis": copy.deepcopy(record.get("counter_thesis")),
+        "missing_evidence_decision_effect": copy.deepcopy(record.get("missing_evidence_decision_effect")),
+        "why_now": copy.deepcopy(record.get("why_now")),
+        "participation": copy.deepcopy(record.get("participation")),
+        "valuation_context_summary": copy.deepcopy(record.get("valuation_context_summary")),
+        "valuation_methods": _valuation_methods_for_delivery(record),
+        "valuation_method_reconciliation": copy.deepcopy(record.get("valuation_method_reconciliation")),
+        "source_identities": copy.deepcopy(record.get("source_identities")),
+        "is_actionable": False,
+        "research_support_not_execution_instruction": True,
+        "no_target_price": True,
+        "no_calibrated_probability": True,
+        "no_position_size": True,
+    }
+
+
+def _integrated_overlay(session: str, integrated: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
+    records = integrated.get("records") or {}
+    return {
+        "contract_version": INTEGRATED_DELIVERY_CONTRACT,
+        "session": session,
+        "integrated_investment_decision_product_identity": integrated["artifact_identity"],
+        "daily_integrated_decision_brief_identity": daily_brief.get("artifact_identity") if daily_brief else None,
+        "coverage": copy.deepcopy(integrated.get("coverage") or {}),
+        "daily_brief_coverage": copy.deepcopy((daily_brief or {}).get("coverage") or {}),
+        "authority_boundary": {
+            "is_actionable": False,
+            "research_support_not_execution_instruction": True,
+            "no_target_price": True,
+            "no_calibrated_probability": True,
+            "no_position_size": True,
+            "no_numeric_risk_reward": True,
+        },
+        "records": {ticker: _integrated_record_for_delivery(record) for ticker, record in sorted(records.items())},
+    }
+
+
+def _daily_brief_transition(daily_brief: Mapping[str, Any] | None, ticker: str) -> Any:
+    """Return an existing per-ticker transition, never a delivery-time inference."""
+    if not isinstance(daily_brief, Mapping):
+        return None
+    transitions = (daily_brief.get("decision_transitions") or {}).get("watchlist_transitions") or []
+    if isinstance(transitions, Mapping):
+        return copy.deepcopy(transitions.get(ticker))
+    for transition in transitions:
+        if isinstance(transition, Mapping) and transition.get("ticker") == ticker:
+            return copy.deepcopy(transition)
+    return None
+
+
+def _decision_card(ticker: str, record: Mapping[str, Any], daily_brief: Mapping[str, Any] | None) -> dict[str, Any]:
+    """A compact presentation of only existing Integrated Decision/brief facts."""
+    delivered = _integrated_record_for_delivery(record) or {}
+    return {
+        "contract_version": DECISION_CARD_CONTRACT,
+        "verdict": delivered.get("research_action_posture"),
+        "setup": {
+            "tactical_phase": delivered.get("tactical_phase"),
+            "structure": copy.deepcopy((delivered.get("evidence_axes") or {}).get("TACTICAL_STRUCTURE")),
+            "confirmation": copy.deepcopy((delivered.get("evidence_axes") or {}).get("PARTICIPATION_CONFIRMATION")),
+        },
+        "fundamental": copy.deepcopy(delivered.get("financial_composite_context")),
+        "valuation": {
+            "context": copy.deepcopy(delivered.get("valuation_context_summary")),
+            "methods": copy.deepcopy(delivered.get("valuation_methods")),
+        },
+        "catalyst": copy.deepcopy(delivered.get("corporate_intelligence_context")),
+        "risk_context": {
+            "material_uncertainties": copy.deepcopy(delivered.get("material_uncertainties")),
+            "counter_thesis": copy.deepcopy(delivered.get("counter_thesis")),
+            "evidence_axis_coherence": copy.deepcopy(delivered.get("evidence_axis_coherence")),
+        },
+        "entry_trigger": copy.deepcopy(delivered.get("trigger")),
+        "invalidation": copy.deepcopy(delivered.get("invalidation")),
+        "evidence_quality": {
+            "evidence_axis_coherence": copy.deepcopy(delivered.get("evidence_axis_coherence")),
+            "missing_evidence_decision_effect": copy.deepcopy(delivered.get("missing_evidence_decision_effect")),
+        },
+        "what_would_change_the_view": {
+            "why_now": copy.deepcopy(delivered.get("why_now")),
+            "daily_brief_transition": _daily_brief_transition(daily_brief, ticker),
+        },
+        "authority_boundary": {
+            "research_support_not_execution_instruction": True,
+            "no_target_price": True,
+            "no_calibrated_probability": True,
+            "no_position_size": True,
+            "no_numeric_risk_reward": True,
+            "is_actionable": False,
+        },
+    }
 
 
 def _slim(value: Any, *, depth: int = 0) -> Any:
@@ -128,7 +306,8 @@ def _delivery_financial_context(context: Mapping[str, Any] | None, ticker: str) 
 
 
 def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[str, Any],
-                     financial_analysis_product_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
+                     financial_analysis_product_context: Mapping[str, Any] | None = None,
+                     integrated_overlay: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """One source-preserving compact context for an arbitrary universe ticker."""
     boundary = copy.deepcopy((operation.get("product") or {}).get("authority_boundary") or {})
     boundary["is_actionable"] = False
@@ -155,6 +334,8 @@ def _compact_context(ticker: str, operation: Mapping[str, Any], inputs: Mapping[
     financial = _delivery_financial_context(financial_analysis_product_context, ticker)
     if financial is not None:
         result["financial_analysis"] = financial
+    if integrated_overlay is not None:
+        result["integrated_decision_v1"] = copy.deepcopy((integrated_overlay.get("records") or {}).get(ticker))
     return result
 
 
@@ -286,7 +467,11 @@ def _session_brief(session: str, operation_identity: str, product_identity: str,
     return "\n".join(lines)
 
 
-def build_dashboard_projection(operation: Mapping[str, Any]) -> dict[str, Any]:
+def build_dashboard_projection(
+    operation: Mapping[str, Any], *,
+    integrated_decision: Mapping[str, Any] | None = None,
+    daily_integrated_brief: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """The released cockpit's deterministic, Product V2-shaped data payload."""
     product, manifest = operation["product"], operation["manifest"]
     projection: dict[str, Any] = {
@@ -314,6 +499,26 @@ def build_dashboard_projection(operation: Mapping[str, Any]) -> dict[str, Any]:
         "portfolio_risk": copy.deepcopy(operation.get("portfolio_risk") or {"status": "NO_EXPLICIT_PORTFOLIO_SUPPLIED", "is_actionable": False, "message": "No explicit portfolio-risk envelope was supplied for this operation."}),
         "what_to_verify_next": copy.deepcopy(product["what_to_verify_next"]),
     }
+    if integrated_decision is not None:
+        overlay = _integrated_overlay(manifest["market_session"], integrated_decision, daily_integrated_brief)
+        projection["source"]["integrated_investment_decision_product_identity"] = integrated_decision["artifact_identity"]
+        projection["source"]["daily_integrated_decision_brief_identity"] = (
+            daily_integrated_brief.get("artifact_identity") if daily_integrated_brief else None
+        )
+        # The governed watchlist is an existing presentation scope.  Every card
+        # value itself comes only from the rich Integrated Decision record (and,
+        # when supplied, the Daily Integrated Decision Brief's transition view).
+        watchlist_tickers = list((product.get("watchlist") or {}).get("tickers") or [])
+        projection["decision_card_v1"] = {
+            ticker: _decision_card(ticker, record, daily_integrated_brief)
+            for ticker, record in sorted((integrated_decision.get("records") or {}).items())
+            if ticker in watchlist_tickers
+        }
+        projection["integrated_decision_overlay_v1"] = {
+            key: copy.deepcopy(value)
+            for key, value in overlay.items()
+            if key != "records"
+        }
     projection["projection_identity"] = "dashboard_decision_cockpit_projection:" + stable_id(projection)
     return projection
 
@@ -328,6 +533,11 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
     scope = _analysis_scope(product, full_universe_record_count=len(universe))
     routing = recommended_ai_inputs()
     boundary = _authority_boundary(product)
+    integrated_decision, daily_integrated_brief = _integrated_delivery_inputs(session, inputs)
+    integrated_overlay = (
+        _integrated_overlay(session, integrated_decision, daily_integrated_brief)
+        if integrated_decision is not None else None
+    )
     financial_context = validate_product_context(inputs.get("financial_analysis_product_context"))
     financial_summary = None
     financial_index = None
@@ -361,10 +571,27 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         "lineage": {"input_artifacts": copy.deepcopy(manifest["input_artifacts"]), "output_artifacts": copy.deepcopy(manifest["outputs"]), "session_coherence": copy.deepcopy(manifest["session_coherence"])},
         "what_to_verify_next": copy.deepcopy(product["what_to_verify_next"]),
     }
+    if integrated_overlay is not None:
+        primary["integrated_decision_overlay_v1"] = {
+            key: copy.deepcopy(value)
+            for key, value in integrated_overlay.items()
+            if key != "records"
+        }
+        # Existing Product V2 contexts retain their original keys.  The rich
+        # surface is deliberately additive and versioned on each available card.
+        for ticker, context in primary["ticker_research_contexts"].items():
+            context["integrated_decision_v1"] = copy.deepcopy((integrated_overlay["records"] or {}).get(ticker))
     primary_bytes = (_canon(primary) + "\n").encode("utf-8")
-    rows = [_canon(_compact_context(ticker, operation, inputs, financial_context)) for ticker in universe]
+    rows = [
+        _canon(_compact_context(ticker, operation, inputs, financial_context, integrated_overlay))
+        for ticker in universe
+    ]
     full_bytes = (("\n".join(rows) + "\n") if rows else "").encode("utf-8")
-    projection = build_dashboard_projection(operation)
+    projection = build_dashboard_projection(
+        operation,
+        integrated_decision=integrated_decision,
+        daily_integrated_brief=daily_integrated_brief,
+    )
     projection_bytes = (_canon(projection) + "\n").encode("utf-8")
     # Session operations are immutable/replayable.  A wall-clock timestamp would
     # change their bytes, so the manifest carries a transparent session-derived
@@ -398,10 +625,11 @@ def build_delivery(operation: Mapping[str, Any], inputs: Mapping[str, Any]) -> d
         },
         "source_artifact_identities": copy.deepcopy(product["source_artifact_identities"]),
         "financial_analysis_source_context_identity": (financial_context or {}).get("source_context_identity"),
-        **({"integrated_investment_decision_product_identity": (
-            inputs.get("integrated_investment_decision_product_identity")
-            or (inputs.get("integrated_investment_decision_product") or {}).get("artifact_identity")
-        )} if (inputs.get("integrated_investment_decision_product_identity") or (inputs.get("integrated_investment_decision_product") or {}).get("artifact_identity")) else {}),
+        **({
+            "integrated_delivery_contract": INTEGRATED_DELIVERY_CONTRACT,
+            "integrated_investment_decision_product_identity": integrated_decision["artifact_identity"],
+            "daily_integrated_decision_brief_identity": daily_integrated_brief.get("artifact_identity") if daily_integrated_brief else None,
+        } if integrated_decision is not None else {}),
         "authority_boundary": boundary,
         "warnings": copy.deepcopy(manifest["warnings"]),
         "created_at": created_at,

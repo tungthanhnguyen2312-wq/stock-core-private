@@ -580,7 +580,11 @@ def _patch_full_pipeline_stages(monkeypatch, order, tmp_path, *, prospective_res
     monkeypatch.setattr(cpc, "acquire_and_materialize", lambda *a, **k: order.append("acquire") or {
         "snapshot": {}, "resolved_completed_session": "2026-08-26", "coverage": {}, "artifact_root": tmp_path,
     })
-    monkeypatch.setattr(cpc, "build_enrichment_components", lambda *a, **k: order.append("enrich") or {})
+    monkeypatch.setattr(cpc, "build_enrichment_components", lambda *a, **k: order.append("enrich") or {
+        "integrated_investment_decision_product": {
+            "artifact": {"session": "2026-08-26", "contract_version": "integrated_investment_decision_product/v1", "artifact_identity": "integrated:test", "records": {}},
+        },
+    })
     monkeypatch.setattr(cpc, "register_session_inputs", lambda *a, **k: order.append("register") or {})
     monkeypatch.setattr(cpc, "validate_and_freeze_completed_session", lambda *a, **k: order.append("freeze") or {})
     monkeypatch.setattr(cpc, "_git_head", lambda p: "deadbeef")

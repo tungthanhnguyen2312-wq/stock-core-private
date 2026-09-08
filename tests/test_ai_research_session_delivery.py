@@ -1,9 +1,55 @@
 import hashlib
 import json
 
+import pytest
+
 from ai_research_session_delivery import AI_CONTRACT, FULL_UNIVERSE_COMPANION_ROLE, PRIMARY_HUMAN_REVIEW_FILENAME, build_delivery
 from current_daily_decision_research_product import OWNER_FOCUS_TICKERS, WATCHLIST, ABSENT_OWNER_FOCUS_STATUS
 from owner_research_focus import broader_watchlist, owner_focus_tickers
+
+
+def _integrated_delivery_fixture(*, session="2026-08-21", identity="integrated_investment_decision_product/v1:integrated-1"):
+    return {
+        "contract_version": "integrated_investment_decision_product/v1",
+        "session": session,
+        "artifact_identity": identity,
+        "coverage": {"universe_denominator": 1, "residual": 0},
+        "records": {
+            "AAA": {
+                "research_action_posture": "INITIATE_ON_BREAKOUT",
+                "tactical_phase": "BREAKOUT_CONFIRMED",
+                "trigger": {"trigger_type": "BREAKOUT", "trigger_level": 42.5, "trigger_state": "TRIGGERED", "distance_to_trigger_pct": 0.0},
+                "invalidation": {"invalidation_level": 40.0, "invalidation_method": "CLOSE_BELOW_SUPPORT", "distance_to_invalidation_pct": 0.06},
+                "evidence_axis_coherence": {"state": "COHERENT", "reason_codes": ["CONFIRMED"]},
+                "evidence_axes": {"TACTICAL_STRUCTURE": {"state": "AVAILABLE"}},
+                "financial_composite_context": {"financial_composite_state": "FUNDAMENTALS_IMPROVING"},
+                "corporate_intelligence_context": {"state": "INFORMATIONAL_ONLY"},
+                "material_uncertainties": ["EVIDENCE_LIMITED"],
+                "counter_thesis": ["BREAKOUT_FAILURE"],
+                "missing_evidence_decision_effect": "DOES_NOT_BLOCK_CURRENT_RESEARCH",
+                "why_now": "Existing technical confirmation.",
+                "participation": {"status": "AVAILABLE"},
+                "valuation_context_summary": {"pe_multiple": 11.25, "status": "AVAILABLE"},
+                "valuation_methods": {
+                    "P/E": {"method_id": "P/E", "status": "RESEARCH_USABLE", "applicability": "APPLICABLE", "value": 11.25},
+                    "P/B": {"method_id": "P/B", "status": "INPUT_BLOCKED", "applicability": "INPUT_BLOCKED", "blocker_reason_codes": ["ENTITY_CLASS_UNRESOLVED"], "value": None, "target_price": 99.0},
+                },
+                "valuation_method_reconciliation": {"P/E": {"comparison_status": "AVAILABLE"}},
+                "source_identities": {"technical": "technical:1"},
+            },
+        },
+    }
+
+
+def _daily_brief_fixture(integrated, *, session="2026-08-21"):
+    return {
+        "contract_version": "daily_integrated_decision_brief/v1",
+        "session": session,
+        "artifact_identity": "daily_integrated_decision_brief/v1:brief-1",
+        "coverage": {"watchlist_coverage": 1},
+        "what_changed_today": {"availability": "AVAILABLE", "new_actionable_now": ["AAA"]},
+        "source_artifact_identities": {"integrated_investment_decision_product": integrated["artifact_identity"]},
+    }
 
 
 def _operation():
@@ -62,6 +108,53 @@ def test_delivery_is_deterministic_and_preserves_boundaries():
     assert primary["ticker_research_contexts"]["AAA"]["market_flow_positioning"]["traded_value"] == 0.0
     assert json.loads(one["manifest"])["files"]["ai_research_full_universe.ndjson"]["record_count"] == 1
     assert len(one["full_universe"].splitlines()) == 1
+
+
+def test_integrated_delivery_overlay_preserves_native_values_and_cockpit_card():
+    operation = _operation()
+    integrated = _integrated_delivery_fixture()
+    brief = _daily_brief_fixture(integrated)
+    inputs = {
+        "descriptive": {"records": {"AAA": {}}}, "tactical": {"records": {"AAA": {}}},
+        "fundamental": {"records": {}}, "valuation": {"records": {}},
+        "market_flow_positioning": {"records": {}}, "corporate_intelligence": {"records": {}},
+        "integrated_investment_decision_product": integrated,
+        "daily_integrated_decision_brief": brief,
+    }
+    one, two = build_delivery(operation, inputs), build_delivery(operation, inputs)
+    assert one == two
+    primary = json.loads(one["primary"])
+    row = primary["ticker_research_contexts"]["AAA"]["integrated_decision_v1"]
+    assert row["research_action_posture"] == "INITIATE_ON_BREAKOUT"
+    assert row["trigger"]["trigger_level"] == 42.5
+    assert row["invalidation"]["invalidation_level"] == 40.0
+    assert row["evidence_axis_coherence"]["state"] == "COHERENT"
+    assert row["valuation_methods"]["P/E"]["value"] == 11.25
+    assert row["valuation_methods"]["P/B"]["status"] == "INPUT_BLOCKED"
+    assert "target_price" not in json.dumps(row["valuation_methods"])
+    companion = json.loads(one["full_universe"])
+    assert companion["integrated_decision_v1"]["trigger"]["distance_to_trigger_pct"] == 0.0
+    projection = json.loads(one["projection"])
+    card = projection["decision_card_v1"]["AAA"]
+    assert card["verdict"] == "INITIATE_ON_BREAKOUT"
+    assert card["entry_trigger"]["trigger_level"] == 42.5
+    assert card["authority_boundary"]["research_support_not_execution_instruction"] is True
+    assert card["authority_boundary"]["no_target_price"] is True
+
+
+def test_integrated_delivery_rejects_cross_session_or_mismatched_brief_identity():
+    operation = _operation()
+    integrated = _integrated_delivery_fixture(session="2026-08-20")
+    inputs = {"descriptive": {"records": {"AAA": {}}}, "integrated_investment_decision_product": integrated}
+    with pytest.raises(ValueError, match="INTEGRATED_DELIVERY_SESSION_MISMATCH"):
+        build_delivery(operation, inputs)
+    integrated = _integrated_delivery_fixture()
+    brief = _daily_brief_fixture(integrated)
+    brief["source_artifact_identities"]["integrated_investment_decision_product"] = "integrated_investment_decision_product/v1:other"
+    inputs["integrated_investment_decision_product"] = integrated
+    inputs["daily_integrated_decision_brief"] = brief
+    with pytest.raises(ValueError, match="DAILY_INTEGRATED_BRIEF_SOURCE_IDENTITY_MISMATCH"):
+        build_delivery(operation, inputs)
 
 
 def _card(ticker, action="WAIT"):

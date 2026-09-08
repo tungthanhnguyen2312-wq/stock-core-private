@@ -1,4 +1,5 @@
 import copy
+import json
 from pathlib import Path
 
 import pytest
@@ -44,3 +45,33 @@ def test_mismatched_tactical_lineage_fails_closed():
     broken["tactical"]["source_artifacts"]["descriptive"] = "stale"
     with pytest.raises(ValueError, match="TACTICAL_UPSTREAM_LINEAGE_MISMATCH"):
         validate_coherence(broken, "2026-08-21")
+
+
+def test_operation_retains_explicit_same_session_integrated_brief(tmp_path: Path):
+    integrated = {
+        "contract_version": "integrated_investment_decision_product/v1",
+        "session": "2026-08-21",
+        "artifact_identity": "integrated_investment_decision_product/v1:retained",
+        "records": {"ABB": {"research_action_posture": "HOLD"}},
+        "coverage": {"universe_denominator": 1683, "residual": 0},
+    }
+    brief = {
+        "contract_version": "daily_integrated_decision_brief/v1",
+        "session": "2026-08-21",
+        "artifact_identity": "daily_integrated_decision_brief/v1:retained",
+        "source_artifact_identities": {"integrated_investment_decision_product": integrated["artifact_identity"]},
+        "coverage": {"watchlist_coverage": 11},
+    }
+    operation = build_operation(
+        _resolved(), "2026-08-21", producer_head="producer", consumer_head="consumer",
+        integrated_investment_decision_product=integrated,
+        daily_integrated_decision_brief=brief,
+    )
+    materialize(tmp_path, operation)
+    retained = json.loads((tmp_path / "daily_integrated_decision_brief_artifact.json").read_text(encoding="utf-8"))
+    assert retained["session"] == "2026-08-21"
+    assert retained["daily_operation_identity"] == operation["manifest"]["operation_identity"]
+    assert retained["integrated_investment_decision_product_identity"] == integrated["artifact_identity"]
+    assert retained["source_frozen_input_identities"]
+    primary = json.loads((tmp_path / "ai_research_session_bundle.json").read_text(encoding="utf-8"))
+    assert primary["integrated_decision_overlay_v1"]["integrated_investment_decision_product_identity"] == integrated["artifact_identity"]

@@ -24,7 +24,7 @@ from current_opportunity_prioritization import build as build_opportunity, conte
 from daily_opportunity_decision_queue import build as build_decision_queue, content_identity as decision_queue_identity, prospective_context as decision_queue_prospective_context
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
-from ai_research_session_delivery import build_delivery
+from ai_research_session_delivery import build_delivery, _integrated_delivery_inputs
 
 CONTRACT_VERSION = "daily_research_session_operation/v1"
 REQUIRED = ("descriptive", "screening", "tactical", "triage", "fundamental", "valuation", "catalyst", "corporate_intelligence")
@@ -207,7 +207,80 @@ def validate_coherence(inputs: Mapping[str, Any], session: str) -> dict[str, Any
     return {"session": session, "technical_coverage_semantics": {"same_session_technical_feature_available_count": coverage, "current_active_equity_denominator": descriptive["market_breadth"]["current_active_equity_denominator"], "observed_session_cohort": descriptive["market_breadth"]["observed_session_cohort"], "semantic_note": "956 is same-session technical feature coverage and tactical classified count after retained technical recovery; 763 is superseded pre-recovery coverage and is rejected."}, "corporate_intelligence_coverage": corporate.get("coverage"), "accepted_degraded_inputs": {"catalyst": "EARLIER_RETAINED_CATALYST_CONTEXT"}, "incompatible_inputs": []}
 
 
-def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def _integrated_delivery_binding(
+    *, session: str, integrated_decision: Mapping[str, Any] | None,
+    daily_integrated_brief: Mapping[str, Any] | None,
+    registry: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    if integrated_decision is None:
+        return None
+    frozen = selection_identities(registered_session_selection(registry, session))
+    return {
+        "contract_version": "daily_session_integrated_decision_delivery_binding/v1",
+        "session": session,
+        "integrated_investment_decision_product": dict(integrated_decision),
+        "daily_integrated_decision_brief": dict(daily_integrated_brief) if daily_integrated_brief else None,
+        "source_frozen_input_identities": frozen,
+        "authority_boundary": {
+            "is_actionable": False,
+            "research_support_not_execution_instruction": True,
+            "no_target_price": True,
+            "no_calibrated_probability": True,
+            "no_position_size": True,
+        },
+    }
+
+
+def _integrated_brief_retention_artifact(operation: Mapping[str, Any]) -> dict[str, Any] | None:
+    binding = operation.get("integrated_delivery")
+    if not isinstance(binding, Mapping) or not isinstance(binding.get("daily_integrated_decision_brief"), Mapping):
+        return None
+    artifact = {
+        "schema_version": "1.0.0",
+        "contract_version": "daily_session_integrated_decision_brief_artifact/v1",
+        "session": operation["manifest"]["market_session"],
+        "daily_operation_identity": operation["manifest"]["operation_identity"],
+        "integrated_investment_decision_product_identity": binding["integrated_investment_decision_product"]["artifact_identity"],
+        "daily_integrated_decision_brief": copy.deepcopy(binding["daily_integrated_decision_brief"]),
+        "source_frozen_input_identities": copy.deepcopy(binding["source_frozen_input_identities"]),
+        "authority_boundary": copy.deepcopy(binding["authority_boundary"]),
+    }
+    artifact["artifact_sha256"] = stable_id(artifact)
+    artifact["artifact_identity"] = "daily_session_integrated_decision_brief_artifact:" + artifact["artifact_sha256"]
+    return artifact
+
+
+def retain_integrated_decision_brief(
+    output_dir: Path, *, session: str, operation_manifest: Mapping[str, Any],
+    integrated_investment_decision_product: Mapping[str, Any],
+    daily_integrated_decision_brief: Mapping[str, Any], registry: Mapping[str, Any],
+) -> Path:
+    """Append one immutable rich-brief retention artifact to a just-built operation.
+
+    This is intentionally a narrow publication-boundary helper.  It accepts the
+    caller's exact current-session artifacts and registry, rather than looking
+    for a similarly named or newest artifact on disk.  Replays are idempotent;
+    a changed payload fails closed through ``write_immutable``.
+    """
+    integrated, brief = _integrated_delivery_inputs(session, {
+        "integrated_investment_decision_product": integrated_investment_decision_product,
+        "daily_integrated_decision_brief": daily_integrated_decision_brief,
+    })
+    binding = _integrated_delivery_binding(
+        session=session, integrated_decision=integrated, daily_integrated_brief=brief, registry=registry,
+    )
+    if not isinstance(binding, Mapping):
+        raise ValueError("DAILY_INTEGRATED_BRIEF_BINDING_MISSING")
+    operation = {"manifest": dict(operation_manifest), "integrated_delivery": binding}
+    artifact = _integrated_brief_retention_artifact(operation)
+    if artifact is None:
+        raise ValueError("DAILY_INTEGRATED_BRIEF_RETENTION_ARTIFACT_MISSING")
+    path = output_dir / "daily_integrated_decision_brief_artifact.json"
+    write_immutable(path, artifact)
+    return path
+
+
+def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None, integrated_investment_decision_product: Mapping[str, Any] | None = None, daily_integrated_decision_brief: Mapping[str, Any] | None = None) -> dict[str, Any]:
     registry = registry if registry is not None else load_registry(root or MODULE_ROOT)
     assert_inputs_match_registered_session(session, inputs, registry)
     # This product-only context is intentionally an explicit caller attachment,
@@ -216,6 +289,14 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         from financial_analysis_product_projection import validate_product_context
         validate_product_context(financial_analysis_product_context)
         inputs = {**dict(inputs), "financial_analysis_product_context": financial_analysis_product_context}
+    integrated_decision, integrated_brief = _integrated_delivery_inputs(session, {
+        "integrated_investment_decision_product": integrated_investment_decision_product,
+        "daily_integrated_decision_brief": daily_integrated_decision_brief,
+    })
+    integrated_delivery = _integrated_delivery_binding(
+        session=session, integrated_decision=integrated_decision,
+        daily_integrated_brief=integrated_brief, registry=registry,
+    )
     coherence = validate_coherence(inputs, session)
     peer = build_peer(descriptive=inputs["descriptive"], tactical=inputs["tactical"], fundamental=inputs["fundamental"], valuation=inputs["valuation"])
     if peer_identity(peer)["artifact_sha256"] != peer["artifact_sha256"]: raise ValueError("PEER_ARTIFACT_SELF_VERIFICATION_FAILED")
@@ -273,7 +354,14 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         manifest["coverage_summary"]["opportunity_decision_queue"] = {"current_official_universe": opportunity["coverage"]["current_official_universe"], "priority_now": decision_queue["entry_relevant_summary"]["PRIORITY_NOW_TOTAL"], "priority_now_entry_relevant": decision_queue["entry_relevant_summary"]["PRIORITY_NOW_ENTRY_RELEVANT"], "primary_review_candidates": decision_queue["primary_review_candidates"]["count"]}
         manifest["warnings"].append("Research priority tier is a research-lane signal, not entry timing, full-position readiness, or position sizing; see entry_relevant and lane_specific_priority on each decision-queue record.")
         manifest["operation_identity"] = _identity(manifest)
-    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "opportunity": opportunity, "decision_queue": decision_queue, "opportunity_snapshot": opportunity_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "manifest": manifest}
+    if integrated_delivery is not None:
+        manifest["outputs"]["integrated_investment_decision_product"] = integrated_decision["artifact_identity"]
+        if integrated_brief is not None:
+            manifest["outputs"]["daily_integrated_decision_brief"] = integrated_brief["artifact_identity"]
+        manifest["coverage_summary"]["integrated_investment_decision"] = copy.deepcopy(integrated_decision.get("coverage") or {})
+        manifest["warnings"].append("Integrated Decision delivery is a same-session research overlay; it does not confer execution authority.")
+        manifest["operation_identity"] = _identity(manifest)
+    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "opportunity": opportunity, "decision_queue": decision_queue, "opportunity_snapshot": opportunity_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "integrated_delivery": integrated_delivery, "manifest": manifest}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
@@ -301,11 +389,20 @@ def materialize(output_dir: Path, operation: Mapping[str, Any]) -> None:
         write_immutable(output_dir / "opportunity_prioritization_artifact.json", operation["opportunity"])
         write_immutable(output_dir / "daily_opportunity_decision_queue_artifact.json", operation["decision_queue"])
         write_immutable(output_dir / "opportunity_decision_prospective_context.json", operation["opportunity_snapshot"])
-    delivery = build_delivery(operation, operation["inputs"])
+    delivery_inputs = dict(operation["inputs"])
+    integrated_delivery = operation.get("integrated_delivery")
+    if isinstance(integrated_delivery, Mapping):
+        delivery_inputs["integrated_investment_decision_product"] = integrated_delivery["integrated_investment_decision_product"]
+        if integrated_delivery.get("daily_integrated_decision_brief") is not None:
+            delivery_inputs["daily_integrated_decision_brief"] = integrated_delivery["daily_integrated_decision_brief"]
+    delivery = build_delivery(operation, delivery_inputs)
     for filename, value in (("ai_research_session_bundle.json", delivery["primary"]), ("ai_research_full_universe.ndjson", delivery["full_universe"]), ("ai_research_bundle_manifest.json", delivery["manifest"]), ("ai_research_session_brief.md", delivery["brief"]), ("current_decision_cockpit_projection.json", delivery["projection"])):
         path = output_dir / filename
         if path.exists() and path.read_bytes() != value: raise ValueError("IMMUTABLE_SESSION_OPERATION_DELIVERY_CONFLICT:" + filename)
         path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(value)
+    retained_brief = _integrated_brief_retention_artifact(operation)
+    if retained_brief is not None:
+        write_immutable(output_dir / "daily_integrated_decision_brief_artifact.json", retained_brief)
     write_immutable(output_dir / "run_manifest.json", operation["manifest"])
 
 
@@ -322,6 +419,8 @@ def run_session_operation(
     macro: Mapping[str, Any] | None = None,
     shadow_security_recommendation: Mapping[str, Any] | None = None,
     financial_analysis_product_context: Mapping[str, Any] | None = None,
+    integrated_investment_decision_product: Mapping[str, Any] | None = None,
+    daily_integrated_decision_brief: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     """Build, Consumer-validate, and immutably materialize one exact operation.
 
@@ -349,6 +448,8 @@ def run_session_operation(
         root=root,
         shadow_security_recommendation=shadow_security_recommendation,
         financial_analysis_product_context=financial_analysis_product_context,
+        integrated_investment_decision_product=integrated_investment_decision_product,
+        daily_integrated_decision_brief=daily_integrated_decision_brief,
     )
     consumer_root = root.parent / "ai-core-private"
     if str(consumer_root) not in sys.path:
