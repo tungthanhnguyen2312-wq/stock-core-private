@@ -40,6 +40,16 @@ def _prime_materialization_outputs(paths: dict[str, Path]) -> None:
         _write_json(paths[key], {})
 
 
+def _reuse_existing_technical_cache(candidate, *, session, p3f9b_snapshot_identity):
+    """Test-only compatibility shim for tests that prime every independent-component output with
+    a placeholder ``{}`` and assert nothing about technical-recovery cache validity specifically
+    (they exercise snapshot-acquisition delegation / execution-root separation instead). It
+    reproduces the pre-fix exists()-only reuse so those tests keep asserting what they always
+    asserted. The new identity/session/lineage validation semantics themselves are exercised by
+    the dedicated test_technical_recovery_cache_* tests below, against real fixtures."""
+    return candidate if candidate.exists() else None
+
+
 def test_run_cmd_executes_relative_tool_from_explicit_execution_root(tmp_path):
     execution_root = tmp_path / "producer"
     execution_root.mkdir()
@@ -291,7 +301,8 @@ def test_materialize_independent_components_delegates_snapshot_acquisition_to_th
 
     _prime_materialization_outputs(paths)
     with patch.object(level2, "ensure_exact_session_snapshot", fake_ensure), \
-         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"):
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "_valid_technical_recovery_cache", _reuse_existing_technical_cache):
         level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
 
     assert calls == [(tmp_path, session, tmp_path)]
@@ -310,7 +321,8 @@ def test_materialization_separates_attempt_artifact_root_from_execution_root(tmp
 
     with patches[0], patches[1], patches[2], patches[3], patches[4], \
          patch.object(level2, "run_cmd") as mocked_run_cmd, \
-         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"):
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "_valid_technical_recovery_cache", _reuse_existing_technical_cache):
         level2.materialize_independent_components(
             attempt_root,
             session,
@@ -333,12 +345,194 @@ def test_ordinary_materialization_keeps_its_single_root_as_execution_root(tmp_pa
 
     with patches[0], patches[1], patches[2], patches[3], patches[4], \
          patch.object(level2, "run_cmd") as mocked_run_cmd, \
-         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"):
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "_valid_technical_recovery_cache", _reuse_existing_technical_cache):
         level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
 
     mocked_run_cmd.assert_not_called()
     written = json.loads(paths["exact_session_snapshot"].read_text(encoding="utf-8"))
     assert written["resolved_completed_session"] == session
+
+
+# --- technical_recovery cache-identity validation (materialize_independent_components) --------
+#
+# daily_session_level2_package.py::materialize_independent_components() used to treat mere file
+# existence at paths["technical_recovery"] as proof a cached recovery artifact was safe to hand
+# downstream (`if not tech_out.exists(): <regenerate>`). A 2026-09-07 artifact written by the
+# pre-fix producer (before 0a0fd2d, "fix(technical): finalize recovery artifact before identity")
+# has bytes that no longer match its own stored artifact_sha256, and
+# market_wide_current_descriptive_research.build_artifact() correctly rejects that mismatch with
+# TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH -- but only after the orchestrator had already
+# hardcoded it as this session's technical_recovery input. These tests exercise the fix directly
+# at the materialize_independent_components() boundary using the real
+# market_wide_current_descriptive_research.content_identity() convention (not a re-implementation).
+
+
+def _independent_component_session_paths(tmp_path, session):
+    paths = level2.session_artifact_paths(tmp_path, session)
+    for key in (
+        "breadth_foundation", "universe_resolution", "liquidity_research",
+        "descriptive_research", "screening_foundation", "tactical_classifier",
+        "corporate_intelligence", "valuation", "sector_leadership", "peer_relative",
+        "risk_register", "technical_coverage_disposition",
+    ):
+        _write_json(paths[key], {})
+    return paths
+
+
+def _write_valid_p3f9b_snapshot(path: Path, session: str) -> str:
+    from field_temporal_contract import stable_id
+    payload = {"resolved_completed_session": session, "records": {}}
+    payload["snapshot_sha256"] = stable_id(payload)
+    payload["snapshot_identity"] = f"p3f9_exact_session_snapshot:{payload['snapshot_sha256']}"
+    _write_json(path, payload)
+    return payload["snapshot_identity"]
+
+
+def _valid_technical_recovery_payload(session: str, snapshot_identity: str) -> dict:
+    from market_wide_current_descriptive_research import content_identity
+    payload = {
+        "target_session": session,
+        "source_lineage": {"p3f9b_snapshot_identity": snapshot_identity},
+        "recovered_history_overrides": {},
+    }
+    payload.update(content_identity(payload))
+    return payload
+
+
+def _stale_technical_recovery_payload(session: str, snapshot_identity: str) -> dict:
+    # Mirrors the real 2026-09-07 defect: correct target_session/source_lineage, but an
+    # artifact_sha256 stamped before HISTORY_RECOVERY_RUNTIME was merged into the payload, so it
+    # no longer reproduces the artifact's own recomputed content hash.
+    payload = _valid_technical_recovery_payload(session, snapshot_identity)
+    payload["artifact_sha256"] = "0" * 64
+    payload["operational_summary"] = {"HISTORY_RECOVERY_RUNTIME": {"attempts": 1}}
+    return payload
+
+
+def _fake_ensure_exact_session_snapshot(paths):
+    def fake_ensure(artifact_root, sess, runtime_root, workers, now, *, execution_root=None):
+        return paths["exact_session_snapshot"]
+    return fake_ensure
+
+
+def test_technical_recovery_cache_reused_when_identity_is_valid(tmp_path):
+    session = "2026-09-07"
+    paths = _independent_component_session_paths(tmp_path, session)
+    snapshot_identity = _write_valid_p3f9b_snapshot(paths["exact_session_snapshot"], session)
+    valid_payload = _valid_technical_recovery_payload(session, snapshot_identity)
+    _write_json(paths["technical_recovery"], valid_payload)
+
+    with patch.object(level2, "ensure_exact_session_snapshot", _fake_ensure_exact_session_snapshot(paths)), \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "run_cmd") as mocked_run_cmd:
+        level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
+
+    mocked_run_cmd.assert_not_called()
+    assert json.loads(paths["technical_recovery"].read_text(encoding="utf-8")) == valid_payload
+
+
+def test_technical_recovery_cache_rejected_and_regenerated_when_identity_is_stale(tmp_path):
+    session = "2026-09-07"
+    paths = _independent_component_session_paths(tmp_path, session)
+    snapshot_identity = _write_valid_p3f9b_snapshot(paths["exact_session_snapshot"], session)
+    stale_payload = _stale_technical_recovery_payload(session, snapshot_identity)
+    _write_json(paths["technical_recovery"], stale_payload)
+    original_tech_dir = paths["technical_recovery"].parent
+    regenerated_out_dirs = []
+
+    def fake_run_cmd(root, argv):
+        assert argv[0] == "tools/run_market_wide_current_technical_coverage_scaleout.py"
+        out_dir = Path(argv[argv.index("--out-dir") + 1])
+        regenerated_out_dirs.append(out_dir)
+        fresh = _valid_technical_recovery_payload(session, snapshot_identity)
+        _write_json(out_dir / "market_wide_current_technical_coverage_recovery_artifact.json", fresh)
+
+    with patch.object(level2, "ensure_exact_session_snapshot", _fake_ensure_exact_session_snapshot(paths)), \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "run_cmd", side_effect=fake_run_cmd) as mocked_run_cmd:
+        level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
+
+    mocked_run_cmd.assert_called_once()
+    assert regenerated_out_dirs == [original_tech_dir.parent / f"{original_tech_dir.name}-revalidated"]
+
+    regenerated_path = regenerated_out_dirs[0] / "market_wide_current_technical_coverage_recovery_artifact.json"
+    regenerated = json.loads(regenerated_path.read_text(encoding="utf-8"))
+    from market_wide_current_descriptive_research import content_identity
+    assert regenerated["artifact_sha256"] == content_identity(regenerated)["artifact_sha256"]
+
+    # Downstream descriptive-research must accept the regenerated artifact, using the real,
+    # unmodified verifier -- not a relaxed or bypassed one.
+    from market_wide_current_descriptive_research import build_artifact
+    ur = {"records": {}, "input_candidates": {"resolved_completed_session": session},
+          "current_active_equity_denominator": {"count": 1}, "observed_session_cohort": {"count": 0}}
+    ur.update(content_identity(ur))
+    import market_wide_current_liquidity_research as liquidity_module
+    liq = {"records": {}, "resolved_completed_session": session,
+           "universe": {"source_snapshot_identity": snapshot_identity}}
+    liq.update(liquidity_module.content_identity(liq))
+    p3f9b_snapshot = json.loads(paths["exact_session_snapshot"].read_text(encoding="utf-8"))
+    artifact = build_artifact(
+        universe_resolution_artifact=ur, p3f9b_snapshot=p3f9b_snapshot, liquidity_artifact=liq,
+        entity_classifications={}, technical_history_recovery_artifact=regenerated,
+    )
+    assert artifact["input_lineage"]["technical_history_recovery_artifact_identity"] == regenerated["artifact_identity"]
+
+
+def test_technical_recovery_stale_cache_is_never_mutated_in_place(tmp_path):
+    session = "2026-09-07"
+    paths = _independent_component_session_paths(tmp_path, session)
+    snapshot_identity = _write_valid_p3f9b_snapshot(paths["exact_session_snapshot"], session)
+    stale_payload = _stale_technical_recovery_payload(session, snapshot_identity)
+    _write_json(paths["technical_recovery"], stale_payload)
+    original_bytes = paths["technical_recovery"].read_bytes()
+    original_tech_dir = paths["technical_recovery"].parent
+
+    def fake_run_cmd(root, argv):
+        out_dir = Path(argv[argv.index("--out-dir") + 1])
+        # The implementation must never point the producer at the original, already-occupied
+        # tech_dir -- run_all() there would just print "REUSED" over the stale file's own path,
+        # and nothing may write to that path at all once it is known invalid.
+        assert out_dir != original_tech_dir
+        fresh = _valid_technical_recovery_payload(session, snapshot_identity)
+        _write_json(out_dir / "market_wide_current_technical_coverage_recovery_artifact.json", fresh)
+
+    with patch.object(level2, "ensure_exact_session_snapshot", _fake_ensure_exact_session_snapshot(paths)), \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "run_cmd", side_effect=fake_run_cmd):
+        level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
+
+    # The retained historical artifact is byte-for-byte untouched -- never repaired, re-signed, or
+    # overwritten in place to force it to pass identity validation.
+    assert paths["technical_recovery"].read_bytes() == original_bytes
+    assert json.loads(paths["technical_recovery"].read_text(encoding="utf-8"))["artifact_sha256"] == "0" * 64
+
+
+def test_technical_recovery_regenerated_cache_is_reused_on_second_invocation(tmp_path):
+    session = "2026-09-07"
+    paths = _independent_component_session_paths(tmp_path, session)
+    snapshot_identity = _write_valid_p3f9b_snapshot(paths["exact_session_snapshot"], session)
+    stale_payload = _stale_technical_recovery_payload(session, snapshot_identity)
+    _write_json(paths["technical_recovery"], stale_payload)
+
+    def fake_run_cmd(root, argv):
+        out_dir = Path(argv[argv.index("--out-dir") + 1])
+        fresh = _valid_technical_recovery_payload(session, snapshot_identity)
+        _write_json(out_dir / "market_wide_current_technical_coverage_recovery_artifact.json", fresh)
+
+    with patch.object(level2, "ensure_exact_session_snapshot", _fake_ensure_exact_session_snapshot(paths)), \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "run_cmd", side_effect=fake_run_cmd) as mocked_run_cmd:
+        level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
+    assert mocked_run_cmd.call_count == 1
+
+    # Second same-input invocation: the stale original is still on disk and still invalid, but the
+    # regenerated cache from the first invocation must now be reused without a second producer run.
+    with patch.object(level2, "ensure_exact_session_snapshot", _fake_ensure_exact_session_snapshot(paths)), \
+         patch.object(level2, "_prior_completed_descriptive", return_value=tmp_path / "prior.json"), \
+         patch.object(level2, "run_cmd", side_effect=fake_run_cmd) as mocked_run_cmd_second:
+        level2.materialize_independent_components(tmp_path, session, tmp_path / "runtime")
+    mocked_run_cmd_second.assert_not_called()
 
 
 def test_named_20260824_triage_file_is_2026_08_21_session():

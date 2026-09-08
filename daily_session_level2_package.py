@@ -105,6 +105,36 @@ def _rel(root: Path, path: Path) -> str:
         return path.as_posix()
 
 
+def _valid_technical_recovery_cache(
+    tech_out: Path, *, session: str, p3f9b_snapshot_identity: str | None,
+) -> Path | None:
+    """Return ``tech_out`` if it is a genuine reuse candidate, else ``None``.
+
+    Existence alone is not proof of validity: a technical-recovery artifact written by the
+    pre-fix producer (before 0a0fd2d, "fix(technical): finalize recovery artifact before
+    identity") has bytes on disk whose recomputed content hash disagrees with its own stored
+    ``artifact_sha256``. ``market_wide_current_descriptive_research.build_artifact()`` already
+    recomputes and rejects that mismatch (``TECHNICAL_HISTORY_RECOVERY_IDENTITY_MISMATCH``); this
+    reuses the exact same ``content_identity()`` convention -- not a second hashing scheme -- so a
+    stale artifact is caught here, before it is ever handed downstream, instead of only there.
+    Session and P3F9B-snapshot lineage are checked with the identical fields
+    ``build_artifact()`` itself requires (``target_session`` /
+    ``source_lineage.p3f9b_snapshot_identity``).
+    """
+    artifact = _load(tech_out)
+    if not isinstance(artifact, Mapping):
+        return None
+    from market_wide_current_descriptive_research import content_identity
+    if artifact.get("artifact_sha256") != content_identity(artifact)["artifact_sha256"]:
+        return None
+    if artifact.get("target_session") != session:
+        return None
+    source_lineage = artifact.get("source_lineage")
+    if not isinstance(source_lineage, Mapping) or source_lineage.get("p3f9b_snapshot_identity") != p3f9b_snapshot_identity:
+        return None
+    return tech_out
+
+
 def _artifact_identity(payload: Mapping[str, Any] | None) -> str | None:
     if not isinstance(payload, Mapping):
         return None
@@ -1184,12 +1214,31 @@ def materialize_independent_components(
     tech_out = paths["technical_recovery"]
     tech_dir = tech_out.parent
     baseline_desc = _prior_completed_descriptive(execution_root, session)
-    if not tech_out.exists():
-        run_cmd(execution_root, [
-            "tools/run_market_wide_current_technical_coverage_scaleout.py",
-            "--baseline", str(baseline_desc), "--snapshot", str(p3f9b_snapshot),
-            "--out-dir", str(tech_dir), "--all",
-        ])
+    p3f9b_snapshot_identity = (_load(p3f9b_snapshot) or {}).get("snapshot_identity")
+    # A retained technical_recovery artifact must prove it is a valid reuse candidate, not merely
+    # exist. Check the file at its original path first, then a prior invalidated-cache regeneration
+    # (below) so a second same-input invocation is idempotent once regeneration has happened once.
+    tech_regen_dir = tech_dir.parent / f"{tech_dir.name}-revalidated"
+    for candidate in (tech_out, tech_regen_dir / tech_out.name):
+        valid = _valid_technical_recovery_cache(candidate, session=session, p3f9b_snapshot_identity=p3f9b_snapshot_identity)
+        if valid is not None:
+            tech_out = valid
+            break
+    else:
+        # Neither candidate is valid. If tech_out exists it is a stale/invalid retained artifact
+        # (e.g. a pre-0a0fd2d build) -- it is left exactly as it is on disk as immutable historical
+        # evidence, never repaired, re-signed, or overwritten in place. run_all() in the recovery
+        # producer will not overwrite an existing output path (it prints "REUSED" and returns), so
+        # regeneration through the already-fixed builder must target a fresh sibling directory
+        # rather than tech_dir whenever tech_out is already occupied by an invalid artifact.
+        if tech_out.exists():
+            tech_out = tech_regen_dir / tech_out.name
+        if not tech_out.exists():
+            run_cmd(execution_root, [
+                "tools/run_market_wide_current_technical_coverage_scaleout.py",
+                "--baseline", str(baseline_desc), "--snapshot", str(p3f9b_snapshot),
+                "--out-dir", str(tech_out.parent), "--all",
+            ])
     desc_out = paths["descriptive_research"]
     if not desc_out.exists():
         run_cmd(execution_root, [
