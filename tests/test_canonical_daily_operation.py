@@ -106,7 +106,27 @@ def _producer(tmp_path: Path, session: str = SESSION) -> dict:
 def _patch_downstream(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(cdo, "register_session_inputs", lambda *a, **k: {"status": "REGISTERED"})
     monkeypatch.setattr(cdo, "validate_and_freeze_completed_session", lambda *a, **k: {"status": "FROZEN"})
-    monkeypatch.setattr(cdo, "build_enrichment_components", lambda *a, **k: {})
+    monkeypatch.setattr(cdo, "build_enrichment_components", lambda _root, session, **_kwargs: {
+        "integrated_investment_decision_product": {
+            "status": "BUILT",
+            "artifact": {
+                "contract_version": "integrated_investment_decision_product/v1",
+                "session": session,
+                "artifact_identity": "integrated_investment_decision_product/v1:test",
+                "records": {},
+            },
+        },
+    })
+    monkeypatch.setattr(cdo, "retain_prospective_decision_snapshot", lambda *_a, **_k: {
+        "status": "RETAINED",
+        "artifact": {
+            "snapshot_identity": "prospective_decision_snapshot:test",
+            "source_integrated_decision_artifact": {
+                "artifact_identity": "integrated_investment_decision_product/v1:test",
+            },
+        },
+        "path": tmp_path / "prospective-decision-snapshot.json",
+    })
     monkeypatch.setattr(cdo, "build_decision_packet", lambda *a, **k: {"artifact_identity": "current_research_decision_packet:ed1bfde1"})
     monkeypatch.setattr(cdo, "run_prospective_collection", lambda *a, **k: {
         "status": "COLLECTED", "snapshot": {"snapshot_id": "prospective_research_cohort_snapshot:6b98b392"}, "path": str(tmp_path),
@@ -118,8 +138,10 @@ def _patch_downstream(monkeypatch, tmp_path: Path) -> None:
 
 def _run(tmp_path: Path, monkeypatch, *, now=POST_CLOSE, session=SESSION, complete_publication=False,
          acquire_fn=None, producer_fn=None, runtime_fn=None, trusted_fn=None, publication_runner=None,
-         working=None, exact=None, runtime_session=None, **kwargs):
+         working=None, exact=None, runtime_session=None, enrichment_fn=None, **kwargs):
     _patch_downstream(monkeypatch, tmp_path)
+    if enrichment_fn is not None:
+        monkeypatch.setattr(cdo, "build_enrichment_components", enrichment_fn)
     runtime = tmp_path / "runtime"
     _write_runtime(runtime, runtime_session or session)
 
@@ -479,6 +501,72 @@ def test_registration_only_after_phase_b(tmp_path, monkeypatch):
     )
     assert order.index("acquire") < order.index("register")
     assert order.index("register") < order.index("producer")
+
+
+def test_integrated_decision_is_built_after_freeze_and_explicitly_supplied_to_producer(tmp_path, monkeypatch):
+    order, received = [], {}
+    _patch_downstream(monkeypatch, tmp_path)
+    monkeypatch.setattr(cdo, "register_session_inputs", lambda *a, **k: order.append("register") or {"status": "REGISTERED"})
+    monkeypatch.setattr(cdo, "validate_and_freeze_completed_session", lambda *a, **k: order.append("freeze") or {"status": "FROZEN"})
+
+    integrated = {
+        "contract_version": "integrated_investment_decision_product/v1",
+        "session": SESSION,
+        "artifact_identity": "integrated_investment_decision_product/v1:exact-frozen-inputs",
+        "records": {},
+    }
+    monkeypatch.setattr(cdo, "build_enrichment_components", lambda *_a, **_k: order.append("integrated") or {
+        "integrated_investment_decision_product": {"status": "BUILT", "artifact": integrated},
+    })
+
+    def acquire(*_a, **_k):
+        order.append("acquire")
+        return _acquired(tmp_path)
+
+    def producer(*_a, **kwargs):
+        order.append("producer")
+        received.update(kwargs)
+        return _producer(tmp_path)
+
+    runtime = tmp_path / "runtime"
+    _write_runtime(runtime, SESSION)
+    cdo.run_canonical_daily_operation(
+        tmp_path, runtime, SESSION, now=POST_CLOSE,
+        working_dates_evidence=_working_dates(SESSION),
+        acquire_fn=acquire,
+        producer_fn=producer,
+        runtime_fn=lambda *a, **k: {"session": SESSION},
+        trusted_fn=lambda *a, **k: {"session": SESSION, "trusted_subset_ready": True},
+        macro_refresh_fn=lambda *a, **k: {},
+        out_dir=tmp_path / "ops",
+    )
+    assert order.index("freeze") < order.index("integrated") < order.index("producer")
+    assert received["integrated_investment_decision_product"] is integrated
+
+
+def test_missing_or_cross_session_integrated_decision_fails_before_producer(tmp_path, monkeypatch):
+    producer_called = False
+
+    def producer(*_a, **_k):
+        nonlocal producer_called
+        producer_called = True
+        return _producer(tmp_path)
+
+    with pytest.raises(cdo.CanonicalDailyOperationError, match="INTEGRATED_DECISION_DELIVERY_INPUT_UNAVAILABLE") as exc:
+        _run(tmp_path, monkeypatch, producer_fn=producer, enrichment_fn=lambda *_a, **_k: {})
+    assert exc.value.stage == cdo.STAGE_BLOCKED_DAILY_PRODUCER
+    assert producer_called is False
+
+    with pytest.raises(cdo.CanonicalDailyOperationError, match="INTEGRATED_DECISION_DELIVERY_SESSION_MISMATCH"):
+        _run(
+            tmp_path, monkeypatch,
+            enrichment_fn=lambda *_a, **_k: {"integrated_investment_decision_product": {"artifact": {
+                "contract_version": "integrated_investment_decision_product/v1",
+                "session": "2026-08-25",
+                "artifact_identity": "integrated_investment_decision_product/v1:wrong-session",
+                "records": {},
+            }}},
+        )
 
 
 def test_daily_producer_failure_skips_runtime_and_publication(tmp_path, monkeypatch):

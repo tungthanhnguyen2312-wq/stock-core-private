@@ -56,6 +56,7 @@ from canonical_post_close_pipeline import (
     build_tiered_bundle,
     evaluate_dashboard_runtime_readiness,
     register_session_inputs,
+    retain_prospective_decision_snapshot,
     run_prospective_collection,
     validate_and_freeze_completed_session,
 )
@@ -381,6 +382,33 @@ def format_owner_daily_status(
     return "\n".join(lines)
 
 
+def _integrated_delivery_for_session(enrichment: Mapping[str, Any], session: str) -> Mapping[str, Any]:
+    """Return the exact rich-decision input that must exist before Daily sealing.
+
+    ``build_enrichment_components`` is invoked only after registration and the
+    completed-session freeze.  This boundary deliberately accepts the returned
+    object by identity; it never discovers a similarly named or newer artifact.
+    """
+    integrated = (enrichment.get("integrated_investment_decision_product") or {}).get("artifact")
+    if not isinstance(integrated, Mapping):
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_DAILY_PRODUCER,
+            "INTEGRATED_DECISION_DELIVERY_INPUT_UNAVAILABLE",
+        )
+    if integrated.get("session") != session:
+        raise CanonicalDailyOperationError(
+            STAGE_BLOCKED_DAILY_PRODUCER,
+            f"INTEGRATED_DECISION_DELIVERY_SESSION_MISMATCH:expected={session}:observed={integrated.get('session')}",
+        )
+    if integrated.get("contract_version") != "integrated_investment_decision_product/v1":
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "INTEGRATED_DECISION_DELIVERY_CONTRACT_MISMATCH")
+    if not isinstance(integrated.get("artifact_identity"), str) or not integrated["artifact_identity"]:
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "INTEGRATED_DECISION_DELIVERY_IDENTITY_MISSING")
+    if not isinstance(integrated.get("records"), Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "INTEGRATED_DECISION_DELIVERY_RECORDS_MISSING")
+    return integrated
+
+
 def run_canonical_daily_operation(
     root: Path,
     runtime_root: Path,
@@ -544,11 +572,23 @@ def run_canonical_daily_operation(
     except CanonicalPostCloseError as exc:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_INPUT_REGISTRATION, str(exc)) from exc
 
+    # The immutable Daily operation owns the AI handoff and cockpit projection.
+    # Build and validate its exact-session Integrated Decision after the input
+    # ledger is frozen, then pass that object explicitly into the producer.
+    # This matches canonical_post_close_pipeline and leaves no post-hoc route
+    # for attaching a rich-decision delivery surface to a sealed operation.
+    enrichment = build_enrichment_components(
+        root, resolved_session, artifact_root=artifact_root, runtime_root=runtime_root,
+        priority_queue_artifact=None,
+    )
+    integrated_delivery = _integrated_delivery_for_session(enrichment, resolved_session)
+
     producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
     try:
         producer_result = produce(
             root, session=resolved_session, latest_completed_session=False,
             producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
+            integrated_investment_decision_product=integrated_delivery,
             now=instant,
         )
     except DailyProducerError as exc:
@@ -626,9 +666,9 @@ def run_canonical_daily_operation(
         )
 
     operation = producer_result.get("operation") if isinstance(producer_result.get("operation"), Mapping) else {}
-    enrichment = build_enrichment_components(
-        root, resolved_session, artifact_root=artifact_root, runtime_root=runtime_root,
-        priority_queue_artifact=operation.get("decision_queue"),
+    prospective_decision_snapshot = retain_prospective_decision_snapshot(
+        root, resolved_session, producer_result=producer_result, enrichment=enrichment,
+        exact_session_snapshot=snapshot,
     )
     decision_packet = build_decision_packet(
         root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
@@ -638,7 +678,8 @@ def run_canonical_daily_operation(
     tiers = build_tiered_bundle(
         root, resolved_session, acquisition=acquisition, producer_result=producer_result,
         decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
-        producer_head=producer_head, consumer_head=consumer_head, artifact_root=artifact_root,
+        producer_head=producer_head, consumer_head=consumer_head, prospective_snapshot=prospective_decision_snapshot,
+        artifact_root=artifact_root,
         runtime_release=runtime_release,
     )
 
@@ -692,6 +733,7 @@ def run_canonical_daily_operation(
         "daily_session_shadow_recommendation_identity": shadow_autosourcing.get("artifact_identity"),
         "decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
         "prospective_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "prospective_decision_snapshot_identity": ((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
         "runtime_session": runtime_session,
         "trusted_session": trusted_session,
         "publication_state": state,
@@ -740,6 +782,15 @@ def run_canonical_daily_operation(
         "daily_session_shadow_recommendation": dict(shadow_autosourcing),
         "decision_packet_identity": (decision_packet or {}).get("artifact_identity"),
         "prospective_cohort_identity": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "prospective_decision_snapshot": {
+            "status": (prospective_decision_snapshot or {}).get("status"),
+            "reason": (prospective_decision_snapshot or {}).get("reason"),
+            "identity": ((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
+            "source_integrated_decision_identity": (
+                ((prospective_decision_snapshot or {}).get("artifact") or {})
+                .get("source_integrated_decision_artifact", {}).get("artifact_identity")
+            ),
+        },
         "runtime_release_status": "READY" if runtime_release.get("ready") else "NOT_READY",
         "runtime_release": runtime_release,
         "macro_refresh": macro_refresh,
@@ -761,9 +812,10 @@ def run_canonical_daily_operation(
         "producer_result": producer_result,
         "decision_packet": decision_packet,
         "prospective": prospective,
+        "prospective_decision_snapshot_detail": prospective_decision_snapshot,
         "enrichment": enrichment,
     }
-    persistable = {k: v for k, v in record.items() if k not in {"producer_result", "decision_packet", "prospective", "enrichment"}}
+    persistable = {k: v for k, v in record.items() if k not in {"producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment"}}
     persistable["lineage"] = {
         "session_gate_phase_a": phase_a.get("gate_identity"),
         "session_gate_phase_b": phase_b.get("gate_identity"),
@@ -772,6 +824,7 @@ def run_canonical_daily_operation(
         "daily_session_shadow_recommendation": shadow_autosourcing.get("artifact_identity"),
         "decision_packet": (decision_packet or {}).get("artifact_identity"),
         "prospective_cohort": ((prospective or {}).get("snapshot") or {}).get("snapshot_id"),
+        "prospective_decision_snapshot": ((prospective_decision_snapshot or {}).get("artifact") or {}).get("snapshot_identity"),
         "runtime_release_session": runtime_session,
         "trusted_subset_session": trusted_session,
         "publication_attestation": None if not publication else publication.get("attestation_identity"),

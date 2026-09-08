@@ -120,10 +120,12 @@ def test_daily_producer_autosources_without_manual_parameter_and_threads_exact_p
     monkeypatch.setattr(producer, "build_acquisition_plan", lambda *a, **k: {"items": []})
     monkeypatch.setattr(producer, "_verify_delivery", lambda *a, **k: {"status": "PASS"})
 
+    resolution_statuses = iter(("BUILT", "REUSED"))
+
     def autosource(*_args, **kwargs):
         calls["autosource"] += 1
         assert kwargs["session"] == SESSION and kwargs["inputs"] is inputs
-        return {"status": "BUILT", "path": tmp_path / "shadow.json", "chain": automatic}
+        return {"status": next(resolution_statuses), "path": tmp_path / "shadow.json", "chain": automatic}
 
     def session_operation(*_args, **kwargs):
         calls["session_operation"] += 1
@@ -136,9 +138,15 @@ def test_daily_producer_autosources_without_manual_parameter_and_threads_exact_p
         tmp_path, session=SESSION, latest_completed_session=False,
         producer_head="producer", consumer_head="consumer", now=None,
     )
-    assert calls == {"autosource": 1, "session_operation": 1}
-    assert result["manifest"]["daily_session_shadow_recommendation"]["status"] == "BUILT"
+    replay = producer.run_daily_producer(
+        tmp_path, session=SESSION, latest_completed_session=False,
+        producer_head="producer", consumer_head="consumer", now=None,
+    )
+    assert calls == {"autosource": 2, "session_operation": 2}
+    assert result["manifest"]["daily_session_shadow_recommendation"]["status"] == "IDENTITY_VALID_SAME_SESSION_ARTIFACT"
     assert result["manifest"]["daily_session_shadow_recommendation"]["session"] == SESSION
+    assert replay["reused_existing_run"] is True
+    assert replay["manifest"] == result["manifest"]
 
 
 def test_explicit_override_must_be_same_auto_resolved_artifact():

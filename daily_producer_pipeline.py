@@ -329,7 +329,11 @@ def run_daily_producer(
         "source_acquisition_result": {"status": "REUSED_RETAINED_EVIDENCE", "acquired": [], "reused": [row["input_class"] for row in plan["items"] if row["input_class"] not in {"macro", "explicit_portfolio"}], "blocked_or_unavailable": [row["input_class"] for row in plan["items"] if row["execution_disposition"] in {"BLOCKED", "OPTIONAL_UNAVAILABLE", "NOT_APPLICABLE"}]},
         "upstream_artifact_identities": copy.deepcopy(operation["manifest"]["input_artifacts"]),
         "daily_session_shadow_recommendation": {
-            "status": shadow_resolution["status"],
+            # ``BUILT`` versus ``REUSED`` describes this invocation, rather than
+            # the retained same-session artifact.  Persisting it here would make
+            # an otherwise identical immutable producer manifest conflict on a
+            # normal idempotent replay.
+            "status": "IDENTITY_VALID_SAME_SESSION_ARTIFACT",
             "session": selected,
             "path": _relative_or_absolute(root, Path(shadow_resolution["path"])),
             "artifact_identity": shadow_resolution["chain"]["artifact_identity"],
