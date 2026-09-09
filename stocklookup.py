@@ -196,6 +196,9 @@ def main(argv=None) -> int:
     portfolio_shortlist = portfolio_sub.add_parser("shortlist", help="Compose a private retained-evidence owner research shortlist; no Daily or provider call.")
     portfolio_shortlist.add_argument("--portfolio-root", type=Path, default=None)
     portfolio_shortlist.add_argument("--session", required=True)
+    portfolio_review = portfolio_sub.add_parser("review", help="Build a private deterministic owner review packet from the retained shortlist.")
+    portfolio_review.add_argument("--portfolio-root", type=Path, default=None)
+    portfolio_review.add_argument("--session", required=True)
     a = p.parse_args(argv)
 
     if a.command == "roadmap":
@@ -235,6 +238,16 @@ def main(argv=None) -> int:
                 pas.write_private_artifact(artifact, portfolio_root=root)
                 print(json.dumps(pas.public_console_summary(artifact), ensure_ascii=False, sort_keys=True))
                 return 0
+            if a.portfolio_action == "review":
+                import private_portfolio_decision_packet as packet
+                root = (a.portfolio_root or __import__("private_portfolio_context").default_portfolio_root()).expanduser()
+                path = root / "portfolio_aware_opportunity_shortlists" / a.session / "portfolio_aware_opportunity_shortlist_v1.json"
+                try:
+                    artifact = packet.build_artifact(shortlist=json.loads(path.read_text(encoding="utf-8")))
+                except (FileNotFoundError, packet.PacketError, json.JSONDecodeError):
+                    print(json.dumps({"status":"BLOCKED","reason_code":"RETAINED_SHORTLIST_UNAVAILABLE_OR_INCOMPATIBLE"},sort_keys=True)); return 2
+                packet.write_private_artifact(artifact, root)
+                print(json.dumps(packet.public_console_summary(artifact),ensure_ascii=False,sort_keys=True)); return 0
             # a.portfolio_action == "evaluate"
             import datetime as _dt
 
