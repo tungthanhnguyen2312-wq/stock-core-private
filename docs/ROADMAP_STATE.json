@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.09.1",
+  "roadmap_version": "2026.09.09.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "354361bb32a56a78af5581edd0b8d2a593824585",
-  "last_updated_checkpoint": "354361bb32a56a78af5581edd0b8d2a593824585",
+  "implementation_lineage_head": "91b0cbf568c4c03231640f47602335be9a99222b",
+  "last_updated_checkpoint": "91b0cbf568c4c03231640f47602335be9a99222b",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "AI_DAILY_BRIEF_LINEAGE_CORRECTIVE_V1",
+    "milestone": "PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -966,18 +966,19 @@
     {
       "milestone_id": "PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
       "state": "COMPLETE",
-      "narrative_disposition": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT",
+      "narrative_disposition": "COMPLETE / REAL_PRIVATE_INPUT_VALIDATED",
       "starting_checkpoint": "f8532b7678f3f17b1a13c357c787fd1fde453c72",
-      "checkpoint": "f5771bbd51be50111c48bbcf3f523ca2fbb12c94",
+      "checkpoint": "91b0cbf568c4c03231640f47602335be9a99222b",
       "owner_input_semantics_corrective_base": "d4e462ff05cfbe6fd3054440a0784a2f730f9928",
+      "real_workbook_schema_adaptation_checkpoint": "91b0cbf568c4c03231640f47602335be9a99222b",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "NONE / PRIVATE_LOCAL_CONTEXT_FOUNDATION_ONLY / NO_DAILY_DASHBOARD_AI_HANDOFF_OR_SIZING_CHANGE",
       "owner_authorized": true,
-      "source_doc": "Owner-authorized PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1 directive (2026-09-08)",
+      "source_doc": "Owner-authorized PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1 directive (2026-09-08); real-workbook schema adaptation directive (2026-09-09)",
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_08_PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
-      "notes": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, system_default_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Same-milestone owner-input semantics corrective maps current margin debt, minimum/maximum available margin, and annual percentage-number rate separately; VND is field-owned regardless of Excel number format or magnitude, and availability never implies debt. SYSTEM_DEFAULT_POLICY_V1 supplies only individually absent fields while retaining owner/default/effective policy provenance; no cap is an automatic sell instruction. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Next proposed gate only: PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1; it is not queued. Repository convergence (2026-09-08): originally developed on feature/private-portfolio-context-foundation-v1 (worktree commits 5b689ce/6264b8a) from base f8532b7678f3f17b1a13c357c787fd1fde453c72, which was already Producer main's exact HEAD at convergence time (verified ancestor, zero divergence). Ported via clean cherry-pick onto integrate/private-portfolio-context-foundation-v1 with identical content and no conflicts; the recorded checkpoint/owner_input_semantics_corrective_base above are the resulting integration-branch commit identities (d4e462f/f5771bb), which differ from the original feature-branch hashes only because their parent commit changed. Real private-workbook validation could not run this session: no workbook exists yet at %USERPROFILE%\\.stocklookup\\portfolio\\portfolio_input.xlsx (REAL_PRIVATE_IMPORT_STATUS = OWNER_INPUT_NOT_PRESENT); a dummy workbook was deliberately not created. Disposition is therefore COMPLETE_CODE / OWNER_INPUT_NOT_PRESENT, not COMPLETE / REAL_PRIVATE_INPUT_VALIDATED; V2 (PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1) remains not started and the actual next gate is REAL_PRIVATE_PORTFOLIO_INPUT_REQUIRED."
+      "notes": "COMPLETE / REAL_PRIVATE_INPUT_VALIDATED. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, system_default_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Same-milestone owner-input semantics corrective maps current margin debt, minimum/maximum available margin, and annual percentage-number rate separately; VND is field-owned regardless of Excel number format or magnitude, and availability never implies debt. SYSTEM_DEFAULT_POLICY_V1 supplies only individually absent fields while retaining owner/default/effective policy provenance; no cap is an automatic sell instruction. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Repository convergence (2026-09-08): originally developed on feature/private-portfolio-context-foundation-v1 (worktree commits 5b689ce/6264b8a) from base f8532b7678f3f17b1a13c357c787fd1fde453c72, which was already Producer main's exact HEAD at convergence time (verified ancestor, zero divergence). Ported via clean cherry-pick onto integrate/private-portfolio-context-foundation-v1 with identical content and no conflicts; the recorded owner_input_semantics_corrective_base above is the resulting integration-branch commit identity (d4e462f), which differs from the original feature-branch hash only because its parent commit changed. Real-workbook schema adaptation (2026-09-09, checkpoint 91b0cbf): the real owner workbook's actual Vietnamese column labels had no alias mapping (TRADE/DIVIDEND/MONEY/MARGIN_HEADER_UNRECOGNIZED, event_count=0), and a genuine pre-existing _normal() bug silently dropped Vietnamese d (U+0111) instead of folding it to plain d; both fixed. The margin sheet has no header row at all in the real workbook (a headerless legacy ledger: date, amount, free-text note); a narrowly-scoped positional fallback recognizes it, classifying every row as MONEY_MOVEMENT rather than guessing a financing-cost category from free text. A corporate-action row's date and cash amount now fall back to the columns the real workbook actually and consistently populates (record/ex-rights date when execution date is blank; net-of-tax cash amount over the frequently-blank nominal one), evidenced by structural, type-only inspection of the real workbook -- never its values, which were never printed, logged, or persisted anywhere in the repository. Real import: 370 events, 25 current positions (was 0/0), workbook SHA f994bfd49bba3373dda8cff1028a00d31568e7a61bdbda261bc4bebd241ab13e. Residual warnings (6 CASH_DIVIDEND_AMOUNT_UNRESOLVED, 3 DIVIDEND_ROW_INVALID, 2 STOCK_DISTRIBUTION_QUANTITY_UNRESOLVED, 2 SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING, 1 TOTAL_VIEW_HINT_UNUSABLE, 1 MARGIN_LEGACY_POSITIONAL_LAYOUT_USED informational) individually verified structurally against every populated column in the affected real rows; each traces to genuinely incomplete/pending source data (a corporate action awaiting settlement, a handful of rows with no date recorded in any of the three candidate columns, a real trade-reconciliation question) or a real classification path, never a remaining parser mapping gap. Import layout bumped V2->V3->V4 so neither schema-adaptation attempt overwrites the original failed V2 attempt's or each other's immutable artifacts for the same workbook SHA. Disposition is therefore COMPLETE / REAL_PRIVATE_INPUT_VALIDATED; PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1 remains only a proposed successor, not started, not queued, and owner authorization is still required before it begins."
     },
     {
       "milestone_id": "AI_DAILY_BRIEF_LINEAGE_CORRECTIVE_V1",
