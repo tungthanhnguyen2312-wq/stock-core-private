@@ -1,0 +1,198 @@
+{
+  "artifact_identity": "asymmetric_dislocation_research/v1:d83e7c08079704c602fcdd4f849e5d16b4826580958653d24444724f6e40fee2",
+  "coverage": {
+    "candidate_count": 228,
+    "evidence_qualified_count": 1471,
+    "missing_evidence_flag_distribution": {
+      "FUNDAMENTAL_EVIDENCE_UNAVAILABLE": 320,
+      "VALUATION_EVIDENCE_UNAVAILABLE": 756
+    },
+    "missing_evidence_ticker_count": 864,
+    "reason_code_distribution": {
+      "CHEAP_VALUATION_WITH_DETERIORATING_FUNDAMENTALS": 152,
+      "CHEAP_VALUATION_WITH_MIXED_FUNDAMENTALS_CORROBORATED_BY_RECOVERY_EVIDENCE": 4,
+      "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION": 10,
+      "DETERIORATING_FUNDAMENTALS_NO_QUALIFIED_CHEAPNESS_OR_BREAKDOWN": 98,
+      "EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE": 6,
+      "IMPROVING_TACTICAL_STRUCTURE_WITH_MIXED_FUNDAMENTALS": 89,
+      "IMPROVING_TACTICAL_STRUCTURE_WITH_NON_DETERIORATING_FUNDAMENTALS": 96,
+      "INSUFFICIENT_EVIDENCE_ACROSS_REUSED_AXES": 614,
+      "PRICE_BREAKDOWN_WITH_WEAK_SURVIVABILITY": 23
+    },
+    "state_distribution": {
+      "CYCLICAL_RECOVERY_FORMING": 185,
+      "DISTRESS_SPECULATIVE": 23,
+      "INSUFFICIENT_EVIDENCE": 614,
+      "NO_QUALIFIED_DISLOCATION": 689,
+      "QUALITY_DISLOCATION": 14,
+      "TURNAROUND_EVIDENCE_FORMING": 6,
+      "VALUE_TRAP_RISK": 152
+    },
+    "universe_denominator": 1683
+  },
+  "session": "2026-09-09",
+  "source_integrated_decision_identity": "integrated_investment_decision_product/v1:21e8014c0afb1bbbcc04acfa8a98e926186e839868b7d34e235be870bd11e3c6",
+  "top_candidate_count": 50,
+  "top_candidates_sample": [
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "ALC",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "API",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "BMV",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_MIXED_FUNDAMENTALS_CORROBORATED_BY_RECOVERY_EVIDENCE"
+      ],
+      "ticker": "BSR",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "C4G",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "CFV",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "HWS",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "KDC",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "NAS",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "PAC",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_MIXED_FUNDAMENTALS_CORROBORATED_BY_RECOVERY_EVIDENCE"
+      ],
+      "ticker": "PBP",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_VIABLE_ECONOMICS_AND_PRICE_DISLOCATION"
+      ],
+      "ticker": "PDN",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_MIXED_FUNDAMENTALS_CORROBORATED_BY_RECOVERY_EVIDENCE"
+      ],
+      "ticker": "SCI",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "QUALITY_DISLOCATION",
+      "reason_codes": [
+        "CHEAP_VALUATION_WITH_MIXED_FUNDAMENTALS_CORROBORATED_BY_RECOVERY_EVIDENCE"
+      ],
+      "ticker": "VIT",
+      "valuation_dislocation_state": "CHEAP"
+    },
+    {
+      "primary_research_state": "TURNAROUND_EVIDENCE_FORMING",
+      "reason_codes": [
+        "EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE"
+      ],
+      "ticker": "SAP",
+      "valuation_dislocation_state": "MID"
+    },
+    {
+      "primary_research_state": "TURNAROUND_EVIDENCE_FORMING",
+      "reason_codes": [
+        "EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE"
+      ],
+      "ticker": "VNH",
+      "valuation_dislocation_state": "UNAVAILABLE"
+    },
+    {
+      "primary_research_state": "TURNAROUND_EVIDENCE_FORMING",
+      "reason_codes": [
+        "EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE"
+      ],
+      "ticker": "KCE",
+      "valuation_dislocation_state": "EXPENSIVE"
+    },
+    {
+      "primary_research_state": "TURNAROUND_EVIDENCE_FORMING",
+      "reason_codes": [
+        "EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE"
+      ],
+      "ticker": "MTG",
+      "valuation_dislocation_state": "EXPENSIVE"
+    },
+    {
+      "primary_research_state": "TURNAROUND_EVIDENCE_FORMING",
+      "reason_codes": [
+        "EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE"
+      ],
+      "ticker": "NQT",
+      "valuation_dislocation_state": "EXPENSIVE"
+    },
+    {
+      "primary_research_state": "TURNAROUND_EVIDENCE_FORMING",
+      "reason_codes": [
+        "EXPLICIT_FINANCIAL_TURNAROUND_EVIDENCE"
+      ],
+      "ticker": "PCM",
+      "valuation_dislocation_state": "EXPENSIVE"
+    }
+  ]
+}
