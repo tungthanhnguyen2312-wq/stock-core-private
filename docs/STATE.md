@@ -1,5 +1,38 @@
 # Stock Lookup — Operational State
 
+**Asymmetric Dislocation Research V1 (2026-09-09):** `ASYMMETRIC_DISLOCATION_RESEARCH_V1 =
+COMPLETE / RESEARCH_ONLY / READY_FOR_LATER_PRODUCT_INTEGRATION`, started at owner checkpoint
+`461e2e2017946dfb2bccb11f50baa9b6741d4d38` (`HEAD == origin/main`), implementation checkpoint
+`55e64bc29e34355fdb161e8dfa4ab85d60067d8c`. Owner explicitly authorized this new standalone
+milestone despite `docs/ROADMAP_STATE.json` `queued_next=[]`, recorded as
+`OWNER_AUTHORIZATION_2026_09_09_ASYMMETRIC_DISLOCATION_RESEARCH_V1`; no successor is inferred.
+New `asymmetric_dislocation_research/v1` (`asymmetric_dislocation_research.py`) joins, without
+recomputation, the already-governed `integrated_investment_decision_product/v1` per-ticker
+record's `fundamental_state`/`financial_composite_context` (survivability), `valuation_context_
+summary` (cheap/expensive), `tactical_phase`/`market_structure_state`/`breakout_state_v3`/RSI
+zone (market dislocation), `corporate_intelligence_context` (catalyst/risk), and `invalidation`
+(deterministic risk boundary) into seven deterministic states -- `QUALITY_DISLOCATION`,
+`CYCLICAL_RECOVERY_FORMING`, `TURNAROUND_EVIDENCE_FORMING`, `DISTRESS_SPECULATIVE`,
+`VALUE_TRAP_RISK`, `NO_QUALIFIED_DISLOCATION`, `INSUFFICIENT_EVIDENCE` -- with reason codes and
+an explicit lexicographic candidate ranking over already-qualified component states (never a
+weighted score). A cheap valuation never rescues a deteriorating fundamental read into
+`VALUE_TRAP_RISK`; oversold RSI alone never qualifies any state; scenario asymmetry stays
+`ASYMMETRY_NOT_QUANTIFIED` (the calibration pipeline's real cohorts remain
+`INSUFFICIENT_SAMPLE`); no probability or target price is ever emitted. Real read-only
+market-wide replay (`tools/run_asymmetric_dislocation_research.py`, no provider/network call)
+against the latest governed completed session 2026-09-09 (`integrated_investment_decision_
+product/v1:21e8014c0afb1bbbcc04acfa8a98e926186e839868b7d34e235be870bd11e3c6`), denominator
+1,683: `NO_QUALIFIED_DISLOCATION` 689, `INSUFFICIENT_EVIDENCE` 614, `CYCLICAL_RECOVERY_FORMING`
+185, `VALUE_TRAP_RISK` 152, `DISTRESS_SPECULATIVE` 23, `QUALITY_DISLOCATION` 14,
+`TURNAROUND_EVIDENCE_FORMING` 6; 228 eligible research candidates. 15 new focused tests cover
+every required transition plus determinism/idempotence, no-future-session-leakage, and ranking
+stability. Standalone and read-only over retained completed-session products only: no existing
+module was edited, and canonical Daily Producer orchestration, Daily Brief generation, AI
+delivery, the Integrated Investment Decision production path, AI/public handoff, and Portfolio
+V2 decision semantics are all unchanged and not activated in canonical Daily. No provider, PIT,
+liquidity, sizing, universal score, probability, target price, or authority-promotion change.
+Artifact: `operations-review/asymmetric-dislocation-research-v1-20260909/`.
+
 **Liquidity evidence ceiling closeout and state synchronization V1 (2026-09-08):**
 `LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 = COMPLETE / TERMINAL_STATE_SYNC_ONLY` at
 repository HEAD `0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752` (== origin/main; unchanged by this
