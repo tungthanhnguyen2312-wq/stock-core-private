@@ -509,30 +509,12 @@ def _posture_transition(*, root: Path, current_session: str, previous_session: s
     )
 
 
-def build_artifact(
-    *,
-    root: Path,
-    current_session: str,
-    current_source: Path,
-    previous_session: str | None = None,
-    previous_source: Path | None = None,
-    run_identity: str | None = None,
-    registry: Mapping[str, Any] | None = None,
+def _build_from_resolved_operations(
+    *, root: Path, current_session: str, current: Mapping[str, Any],
+    previous: Mapping[str, Any] | None, run_identity: str | None,
+    registry: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Build one next_session_decision_brief/v1 artifact. Never mutates Producer evidence."""
-    registry = registry if registry is not None else load_registry(root)
-    _require_qualified(registry, current_session)
-    current = _resolve_operation(session=current_session, operation_dir=current_source)
-
-    if (previous_session is None) != (previous_source is None):
-        raise NextSessionDecisionBriefError("PREVIOUS_SESSION_AND_SOURCE_MUST_BOTH_BE_GIVEN_OR_BOTH_ABSENT")
-    previous: dict[str, Any] | None = None
-    if previous_session is not None and previous_source is not None:
-        if previous_session >= current_session:
-            raise NextSessionDecisionBriefError("PREVIOUS_SESSION_NOT_STRICTLY_BEFORE_CURRENT_SESSION")
-        _require_qualified(registry, previous_session)
-        previous = _resolve_operation(session=previous_session, operation_dir=previous_source)
-
+    """Assemble the transition projection from already-validated operation payloads."""
     resolved_previous_session = previous["session"] if previous else None
     qualified_chain = _qualified_session_chain(registry)
 
@@ -571,6 +553,86 @@ def build_artifact(
     }
     artifact.update(content_identity(artifact))
     return artifact
+
+
+def build_artifact(
+    *,
+    root: Path,
+    current_session: str,
+    current_source: Path,
+    previous_session: str | None = None,
+    previous_source: Path | None = None,
+    run_identity: str | None = None,
+    registry: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build one next_session_decision_brief/v1 artifact. Never mutates Producer evidence."""
+    registry = registry if registry is not None else load_registry(root)
+    _require_qualified(registry, current_session)
+    current = _resolve_operation(session=current_session, operation_dir=current_source)
+    if (previous_session is None) != (previous_source is None):
+        raise NextSessionDecisionBriefError("PREVIOUS_SESSION_AND_SOURCE_MUST_BOTH_BE_GIVEN_OR_BOTH_ABSENT")
+    previous: dict[str, Any] | None = None
+    if previous_session is not None and previous_source is not None:
+        if previous_session >= current_session:
+            raise NextSessionDecisionBriefError("PREVIOUS_SESSION_NOT_STRICTLY_BEFORE_CURRENT_SESSION")
+        _require_qualified(registry, previous_session)
+        previous = _resolve_operation(session=previous_session, operation_dir=previous_source)
+    return _build_from_resolved_operations(
+        root=root, current_session=current_session, current=current, previous=previous,
+        run_identity=run_identity, registry=registry,
+    )
+
+
+def build_from_current_delivery_payload(
+    *,
+    root: Path,
+    current_session: str,
+    current_manifest: Mapping[str, Any],
+    current_bundle: Mapping[str, Any],
+    current_bundle_sha256: str,
+    current_queue: Mapping[str, Any] | None,
+    previous_session: str | None = None,
+    previous_source: Path | None = None,
+    run_identity: str | None = None,
+    registry: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a transition projection from an explicit pre-seal delivery payload.
+
+    Canonical Daily uses this narrowly to construct the rich Brief before its
+    final immutable delivery is written.  It does not scan for or retrofit a
+    Brief, and all session/operation identities are validated exactly as for a
+    retained on-disk operation.
+    """
+    registry = registry if registry is not None else load_registry(root)
+    _require_qualified(registry, current_session)
+    if current_manifest.get("market_session") != current_session:
+        raise NextSessionDecisionBriefError("PRESEAL_MANIFEST_SESSION_MISMATCH:" + current_session)
+    operation_identity = current_manifest.get("operation_identity")
+    if current_bundle.get("session") != current_session or current_bundle.get("operation_identity") != operation_identity:
+        raise NextSessionDecisionBriefError("PRESEAL_BUNDLE_OPERATION_IDENTITY_MISMATCH:" + current_session)
+    if current_bundle.get("product_identity") != (current_manifest.get("outputs") or {}).get("daily_product"):
+        raise NextSessionDecisionBriefError("PRESEAL_BUNDLE_PRODUCT_IDENTITY_MISMATCH:" + current_session)
+    if current_queue is not None and current_queue.get("research_session") != current_session:
+        raise NextSessionDecisionBriefError("PRESEAL_OPPORTUNITY_QUEUE_SESSION_MISMATCH:" + current_session)
+    if (previous_session is None) != (previous_source is None):
+        raise NextSessionDecisionBriefError("PREVIOUS_SESSION_AND_SOURCE_MUST_BOTH_BE_GIVEN_OR_BOTH_ABSENT")
+    previous: dict[str, Any] | None = None
+    if previous_session is not None and previous_source is not None:
+        if previous_session >= current_session:
+            raise NextSessionDecisionBriefError("PREVIOUS_SESSION_NOT_STRICTLY_BEFORE_CURRENT_SESSION")
+        _require_qualified(registry, previous_session)
+        previous = _resolve_operation(session=previous_session, operation_dir=previous_source)
+    current = {
+        "session": current_session,
+        "manifest": dict(current_manifest),
+        "bundle": dict(current_bundle),
+        "bundle_sha256": current_bundle_sha256,
+        "queue": dict(current_queue) if isinstance(current_queue, Mapping) else None,
+    }
+    return _build_from_resolved_operations(
+        root=root, current_session=current_session, current=current, previous=previous,
+        run_identity=run_identity, registry=registry,
+    )
 
 
 def build_from_previous_bundle_path(

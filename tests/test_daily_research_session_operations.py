@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from daily_research_session_operations import build_operation, load_registry, materialize, resolve_inputs, validate_coherence
+from daily_research_session_operations import bind_integrated_decision_brief_before_sealing, build_operation, load_registry, materialize, resolve_inputs, validate_coherence
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,3 +75,46 @@ def test_operation_retains_explicit_same_session_integrated_brief(tmp_path: Path
     assert retained["source_frozen_input_identities"]
     primary = json.loads((tmp_path / "ai_research_session_bundle.json").read_text(encoding="utf-8"))
     assert primary["integrated_decision_overlay_v1"]["integrated_investment_decision_product_identity"] == integrated["artifact_identity"]
+    assert primary["integrated_decision_overlay_v1"]["daily_integrated_decision_brief_identity"] == brief["artifact_identity"]
+
+
+def test_preseal_brief_binding_is_deterministic_and_fails_closed_without_changing_research():
+    integrated = {
+        "contract_version": "integrated_investment_decision_product/v1",
+        "session": "2026-08-21",
+        "artifact_identity": "integrated_investment_decision_product/v1:preseal",
+        "records": {"ABB": {"research_action_posture": "HOLD", "trigger": {"trigger_state": "NOT_AVAILABLE"}}},
+        "coverage": {"universe_denominator": 1683, "residual": 0},
+    }
+    brief = {
+        "contract_version": "daily_integrated_decision_brief/v1",
+        "session": "2026-08-21",
+        "artifact_identity": "daily_integrated_decision_brief/v1:preseal",
+        "source_artifact_identities": {"integrated_investment_decision_product": integrated["artifact_identity"]},
+        "coverage": {"watchlist_coverage": 11},
+    }
+    before = build_operation(
+        _resolved(), "2026-08-21", producer_head="producer", consumer_head="consumer",
+        integrated_investment_decision_product=integrated,
+    )
+    registry = load_registry(ROOT)
+    after_one = bind_integrated_decision_brief_before_sealing(
+        before, daily_integrated_decision_brief=brief, registry=registry,
+    )
+    after_two = bind_integrated_decision_brief_before_sealing(
+        before, daily_integrated_decision_brief=brief, registry=registry,
+    )
+    assert after_one["manifest"]["operation_identity"] == after_two["manifest"]["operation_identity"]
+    assert after_one["product"] == before["product"]
+    assert after_one["snapshot"] == before["snapshot"]
+    assert after_one["integrated_delivery"]["daily_integrated_decision_brief"]["artifact_identity"] == brief["artifact_identity"]
+    wrong_session = {**brief, "session": "2026-08-20"}
+    with pytest.raises(ValueError, match="DAILY_INTEGRATED_BRIEF_SESSION_MISMATCH"):
+        bind_integrated_decision_brief_before_sealing(
+            before, daily_integrated_decision_brief=wrong_session, registry=registry,
+        )
+    wrong_integrated = {**brief, "source_artifact_identities": {"integrated_investment_decision_product": "other"}}
+    with pytest.raises(ValueError, match="DAILY_INTEGRATED_BRIEF_SOURCE_IDENTITY_MISMATCH"):
+        bind_integrated_decision_brief_before_sealing(
+            before, daily_integrated_decision_brief=wrong_integrated, registry=registry,
+        )

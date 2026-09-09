@@ -14,6 +14,7 @@ from next_session_decision_brief import (
     UNAVAILABLE,
     NextSessionDecisionBriefError,
     build_artifact,
+    build_from_current_delivery_payload,
     build_from_previous_bundle_path,
     content_identity,
 )
@@ -32,6 +33,47 @@ PREVIOUS_SESSION = "2026-08-27"
 ROOT = Path("C:/Projects/StockLookup/stock-core-private")
 _LATEST_POINTER = ROOT / "operations-review/daily-producer-runs-v1/LATEST_COMPLETED_RUN.json"
 pytestmark = pytest.mark.skipif(not _LATEST_POINTER.is_file(), reason="real 2026-08-27/2026-08-28 operations-review evidence not present at " + str(ROOT))
+
+
+def test_preseal_payload_uses_explicit_current_delivery_without_operation_discovery(monkeypatch, tmp_path):
+    import next_session_decision_brief as module
+
+    captured = {}
+    registry = {"completed_sessions": {
+        "2026-09-09": {
+            "status": "COMPLETED_RETAINED_EVIDENCE",
+            "frozen_input_identities": {"descriptive": "descriptive:preseal"},
+        },
+    }}
+
+    def assemble(**kwargs):
+        captured.update(kwargs)
+        return {"artifact_identity": "next_session_decision_brief/v2:preseal"}
+
+    monkeypatch.setattr(module, "_build_from_resolved_operations", assemble)
+    manifest = {
+        "market_session": "2026-09-09",
+        "operation_identity": "daily_research_session_operation:preseal",
+        "outputs": {"daily_product": "current_daily_decision_research_product/v2:preseal"},
+    }
+    bundle = {
+        "session": "2026-09-09",
+        "operation_identity": manifest["operation_identity"],
+        "product_identity": manifest["outputs"]["daily_product"],
+    }
+    result = build_from_current_delivery_payload(
+        root=tmp_path,
+        current_session="2026-09-09",
+        current_manifest=manifest,
+        current_bundle=bundle,
+        current_bundle_sha256="a" * 64,
+        current_queue={"research_session": "2026-09-09"},
+        registry=registry,
+    )
+    assert result["artifact_identity"] == "next_session_decision_brief/v2:preseal"
+    assert captured["current"]["manifest"] == manifest
+    assert captured["current"]["bundle"] == bundle
+    assert captured["previous"] is None
 
 
 def _current_and_previous_dirs() -> tuple[Path, Path]:

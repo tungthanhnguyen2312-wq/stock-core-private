@@ -10,7 +10,7 @@ import copy
 import json
 import sys
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from current_daily_decision_research_product import build as build_product, content_identity as product_identity, markdown
 from current_evidence_bound_scenario import build as build_scenario, content_identity as scenario_identity
@@ -280,6 +280,42 @@ def retain_integrated_decision_brief(
     return path
 
 
+def bind_integrated_decision_brief_before_sealing(
+    operation: Mapping[str, Any], *, daily_integrated_decision_brief: Mapping[str, Any],
+    registry: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind a caller-supplied same-session Brief before immutable delivery writes.
+
+    The operation is deliberately supplied in-memory by its canonical producer.
+    This prevents a post-seal file discovery or a mutation of an already-retained
+    operation while preserving standalone/no-Brief operation semantics.
+    """
+    prepared = copy.deepcopy(dict(operation))
+    manifest = prepared.get("manifest")
+    binding = prepared.get("integrated_delivery")
+    if not isinstance(manifest, Mapping) or not isinstance(binding, Mapping):
+        raise ValueError("DAILY_INTEGRATED_BRIEF_PRESEAL_BINDING_INPUT_MISSING")
+    integrated = binding.get("integrated_investment_decision_product")
+    session = manifest.get("market_session")
+    if not isinstance(integrated, Mapping) or not isinstance(session, str):
+        raise ValueError("DAILY_INTEGRATED_BRIEF_PRESEAL_INTEGRATED_INPUT_MISSING")
+    integrated, brief = _integrated_delivery_inputs(session, {
+        "integrated_investment_decision_product": integrated,
+        "daily_integrated_decision_brief": daily_integrated_decision_brief,
+    })
+    prepared["integrated_delivery"] = _integrated_delivery_binding(
+        session=session, integrated_decision=integrated, daily_integrated_brief=brief, registry=registry,
+    )
+    prepared_manifest = dict(manifest)
+    outputs = dict(prepared_manifest.get("outputs") or {})
+    outputs["integrated_investment_decision_product"] = integrated["artifact_identity"]
+    outputs["daily_integrated_decision_brief"] = brief["artifact_identity"]
+    prepared_manifest["outputs"] = outputs
+    prepared_manifest["operation_identity"] = _identity(prepared_manifest)
+    prepared["manifest"] = prepared_manifest
+    return prepared
+
+
 def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None, integrated_investment_decision_product: Mapping[str, Any] | None = None, daily_integrated_decision_brief: Mapping[str, Any] | None = None) -> dict[str, Any]:
     registry = registry if registry is not None else load_registry(root or MODULE_ROOT)
     assert_inputs_match_registered_session(session, inputs, registry)
@@ -421,6 +457,7 @@ def run_session_operation(
     financial_analysis_product_context: Mapping[str, Any] | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
     daily_integrated_decision_brief: Mapping[str, Any] | None = None,
+    daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     """Build, Consumer-validate, and immutably materialize one exact operation.
 
@@ -451,6 +488,15 @@ def run_session_operation(
         integrated_investment_decision_product=integrated_investment_decision_product,
         daily_integrated_decision_brief=daily_integrated_decision_brief,
     )
+    if daily_integrated_decision_brief is None and daily_integrated_decision_brief_builder is not None:
+        generated_brief = daily_integrated_decision_brief_builder(operation)
+        if not isinstance(generated_brief, Mapping):
+            raise ValueError("DAILY_INTEGRATED_BRIEF_PRESEAL_BUILDER_DID_NOT_RETURN_ARTIFACT")
+        operation = bind_integrated_decision_brief_before_sealing(
+            operation,
+            daily_integrated_decision_brief=generated_brief,
+            registry=registry,
+        )
     consumer_root = root.parent / "ai-core-private"
     if str(consumer_root) not in sys.path:
         sys.path.insert(0, str(consumer_root))

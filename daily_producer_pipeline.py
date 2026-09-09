@@ -12,7 +12,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from daily_session_shadow_recommendation import DailySessionShadowRecommendationError, resolve_or_build as resolve_or_build_daily_session_shadow_recommendation
 from daily_research_session_operations import load_registry, resolve_inputs, run_session_operation, validate_coherence
@@ -251,6 +251,7 @@ def run_daily_producer(
     fundamental_cohort_selector: str | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
     daily_integrated_decision_brief: Mapping[str, Any] | None = None,
+    daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Run the one-command retained completed-session producer pipeline."""
@@ -294,6 +295,7 @@ def run_daily_producer(
         shadow_security_recommendation=resolved_shadow_security_recommendation,
         integrated_investment_decision_product=integrated_investment_decision_product,
         daily_integrated_decision_brief=daily_integrated_decision_brief,
+        daily_integrated_decision_brief_builder=daily_integrated_decision_brief_builder,
     )
     parity = _verify_delivery(operation, operation_dir)
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])

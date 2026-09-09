@@ -34,6 +34,7 @@ Authority effect remains NONE. No OS scheduler, poll, sleep, or background loop.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -409,6 +410,83 @@ def _integrated_delivery_for_session(enrichment: Mapping[str, Any], session: str
     return integrated
 
 
+def _previous_qualified_operation_source(
+    root: Path, *, session: str, registry: Mapping[str, Any],
+) -> tuple[str, Path] | None:
+    """Resolve a prior governed operation by its explicit session, never by mtime.
+
+    This is only transition context for the pre-seal Daily Brief.  It never
+    searches for a Brief and never selects a different session as a fallback.
+    """
+    completed = registry.get("completed_sessions") or {}
+    prior_sessions = sorted(
+        candidate for candidate, row in completed.items()
+        if candidate < session
+        and isinstance(row, Mapping)
+        and row.get("status") == "COMPLETED_RETAINED_EVIDENCE"
+    )
+    for prior in reversed(prior_sessions):
+        candidates: list[Path] = []
+        for bundle in sorted((root / "operations-review" / "daily-research-session-operations-v1" / prior).glob("*/ai_research_session_bundle.json")):
+            try:
+                value = json.loads(bundle.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if value.get("session") == prior:
+                candidates.append(bundle.parent)
+        if len(candidates) == 1:
+            return prior, candidates[0]
+        if len(candidates) > 1:
+            raise CanonicalDailyOperationError(
+                STAGE_BLOCKED_DAILY_PRODUCER,
+                f"PRESEAL_PREVIOUS_OPERATION_AMBIGUOUS:{prior}",
+            )
+    return None
+
+
+def _build_preseal_daily_integrated_brief(
+    root: Path, *, session: str, operation: Mapping[str, Any], registry: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Build the canonical Daily Brief from exact in-memory pre-seal inputs.
+
+    The draft delivery exists only in memory to obtain the existing transition
+    projection's current-session bundle shape.  It is neither a retained
+    operation nor a post-hoc repair; only the subsequently Brief-bound operation
+    is materialized.  All Analytical inputs are caller-owned/session-addressed.
+    """
+    from ai_research_session_delivery import build_delivery
+    from daily_integrated_decision_brief import build_from_session
+    from next_session_decision_brief import build_from_current_delivery_payload
+
+    binding = operation.get("integrated_delivery")
+    if not isinstance(binding, Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "PRESEAL_INTEGRATED_DELIVERY_MISSING")
+    integrated = binding.get("integrated_investment_decision_product")
+    if not isinstance(integrated, Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "PRESEAL_INTEGRATED_DECISION_MISSING")
+    delivery_inputs = dict(operation.get("inputs") or {})
+    delivery_inputs["integrated_investment_decision_product"] = integrated
+    draft_delivery = build_delivery(operation, delivery_inputs)
+    draft_bundle_bytes = draft_delivery["primary"]
+    draft_bundle = json.loads(draft_bundle_bytes.decode("utf-8"))
+    previous = _previous_qualified_operation_source(root, session=session, registry=registry)
+    next_brief = build_from_current_delivery_payload(
+        root=root,
+        current_session=session,
+        current_manifest=operation["manifest"],
+        current_bundle=draft_bundle,
+        current_bundle_sha256=hashlib.sha256(draft_bundle_bytes).hexdigest(),
+        current_queue=operation.get("decision_queue"),
+        previous_session=previous[0] if previous else None,
+        previous_source=previous[1] if previous else None,
+        registry=registry,
+    )
+    brief = build_from_session(root=root, session=session, next_session_brief=next_brief)
+    if not isinstance(brief, Mapping):
+        raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, "PRESEAL_DAILY_INTEGRATED_BRIEF_UNAVAILABLE")
+    return brief
+
+
 def run_canonical_daily_operation(
     root: Path,
     runtime_root: Path,
@@ -427,6 +505,7 @@ def run_canonical_daily_operation(
     trusted_fn: Callable[..., Mapping[str, Any]] | None = None,
     publication_runner: Callable[[list[str]], Any] | None = None,
     macro_refresh_fn: Callable[[Path, Path], Mapping[str, Any]] | None = None,
+    daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     web_dir: Path | None = None,
     out_dir: Path | str | None = None,
     consumer_root: Path | None = None,
@@ -584,12 +663,21 @@ def run_canonical_daily_operation(
     integrated_delivery = _integrated_delivery_for_session(enrichment, resolved_session)
 
     producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
+    preseal_brief_builder = daily_integrated_decision_brief_builder
+    # Injected producer functions are test/diagnostic seams with their own
+    # declared contract.  The production producer always receives the canonical
+    # pre-seal builder; an injected seam may opt in explicitly.
+    if preseal_brief_builder is None and producer_fn is None:
+        registry_for_brief = load_registry(root)
+        preseal_brief_builder = lambda operation: _build_preseal_daily_integrated_brief(
+            root, session=resolved_session, operation=operation, registry=registry_for_brief,
+        )
     try:
         producer_result = produce(
             root, session=resolved_session, latest_completed_session=False,
             producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
-            integrated_investment_decision_product=integrated_delivery,
-            now=instant,
+            integrated_investment_decision_product=integrated_delivery, now=instant,
+            **({"daily_integrated_decision_brief_builder": preseal_brief_builder} if preseal_brief_builder is not None else {}),
         )
     except DailyProducerError as exc:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, str(exc)) from exc

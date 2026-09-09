@@ -214,6 +214,45 @@ def _completed_registry(root: Path, *sessions: str) -> None:
     }}), encoding="utf-8")
 
 
+def test_canonical_producer_receives_explicit_preseal_brief_builder(monkeypatch, tmp_path):
+    seen = {}
+
+    def brief_builder(operation):
+        integrated = operation["integrated_delivery"]["integrated_investment_decision_product"]
+        seen["integrated_identity"] = integrated["artifact_identity"]
+        return {
+            "contract_version": "daily_integrated_decision_brief/v1",
+            "session": SESSION,
+            "artifact_identity": "daily_integrated_decision_brief/v1:canonical-test",
+            "source_artifact_identities": {
+                "integrated_investment_decision_product": integrated["artifact_identity"],
+            },
+            "coverage": {"watchlist_coverage": 11},
+        }
+
+    def producer(*_args, **kwargs):
+        builder = kwargs["daily_integrated_decision_brief_builder"]
+        draft = {
+            "manifest": {"market_session": SESSION},
+            "integrated_delivery": {
+                "integrated_investment_decision_product": kwargs["integrated_investment_decision_product"],
+            },
+        }
+        generated = builder(draft)
+        seen["brief_identity"] = generated["artifact_identity"]
+        return _producer(tmp_path, SESSION)
+
+    _run(
+        tmp_path, monkeypatch,
+        producer_fn=producer,
+        daily_integrated_decision_brief_builder=brief_builder,
+    )
+    assert seen == {
+        "integrated_identity": "integrated_investment_decision_product/v1:test",
+        "brief_identity": "daily_integrated_decision_brief/v1:canonical-test",
+    }
+
+
 def test_sunday_auto_resolves_latest_governed_completed_session_without_floor(monkeypatch, tmp_path):
     sunday = datetime(2026, 8, 30, 13, 0, tzinfo=VN_TZ)
     target = "2026-08-28"

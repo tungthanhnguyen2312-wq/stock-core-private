@@ -135,6 +135,11 @@ def test_integrated_delivery_overlay_preserves_native_values_and_cockpit_card():
     companion = json.loads(one["full_universe"])
     assert companion["integrated_decision_v1"]["trigger"]["distance_to_trigger_pct"] == 0.0
     projection = json.loads(one["projection"])
+    overlay = primary["integrated_decision_overlay_v1"]
+    assert overlay["daily_integrated_decision_brief_identity"] == brief["artifact_identity"]
+    assert overlay["integrated_investment_decision_product_identity"] == integrated["artifact_identity"]
+    assert overlay["session"] == integrated["session"] == brief["session"]
+    assert json.loads(one["manifest"])["daily_integrated_decision_brief_identity"] == brief["artifact_identity"]
     card = projection["decision_card_v1"]["AAA"]
     assert card["verdict"] == "INITIATE_ON_BREAKOUT"
     assert card["entry_trigger"]["trigger_level"] == 42.5
@@ -155,6 +160,24 @@ def test_integrated_delivery_rejects_cross_session_or_mismatched_brief_identity(
     inputs["daily_integrated_decision_brief"] = brief
     with pytest.raises(ValueError, match="DAILY_INTEGRATED_BRIEF_SOURCE_IDENTITY_MISMATCH"):
         build_delivery(operation, inputs)
+    brief = _daily_brief_fixture(integrated, session="2026-08-20")
+    inputs["daily_integrated_decision_brief"] = brief
+    with pytest.raises(ValueError, match="DAILY_INTEGRATED_BRIEF_SESSION_MISMATCH"):
+        build_delivery(operation, inputs)
+
+
+def test_integrated_delivery_without_brief_preserves_standalone_semantics():
+    operation = _operation()
+    integrated = _integrated_delivery_fixture()
+    inputs = {
+        "descriptive": {"records": {"AAA": {}}},
+        "integrated_investment_decision_product": integrated,
+    }
+    delivery = build_delivery(operation, inputs)
+    primary = json.loads(delivery["primary"])
+    assert primary["integrated_decision_overlay_v1"]["daily_integrated_decision_brief_identity"] is None
+    assert primary["integrated_decision_overlay_v1"]["integrated_investment_decision_product_identity"] == integrated["artifact_identity"]
+    assert len(delivery["full_universe"].splitlines()) == 1
 
 
 def _card(ticker, action="WAIT"):
