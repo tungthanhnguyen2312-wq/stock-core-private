@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.08.2",
+  "roadmap_version": "2026.09.09.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,13 +9,13 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "f5771bbd51be50111c48bbcf3f523ca2fbb12c94",
-  "last_updated_checkpoint": "f5771bbd51be50111c48bbcf3f523ca2fbb12c94",
+  "implementation_lineage_head": "354361bb32a56a78af5581edd0b8d2a593824585",
+  "last_updated_checkpoint": "354361bb32a56a78af5581edd0b8d2a593824585",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
+    "milestone": "AI_DAILY_BRIEF_LINEAGE_CORRECTIVE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -978,6 +978,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_08_PRIVATE_PORTFOLIO_CONTEXT_FOUNDATION_V1",
       "notes": "COMPLETE / LOCAL_ONLY_PRIVATE_OWNER_INPUT. Owner override authorizes this bounded work despite queued_next=[]. `portfolio import` and `portfolio status` extend the owner CLI but bypass Daily. The default workbook and all derived artifacts are private under %USERPROFILE%\\.stocklookup\\portfolio; no private values are committed, logged, put in tests, or placed in operations-review. Deterministic content-addressed portfolio_event_ledger_v1, portfolio_snapshot_v1, portfolio_policy_v1, system_default_policy_v1, account_snapshot_v1, and manifest contracts retain source workbook SHA-256. Same-milestone owner-input semantics corrective maps current margin debt, minimum/maximum available margin, and annual percentage-number rate separately; VND is field-owned regardless of Excel number format or magnitude, and availability never implies debt. SYSTEM_DEFAULT_POLICY_V1 supplies only individually absent fields while retaining owner/default/effective policy provenance; no cap is an automatic sell instruction. Existing explicit portfolio risk contracts are reused, not replaced. No network/provider call, Daily run, production/runtime mutation, Dashboard, AI handoff, publication, deployment, authority promotion, recommendation, execution, or sizing output. `Total` remains a warning-only reconciliation hint. Next proposed gate only: PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1; it is not queued. Repository convergence (2026-09-08): originally developed on feature/private-portfolio-context-foundation-v1 (worktree commits 5b689ce/6264b8a) from base f8532b7678f3f17b1a13c357c787fd1fde453c72, which was already Producer main's exact HEAD at convergence time (verified ancestor, zero divergence). Ported via clean cherry-pick onto integrate/private-portfolio-context-foundation-v1 with identical content and no conflicts; the recorded checkpoint/owner_input_semantics_corrective_base above are the resulting integration-branch commit identities (d4e462f/f5771bb), which differ from the original feature-branch hashes only because their parent commit changed. Real private-workbook validation could not run this session: no workbook exists yet at %USERPROFILE%\\.stocklookup\\portfolio\\portfolio_input.xlsx (REAL_PRIVATE_IMPORT_STATUS = OWNER_INPUT_NOT_PRESENT); a dummy workbook was deliberately not created. Disposition is therefore COMPLETE_CODE / OWNER_INPUT_NOT_PRESENT, not COMPLETE / REAL_PRIVATE_INPUT_VALIDATED; V2 (PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1) remains not started and the actual next gate is REAL_PRIVATE_PORTFOLIO_INPUT_REQUIRED."
+    },
+    {
+      "milestone_id": "AI_DAILY_BRIEF_LINEAGE_CORRECTIVE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE / QUALIFIED_LOCAL_THEN_RELEASED",
+      "starting_checkpoint": "c7097946f9af1e0a1271ee6fd924c3ff642b58e8",
+      "checkpoint": "354361bb32a56a78af5581edd0b8d2a593824585",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / AI_DELIVERY_LINEAGE_SEALING_ORDER_ONLY / NO_DAILY_DASHBOARD_PROVIDER_OR_AUTHORITY_CHANGE",
+      "owner_authorized": true,
+      "source_doc": "Owner-directed DAILY_BRIEF_PRESEAL_CORRECTIVE_RC_V3 qualification and release directive (2026-09-09)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_09_DAILY_BRIEF_PRESEAL_CORRECTIVE_RC_V3_RELEASE",
+      "notes": "COMPLETE / QUALIFIED_LOCAL_THEN_RELEASED. Root cause: canonical orchestration sealed AI delivery before the same-session Daily Brief was bound, so a Brief created after seal could never be reflected in that day's AI delivery. Fix binds the canonical same-session `next_session_decision_brief` before final AI-delivery materialization in `canonical_daily_operation.py`/`daily_producer_pipeline.py`/`daily_research_session_operations.py`/`next_session_decision_brief.py`: Brief/session/Integrated-Decision identity now propagate exactly into the delivery overlay, a wrong-session or wrong-Integrated Brief is rejected (not silently relabeled), and standalone no-Brief delivery remains valid and unchanged. Developed on `feature/ai-daily-brief-lineage-corrective-v1` (worktree commit `8003658`, base `bf11dbf` = Producer main's then-current local HEAD); ported unmodified onto two successive integration worktrees for qualification (RC v2 `e73881a`, RC v3 `59d6ae2`) before this release -- all three share one identical patch-id (`ce46cb77`), proving zero drift across every port. Released by cherry-picking that same patch-id-identical commit directly onto `origin/main` (this checkpoint `354361b`), deliberately excluding three unrelated local-only Producer commits (`c88db84` valuation entity-class binding, `943c4bf` participation-narrative alignment, `d023c33` roadmap docs) that shared linear history with the corrective purely by commit order; verified by direct diff/grep that none of the corrective's 8 changed files reference any symbol those three commits touch, and by an empirical full rerun of the qualification suite directly against a fresh `origin/main`-based branch with only this one commit applied, which reached the identical 198-pass/11-fail/17-error result as RC v3's own qualification -- confirming no hidden functional dependency. All 28 non-passing results (11 failed, 17 errored) trace to one single pre-existing test fixture, `tests/test_next_session_decision_brief.py`'s hardcoded `CURRENT_SESSION = \"2026-08-28\"` constant, which now correctly disagrees with the real, further-advanced `LATEST_COMPLETED_RUN.json` (`2026-09-09`) -- a stale test expectation, not a product defect; zero genuine regressions found across three independent qualification passes (RC v2, RC v3, and this release branch). Missing retained-evidence fixtures encountered mid-qualification (operations-review session snapshots that existed in the primary checkout but were simply never junctioned into a given fresh worktree, plus the `data_bctc` runtime payload and the `ai-core-private` consumer-repo sibling required by one worktree-relative test path) were bridged with temporary read-only NTFS junctions to the existing governed primary artifacts only -- nothing was manufactured, copied, or committed -- and every temporary junction was removed after each qualification pass. One genuinely unrecoverable gap (2026-08-26 descriptive/screening/tactical/triage retained evidence, confirmed absent from the primary checkout itself, not just unjunctioned) was left correctly out of scope. `py_compile`, `git diff --check`, and JSON validation all clean at every stage; the primary checkout's pre-existing uncommitted `config/daily_research_session_input_registry.json` diff (`known_operational_diff_allowlist`) was never touched. No Daily run, provider acquisition, Dashboard publication, deployment, runtime mutation, or authority promotion occurred at any stage of qualification or release. No successor is queued."
     }
   ],
   "blocked_capabilities": [
