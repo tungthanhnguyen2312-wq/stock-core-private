@@ -227,11 +227,12 @@ def main(argv=None) -> int:
                 try:
                     root = (a.portfolio_root or __import__("private_portfolio_context").default_portfolio_root()).expanduser()
                     portfolio_path = root / "portfolio_aware_decisions" / a.session / "portfolio_aware_decision_v1.json"
-                    asymmetric_path = ROOT / "operations-review" / "asymmetric-dislocation-research-v1-20260909" / "asymmetric_dislocation_research_20260909.json"
                     integrated = pad.load_integrated_decision_artifact(ROOT, a.session)
+                    import asymmetric_dislocation_research as adr
+                    asymmetric = adr.build_artifact(session=a.session, integrated_product=integrated)
                     artifact = pas.build_artifact(session=a.session, integrated_decision=integrated,
                         portfolio_aware_decision=json.loads(portfolio_path.read_text(encoding="utf-8")),
-                        asymmetric_dislocation=json.loads(asymmetric_path.read_text(encoding="utf-8")))
+                        asymmetric_dislocation=asymmetric)
                 except (FileNotFoundError, pas.OpportunityShortlistError, json.JSONDecodeError):
                     print(json.dumps({"status": "BLOCKED", "reason_code": "RETAINED_INPUT_CONTRACT_UNAVAILABLE_OR_INCOMPATIBLE"}, sort_keys=True))
                     return 2
@@ -243,7 +244,13 @@ def main(argv=None) -> int:
                 root = (a.portfolio_root or __import__("private_portfolio_context").default_portfolio_root()).expanduser()
                 path = root / "portfolio_aware_opportunity_shortlists" / a.session / "portfolio_aware_opportunity_shortlist_v1.json"
                 try:
-                    artifact = packet.build_artifact(shortlist=json.loads(path.read_text(encoding="utf-8")))
+                    import portfolio_aware_decision as pad
+                    import asymmetric_dislocation_research as adr
+                    shortlist = json.loads(path.read_text(encoding="utf-8"))
+                    integrated = pad.load_integrated_decision_artifact(ROOT, a.session)
+                    portfolio = json.loads((root / "portfolio_aware_decisions" / a.session / "portfolio_aware_decision_v1.json").read_text(encoding="utf-8"))
+                    asymmetric = adr.build_artifact(session=a.session, integrated_product=integrated)
+                    artifact = packet.build_artifact(shortlist=shortlist, integrated_decision=integrated, portfolio_aware_decision=portfolio, asymmetric_dislocation=asymmetric)
                 except (FileNotFoundError, packet.PacketError, json.JSONDecodeError):
                     print(json.dumps({"status":"BLOCKED","reason_code":"RETAINED_SHORTLIST_UNAVAILABLE_OR_INCOMPATIBLE"},sort_keys=True)); return 2
                 packet.write_private_artifact(artifact, root)
