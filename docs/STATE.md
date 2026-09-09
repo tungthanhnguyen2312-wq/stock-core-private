@@ -1,5 +1,7 @@
 # Stock Lookup — Operational State
 
+**Private Portfolio Decision Packet V1 (2026-09-10):** `PRIVATE_PORTFOLIO_DECISION_PACKET_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / OWNER_REVIEW_PRODUCT_READY` at checkpoint `a8796549fcf6c39074a4722f810175ab34287a79`. Its predecessor `PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / RESEARCH_ACTION_QUEUE_READY` at `b6f405b437793416cd7a230bcb3a0f8a54865386`. Both are private/local-only read-only compositions of retained same-session products; no Daily, provider, deployment, execution, liquidity, PIT, or authority promotion occurred.
+
 **Asymmetric Dislocation Research V1 (2026-09-09):** `ASYMMETRIC_DISLOCATION_RESEARCH_V1 =
 COMPLETE / RESEARCH_ONLY / READY_FOR_LATER_PRODUCT_INTEGRATION`, started at owner checkpoint
 `461e2e2017946dfb2bccb11f50baa9b6741d4d38` (`HEAD == origin/main`), implementation checkpoint

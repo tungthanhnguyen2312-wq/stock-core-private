@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.09.4",
+  "roadmap_version": "2026.09.10.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,17 +9,23 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "55e64bc29e34355fdb161e8dfa4ab85d60067d8c",
-  "last_updated_checkpoint": "55e64bc29e34355fdb161e8dfa4ab85d60067d8c",
+  "implementation_lineage_head": "a8796549fcf6c39074a4722f810175ab34287a79",
+  "last_updated_checkpoint": "a8796549fcf6c39074a4722f810175ab34287a79",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "ASYMMETRIC_DISLOCATION_RESEARCH_V1",
+    "milestone": "PRIVATE_PORTFOLIO_DECISION_PACKET_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1", "state": "COMPLETE", "narrative_disposition": "PRIVATE_REAL_PORTFOLIO_VALIDATED / RESEARCH_ACTION_QUEUE_READY", "checkpoint": "b6f405b437793416cd7a230bcb3a0f8a54865386", "dependencies": ["ASYMMETRIC_DISLOCATION_RESEARCH_V1"], "unlocks": ["PRIVATE_PORTFOLIO_DECISION_PACKET_V1"], "authority_effect": "NONE / PRIVATE_LOCAL_SELECTION_ONLY", "owner_authorized": true, "source_doc": "Owner authorization 2026-09-09", "state_history": [], "owner_override": "OWNER_AUTHORIZATION_2026_09_09_PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1", "notes": "Private local-only, deterministic selection over retained same-session Integrated Decision, Portfolio V2, and Asymmetric Dislocation. No Daily, provider, execution, sizing, or authority promotion."
+    },
+    {
+      "milestone_id": "PRIVATE_PORTFOLIO_DECISION_PACKET_V1", "state": "COMPLETE", "narrative_disposition": "PRIVATE_REAL_PORTFOLIO_VALIDATED / OWNER_REVIEW_PRODUCT_READY", "checkpoint": "a8796549fcf6c39074a4722f810175ab34287a79", "dependencies": ["PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1"], "unlocks": [], "authority_effect": "NONE / PRIVATE_LOCAL_OWNER_REVIEW_ONLY", "owner_authorized": true, "source_doc": "Owner authorization 2026-09-09", "state_history": [], "owner_override": "OWNER_AUTHORIZATION_2026_09_09_PRIVATE_PORTFOLIO_DECISION_PACKET_V1", "notes": "Private local-only owner-review packet with exact same-session source lineage; execution quantities remain not qualified and calibration is not temporally autosourced. No successor is queued."
+    },
     {
       "milestone_id": "CANONICAL_TRADES_RECONCILER_PAGE_SELECTION_INDEXING_PERFORMANCE_FIX_V1",
       "state": "COMPLETE",

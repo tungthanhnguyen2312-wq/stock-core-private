@@ -1,5 +1,9 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-10 - Private Portfolio Owner-Review State Synchronization
+
+Recorded accepted private/local-only completion: `PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / RESEARCH_ACTION_QUEUE_READY` (`b6f405b`) and `PRIVATE_PORTFOLIO_DECISION_PACKET_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / OWNER_REVIEW_PRODUCT_READY` (`a879654`). This is state synchronization only; no execution, liquidity, PIT, provider, Daily, or authority change.
+
 ## 2026-09-08 - Liquidity Evidence Ceiling Closeout And State Synchronization V1
 
 `LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 = COMPLETE / TERMINAL_STATE_SYNC_ONLY`

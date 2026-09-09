@@ -1,5 +1,7 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Private Portfolio owner-review closeout (2026-09-10):** `PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1` and `PRIVATE_PORTFOLIO_DECISION_PACKET_V1` are COMPLETE at `b6f405b` and `a879654` respectively. They remain private/local deterministic review products with no successor queued and no change to canonical Daily or execution authority.
+
 **Liquidity evidence ceiling closeout and state synchronization V1 (2026-09-08):**
 `LIQUIDITY_EVIDENCE_CEILING_CLOSEOUT_AND_STATE_SYNC_V1 = COMPLETE / TERMINAL_STATE_SYNC_ONLY` at
 repository HEAD `0a0fd2d3cf39ff8bf8d3783c3ad494c540f67752` (== origin/main; unchanged). Doc/state
