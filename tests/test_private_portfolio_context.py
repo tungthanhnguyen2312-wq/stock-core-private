@@ -127,8 +127,8 @@ def test_absent_account_and_policy_are_explicit_not_zero_filled(tmp_path: Path):
     assert result["policy"]["owner_policy_status"] == "NOT_PROVIDED"
     assert result["policy"]["owner_supplied_fields"]["max_single_position_weight"] is None
     assert result["policy"]["effective_fields"]["max_single_position_weight"] == "0.30"
-    assert result["policy"]["field_provenance"]["max_single_position_weight"]["effective_source"] == "SYSTEM_DEFAULT_POLICY_V1"
-    assert result["system_default_policy"]["policy_version"] == "SYSTEM_DEFAULT_POLICY_V1"
+    assert result["policy"]["field_provenance"]["max_single_position_weight"]["effective_source"] == "SYSTEM_DEFAULT_POLICY_V2"
+    assert result["system_default_policy"]["policy_version"] == "SYSTEM_DEFAULT_POLICY_V2"
     assert result["system_default_policy"]["default_fields"] == {
         "risk_budget_per_investment_decision_to_nav": "0.01",
         "max_single_position_weight": "0.30",
@@ -137,6 +137,12 @@ def test_absent_account_and_policy_are_explicit_not_zero_filled(tmp_path: Path):
         "max_margin_debt_to_nav": "0.15",
         "minimum_cash_reserve_to_nav": "0.05",
         "max_margin_rate_percent_for_new_leveraged_exposure": "15.0",
+        # PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1 additions (2026-09-09).
+        "probe_risk_budget_multiplier": "0.50",
+        "tactical_margin_holding_days": "30",
+        "min_net_reward_risk_for_margin": "2.0",
+        "strong_net_reward_risk_for_max_margin": "3.0",
+        "max_financing_cost_fraction_of_gross_upside": "0.20",
     }
 
 
@@ -246,7 +252,7 @@ def test_partial_owner_policy_override_keeps_source_effective_values_and_provena
     assert policy_result["field_provenance"]["max_single_position_weight"]["effective_source"] == "OWNER_WORKBOOK"
     assert policy_result["owner_supplied_fields"]["max_margin_debt_to_nav"] is None
     assert policy_result["effective_fields"]["max_margin_debt_to_nav"] == "0.15"
-    assert policy_result["field_provenance"]["max_margin_debt_to_nav"]["effective_source"] == "SYSTEM_DEFAULT_POLICY_V1"
+    assert policy_result["field_provenance"]["max_margin_debt_to_nav"]["effective_source"] == "SYSTEM_DEFAULT_POLICY_V2"
     assert policy_result["effective_fields"]["max_margin_rate_percent_for_new_leveraged_exposure"] == "15.0"
     assert policy_result["authority_boundary"]["existing_positions_above_policy_caps_are_not_automatic_sell_instructions"] is True
 

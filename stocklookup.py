@@ -175,10 +175,24 @@ def main(argv=None) -> int:
     portfolio = sub.add_parser("portfolio", help="Private local-only workbook import and status; never enters Daily.")
     portfolio_sub = portfolio.add_subparsers(dest="portfolio_action", required=True)
     portfolio_import = portfolio_sub.add_parser("import", help="Import the owner workbook into private content-addressed local artifacts.")
-    portfolio_import.add_argument("--workbook", type=Path, default=None, help="Private workbook path (default: %USERPROFILE%\\.stocklookup\\portfolio\\portfolio_input.xlsx).")
-    portfolio_import.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %USERPROFILE%\\.stocklookup\\portfolio).")
+    portfolio_import.add_argument("--workbook", type=Path, default=None, help="Private workbook path (default: %%USERPROFILE%%\\.stocklookup\\portfolio\\portfolio_input.xlsx).")
+    portfolio_import.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
     portfolio_status = portfolio_sub.add_parser("status", help="Read the private latest-import pointer without opening the workbook.")
-    portfolio_status.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %USERPROFILE%\\.stocklookup\\portfolio).")
+    portfolio_status.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
+    portfolio_evaluate = portfolio_sub.add_parser(
+        "evaluate",
+        help=(
+            "Join the private portfolio state and risk policy against the latest retained "
+            "completed Integrated Decision (PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1). "
+            "Read-only: no Daily run, no provider call, no re-parse of the owner workbook. "
+            "Console output is identities/counts/reason-codes only -- never holdings, "
+            "quantities, prices, NAV, cash, or margin balances."
+        ),
+    )
+    portfolio_evaluate.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
+    portfolio_evaluate.add_argument("--session", default=None, help="Explicit YYYY-MM-DD session (default: latest retained completed session).")
+    portfolio_evaluate.add_argument("--sector-snapshot", type=Path, default=None, help="Optional explicit exchange_industry_classification snapshot path.")
+    portfolio_evaluate.add_argument("--exclude", action="append", default=[], help="Ticker to exclude from active portfolio workflow (repeatable).")
     a = p.parse_args(argv)
 
     if a.command == "roadmap":
@@ -196,9 +210,28 @@ def main(argv=None) -> int:
             if a.portfolio_action == "import":
                 result = import_workbook(workbook_path=a.workbook, portfolio_root=a.portfolio_root)
                 print(json.dumps(public_import_summary(result), ensure_ascii=False, sort_keys=True))
-            else:
+                return 0
+            if a.portfolio_action == "status":
                 result = load_portfolio_status(portfolio_root=a.portfolio_root)
                 print(json.dumps(public_status_summary(result), ensure_ascii=False, sort_keys=True))
+                return 0
+            # a.portfolio_action == "evaluate"
+            import datetime as _dt
+
+            import portfolio_aware_decision as pad
+            try:
+                artifact = pad.evaluate_from_retained_artifacts(
+                    repo_root=ROOT, session=a.session, portfolio_root=a.portfolio_root,
+                    sector_snapshot_path=a.sector_snapshot, excluded_tickers=a.exclude,
+                    requested_at=_dt.datetime.now().isoformat(timespec="seconds"),
+                )
+            except FileNotFoundError as exc:
+                print(json.dumps({"status": "BLOCKED", "reason_code": str(exc)}, ensure_ascii=False, sort_keys=True))
+                return 2
+            pad.write_private_artifact(artifact, portfolio_root=a.portfolio_root)
+            summary = pad.public_console_summary(artifact)
+            summary["private_artifact_written"] = True
+            print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
             return 0
         except PortfolioImportError as exc:
             print(f"STATUS: {exc}")

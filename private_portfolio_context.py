@@ -245,6 +245,14 @@ POLICY_FIELDS = {
     "max_margin_rate_percent_for_new_leveraged_exposure": ("maxmarginratepercentfornewleveragedexposure", "maxmarginratefornewleverage", "maxnewleveragemarginrate", "laisuatmarginmaxchodonbaymoi"),
     "max_ticker_financing_cost": ("maxtickerfinancingcost", "maxstockfinancingcost", "laivaymatotoida"),
     "max_account_margin_cost": ("maxaccountmargincost", "maxmargininterest", "laivaytaikhoantoida"),
+    # PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1 additions (2026-09-09): probe/tactical-margin
+    # policy defaults, owner-overridable through this same workbook sheet like every other
+    # field above. Additive only -- no existing field's recognition or default changes.
+    "probe_risk_budget_multiplier": ("proberiskbudgetmultiplier", "probesizemultiplier", "hesotigioihanrurochothudo"),
+    "tactical_margin_holding_days": ("tacticalmarginholdingdays", "marginholdingdays", "songgiuvitheky"),
+    "min_net_reward_risk_for_margin": ("minnetrewardriskformargin", "minrewardriskratiomargin", "tylethuongruitoithieuchomargin"),
+    "strong_net_reward_risk_for_max_margin": ("strongnetrewardriskformaxmargin", "strongrewardriskratiomargin", "tylethuongruimanhchomargintoida"),
+    "max_financing_cost_fraction_of_gross_upside": ("maxfinancingcostfractionofgrossupside", "maxfinancingcostfractionupside", "tylechiphilaivaytoidatrenloinhuan"),
 }
 
 # Monetary fields are VND because the workbook field contract says so.  The
@@ -277,9 +285,21 @@ POLICY_FIELD_SEMANTICS = {
     "max_margin_rate_percent_for_new_leveraged_exposure": "PERCENT_PER_ANNUM_NUMBER",
     "max_ticker_financing_cost": "VND",
     "max_account_margin_cost": "VND",
+    "probe_risk_budget_multiplier": "UNIT_FRACTION_OF_NORMAL_RISK_BUDGET",
+    "tactical_margin_holding_days": "CALENDAR_DAYS_INTEGER",
+    "min_net_reward_risk_for_margin": "RATIO",
+    "strong_net_reward_risk_for_max_margin": "RATIO",
+    "max_financing_cost_fraction_of_gross_upside": "UNIT_FRACTION",
 }
-SYSTEM_DEFAULT_POLICY_VERSION = "SYSTEM_DEFAULT_POLICY_V1"
-SYSTEM_DEFAULT_POLICY_V1 = {
+# V1 -> V2 (PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1, 2026-09-09): five new probe/tactical-
+# margin defaults added below. The version string itself must change, not just the dict content
+# -- ``_import_layout()`` folds ``SYSTEM_DEFAULT_POLICY_VERSION`` into its own identity, and an
+# already-materialized immutable ``portfolio_snapshot_v1.json`` at a V1 layout directory must
+# never silently gain five new effective-policy fields under an unchanged version string. A
+# fresh ``import_workbook()`` re-run against the same, unchanged real workbook now lands in a new
+# V2 layout directory instead of conflicting with the frozen V1 one.
+SYSTEM_DEFAULT_POLICY_VERSION = "SYSTEM_DEFAULT_POLICY_V2"
+SYSTEM_DEFAULT_POLICY_FIELDS = {
     "risk_budget_per_investment_decision_to_nav": "0.01",
     "max_single_position_weight": "0.30",
     "max_sector_weight": "0.45",
@@ -287,6 +307,14 @@ SYSTEM_DEFAULT_POLICY_V1 = {
     "max_margin_debt_to_nav": "0.15",
     "minimum_cash_reserve_to_nav": "0.05",
     "max_margin_rate_percent_for_new_leveraged_exposure": "15.0",
+    # PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1 additions (2026-09-09). Additive only: every
+    # field above is untouched, so a caller that only ever read the pre-existing seven fields
+    # sees no behavior change.
+    "probe_risk_budget_multiplier": "0.50",
+    "tactical_margin_holding_days": "30",
+    "min_net_reward_risk_for_margin": "2.0",
+    "strong_net_reward_risk_for_max_margin": "3.0",
+    "max_financing_cost_fraction_of_gross_upside": "0.20",
 }
 
 
@@ -563,8 +591,8 @@ def _system_default_policy() -> dict[str, Any]:
         "contract_version": SYSTEM_DEFAULT_POLICY_CONTRACT,
         "policy_version": SYSTEM_DEFAULT_POLICY_VERSION,
         "status": "ACTIVE_SYSTEM_DEFAULTS",
-        "default_fields": SYSTEM_DEFAULT_POLICY_V1,
-        "field_semantics": {field: POLICY_FIELD_SEMANTICS[field] for field in SYSTEM_DEFAULT_POLICY_V1},
+        "default_fields": SYSTEM_DEFAULT_POLICY_FIELDS,
+        "field_semantics": {field: POLICY_FIELD_SEMANTICS[field] for field in SYSTEM_DEFAULT_POLICY_FIELDS},
         "authority_boundary": {
             "applies_only_when_owner_field_absent": True,
             "owner_value_overrides_default_per_field": True,
