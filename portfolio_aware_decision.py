@@ -37,6 +37,7 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+import empirical_setup_outcome_calibration as _empirical_calibration
 import exchange_industry_classification as _industry_classification
 import private_portfolio_context as _private_portfolio_context
 
@@ -872,6 +873,38 @@ def _cost_basis_context(pos: Mapping[str, Any] | None) -> dict[str, Any]:
     }
 
 
+_EMPIRICAL_REWARD_CONTEXT_NOT_APPLICABLE = {
+    "status": "NOT_APPLICABLE",
+    "reason": "NOT_A_TACTICAL_DECISION_SLEEVE_OR_NO_CALIBRATION_ARTIFACT_SUPPLIED",
+    "authority_boundary": {
+        "is_not_a_target_price": True, "is_not_an_analyst_forecast": True, "is_not_an_expected_return": True,
+        "is_not_execution_authority": True, "empirical_research_estimate_not_universal_probability": True,
+        "never_silently_converted_to_executable_target": True,
+    },
+}
+
+
+def _empirical_reward_context(
+    *, sizing_mode: str, posture: str, security_decision: Mapping[str, Any],
+    calibration_artifact: Mapping[str, Any] | None, empirical_reward_horizon: str,
+) -> dict[str, Any]:
+    """Bounded, optional EMPIRICAL_SETUP_OUTCOME_CALIBRATION_V1 research hook.
+
+    Context only, never wired into margin_economics automatically -- see that module's own
+    ``reward_boundary`` parameter, which stays exactly as explicit/caller-supplied as before this
+    hook existed. ``portfolio_aware_decision.py`` never forces a margin value into existence just
+    to improve coverage: this field is purely additive, read-only lookup context.
+    """
+    if calibration_artifact is None or sizing_mode == SIZING_MODE_NOT_APPLICABLE:
+        return dict(_EMPIRICAL_REWARD_CONTEXT_NOT_APPLICABLE)
+    return _empirical_calibration.empirical_reward_context_for_cohort(
+        calibration_artifact, posture=posture,
+        tactical_structure_state=security_decision.get("market_structure_state", "FIELD_NOT_RETAINED_AT_T0"),
+        invalidation_method=(security_decision.get("invalidation") or {}).get("invalidation_method", "FIELD_NOT_RETAINED_AT_T0"),
+        horizon=empirical_reward_horizon,
+    )
+
+
 def _not_evaluated_record(*, ticker: str, security_decision: Mapping[str, Any], posture: str, position_lane: str | None) -> dict[str, Any]:
     trigger = security_decision.get("trigger") or {}
     invalidation = security_decision.get("invalidation") or {}
@@ -910,6 +943,7 @@ def _not_evaluated_record(*, ticker: str, security_decision: Mapping[str, Any], 
         "margin_account_context": {"current_margin_debt": None, "margin_available_minimum": None,
                                     "margin_available_maximum": None, "annual_margin_rate_percent": None},
         "margin_economics": margin_economics,
+        "empirical_reward_context": dict(_EMPIRICAL_REWARD_CONTEXT_NOT_APPLICABLE),
         "single_position_constraint": _UNAVAILABLE_WEIGHT_CONSTRAINT,
         "sector_constraint": _UNAVAILABLE_WEIGHT_CONSTRAINT,
         "gross_exposure_constraint": _UNAVAILABLE_WEIGHT_CONSTRAINT,
@@ -941,6 +975,7 @@ def _not_evaluated_record(*, ticker: str, security_decision: Mapping[str, Any], 
 def build_ticker_portfolio_aware_decision(
     *, ticker: str, portfolio_state: Mapping[str, Any], security_decision: Mapping[str, Any] | None,
     position_lane: str | None = None, reward_boundary: float | None = None,
+    calibration_artifact: Mapping[str, Any] | None = None, empirical_reward_horizon: str = "T5",
 ) -> dict[str, Any]:
     """Build one ticker's ``portfolio_aware_decision/v1`` record.
 
@@ -949,6 +984,14 @@ def build_ticker_portfolio_aware_decision(
     calculation. Nothing upstream in this repository emits one today (no target price is ever
     fabricated anywhere in this codebase); when absent, margin economics reports
     ``NOT_EVALUATED`` rather than inventing a target or a probability.
+
+    ``calibration_artifact`` is an optional, bounded EMPIRICAL_SETUP_OUTCOME_CALIBRATION_V1
+    research hook (an ``empirical_setup_outcome_calibration/v1`` artifact). When supplied and this
+    ticker is a genuine tactical decision sleeve, a matching ``CALIBRATED_RESEARCH``-adequacy
+    cohort's empirical R-multiple/return context is retained as ``empirical_reward_context`` --
+    never fed into ``margin_economics`` automatically, never a target price, analyst forecast,
+    expected return, or execution authority. Absent (the default), this field is uniformly
+    ``NOT_APPLICABLE``, matching every real record's honest state today.
     """
     ticker = str(ticker).upper()
     security_decision = security_decision or {}
@@ -1110,6 +1153,10 @@ def build_ticker_portfolio_aware_decision(
         margin_debt_remaining_quantity=margin_debt_remaining_quantity,
         portfolio_risk_quantity_ceiling=portfolio_risk_quantity_ceiling,
     )
+    empirical_reward_context = _empirical_reward_context(
+        sizing_mode=sizing_mode, posture=posture, security_decision=security_decision,
+        calibration_artifact=calibration_artifact, empirical_reward_horizon=empirical_reward_horizon,
+    )
 
     portfolio_constraint_completeness, constraints_evaluated, constraints_not_evaluated = _constraint_completeness(
         single_constraint=single_constraint, sector_constraint=sector_constraint, gross_constraint=gross_constraint,
@@ -1183,6 +1230,7 @@ def build_ticker_portfolio_aware_decision(
         "cash_funding_capacity": cash_funding_capacity,
         "margin_account_context": margin_account_context,
         "margin_economics": margin_economics,
+        "empirical_reward_context": empirical_reward_context,
         "single_position_constraint": single_constraint,
         "sector_constraint": sector_constraint,
         "gross_exposure_constraint": gross_constraint,
@@ -1221,6 +1269,7 @@ def build_artifact(
     *, session: str, requested_at: str, portfolio_state: Mapping[str, Any],
     integrated_decision_artifact: Mapping[str, Any], position_lanes_by_ticker: Mapping[str, str] | None = None,
     reward_boundary_by_ticker: Mapping[str, float] | None = None,
+    calibration_artifact: Mapping[str, Any] | None = None, empirical_reward_horizon: str = "T5",
 ) -> dict[str, Any]:
     records_in = integrated_decision_artifact.get("records") or {}
     lanes_by_ticker = position_lanes_by_ticker or {}
@@ -1235,6 +1284,7 @@ def build_artifact(
         record = build_ticker_portfolio_aware_decision(
             ticker=ticker, portfolio_state=portfolio_state, security_decision=records_in[ticker],
             position_lane=lanes_by_ticker.get(ticker), reward_boundary=_num(reward_boundaries.get(ticker)),
+            calibration_artifact=calibration_artifact, empirical_reward_horizon=empirical_reward_horizon,
         )
         records[ticker] = record
         action = record["portfolio_action_research"]

@@ -437,3 +437,56 @@ def test_20_not_provided_portfolio_state_is_honest_not_a_forced_wait():
     # The security's own posture is preserved untouched even with no private state.
     assert record["security_research_action_posture"] == "INITIATE_ON_BREAKOUT"
     assert record["margin_economics"]["status"] == "NOT_APPLICABLE"
+
+
+# ── 21. Bounded, optional EMPIRICAL_SETUP_OUTCOME_CALIBRATION_V1 research hook ──────────────
+
+def test_21_empirical_reward_context_defaults_to_not_applicable():
+    snapshot = make_snapshot(account={"cash_available": "100000000", "net_asset_value": "100000000"})
+    decision = make_security_decision("AAA", "INITIATE_ON_BREAKOUT", trigger_level=50, invalidation_level=45)
+    record = decide("AAA", snapshot, decision, sector_by_ticker={"AAA": "TECHNOLOGY"})
+    assert record["empirical_reward_context"]["status"] == "NOT_APPLICABLE"
+
+
+def test_21b_empirical_reward_context_attaches_without_changing_execution_or_margin_authority():
+    import empirical_setup_outcome_calibration as calib
+
+    observations = [
+        {
+            "ticker": f"T{ticker}", "t0_session": f"2026-01-{session + 1:02d}",
+            "research_action_posture_at_t0": "INITIATE_ON_BREAKOUT", "tactical_structure_state_at_t0": "INSUFFICIENT_HISTORY",
+            "invalidation_method_at_t0": "CONFIRMED_SWING_LEVEL_OR_SUPPORT_FALLBACK", "market_regime_at_t0": "NEUTRAL_MIXED",
+            "r_multiple_denominator_status": "AVAILABLE",
+            "horizons": {name: {
+                "required_completed_future_sessions": sessions, "status": "MATURE", "maturation_state": "MATURED",
+                "forward_return": 0.05, "mfe_close_proxy": 0.05, "mae_close_proxy": -0.02,
+                "close_path_semantics": "CLOSE_ONLY_NOT_INTRADAY_MFE_MAE", "r_multiple": 0.5, "r_multiple_status": "AVAILABLE",
+            } for name, sessions in calib.HORIZONS.items()},
+            "invalidation": {"status": "NOT_SATISFIED_YET", "hit": False, "event_session": None, "sessions_to_invalidation": None, "condition_identity": None},
+            "target": {"status": calib.NOT_EVALUATED, "hit": None, "event_session": None, "sessions_to_target": None, "reason": "TEST"},
+            "target_invalidation_ordering": calib.NOT_EVALUATED,
+            "observation_identity": f"empirical_setup_observation:test:{ticker}:{session}",
+            "authority_boundary": {},
+        }
+        for session in range(10) for ticker in range(5)
+    ]
+    calibration_artifact = {"artifact_identity": "test-calibration", "cohorts": calib.aggregate_cohorts(observations)}
+
+    snapshot = make_snapshot(account={"cash_available": "100000000", "net_asset_value": "100000000"})
+    decision = make_security_decision("AAA", "INITIATE_ON_BREAKOUT", trigger_level=50, invalidation_level=45)
+    decision["market_structure_state"] = "INSUFFICIENT_HISTORY"
+    decision["invalidation"]["invalidation_method"] = "CONFIRMED_SWING_LEVEL_OR_SUPPORT_FALLBACK"
+    without_hook = decide("AAA", snapshot, decision, sector_by_ticker={"AAA": "TECHNOLOGY"})
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, sector_by_ticker={"AAA": "TECHNOLOGY"})
+    with_hook = pad.build_ticker_portfolio_aware_decision(
+        ticker="AAA", portfolio_state=state, security_decision=decision, calibration_artifact=calibration_artifact,
+    )
+
+    assert with_hook["empirical_reward_context"]["status"] == "AVAILABLE"
+    assert with_hook["empirical_reward_context"]["authority_boundary"]["is_not_execution_authority"] is True
+    # Execution/margin authority and sizing are byte-identical whether or not the hook fires.
+    assert with_hook["execution_qualified_quantity"] == without_hook["execution_qualified_quantity"]
+    assert with_hook["execution_qualified_quantity_status"] == without_hook["execution_qualified_quantity_status"]
+    assert with_hook["margin_economics"]["status"] == without_hook["margin_economics"]["status"]
+    assert with_hook["portfolio_risk_quantity_ceiling"] == without_hook["portfolio_risk_quantity_ceiling"]
+    assert with_hook["portfolio_action_research"] == without_hook["portfolio_action_research"]
