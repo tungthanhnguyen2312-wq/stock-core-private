@@ -193,6 +193,9 @@ def main(argv=None) -> int:
     portfolio_evaluate.add_argument("--session", default=None, help="Explicit YYYY-MM-DD session (default: latest retained completed session).")
     portfolio_evaluate.add_argument("--sector-snapshot", type=Path, default=None, help="Optional explicit exchange_industry_classification snapshot path.")
     portfolio_evaluate.add_argument("--exclude", action="append", default=[], help="Ticker to exclude from active portfolio workflow (repeatable).")
+    portfolio_shortlist = portfolio_sub.add_parser("shortlist", help="Compose a private retained-evidence owner research shortlist; no Daily or provider call.")
+    portfolio_shortlist.add_argument("--portfolio-root", type=Path, default=None)
+    portfolio_shortlist.add_argument("--session", required=True)
     a = p.parse_args(argv)
 
     if a.command == "roadmap":
@@ -214,6 +217,23 @@ def main(argv=None) -> int:
             if a.portfolio_action == "status":
                 result = load_portfolio_status(portfolio_root=a.portfolio_root)
                 print(json.dumps(public_status_summary(result), ensure_ascii=False, sort_keys=True))
+                return 0
+            if a.portfolio_action == "shortlist":
+                import portfolio_aware_opportunity_shortlist as pas
+                import portfolio_aware_decision as pad
+                try:
+                    root = (a.portfolio_root or __import__("private_portfolio_context").default_portfolio_root()).expanduser()
+                    portfolio_path = root / "portfolio_aware_decisions" / a.session / "portfolio_aware_decision_v1.json"
+                    asymmetric_path = ROOT / "operations-review" / "asymmetric-dislocation-research-v1-20260909" / "asymmetric_dislocation_research_20260909.json"
+                    integrated = pad.load_integrated_decision_artifact(ROOT, a.session)
+                    artifact = pas.build_artifact(session=a.session, integrated_decision=integrated,
+                        portfolio_aware_decision=json.loads(portfolio_path.read_text(encoding="utf-8")),
+                        asymmetric_dislocation=json.loads(asymmetric_path.read_text(encoding="utf-8")))
+                except (FileNotFoundError, pas.OpportunityShortlistError, json.JSONDecodeError):
+                    print(json.dumps({"status": "BLOCKED", "reason_code": "RETAINED_INPUT_CONTRACT_UNAVAILABLE_OR_INCOMPATIBLE"}, sort_keys=True))
+                    return 2
+                pas.write_private_artifact(artifact, portfolio_root=root)
+                print(json.dumps(pas.public_console_summary(artifact), ensure_ascii=False, sort_keys=True))
                 return 0
             # a.portfolio_action == "evaluate"
             import datetime as _dt
