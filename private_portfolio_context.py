@@ -25,7 +25,15 @@ SNAPSHOT_CONTRACT = "portfolio_snapshot/v1"
 POLICY_CONTRACT = "portfolio_policy/v1"
 SYSTEM_DEFAULT_POLICY_CONTRACT = "system_default_policy/v1"
 IMPORT_MANIFEST_CONTRACT = "portfolio_import_manifest/v1"
-IMPORT_LAYOUT_VERSION = "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V2"
+# V2 -> V3: real-workbook schema adaptation (new header aliases, the
+# headerless legacy margin fallback, and the zero-events fail-closed check).
+# V3 -> V4: dividend row-level refinement discovered from the real V3 import's
+# own residual warnings (record/ex-rights date fallback when the execution
+# date is blank; prefer the consistently-populated net-of-tax cash amount
+# column over the frequently-blank nominal one). Each revision's own prior
+# attempt -- including a failed one -- must never be silently overwritten; a
+# new layout version creates its own immutable revision alongside it instead.
+IMPORT_LAYOUT_VERSION = "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V4"
 CURRENT_COST_BASIS_METHOD = "WEIGHTED_AVERAGE_CARRYING_COST"
 LIFETIME_BREAKEVEN_METHOD = "LIFETIME_NET_CASH_OUTFLOW_PER_CURRENT_SHARE"
 REPOSITORY_ROOT = Path(__file__).resolve().parent
@@ -72,7 +80,13 @@ def _within(path: Path, parent: Path) -> bool:
 
 
 def _normal(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
+    # Vietnamese d/D (U+0111/U+0110) has no NFKD compatibility decomposition to
+    # plain d/D -- unlike every other Vietnamese diacritic, it would otherwise
+    # be silently dropped entirely by the combining-mark strip below rather
+    # than folded, corrupting real header labels (e.g. "Hanh dong" would lose
+    # its d and could collide with an unrelated label).
+    text = str(value or "").replace("đ", "d").replace("Đ", "D")
+    text = unicodedata.normalize("NFKD", text)
     text = "".join(char for char in text if not unicodedata.combining(char))
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
@@ -144,16 +158,54 @@ def _truthy_cells(row: Iterable[Any]) -> bool:
 
 FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "date": ("date", "tradedate", "transactiondate", "ngay", "ngaygd", "ngaygiaodich", "ngaythuchien"),
-    "ticker": ("ticker", "symbol", "stockcode", "securitycode", "mack", "machungkhoan", "ma"),
-    "side": ("side", "action", "type", "tradetype", "buysell", "muaban", "giaodich"),
-    "quantity": ("quantity", "qty", "volume", "shares", "sharequantity", "sl", "soluong"),
-    "price": ("price", "tradeprice", "unitprice", "gia", "giagiao dich", "giagiaodich"),
-    "amount": ("amount", "value", "totalamount", "cashamount", "netamount", "thanhtien", "giatri", "total"),
-    "fee": ("fee", "fees", "commission", "brokerage", "phi", "phigiaodich"),
-    "tax": ("tax", "taxes", "withholdingtax", "thue"),
-    "cash_amount": ("cashdividend", "dividendamount", "cashamount", "amount", "thanhtien", "giatri"),
+    # A corporate-action row's defining date is only reliably filled in on
+    # "Ngay DKCC" (record date) or "Ngay GDKHQ" (ex-rights date) until the
+    # action actually settles, at which point "Ngay thuc hien" (the primary
+    # "date" alias above) is filled in too -- confirmed empirically against
+    # the real workbook's own column-presence pattern (record/ex-rights dates
+    # populated on rows where the execution date column is still blank).
+    # _dividend_events() falls back through these only when "date" is absent;
+    # they are never a second, competing definition of the same field.
+    "date_record": ("ngaydkcc",),
+    "date_exrights": ("ngaygdkhq",),
+    "ticker": ("ticker", "symbol", "stockcode", "securitycode", "mack", "machungkhoan", "ma", "cophieu"),
+    # "hanh dong" (Action) and "loai su kien" (Event Type) are the same generic
+    # side/category slot as "action"/"type" above, just in the owner's own
+    # language; "loai su kien" additionally drives the stock-vs-cash dividend
+    # token match in _dividend_events (e.g. a value containing "co phieu").
+    "side": ("side", "action", "type", "tradetype", "buysell", "muaban", "giaodich", "hanhdong", "loaisukien"),
+    # "KL khop" (matched/filled quantity) and "Gia khop" (matched/filled price)
+    # are the owner's actually-executed trade columns; the sibling "KL dat"/
+    # "Gia dat" (order-placed, not necessarily filled as requested) are
+    # deliberately not aliased here so the parser never prefers a requested
+    # order over what was actually executed.
+    "quantity": ("quantity", "qty", "volume", "shares", "sharequantity", "sl", "soluong", "klkhop"),
+    "price": ("price", "tradeprice", "unitprice", "gia", "giagiao dich", "giagiaodich", "giakhop"),
+    # "Gia tri khop" (matched trade value, pre-fee/tax) is the gross analogue of
+    # "amount"; it is listed before "Thanh tien" is even needed because a
+    # column that already carries the label the code's own netamount-recovery
+    # branch expects (see amount_header handling in _trade_events) is safer
+    # than back-computing gross from a net-settled figure. "So tien" is Money's
+    # own generic cash-movement amount label.
+    "amount": ("amount", "value", "totalamount", "cashamount", "netamount", "thanhtien", "giatri", "total", "giatrikhop", "sotien"),
+    "fee": ("fee", "fees", "commission", "brokerage", "phi", "phigiaodich", "phigd"),
+    "tax": ("tax", "taxes", "withholdingtax", "thue", "thuetncn"),
+    # "So tien thuc nhan tru thue" (amount actually received, net of tax) is
+    # listed first because it is the real workbook's consistently-populated
+    # final cash figure for a dividend row; "Tien co tuc" (a nominal/declared
+    # amount label) is frequently left blank on real rows where the net
+    # figure is filled in instead, confirmed by the real workbook's own
+    # column-presence pattern.  Column order (not alias order) decides which
+    # wins when a row happens to populate both.
+    "cash_amount": ("cashdividend", "dividendamount", "cashamount", "amount", "thanhtien", "giatri", "tiencotuc", "sotienthucnhantruthue"),
     "cash_per_share": ("cashpershare", "dividendpershare", "cophieutienmatmoicophieu"),
-    "stock_quantity": ("stockquantity", "bonusshares", "stockdividendshares", "sharedividend", "cophieunhan", "soluongcophieu"),
+    # "So CK duoc nhan/duoc mua" is the owner's already-settled received/bought
+    # share count for a corporate-action row (the figure actually added to the
+    # position); the sibling "So CK huong quyen" (theoretical rights
+    # entitlement) is deliberately not aliased here -- it stays an informational,
+    # non-authoritative annotation, never a reconciliation input, per the
+    # approved fractional-entitlement-is-not-a-mismatch semantics.
+    "stock_quantity": ("stockquantity", "bonusshares", "stockdividendshares", "sharedividend", "cophieunhan", "soluongcophieu", "sockduocnhanduocmua"),
     "key": ("key", "field", "metric", "name", "parameter", "chi tieu", "chitieu"),
     "value": ("value", "amount", "number", "gia tri", "giatri"),
 }
@@ -162,25 +214,34 @@ FIELD_ALIAS_NORMALS = {field: {_normal(alias) for alias in aliases} for field, a
 ACCOUNT_FIELDS = {
     "as_of_date": ("asofdate", "asof", "snapshotdate", "ngaychot", "ngay"),
     "currency": ("currency", "basecurrency", "tiente", "donvitien"),
-    "cash_available": ("cashavailable", "cashbalance", "cash", "tienmat", "tiensan sang"),
+    "cash_available": ("cashavailable", "cashbalance", "cash", "tienmat", "tiensan sang", "cashinvestable"),
     "cash_reserved": ("cashreserved", "reservedcash", "tienphongtoa", "tiencho"),
+    # Cash and securities receivables are immediately-usable-cash's own
+    # distinct, non-overlapping concept: a workbook that separately reports
+    # them must never have their value folded into cash_available.
+    "receivable_cash": ("receivablecash",),
+    "receivable_dividends": ("receivabledividends",),
     "margin_debt": ("margindebt", "currentmargindebt", "marginloan", "currentmarginloan", "marginbalance", "nodu", "nodmargin"),
     "margin_available_minimum": ("marginavailableminimum", "minmarginavailable", "minimumavailablemargin", "marginavailabilitymin", "marginavailablemin", "hanmucmarginconlaitoithieu", "sucmuatoithieu"),
     "margin_available_maximum": ("marginavailablemaximum", "maxmarginavailable", "maximumavailablemargin", "marginavailabilitymax", "marginavailablemax", "hanmucmarginconlaitoida", "sucmuatoida"),
-    "annual_margin_rate_percent": ("annualmarginratepercent", "annualmarginrate", "marginratepercent", "margininterestrate", "laisuatmargin", "laivaymarginphantram"),
+    "annual_margin_rate_percent": ("annualmarginratepercent", "annualmarginrate", "marginratepercent", "margininterestrate", "laisuatmargin", "laivaymarginphantram", "marginratepapct"),
     "accrued_margin_interest": ("accruedmargininterest", "margininterest", "laivaymargin", "laitrich"),
-    "net_asset_value": ("netassetvalue", "nav", "taisanrong"),
+    # "broker_nav" is the broker-reported NAV; a separately, deterministically
+    # computed NAV (if one is ever added) is a distinct successor field, per
+    # the approved "broker and computed NAV may coexist" semantics -- this
+    # field is never treated as anything other than the broker's own figure.
+    "net_asset_value": ("netassetvalue", "nav", "taisanrong", "brokernav"),
     "gross_market_value": ("grossmarketvalue", "marketvalue", "giatrithitruong"),
 }
 POLICY_FIELDS = {
     "as_of_date": ACCOUNT_FIELDS["as_of_date"],
     "currency": ACCOUNT_FIELDS["currency"],
-    "risk_budget_per_investment_decision_to_nav": ("riskbudgetperinvestmentdecisiontonav", "riskbudgetperdecision", "riskbudgettonav", "ngansachruimoiquyetdinh"),
-    "max_single_position_weight": ("maxsinglepositionweight", "maxsinglenameweight", "tytrongtoidamotma"),
+    "risk_budget_per_investment_decision_to_nav": ("riskbudgetperinvestmentdecisiontonav", "riskbudgetperdecision", "riskbudgettonav", "ngansachruimoiquyetdinh", "riskbudgetperdealpctnav"),
+    "max_single_position_weight": ("maxsinglepositionweight", "maxsinglenameweight", "tytrongtoidamotma", "maxsinglenamepctnav"),
     "max_gross_exposure_to_nav": ("maxgrossexposuretonav", "maxgrossleverage", "tongphoinhiemtoida"),
-    "max_margin_debt_to_nav": ("maxmargindebttonav", "maxmarginratio", "marginno toida", "marginnotoida"),
-    "max_sector_weight": ("maxsectorweight", "tytrongnganhtoida"),
-    "minimum_cash_reserve_to_nav": ("minimumcashreservetonav", "mincashreservetonav", "minimumcashreserve", "tienmatdutoithieutonnav"),
+    "max_margin_debt_to_nav": ("maxmargindebttonav", "maxmarginratio", "marginno toida", "marginnotoida", "maxmargindebtpctnav"),
+    "max_sector_weight": ("maxsectorweight", "tytrongnganhtoida", "maxsectorpctnav"),
+    "minimum_cash_reserve_to_nav": ("minimumcashreservetonav", "mincashreservetonav", "minimumcashreserve", "tienmatdutoithieutonnav", "mincashreservepctnav"),
     "max_margin_rate_percent_for_new_leveraged_exposure": ("maxmarginratepercentfornewleveragedexposure", "maxmarginratefornewleverage", "maxnewleveragemarginrate", "laisuatmarginmaxchodonbaymoi"),
     "max_ticker_financing_cost": ("maxtickerfinancingcost", "maxstockfinancingcost", "laivaymatotoida"),
     "max_account_margin_cost": ("maxaccountmargincost", "maxmargininterest", "laivaytaikhoantoida"),
@@ -194,6 +255,8 @@ ACCOUNT_FIELD_SEMANTICS = {
     "currency": "ISO_CURRENCY_CODE",
     "cash_available": "VND",
     "cash_reserved": "VND",
+    "receivable_cash": "VND",
+    "receivable_dividends": "VND",
     "margin_debt": "VND",
     "margin_available_minimum": "VND",
     "margin_available_maximum": "VND",
@@ -331,7 +394,16 @@ def _dividend_events(sheet: Any, warnings: list[dict[str, Any]]) -> list[dict[st
     for source_row, row in enumerate(sheet.iter_rows(min_row=header_row + 1, values_only=True), start=header_row + 1):
         if not _truthy_cells(row):
             continue
-        effective_date, ticker = _date(_cell(row, mapping, "date")), _ticker(_cell(row, mapping, "ticker"))
+        # A corporate-action row may only carry its record/ex-rights date
+        # until settlement fills in the execution date; never fabricate one
+        # date from another, only fall back to an earlier, already-real
+        # lifecycle date when the primary one is genuinely absent.
+        effective_date = (
+            _date(_cell(row, mapping, "date"))
+            or _date(_cell(row, mapping, "date_record"))
+            or _date(_cell(row, mapping, "date_exrights"))
+        )
+        ticker = _ticker(_cell(row, mapping, "ticker"))
         event_hint = _normal(_cell(row, mapping, "side"))
         stock_quantity = _decimal(_cell(row, mapping, "stock_quantity"))
         # ``Cash Amount`` is also a generic ``amount`` alias.  Prefer the
@@ -388,6 +460,49 @@ def _money_events(sheet: Any, warnings: list[dict[str, Any]], *, margin: bool = 
             source_row=source_row,
             ticker=ticker,
             gross_amount=retained_amount,
+            note="OWNER_REPORTED_CASHFLOW",
+            monetary_currency="VND",
+            monetary_unit_basis="WORKBOOK_FIELD_IDENTITY_VND_NO_FORMAT_OR_MAGNITUDE_INFERENCE",
+        ))
+    return events
+
+
+def _legacy_positional_margin_events(sheet: Any, *, date_column: int = 2, amount_column: int = 3, note_column: int = 4) -> list[dict[str, Any]]:
+    """A headerless legacy margin ledger: fixed date/amount/note columns with
+    no labelled header row at all.
+
+    Used only as a fallback in ``build_event_ledger`` when the ``margin``
+    sheet has no recognizable label header and no account-snapshot-style
+    key/value fields -- every other sheet, and this one when it does carry a
+    header, is always matched by label, never by bare column position.  A
+    row is treated as a real cash-movement record only when its date column
+    parses as a date AND its amount column parses as a number; this
+    correctly skips a trailing summary/total row (whose date-column cell is
+    a text label instead) without needing to recognize that text.  A
+    non-empty free-text remark is retained as the event's ``note_class`` only
+    for the reconciliation trail; the movement itself is intentionally
+    always classified as ``MONEY_MOVEMENT`` and never a financing-cost or
+    account-margin-cost event, because deposits, loan draws, and debt
+    repayments described in the owner's own notes are real cash movements,
+    not interest expense, and forcing them into a cost category from a free
+    text hint would misrepresent the ledger rather than merely leave it
+    unclassified.
+    """
+    events = []
+    for source_row, row in enumerate(sheet.iter_rows(min_row=1, values_only=True), start=1):
+        if not _truthy_cells(row):
+            continue
+        date_value = row[date_column - 1] if date_column <= len(row) else None
+        amount_value = row[amount_column - 1] if amount_column <= len(row) else None
+        effective_date, amount = _date(date_value), _decimal(amount_value)
+        if not effective_date or amount is None:
+            continue
+        events.append(_event(
+            event_type="MONEY_MOVEMENT",
+            effective_date=effective_date,
+            source_sheet=sheet.title,
+            source_row=source_row,
+            gross_amount=amount,
             note="OWNER_REPORTED_CASHFLOW",
             monetary_currency="VND",
             monetary_unit_basis="WORKBOOK_FIELD_IDENTITY_VND_NO_FORMAT_OR_MAGNITUDE_INFERENCE",
@@ -606,6 +721,7 @@ def _account_snapshot_contract(account_sheet: Any | None, margin_sheet: Any | No
         "authority_boundary": {
             "margin_availability_is_not_margin_debt": True,
             "dedicated_account_snapshot_precedes_legacy_margin_fields_on_conflict": True,
+            "cash_available_excludes_receivable_cash_and_receivable_dividends": True,
         },
     }
     return {**body, **_identity("account_snapshot", body)}
@@ -661,8 +777,18 @@ def build_event_ledger(*, workbook_path: Path, workbook_sha256: str) -> tuple[di
     margin_has_account_fields = _has_account_snapshot_fields(margin)
     if margin is not None:
         margin_event_header = _header_map(margin, candidates=FIELD_ALIASES, required={"date", "amount"})
-        if margin_event_header is not None or not margin_has_account_fields:
+        if margin_event_header is not None:
             events.extend(_money_events(margin, warnings, margin=True))
+        elif not margin_has_account_fields:
+            # No recognizable label header and no account-snapshot-style
+            # key/value fields either: try the known headerless legacy
+            # ledger shape (fixed date/amount/note columns) before giving up.
+            legacy_events = _legacy_positional_margin_events(margin)
+            if legacy_events:
+                events.extend(legacy_events)
+                warnings.append({"code": "MARGIN_LEGACY_POSITIONAL_LAYOUT_USED", "sheet": margin.title})
+            else:
+                warnings.append({"code": "MARGIN_HEADER_UNRECOGNIZED", "sheet": margin.title})
     events.sort(key=lambda item: (item["effective_date"], item["source"]["sheet"], item["source"]["row"], item["event_identity"]))
     account = _account_snapshot_contract(_sheet_by_normalized_name(workbook, "AccountSnapshot"), margin, warnings)
     owner_policy = _optional_contract(
@@ -675,6 +801,17 @@ def build_event_ledger(*, workbook_path: Path, workbook_sha256: str) -> tuple[di
     )
     policy, system_default_policy = _effective_policy(owner_policy)
     total_hint = _total_quantity_hint(_sheet_by_normalized_name(workbook, "Total"), warnings)
+    # A syntactically successful import that recognized every present source
+    # sheet's header yet produced zero events is suspicious, not clean: it is
+    # exactly the failure mode a schema-adaptation regression would produce
+    # (every required column found, but some row-level rule silently rejects
+    # every row). Surface it explicitly rather than letting it read the same
+    # as a workbook that genuinely records no activity.
+    present_source_sheets = [sheet for sheet in (trade, dividend, money, margin) if sheet is not None]
+    header_unrecognized_codes = {"TRADE_HEADER_UNRECOGNIZED", "DIVIDEND_HEADER_UNRECOGNIZED", "MONEY_HEADER_UNRECOGNIZED", "MARGIN_HEADER_UNRECOGNIZED"}
+    any_header_unrecognized = any(warning.get("code") in header_unrecognized_codes for warning in warnings)
+    if present_source_sheets and not any_header_unrecognized and not events:
+        warnings.append({"code": "ZERO_EVENTS_DESPITE_RECOGNIZED_SOURCES"})
     body = {
         "schema_version": "portfolio_event_ledger_v1",
         "contract_version": EVENT_LEDGER_CONTRACT,
@@ -920,6 +1057,16 @@ def portfolio_status(*, portfolio_root: Path | None = None) -> dict[str, Any]:
         snapshot = json.loads((directory / "portfolio_snapshot_v1.json").read_text(encoding="utf-8"))
     except (OSError, KeyError, json.JSONDecodeError) as exc:
         raise PortfolioImportError("PRIVATE_PORTFOLIO_LATEST_POINTER_INVALID") from exc
+    warning_counts = snapshot["reconciliation"]["warning_counts"]
+    if "ZERO_EVENTS_DESPITE_RECOGNIZED_SOURCES" in warning_counts:
+        # A syntactically successful import whose recognized source sheets
+        # produced no events at all must never read the same as a genuinely
+        # activity-free workbook -- fail closed instead of claiming READY.
+        return {
+            "status": "RECONCILIATION_INCOMPLETE",
+            "reason_codes": ["ZERO_EVENTS_DESPITE_RECOGNIZED_SOURCES"],
+            "pointer": pointer, "manifest": manifest, "snapshot": snapshot, "portfolio_root": root,
+        }
     return {"status": "READY", "pointer": pointer, "manifest": manifest, "snapshot": snapshot, "portfolio_root": root}
 
 
@@ -942,8 +1089,8 @@ def public_status_summary(result: Mapping[str, Any]) -> dict[str, Any]:
     if result["status"] == "NOT_IMPORTED":
         return {"status": "NOT_IMPORTED"}
     snapshot = result["snapshot"]
-    return {
-        "status": "READY",
+    summary = {
+        "status": result["status"],
         "import_manifest_identity": result["manifest"]["artifact_identity"],
         "workbook_sha256": result["manifest"]["workbook_sha256"],
         "current_position_count": len(snapshot["positions"]),
@@ -951,3 +1098,6 @@ def public_status_summary(result: Mapping[str, Any]) -> dict[str, Any]:
         "provider_calls": "NOT_USED",
         "daily_run": "NOT_USED",
     }
+    if "reason_codes" in result:
+        summary["reason_codes"] = result["reason_codes"]
+    return summary
