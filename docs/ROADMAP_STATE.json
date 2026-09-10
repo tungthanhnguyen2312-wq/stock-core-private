@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.10.3",
+  "roadmap_version": "2026.09.10.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,26 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1",
+    "milestone": "TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "HISTORICAL_TIMING_DIAGNOSTIC_READY / POLICY_UNCHANGED",
+      "starting_checkpoint": "8828593c6ee4d86a5997d294b380b7e516f08b54",
+      "checkpoint": "HEAD",
+      "dependencies": ["PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / RETAINED_RESEARCH_DIAGNOSTIC_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1 directive (2026-09-10)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_10_TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1",
+      "notes": "COMPLETE / HISTORICAL_TIMING_DIAGNOSTIC_READY / POLICY_UNCHANGED. Calls the current watchlist_tactical_entry_classifier.build_artifact() against only exact registry-locked retained snapshots and fails closed on a stored/replayed state, action, rule, or signal mismatch. All SSI/PNJ/PAN rows for 2026-08-21..2026-09-10 are RETROSPECTIVE_RESEARCH_REPLAY only; PIT remains unqualified. SSI/PNJ late-July-to-early-August has no coherent retained classifier snapshot and is NOT_REPLAYABLE, never backfilled from a later snapshot. PAN on 2026-09-10 remains DOWNTREND / AVOID under R9. Cross-session reference-low/return/MAE/MFE metrics are not computed because price lineage/factor-chain authority remains insufficient; all three missed-opportunity classifications are INSUFFICIENT_TEMPORAL_OR_BASIS_EVIDENCE. Market breadth is context not a state/action gate. No Daily, provider/network call, runtime write, classifier/policy change, authority promotion, probability, or successor V2; queued_next remains empty and Daily Brief acceptance remains DEFERRED / NOT_FAILED. Artifact: operations-review/tactical-reversal-retrospective-validation-v1-20260910/."
+    },
     {
       "milestone_id": "PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1",
       "state": "COMPLETE",

@@ -1,5 +1,37 @@
 # Stock Lookup — Operational State
 
+**Tactical reversal retrospective validation V1 (2026-09-10):**
+`TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1 = COMPLETE / HISTORICAL_TIMING_DIAGNOSTIC_READY /
+POLICY_UNCHANGED`. This owner-authorized, retained-data-only consumer calls the existing
+`watchlist_tactical_entry_classifier.build_artifact()` on every exact session locked in the
+governed registry, then fails closed unless the retained SSI/PNJ/PAN state, entry action, action,
+rule id, and consumed signals are reproduced. It does not copy or restate a tactical decision
+table. All 30 retained ticker/session rows across the ten governed snapshots (2026-08-21 through
+2026-09-10) reproduce as `RETROSPECTIVE_RESEARCH_REPLAY`; their point-in-time basis result remains
+unqualified. There is no coherent classifier snapshot for SSI or PNJ in the requested late-July to
+early-August window, so that episode is `NOT_REPLAYABLE`, not inferred from a later snapshot or
+price series. The retained later rows show first `SELLING_PRESSURE_EASING` on 2026-08-26 for both,
+but no `EARLY_REVERSAL_CANDIDATE`/`EARLY_ENTRY` or `BUY_ON_CONFIRMATION` in the retained sequence;
+this is not a bottom-timing verdict for the missing target episode.
+
+For PAN, the exact 2026-09-10 retained replay remains `DOWNTREND / AVOID` under
+`R9_DOWNTREND_DEFAULT`; an isolated retained 2026-09-09 `SELLING_PRESSURE_EASING / WAIT` read did
+not persist into the following retained session. PAN is below MA20 with negative 20-day momentum,
+lower-middle market-relative and lower-quartile sector-relative momentum, and a negative daily
+return. The existing R6 early-candidate rule can change before an MA20 reclaim only after the
+20-day momentum sign turns positive plus an independent confirmation; MA50/MA200 are not inputs to
+this classifier. The 2026-09-10 market breadth context (216/822 above MA20, 575/822 negative
+20-day momentum) is `MARKET_BREADTH_MIXED`/`MOMENTUM_BREADTH_NEGATIVE`; its label is context, not
+an action/state gate. Only the separate same-session volatility median remains a technical input to
+R2/R7. No cross-session reference low, rebound distance, MAE, or MFE is computed: the retained
+current-retrospective-adjusted snapshots lack a qualified factor-chain/lineage for a same-basis
+historical return. The missed-opportunity result for all three is therefore
+`INSUFFICIENT_TEMPORAL_OR_BASIS_EVIDENCE`, never a probability or policy recommendation. Artifact:
+`operations-review/tactical-reversal-retrospective-validation-v1-20260910/`. No provider/network
+call, canonical Daily/runtime mutation, classifier/action-threshold change, Integrated Decision,
+Portfolio, Price-Basis authority, liquidity/execution/sizing, or provider-authority change
+occurred. Daily Brief acceptance remains `DEFERRED / NOT_FAILED`; no classifier V2 is queued.
+
 **Price basis semantics and feature fitness V1 (2026-09-10):**
 `PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1 = COMPLETE / SHADOW_BASIS_FITNESS_READY /
 AUTHORITY_UNCHANGED`. New `price_basis_feature_fitness/v1` is a deterministic query/report

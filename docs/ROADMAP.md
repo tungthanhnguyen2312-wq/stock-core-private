@@ -1,5 +1,22 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Tactical reversal retrospective validation V1 (2026-09-10):**
+`TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1 = COMPLETE / HISTORICAL_TIMING_DIAGNOSTIC_READY /
+POLICY_UNCHANGED`. The new retained-evidence diagnostic replays registry-locked snapshots only by
+calling the current `watchlist_tactical_entry_classifier.build_artifact()` and fails closed if its
+stored state/action/rule/signal output is not reproduced. SSI/PNJ late-July-to-early-August is
+honestly `NOT_REPLAYABLE` because the first coherent retained classifier snapshot is 2026-08-21;
+later snapshots are not substituted. All ten retained sessions for SSI/PNJ/PAN are labelled
+`RETROSPECTIVE_RESEARCH_REPLAY`, never PIT-qualified. Cross-session bottom, return, MAE/MFE, and
+distance metrics remain uncomputed because the retrospective-adjusted snapshots lack a qualified
+cross-session factor-chain/lineage. PAN's 2026-09-10 exact retained result remains
+`DOWNTREND / AVOID` under R9; the 2026-09-09 easing state did not persist. Market breadth remains
+context, not a gate, with only its volatility median independently used by R2/R7. Diagnostic
+thresholds are reporting-only, no probability is emitted, and no classifier V2 is queued. Artifact:
+`operations-review/tactical-reversal-retrospective-validation-v1-20260910/`. No Daily, provider,
+runtime, authority, or canonical policy change; Daily Brief acceptance remains
+`DEFERRED / NOT_FAILED`.
+
 **Price basis semantics and feature fitness V1 (2026-09-10):**
 `PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1 = COMPLETE / SHADOW_BASIS_FITNESS_READY /
 AUTHORITY_UNCHANGED`. This owner-authorized foundation adds a deterministic, non-mutating

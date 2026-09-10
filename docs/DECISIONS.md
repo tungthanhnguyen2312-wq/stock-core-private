@@ -1,5 +1,50 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-10 - Tactical Reversal Retrospective Validation V1
+
+`TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1 = COMPLETE / HISTORICAL_TIMING_DIAGNOSTIC_READY /
+POLICY_UNCHANGED`. This is a bounded retained-data validation of the existing
+`watchlist_tactical_entry_classifier/v1`, not a second reversal engine and not a rule-tuning
+exercise. `tactical_reversal_retrospective_validation.py` calls the existing
+`build_artifact()` for each governed registry snapshot and compares the retained and replayed
+`entry_state`, `entry_action`, `action`, `rule_id`, and input signals. Any difference fails
+closed. Its new runner reads only an explicitly supplied retained-evidence root and writes its
+diagnostic only to the current checkout's
+`operations-review/tactical-reversal-retrospective-validation-v1-20260910/` directory.
+
+All SSI/PNJ/PAN rows across the ten exact retained sessions from 2026-08-21 through 2026-09-10
+reproduced the current classifier as `RETROSPECTIVE_RESEARCH_REPLAY`; `PIT_QUALIFIED_REPLAY` is
+not claimed because the current-retrospective-adjusted records still lack factor evidence knowable
+at their historical decision cutoff. The required SSI/PNJ late-July-to-early-August episode is
+`NOT_REPLAYABLE`: no governed coherent descriptive/screening/fundamental/tactical snapshot exists
+before 2026-08-21. The later retained series shows first `SELLING_PRESSURE_EASING` on 2026-08-26
+for both names but no retained `EARLY_REVERSAL_CANDIDATE`/`EARLY_ENTRY` or
+`BUY_ON_CONFIRMATION`; that observation is explicitly not used to judge an unretained target
+bottom/rebound episode.
+
+The timing layer has transparent reporting-only thresholds (near: at most two sessions and 3%;
+acceptable: at most five sessions and 8%) but never feeds them to the classifier. No reference-low
+session, return distance, MAE, or MFE is emitted for these cases because no qualified same-basis
+cross-session factor-chain/lineage is retained; raw and current-adjusted contexts are rejected
+before a return calculation. Every case therefore finishes
+`INSUFFICIENT_TEMPORAL_OR_BASIS_EVIDENCE`, not a probability or investment authority. The tested
+false-start function requires already-compatible price observations, so it cannot manufacture a
+lower low from incompatible snapshots.
+
+PAN's exact 2026-09-10 replay is genuinely `DOWNTREND / AVOID` under R9, after a retained
+2026-09-09 `SELLING_PRESSURE_EASING / WAIT` state that did not persist. PAN remains below MA20
+with negative 20-day momentum; R6 requires a positive momentum flip and one independent market/
+sector/positive-return-plus-volume confirmation, and it does not require MA50/MA200 or an MA20
+reclaim. The 216/822 above-MA20 and 575/822 negative-momentum breadth context resolves to
+`MARKET_BREADTH_MIXED`/`MOMENTUM_BREADTH_NEGATIVE`, but the classifier uses it as context only;
+only the contemporaneous volatility median participates independently in R2/R7.
+
+No provider/API/network call, Daily run, runtime/database write, canonical Daily mutation,
+classifier threshold/action change, Integrated Decision/Asymmetric Dislocation/Portfolio/Owner
+Packet change, price-basis/RAW_AS_TRADED/PIT authority promotion, liquidity/execution/sizing
+change, source addition, probability, or successor classifier milestone occurred. Daily Brief
+acceptance remains `DEFERRED / NOT_FAILED`; no classifier V2 is queued.
+
 ## 2026-09-10 - Price Basis Semantics And Feature Fitness V1
 
 `PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1 = COMPLETE / SHADOW_BASIS_FITNESS_READY /
