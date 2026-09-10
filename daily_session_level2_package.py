@@ -42,18 +42,21 @@ ROOT_DEFAULT = Path(__file__).resolve().parent
 FALLBACK_RECOVERY_BASELINE = Path("operations-review/market-wide-current-descriptive-research-v1-20260824/market_wide_current_descriptive_research_artifact.json")
 
 
-def _prior_completed_descriptive(root: Path, session: str) -> Path:
+def _prior_completed_descriptive(
+    retained_evidence_root: Path, session: str, *, registry_root: Path | None = None,
+) -> Path:
     """Use the latest governed completed-session descriptive strictly before target; never glob."""
-    registry = load_registry(root)
+    registry = load_registry(registry_root or retained_evidence_root)
     prior = sorted(name for name in (registry.get("completed_sessions") or {}) if str(name) < session)
     if prior:
         selection = (registry.get("sessions") or {}).get(prior[-1]) or {}
         entry = selection.get("descriptive") if isinstance(selection, Mapping) else None
         if isinstance(entry, Mapping) and isinstance(entry.get("path"), str):
-            path = root / entry["path"]
+            candidate = Path(entry["path"])
+            path = candidate if candidate.is_absolute() else retained_evidence_root / candidate
             if path.is_file():
                 return path
-    fallback = root / FALLBACK_RECOVERY_BASELINE
+    fallback = retained_evidence_root / FALLBACK_RECOVERY_BASELINE
     if fallback.is_file():
         return fallback
     raise FileNotFoundError("RECOVERY_BASELINE_DESCRIPTIVE_UNAVAILABLE")
@@ -1367,6 +1370,7 @@ def materialize_independent_components(
     now: datetime | None = None,
     *,
     execution_root: Path | None = None,
+    retained_evidence_root: Path | None = None,
 ) -> None:
     """Materialize a session into ``artifact_root`` using ``execution_root`` tools.
 
@@ -1375,14 +1379,20 @@ def materialize_independent_components(
     attempt output root plus the Producer checkout separately.
     """
     execution_root = execution_root or artifact_root
+    retained_evidence_root = retained_evidence_root or execution_root
     paths = session_artifact_paths(artifact_root, session)
-    retained_paths = session_artifact_paths(execution_root, session)
+    retained_paths = session_artifact_paths(retained_evidence_root, session)
     p3f9b_snapshot = ensure_exact_session_snapshot(
         artifact_root, session, runtime_root, workers, now, execution_root=execution_root,
     )
     breadth_out = paths["breadth_foundation"]
     if not breadth_out.exists():
-        run_cmd(execution_root, ["tools/build_current_market_universe_breadth_foundation.py", "--snapshot", str(p3f9b_snapshot), "--output", str(breadth_out)])
+        qualification = retained_evidence_root / "operations-review" / "market-wide-current-research-universe-qualification-v1-20260823" / "market_wide_current_research_universe_artifact.json"
+        run_cmd(execution_root, [
+            "tools/build_current_market_universe_breadth_foundation.py",
+            "--qualification-artifact", str(qualification),
+            "--snapshot", str(p3f9b_snapshot), "--output", str(breadth_out),
+        ])
     ur_out = paths["universe_resolution"]
     if not ur_out.exists():
         run_cmd(execution_root, [
@@ -1410,7 +1420,9 @@ def materialize_independent_components(
         ])
     tech_out = paths["technical_recovery"]
     tech_dir = tech_out.parent
-    baseline_desc = _prior_completed_descriptive(execution_root, session)
+    baseline_desc = _prior_completed_descriptive(
+        retained_evidence_root, session, registry_root=execution_root,
+    )
     p3f9b_snapshot_identity = (_load(p3f9b_snapshot) or {}).get("snapshot_identity")
     # Use the same deterministic resolver the Integrated Decision consumer uses.  A new Daily
     # is allowed to generate the one explicit replacement only when no qualified retained input
@@ -1418,7 +1430,7 @@ def materialize_independent_components(
     try:
         technical_resolution = resolve_technical_recovery_artifact(
             artifact_root, session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
-            authority_root=execution_root,
+            authority_root=retained_evidence_root,
         )
         tech_out = technical_resolution["selected_path"]
     except TechnicalRecoveryArtifactResolutionError as exc:
@@ -1436,7 +1448,7 @@ def materialize_independent_components(
         # or wrong-lineage replacement fails closed before descriptive research sees it.
         tech_out = resolve_technical_recovery_artifact(
             artifact_root, session, p3f9b_snapshot_identity=p3f9b_snapshot_identity,
-            authority_root=execution_root,
+            authority_root=retained_evidence_root,
         )["selected_path"]
     desc_out = paths["descriptive_research"]
     if not desc_out.exists():
@@ -1521,6 +1533,7 @@ def maybe_build_triage_dependent(
     session: str,
     *,
     execution_root: Path | None = None,
+    retained_evidence_root: Path | None = None,
 ) -> dict[str, Any]:
     """Build attempt outputs from selected artifacts and retained Producer inputs.
 
@@ -1529,8 +1542,9 @@ def maybe_build_triage_dependent(
     non-canonical callers.
     """
     execution_root = execution_root or artifact_root
+    retained_evidence_root = retained_evidence_root or execution_root
     paths = session_artifact_paths(artifact_root, session)
-    retained_paths = session_artifact_paths(execution_root, session)
+    retained_paths = session_artifact_paths(retained_evidence_root, session)
     if (
         not paths["session_triage"].exists()
         and paths["descriptive_research"].exists()

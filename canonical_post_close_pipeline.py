@@ -465,6 +465,8 @@ def resolve_acquisition_root(root: Path, session: str, *, now: datetime | None =
 
 def acquire_and_materialize(
     root: Path, session: str, runtime_root: Path, *, workers: int = 12, now: datetime | None = None,
+    retained_evidence_root: Path | None = None, output_root: Path | None = None,
+    no_new_provider_acquisition: bool = False,
 ) -> dict[str, Any]:
     """Stage 1-3: DNSE acquisition, runtime materialization, current-session analytics.
 
@@ -482,11 +484,33 @@ def acquire_and_materialize(
     not yet passed (resolve_acquisition_root's same-day gate), or if coverage is insufficient.
     """
     now = now or vn_now()
-    artifact_root, eligibility = resolve_acquisition_root(root, session, now=now)
+    explicit_retained_evidence_root = retained_evidence_root is not None
+    retained_evidence_root = Path(retained_evidence_root or root)
+    output_root = Path(output_root or root)
+    # This is intentionally before resolve_acquisition_root()/ensure_exact_session_snapshot(),
+    # the two boundaries that can create an acquisition attempt or contact a provider.
+    from daily_execution_environment import build_resume_plan, missing_retained_inputs
+    missing = (
+        missing_retained_inputs(
+            retained_evidence_root, session, producer_registry_root=root,
+        ) if explicit_retained_evidence_root else []
+    )
+    if missing:
+        raise CanonicalPostCloseError(
+            "FAILED_PREFLIGHT_RETAINED_EVIDENCE:STATIC_DEPENDENCY_UNAVAILABLE:"
+            + ",".join(str(row["contract"]) for row in missing)
+        )
+    resume_plan = build_resume_plan(output_root, session)
+    if no_new_provider_acquisition and resume_plan["provider_required_components"]:
+        raise CanonicalPostCloseError(
+            "FAILED_PREFLIGHT_RESUME:NO_NEW_PROVIDER_ACQUISITION_COMPONENTS_REQUIRED:"
+            + ",".join(resume_plan["provider_required_components"])
+        )
+    artifact_root, eligibility = resolve_acquisition_root(output_root, session, now=now)
     paths = level2.session_artifact_paths(artifact_root, session)
     try:
         level2.ensure_exact_session_snapshot(
-            artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
+        artifact_root, session, runtime_root, workers=workers, now=now, execution_root=root,
         )
     except ValueError as exc:
         if str(exc).startswith("P3F9B_ACQUIRED_SESSION_MISMATCH"):
@@ -512,18 +536,24 @@ def acquire_and_materialize(
             f"exact={exact}:total={total}:ratio={coverage_ratio:.4f}:floor={MIN_EXACT_SESSION_COVERAGE_RATIO}"
             f"{degraded_note}"
         )
+    materialize_kwargs: dict[str, Any] = dict(
+        workers=workers, now=now, execution_root=root,
+    )
+    if explicit_retained_evidence_root:
+        materialize_kwargs["retained_evidence_root"] = retained_evidence_root
     level2.materialize_independent_components(
         artifact_root,
         session,
         runtime_root,
-        workers=workers,
-        now=now,
-        execution_root=root,
+        **materialize_kwargs,
     )
+    triage_kwargs: dict[str, Any] = {"execution_root": root}
+    if explicit_retained_evidence_root:
+        triage_kwargs["retained_evidence_root"] = retained_evidence_root
     triage_build_result = level2.maybe_build_triage_dependent(
         artifact_root,
         session,
-        execution_root=root,
+        **triage_kwargs,
     )
     # Ground-truth check on the triage file itself, matching maybe_build_triage_dependent's own
     # fallback (registry-based session_triage_status would require this session to already be
@@ -544,6 +574,9 @@ def acquire_and_materialize(
         "paths": paths,
         "artifact_root": artifact_root,
         "eligibility": eligibility,
+        "resume_plan": resume_plan,
+        "retained_evidence_root": retained_evidence_root,
+        "output_root": output_root,
     }
 
 
@@ -561,6 +594,7 @@ def enrichment_output_path(root: Path, session: str, name: str) -> Path:
 def build_enrichment_components(
     root: Path, session: str, *, artifact_root: Path | None = None, runtime_root: Path | None = None,
     priority_queue_artifact: Mapping[str, Any] | None = None,
+    retained_evidence_root: Path | None = None, output_root: Path | None = None,
 ) -> dict[str, Any]:
     """Best-effort materialize the three current-research components no orchestrator wires today
     (historical context, financial momentum, corporate event context). Each is fully independent;
@@ -570,20 +604,20 @@ def build_enrichment_components(
     session-pinned) rather than leaving the component wholly absent.
 
     `artifact_root` (defaulting to `root`) is where this run's session-specific Level-2 outputs
-    are looked up. Immutable retained inputs stay under the Producer `root`, even when the run
-    selected a fresh-attempt directory. Output always stays under `root`
-    (this pipeline's own enrichment namespace never collides with a pre-cutoff artifact, since
-    that namespace does not exist until this function runs).
+    are looked up. ``retained_evidence_root`` supplies immutable source inputs and ``output_root``
+    owns fresh enrichment products; both default to the Producer root for legacy callers.
     """
     artifact_root = artifact_root or root
+    retained_evidence_root = retained_evidence_root or root
+    output_root = output_root or root
     paths = level2.session_artifact_paths(artifact_root, session)
-    retained_paths = level2.session_artifact_paths(root, session)
+    retained_paths = level2.session_artifact_paths(retained_evidence_root, session)
     results: dict[str, Any] = {}
 
     def _attempt(name: str, level2_key: str, fn) -> None:
         try:
             artifact = fn()
-            out = enrichment_output_path(root, session, name)
+            out = enrichment_output_path(output_root, session, name)
             _write_json(out, artifact)
             results[name] = {"status": "BUILT", "artifact": artifact, "path": out}
             return
@@ -626,7 +660,7 @@ def build_enrichment_components(
         # current_research_risk_register.py/current_research_decision_packet.py see the same
         # evidence current_corporate_intelligence_axis.py already does.
         evidence_session = official_event_context.get("research_session")
-        supplemental = load_supplemental_retained_events(root, evidence_session) if evidence_session else None
+        supplemental = load_supplemental_retained_events(retained_evidence_root, evidence_session) if evidence_session else None
         return build(
             official_universe=official_universe,
             official_event_context=official_event_context,
@@ -685,7 +719,7 @@ def build_enrichment_components(
         technical_resolution = level2.resolve_technical_recovery_artifact(
             artifact_root, session,
             p3f9b_snapshot_identity=p3f9b.get("snapshot_identity"),
-            authority_root=root,
+            authority_root=retained_evidence_root,
         )
         technical_recovery = _load(technical_resolution["selected_path"])
         if not technical_recovery:
@@ -745,10 +779,10 @@ def build_enrichment_components(
         # relative(), joined against this same engine artifact's TTM features -- mirroring
         # tools/run_integrated_investment_decision_replay.py's own proven wiring, the one place both
         # correct shapes are established end to end.
-        fin_authority = fin_v2_authority.resolve(root)
-        engine_artifact = fin_v2_material.build_engine_artifact(root=root, requested_at=requested_at, authority=fin_authority)
+        fin_authority = fin_v2_authority.resolve(retained_evidence_root)
+        engine_artifact = fin_v2_material.build_engine_artifact(root=retained_evidence_root, requested_at=requested_at, authority=fin_authority)
         financial_session_artifact = fin_v2_material.build_session_artifact(
-            root=root, decision_session=session, product_tickers=daily_denominator,
+            root=retained_evidence_root, decision_session=session, product_tickers=daily_denominator,
             requested_at=requested_at, authority=fin_authority, engine_artifact=engine_artifact,
         )
         readiness_context = (
@@ -784,7 +818,7 @@ def build_enrichment_components(
                 corporate_intelligence_artifact = build_corporate_intelligence_axis(
                     official_universe=official_universe_ci,
                     official_event_context=official_event_context_ci,
-                    root=root,
+                    root=retained_evidence_root,
                     research_session=official_event_context_ci.get("research_session"),
                     market_wide_current_corporate_intelligence=market_wide_ci,
                 )
@@ -822,6 +856,7 @@ def build_enrichment_components(
 def retain_prospective_decision_snapshot(
     root: Path, session: str, *, producer_result: Mapping[str, Any],
     enrichment: Mapping[str, Any], exact_session_snapshot: Mapping[str, Any] | None = None,
+    output_root: Path | None = None,
 ) -> dict[str, Any]:
     """Seal the current Integrated Decision at T0 before its handoff is written.
 
@@ -845,7 +880,7 @@ def retain_prospective_decision_snapshot(
             producer_run_identity=producer_result.get("run_identity"), integrated_artifact=integrated,
             exact_session_snapshot=exact_session_snapshot,
         )
-        path = write_immutable_snapshot(root, snapshot)
+        path = write_immutable_snapshot(output_root or root, snapshot)
     except Exception as exc:
         return {"status": "UNAVAILABLE", "reason": f"PROSPECTIVE_SNAPSHOT_RETENTION_FAILED:{type(exc).__name__}:{exc}"}
     return {"status": "RETAINED", "artifact": snapshot, "path": path}
@@ -853,6 +888,7 @@ def retain_prospective_decision_snapshot(
 
 def register_session_inputs(
     root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
+    retained_evidence_root: Path | None = None,
 ) -> dict[str, Any]:
     """Write config/daily_research_session_input_registry.json's sessions[session] entry.
 
@@ -872,7 +908,7 @@ def register_session_inputs(
     path = registry_path or root / "config" / "daily_research_session_input_registry.json"
     registry = json.loads(path.read_text(encoding="utf-8"))
     paths = level2.session_artifact_paths(artifact_root, session)
-    retained_paths = level2.session_artifact_paths(root, session)
+    retained_paths = level2.session_artifact_paths(retained_evidence_root or root, session)
     selection: dict[str, dict[str, str]] = {}
     for registry_key, level2_key in REGISTRY_KEY_TO_LEVEL2_KEY.items():
         artifact_path = retained_paths[level2_key] if level2_key in RETAINED_LEVEL2_INPUT_KEYS else paths[level2_key]
@@ -994,25 +1030,28 @@ def build_decision_packet(
 
 
 def run_prospective_collection(
-    root: Path, session: str, *, artifact_root: Path | None = None,
+    root: Path, session: str, *, artifact_root: Path | None = None, output_root: Path | None = None,
 ) -> dict[str, Any] | None:
     """Post-hoc, non-blocking: a failure here never revises the completed Daily Producer result.
 
     `artifact_root` (defaulting to `root`) locates the decision packet build_decision_packet just
-    wrote for THIS run; prospective collection's own output always stays under `root`
-    (unaffected by any fresh-attempt redirect -- that namespace is not session-templated per
-    attempt and was never touched by an earlier pre-cutoff run).
+    wrote for THIS run. The Producer root remains the registry/code authority, while an explicit
+    ``output_root`` receives both fresh prospective artifacts.
     """
     artifact_root = artifact_root or root
+    output_root = output_root or root
     paths = level2.session_artifact_paths(artifact_root, session)
     packet_path = paths["decision_packet"]
-    cmd = [sys.executable, "tools/run_prospective_research_cohort_collection.py", "--session", session]
+    output = output_root / "operations-review" / "prospective-research-cohort-collection-v1" / f"prospective_research_cohort_snapshot_{session}.json"
+    cmd = [
+        sys.executable, "tools/run_prospective_research_cohort_collection.py",
+        "--session", session, "--root", str(root), "--output", str(output),
+    ]
     if packet_path.is_file():
         cmd += ["--decision-packet-path", str(packet_path)]
     result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
     if result.returncode != 0:
         return {"status": "UNAVAILABLE", "reason": (result.stderr or result.stdout).strip()[-2000:]}
-    output = root / "operations-review" / "prospective-research-cohort-collection-v1" / f"prospective_research_cohort_snapshot_{session}.json"
     snapshot = _load(output)
     # The same bounded post-close hook rolls forward already-retained integrated
     # decisions.  It scans only canonical handoffs from *earlier* sessions (the
@@ -1020,7 +1059,7 @@ def run_prospective_collection(
     # future outcome data back into today's decision.  A diagnostic failure is
     # deliberately localized just like the existing prospective cohort step.
     feedback_output = (
-        root / "operations-review" / "prospective-decision-outcome-feedback-v1" / session
+        output_root / "operations-review" / "prospective-decision-outcome-feedback-v1" / session
         / "prospective_decision_feedback_artifact.json"
     )
     feedback_cmd = [
@@ -1043,10 +1082,12 @@ def build_tiered_bundle(
     enrichment: Mapping[str, Any], producer_head: str | None, consumer_head: str | None,
     prospective_snapshot: Mapping[str, Any] | None = None,
     artifact_root: Path | None = None, runtime_release: Mapping[str, Any] | None = None,
+    output_root: Path | None = None,
 ) -> dict[str, Any]:
     artifact_root = artifact_root or root
+    output_root = output_root or root
     level2_paths = level2.session_artifact_paths(artifact_root, session)
-    bundle_dir = root / "operations-review" / "canonical-post-close-v1" / session
+    bundle_dir = output_root / "operations-review" / "canonical-post-close-v1" / session
     manifest = producer_result["manifest"]
     operation = producer_result["operation"]
     product = operation["product"]

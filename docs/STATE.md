@@ -1,5 +1,30 @@
 # Stock Lookup — Operational State
 
+**Daily production execution-environment guard V1 (2026-09-10):**
+`DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1 = COMPLETE / PRE_ACQUISITION_FAIL_CLOSED /
+SAFE_RESUME_CONTRACT_READY` at this state-sync checkpoint. The real 2026-09-10 incident established
+one coupled operational problem, not three analytical defects: the owner ran stale/diverged
+`bf11dbf` code, a clean worktree selected the wrong runtime fallback, and that worktree lacked the
+repo-relative retained evidence needed before Level-2 could safely materialize. Owner-facing
+canonical Daily now resolves and reports four explicit roots -- `PRODUCER_CODE_ROOT`,
+`RETAINED_EVIDENCE_ROOT`, `RUNTIME_ROOT`, and `OPERATION_OUTPUT_ROOT` -- before the provider
+boundary. The producer must be clean and exactly equal to governed `origin/main`; runtime must be
+explicitly selected (or the legacy primary-checkout adjacent runtime) and contain `vn_stock.db`;
+the bounded static/governed retained closure (including the Producer-owned session registry and
+its selected immutable previous-session bundle) must resolve by contract before snapshot
+acquisition. No registry or mutable pointer is borrowed from an unrelated evidence checkout. A resume plan
+independently classifies exact snapshot, liquidity, technical recovery, and deterministic
+downstream products. `NO_NEW_PROVIDER_ACQUISITION` refuses before execution when any component,
+including liquidity or technical recovery, would issue a provider request. Legacy primary-checkout
+operation remains compatible with identical roots. No live Daily, provider call, database write,
+analytical recomputation, authority promotion, deployment, or publication occurred here.
+
+`DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE = DEFERRED / NOT_FAILED`.
+The stale owner run remains `VALID_2026_09_10_SESSION_DATA / INVALID_RELEASE_ACCEPTANCE_EVIDENCE`;
+the clean run's retained snapshot remains valid but acceptance was blocked by environment/resume
+qualification, not by a proven pre-seal corrective regression. Do not mark Daily Brief production
+acceptance PASS until a future owner-authorized guarded execution completes.
+
 **Private Portfolio Decision Packet V1 (2026-09-10):** `PRIVATE_PORTFOLIO_DECISION_PACKET_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / OWNER_REVIEW_PRODUCT_READY` at checkpoint `a8796549fcf6c39074a4722f810175ab34287a79`. Its predecessor `PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / RESEARCH_ACTION_QUEUE_READY` at `b6f405b437793416cd7a230bcb3a0f8a54865386`. Both are private/local-only read-only compositions of retained same-session products; no Daily, provider, deployment, execution, liquidity, PIT, or authority promotion occurred.
 
 **Asymmetric Dislocation Research V1 (2026-09-09):** `ASYMMETRIC_DISLOCATION_RESEARCH_V1 =

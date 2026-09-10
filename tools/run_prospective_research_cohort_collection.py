@@ -33,11 +33,11 @@ def _load(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding='utf-8'))
 
 
-def _full_universe_snapshot_id(registry: dict[str, Any], session: str) -> str | None:
+def _full_universe_snapshot_id(registry: dict[str, Any], session: str, *, root: Path = ROOT) -> str | None:
     """Best-effort cross-link to the same-session full-universe freeze; never required."""
     try:
         entry = ((registry.get('completed_sessions') or {}).get(session) or {}).get('output_artifacts', {}).get('daily_opportunity_decision_queue')
-        manifest = _load(ROOT / entry['manifest_path'])
+        manifest = _load(root / entry['manifest_path'])
         return manifest.get('outputs', {}).get('prospective_snapshot')
     except Exception:
         return None
@@ -61,7 +61,8 @@ def resolve(session: str, root: Path = ROOT, *, decision_packet_path: Path | Non
     decision_packet = _load(decision_packet_path) if decision_packet_path is not None else None
     snapshot = freeze_prospective_research_cohort(
         session=session, triage=triage, decision_packet=decision_packet,
-        registered_source_identities=frozen, full_universe_prospective_snapshot_id=_full_universe_snapshot_id(registry, session),
+        registered_source_identities=frozen,
+        full_universe_prospective_snapshot_id=_full_universe_snapshot_id(registry, session, root=root),
     )
     replay_prospective_research_cohort_snapshot(snapshot)
     return {'snapshot': snapshot, 'triage_path': triage_path, 'decision_packet_path': decision_packet_path}
@@ -76,14 +77,19 @@ def main() -> None:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument('--session', help='Exact governed completed market session (YYYY-MM-DD).')
     mode.add_argument('--latest-completed-session', action='store_true', help='Resolve only from the explicit governed completed-session ledger; never from wall clock.')
+    parser.add_argument('--root', type=Path, default=ROOT, help='Producer registry/evidence root to read; never mutated.')
+    parser.add_argument('--output', type=Path, default=None, help='Explicit immutable output path; defaults beneath --root.')
     parser.add_argument('--decision-packet-path', type=Path, help='Optional same-session current_research_decision_packet artifact. Omitted proceeds with degraded per-ticker component detail rather than blocking.')
     parser.add_argument('--input-registry', type=Path, help='Explicit governed registry path override.')
     args = parser.parse_args()
-    registry = load_registry(ROOT, args.input_registry)
+    registry = load_registry(args.root, args.input_registry)
     session = args.session or resolve_latest_registered_completed_session(registry)
-    result = resolve(session, decision_packet_path=args.decision_packet_path, registry_path=args.input_registry)
+    result = resolve(
+        session, root=args.root, decision_packet_path=args.decision_packet_path,
+        registry_path=args.input_registry,
+    )
     snapshot = result['snapshot']
-    path = output_path(snapshot)
+    path = args.output or output_path(snapshot, root=args.root)
     write_immutable(path, snapshot)
     print(f"SESSION: {session}")
     print(f"SNAPSHOT_ID: {snapshot['snapshot_id']}")

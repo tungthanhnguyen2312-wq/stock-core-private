@@ -509,6 +509,9 @@ def run_canonical_daily_operation(
     web_dir: Path | None = None,
     out_dir: Path | str | None = None,
     consumer_root: Path | None = None,
+    retained_evidence_root: Path | None = None,
+    operation_output_root: Path | None = None,
+    no_new_provider_acquisition: bool = False,
 ) -> dict[str, Any]:
     """Foreground one-shot daily operation. Tests must inject ``now`` / ``requested_at``."""
     root = Path(root)
@@ -518,7 +521,12 @@ def run_canonical_daily_operation(
         instant = instant.replace(tzinfo=VN_TZ)
     else:
         instant = instant.astimezone(VN_TZ)
-    output_root = Path(out_dir) if out_dir else root / "operations-review"
+    explicit_retained_evidence_root = retained_evidence_root is not None
+    retained_evidence_root = Path(retained_evidence_root or root)
+    operation_output_root = Path(operation_output_root or root)
+    # ``out_dir`` is a legacy explicit override. Otherwise every fresh operation record belongs
+    # to the declared output root, never to retained evidence or merely to the code checkout.
+    output_root = Path(out_dir) if out_dir else operation_output_root / "operations-review"
     acquire = acquire_fn or acquire_and_materialize
     produce = producer_fn or run_daily_producer
     runtime_materialize = runtime_fn or materialize_canonical_runtime_release
@@ -586,7 +594,14 @@ def run_canonical_daily_operation(
     def _acquire() -> Mapping[str, Any]:
         nonlocal acquisition_calls
         acquisition_calls += 1
-        return acquire(root, resolved_session, runtime_root, workers=workers, now=instant)
+        kwargs: dict[str, Any] = {"workers": workers, "now": instant}
+        if explicit_retained_evidence_root or operation_output_root != root or no_new_provider_acquisition:
+            kwargs.update(
+                retained_evidence_root=retained_evidence_root,
+                output_root=operation_output_root,
+                no_new_provider_acquisition=no_new_provider_acquisition,
+            )
+        return acquire(root, resolved_session, runtime_root, **kwargs)
 
     try:
         acquisition = _acquire()
@@ -646,7 +661,10 @@ def run_canonical_daily_operation(
 
     artifact_root = Path(acquisition.get("artifact_root") or root)
     try:
-        registration = register_session_inputs(root, resolved_session, artifact_root=artifact_root)
+        registration = register_session_inputs(
+            root, resolved_session, artifact_root=artifact_root,
+            retained_evidence_root=retained_evidence_root,
+        )
         freeze = validate_and_freeze_completed_session(root, resolved_session)
     except CanonicalPostCloseError as exc:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_INPUT_REGISTRATION, str(exc)) from exc
@@ -659,6 +677,8 @@ def run_canonical_daily_operation(
     enrichment = build_enrichment_components(
         root, resolved_session, artifact_root=artifact_root, runtime_root=runtime_root,
         priority_queue_artifact=None,
+        retained_evidence_root=retained_evidence_root,
+        output_root=operation_output_root,
     )
     integrated_delivery = _integrated_delivery_for_session(enrichment, resolved_session)
 
@@ -670,15 +690,22 @@ def run_canonical_daily_operation(
     if preseal_brief_builder is None and producer_fn is None:
         registry_for_brief = load_registry(root)
         preseal_brief_builder = lambda operation: _build_preseal_daily_integrated_brief(
-            root, session=resolved_session, operation=operation, registry=registry_for_brief,
+            retained_evidence_root, session=resolved_session, operation=operation, registry=registry_for_brief,
         )
     try:
-        producer_result = produce(
-            root, session=resolved_session, latest_completed_session=False,
+        producer_kwargs: dict[str, Any] = dict(
+            session=resolved_session, latest_completed_session=False,
             producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
             integrated_investment_decision_product=integrated_delivery, now=instant,
             **({"daily_integrated_decision_brief_builder": preseal_brief_builder} if preseal_brief_builder is not None else {}),
         )
+        if operation_output_root != root:
+            producer_kwargs.update(
+                output_root=operation_output_root / "operations-review" / "daily-producer-runs-v1",
+                operation_output_root=operation_output_root / "operations-review" / "daily-research-session-operations-v1",
+                shadow_artifact_output_root=operation_output_root / "operations-review" / "daily-session-shadow-recommendation-v1",
+            )
+        producer_result = produce(root, **producer_kwargs)
     except DailyProducerError as exc:
         raise CanonicalDailyOperationError(STAGE_BLOCKED_DAILY_PRODUCER, str(exc)) from exc
     except CanonicalPostCloseError as exc:
@@ -754,21 +781,32 @@ def run_canonical_daily_operation(
         )
 
     operation = producer_result.get("operation") if isinstance(producer_result.get("operation"), Mapping) else {}
+    prospective_snapshot_kwargs: dict[str, Any] = {}
+    if operation_output_root != root:
+        prospective_snapshot_kwargs["output_root"] = operation_output_root
     prospective_decision_snapshot = retain_prospective_decision_snapshot(
         root, resolved_session, producer_result=producer_result, enrichment=enrichment,
-        exact_session_snapshot=snapshot,
+        exact_session_snapshot=snapshot, **prospective_snapshot_kwargs,
     )
     decision_packet = build_decision_packet(
         root, resolved_session, opportunity=operation.get("opportunity"), enrichment=enrichment,
         artifact_root=artifact_root,
     )
-    prospective = run_prospective_collection(root, resolved_session, artifact_root=artifact_root)
+    prospective_kwargs: dict[str, Any] = {}
+    tier_kwargs: dict[str, Any] = {}
+    if operation_output_root != root:
+        prospective_kwargs["output_root"] = operation_output_root
+        tier_kwargs["output_root"] = operation_output_root
+    prospective = run_prospective_collection(
+        root, resolved_session, artifact_root=artifact_root, **prospective_kwargs,
+    )
     tiers = build_tiered_bundle(
         root, resolved_session, acquisition=acquisition, producer_result=producer_result,
         decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
         producer_head=producer_head, consumer_head=consumer_head, prospective_snapshot=prospective_decision_snapshot,
         artifact_root=artifact_root,
         runtime_release=runtime_release,
+        **tier_kwargs,
     )
 
     publication: dict[str, Any] | None = None

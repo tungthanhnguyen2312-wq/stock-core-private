@@ -14,17 +14,10 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parent
 
 
-def _runtime() -> Path:
-    if os.environ.get("STOCK_LOOKUP_RUNTIME_ROOT"):
-        return Path(os.environ["STOCK_LOOKUP_RUNTIME_ROOT"])
-    for candidate in (
-        ROOT.parent / "dashboard-runtime",
-        ROOT.parent.parent / "dashboard-runtime",
-        Path("C:/Projects/StockLookup/dashboard-runtime"),
-    ):
-        if candidate.is_dir():
-            return candidate
-    return ROOT.parent / "dashboard-runtime"
+def _runtime(configured: Path | None = None) -> Path | None:
+    """Resolve only the governed runtime contract; never select a worktree sibling by accident."""
+    from daily_execution_environment import resolve_roots
+    return resolve_roots(ROOT, runtime_root=configured).runtime_root
 
 
 def _handoff() -> Path:
@@ -50,7 +43,7 @@ def _producer_failure_message(code: int) -> str | None:
     return None
 
 
-def _previous(session: str, root: Path) -> Path | None:
+def _previous(session: str, root: Path, *, operation_root: Path | None = None) -> Path | None:
     """Latest retained operation bundle strictly before ``session`` that is ALSO governed
     qualified (``completed_sessions[prior].status == "COMPLETED_RETAINED_EVIDENCE"`` in
     ``config/daily_research_session_input_registry.json``) -- not merely the latest bundle that
@@ -63,8 +56,9 @@ def _previous(session: str, root: Path) -> Path | None:
     """
     from daily_research_session_operations import frozen_input_identities, load_registry
     registry = load_registry(root)
+    operation_root = operation_root or root
     candidates = []
-    for manifest in sorted((root / "operations-review/daily-research-session-operations-v1").glob("*/*/run_manifest.json")):
+    for manifest in sorted((operation_root / "operations-review/daily-research-session-operations-v1").glob("*/*/run_manifest.json")):
         value = json.loads(manifest.read_text(encoding="utf-8"))
         prior = str(value.get("market_session") or "")
         bundle = manifest.parent / "ai_research_session_bundle.json"
@@ -86,11 +80,18 @@ def _latest_operation(root: Path = ROOT) -> tuple[str, Path, str]:
     return session, root / manifest["daily_session_operation"]["directory"], pointer["run_identity"]
 
 
-def _decision_brief(session: str, operation: Path, previous_bundle: Path | None, run_identity: str | None, root: Path = ROOT) -> Path | None:
+def _decision_brief(
+    session: str, operation: Path, previous_bundle: Path | None, run_identity: str | None,
+    root: Path = ROOT, *, registry_root: Path | None = None,
+) -> Path | None:
     """Best-effort, non-blocking: the brief is derived evidence, never a gate on publication."""
     try:
         from next_session_decision_brief import build_from_previous_bundle_path
-        brief = build_from_previous_bundle_path(root=root, session=session, source=operation, previous=previous_bundle, run_identity=run_identity)
+        from daily_research_session_operations import load_registry
+        brief = build_from_previous_bundle_path(
+            root=root, session=session, source=operation, previous=previous_bundle,
+            run_identity=run_identity, registry=load_registry(registry_root or root),
+        )
         payload = json.dumps(brief, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
         path = operation / "next_session_decision_brief.json"
         if path.exists() and path.read_text(encoding="utf-8") != payload:
@@ -103,7 +104,10 @@ def _decision_brief(session: str, operation: Path, previous_bundle: Path | None,
         return None
 
 
-def _daily_integrated_decision_brief(session: str, operation: Path, decision_brief_path: Path | None, root: Path = ROOT) -> Path | None:
+def _daily_integrated_decision_brief(
+    session: str, operation: Path, decision_brief_path: Path | None, root: Path = ROOT,
+    *, registry_root: Path | None = None,
+) -> Path | None:
     """Best-effort, non-blocking: derived evidence riding alongside publication, never a gate on
     it. Requires next_session_decision_brief/v2 to have built successfully (its market_transition/
     sector_transition/posture_transition sections are reused verbatim, never recomputed) and this
@@ -141,7 +145,7 @@ def _daily_integrated_decision_brief(session: str, operation: Path, decision_bri
                 operation_manifest=operation_manifest,
                 integrated_investment_decision_product=integrated,
                 daily_integrated_decision_brief=brief,
-                registry=load_registry(root),
+                registry=load_registry(registry_root or root),
             )
         except Exception as retention_exc:
             # Preserve the pre-existing non-blocking brief contract while
@@ -158,6 +162,11 @@ def main(argv=None) -> int:
     sub = p.add_subparsers(dest="command", required=True)
     d = sub.add_parser("daily")
     d.add_argument("--session")
+    d.add_argument("--runtime-root", type=Path, default=None, help="Authoritative runtime root for canonical Daily.")
+    d.add_argument("--retained-evidence-root", type=Path, default=None, help="Immutable retained-evidence root.")
+    d.add_argument("--output-root", type=Path, default=None, help="Operation/Level-2 output root.")
+    d.add_argument("--no-new-provider-acquisition", action="store_true", help="Refuse a resume requiring any provider request.")
+    d.add_argument("--preflight", action="store_true", help="Print canonical Daily preflight facts and exit without acquisition.")
     d.add_argument("--replay-local", action="store_true")
     d.add_argument("--replay-operation", type=Path)
     d.add_argument("--replay-root", type=Path, default=ROOT)
@@ -277,11 +286,36 @@ def main(argv=None) -> int:
             print(f"STATUS: {exc}")
             return 2
 
+    daily_runtime: Path | None = None
+    daily_retained_evidence_root = ROOT
+    daily_output_root = ROOT
+    if a.command == "daily":
+        from daily_execution_environment import format_preflight, preflight_canonical_daily
+        from daily_session_level2_package import resolve_level2_session
+        intended_session = resolve_level2_session(a.session)["session"]
+        environment = preflight_canonical_daily(
+            ROOT,
+            session=intended_session,
+            runtime_root=a.runtime_root,
+            retained_evidence_root=a.retained_evidence_root,
+            output_root=a.output_root,
+            no_new_provider_acquisition=a.no_new_provider_acquisition,
+        )
+        if a.preflight or environment["status"] != "PASS":
+            print(format_preflight(environment))
+        if environment["status"] != "PASS":
+            return 2
+        if a.preflight:
+            return 0
+        daily_runtime = Path(environment["roots"]["runtime_root"])
+        daily_retained_evidence_root = Path(environment["roots"]["retained_evidence_root"])
+        daily_output_root = Path(environment["roots"]["output_root"])
+
     try:
         from stocklookup_preflight import check
         check(
             producer_root=a.replay_root if a.replay_operation else ROOT,
-            runtime_root=_runtime(),
+            runtime_root=daily_runtime or _runtime(),
             transport_root=_handoff(),
             replay_local=a.replay_local,
         )
@@ -295,20 +329,34 @@ def main(argv=None) -> int:
             return 2
         session, operation, run_identity = a.session, a.replay_operation, None
     else:
-        cmd = [sys.executable, str(ROOT / "daily_analysis_pipeline.py"), "--runtime-root", str(_runtime()), "--canonical-post-close"]
+        cmd = [sys.executable, str(ROOT / "daily_analysis_pipeline.py"), "--runtime-root", str(daily_runtime), "--canonical-post-close"]
         if a.session:
             cmd += ["--session", a.session]
+        if a.retained_evidence_root:
+            cmd += ["--retained-evidence-root", str(a.retained_evidence_root)]
+        if a.output_root:
+            cmd += ["--output-root", str(a.output_root)]
+        if a.no_new_provider_acquisition:
+            cmd.append("--no-new-provider-acquisition")
         code = subprocess.run(cmd).returncode
         if code:
             message = _producer_failure_message(code)
             if message:
                 print(message)
             return code
-        session, operation, run_identity = _latest_operation()
+        session, operation, run_identity = _latest_operation(daily_output_root)
 
-    previous_bundle = _previous(session, a.replay_root)
-    decision_brief_path = _decision_brief(session, operation, previous_bundle, run_identity)
-    daily_integrated_brief_path = _daily_integrated_decision_brief(session, operation, decision_brief_path)
+    previous_bundle = _previous(
+        session, a.replay_root, operation_root=daily_retained_evidence_root,
+    )
+    decision_brief_path = _decision_brief(
+        session, operation, previous_bundle, run_identity,
+        root=daily_retained_evidence_root, registry_root=a.replay_root,
+    )
+    daily_integrated_brief_path = _daily_integrated_decision_brief(
+        session, operation, decision_brief_path,
+        root=daily_output_root, registry_root=a.replay_root,
+    )
 
     try:
         from ai_handoff_publication import publish
@@ -333,7 +381,7 @@ def main(argv=None) -> int:
         dash_res = publish_dashboard_release(
             session=session,
             operation_dir=operation,
-            runtime_root=_runtime(),
+            runtime_root=daily_runtime or _runtime(),
             web_root=web_root,
             replay_local=a.replay_local or a.local_only,
             push=not (a.replay_local or a.local_only),

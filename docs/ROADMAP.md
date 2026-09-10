@@ -1,5 +1,17 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Daily production execution-environment guard V1 (2026-09-10):**
+`DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1 = COMPLETE / PRE_ACQUISITION_FAIL_CLOSED /
+SAFE_RESUME_CONTRACT_READY`. This immediate corrective dependency separates producer code,
+retained evidence, runtime, and operation-output roots while preserving the legacy primary-checkout
+default where they are identical. Canonical owner Daily now refuses stale/diverged/dirty producer
+code, an unqualified runtime, or a missing static retained-input closure (including the
+Producer-owned registry's selected prior governed bundle) before market acquisition.
+Its dry-run resume plan distinguishes reusable qualified artifacts, deterministic recomputation,
+provider-required components, and missing governed inputs; `NO_NEW_PROVIDER_ACQUISITION` refuses
+liquidity/technical recovery fan-out before it starts. The prior Daily Brief acceptance is
+`DEFERRED / NOT_FAILED`, not PASS, pending a separately owner-authorized guarded new-session run.
+
 **Private Portfolio owner-review closeout (2026-09-10):** `PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1` and `PRIVATE_PORTFOLIO_DECISION_PACKET_V1` are COMPLETE at `b6f405b` and `a879654` respectively. They remain private/local deterministic review products with no successor queued and no change to canonical Daily or execution authority.
 
 **Liquidity evidence ceiling closeout and state synchronization V1 (2026-09-08):**

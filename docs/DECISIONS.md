@@ -1,5 +1,28 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-10 - Daily Production Execution Environment Guard V1
+
+`DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1 = COMPLETE / PRE_ACQUISITION_FAIL_CLOSED /
+SAFE_RESUME_CONTRACT_READY`. The 2026-09-10 Daily incident is one execution-environment and resume
+contract failure: stale producer code (`bf11dbf`) lacked the released pre-seal Brief binding,
+worktree-relative runtime discovery selected a non-authoritative location, and repo-relative
+retained evidence was absent from a clean checkout. The correction introduces one bounded
+preflight contract, not three feature milestones. It requires a clean producer checkout exactly at
+the local governed `origin/main`, a deterministic runtime with `vn_stock.db`, a separately
+resolvable immutable retained-evidence closure, and an explicit output root. The Producer-owned
+session registry and the retained immutable bundle it selects as prior governed context are both
+preflight-checked. Registry and mutable navigation pointers remain producer-owned and are never
+borrowed from a dirty evidence checkout.
+
+An existing exact-session snapshot is reusable only after its session/contract/hash identity is
+validated. Resume planning is explicit: `REUSABLE_QUALIFIED`,
+`RECOMPUTABLE_FROM_RETAINED_INPUTS`, `REQUIRES_PROVIDER_ACQUISITION`, or
+`BLOCKED_MISSING_GOVERNED_INPUT`. `NO_NEW_PROVIDER_ACQUISITION` is a fail-closed replay mode;
+missing liquidity or technical recovery is reported before any provider call, never fabricated from
+the P3F9 snapshot. `DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE` is recorded
+`DEFERRED / NOT_FAILED`: no production acceptance is claimed from stale-code or incomplete-clean
+execution evidence. No provider, live Daily, authority promotion, deployment, or publication ran.
+
 ## 2026-09-10 - Private Portfolio Owner-Review State Synchronization
 
 Recorded accepted private/local-only completion: `PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / RESEARCH_ACTION_QUEUE_READY` (`b6f405b`) and `PRIVATE_PORTFOLIO_DECISION_PACKET_V1 = COMPLETE / PRIVATE_REAL_PORTFOLIO_VALIDATED / OWNER_REVIEW_PRODUCT_READY` (`a879654`). This is state synchronization only; no execution, liquidity, PIT, provider, Daily, or authority change.

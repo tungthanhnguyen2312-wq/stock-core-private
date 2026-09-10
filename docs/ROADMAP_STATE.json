@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.10.1",
+  "roadmap_version": "2026.09.10.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -9,17 +9,45 @@
     "ai_rules": "docs/AI_RULES.md",
     "note": "This file is the machine-readable EXECUTION-STATE authority: which milestone is current/active/next/blocked, what checkpoint proves each completed milestone, and whether recorded state contradicts Git/worktree reality. It does not restate or supersede the narrative docs' technical content and is not a substitute for reading them. Where this file and a narrative doc appear to disagree, that is a conflict to surface to the owner (AGENTS.md 'Default lightweight bootstrap' rule), never an automatic override in either direction."
   },
-  "implementation_lineage_head": "a8796549fcf6c39074a4722f810175ab34287a79",
-  "last_updated_checkpoint": "a8796549fcf6c39074a4722f810175ab34287a79",
+  "implementation_lineage_head": "HEAD",
+  "last_updated_checkpoint": "HEAD",
   "known_operational_diff_allowlist": [
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PRIVATE_PORTFOLIO_DECISION_PACKET_V1",
+    "milestone": "DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PRE_ACQUISITION_FAIL_CLOSED / SAFE_RESUME_CONTRACT_READY",
+      "starting_checkpoint": "c106e74d039efb8400864d9e7daf275b7cbd3a33",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": ["DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE"],
+      "authority_effect": "NONE / DAILY_EXECUTION_ENVIRONMENT_SAFETY_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1 directive (2026-09-10)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_10_DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1",
+      "notes": "COMPLETE / PRE_ACQUISITION_FAIL_CLOSED / SAFE_RESUME_CONTRACT_READY. Owner-facing canonical Daily now qualifies a clean producer checkout exactly at origin/main, an explicit or legacy-primary deterministic runtime root with vn_stock.db, and the bounded immutable retained-input closure before the snapshot acquisition boundary. PRODUCER_CODE_ROOT, RETAINED_EVIDENCE_ROOT, RUNTIME_ROOT, and OPERATION_OUTPUT_ROOT are explicit contracts; legacy primary-checkout operation keeps the roots identical. Resume planning classifies snapshot and downstream components before execution. NO_NEW_PROVIDER_ACQUISITION refuses when liquidity or technical recovery would require live reads. No provider call, Daily execution, analytical-authority promotion, deploy, or publication occurred in this milestone."
+    },
+    {
+      "milestone_id": "DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE",
+      "state": "DEFERRED",
+      "narrative_disposition": "NOT_FAILED / EXECUTION_ENVIRONMENT_QUALIFICATION_REQUIRED",
+      "dependencies": ["DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / ACCEPTANCE_NOT_YET_PROVEN",
+      "owner_authorized": true,
+      "source_doc": "Owner acceptance directives (2026-09-10)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_10_DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1",
+      "notes": "DEFERRED / NOT_FAILED. The stale bf11dbf run produced valid 2026-09-10 session data but cannot serve as release-acceptance evidence. The clean release run proved a valid exact-session snapshot but exposed execution-environment qualification defects. No Daily Brief production-acceptance PASS is recorded; a later owner-authorized execution may resume only under the guarded contract."
+    },
     {
       "milestone_id": "PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1", "state": "COMPLETE", "narrative_disposition": "PRIVATE_REAL_PORTFOLIO_VALIDATED / RESEARCH_ACTION_QUEUE_READY", "checkpoint": "b6f405b437793416cd7a230bcb3a0f8a54865386", "dependencies": ["ASYMMETRIC_DISLOCATION_RESEARCH_V1"], "unlocks": ["PRIVATE_PORTFOLIO_DECISION_PACKET_V1"], "authority_effect": "NONE / PRIVATE_LOCAL_SELECTION_ONLY", "owner_authorized": true, "source_doc": "Owner authorization 2026-09-09", "state_history": [], "owner_override": "OWNER_AUTHORIZATION_2026_09_09_PORTFOLIO_AWARE_OPPORTUNITY_SHORTLIST_V1", "notes": "Private local-only, deterministic selection over retained same-session Integrated Decision, Portfolio V2, and Asymmetric Dislocation. No Daily, provider, execution, sizing, or authority promotion."
     },

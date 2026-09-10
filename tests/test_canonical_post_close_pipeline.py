@@ -124,10 +124,20 @@ def test_explicit_session_required_by_pipeline():
         cpc.run_canonical_post_close(ROOT, ROOT.parent / "dashboard-runtime", "")
 
 
-def test_omitted_session_without_working_dates_fails_closed(capsys, tmp_path):
+def test_omitted_session_without_working_dates_fails_closed(capsys, tmp_path, monkeypatch):
     import daily_analysis_pipeline as dap
+    import daily_execution_environment as environment
     runtime = tmp_path / "runtime"
     runtime.mkdir()
+    # This test isolates the established Phase-A working-dates refusal.  The new environment
+    # guard is separately exercised by test_daily_execution_environment.py and must not make
+    # this fixture depend on the checkout that happens to run pytest.
+    monkeypatch.setattr(environment, "preflight_canonical_daily", lambda *_a, **_k: {
+        "status": "PASS", "session": "2026-08-26",
+        "roots": {"runtime_root": str(runtime), "retained_evidence_root": str(tmp_path), "output_root": str(tmp_path)},
+        "producer_release": {"qualified": True, "head": "fixture", "origin_main": "fixture"},
+        "resume_plan": {"provider_required_components": []},
+    })
     rc = dap.main([
         "--runtime-root", str(runtime),
         "--canonical-post-close",
@@ -458,7 +468,7 @@ def test_integrated_decision_uses_validated_retained_technical_resolution():
     end = source.index("\n    _attempt(", start)
     body = source[start:end]
     assert "level2.resolve_technical_recovery_artifact(" in body
-    assert "authority_root=root" in body
+    assert "authority_root=retained_evidence_root" in body
     assert 'technical_recovery = _load(technical_resolution["selected_path"])' in body
     assert 'technical_recovery = _load(paths["technical_recovery"])' not in body
 

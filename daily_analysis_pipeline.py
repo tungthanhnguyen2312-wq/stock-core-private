@@ -229,6 +229,10 @@ def parse(argv=None):
     p.add_argument("--allow-provider-probe", action="store_true", help="Permit exactly one working_dates GET.")
     p.add_argument("--web-dir", default=None, help="Dashboard checkout for --complete-publication.")
     p.add_argument("--out-dir", default=None, help="Daily-operation artifact root; defaults to operations-review.")
+    p.add_argument("--retained-evidence-root", default=None, help="Immutable retained-evidence root; defaults to the producer checkout.")
+    p.add_argument("--output-root", default=None, help="Operation/Level-2 output root; defaults to the producer checkout.")
+    p.add_argument("--no-new-provider-acquisition", action="store_true", help="Fail before execution if resume requires any provider acquisition.")
+    p.add_argument("--preflight", action="store_true", help="Print canonical Daily execution-environment facts and exit without acquisition.")
     p.add_argument("--workers", type=int, default=12, help="Parallel DNSE fetch workers; only used by --canonical-post-close.")
     return p.parse_args(argv)
 
@@ -238,7 +242,26 @@ def main(argv=None, runner=subprocess.run) -> int:
     if args.complete_publication and not args.canonical_post_close:
         print("[daily_analysis] --complete-publication requires --canonical-post-close", file=sys.stderr)
         return 2
-    if args.runtime_root:
+    if args.canonical_post_close:
+        from daily_execution_environment import format_preflight, preflight_canonical_daily
+        from daily_session_level2_package import resolve_level2_session
+        intended_session = resolve_level2_session(args.session)["session"]
+        preflight = preflight_canonical_daily(
+            SCRIPT_DIR,
+            session=intended_session,
+            runtime_root=args.runtime_root,
+            retained_evidence_root=args.retained_evidence_root,
+            output_root=args.output_root,
+            no_new_provider_acquisition=args.no_new_provider_acquisition,
+        )
+        if args.preflight or preflight["status"] != "PASS":
+            print(format_preflight(preflight))
+        if preflight["status"] != "PASS":
+            return 2
+        if args.preflight:
+            return 0
+        root = Path(preflight["roots"]["runtime_root"])
+    elif args.runtime_root:
         root = Path(args.runtime_root).expanduser().resolve()
     elif os.environ.get(RUNTIME_ROOT_ENV, "").strip():
         root = resolve_runtime_root()
@@ -274,6 +297,9 @@ def main(argv=None, runner=subprocess.run) -> int:
                 allow_provider_probe=probe,
                 web_dir=Path(args.web_dir) if args.web_dir else None,
                 out_dir=args.out_dir,
+                retained_evidence_root=Path(preflight["roots"]["retained_evidence_root"]),
+                operation_output_root=Path(preflight["roots"]["output_root"]),
+                no_new_provider_acquisition=args.no_new_provider_acquisition,
             )
         except CanonicalDailyOperationError as exc:
             print(f"DAILY_OPERATION_STATE={exc.stage}", file=sys.stderr)
