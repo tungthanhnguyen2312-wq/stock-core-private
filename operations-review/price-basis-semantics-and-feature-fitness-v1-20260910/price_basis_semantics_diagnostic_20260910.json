@@ -1,6 +1,6 @@
 {
-  "artifact_identity": "price_basis_semantics_diagnostic:bd80294ad27ae0950cbdbfbd70e2997856d02f50b19abdee315e6fd3a06205ba",
-  "artifact_sha256": "bd80294ad27ae0950cbdbfbd70e2997856d02f50b19abdee315e6fd3a06205ba",
+  "artifact_identity": "price_basis_semantics_diagnostic:5bfe4ac6d8ecee0e762bb9b698ed174f15dc652b33af1eee9da412acbe543631",
+  "artifact_sha256": "5bfe4ac6d8ecee0e762bb9b698ed174f15dc652b33af1eee9da412acbe543631",
   "authority_boundary": {
     "canonical_daily_classifications_modified": false,
     "historical_pit": "NOT_PROMOTED",
@@ -34,8 +34,10 @@
         "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
       ],
       "existing_signal_context": {
+        "descriptive_trend_state": "AT_OR_BELOW_MA20",
         "note": "Retained signal state is reported as context only; this diagnostic does not alter it or interpret it as an investment recommendation.",
-        "trend_state": "AT_OR_BELOW_MA20"
+        "tactical_entry_action": "AVOID",
+        "tactical_entry_state": "DOWNTREND"
       },
       "feature_fitness": {
         "EXECUTION_RAW_REPLAY": {
@@ -295,8 +297,10 @@
         "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
       ],
       "existing_signal_context": {
+        "descriptive_trend_state": "AT_OR_BELOW_MA20",
         "note": "Retained signal state is reported as context only; this diagnostic does not alter it or interpret it as an investment recommendation.",
-        "trend_state": "AT_OR_BELOW_MA20"
+        "tactical_entry_action": "WAIT",
+        "tactical_entry_state": "SELLING_PRESSURE_EASING"
       },
       "feature_fitness": {
         "EXECUTION_RAW_REPLAY": {
@@ -556,8 +560,10 @@
         "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
       ],
       "existing_signal_context": {
+        "descriptive_trend_state": "AT_OR_BELOW_MA20",
         "note": "Retained signal state is reported as context only; this diagnostic does not alter it or interpret it as an investment recommendation.",
-        "trend_state": "AT_OR_BELOW_MA20"
+        "tactical_entry_action": "WAIT",
+        "tactical_entry_state": "SELLING_PRESSURE_EASING"
       },
       "feature_fitness": {
         "EXECUTION_RAW_REPLAY": {
@@ -838,6 +844,10 @@
     "descriptive": {
       "artifact_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
       "relative_path": "operations-review/market-wide-current-descriptive-research-v1-20260910/market_wide_current_descriptive_research_artifact.json"
+    },
+    "tactical": {
+      "artifact_identity": "watchlist_tactical_entry_classifier:dd3b948ea6a2decb5951fb209d700664b0e7a18dc128e0a874455359cef3d1ac",
+      "relative_path": "operations-review/watchlist-tactical-entry-decision-v1-20260910/watchlist_tactical_entry_classifier_artifact.json"
     }
   }
 }

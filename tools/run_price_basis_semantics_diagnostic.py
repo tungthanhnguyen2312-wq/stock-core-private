@@ -54,10 +54,11 @@ def _current_vs_ma20_divergence(technical_features: Mapping[str, Any]) -> float 
 
 def _case(
     *, ticker: str, descriptive: Mapping[str, Any], descriptive_identity: str | None,
-    corporate_intelligence: Mapping[str, Any], session: str,
+    corporate_intelligence: Mapping[str, Any], tactical: Mapping[str, Any], session: str,
 ) -> dict[str, Any]:
     descriptive_record = (descriptive.get("records") or {}).get(ticker)
     corporate_record = (corporate_intelligence.get("records") or {}).get(ticker)
+    tactical_record = (tactical.get("records") or {}).get(ticker)
     if not isinstance(descriptive_record, Mapping):
         return {
             "ticker": ticker,
@@ -135,7 +136,9 @@ def _case(
         "corporate_action_factor_chain": corporate_chain,
         "feature_fitness": feature_fitness,
         "existing_signal_context": {
-            "trend_state": descriptive_record.get("trend_state"),
+            "descriptive_trend_state": descriptive_record.get("trend_state"),
+            "tactical_entry_state": tactical_record.get("entry_state") if isinstance(tactical_record, Mapping) else None,
+            "tactical_entry_action": tactical_record.get("entry_action") if isinstance(tactical_record, Mapping) else None,
             "note": "Retained signal state is reported as context only; this diagnostic does not alter it or interpret it as an investment recommendation.",
         },
         "evidence_gaps": sorted(set(context.get("reason_codes") or []) | set(corporate_chain["reason_codes"])),
@@ -149,6 +152,7 @@ def build_diagnostic(*, runtime_root: Path, session: str | None = None) -> dict[
     inputs, metadata = session_operations.resolve_inputs(runtime_root, selected_session, registry)
     descriptive = inputs["descriptive"]
     corporate_intelligence = inputs["corporate_intelligence"]
+    tactical = inputs["tactical"]
     descriptive_identity = (metadata.get("descriptive") or {}).get("artifact_identity")
     artifact = {
         "schema_version": "1.0.0",
@@ -164,6 +168,10 @@ def build_diagnostic(*, runtime_root: Path, session: str | None = None) -> dict[
                 "artifact_identity": (metadata.get("corporate_intelligence") or {}).get("artifact_identity"),
                 "relative_path": (metadata.get("corporate_intelligence") or {}).get("path"),
             },
+            "tactical": {
+                "artifact_identity": (metadata.get("tactical") or {}).get("artifact_identity"),
+                "relative_path": (metadata.get("tactical") or {}).get("path"),
+            },
         },
         "contract_summary": basis.contract_summary(),
         "cases": {
@@ -172,6 +180,7 @@ def build_diagnostic(*, runtime_root: Path, session: str | None = None) -> dict[
                 descriptive=descriptive,
                 descriptive_identity=descriptive_identity,
                 corporate_intelligence=corporate_intelligence,
+                tactical=tactical,
                 session=selected_session,
             )
             for ticker in REPRESENTATIVE_TICKERS

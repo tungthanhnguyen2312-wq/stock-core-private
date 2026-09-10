@@ -153,11 +153,18 @@ def test_retained_diagnostic_reports_each_representative_ticker_without_daily_mu
         "artifact_identity": "corporate:fixture",
         "records": {ticker: {"corporate_action_context": {"events": [], "status": "UNAVAILABLE"}} for ticker in diagnostic.REPRESENTATIVE_TICKERS},
     }
+    tactical = {
+        "artifact_identity": "tactical:fixture",
+        "records": {
+            ticker: {"entry_state": "DOWNTREND" if ticker == "PAN" else "WAIT", "entry_action": "AVOID" if ticker == "PAN" else "WAIT"}
+            for ticker in diagnostic.REPRESENTATIVE_TICKERS
+        },
+    }
     other = {"artifact_identity": "unused:fixture"}
     entries = {}
     for name in session_operations_required_names():
         path = Path("artifacts") / f"{name}.json"
-        payload = descriptive if name == "descriptive" else corporate if name == "corporate_intelligence" else other
+        payload = descriptive if name == "descriptive" else corporate if name == "corporate_intelligence" else tactical if name == "tactical" else other
         _write_json(tmp_path / path, payload)
         entries[name] = {"path": str(path).replace("\\", "/"), "artifact_identity": payload["artifact_identity"]}
     _write_json(tmp_path / "config" / "daily_research_session_input_registry.json", {
@@ -172,7 +179,7 @@ def test_retained_diagnostic_reports_each_representative_ticker_without_daily_mu
     assert artifact["cases"]["SSI"]["corporate_action_factor_chain"]["state"] == basis.BASIS_UNVERIFIED
     assert artifact["cases"]["SSI"]["current_vs_historical_basis"]["state"] == basis.BASIS_UNVERIFIED
     assert artifact["cases"]["PNJ"]["observed_series"]["numeric_divergence_authority_gate"] is False
-    assert artifact["cases"]["PAN"]["existing_signal_context"]["trend_state"] == "DOWNTREND"
+    assert artifact["cases"]["PAN"]["existing_signal_context"]["tactical_entry_state"] == "DOWNTREND"
     assert artifact["authority_boundary"]["canonical_daily_classifications_modified"] is False
 
 
