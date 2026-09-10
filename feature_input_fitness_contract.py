@@ -47,6 +47,7 @@ from typing import Any, Mapping, Sequence
 import financial_entity_applicability
 import monetary_basis_contract
 import multi_source_market_evidence_contract
+import price_basis_feature_fitness
 import technical_structure_context
 
 CONTRACT_VERSION = "feature_input_fitness_contract/v1"
@@ -64,6 +65,7 @@ RELATIVE_VOLUME = "RELATIVE_VOLUME"
 TECHNICAL_CLOSE_HISTORY = "TECHNICAL_CLOSE_HISTORY"
 TECHNICAL_VOLUME_HISTORY = "TECHNICAL_VOLUME_HISTORY"
 OHLC_GEOMETRY = "OHLC_GEOMETRY"
+PRICE_DERIVED_BASIS_FITNESS = "PRICE_DERIVED_BASIS_FITNESS"
 VALUATION_PRICE = "VALUATION_PRICE"
 MARKET_CAP = "MARKET_CAP"
 P_E = "P_E"
@@ -91,6 +93,7 @@ EXECUTION_LIQUIDITY = "EXECUTION_LIQUIDITY"
 USE_CASE_FAMILIES: tuple[str, ...] = (
     CURRENT_SESSION_PRICE, CURRENT_SESSION_RETURN, MARKET_BREADTH, CURRENT_SESSION_VOLUME,
     RELATIVE_VOLUME, TECHNICAL_CLOSE_HISTORY, TECHNICAL_VOLUME_HISTORY, OHLC_GEOMETRY,
+    PRICE_DERIVED_BASIS_FITNESS,
     VALUATION_PRICE, MARKET_CAP, P_E, P_B, P_S, EV_EBITDA, FUNDAMENTAL_RATIO,
     FINANCIAL_REVENUE_GROWTH, FINANCIAL_EARNINGS_GROWTH, FINANCIAL_MARGIN,
     FINANCIAL_ROE_ROA, FINANCIAL_LEVERAGE_LIQUIDITY, FINANCIAL_CASH_FLOW_QUALITY,
@@ -212,6 +215,15 @@ FAMILY_REGISTRY: dict[str, dict[str, Any]] = {
         authoritative_functions=("HIGH_LOW_BLOCKED_FEATURES",),
         known_blockers=("HIGH_LOW_BASIS_NOT_COMPATIBLE",),
         notes="Standing BLOCKED: the retained high/low basis is ADJUSTED_RETROSPECTIVE_RAW_AS_TRADED_NOT_PROMOTED with no wick-geometry compatibility proof (TACTICAL_MARKET_STRUCTURE_AND_BREAKOUT_V3, unchanged since). FVG/Order Block/liquidity-sweep remain DEFERRED_INPUT_BASIS_NOT_QUALIFIED for this reason.",
+    ),
+    PRICE_DERIVED_BASIS_FITNESS: _entry(
+        description="Shadow-only compatibility query for MA20/50/200, RSI, momentum/return, local price action, PIT/backtest, and execution/raw replay before a consumer combines current and historical price contexts.",
+        required_dimensions=("provider_or_source_identity", "session_or_date_range", "observed_basis", "basis_provenance", "adjustment_knowledge_cutoff", "qualified_factor_chain_identity"),
+        fitness_tiers=("BASIS_COMPATIBLE", "BASIS_COMPATIBLE_RESEARCH_ONLY", "BASIS_UNVERIFIED", "BASIS_INCOMPATIBLE", "POINT_IN_TIME_SEMANTICS_UNQUALIFIED"),
+        authoritative_module="price_basis_feature_fitness",
+        authoritative_functions=("evaluate_feature_fitness",),
+        known_blockers=("RAW_AS_TRADED_NOT_PROMOTED", "RECORD_DATE_DOES_NOT_ESTABLISH_EX_DATE"),
+        notes="Query/report boundary only. It does not modify Current Research classifications or grant RAW_AS_TRADED, PIT, execution, liquidity, or sizing authority; numeric divergence is explicitly diagnostic-only.",
     ),
     VALUATION_PRICE: _entry(
         description="Whether the current-session price is currency/scale-known enough to enter any valuation ratio.",
@@ -421,6 +433,25 @@ def evaluate_technical_close_history(
         pf_record=pf_record, recovery_override=recovery_override, target_session=target_session,
     )
     return {"winning_record": winning_record, "source": source}
+
+
+def evaluate_price_derived_basis_fitness(
+    *, feature: str, current_context: Mapping[str, Any], history_context: Mapping[str, Any] | None = None,
+    decision_as_of: str | None = None, observed_price_divergence_pct: float | None = None,
+) -> dict[str, Any]:
+    """Delegate price-basis fitness to the dedicated shadow contract.
+
+    This is intentionally a query path only: callers receive explicit semantic fitness and
+    reason codes, while the established technical/current-research producers retain their own
+    classifications and output identities unchanged.
+    """
+    return price_basis_feature_fitness.evaluate_feature_fitness(
+        feature=feature,
+        current_context=current_context,
+        history_context=history_context,
+        decision_as_of=decision_as_of,
+        observed_price_divergence_pct=observed_price_divergence_pct,
+    )
 
 
 def evaluate_historical_provider_series(series: Mapping[str, Any], feature_family: str) -> dict[str, Any]:

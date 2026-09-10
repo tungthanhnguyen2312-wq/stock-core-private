@@ -1,5 +1,45 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-10 - Price Basis Semantics And Feature Fitness V1
+
+`PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1 = COMPLETE / SHADOW_BASIS_FITNESS_READY /
+AUTHORITY_UNCHANGED`. The repository now has a closed, deterministic shadow contract for the
+price-basis question that existing technical evidence had not expressed uniformly: whether the
+current price, historical indicator input, corporate-action adjustment knowledge, and intended
+use share compatible economic semantics. Its vocabulary is exactly `RAW_AS_TRADED`,
+`CURRENT_RETROSPECTIVE_ADJUSTED`, `POINT_IN_TIME_ADJUSTED`, and `BASIS_UNKNOWN`; its result
+vocabulary is `BASIS_COMPATIBLE`, `BASIS_COMPATIBLE_RESEARCH_ONLY`, `BASIS_UNVERIFIED`,
+`BASIS_INCOMPATIBLE`, or `POINT_IN_TIME_SEMANTICS_UNQUALIFIED`. The contract records a source or
+provider identity, bounded session range, provenance/confidence, adjustment knowledge cutoff,
+and qualified chain identity whenever retained. It has no price transformation and cannot infer
+an ex-date from a record date or create a factor from incomplete official execution evidence.
+
+The `feature_input_fitness_contract` and a non-mutating
+`technical_structure_context.price_basis_fitness_context()` adapter expose the query without
+changing a producer output, tactical rule, Daily classification, Integrated Decision action,
+Portfolio V2, Asymmetric Dislocation, or Owner Packet. MA20/50/200, RSI, momentum/return, and
+local price action may be labelled research-only only when their declared current-adjusted series
+is semantically compatible. PIT/backtest requires an adjusted series and factor knowledge
+knowable by its historical cutoff; a factor discovered after that cutoff fails closed. Raw
+execution replay requires raw-as-traded, but the standing authority is still `NOT_PROMOTED`, so
+this milestone cannot qualify it. A numerical gap (including more than 15%) is an anomaly signal,
+not evidence of corruption or a promotion gate.
+
+The read-only retained 2026-09-10 diagnostic for SSI, PNJ, and PAN is stored at
+`operations-review/price-basis-semantics-and-feature-fitness-v1-20260910/`. It finds the retained
+source-scoped `ADJUSTED_RETROSPECTIVE` Current Research technical context for each, but no
+qualified corporate-action factor chain in the selected corporate-intelligence evidence. Their
+strict reconstruction result is therefore `BASIS_UNVERIFIED`; SSI is not resolved from a record
+date, PNJ's large current-to-MA20 gap is not presumed erroneous, and PAN's downtrend is only
+reported signal context. Local retained MA20/momentum/price-action reads remain shadow
+research-only; PIT and raw replay remain unavailable. The synthetic suite proves the more-than-
+15% non-gate, qualified-chain compatibility, future-event PIT refusal, adjusted-only raw replay
+refusal, current-adjusted research-only boundary, unknown fail-closed behavior, and record-date
+non-inference. No provider/API/network call, Daily run, runtime/database write, incident-evidence
+mutation, provider/source addition, RAW_AS_TRADED/PIT/liquidity/execution/sizing promotion,
+deployment, or cutover occurred. No successor is automatically queued; Daily Brief new-session
+acceptance remains `DEFERRED / NOT_FAILED`.
+
 ## 2026-09-10 - Daily Production Execution Environment Guard V1
 
 `DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1 = COMPLETE / PRE_ACQUISITION_FAIL_CLOSED /

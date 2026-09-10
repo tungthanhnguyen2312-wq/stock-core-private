@@ -1,5 +1,30 @@
 # Stock Lookup — Operational State
 
+**Price basis semantics and feature fitness V1 (2026-09-10):**
+`PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1 = COMPLETE / SHADOW_BASIS_FITNESS_READY /
+AUTHORITY_UNCHANGED`. New `price_basis_feature_fitness/v1` is a deterministic query/report
+boundary over four distinct contexts: `RAW_AS_TRADED`, `CURRENT_RETROSPECTIVE_ADJUSTED`,
+`POINT_IN_TIME_ADJUSTED`, and `BASIS_UNKNOWN`. It binds source/provider identity, session range,
+observed basis, adjustment knowledge cutoff, qualified factor-chain identity, provenance,
+confidence, and exact gap reasons before evaluating MA20/50/200, RSI, momentum/return, local
+price action, PIT/backtest, or execution/raw replay. Numeric divergence is retained only as an
+anomaly signal, never an authority gate; record date is never read as ex-date and no factor is
+manufactured without executed, explicit-ex-date official evidence. The existing technical path
+can query this context through `technical_structure_context.price_basis_fitness_context()` and
+the feature-fitness registry; neither existing technical artifact bytes nor canonical Daily
+classifications change. The bounded retained 2026-09-10 SSI/PNJ/PAN diagnostic
+(`operations-review/price-basis-semantics-and-feature-fitness-v1-20260910/`) observes a
+source-scoped current retrospective-adjusted technical context but no qualified corporate-action
+factor chain for any of the three. Its strict raw-to-adjusted reconstruction verdict is therefore
+`BASIS_UNVERIFIED` for each; local MA20/momentum/price-action semantics remain explicitly
+`BASIS_COMPATIBLE_RESEARCH_ONLY` where the retained current artifact has the input, while PIT is
+`POINT_IN_TIME_SEMANTICS_UNQUALIFIED` and raw execution replay is incompatible. SSI remains a
+question, PNJ's observed current-to-MA20 divergence is not treated as corruption, and PAN's
+retained downtrend is reported as signal context only. No live Daily, provider/network call,
+runtime write, incident-evidence mutation, source addition, authority promotion, cutover, or
+change to watchlist, Integrated Decision, Portfolio V2, Asymmetric Dislocation, or Owner Packet.
+`RAW_AS_TRADED = NOT_PROMOTED`; PIT, liquidity, execution, and sizing gates remain unchanged.
+
 **Daily production execution-environment guard V1 (2026-09-10):**
 `DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1 = COMPLETE / PRE_ACQUISITION_FAIL_CLOSED /
 SAFE_RESUME_CONTRACT_READY` at this state-sync checkpoint. The real 2026-09-10 incident established

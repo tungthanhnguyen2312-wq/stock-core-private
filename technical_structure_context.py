@@ -99,6 +99,28 @@ class TechnicalStructureContextError(ValueError):
     """A retained input or an invariant of this contract is violated."""
 
 
+def price_basis_fitness_context(
+    *, ticker: str, technical_features: Mapping[str, Any], source_artifact_identity: str | None,
+    provider: str | None = None,
+) -> dict[str, Any]:
+    """Expose a non-mutating price-basis context for a downstream shadow query.
+
+    ``build_artifact`` deliberately does not call this helper: adding it to the produced
+    structure artifact would change the current Daily/Current Research artifact bytes and is out
+    of scope for the basis-foundation milestone.  A diagnostic or later opt-in consumer may query
+    it explicitly, receiving the retained basis/provenance gaps rather than a rewritten tactical
+    state.
+    """
+    import price_basis_feature_fitness
+
+    return price_basis_feature_fitness.current_research_context_from_technical_features(
+        ticker=ticker,
+        technical_features=technical_features,
+        source_artifact_identity=source_artifact_identity,
+        provider=provider,
+    )
+
+
 # ── Canonical identity helpers (V1 unchanged) ─────────────────────────────────
 
 def _canonical_json(value: Any) -> str:

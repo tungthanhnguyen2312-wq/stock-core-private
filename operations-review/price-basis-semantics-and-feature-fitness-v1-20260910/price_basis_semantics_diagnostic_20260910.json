@@ -1,0 +1,843 @@
+{
+  "artifact_identity": "price_basis_semantics_diagnostic:bd80294ad27ae0950cbdbfbd70e2997856d02f50b19abdee315e6fd3a06205ba",
+  "artifact_sha256": "bd80294ad27ae0950cbdbfbd70e2997856d02f50b19abdee315e6fd3a06205ba",
+  "authority_boundary": {
+    "canonical_daily_classifications_modified": false,
+    "historical_pit": "NOT_PROMOTED",
+    "liquidity_execution_sizing": "UNCHANGED_AND_BLOCKED",
+    "provider_authority": "UNCHANGED",
+    "provider_or_network_calls": false,
+    "raw_as_traded": "NOT_PROMOTED",
+    "record_date_inferred_as_ex_date": false,
+    "runtime_root_written": false
+  },
+  "cases": {
+    "PAN": {
+      "corporate_action_factor_chain": {
+        "event_count": 0,
+        "reason_codes": [
+          "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+        ],
+        "record_date_used_as_ex_date": false,
+        "state": "BASIS_UNVERIFIED"
+      },
+      "current_vs_historical_basis": {
+        "note": "The current artifact declares a source-scoped retrospective-adjusted technical series. Local feature reads remain shadow/research-only; raw-to-adjusted reconstruction is unverified unless a qualified factor chain is retained.",
+        "reason_codes": [
+          "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+        ],
+        "state": "BASIS_UNVERIFIED"
+      },
+      "evidence_gaps": [
+        "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN",
+        "PROVIDER_IDENTITY_NOT_RETAINED",
+        "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
+      ],
+      "existing_signal_context": {
+        "note": "Retained signal state is reported as context only; this diagnostic does not alter it or interpret it as an investment recommendation.",
+        "trend_state": "AT_OR_BELOW_MA20"
+      },
+      "feature_fitness": {
+        "EXECUTION_RAW_REPLAY": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": null,
+            "feature": "EXECUTION_RAW_REPLAY",
+            "fitness_identity": "price_basis_feature_fitness:65cabb834a4d8fc201adf2190539e770ac0305e42c220925fae83401ea7154fb",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": null,
+              "reason_codes": []
+            },
+            "reason_codes": [
+              "EXECUTION_REPLAY_REQUIRES_RAW_AS_TRADED"
+            ],
+            "state": "BASIS_INCOMPATIBLE"
+          },
+          "retained_feature_input_status": "RAW_AS_TRADED_NOT_RETAINED_OR_PROMOTED"
+        },
+        "LOCAL_PRICE_ACTION": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": null,
+            "feature": "LOCAL_PRICE_ACTION",
+            "fitness_identity": "price_basis_feature_fitness:e028b645f133c34adf272719afc25ebc32aa0e6de0ad7155e00385ad5a1ebf32",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.18486916145837023,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "OBSERVED"
+        },
+        "MA20": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": null,
+            "feature": "MA20",
+            "fitness_identity": "price_basis_feature_fitness:3043acdf30baed746a512708d9123a52429dbf1dd34a71ee91312e60c086cd18",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.18486916145837023,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "SHADOW_ONLY"
+        },
+        "MA200": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": null,
+            "feature": "MA200",
+            "fitness_identity": "price_basis_feature_fitness:c8d09c66e6c3e8f6e094af4c1dc914d1a0a762c4c11bca295ef70d2d4619197f",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.18486916145837023,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        },
+        "MA50": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": null,
+            "feature": "MA50",
+            "fitness_identity": "price_basis_feature_fitness:b097854415be7238c69c81e24bb62757a36ee4e5272a2ae4aa7e965135fcf8c6",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.18486916145837023,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        },
+        "MOMENTUM_RETURN": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": null,
+            "feature": "MOMENTUM_RETURN",
+            "fitness_identity": "price_basis_feature_fitness:f01c6708375a0d0c2df86c8455379553b4a80c55e86d098479bca6d4cc242080",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.18486916145837023,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "SHADOW_ONLY"
+        },
+        "PIT_BACKTEST": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": "2026-09-10",
+            "feature": "PIT_BACKTEST",
+            "fitness_identity": "price_basis_feature_fitness:f767f50e3c5e285fb6ae4b09604d86fde3b439bbc747c3c54cf847ca3c6c823f",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": null,
+              "reason_codes": []
+            },
+            "reason_codes": [
+              "PIT_REQUIRES_POINT_IN_TIME_ADJUSTED_SERIES"
+            ],
+            "state": "POINT_IN_TIME_SEMANTICS_UNQUALIFIED"
+          },
+          "retained_feature_input_status": "PIT_NOT_QUALIFIED_BY_CURRENT_RESEARCH_ARTIFACT"
+        },
+        "RSI": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "decision_as_of": null,
+            "feature": "RSI",
+            "fitness_identity": "price_basis_feature_fitness:ae9c6b5697247e52eeac5cc92bb5906212865bd8ae305b8e7c7537979fd57e74",
+            "history_context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.18486916145837023,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        }
+      },
+      "observed_series": {
+        "current_to_ma20_divergence_pct": -0.18486916145837023,
+        "numeric_divergence_authority_gate": false,
+        "observed_basis_context": {
+          "adjustment_knowledge_cutoff": null,
+          "authority_effect": "NONE",
+          "basis_confidence": "SOURCE_SCOPED_CURRENT_RESEARCH_ONLY",
+          "basis_lineage_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
+          "basis_provenance": [
+            "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT",
+            "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca"
+          ],
+          "context_identity": "price_basis_context:638718758ff3755d262994a7f8616571793000482c3b723c10a291beb2303c7c",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "corporate_action_factor_chain": {
+            "event_types": [],
+            "identity": null,
+            "knowledge_cutoff": null,
+            "reason_codes": [
+              "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+            ],
+            "status": "NOT_PROVIDED"
+          },
+          "observed_basis": "CURRENT_RETROSPECTIVE_ADJUSTED",
+          "provider": null,
+          "raw_as_traded_authority": "NOT_PROMOTED",
+          "reason_codes": [
+            "PROVIDER_IDENTITY_NOT_RETAINED",
+            "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
+          ],
+          "schema_version": "1.0.0",
+          "session_end": "2026-09-10",
+          "session_start": "2026-09-10",
+          "source_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
+          "ticker": "PAN"
+        },
+        "session": "2026-09-10",
+        "technical_feature_as_of_session": "2026-09-10",
+        "technical_history_provenance": {
+          "source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"
+        },
+        "technical_status": "SHADOW_ONLY"
+      },
+      "status": "RETAINED_CURRENT_RESEARCH_CONTEXT_OBSERVED",
+      "ticker": "PAN"
+    },
+    "PNJ": {
+      "corporate_action_factor_chain": {
+        "event_count": 0,
+        "reason_codes": [
+          "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+        ],
+        "record_date_used_as_ex_date": false,
+        "state": "BASIS_UNVERIFIED"
+      },
+      "current_vs_historical_basis": {
+        "note": "The current artifact declares a source-scoped retrospective-adjusted technical series. Local feature reads remain shadow/research-only; raw-to-adjusted reconstruction is unverified unless a qualified factor chain is retained.",
+        "reason_codes": [
+          "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+        ],
+        "state": "BASIS_UNVERIFIED"
+      },
+      "evidence_gaps": [
+        "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN",
+        "PROVIDER_IDENTITY_NOT_RETAINED",
+        "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
+      ],
+      "existing_signal_context": {
+        "note": "Retained signal state is reported as context only; this diagnostic does not alter it or interpret it as an investment recommendation.",
+        "trend_state": "AT_OR_BELOW_MA20"
+      },
+      "feature_fitness": {
+        "EXECUTION_RAW_REPLAY": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": null,
+            "feature": "EXECUTION_RAW_REPLAY",
+            "fitness_identity": "price_basis_feature_fitness:ea6e3427f98c3205dc5ecbb2f75a53aed784a08b18b9f9691e16fd55143fb733",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": null,
+              "reason_codes": []
+            },
+            "reason_codes": [
+              "EXECUTION_REPLAY_REQUIRES_RAW_AS_TRADED"
+            ],
+            "state": "BASIS_INCOMPATIBLE"
+          },
+          "retained_feature_input_status": "RAW_AS_TRADED_NOT_RETAINED_OR_PROMOTED"
+        },
+        "LOCAL_PRICE_ACTION": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": null,
+            "feature": "LOCAL_PRICE_ACTION",
+            "fitness_identity": "price_basis_feature_fitness:189fb1b442d26ae23b013892c4b072af8c1485d4445c7ac6b5c9c736e84d5cc5",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.37698829863533195,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "OBSERVED"
+        },
+        "MA20": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": null,
+            "feature": "MA20",
+            "fitness_identity": "price_basis_feature_fitness:6f0ffa74df0dbd55759fc9d1526fd9985aa838dda3025b8463831026b7ca6f0d",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.37698829863533195,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "SHADOW_ONLY"
+        },
+        "MA200": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": null,
+            "feature": "MA200",
+            "fitness_identity": "price_basis_feature_fitness:f34b94cf4ccb056f97551e7de4e7d8b41cd8b73ce87d76bb332884c2faafb93f",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.37698829863533195,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        },
+        "MA50": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": null,
+            "feature": "MA50",
+            "fitness_identity": "price_basis_feature_fitness:8ff555bd0ab89f303fc0c57551325c0d2ce0100deb417480c11c5e30fc8039f5",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.37698829863533195,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        },
+        "MOMENTUM_RETURN": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": null,
+            "feature": "MOMENTUM_RETURN",
+            "fitness_identity": "price_basis_feature_fitness:96a0e5f066f1d1354ecf5a3010e8b4a473eff42d13b25401811b44f3364645a9",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.37698829863533195,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "SHADOW_ONLY"
+        },
+        "PIT_BACKTEST": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": "2026-09-10",
+            "feature": "PIT_BACKTEST",
+            "fitness_identity": "price_basis_feature_fitness:ff19179797164f8f9fce5438bd3701c0b042d9262e5c2473463070392d36637c",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": null,
+              "reason_codes": []
+            },
+            "reason_codes": [
+              "PIT_REQUIRES_POINT_IN_TIME_ADJUSTED_SERIES"
+            ],
+            "state": "POINT_IN_TIME_SEMANTICS_UNQUALIFIED"
+          },
+          "retained_feature_input_status": "PIT_NOT_QUALIFIED_BY_CURRENT_RESEARCH_ARTIFACT"
+        },
+        "RSI": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "decision_as_of": null,
+            "feature": "RSI",
+            "fitness_identity": "price_basis_feature_fitness:c672151be358e2d51db1d05a526c24253fd1cc5ec6c9596dfa7ae53cb97c4484",
+            "history_context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.37698829863533195,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        }
+      },
+      "observed_series": {
+        "current_to_ma20_divergence_pct": -0.37698829863533195,
+        "numeric_divergence_authority_gate": false,
+        "observed_basis_context": {
+          "adjustment_knowledge_cutoff": null,
+          "authority_effect": "NONE",
+          "basis_confidence": "SOURCE_SCOPED_CURRENT_RESEARCH_ONLY",
+          "basis_lineage_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
+          "basis_provenance": [
+            "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT",
+            "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca"
+          ],
+          "context_identity": "price_basis_context:5a872cf5e447928489573ef48c5c9859ad6ca7563191d3f583f3b46df479def1",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "corporate_action_factor_chain": {
+            "event_types": [],
+            "identity": null,
+            "knowledge_cutoff": null,
+            "reason_codes": [
+              "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+            ],
+            "status": "NOT_PROVIDED"
+          },
+          "observed_basis": "CURRENT_RETROSPECTIVE_ADJUSTED",
+          "provider": null,
+          "raw_as_traded_authority": "NOT_PROMOTED",
+          "reason_codes": [
+            "PROVIDER_IDENTITY_NOT_RETAINED",
+            "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
+          ],
+          "schema_version": "1.0.0",
+          "session_end": "2026-09-10",
+          "session_start": "2026-09-10",
+          "source_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
+          "ticker": "PNJ"
+        },
+        "session": "2026-09-10",
+        "technical_feature_as_of_session": "2026-09-10",
+        "technical_history_provenance": {
+          "source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"
+        },
+        "technical_status": "SHADOW_ONLY"
+      },
+      "status": "RETAINED_CURRENT_RESEARCH_CONTEXT_OBSERVED",
+      "ticker": "PNJ"
+    },
+    "SSI": {
+      "corporate_action_factor_chain": {
+        "event_count": 0,
+        "reason_codes": [
+          "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+        ],
+        "record_date_used_as_ex_date": false,
+        "state": "BASIS_UNVERIFIED"
+      },
+      "current_vs_historical_basis": {
+        "note": "The current artifact declares a source-scoped retrospective-adjusted technical series. Local feature reads remain shadow/research-only; raw-to-adjusted reconstruction is unverified unless a qualified factor chain is retained.",
+        "reason_codes": [
+          "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+        ],
+        "state": "BASIS_UNVERIFIED"
+      },
+      "evidence_gaps": [
+        "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN",
+        "PROVIDER_IDENTITY_NOT_RETAINED",
+        "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
+      ],
+      "existing_signal_context": {
+        "note": "Retained signal state is reported as context only; this diagnostic does not alter it or interpret it as an investment recommendation.",
+        "trend_state": "AT_OR_BELOW_MA20"
+      },
+      "feature_fitness": {
+        "EXECUTION_RAW_REPLAY": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": null,
+            "feature": "EXECUTION_RAW_REPLAY",
+            "fitness_identity": "price_basis_feature_fitness:abfe337e0560e653bb152cd23596e2b122c82edf48414be3462f219bbe48f0ee",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": null,
+              "reason_codes": []
+            },
+            "reason_codes": [
+              "EXECUTION_REPLAY_REQUIRES_RAW_AS_TRADED"
+            ],
+            "state": "BASIS_INCOMPATIBLE"
+          },
+          "retained_feature_input_status": "RAW_AS_TRADED_NOT_RETAINED_OR_PROMOTED"
+        },
+        "LOCAL_PRICE_ACTION": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": null,
+            "feature": "LOCAL_PRICE_ACTION",
+            "fitness_identity": "price_basis_feature_fitness:b737032485f3059a0216583199fb6532c16588ce169e68fb71e8dbd455df4d6c",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.10835020061694187,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "OBSERVED"
+        },
+        "MA20": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": null,
+            "feature": "MA20",
+            "fitness_identity": "price_basis_feature_fitness:9ba947226a0d9ad51ca8dbd460a42ae0340a5c849264c2b2170bf02bce66cae5",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.10835020061694187,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "SHADOW_ONLY"
+        },
+        "MA200": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": null,
+            "feature": "MA200",
+            "fitness_identity": "price_basis_feature_fitness:d011c57ff7a9e761eb1924f861f4cada032f1e47256d45c2775d1501f76c7c28",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.10835020061694187,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        },
+        "MA50": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": null,
+            "feature": "MA50",
+            "fitness_identity": "price_basis_feature_fitness:a7f5a51cbb60c56cc95724b43dd49c90aef00f4d88d8fba80ba6738b1e78aed8",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.10835020061694187,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        },
+        "MOMENTUM_RETURN": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": null,
+            "feature": "MOMENTUM_RETURN",
+            "fitness_identity": "price_basis_feature_fitness:142cf474b09497618de91fbcb6801a35ad54c9ceea3d02bab9d8c06f31dc5886",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.10835020061694187,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "SHADOW_ONLY"
+        },
+        "PIT_BACKTEST": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": "2026-09-10",
+            "feature": "PIT_BACKTEST",
+            "fitness_identity": "price_basis_feature_fitness:021781765e476954e306a535ccae4820a1b3d8ac68e02417f41ace14924e5819",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": null,
+              "reason_codes": []
+            },
+            "reason_codes": [
+              "PIT_REQUIRES_POINT_IN_TIME_ADJUSTED_SERIES"
+            ],
+            "state": "POINT_IN_TIME_SEMANTICS_UNQUALIFIED"
+          },
+          "retained_feature_input_status": "PIT_NOT_QUALIFIED_BY_CURRENT_RESEARCH_ARTIFACT"
+        },
+        "RSI": {
+          "basis_fitness": {
+            "authority_effect": "NONE",
+            "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+            "current_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "decision_as_of": null,
+            "feature": "RSI",
+            "fitness_identity": "price_basis_feature_fitness:3711c501fb43b2b637dc88b8dce90b2e39063ee00f3384fca90033e8e82c8571",
+            "history_context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+            "not_an_execution_or_backtest_authorization": true,
+            "numeric_divergence": {
+              "authority_gate": false,
+              "observed_price_divergence_pct": -0.10835020061694187,
+              "reason_codes": [
+                "NUMERIC_DIVERGENCE_IS_ANOMALY_SIGNAL_NOT_AUTHORITY_GATE"
+              ]
+            },
+            "reason_codes": [
+              "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+            ],
+            "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+          },
+          "retained_feature_input_status": "NOT_RETAINED_IN_SELECTED_CURRENT_ARTIFACT"
+        }
+      },
+      "observed_series": {
+        "current_to_ma20_divergence_pct": -0.10835020061694187,
+        "numeric_divergence_authority_gate": false,
+        "observed_basis_context": {
+          "adjustment_knowledge_cutoff": null,
+          "authority_effect": "NONE",
+          "basis_confidence": "SOURCE_SCOPED_CURRENT_RESEARCH_ONLY",
+          "basis_lineage_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
+          "basis_provenance": [
+            "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT",
+            "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca"
+          ],
+          "context_identity": "price_basis_context:f6e0bba8050c7565b8b689b9667ed6458479813f2fe7da0e3b3b352d2e093840",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "corporate_action_factor_chain": {
+            "event_types": [],
+            "identity": null,
+            "knowledge_cutoff": null,
+            "reason_codes": [
+              "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+            ],
+            "status": "NOT_PROVIDED"
+          },
+          "observed_basis": "CURRENT_RETROSPECTIVE_ADJUSTED",
+          "provider": null,
+          "raw_as_traded_authority": "NOT_PROMOTED",
+          "reason_codes": [
+            "PROVIDER_IDENTITY_NOT_RETAINED",
+            "PROVIDER_IDENTITY_NOT_RETAINED_IN_TECHNICAL_FEATURE_CONTEXT"
+          ],
+          "schema_version": "1.0.0",
+          "session_end": "2026-09-10",
+          "session_start": "2026-09-10",
+          "source_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
+          "ticker": "SSI"
+        },
+        "session": "2026-09-10",
+        "technical_feature_as_of_session": "2026-09-10",
+        "technical_history_provenance": {
+          "source": "RETAINED_P3F9B_EXACT_SESSION_SNAPSHOT"
+        },
+        "technical_status": "SHADOW_ONLY"
+      },
+      "status": "RETAINED_CURRENT_RESEARCH_CONTEXT_OBSERVED",
+      "ticker": "SSI"
+    }
+  },
+  "contract_summary": {
+    "authority_effect": "NONE",
+    "basis_vocabulary": [
+      "BASIS_UNKNOWN",
+      "CURRENT_RETROSPECTIVE_ADJUSTED",
+      "POINT_IN_TIME_ADJUSTED",
+      "RAW_AS_TRADED"
+    ],
+    "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+    "feature_vocabulary": [
+      "EXECUTION_RAW_REPLAY",
+      "LOCAL_PRICE_ACTION",
+      "MA20",
+      "MA200",
+      "MA50",
+      "MOMENTUM_RETURN",
+      "PIT_BACKTEST",
+      "RSI"
+    ],
+    "fitness_states": [
+      "BASIS_COMPATIBLE",
+      "BASIS_COMPATIBLE_RESEARCH_ONLY",
+      "BASIS_INCOMPATIBLE",
+      "BASIS_UNVERIFIED",
+      "POINT_IN_TIME_SEMANTICS_UNQUALIFIED"
+    ],
+    "numeric_divergence_is_authority_gate": false,
+    "raw_as_traded_authority": "NOT_PROMOTED",
+    "record_date_inferred_as_ex_date": false
+  },
+  "contract_version": "price_basis_semantics_diagnostic/v1",
+  "milestone": "PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1",
+  "schema_version": "1.0.0",
+  "session": "2026-09-10",
+  "source_artifacts": {
+    "corporate_intelligence": {
+      "artifact_identity": "market_wide_current_corporate_intelligence:1dafbabced5e05806892e626dc946488478b77ee9680766fe90fc61af143f07c",
+      "relative_path": "operations-review/market-wide-current-corporate-intelligence-v1-20260910/market_wide_current_corporate_intelligence_artifact.json"
+    },
+    "descriptive": {
+      "artifact_identity": "market_wide_current_descriptive_research:22f2829fb591249ac59fed370150580d56e38457e33b244bbfe3bacb4961c5ca",
+      "relative_path": "operations-review/market-wide-current-descriptive-research-v1-20260910/market_wide_current_descriptive_research_artifact.json"
+    }
+  }
+}

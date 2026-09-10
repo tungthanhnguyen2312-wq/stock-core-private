@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.10.2",
+  "roadmap_version": "2026.09.10.3",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,26 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1",
+    "milestone": "PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "SHADOW_BASIS_FITNESS_READY / AUTHORITY_UNCHANGED",
+      "starting_checkpoint": "8373078eecdfa69631e000a3a87457bd4aebcb64",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / SHADOW_BASIS_FITNESS_QUERY_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1 directive (2026-09-10)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_10_PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1",
+      "notes": "COMPLETE / SHADOW_BASIS_FITNESS_READY / AUTHORITY_UNCHANGED. Deterministic vocabulary and feature-fitness reporting for raw-as-traded, current retrospective-adjusted, point-in-time-adjusted, and unknown price contexts. The SSI/PNJ/PAN retained 2026-09-10 diagnostic is committed under operations-review/price-basis-semantics-and-feature-fitness-v1-20260910/: every strict raw-to-adjusted reconstruction remains BASIS_UNVERIFIED without a qualified factor chain; source-scoped local technical reads remain research-only; PIT and raw execution replay remain blocked. No Daily, provider/network call, runtime or incident-evidence mutation, canonical classification change, provider/source addition, RAW_AS_TRADED/PIT/liquidity/execution/sizing promotion, or cutover. Daily Brief acceptance remains DEFERRED / NOT_FAILED. No successor queued."
+    },
     {
       "milestone_id": "DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1",
       "state": "COMPLETE",

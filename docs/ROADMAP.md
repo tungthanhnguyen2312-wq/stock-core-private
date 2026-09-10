@@ -1,5 +1,21 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Price basis semantics and feature fitness V1 (2026-09-10):**
+`PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1 = COMPLETE / SHADOW_BASIS_FITNESS_READY /
+AUTHORITY_UNCHANGED`. This owner-authorized foundation adds a deterministic, non-mutating
+price-basis context and feature-fitness query for MA20/50/200, RSI, momentum/return, local price
+action, PIT/backtest, and raw execution replay. It distinguishes raw-as-traded, current
+retrospective-adjusted, point-in-time-adjusted, and unknown basis; preserves source/session/
+provenance/knowledge-cutoff/factor-chain gaps; and treats percentage divergence only as an
+anomaly signal. The bounded SSI/PNJ/PAN retained-evidence diagnostic is committed under
+`operations-review/price-basis-semantics-and-feature-fitness-v1-20260910/`; each strict
+raw-to-adjusted reconstruction is `BASIS_UNVERIFIED` because no qualified factor chain is
+retained in the selected evidence, while local current-adjusted technical reads remain explicitly
+research-only. No Daily, provider, runtime, or incident-evidence write occurred. No source,
+RAW_AS_TRADED/PIT/liquidity/execution/sizing authority or canonical Daily classification changed,
+and no cutover successor is queued. Daily Brief new-session acceptance remains
+`DEFERRED / NOT_FAILED`.
+
 **Daily production execution-environment guard V1 (2026-09-10):**
 `DAILY_PRODUCTION_EXECUTION_ENVIRONMENT_GUARD_V1 = COMPLETE / PRE_ACQUISITION_FAIL_CLOSED /
 SAFE_RESUME_CONTRACT_READY`. This immediate corrective dependency separates producer code,
