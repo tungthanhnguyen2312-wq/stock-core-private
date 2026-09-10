@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.10.4",
+  "roadmap_version": "2026.09.10.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,11 +15,26 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1",
+    "milestone": "HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED",
+      "starting_checkpoint": "0053835f8883def96175220315cbffac2722fae9",
+      "checkpoint": "HEAD",
+      "dependencies": ["TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / LOCAL_RESEARCH_RECONSTRUCTION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1 directive (2026-09-10)",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_10_HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1",
+      "notes": "COMPLETE / RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED. Reads explicitly supplied local vn_stock.db only through query-only SQLite, freezes exactly the selected provider-scoped DNSE OHLCV/lineage rows used for each 20-session T0 window, and calls the existing mva_daily_research_bundle, screening, and watchlist_tactical_entry_classifier implementations. SSI/PNJ 2026-07-20..2026-08-10 rows are RETROSPECTIVE_RESEARCH_RECONSTRUCTION only: selected DNSE lineage was retrieved 2026-08-25 and the basis remains adjusted retrospective. Later sector metadata plus fundamental/corporate-event inputs are rejected and NOT_RECONSTRUCTABLE, never defaults. PAN exact retained control reproduces 2026-09-09 R8 SELLING_PRESSURE_EASING / WAIT -> 2026-09-10 R9 DOWNTREND / AVOID. Research-only same-series reference-low/return/MAE/MFE/false-start fields require an explicit internal price-series identity. No Daily, provider/network call, runtime/database write, classifier/policy change, authority promotion, probability, or successor V2; queued_next remains empty and Daily Brief acceptance remains DEFERRED / NOT_FAILED. Artifact: operations-review/historical-tactical-replay-evidence-foundation-v1-20260910/."
+    },
     {
       "milestone_id": "TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1",
       "state": "COMPLETE",

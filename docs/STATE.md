@@ -1,5 +1,39 @@
 # Stock Lookup — Operational State
 
+**Historical tactical replay evidence foundation V1 (2026-09-10):**
+`HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1 = COMPLETE /
+RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED`. This owner-authorized local-only
+foundation reconstructs the minimum compatible descriptive/screening/fundamental input shapes for
+the unchanged `watchlist_tactical_entry_classifier.build_artifact()` from a provider-scoped
+DNSE OHLCV cohort in the explicit dashboard runtime. It reads `vn_stock.db` through SQLite
+`mode=ro`, freezes only the 26,291 selected OHLCV rows and matching lineage rows used for the
+16 20-session T0 windows (rather than copying or hashing the whole mutable DB), then derives
+technical features with the existing `mva_daily_research_bundle.market_features()` and uses the
+existing screening and classifier modules without a copied rule table. SSI and PNJ now replay
+across every retained trading session from 2026-07-20 through 2026-08-10 (32 representative
+rows) as `RETROSPECTIVE_RESEARCH_RECONSTRUCTION`; none is PIT-qualified because selected DNSE
+lineage is observed/retrieved on 2026-08-25 and the price basis remains
+`ADJUSTED_RETROSPECTIVE`. Sector metadata (first locally updated 2026-08-14) and later
+fundamental/corporate-event context are not borrowed into July: both stay explicitly
+`NOT_RECONSTRUCTABLE`, never neutral defaults.
+
+The retrospective same-series timing read is research-only: SSI's retained reference close low
+is 17.59 on 2026-07-27 and PNJ's is 30.75 on 2026-07-24. The first retained easing state is SSI
+2026-07-21 and PNJ 2026-07-27; neither has an `EARLY_ENTRY` nor `BUY_ON_CONFIRMATION` in this
+window, so no MAE/MFE or false-start result is manufactured. Same-basis return/timing calculations
+require an explicit internal DNSE retrospective-series identity and remain non-PIT. R6 remains
+the existing classifier's rule: its output records the 20-day momentum sign and only the existing
+independent market/sector/positive-return-plus-relative-volume confirmation; positive momentum
+without confirmation remains the existing R6B outcome. The exact retained PAN control replays
+unchanged: 2026-09-09 `SELLING_PRESSURE_EASING / WAIT / R8` becomes 2026-09-10
+`DOWNTREND / AVOID / R9`.
+
+Artifact: `operations-review/historical-tactical-replay-evidence-foundation-v1-20260910/`.
+No provider/network call, Daily/runtime/database mutation, classifier/policy modification,
+Integrated Decision/Portfolio change, price-basis/RAW_AS_TRADED/PIT authority promotion,
+liquidity/execution/sizing change, probability, or classifier V2 occurred. Daily Brief acceptance
+remains `DEFERRED / NOT_FAILED`.
+
 **Tactical reversal retrospective validation V1 (2026-09-10):**
 `TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1 = COMPLETE / HISTORICAL_TIMING_DIAGNOSTIC_READY /
 POLICY_UNCHANGED`. This owner-authorized, retained-data-only consumer calls the existing

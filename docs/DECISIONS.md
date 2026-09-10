@@ -1,5 +1,40 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-10 - Historical Tactical Replay Evidence Foundation V1
+
+`HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1 = COMPLETE /
+RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED`. Owner authorization records a
+bounded exception to the empty roadmap queue, not a successor-policy inference. The foundation is
+not a second technical engine: it calls the existing `mva_daily_research_bundle.market_features`,
+`current_market_screening_opportunity_comparison_foundation.build_artifact`, and
+`watchlist_tactical_entry_classifier.build_artifact` contracts. The runner takes explicit
+runtime and retained-evidence roots, opens the runtime's `vn_stock.db` in query-only SQLite
+mode, and writes only its newly generated checkout-local review artifact.
+
+Because the runtime DB is mutable, it retains the exact content of only rows consumed by a
+provider-scoped DNSE T0 cohort and its preceding 20 completed DB sessions. The freeze carries a
+deterministic selected-row/lineage identity; it neither retains nor hashes the whole database.
+For the July 20 through August 10 SSI/PNJ replay this produces 16 historical sessions and 32
+representative classifier rows. Each is `RETROSPECTIVE_RESEARCH_RECONSTRUCTION`, not
+`PIT_QUALIFIED_RECONSTRUCTION`: source lineage records retrieval on 2026-08-25, and the price
+basis is current retrospective adjusted. The foundation intentionally refuses to use locally
+later sector metadata or later fundamental/corporate-event context as though it were known at T0.
+They are explicit `NOT_RECONSTRUCTABLE` inputs, never fabricated neutral values.
+
+Same-series reference-low, return, MAE/MFE, and lower-low checks are permitted only inside the
+declared local DNSE adjusted-retrospective series; they are reported as research-only and do not
+restore raw/PIT/backtest authority. SSI's window low is 2026-07-27 and PNJ's is 2026-07-24; no
+early-entry or confirmation action occurs for either, so the outcome is absence of that signal,
+not a bottom claim. R6 evidence records the unchanged classifier result, the momentum sign, and
+the existing independent confirmation paths; R6B remains the only positive-momentum/no-confirmation
+result. The exact retained PAN control proves the unchanged 2026-09-09 R8 easing/wait to
+2026-09-10 R9 downtrend/avoid transition.
+
+No provider/API/network call, Daily execution, runtime/database write, classifier-policy change,
+Integrated Decision or portfolio mutation, price-basis/RAW_AS_TRADED/PIT promotion,
+liquidity/execution/sizing change, score, probability, target, or successor V2 was authorized or
+performed. Daily Brief acceptance remains `DEFERRED / NOT_FAILED`.
+
 ## 2026-09-10 - Tactical Reversal Retrospective Validation V1
 
 `TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1 = COMPLETE / HISTORICAL_TIMING_DIAGNOSTIC_READY /

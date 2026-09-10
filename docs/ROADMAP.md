@@ -1,5 +1,23 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Historical tactical replay evidence foundation V1 (2026-09-10):**
+`HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1 = COMPLETE /
+RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED`. The bounded local foundation
+reads the explicitly supplied dashboard runtime's mutable `vn_stock.db` only with SQLite
+`mode=ro`, freezes its exact provider-scoped selected rows and lineage content-addressably, and
+then calls the existing technical-feature, screening, and tactical-classifier implementations.
+It never copies R1–R9. SSI/PNJ are reconstructable for all 16 retained trading sessions from
+2026-07-20 through 2026-08-10, but only as `RETROSPECTIVE_RESEARCH_RECONSTRUCTION`: the selected
+DNSE lineage was observed on 2026-08-25 and its adjusted-retrospective price series has no PIT or
+raw-as-traded promotion. Later sector metadata and fundamental/corporate context are rejected
+rather than projected backward, so those inputs remain explicitly not reconstructable. The PAN
+exact-control replay preserves the existing 2026-09-09 R8 easing/wait to 2026-09-10 R9
+downtrend/avoid transition. Same-series reference-low/return/false-start fields are research-only
+and require a declared same-series identity. Artifact:
+`operations-review/historical-tactical-replay-evidence-foundation-v1-20260910/`. No Daily,
+provider/network, database/runtime write, authority/policy change, probability, or successor
+classifier milestone; Daily Brief acceptance remains `DEFERRED / NOT_FAILED`.
+
 **Tactical reversal retrospective validation V1 (2026-09-10):**
 `TACTICAL_REVERSAL_RETROSPECTIVE_VALIDATION_V1 = COMPLETE / HISTORICAL_TIMING_DIAGNOSTIC_READY /
 POLICY_UNCHANGED`. The new retained-evidence diagnostic replays registry-locked snapshots only by
