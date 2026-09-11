@@ -1,5 +1,48 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-11 - Tactical Reversal Shadow Probe Policy V1
+
+`TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1 = COMPLETE / SHADOW_ONLY / PRODUCTION_POLICY_UNCHANGED`.
+Owner authorization records a bounded exception to the empty roadmap queue, not a
+successor-policy inference. This wires only the two candidates the counterfactual evaluation
+supported (momentum-bucket R8 subset, two-session R8 persistence) as a read-only annotation
+layer over the unchanged, already-produced classifier output; Candidate C stays excluded and
+named, never silently dropped or reintroduced. `tactical_reversal_shadow_probe_policy.py`
+imports and calls `tactical_reversal_probe_policy_counterfactual_evaluation.evaluate_candidate`
+directly rather than re-deriving the two candidates' conditions, so the shadow layer is
+structurally incapable of drifting from the evaluated policy without also changing the
+evaluation module those functions were validated against.
+
+Every shadow record is an annotation, not a signal: it echoes the source classifier's
+`entry_state`/`entry_action`/`rule_id` read-only, never invokes the classifier, and never
+computes or emits a probability, target price, or sizing quantity. Three distinct "cannot
+confirm" states are kept apart rather than collapsed: `NOT_EVALUABLE` (the source classifier
+itself had no technical-feature-based state that session, R0), `PARTIALLY_UNEVALUABLE`/
+`UNEVALUABLE` (one or both candidate dimensions could not be confirmed -- chiefly persistence
+without a retained adjacent prior session), and a genuine prior-session gap versus a caller that
+never attempted the lookup at all, which carry different reason codes precisely so a future
+caller cannot mistake "we don't know" for "no". PAN's real retained 2026-09-08/09/10 signals are
+locked in as an exact regression fixture: the shadow layer reproduces
+`NOT_PROBE_ELIGIBLE` for PAN's 2026-09-09 episode for the same reasons the counterfactual
+evaluation found (momentum bucket below the upper half; the immediately prior session was not
+itself R8), confirming the production wiring did not accidentally loosen anything the evaluation
+tightened.
+
+Runtime discovery was treated as a recoverable precondition rather than a separate milestone:
+the runner verifies `vn_stock.db` is present and opens read-only under the canonical
+`dashboard-runtime` path, optionally injects `STOCK_LOOKUP_RUNTIME_ROOT` into its own process
+only, and reports a missing database as an explicit blocker string rather than raising --
+though the shadow computation itself never needed to query the database further, since its
+inputs are already-retained real daily tactical artifacts. Two real sessions were run
+end-to-end (2026-09-09/08 and 2026-09-10/09) against genuine ~1,683-ticker retained artifacts,
+not synthetic fixtures, to confirm the wiring holds at production scale.
+
+No provider/API/network call, Daily execution, runtime/database write, classifier-policy
+change, Integrated Decision or portfolio mutation, price-basis/RAW_AS_TRADED/PIT promotion,
+liquidity/execution/sizing change, or probability/target output was authorized or performed.
+A supported shadow verdict is research-only and does not by itself authorize replacing R6 or
+turning R8 into a normal BUY/ADD state. Daily Brief acceptance remains `DEFERRED / NOT_FAILED`.
+
 ## 2026-09-11 - Tactical Reversal Probe Policy Counterfactual Evaluation V1
 
 `TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1 = COMPLETE /
