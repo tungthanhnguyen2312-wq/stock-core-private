@@ -88,6 +88,7 @@ from completed_market_session_gate import (
     resolve_latest_qualified_completed_session,
 )
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
+from daily_research_session_operations import load_registry
 from field_temporal_contract import stable_id
 from governed_publication_completion import PublicationCompletionError
 from vn_time import VN_TZ, vn_now

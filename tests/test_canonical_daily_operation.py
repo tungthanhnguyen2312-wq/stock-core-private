@@ -253,6 +253,53 @@ def test_canonical_producer_receives_explicit_preseal_brief_builder(monkeypatch,
     }
 
 
+def test_production_call_shape_resolves_load_registry_without_nameerror(monkeypatch, tmp_path):
+    """Regression for the 2026-09-11 Daily release blocker.
+
+    canonical_daily_operation.py:691 calls ``load_registry(root)`` only when the caller
+    supplies neither ``producer_fn`` nor ``daily_integrated_decision_brief_builder`` --
+    exactly the real production shape used by stocklookup.py's Daily entrypoint. Every
+    other test in this file routes through ``_run()``, which always injects a
+    ``producer_fn`` and therefore never reaches this branch; it was reachable only by a
+    genuine production run, which is how commit 354361b shipped a call to
+    ``load_registry`` with no corresponding import and stayed green through CI.
+    """
+    _patch_downstream(monkeypatch, tmp_path)
+    runtime = tmp_path / "runtime"
+    _write_runtime(runtime, SESSION)
+    registry_path = tmp_path / "config" / "daily_research_session_input_registry.json"
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(json.dumps({
+        "contract_version": "daily_research_session_input_registry/v1",
+        "completed_sessions": {},
+    }), encoding="utf-8")
+
+    captured: dict = {}
+
+    def fake_run_daily_producer(*_args, **kwargs):
+        captured["daily_integrated_decision_brief_builder"] = kwargs.get("daily_integrated_decision_brief_builder")
+        return _producer(tmp_path, SESSION)
+
+    monkeypatch.setattr(cdo, "run_daily_producer", fake_run_daily_producer)
+
+    record = cdo.run_canonical_daily_operation(
+        tmp_path, runtime, SESSION,
+        now=POST_CLOSE, complete_publication=False,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+        exact_session_evidence=None,
+        acquire_fn=lambda *a, **k: _acquired(tmp_path, SESSION),
+        producer_fn=None,
+        runtime_fn=lambda *a, **k: {"session": SESSION, "live_count": 889},
+        trusted_fn=lambda *a, **k: {"session": SESSION, "trusted_subset_ready": True, "records_fingerprint": "fp"},
+        publication_runner=None,
+        out_dir=tmp_path / "operations-review",
+    )
+
+    assert record is not None
+    assert "daily_integrated_decision_brief_builder" in captured
+    assert callable(captured["daily_integrated_decision_brief_builder"])
+
+
 def test_sunday_auto_resolves_latest_governed_completed_session_without_floor(monkeypatch, tmp_path):
     sunday = datetime(2026, 8, 30, 13, 0, tzinfo=VN_TZ)
     target = "2026-08-28"
