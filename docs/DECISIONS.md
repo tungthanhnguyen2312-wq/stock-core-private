@@ -1,5 +1,54 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-11 - Tactical Reversal Probe Policy Counterfactual Evaluation V1
+
+`TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1 = COMPLETE /
+EVIDENCE_SUPPORTS_SHADOW_PROBE_POLICY / PRODUCTION_POLICY_UNCHANGED`. Owner authorization
+records a bounded exception to the empty roadmap queue, not a successor-policy inference. This
+is deliberately not a fourth evidence foundation: it reuses
+`historical_tactical_replay_evidence_foundation`'s sqlite-freeze and its existing
+descriptive/screening/classifier composition unmodified, widening only which candidate tickers
+are retained per session (every T0 candidate, not a fixed representative pair) and the target
+session range (2026-07-01 through 2026-08-25, the full local DNSE evidence window -- September
+data does not exist locally beyond 2026-08-25, so the cohort could not be extended into it
+without a provider call, which is out of scope).
+
+Three shadow candidate policies were defined as pure functions of one session's own
+classifier-produced `rule_id`/`signals` plus, for one candidate, the immediately adjacent prior
+reconstructed session's own `rule_id` for the same ticker -- never a later observation. Outcome
+evaluation (reference-low distance, session lag, MAE/MFE at T5/T10/T20, confirmation lag to
+R6/R3/R2) is applied strictly after a signal is already decided and may use later same-series
+rows only as a research label, matching the existing foundation's own convention. The decision
+function reports four named criteria per candidate individually rather than combining them into
+one weighted score: a materially earlier median confirmation lag than waiting for R6, a
+materially lower T10 false-start rate than the full R8 population the candidate subsets
+(proving the extra condition filters rather than merely inherits R8's own baseline risk), a
+materially better T10 MAE than that same baseline, and -- decisively -- whether the candidate
+would mark PAN's exact retained 2026-09-09 `SELLING_PRESSURE_EASING`/`WAIT`/R8 episode (reused
+unchanged from `HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1`, which deteriorated to
+2026-09-10 `DOWNTREND`/`AVOID`/R9 the next session) `PROBE_ELIGIBLE`.
+
+An earlier draft of the decision function compared each candidate only against a loose margin
+on its own T10 lower-low rate and required no comparison to the R8 population it was drawn
+from; under that draft all three candidates were nominally "supported," including the one whose
+volume/return arm is the exact arm that would have flagged PAN's real false start eligible. That
+was rejected as an insufficiently discriminating bar -- filtering R8 down to a stricter subset
+that shows the *same* MAE/MFE/false-start profile as the full R8 population it came from is not
+evidence the subset is doing anything useful. The revised, adopted criteria require each
+candidate to show a real, named improvement over the full R8 baseline it subsets, and explicitly
+gate on the PAN control case rather than only on aggregate cohort statistics. Under the adopted
+criteria, the momentum-bucket-subset and two-session-persistence candidates clear every bar and
+correctly exclude PAN; the volume/return/no-breakdown-quartile candidate fails the false-start
+margin and flags PAN's real false start -- exposed, not hidden, exactly as required. Terminal
+decision: `EVIDENCE_SUPPORTS_SHADOW_PROBE_POLICY` for the first two candidates only. This does
+not authorize replacing R6, does not turn R8 into a normal BUY/ADD state, introduces no sizing
+formula, and does not by itself queue a successor milestone.
+
+No provider/API/network call, Daily execution, runtime/database write, classifier-policy change,
+Integrated Decision or portfolio mutation, price-basis/RAW_AS_TRADED/PIT promotion,
+liquidity/execution/sizing change, or probability/target output was authorized or performed.
+Daily Brief acceptance remains `DEFERRED / NOT_FAILED`.
+
 ## 2026-09-10 - Historical Tactical Replay Evidence Foundation V1
 
 `HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1 = COMPLETE /

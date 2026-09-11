@@ -1,5 +1,71 @@
 # Stock Lookup — Operational State
 
+**Tactical reversal probe policy counterfactual evaluation V1 (2026-09-11):**
+`TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1 = COMPLETE /
+EVIDENCE_SUPPORTS_SHADOW_PROBE_POLICY / PRODUCTION_POLICY_UNCHANGED`. This owner-authorized,
+research-only counterfactual evaluation asks whether R8 `SELLING_PRESSURE_EASING`'s
+conservatism versus R6 `EARLY_REVERSAL_CANDIDATE` is costing useful early-entry timing, using
+a broad cohort rather than the two-ticker SSI/PNJ anecdote. It creates no new evidence
+foundation: `tactical_reversal_probe_policy_counterfactual_evaluation.py` reuses
+`historical_tactical_replay_evidence_foundation`'s sqlite-freeze and existing
+descriptive/screening/classifier composition unmodified, but retains every T0 candidate
+ticker per session instead of narrowing to a fixed representative pair. Cohort: 893 tickers,
+40 sessions (2026-07-01 through 2026-08-25, the full local DNSE evidence window; September
+data does not exist locally beyond 2026-08-25), 30,436 total candidate classifier signals,
+2,133 control R8 episodes, 400 control R6 episodes -- no session exclusions.
+
+Three T0-only shadow candidates were evaluated against the unchanged classifier as control:
+(A) R8 restricted to the market-relative-momentum-upper-half confirmation arm only, dropping
+R8's weaker today-positive-only arm; (B) R8 required on two consecutive reconstructed
+sessions before `PROBE_ELIGIBLE`; (C) R8 plus elevated relative volume and a positive same-day
+return, excluding the bottom-quartile momentum breakdown cohort. Each was scored against four
+named, individually reported criteria -- never a blended score: materially earlier median
+session-lag to eventual R6/R3/R2 confirmation than waiting for R6 (>=2 sessions, >=30 episodes);
+a materially lower T10 lower-low ("false start") rate than the full R8 population each
+candidate subsets (>=5 points lower); a materially better T10 MAE than that same baseline
+(>=0.5 points); and, critically, not marking PAN's exact retained 2026-09-09
+`SELLING_PRESSURE_EASING`->`WAIT`/R8 episode (which deteriorated to 2026-09-10
+`DOWNTREND`/`AVOID`/R9 the very next session, reused unchanged from
+`HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1`'s PAN control) as `PROBE_ELIGIBLE`.
+Candidates A and B clear all four criteria (median confirmation lag 8 and 10 sessions; T10
+false-start rate 75.3%/72.4% vs the full-R8 baseline's 80.5%; T10 MAE -3.13%/-3.01% vs
+baseline -4.25%; both correctly exclude PAN). Candidate C fails both the false-start-rate
+margin (76.0%, inside the +5pp tolerance) and the PAN check -- its volume+return arm flags
+PAN's real 2026-09-09 easing session eligible, exactly the false start the milestone asked
+candidates to expose rather than be designed around. Terminal decision:
+`EVIDENCE_SUPPORTS_SHADOW_PROBE_POLICY` (candidates A and B only). This does not authorize
+replacing R6 or turning R8 into a normal BUY/ADD state; a later milestone may introduce a
+distinct `PROBE_ELIGIBLE` research posture below normal `EARLY_ENTRY`, routed through existing
+Portfolio risk policy, with no sizing formula implied here.
+
+SSI/PNJ case studies over the same reconstructed window reproduce
+`HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1`'s own figures exactly (SSI reference low
+17.59 on 2026-07-27, first easing 2026-07-21; PNJ reference low 30.75 on 2026-07-24, first
+easing 2026-07-27); neither ever reaches `EARLY_REVERSAL_CANDIDATE` inside the decline window,
+confirming the original finding is not an artifact of the narrow two-ticker sample. Candidate B
+fires on SSI's third day of a three-session R8 persistence run (07-29/07-30) and PNJ's
+08-04/08-05 run; Candidate A never fires for either ticker (their R8 episodes never carry
+upper-half market-relative momentum); Candidate C fires once for SSI (07-23) and never for
+PNJ. All price/return calculations remain `ADJUSTED_RETROSPECTIVE` /
+`LOCAL_DNSE_ADJUSTED_RETROSPECTIVE_SELECTED_SERIES`, same-basis-enforced, and non-PIT;
+reference lows and MAE/MFE use later same-series observations strictly as research labels,
+never fed back into signal generation. 26 new focused tests prove T0-only triggering (an
+injected "future" field never changes a verdict), that the existing classifier is invoked
+unchanged (mocked with `wraps=`), that PAN's retained transition and per-candidate verdicts on
+it are locked as an explicit regression fixture, deterministic repeated builds, and the four
+decision criteria's branch logic including the PAN-veto path. Zero regression: 74 tests /
+54 subtests pass unchanged across the three prerequisite foundations
+(`test_watchlist_tactical_entry_classifier.py`, `test_historical_tactical_replay_evidence_foundation.py`,
+`test_tactical_reversal_retrospective_validation.py`, `test_price_basis_feature_fitness.py`,
+`test_feature_input_fitness_contract.py`). `py_compile`, `git diff --check`, and
+`tools/stocklookup_roadmap.py --check` (drift PASS) are all clean.
+
+Artifact: `operations-review/tactical-reversal-probe-policy-counterfactual-evaluation-v1-20260911/`.
+No classifier/policy modification, provider/network call, Daily/runtime/database mutation,
+Integrated Decision/Portfolio change, price-basis/RAW_AS_TRADED/PIT authority promotion,
+liquidity/execution/sizing change, probability output, or classifier V2 queuing occurred. Daily
+Brief acceptance remains `DEFERRED / NOT_FAILED`.
+
 **Historical tactical replay evidence foundation V1 (2026-09-10):**
 `HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1 = COMPLETE /
 RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED`. This owner-authorized local-only
