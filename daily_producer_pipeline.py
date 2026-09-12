@@ -16,6 +16,7 @@ from typing import Any, Callable, Mapping
 
 from daily_session_shadow_recommendation import DailySessionShadowRecommendationError, resolve_or_build as resolve_or_build_daily_session_shadow_recommendation
 from daily_research_session_operations import load_registry, resolve_inputs, run_session_operation, validate_coherence
+from canonical_current_product_projections import materialize_and_write_current_product_projections
 from field_temporal_contract import stable_id
 from vn_time import VN_TZ, vn_now
 
@@ -300,6 +301,17 @@ def run_daily_producer(
         daily_integrated_decision_brief_builder=daily_integrated_decision_brief_builder,
     )
     parity = _verify_delivery(operation, operation_dir)
+    # Current-product projections (Investment Decision Workspace, Screener Master Projection):
+    # optional, non-blocking step, exactly like the macro-refresh step in
+    # canonical_daily_operation.py -- a failure here must never block core Daily, the decision
+    # cockpit, or AI handoff. Reuses the same registry-resolved `inputs` already validated above
+    # (no extra file search); writes into `operation_dir`, the same Daily Research Session
+    # Operation directory `dashboard_release_publisher.py` already reads
+    # `current_decision_cockpit_projection.json` from. See canonical_current_product_projections.py.
+    current_product_projections = materialize_and_write_current_product_projections(
+        root=root, session=selected, operation_dir=operation_dir, registry_inputs=inputs,
+        requested_at=vn_now().isoformat(timespec="seconds"),
+    )
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])
     run_dir = output_root / selected / run_identity.split(":", 1)[1]
     existing_run = (run_dir / "run_manifest.json").exists()

@@ -85,3 +85,8 @@ jobs:
           tests/test_macro_sync_source_fetchers.py
           tests/test_macro_import_containment.py
           tests/test_dashboard_domain_freshness.py
+          tests/test_canonical_current_product_projections.py
+          tests/test_investment_decision_workspace_projection.py
+          tests/test_screener_master_projection.py
+          tests/test_current_valuation_opportunity_integration.py
+          tests/test_dashboard_release_publisher.py

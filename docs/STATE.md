@@ -1,5 +1,85 @@
 # Stock Lookup — Operational State
 
+**Canonical current-product projections and Dashboard binding V1 (2026-09-12):**
+`CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1 = COMPLETE_LOCAL`.
+`RELEASE_NOT_YET_AUTHORIZED` -- owner-authorized bounded implementation milestone, local
+checkpoint only, not pushed. Root cause: `investment_decision_workspace_projection.json` and
+`screener_master_projection.json`/`.js` were each materialized exactly once, by a hand-run,
+milestone-dated tool (`tools/run_investment_decision_workspace_projection.py`,
+`tools/run_screener_master_projection.py`) hardcoding a specific historical session and a list
+of specific dated `operations-review/...` search paths -- never wired into
+`canonical_daily_operation.py`/`daily_producer_pipeline.py`, so both products stayed frozen at
+`as_of_session=2026-08-28` while the Dashboard release session moved on to 2026-09-11 (found by
+the prior Dashboard-side `DASHBOARD_CURRENT_SESSION_SURFACE_COHERENCE_AND_RELEASE_CONTRACT_V1`
+milestone, which correctly stopped the stale artifacts from displaying as current but could not
+fix the Producer-side gap under its own Dashboard-repo, read-only-Producer scope).
+
+**`SCREENER_MASTER = RECURRING_CURRENT_PRODUCT`, `INVESTMENT_WORKSPACE = RECURRING_CURRENT_
+PRODUCT`.** New `canonical_current_product_projections.py` is the clean, session-parametric
+materialization boundary the historical tools were never designed to be: zero search, zero
+hardcoded session. Every input is either reused already-loaded from
+`daily_research_session_operations.resolve_inputs()`'s own registry-governed selection for the
+current session (`tactical`/`watchlist_tactical_entry_classifier`,
+`valuation`/`market_wide_current_valuation`, optional `event_context`/`official_universe`), or
+resolved via one explicit, deterministic per-session path formula
+(`resolve_supplementary_inputs`: `liquidity`/`market_wide_current_liquidity_research`,
+`leadership`/`current_market_sector_leadership_context`, `financial_analysis_product_v2`) --
+never a glob, a latest-mtime search, or a fallback to a different session's file. A missing
+axis at its one deterministic path is `None` (a legitimately unavailable optional axis, not an
+error and not a substitute). Wired into `daily_producer_pipeline.py::run_daily_producer()`
+immediately after `run_session_operation()` returns, writing into the same Daily Research
+Session Operation directory `dashboard_release_publisher.py` already reads
+`current_decision_cockpit_projection.json` from -- fully non-blocking (wrapped, never raises;
+a failure reports `status: SKIPPED`, exactly like the existing macro-refresh step) so core
+Daily, the decision cockpit, and AI handoff can never be blocked by this optional step.
+
+**`ONE_OFF_HISTORICAL_TOOLS = RETAINED_FOR_REPRODUCIBILITY_ONLY`.**
+`tools/run_investment_decision_workspace_projection.py` and
+`tools/run_screener_master_projection.py` are untouched and still work exactly as before, for
+manual historical reproduction; neither is called by the new canonical path.
+
+**`DASHBOARD_PRODUCT_FRESHNESS = DERIVED_FROM_PRODUCT_ARTIFACT`.**
+`dashboard_release_publisher.py` previously declared `domains.screening = CURRENT` unconditionally
+from the existence of the core screen-snapshot artifacts, with no reference to
+`screener_master_projection` at all. Two new domains, `investment_workspace` and
+`screener_master`, are now each derived strictly from their OWN payload's `as_of_session`
+matching the release session (the same session-gated pattern already used for `cockpit`): a
+stale or absent product is `UNAVAILABLE` with an explicit reason code, and any existing
+web-root file is removed rather than left as a silent stale carry-forward -- a 2026-08-28
+artifact can never again be copied into a 2026-09-11 release and labeled `CURRENT`. The
+existing `screening` domain (screen_snapshot/breadth currency) is unchanged and kept distinct,
+avoiding duplicate/confusing semantics. Both new artifacts are added to
+`DASHBOARD_RELEASE_ALLOWLIST`, so `build_info.json`'s `files` manifest hashes/registers them
+automatically whenever they are actually bound.
+
+**Retained 2026-09-11 replay qualification** (no network, no provider acquisition -- see
+`docs/canonical_current_product_projections_replay_20260912.md` for full stats/lineage):
+`RETAINED_2026_09_11_WORKSPACE = CURRENT` (`as_of_session=2026-09-11`, denominator 1,683, zero
+silent drops), `RETAINED_2026_09_11_SCREENER_MASTER = CURRENT` (`as_of_session=2026-09-11`,
+denominator 1,683, zero duplicates, JSON/JS pair identity-matched). **Known, disclosed
+limitation, not a regression**: `market_wide_fundamental_feature_store` and
+`tactical_behavior_context` have no recurring canonical-runtime source at all (each exists only
+as a single 2026-08-31 snapshot inside a now-detached feature worktree); both are passed as
+`None` rather than reached into fragile worktree-local paths, which is why the Workspace's
+top-level `research_stance`/`entry_state` decision fields currently resolve to
+`INSUFFICIENT_EVIDENCE`/`NONE` for every ticker even though every other axis (valuation,
+tactical entry-state via `watchlist`, liquidity, sector leadership, financial V2, official
+universe) is exact-session or a disclosed stale-but-usable snapshot exactly like the existing
+catalyst-axis precedent. Recommended follow-up (separate, later, not opened here): a recurring
+materializer for those two specific axes, matching the pattern this milestone established for
+the other three.
+
+Tests: 16 new (`tests/test_canonical_current_product_projections.py`, one retained-evidence
+replay test that skips gracefully without local `operations-review` evidence), all existing
+`investment_decision_workspace_projection`/`screener_master_projection`/
+`current_valuation_opportunity_integration`/`dashboard_release_publisher`/
+`daily_producer_pipeline` suites pass unmodified (3 pre-existing worktree-local
+retained-evidence gaps confirmed present in the primary checkout too, unrelated to this
+milestone). Full W1-W4 focused-regression command (393 tests) reproduces green locally.
+`py_compile`, JSON parse, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift
+`PASS`) all clean. No production analytical behavior, provider/source authority, or
+recommendation semantics changed anywhere. Not pushed; Dashboard not published.
+
 **Macro network governance and VNStock decoupling RELEASE V1 (2026-09-12):**
 `MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_RELEASE_V1 = COMPLETE`. `HOSTED_PRODUCER_CI =
 PASS`. Releases local implementation checkpoint `4e406fe55ff2357eea24c1715969d78905187042` to
