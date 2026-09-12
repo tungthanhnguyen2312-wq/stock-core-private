@@ -141,6 +141,27 @@ class UnchangedProductionOutputTests(unittest.TestCase):
         self.assertTrue(result["no_probability_target_or_sizing_emitted"])
         self.assertEqual(result["authority"], "SHADOW_ONLY / NOT_PRODUCTION_POLICY")
 
+    def test_future_injected_field_never_changes_the_t0_shadow_result(self):
+        """A field no evaluator declares (e.g. a later-session outcome smuggled onto the
+        record) must never change shadow_disposition/candidate_verdicts -- this is the
+        record-level analogue of the underlying evaluate_candidate() T0-only guarantee
+        tested directly in test_tactical_reversal_probe_policy_counterfactual_evaluation.py.
+        """
+        current = _classifier_record(rule_id=R8, momentum_bucket="LOWER_MIDDLE", elevated_volume=False, return_1d=-0.01)
+        prior = _classifier_record(rule_id=R8, momentum_bucket="LOWER_MIDDLE")
+        baseline = shadow.evaluate_shadow_probe(ticker="XXX", session="2026-09-09", current_record=current, prior_record=prior)
+
+        adversarial_current = copy.deepcopy(current)
+        adversarial_current["future_outcome_lower_low"] = True
+        adversarial_current["next_session_rule_id"] = "R9_DOWNTREND_DEFAULT"
+        adversarial_prior = copy.deepcopy(prior)
+        adversarial_prior["future_outcome_lower_low"] = True
+        mutated = shadow.evaluate_shadow_probe(
+            ticker="XXX", session="2026-09-09", current_record=adversarial_current, prior_record=adversarial_prior,
+        )
+        self.assertEqual(baseline["shadow_disposition"], mutated["shadow_disposition"])
+        self.assertEqual(baseline["candidate_verdicts"], mutated["candidate_verdicts"])
+
     def test_evaluate_shadow_probe_never_invokes_the_classifier(self):
         self.assertNotIn("watchlist_tactical_entry_classifier", shadow.__dict__)
         import inspect
