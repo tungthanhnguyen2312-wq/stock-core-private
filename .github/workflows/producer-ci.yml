@@ -14,7 +14,16 @@ jobs:
     name: Structural contracts
     runs-on: ubuntu-latest
     steps:
+      # Full history is required here: tools/stocklookup_roadmap.py --check resolves every
+      # milestone's recorded checkpoint commit against the local Git object store
+      # (roadmap_execution_state.py's resolve_checkpoint -> `git cat-file -t <checkpoint>`).
+      # actions/checkout@v4 defaults to a shallow (depth-1) clone, which contains only the
+      # tip commit -- every historical checkpoint then reports ROADMAP_CHECKPOINT_NOT_IN_GIT
+      # even though it genuinely exists in the real repository. fetch-depth: 0 fetches full
+      # history so the check runs against the same object store a local clone would have.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'

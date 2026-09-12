@@ -1,5 +1,19 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - Producer CI Hosted-Run Corrective (Shallow-Checkout Roadmap Check)
+
+`PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_RELEASE_V1` corrective. The first hosted
+Producer CI run (`origin/main = 036f206`) failed its `structural` job: `tools/
+stocklookup_roadmap.py --check` reported `ROADMAP_CHECKPOINT_NOT_IN_GIT` for every historical
+milestone checkpoint. Reproduced locally with a `git clone --depth 1` of the same commit: `git
+cat-file -t <checkpoint>` fails for every pre-existing commit because `actions/checkout@v4`
+defaults to a shallow (depth-1) clone, which contains only the tip commit's tree -- not a
+product defect (every checkpoint genuinely resolves in a normal full clone). Category A CI/
+fixture defect. Fix: added `with: {fetch-depth: 0}` to the `structural` job's checkout step in
+`.github/workflows/producer-ci.yml` only; no production analytical module, test, or other job
+changed. The `focused-regressions` and `production-call-shape-smoke` jobs already passed on the
+first hosted run and needed no change.
+
 ## 2026-09-12 - Producer CI and Production Call-Shape Hardening V1
 
 `PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1 = COMPLETE`.
