@@ -1075,6 +1075,61 @@ def run_prospective_collection(
     return {"status": "COLLECTED", "stdout": result.stdout, "snapshot": snapshot, "path": str(output), "decision_feedback": feedback}
 
 
+SHADOW_COLLECTION_COMPLETE = "SHADOW_COLLECTION_COMPLETE"
+SHADOW_COLLECTION_SKIPPED_NO_ELIGIBLE_ARTIFACT = "SHADOW_COLLECTION_SKIPPED_NO_ELIGIBLE_ARTIFACT"
+SHADOW_COLLECTION_FAILED = "SHADOW_COLLECTION_FAILED"
+
+
+def run_tactical_reversal_shadow_collection(
+    root: Path, session: str, *, artifact_root: Path | None = None, output_root: Path | None = None,
+) -> dict[str, Any]:
+    """Post-hoc, non-blocking tactical-reversal shadow-probe observation collection.
+
+    Mirrors ``run_prospective_collection``'s isolation contract exactly: a failure here
+    never revises the completed Daily Producer result, never re-invokes the production
+    classifier, and never acquires market data -- it consumes only the already-produced,
+    already-retained ``watchlist_tactical_entry_classifier`` artifact for ``session``. If
+    that artifact was never retained for this session (e.g. Daily ran without a tactical
+    axis, or this is a non-trading/degraded session), collection is explicitly skipped
+    rather than attempted against synthesized input. See
+    ``TACTICAL_REVERSAL_SHADOW_COLLECTION_OPERATIONALIZATION_V1``.
+
+    This is a distinct subsystem from ``run_prospective_collection`` above (which admits
+    Decision-Workspace research theses into ``durable_prospective_research_case_store``);
+    the two are unrelated and intentionally keyed under different result names so neither
+    silently shadows the other.
+    """
+    artifact_root = artifact_root or root
+    output_root = output_root or root
+    paths = level2.session_artifact_paths(artifact_root, session)
+    tactical_path = paths.get("tactical_classifier")
+    if not isinstance(tactical_path, Path) or not tactical_path.is_file():
+        return {
+            "status": SHADOW_COLLECTION_SKIPPED_NO_ELIGIBLE_ARTIFACT,
+            "session": session,
+            "reason": "TACTICAL_CLASSIFIER_ARTIFACT_NOT_RETAINED_FOR_SESSION",
+        }
+    store_root = output_root / "operations-review" / "tactical-reversal-prospective-shadow-collection-v1"
+    cmd = [
+        sys.executable, "tools/run_tactical_reversal_prospective_shadow_collection.py",
+        "--retained-evidence-root", str(artifact_root), "--store-root", str(store_root), "--session", session,
+    ]
+    try:
+        result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
+    except OSError as exc:
+        return {"status": SHADOW_COLLECTION_FAILED, "session": session, "reason": f"{type(exc).__name__}:{exc}"}
+    if result.returncode != 0:
+        return {
+            "status": SHADOW_COLLECTION_FAILED, "session": session,
+            "reason": (result.stderr or result.stdout).strip()[-2000:],
+        }
+    try:
+        summary = json.loads(result.stdout)
+    except (json.JSONDecodeError, ValueError):
+        summary = None
+    return {"status": SHADOW_COLLECTION_COMPLETE, "session": session, "store_root": str(store_root), "summary": summary}
+
+
 def build_tiered_bundle(
     root: Path, session: str, *,
     acquisition: Mapping[str, Any], producer_result: Mapping[str, Any],

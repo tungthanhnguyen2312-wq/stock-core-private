@@ -30,10 +30,10 @@ if str(ROOT) not in sys.path:
 import tactical_reversal_prospective_shadow_collection as collection  # noqa: E402
 
 
-def _future_rows(retained_evidence_root: Path, ticker: str, sessions: list[str]) -> list[dict[str, Any]]:
+def _future_rows(ticker: str, sessions: list[str], artifacts_by_session: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for session in sessions:
-        artifact = collection.load_tactical_artifact(retained_evidence_root, session=session)
+        artifact = artifacts_by_session.get(session)
         record = None
         basis = None
         if artifact is not None:
@@ -73,27 +73,36 @@ def collect_session(
 
 
 def mature_all(*, retained_evidence_root: Path, store_root: Path) -> dict[str, Any]:
+    """Recompute every observation's outcome against currently-retained future sessions.
+
+    Loads every retained tactical artifact exactly once (not once per observation/session
+    pair -- ``discover_retained_tactical_sessions`` returns the *same, monotonically
+    growing* session list on every call, so an observation's future-session window can only
+    ever be recomputed larger or identical here, never smaller; a prior run's persisted
+    outcome is therefore always superseded by this run's recomputation whenever any future
+    session exists, making a separate "fall back to a previously-persisted outcome" pass
+    unnecessary rather than merely an optimization).
+    """
     sessions = collection.discover_retained_tactical_sessions(retained_evidence_root)
     latest = sessions[-1] if sessions else None
+    artifacts_by_session = {
+        session: collection.load_tactical_artifact(retained_evidence_root, session=session) for session in sessions
+    }
     store = collection.ProspectiveShadowObservationStore(store_root)
     outcomes_by_id: dict[str, Any] = {}
     matured = []
+    all_observations = []
     for observation_id in store.list_observation_ids():
         observation = store.load_observation(observation_id)
+        all_observations.append(observation)
         future_sessions = [item for item in sessions if item > observation["trigger_session"]]
         if not future_sessions:
             continue
-        rows = _future_rows(retained_evidence_root, observation["ticker"], future_sessions)
+        rows = _future_rows(observation["ticker"], future_sessions, artifacts_by_session)
         outcome = collection.mature_outcome(observation, rows, evaluation_as_of_session=latest)
         store.persist_outcome_update(observation_id, outcome)
         outcomes_by_id[observation_id] = outcome
         matured.append(observation_id)
-    all_observations = [store.load_observation(oid) for oid in store.list_observation_ids()]
-    for observation in all_observations:
-        if observation["observation_id"] not in outcomes_by_id:
-            latest_update = store.latest_outcome_update(observation["observation_id"])
-            if latest_update is not None:
-                outcomes_by_id[observation["observation_id"]] = latest_update
     status = collection.build_collection_status(all_observations, outcomes_by_id)
     return {"matured_observation_ids": matured, "collection_status": status}
 

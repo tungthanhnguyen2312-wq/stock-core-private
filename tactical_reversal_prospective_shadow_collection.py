@@ -109,30 +109,46 @@ def evidence_mode_for_session(trigger_session: str) -> str:
 # retained, never by calendar arithmetic and never synthesized.
 # --------------------------------------------------------------------------------------
 
-def discover_retained_tactical_sessions(retained_evidence_root: Path | str) -> list[str]:
-    """Sorted distinct session identifiers for every genuinely retained tactical artifact."""
+def _discover_retained_tactical_index(retained_evidence_root: Path | str) -> dict[str, Path]:
+    """Session -> the one retained artifact path that declares it.
+
+    Keyed by the artifact's own declared ``session`` field, never guessed from its
+    containing directory's date suffix. A real retained artifact can be rebuilt under a
+    directory named for the day it was rebuilt while still declaring the session it is
+    actually valid for -- observed in this repository's own retained evidence (the
+    ``watchlist-tactical-entry-decision-v1-20260823`` directory declares
+    ``"session": "2026-08-21"``). Guessing the path from the session string would silently
+    miss that artifact entirely. Two directories that ever declare the same session is
+    treated as ambiguous retained evidence and raises rather than silently picking one.
+    """
     root = Path(retained_evidence_root) / "operations-review"
-    sessions: set[str] = set()
+    index: dict[str, Path] = {}
     if not root.is_dir():
-        return []
+        return index
     for path in sorted(root.glob(TACTICAL_ARTIFACT_GLOB)):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
         session = data.get("session")
-        if isinstance(session, str):
-            sessions.add(session)
-    return sorted(sessions)
+        if not isinstance(session, str):
+            continue
+        if session in index and index[session] != path:
+            raise ProspectiveShadowCollectionError(
+                f"AMBIGUOUS_RETAINED_TACTICAL_SESSION:{session}:{index[session]}:{path}"
+            )
+        index[session] = path
+    return index
+
+
+def discover_retained_tactical_sessions(retained_evidence_root: Path | str) -> list[str]:
+    """Sorted distinct session identifiers for every genuinely retained tactical artifact."""
+    return sorted(_discover_retained_tactical_index(retained_evidence_root))
 
 
 def load_tactical_artifact(retained_evidence_root: Path | str, *, session: str) -> Mapping[str, Any] | None:
-    path = (
-        Path(retained_evidence_root) / "operations-review"
-        / f"watchlist-tactical-entry-decision-v1-{session.replace('-', '')}"
-        / "watchlist_tactical_entry_classifier_artifact.json"
-    )
-    if not path.is_file():
+    path = _discover_retained_tactical_index(retained_evidence_root).get(session)
+    if path is None or not path.is_file():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -356,6 +372,26 @@ class ProspectiveShadowObservationStore:
         updates = self.load_outcome_updates(observation_id)
         return updates[-1] if updates else None
 
+    def latest_outcome_updates_by_observation(self) -> dict[str, dict[str, Any]]:
+        """Read every outcome-update file exactly once and return each observation's latest.
+
+        ``load_outcome_updates``/``latest_outcome_update`` re-scan the entire outcomes
+        directory per observation_id -- correct but O(observations x outcome files), which
+        becomes prohibitive once a store holds many thousands of each (e.g. a bulk
+        historical-mapping run). This reads the directory once regardless of how many
+        distinct observations it covers.
+        """
+        latest: dict[str, dict[str, Any]] = {}
+        for path in sorted(self.outcomes_dir.glob("*.json")):
+            event = self._read_json(path)
+            observation_id = event.get("observation_id")
+            if not isinstance(observation_id, str):
+                continue
+            current = latest.get(observation_id)
+            if current is None or str(event.get("evaluation_as_of_session")) >= str(current.get("evaluation_as_of_session")):
+                latest[observation_id] = event
+        return latest
+
 
 # --------------------------------------------------------------------------------------
 # Future-outcome maturity.  Every horizon is counted in genuinely retained trading
@@ -510,34 +546,38 @@ def _cohort_key(observation: Mapping[str, Any]) -> str:
     return "R8_NEITHER"
 
 
+def _cohort_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    counts = {"A_ONLY": 0, "B_ONLY": 0, "A_AND_B": 0, "R8_NEITHER": 0, "NOT_R8_CONTROL_POPULATION": 0}
+    for row in rows:
+        counts[_cohort_key(row)] += 1
+    return counts
+
+
+def _horizon_maturity(
+    rows: Sequence[Mapping[str, Any]], outcomes_by_observation_id: Mapping[str, Mapping[str, Any]],
+) -> dict[str, dict[str, int]]:
+    tally: dict[str, dict[str, int]] = {name: {"MATURE": 0, "PENDING": 0, "UNEVALUABLE": 0} for name in HORIZONS}
+    for row in rows:
+        outcome = outcomes_by_observation_id.get(row["observation_id"])
+        for name in HORIZONS:
+            if outcome is None:
+                tally[name]["PENDING"] += 1
+                continue
+            status = outcome["horizons"][name]["status"]
+            if status == "MATURE":
+                tally[name]["MATURE"] += 1
+            elif status == PENDING_HORIZON:
+                tally[name]["PENDING"] += 1
+            else:
+                tally[name]["UNEVALUABLE"] += 1
+    return tally
+
+
 def build_collection_status(
     observations: Sequence[Mapping[str, Any]], outcomes_by_observation_id: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, Any]:
     bootstrap = [item for item in observations if item["evidence_mode"] == BOOTSTRAP_NON_PROSPECTIVE]
     prospective = [item for item in observations if item["evidence_mode"] == PROSPECTIVE]
-
-    def _cohort_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
-        counts = {"A_ONLY": 0, "B_ONLY": 0, "A_AND_B": 0, "R8_NEITHER": 0, "NOT_R8_CONTROL_POPULATION": 0}
-        for row in rows:
-            counts[_cohort_key(row)] += 1
-        return counts
-
-    def _horizon_maturity(rows: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, int]]:
-        tally: dict[str, dict[str, int]] = {name: {"MATURE": 0, "PENDING": 0, "UNEVALUABLE": 0} for name in HORIZONS}
-        for row in rows:
-            outcome = outcomes_by_observation_id.get(row["observation_id"])
-            for name in HORIZONS:
-                if outcome is None:
-                    tally[name]["PENDING"] += 1
-                    continue
-                status = outcome["horizons"][name]["status"]
-                if status == "MATURE":
-                    tally[name]["MATURE"] += 1
-                elif status == PENDING_HORIZON:
-                    tally[name]["PENDING"] += 1
-                else:
-                    tally[name]["UNEVALUABLE"] += 1
-        return tally
 
     maturity_labels: dict[str, int] = {PROSPECTIVE_PENDING: 0, PROSPECTIVE_PARTIAL: 0, PROSPECTIVE_MATURE: 0}
     for row in prospective:
@@ -558,13 +598,105 @@ def build_collection_status(
         "prospective_observation_count": len(prospective),
         "prospective_cohorts": _cohort_counts(prospective),
         "bootstrap_cohorts_regression_only": _cohort_counts(bootstrap),
-        "prospective_horizon_maturity": _horizon_maturity(prospective),
+        "prospective_horizon_maturity": _horizon_maturity(prospective, outcomes_by_observation_id),
+        "bootstrap_horizon_maturity_regression_only": _horizon_maturity(bootstrap, outcomes_by_observation_id),
         "prospective_maturity_labels": maturity_labels,
         "excluded_candidates": dict(shadow.EXCLUDED_CANDIDATES),
         "authority_boundary": {
             "bootstrap_excluded_from_prospective_aggregate": True,
             "promotion_decision": "NOT_MADE_THIS_MILESTONE",
             "classifier_v2_queued": False,
+            "probability_or_recommendation": "NOT_EMITTED",
+        },
+    }
+
+
+# --------------------------------------------------------------------------------------
+# Historical descriptive summary.  Uses already-retained sessions (BOOTSTRAP_NON_PROSPECTIVE
+# only) to exercise the same T+5/T+10/T+20/confirmation-lag machinery the counterfactual
+# study exercised separately, as a methodology consistency check -- never as prospective
+# validation evidence, and never blended with genuinely prospective observations.
+# --------------------------------------------------------------------------------------
+
+def historical_descriptive_summary(
+    observations: Sequence[Mapping[str, Any]], outcomes_by_observation_id: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    bootstrap = [item for item in observations if item["evidence_mode"] == BOOTSTRAP_NON_PROSPECTIVE]
+    r8 = [item for item in bootstrap if item["source_rule_id"] == "R8_SELLING_PRESSURE_EASING"]
+    candidate_a = [item for item in r8 if item["candidate_a"]["eligible"] is True]
+    candidate_b = [item for item in r8 if item["candidate_b"]["eligible"] is True]
+    a_and_b = [item for item in r8 if item["candidate_a"]["eligible"] is True and item["candidate_b"]["eligible"] is True]
+
+    def _horizon_metrics(rows: Sequence[Mapping[str, Any]], horizon_name: str) -> dict[str, Any]:
+        matured = []
+        for row in rows:
+            outcome = outcomes_by_observation_id.get(row["observation_id"])
+            if outcome is not None and outcome["horizons"][horizon_name]["status"] == "MATURE":
+                matured.append(outcome["horizons"][horizon_name])
+        if not matured:
+            return {"n": 0, "lower_low_rate": None, "mae_mean": None, "mfe_mean": None}
+        lower_low_rate = sum(1 for item in matured if item["lower_low_within_horizon"]) / len(matured)
+        return {
+            "n": len(matured),
+            "lower_low_rate": lower_low_rate,
+            "mae_mean": sum(item["mae_pct"] for item in matured) / len(matured),
+            "mfe_mean": sum(item["mfe_pct"] for item in matured) / len(matured),
+        }
+
+    def _confirmation_lag(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+        lags: dict[str, list[int]] = {label: [] for label in CONFIRMATION_TARGETS}
+        for row in rows:
+            outcome = outcomes_by_observation_id.get(row["observation_id"])
+            if outcome is None:
+                continue
+            for label in CONFIRMATION_TARGETS:
+                transition = outcome["confirmation_transitions"][label]
+                if transition["status"] == "COMPLETE":
+                    lags[label].append(transition["sessions_to_event"])
+        return {
+            label: {"n": len(values), "mean_sessions_to_event": (sum(values) / len(values)) if values else None}
+            for label, values in lags.items()
+        }
+
+    return {
+        "schema_version": "1.0.0",
+        "contract_version": CONTRACT_VERSION + "/historical_descriptive_summary",
+        "evidence_mode_scope": BOOTSTRAP_NON_PROSPECTIVE,
+        "cohort_counts": {
+            "full_r8_control_count": len(r8),
+            "candidate_a_trigger_count": len(candidate_a),
+            "candidate_b_trigger_count": len(candidate_b),
+            "a_and_b_count": len(a_and_b),
+        },
+        "horizon_availability": {
+            "full_r8_control": _horizon_maturity(r8, outcomes_by_observation_id),
+            "candidate_a": _horizon_maturity(candidate_a, outcomes_by_observation_id),
+            "candidate_b": _horizon_maturity(candidate_b, outcomes_by_observation_id),
+        },
+        "t5_descriptive_metrics": {
+            "full_r8_control": _horizon_metrics(r8, "T5"),
+            "candidate_a": _horizon_metrics(candidate_a, "T5"),
+            "candidate_b": _horizon_metrics(candidate_b, "T5"),
+        },
+        "t10_descriptive_metrics": {
+            "full_r8_control": _horizon_metrics(r8, "T10"),
+            "candidate_a": _horizon_metrics(candidate_a, "T10"),
+            "candidate_b": _horizon_metrics(candidate_b, "T10"),
+        },
+        "t20_descriptive_metrics": {
+            "full_r8_control": _horizon_metrics(r8, "T20"),
+            "candidate_a": _horizon_metrics(candidate_a, "T20"),
+            "candidate_b": _horizon_metrics(candidate_b, "T20"),
+        },
+        "confirmation_lag": {
+            "full_r8_control": _confirmation_lag(r8),
+            "candidate_a": _confirmation_lag(candidate_a),
+            "candidate_b": _confirmation_lag(candidate_b),
+        },
+        "authority_boundary": {
+            "evidence_mode": BOOTSTRAP_NON_PROSPECTIVE,
+            "counts_as_prospective_validation": False,
+            "purpose": "METHODOLOGY_CONSISTENCY_CHECK_AGAINST_COUNTERFACTUAL_STUDY_NOT_A_NEW_AUTHORITY",
             "probability_or_recommendation": "NOT_EMITTED",
         },
     }

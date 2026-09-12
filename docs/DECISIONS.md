@@ -1,5 +1,89 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - Tactical Reversal Shadow Collection Operationalization V1
+
+`TACTICAL_REVERSAL_SHADOW_COLLECTION_OPERATIONALIZATION_V1 = COMPLETE`. Two tightly-related
+gaps, both closed: (1) the prior milestone's collector was never actually invoked by any real
+Daily path -- `COLLECTION_READY` meant the machinery existed, not that it ran; (2) already-
+retained historical evidence had not been used to exercise the collection/maturation
+machinery at scale.
+
+**Where to hook Daily.** Before writing any code, `canonical_daily_operation.py` was
+inspected for an existing precedent rather than guessing at an integration point.
+`run_prospective_collection` (in `canonical_post_close_pipeline.py`) already does exactly the
+right thing for an unrelated subsystem (Decision-Workspace research-thesis admission): it
+runs as an isolated subprocess, strictly after the Daily Producer result is finalized, and its
+own docstring states the contract directly -- "a failure here never revises the completed
+Daily Producer result." `run_tactical_reversal_shadow_collection` was added immediately
+alongside it, following the identical isolation contract, rather than inventing a new
+integration pattern. The two are unrelated subsystems (one admits AI-narrative research
+theses, the other collects tactical A/B shadow eligibility) and are kept under distinct
+result keys (`prospective` vs `tactical_reversal_shadow_collection`) so neither is mistaken
+for or silently shadows the other.
+
+**Identity/idempotency isolation, found by construction review before it could ship as a
+bug.** The obvious first draft embedded the shadow-collection status inside
+`identity_payload` (which feeds `operation_identity`'s content-hash digest) so it would be
+"visible." That would have been wrong: `operation_identity` is also the key Daily's own
+idempotent-rerun check compares (`comparable_prior == comparable_new` against the previously
+persisted `daily_operation_record.json`), and a shadow-collector status can legitimately flip
+between `SHADOW_COLLECTION_COMPLETE` and `SHADOW_COLLECTION_FAILED` across two runs of the
+*exact same* completed session (a transient subprocess hiccup) without the Daily production
+result having changed at all. Embedding it in `identity_payload` would have let a flaky
+collector spuriously raise `IMMUTABLE_OPERATION_RECORD_CONFLICT` on an otherwise-identical
+rerun -- exactly the kind of silent production-affecting side effect this milestone's own
+failure-isolation requirement forbids. Caught and corrected before commit: the full
+`tactical_reversal_shadow_collection` result lives only in the in-memory `record` (and the
+owner-visible `print_daily_operation_handoff` status line), excluded from both
+`identity_payload` and `persistable` -- mirroring exactly how the pre-existing `prospective`
+raw result is already excluded from `persistable` for the same reason. Regression-tested
+directly: two `_run()`s of the same session with opposite shadow-collection outcomes produce
+byte-identical `operation_identity` and never raise a rerun conflict.
+
+**A real data bug, found only by actually using historical evidence at scale.** Bulk-mapping
+every retained tactical session (not just testing against one) surfaced that
+`operations-review/watchlist-tactical-entry-decision-v1-20260823/watchlist_tactical_entry_classifier_artifact.json`
+declares `"session": "2026-08-21"` -- its directory is named for its rebuild date, not the
+session it is valid for. `discover_retained_tactical_sessions`/`load_tactical_artifact`
+previously guessed the file path from the session string (directory-name convention); that
+guess silently skipped this artifact entirely, which would have quietly under-counted
+historical mapping without ever raising an error. Fixed by building an authoritative
+session -> path index from every artifact's own declared `session` field, with an explicit
+`AMBIGUOUS_RETAINED_TACTICAL_SESSION` fail-closed check for the case where two directories
+ever declare the same session (verified none currently do).
+
+**A real performance bug, also found only at bulk-historical scale.** The original
+single-session bootstrap validation (previous milestone) never exercised more than ~1,683
+observations across one trigger session. Mapping all 10 retained sessions produces 16,830
+observations and ~15,147 outcome-update events; `mature_all`'s `_future_rows` was re-loading
+and re-parsing every retained tactical artifact (each ~4MB) from scratch for every single
+ticker/session pair, and this milestone's own historical-mapping driver additionally called
+`store.latest_outcome_update` (an O(all outcome files) linear scan) once per observation --
+O(observations x sessions) and O(observations x outcome files) respectively. Both were
+genuinely unbounded at this scale (an early run did not complete inside a 10-minute wall-clock
+budget). Fixed by loading every retained artifact exactly once per run
+(`artifacts_by_session`, cached and reused) and adding
+`ProspectiveShadowObservationStore.latest_outcome_updates_by_observation()`, which reads the
+outcomes directory exactly once regardless of observation count. A rerun against the
+now-fully-populated store completed and reproduced byte-identical output, confirming both the
+fix and the store's determinism guarantee held throughout.
+
+**Historical mapping is explicitly not prospective evidence.** Every one of the 16,830
+observations this milestone produced has `trigger_session <= 2026-09-11` (the fixed
+activation boundary), so every one is `BOOTSTRAP_NON_PROSPECTIVE` by the existing, unchanged,
+permanent T0 rule -- `tools/run_tactical_reversal_historical_shadow_mapping.py` asserts this
+explicitly at the end of every run rather than merely assuming it. `historical_descriptive_summary`
+(new, in `tactical_reversal_prospective_shadow_collection.py`) is scoped to
+`BOOTSTRAP_NON_PROSPECTIVE` only and is never merged into `build_collection_status`'s
+prospective aggregates. See `docs/STATE.md` for the full reconciliation against
+`TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1`'s separately-computed figures
+(horizon, evidence-continuity, and cohort-semantics differences, all identified, none
+indicating a defect in either study).
+
+No provider/network call, no runtime database write, no classifier invocation or rule-table
+change, no Daily/Daily Brief/Integrated Decision/Portfolio change, and no classifier
+promotion decision. `GENUINE_PROSPECTIVE_VALIDATION` remains `NOT_YET_MATURE`.
+
 ## 2026-09-12 - Tactical Reversal Prospective Shadow Collection V1
 
 `TACTICAL_REVERSAL_PROSPECTIVE_SHADOW_COLLECTION_V1 = COMPLETE / COLLECTION_READY /

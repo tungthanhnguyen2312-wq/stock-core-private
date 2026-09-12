@@ -59,6 +59,7 @@ from canonical_post_close_pipeline import (
     register_session_inputs,
     retain_prospective_decision_snapshot,
     run_prospective_collection,
+    run_tactical_reversal_shadow_collection,
     validate_and_freeze_completed_session,
 )
 from canonical_trusted_subset_release import (
@@ -325,6 +326,8 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
     print(f"AUTHORITY_EFFECT={record.get('authority_effect')}")
     print(f"MARKET_ACQUISITION_OWNER={record.get('market_acquisition_owner')}")
     print(f"OPERATION_IDENTITY={record.get('operation_identity')}")
+    shadow_collection = record.get("tactical_reversal_shadow_collection") if isinstance(record.get("tactical_reversal_shadow_collection"), Mapping) else {}
+    print(f"TACTICAL_REVERSAL_SHADOW_COLLECTION={shadow_collection.get('status')}")
     if record.get("stage"):
         print(f"STAGE={record.get('stage')}")
 
@@ -801,6 +804,14 @@ def run_canonical_daily_operation(
     prospective = run_prospective_collection(
         root, resolved_session, artifact_root=artifact_root, **prospective_kwargs,
     )
+    # Distinct from `prospective` above (Decision-Workspace research-thesis admission):
+    # this is TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1's own A/B observation collector.
+    # Both are post-hoc and non-blocking -- a failure in either never revises the Daily
+    # Producer result already finalized above.
+    tactical_shadow_collection = run_tactical_reversal_shadow_collection(
+        root, resolved_session, artifact_root=artifact_root,
+        **({"output_root": operation_output_root} if operation_output_root != root else {}),
+    )
     tiers = build_tiered_bundle(
         root, resolved_session, acquisition=acquisition, producer_result=producer_result,
         decision_packet=decision_packet, prospective=prospective, enrichment=enrichment,
@@ -941,8 +952,15 @@ def run_canonical_daily_operation(
         "prospective": prospective,
         "prospective_decision_snapshot_detail": prospective_decision_snapshot,
         "enrichment": enrichment,
+        # Excluded from `persistable`/idempotent-rerun comparison below, exactly like
+        # `prospective` above: its status can genuinely vary run-to-run (a transient
+        # subprocess hiccup, or a later run maturing more horizons) without that variance
+        # meaning the Daily production result itself changed. Embedding a volatile status
+        # inside the compared record would risk a spurious IMMUTABLE_OPERATION_RECORD_CONFLICT
+        # on an otherwise-identical rerun.
+        "tactical_reversal_shadow_collection": tactical_shadow_collection,
     }
-    persistable = {k: v for k, v in record.items() if k not in {"producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment"}}
+    persistable = {k: v for k, v in record.items() if k not in {"producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment", "tactical_reversal_shadow_collection"}}
     persistable["lineage"] = {
         "session_gate_phase_a": phase_a.get("gate_identity"),
         "session_gate_phase_b": phase_b.get("gate_identity"),

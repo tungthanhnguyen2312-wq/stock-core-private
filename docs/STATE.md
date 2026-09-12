@@ -1,5 +1,95 @@
 # Stock Lookup — Operational State
 
+**Tactical reversal shadow collection operationalization V1 (2026-09-12):**
+`TACTICAL_REVERSAL_SHADOW_COLLECTION_OPERATIONALIZATION_V1 = COMPLETE`.
+`SHADOW_COLLECTION_OPERATIONAL = YES`. `HISTORICAL_MAPPING = COMPLETE`.
+`GENUINE_PROSPECTIVE_VALIDATION = NOT_YET_MATURE`. These three are kept explicitly separate
+and must never be conflated: the first says the wiring exists, the second says historical
+regression data was mapped, and the third says no forward evidence has matured yet -- none
+of the first two imply the third.
+
+**Operational gap found and closed.** Before this milestone,
+`tactical_reversal_prospective_shadow_collection.py` was never invoked by any real Daily
+path -- `COLLECTION_READY` (the prior milestone's disposition) meant the machinery existed,
+not that it ran. `canonical_daily_operation.run_canonical_daily_operation` now calls the new
+`canonical_post_close_pipeline.run_tactical_reversal_shadow_collection(root, resolved_session,
+...)` immediately after `run_prospective_collection` (a distinct, unrelated subsystem --
+Decision-Workspace research-thesis admission -- kept under a separate result key so neither
+shadows the other), mirroring that function's exact post-hoc/non-blocking isolation contract:
+it consumes only the already-produced, already-retained `watchlist_tactical_entry_classifier`
+artifact for the session (never re-invokes the classifier, never acquires market data), runs
+the existing collector as an isolated subprocess, and reports one of `SHADOW_COLLECTION_COMPLETE`
+/ `SHADOW_COLLECTION_SKIPPED_NO_ELIGIBLE_ARTIFACT` / `SHADOW_COLLECTION_FAILED` under
+`record["tactical_reversal_shadow_collection"]`. That status is deliberately excluded from
+both `identity_payload` (the `operation_identity` digest) and `persistable` (the idempotent-
+rerun comparison) -- a transient collector failure/success flip can never change Daily's
+operation identity or trigger a spurious `IMMUTABLE_OPERATION_RECORD_CONFLICT` on an otherwise
+identical rerun. `print_daily_operation_handoff` prints `TACTICAL_REVERSAL_SHADOW_COLLECTION=...`
+alongside the existing owner status lines. Monday readiness (`tools/check_tactical_reversal_
+monday_readiness.py`, every criterion checked programmatically): `READY`.
+
+**Real bug found and fixed in the collection module itself.** Bulk historical mapping
+surfaced that one genuinely retained tactical artifact
+(`operations-review/watchlist-tactical-entry-decision-v1-20260823/`) declares
+`"session": "2026-08-21"` internally -- its containing directory is named for the day it was
+rebuilt, not the session it is valid for. The prior milestone's path-construction convention
+(guessing the directory name from the session string) silently missed this artifact entirely.
+`discover_retained_tactical_sessions`/`load_tactical_artifact` now build an authoritative
+session -> path index from each artifact's own declared `session` field and raise
+`AMBIGUOUS_RETAINED_TACTICAL_SESSION` if two directories ever declare the same one, rather
+than silently picking either.
+
+**Historical mapping (regression/mechanics only, never prospective evidence).** Every one of
+the 10 currently retained tactical sessions (`2026-08-21, 08-24, 08-25, 08-28, 09-04, 09-07,
+09-08, 09-09, 09-10, 09-11` -- all on or before the `2026-09-11` activation boundary) was
+mapped: 16,830 T0 observations (10 sessions x up to 1,683 tickers), all confirmed
+`BOOTSTRAP_NON_PROSPECTIVE` by an explicit runtime assertion in
+`tools/run_tactical_reversal_historical_shadow_mapping.py`. Cohort counts: full R8 control
+1,918, Candidate A trigger 991, Candidate B trigger 678, A n B 513. T5 matured for 587/1,918
+full-R8 (lower-low rate 87.7%, mean MAE -22.0%, mean MFE -18.5%), 239/991 Candidate A
+(80.3% / -7.0% / -3.4%), 172/678 Candidate B (86.6% / -3.2% / +0.8%); T10/T20 are 100%
+`PENDING` for every cohort -- with only 10 sparsely-spaced retained sessions total (large
+multi-day/multi-week gaps between them, e.g. 08-28 -> 09-04), no ticker anywhere in this
+dataset has 10 or 20 *retained* future sessions available yet, so T10/T20 cannot mature from
+this evidence regardless of candidate. A rerun against the same store reproduced byte-identical
+output (deterministic).
+
+**Reconciliation with `TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1`
+(consistency check, not an authority change; figures intentionally not hard-coded, recomputed
+from this repository's actual current evidence).** The counterfactual study's ~2,133/80.5%/
+-4.25%/+3.11% full-R8 T10 figures are **not directly comparable** to the numbers above, for
+three separate, identified reasons: (1) **horizon** -- the counterfactual study matured T10;
+this historical mapping's T10 is 100% pending (explained above), so the only comparable
+horizon here is T5, an inherently different (shorter) window. (2) **evidence continuity** --
+the counterfactual study reconstructed a *continuous* 40-trading-session daily series via
+`historical_tactical_replay_evidence_foundation`'s sqlite freeze, so its "T10" genuinely means
+10 consecutive trading days later. This historical mapping instead consumes whatever
+`watchlist_tactical_entry_classifier` snapshots happen to be retained on disk from past
+milestones' own validation runs -- 10 *sparse* dates, not a continuous series -- so its "T5"
+means 5 retained-snapshot-later, which can span several real calendar weeks and therefore
+much more price drift than a true 5-trading-day window (directly explaining the much larger
+MAE/MFE magnitudes observed here, e.g. -22.0% vs the counterfactual's -4.25%). (3) **cohort
+semantics** -- the counterfactual study counted *episodes* (the first session of each
+consecutive R8 run, 2,133 of them across 893 tickers x 40 sessions); this historical mapping
+counts every (ticker, retained-session) R8 *sighting* without episode deduplication (1,918
+across 10 sessions x up to 1,683 tickers), a structurally different denominator. None of this
+indicates a defect in either study; it reflects the deliberately different, much sparser
+evidence base a same-day historical backfill has available versus a purpose-built continuous
+reconstruction.
+
+**Blocker matrix (sequencing reference only; no fix attempted this milestone).**
+`RAW_AS_TRADED_AND_HISTORICAL_PIT`: BLOCKED (Section 3 Invariant 1, unchanged -- no ex-date
+evidence). `LIQUIDITY_AND_POSITION_SIZING_AUTHORITY`: BLOCKED (Section 3 Invariant 2,
+unchanged -- FHSC evidence ceiling). `ACTIVE_UNIVERSE_AUTHORITY`: UNKNOWN (unchanged).
+`REVERSE_VALUATION_INTRINSIC_OUTPUTS`: BLOCKED (unchanged). `MARKET_DATA_PROVIDER_EXPANSION`:
+CLOSED_REJECTED (unchanged; DNSE/Livespeed remains the only direction). Residual ~15
+standalone `vnstock`-calling sync scripts still bypass `vnstock_rate_governor` (flagged
+2026-09-04, not fixed; out of canonical Daily's own execution graph, DATA/EXTERNAL not
+IMPLEMENTATION). `IMMUTABLE_SESSION_OPERATION_CONTENT_CONFLICT`
+(`daily_research_session_operations.write_immutable`) is a normal write-once fail-closed
+invariant, not an open issue -- no STATE/ROADMAP entry references it as active. None of these
+were touched by, or block, this milestone.
+
 **Tactical reversal prospective shadow collection V1 (2026-09-12):**
 `TACTICAL_REVERSAL_PROSPECTIVE_SHADOW_COLLECTION_V1 = COMPLETE / COLLECTION_READY /
 ACTIVE_COLLECTION / NO_PRODUCTION_CHANGE`. New `tactical_reversal_prospective_shadow_collection.py`
