@@ -1,5 +1,50 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - Producer CI and Production Call-Shape Hardening V1
+
+`PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1 = COMPLETE`.
+`NETWORK_IN_CI = FORBIDDEN`; `PRODUCTION_CALL_SHAPE_SMOKE = ACTIVE`; and
+`PRODUCTION_ANALYTICAL_BEHAVIOR = UNCHANGED`.
+
+**Decision.** Add one small `Producer CI` Actions workflow rather than a generic test platform:
+`structural` runs critical-entry `py_compile`, JSON parse, roadmap drift, and a transport-guard
+sanity check; `production-call-shape-smoke` runs the new deterministic offline smoke; and
+`focused-regressions` runs the self-contained Canonical Daily, session-registry/comparison,
+AI-handoff-source-freshness, and tactical-shadow suites. The workflow is limited to pushes to
+`main` and PRs targeting `main`, uses Python 3.13, has read-only repository permission, and has no
+schedule, deployment, publication, secret reference, or CI-originated push.
+
+**Production call shape covered.** The smoke invokes
+`canonical_daily_operation.run_canonical_daily_operation` with all of its public default seams
+omitted, specifically `acquire_fn`, `producer_fn`, `runtime_fn`, `trusted_fn`,
+`macro_refresh_fn`, macro-context and Daily-Brief builders, and publication runner. It replaces
+only the imported lower side-effecting implementations with deterministic temporary-fixture
+equivalents. This exercises default producer-symbol lookup, normal keyword call shape, macro
+optionality, the actual `load_registry(root)` read after freeze, the pre-seal comparator path,
+runtime/trusted ordering, optional tactical-shadow failure isolation, and the disabled-publication
+branch. A controlled bad default-producer signature is required to fail loudly, so the smoke tests
+the detection mechanism as well as the healthy route.
+
+**Offline and clean-checkout boundary.** A context-local guard intercepts `requests`, `urllib`,
+socket, and HTTP transport and rejects imports from provider families including DNSE, KBS, VCI,
+FRED, Yahoo, World Bank, `vnstock`, and `vnai`. Successful smoke runs assert zero network and
+provider counts; no ordinary unit-test semantics are changed outside that `with` boundary. The
+fixture generates only `tmp_path` registry/runtime/output content, so neither hosted lane relies on
+gitignored `operations-review`, runtime DBs, private portfolio material, secrets, or local
+`ai-core-private`. The smoke uses no ai-core code: the producer-side call shape ends before any
+cross-repository consumer import, so pinning or cloning an ai-core revision is neither needed nor
+appropriate here.
+
+**Known local boundary.**
+`test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch` is classified
+`LOCAL_RETAINED_EVIDENCE_INTEGRATION_TEST`. It remains available to an operator with the real
+gitignored evidence but is explicitly deselected in hosted CI; the CI fixture does not recreate
+that evidence and unrelated failures are not suppressed.
+
+No production code changed. No market-data provider call, no macro call, no Daily, no AI handoff
+or Dashboard publication, no deployment, and no repository visibility change occurred while
+implementing this test/CI-only milestone. VNStock architecture remains out of scope.
+
 ## 2026-09-12 - AI Handoff Freshness and Source Convergence V1
 
 `AI_HANDOFF_FRESHNESS_AND_SOURCE_CONVERGENCE_V1 = COMPLETE`. Owner-directed milestone delivered

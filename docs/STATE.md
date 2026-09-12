@@ -1,5 +1,38 @@
 # Stock Lookup — Operational State
 
+**Producer CI and Production Call-Shape Hardening V1 (2026-09-12):**
+`PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1 = COMPLETE`.
+`NETWORK_IN_CI = FORBIDDEN`. `PRODUCTION_CALL_SHAPE_SMOKE = ACTIVE`.
+`PRODUCTION_ANALYTICAL_BEHAVIOR = UNCHANGED`.
+
+The Producer now has the small GitHub Actions workflow `.github/workflows/producer-ci.yml`, on
+pushes to `main` and pull requests targeting `main`, with three lanes: structural Python/JSON/
+roadmap checks; an offline production-call-shape smoke; and focused deterministic Canonical Daily,
+registry/comparison, AI-freshness, and tactical-shadow regressions. The smoke runs the real
+`run_canonical_daily_operation(..., producer_fn=None)` default resolution with a temporary,
+synthetic retained-evidence/runtime tree. It keeps all public injection arguments omitted, but
+contains only the side-effecting module boundaries (acquisition, producer execution, materializers,
+macro refresh, post-hoc collection, and publication) so the default symbol, signature, ordering,
+registry-after-freeze, and comparator/pre-seal path remain live. A narrowly scoped test guard fails
+immediately on `requests`, `urllib`, socket/HTTP transport, provider-family imports, or
+`vnstock`/`vnai`; success requires `NETWORK_CALL_COUNT = 0` and `PROVIDER_CALL_COUNT = 0`.
+
+The smoke deliberately does not assert live provider availability, acquire market data, use
+`operations-review/`, a database, owner files, secrets, or an `ai-core-private` checkout. It proves
+macro refresh failure degrades to explicit unavailable context, tactical shadow collector failure
+does not block core local completion, and publication remains disabled. It does not run the owner
+PowerShell process end-to-end because that would cross a process boundary and defeat the contained
+test-only transport guard; the authoritative route remains `stocklookup.ps1 daily` ->
+`stocklookup.py` -> `daily_analysis_pipeline.py --canonical-post-close` ->
+`canonical_daily_operation.run_canonical_daily_operation`.
+
+`test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch` is explicitly a
+`LOCAL_RETAINED_EVIDENCE_INTEGRATION_TEST`: it reads gitignored retained 2026-08-26 material and is
+intentionally deselected from hosted CI rather than copied, fabricated, or hidden. No provider
+routing, quality sentinel, macro source policy, tactical policy, analytical calculation,
+recommendation, portfolio/sizing, PIT/RAW_AS_TRADED, or Dashboard behavior changed. No VNStock
+work was started.
+
 **AI handoff freshness and source convergence V1 (2026-09-12):**
 `AI_HANDOFF_FRESHNESS_AND_SOURCE_CONVERGENCE_V1 = COMPLETE`. Closes the macro delivery/wiring
 gap the milestone brief named: the retained 2026-09-11 `ai_research_session_bundle.json` genuinely

@@ -1,0 +1,67 @@
+name: Producer CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  structural:
+    name: Structural contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt pytest
+      - run: python -m py_compile stocklookup.py daily_analysis_pipeline.py canonical_daily_operation.py daily_producer_pipeline.py daily_research_session_operations.py
+      - run: python -c "import json; json.load(open('docs/ROADMAP_STATE.json', encoding='utf-8'))"
+      - run: python tools/stocklookup_roadmap.py --check
+      - run: >-
+          pytest -q
+          tests/test_production_call_shape_smoke.py::test_offline_guard_blocks_requests_urllib_and_vnstock_import
+          tests/test_production_call_shape_smoke.py::test_owner_daily_entry_route_remains_canonical
+
+  production-call-shape-smoke:
+    name: Offline production call-shape smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt pytest
+      - run: pytest -q tests/test_production_call_shape_smoke.py
+
+  focused-regressions:
+    name: Focused deterministic regressions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt pytest
+      - run: >-
+          pytest -q
+          tests/test_canonical_daily_operation.py
+          --deselect=tests/test_canonical_daily_operation.py::test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch
+          tests/test_session_registry_gap_reconciliation.py
+          tests/test_session_comparison_semantics.py
+          tests/test_next_session_decision_brief_comparison_metadata.py
+          tests/test_daily_producer_pipeline.py::test_completed_session_gate_uses_governed_ledger_not_clock_inference
+          tests/test_daily_producer_pipeline.py::test_completed_session_gate_refuses_incomplete_session
+          tests/test_daily_producer_pipeline.py::test_gate_A_future_session_refused_even_with_complete_looking_evidence
+          tests/test_daily_producer_pipeline.py::test_gate_B_same_day_without_completed_evidence_refused
+          tests/test_daily_producer_pipeline.py::test_gate_C_same_day_with_explicit_completed_evidence_accepted
+          tests/test_ai_handoff_source_freshness_matrix.py
+          tests/test_ai_handoff_publication.py
+          tests/test_tactical_reversal_shadow_collection_operationalization.py
