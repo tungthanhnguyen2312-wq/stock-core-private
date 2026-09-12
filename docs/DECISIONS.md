@@ -43,6 +43,19 @@ liquidity/execution/sizing change, or probability/target output was authorized o
 A supported shadow verdict is research-only and does not by itself authorize replacing R6 or
 turning R8 into a normal BUY/ADD state. Daily Brief acceptance remains `DEFERRED / NOT_FAILED`.
 
+**2026-09-12 rebase addendum.** This implementation was originally committed locally
+(`4bbaf53`) on a branch rooted at the `83fb04f` baseline. By the time of this checkpoint,
+`origin/main` had advanced one commit (`78457cd`, an unrelated Daily `NameError` import fix
+plus a retained-evidence registry entry, confirmed non-overlapping with any file this
+milestone touches). Per authority-chain instruction, the work was re-derived on a fresh
+worktree/branch rooted at `origin/main` `78457cd`: the original commit cherry-picked with
+zero conflicts, one additional focused test was added (`future_outcome_lower_low`/
+`next_session_rule_id` injection at the shadow-record level, proving the shadow disposition
+is unaffected -- the milestone's own required test list names this case explicitly), and the
+full suite (119 tests, 118 + 1) plus the four prerequisite foundations' suites pass unchanged.
+The diverged local `main` and its protected stash (an unrelated pre-existing
+`config/daily_research_session_input_registry.json` edit) were left untouched throughout.
+
 ## 2026-09-11 - Tactical Reversal Probe Policy Counterfactual Evaluation V1
 
 `TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1 = COMPLETE /

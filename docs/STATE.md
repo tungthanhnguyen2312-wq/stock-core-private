@@ -44,6 +44,16 @@ authority change, no probability/target output, and no classifier V2 queued. Thi
 itself authorize replacing R6 or turning R8 into a normal BUY/ADD state. Daily Brief acceptance
 remains `DEFERRED / NOT_FAILED`.
 
+2026-09-12 checkpoint re-derivation: rebuilt on a fresh worktree/branch rooted at `origin/main`
+`78457cd` (one unrelated Daily fix ahead of the original `83fb04f` baseline; non-overlapping
+files, cherry-picked clean); added one focused test proving future-field injection at the
+shadow-record level cannot change the T0 result (119 tests, 118 + 1, pass unchanged); and an
+independent bounded read-only real-data run against retained `2026-09-11` (prior `2026-09-10`)
+artifacts confirms production-scale wiring out of sample from the original two runs:
+146/1,683 `PROBE_ELIGIBLE`, PAN correctly `NOT_PROBE_ELIGIBLE` (`R9_DOWNTREND_DEFAULT`, not R8
+that session). `vn_stock.db` verified read-only under the canonical
+`C:\Projects\StockLookup\dashboard-runtime`; no write.
+
 **Tactical reversal probe policy counterfactual evaluation V1 (2026-09-11):**
 `TACTICAL_REVERSAL_PROBE_POLICY_COUNTERFACTUAL_EVALUATION_V1 = COMPLETE /
 EVIDENCE_SUPPORTS_SHADOW_PROBE_POLICY / PRODUCTION_POLICY_UNCHANGED`. This owner-authorized,
