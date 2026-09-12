@@ -1,5 +1,104 @@
 # Stock Lookup — Operational State
 
+**Session registry promotion and comparison-semantics corrective V1 (2026-09-12):**
+`SESSION_REGISTRY_PROMOTION_AND_COMPARISON_SEMANTICS_CORRECTIVE_V1 = COMPLETE`. Fixes the
+governance/correctness defect the 2026-09-12 weekly full-system audit found: several completed
+Daily sessions were produced and published to both the AI-handoff and Dashboard repositories
+without their `completed_sessions` entry ever reaching this repository's own registry file, and
+`next_session_decision_brief` could then compare a current session against a governed session
+several sessions removed without saying so.
+
+**Root cause (both halves, neither alone explains it).** `canonical_post_close_pipeline.
+validate_and_freeze_completed_session` already ran automatically on every completed Daily
+operation and always froze a real result on success -- the completion gate itself never failed
+open (confirmed directly: the retained 2026-09-10 operation record's own embedded `freeze` block
+reads `"status": "FROZEN"` with zero `incompatible_inputs`). But that freeze is a plain local
+`config/daily_research_session_input_registry.json` write with no accompanying `git commit`, and
+`docs/ROADMAP_STATE.json`'s own `known_operational_diff_allowlist` treats this file's uncommitted
+local drift as routine, not urgent. Several of the affected runs (2026-08-27/28, 2026-09-03/04)
+executed from ephemeral integration/release-candidate worktrees whose local registry edit was
+never reconciled back into this checkout's `origin/main` lineage; 2026-09-10 specifically ran
+against local `main` at `bf11dbf` (never pushed, diverged from `origin/main` at `c709794`).
+Downstream publication (`ai_handoff_publication.publish`, the Dashboard release publisher) never
+gated on the registry write having reached the shared/authoritative checkout -- only on that same
+run's own local `LOCAL_COMPLETE`/`READY` operation state -- so publication reached both downstream
+repositories live regardless. The forward ordering invariant itself (register + freeze strictly
+before the AI-handoff/producer path in `canonical_daily_operation.py`) was already correct and is
+now covered by a dedicated production-call-shape regression
+(`test_production_call_shape_reads_registry_for_comparator_only_after_freeze`); no ordering bug
+was found.
+
+**Conservative historical reconciliation (no blind promotion).** New
+`session_registry_gap_reconciliation.py` classifies each candidate session by literally replaying
+today's real `canonical_post_close_pipeline.register_session_inputs` /
+`.validate_and_freeze_completed_session` against whatever retained evidence is actually still on
+disk -- never by trusting that a session was published. Of the 8 audited sessions: 2026-08-21/24/
+25/26 and 2026-09-11 were already `GOVERNED_COMPLETED` (untouched). 2026-08-27 and 2026-09-03
+are `INSUFFICIENT_RETAINED_EVIDENCE` (their retained descriptive-research artifact no longer
+exists on disk anywhere) and remain correctly unregistered -- publication once having occurred is
+not evidence of anything today. 2026-08-28, 2026-09-04, and 2026-09-10 each
+`QUALIFIES_FOR_RETROACTIVE_GOVERNED_REGISTRATION`: their full session-locked evidence set
+(descriptive/screening/tactical/triage/valuation/corporate_intelligence) is still retained,
+internally coherent, and passes the exact current `validate_coherence` contract unmodified, so
+all three are now registered in `completed_sessions`. 2026-09-10 received the specific scrutiny
+its noncurrent `bf11dbf` producer checkpoint calls for (data fitness, code-lineage fitness,
+registration fitness assessed independently, per the audit's own instruction not to auto-accept
+or auto-reject a noncurrent checkpoint): `bf11dbf`'s `REGISTRY_KEY_TO_LEVEL2_KEY`/
+`REQUIRED_REGISTRY_KEYS` contract is byte-identical to today's, and the real coherence check
+re-run against its retained evidence today succeeds cleanly -- genuine evidence, not an assumption
+from the checkpoint alone. Reconciliation artifact:
+`operations-review/session-registry-promotion-and-comparison-semantics-corrective-v1-20260912/
+session_registry_gap_reconciliation_result.json`.
+
+**Resulting comparator for 2026-09-11, not forced.** With 2026-09-10 now genuinely governed, the
+nearest valid comparator for 2026-09-11 becomes 2026-09-10 itself -- immediately adjacent -- purely
+as a consequence of evidence passing its own bar, exactly as the audit required ("do NOT force
+2026-09-10 to become valid just to make the comparator adjacent"). Had 2026-09-10 failed
+reconciliation, the comparator would have remained 2026-08-26 and the new comparison metadata
+below would report that gap explicitly instead.
+
+**New comparison-semantics contract, purely additive.** New `session_comparison_semantics.py`
+adds `comparison_metadata` (`comparison_session`, `comparison_session_role` --
+`IMMEDIATE_PREVIOUS_GOVERNED_SESSION` / `DISTANT_PREVIOUS_GOVERNED_SESSION` /
+`NO_PREVIOUS_GOVERNED_SESSION` --, `session_gap_trading_sessions`,
+`is_immediate_previous_completed_session`, `comparison_fitness` -- `FRESH_ADJACENT` /
+`DEGRADED_MULTI_SESSION_GAP` / `UNAVAILABLE` --, `comparison_reason_codes`,
+`skipped_known_sessions`, and a deterministic templated `notice`) to
+`next_session_decision_brief`, propagated unchanged into `daily_integrated_decision_brief` and
+into `ai_handoff_publication`'s package lineage and `LATEST.json`. The existing
+`previous_session`/`previous_qualified_session` fields are untouched and remain present; nothing
+was renamed. The session-gap count is derived only from what the registry's `completed_sessions`
+and `sessions` maps already know happened -- never from calendar-day subtraction -- and reports
+`0`/`FRESH_ADJACENT` rather than fabricating a gap when the registry holds no evidence one exists.
+A direct regression (`test_comparison_metadata_degraded_multi_session_gap_end_to_end`) locks the
+exact historical shape this milestone was created to fix (2026-09-11 vs. a 2026-08-26 comparator
+with five known intervening sessions) so it can never again read as an ordinary adjacent-day
+transition.
+
+**Scope discipline.** No provider/network call, runtime database mutation, AI handoff publication,
+Dashboard deployment, repository-visibility change, or push/merge occurred. No Dashboard-side code
+was found to consume these fields (grepped; none of `dashboard_session_companions.py`/
+`canonical_dashboard_runtime_release.py` reference `previous_session`), so none was touched. The
+tactical-reversal shadow chain (`TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1` /
+`_PROSPECTIVE_SHADOW_COLLECTION_V1` / `_SHADOW_COLLECTION_OPERATIONALIZATION_V1`), Candidates A/B/C,
+and the historical bootstrap mapping are unmodified.
+`IMMUTABLE_SESSION_OPERATION_CONTENT_CONFLICT` was not reopened -- no new evidence of a
+nondeterministic rerun, competing lineage, or identity instability was produced; the prior
+`EXPECTED_IMMUTABILITY_PROTECTION` classification stands.
+
+**TESTS**: 26 new focused tests across `tests/test_session_registry_gap_reconciliation.py` (9),
+`tests/test_session_comparison_semantics.py` (7), `tests/test_next_session_decision_brief_
+comparison_metadata.py` (6, entirely self-contained/synthetic -- deliberately independent of
+`test_next_session_decision_brief.py`'s machine-local real-evidence replay suite), plus 2 in
+`test_daily_integrated_decision_brief.py`, 1 in `test_ai_handoff_publication.py`, and 1 production-
+call-shape ordering regression in `test_canonical_daily_operation.py`. Full before/after comparison
+across every affected test file reproduces the identical pre-existing fresh-worktree baseline (22
+failed / 17 errored, all previously documented gitignored-`operations-review`-evidence gaps
+unrelated to this milestone) with zero new failures and 197 passed (171 + this milestone's 26).
+`py_compile`, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`, ignoring
+this branch's own expected in-progress dirty-worktree warning) are all clean. No successor is
+queued.
+
 **Tactical reversal shadow collection operationalization V1 (2026-09-12):**
 `TACTICAL_REVERSAL_SHADOW_COLLECTION_OPERATIONALIZATION_V1 = COMPLETE`.
 `SHADOW_COLLECTION_OPERATIONAL = YES`. `HISTORICAL_MAPPING = COMPLETE`.

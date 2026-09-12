@@ -84,6 +84,19 @@ def test_decision_brief_included_when_supplied(tmp_path):
     latest=json.loads((r/"LATEST.json").read_text())
     assert latest["decision_brief_sha256"]==result["package"]["files"]["next_session_decision_brief.json"]
 
+def test_comparison_metadata_propagates_into_lineage_and_latest_json(tmp_path):
+    """SESSION_REGISTRY_PROMOTION_AND_COMPARISON_SEMANTICS_CORRECTIVE_V1: whatever
+    comparison_metadata next_session_decision_brief.json carries must survive, additively,
+    into both the handoff package's lineage and the published LATEST.json pointer."""
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    comparison_metadata={"comparison_session":"2026-08-26","comparison_session_role":"DISTANT_PREVIOUS_GOVERNED_SESSION","session_gap_trading_sessions":5,"is_immediate_previous_completed_session":False,"comparison_fitness":"DEGRADED_MULTI_SESSION_GAP","comparison_reason_codes":["PREVIOUS_SESSION_REGISTRY_GAP"],"skipped_known_sessions":["2026-08-27","2026-08-28","2026-09-03","2026-09-04","2026-09-10"],"notice":"..."}
+    brief=tmp_path/"next_session_decision_brief.json"
+    brief.write_text(json.dumps({"artifact_identity":"next_session_decision_brief:abc123","comparison_metadata":comparison_metadata}),encoding="utf-8")
+    result=publish(r,s,"2026-09-11",producer_checkpoint="abc",push=False,decision_brief=brief)
+    assert result["package"]["lineage"]["comparison_metadata"]==comparison_metadata
+    latest=json.loads((r/"LATEST.json").read_text())
+    assert latest["comparison_metadata"]==comparison_metadata
+
 def test_daily_integrated_decision_brief_is_optional_and_additive(tmp_path):
     s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
     without=build_package(s,"2026-08-28",producer_checkpoint="abc")

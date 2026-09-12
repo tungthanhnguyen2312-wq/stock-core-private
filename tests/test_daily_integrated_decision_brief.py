@@ -319,6 +319,36 @@ class TestBuildArtifactSessionValidation:
         assert artifact["watchlist"]["count"] == 11
         assert artifact["authority_boundary"]["no_universal_score_rank_target_or_probability"] is True
 
+    def test_comparison_metadata_propagates_additively_from_next_session_brief(self):
+        """SESSION_REGISTRY_PROMOTION_AND_COMPARISON_SEMANTICS_CORRECTIVE_V1: whatever
+        next_session_decision_brief computed for comparison_metadata must survive into the
+        compact AI-facing daily_integrated_decision_brief unchanged, additively, alongside the
+        existing previous_qualified_session field (never replacing it)."""
+        nsb = self._minimal_next_brief("2026-08-28")
+        nsb["comparison_metadata"] = {
+            "comparison_session": None, "comparison_session_role": "NO_PREVIOUS_GOVERNED_SESSION",
+            "session_gap_trading_sessions": None, "is_immediate_previous_completed_session": False,
+            "comparison_fitness": "UNAVAILABLE", "comparison_reason_codes": ["NO_PREVIOUS_GOVERNED_SESSION"],
+            "skipped_known_sessions": [], "notice": None,
+        }
+        artifact = brief.build_artifact(
+            session="2026-08-28", requested_at="2026-08-28T15:00:00+07:00",
+            integrated_decision_current=self._minimal_integrated("2026-08-28"),
+            next_session_brief=nsb,
+        )
+        assert artifact["comparison_metadata"] == nsb["comparison_metadata"]
+        assert artifact["previous_qualified_session"] is None  # existing field still present, unchanged
+
+    def test_missing_comparison_metadata_degrades_to_none_not_an_error(self):
+        """A next_session_brief built before this milestone (no comparison_metadata key at all)
+        must not break daily_integrated_decision_brief -- purely additive compatibility."""
+        artifact = brief.build_artifact(
+            session="2026-08-28", requested_at="2026-08-28T15:00:00+07:00",
+            integrated_decision_current=self._minimal_integrated("2026-08-28"),
+            next_session_brief=self._minimal_next_brief("2026-08-28"),
+        )
+        assert artifact["comparison_metadata"] is None
+
     def test_identity_is_deterministic_and_excludes_requested_at(self):
         current = self._minimal_integrated("2026-08-28")
         nsb = self._minimal_next_brief("2026-08-28")

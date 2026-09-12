@@ -300,6 +300,55 @@ def test_production_call_shape_resolves_load_registry_without_nameerror(monkeypa
     assert callable(captured["daily_integrated_decision_brief_builder"])
 
 
+def test_production_call_shape_reads_registry_for_comparator_only_after_freeze(monkeypatch, tmp_path):
+    """SESSION_REGISTRY_PROMOTION_AND_COMPARISON_SEMANTICS_CORRECTIVE_V1 production-call-shape
+    regression: the exact same producer_fn=None branch that constructs
+    ``preseal_brief_builder`` (canonical_daily_operation.py ~L695) must call ``load_registry(root)``
+    -- the registry the comparison resolver and comparison_metadata are built from -- strictly
+    after ``validate_and_freeze_completed_session`` has run, never before. A refactor that moved
+    the registry read earlier would silently feed the comparator a pre-freeze, stale registry
+    view. This is the exact production call shape (no producer_fn, no explicit brief builder
+    injected) that let the 2026-09-11 load_registry NameError ship unnoticed; every other test in
+    this file routes through _run()'s producer_fn seam and never reaches this branch."""
+    order: list[str] = []
+    _patch_downstream(monkeypatch, tmp_path)
+
+    def freeze(*_a, **_k):
+        order.append("freeze")
+        return {"status": "FROZEN"}
+
+    def load_registry_spy(*_a, **_k):
+        order.append("load_registry")
+        return {"completed_sessions": {}, "sessions": {}}
+
+    monkeypatch.setattr(cdo, "validate_and_freeze_completed_session", freeze)
+    monkeypatch.setattr(cdo, "load_registry", load_registry_spy)
+
+    def fake_run_daily_producer(*_args, **kwargs):
+        order.append("daily_producer")
+        return _producer(tmp_path, SESSION)
+
+    monkeypatch.setattr(cdo, "run_daily_producer", fake_run_daily_producer)
+    runtime = tmp_path / "runtime"
+    _write_runtime(runtime, SESSION)
+
+    cdo.run_canonical_daily_operation(
+        tmp_path, runtime, SESSION,
+        now=POST_CLOSE, complete_publication=False,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+        exact_session_evidence=None,
+        acquire_fn=lambda *a, **k: _acquired(tmp_path, SESSION),
+        producer_fn=None,
+        runtime_fn=lambda *a, **k: {"session": SESSION, "live_count": 889},
+        trusted_fn=lambda *a, **k: {"session": SESSION, "trusted_subset_ready": True, "records_fingerprint": "fp"},
+        publication_runner=None,
+        out_dir=tmp_path / "operations-review",
+    )
+
+    assert "freeze" in order and "load_registry" in order
+    assert order.index("freeze") < order.index("load_registry") < order.index("daily_producer")
+
+
 def test_sunday_auto_resolves_latest_governed_completed_session_without_floor(monkeypatch, tmp_path):
     sunday = datetime(2026, 8, 30, 13, 0, tzinfo=VN_TZ)
     target = "2026-08-28"

@@ -62,7 +62,9 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
     lineage=_manifest_lineage(source,producer_checkpoint)
     financial_source_identity = _financial_lineage(parsed)
     if financial_source_identity is not None: lineage["financial_analysis_source_context_identity"] = financial_source_identity
-    if decision_brief: lineage["next_session_decision_brief_identity"]=parsed["next_session_decision_brief.json"].get("artifact_identity")
+    if decision_brief:
+        lineage["next_session_decision_brief_identity"]=parsed["next_session_decision_brief.json"].get("artifact_identity")
+        lineage["comparison_metadata"]=parsed["next_session_decision_brief.json"].get("comparison_metadata")
     if daily_integrated_decision_brief:
         brief_parsed=parsed["daily_integrated_decision_brief.json"]
         lineage["daily_integrated_decision_brief_identity"]=brief_parsed.get("artifact_identity")
@@ -72,7 +74,9 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
     return files,payload
 def _latest_payload(session: str, payload: Mapping[str, Any], *, immutable_session_path: str, handoff_commit: str, previous: Path|None) -> dict[str, Any]:
     latest={"schema_version":"stocklookup_ai_handoff_latest/v2","latest_session":session,"status":"READY_FOR_AI","handoff_build_id":payload["handoff_build_id"],"immutable_session_path":immutable_session_path,"handoff_commit":handoff_commit,"producer_checkpoint":payload["lineage"]["producer_checkpoint"],"producer_lineage":payload["lineage"],"session_bundle_sha256":payload["files"]["ai_research_session_bundle.json"],"opportunity_artifact_sha256":payload["files"]["daily_opportunity_decision_queue_artifact.json"],"manifest_sha256":payload["files"]["ai_research_bundle_manifest.json"],"previous_session":previous.parent.parent.name if previous else None}
-    if "next_session_decision_brief.json" in payload["files"]: latest["decision_brief_sha256"]=payload["files"]["next_session_decision_brief.json"]
+    if "next_session_decision_brief.json" in payload["files"]:
+        latest["decision_brief_sha256"]=payload["files"]["next_session_decision_brief.json"]
+        latest["comparison_metadata"]=payload["lineage"].get("comparison_metadata")
     if "daily_integrated_decision_brief.json" in payload["files"]: latest["daily_integrated_decision_brief_sha256"]=payload["files"]["daily_integrated_decision_brief.json"]
     return latest
 def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, local_only: bool=False, decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None) -> dict[str,Any]:

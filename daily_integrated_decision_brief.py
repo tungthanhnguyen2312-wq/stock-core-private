@@ -570,6 +570,7 @@ def build_artifact(
     artifact: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION,
         "session": session, "previous_qualified_session": next_session_brief.get("previous_qualified_session"),
+        "comparison_metadata": next_session_brief.get("comparison_metadata"),
         "requested_at": requested_at, "policy_version": POLICY_VERSION,
         "market_summary": market_summary, "sector_summary": sector_summary,
         "opportunity_sets": opportunity_sets, "watchlist": watchlist,

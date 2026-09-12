@@ -30,6 +30,7 @@ from daily_research_session_operations import frozen_input_identities, load_regi
 from field_temporal_contract import stable_id
 from multi_session_thesis_recommendation_lifecycle import CONFIRMATION_STATES as TACTICAL_CONFIRMATION_STATES
 from multi_session_thesis_recommendation_lifecycle import build_artifact as build_lifecycle_artifact
+from session_comparison_semantics import build_comparison_metadata
 
 CONTRACT_VERSION = "next_session_decision_brief/v2"
 HIGH_PRIORITY_TIER = "PRIORITY_NOW"
@@ -523,6 +524,9 @@ def _build_from_resolved_operations(
         "contract_version": CONTRACT_VERSION,
         "current_session": current_session,
         "previous_qualified_session": resolved_previous_session,
+        "comparison_metadata": build_comparison_metadata(
+            registry=registry, current_session=current_session, comparison_session=resolved_previous_session,
+        ),
         "binding": {
             "run_identity": run_identity,
             "run_identity_availability": AVAILABLE if run_identity else UNAVAILABLE,
