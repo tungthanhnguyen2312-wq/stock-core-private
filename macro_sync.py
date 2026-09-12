@@ -208,35 +208,26 @@ def fetch_wb(code):
     return sorted((f"{d['date']}-12-31", d["value"]) for d in j[1] if d["value"] is not None)
 
 def fetch_vcb_today():
-    """Tỷ giá VCB bán ra hôm nay (vnstock). Giá dạng chuỗi '26,471.00' -> float."""
-    from vnstock.explorer.misc.exchange_rate import vcb_exchange_rate
-    today = datetime.now().strftime("%Y-%m-%d")
-    try:
-        df = vcb_exchange_rate(date=today)
-        time.sleep(REQUEST_DELAY)
-        usd = df[df["currency_code"].astype(str).str.upper() == "USD"]
-        if usd.empty:
-            return []
-        sell = float(str(usd["sell"].iloc[0]).replace(",", ""))
-        return [(today, sell)]
-    except Exception as e:
-        print(f"   [Lỗi Hệ Thống] VCB: {str(e)[:60]}")
-        return []
+    """Tỷ giá VCB bán ra hôm nay, qua adapter first-party trực tiếp (macro_vcb_adapter.py) --
+    KHÔNG qua vnstock (xem docs/DECISIONS.md
+    MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1)."""
+    from macro_vcb_adapter import fetch_vcb_usd_sell_rate
+    result = fetch_vcb_usd_sell_rate()
+    time.sleep(REQUEST_DELAY)
+    if result.status != "OK":
+        print(f"   [Lỗi Hệ Thống] VCB: {result.status}:{result.reason}")
+    return result.pairs
 
 def fetch_sjc_today():
-    """Giá vàng SJC bán ra (chi nhánh HCM) hôm nay, đồng/lượng."""
-    from vnstock.explorer.misc.gold_price import sjc_gold_price
-    today = datetime.now().strftime("%Y-%m-%d")
-    try:
-        df = sjc_gold_price()
-        time.sleep(REQUEST_DELAY)
-        row = df[df["branch"].astype(str).str.contains("Hồ Chí Minh", na=False)]
-        if row.empty:
-            row = df.head(1)
-        return [(today, float(row["sell_price"].iloc[0]))]
-    except Exception as e:
-        print(f"   [Lỗi Hệ Thống] SJC: {str(e)[:60]}")
-        return []
+    """Giá vàng SJC bán ra (chi nhánh HCM) hôm nay, đồng/lượng -- qua adapter first-party
+    trực tiếp (macro_sjc_adapter.py) -- KHÔNG qua vnstock (xem docs/DECISIONS.md
+    MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1)."""
+    from macro_sjc_adapter import fetch_sjc_gold_sell_price
+    result = fetch_sjc_gold_sell_price()
+    time.sleep(REQUEST_DELAY)
+    if result.status != "OK":
+        print(f"   [Lỗi Hệ Thống] SJC: {result.status}:{result.reason}")
+    return result.pairs
 
 # ==========================================
 # SNAPSHOT: giá trị mới nhất + biến động mỗi chuỗi
@@ -473,6 +464,22 @@ def atomic_write_text(path, content):
             os.unlink(temp_name)
 
 
+def atomic_write_via(path, writer):
+    """Run ``writer(temp_path)`` against a temp file in the same directory as ``path``, then
+    atomically replace ``path`` with it. A crash inside ``writer`` leaves the temp file behind
+    (cleaned up in ``finally``) but never leaves ``path`` itself partially written."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".tmp")
+    os.close(fd)
+    try:
+        writer(temp_name)
+        os.replace(temp_name, target)
+    finally:
+        if os.path.exists(temp_name):
+            os.unlink(temp_name)
+
+
 def export_web_snapshot(conn, json_path=WEB_JSON, js_path=WEB_JS, generated_at=None):
     generated_at = generated_at or datetime.now(VN_TZ)
     pipeline_completed_at = generated_at
@@ -523,7 +530,7 @@ def main():
     generated_at = datetime.now(VN_TZ)
     if not args.export_web_only:
         snap = make_snapshot(conn, generated_at=generated_at)
-        snap.to_csv(OUT_SNAPSHOT, index=False, encoding="utf-8-sig")
+        atomic_write_via(OUT_SNAPSHOT, lambda tmp: snap.to_csv(tmp, index=False, encoding="utf-8-sig"))
     web = export_web_snapshot(conn, generated_at=generated_at)
     total = conn.execute("SELECT COUNT(*) FROM macro").fetchone()[0]
     conn.close()

@@ -80,3 +80,8 @@ jobs:
           tests/test_multi_source_exact_session_resolver.py
           tests/test_multi_source_market_evidence_contract.py
           tests/test_vnstock_rate_governor.py
+          tests/test_macro_vcb_adapter.py
+          tests/test_macro_sjc_adapter.py
+          tests/test_macro_sync_source_fetchers.py
+          tests/test_macro_import_containment.py
+          tests/test_dashboard_domain_freshness.py

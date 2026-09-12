@@ -1,5 +1,116 @@
 # Stock Lookup — Operational State
 
+**Macro network governance and VNStock decoupling V1 (2026-09-12):**
+`MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1 = COMPLETE_LOCAL`. `RELEASE_NOT_YET_
+AUTHORIZED` -- owner-authorized bounded implementation milestone (started despite `queued_
+next=[]`, per `AI_RULES.md` rule 11's explicit-owner-override provision), local checkpoint
+only, not pushed. Scope: the runtime/presentation macro acquisition path only
+(`macro_sync.py` -> `macro_presentation_context.py`); the distinct evidence-bound
+`current_macro_regime/v1` research product and W3's exact-session KBS/VCI worker isolation
+are both untouched.
+
+**`MACRO_VNSTOCK_DEPENDENCY = REMOVED`, `MACRO_VNAI_DEPENDENCY = REMOVED`.** VCB (USD/VND) and
+SJC (gold) macro acquisition previously went through `vnstock.explorer.misc.exchange_rate.
+vcb_exchange_rate`/`vnstock.explorer.misc.gold_price.sjc_gold_price`. Both installed wrappers
+(vnstock 4.0.4) were statically inspected -- never guessed -- to extract their exact
+request/parse contracts, then reimplemented as two new first-party, vnstock/vnai-free modules:
+`macro_vcb_adapter.py` (`GET https://www.vietcombank.com.vn/api/exchangerates/exportexcel?
+date=YYYY-MM-DD`, base64 xlsx, `ExchangeRate` sheet, `iloc[2:-4]` slice reproduced exactly) and
+`macro_sjc_adapter.py` (`POST https://sjc.com.vn/GoldPrice/Services/PriceService.ashx`,
+`method=GetSJCGoldPriceByDate&toDate=DD/MM/YYYY`, fixed browser-like headers reproduced as a
+plain literal rather than importing `vnstock.core.utils.user_agent`). Both routes are public
+and keyless -- no API key, no session/auth, no undocumented VNStock-owned infrastructure --
+so no `DIRECT_FIRST_PARTY_MACRO_ROUTE_NOT_ESTABLISHED` stop condition applies.
+`macro_sync.py`'s `fetch_vcb_today()`/`fetch_sjc_today()` now call these adapters directly;
+FRED/Yahoo/World Bank fetchers are untouched (already keyless, already bounded).
+
+**A real correctness bug was self-caught before landing.** Building the VCB adapter's offline
+fixture tests surfaced that pandas' Excel reader silently parses several tokens (notably
+`"N/A"`) to `NaN`, and `float("nan")` does not raise -- the first adapter draft would have
+reported a genuinely missing VCB sell-rate cell as a fabricated `"OK"` NaN value rather than an
+honest `SOURCE_RETURNED_NO_VALUE`. Fixed with an explicit `pd.isna()`/`math.isfinite()` guard
+before any such cell is accepted, with a dedicated regression test locking in the fix
+(`test_na_like_sell_cell_is_not_fabricated_as_a_value`).
+
+**Bounded network behavior.** FRED/Yahoo/World Bank already had explicit per-request timeouts
+(`http_get(..., timeout=25)`) and bounded retry (`MAX_RETRY=3`, finite backoff) -- untouched.
+The new VCB/SJC adapters add an explicit `timeout=10` to their single `requests.get`/`.post`
+call each; matching the original wrapper's own behavior (zero retries), no retry loop was
+added -- a single bounded attempt is already a finite, terminal outcome. The canonical Daily
+parent's `refresh_macro_snapshot()` subprocess call previously had NO subprocess-level
+timeout at all; it now carries a `timeout=300` (`MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS`) total
+deadline, mapped on `subprocess.TimeoutExpired` to an explicit `MACRO_SYNC_SUBPROCESS_TIMEOUT`
+`FAILED` result -- core Daily continues either way; macro remains non-blocking exactly as
+before, single-refresh-owner invariant (one macro refresh per canonical Daily,
+`canonical_daily_operation.py` line ~710) unchanged.
+
+**Atomic snapshot write.** `data/macro_snapshot.json`/`.js` were already written via
+temp-file-then-`os.replace` (`atomic_write_text`). `macro_snapshot.csv` was not: pandas'
+`to_csv(path, ...)` wrote directly into the target path, so a mid-write crash could leave a
+partially-written CSV masquerading as complete. New `atomic_write_via()` writes pandas' own
+CSV serialization into a temp file in the same directory first, then atomically replaces the
+target -- byte-identical output (same `to_csv` call, same `utf-8-sig` encoding), just crash-safe.
+
+**No schema, cadence, or authority change.** The 17-series catalog (FRED=5, Yahoo=8, World
+Bank=2, VCB=1, SJC=1 -- reconfirmed exactly from current `macro_sync.py` code, not assumed from
+this milestone's own prior-audit prompt text), `data/macro_snapshot.json`/`.csv` schemas,
+`macro_presentation_context/v1`'s `SOURCE_AUTHORITY` labels (Yahoo stays
+`UNOFFICIAL_MARKET_DATA_SOURCE`; VCB/SJC stay `FIRST_PARTY_QUOTE_UNOFFICIAL_TRANSPORT`, never
+promoted to official), and acquisition cadence (still attempted every refresh, no new
+cadence-gating policy) are all byte-for-byte unchanged. `current_macro_regime/v1` binding
+remains untouched -- this milestone never redefines or promotes it.
+
+**Import containment.** A new subprocess-isolated check
+(`tests/test_macro_import_containment.py` + `tests/fixtures/check_macro_import_containment.py`,
+mirroring W3's own `check_parent_import_containment.py` rationale so in-process
+`sys.modules` pollution from unrelated test files collected in the same pytest session can
+never produce an order-dependent false pass) confirms `macro_sync.py` and both new adapters
+never import `vnstock`/`vnai`. Reconfirmed live during the bounded qualification probe below:
+`MACRO_VNSTOCK_IMPORT = NONE`.
+
+**BOUNDED LIVE QUALIFICATION (5 real network requests, one per source family, no DB/artifact
+write -- fetcher functions called directly, never `macro_sync.main()`).** All five succeeded:
+FRED `us_fedfunds`/FEDFUNDS (full history CSV, 866 points, latest 2026-08-01=3.63), Yahoo
+`sp500`/^GSPC (5d range, 5 points, latest 2026-09-11=7656.98), World Bank `vn_cpi_yoy`/FP.CPI.
+TOTL.ZG (30 annual points, latest 2025-12-31=3.31), VCB direct adapter (USD sell
+2026-09-12=26,110 VND), SJC direct adapter (HCM branch sell 2026-09-12=146,000,000 VND/lượng).
+Both direct VCB and SJC adapters returned a valid parsed first-party value -- the qualification
+bar this milestone exists to clear -- so `VCB_SJC_DIRECT_MACRO_DECOUPLING_NOT_QUALIFIED` does
+not apply.
+
+**Tests.** 49 new offline tests across `test_macro_vcb_adapter.py` (11),
+`test_macro_sjc_adapter.py` (11), `test_macro_sync_source_fetchers.py` (21, covering FRED/
+Yahoo/World Bank success+failure, VCB/SJC delegation wiring, multi-source partial-failure at
+the upsert/DB layer, and atomic-write crash-safety), `test_macro_import_containment.py` (1),
+plus 3 new tests appended to the existing `test_dashboard_domain_freshness.py` (subprocess
+total-deadline wiring + timeout-is-nonfatal). Zero real network in any of them. Regression:
+existing `test_macro_sync.py` (10), `test_macro_presentation_context.py` (15),
+`test_ai_handoff_source_freshness_matrix.py`, `test_current_macro_regime.py`,
+`test_vietnam_official_macro_evidence.py`, the full `test_canonical_daily_operation.py`
+(43, 1 pre-existing deselect), the dashboard release publisher's existing macro
+schema-contract test, `test_production_call_shape_smoke.py` (5), and every W3 focused-CI
+test file (`test_vnstock_worker_client.py`, `test_vnstock_exact_session_worker_equivalence.py`,
+`test_vnstock_worker_import_containment.py`, `test_multi_source_exact_session_resolver.py`,
+`test_multi_source_market_evidence_contract.py`, `test_vnstock_rate_governor.py` -- 133 tests)
+all pass unmodified, confirming zero W3 impact. `py_compile`, JSON validation, `git diff
+--check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`) all clean. New test files
+added to `.github/workflows/producer-ci.yml`'s existing `focused-regressions` lane (no fourth
+workflow); the full 24-file lane (298 tests) reproduced green locally. GitHub Actions still
+makes zero live network calls anywhere.
+
+**Files changed:** new `macro_vcb_adapter.py`, `macro_sjc_adapter.py`,
+`tests/test_macro_vcb_adapter.py`, `tests/test_macro_sjc_adapter.py`,
+`tests/test_macro_sync_source_fetchers.py`, `tests/test_macro_import_containment.py`,
+`tests/fixtures/check_macro_import_containment.py`; modified `macro_sync.py` (VCB/SJC fetchers
+delegate to the new adapters, `atomic_write_via()` for the CSV snapshot),
+`canonical_daily_operation.py` (`MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS`, `subprocess.
+TimeoutExpired` handling in `refresh_macro_snapshot()`), `tests/test_dashboard_domain_
+freshness.py` (3 new tests), `.github/workflows/producer-ci.yml` (5 new test files in the
+existing `focused-regressions` lane). No other file touched -- in particular no touch to
+`vnstock_worker_client.py`/`vnstock_worker_process.py`/`vnstock_worker_protocol.py`,
+`multi_source_exact_session_resolver.py`, `current_macro_regime.py`, `freshness_history.py`,
+`macro_presentation_context.py`, or any Dashboard/dashboard-repo file.
+
 **VNStock exact-session worker isolation and sentinel equivalence RELEASE V1 (2026-09-12):**
 `VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_RELEASE_V1 = COMPLETE`.
 `LIVE_WORKER_INTEGRATION = QUALIFIED`. `HOSTED_PRODUCER_CI = PASS`. Releases local implementation

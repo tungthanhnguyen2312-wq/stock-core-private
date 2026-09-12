@@ -167,11 +167,19 @@ def _write_json(path: Path, value: Mapping[str, Any]) -> None:
         path.write_text(encoded, encoding="utf-8")
 
 
+# Total wall-clock budget for the optional macro subprocess. Bounded generously above normal
+# execution (17 series, each individually timeout/retry-bounded in macro_sync.py) so a
+# transient slow source doesn't false-positive, while still guaranteeing this optional step
+# can never hang core Daily indefinitely if a source stalls past its own bounded retry logic.
+MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS = 300
+
+
 def refresh_macro_snapshot(root: Path, runtime_root: Path) -> dict[str, Any]:
     """Run the existing bounded macro synchronizer once, without blocking core research.
 
-    Macro is optional context: a source failure is recorded for the presentation contract,
-    while the exact-session market/research path remains authoritative and completes.
+    Macro is optional context: a source failure (including a total-deadline timeout) is
+    recorded for the presentation contract, while the exact-session market/research path
+    remains authoritative and completes.
     """
     env = os.environ.copy()
     env["STOCK_LOOKUP_RUNTIME_ROOT"] = str(runtime_root)
@@ -179,7 +187,13 @@ def refresh_macro_snapshot(root: Path, runtime_root: Path) -> dict[str, Any]:
         result = subprocess.run(
             [sys.executable, str(root / "macro_sync.py")], cwd=root, env=env,
             capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+            timeout=MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS,
         )
+    except subprocess.TimeoutExpired as exc:
+        detail = (exc.stderr or exc.stdout or "")
+        detail = detail.strip()[-500:] if isinstance(detail, str) else ""
+        return {"status": "FAILED", "reason_code": "MACRO_SYNC_SUBPROCESS_TIMEOUT",
+                "timeout_seconds": MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS, "detail": detail}
     except OSError as exc:
         return {"status": "FAILED", "reason_code": "MACRO_SYNC_EXECUTION_FAILED", "detail": type(exc).__name__}
     if result.returncode:

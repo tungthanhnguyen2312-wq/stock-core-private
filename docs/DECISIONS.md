@@ -1,5 +1,73 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - Macro Network Governance and VNStock Decoupling V1
+
+`MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1 = COMPLETE_LOCAL`, local implementation
+checkpoint only, not pushed. `RELEASE_NOT_YET_AUTHORIZED`.
+
+**Decision: replace VCB/SJC's vnstock dependency with two first-party adapters, not a new
+provider.** The runtime/presentation macro path (`macro_sync.py`) acquired Vietcombank USD/VND
+and SJC gold quotes through `vnstock.explorer.misc.exchange_rate.vcb_exchange_rate`/
+`vnstock.explorer.misc.gold_price.sjc_gold_price`. Both installed wrappers (vnstock 4.0.4) were
+statically read in full before writing any adapter code -- their exact endpoint, HTTP method,
+body/params, headers, and parsing were extracted, never guessed or inferred from memory. Both
+routes turned out to be public and keyless (VCB: plain `GET` with no headers at all; SJC: `POST`
+with only browser-like `Referer`/`Origin`/`User-Agent` headers to avoid basic bot-blocking, no
+API key or session/auth of any kind) -- so the milestone's `DIRECT_FIRST_PARTY_MACRO_ROUTE_NOT_
+ESTABLISHED` stop condition never triggered, and no new market-data provider was introduced
+(the source identity stays `VCB`/`SJC`, not `VNSTOCK`, satisfying `docs/AI_RULES.md` rule 8's
+provider-expansion gate by construction -- this is provider-internal transport decoupling, not
+a new provider).
+
+**Decision: reproduce SJC's header set as a plain literal rather than importing `vnstock.core.
+utils.user_agent`.** That module itself does not import vnai, but importing anything under the
+`vnstock` package tree was ruled out on principle for this milestone's own goal (macro path
+imports vnstock = NO). The four fixed header values it would have produced
+(`Referer`/`Origin`=sjc.com.vn, a Chrome/Windows `User-Agent`, standard `Accept`/`Content-Type`)
+are copied once as `SJC_HEADERS` in `macro_sjc_adapter.py` instead.
+
+**Decision: zero retry added to the new VCB/SJC adapters, unlike FRED/Yahoo/World Bank's
+existing `http_get()` (`MAX_RETRY=3`).** The original vnstock-based `fetch_vcb_today()`/
+`fetch_sjc_today()` had zero retries -- a single attempt wrapped in a generic
+`except Exception`. Preserving that exact attempt-count (while adding the previously-absent
+explicit `timeout=10`) satisfies "finite attempts, finite time, explicit terminal failure"
+without inventing new retry semantics the original never had; a single bounded attempt is
+already a valid terminal outcome per the milestone brief's own retry-policy section.
+
+**Decision: `MACRO_SYNC_SUBPROCESS_TIMEOUT_SECONDS = 300`, not shorter.** `refresh_macro_
+snapshot()`'s `subprocess.run()` call to `macro_sync.py` had no timeout at all before this
+milestone. Worst-case cumulative latency across the 15 FRED+Yahoo+World Bank series (each
+individually bounded by `http_get`'s own ~3-attempt/finite-backoff retry) is real but rare;
+300s is chosen generously above normal execution (each series' own per-request timeout is 25s,
+and normal runs complete in tens of seconds) so a single slow-but-working source cannot
+false-positive the whole macro refresh, while still guaranteeing the optional step can never
+hang core Daily indefinitely.
+
+**Self-caught defect: `float("nan")` does not raise.** Building the VCB adapter's fixture
+tests revealed that pandas' Excel reader silently converts tokens including `"N/A"` to `NaN`
+during `pd.read_excel`; `float(str(nan_value))` then successfully parses to a float `NaN`
+rather than raising. The first adapter draft would have reported a genuinely missing/blank VCB
+sell-rate cell as a fabricated `"OK"` result carrying a `NaN` "value" -- a direct violation of
+`docs/DATA_FIRST_DOCTRINE.md` Section 2 ("Missing data is never converted to zero" applies
+equally to never converting missing data into a silently-accepted `NaN`). Fixed with an
+explicit `pd.isna()` check (classified `SOURCE_RETURNED_NO_VALUE`) before the string-to-float
+conversion, plus a `math.isfinite()` guard after it, both covered by dedicated regression
+tests. Caught and fixed before any commit, via the offline fixture-test-writing process itself
+-- not found in production.
+
+**Explicitly out of scope / unchanged (per milestone brief and reconfirmed in code before
+finishing):** `current_macro_regime/v1`'s own evidence-bound research contract and authority;
+the 17-series catalog and its per-series units/labels/frequencies; `data/macro_snapshot.json`/
+`.csv` schemas; `macro_presentation_context/v1`'s source-authority labels (Yahoo stays
+unofficial; VCB/SJC stay first-party-unofficial-transport, never promoted); acquisition cadence
+(no new "only fetch when due" policy); the single-macro-refresh-per-Daily ownership invariant;
+W3's exact-session KBS/VCI worker isolation (`vnstock_worker_client.py`/`vnstock_worker_
+process.py`/`vnstock_worker_protocol.py`, `multi_source_exact_session_resolver.py`) and its
+still-intentional, still-untouched use of `vnstock`/`vnai` for KBS/VCI transport; the ~15 other
+standalone sync scripts that import `vnstock` directly for financial/company/profile/ownership
+data (pre-existing, separately-flagged coverage gap, unchanged by this milestone); the
+Dashboard/dashboard-repo consumer (no file in that repository touched).
+
 ## 2026-09-12 - VNStock Exact-Session Worker Isolation and Sentinel Equivalence RELEASE V1
 
 `VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_RELEASE_V1 = COMPLETE`. Releases
