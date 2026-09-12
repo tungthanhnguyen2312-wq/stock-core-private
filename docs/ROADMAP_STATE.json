@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.13.1",
+  "roadmap_version": "2026.09.13.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1",
+    "milestone": "CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -1526,6 +1526,22 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_13_CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1",
       "notes": "COMPLETE_LOCAL, local checkpoint only, not pushed. The predecessor milestone (above) traced thesis_cases=None at the canonical integration boundary and confirmed neither retained scenario contract is that decision-input contract. This milestone builds the first real one: new current_thesis_case_context/v1 (current_thesis_case_context.py), materialized fresh every run in canonical_current_product_projections.materialize_current_investment_decision_workspace over exactly the Daily ticker denominator (watchlist union valuation), from two already-upstream, already-governed current-session artifacts only -- financial_analysis_product_context and the registry's event_context -- never from the retained scenario contracts, never from security_decision_context/Workspace/Screener/portfolio output (DAG verified acyclic). Of the five fields opportunity_context can accept from thesis_cases, catalysts/retained_event_context and technical_invalidation already have a live current market-wide source today (current_corporate_event_context/current_official_event_context directly, and tactical_confirmation_invalidation_boundaries/v1 via tactical_behavior_context) so both are reported explicitly absent with a reason rather than re-derived; fundamental_invalidation and counter_thesis_evidence are the real contribution, built only from financial_analysis_context/v2's categorical state vocabulary, never its positive_evidence/negative_evidence/conflicting_evidence prose lists. counter_thesis_evidence is a short string-tag list matching the existing key_counter_thesis vocabulary and deliberately excludes the four dimensions security_decision_context._financial_analysis_annotation already tags from the same record via its own separate argument (full structured evidence for every dimension is kept separately in counter_thesis_evidence_detail, never re-emitted as a duplicate tag) -- an earlier draft emitted structured objects into this field directly, which would have silently mixed objects into a string-tag list every other contributor populates with strings; fixed pre-commit. A second self-caught defect: risk_evidence's first draft treated any event with a non-empty warnings list as adverse; the real retained current_official_event_context/v1 corpus for 2026-09-11 proved every single event -- routine CASH_DIVIDEND/AGM included -- carries one of three fixed boilerplate authority-boundary disclaimers there, which fabricated RISK on 1,101 of 1,683 tickers from pure boilerplate; fixed pre-commit to require a genuinely adverse event_status/event_state, which the real corpus has none of today, so RISK is honestly 0 market-wide. Real 2026-09-11 retained local replay (no network/provider/DB/publish): denominator 1,683, zero silent ticker drops, 1,361 tickers with >=1 eligible thesis case / 322 with legitimately zero, 1,164 SUPPORT, 830 COUNTER, 0 RISK, fundamental_invalidation READY for 1,164 / UNAVAILABLE for 519 (was UNAVAILABLE for all 1,683 before this milestone), presentation_only_sourced_cases 0. security_decision_context's research_stance_distribution is byte-identical before/after ({WAIT_FOR_CONFIRMATION: 1473, INSUFFICIENT_EVIDENCE: 210}, rest 0) because this retained root's tactical_behavior is independently UNAVAILABLE (missing technical_structure_context/tactical_setup_tags for 2026-09-11, a pre-existing source-availability gap unrelated to this milestone) -- thesis cases are supporting evidence, not a posture override, exactly as designed; key_counter_thesis gained a non-duplicate tag on 26 tickers (815 -> 841). Portfolio remains out of scope and unchanged; no private portfolio root read. 18 new focused tests (tests/test_current_thesis_case_context.py: deterministic identity, evidence-class mapping, no-fabrication, zero-silent-drop, no-duplication regression, DAG/import-boundary checks, end-to-end decision-consumption smoke) plus 2 existing tests updated in tests/test_canonical_current_product_projections.py for the axis no longer being permanently unavailable; zero regressions across current_valuation_opportunity_integration, security_decision_context, investment_decision_workspace_projection, canonical_current_product_projections, production_call_shape_smoke (one unrelated pre-existing failure confirmed caused by a gitignored/worktree-local operations-review evidence gap, not this change). py_compile, JSON parse, git diff --check, and tools/stocklookup_roadmap.py --check all clean. No source authority, RAW_AS_TRADED, PIT, valuation, or recommendation-policy change. Not pushed; no successor milestone opened."
+    },
+    {
+      "milestone_id": "CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE_LOCAL / EVENT_CONTRACT_SEMANTICS_CORRECTED / AUTHORITY_UNCHANGED",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / EVENT_CATALYST_SEMANTIC_CORRECTIVE_AND_DECISION_INTEGRATION_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-directed CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1 brief (2026-09-13), delivered directly in chat.",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_13_CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1",
+      "notes": "COMPLETE_LOCAL, local checkpoint only, not pushed. The production Daily event input is current_official_event_context/v1, which owns event_state rather than the legacy event_status field. current_event_catalyst_classification/v1 is now the version-aware compatibility boundary shared by thesis and opportunity/security integration. Official current/recent price/share events require price/share materiality and official ex-date qualification; governance events are neutral, past events ineligible, and incomplete/unknown temporal state unresolved. Legacy CANCELLED/CONFLICTING_EVIDENCE remain adverse/superseded, never active positive catalysts. The official contract has no separate supersession field; none was invented. Retained 2026-09-11 replay used registry event identity current_official_event_context:98c83c3c180fe28c98719b4b83a214570629ea5f491fd05feb3d6d28f5261391 from source research session 2026-09-05: 4,444 events classified 112 positive, 44 neutral, 4,282 ineligible, 6 unresolved, and 0 negative; 108 Daily tickers have eligible catalysts, and no source-event identities duplicated. 1,683-ticker denominator remains complete, with thesis eligible coverage 1,361 -> 1,385 and no security recommendation-policy change. The retained source's publication timing and stale source-session limits remain explicit. Focused tests pass (127 passed, 1 skipped); no network, database write, publication, deployment, source, RAW_AS_TRADED, PIT, valuation, liquidity, sizing, or execution authority changed. See docs/current_event_catalyst_decision_semantics_replay_20260913.md."
     }
   ],
   "blocked_capabilities": [

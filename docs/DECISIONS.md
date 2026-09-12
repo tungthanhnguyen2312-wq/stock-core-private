@@ -1,5 +1,32 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-13 - Current Event Catalyst Decision Semantics Corrective V1
+
+`CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1 = COMPLETE_LOCAL`, local checkpoint
+only, not pushed.
+
+1. **Decision: classify the actual Daily event contract at one boundary.** The canonical registry
+   supplies `current_official_event_context/v1` and its `event_state`; reading the legacy
+   `event_status` field in the consumer was a contract mismatch. New
+   `current_event_catalyst_classification.py` accepts each vocabulary only under its declared
+   version and reports unsupported or unrecognized state explicitly rather than guessing.
+
+2. **Decision: admit only current, officially qualified price/share events as catalysts.**
+   `UPCOMING`/`EX_DATE_TODAY`/`RECENT` events require price/share type, price/share materiality,
+   and official ex-date qualification. Governance information remains neutral, `PAST` is not a
+   current catalyst, and incomplete temporal facts remain unresolved.
+
+3. **Decision: preserve source supersession and warning semantics.** The official contract has no
+   amendment/supersession field, so no one was invented. Legacy `CANCELLED`/`CONFLICTING_EVIDENCE`
+   are adverse/superseded context and can never become active positive catalysts. Fixed boilerplate
+   warnings are ignored; retained sample events prove they occur on routine dividend and AGM rows.
+
+4. **Decision: make thesis and opportunity consume the same classification result.** Eligible
+   classifications populate thesis `CATALYST` evidence and the existing opportunity catalyst axis
+   with source identity and method lineage. This is semantic corrective/integration work only;
+   security policy and all authority boundaries remain unchanged. See
+   `docs/current_event_catalyst_decision_semantics_replay_20260913.md`.
+
 ## 2026-09-13 - Canonical Evidence-Bound Thesis Cases Decision Input V1
 
 `CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1 = COMPLETE_LOCAL`, local checkpoint

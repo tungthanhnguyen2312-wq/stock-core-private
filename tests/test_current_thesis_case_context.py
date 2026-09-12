@@ -37,7 +37,7 @@ def _fa_record(**overrides):
 
 
 def _events(records):
-    return {"artifact_identity": "evt:1", "records": records}
+    return {"contract_version": "current_corporate_event_context/v1", "artifact_identity": "evt:1", "records": records}
 
 
 def _event_record(events):

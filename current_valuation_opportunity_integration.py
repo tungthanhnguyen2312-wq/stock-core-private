@@ -145,6 +145,7 @@ def build_artifacts(
             events_record=event_records.get(ticker),
             events_session=events_session,
             events_identity=events_identity,
+            events_contract_version=(events or {}).get("contract_version"),
             thesis=thesis_records.get(ticker),
             thesis_session=thesis_session or (thesis_records.get(ticker) or {}).get("as_of_session"),
             thesis_identity=thesis_identity,

@@ -12,14 +12,13 @@ contracts independently supply -- never by renaming a presentation artifact, nev
 probability, target price, expected return, action, or sizing.
 
 Two of the five ``opportunity_context._downside_axis``/``_catalyst_axis`` fields this contract
-can populate (``technical_invalidation`` and ``catalysts``/``retained_event_context``) are
-already served by other current, upstream, market-wide sources today --
-``tactical_confirmation_invalidation_boundaries/v1`` (via ``tactical_behavior_context``) for
-technical invalidation, and ``current_corporate_event_context``/``current_official_event_
-context`` directly for catalysts. Duplicating either here would just be noise, not new evidence,
-so both are reported explicitly absent with a reason rather than re-derived. The two fields with
-no other current source -- ``fundamental_invalidation`` and ``counter_thesis_evidence`` -- are
-this module's real contribution, built from ``financial_analysis_context/v2``'s own categorical
+can populate are already served by current, upstream, market-wide sources today. Technical
+invalidation comes from ``tactical_confirmation_invalidation_boundaries/v1`` (via
+``tactical_behavior_context``). Event context instead crosses the version-aware
+``current_event_catalyst_classification`` boundary, which emits only qualified current catalysts
+and preserves non-catalyst event classifications for lineage. The two fields with no other
+current source -- ``fundamental_invalidation`` and ``counter_thesis_evidence`` -- are this
+module's other contribution, built from ``financial_analysis_context/v2``'s own categorical
 state vocabulary (never its ``positive_evidence``/``negative_evidence``/``conflicting_evidence``
 prose lists -- those are presentation text, not structured evidence, and are never read here).
 ``counter_thesis_evidence`` is a short string-tag list (matching the existing ``key_counter_
@@ -57,6 +56,13 @@ import hashlib
 import json
 from typing import Any, Mapping
 
+from current_event_catalyst_classification import (
+    METHOD_VERSION as CATALYST_METHOD_VERSION,
+    NEGATIVE_CATALYST,
+    POSITIVE_CATALYST,
+    classify_events,
+)
+
 CONTRACT_VERSION = "current_thesis_case_context/v1"
 MILESTONE = "CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1"
 SCHEMA_VERSION = "1.0.0"
@@ -75,10 +81,9 @@ FA_V2_STATE_DIMENSIONS: tuple[tuple[str, str, str, str], ...] = (
 FA_V2_NEGATIVE_ONLY_STATES: tuple[tuple[str, str, str], ...] = (
     ("growth_state", "CONTRACTING", "GROWTH"),
 )
-_ADVERSE_EVENT_STATUSES = frozenset({"CANCELLED", "CONFLICTING_EVIDENCE"})
 METHOD_INVALIDATION = "FA_V2_POSITIVE_STATE_REVERSAL_BOUNDARY/v1"
 METHOD_EVIDENCE = "financial_analysis_context/v2 categorical state vocabulary"
-METHOD_RISK = "current_corporate_event_context adverse/conflicting event scan"
+METHOD_RISK = "current_event_catalyst_classification/v1 adverse event scan"
 _IDENTITY_EXCLUDED = {"artifact_sha256", "artifact_identity", "requested_at"}
 
 
@@ -197,7 +202,12 @@ def _fundamental_invalidation(fa_record: Mapping[str, Any] | None) -> dict[str, 
             "trigger_type": None, "as_of": as_of, "method": METHOD_INVALIDATION, "source_identity": identity}
 
 
-def _risk_evidence(event_record: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+def _event_classifications(event_record: Mapping[str, Any] | None, *, event_contract_version: str | None) -> list[dict[str, Any]]:
+    events = (event_record or {}).get("events") if isinstance(event_record, Mapping) else None
+    return classify_events(events if isinstance(events, list) else [], contract_version=event_contract_version)
+
+
+def _risk_evidence(classifications: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
     """Adverse-event risk evidence only -- never a general-purpose warnings scan.
 
     A first version of this function treated ANY non-empty ``event["warnings"]`` as adverse.
@@ -213,36 +223,33 @@ def _risk_evidence(event_record: Mapping[str, Any] | None) -> list[dict[str, Any
     real contract's retained corpus currently emits an adverse value here, so RISK legitimately
     stays empty market-wide today -- an honest zero, not a suppressed signal.
     """
-    events = (event_record or {}).get("events") if isinstance(event_record, Mapping) else None
-    if not isinstance(events, list):
-        return []
     risk: list[dict[str, Any]] = []
-    for event in events:
-        if not isinstance(event, Mapping):
-            continue
-        status = event.get("event_status") or event.get("event_state")
-        if status not in _ADVERSE_EVENT_STATUSES:
+    for event in classifications:
+        if event.get("catalyst_class") != NEGATIVE_CATALYST:
             continue
         risk.append(_evidence(
             case_class="RISK", source_dimension="CORPORATE_EVENT", metric_or_state=event.get("event_type"),
-            value=status, as_of=event.get("known_at") or event.get("published_at") or event.get("official_observed_at"),
-            method=METHOD_RISK, evidence_tier=event.get("evidence_tier") or event.get("qualification") or "UNSPECIFIED",
-            source_identity=event.get("source_record_identity") or event.get("event_id"),
-            reason=f"Retained corporate event carries adverse status {status}.",
+            value=event.get("event_state"), as_of=event.get("known_at") or event.get("event_date"),
+            method=METHOD_RISK, evidence_tier=event.get("fitness") or "UNSPECIFIED",
+            source_identity=event.get("source_event_identity"),
+            reason=f"Retained corporate event classification is adverse: {event.get('event_state')}.",
         ))
     return risk
 
 
 def build_ticker_case(*, ticker: str, as_of_session: str, fa_record: Mapping[str, Any] | None,
-                       event_record: Mapping[str, Any] | None) -> dict[str, Any]:
+                       event_record: Mapping[str, Any] | None, event_contract_version: str | None) -> dict[str, Any]:
     supporting, counter_detail = _supporting_and_counter_evidence(fa_record)
     fundamental_invalidation = _fundamental_invalidation(fa_record)
-    risk = _risk_evidence(event_record)
+    event_classifications = _event_classifications(event_record, event_contract_version=event_contract_version)
+    catalysts = [item for item in event_classifications if item["catalyst_class"] == POSITIVE_CATALYST]
+    risk = _risk_evidence(event_classifications)
     counter_tags = _counter_thesis_tags(counter_detail, risk)
     case_classes_present = sorted({
         *(["SUPPORT"] if supporting else []),
         *(["COUNTER"] if counter_detail else []),
         *(["RISK"] if risk else []),
+        *(["CATALYST"] if catalysts else []),
         *(["INVALIDATION"] if fundamental_invalidation["status"] != "UNAVAILABLE" else []),
     })
     evidence_gaps = []
@@ -264,9 +271,9 @@ def build_ticker_case(*, ticker: str, as_of_session: str, fa_record: Mapping[str
         "counter_thesis_evidence": counter_tags,
         "counter_thesis_evidence_detail": counter_detail,
         "risk_evidence": risk,
-        "catalysts": [],
-        "retained_event_context": [],
-        "catalyst_axis_reason": "CATALYST_ALREADY_SOURCED_FROM_CORPORATE_EVENT_CONTEXT_DIRECTLY_NO_ADDITIONAL_DETERMINISTIC_SIGNAL",
+        "catalysts": catalysts,
+        "retained_event_context": event_classifications,
+        "catalyst_axis_reason": "CANONICAL_EVENT_CATALYST_CLASSIFICATION_APPLIED",
         "technical_invalidation": {
             "status": "UNAVAILABLE",
             "reason": "TECHNICAL_INVALIDATION_ALREADY_SOURCED_FROM_TACTICAL_CONFIRMATION_INVALIDATION_BOUNDARIES_VIA_TACTICAL_BEHAVIOR_CONTEXT",
@@ -279,7 +286,8 @@ def build_ticker_case(*, ticker: str, as_of_session: str, fa_record: Mapping[str
             "corporate_event_source_session": (event_record or {}).get("research_session") if event_record else None,
         },
         "method_versions": {
-            "invalidation": METHOD_INVALIDATION, "supporting_and_counter_evidence": METHOD_EVIDENCE, "risk_evidence": METHOD_RISK,
+            "invalidation": METHOD_INVALIDATION, "supporting_and_counter_evidence": METHOD_EVIDENCE,
+            "risk_evidence": METHOD_RISK, "catalyst_classification": CATALYST_METHOD_VERSION,
         },
         "authority_boundaries": {
             "research_only": True, "case_is_not_decision_authority": True, "no_probability": True,
@@ -301,6 +309,7 @@ def build_artifact(*, as_of_session: str, requested_at: str, daily_tickers: Any,
         raise ThesisCaseContextError("EMPTY_THESIS_CASE_DENOMINATOR")
     event_records = (events or {}).get("records") if isinstance(events, Mapping) else None
     event_records = event_records if isinstance(event_records, Mapping) else {}
+    event_contract_version = (events or {}).get("contract_version") if isinstance(events, Mapping) else None
     records: dict[str, dict[str, Any]] = {}
     for ticker in tickers:
         fa_record = _fa_record(financial_analysis_product_context, ticker)
@@ -308,6 +317,7 @@ def build_artifact(*, as_of_session: str, requested_at: str, daily_tickers: Any,
         records[ticker] = build_ticker_case(
             ticker=ticker, as_of_session=as_of_session, fa_record=fa_record,
             event_record=event_record if isinstance(event_record, Mapping) else None,
+            event_contract_version=event_contract_version,
         )
     if set(records) != set(tickers):
         raise ThesisCaseContextError("THESIS_CASE_SILENT_TICKER_DROP")
@@ -333,6 +343,7 @@ def build_artifact(*, as_of_session: str, requested_at: str, daily_tickers: Any,
             "tickers_with_ge_1_eligible_case": sum(bool(record["case_classes_present"]) for record in records.values()),
             "tickers_with_zero_eligible_cases": sum(not record["case_classes_present"] for record in records.values()),
             "case_class_ticker_counts": dict(sorted(case_class_counts.items())),
+            "catalyst_method_identity": CATALYST_METHOD_VERSION,
             "fundamental_invalidation_status": dict(sorted(fundamental_invalidation_status.items())),
             "presentation_only_sourced_cases": presentation_only_sourced,
         },

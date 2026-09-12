@@ -1,5 +1,21 @@
 # Stock Lookup — Operational State
 
+**Current event catalyst decision semantics corrective V1 (2026-09-13):**
+`CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1 = COMPLETE_LOCAL`. Canonical Daily's
+registry `event_context` is `current_official_event_context/v1`, which owns `event_state`, not
+the legacy `event_status` field. `current_event_catalyst_classification/v1` is now the sole,
+version-aware interpretation boundary for thesis and opportunity/security integration: only
+current/recent, official-qualified price/share events become catalysts; AGM/informational events
+remain neutral; past events are ineligible; incomplete/unknown state is unresolved; and declared
+legacy cancelled/conflicting events are adverse rather than active catalysts. The real 2026-09-11
+retained replay classified 4,444 events as 112 positive, 44 neutral, 4,282 ineligible, and 6
+unresolved (108 eligible-catalyst tickers), with no silent Daily-denominator drops. Boilerplate
+authority warnings are not event signal. No source, recommendation, valuation, RAW/PIT, liquidity,
+sizing, execution, publication, or deployment authority changed. The input source is itself from
+research session 2026-09-05 and retains publication-time limits; these are preserved, not
+inferred away. Full contract, traces, before/after effects, and tests:
+`docs/current_event_catalyst_decision_semantics_replay_20260913.md`.
+
 **Canonical evidence-bound thesis cases decision input V1 (2026-09-13):**
 `CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1 = COMPLETE_LOCAL`. The predecessor
 milestone (below) traced `thesis_cases=None` at the canonical integration boundary and explicitly

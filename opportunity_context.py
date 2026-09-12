@@ -8,7 +8,12 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Mapping
 
-from current_corporate_event_context import CONFIRMED_RECENT, CONFIRMED_UPCOMING, PLANNED_NOT_EXECUTED
+from current_event_catalyst_classification import (
+    NEGATIVE_CATALYST,
+    POSITIVE_CATALYST,
+    UNRESOLVED,
+    classify_events,
+)
 from current_research_valuation_context import evaluate_ticker_valuation, valuation_axis
 from opportunity_axis_freshness import STALE_BUT_RESEARCH_USABLE, axis_is_research_usable, classify_axis_freshness
 from watchlist_tactical_entry_classifier import ENTRY_ACTION_BY_ENTRY_STATE
@@ -49,27 +54,14 @@ def _feature(record: Mapping[str, Any] | None, feature_id: str) -> Mapping[str, 
     return (_feature_context(record).get("current_features") or {}).get(feature_id) or {}
 
 
-def _catalyst_status(events: list[Mapping[str, Any]], thesis: Mapping[str, Any] | None) -> str:
-    if thesis and thesis.get("catalysts"):
+def _catalyst_status(classifications: list[Mapping[str, Any]], thesis: Mapping[str, Any] | None) -> str:
+    if any(item.get("catalyst_class") == POSITIVE_CATALYST for item in classifications) or (thesis and thesis.get("catalysts")):
         return CONFIRMED
-    statuses = {event.get("event_status") for event in events}
-    if statuses & {CONFIRMED_UPCOMING, CONFIRMED_RECENT}:
-        return CONFIRMED
-    if PLANNED_NOT_EXECUTED in statuses:
+    if any(item.get("temporal_status") == "PLANNED_NOT_EXECUTED" for item in classifications):
         return PLANNED_PENDING
-    if events:
+    if classifications:
         return WATCH_FOR_EXECUTION
     if thesis and thesis.get("retained_event_context"):
-        return WATCH_FOR_EXECUTION
-    return CATALYST_UNAVAILABLE
-
-
-def _map_event_status(status: str | None) -> str:
-    if status in {CONFIRMED_UPCOMING, CONFIRMED_RECENT}:
-        return CONFIRMED
-    if status == PLANNED_NOT_EXECUTED:
-        return PLANNED_PENDING
-    if status:
         return WATCH_FOR_EXECUTION
     return CATALYST_UNAVAILABLE
 
@@ -231,7 +223,8 @@ def _market_axis(*, behavior: Mapping[str, Any] | None, leadership: Mapping[str,
 
 def _catalyst_axis(*, events_record: Mapping[str, Any] | None, thesis: Mapping[str, Any] | None,
                    decision_session: str, events_session: str | None, events_identity: str | None,
-                   thesis_session: str | None, thesis_identity: str | None) -> dict[str, Any]:
+                   thesis_session: str | None, thesis_identity: str | None,
+                   events_contract_version: str | None) -> dict[str, Any]:
     source_session = events_session or thesis_session
     source_identity = events_identity or thesis_identity
     freshness = classify_axis_freshness(
@@ -239,27 +232,21 @@ def _catalyst_axis(*, events_record: Mapping[str, Any] | None, thesis: Mapping[s
         known_at=None, source_artifact_identity=source_identity,
     )
     events = list((events_record or {}).get("events") or [])
-    status = _catalyst_status(events, thesis)
-    qualified = [event for event in events if _map_event_status(event.get("event_status")) == CONFIRMED]
-    pending = [event for event in events if _map_event_status(event.get("event_status")) == PLANNED_PENDING]
-    watch = [event for event in events if _map_event_status(event.get("event_status")) == WATCH_FOR_EXECUTION]
+    classifications = classify_events(events, contract_version=events_contract_version)
+    status = _catalyst_status(classifications, thesis)
     usable = axis_is_research_usable(freshness) and status != CATALYST_UNAVAILABLE
-    compact_events = [
-        {"event_type": event.get("event_type"), "event_status": _map_event_status(event.get("event_status")),
-         "source_status": event.get("event_status"), "known_at": event.get("known_at") or event.get("published_at"),
-         "effective_or_expected_date": event.get("effective_date") or event.get("ex_date") or event.get("execution_date")}
-        for event in events
-    ]
+    compact_events = list(classifications)
     return {
         "readiness": status if (events_record or thesis) else "UNAVAILABLE",
         "status": status,
         "qualified_current_catalysts": (
-            [item for item in compact_events if item["event_status"] == CONFIRMED]
+            [item for item in compact_events if item["catalyst_class"] == POSITIVE_CATALYST]
             or list((thesis or {}).get("catalysts") or [])
         ),
-        "pending_watch_items": [item for item in compact_events if item["event_status"] in {PLANNED_PENDING, WATCH_FOR_EXECUTION}],
-        "adverse_events": [item for item in compact_events if item.get("source_status") == "CANCELLED"],
+        "pending_watch_items": [item for item in compact_events if item["catalyst_class"] == UNRESOLVED],
+        "adverse_events": [item for item in compact_events if item["catalyst_class"] == NEGATIVE_CATALYST],
         "event_count": len(events),
+        "event_classifications": compact_events,
         "freshness": freshness,
         "research_usable": usable,
         "inferred_from_price_action": False,
@@ -313,6 +300,7 @@ def build_ticker_opportunity(
     events_record: Mapping[str, Any] | None,
     events_session: str | None,
     events_identity: str | None,
+    events_contract_version: str | None,
     thesis: Mapping[str, Any] | None,
     thesis_session: str | None,
     thesis_identity: str | None,
@@ -344,6 +332,7 @@ def build_ticker_opportunity(
         events_record=events_record, thesis=thesis, decision_session=decision_session,
         events_session=events_session, events_identity=events_identity,
         thesis_session=thesis_session, thesis_identity=thesis_identity,
+        events_contract_version=events_contract_version,
     )
     downside = _downside_axis(
         tactical=tactical, thesis=thesis, decision_session=decision_session,
