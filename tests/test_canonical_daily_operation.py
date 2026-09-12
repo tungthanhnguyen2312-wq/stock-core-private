@@ -349,6 +349,100 @@ def test_production_call_shape_reads_registry_for_comparator_only_after_freeze(m
     assert order.index("freeze") < order.index("load_registry") < order.index("daily_producer")
 
 
+def test_production_call_shape_macro_refresh_and_load_run_once_before_producer(monkeypatch, tmp_path):
+    """AI_HANDOFF_FRESHNESS_AND_SOURCE_CONVERGENCE_V1 ordering regression: the macro
+    synchronizer must run at most once (no duplicate refresh for AI vs. Dashboard), and it
+    -- along with loading the resulting snapshot into a presentation context -- must happen
+    strictly before the Daily Producer, so the AI handoff can carry the exact same retained
+    macro evidence the Dashboard later reuses from disk. Uses the production call shape
+    (producer_fn=None), the same seam that let the 2026-09-11 load_registry NameError and
+    the original macro-after-Producer ordering gap both ship unnoticed."""
+    order: list[str] = []
+    _patch_downstream(monkeypatch, tmp_path)
+    monkeypatch.setattr(cdo, "load_registry", lambda *_a, **_k: {"completed_sessions": {}, "sessions": {}})
+
+    refresh_calls: list[int] = []
+
+    def fake_refresh(_root, _runtime_root):
+        refresh_calls.append(1)
+        order.append("macro_refresh")
+        return {"status": "REFRESHED", "reason_code": None}
+
+    monkeypatch.setattr(cdo, "refresh_macro_snapshot", fake_refresh)
+
+    load_calls: list[int] = []
+
+    def fake_load(_root, _runtime_root, *, macro_refresh, generated_at):
+        load_calls.append(1)
+        order.append("macro_load")
+        assert macro_refresh == {"status": "REFRESHED", "reason_code": None}
+        return {"status": "AVAILABLE", "artifact_identity": "macro_presentation_context:test"}
+
+    monkeypatch.setattr(cdo, "build_macro_presentation_context", fake_load)
+
+    captured: dict = {}
+
+    def fake_run_daily_producer(*_args, **kwargs):
+        order.append("daily_producer")
+        captured["macro_presentation_context"] = kwargs.get("macro_presentation_context")
+        return _producer(tmp_path, SESSION)
+
+    monkeypatch.setattr(cdo, "run_daily_producer", fake_run_daily_producer)
+    runtime = tmp_path / "runtime"
+    _write_runtime(runtime, SESSION)
+
+    result = cdo.run_canonical_daily_operation(
+        tmp_path, runtime, SESSION,
+        now=POST_CLOSE, complete_publication=False,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+        exact_session_evidence=None,
+        acquire_fn=lambda *a, **k: _acquired(tmp_path, SESSION),
+        producer_fn=None,
+        runtime_fn=lambda *a, **k: {"session": SESSION, "live_count": 889},
+        trusted_fn=lambda *a, **k: {"session": SESSION, "trusted_subset_ready": True, "records_fingerprint": "fp"},
+        publication_runner=None,
+        out_dir=tmp_path / "operations-review",
+    )
+
+    assert len(refresh_calls) == 1, "macro refresh must run at most once per operation"
+    assert len(load_calls) == 1
+    assert order.index("macro_refresh") < order.index("macro_load") < order.index("daily_producer")
+    # Producer must receive the exact same macro presentation context object later surfaced
+    # on the operation record -- not a second, independently-loaded copy.
+    assert captured["macro_presentation_context"] == {"status": "AVAILABLE", "artifact_identity": "macro_presentation_context:test"}
+    assert result["macro_presentation_context_status"] == "AVAILABLE"
+
+
+def test_macro_refresh_failure_does_not_block_core_daily_and_reports_unavailable(monkeypatch, tmp_path):
+    """A failed macro refresh must degrade to an explicit unavailable macro presentation
+    context, never abort or weaken the exact-session equity core."""
+    _patch_downstream(monkeypatch, tmp_path)
+    monkeypatch.setattr(cdo, "load_registry", lambda *_a, **_k: {"completed_sessions": {}, "sessions": {}})
+    monkeypatch.setattr(cdo, "refresh_macro_snapshot", lambda *_a, **_k: {
+        "status": "FAILED", "reason_code": "MACRO_SYNC_EXTERNAL_OR_PIPELINE_FAILURE",
+    })
+    monkeypatch.setattr(cdo, "run_daily_producer", lambda *_a, **_k: _producer(tmp_path, SESSION))
+    runtime = tmp_path / "runtime"
+    _write_runtime(runtime, SESSION)
+
+    result = cdo.run_canonical_daily_operation(
+        tmp_path, runtime, SESSION,
+        now=POST_CLOSE, complete_publication=False,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+        exact_session_evidence=None,
+        acquire_fn=lambda *a, **k: _acquired(tmp_path, SESSION),
+        producer_fn=None,
+        runtime_fn=lambda *a, **k: {"session": SESSION, "live_count": 889},
+        trusted_fn=lambda *a, **k: {"session": SESSION, "trusted_subset_ready": True, "records_fingerprint": "fp"},
+        publication_runner=None,
+        out_dir=tmp_path / "operations-review",
+    )
+
+    assert result["daily_operation_state"] in {"LOCAL_COMPLETE", "PUBLISHED"}
+    assert result["macro_refresh"]["status"] == "FAILED"
+    assert result["macro_presentation_context_status"] == "UNAVAILABLE"
+
+
 def test_sunday_auto_resolves_latest_governed_completed_session_without_floor(monkeypatch, tmp_path):
     sunday = datetime(2026, 8, 30, 13, 0, tzinfo=VN_TZ)
     target = "2026-08-28"

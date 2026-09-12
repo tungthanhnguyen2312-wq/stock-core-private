@@ -91,6 +91,7 @@ from completed_market_session_gate import (
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
 from daily_research_session_operations import load_registry
 from field_temporal_contract import stable_id
+import macro_presentation_context as macro_presentation_context_module
 from governed_publication_completion import PublicationCompletionError
 from vn_time import VN_TZ, vn_now
 
@@ -185,6 +186,20 @@ def refresh_macro_snapshot(root: Path, runtime_root: Path) -> dict[str, Any]:
         return {"status": "FAILED", "reason_code": "MACRO_SYNC_EXTERNAL_OR_PIPELINE_FAILURE",
                 "returncode": result.returncode, "detail": (result.stderr or result.stdout).strip()[-500:]}
     return {"status": "REFRESHED", "reason_code": None}
+
+
+def build_macro_presentation_context(
+    root: Path, runtime_root: Path, *, macro_refresh: Mapping[str, Any], generated_at: datetime,
+) -> dict[str, Any]:
+    """Load whatever the runtime macro snapshot already has on disk (refreshed at most once,
+    by ``refresh_macro_snapshot`` above) and reshape it for AI-handoff presentation. Never
+    performs its own network/subprocess call: a failed or skipped refresh still lets this
+    load an older retained snapshot rather than losing macro context entirely.
+    """
+    return macro_presentation_context_module.build_from_runtime(
+        root, runtime_root, generated_at=generated_at.isoformat(),
+        refresh_status=macro_refresh.get("status"), refresh_reason_code=macro_refresh.get("reason_code"),
+    )
 
 
 def _working_dates_probe() -> dict[str, Any]:
@@ -509,6 +524,7 @@ def run_canonical_daily_operation(
     trusted_fn: Callable[..., Mapping[str, Any]] | None = None,
     publication_runner: Callable[[list[str]], Any] | None = None,
     macro_refresh_fn: Callable[[Path, Path], Mapping[str, Any]] | None = None,
+    macro_presentation_context_fn: Callable[..., Mapping[str, Any]] | None = None,
     daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     web_dir: Path | None = None,
     out_dir: Path | str | None = None,
@@ -686,6 +702,18 @@ def run_canonical_daily_operation(
     )
     integrated_delivery = _integrated_delivery_for_session(enrichment, resolved_session)
 
+    # Single-refresh invariant: the macro synchronizer runs at most once per operation, and
+    # runs here -- before the Daily Producer -- so the AI handoff can carry the exact same
+    # retained snapshot the Dashboard later reuses from disk. A refresh failure never blocks
+    # or weakens the exact-session equity core: macro presentation context degrades to an
+    # explicit unavailable/partial state instead.
+    macro_refresh = dict((macro_refresh_fn or refresh_macro_snapshot)(root, runtime_root))
+    macro_presentation_context = dict(
+        (macro_presentation_context_fn or build_macro_presentation_context)(
+            root, runtime_root, macro_refresh=macro_refresh, generated_at=instant,
+        )
+    )
+
     producer_head, consumer_head = _git_head(root), _git_head(root.parent / "ai-core-private")
     preseal_brief_builder = daily_integrated_decision_brief_builder
     # Injected producer functions are test/diagnostic seams with their own
@@ -701,6 +729,7 @@ def run_canonical_daily_operation(
             session=resolved_session, latest_completed_session=False,
             producer_head=producer_head or "UNKNOWN", consumer_head=consumer_head or "UNKNOWN",
             integrated_investment_decision_product=integrated_delivery, now=instant,
+            macro_presentation_context=macro_presentation_context,
             **({"daily_integrated_decision_brief_builder": preseal_brief_builder} if preseal_brief_builder is not None else {}),
         )
         if operation_output_root != root:
@@ -729,10 +758,6 @@ def run_canonical_daily_operation(
             STAGE_BLOCKED_SESSION_IDENTITY,
             f"DAILY_PRODUCER_SESSION_MISMATCH:expected={resolved_session}:observed={producer_session}",
         )
-
-    # The existing macro synchronizer is an optional, bounded current-research refresh.
-    # Its failure never weakens or blocks the exact-session deterministic core.
-    macro_refresh = dict((macro_refresh_fn or refresh_macro_snapshot)(root, runtime_root))
 
     shadow_autosourcing = (
         (producer_result.get("manifest") or {}).get("daily_session_shadow_recommendation")
@@ -932,6 +957,7 @@ def run_canonical_daily_operation(
         "runtime_release_status": "READY" if runtime_release.get("ready") else "NOT_READY",
         "runtime_release": runtime_release,
         "macro_refresh": macro_refresh,
+        "macro_presentation_context_status": macro_presentation_context.get("status"),
         "trusted_subset_status": "READY" if trusted.get("trusted_subset_ready") else "NOT_READY",
         "trusted_subset": {
             "session": trusted_session,

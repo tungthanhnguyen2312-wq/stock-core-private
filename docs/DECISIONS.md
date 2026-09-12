@@ -1,5 +1,119 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - AI Handoff Freshness and Source Convergence V1
+
+`AI_HANDOFF_FRESHNESS_AND_SOURCE_CONVERGENCE_V1 = COMPLETE`. Owner-directed milestone delivered
+directly in chat, executed by Claude Code from a fresh worktree/branch rooted exactly at
+`origin/main = 6bbce33af42ccebd40eb8da917d1b7af669b0a7d`.
+
+**Root cause of the AI-handoff macro gap**: read directly from the retained 2026-09-11
+`ai_research_session_bundle.json`, `market.macro` genuinely was
+`{"status": "UNAVAILABLE", "reason": "NO_EXPLICIT_MACRO_ARTIFACT_BOUND"}`. Tracing
+`canonical_daily_operation.py` confirmed why: it never passed a `macro=` argument into
+`daily_producer_pipeline.produce()` at all, and its separate `macro_sync.py` refresh call ran
+strictly *after* `produce()` returned (line ~735, after the Producer call at line ~712) -- even a
+correctly-wired `macro=` would have been too late. No retained `current_macro_regime/v1` artifact
+exists anywhere (`grep -rl current_macro_regime operations-review` returns zero files), and
+`current_macro_regime.py` performs live FRED/SBV network calls with no offline acquisition path --
+so **Option A** (bind an existing qualified `current_macro_regime` artifact) was not available
+under this milestone's explicit no-network-call constraint.
+
+**Selected Option B**: the runtime `macro_sync.py` snapshot (`data/macro_snapshot.json`) is real,
+already retained, and structurally distinct from `current_macro_regime/v1` (no regime
+classification, no retained raw per-observation provider payload). New `macro_presentation_context.
+py` (`macro_presentation_context/v1` -- a contract_version deliberately distinct from
+`current_macro_regime/v1`, so nothing downstream can mistake a descriptive snapshot wrapper for
+evidence-bound regime research) wraps it for AI-consumer presentation only: per-series `source`,
+an honest `source_authority` tag (FRED/World Bank -> official; Vietcombank/SJC -> first-party quote
+over an unofficial transport; Yahoo Finance -> unofficial market data -- freshness never upgrades
+authority), and a cadence-aware `freshness_history.py` envelope per series. `freshness_history.py`
+gained four new domain rules (`macro_annual`, `screening`, `valuation`, `market_flow`,
+`integrated_decision`) purely additively; every existing rule is untouched.
+
+**Single-refresh ordering fix**: the existing macro-sync subprocess call was *moved*, never
+duplicated, from strictly-after-the-Producer to strictly-before-it (right after `enrichment`, right
+before `produce()`), so the same retained snapshot the Dashboard later reads from disk is also the
+one available to the AI handoff. A dedicated production-call-shape regression
+(`test_production_call_shape_macro_refresh_and_load_run_once_before_producer`) proves the refresh
+runs exactly once, strictly before the Producer, and that the Producer receives the identical
+presentation-context object later surfaced on the operation record -- the same seam that let the
+2026-09-11 `load_registry` NameError and the original macro-after-Producer gap both ship unnoticed.
+A second regression (`test_macro_refresh_failure_does_not_block_core_daily_and_reports_unavailable`)
+proves a failed refresh degrades to an explicit unavailable presentation context without blocking
+or weakening the exact-session equity core. The new context threads additively (new
+`macro_presentation_context=` parameter, default `None`) through `run_daily_producer` ->
+`run_session_operation` -> `build_operation` -> `ai_research_session_delivery.build_delivery`,
+landing as `primary.market.macro_presentation_context` alongside the untouched, still-unbound
+`primary.market.macro` (`current_macro_regime/v1` -- Option A remains available, unused, for a
+future milestone that actually acquires a qualified artifact).
+
+**New `ai_handoff_source_freshness_matrix.py`** (`ai_handoff_source_freshness_matrix/v1`)
+additively classifies all 11 requested domains -- market price/descriptive, breadth and sector
+(both descriptive sub-fields, not separately tracked session inputs today), tactical, screening,
+fundamentals, valuation, corporate intelligence, catalyst/event, macro, market-flow positioning,
+and Integrated Decision -- into `CURRENT_INTERNAL`/`PARTIAL_INTERNAL`/`STALE_INTERNAL`/
+`UNAVAILABLE_INTERNAL`, plus a mechanically-derived `online_enrichment_guidance`
+(`INTERNAL_SUFFICIENT`/`INTERNAL_PARTIAL`/`EXTERNAL_CONTEXT_MAY_BE_REQUIRED`). It is built entirely
+from evidence `build_operation` already resolves -- no new acquisition, no recomputed analytical
+value, and it never emits an investment conclusion (a dedicated test asserts no buy/sell/target/
+probability/sizing/execution token appears anywhere in its output). Two domains are classified from
+genuine per-artifact evidence rather than session presence alone: **fundamentals** reads
+`PARTIAL_INTERNAL`/historical because the registered `market_wide_current_fundamental_research`
+artifact identity is confirmed byte-identical across every session from 2026-08-21 through
+2026-09-11 with no embedded per-session timestamp -- a real, permanent evidence-shape limit, not a
+defect, so it is never falsely asserted exact-session current; **catalyst** reads its own real
+`research_session` field (confirmed: `2026-08-20`, 22 days stale as of 2026-09-11) through
+`freshness_history`'s existing `corporate_events` domain rule and correctly resolves
+`STALE_INTERNAL` with an `EARLIER_RETAINED_CATALYST_CONTEXT` reason code, never silently current.
+
+**Market-flow / foreign-flow (items 8-9)** stay three distinct, never-collapsed evidence classes:
+`qualified_dnse_value_flow` (bound to `inputs.market_flow_positioning` only when a genuinely
+same-session artifact is registered; for 2026-09-11 this is honestly `UNAVAILABLE_INTERNAL` /
+`NO_COMPATIBLE_CURRENT_MARKET_FLOW_ARTIFACT`, matching the retained bundle's real
+`flow_coverage: null` exactly -- the stale 2026-08-24 artifact the weekly audit flagged is never
+revived or relabeled current), `macro_snapshot_foreign_flow` (`macro_sync.py`'s own snapshot-level
+foreign-flow slot, honestly always unavailable in every retained snapshot inspected), and
+`proprietary_flow` (explicitly `NO_PROPRIETARY_FLOW_CAPABILITY_THIS_MILESTONE`, never inferred).
+
+**Real, read-only, no-network validation** against the actual retained 2026-09-11
+registry/evidence and the actual retained `data/macro_snapshot.json` (7 weeks stale in this dev
+environment, since nothing has run `macro_sync.py` here under this milestone's no-network
+constraint): macro status moves from a bare `null`/`UNAVAILABLE` to `macro_presentation_context.
+status = PARTIAL` (2 of 17 series `current`, 15 honestly `stale`/`expiring` under their own cadence
+rules -- a true reflection of local snapshot age, not a code defect); 7 of the 11 domains resolve
+`CURRENT_INTERNAL`/`INTERNAL_SUFFICIENT` (market price/descriptive, breadth, sector, tactical,
+screening, valuation, corporate intelligence); `catalyst_event` and `market_flow_positioning`
+correctly flag `EXTERNAL_CONTEXT_MAY_BE_REQUIRED`. The validation script itself did not wire the
+real Producer's `integrated_delivery` object, so its `integrated_decision` reading
+(`UNAVAILABLE_INTERNAL`) reflects that script's own scope, not a production claim -- the dedicated
+`canonical_daily_operation.py` regressions exercise the real production call shape for that path
+instead. Nothing under `stocklookup-ai-handoffs/sessions/2026-09-11` or the Dashboard's own
+2026-09-11 build was touched, read for anything but the *before* comparison, or republished.
+
+**Tests/validation**: 34 new focused tests (15 `test_macro_presentation_context.py`, 17
+`test_ai_handoff_source_freshness_matrix.py`, 2 new ordering/failure-isolation regressions in
+`test_canonical_daily_operation.py`) all pass. Because this feature worktree's own
+`operations-review/` is gitignored and worktree-local (same known gap the prior milestone
+documented), the directly-touched modules' existing suites (`test_daily_research_session_
+operations.py`, `test_daily_producer_pipeline.py`, `test_ai_research_session_delivery.py`,
+`test_ai_research_ticker_extractor.py`, `test_financial_analysis_v2_product_integration.py`,
+`test_canonical_daily_operation.py` -- 62 tests total) were verified against real retained evidence
+read-only-copied from the primary checkout rather than accepted on the fresh-worktree baseline
+alone; zero regressions. The sole remaining failure
+(`test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch`) is the identical
+pre-existing gitignored-evidence gap the prior milestone already documented, untouched by this
+diff. `py_compile`, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`)
+all clean.
+
+**Guardrails held**: no new market-data provider; no numerical analytical output change anywhere
+(source-freshness metadata is purely additive presentation); `current_macro_regime/v1` binding,
+RAW_AS_TRADED, historical PIT, liquidity/position-sizing authority, intrinsic/reverse valuation,
+portfolio sizing, active-universe authority, Dashboard UI, the VNStock rate governor, and every
+tactical-reversal shadow/prospective/registry-reconciliation/session-comparison chain are
+untouched; no provider or network call was made; no Daily run was executed; no historical AI
+handoff or Dashboard build was rewritten or republished; not pushed, not merged, not deployed. No
+successor is queued.
+
 ## 2026-09-12 - Session Registry Promotion and Comparison-Semantics Corrective V1
 
 `SESSION_REGISTRY_PROMOTION_AND_COMPARISON_SEMANTICS_CORRECTIVE_V1 = COMPLETE`. Owner-directed

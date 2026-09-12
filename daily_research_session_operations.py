@@ -25,6 +25,7 @@ from daily_opportunity_decision_queue import build as build_decision_queue, cont
 from prospective_research_learning import freeze_current_decision_surface
 from sector_aware_relative_research import build as build_peer, content_identity as peer_identity
 from ai_research_session_delivery import build_delivery, _integrated_delivery_inputs
+from ai_handoff_source_freshness_matrix import build_source_freshness_matrix
 
 CONTRACT_VERSION = "daily_research_session_operation/v1"
 REQUIRED = ("descriptive", "screening", "tactical", "triage", "fundamental", "valuation", "catalyst", "corporate_intelligence")
@@ -316,7 +317,7 @@ def bind_integrated_decision_brief_before_sealing(
     return prepared
 
 
-def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None, integrated_investment_decision_product: Mapping[str, Any] | None = None, daily_integrated_decision_brief: Mapping[str, Any] | None = None) -> dict[str, Any]:
+def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: str, consumer_head: str, generation_context: str = "RETAINED_FIXED_TIME_REPLAY", portfolio: Mapping[str, Any] | None = None, macro: Mapping[str, Any] | None = None, macro_presentation_context: Mapping[str, Any] | None = None, registry: Mapping[str, Any] | None = None, root: Path | None = None, shadow_security_recommendation: Mapping[str, Any] | None = None, financial_analysis_product_context: Mapping[str, Any] | None = None, integrated_investment_decision_product: Mapping[str, Any] | None = None, daily_integrated_decision_brief: Mapping[str, Any] | None = None) -> dict[str, Any]:
     registry = registry if registry is not None else load_registry(root or MODULE_ROOT)
     assert_inputs_match_registered_session(session, inputs, registry)
     # This product-only context is intentionally an explicit caller attachment,
@@ -397,7 +398,14 @@ def build_operation(inputs: Mapping[str, Any], session: str, *, producer_head: s
         manifest["coverage_summary"]["integrated_investment_decision"] = copy.deepcopy(integrated_decision.get("coverage") or {})
         manifest["warnings"].append("Integrated Decision delivery is a same-session research overlay; it does not confer execution authority.")
         manifest["operation_identity"] = _identity(manifest)
-    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "flow_snapshot": flow_snapshot, "opportunity": opportunity, "decision_queue": decision_queue, "opportunity_snapshot": opportunity_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "integrated_delivery": integrated_delivery, "manifest": manifest}
+    # Additive, presentation-only classification of already-resolved evidence -- never fed
+    # back into manifest["operation_identity"] and never recomputes any analytical value.
+    source_freshness_matrix = build_source_freshness_matrix(
+        session=session, inputs=inputs, macro_context=macro_context,
+        macro_presentation_context=macro_presentation_context, flow=flow,
+        integrated_delivery=integrated_delivery,
+    )
+    return {"inputs": dict(inputs), "peer": peer, "scenario": scenario, "strategy": strategy, "portfolio_risk": portfolio_risk, "macro_context": macro_context, "macro_presentation_context": macro_presentation_context, "source_freshness_matrix": source_freshness_matrix, "flow_snapshot": flow_snapshot, "opportunity": opportunity, "decision_queue": decision_queue, "opportunity_snapshot": opportunity_snapshot, "product": product, "snapshot": snapshot, "corporate_snapshot": corporate_snapshot, "strategy_snapshot": strategy_snapshot, "integrated_delivery": integrated_delivery, "manifest": manifest}
 
 
 def write_immutable(path: Path, value: Mapping[str, Any]) -> None:
@@ -453,6 +461,7 @@ def run_session_operation(
     generation_context: str = "RETAINED_FIXED_TIME_REPLAY",
     portfolio: Mapping[str, Any] | None = None,
     macro: Mapping[str, Any] | None = None,
+    macro_presentation_context: Mapping[str, Any] | None = None,
     shadow_security_recommendation: Mapping[str, Any] | None = None,
     financial_analysis_product_context: Mapping[str, Any] | None = None,
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
@@ -481,6 +490,7 @@ def run_session_operation(
         generation_context=generation_context,
         portfolio=portfolio,
         macro=macro,
+        macro_presentation_context=macro_presentation_context,
         registry=registry,
         root=root,
         shadow_security_recommendation=shadow_security_recommendation,

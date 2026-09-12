@@ -32,6 +32,18 @@ RULES = {
     "macro_weekly": DomainRule("macro_weekly", 7, 7),
     "macro_monthly": DomainRule("macro_monthly", 31, 14),
     "macro_quarterly": DomainRule("macro_quarterly", 92, 35),
+    # A dedicated annual cadence (not folded into macro_quarterly): a 300-day-old GDP print
+    # is normal for a yearly series and must not misread as stale against a 92-day rule.
+    "macro_annual": DomainRule("macro_annual", 366, 185),
+    # Same-session research inputs validated by daily_research_session_operations.py's
+    # validate_coherence() against the current session (screening, valuation, market-flow
+    # positioning, integrated decision): identical daily/market-day cadence to "technical",
+    # kept as separate names so each domain's own freshness reads independently in the
+    # AI handoff source-freshness matrix rather than sharing one ambiguous label.
+    "screening": DomainRule("screening", 1, 1, market_days=True),
+    "valuation": DomainRule("valuation", 1, 1, market_days=True),
+    "market_flow": DomainRule("market_flow", 1, 1, market_days=True),
+    "integrated_decision": DomainRule("integrated_decision", 1, 1, market_days=True),
     "financial_quarterly": DomainRule("financial_quarterly", 92, 45, historical=True),
     # meta_sync.py's own cadence contract: per-ticker fundamentals (pe/pb/roe/market_cap/
     # shares_outstanding/free_float/foreign_room) are documented as "changes slowly -> quarterly
