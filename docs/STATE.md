@@ -1,5 +1,62 @@
 # Stock Lookup — Operational State
 
+**Tactical reversal prospective shadow collection V1 (2026-09-12):**
+`TACTICAL_REVERSAL_PROSPECTIVE_SHADOW_COLLECTION_V1 = COMPLETE / COLLECTION_READY /
+ACTIVE_COLLECTION / NO_PRODUCTION_CHANGE`. New `tactical_reversal_prospective_shadow_collection.py`
+(`tactical_reversal_prospective_shadow_collection/v1`) adds the durable T0
+observation -> immutable retention -> future-outcome-accrual layer
+`TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1` was missing: an immutable, content-addressed T0
+envelope per (ticker, trigger_session) that delegates every eligibility verdict, unmodified,
+to `tactical_reversal_shadow_probe_policy.evaluate_shadow_probe`, plus a strictly separate
+append-only outcome-update layer that matures T+5/T+10/T+20 trading-session-counted
+descriptive metrics (return, close-path MAE/MFE proxy, lower-low occurrence/lag, first
+R6/R3/R2 confirmation lag) only as genuinely retained future sessions accumulate. This
+milestone makes prospective collection operational; it does **not** decide whether Candidate
+A or B should enter production, and makes no promotion decision.
+
+Activation boundary is fixed and permanent: policy checkpoint
+`d758814c73dc2bf60cfa605f4a6738e2c36ea6a7`, activation date `2026-09-11`. Every session on or
+before that date is `BOOTSTRAP_NON_PROSPECTIVE` forever (regression/mechanics evidence
+only, never counted toward prospective validation); a genuinely prospective observation can
+only exist for a session strictly after it. A second, entirely separate maturity label
+(`PROSPECTIVE_PENDING`/`PARTIAL`/`MATURE`) is computed fresh on demand from whatever future
+sessions are genuinely retained -- it is never written onto the immutable T0 envelope, so a
+later maturation pass can never rewrite what the policy knew or decided at T0. Horizons are
+counted in genuinely retained trading sessions (never calendar days, never imputed); a
+ticker-specific data gap inside an otherwise-retained session still consumes that session's
+slot rather than being skipped.
+
+Bootstrap validation ran against the real retained 2026-09-11 artifact (1,683 tickers):
+`A_AND_B` 81, `A_ONLY` 62, `B_ONLY` 3, `R8_NEITHER` 52, `NOT_R8_CONTROL_POPULATION` 1,485 --
+all correctly tagged `BOOTSTRAP_NON_PROSPECTIVE` and excluded from the prospective aggregate.
+No retained session exists yet after the 2026-09-11 activation boundary, so
+`prospective_observation_count = 0` and `overall_status = NO_PROSPECTIVE_OBSERVATIONS_YET` --
+the correct, expected disposition, not a blocker. A byte-identical rerun against the same
+retained evidence reproduced identical observation ids/content and an identical collection
+status (idempotent by construction: content-addressed, write-once T0 files). 28 new focused
+tests (bootstrap/prospective tagging, candidate A/B/A∩B retention and independence, Candidate
+C absence, T5/T10/T20 pending-then-mature lifecycle, trading-session vs calendar-day
+counting, deterministic MAE/MFE/lower-low/confirmation-lag, incomplete-horizon
+never-imputed, price-basis-incompatible -> unevaluable, T0-immutability across future
+enrichment, future-field-injection cannot alter T0 eligibility, no probability/target/sizing
+field anywhere, and static guards that this module never imports the production classifier
+or any Daily/Daily Brief/Integrated Decision surface). Zero regression: the four shadow-policy
+prerequisite suites (122 tests / 54 subtests) pass unchanged; the 11 pre-existing
+environmental failures in `test_canonical_daily_operation.py`/`test_daily_producer_pipeline.py`/
+`test_canonical_post_close_pipeline.py` (missing untracked retained-evidence fixtures in a
+fresh worktree, confirmed identical on the prior milestone's clean control worktree) are
+unchanged and unrelated. `py_compile`, `git diff --check`, and
+`tools/stocklookup_roadmap.py --check` (drift PASS) are all clean.
+
+No classifier invocation or rule-table change, no provider/network call, no runtime database
+write, no Daily/Daily Brief/Integrated Decision/Portfolio change, no PIT/RAW_AS_TRADED/
+liquidity/execution/sizing authority change, and no probability/target/sizing field anywhere
+in this layer. `PROSPECTIVE_VALIDATION = NOT YET MATURE` (T+5/T+10/T+20 all pending, zero
+genuine prospective sessions observed as of this checkpoint); a later, separately authorized
+`TACTICAL_REVERSAL_PROSPECTIVE_SHADOW_EVALUATION_V1` milestone will perform the actual
+promotion review, only once enough genuinely prospective horizons have matured. Classifier V2
+is not queued.
+
 **Tactical reversal shadow probe policy V1 (2026-09-11):**
 `TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1 = COMPLETE / SHADOW_ONLY / PRODUCTION_POLICY_UNCHANGED`.
 This owner-authorized module wires the two candidates

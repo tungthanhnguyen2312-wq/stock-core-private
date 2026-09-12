@@ -1,5 +1,78 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - Tactical Reversal Prospective Shadow Collection V1
+
+`TACTICAL_REVERSAL_PROSPECTIVE_SHADOW_COLLECTION_V1 = COMPLETE / COLLECTION_READY /
+ACTIVE_COLLECTION / NO_PRODUCTION_CHANGE`. This milestone builds the collection/retention
+mechanics required to eventually validate Candidates A and B against genuine future
+sessions; it explicitly does not decide whether either candidate should enter production.
+
+**Reuse decision.** The repository already has a mature immutable-case/append-only-event
+pattern (`durable_prospective_research_case_store.py`) and a horizon-maturity engine
+(`prospective_decision_outcome_measurement.py`, T5/T10/T20/T60, PENDING/MATURE, price-basis
+compatibility, close-path MAE/MFE proxy). Both were inspected first. Neither was reused
+directly: the case store's contract (AI-drafted thesis, human-review provenance, claims/
+scenarios/catalysts) is built for narrative investment theses and has no honest way to
+represent a deterministic tactical shadow-eligibility annotation without either fabricating
+an AI-draft/human-review packet or abusing `persist_policy_admitted_case`'s
+`investment_decision_workspace_projection/v1` card shape, which itself assumes a
+research-stance/entry-state contract this milestone's data does not have. Per `AGENTS.md`
+("edit over proliferate... unless a distinct contract boundary genuinely exists"), this is
+judged a genuine boundary: a new, narrowly-scoped module
+(`tactical_reversal_prospective_shadow_collection.py`) reuses the *pattern* (content-addressed
+write-once T0 envelopes, append-only outcome events, trading-session-counted horizon
+maturity, PENDING/MATURE statuses, price-basis compatibility gating, close-path MAE/MFE
+proxy semantics) rather than the mismatched literal contract. `evaluate_shadow_probe` itself
+is still called unmodified for every eligibility verdict, so this layer cannot independently
+re-decide what the policy already decided.
+
+**Activation boundary.** `TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1` was checked in as
+`d758814c73dc2bf60cfa605f4a6738e2c36ea6a7`, already built and validated against retained
+evidence through session `2026-09-11`. Every session on or before that date can only ever be
+`BOOTSTRAP_NON_PROSPECTIVE` -- fixed forever, computed once at T0 from `trigger_session` alone
+-- regardless of how much later outcome evidence eventually accrues for it; a genuinely
+prospective observation requires a session strictly after the boundary. This is a hard
+design constraint, not a convenience: retroactively relabeling 2026-09-11-and-earlier data as
+prospective, or backfilling its now-known outcomes into a promotion aggregate, would let
+already-observed hindsight quietly count as forward validation.
+
+**Immutability model.** A T0 observation's `observation_id` is a SHA-256 content hash of its
+own body (evidence_mode, candidate A/B verdicts, source classifier state, trigger price/
+basis), so it is impossible for a future maturation pass to change what the T0 record says
+without also changing its identity -- `ProspectiveShadowObservationStore` enforces this with
+an atomic write-once (`O_EXCL`) file per envelope; a rerun against identical retained
+evidence reproduces the exact same file rather than erroring or duplicating. Future outcomes
+are a completely separate, append-only, content-addressed event keyed by
+`(observation_id, evaluation_as_of_session)`, never merged into or overwriting the T0 file.
+The one field this uncovered a genuine tension in was `evidence_mode`: the milestone brief
+lists `PROSPECTIVE_PENDING`/`PARTIAL`/`MATURE` as if they belonged on the T0 record itself,
+but a value that changes as future evidence accrues cannot also be an immutable T0 field
+without violating immutability. Resolution: the T0-persisted `evidence_mode` is only ever
+`BOOTSTRAP_NON_PROSPECTIVE` or `PROSPECTIVE` (a pure, permanent function of
+`trigger_session`); the pending/partial/mature refinement is a `observation_maturity_label()`
+call computed fresh from whatever outcome evidence currently exists and is never written
+back onto the T0 envelope.
+
+**Price basis.** The retained `watchlist_tactical_entry_classifier` artifact carries no
+explicit `price_basis_identity` field. Rather than inventing one, the stable contract-name
+prefix of `source_artifacts.descriptive` (e.g. `market_wide_current_descriptive_research`,
+constant across sessions unless the production pipeline's method genuinely changes) is used
+as the basis-compatibility key; a horizon whose window spans a basis-prefix change is marked
+`PRICE_BASIS_INCOMPATIBLE_OR_CLOSE_UNAVAILABLE`, never silently computed. MAE/MFE are close-
+path proxies only (`CLOSE_PATH_RESEARCH_PROXY_ONLY`), matching
+`prospective_decision_outcome_measurement.py`'s own convention, since no intraday high/low is
+retained in this data path.
+
+**Result.** Bootstrap-validated against the real retained 2026-09-11 artifact (1,683
+tickers; `A_AND_B` 81 / `A_ONLY` 62 / `B_ONLY` 3 / `R8_NEITHER` 52 /
+`NOT_R8_CONTROL_POPULATION` 1,485), all correctly excluded from the prospective aggregate. No
+retained session exists yet after the activation boundary, so
+`overall_status = NO_PROSPECTIVE_OBSERVATIONS_YET` -- the correct current disposition, not a
+blocker; `PROSPECTIVE_VALIDATION = NOT YET MATURE`. No classifier invocation, provider/
+network call, runtime database write, Daily/Daily Brief/Integrated Decision/Portfolio change,
+or probability/target/sizing output. Classifier V2 and the next milestone
+(`TACTICAL_REVERSAL_PROSPECTIVE_SHADOW_EVALUATION_V1`) are explicitly not queued.
+
 ## 2026-09-11 - Tactical Reversal Shadow Probe Policy V1
 
 `TACTICAL_REVERSAL_SHADOW_PROBE_POLICY_V1 = COMPLETE / SHADOW_ONLY / PRODUCTION_POLICY_UNCHANGED`.
