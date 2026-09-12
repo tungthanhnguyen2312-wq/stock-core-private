@@ -1284,12 +1284,34 @@ def ensure_exact_session_snapshot(
         dnse_snapshot=dnse_snapshot, candidate_metadata=candidate_metadata, target_session=session,
     )
 
+    # VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1 (2026-09-12): KBS/VCI
+    # transport (and therefore the vnstock/vnai imports it needs) now runs inside one bounded
+    # worker subprocess for this operation, never in this process -- see
+    # vnstock_worker_client.VnstockWorkerFetcher's own docstring. This resolver call's own
+    # source-ordering/fallback/sentinel/conflict-resolution/quarantine policy is completely
+    # unchanged; only WHERE the leaf fetch_single_source call physically executes moved. The
+    # worker is started lazily (only once resolver internals actually need a KBS/VCI fetch) and
+    # is always torn down deterministically here, success or failure alike.
+    #
+    # Passing an explicit (non-None) rate_governor makes resolve_exact_session_with_autorecovery
+    # treat it as caller-owned (owns_governor=False in its own wrapper), so it deliberately does
+    # NOT restore the module-global active governor afterward -- that restoration is this
+    # function's own responsibility below, exactly mirroring what owns_governor=True would have
+    # done. Otherwise this process's vnstock_rate_governor "active governor" pointer would keep
+    # referencing a shut-down VnstockWorkerFetcher after this function returns.
+    from vnstock_rate_governor import get_active_governor, set_active_governor
+    from vnstock_worker_client import VnstockWorkerFetcher
+
+    worker_fetcher = VnstockWorkerFetcher(session=session)
+    previous_active_governor = get_active_governor()
     try:
         evidence, projected = resolver.resolve_exact_session_with_autorecovery(
             dnse_snapshot=dnse_snapshot, target_session=session, requested_at=dnse_snapshot["requested_at"],
             sentinel_cohort=sentinel["tickers"],
             recovery_eligibility_projection=recovery_eligibility,
             residual_yield_sentinel_tickers=residual_sentinel["tickers"],
+            fetch_single_source=worker_fetcher.fetch,
+            rate_governor=worker_fetcher,
         )
     except resolver.DailyRecoveryRuntimeBudgetExceeded as exc:
         # Preserve the deterministic throughput/timeout/retry diagnostic while refusing to
@@ -1321,6 +1343,12 @@ def ensure_exact_session_snapshot(
             + f":budget_seconds={exc.diagnostic['runtime_budget_seconds']:.1f}"
             + f":diagnostic={abort_path}"
         ) from exc
+    finally:
+        # Deterministic worker shutdown regardless of success, a converted budget-exceeded
+        # ValueError, or any other exception (e.g. a vnstock_worker_protocol.VnstockWorkerFailure)
+        # propagating out of resolve_exact_session_with_autorecovery above.
+        worker_fetcher.shutdown()
+        set_active_governor(previous_active_governor)
     if not evidence_path.exists():
         evidence_path.parent.mkdir(parents=True, exist_ok=True)
         evidence_path.write_text(

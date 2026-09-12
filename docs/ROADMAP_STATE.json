@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.12.4",
+  "roadmap_version": "2026.09.12.5",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1",
+    "milestone": "VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -1237,6 +1237,20 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_12_PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1",
       "notes": "COMPLETE. Adds the first lightweight Producer GitHub Actions workflow, .github/workflows/producer-ci.yml, with Python 3.13 structural, offline production-call-shape smoke, and focused deterministic regression lanes on main pushes and main-targeting PRs only. The smoke leaves every public canonical-daily injection argument omitted, so real default acquisition/producer/runtime/trusted/macro/brief resolution and the producer_fn=None registry-after-freeze/comparator path execute; only lower side-effecting module implementations are replaced with deterministic tmp_path synthetic retained evidence. A context-local guard rejects requests, urllib, socket/HTTP transport, provider-family imports (DNSE/KBS/VCI/FRED/Yahoo/World Bank), and vnstock/vnai; healthy smoke requires NETWORK_CALL_COUNT=0 and PROVIDER_CALL_COUNT=0. Macro refresh failure produces explicit unavailable context without blocking core LOCAL_COMPLETE; tactical-shadow failure is non-blocking; publication is disabled. No gitignored operations-review, local runtime DB, private portfolio, secrets, or ai-core checkout is used. ai-core is not imported in this Producer-only smoke, so no unpinned cross-repository clone is introduced. test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch is explicitly LOCAL_RETAINED_EVIDENCE_INTEGRATION_TEST and deselected from hosted CI because it needs real gitignored 2026-08-26 material. No production analytical code, provider authority/routing, quality/macro/tactical policy, valuation, portfolio/sizing, PIT/RAW_AS_TRADED, recommendation, Dashboard, repository visibility, or VNStock architecture changed. No successor is queued."
+    },
+    {
+      "milestone_id": "VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "COMPLETE_LOCAL / RELEASE_NOT_YET_AUTHORIZED / DNSE_PRIMARY_UNCHANGED / KBS_VCI_AUTHORITY_UNCHANGED / VNSTOCK_PARENT_IMPORT_REMOVED_FROM_EXACT_SESSION_PATH",
+      "checkpoint": "HEAD",
+      "dependencies": ["PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / PROCESS_ISOLATION_AND_TRANSPORT_ONLY / NO_ANALYTICAL_OR_SOURCE_AUTHORITY_CHANGE",
+      "owner_authorized": true,
+      "source_doc": "Owner-directed VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1 brief (2026-09-12), delivered directly in chat; owner-authorized despite queued_next=[] per AI_RULES.md rule 11's explicit-override provision",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_12_VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1",
+      "notes": "COMPLETE_LOCAL, not pushed/merged/deployed; RELEASE_NOT_YET_AUTHORIZED. Moved KBS/VCI transport for canonical exact-session acquisition (multi_source_exact_session_resolver.py, via daily_session_level2_package.ensure_exact_session_snapshot) into one bounded worker subprocess per operation (new vnstock_worker_protocol.py, vnstock_worker_process.py, vnstock_worker_client.py), using the approved parent-keeps-all-policy/worker-is-transport-only architecture unmodified -- integration is exactly two injected arguments (fetch_single_source, rate_governor) into the resolver's existing injection seam plus a finally for deterministic worker shutdown and active-governor restoration; zero changes to the resolver's or multi_source_market_evidence_contract.py's own Pass 2-6 policy logic. resolve_multi_source_exact_session_snapshot() and the standalone tools/run_multi_source_exact_session_resolver.py diagnostic are untouched, still using the direct vn_stock_pipeline import by default. Found before implementing (not a stop condition): the brief's assumed ordinary-vs-degraded-expansion KBS/VCI asymmetry does not exist in the actual code -- both paths already share one KBS-first/VCI-on-genuine-error-only constant; the equivalence suite asserts symmetry, matching current code, not the brief's mistaken premise (docs/STATE.md's own 2026-09-04 entries contain the same-day contradictory prose that caused the mistaken premise). The worker owns the real shared rate governor (45 req/60s, KBS 2-worker/0.25s cap, VCI sequential -- unchanged numbers); the parent's runtime-guard forecast and evidence-embedded governor diagnostic are served by a duck-typed VnstockWorkerFetcher shim (pure-arithmetic estimated_minimum_seconds_for, real round-tripped .diagnostic()) rather than a parent-side governor that would pretend to gate a child process. Found and fixed one real bug during implementation: an explicit rate_governor= makes the resolver's existing wrapper skip restoring the module-global active-governor pointer, which would otherwise leak a shut-down worker reference into later same-process vn_stock_pipeline calls -- reproduced via real cross-test contamination, fixed with an explicit capture/restore in ensure_exact_session_snapshot's own finally. Five typed VnstockWorkerFailure subclasses cover startup failure/SystemExit/crash/hang/malformed-or-duplicate-response, all fail closed (never fabricated into SESSION_MISSING), none silently restarted. Not a security sandbox (documented in both new worker files' own docstrings). Canonical source identity unchanged (DNSE/KBS/VCI only, never VNSTOCK_WORKER). Scope: macro_sync.py, financial/company/profile/ownership VNStock uses, provider authority, thresholds, tactical system, Dashboard, AI handoff, portfolio sizing, and PIT/RAW_AS_TRADED are all untouched; the other ~15 standalone vnstock-importing sync scripts are a pre-existing, separately-flagged gap, not addressed here. No package removal queued; no live provider acquisition run this session."
     }
   ],
   "blocked_capabilities": [

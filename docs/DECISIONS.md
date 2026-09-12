@@ -1,5 +1,93 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - VNStock Exact-Session Worker Isolation and Sentinel Equivalence V1 (COMPLETE_LOCAL)
+
+`VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1`. Owner-authorized despite
+`queued_next=[]` (explicit override, `AI_RULES.md` rule 11). Implementation + local checkpoint
+only -- not pushed, not merged, not deployed; no live provider acquisition was run.
+
+**Decision.** Moved KBS/VCI transport for canonical exact-session acquisition into one bounded
+worker subprocess per operation, using the approved architecture (parent keeps ALL policy; worker
+is transport only) unmodified from the brief -- repository evidence did not surface any actual
+incompatibility, so the high-level design was not reopened. New modules: `vnstock_worker_
+protocol.py` (stdlib-only wire schema/exceptions, shared by both sides), `vnstock_worker_
+process.py` (the worker subprocess entrypoint -- the ONLY file in the exact-session path that
+imports `vnstock`/`vnai` now), `vnstock_worker_client.py` (parent-side `VnstockWorkerFetcher`, a
+drop-in replacement for `vn_stock_pipeline.fetch_single_source`'s call signature/return shape).
+Integration is exactly two lines of injection into `daily_session_level2_package.
+ensure_exact_session_snapshot`'s existing call to `resolve_exact_session_with_autorecovery`
+(`fetch_single_source=worker_fetcher.fetch, rate_governor=worker_fetcher`) plus a `finally` for
+deterministic worker shutdown and active-governor restoration -- zero changes to
+`multi_source_exact_session_resolver.py`'s or `multi_source_market_evidence_contract.py`'s own
+Pass 2-6 policy logic, because both already exposed `fetch_single_source`/`rate_governor` as
+injectable parameters (this milestone's whole design rides that pre-existing seam rather than
+inventing a new one).
+
+**Behavior-freeze finding (documented in `docs/STATE.md`'s new entry, not repeated here): the
+brief's assumed ordinary-vs-degraded KBS/VCI asymmetry does not exist in the actual code** -- both
+paths are already KBS-first/VCI-on-genuine-error-only via one shared constant. Treated as a
+premise correction, not a stop condition: the equivalence suite asserts symmetry (matching current
+code), and the architecture/scope were unaffected.
+
+**Rate-governor ownership.** The worker installs and owns the real `VnstockRateGovernor` for the
+operation's lifetime (45 req/60s shared budget, KBS 2-worker/0.25s cap, VCI sequential --
+unchanged numbers). The parent's `_DailyRecoveryRuntimeGuard` and evidence-embedded governor
+diagnostic are served by `VnstockWorkerFetcher` itself acting as a duck-typed shim:
+`estimated_minimum_seconds_for` is pure arithmetic over fixed constants (reproduced exactly, no
+round-trip needed) and `.diagnostic()` round-trips to the worker's real governor -- deliberately
+never a parent-side governor object that would "pretend" to gate a child process's requests (the
+brief's explicit prohibition). A real bug was found and fixed during implementation: an explicit
+non-None `rate_governor=` makes the resolver's existing wrapper skip restoring the module-global
+active-governor pointer afterward (by design, for its OWN caller-owned-governor use case) --
+`ensure_exact_session_snapshot` now captures and restores it explicitly in its own `finally`,
+without which a shut-down worker reference would leak into any later same-process
+`vn_stock_pipeline` call. Caught via a real, reproducible test-suite cross-contamination (not a
+hypothetical): running the existing `test_vnstock_rate_governor.py`/`test_vn_stock_pipeline.py`
+files immediately after this milestone's own tests failed with `AttributeError: 'VnstockWorkerFetcher'
+object has no attribute 'acquire'` until fixed.
+
+**Failure semantics.** Five typed `VnstockWorkerFailure` subclasses (startup failure, protocol
+violation, timeout, process-exit, adapter-exception) cover: startup failure, `SystemExit`, hard
+crash, hang (bounded per-request timeout), and malformed/duplicate/unknown-request-id responses --
+all fail closed, all raise rather than fabricate a provider outcome, none silently restart the
+worker or reset its budget. Verified against a deterministic fake worker
+(`tests/fixtures/fake_vnstock_worker.py`) implementing the identical protocol -- no real
+`vnstock`/`vnai`/network anywhere in the new test files.
+
+**Import containment.** `tests/test_vnstock_worker_import_containment.py` runs its check in an
+isolated subprocess (`tests/fixtures/check_parent_import_containment.py`) specifically because an
+in-process `sys.modules` assertion would be contaminated by other test files in the same pytest
+session that legitimately import `vn_stock_pipeline`/`vnstock` directly -- confirmed: `vnstock`/
+`vnai` never enter that subprocess's own `sys.modules` after importing `multi_source_exact_
+session_resolver`/`daily_session_level2_package`-equivalent parent modules and driving a real
+worker round-trip against the fake worker.
+
+**Verification.** New tests: 13 (`test_vnstock_worker_client.py`) + 13 (`test_vnstock_exact_
+session_worker_equivalence.py`, covering acceptance cases A-I and N with golden BEFORE/AFTER
+equivalence, worker-only diagnostics excluded from the comparison per the brief) + 1
+(`test_vnstock_worker_import_containment.py`) = 27, all passing. Existing focused-domain suite
+(`test_multi_source_exact_session_resolver`, `test_multi_source_market_evidence_contract`,
+`test_daily_session_level2_package`, `test_vnstock_rate_governor`, `test_vn_stock_pipeline`): 201
+passed, 4 pre-existing failures unrelated to this milestone (3 gitignored-evidence-absent-in-a-
+fresh-worktree gaps; 1 cross-test active-governor leak reproduced identically with none of this
+milestone's files present). Hosted Producer CI's exact 3 jobs reproduced green locally
+(`daily_session_level2_package.ensure_exact_session_snapshot` is mocked out entirely above its own
+call site by the production-call-shape smoke, so this milestone's worker-spawning code is never on
+that smoke's path and needed no CI changes). `python tools/stocklookup_roadmap.py --check`:
+`ON_TRACK`. `py_compile`, `git diff --check` clean.
+
+**Scope discipline / unchanged.** `macro_sync.py` (VCB/SJC, a separate later milestone, "W4"),
+financial/company/profile/ownership VNStock uses, provider authority, source thresholds, the
+tactical system, Dashboard, AI handoff semantics, portfolio sizing, and PIT/RAW_AS_TRADED are all
+untouched. Canonical source identity remains `DNSE`/`KBS`/`VCI` only -- the worker is never
+promoted into source authority or embedded as a fourth "source". This worker exists for exact-
+session KBS/VCI recovery/corroboration only; it is not a generalized VNStock daemon and no
+package-removal is queued. Not a security sandbox -- documented explicitly in both new worker
+files' own docstrings and in `docs/STATE.md`.
+
+**Disposition.** `COMPLETE_LOCAL`. `RELEASE_NOT_YET_AUTHORIZED` -- push/merge/deploy/publication
+and hosted-CI observation belong to a later, separately authorized release step.
+
 ## 2026-09-12 - Roadmap Remote-Checkpoint Reconciliation and Hosted CI Closeout V1
 
 `ROADMAP_REMOTE_CHECKPOINT_RECONCILIATION_AND_HOSTED_CI_CLOSEOUT_V1`. After the shallow-checkout
