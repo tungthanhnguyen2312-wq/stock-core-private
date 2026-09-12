@@ -1,5 +1,48 @@
 # Stock Lookup — Operational State
 
+**Roadmap Remote-Checkpoint Reconciliation and Hosted CI Closeout V1 (2026-09-12):**
+`ROADMAP_REMOTE_CHECKPOINT_RECONCILIATION_AND_HOSTED_CI_CLOSEOUT_V1 = COMPLETE`.
+`PRODUCTION_ANALYTICAL_BEHAVIOR = UNCHANGED`. `HISTORICAL_LOCAL_FEATURE_BRANCHES = NOT_PROMOTED`.
+
+The first hosted Producer CI run (`producer-ci.yml`, triggered by
+`PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1` below) exposed a real control-plane defect:
+`docs/ROADMAP_STATE.json`'s `checkpoint` field for two COMPLETE milestones --
+`HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1`
+(`a0fcf8957c6e2d1bb541b93c136ce65b6d4223a2`) and
+`TEXT_NATIVE_OFFICIAL_FINANCIAL_TABLE_EXTRACTION_SCALEOUT_V1`
+(`2507c86a3a8b07f6c09133097e799c5bd194f063`) -- named commits that exist only on the local-only
+branch `feature/text-native-official-financial-table-extraction-scaleout-v1`, never pushed to
+`origin`. `tools/stocklookup_roadmap.py --check` resolves `checkpoint` with `git cat-file -t` against
+whatever repository it is run in; run in this worktree (which still holds that local branch) it
+passed, but a fresh clone of `origin/main` -- exactly what hosted CI checks out -- cannot see those
+objects and correctly failed with `ROADMAP_CHECKPOINT_NOT_IN_GIT` for both entries. Reproduced
+independently via a clean `git clone --single-branch --branch main` from the GitHub remote: 2/2 FAIL,
+0 unexpected findings.
+
+Both milestones were already correctly narrated as unmerged/`RETAINED_UNMERGED` in prose (this entry
+and `docs/DECISIONS.md`); only the machine-readable `checkpoint` field was wrong, because it was set
+to each milestone's own local implementation commit instead of the commit that actually recorded the
+milestone's disposition on shared history. Both dispositions were first authoritatively recorded, on
+`origin/main`, by the single owner rebaseline commit `9d049bb6a9cf602c5200ececc43fcac8091d71ce`
+(`docs(roadmap): rebaseline financial data path to structured research`, 2026-08-31) -- confirmed by
+`git log -S<milestone_id> origin/main -- docs/ROADMAP_STATE.json`. Neither milestone's implementation
+was later merged onto `main` under a different commit (Case A checked and ruled out: HNX's own
+`hnx_periodic_financial_document_acquisition.py` is absent from `origin/main`'s tree). Both entries'
+`checkpoint` now point to `9d049bb6a9c...` (Case B: a later owner-approved governance/rebaseline
+commit formally accepting the disposition); each entry's original local execution SHA is preserved
+verbatim in that entry's `notes` as historical, explicitly-never-merged lineage. `authority_effect`,
+`state`, and `narrative_disposition` are byte-for-byte unchanged on both entries -- this was a
+checkpoint-representation fix only, not a re-evaluation of either milestone's evidence or authority.
+
+The `ROADMAP_CHECKPOINT_NOT_IN_GIT` detector itself was not weakened, no milestone-specific bypass was
+added, and no historical feature branch was pushed. New regression tests in
+`tests/test_roadmap_execution_state.py` assert (a) every COMPLETE milestone's `checkpoint` is an
+ancestor of live HEAD (the offline-checkable proxy for "resolvable from a fresh clone of the pushed
+branch"), (b) `notes` may reference an unmerged SHA without affecting validation, (c) a
+`RETAINED_UNMERGED` milestone can stay `ON_TRACK` without its own feature branch ever being merged,
+(d) both milestones' `authority_effect` is unchanged by this fix, and (e) the checker source contains
+no hardcoded exemption naming either milestone.
+
 **Producer CI and Production Call-Shape Hardening V1 (2026-09-12):**
 `PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_V1 = COMPLETE`.
 `NETWORK_IN_CI = FORBIDDEN`. `PRODUCTION_CALL_SHAPE_SMOKE = ACTIVE`.

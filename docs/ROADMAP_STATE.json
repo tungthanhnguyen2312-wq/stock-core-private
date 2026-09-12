@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.12.3",
+  "roadmap_version": "2026.09.12.4",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -315,7 +315,7 @@
       "milestone_id": "HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1",
       "state": "COMPLETE",
       "narrative_disposition": "COMPLETE / RAW_ROUTE_AUTHORITY_ONLY",
-      "checkpoint": "a0fcf8957c6e2d1bb541b93c136ce65b6d4223a2",
+      "checkpoint": "9d049bb6a9cf602c5200ececc43fcac8091d71ce",
       "dependencies": [],
       "unlocks": [],
       "authority_effect": "RAW_DOCUMENT_ROUTE_AUTHORITY_PROMOTED_WITHIN_OWNER_APPROVED_SCOPE / FINANCIAL_FACT_AUTHORITY_UNCHANGED",
@@ -323,13 +323,13 @@
       "source_doc": "docs/STATE.md (2026-08-31, HNX terminal closeout recorded by owner rebaseline)",
       "state_history": [],
       "owner_override": null,
-      "notes": "Terminal raw-acquisition verification asset: 160 targets, 155 immutable retained documents, 30 text-native, 125 image-only, and no financial-fact authority promotion."
+      "notes": "Terminal raw-acquisition verification asset: 160 targets, 155 immutable retained documents, 30 text-native, 125 image-only, and no financial-fact authority promotion. checkpoint is the origin/main governance rebaseline commit ('docs(roadmap): rebaseline financial data path to structured research') that first authoritatively recorded this terminal disposition -- a state-recording commit, not the implementation itself. Historical local execution checkpoint a0fcf8957c6e2d1bb541b93c136ce65b6d4223a2 ('docs(roadmap): close HNX raw financial acquisition') was never merged to origin/main and resolves only on the local-only branch feature/text-native-official-financial-table-extraction-scaleout-v1; retained here as descriptive lineage, not as the authoritative checkpoint."
     },
     {
       "milestone_id": "TEXT_NATIVE_OFFICIAL_FINANCIAL_TABLE_EXTRACTION_SCALEOUT_V1",
       "state": "COMPLETE",
       "narrative_disposition": "PARTIAL_BY_EVIDENCE / OFFICIAL_FINANCIAL_VERIFICATION_UTILITY_RETAINED_UNMERGED",
-      "checkpoint": "2507c86a3a8b07f6c09133097e799c5bd194f063",
+      "checkpoint": "9d049bb6a9cf602c5200ececc43fcac8091d71ce",
       "dependencies": ["HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1"],
       "unlocks": [],
       "authority_effect": "NONE / FINANCIAL_FACT_AUTHORITY_UNCHANGED",
@@ -337,7 +337,7 @@
       "source_doc": "Claude terminal result (2026-08-31), recorded in docs/STATE.md by owner rebaseline",
       "state_history": [],
       "owner_override": null,
-      "notes": "Terminal unmerged feature utility: 30 text-native documents processed, 14 statement tables detected, 10 recognized, 0 candidates, and 0 qualification-ready facts. It is not a default financial ingestion or critical-path dependency."
+      "notes": "Terminal unmerged feature utility: 30 text-native documents processed, 14 statement tables detected, 10 recognized, 0 candidates, and 0 qualification-ready facts. It is not a default financial ingestion or critical-path dependency. checkpoint is the origin/main governance rebaseline commit ('docs(roadmap): rebaseline financial data path to structured research') that first authoritatively recorded this RETAINED_UNMERGED disposition -- a state-recording commit, not the implementation itself. Historical local execution checkpoint 2507c86a3a8b07f6c09133097e799c5bd194f063 ('feat(evidence): extract text-native official financial tables') was never merged to origin/main and resolves only on the local-only branch feature/text-native-official-financial-table-extraction-scaleout-v1; retained here as descriptive lineage, not as the authoritative checkpoint."
     },
     {
       "milestone_id": "MARKET_WIDE_STRUCTURED_FINANCIAL_PERIOD_SEMANTICS_V1",

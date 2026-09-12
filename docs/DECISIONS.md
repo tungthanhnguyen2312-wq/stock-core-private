@@ -1,5 +1,53 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - Roadmap Remote-Checkpoint Reconciliation and Hosted CI Closeout V1
+
+`ROADMAP_REMOTE_CHECKPOINT_RECONCILIATION_AND_HOSTED_CI_CLOSEOUT_V1`. After the shallow-checkout
+corrective below (`origin/main = c9522ec`), the hosted Producer CI structural job resolves
+checkpoints against a full clone but still failed `ROADMAP_CHECKPOINT_NOT_IN_GIT` for exactly two
+COMPLETE milestones: `HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1`
+(recorded checkpoint `a0fcf8957c6e2d1bb541b93c136ce65b6d4223a2`) and
+`TEXT_NATIVE_OFFICIAL_FINANCIAL_TABLE_EXTRACTION_SCALEOUT_V1` (recorded checkpoint
+`2507c86a3a8b07f6c09133097e799c5bd194f063`). Independently reproduced with a clean
+`git clone --single-branch --branch main` of the GitHub remote (not the prior fixture's `--depth 1`
+issue): exactly these two FAIL, nothing else. Root cause differs from the shallow-checkout corrective
+below: both SHAs are real commits but exist only on the local-only branch
+`feature/text-native-official-financial-table-extraction-scaleout-v1`, which was never pushed to
+`origin`; `git cat-file -t` resolves them in any worktree that still holds that branch (including
+this one), masking the defect locally, but not in a clone of `origin/main` alone.
+
+Semantics established from `roadmap_execution_state.py` (`resolve_checkpoint`,
+`ROADMAP_CHECKPOINT_NOT_IN_GIT`): the machine-readable `checkpoint` field is validated only by
+`git cat-file -t <checkpoint>` against whatever repository the checker is pointed at -- it carries no
+inherent "must be reachable from origin" semantics of its own. The invariant hosted CI actually
+enforces is a consequence of *where* CI runs the checker (a fresh clone of the pushed branch): a
+`checkpoint` is only reliably authoritative if it is reachable from shared, pushed history, not merely
+present as a commit object somewhere in the evaluator's local repository.
+
+Both milestones were already correctly described in prose (this file and `docs/STATE.md`) as unmerged
+/ `RETAINED_UNMERGED`; the bug was narrowly in the machine-readable field, which had been set to each
+milestone's own local implementation commit. Checked and ruled out Case A (later merge under a
+different commit) for both: neither milestone's implementation files exist anywhere in
+`origin/main`'s tree (`hnx_periodic_financial_document_acquisition.py` absent; no text-native
+extraction module present). Applied Case B for both: `git log -S<milestone_id> origin/main --
+docs/ROADMAP_STATE.json` shows both dispositions were first authoritatively recorded on `origin/main`
+by the single owner rebaseline commit `9d049bb6a9cf602c5200ececc43fcac8091d71ce` (`docs(roadmap):
+rebaseline financial data path to structured research`, 2026-08-31). Repointed both entries'
+`checkpoint` to `9d049bb6a9c...`; preserved each entry's original local execution SHA verbatim in that
+entry's own `notes` as historical, explicitly-never-merged lineage, with the branch name it lives on.
+No `state`, `authority_effect`, or `narrative_disposition` field changed on either entry -- this is a
+checkpoint-representation fix, not a re-evaluation of either milestone.
+
+Did not weaken `ROADMAP_CHECKPOINT_NOT_IN_GIT`, add a milestone-specific bypass, or push either
+historical local feature branch. Added regression coverage in `tests/test_roadmap_execution_state.py`
+proving: a COMPLETE milestone's `checkpoint` must be an ancestor of live HEAD (the offline proxy for
+"resolvable from a fresh clone of the pushed branch"); an unmerged SHA may live in `notes` without
+being validated; a `RETAINED_UNMERGED` milestone stays `ON_TRACK` without its feature branch being
+merged; both milestones' `authority_effect` is unchanged; and the checker source has no
+milestone-specific exemption. `python tools/stocklookup_roadmap.py --check` passes locally; the fix
+is committed to `main` and pushed as one non-force fast-forward so the next hosted run validates it
+against the real remote.
+
 ## 2026-09-12 - Producer CI Hosted-Run Corrective (Shallow-Checkout Roadmap Check)
 
 `PRODUCER_CI_AND_PRODUCTION_CALL_SHAPE_HARDENING_RELEASE_V1` corrective. The first hosted

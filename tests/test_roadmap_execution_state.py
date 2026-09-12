@@ -373,3 +373,129 @@ def test_real_bootstrap_roadmap_state_is_on_track():
     state = res.load_state()
     report = res.evaluate(state, repo=res.REPO_ROOT)
     assert not report.has_fail(), [(f.code, f.message) for f in report.findings if f.severity == res.FAIL]
+
+
+# ---------------------------------------------------------------------------
+# Authoritative-vs-historical checkpoint reconciliation
+# (ROADMAP_REMOTE_CHECKPOINT_RECONCILIATION_AND_HOSTED_CI_CLOSEOUT_V1)
+#
+# A checkpoint resolving against *this* worktree's local Git object store is
+# not sufficient: this worktree also holds many local-only feature branches
+# that a fresh clone of origin/main never sees. The real regression is a
+# COMPLETE milestone whose checkpoint only resolves because the object
+# happens to exist locally, not because it is reachable from shared mainline
+# history. `git_is_ancestor(repo, checkpoint, HEAD)` is the offline-provable
+# proxy for "would also resolve in a fresh clone of the branch HEAD sits on".
+# ---------------------------------------------------------------------------
+
+def test_completed_milestone_checkpoints_are_ancestors_of_head():
+    """Every COMPLETE milestone's checkpoint must be reachable from live HEAD.
+
+    A local-only feature-branch commit can satisfy ``git cat-file -t`` in this
+    worktree (the object exists) while being unreachable from any commit a
+    fresh clone of the pushed branch would ever see. Ancestry of HEAD is the
+    offline-checkable stand-in for "resolvable from shared Git history".
+    """
+    state = res.load_state()
+    head = res.git_head(res.REPO_ROOT)
+    assert head, "expected a resolvable HEAD in this worktree"
+    milestones = res._milestones_by_id(state)
+    non_ancestor = []
+    for mid, m in milestones.items():
+        if m.get("state") != "COMPLETE":
+            continue
+        checkpoint = m.get("checkpoint")
+        if not checkpoint or checkpoint == res.HEAD_SENTINEL:
+            continue
+        if not res.git_is_ancestor(res.REPO_ROOT, checkpoint, head):
+            non_ancestor.append((mid, checkpoint))
+    assert not non_ancestor, non_ancestor
+
+
+def test_notes_may_reference_unmerged_sha_without_effect(git_repo):
+    """Descriptive lineage may name a SHA that was never merged anywhere;
+    only the machine-readable `checkpoint` field is validated."""
+    repo, sha = git_repo
+    never_merged = "b" * 40
+    state = _state(
+        [
+            _milestone(
+                "A",
+                "COMPLETE",
+                checkpoint=sha,
+                notes=f"historical local execution checkpoint {never_merged}, never merged to origin/main",
+            )
+        ],
+        lineage_head=sha,
+    )
+    report = res.evaluate(state, repo=repo)
+    assert not report.has_fail()
+
+
+def test_retained_unmerged_milestone_keeps_terminal_status_without_claiming_merge(git_repo):
+    """A RETAINED_UNMERGED-style milestone stays COMPLETE/ON_TRACK as long as
+    its authoritative `checkpoint` is a real shared commit -- it must not need
+    to (and must not) claim its own unmerged feature branch was ever merged."""
+    repo, sha = git_repo
+    unmerged_feature_sha = "c" * 40
+    state = _state(
+        [
+            _milestone(
+                "RETAINED_UNMERGED_EXAMPLE_V1",
+                "COMPLETE",
+                checkpoint=sha,
+                narrative_disposition="PARTIAL_BY_EVIDENCE / RETAINED_UNMERGED",
+                notes=f"Historical local execution checkpoint {unmerged_feature_sha} was never merged to origin/main.",
+            )
+        ],
+        lineage_head=sha,
+    )
+    report = res.evaluate(state, repo=repo)
+    assert not report.has_fail()
+    assert "ROADMAP_CHECKPOINT_NOT_IN_GIT" not in {f.code for f in report.findings}
+
+
+def test_hnx_and_text_native_authority_effects_unchanged_by_reconciliation():
+    """The checkpoint-field correction must not change what either milestone
+    is recorded as having actually done (authority effect, terminal state,
+    RETAINED_UNMERGED disposition)."""
+    state = res.load_state()
+    milestones = res._milestones_by_id(state)
+    hnx = milestones["HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1"]
+    text_native = milestones["TEXT_NATIVE_OFFICIAL_FINANCIAL_TABLE_EXTRACTION_SCALEOUT_V1"]
+
+    assert hnx["state"] == "COMPLETE"
+    assert hnx["authority_effect"] == (
+        "RAW_DOCUMENT_ROUTE_AUTHORITY_PROMOTED_WITHIN_OWNER_APPROVED_SCOPE / FINANCIAL_FACT_AUTHORITY_UNCHANGED"
+    )
+
+    assert text_native["state"] == "COMPLETE"
+    assert text_native["authority_effect"] == "NONE / FINANCIAL_FACT_AUTHORITY_UNCHANGED"
+    assert "RETAINED_UNMERGED" in text_native["narrative_disposition"]
+
+    # The corrected authoritative checkpoint is shared between both entries
+    # (the single governance rebaseline commit that recorded both
+    # dispositions) and differs from each entry's historical, unmerged
+    # implementation SHA, which now lives only in `notes`.
+    assert hnx["checkpoint"] == text_native["checkpoint"]
+    assert hnx["checkpoint"] != "a0fcf8957c6e2d1bb541b93c136ce65b6d4223a2"
+    assert text_native["checkpoint"] != "2507c86a3a8b07f6c09133097e799c5bd194f063"
+    assert "a0fcf8957c6e2d1bb541b93c136ce65b6d4223a2" in hnx["notes"]
+    assert "2507c86a3a8b07f6c09133097e799c5bd194f063" in text_native["notes"]
+
+
+def test_truly_nonexistent_authoritative_checkpoint_still_fails(git_repo):
+    repo, sha = git_repo
+    state = _state([_milestone("A", "COMPLETE", checkpoint="d" * 40)], lineage_head=sha)
+    report = res.evaluate(state, repo=repo)
+    assert "ROADMAP_CHECKPOINT_NOT_IN_GIT" in {f.code for f in report.findings}
+    assert report.overall == "DRIFT_DETECTED"
+
+
+def test_no_milestone_specific_checkpoint_bypass_in_checker_source():
+    """The checkpoint-existence check must stay milestone-agnostic: no
+    hardcoded exemption for the two milestones this reconciliation fixed."""
+    source = Path(res.__file__).read_text(encoding="utf-8")
+    assert "HNX_PERIODIC_FINANCIAL_DOCUMENT_ROUTE_ACTIVATION_AND_RAW_ACQUISITION_V1" not in source
+    assert "TEXT_NATIVE_OFFICIAL_FINANCIAL_TABLE_EXTRACTION_SCALEOUT_V1" not in source
+    assert "ROADMAP_CHECKPOINT_NOT_IN_GIT" in source
