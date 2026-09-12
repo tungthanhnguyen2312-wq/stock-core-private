@@ -1,5 +1,82 @@
 # Stock Lookup — Operational State
 
+**VNStock exact-session worker isolation and sentinel equivalence RELEASE V1 (2026-09-12):**
+`VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_RELEASE_V1 = COMPLETE`.
+`LIVE_WORKER_INTEGRATION = QUALIFIED`. `HOSTED_PRODUCER_CI = PASS`. Releases local implementation
+checkpoint `02519bcbdc41231a5a491296b9295c4db7c34819` to `origin/main`.
+
+**Bounded real-provider live probe (release qualification only, not provider re-qualification).**
+Offline tests (fake worker) had already proven protocol/semantic equivalence, but never exercised
+the REAL `vnstock_worker_process.py` against real installed `vnstock`/`vnai`. One bounded probe --
+HPG, target session 2026-09-11, KBS + VCI only, through the real `VnstockWorkerFetcher` -- found
+and fixed two real defects the fake-worker suite structurally cannot see:
+
+1. **numpy/pandas import-thread hazard.** `vn_stock_pipeline` (and its pandas/numpy dependency
+   chain) was imported lazily inside a `ThreadPoolExecutor` worker thread on the first real fetch.
+   numpy's native C-extension init is not safe to trigger for the first time off the main thread;
+   this deadlocked with zero further CPU consumed (confirmed via a watchdog thread stack dump: the
+   worker thread was stuck inside `numpy._core.multiarray`'s `create_module`). Fixed by importing
+   `vn_stock_pipeline` eagerly in `main()`, on the main thread, before the request-handling pool is
+   even created.
+2. **Unbounded first-use subprocess calls inside vnstock/vnai itself.** (a) `vnstock/__init__.py`
+   unconditionally calls `update_notice(verbose=False)` on first import, which shells out to
+   `python -m pip list --format=json` under a `subprocess.run(timeout=5)` that is not robust
+   against a grandchild process holding the stdout pipe open past that timeout -- hung 60+ seconds.
+   (b) `vnai`'s lazy telemetry singleton (`vnai.scope.profile.Inspector`, constructed the first
+   time any decorated `vnstock` API method runs) calls `analyze_git_info()`, which runs several
+   `git` subprocesses with **no timeout at all** against the process's current working directory --
+   also hung 60+ seconds, reproduced even from a neutral non-repository cwd. Neither is a KBS/VCI
+   data-fetching concern; both are vnstock's/vnai's own self-promotion/telemetry side effects.
+   Fixed, without touching the installed packages: (a) pre-seed `sys.modules['vnstock.core.utils.
+   upgrade']` with a no-op stub via ordinary Python import-cache semantics before `vnstock` is ever
+   imported; (b) trigger `vnai.setup()` once at worker startup under a temporary `subprocess.run`
+   guard that fast-fails only `git`-argv calls, so the singleton is safely pre-constructed before
+   any real request needs it; (c) launch the worker from a neutral (non-repository) working
+   directory as defense in depth. `vnai`'s own internal rate-limiting/tier telemetry is not
+   something this project's correctness depends on -- the real governance is
+   `vnstock_rate_governor.VnstockRateGovernor`, entirely independent of vnai's own accounting.
+
+Result after both fixes: **VCI returned a real, correctly-dated HPG 2026-09-11 row**
+(open=21.75/high=21.80/low=21.30/close=21.30/volume=22,031,700, `source` field literally `"VCI"`);
+**KBS returned an honest `SESSION_MISSING`** (target session genuinely absent from its own returned
+history -- a normal, expected provider outcome, not an error). Parent process's own `sys.modules`
+never gained `vnstock`/`vnai`, checked immediately before and after the probe. The probe's own
+worker subprocess terminated cleanly; a handful of unrelated stray processes from this session's
+own manual diagnostic scripts (not the qualifying probe run itself) were identified by PID/age/CPU
+signature and cleaned up separately.
+
+**Pre-existing test-suite hygiene bug found and fixed (unrelated to W3's own correctness).** Adding
+the new W3 test files to the SAME hosted CI job as the existing resolver/governor suites surfaced a
+real, pre-existing cross-test leak: two test functions (one already in `test_multi_source_exact_
+session_resolver.py`, predating this milestone; one in this milestone's own `test_vnstock_exact_
+session_worker_equivalence.py`) pass an explicit `rate_governor=` to the resolver's public wrapper,
+which -- by that wrapper's own documented caller-owns-it contract -- leaves the module-global
+"active governor" pointer set after the test returns. Reproduced with zero W3 files present (using
+only the two pre-existing files), confirming it predates this milestone. Fixed with an `autouse`
+pytest fixture (resolver test file) and an explicit capture/restore (equivalence test file); zero
+change to any test's own assertions.
+
+**CI coverage.** `.github/workflows/producer-ci.yml`'s `focused-regressions` lane now also runs
+`tests/test_vnstock_worker_client.py`, `tests/test_vnstock_exact_session_worker_equivalence.py`,
+`tests/test_vnstock_worker_import_containment.py`, `tests/test_multi_source_exact_session_
+resolver.py`, `tests/test_multi_source_market_evidence_contract.py`, and `tests/test_vnstock_rate_
+governor.py`. Every one of those tests uses the deterministic fake worker
+(`tests/fixtures/fake_vnstock_worker.py`) exclusively -- confirmed by inspection, every
+`VnstockWorkerFetcher(...)` construction in those files passes `worker_script=FAKE_WORKER`
+explicitly. Hosted CI therefore still makes zero live provider/network calls; the real-provider
+probe above is local release qualification only, never run in GitHub Actions.
+
+**Roadmap.** `docs/ROADMAP_STATE.json`'s `VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_
+EQUIVALENCE_V1` entry's `checkpoint` is now literal (`02519bcbdc41231a5a491296b9295c4db7c34819`,
+the original implementation commit) rather than the `HEAD` sentinel it briefly carried while local
+-- the release-integration commit recording this is its direct descendant on the same pushed
+chain. No recovery-order/fallback semantics, sentinel cohort/frequency, cache/reuse policy,
+provider/source authority, or macro behavior changed by this release step; the earlier local
+milestone's own behavior-freeze findings (KBS-first/VCI-on-genuine-error-only symmetric across
+ordinary and degraded-expansion paths; sentinel cohort/frequency preserved exactly; accepted
+snapshot/cache reuse unchanged) were statically reconfirmed unchanged in this release's own source
+tree before push.
+
 **VNStock exact-session worker isolation and sentinel equivalence V1 (2026-09-12):**
 `VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1 = COMPLETE_LOCAL`.
 `RELEASE_NOT_YET_AUTHORIZED` -- owner-authorized bounded implementation milestone (started despite

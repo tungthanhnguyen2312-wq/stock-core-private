@@ -34,6 +34,7 @@ import json
 import queue
 import subprocess
 import sys
+import tempfile
 import threading
 import uuid
 from pathlib import Path
@@ -98,6 +99,7 @@ class VnstockWorkerFetcher:
         startup_timeout: float = DEFAULT_STARTUP_TIMEOUT_SECONDS,
         shutdown_timeout: float = DEFAULT_SHUTDOWN_TIMEOUT_SECONDS,
         env: dict[str, str] | None = None,
+        worker_cwd: Path | str | None = None,
     ):
         self._session = session
         self._worker_script = worker_script or _WORKER_SCRIPT
@@ -106,6 +108,16 @@ class VnstockWorkerFetcher:
         self._startup_timeout = startup_timeout
         self._shutdown_timeout = shutdown_timeout
         self._env = env
+        # Deliberately NOT this repository's own working directory (or any git repository) by
+        # default. vnai's first-real-use lazy telemetry initialization
+        # (vnai.scope.profile.Inspector.analyze_git_info) shells out to several UNBOUNDED
+        # (no `timeout=`) `git` subprocesses against the process's current working directory --
+        # observed hanging for 60+ seconds via a watchdog thread stack dump against this
+        # multi-worktree repository during this milestone's own live release probe. Launching
+        # the worker from a neutral, non-repository directory makes `git rev-parse
+        # --is-inside-work-tree` fail fast (~0.1s) and short-circuit the rest of that function,
+        # entirely avoiding the hazard without touching vnai's own behavior/telemetry semantics.
+        self._worker_cwd = Path(worker_cwd) if worker_cwd is not None else Path(tempfile.gettempdir())
 
         self._lifecycle_lock = threading.Lock()
         self._send_lock = threading.Lock()
@@ -148,6 +160,7 @@ class VnstockWorkerFetcher:
                     [self._python_executable, "-u", str(self._worker_script)],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     text=True, encoding="utf-8", bufsize=1, env=popen_env,
+                    cwd=str(self._worker_cwd),
                 )
             except OSError as exc:
                 failure = VnstockWorkerStartupError(

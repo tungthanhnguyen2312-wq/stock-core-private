@@ -1,5 +1,159 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - VNStock Exact-Session Worker Isolation and Sentinel Equivalence RELEASE V1
+
+`VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_RELEASE_V1 = COMPLETE`. Releases
+local implementation checkpoint `02519bcbdc41231a5a491296b9295c4db7c34819` (verified linear
+ancestor of `origin/main = bfea0a8c...`, single commit, exact 12-file diff scope reconfirmed
+unchanged: no macro/provider-authority/tactical/valuation/portfolio files touched) to `origin/main`
+as a fast-forward, via this one release-integration commit as its direct descendant.
+
+**Bounded real-provider live probe -- two real defects found and fixed.** Offline equivalence
+tests used a deterministic fake worker throughout; nothing in that suite could ever exercise the
+REAL `vnstock_worker_process.py` importing the REAL installed `vnstock`/`vnai` packages. Before
+release, ran exactly one bounded probe (HPG, target session 2026-09-11, KBS then VCI, through the
+real `VnstockWorkerFetcher`/`vnstock_worker_process.py`, no canonical Daily/DB/registry/handoff/
+Dashboard write). It hung on the first attempt. Diagnosed with a temporary watchdog thread (dumps
+every thread's stack via `sys._current_frames()` after a fixed delay) against instrumented copies
+of the worker script run manually via raw `subprocess.Popen` -- never against the shared checkpoint
+commit's own file until the fix was verified.
+
+1. **Root cause 1 (numpy/pandas thread-import hazard).** `_process_fetch` imported
+   `vn_stock_pipeline` (transitively pandas/numpy) lazily, inside a `ThreadPoolExecutor` worker
+   thread, on the first real request. The watchdog dump showed the thread stuck inside
+   `numpy._core.multiarray`'s `create_module` (CPython's `frozen importlib._bootstrap_external`
+   `create_module`) with zero further CPU consumed -- a known hazard: numpy's native C-extension
+   initialization is not safe to trigger for the first time off the main thread. A prior in-process
+   (non-worker) direct call to the same adapter had succeeded in 7.09s specifically because that
+   import happened on the main thread of a simple script. Fixed: `vnstock_worker_process.main()`
+   now imports `vn_stock_pipeline` (and calls `_install_bounded_http()`) eagerly, on the main
+   thread, BEFORE the request-handling `ThreadPoolExecutor` is even constructed -- every later
+   `import vn_stock_pipeline` from any thread is then a cheap `sys.modules` lookup, never a
+   re-execution of module-level code, permanently closing the hazard.
+
+2. **Root cause 2 (unbounded first-use subprocess calls inside the vnstock/vnai packages
+   themselves, not this project's code).** After fixing #1, the worker reached "ready" quickly but
+   the first real fetch still hung. A second watchdog dump found the stuck thread inside
+   `vnstock/__init__.py`'s own unconditional `update_notice(verbose=False)` call (module level, on
+   every fresh interpreter's first `import vnstock`), specifically inside `vnstock.core.utils.
+   upgrade._get_installed_version_robust`'s `subprocess.run([python_exe, "-m", "pip", "list",
+   "--format=json"], timeout=5)` -- `timeout=5` is not robust against a grandchild process holding
+   the child's stdout pipe open past that timeout (a documented CPython subprocess/pipe-inheritance
+   hazard), so `communicate()`'s reader thread hung well past the nominal 5s bound. Fixed (without
+   modifying the installed package) by pre-seeding `sys.modules['vnstock.core.utils.upgrade']` with
+   a no-op stub (`update_notice`, `migrate_to_sponsor`) via ordinary Python import-cache semantics,
+   BEFORE anything imports `vnstock` for the first time -- `vnstock/__init__.py`'s own `from
+   vnstock.core.utils.upgrade import ...` statements then resolve to the cached stub rather than
+   re-executing the real file. After this fix, a THIRD watchdog dump found the SAME class of hang
+   one level deeper: `vnai`'s own lazy telemetry singleton (`vnai.scope.profile.Inspector`,
+   constructed at `vnai/scope/profile.py:674` module level, but only reached the first time any
+   `vnai`-decorated `vnstock` API method is actually called -- confirmed via
+   `vn_stock_pipeline.py:506`'s `_quote(...).history(...)` call -> `vnai/__init__.py`'s `wrapper()`
+   decorator -> `setup()` -> `Core().initialize()` -> `from vnai.scope.profile import inspector`)
+   calls `enhanced_commercial_detection()` -> `analyze_git_info()`, which runs FIVE separate `git`
+   subprocesses (`rev-parse --is-inside-work-tree`, `rev-parse --show-toplevel`, `config --get
+   remote.origin.url`, `rev-list --count HEAD`, `branch --list`) via `subprocess.run(...,
+   capture_output=True, text=True)` with **no `timeout=` parameter at all**. This reproduced even
+   from a neutral, non-repository working directory (`git rev-parse --is-inside-work-tree` alone
+   confirmed to return in ~0.15s from `/tmp` independently), ruling out "this repo is just slow to
+   scan" as the explanation -- an environment-specific git/credential-helper hazard on this
+   machine, orthogonal to which directory the process runs from. Fixed with three layers, in order
+   of what actually closed the hang: (a) launch the worker subprocess from a neutral non-repository
+   `cwd` (`tempfile.gettempdir()` by default, overridable) as defense in depth; (b) trigger
+   `vnai.setup()` explicitly, once, at worker startup (main thread, before the pool exists) under a
+   temporary `subprocess.run` guard that intercepts ONLY `git`-argv calls and returns a fast, fake
+   "not a git repository" `CompletedProcess` (`returncode=1`) without ever spawning a process for
+   them -- `analyze_git_info()`'s own first check (`if result.returncode != 0: return {"has_git":
+   False}`) then short-circuits immediately, and the real `subprocess.run` is restored in a
+   `finally` regardless of outcome, so nothing else in the process (including the real KBS/VCI
+   HTTP transport, which never uses `subprocess` at all) is affected. `vnai`'s own internal
+   commercial-usage/telemetry detection is not something this project's correctness depends on --
+   the actual KBS/VCI request-rate governance this project relies on is
+   `vnstock_rate_governor.VnstockRateGovernor`, entirely independent of vnai's own accounting (see
+   that module's own docstring) -- so short-circuiting just this one probe changes no behavior any
+   of this project's own contracts depend on.
+
+**Live probe acceptance result (after both fixes).** KBS: `transport_status=success`,
+`provider_outcome=SESSION_MISSING` (`TARGET_SESSION_ABSENT_FROM_RETURNED_HISTORY`, 8 rows in the
+15-day window, none dated 2026-09-11 -- an honest, non-fabricated "provider genuinely doesn't have
+this exact session" result, not an error). VCI: `transport_status=success`,
+`provider_outcome=EXACT_SESSION_OBSERVED`, `returned_session=2026-09-11`, normalized OHLCV
+open=21.75/high=21.80/low=21.30/close=21.30/volume=22,031,700, `source` field literally `"VCI"`
+(never `"VNSTOCK_WORKER"` or `"WORKER"` -- source identity unchanged). Satisfies the release
+acceptance bar (at least one provider returns a usable, correctly-dated row; the other carries an
+honest classification) -- `LIVE_WORKER_INTEGRATION = QUALIFIED`. Parent process's own
+`sys.modules` contained neither `vnstock` nor `vnai`, checked immediately before and immediately
+after the probe (`PARENT_VNSTOCK_IMPORT = NONE`). The probe's own worker subprocess (confirmed by
+PID) terminated cleanly on `shutdown()`; separately, several stray processes left over from this
+session's own earlier manual diagnostic scripts (raw `subprocess.Popen` invocations used only to
+capture watchdog stack dumps, never the qualifying probe itself) were identified by PID start-time/
+CPU signature and terminated -- none were unrelated user processes.
+
+**Pre-existing test-suite hygiene defect found and fixed (a release-gate issue, not a W3 product
+defect).** Adding the new W3 test files to the same hosted CI `focused-regressions` job as
+`test_multi_source_exact_session_resolver.py`/`test_vnstock_rate_governor.py` surfaced a real
+cross-test failure: `test_set_active_governor_returns_previous_and_get_active_governor_reflects_it`
+found a real `VnstockRateGovernor` still module-globally "active" from an earlier test in the same
+pytest session. Root cause: both `test_multi_source_exact_session_resolver.py` (four pre-existing
+tests, predating this milestone entirely) and this milestone's own `test_vnstock_exact_session_
+worker_equivalence.py` (`_run_before`) pass an explicit `rate_governor=` to `resolve_multi_source_
+exact_session_snapshot`/`resolve_exact_session_with_autorecovery` -- by that wrapper's own
+documented contract, a caller-supplied governor is left active for the caller to tear down
+(`owns_governor=False`), and neither test file was doing so. Reproduced with ONLY the two
+pre-existing files present (zero W3 files), confirming the underlying defect predates this
+milestone and is not a W3 correctness issue -- it only became visible as a release-gate failure
+because this release adds new files into the same CI invocation. Fixed: an `autouse` pytest
+fixture in `test_multi_source_exact_session_resolver.py` that captures/restores the active governor
+around every test in that file; an explicit capture/restore in `_run_before`/`_run_after` in the
+equivalence test file (matching the hygiene pattern `daily_session_level2_package.
+ensure_exact_session_snapshot` itself already needed and got in the original W3 commit). Zero
+change to any test's own assertions or the behavior under test.
+
+**CI coverage.** `.github/workflows/producer-ci.yml`'s `focused-regressions` job now also runs
+`tests/test_vnstock_worker_client.py`, `tests/test_vnstock_exact_session_worker_equivalence.py`,
+`tests/test_vnstock_worker_import_containment.py`, `tests/test_multi_source_exact_session_
+resolver.py`, `tests/test_multi_source_market_evidence_contract.py`, and `tests/test_vnstock_rate_
+governor.py` -- previously none of these ran hosted at all. Confirmed by inspection: every
+`VnstockWorkerFetcher(...)` construction across all three new test files passes `worker_script=
+FAKE_WORKER` explicitly, so hosted CI still makes zero live provider/network calls; the network
+prohibition and every other existing CI invariant (shallow-checkout roadmap fix, offline
+production-call-shape guard) are unchanged. No fourth workflow created.
+
+**Roadmap-state literalization.** `docs/ROADMAP_STATE.json`'s `VNSTOCK_EXACT_SESSION_WORKER_
+ISOLATION_AND_SENTINEL_EQUIVALENCE_V1` entry's `checkpoint` changes from the `HEAD` sentinel (valid
+only while local) to the literal `02519bcbdc41231a5a491296b9295c4db7c34819` -- the actual
+implementation commit, which this release-integration commit is a direct descendant of on the same
+pushed chain. `authority_effect`, `state`, and every analytical claim on that entry are otherwise
+unchanged; this is a checkpoint-representation update, identical in kind to (and consistent with)
+this repository's own prior `ROADMAP_REMOTE_CHECKPOINT_RECONCILIATION_AND_HOSTED_CI_CLOSEOUT_V1`
+precedent.
+
+**Recovery-order/sentinel/cache truth reconfirmed unchanged.** Statically reconfirmed in this
+release's own source tree before push: `MARKET_WIDE_RECOVERY_SOURCE_ORDER = ("KBS", "VCI")` is
+still the single constant driving both ordinary-gap and degraded-expansion recovery (no asymmetry
+introduced or claimed); no W3-authored documentation overstates sentinel frequency (the existing
+wording already conditions worker startup on "the resolver's own existing policy actually needs a
+KBS/VCI fetch," never "every command"); no cache/reuse-gate code was touched, so existing accepted-
+snapshot reuse semantics are unchanged.
+
+**Local validation before push.** `tests/test_vnstock_worker_client.py` (13),
+`tests/test_vnstock_exact_session_worker_equivalence.py` (13),
+`tests/test_vnstock_worker_import_containment.py` (1): 27/27 passed. Full updated
+`focused-regressions` command reproduced locally in one invocation: 249 passed, 0 failed (the
+governor-leak fix above verified against the exact combined ordering that originally exposed it).
+Structural job's py_compile targets, `docs/ROADMAP_STATE.json` JSON parse, `tools/
+stocklookup_roadmap.py --check` (`ON_TRACK`), the two structural-job pytest targets, workflow YAML
+parse, and `git diff --check`: all clean. `test_daily_session_level2_package.py`'s 3
+gitignored-evidence-absent-in-a-fresh-worktree failures (file present in the primary checkout,
+absent in this worktree, per the same pattern this file's own prior entries document) are unrelated
+and unchanged by this release.
+
+**Disposition.** `VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_RELEASE_V1 =
+COMPLETE`. `DNSE_PRIMARY = UNCHANGED`. `QUALITY_SENTINEL = PRESERVED`. `KBS_VCI_AUTHORITY =
+UNCHANGED`. `VNSTOCK_EXACT_SESSION_TRANSPORT = ISOLATED`. `PRODUCTION_ANALYTICAL_BEHAVIOR =
+UNCHANGED`. No provider/source authority promotion. VNStock package removal: not authorized, not
+performed. Next milestone (W4, macro VNStock subprocess/network governance) not started.
+
 ## 2026-09-12 - VNStock Exact-Session Worker Isolation and Sentinel Equivalence V1 (COMPLETE_LOCAL)
 
 `VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_V1`. Owner-authorized despite

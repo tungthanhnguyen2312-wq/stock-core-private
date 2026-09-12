@@ -126,12 +126,20 @@ def _direct_fetch_matching_fake_worker(ticker: str, source: str, start: str, end
 
 
 def _run_before(dnse_snapshot, sentinel_cohort, **kwargs):
-    return resolve_exact_session_with_autorecovery(
-        dnse_snapshot=dnse_snapshot, target_session=TARGET, requested_at=REQUESTED_AT,
-        sentinel_cohort=sentinel_cohort, fetch_single_source=_direct_fetch_matching_fake_worker,
-        request_delay=0.0, sleep_fn=lambda s: None, rate_governor=VnstockRateGovernor(),
-        **kwargs,
-    )
+    # Same explicit-rate_governor hygiene as _run_after below: an explicit (non-None)
+    # rate_governor makes the resolver's own wrapper skip restoring the module-global active
+    # governor afterward, which would otherwise leak this test-local governor into later,
+    # unrelated tests/files in the same pytest session.
+    previous_active_governor = get_active_governor()
+    try:
+        return resolve_exact_session_with_autorecovery(
+            dnse_snapshot=dnse_snapshot, target_session=TARGET, requested_at=REQUESTED_AT,
+            sentinel_cohort=sentinel_cohort, fetch_single_source=_direct_fetch_matching_fake_worker,
+            request_delay=0.0, sleep_fn=lambda s: None, rate_governor=VnstockRateGovernor(),
+            **kwargs,
+        )
+    finally:
+        set_active_governor(previous_active_governor)
 
 
 def _run_after(dnse_snapshot, sentinel_cohort, **kwargs):

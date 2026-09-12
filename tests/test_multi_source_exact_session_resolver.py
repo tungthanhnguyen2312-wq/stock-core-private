@@ -25,10 +25,27 @@ from multi_source_exact_session_resolver import (
     select_sentinel_cohort,
 )
 from vn_stock_pipeline import FetchOutcome
-from vnstock_rate_governor import VnstockRateGovernor, get_active_governor
+from vnstock_rate_governor import VnstockRateGovernor, get_active_governor, set_active_governor
 
 TARGET = "2026-09-03"
 REQUESTED_AT = "2026-09-03T20:00:00+07:00"
+
+
+@pytest.fixture(autouse=True)
+def _restore_active_governor_after_test():
+    """Several tests below pass an explicit ``rate_governor=`` to
+    ``resolve_multi_source_exact_session_snapshot``/``resolve_exact_session_with_autorecovery`` --
+    by that wrapper's own documented contract, a caller-supplied (non-None) governor is left
+    active afterward for the caller to tear down (``owns_governor=False``), unlike the default
+    fresh-governor-per-call path. Without this fixture that leaves the module-global "active
+    governor" pointing at a test-local object for the rest of the pytest session, silently
+    breaking any later, unrelated test/module that expects a clean ``get_active_governor() is
+    None`` starting state (observed directly: this exact leak, pre-existing and unrelated to any
+    single test file's own correctness, was reproduced with only this file plus
+    ``test_vnstock_rate_governor.py`` in one pytest session)."""
+    previous = get_active_governor()
+    yield
+    set_active_governor(previous)
 
 
 def _dnse_obs(session, close, volume=1000):

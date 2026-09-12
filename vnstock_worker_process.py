@@ -31,6 +31,8 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+import types
+
 from vnstock_worker_protocol import (
     FAILURE_CLASS_REQUEST_PROCESSING_EXCEPTION,
     MSG_FETCH,
@@ -71,9 +73,12 @@ def _process_fetch(request: dict[str, Any], *, real_stdout) -> None:
     ticker = request.get("ticker")
     provider = request.get("provider")
     try:
+        # vn_stock_pipeline (and therefore pandas/numpy) is imported eagerly in main() on the
+        # main thread before this pool ever starts serving requests -- see that comment for why.
+        # By the time we get here it is already a cheap sys.modules lookup, never a first-time
+        # C-extension load from a background thread.
         import vn_stock_pipeline as vsp
 
-        vsp._install_bounded_http()
         outcome = vsp.fetch_single_source(
             ticker, provider, request.get("start"), request.get("end"),
             bypass_circuit_check=bool(request.get("bypass_circuit_check", False)),
@@ -118,6 +123,93 @@ def _process_fetch(request: dict[str, Any], *, real_stdout) -> None:
         )
 
 
+def _disable_vnstock_update_notice() -> None:
+    """Pre-seed ``sys.modules['vnstock.core.utils.upgrade']`` with a no-op stub, via ordinary
+    Python import-cache semantics, BEFORE anything imports ``vnstock`` for the first time.
+
+    ``vnstock/__init__.py`` unconditionally calls ``update_notice(verbose=False)`` at module
+    level on every fresh interpreter's first import, which shells out to ``python -m pip list
+    --format=json`` (``vnstock.core.utils.upgrade._get_installed_version_robust``) under a
+    ``subprocess.run(timeout=5)`` that is NOT robust against a grandchild process holding the
+    stdout pipe open past that timeout (a known CPython subprocess/pipe-inheritance hazard) --
+    observed directly, via a watchdog thread stack dump during this milestone's own live release
+    probe, hanging for 60+ seconds with zero further CPU consumed. This is vnstock's own
+    self-promotion/update-nag feature -- purely cosmetic console output nobody ever sees in a
+    non-interactive worker process -- wholly unrelated to KBS/VCI data fetching, so it is
+    disabled here rather than left to occasionally stall a real acquisition. This does not
+    modify the installed package: it only pre-populates the interpreter's own module cache, the
+    same mechanism Python's own import system already uses to avoid re-executing an
+    already-imported module.
+    """
+    module_name = "vnstock.core.utils.upgrade"
+    if module_name in sys.modules:
+        return
+    stub = types.ModuleType(module_name)
+    stub.update_notice = lambda verbose=False: None  # noqa: ARG005 -- must match the real signature
+    stub.migrate_to_sponsor = lambda target_dir=".": None  # noqa: ARG005 -- imported but never called at module level
+    sys.modules[module_name] = stub
+
+
+def _preempt_vnai_git_telemetry_hang() -> None:
+    """Trigger ``vnai``'s lazy singleton telemetry initialization ourselves, on the main thread,
+    during startup, with ``subprocess.run``/``subprocess.Popen`` temporarily short-circuited for
+    ``git``-prefixed argv only -- so ``vnai.scope.profile.Inspector``'s first-construction
+    ``analyze_git_info()`` (module-level ``inspector = Inspector()`` at
+    ``vnai/scope/profile.py:674``, reached via ``vnai.setup()`` the first time any decorated
+    ``vnstock`` call runs) sees a fast, clean "not a git repository" result and short-circuits
+    immediately, instead of running several ``subprocess.run(["git", ...])`` calls that carry NO
+    ``timeout=`` at all.
+
+    Observed directly, via a watchdog thread stack dump during this milestone's own live release
+    probe: these unbounded git calls hung for 60+ seconds even from a neutral, non-repository
+    working directory (a real, environment-specific git/credential-helper hazard on this machine,
+    not something this project's own code can fix by choice of cwd alone). ``vnai``'s own
+    commercial-usage/telemetry detection is not something this project's correctness depends on
+    -- the actual KBS/VCI request-rate governance this project relies on is
+    ``vnstock_rate_governor.VnstockRateGovernor``, entirely independent of vnai's internal
+    accounting (see that module's own docstring) -- so short-circuiting just the git probe here
+    changes no behavior this project's contracts depend on.
+
+    Only ``git``-argv calls are intercepted, and only for the duration of this one controlled
+    trigger; every other ``subprocess`` call in this process (including the real KBS/VCI HTTP
+    transport, which does not use ``subprocess`` at all) is completely unaffected, and the real
+    ``subprocess.run``/``Popen`` are restored immediately afterward in every case (success,
+    exception, or the singleton having already been constructed by something else).
+    """
+    import subprocess
+
+    if "vnai" in sys.modules:
+        return  # Already imported (by something else) -- too late to preempt safely; no-op.
+
+    real_run = subprocess.run
+
+    def _fake_run(popenargs, *args, **kwargs):
+        argv = popenargs if isinstance(popenargs, (list, tuple)) else [popenargs]
+        if argv and str(argv[0]).lower().endswith("git"):
+            # Fast, clean "not a git repository" result -- no process ever spawned for this
+            # call, so there is nothing left to hang on. analyze_git_info() checks only
+            # returncode/stdout, both satisfied by this CompletedProcess.
+            return subprocess.CompletedProcess(argv, 1, stdout="", stderr="")
+        return real_run(popenargs, *args, **kwargs)
+
+    subprocess.run = _fake_run
+    try:
+        import vnai
+
+        # A bare `import vnai` alone does NOT construct the Inspector singleton -- that only
+        # happens inside vnai's own `wrapper()` decorator calling `setup()` the first time a
+        # decorated vnstock API method actually runs. Call it explicitly here, under the patch,
+        # so the singleton is already safely constructed by the time the real fetch triggers the
+        # same `setup()` call for real (vnai's own `_get_core()` finds `_core_instance` already
+        # set and returns it immediately, never reaching this code path again).
+        vnai.setup()
+    except Exception:  # noqa: BLE001 -- vnai is optional to this preemption; a real failure here
+        # surfaces normally later, at the real (unguarded) call inside vn_stock_pipeline.
+        pass
+    finally:
+        subprocess.run = real_run
+
+
 def main() -> int:
     # Reserve the real fd 1 for the protocol only; redirect Python-level sys.stdout so any
     # accidental print()/banner from the adapter or a dependency lands somewhere harmless
@@ -126,12 +218,27 @@ def main() -> int:
     devnull = open(os.devnull, "w", encoding="utf-8")
     sys.stdout = devnull
 
-    pool = ThreadPoolExecutor(max_workers=_WORKER_INTERNAL_POOL_SIZE, thread_name_prefix="vnstock-worker")
     try:
         import vnstock_rate_governor as governor_module
 
         governor = governor_module.VnstockRateGovernor()
         governor_module.set_active_governor(governor)
+
+        # Import vn_stock_pipeline (and its heavy pandas/numpy dependency chain) here, on the
+        # MAIN thread, before the request-handling thread pool exists and before any request is
+        # served. numpy's native C-extension initialization (multiarray/OpenBLAS setup) is not
+        # safe to trigger for the first time from a non-main thread -- doing so from inside a
+        # ThreadPoolExecutor worker (as a naive per-request `import vn_stock_pipeline` would)
+        # deadlocks inside CPython's import lock/numpy's own C-level init with zero further CPU
+        # consumed, observed directly via a watchdog thread stack dump during this milestone's
+        # own live-probe qualification. Once imported here, every later `import vn_stock_pipeline`
+        # from any thread (including inside _process_fetch) is a cheap sys.modules lookup, not a
+        # re-execution of module-level code, so this fully and permanently avoids the hazard.
+        _disable_vnstock_update_notice()
+        _preempt_vnai_git_telemetry_hang()
+        import vn_stock_pipeline as vsp
+
+        vsp._install_bounded_http()
     except Exception as exc:  # noqa: BLE001
         _emit(
             {
@@ -146,6 +253,7 @@ def main() -> int:
         )
         return 1
 
+    pool = ThreadPoolExecutor(max_workers=_WORKER_INTERNAL_POOL_SIZE, thread_name_prefix="vnstock-worker")
     _emit({"protocol_version": PROTOCOL_VERSION, "type": MSG_READY, "request_id": None}, real_stdout=real_stdout)
 
     stdin = sys.stdin

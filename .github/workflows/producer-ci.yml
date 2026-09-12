@@ -74,3 +74,9 @@ jobs:
           tests/test_ai_handoff_source_freshness_matrix.py
           tests/test_ai_handoff_publication.py
           tests/test_tactical_reversal_shadow_collection_operationalization.py
+          tests/test_vnstock_worker_client.py
+          tests/test_vnstock_exact_session_worker_equivalence.py
+          tests/test_vnstock_worker_import_containment.py
+          tests/test_multi_source_exact_session_resolver.py
+          tests/test_multi_source_market_evidence_contract.py
+          tests/test_vnstock_rate_governor.py
