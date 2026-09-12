@@ -1,5 +1,38 @@
 # Stock Lookup — Operational State
 
+**Macro network governance and VNStock decoupling RELEASE V1 (2026-09-12):**
+`MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_RELEASE_V1 = COMPLETE`. `HOSTED_PRODUCER_CI =
+PASS`. Releases local implementation checkpoint `4e406fe55ff2357eea24c1715969d78905187042` to
+`origin/main`.
+
+This release-integration commit is documentation-and-checkpoint-only: it literalizes the
+implementation milestone's `docs/ROADMAP_STATE.json` checkpoint from the `HEAD` sentinel to the
+literal implementation commit, and adds this and the paired `docs/DECISIONS.md` entry. No
+adapter, `macro_sync.py`, `canonical_daily_operation.py`, or test file is touched beyond the
+implementation commit itself -- CI already covered all 5 new W4 test files in the implementation
+commit's own change to `.github/workflows/producer-ci.yml`.
+
+Pre-push re-validation, run directly against the unmodified implementation commit in its own
+worktree (system Python 3.13, matching the implementation commit's own local validation): all 49
+new W4 tests pass; the 5 existing W1 macro-presentation/source-freshness regression files (45
+tests: `test_macro_sync.py`, `test_macro_presentation_context.py`,
+`test_ai_handoff_source_freshness_matrix.py`, `test_current_macro_regime.py`,
+`test_vietnam_official_macro_evidence.py`) pass unmodified; all 133 W3 worker/import-containment/
+resolver tests (`test_vnstock_worker_client.py`, `test_vnstock_exact_session_worker_equivalence.py`,
+`test_vnstock_worker_import_containment.py`, `test_multi_source_exact_session_resolver.py`,
+`test_multi_source_market_evidence_contract.py`, `test_vnstock_rate_governor.py`) pass unmodified,
+confirming zero W3 impact; `test_canonical_daily_operation.py` reproduces 43 passed / 1
+pre-existing gitignored-evidence failure (`test_isolated_2026_08_26_full_replay_reaches_
+published_without_dispatch`, the same documented gap from prior milestones, unrelated to this
+diff); `test_production_call_shape_smoke.py` (5) passes; `py_compile`, JSON parse, YAML parse,
+`git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`) are all clean.
+
+The implementation commit's own bounded live qualification (5/5 real requests: FRED, Yahoo, World
+Bank, direct VCB, direct SJC all `OK`; `MACRO_VNSTOCK_IMPORT = NONE`, logged in this same file's
+prior entry below) was not rerun -- provenance to this exact candidate commit is unambiguous
+(same day, same commit, no intervening local change), so a fresh live probe would exercise
+identical code for no new evidence.
+
 **Macro network governance and VNStock decoupling V1 (2026-09-12):**
 `MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1 = COMPLETE_LOCAL`. `RELEASE_NOT_YET_
 AUTHORIZED` -- owner-authorized bounded implementation milestone (started despite `queued_

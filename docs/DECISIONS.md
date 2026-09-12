@@ -1,5 +1,34 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-12 - Macro Network Governance and VNStock Decoupling RELEASE V1
+
+`MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_RELEASE_V1 = COMPLETE`. Release-integration
+commit for local implementation checkpoint `4e406fe55ff2357eea24c1715969d78905187042`.
+
+**Decision: no product-level changes in the release-integration commit.** Unlike the prior
+`VNSTOCK_EXACT_SESSION_WORKER_ISOLATION_AND_SENTINEL_EQUIVALENCE_RELEASE_V1` release (which found
+and fixed two real defects via a fresh bounded live probe of the actual worker subprocess), this
+release's pre-push re-validation reproduced the implementation commit's own local test/structural
+results with zero new findings and zero code changes. The only changes in this commit are: (1)
+`docs/ROADMAP_STATE.json`'s milestone checkpoint literalized from the `HEAD` sentinel to the
+literal implementation SHA (required before any further edit to that file, per `roadmap_execution_
+state.py`'s own documented `HEAD` sentinel convention -- otherwise the sentinel would silently
+resolve to this release commit itself rather than the commit that actually introduced the
+milestone record), and (2) this pair of `docs/STATE.md`/`docs/DECISIONS.md` release entries.
+
+**Decision: do not rerun the 5-request live qualification.** The implementation commit's own
+`docs/STATE.md` entry already logs a same-day, same-commit bounded live qualification (FRED,
+Yahoo, World Bank, direct VCB, direct SJC all `OK`; `MACRO_VNSTOCK_IMPORT = NONE`). Provenance to
+`4e406fe55ff2357eea24c1715969d78905187042` is unambiguous -- no local change occurred between that
+qualification and this release -- so a fresh probe would exercise byte-identical code for no new
+evidence, consistent with the release brief's own instruction not to automatically rerun live
+requests when provenance is unambiguous.
+
+**Decision: no fourth CI workflow, no CI diff in this commit.** The implementation commit itself
+already added all 5 new W4 test files to `.github/workflows/producer-ci.yml`'s existing
+`focused-regressions` lane; hosted CI coverage was verified by inspection to already be complete
+before this release commit was authored, so no CI change was needed here.
+
 ## 2026-09-12 - Macro Network Governance and VNStock Decoupling V1
 
 `MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1 = COMPLETE_LOCAL`, local implementation
