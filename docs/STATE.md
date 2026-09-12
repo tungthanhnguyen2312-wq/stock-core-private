@@ -1,5 +1,89 @@
 # Stock Lookup — Operational State
 
+**Canonical recurring decision context materialization V1 (2026-09-12):**
+`CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1 = COMPLETE_LOCAL`.
+`RELEASE_NOT_YET_AUTHORIZED` -- owner-authorized, local checkpoint only, not pushed. Closes the
+two current-decision context gaps the immediately preceding milestone disclosed:
+`market_wide_fundamental_feature_store` and `tactical_behavior_context` were passed as `None`
+into `current_valuation_opportunity_integration.build_artifacts`, so the Workspace's top-level
+`research_stance`/`entry_state` decision fields resolved to `INSUFFICIENT_EVIDENCE`/`NONE` for
+every ticker even though every other axis was current. Both axes now have a genuine recurring,
+non-historical source; neither is a new analytical architecture -- both reuse the existing,
+unmodified `market_wide_fundamental_feature_store.build_artifact()` /
+`tactical_behavior_context.build_artifact()` builders.
+
+**`FUNDAMENTAL_FEATURE_STORE = RECURRING` (non-session-bound).** New
+`canonical_current_product_projections.materialize_current_fundamental_feature_store_context()`
+feeds `financial_v2_current_input_authority`'s pinned, identity-verified, CURRENT
+structured-period-semantics chain (advanced 2026-09-05; the same evidence Financial V2 itself
+already consumes every session) into the Feature Store builder fresh every run -- never the
+module's own frozen `DEFAULT_SEMANTICS` (2026-08-31), and never the separate frozen 2026-08-31
+Feature Store artifact that authority pins only for Financial V2's own internal entity-type join.
+Financial evidence is periodic: this axis is deliberately not checked against the Daily session
+the way tactical is; its identity only changes when the pinned authority itself advances. Real
+retained-evidence replay: 1,492/1,492 tickers, zero silent drops, a fresh `artifact_identity`
+distinct from the frozen snapshot's pinned identity (proving a genuine rebuild, not a read of the
+old file).
+
+**`TACTICAL_BEHAVIOR_CONTEXT = RECURRING` (exact-session).** `technical_structure_context` was
+already rebuilt fresh every Daily run inside `canonical_post_close_pipeline.py`'s
+`_integrated_investment_decision_product()` but never persisted; `tactical_setup_tags` was never
+built anywhere in canonical runtime at all, only by its own hand-run tool. Fixed with two small,
+additive changes to that same function: persist the already-computed `technical_structure`
+artifact (zero new computation), and build+persist `tactical_setup_tags` best-effort from
+already-in-scope same-session inputs, mirroring the existing `tactical_confirmation_invalidation_
+boundaries` best-effort pattern exactly (both given new per-session paths in
+`daily_session_level2_package.session_artifact_paths()`). New
+`materialize_current_tactical_behavior_context()` then joins the registry's own
+`watchlist_tactical_entry_classifier` with these two newly-retained artifacts (plus boundaries/
+leadership) via the unmodified `tactical_behavior_context.build_artifact()`; a mandatory-input
+gap or session mismatch is an explicit `UNAVAILABLE` status, never a historical fallback, never
+raised out. Real replay (technical_structure/setup_tags rebuilt from real 2026-09-11 evidence):
+materialized over the full 1,683-candidate denominator, `entry_state` distribution exactly
+matching the Screener's own independently-sourced watchlist distribution (`DOWNTREND` 309,
+`SELLING_PRESSURE_EASING` 198, `UPTREND_CONFIRMED` 186, `BREAKDOWN_RISK` 95,
+`EARLY_REVERSAL_CANDIDATE` 64, `SIDEWAYS_NEUTRAL` 54, `DISTRIBUTION_RISK` 18, `BASE_BUILDING` 16,
+`BREAKOUT_READY` 11, missing 732) -- a strong cross-check that the new join is genuinely correct.
+
+**One real architectural interaction found and fixed pre-commit.** The Feature Store's own
+~1,492-ticker universe is not a strict subset of the Daily Product's own ~1,683-ticker
+denominator; left unprojected it silently widened `current_valuation_opportunity_integration`'s
+ticker union past what `financial_analysis_product_context` (itself already Daily-denominator-
+complete) covers, tripping `FINANCIAL_ANALYSIS_PRODUCT_SILENT_TICKER_DROP`. Fixed with a new
+`_project_to_daily_tickers()` transient join-time view (restricts records to the Daily watchlist/
+valuation ticker set, fabricates nothing, never touches the retained artifact's own identity) --
+mirrors `canonical_daily_financial_v2_materialization`'s own established "project onto the Daily
+Product's OWN denominator, never the engine's own narrower cohort" pattern.
+
+**Real before/after Workspace replay (2026-09-11, denominator 1,683 unchanged, zero silent
+drops, Financial V2 available 1,476/1,683 unchanged).** `research_stance_distribution`: 100%
+`INSUFFICIENT_EVIDENCE` (documented baseline) -> `{WAIT_FOR_CONFIRMATION: 824, AVOID_NEW_ENTRY:
+422, ACCUMULATE_RESEARCH_CANDIDATE: 163, INSUFFICIENT_EVIDENCE: 190, INITIATE_RESEARCH_CANDIDATE:
+54, HIGH_RISK_SPECULATION_ONLY: 30}`. `entry_state_distribution`: 100% `None` -> the exact
+tactical distribution above. **Screener Master non-regression (2026-09-11):** every coverage
+field (denominator 1,683, zero duplicates, price 952/1,683, sector 1,678/1,683, financial_v2
+1,476/1,683, tactical 951/1,683, `tactical_entry_state_distribution`, liquidity-proxy 937,
+execution-capacity-exact-blocked 1,683) reproduces bit-for-bit identical to the documented
+pre-milestone baseline -- `research_stance_distribution` is the only new, additive field.
+
+New retained per-session outputs: `market_wide_fundamental_feature_store_artifact.json` +
+`market_wide_fundamental_feature_store_records.jsonl.gz` (summary/records-payload split,
+mirroring `tools/run_market_wide_fundamental_feature_store_v1.py`'s own scalable
+representation) and `tactical_behavior_context_artifact.json`, all written into the same Daily
+Research Session Operation directory as Workspace/Screener. No new Dashboard binding added (no
+demonstrated public-surface need for either as a standalone product). No historical/glob/mtime
+discovery, no hardcoded session default, anywhere in the new code. 14 new focused tests
+(`tests/test_canonical_recurring_decision_context_materialization.py`); zero regressions across
+every directly-relevant suite (confirmed against the untouched `fda11ad` baseline worktree for
+the handful of pre-existing gitignored-evidence-gap failures). Full updated W1-W4
+focused-regression command reproduces 407 passed / 1 skipped / 1 deselected locally (393 baseline
++ 14 new). `py_compile`, YAML parse, `git diff --check`, and `tools/stocklookup_roadmap.py
+--check` (drift `PASS`) all clean. Feature Store and Financial V2 remain distinct products under
+their own authority boundaries; Financial V2 semantics untouched. No Feature Store V2, no
+Tactical V3/V4, no scoring/ranking/probability/target/sizing/execution semantics introduced. Full
+report: `docs/canonical_recurring_decision_context_materialization_replay_20260912.md`. Not
+pushed; Dashboard not published; no successor milestone opened.
+
 **Canonical current-product projections and Dashboard binding V1 (2026-09-12):**
 `CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1 = COMPLETE_LOCAL`.
 `RELEASE_NOT_YET_AUTHORIZED` -- owner-authorized bounded implementation milestone, local

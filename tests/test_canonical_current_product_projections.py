@@ -64,7 +64,7 @@ def test_resolve_supplementary_inputs_reads_exact_deterministic_path(tmp_path):
 
 def test_resolve_supplementary_inputs_missing_axis_is_none_not_an_error(tmp_path):
     resolved = ccpp.resolve_supplementary_inputs(tmp_path, SESSION)
-    assert resolved == {"liquidity": None, "leadership": None, "financial_analysis_product_v2": None}
+    assert resolved == {name: None for name in ccpp.SUPPLEMENTARY_INPUT_TEMPLATES}
 
 
 def test_resolve_supplementary_inputs_never_falls_back_to_a_different_session(tmp_path):

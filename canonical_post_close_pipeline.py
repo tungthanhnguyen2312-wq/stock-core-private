@@ -688,6 +688,7 @@ def build_enrichment_components(
         import tactical_confirmation_context as confirmation_context
         import tactical_confirmation_invalidation_boundaries as boundary_context
         import tactical_momentum_context as momentum_context
+        import tactical_setup_tags as setup_tags_context
         import technical_structure_context as tsc
         # integrated_investment_decision_product.evaluate_tactical_phase/evaluate_participation read
         # a FLAT compact shape (eligible, market_structure_state, breakout_state_v3, bos_state,
@@ -708,6 +709,7 @@ def build_enrichment_components(
         desc = _load(paths["descriptive_research"])
         p3f9b = _load(paths["exact_session_snapshot"])
         mkt = _load(paths["sector_leadership"])
+        screening = _load(paths["screening_foundation"])
         opp = _load(paths["opportunity_prioritization"])
         if not desc or not p3f9b:
             raise CanonicalPostCloseError("REQUIRED_INPUT_MISSING")
@@ -756,6 +758,23 @@ def build_enrichment_components(
                 )
             except Exception:
                 tactical_boundaries = None
+        # tactical_setup_tags/v1 has no canonical Daily materialization path of its own today; it
+        # is built here, best-effort, from the exact same already-qualified same-session evidence
+        # already in scope for the boundary engine above (plus screening/leadership), so
+        # CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1's tactical_behavior_context
+        # join has a genuine current-session source for it rather than none at all. A missing
+        # mandatory input (screening/leadership/classifier) or a build failure leaves this
+        # retention-only artifact absent; it never alters the already-determined action posture.
+        tactical_setup_tags_artifact = None
+        if tactical_classifier and screening and mkt:
+            try:
+                tactical_setup_tags_artifact = setup_tags_context.build_artifact(
+                    technical_structure=technical_structure, current_descriptive=desc,
+                    current_screening=screening, current_leadership=mkt,
+                    tactical=tactical_classifier, requested_at=requested_at,
+                )
+            except Exception:
+                tactical_setup_tags_artifact = None
         # Also retained under its own canonical per-session path (not just consumed here) so
         # downstream consumers -- the daily_integrated_decision_brief CLI-level builder in
         # particular, which needs BOS/CHoCH per watchlist ticker -- can load the same compact V3
@@ -765,6 +784,13 @@ def build_enrichment_components(
         _write_json(paths["tactical_confirmation_context"], confirmation)
         if tactical_boundaries is not None:
             _write_json(paths["tactical_confirmation_invalidation_boundaries"], tactical_boundaries)
+        # technical_structure_context itself was never persisted anywhere before this milestone
+        # (only its derivatives above were) -- this is pure retention of an already-computed
+        # artifact, zero new computation, so canonical_current_product_projections.py can load it
+        # per-session instead of rebuilding Tactical V3's own upstream input a second time.
+        _write_json(paths["technical_structure_context"], technical_structure)
+        if tactical_setup_tags_artifact is not None:
+            _write_json(paths["tactical_setup_tags"], tactical_setup_tags_artifact)
         # Financial V2 previously had NO canonical daily-materialization path anywhere in this
         # pipeline: the prior wiring here loaded the legacy, structurally incompatible
         # market_wide_current_fundamental_research/v1 artifact (523-record shape;

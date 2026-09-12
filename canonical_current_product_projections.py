@@ -24,15 +24,27 @@ degrades an individual field, never the whole product" semantics
 ``current_valuation_opportunity_integration.py``/``investment_decision_workspace_projection.py``
 already implement) -- never silently substituted for a different session's file.
 
-``feature_store`` (fundamental feature store), ``tactical_behavior`` (BOS/CHoCH technical
-structure detail), ``thesis_cases`` (catalyst/downside-invalidation cases), and
-``portfolio`` (explicit portfolio-risk research) have no recurring, canonical-runtime source at
-all today -- each was materialized exactly once, in a now-detached feature worktree, for the
-original 2026-08-28/2026-08-31 milestone, and never regenerated since. Resurrecting those
-worktree-local, one-off snapshots into a "canonical" recurring path would be the same defect
-this module exists to remove, just relocated. They are passed as ``None`` here; every one is
-already an optional, gracefully-degrading keyword argument in the builders this module calls,
-so the Workspace/Screener product is not blocked, only that individual axis's field.
+``feature_store`` (``market_wide_fundamental_feature_store/v1``) and ``tactical_behavior``
+(``tactical_behavior_context/v1``) are, as of
+CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1, materialized fresh here every run --
+never read from either module's own dated default or the detached 2026-08-31 feature worktrees
+that produced the original one-off snapshots (see ``materialize_current_fundamental_feature_
+store_context`` / ``materialize_current_tactical_behavior_context`` below). Financial evidence is
+periodic, not daily: the fundamental feature context is rebuilt from
+``financial_v2_current_input_authority``'s pinned, versioned structured-period-semantics chain
+(the same evidence Financial V2 itself already consumes every session) and is NOT session-bound
+-- its identity changes only when that authority itself advances. Tactical behavior IS exact
+same-session -- it is rebuilt from the registry's own ``watchlist_tactical_entry_classifier``
+plus ``technical_structure_context``/``tactical_setup_tags``, both now retained per-session by
+``canonical_post_close_pipeline.py`` (the first genuinely current-session, non-historical source
+either axis has ever had). Either axis missing its mandatory current-session input is an explicit
+unavailable status, never a historical fallback.
+
+``thesis_cases`` (catalyst/downside-invalidation cases) and ``portfolio`` (explicit
+portfolio-risk research) still have no recurring, canonical-runtime source and remain passed as
+``None`` here; both are already optional, gracefully-degrading keyword arguments in the builders
+this module calls, so the Workspace/Screener product is not blocked, only that individual axis's
+field.
 
 Never raises out of the top-level entry point (``materialize_and_write_current_product_projections``):
 a failure here must never block core Daily / the decision cockpit / AI handoff, exactly like
@@ -41,14 +53,20 @@ status dict instead.
 """
 from __future__ import annotations
 
+import gzip
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Mapping
 
 from atomic_io import atomic_write_file, atomic_write_json
+import canonical_daily_financial_v2_materialization
 import current_valuation_opportunity_integration
+import financial_v2_current_input_authority
 import investment_decision_workspace_projection
+import market_wide_fundamental_feature_store
 import screener_master_projection
+import tactical_behavior_context
 from runtime_paths import runtime_root
 
 CONTRACT_VERSION = "canonical_current_product_projections/v1"
@@ -62,17 +80,28 @@ VCI_INDUSTRY_SNAPSHOT_RELATIVE = "registry_snapshots/metadata/vnstock_metadata_s
 WORKSPACE_ARTIFACT_FILENAME = "investment_decision_workspace_projection.json"
 SCREENER_MASTER_JSON_FILENAME = "screener_master_projection.json"
 SCREENER_MASTER_JS_FILENAME = "screener_master_projection.js"
+FEATURE_STORE_ARTIFACT_FILENAME = "market_wide_fundamental_feature_store_artifact.json"
+FEATURE_STORE_RECORDS_FILENAME = "market_wide_fundamental_feature_store_records.jsonl.gz"
+TACTICAL_BEHAVIOR_ARTIFACT_FILENAME = "tactical_behavior_context_artifact.json"
 
 #: Explicit, deterministic path template per supplementary axis (session -> one path, never a
 #: search). Each entry: (directory-slug, filename). ``{session}`` is replaced with the session
 #: string with dashes removed (matching this repository's own established
 #: ``operations-review/<capability>-v1-<YYYYMMDD>/`` per-session artifact directory
 #: convention -- see e.g. ``config/daily_research_session_input_registry.json``'s own dated
-#: entries for 2026-09-11).
+#: entries for 2026-09-11). ``technical_structure``/``tactical_setup_tags``/``tactical_boundaries``
+#: reuse ``daily_session_level2_package.session_artifact_paths()``'s own
+#: ``integrated-investment-decision-product-v1-{session}`` directory -- the same one
+#: ``canonical_post_close_pipeline.py`` already retains ``tactical_confirmation_invalidation_
+#: boundaries_artifact.json`` under, and now also retains ``technical_structure_context``/
+#: ``tactical_setup_tags`` under, for exactly this axis.
 SUPPLEMENTARY_INPUT_TEMPLATES: dict[str, tuple[str, str]] = {
     "liquidity": ("market-wide-current-liquidity-research-v1-{session}", "market_wide_current_liquidity_research_artifact.json"),
     "leadership": ("current-market-sector-leadership-context-v1-{session}", "current_market_sector_leadership_context_artifact.json"),
     "financial_analysis_product_v2": ("financial-analysis-product-v2-{session}", "financial_analysis_product_artifact.json"),
+    "technical_structure": ("integrated-investment-decision-product-v1-{session}", "technical_structure_context_artifact.json"),
+    "tactical_setup_tags": ("integrated-investment-decision-product-v1-{session}", "tactical_setup_tags_artifact.json"),
+    "tactical_boundaries": ("integrated-investment-decision-product-v1-{session}", "tactical_confirmation_invalidation_boundaries_artifact.json"),
 }
 
 
@@ -114,12 +143,114 @@ def _financial_analysis_product_context(supplementary: Mapping[str, Any]) -> dic
     return None
 
 
+def _project_to_daily_tickers(artifact: Mapping[str, Any] | None, daily_tickers: set[str]) -> dict[str, Any] | None:
+    """Restrict ``artifact["records"]`` to ``daily_tickers`` for a transient join-time view --
+    never fabricates a record for a Daily ticker the axis doesn't cover, never mutates the
+    artifact's own identity (the identity describes the ORIGINAL, unprojected content; this is
+    a view, not a new artifact). ``None`` in, ``None`` out."""
+    if artifact is None:
+        return None
+    records = artifact.get("records") or {}
+    projected = dict(artifact)
+    projected["records"] = {ticker: records[ticker] for ticker in daily_tickers if ticker in records}
+    return projected
+
+
+def materialize_current_fundamental_feature_store_context(*, root: Path, requested_at: str) -> dict[str, Any]:
+    """Build the current ``market_wide_fundamental_feature_store/v1`` research context fresh
+    from ``financial_v2_current_input_authority``'s pinned, versioned structured-period-semantics
+    chain -- the same evidence Financial V2 itself already reads and identity-verifies every
+    session. Never uses ``market_wide_fundamental_feature_store.DEFAULT_SEMANTICS`` (the module's
+    own frozen 2026-08-31 constant) and never reads the frozen 2026-08-31
+    ``market_wide_fundamental_feature_store_artifact.json`` snapshot the authority separately
+    pins for Financial V2's OWN internal entity-type join -- this axis independently rebuilds a
+    fresh feature-store artifact from the current semantics rows instead.
+
+    Financial evidence is periodic, not daily: this axis is deliberately NOT checked against the
+    Daily ``session`` the way ``tactical_behavior`` is -- its content identity is expected to
+    repeat unchanged across many consecutive sessions and only changes when the pinned authority
+    itself is deliberately advanced to a newer retained semantics snapshot.
+
+    Never raises: a missing/drifted authority input is an explicit ``UNAVAILABLE`` status.
+    """
+    try:
+        authority = financial_v2_current_input_authority.resolve(Path(root))
+        semantic_rows, semantics_artifact = canonical_daily_financial_v2_materialization.load_semantic_rows(authority)
+    except financial_v2_current_input_authority.FinancialV2InputAuthorityError as exc:
+        return {"status": "UNAVAILABLE", "reason_code": "FUNDAMENTAL_FEATURE_SEMANTICS_SOURCE_UNAVAILABLE", "detail": str(exc)}
+    except Exception as exc:  # noqa: BLE001 - axis-local failure must stay non-blocking
+        return {"status": "UNAVAILABLE", "reason_code": type(exc).__name__, "detail": str(exc)}
+    artifact = market_wide_fundamental_feature_store.build_artifact(
+        semantic_rows=semantic_rows, period_semantics_identity=semantics_artifact["artifact_identity"],
+        requested_at=requested_at,
+    )
+    return {
+        "status": "MATERIALIZED",
+        "artifact": artifact,
+        "source_semantics_identity": semantics_artifact["artifact_identity"],
+        "financial_input_authority": authority.to_manifest(),
+    }
+
+
+def materialize_current_tactical_behavior_context(
+    *,
+    session: str,
+    registry_inputs: Mapping[str, Any],
+    supplementary: Mapping[str, Any],
+    requested_at: str,
+) -> dict[str, Any]:
+    """Build the current-session ``tactical_behavior_context/v1`` from already-governed,
+    exact-session inputs only: the registry's own ``watchlist_tactical_entry_classifier``
+    (``registry_inputs["tactical"]``) plus ``technical_structure_context``/``tactical_setup_tags``,
+    both now retained per-session by ``canonical_post_close_pipeline.py`` (rebuilt there, once,
+    from the same session's already-qualified descriptive/snapshot/recovery evidence -- no
+    duplicate computation happens in this module). Boundaries and leadership are optional,
+    exactly as ``tactical_behavior_context.build_artifact`` already degrades them.
+
+    A mandatory-input gap or a session mismatch against the requested Daily ``session`` is an
+    explicit ``UNAVAILABLE`` status -- never a historical fallback, never raised out to the
+    caller.
+    """
+    tactical = registry_inputs.get("tactical")
+    technical_structure = supplementary.get("technical_structure")
+    setup_tags = supplementary.get("tactical_setup_tags")
+    if not isinstance(tactical, Mapping) or not isinstance(technical_structure, Mapping) or not isinstance(setup_tags, Mapping):
+        return {
+            "status": "UNAVAILABLE",
+            "reason_code": "TACTICAL_BEHAVIOR_MANDATORY_INPUT_MISSING",
+            "detail": {
+                "tactical_available": isinstance(tactical, Mapping),
+                "technical_structure_available": isinstance(technical_structure, Mapping),
+                "tactical_setup_tags_available": isinstance(setup_tags, Mapping),
+            },
+        }
+    if tactical.get("session") != session:
+        return {
+            "status": "UNAVAILABLE", "reason_code": "TACTICAL_SESSION_MISMATCH",
+            "detail": {"expected": session, "observed": tactical.get("session")},
+        }
+    try:
+        artifact = tactical_behavior_context.build_artifact(
+            tactical=tactical, technical_structure=technical_structure, tactical_setup_tags=setup_tags,
+            confirmation_invalidation_boundaries=supplementary.get("tactical_boundaries"),
+            current_leadership=supplementary.get("leadership"),
+            requested_at=requested_at,
+        )
+    except tactical_behavior_context.TacticalBehaviorContextError as exc:
+        return {"status": "UNAVAILABLE", "reason_code": str(exc), "detail": None}
+    except Exception as exc:  # noqa: BLE001 - axis-local failure must stay non-blocking
+        return {"status": "UNAVAILABLE", "reason_code": type(exc).__name__, "detail": str(exc)}
+    return {"status": "MATERIALIZED", "artifact": artifact}
+
+
 def materialize_current_investment_decision_workspace(
     *,
     session: str,
     registry_inputs: Mapping[str, Any],
     supplementary: Mapping[str, Any],
     requested_at: str,
+    feature_store: Mapping[str, Any] | None = None,
+    tactical_behavior: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Investment Decision Workspace from already-resolved inputs.
 
@@ -133,6 +264,12 @@ def materialize_current_investment_decision_workspace(
     already the authoritative, already-loaded corporate-event input the current cockpit
     pipeline itself accepts for this same conceptual axis.
 
+    ``feature_store``/``tactical_behavior``, when supplied, are the already-materialized
+    ``market_wide_fundamental_feature_store/v1``/``tactical_behavior_context/v1`` artifacts
+    (see ``materialize_current_fundamental_feature_store_context``/``materialize_current_
+    tactical_behavior_context``); ``None`` means that axis is genuinely unavailable this run,
+    exactly the same optional, gracefully-degrading semantics every other axis here already has.
+
     Raises ``CanonicalCurrentProductProjectionsError`` if the two required registry inputs are
     absent -- there is no fallback path for these; a Daily run without them has no valid
     Workspace denominator to build from.
@@ -142,10 +279,23 @@ def materialize_current_investment_decision_workspace(
     if not isinstance(watchlist, Mapping) or not isinstance(valuation, Mapping):
         raise CanonicalCurrentProductProjectionsError("WORKSPACE_REQUIRED_REGISTRY_INPUT_MISSING")
 
+    # market_wide_fundamental_feature_store/v1's own ticker universe (drawn from the structured
+    # financial-semantics corpus) need not equal -- and today does not equal -- the Daily
+    # Product's own denominator (watchlist/valuation). Left unprojected, an extra feature-store
+    # ticker would widen current_valuation_opportunity_integration's ticker union past what
+    # financial_analysis_product_context (itself already Daily-denominator-complete) covers,
+    # tripping its own zero-silent-drop invariant. Mirrors canonical_daily_financial_v2_
+    # materialization.build_compact_product's established pattern: project the axis's own
+    # narrower/wider engine cohort onto the Daily Product's OWN ticker denominator, never the
+    # other way around. The retained on-disk Feature Store artifact keeps its full, unprojected
+    # records and its own real identity -- only this transient join-time view is restricted.
+    daily_tickers = set((watchlist.get("records") or {})) | set((valuation.get("records") or {}))
+    projected_feature_store = _project_to_daily_tickers(feature_store, daily_tickers)
+
     opportunity_and_decision = current_valuation_opportunity_integration.build_artifacts(
         as_of_session=session,
-        feature_store=None,
-        tactical_behavior=None,
+        feature_store=projected_feature_store,
+        tactical_behavior=tactical_behavior,
         watchlist=watchlist,
         valuation=valuation,
         liquidity=supplementary.get("liquidity"),
@@ -227,9 +377,23 @@ def materialize_and_write_current_product_projections(
     operation_dir = Path(operation_dir)
     try:
         supplementary = resolve_supplementary_inputs(root, session)
-        workspace_bundle = materialize_current_investment_decision_workspace(
+        feature_store_result = materialize_current_fundamental_feature_store_context(
+            root=root, requested_at=requested_at,
+        )
+        tactical_behavior_result = materialize_current_tactical_behavior_context(
             session=session, registry_inputs=registry_inputs, supplementary=supplementary,
             requested_at=requested_at,
+        )
+        feature_store_artifact = (
+            feature_store_result.get("artifact") if feature_store_result.get("status") == "MATERIALIZED" else None
+        )
+        tactical_behavior_artifact = (
+            tactical_behavior_result.get("artifact") if tactical_behavior_result.get("status") == "MATERIALIZED" else None
+        )
+        workspace_bundle = materialize_current_investment_decision_workspace(
+            session=session, registry_inputs=registry_inputs, supplementary=supplementary,
+            requested_at=requested_at, feature_store=feature_store_artifact,
+            tactical_behavior=tactical_behavior_artifact,
         )
         workspace = workspace_bundle["workspace"]
         snapshot_root = Path(runtime_root_override) if runtime_root_override is not None else runtime_root(root)
@@ -254,6 +418,53 @@ def materialize_and_write_current_product_projections(
     atomic_write_json(screener_json_path, screener_master)
     atomic_write_file(screener_js_path, screener_master_projection.js_fallback(screener_master), encoding="utf-8", newline="\n")
 
+    fundamental_feature_store_status: dict[str, Any] = {"status": feature_store_result.get("status")}
+    if feature_store_artifact is not None:
+        # Preserve the Feature Store's own scalable summary/records-payload representation
+        # (mirrors tools/run_market_wide_fundamental_feature_store_v1.py) rather than writing one
+        # enormous inline JSON file -- the in-memory ``feature_store_artifact`` used above for the
+        # opportunity/decision join keeps its own full ``records``-inclusive identity untouched.
+        summary = dict(feature_store_artifact)
+        records = summary.pop("records")
+        records_path = operation_dir / FEATURE_STORE_RECORDS_FILENAME
+        digest = hashlib.sha256()
+        with gzip.open(records_path, "wt", encoding="utf-8", newline="\n") as handle:
+            for ticker in sorted(records):
+                line = json.dumps(records[ticker], ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+                digest.update(line.encode("utf-8"))
+                handle.write(line)
+        summary["records_payload"] = {
+            "path": FEATURE_STORE_RECORDS_FILENAME, "record_count": len(records),
+            "canonical_jsonl_sha256": digest.hexdigest(),
+        }
+        summary.update(market_wide_fundamental_feature_store.content_identity(summary))
+        atomic_write_json(operation_dir / FEATURE_STORE_ARTIFACT_FILENAME, summary)
+        fundamental_feature_store_status.update({
+            "artifact_identity": feature_store_artifact.get("artifact_identity"),
+            "retained_summary_identity": summary.get("artifact_identity"),
+            "input_period_semantics_identity": feature_store_artifact.get("input_period_semantics_identity"),
+            "ticker_denominator": (feature_store_artifact.get("coverage") or {}).get("ticker_denominator"),
+        })
+    else:
+        fundamental_feature_store_status["reason_code"] = feature_store_result.get("reason_code")
+
+    tactical_behavior_status: dict[str, Any] = {"status": tactical_behavior_result.get("status")}
+    if tactical_behavior_artifact is not None:
+        atomic_write_json(operation_dir / TACTICAL_BEHAVIOR_ARTIFACT_FILENAME, tactical_behavior_artifact)
+        tactical_behavior_status.update({
+            "artifact_identity": tactical_behavior_artifact.get("artifact_identity"),
+            "session": tactical_behavior_artifact.get("session"),
+            "candidate_count": (tactical_behavior_artifact.get("coverage") or {}).get("candidate_count"),
+        })
+    else:
+        tactical_behavior_status["reason_code"] = tactical_behavior_result.get("reason_code")
+
+    unavailable_optional_axes = ["thesis_cases", "portfolio"]
+    if feature_store_artifact is None:
+        unavailable_optional_axes.append("feature_store")
+    if tactical_behavior_artifact is None:
+        unavailable_optional_axes.append("tactical_behavior")
+
     return {
         "status": "MATERIALIZED",
         "contract_version": CONTRACT_VERSION,
@@ -271,6 +482,8 @@ def materialize_and_write_current_product_projections(
             "artifact_identity": screener_master.get("artifact_identity"),
             "denominator": screener_master.get("denominator"),
         },
+        "fundamental_feature_store": fundamental_feature_store_status,
+        "tactical_behavior_context": tactical_behavior_status,
         "supplementary_inputs_available": {name: value is not None for name, value in supplementary.items()},
-        "unavailable_optional_axes": ["feature_store", "tactical_behavior", "thesis_cases", "portfolio"],
+        "unavailable_optional_axes": sorted(unavailable_optional_axes),
     }
