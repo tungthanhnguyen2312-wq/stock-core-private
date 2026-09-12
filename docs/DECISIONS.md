@@ -5647,3 +5647,49 @@ input for either axis; no stale fallback (a mandatory-input gap is always explic
 `UNAVAILABLE`); no Dashboard/AI/public-handoff publication; no provider/network acquisition; no
 production DB write; no source, PIT, RAW_AS_TRADED, liquidity/execution/sizing authority, or
 recommendation-policy change. Not pushed, not merged, not deployed. No successor is queued.
+
+## 2026-09-13 - Canonical Recurring Thesis And Portfolio Context Materialization V1
+
+**DECISION**: Record the two remaining optional current-product axes as explicit unavailable
+states rather than force either existing capability through an incompatible boundary. This
+owner-authorized milestone was opened despite `queued_next=[]` under AI_RULES rule 11; it does not
+authorize a source promotion or a new analytical contract.
+
+1. **Thesis is not a canonical decision input.** `current_evidence_bound_scenario/v1` is a
+   Daily-produced, retained evidence-bound Bear/Base/Bull research overlay. The separately
+   retained `current_research_scenario_context/v1` emits CONSERVATIVE/BASE/SPECULATIVE
+   research-condition axes. Neither contract is the per-ticker `thesis_cases` structure that
+   `opportunity_context` consumes for catalysts, retained event context, technical/fundamental
+   invalidation, and counter-thesis evidence, and neither is contractually passed into the current
+   valuation/opportunity/security-decision chain. Both prohibit probability, target, expected
+   return, recommendation, and sizing output. `CURRENT_THESIS_DECISION_INPUT_NOT_ESTABLISHED` is
+   therefore the correct terminal status; no taxonomy adapter was created.
+2. **Portfolio remains private-local and post-security-decision.** `portfolio_aware_decision/v1`
+   consumes `portfolio_snapshot/v1` only when an explicit private snapshot is supplied, then
+   derives a portfolio research layer over an already finished Integrated Investment Decision.
+   Its optional helper is explicitly non-canonical and reads private state only when its caller
+   supplies it. Canonical Daily has no such safe opt-in. It must not inspect the private portfolio
+   root or emit a zero-holdings substitute. `NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED` remains the
+   native Workspace result; security attractiveness is unchanged.
+3. **The orchestration result now names both states.**
+   `canonical_current_product_projections.unavailable_recurring_context_axes()` records thesis
+   `UNAVAILABLE` and portfolio `NOT_EVALUATED` with their deterministic reason codes. The existing
+   opportunity/security-decision boundary continues to receive `None`, which is its intended
+   missingness representation. No final-layer stance, action, or portfolio value is manufactured.
+
+**REPLAY / VALIDATION**: A local-only 2026-09-11 call to
+`materialize_and_write_current_product_projections()` against the primary retained root produced
+the full 1,683-ticker Workspace and Screener with zero silent drops and 0 evaluated / 1,683
+unevaluated portfolio cards. It required no private values. The root lacked the prior replay's
+post-close supplemental tactical artifacts, so the pre-existing optional degradation yielded
+`WAIT_FOR_CONFIRMATION: 1473` and `INSUFFICIENT_EVIDENCE: 210`; this is documented source
+availability, not a changed threshold. Focused canonical-product, opportunity/security,
+Workspace, Screener, and portfolio tests pass; the retained-fixture scenario suite is blocked by
+its absent gitignored historical artifact in the isolated worktree, not modified.
+
+**GUARDRAILS HELD**: no new thesis, scenario, portfolio, risk, or sizing engine; no private
+portfolio read or value in source/tests/docs/public artifacts; no target/probability/expected
+return; no execution sizing (`execution_qualified_quantity` remains fail-closed and distinct from
+any portfolio risk ceiling); no network/provider/DB write; no source/PIT/RAW/liquidity/execution
+authority promotion; no Dashboard or AI-handoff change. No successor is queued. Local checkpoint
+only; not pushed, merged, deployed, or published.

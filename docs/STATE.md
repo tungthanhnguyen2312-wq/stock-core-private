@@ -1,5 +1,46 @@
 # Stock Lookup — Operational State
 
+**Canonical recurring thesis and portfolio context materialization V1 (2026-09-13):**
+`CANONICAL_RECURRING_THESIS_AND_PORTFOLIO_CONTEXT_MATERIALIZATION_V1 = PARTIAL_BY_CURRENT_
+SOURCE_AVAILABILITY`. Owner authorization explicitly opened this bounded milestone despite
+`queued_next=[]`; it is a local checkpoint only and is not pushed. The source trace closes the
+remaining `canonical_current_product_projections.py` optional-axis question without inventing an
+adapter: `CURRENT_THESIS_DECISION_INPUT_NOT_ESTABLISHED` and
+`NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED` are now explicit orchestration statuses.
+
+**`THESIS_RECURRING = NO`.** `current_evidence_bound_scenario/v1` is built during the older Daily
+research operation and is retained as a Bear/Base/Bull evidence-bound research overlay;
+`current_research_scenario_context/v1` is a separately invoked CONSERVATIVE/BASE/SPECULATIVE
+research-condition/presentation contract. Neither emits the per-ticker catalyst, retained-event,
+technical-invalidation, fundamental-invalidation, and counter-thesis record contract consumed by
+`current_valuation_opportunity_integration.py`, nor is either contractually an input to that
+security-decision chain. Both explicitly prohibit probability, target, expected-return, action,
+and sizing output. No conversion or second thesis taxonomy was added; the canonical call keeps
+`thesis_cases=None` and records the reason rather than treating a retained narrative as current
+decision authority.
+
+**`PORTFOLIO_RECURRING = NO` for canonical Daily; private-local capability remains intact.**
+`portfolio_aware_decision/v1` consumes an already-supplied private `portfolio_snapshot/v1` only
+after a finished Integrated Investment Decision. Its only optional local integration helper is
+explicitly demonstration/private-local and is not a canonical-Daily opt-in. Canonical materialize
+never reads `%USERPROFILE%\\.stocklookup\\portfolio`; owner portfolio absence is normal. The
+existing Workspace card remains `evaluated=false`, `status=NOT_EVALUATED`,
+`reason=NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED`, while security research stays independent.
+`portfolio_risk_quantity_ceiling`, if a private local evaluation has sufficient inputs, remains a
+risk-policy research ceiling and is never an `execution_qualified_quantity`; execution stays
+`NOT_EVALUATED` because exact liquidity authority is absent.
+
+The 2026-09-11 retained local replay exercised the same current-product function path with no
+network, provider, database, or private-file access: denominator 1,683, zero silent drops,
+portfolio evaluated 0 / unevaluated 1,683, and the Screener preserved 1,683 rows, zero duplicates,
+price 952, sector 1,678, Financial V2 1,476, and tactical 951. The primary retained root did not
+contain the post-close supplemental tactical artifacts from the prior full-source replay, so its
+existing legitimate optional-axis degradation produced 1,473 `WAIT_FOR_CONFIRMATION` and 210
+`INSUFFICIENT_EVIDENCE`; this is a source-availability observation, not a policy change. Full
+source map and replay record: `docs/canonical_recurring_thesis_portfolio_context_replay_20260913.md`.
+No source, policy, sizing, execution, RAW/PIT, Dashboard, or publication authority changed. No
+successor is queued.
+
 **Canonical recurring decision context materialization V1 (2026-09-12):**
 `CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1 = COMPLETE_LOCAL`.
 `RELEASE_NOT_YET_AUTHORIZED` -- owner-authorized, local checkpoint only, not pushed. Closes the

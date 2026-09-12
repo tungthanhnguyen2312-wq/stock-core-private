@@ -133,6 +133,27 @@ def test_workspace_portfolio_unavailable_stays_not_evaluated_never_a_share_count
     for card in bundle["workspace"]["cards"].values():
         assert card["portfolio"]["status"] == "NOT_EVALUATED"
         assert card["portfolio"].get("evaluated") is not True
+        assert card["portfolio"]["reason"] == "NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED"
+
+
+def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contract():
+    statuses = ccpp.unavailable_recurring_context_axes()
+    assert statuses == {
+        "thesis_cases": {
+            "status": "UNAVAILABLE",
+            "reason_code": "CURRENT_THESIS_DECISION_INPUT_NOT_ESTABLISHED",
+        },
+        "portfolio": {
+            "status": "NOT_EVALUATED",
+            "reason_code": "NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED",
+        },
+    }
+    bundle = ccpp.materialize_current_investment_decision_workspace(
+        session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
+        requested_at="2026-09-11T18:00:00+07:00",
+    )
+    assert bundle["opportunity_context"]["source_artifacts"]["thesis_catalyst_cases"] is None
+    assert bundle["opportunity_context"]["source_artifacts"]["portfolio_research_context"] is None
 
 
 def test_workspace_prefers_registered_event_context_over_no_input_when_present():
@@ -223,6 +244,7 @@ def test_top_level_writes_matching_json_js_pair_and_workspace_file_on_success(tm
     assert result["status"] == "MATERIALIZED"
     assert result["workspace"]["as_of_session"] == SESSION
     assert result["screener_master_projection"]["as_of_session"] == SESSION
+    assert result["context_axes"] == ccpp.unavailable_recurring_context_axes()
 
     workspace_on_disk = json.loads((operation_dir / ccpp.WORKSPACE_ARTIFACT_FILENAME).read_text(encoding="utf-8"))
     screener_json_on_disk = json.loads((operation_dir / ccpp.SCREENER_MASTER_JSON_FILENAME).read_text(encoding="utf-8"))

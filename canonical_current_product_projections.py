@@ -41,10 +41,14 @@ either axis has ever had). Either axis missing its mandatory current-session inp
 unavailable status, never a historical fallback.
 
 ``thesis_cases`` (catalyst/downside-invalidation cases) and ``portfolio`` (explicit
-portfolio-risk research) still have no recurring, canonical-runtime source and remain passed as
-``None`` here; both are already optional, gracefully-degrading keyword arguments in the builders
-this module calls, so the Workspace/Screener product is not blocked, only that individual axis's
-field.
+portfolio-risk research) have been traced as deliberately unavailable to this canonical runtime:
+the retained scenario contracts are presentation/research-condition artifacts, not the
+``thesis_cases`` input contract consumed by the opportunity builder, while
+``portfolio_aware_decision/v1`` is a private-local, post-security-decision capability with no
+canonical Daily opt-in. They therefore remain ``None`` at their existing integration boundary;
+the top-level materialization result now makes the two different reason codes explicit. This is
+not a hidden fallback or an invitation to adapt either contract into a second decision taxonomy.
+Both builders already degrade the absent axes without blocking the Workspace/Screener product.
 
 Never raises out of the top-level entry point (``materialize_and_write_current_product_projections``):
 a failure here must never block core Daily / the decision cockpit / AI handoff, exactly like
@@ -107,6 +111,26 @@ SUPPLEMENTARY_INPUT_TEMPLATES: dict[str, tuple[str, str]] = {
 
 class CanonicalCurrentProductProjectionsError(ValueError):
     """A required input or invariant of this materialization boundary is violated."""
+
+
+def unavailable_recurring_context_axes() -> dict[str, dict[str, str]]:
+    """Declare the two optional axes that have no canonical current source yet.
+
+    This is deliberately an orchestration status rather than a synthetic artifact: the existing
+    opportunity/security-decision contracts accept ``None`` for both inputs and their native
+    missingness behavior is the only truthful representation until an upstream contract is
+    explicitly made eligible. In particular, never read a private portfolio root here.
+    """
+    return {
+        "thesis_cases": {
+            "status": "UNAVAILABLE",
+            "reason_code": "CURRENT_THESIS_DECISION_INPUT_NOT_ESTABLISHED",
+        },
+        "portfolio": {
+            "status": "NOT_EVALUATED",
+            "reason_code": "NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED",
+        },
+    }
 
 
 def _session_compact(session: str) -> str:
@@ -459,7 +483,8 @@ def materialize_and_write_current_product_projections(
     else:
         tactical_behavior_status["reason_code"] = tactical_behavior_result.get("reason_code")
 
-    unavailable_optional_axes = ["thesis_cases", "portfolio"]
+    context_axis_status = unavailable_recurring_context_axes()
+    unavailable_optional_axes = list(context_axis_status)
     if feature_store_artifact is None:
         unavailable_optional_axes.append("feature_store")
     if tactical_behavior_artifact is None:
@@ -484,6 +509,7 @@ def materialize_and_write_current_product_projections(
         },
         "fundamental_feature_store": fundamental_feature_store_status,
         "tactical_behavior_context": tactical_behavior_status,
+        "context_axes": context_axis_status,
         "supplementary_inputs_available": {name: value is not None for name, value in supplementary.items()},
         "unavailable_optional_axes": sorted(unavailable_optional_axes),
     }
