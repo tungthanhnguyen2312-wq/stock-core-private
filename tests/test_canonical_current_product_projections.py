@@ -139,10 +139,6 @@ def test_workspace_portfolio_unavailable_stays_not_evaluated_never_a_share_count
 def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contract():
     statuses = ccpp.unavailable_recurring_context_axes()
     assert statuses == {
-        "thesis_cases": {
-            "status": "UNAVAILABLE",
-            "reason_code": "CURRENT_THESIS_DECISION_INPUT_NOT_ESTABLISHED",
-        },
         "portfolio": {
             "status": "NOT_EVALUATED",
             "reason_code": "NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED",
@@ -152,8 +148,27 @@ def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contrac
         session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
         requested_at="2026-09-11T18:00:00+07:00",
     )
-    assert bundle["opportunity_context"]["source_artifacts"]["thesis_catalyst_cases"] is None
     assert bundle["opportunity_context"]["source_artifacts"]["portfolio_research_context"] is None
+
+
+def test_thesis_case_context_materializes_over_the_daily_denominator_even_with_no_fa_v2_or_events():
+    """thesis_cases is no longer a permanently-unavailable axis (CANONICAL_EVIDENCE_BOUND_THESIS_
+    CASES_DECISION_INPUT_V1): it now materializes from whatever financial_analysis_product_context/
+    events are supplied, degrading individual tickers -- never the whole axis -- when both are
+    absent, exactly like every other optional axis in this module."""
+    bundle = ccpp.materialize_current_investment_decision_workspace(
+        session=SESSION, registry_inputs=_registry_inputs(), supplementary={},
+        requested_at="2026-09-11T18:00:00+07:00",
+    )
+    thesis_result = bundle["thesis_case_context"]
+    assert thesis_result["status"] == "MATERIALIZED"
+    artifact = thesis_result["artifact"]
+    assert set(artifact["records"]) == {"AAA", "BBB"}
+    assert artifact["coverage"]["zero_silent_ticker_drops"] is True
+    # No FA V2/events supplied here -- every ticker legitimately has zero eligible cases, not a
+    # fabricated one.
+    assert artifact["coverage"]["tickers_with_zero_eligible_cases"] == 2
+    assert bundle["opportunity_context"]["source_artifacts"]["thesis_catalyst_cases"] == artifact["artifact_identity"]
 
 
 def test_workspace_prefers_registered_event_context_over_no_input_when_present():
@@ -245,6 +260,10 @@ def test_top_level_writes_matching_json_js_pair_and_workspace_file_on_success(tm
     assert result["workspace"]["as_of_session"] == SESSION
     assert result["screener_master_projection"]["as_of_session"] == SESSION
     assert result["context_axes"] == ccpp.unavailable_recurring_context_axes()
+    assert result["thesis_case_context"]["status"] == "MATERIALIZED"
+    assert "thesis_cases" not in result["unavailable_optional_axes"]
+    thesis_on_disk = json.loads((operation_dir / ccpp.THESIS_CASE_CONTEXT_ARTIFACT_FILENAME).read_text(encoding="utf-8"))
+    assert thesis_on_disk["artifact_identity"] == result["thesis_case_context"]["artifact_identity"]
 
     workspace_on_disk = json.loads((operation_dir / ccpp.WORKSPACE_ARTIFACT_FILENAME).read_text(encoding="utf-8"))
     screener_json_on_disk = json.loads((operation_dir / ccpp.SCREENER_MASTER_JSON_FILENAME).read_text(encoding="utf-8"))

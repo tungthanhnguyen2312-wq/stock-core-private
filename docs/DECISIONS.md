@@ -1,5 +1,65 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-13 - Canonical Evidence-Bound Thesis Cases Decision Input V1
+
+`CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1 = COMPLETE_LOCAL`, local checkpoint
+only, not pushed (`current_thesis_case_context.py` new; `canonical_current_product_projections.py`
+modified; `tests/test_current_thesis_case_context.py` new,
+`tests/test_canonical_current_product_projections.py` modified).
+
+1. **Decision: build a new module, never rename `current_research_scenario_context`/
+   `current_evidence_bound_scenario` into `thesis_cases`.** The predecessor milestone
+   (2026-09-13, above) already traced both retained scenario contracts as presentation/
+   research-condition artifacts that intentionally omit probability, target price, expected
+   return, action, and sizing -- confirmed again here by direct inspection. Neither exposes the
+   per-ticker `catalysts`/`technical_invalidation`/`fundamental_invalidation`/`counter_thesis_
+   evidence` shape `opportunity_context.build_ticker_opportunity` actually reads. A new module
+   was the only option that does not either fabricate that shape from prose or invent a second,
+   competing thesis taxonomy.
+
+2. **Decision: source only `financial_analysis_product_context` and corporate event context --
+   never `thesis_catalyst_downside_research_cases.py`/`fundamental_thesis_invalidation_
+   precision.py`.** Both existing modules already build an evidence-bound
+   catalyst/downside/invalidation case per ticker and looked, at first read, like a ready-made
+   fit. Both are frozen-cohort SHADOW experiments (`operations-review/fundamental-plus-market-
+   opportunity-ranking-v1-20260828/artifact.json`, a *different*, superseded ranking contract,
+   hardcoded as their only input) -- `TEMPORALLY_INCOMPATIBLE`/`UNSUITABLE` for a canonical,
+   market-wide, every-session `thesis_cases` input. Their evidence *shape* (dual technical/
+   fundamental invalidation, catalyst/counter/gap taxonomy) informed this module's design, but
+   the construction was rebuilt against genuinely current, market-wide, already-governed sources.
+
+3. **Decision: do not duplicate `technical_invalidation` or `catalysts`/`retained_event_context`
+   here.** Tracing the actual consumer (`opportunity_context._downside_axis`/`_catalyst_axis`)
+   showed both already have a live, current, market-wide source wired in today --
+   `tactical_confirmation_invalidation_boundaries/v1` (via `tactical_behavior_context`, itself
+   already flowing into the `tactical` axis's own `invalidation` field) and `current_official_
+   event_context`/`current_corporate_event_context` directly. Re-deriving either here would be
+   noise, not new evidence, so both are reported explicitly absent with a reason instead.
+
+4. **Decision: `counter_thesis_evidence` is a short string-tag list, and excludes the four FA V2
+   dimensions `security_decision_context._financial_analysis_annotation` already tags.** That
+   existing annotation independently turns a negative `profitability_state`/`margin_state`/
+   `balance_sheet_state`/`cash_conversion_state` reading on the *same* `financial_analysis_
+   product_context` record into `FA_V2_LOSS_MAKING`/`FA_V2_MARGIN_COMPRESSING`/etc. tags via its
+   own separate `financial_analysis` argument. An earlier draft of this module re-emitted all
+   four dimensions as structured evidence objects directly into this field, which
+   `opportunity_context._downside_axis` passes straight through into `security_decision_
+   context`'s `key_counter_thesis`/`counter_thesis` list -- a list every other contributor
+   populates with short string tags, never objects. Fixed before the checkpoint: the tag list now
+   carries only genuinely additive dimensions (`growth_state`, adverse corporate events); the
+   full structured evidence for every dimension (duplicates included) is preserved separately in
+   `counter_thesis_evidence_detail` for lineage/taxonomy completeness, never re-emitted as a tag.
+
+5. **Decision: `risk_evidence` triggers only on a genuinely adverse event status, never on a
+   merely non-empty `warnings` list.** A first draft treated any event with `warnings` as
+   adverse. Running the real 2026-09-11 retained `current_official_event_context/v1` corpus
+   through it showed every single retained event -- routine CASH_DIVIDEND/AGM events included --
+   carries one of three fixed, templated authority-boundary disclaimers in `warnings` (e.g. "No
+   event impact, probability, score, target, or recommendation is derived."); that draft
+   fabricated RISK on 1,101 of 1,683 tickers from pure boilerplate. Fixed before the checkpoint to
+   require an explicit adverse `event_status`/`event_state` value; the real corpus has none today,
+   so RISK is honestly `0` market-wide rather than a suppressed or invented signal.
+
 ## 2026-09-12 - Canonical Current-Product Projections and Dashboard Binding V1
 
 `CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1 = COMPLETE_LOCAL`,

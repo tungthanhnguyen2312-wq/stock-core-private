@@ -1,5 +1,55 @@
 # Stock Lookup — Operational State
 
+**Canonical evidence-bound thesis cases decision input V1 (2026-09-13):**
+`CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1 = COMPLETE_LOCAL`. The predecessor
+milestone (below) traced `thesis_cases=None` at the canonical integration boundary and explicitly
+recorded that neither retained scenario contract is that decision-input contract. This milestone
+builds the first real one: new `current_thesis_case_context/v1`
+(`current_thesis_case_context.py`), materialized fresh every run in
+`canonical_current_product_projections.materialize_current_investment_decision_workspace` over
+exactly the Daily ticker denominator (watchlist union valuation), from two already-upstream,
+already-governed current-session artifacts only -- `financial_analysis_product_context` and the
+registry's `event_context` -- never from `current_research_scenario_context`/`current_evidence_
+bound_scenario`, never from security_decision_context/Workspace/Screener/portfolio output (DAG
+verified acyclic; see replay doc).
+
+Two of the five fields `opportunity_context._catalyst_axis`/`_downside_axis` can accept from
+`thesis_cases` (`catalysts`/`retained_event_context` and `technical_invalidation`) already have a
+genuinely current, market-wide source today (`current_corporate_event_context`/`current_official_
+event_context` directly, and `tactical_confirmation_invalidation_boundaries/v1` via
+`tactical_behavior_context`, respectively) -- this module reports both explicitly absent with a
+reason rather than re-deriving duplicate signal. The two fields with no other current source --
+`fundamental_invalidation` and `counter_thesis_evidence` -- are the real contribution, built only
+from `financial_analysis_context/v2`'s categorical state vocabulary (never its `positive_
+evidence`/`negative_evidence`/`conflicting_evidence` prose lists). `counter_thesis_evidence` is a
+short string-tag list matching the existing `key_counter_thesis` vocabulary contract and
+deliberately excludes the four dimensions `security_decision_context._financial_analysis_
+annotation` already tags from the same record via its own separate argument, so one observed fact
+is never double-counted across two pipes; the full structured evidence for every dimension is
+kept separately in `counter_thesis_evidence_detail` for lineage/taxonomy completeness. A third
+class, `risk_evidence` (genuinely adverse/cancelled/conflicting corporate events), is additive and
+not read by any consumer yet; it deliberately never triggers on a merely non-empty `warnings`
+list -- a first draft did, and the real retained `current_official_event_context/v1` corpus
+proved every single event (routine CASH_DIVIDEND/AGM included) carries a fixed boilerplate
+disclaimer there, which fabricated RISK on 1,101/1,683 tickers before this was caught and fixed
+pre-commit; RISK is honestly `0` market-wide in the current retained corpus.
+
+Real 2026-09-11 retained local replay (no network/provider/DB/publish): denominator 1,683, zero
+silent ticker drops, 1,361 tickers with >=1 eligible thesis case / 322 with legitimately zero,
+1,164 `SUPPORT`, 830 `COUNTER`, 0 `RISK`, `fundamental_invalidation` `READY` for 1,164 / explicitly
+`UNAVAILABLE` for 519 (was `UNAVAILABLE` for all 1,683 before this milestone), `presentation_only_
+sourced_cases = 0`. `security_decision_context`'s `research_stance_distribution` is byte-identical
+before/after (`{WAIT_FOR_CONFIRMATION: 1473, INSUFFICIENT_EVIDENCE: 210}`, the rest `0`) because
+this retained root's `tactical_behavior` is independently `UNAVAILABLE` (missing `technical_
+structure_context`/`tactical_setup_tags` for 2026-09-11, a pre-existing source-availability gap
+unrelated to this milestone) -- thesis cases are supporting evidence, not a posture override,
+exactly as designed; `key_counter_thesis` gained a non-duplicate tag on 26 tickers (815 -> 841).
+Portfolio remains out of scope and unchanged (`portfolio_aware_decision/v1` stays private-local,
+post-security-decision; no private portfolio root read). Authority effect: `NONE /
+DETERMINISTIC_THESIS_CONTEXT_MATERIALIZATION_AND_INTEGRATION_ONLY` -- no source authority,
+`RAW_AS_TRADED`, PIT, valuation, or recommendation-policy change. Full source map, DAG, fitness
+matrix, and sample traces: `docs/canonical_evidence_bound_thesis_cases_replay_20260913.md`.
+
 **Canonical recurring thesis and portfolio context materialization V1 (2026-09-13):**
 `CANONICAL_RECURRING_THESIS_AND_PORTFOLIO_CONTEXT_MATERIALIZATION_V1 = PARTIAL_BY_CURRENT_
 SOURCE_AVAILABILITY`. Owner authorization explicitly opened this bounded milestone despite

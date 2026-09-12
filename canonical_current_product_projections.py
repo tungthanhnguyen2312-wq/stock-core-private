@@ -40,15 +40,25 @@ plus ``technical_structure_context``/``tactical_setup_tags``, both now retained 
 either axis has ever had). Either axis missing its mandatory current-session input is an explicit
 unavailable status, never a historical fallback.
 
-``thesis_cases`` (catalyst/downside-invalidation cases) and ``portfolio`` (explicit
-portfolio-risk research) have been traced as deliberately unavailable to this canonical runtime:
-the retained scenario contracts are presentation/research-condition artifacts, not the
-``thesis_cases`` input contract consumed by the opportunity builder, while
-``portfolio_aware_decision/v1`` is a private-local, post-security-decision capability with no
-canonical Daily opt-in. They therefore remain ``None`` at their existing integration boundary;
-the top-level materialization result now makes the two different reason codes explicit. This is
-not a hidden fallback or an invitation to adapt either contract into a second decision taxonomy.
-Both builders already degrade the absent axes without blocking the Workspace/Screener product.
+``thesis_cases`` (catalyst/downside-invalidation cases) is, as of
+CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1, materialized fresh here every run by
+``current_thesis_case_context.build_artifact`` over exactly the Daily ticker denominator
+(watchlist union valuation) -- see ``materialize_current_thesis_case_context`` below. It is built
+from ``financial_analysis_product_context`` and the registry's own ``event_context``, the same
+two upstream, already-governed current-session artifacts the opportunity builder already accepts
+independently; it never reads ``current_research_scenario_context``/``current_evidence_bound_
+scenario`` (traced by the prior milestone to be presentation/research-condition artifacts, not
+this decision input) and never reads security_decision_context, Investment Decision Workspace,
+or portfolio output. A missing mandatory input is an explicit ``UNAVAILABLE`` status -- ``None``
+at the existing integration boundary -- never a historical fallback.
+
+``portfolio`` (explicit portfolio-risk research) remains deliberately unavailable to this
+canonical runtime: ``portfolio_aware_decision/v1`` is a private-local, post-security-decision
+capability with no canonical Daily opt-in, and this milestone does not change that. It stays
+``None`` at its existing integration boundary; the top-level materialization result makes its
+reason code explicit. This is not a hidden fallback or an invitation to promote portfolio context
+upstream of the security decision. The opportunity/decision builders already degrade this absent
+axis without blocking the Workspace/Screener product.
 
 Never raises out of the top-level entry point (``materialize_and_write_current_product_projections``):
 a failure here must never block core Daily / the decision cockpit / AI handoff, exactly like
@@ -65,6 +75,7 @@ from typing import Any, Mapping
 
 from atomic_io import atomic_write_file, atomic_write_json
 import canonical_daily_financial_v2_materialization
+import current_thesis_case_context
 import current_valuation_opportunity_integration
 import financial_v2_current_input_authority
 import investment_decision_workspace_projection
@@ -87,6 +98,7 @@ SCREENER_MASTER_JS_FILENAME = "screener_master_projection.js"
 FEATURE_STORE_ARTIFACT_FILENAME = "market_wide_fundamental_feature_store_artifact.json"
 FEATURE_STORE_RECORDS_FILENAME = "market_wide_fundamental_feature_store_records.jsonl.gz"
 TACTICAL_BEHAVIOR_ARTIFACT_FILENAME = "tactical_behavior_context_artifact.json"
+THESIS_CASE_CONTEXT_ARTIFACT_FILENAME = "current_thesis_case_context_artifact.json"
 
 #: Explicit, deterministic path template per supplementary axis (session -> one path, never a
 #: search). Each entry: (directory-slug, filename). ``{session}`` is replaced with the session
@@ -114,18 +126,20 @@ class CanonicalCurrentProductProjectionsError(ValueError):
 
 
 def unavailable_recurring_context_axes() -> dict[str, dict[str, str]]:
-    """Declare the two optional axes that have no canonical current source yet.
+    """Declare the optional axis that still has no canonical current source: portfolio.
 
     This is deliberately an orchestration status rather than a synthetic artifact: the existing
-    opportunity/security-decision contracts accept ``None`` for both inputs and their native
+    opportunity/security-decision contract accepts ``None`` for this input and its native
     missingness behavior is the only truthful representation until an upstream contract is
     explicitly made eligible. In particular, never read a private portfolio root here.
+
+    ``thesis_cases`` is no longer declared here as of
+    CANONICAL_EVIDENCE_BOUND_THESIS_CASES_DECISION_INPUT_V1 -- its actual per-run status is now
+    reported dynamically alongside ``fundamental_feature_store``/``tactical_behavior_context`` in
+    ``materialize_and_write_current_product_projections``'s return value, since it can genuinely
+    materialize.
     """
     return {
-        "thesis_cases": {
-            "status": "UNAVAILABLE",
-            "reason_code": "CURRENT_THESIS_DECISION_INPUT_NOT_ESTABLISHED",
-        },
         "portfolio": {
             "status": "NOT_EVALUATED",
             "reason_code": "NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED",
@@ -267,6 +281,38 @@ def materialize_current_tactical_behavior_context(
     return {"status": "MATERIALIZED", "artifact": artifact}
 
 
+def materialize_current_thesis_case_context(
+    *,
+    session: str,
+    daily_tickers: set[str],
+    financial_analysis_product_context: Mapping[str, Any] | None,
+    events: Mapping[str, Any] | None,
+    requested_at: str,
+) -> dict[str, Any]:
+    """Build the current-session ``current_thesis_case_context/v1`` over exactly
+    ``daily_tickers``. Both inputs are already-resolved, already-governed current-session
+    artifacts the caller has in scope (``financial_analysis_product_context`` from
+    ``_financial_analysis_product_context(supplementary)``, ``events`` from
+    ``registry_inputs['event_context']``) -- no additional resolution happens here. Neither
+    input being present is a hard requirement: an absent axis degrades individual tickers'
+    evidence, never blocks the whole context (mirrors every other optional axis here).
+
+    Never raises out to the caller: a build-time failure is an explicit ``UNAVAILABLE`` status.
+    """
+    if not daily_tickers:
+        return {"status": "UNAVAILABLE", "reason_code": "EMPTY_DAILY_TICKER_DENOMINATOR", "detail": None}
+    try:
+        artifact = current_thesis_case_context.build_artifact(
+            as_of_session=session, requested_at=requested_at, daily_tickers=daily_tickers,
+            financial_analysis_product_context=financial_analysis_product_context, events=events,
+        )
+    except current_thesis_case_context.ThesisCaseContextError as exc:
+        return {"status": "UNAVAILABLE", "reason_code": str(exc), "detail": None}
+    except Exception as exc:  # noqa: BLE001 - axis-local failure must stay non-blocking
+        return {"status": "UNAVAILABLE", "reason_code": type(exc).__name__, "detail": str(exc)}
+    return {"status": "MATERIALIZED", "artifact": artifact}
+
+
 def materialize_current_investment_decision_workspace(
     *,
     session: str,
@@ -315,6 +361,14 @@ def materialize_current_investment_decision_workspace(
     # records and its own real identity -- only this transient join-time view is restricted.
     daily_tickers = set((watchlist.get("records") or {})) | set((valuation.get("records") or {}))
     projected_feature_store = _project_to_daily_tickers(feature_store, daily_tickers)
+    event_context = registry_inputs.get("event_context")
+    financial_analysis_product_context = _financial_analysis_product_context(supplementary)
+    thesis_case_result = materialize_current_thesis_case_context(
+        session=session, daily_tickers=daily_tickers,
+        financial_analysis_product_context=financial_analysis_product_context, events=event_context,
+        requested_at=requested_at,
+    )
+    thesis_case_artifact = thesis_case_result.get("artifact") if thesis_case_result.get("status") == "MATERIALIZED" else None
 
     opportunity_and_decision = current_valuation_opportunity_integration.build_artifacts(
         as_of_session=session,
@@ -323,11 +377,11 @@ def materialize_current_investment_decision_workspace(
         watchlist=watchlist,
         valuation=valuation,
         liquidity=supplementary.get("liquidity"),
-        events=registry_inputs.get("event_context"),
-        thesis_cases=None,
+        events=event_context,
+        thesis_cases=thesis_case_artifact,
         leadership=supplementary.get("leadership"),
         portfolio=None,
-        financial_analysis_product_context=_financial_analysis_product_context(supplementary),
+        financial_analysis_product_context=financial_analysis_product_context,
         financial_analysis_context=None,
         requested_at=requested_at,
     )
@@ -342,6 +396,7 @@ def materialize_current_investment_decision_workspace(
     return {
         "opportunity_context": opportunity_and_decision["opportunity_context"],
         "security_decision_context": opportunity_and_decision["security_decision_context"],
+        "thesis_case_context": thesis_case_result,
         "workspace": workspace,
     }
 
@@ -483,12 +538,28 @@ def materialize_and_write_current_product_projections(
     else:
         tactical_behavior_status["reason_code"] = tactical_behavior_result.get("reason_code")
 
+    thesis_case_result = workspace_bundle.get("thesis_case_context") or {}
+    thesis_case_artifact = thesis_case_result.get("artifact") if thesis_case_result.get("status") == "MATERIALIZED" else None
+    thesis_case_status: dict[str, Any] = {"status": thesis_case_result.get("status")}
+    if thesis_case_artifact is not None:
+        atomic_write_json(operation_dir / THESIS_CASE_CONTEXT_ARTIFACT_FILENAME, thesis_case_artifact)
+        thesis_case_status.update({
+            "artifact_identity": thesis_case_artifact.get("artifact_identity"),
+            "as_of_session": thesis_case_artifact.get("as_of_session"),
+            "ticker_denominator": thesis_case_artifact.get("denominator"),
+            "tickers_with_ge_1_eligible_case": (thesis_case_artifact.get("coverage") or {}).get("tickers_with_ge_1_eligible_case"),
+        })
+    else:
+        thesis_case_status["reason_code"] = thesis_case_result.get("reason_code")
+
     context_axis_status = unavailable_recurring_context_axes()
     unavailable_optional_axes = list(context_axis_status)
     if feature_store_artifact is None:
         unavailable_optional_axes.append("feature_store")
     if tactical_behavior_artifact is None:
         unavailable_optional_axes.append("tactical_behavior")
+    if thesis_case_artifact is None:
+        unavailable_optional_axes.append("thesis_cases")
 
     return {
         "status": "MATERIALIZED",
@@ -509,6 +580,7 @@ def materialize_and_write_current_product_projections(
         },
         "fundamental_feature_store": fundamental_feature_store_status,
         "tactical_behavior_context": tactical_behavior_status,
+        "thesis_case_context": thesis_case_status,
         "context_axes": context_axis_status,
         "supplementary_inputs_available": {name: value is not None for name, value in supplementary.items()},
         "unavailable_optional_axes": sorted(unavailable_optional_axes),
