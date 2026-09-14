@@ -267,8 +267,18 @@ def validate_workspace_projection(source: Path, market_session: str) -> dict[str
             "CURRENT_PRODUCT_ARTIFACT_SESSION_MISMATCH: "
             f"workspace={payload.get('as_of_session')} market={market_session}"
         )
-    if not isinstance(payload.get("producer_artifact_identity"), str) or not payload["producer_artifact_identity"]:
-        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing source artifact identity")
+    # WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1: this used to require a top-level
+    # ``producer_artifact_identity`` field. No Workspace producer, past or present, has ever
+    # emitted that field (traced via `git log -S producer_artifact_identity` across the whole
+    # repository) -- it was invented in isolation when this validator was first written
+    # (2026-09-01) and never reconciled with the real field
+    # ``investment_decision_workspace_projection.py`` actually emits as its own content
+    # identity: ``artifact_identity`` (``f"{CONTRACT_VERSION}:{digest}"``). The sibling
+    # ``validate_screener_master_projection`` below already validates the analogous real field
+    # (``artifact_identity``) on the Screener contract; Workspace now does the same instead of
+    # requiring a phantom field or fabricating one.
+    if not isinstance(payload.get("artifact_identity"), str) or not payload["artifact_identity"]:
+        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing artifact identity")
     coverage = payload.get("coverage")
     if not isinstance(coverage, dict) or coverage.get("ticker_denominator") != len(cards) or coverage.get("zero_silent_ticker_drops") is not True:
         raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: invalid denominator or silent-drop guard")
@@ -910,7 +920,7 @@ def main() -> int:
             "HTML/CSS/JS, CHƯA git add/commit/push. Không file nào trên đĩa bị thay đổi.")
         log(f"[DRY-RUN] Sẽ copy {len(copy_plan)} artifact từ backend: "
             f"{', '.join(copy_plan) or '(không có — backend=web hoặc đã khớp)'}")
-        log(f"[DRY-RUN] Workspace product: {workspace_source} · {len(workspace['cards'])} cards · session {workspace['as_of_session']}")
+        log(f"[DRY-RUN] Workspace product: {workspace_source} · {len(workspace['cards'])} cards · session {workspace['as_of_session']} · {workspace['artifact_identity']}")
         if screener is None:
             log("[DRY-RUN] Screener master projection: optional / not supplied")
         else:

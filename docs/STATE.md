@@ -1,5 +1,33 @@
 # Stock Lookup — Operational State
 
+**Workspace publisher lineage contract reconciliation V1 (2026-09-15):**
+`WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1 = COMPLETE_LOCAL /
+READY_FOR_OWNER_CUTOVER_REVIEW`, child commit of `0488ef6`. Local publisher rehearsal of the
+milestone below's real Workspace artifact failed on `publish_dashboard.py`'s
+`validate_workspace_projection`: `CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing source artifact
+identity`, because it required a top-level `producer_artifact_identity` field.
+`git log -S producer_artifact_identity` across the whole repository proves no Workspace producer,
+past or present, has ever emitted that field -- it was invented in isolation in `af999e7`
+(2026-09-01), before `investment_decision_workspace_projection.py`'s own real content identity
+(`artifact_identity`) was ever wired to a live producer, and never reconciled. Classification:
+`STALE_PUBLISHER_LINEAGE_REQUIREMENT`. Fixed to require `artifact_identity` instead, exactly
+matching the sibling `validate_screener_master_projection`'s already-correct pattern on the
+Screener contract -- never fabricated a self-referential value to satisfy the old check. Two test
+fixtures and one byte-preserving-copy test were updated; five new regression tests added.
+`dashboard_release_publisher.py` (the actual live Dashboard-release binding path) independently
+confirmed to never have shared this defect: a full `local_only=True` rehearsal against the real
+2026-09-14 Workspace/Screener artifacts (writes redirected to a disposable staging directory;
+nothing written to the real `market-dashboard`/`dashboard-runtime` checkouts) shows
+`investment_workspace`/`screener_master` both binding `CURRENT`/`EXACT_SESSION` with correct
+identities, and Screener's `source_artifacts.investment_decision_workspace` exactly equal to
+Workspace's own `artifact_identity` (lineage trace verified byte-for-byte, no identity cycle).
+Real 2026-09-14 numbers unchanged: reference 1,683, official scope 1,504, outside scope 179,
+official-only-excluded 20, price 853/830, tactical 852/831; 2026-09-11 negative control still
+`TEMPORALLY_INELIGIBLE_FOR_SESSION`. Focused suites: 128 passed / 15 failed / 1 skipped, all 15
+failures reproducing the parent milestone's already-catalogued pre-existing causes -- zero
+regressions. No provider/network call, no Daily rerun, no production runtime write, no Dashboard
+publication, no push, no merge to main.
+
 **Current official research universe product cutover and release integration V1 (2026-09-14):**
 `CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1 = COMPLETE_LOCAL /
 READY_FOR_OWNER_CUTOVER_REVIEW`. Owner-authorized despite `queued_next=[]` (recorded per

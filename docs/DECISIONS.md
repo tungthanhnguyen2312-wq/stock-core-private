@@ -1,5 +1,39 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-15 - Workspace Publisher Lineage Contract Reconciliation V1
+
+`WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1 = COMPLETE_LOCAL`, local checkpoint only,
+not pushed, child commit of `0488ef6`. Found while rehearsing that parent milestone's real
+Workspace artifact through `publish_dashboard.py`'s local publisher path.
+
+1. **Decision: trace before editing, and prove which side of the contract is stale.**
+   `validate_workspace_projection` required a top-level `producer_artifact_identity` field.
+   `git log -S producer_artifact_identity` across the whole repository shows the field was
+   invented in isolation in `af999e7` (2026-09-01) and that no Workspace producer, past or
+   present, has ever emitted it -- `investment_decision_workspace_projection.py` has only ever
+   owned `artifact_identity` (`f"{CONTRACT_VERSION}:{digest}"`) as its content identity. The
+   sibling `validate_screener_master_projection` already validates the analogous real field
+   (`artifact_identity`) on the Screener contract, which is the pattern this fix follows exactly
+   rather than inventing a third convention.
+
+2. **Decision: fix the validator to check the field that actually carries this meaning, never
+   fabricate a value to satisfy the old check.** `payload.get("producer_artifact_identity")` is
+   replaced with `payload.get("artifact_identity")`. This is not weakened validation -- it still
+   fails closed on a missing/empty identity -- it validates the field the real contract actually
+   owns. Never assigned `producer_artifact_identity = workspace.artifact_identity` merely to keep
+   the old field alive; the phantom field is simply no longer checked (a stray leftover value on
+   an old payload is ignored, not specially treated -- verified by regression test).
+
+3. **Decision: independently verify `dashboard_release_publisher.py` (the actual live
+   Dashboard-release binding path) does not share this defect, rather than assuming it does or
+   doesn't.** Its `_bind_current_product_json` binds purely on `as_of_session` match and already
+   reads/reports `artifact_identity` correctly -- confirmed by a full `local_only=True` rehearsal
+   against the real 2026-09-14 Workspace/Screener artifacts (all writes redirected to a disposable
+   staging directory; nothing written to the real `market-dashboard` or `dashboard-runtime`
+   checkouts). `investment_workspace`/`screener_master` domains both bind CURRENT/EXACT_SESSION,
+   and Screener's `source_artifacts.investment_decision_workspace` exactly equals Workspace's own
+   `artifact_identity` -- lineage trace verified byte-for-byte, no identity cycle.
+
 ## 2026-09-14 - Current Official Research Universe Product Cutover and Release Integration V1
 
 `CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1 = COMPLETE_LOCAL`,

@@ -48,15 +48,18 @@ def _write_min_fixture(root: Path) -> None:
     )
     (root / "data" / "investment_decision_workspace.json").write_text(
         json.dumps({
-            # Real Workspace artifacts carry these as two distinct fields (see
-            # investment_decision_workspace_projection.py's SCHEMA_VERSION/CONTRACT_VERSION) --
-            # this fixture used to encode the old, buggy single-field contract publish_dashboard.py
-            # validated against; both are fixed together (CURRENT_OFFICIAL_RESEARCH_UNIVERSE_
-            # PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1).
+            # Real Workspace artifacts carry these as three distinct fields (see
+            # investment_decision_workspace_projection.py's SCHEMA_VERSION/CONTRACT_VERSION and
+            # its content_identity()-derived artifact_identity) -- this fixture used to encode
+            # the old, buggy contract publish_dashboard.py validated against
+            # (schema_version-as-contract-id, then a phantom top-level
+            # producer_artifact_identity no real producer has ever emitted); both are fixed
+            # together (CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_
+            # INTEGRATION_V1, WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1).
             "schema_version": "1.0.0",
             "contract_version": "investment_decision_workspace_projection/v1",
             "as_of_session": "2026-07-17",
-            "producer_artifact_identity": "investment_decision_workspace_projection/v1:fixture",
+            "artifact_identity": "investment_decision_workspace_projection/v1:fixture",
             "cards": {"HPG": {"ticker": "HPG"}},
             "coverage": {"ticker_denominator": 1, "zero_silent_ticker_drops": True},
         }) + "\n",
@@ -378,7 +381,7 @@ def _write_backend_fixture(root: Path, session: str, *, live_session: str | None
         "schema_version": "1.0.0",
         "contract_version": "investment_decision_workspace_projection/v1",
         "as_of_session": session,
-        "producer_artifact_identity": "investment_decision_workspace_projection/v1:fixture",
+        "artifact_identity": "investment_decision_workspace_projection/v1:fixture",
         "cards": {"HPG": {"ticker": "HPG"}},
         "coverage": {"ticker_denominator": 1, "zero_silent_ticker_drops": True},
     }), encoding="utf-8")
@@ -712,13 +715,60 @@ class WorkspacePublicationContractTests(_PublishDashboardTestBase):
     def test_workspace_projection_copy_is_explicit_and_byte_preserving(self):
         source = self.backend / "data" / "investment_decision_workspace.json"
         payload = json.loads(source.read_text(encoding="utf-8"))
-        payload["producer_artifact_identity"] = "investment_decision_workspace_projection/v1:changed-fixture"
+        payload["artifact_identity"] = "investment_decision_workspace_projection/v1:changed-fixture"
         source.write_text(json.dumps(payload), encoding="utf-8")
         before = source.read_bytes()
         self.assertTrue(pd.copy_workspace_projection(source))
         target = self.tmp / "data" / "investment_decision_workspace.json"
         self.assertEqual(target.read_bytes(), before)
         self.assertFalse(pd.copy_workspace_projection(source))
+
+    def test_workspace_projection_real_canonical_shape_is_accepted_without_producer_artifact_identity(self):
+        # WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1: a payload shaped exactly like
+        # what investment_decision_workspace_projection.build_artifacts() actually emits --
+        # schema_version/contract_version/artifact_identity, no producer_artifact_identity at
+        # all -- must validate. No real Workspace producer has ever emitted that phantom field
+        # (see the removed check's replacement comment in publish_dashboard.py); requiring it
+        # would silently reject every genuine publish.
+        source = self.backend / "data" / "investment_decision_workspace.json"
+        payload = {
+            "schema_version": "1.0.0",
+            "contract_version": "investment_decision_workspace_projection/v1",
+            "as_of_session": "2026-07-17",
+            "artifact_identity": "investment_decision_workspace_projection/v1:realshape",
+            "cards": {"HPG": {"ticker": "HPG"}},
+            "coverage": {"ticker_denominator": 1, "zero_silent_ticker_drops": True},
+        }
+        self.assertNotIn("producer_artifact_identity", payload)
+        source.write_text(json.dumps(payload), encoding="utf-8")
+        valid = pd.validate_workspace_projection(source, "2026-07-17")
+        self.assertEqual(valid["artifact_identity"], "investment_decision_workspace_projection/v1:realshape")
+
+    def test_workspace_projection_missing_artifact_identity_is_rejected(self):
+        source = self.backend / "data" / "investment_decision_workspace.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        del payload["artifact_identity"]
+        source.write_text(json.dumps(payload), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing artifact identity"):
+            pd.validate_workspace_projection(source, "2026-07-17")
+
+    def test_workspace_projection_empty_artifact_identity_is_rejected(self):
+        source = self.backend / "data" / "investment_decision_workspace.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        payload["artifact_identity"] = ""
+        source.write_text(json.dumps(payload), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing artifact identity"):
+            pd.validate_workspace_projection(source, "2026-07-17")
+
+    def test_workspace_projection_ignores_stray_producer_artifact_identity_field(self):
+        # A payload that still happens to carry the old, no-longer-checked field must not be
+        # rejected or specially treated -- the validator no longer looks at it at all.
+        source = self.backend / "data" / "investment_decision_workspace.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        payload["producer_artifact_identity"] = None
+        source.write_text(json.dumps(payload), encoding="utf-8")
+        valid = pd.validate_workspace_projection(source, "2026-07-17")
+        self.assertEqual(valid["artifact_identity"], "investment_decision_workspace_projection/v1:fixture")
 
 
 if __name__ == "__main__":
