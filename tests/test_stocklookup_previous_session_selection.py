@@ -40,9 +40,22 @@ def _write_registry(root: Path, *, qualified_sessions) -> None:
 def _write_bundle(root: Path, session: str, *, run_id: str = "run-0001") -> Path:
     directory = root / "operations-review" / "daily-research-session-operations-v1" / session / run_id
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "run_manifest.json").write_text(json.dumps({"market_session": session}), encoding="utf-8")
+    operation_identity = f"daily_research_session_operation:{run_id}"
+    product_identity = f"current_daily_decision_research_product:{run_id}"
+    (directory / "run_manifest.json").write_text(json.dumps({
+        "market_session": session,
+        "operation_identity": operation_identity,
+        "input_artifacts": {
+            "descriptive": {"artifact_identity": f"market_wide_current_descriptive_research:{session}"},
+        },
+        "outputs": {"daily_product": product_identity},
+    }), encoding="utf-8")
     bundle = directory / "ai_research_session_bundle.json"
-    bundle.write_text(json.dumps({"session": session}), encoding="utf-8")
+    bundle.write_text(json.dumps({
+        "session": session,
+        "operation_identity": operation_identity,
+        "product_identity": product_identity,
+    }), encoding="utf-8")
     return bundle
 
 

@@ -44,32 +44,18 @@ def _producer_failure_message(code: int) -> str | None:
 
 
 def _previous(session: str, root: Path, *, operation_root: Path | None = None) -> Path | None:
-    """Latest retained operation bundle strictly before ``session`` that is ALSO governed
-    qualified (``completed_sessions[prior].status == "COMPLETED_RETAINED_EVIDENCE"`` in
-    ``config/daily_research_session_input_registry.json``) -- not merely the latest bundle that
-    happens to exist. A retained bundle for a session the registry never locked as complete (e.g.
-    an earlier interrupted/superseded attempt) is real historical evidence, but is never a valid
-    "previous session" for next_session_decision_brief, which enforces this exact same
-    qualification on the current session and would otherwise reject it one layer later
-    (SESSION_NOT_GOVERNED_QUALIFIED) -- see daily_research_session_operations.
-    frozen_input_identities, the same qualification check that function already uses.
-    """
-    from daily_research_session_operations import frozen_input_identities, load_registry
+    """Return the bundle selected by the shared governed-previous-operation contract."""
+    from daily_research_session_operations import load_registry
+    from governed_previous_operation import AVAILABLE, NO_PRIOR_GOVERNED_SESSION, resolve_governed_previous_operation
+
     registry = load_registry(root)
     operation_root = operation_root or root
-    candidates = []
-    for manifest in sorted((operation_root / "operations-review/daily-research-session-operations-v1").glob("*/*/run_manifest.json")):
-        value = json.loads(manifest.read_text(encoding="utf-8"))
-        prior = str(value.get("market_session") or "")
-        bundle = manifest.parent / "ai_research_session_bundle.json"
-        if (
-            prior < session
-            and bundle.is_file()
-            and json.loads(bundle.read_text(encoding="utf-8")).get("session") == prior
-            and frozen_input_identities(registry, prior) is not None
-        ):
-            candidates.append((prior, bundle))
-    return max(candidates, key=lambda item: item[0])[1] if candidates else None
+    previous = resolve_governed_previous_operation(session, registry, operation_root)
+    if previous["status"] == AVAILABLE:
+        return Path(str(previous["bundle_path"]))
+    if previous["status"] == NO_PRIOR_GOVERNED_SESSION:
+        return None
+    raise ValueError(previous["status"] + ":" + str(previous.get("previous_session") or "none"))
 
 
 def _latest_operation(root: Path = ROOT) -> tuple[str, Path, str]:

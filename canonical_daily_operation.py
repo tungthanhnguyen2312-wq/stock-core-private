@@ -90,6 +90,8 @@ from completed_market_session_gate import (
 )
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
 from daily_research_session_operations import load_registry
+from governed_previous_operation import AVAILABLE as PREVIOUS_OPERATION_AVAILABLE
+from governed_previous_operation import resolve_governed_previous_operation
 from field_temporal_contract import stable_id
 import macro_presentation_context as macro_presentation_context_module
 from governed_publication_completion import PublicationCompletionError
@@ -446,35 +448,16 @@ def _integrated_delivery_for_session(enrichment: Mapping[str, Any], session: str
 def _previous_qualified_operation_source(
     root: Path, *, session: str, registry: Mapping[str, Any],
 ) -> tuple[str, Path] | None:
-    """Resolve a prior governed operation by its explicit session, never by mtime.
-
-    This is only transition context for the pre-seal Daily Brief.  It never
-    searches for a Brief and never selects a different session as a fallback.
-    """
-    completed = registry.get("completed_sessions") or {}
-    prior_sessions = sorted(
-        candidate for candidate, row in completed.items()
-        if candidate < session
-        and isinstance(row, Mapping)
-        and row.get("status") == "COMPLETED_RETAINED_EVIDENCE"
+    """Resolve pre-seal transition context through the shared governed selector."""
+    previous = resolve_governed_previous_operation(session, registry, root)
+    if previous["status"] == PREVIOUS_OPERATION_AVAILABLE:
+        return str(previous["previous_session"]), Path(str(previous["operation_directory"]))
+    if previous["status"] == "NO_PRIOR_GOVERNED_SESSION":
+        return None
+    raise CanonicalDailyOperationError(
+        STAGE_BLOCKED_DAILY_PRODUCER,
+        f"PRESEAL_PREVIOUS_OPERATION_{previous['status']}:{previous.get('previous_session') or 'none'}",
     )
-    for prior in reversed(prior_sessions):
-        candidates: list[Path] = []
-        for bundle in sorted((root / "operations-review" / "daily-research-session-operations-v1" / prior).glob("*/ai_research_session_bundle.json")):
-            try:
-                value = json.loads(bundle.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            if value.get("session") == prior:
-                candidates.append(bundle.parent)
-        if len(candidates) == 1:
-            return prior, candidates[0]
-        if len(candidates) > 1:
-            raise CanonicalDailyOperationError(
-                STAGE_BLOCKED_DAILY_PRODUCER,
-                f"PRESEAL_PREVIOUS_OPERATION_AMBIGUOUS:{prior}",
-            )
-    return None
 
 
 def _build_preseal_daily_integrated_brief(

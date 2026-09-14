@@ -192,44 +192,22 @@ def required_retained_inputs(
         "reason_code": registry_reason,
     })
     if registry is not None:
-        completed = registry.get("completed_sessions")
-        previous = sorted(
-            str(candidate_session)
-            for candidate_session, row in (completed or {}).items()
-            if str(candidate_session) < session
-            and isinstance(row, Mapping)
-            and row.get("status") == "COMPLETED_RETAINED_EVIDENCE"
-        )
-        if previous:
-            prior = previous[-1]
-            candidates: list[Path] = []
-            for bundle in (root / "operations-review" / "daily-research-session-operations-v1" / prior).glob("*/ai_research_session_bundle.json"):
-                try:
-                    payload = json.loads(bundle.read_text(encoding="utf-8"))
-                except (OSError, ValueError):
-                    continue
-                if payload.get("session") == prior and isinstance(payload.get("operation_identity"), str):
-                    candidates.append(bundle)
-            previous_reason = None if len(candidates) == 1 else (
-                "MISSING" if not candidates else "AMBIGUOUS_GOVERNED_PREVIOUS_OPERATION"
-            )
-            result.append({
-                "contract": "governed_previous_session_bundle",
-                "path": str(candidates[0]) if len(candidates) == 1 else str(root / "operations-review" / "daily-research-session-operations-v1" / prior),
-                "expected_contract_version": "governed_previous_session_bundle/via_operation_identity",
-                "status": "AVAILABLE" if previous_reason is None else "UNAVAILABLE",
-                "reason_code": previous_reason,
-                "previous_session": prior,
-            })
-        else:
-            result.append({
-                "contract": "governed_previous_session_bundle",
-                "path": None,
-                "expected_contract_version": "governed_previous_session_bundle/via_operation_identity",
-                "status": "AVAILABLE",
-                "reason_code": "NOT_APPLICABLE_NO_PRIOR_COMPLETED_SESSION",
-                "previous_session": None,
-            })
+        from governed_previous_operation import AVAILABLE, NO_PRIOR_GOVERNED_SESSION, resolve_governed_previous_operation
+
+        previous = resolve_governed_previous_operation(session, registry, root)
+        no_prior = previous["status"] == NO_PRIOR_GOVERNED_SESSION
+        result.append({
+            "contract": "governed_previous_session_bundle",
+            "path": previous.get("bundle_path"),
+            "expected_contract_version": "governed_previous_session_bundle/via_frozen_input_lineage",
+            "status": "AVAILABLE" if previous["status"] == AVAILABLE or no_prior else "UNAVAILABLE",
+            "reason_code": "NOT_APPLICABLE_NO_PRIOR_COMPLETED_SESSION" if no_prior else (
+                None if previous["status"] == AVAILABLE else previous["status"]
+            ),
+            "previous_session": previous.get("previous_session"),
+            "operation_identity": previous.get("operation_identity"),
+            "selection_basis": previous.get("selection_basis"),
+        })
     return result
 
 
