@@ -90,7 +90,16 @@ COPY_ARTIFACTS = (
     "data/sector_heatmap.json", "data/sector_heatmap.js",
 )
 WORKSPACE_ASSET = "data/investment_decision_workspace.json"
-WORKSPACE_SCHEMA = "investment_decision_workspace_dashboard_projection/v1"
+# ``schema_version`` (the artifact's structural/versioning field -- currently "1.0.0") and
+# ``contract_version`` (the semantic contract identifier) are two distinct fields on the real
+# Workspace artifact (see ``investment_decision_workspace_projection.py``'s ``SCHEMA_VERSION``/
+# ``CONTRACT_VERSION``) -- never one field checked against the other's-shaped value. The prior
+# single constant here (``investment_decision_workspace_dashboard_projection/v1``) was compared
+# against ``schema_version``, which the real artifact never carries there, silently rejecting
+# every genuine publish attempt. Fixed by CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_
+# RELEASE_INTEGRATION_V1 -- validate both fields against their own real expected values.
+WORKSPACE_SCHEMA_VERSION = "1.0.0"
+WORKSPACE_CONTRACT_VERSION = "investment_decision_workspace_projection/v1"
 SCREENER_MASTER_ASSET = "data/screener_master_projection.json"
 SCREENER_MASTER_JS_ASSET = "data/screener_master_projection.js"
 SCREENER_MASTER_SCHEMA = "screener_master_projection/v1"
@@ -244,8 +253,12 @@ def validate_workspace_projection(source: Path, market_session: str) -> dict[str
         payload = json.loads(source.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: unreadable {source}") from exc
-    if not isinstance(payload, dict) or payload.get("schema_version") != WORKSPACE_SCHEMA:
-        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: unsupported workspace schema")
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != WORKSPACE_SCHEMA_VERSION
+        or payload.get("contract_version") != WORKSPACE_CONTRACT_VERSION
+    ):
+        raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: unsupported workspace schema or contract version")
     cards = payload.get("cards")
     if not isinstance(cards, dict) or not cards:
         raise ValueError("CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: empty workspace corpus")

@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.13.2",
+  "roadmap_version": "2026.09.14.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,8 +15,8 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1",
-    "state": "COMPLETE"
+    "milestone": "CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1",
+    "state": "COMPLETE_LOCAL"
   },
   "queued_next": [],
   "milestones": [
@@ -1542,6 +1542,21 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_13_CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1",
       "notes": "COMPLETE_LOCAL, local checkpoint only, not pushed. The production Daily event input is current_official_event_context/v1, which owns event_state rather than the legacy event_status field. current_event_catalyst_classification/v1 is now the version-aware compatibility boundary shared by thesis and opportunity/security integration. Official current/recent price/share events require price/share materiality and official ex-date qualification; governance events are neutral, past events ineligible, and incomplete/unknown temporal state unresolved. Legacy CANCELLED/CONFLICTING_EVIDENCE remain adverse/superseded, never active positive catalysts. The official contract has no separate supersession field; none was invented. Retained 2026-09-11 replay used registry event identity current_official_event_context:98c83c3c180fe28c98719b4b83a214570629ea5f491fd05feb3d6d28f5261391 from source research session 2026-09-05: 4,444 events classified 112 positive, 44 neutral, 4,282 ineligible, 6 unresolved, and 0 negative; 108 Daily tickers have eligible catalysts, and no source-event identities duplicated. 1,683-ticker denominator remains complete, with thesis eligible coverage 1,361 -> 1,385 and no security recommendation-policy change. The retained source's publication timing and stale source-session limits remain explicit. Focused tests pass (127 passed, 1 skipped); no network, database write, publication, deployment, source, RAW_AS_TRADED, PIT, valuation, liquidity, sizing, or execution authority changed. See docs/current_event_catalyst_decision_semantics_replay_20260913.md."
+    },
+    {
+      "milestone_id": "CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1",
+      "state": "COMPLETE_LOCAL",
+      "narrative_disposition": "READY_FOR_OWNER_CUTOVER_REVIEW / PRODUCTION_ACCEPTANCE_NOT_CLAIMED",
+      "starting_checkpoint": "155efa6a7e39fa24c080477abcc3b3691300df12",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / CURRENT_OFFICIAL_RESEARCH_SCOPE_PRODUCT_INTEGRATION_LOCAL_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-authorized CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1 directive (2026-09-14); queued_next was empty -- explicit owner override recorded per AGENTS.md 'Default lightweight bootstrap'.",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_14_CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1",
+      "notes": "COMPLETE_LOCAL / READY_FOR_OWNER_CUTOVER_REVIEW. Reconciles three held, never-merged official-universe commits (5165f8f current-official-market-universe-refresh-20260913, 14202d8 hnx-upcom-security-status-20260913, e878831 current-research-universe-integration-20260913, all forked from 325a2665) onto the current governed baseline 155efa6 in an isolated worktree via a clean no-commit cherry-pick (zero file-overlap conflicts with the baseline's own two Daily correctives). The held e878831 consumer design (current_research_scope narrows/drops the Screener/Workspace ticker set to the eligible 1,504) was superseded during reconciliation: it silently dropped the 179 outside-scope reference tickers, violating this milestone's explicit no-silent-row-drop requirement. Replaced with a non-destructive design -- current_research_official_universe_scope.ticker_scope_view() attaches a per-card official_research_scope field and an aggregate official_scope_coverage block; the Screener/Workspace denominator is always the full reference population, never narrowed. Wired current_research_official_universe_scope.resolve_scope() into canonical_current_product_projections.py's two existing call sites (previously untouched by design) via a new resolve_current_research_official_universe_scope() step, pinned to the HNX/UPCoM-enriched evidence exactly like the existing VCI_INDUSTRY_SNAPSHOT_RELATIVE pattern. Fixed a genuine publish_dashboard.py validator defect (WORKSPACE_SCHEMA compared the real artifact's schema_version field against a contract-version-shaped string, which the real Workspace artifact never carries there, silently rejecting every genuine publish) -- validates schema_version and contract_version as two separate fields now; two pre-existing test fixtures encoding the old buggy contract were corrected alongside it. Real, read-only 2026-09-14 replay (retained Daily operation daily_research_session_operation:7ae3e33c...) over the real official-universe evidence: reference denominator 1,683, current official research scope 1,504, outside scope 179 (173 delisting-correlated + 6 unresolved), 20 official-only names never admitted; price 853/830, tactical 852/831 available/unavailable byte-identical to the pre-wiring baseline (all 179 outside-scope tickers already had zero price/tactical coverage, so the wiring changes zero existing numbers, only adds scope metadata). Official-status distribution among the 1,504 in-scope members: 403 HOSE NORMAL_OR_NO_SPECIAL_STATUS, 1,051 HNX/UPCoM NOT_PROVIDED_BY_SOURCE_SURFACE, 23 SUSPENDED, 26 RESTRICTED, 1 ACTIVE_BUT_NO_RETAINED_BAR (LCD) -- reconciles exactly with the held HNX/UPCoM enrichment's own cited breakdown. 2026-09-11 negative control correctly resolves TEMPORALLY_INELIGIBLE_FOR_SESSION with scope_ticker_count=None (no backdating). Workspace/Screener official-scope identity (research_session, official_snapshot_observed_at, in-scope count) verified identical across both products (cross-product invariant). Focused suites (canonical current-product projections, Screener, Workspace, official universe, publish_dashboard/dashboard_release_publisher, canonical Daily operation, governed previous operation, the three held-lineage suites) plus the broader named regression set: 223 passed / 18 failed / 14 skipped, all 18 failures independently reproduced byte-for-byte on an untouched 155efa6 worktree (12 are a pre-existing publish_dashboard.py checkout-path authority guard that only passes from the exact stock-core-private path; 6 are a pre-existing missing fixture under operations-review/p3f9b-market-wide-exact-session-scaleout-20260826/) -- zero regressions attributable to this milestone. No provider/network call, no Daily rerun, no production runtime write, no Dashboard publication, no push, no merge to main, no RAW_AS_TRADED/PIT/liquidity/sizing/execution/recommendation authority change. Local checkpoint: branch feature/official-research-product-cutover-20260914, worktree C:/Projects/StockLookup/worktrees/stock-core-official-research-product-cutover-20260914."
     }
   ],
   "blocked_capabilities": [

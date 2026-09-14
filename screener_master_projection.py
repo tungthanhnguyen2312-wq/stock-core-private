@@ -16,6 +16,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+import current_research_official_universe_scope as current_research_official_universe_scope_module
+
 CONTRACT_VERSION = "screener_master_projection/v1"
 MILESTONE = "SCREENER_MASTER_PROJECTION_AND_DECISION_DRAWER_INTEGRATION_V1"
 SCHEMA_VERSION = "1.0.0"
@@ -659,7 +661,24 @@ def build_projection(
     entity_by_ticker: Mapping[str, Any] | None = None,
     liquidity_by_ticker: Mapping[str, Mapping[str, Any]] | None = None,
     official_universe: Mapping[str, Any] | None = None,
+    current_research_scope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """``current_research_scope`` is a fully opt-in, explicit seam: omitted (the default), this
+    function's denominator and every emitted card are byte-identical to the pre-existing
+    behavior (the canonical screen snapshot alone). When supplied, it must be the return value of
+    ``current_research_official_universe_scope.resolve_scope``.
+
+    CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1: supplying
+    ``current_research_scope`` NEVER narrows, widens, or drops the snapshot-derived ticker set --
+    the reference denominator (``denominator.ticker_count``) stays exactly the canonical screen
+    snapshot's own population, whether or not scope is supplied, temporally eligible, or resolves
+    every ticker. Every card instead gains an additive ``official_research_scope`` field (see
+    ``current_research_official_universe_scope.ticker_scope_view``) and the artifact gains an
+    aggregate ``official_scope_coverage`` block with the reference/scope/outside-scope counts and
+    the price x scope and tactical x scope cross-tabs. A ticker outside the current official
+    research scope, or one this adapter cannot resolve at all, is presented with an explicit
+    reason -- never silently dropped from Screener. No underlying snapshot/workspace data is
+    mutated either way."""
     if not snapshot_rows:
         raise ScreenerMasterProjectionError("EMPTY_SCREEN_SNAPSHOT_DENOMINATOR")
     seen: list[str] = []
@@ -676,6 +695,11 @@ def build_projection(
     if duplicates:
         raise ScreenerMasterProjectionError(f"SCREEN_SNAPSHOT_DUPLICATE_TICKERS:{','.join(sorted(duplicates))}")
     tickers = list(rows_by_ticker)
+    pre_scope_ticker_count = len(tickers)
+    current_research_scope_supplied = current_research_scope is not None
+    current_research_scope_applied = bool(
+        isinstance(current_research_scope, Mapping) and current_research_scope.get("temporally_eligible")
+    )
     session = as_of_session or _session_from_snapshot(snapshot_rows)
     workspace_cards = _workspace_cards(workspace)
     workspace_only = sorted(set(workspace_cards) - set(tickers))
@@ -697,7 +721,7 @@ def build_projection(
         official = official_records.get(ticker)
         if isinstance(official, Mapping) and not _text(row.get("listing_exchange")):
             row["listing_exchange"] = official.get("exchange_or_market") or official.get("listing_exchange")
-        cards[ticker] = build_ticker_card(
+        card = build_ticker_card(
             ticker=ticker,
             snapshot_row=row,
             session=session,
@@ -709,6 +733,11 @@ def build_projection(
             liquidity_by_ticker=liquids,
             financial_by_ticker=financial_records,
         )
+        if current_research_scope_supplied:
+            card["official_research_scope"] = current_research_official_universe_scope_module.ticker_scope_view(
+                current_research_scope, ticker,
+            )
+        cards[ticker] = card
     if set(cards) != set(tickers):
         raise ScreenerMasterProjectionError("SILENT_TICKER_DROP")
     if any(extra in cards for extra in workspace_only):
@@ -727,6 +756,41 @@ def build_projection(
     if hnx_listed and hnx_display != hnx_listed:
         raise ScreenerMasterProjectionError("HNX_LISTED_DISPLAY_REGRESSION")
 
+    official_scope_coverage: dict[str, Any] | None = None
+    if current_research_scope_supplied:
+        _scope_mod = current_research_official_universe_scope_module
+        in_scope = sum(card["official_research_scope"]["scope_bucket"] == _scope_mod.SIMPLE_IN_SCOPE for card in cards.values())
+        outside_scope = sum(card["official_research_scope"]["scope_bucket"] == _scope_mod.SIMPLE_OUTSIDE_SCOPE for card in cards.values())
+        unknown_scope = len(cards) - in_scope - outside_scope
+        price_by_bucket: Counter = Counter()
+        tactical_by_bucket: Counter = Counter()
+        for card in cards.values():
+            bucket = card["official_research_scope"]["scope_bucket"]
+            price_by_bucket[(bucket, card["price"]["status"] == PRICE_AVAILABLE)] += 1
+            tactical_by_bucket[(bucket, card["tactical"]["status"] == AVAILABLE)] += 1
+        official_scope_coverage = {
+            "temporally_eligible": current_research_scope_applied,
+            "disposition": current_research_scope.get("disposition") if isinstance(current_research_scope, Mapping) else None,
+            "research_session": current_research_scope.get("research_session") if isinstance(current_research_scope, Mapping) else None,
+            "official_snapshot_observed_at": current_research_scope.get("official_snapshot_observed_at") if isinstance(current_research_scope, Mapping) else None,
+            "reference_denominator": len(cards),
+            "current_official_research_scope_count": in_scope,
+            "outside_current_official_scope_count": outside_scope,
+            "current_official_scope_unknown_count": unknown_scope,
+            "price_x_official_scope": {
+                "in_scope_price_available": price_by_bucket[(_scope_mod.SIMPLE_IN_SCOPE, True)],
+                "in_scope_price_unavailable": price_by_bucket[(_scope_mod.SIMPLE_IN_SCOPE, False)],
+                "outside_scope_price_available": price_by_bucket[(_scope_mod.SIMPLE_OUTSIDE_SCOPE, True)],
+                "outside_scope_price_unavailable": price_by_bucket[(_scope_mod.SIMPLE_OUTSIDE_SCOPE, False)],
+            },
+            "tactical_x_official_scope": {
+                "in_scope_tactical_available": tactical_by_bucket[(_scope_mod.SIMPLE_IN_SCOPE, True)],
+                "in_scope_tactical_unavailable": tactical_by_bucket[(_scope_mod.SIMPLE_IN_SCOPE, False)],
+                "outside_scope_tactical_available": tactical_by_bucket[(_scope_mod.SIMPLE_OUTSIDE_SCOPE, True)],
+                "outside_scope_tactical_unavailable": tactical_by_bucket[(_scope_mod.SIMPLE_OUTSIDE_SCOPE, False)],
+            },
+        }
+
     artifact: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "contract_version": CONTRACT_VERSION,
@@ -738,6 +802,9 @@ def build_projection(
             "source": "canonical_screen_snapshot",
             "zero_duplicates": True,
             "workspace_only_extras_excluded": len(workspace_only),
+            "pre_scope_ticker_count": pre_scope_ticker_count,
+            "current_research_scope_supplied": current_research_scope_supplied,
+            "current_research_scope_applied": current_research_scope_applied,
         },
         "zero_silent_drops": True,
         "coverage": {
@@ -764,11 +831,16 @@ def build_projection(
             "research_stance_distribution": dict(sorted(Counter(card["research"]["stance"] or "NONE" for card in cards.values()).items())),
             "tactical_entry_state_distribution": dict(sorted(Counter(card["tactical"]["entry_state"] or "NONE" for card in cards.values()).items())),
         },
+        "official_scope_coverage": official_scope_coverage,
         "source_artifacts": {
             "screen_snapshot": snapshot_identity,
             "investment_decision_workspace": workspace_identity,
             "financial_analysis_product_integration": financial_v2.get("artifact_identity") if isinstance(financial_v2, Mapping) else None,
             "official_market_universe": official_universe.get("artifact_identity") if isinstance(official_universe, Mapping) else None,
+            "current_research_official_universe_scope": (
+                {"research_session": current_research_scope.get("research_session"), "official_snapshot_observed_at": current_research_scope.get("official_snapshot_observed_at")}
+                if current_research_scope_supplied else None
+            ),
         },
         "blocked_outputs": {
             "universal_score": "SCORING_PROHIBITED",

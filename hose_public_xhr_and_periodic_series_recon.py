@@ -113,6 +113,7 @@ def _stock_rows(records: list[Mapping[str, Any]], capture: Mapping[str, Any]) ->
             raise ValueError("STOCK_MASTER_ROW_CONTRACT_FAILED")
         rows.append({"ticker": ticker, "hose_security_id": row.get("id"), "issuer_name": row.get("name"),
                      "isin": row.get("isin"), "listing_status_id": row.get("listingStatusId"),
+                     "listing_status_reason": row.get("reason"),
                      "listing_registration_volume": row.get("listingVolume"),
                      "exchange_outstanding_volume": row.get("outStanding"),
                      "exchange_outstanding_volume_label": "Outstanding Volume",

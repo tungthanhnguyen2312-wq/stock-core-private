@@ -1,5 +1,64 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-14 - Current Official Research Universe Product Cutover and Release Integration V1
+
+`CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1 = COMPLETE_LOCAL`,
+local checkpoint only, not pushed. Owner-authorized despite `queued_next=[]`. Reconciles three
+held, never-merged commits (5165f8f, 14202d8, e878831 -- forked from `325a2665`) onto governed
+baseline `155efa6`.
+
+1. **Decision: port the held official-universe refresh and HNX/UPCoM status enrichment
+   unchanged.** Both commits' actual content (`current_official_market_universe.py`'s refreshed
+   1,504/1,683/179 accounting, `hnx_official_issuer_profile_multi_gate.py`'s trading/control-status
+   enrichment) touch no file the governed baseline's own two Daily correctives (deterministic
+   governed previous-operation selection; current-product completion retention) also touch. A
+   clean no-commit cherry-pick of all three held commits applied with zero conflicts, confirming
+   the held work and the baseline evolved independently and compatibly.
+
+2. **Decision: reject the held consumer-integration commit's narrowing design; replace it with a
+   non-destructive attach-only design.** `e878831`'s own `current_research_scope` parameter on
+   `screener_master_projection.build_projection`/`investment_decision_workspace_projection.
+   build_artifacts` intersected the ticker set down to the eligible 1,504 -- silently dropping the
+   179 outside-scope reference tickers from Screener/Workspace entirely. This milestone's own
+   explicit product-scope model (reference population != current official research scope != the
+   179 outside-scope set; never silently drop a reference row) makes that design non-viable as-is.
+   Both functions now attach an additive `official_research_scope` per-card field (see new
+   `current_research_official_universe_scope.ticker_scope_view`) and an aggregate
+   `official_scope_coverage` block instead; the denominator is always the full population whether
+   or not scope is supplied, applied, or resolves every ticker. The held commit's own test suite
+   (encoding the narrowing behavior) was updated to assert the new non-destructive behavior; the
+   `omitted-scope stays byte-identical` guarantee both functions already documented is preserved
+   unchanged.
+
+3. **Decision: wire official-scope resolution into the existing canonical current-product path,
+   not a second materializer.** `canonical_current_product_projections.py`'s two existing call
+   sites (deliberately untouched by the held commit, by its own test's assertion) now resolve
+   `current_research_official_universe_scope.resolve_scope()` once per run, from a pinned,
+   versioned evidence path (`CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE`) exactly like the
+   existing `VCI_INDUSTRY_SNAPSHOT_RELATIVE` pattern -- not session-templated, because the
+   evidence's own `official_observed_at` (not this pin's acquisition date) governs the temporal
+   gate. Absent evidence degrades to `current_research_scope=None` (byte-identical prior
+   behavior), never a fabricated scope.
+
+4. **Decision: fix the publish_dashboard.py Workspace validator, not weaken it.**
+   `validate_workspace_projection` compared the real artifact's `schema_version` field
+   (`"1.0.0"`) against a value shaped like a contract identifier
+   (`"investment_decision_workspace_dashboard_projection/v1"`) that the real artifact never
+   carries there -- a genuine defect that would silently reject every real publish attempt. Fixed
+   to validate `schema_version` and `contract_version` as two separate, correctly-named fields;
+   the two existing test fixtures that encoded the old buggy contract (and were consequently
+   failing the corrected check) were updated to the real contract shape alongside the fix.
+
+5. **Decision: demonstrate the integration with a disposable, read-only replay against real
+   2026-09-14 retained Daily evidence, not synthetic fixtures.** Reference denominator 1,683,
+   current official research scope 1,504, outside scope 179, official-only-never-admitted = 20,
+   price 853/830 and tactical 852/831 available/unavailable -- byte-identical to the pre-wiring
+   baseline (the 179 outside-scope tickers already had zero price/tactical coverage before this
+   milestone). 2026-09-11 negative control correctly refuses a numeric scope
+   (`TEMPORALLY_INELIGIBLE_FOR_SESSION`). No provider/network call, no Daily rerun, no production
+   runtime write, no Dashboard publication, no push, no merge to main, no authority change. See
+   `docs/STATE.md` for the full replay evidence and cross-tabs.
+
 ## 2026-09-13 - Current Event Catalyst Decision Semantics Corrective V1
 
 `CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1 = COMPLETE_LOCAL`, local checkpoint

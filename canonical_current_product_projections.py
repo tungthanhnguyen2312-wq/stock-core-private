@@ -75,6 +75,7 @@ from typing import Any, Mapping
 
 from atomic_io import atomic_write_file, atomic_write_json
 import canonical_daily_financial_v2_materialization
+import current_research_official_universe_scope
 import current_thesis_case_context
 import current_valuation_opportunity_integration
 import financial_v2_current_input_authority
@@ -91,6 +92,19 @@ MILESTONE = "CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1"
 #: fact). Reuses the exact same retained snapshot ``sector_relative_research_context.py``
 #: already treats as the current authoritative industry-label source -- not a one-off pick.
 VCI_INDUSTRY_SNAPSHOT_RELATIVE = "registry_snapshots/metadata/vnstock_metadata_snapshot_20260728T122548Z_16fe54ee3497.jsonl"
+
+#: Pinned, versioned current official-universe evidence -- the HNX/UPCoM security-status-
+#: enriched artifact from CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_
+#: INTEGRATION_V1 (superset of the base refresh: same reconciliation, plus per-ticker HNX/UPCoM
+#: trading/control status on the 56-ticker no-bar cohort). Like ``VCI_INDUSTRY_SNAPSHOT_RELATIVE``
+#: above, this is NOT session-templated: the evidence's own ``official_observed_at`` governs
+#: temporal eligibility per requested session (see ``current_research_official_universe_scope``),
+#: never this pin's own acquisition date. Absent (e.g. an older checkout) degrades to current
+#: official-scope semantics being unavailable this run -- never a fabricated scope.
+CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE = (
+    "operations-review/hnx-upcom-official-security-status-enrichment-v1-20260913/"
+    "current_official_market_universe_with_security_status_artifact.json"
+)
 
 WORKSPACE_ARTIFACT_FILENAME = "investment_decision_workspace_projection.json"
 SCREENER_MASTER_JSON_FILENAME = "screener_master_projection.json"
@@ -167,6 +181,27 @@ def resolve_supplementary_inputs(root: Path, session: str) -> dict[str, dict[str
         path = root / "operations-review" / dir_template.format(session=session_compact) / filename
         resolved[name] = _load_json(path) if path.is_file() else None
     return resolved
+
+
+def resolve_current_research_official_universe_scope(root: Path, session: str) -> dict[str, Any] | None:
+    """Resolve the current official research-universe scope for ``session`` from the pinned,
+    versioned evidence at ``CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE`` -- never a glob, never
+    an acquisition. Returns ``None`` (never a fabricated scope, never raised out to the caller)
+    when the pinned evidence is absent or malformed; the temporal-eligibility gate itself is
+    handled inside ``current_research_official_universe_scope.resolve_scope`` -- a session before
+    the evidence's own observation date still resolves here (to an explicitly-ineligible scope
+    result), it just never narrows or admits anything downstream.
+    """
+    path = Path(root) / CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE
+    if not path.is_file():
+        return None
+    try:
+        official_artifact = _load_json(path)
+        return current_research_official_universe_scope.resolve_scope(
+            official_artifact=official_artifact, research_session=session,
+        )
+    except Exception:  # noqa: BLE001 - this axis must never block core Daily / current products
+        return None
 
 
 def _financial_analysis_product_context(supplementary: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -321,6 +356,7 @@ def materialize_current_investment_decision_workspace(
     requested_at: str,
     feature_store: Mapping[str, Any] | None = None,
     tactical_behavior: Mapping[str, Any] | None = None,
+    current_research_scope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Investment Decision Workspace from already-resolved inputs.
 
@@ -392,6 +428,7 @@ def materialize_current_investment_decision_workspace(
         portfolio_research=None,
         prospective_lifecycle=None,
         requested_at=requested_at,
+        current_research_scope=current_research_scope,
     )
     return {
         "opportunity_context": opportunity_and_decision["opportunity_context"],
@@ -410,6 +447,7 @@ def materialize_current_screener_master_projection(
     registry_inputs: Mapping[str, Any],
     supplementary: Mapping[str, Any],
     requested_at: str,
+    current_research_scope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Screener Master Projection from the canonical exact-session
     screen snapshot plus the current Workspace just materialized. ``as_of_session`` is always
@@ -430,6 +468,7 @@ def materialize_current_screener_master_projection(
         financial_v2=_financial_analysis_product_context(supplementary),
         industry_by_ticker=industry_by_ticker,
         official_universe=registry_inputs.get("official_universe"),
+        current_research_scope=current_research_scope,
     )
 
 
@@ -456,6 +495,7 @@ def materialize_and_write_current_product_projections(
     operation_dir = Path(operation_dir)
     try:
         supplementary = resolve_supplementary_inputs(root, session)
+        current_research_scope = resolve_current_research_official_universe_scope(root, session)
         feature_store_result = materialize_current_fundamental_feature_store_context(
             root=root, requested_at=requested_at,
         )
@@ -472,7 +512,7 @@ def materialize_and_write_current_product_projections(
         workspace_bundle = materialize_current_investment_decision_workspace(
             session=session, registry_inputs=registry_inputs, supplementary=supplementary,
             requested_at=requested_at, feature_store=feature_store_artifact,
-            tactical_behavior=tactical_behavior_artifact,
+            tactical_behavior=tactical_behavior_artifact, current_research_scope=current_research_scope,
         )
         workspace = workspace_bundle["workspace"]
         snapshot_root = Path(runtime_root_override) if runtime_root_override is not None else runtime_root(root)
@@ -480,6 +520,7 @@ def materialize_and_write_current_product_projections(
         screener_master = materialize_current_screener_master_projection(
             session=session, root=root, snapshot_path=snapshot_path, workspace=workspace,
             registry_inputs=registry_inputs, supplementary=supplementary, requested_at=requested_at,
+            current_research_scope=current_research_scope,
         )
     except Exception as exc:  # noqa: BLE001 - this step must never block core Daily
         return {
@@ -552,6 +593,19 @@ def materialize_and_write_current_product_projections(
     else:
         thesis_case_status["reason_code"] = thesis_case_result.get("reason_code")
 
+    current_research_official_universe_scope_status: dict[str, Any] = (
+        {
+            "status": "RESOLVED",
+            "disposition": current_research_scope.get("disposition"),
+            "temporally_eligible": current_research_scope.get("temporally_eligible"),
+            "source_reference_ticker_count": current_research_scope.get("source_reference_ticker_count"),
+            "current_research_scope_ticker_count": current_research_scope.get("current_research_scope_ticker_count"),
+            "official_snapshot_observed_at": current_research_scope.get("official_snapshot_observed_at"),
+        }
+        if current_research_scope is not None
+        else {"status": "UNAVAILABLE", "reason_code": "PINNED_OFFICIAL_UNIVERSE_EVIDENCE_ABSENT_OR_UNRESOLVABLE"}
+    )
+
     context_axis_status = unavailable_recurring_context_axes()
     unavailable_optional_axes = list(context_axis_status)
     if feature_store_artifact is None:
@@ -581,6 +635,7 @@ def materialize_and_write_current_product_projections(
         "fundamental_feature_store": fundamental_feature_store_status,
         "tactical_behavior_context": tactical_behavior_status,
         "thesis_case_context": thesis_case_status,
+        "current_research_official_universe_scope": current_research_official_universe_scope_status,
         "context_axes": context_axis_status,
         "supplementary_inputs_available": {name: value is not None for name, value in supplementary.items()},
         "unavailable_optional_axes": sorted(unavailable_optional_axes),

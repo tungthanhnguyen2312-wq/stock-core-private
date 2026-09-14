@@ -69,9 +69,68 @@ def retain(*, response: Mapping[str, Any], destination: Path, ticker: str, surfa
             "source_surface": surface, "source_version": "HNX_PUBLIC_HTML_OR_AUTOCOMPLETE_V1", "error": response.get("error")}
 
 
+# Official trading/security-status vocabulary, extracted from the HNX issuer-profile page's own
+# "Trạng thái kiểm soát" (control status) and "Trạng thái giao dịch" (trading status) fields --
+# two genuinely distinct source fields, kept distinct here, never merged into one string. Every
+# raw value observed on a real HNX_LISTED (LCD, "Bình thường"/"Hoạt động") and UPCOM (ART,
+# "Cảnh báo-Đình chỉ giao dịch"/"Ngừng giao dịch") profile page is covered; an unrecognized raw
+# token maps to UNKNOWN rather than being guessed into an existing bucket.
+CONTROL_NORMAL, CONTROL_WARNING, CONTROL_CONTROL, CONTROL_RESTRICTED = "NORMAL", "WARNING", "CONTROL", "RESTRICTED"
+CONTROL_SUSPENSION_RELATED, CONTROL_MULTIPLE, CONTROL_UNKNOWN = "SUSPENSION_RELATED", "MULTIPLE_RESTRICTIONS", "UNKNOWN"
+TRADING_ACTIVE, TRADING_RESTRICTED, TRADING_TEMP_STOPPED = "ACTIVE", "RESTRICTED", "TEMPORARILY_STOPPED"
+TRADING_SUSPENDED, TRADING_CANCELLED, TRADING_UNKNOWN = "SUSPENDED", "CANCELLED_OR_DELISTED", "UNKNOWN"
+
+_CONTROL_COMPONENT_MAP = {
+    "bình thường": CONTROL_NORMAL, "canh bao": CONTROL_WARNING, "cảnh báo": CONTROL_WARNING,
+    "kiểm soát đặc biệt": CONTROL_CONTROL, "kiểm soát": CONTROL_CONTROL,
+    "hạn chế giao dịch": CONTROL_RESTRICTED,
+    "đình chỉ giao dịch": CONTROL_SUSPENSION_RELATED, "tạm ngừng giao dịch": CONTROL_SUSPENSION_RELATED,
+}
+_TRADING_STATUS_MAP = {
+    "hoạt động": TRADING_ACTIVE,
+    "hạn chế giao dịch": TRADING_RESTRICTED,
+    # "Giao dịch đặc biệt" ("special trading") is HNX's own distinct regime name for a security
+    # trading under special arrangement/limited sessions -- a real, observed raw value (see
+    # test fixtures), not full suspension, so it is grouped with RESTRICTED rather than
+    # SUSPENDED or a silent UNKNOWN.
+    "giao dịch đặc biệt": TRADING_RESTRICTED,
+    "tạm ngừng giao dịch": TRADING_TEMP_STOPPED,
+    "ngừng giao dịch": TRADING_SUSPENDED, "đình chỉ giao dịch": TRADING_SUSPENDED,
+    "hủy giao dịch": TRADING_CANCELLED, "hủy niêm yết": TRADING_CANCELLED, "hủy đăng ký giao dịch": TRADING_CANCELLED,
+}
+
+
+def normalize_control_status(raw: str | None) -> tuple[str, list[str]]:
+    """Split on '-' (the observed compound-status separator, e.g. "Cảnh báo-Đình chỉ giao dịch")
+    and classify each component independently; more than one distinct non-normal component
+    becomes MULTIPLE_RESTRICTIONS rather than silently picking one and discarding the other."""
+    if not raw or not raw.strip():
+        return CONTROL_UNKNOWN, []
+    components = [part.strip().lower() for part in raw.split("-") if part.strip()]
+    mapped = sorted({_CONTROL_COMPONENT_MAP.get(component, CONTROL_UNKNOWN) for component in components})
+    non_normal = [state for state in mapped if state not in (CONTROL_NORMAL,)]
+    if not mapped:
+        return CONTROL_UNKNOWN, []
+    if mapped == [CONTROL_NORMAL]:
+        return CONTROL_NORMAL, mapped
+    if len(non_normal) > 1:
+        return CONTROL_MULTIPLE, mapped
+    return non_normal[0], mapped
+
+
+def normalize_trading_status(raw: str | None) -> str:
+    if not raw or not raw.strip():
+        return TRADING_UNKNOWN
+    return _TRADING_STATUS_MAP.get(raw.strip().lower(), TRADING_UNKNOWN)
+
+
 def parse_profile(payload: bytes, *, identity: Mapping[str, Any], retention: Mapping[str, Any]) -> dict[str, Any]:
     document = payload.decode("utf-8", errors="replace")
     fields = {_text(label): _text(value) for label, value in _PAIR.findall(document)}
+    control_status_raw = fields.get("Trạng thái kiểm soát")
+    trading_status_raw = fields.get("Trạng thái giao dịch")
+    control_status, control_components = normalize_control_status(control_status_raw)
+    trading_status = normalize_trading_status(trading_status_raw)
     kllh_label = next((label for label in fields if label.startswith("KLLH")), None)
     klny_label = next((label for label in fields if label.startswith("KLNY")), None)
     kldkgd_label = next((label for label in fields if label.startswith("KLĐKGD")), None)
@@ -103,6 +162,11 @@ def parse_profile(payload: bytes, *, identity: Mapping[str, Any], retention: Map
             "hnx_klny_shares": _number(fields.get(klny_label)) if klny_label else None,
             "hnx_kldkgd_label": kldkgd_label, "hnx_kldkgd_shares": _number(fields.get(kldkgd_label)) if kldkgd_label else None,
             "charter_capital_thousand_vnd": _number(next((value for label, value in fields.items() if label.startswith("Vốn điều lệ")), None)),
+            "official_control_status_raw": control_status_raw, "official_control_status": control_status,
+            "official_control_status_components": control_components,
+            "official_trading_status_raw": trading_status_raw, "official_trading_status": trading_status,
+            "official_status_publication_date": None, "official_status_effective_date": None,
+            "official_status_temporal_note": "HNX issuer-profile page exposes only the current control/trading status, no effective or publication date field; a linked official decision/notice would be required to establish when this status began.",
             "events": events, "share_identity_schema": "KLLH_AND_KLNY_DISTINCT_LABELLED_OFFICIAL_FIELDS",
             "kllh_semantic_result": "OFFICIAL_EXCHANGE_REPORTED_CIRCULATING_SHARES_CURRENT_PROFILE_ONLY",
             "common_shares_outstanding_result": "UNPROVEN_TREASURY_AND_ACCOUNTING_SCOPE_UNAVAILABLE"}

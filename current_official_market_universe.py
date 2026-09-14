@@ -65,6 +65,31 @@ def _observed_by_source(artifact: Mapping[str, Any]) -> dict[str, str | None]:
     return {str(capture.get("sha256")): capture.get("retrieved_at") for capture in captures if capture.get("sha256")}
 
 
+# Official trading/security-status vocabulary. Populated only from an explicit first-party
+# source field, never inferred from exchange-presence alone -- a security can be currently
+# listed AND under a special trading status at the same time (WARNING/CONTROL/RESTRICTED/
+# SUSPENDED != DELISTED), and the reverse is also true (a listed security with a normal status
+# code can still have no qualified session bar). See module docstring boundary.
+STATUS_NORMAL = "NORMAL_OR_NO_SPECIAL_STATUS"
+STATUS_UNKNOWN_CODE = "OFFICIAL_STATUS_CODE_UNKNOWN_TO_STOCKLOOKUP"
+STATUS_NOT_PROVIDED = "NOT_PROVIDED_BY_SOURCE_SURFACE"
+# The only status code observed on HOSE's live public stock_master surface across all 405
+# currently-returned rows (2026-09-13 live acquisition). The surface appears to enumerate only
+# currently-normal-listed securities; a suspended/restricted/delisted security may simply be
+# absent from it rather than present with a different code -- this is disclosed, not assumed.
+_HOSE_NORMAL_LISTING_STATUS_ID = 11
+
+
+def _hose_official_security_status(row: Mapping[str, Any]) -> tuple[str, str | None]:
+    status_id = row.get("listing_status_id")
+    reason = row.get("listing_status_reason")
+    if status_id == _HOSE_NORMAL_LISTING_STATUS_ID:
+        return STATUS_NORMAL, reason
+    if status_id is None:
+        return STATUS_NOT_PROVIDED, reason
+    return STATUS_UNKNOWN_CODE, reason
+
+
 def _source_row(*, row: Mapping[str, Any], source: str, observed_at: str | None) -> dict[str, Any]:
     ticker = str(row["ticker"]).upper()
     if source == "HNX_UPCOM":
@@ -75,8 +100,14 @@ def _source_row(*, row: Mapping[str, Any], source: str, observed_at: str | None)
             "instrument_class_status": "EXCHANGE_STOCK_LIST_CANDIDATE_NOT_COMMON_EQUITY_PROVEN",
             "current_universe_status": OFFICIAL_CURRENT_STOCK_LIST_CANDIDATE,
             "qualification": "FIRST_PARTY_CURRENT_HNX_OR_UPCOM_STOCK_LIST_ROW",
-            "warnings": ["HNX list evidence establishes current exchange-list presence, not accounting common shares outstanding."],
+            "official_security_status": STATUS_NOT_PROVIDED,
+            "official_security_status_reason": None,
+            "official_security_status_effective_date": None,
+            "official_security_status_publication_date": None,
+            "warnings": ["HNX list evidence establishes current exchange-list presence, not accounting common shares outstanding.",
+                        "HNX's enumerable issuer-list surface carries no trading/security-status column; presence on the list is not evidence of NORMAL status, only of current list membership."],
         }
+    status, status_reason = _hose_official_security_status(row)
     return {
         "ticker": ticker, "issuer_name": row.get("issuer_name"), "exchange_or_market": "HOSE",
         "official_source": "hose_public_stock_master/v1", "official_source_row_identity": f"{row.get('source_identity')}:{row.get('hose_security_id')}:{ticker}",
@@ -84,7 +115,12 @@ def _source_row(*, row: Mapping[str, Any], source: str, observed_at: str | None)
         "instrument_class_status": "OFFICIAL_STOCK_MASTER_SECURITY_TYPE_NOT_COMMON_EQUITY_PROVEN",
         "current_universe_status": OFFICIAL_CURRENT_EXCHANGE_SECURITY,
         "qualification": "FIRST_PARTY_CURRENT_HOSE_STOCK_MASTER_ROW",
-        "warnings": ["HOSE outStanding is retained only as exchange-labelled outstanding volume, not common shares outstanding."],
+        "official_security_status": status,
+        "official_security_status_reason": status_reason,
+        "official_security_status_effective_date": None,
+        "official_security_status_publication_date": None,
+        "warnings": ["HOSE outStanding is retained only as exchange-labelled outstanding volume, not common shares outstanding.",
+                    "HOSE's public stock_master surface carries a listingStatusId/reason pair but no effective/publication date; a suspended or restricted security may be entirely absent from this surface rather than present with a distinguishing code."],
     }
 
 
@@ -156,6 +192,10 @@ def build_artifact(*, hnx: Mapping[str, Any], hose: Mapping[str, Any], status: M
                       "official_source": None, "official_source_row_identity": None, "official_observed_at": None,
                       "first_trading_date": None, "instrument_class_status": "INSTRUMENT_CLASS_UNRESOLVED",
                       "current_universe_status": STOCKLOOKUP_ONLY_UNRESOLVED, "qualification": residual,
+                      "official_security_status": STATUS_NOT_PROVIDED,
+                      "official_security_status_reason": None,
+                      "official_security_status_effective_date": None,
+                      "official_security_status_publication_date": None,
                       "warnings": ["No matching retained current HNX/UPCoM or HOSE master row; absence is not zero or proof of instrument class."]}
         record["stocklookup_candidate"] = stocklookup_record is not None
         if not stocklookup_record:
@@ -209,3 +249,136 @@ def replay(artifact: Mapping[str, Any]) -> None:
     reconciliation = artifact.get("reconciliation", {})
     if reconciliation.get("official_total_match", 0) + reconciliation.get("stocklookup_only_unresolved", 0) != reconciliation.get("stocklookup_universe_count"):
         raise ValueError("STOCKLOOKUP_RECONCILIATION_INVALID")
+
+
+# --- HNX_UPCOM_OFFICIAL_SECURITY_STATUS_ENRICHMENT_V1 -----------------------------------------
+# Additive enrichment of a narrow cohort (the 50 no-qualified-bar names plus the 6 residual
+# unresolved names), never a denominator change and never a Security Master. See
+# hnx_official_issuer_profile_multi_gate.py for the underlying HNX issuer-profile parser and its
+# control/trading-status normalization. This never filters `records`, only annotates it.
+TARGET_SESSION_QUALIFIED = "QUALIFIED_FOR_TARGET_SESSION"
+TARGET_SESSION_OBSERVED_AFTER = "CURRENT_STATUS_OBSERVED_AFTER_TARGET_SESSION"
+
+_BUCKET_ACTIVE_NO_BAR = "OFFICIALLY_ACTIVE_BUT_NO_RETAINED_BAR"
+_BUCKET_RESTRICTED = "OFFICIALLY_RESTRICTED"
+_BUCKET_TEMP_STOPPED = "OFFICIALLY_TEMPORARILY_STOPPED"
+_BUCKET_SUSPENDED = "OFFICIALLY_SUSPENDED"
+_BUCKET_CANCELLED = "OFFICIAL_CANCELLATION_OR_DELISTING_STATUS"
+_BUCKET_NOT_TEMPORALLY_QUALIFIED = "STATUS_CURRENT_BUT_TARGET_SESSION_NOT_TEMPORALLY_QUALIFIED"
+_BUCKET_UNAVAILABLE = "OFFICIAL_STATUS_UNAVAILABLE"
+_BUCKET_CONFLICTING = "CONFLICTING_OFFICIAL_EVIDENCE"
+
+
+def _explanatory_bucket(*, outcome: str, trading_status: str | None, control_status: str | None) -> str:
+    if outcome != "CURRENT_PROFILE_FOUND":
+        return _BUCKET_UNAVAILABLE
+    if trading_status == "CANCELLED_OR_DELISTED":
+        return _BUCKET_CANCELLED
+    if trading_status == "SUSPENDED":
+        return _BUCKET_SUSPENDED
+    if trading_status == "TEMPORARILY_STOPPED":
+        return _BUCKET_TEMP_STOPPED
+    if trading_status == "RESTRICTED":
+        return _BUCKET_RESTRICTED
+    if trading_status == "ACTIVE" and control_status == "NORMAL":
+        return _BUCKET_ACTIVE_NO_BAR
+    if trading_status == "ACTIVE":
+        # Active trading status but a non-normal control status (warned/controlled) is a real,
+        # if less severe, restriction signal -- distinct from a genuinely clean active name.
+        return _BUCKET_RESTRICTED
+    return _BUCKET_UNAVAILABLE if trading_status == "UNKNOWN" else _BUCKET_CONFLICTING
+
+
+def build_no_bar_explanation_summary(status_artifact: Mapping[str, Any]) -> dict[str, Any]:
+    """Classify the 50-cohort and 6-residual-cohort rows of a retained
+    ``hnx_upcom_official_security_status/v1`` artifact into the mutually-exclusive high-level
+    explanatory buckets this milestone defines. Never infers a bucket without direct support --
+    an unresolved acquisition (search/profile fetch failure, or the 6 residual names' genuine
+    profile-not-found outcome) is `OFFICIAL_STATUS_UNAVAILABLE`, never guessed into a status."""
+    cohort50 = status_artifact["cohort_50_no_bar"]
+    cohort_six = status_artifact["cohort_six_residual"]
+
+    def _classify(cohort: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for ticker, row in cohort.items():
+            profile = row.get("profile")
+            trading = profile.get("official_trading_status") if profile else None
+            control = profile.get("official_control_status") if profile else None
+            bucket = _explanatory_bucket(outcome=row["outcome"], trading_status=trading, control_status=control)
+            # No dated official notice was acquired for any ticker in this bounded milestone (see
+            # official_status_temporal_note on every profile), so target-session applicability is
+            # never asserted QUALIFIED -- it is reported as a separate, explicit dimension per
+            # the milestone's "do not merge current status with target-session status" rule,
+            # never folded into the bucket itself.
+            target_session_applicability = TARGET_SESSION_OBSERVED_AFTER if profile else "NOT_APPLICABLE_NO_PROFILE"
+            out[ticker] = {
+                "ticker": ticker, "market": profile.get("market") if profile else None,
+                "outcome": row["outcome"], "official_control_status_raw": profile.get("official_control_status_raw") if profile else None,
+                "official_control_status": control, "official_trading_status_raw": profile.get("official_trading_status_raw") if profile else None,
+                "official_trading_status": trading, "explanatory_bucket": bucket,
+                "target_session_applicability": target_session_applicability,
+            }
+        return out
+
+    classified_50 = _classify(cohort50)
+    classified_six = _classify(cohort_six)
+
+    bucket_counts = Counter(row["explanatory_bucket"] for row in classified_50.values())
+    explained = sum(bucket_counts[b] for b in (_BUCKET_RESTRICTED, _BUCKET_TEMP_STOPPED, _BUCKET_SUSPENDED, _BUCKET_CANCELLED))
+    still_source_gap = bucket_counts[_BUCKET_ACTIVE_NO_BAR]
+    temporally_unresolved = bucket_counts[_BUCKET_UNAVAILABLE] + bucket_counts[_BUCKET_CONFLICTING] + bucket_counts[_BUCKET_NOT_TEMPORALLY_QUALIFIED]
+    if explained + still_source_gap + temporally_unresolved != len(classified_50):
+        raise ValueError("NO_BAR_EXPLANATION_ACCOUNTING_INVALID")
+
+    return {
+        "cohort_50_classified": classified_50,
+        "cohort_six_classified": classified_six,
+        "bucket_counts_50": dict(sorted(bucket_counts.items())),
+        "no_bar_explained_by_official_status": explained,
+        "no_bar_still_source_coverage_gap": still_source_gap,
+        "no_bar_temporally_unresolved": temporally_unresolved,
+        "temporal_caveat": (
+            "no_bar_explained_by_official_status reflects the CURRENT (2026-09-13) official "
+            "control/trading status only; no dated official decision/notice was acquired for any "
+            "of the 50 (out of this milestone's bounded scope), so none carry an explicit, dated "
+            "proof that the status already applied on the 2026-09-11 target session. "
+            "target_session_applicability is reported separately per ticker "
+            "(CURRENT_STATUS_OBSERVED_AFTER_TARGET_SESSION for all 49) and must never be read as "
+            "QUALIFIED_FOR_TARGET_SESSION."
+        ),
+    }
+
+
+def attach_hnx_upcom_security_status(artifact: Mapping[str, Any], status_artifact: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a NEW copy of a built current_official_market_universe artifact with per-ticker
+    official_control_status/official_trading_status/target_session_applicability attached for
+    the enrichment cohort only. Never filters records, never changes the denominator, never
+    touches records outside the enrichment cohort. No contract-version bump: purely additive
+    fields on an already-additive record shape."""
+    _verify(artifact, "CURRENT_OFFICIAL_MARKET_UNIVERSE")
+    summary = build_no_bar_explanation_summary(status_artifact)
+    enriched = copy.deepcopy(dict(artifact))
+    enriched.pop("artifact_sha256", None)
+    enriched.pop("artifact_identity", None)
+    for classified in (summary["cohort_50_classified"], summary["cohort_six_classified"]):
+        for ticker, row in classified.items():
+            if ticker not in enriched["records"]:
+                continue
+            enriched["records"][ticker]["hnx_upcom_official_control_status"] = row["official_control_status"]
+            enriched["records"][ticker]["hnx_upcom_official_control_status_raw"] = row["official_control_status_raw"]
+            enriched["records"][ticker]["hnx_upcom_official_trading_status"] = row["official_trading_status"]
+            enriched["records"][ticker]["hnx_upcom_official_trading_status_raw"] = row["official_trading_status_raw"]
+            enriched["records"][ticker]["hnx_upcom_target_session_applicability"] = row["target_session_applicability"]
+    enriched["hnx_upcom_security_status_enrichment"] = {
+        "contract_version": "hnx_upcom_official_security_status/v1",
+        "source_artifact_identity": status_artifact["artifact_identity"],
+        "cohort_scope": "50_no_bar_plus_6_residual_only; no other record modified",
+        "no_bar_explained_by_official_status": summary["no_bar_explained_by_official_status"],
+        "no_bar_still_source_coverage_gap": summary["no_bar_still_source_coverage_gap"],
+        "no_bar_temporally_unresolved": summary["no_bar_temporally_unresolved"],
+        "bucket_counts_50": summary["bucket_counts_50"],
+        "temporal_caveat": summary["temporal_caveat"],
+        "authority_boundary": "STATUS_ENRICHMENT_ONLY; NO_DENOMINATOR_CHANGE; NO_ACTIVE_UNIVERSE_PROMOTION; NO_TACTICAL_OR_STRATEGY_RULE_CHANGE",
+    }
+    enriched.update(_identity(enriched))
+    return enriched

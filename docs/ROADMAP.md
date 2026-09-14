@@ -950,3 +950,22 @@ The scaleout attempt is terminally `COHERENT_PARTIAL_PROVIDER_LIMITED`: retained
 ### Current-Session Decision Rollover and Prospective Case Capture V1 (Complete / Coherent Partial)
 
 `CURRENT_SESSION_DECISION_ROLLOVER_AND_PROSPECTIVE_CASE_CAPTURE_V1` makes future genuine case capture deterministic: `prospective_case_admission_policy/v1` and its one-shot runner require a qualified completed session and a Workspace projection at exactly that session, then retain non-discretionary eligible stance roles in the existing durable store and initialize outcome measurement. The real 2026-08-31 gate did not qualify a current session, so the 2026-08-28 projection was intentionally not admitted late; zero cases were created. The runner is ready for a future owner invocation when a genuine current qualified session exists. No calibration, retuning, execution, or PIT successor is queued.
+
+### Current Official Research Universe Product Cutover and Release Integration V1 (Complete Locally / Ready for Owner Cutover Review)
+
+`CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1` reconciles three
+held, never-merged 2026-09-13 commits (official-universe refresh, HNX/UPCoM security-status
+enrichment, current-research consumer integration) onto the governed baseline in an isolated
+worktree. It establishes the product scope model as permanent architecture: reference/product
+observation population (currently 1,683) != current official research scope (currently 1,504,
+the intersection matched to a live official exchange master row) != outside current official
+scope (179) != official-only source presence (20, never admitted to the reference population).
+Membership, official trading status, price availability, and tactical availability stay four
+orthogonal axes across Screener and Workspace -- neither product may narrow its denominator or
+silently drop a reference row because of scope; every card instead carries an additive
+scope-status field, sourced from one canonical `current_research_official_universe_scope.py`
+adapter both products consume identically. The next real-data gate, only with owner
+authorization, is production cutover itself: registering the refreshed official-universe evidence
+into the canonical Daily input path and rehearsing/publishing an actual Dashboard release bound to
+it. This milestone performs neither; see `docs/STATE.md` for the full local replay evidence and
+`docs/DECISIONS.md` for the reconciliation decisions.

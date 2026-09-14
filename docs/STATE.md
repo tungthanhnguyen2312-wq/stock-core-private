@@ -1,5 +1,268 @@
 # Stock Lookup — Operational State
 
+**Current official research universe product cutover and release integration V1 (2026-09-14):**
+`CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1 = COMPLETE_LOCAL /
+READY_FOR_OWNER_CUTOVER_REVIEW`. Owner-authorized despite `queued_next=[]` (recorded per
+`AGENTS.md` "Default lightweight bootstrap"). Reconciles the three held, never-merged commits
+below (`5165f8f`/`14202d8`/`e878831`, all forked from `325a2665` on 2026-09-13) onto the governed
+baseline `155efa6` (Daily's deterministic previous-operation selection + current-product
+completion retention) in an isolated worktree. All three ported cleanly with zero file-overlap
+conflicts against the baseline.
+
+**Product scope model, made explicit and preserved distinct:** reference/product observation
+population (`1,683`, the governed `stocklookup_candidate` set) != current official research scope
+(`1,504`, the intersection currently matched to a live HNX/UPCoM/HOSE official master row) !=
+outside current official scope (`179` = 173 delisting-correlated + 6 unresolved) != the 20
+official-only names (official source presence, never admitted to the reference population).
+Membership, official trading status, price availability, and tactical availability are four
+orthogonal axes -- a restricted/suspended security stays a scope member; missing price/tactical
+never removes scope membership.
+
+**Reconciliation decision: the held `e878831` consumer design (below) was superseded, not ported
+as-is.** Its own `current_research_scope` parameter on `screener_master_projection.
+build_projection`/`investment_decision_workspace_projection.build_artifacts` intersected the
+ticker set down to the eligible 1,504, silently dropping the 179 outside-scope tickers from
+Screener/Workspace entirely -- exactly the silent-row-drop this milestone's product-scope model
+prohibits. Replaced with a non-destructive design: both functions now attach an additive per-card
+`official_research_scope` field (new `current_research_official_universe_scope.
+ticker_scope_view`, exposing both the simplified `IN_CURRENT_OFFICIAL_RESEARCH_SCOPE`/
+`OUTSIDE_CURRENT_OFFICIAL_RESEARCH_SCOPE`/`CURRENT_OFFICIAL_SCOPE_UNKNOWN` bucket and the richer
+existing `current_research_scope_state`/`current_research_scope_fitness` vocabulary) and an
+aggregate `official_scope_coverage` block (reference denominator, in/outside/unknown counts,
+price x scope and tactical x scope cross-tabs) -- the denominator is always the full population,
+whether or not scope is supplied, applied, or resolves every ticker. The pre-existing "omitted
+scope stays byte-identical" guarantee on both functions is unchanged; the held test suite's
+narrowing-behavior assertions were updated to the new attach-only behavior (28/29 tests, all
+passing against the real retained 2026-09-13 evidence below).
+
+**Wired into the canonical current-product path, not a second materializer:**
+`canonical_current_product_projections.py`'s two existing call sites (deliberately untouched by
+the held commit, by its own test's assertion) now resolve `current_research_official_universe_
+scope.resolve_scope()` once per run via a new `resolve_current_research_official_universe_scope()`
+step, reading a pinned, versioned evidence path (`CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE`,
+the HNX/UPCoM-enriched artifact) exactly like the existing `VCI_INDUSTRY_SNAPSHOT_RELATIVE`
+pattern -- never session-templated, since the evidence's own `official_observed_at` (not this
+pin's acquisition date) governs the non-negotiable temporal gate. Absent/unresolvable evidence
+degrades to `current_research_scope=None` (byte-identical prior behavior), never a fabricated
+scope; this status is now also surfaced in the top-level manifest as
+`current_research_official_universe_scope`.
+
+**Fixed a genuine `publish_dashboard.py` Workspace validator defect (not merely a lineage
+correction):** `validate_workspace_projection` compared the real artifact's `schema_version`
+field (`"1.0.0"`) against a value shaped like a contract identifier
+(`"investment_decision_workspace_dashboard_projection/v1"`) that the real artifact never carries
+there -- silently rejecting every genuine publish attempt. Now validates `schema_version` and
+`contract_version` (`"investment_decision_workspace_projection/v1"`) as two separate, correctly
+named fields; the two pre-existing test fixtures that encoded the old buggy contract (and
+consequently failed the corrected check) were fixed alongside it. `dashboard_release_publisher.py`
+(the actual live Dashboard-release binding path)'s own session-gated Workspace/Screener binding
+(`_bind_current_product_json`/`_bind_current_product_json_js_pair`) was inspected and does not
+share this defect -- it binds on `as_of_session` match only, independent of
+`publish_dashboard.py`.
+
+**Real, read-only 2026-09-14 replay** (retained Daily operation
+`daily_research_session_operation:7ae3e33c06106dfa41cd0ed11182c7e7c8fe59bc3cbe7245b2b7635bc20a2b5a`,
+real per-axis evidence read directly from the Producer checkout, official-universe evidence read
+from the integration worktree, nothing written to either): reference denominator `1,683`, current
+official research scope `1,504`, outside scope `179`, 20 official-only names never admitted to any
+card. Price `853`/`830` available/unavailable, tactical `852`/`831` available/unavailable --
+byte-identical to the pre-wiring baseline reported for this same real evidence, because all 179
+outside-scope tickers already had zero price/tactical coverage before this milestone (the price
+gap and the official-scope-outside set are two independent, non-overlapping concerns; wiring scope
+in changes zero existing numbers, only adds scope metadata). Cross-tab: 853/651 in-scope
+price-available/unavailable, 0/179 outside-scope (all outside-scope rows are price-unavailable);
+852/652 in-scope tactical-available/unavailable, 0/179 outside-scope. Official-status distribution
+among the 1,504 in-scope members: 403 HOSE `NORMAL_OR_NO_SPECIAL_STATUS`, 1,051 HNX/UPCoM
+`NOT_PROVIDED_BY_SOURCE_SURFACE` (no narrower enrichment on that ticker), 23 `SUSPENDED`, 26
+`RESTRICTED`, 1 `ACTIVE`-but-no-retained-bar (LCD) -- reconciles exactly with the held HNX/UPCoM
+enrichment's own cited 23/26/1 breakdown. 2026-09-11 temporal negative control correctly resolves
+`TEMPORALLY_INELIGIBLE_FOR_SESSION` with `current_research_scope_ticker_count=None` (no
+backdating). Workspace and Screener report identical scope identity (`research_session`,
+`official_snapshot_observed_at`, in-scope count `1,504`) -- cross-product invariant holds. HPG,
+FPT, SSI, VCB, PAN, PNJ, PVD, QNS, VNM, EVF, POW, NVL: all 12 watchlist names are current official
+research scope members with price and tactical available; research stance unchanged (scope never
+touches decision fields).
+
+Focused suites (canonical current-product projections, Screener, Workspace, official universe,
+`publish_dashboard.py`/`dashboard_release_publisher.py`, canonical Daily operation, governed
+previous operation, the three held-lineage suites) plus the broader named regression set: 223
+passed / 18 failed / 14 skipped. All 18 failures independently reproduced byte-for-byte on an
+untouched `155efa6` worktree at a different path (12 are a pre-existing `publish_dashboard.py`
+checkout-path authority guard that only passes from the exact `stock-core-private` path; 6 are a
+pre-existing missing fixture under
+`operations-review/p3f9b-market-wide-exact-session-scaleout-20260826/`) -- zero regressions
+attributable to this milestone. `python -m py_compile` on every changed file, `git diff --check`,
+and `python tools/stocklookup_roadmap.py --check` all pass (`Overall: ON_TRACK`).
+
+No provider/network call, no Daily rerun, no production runtime write, no Dashboard publication,
+no push, no merge to main. Authority effect: `NONE /
+CURRENT_OFFICIAL_RESEARCH_SCOPE_PRODUCT_INTEGRATION_LOCAL_ONLY` -- no RAW_AS_TRADED, PIT,
+liquidity/sizing/execution, or recommendation-policy authority change. Local checkpoint: branch
+`feature/official-research-product-cutover-20260914`, worktree
+`C:/Projects/StockLookup/worktrees/stock-core-official-research-product-cutover-20260914`.
+
+**Current Research official-universe consumer integration V1 (2026-09-13, isolated child
+worktree `stock-core-current-research-universe-integration-20260913`, branch
+`feature/current-research-official-universe-integration-20260913`, parent checkpoint
+`14202d88b49b491fa74b560dcf0cf67b07a34a16`, not merged/pushed; no network used, evidence-only):**
+`CURRENT_RESEARCH_OFFICIAL_UNIVERSE_CONSUMER_INTEGRATION_V1 = COMPLETE_LOCAL_READY_FOR_POST_
+ACCEPTANCE_CUTOVER_DECISION`. Builds the consumer-scope boundary for the two prior official-
+universe milestones -- reuses `current_official_market_universe.py` unchanged, adds no new
+Security Master.
+
+**Three universes stay explicitly distinct, never conflated.** New
+`current_research_official_universe_scope.py` (`resolve_scope`, contract
+`current_research_official_universe_scope/v1`) is a pure consumer-scope adapter with no
+acquisition, no provider calls, no listing-status inference, no strategy rules: (A) the governed
+1,683 source/acquisition reference set, unchanged; (B) `CURRENT_OFFICIAL_EXCHANGE_PRESENCE` --
+`intersection(A, refreshed official masters)` = 1,504 (179 outside: 173 `DELISTED_OR_NO_LONGER_
+CURRENT`, 6 `UNRESOLVED` -- never auto-upgraded to delisted; the 20 official-only rows are never
+unioned in); (C) session price/tactical availability (952/951), deliberately not computed by this
+module at all -- membership is never derived from price presence or absence.
+
+**The non-negotiable temporal gate.** The 2026-09-13 official evidence's own observation
+timestamp is derived from its retained records (never wall-clock "now"); a requested research
+session is eligible only when its date is on/after that observation date. Real replay: session
+`2026-09-11` (before the 2026-09-13 observation) -> `TEMPORALLY_INELIGIBLE_FOR_SESSION`,
+`current_research_scope_ticker_count = None` (never 1,504, never a stale/fabricated number);
+session `2026-09-13` or later -> `CURRENT_OBSERVED_EVIDENCE_AVAILABLE`, scope = 1,504. The
+released 2026-09-11 Workspace/Screener product is NOT rematerialized and its denominator stays
+1,683 -- this milestone never rewrites history.
+
+**Restricted/suspended securities remain scope members**, exactly per the milestone's design:
+real replay confirms `ART` (`SUSPENDED`) and all 49 status-explained no-bar names stay
+`IN_CURRENT_OFFICIAL_RESEARCH_SCOPE` with a `CURRENT_STATUS_PARTIAL` fitness tag, never excluded;
+the 502 price-source-gap names and the 50 no-bar names are both confirmed 100% included via real
+replay against retained evidence.
+
+**Opt-in, byte-compatible Screener/Workspace seams.** Both `screener_master_projection.
+build_projection` and `investment_decision_workspace_projection.build_artifacts` gained one new
+`current_research_scope: Mapping | None = None` parameter (default `None` = untouched prior
+behavior, test-verified). When supplied and temporally eligible, the ticker set is intersected
+with the scope's eligible set as a final dict-subset step only -- every retained ticker's card is
+the same object as the unfiltered build (test-verified byte-equality), never a recomputation.
+`canonical_current_product_projections.py`'s existing call sites were not touched (pass no new
+argument), so the default production path is unchanged (verified structurally). No
+`ACTIVE_UNIVERSE` promotion, no historical PIT, no strategy/ranking/sizing change, no production
+cutover, no network call. 28 new focused tests (25 required scenarios plus edge cases); 115/115
+passed across all directly-relevant suites (one pre-existing, unrelated `canonical_current_
+product_projections` replay test fails in this fresh worktree from a gitignored-evidence gap that
+also reproduces on the untouched parent worktree -- not a regression from this milestone).
+`py_compile`/`git diff --check` clean; `tools/stocklookup_roadmap.py --check` reports `DRIFT CHECK:
+PASS`/`Overall: ON_TRACK` (its only warning is the expected uncommitted-file notice plus
+pre-existing, unrelated stale `HEAD` sentinels from other milestones). Full evidence:
+`operations-review/current-research-official-universe-consumer-integration-v1-20260913/`. Local
+commit only.
+
+**HNX/UPCoM official security-status enrichment V1 (2026-09-13, isolated child worktree
+`stock-core-hnx-upcom-security-status-20260913`, branch `feature/hnx-upcom-security-status-
+enrichment-20260913`, parent checkpoint `5165f8f80e2cefca24f97285191bffa53505c983`, not
+merged/pushed):**
+`HNX_UPCOM_OFFICIAL_SECURITY_STATUS_ENRICHMENT_V1 = COMPLETE_LOCAL_READY_FOR_UNIVERSE_PROMOTION_
+REVIEW`. Answers, with real official evidence, why the 50 `NO_OBSERVED_TRADING_ACTIVITY_IN_
+RETAINED_WINDOW` names (all still officially current-listed per the parent milestone) have no
+qualified 2026-09-11 bar. Extends `hnx_official_issuer_profile_multi_gate.py`'s existing HNX
+issuer-profile parser (no new parser, no version bump) to also read its `Trạng thái kiểm soát`
+(control status) and `Trạng thái giao dịch` (trading status) fields -- kept as two always-distinct
+dimensions, normalized deterministically from the real observed Vietnamese vocabulary.
+
+**Result: of the 50, 49 are officially restricted or suspended from trading right now (23
+`OFFICIALLY_SUSPENDED` -- "Ngừng giao dịch"; 26 `OFFICIALLY_RESTRICTED` -- HNX's own "Giao dịch
+đặc biệt" special-trading regime) and exactly 1 (`LCD`, the cohort's only HNX_LISTED member; all
+49 others are UPCOM) is genuinely `OFFICIALLY_ACTIVE_BUT_NO_RETAINED_BAR` -- a real, unexplained
+source-coverage gap.** `NO_BAR_EXPLAINED_BY_OFFICIAL_STATUS=49`,
+`NO_BAR_STILL_SOURCE_COVERAGE_GAP=1`, `NO_BAR_TEMPORALLY_UNRESOLVED=0`, reconciling to 50.
+Bounded live acquisition: 2 requests per ticker (autocomplete identity + profile page) x 56
+tickers (50 + the 6 residual cohort) = 106 captures; no disclosure crawl, no other ticker touched.
+
+**Temporal caveat, disclosed rather than backdated.** All 49 "explained" statuses are the
+*current* (2026-09-13) profile state; no dated official decision/notice was acquired this
+bounded milestone, so none carry explicit proof the status already applied on 2026-09-11 --
+`target_session_applicability = CURRENT_STATUS_OBSERVED_AFTER_TARGET_SESSION` for all 49, reported
+as a separate field, never merged into or overriding the status classification itself.
+
+**Six residual names (`BCG`, `BCR`, `DAN`, `DVT`, `LTG`, `VTS`) remain fail-closed.** None resolve
+a current HNX/UPCoM profile via the same autocomplete+profile-page path the 50 used successfully --
+consistent with, and independently corroborating, their absence from the parent milestone's
+refreshed official master lists. No cancellation/delisting notice was found or inferred; all six
+stay `OFFICIAL_STATUS_UNAVAILABLE`, not promoted to any delisted disposition.
+
+**Additive-only integration.** New `current_official_market_universe.attach_hnx_upcom_security_
+status()` (+ `build_no_bar_explanation_summary()`) returns a *copy* of the refreshed official-
+universe artifact with per-ticker `hnx_upcom_official_control_status`/`_trading_status`/
+`target_session_applicability` attached for exactly the 56-ticker cohort; `reconciliation` and
+every other record are byte-identical to the un-enriched parent artifact (test-verified). No
+`ACTIVE_UNIVERSE` promotion, no denominator change, no tactical/strategy rule change, no
+production cutover. 25 new focused tests (15 required scenarios plus edge cases); 82/82 passed
+across all directly-relevant suites, zero regressions. `py_compile` clean. Full evidence:
+`operations-review/hnx-upcom-official-security-status-enrichment-v1-20260913/`
+(`official_source_manifest.json`, `reconciliation_summary.json`, `per_ticker_status_table.csv`,
+`current_official_market_universe_with_security_status_artifact.json`). Local commit only.
+
+**Current official market universe refresh and security-status V1 (2026-09-13, isolated worktree
+`stock-core-official-universe-refresh-20260913`, branch `feature/current-official-market-universe-
+refresh-20260913`, not merged/pushed):**
+`CURRENT_OFFICIAL_MARKET_UNIVERSE_REFRESH_AND_SECURITY_STATUS_V1 = COMPLETE_LOCAL_READY_FOR_OWNER_
+PROMOTION_REVIEW`. Refreshes the existing `current_official_market_universe.py` capability (no new
+Security Master module) with a live 2026-09-13 HNX_LISTED/UPCOM list re-acquisition (bounded, 4
+requests -- both list surfaces return their full result set on page 1) and a live HOSE public
+stock-master re-acquisition, reconciled against the retained 2026-09-11 Current Research product
+evidence (status/descriptive/screening/tactical/strategy/scenario). Rights/disclosure-index
+re-acquisition was explicitly out of bounded scope this milestone (UPCOM's rights endpoint enforces
+a small server-side page size requiring 300+ sequential pages, unbounded and not read by the
+1,683-ticker reconciliation math); that dataset is carried forward from 2026-08-24, labelled
+`CARRIED_FORWARD_NOT_REFRESHED`, not silently treated as fresh.
+
+**Result: `official_total_match` 1,507 -> 1,504** (HNX/UPCOM match 1,104 -> 1,101, HOSE match
+unchanged 403), **`stocklookup_only_unresolved` 176 -> 179**, decomposing cleanly into the SAME
+173 `DELISTED_OR_NO_LONGER_CURRENT` (unchanged) plus 6 `UNRESOLVED` (was 0) -- and
+`SYMBOL_IDENTITY_DRIFT` drops from 3 to 0. The 3 old drift tickers (`BCG`, `BCR`, `VTS`) are
+confirmed, by live fetch, absent from both the current HNX/UPCOM and HOSE official master lists;
+the other 3 of the 2026-09-11 diagnostic's six unresolved provider-rejected tickers (`DAN`, `DVT`,
+`LTG` -- LTG being Loc Troi Group, a large UPCOM agribusiness name) are confirmed to have been
+present on HNX's official UPCOM list as of 2026-08-24 with real issuer names and first-trading
+dates, and are now confirmed absent from the live 2026-09-13 list -- two independent official
+first-party fetches, 20 days apart, corroborating a real recent exchange-presence change for all
+six names. None of the six have yet acquired the VCI-exchange `DELISTED` corroboration the existing
+pipeline requires to promote to `INACTIVE_OR_DELISTED`, so they remain `UNRESOLVED`, not delisted --
+this milestone does not promote them.
+
+**Universe-status gap vs price-source-coverage gap, cleanly separated for the 2026-09-11
+diagnostic's two source-gap populations.** Cross-tabbed against the refreshed official universe:
+all 502 target-session-gap-with-nearby-activity tickers and all 50 no-observed-activity tickers
+match a current official HNX/UPCoM or HOSE master row (472+30 and 50 respectively) -- **zero**
+further exclusion. The refreshed official-universe denominator (1,504) is therefore numerically
+identical to the existing `current_active_equity_denominator` the 2026-09-11 status artifact
+already reported; this milestone corroborates that figure via an independent official-source
+signal, it does not change it. Consumer-compatibility numerators (screening `data_ready`=951,
+tactical `classified`=951, strategy `eligible`=296, scenario `ready`=515) are byte-identical
+before/after the denominator narrows from 1,683 to 1,504 -- confirming the ticker-filter adapter
+changes scope only, never a decision rule, exactly as designed.
+
+**New additive field family, no contract version bump.** `current_official_market_universe.
+_source_row()` now emits `official_security_status` (+ `_reason`/`_effective_date`/
+`_publication_date`, the latter two always `None` -- neither source surface currently carries a
+status effective/publication date). HOSE's live public stock-master surface returns
+`listingStatusId=11` uniformly across all 405 currently-listed rows observed 2026-09-13 (`NORMAL_
+OR_NO_SPECIAL_STATUS`); it appears to enumerate only currently-normal-listed securities rather than
+exposing a distinguishing code for warned/restricted/suspended names, which is disclosed rather
+than assumed. HNX's enumerable list surface carries no status column at all
+(`NOT_PROVIDED_BY_SOURCE_SURFACE`). `hose_public_xhr_and_periodic_series_recon._stock_rows` now
+also retains the previously-discarded `reason` field as `listing_status_reason`. Neither
+`canonical_universe_tiers.py` nor `canonical_instrument_reconciliation.py` was touched; `listing_
+status`/`ACTIVE_UNIVERSE` promotion remains exactly as fail-closed as before this milestone.
+
+**16 new focused tests** (`tests/test_current_official_market_universe_refresh_20260913.py`);
+zero regressions across all directly-relevant suites (53 passed:
+`test_current_official_market_universe.py`, `test_hose_public_xhr_and_periodic_series_recon.py`,
+`test_current_universe_status_and_session_coverage_resolution.py`, `test_hnx_enumerable_universe_
+kllh_event_disclosure_scaleout.py`, `test_official_corporate_event_incremental_acquisition.py`,
+plus the new file). `py_compile` clean. No production cutover, no `ACTIVE_UNIVERSE` promotion, no
+Dashboard/canonical-Daily change. Full evidence: `operations-review/current-official-market-
+universe-refresh-v1-20260913/` (`official_source_manifest.json`, `reconciliation_summary.json`,
+`residual_and_official_only_per_ticker.csv`). Local commit only; not pushed, not merged into the
+frozen production-acceptance baseline `325a26657ad9b5e96e3bcf3529f01bca98b1720d`.
+
 **Current event catalyst decision semantics corrective V1 (2026-09-13):**
 `CURRENT_EVENT_CATALYST_DECISION_SEMANTICS_CORRECTIVE_V1 = COMPLETE_LOCAL`. Canonical Daily's
 registry `event_context` is `current_official_event_context/v1`, which owns `event_state`, not

@@ -23,6 +23,7 @@ from collections import Counter
 from typing import Any, Mapping
 
 from current_research_valuation_context import RELATIVE_METHODS
+import current_research_official_universe_scope as current_research_official_universe_scope_module
 
 CONTRACT_VERSION = "investment_decision_workspace_projection/v1"
 MILESTONE = "INVESTMENT_DECISION_WORKSPACE_V1"
@@ -353,6 +354,7 @@ def build_artifacts(
     portfolio_research: Mapping[str, Any] | None = None,
     prospective_lifecycle: Mapping[str, Any] | None = None,
     requested_at: str,
+    current_research_scope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Join a matched opportunity_context/v1 + security_decision_context/v1 pair into the
     compact investment_decision_workspace_projection/v1 artifact. Raises fail-closed if the two
@@ -360,6 +362,20 @@ def build_artifacts(
     if the denominator is empty. leadership/portfolio_research/prospective_lifecycle are optional
     enrichment inputs; their absence degrades individual card fields to explicit unavailable
     states, never the whole workspace.
+
+    ``current_research_scope`` is a fully opt-in, explicit seam: omitted (the default), the
+    denominator and every card are byte-identical to the pre-existing behavior. When supplied
+    (the return value of ``current_research_official_universe_scope.resolve_scope``), every card
+    is built EXACTLY as before -- decision fields (research_stance, entry_state, valuation,
+    thesis/counter-thesis, confirmation, invalidation, financial context, ...) are never
+    re-derived or mutated by scope.
+
+    CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1: supplying
+    ``current_research_scope`` never narrows or drops the Daily ticker denominator -- every card
+    this function would otherwise build stays present. Each card instead gains an additive
+    ``official_research_scope`` field (``current_research_official_universe_scope.
+    ticker_scope_view``), and ``coverage`` gains an aggregate scope-count block. A ticker outside
+    the current official research scope is presented with an explicit reason, never dropped.
     """
     if opportunity_artifact.get("contract_version") != "opportunity_context/v1":
         raise InvestmentDecisionWorkspaceError("OPPORTUNITY_CONTRACT_UNSUPPORTED")
@@ -382,10 +398,15 @@ def build_artifacts(
     if not isinstance(leadership_records, Mapping):
         leadership_records = {}
 
+    current_research_scope_supplied = current_research_scope is not None
+    current_research_scope_applied = bool(
+        isinstance(current_research_scope, Mapping) and current_research_scope.get("temporally_eligible")
+    )
+
     cards: dict[str, Any] = {}
     for ticker in tickers:
         sector = _sector_label(leadership_records, ticker)
-        cards[ticker] = build_ticker_card(
+        card = build_ticker_card(
             ticker=ticker,
             opportunity_record=opportunity_records[ticker],
             decision_record=decision_records[ticker],
@@ -393,9 +414,32 @@ def build_artifacts(
             portfolio_research=portfolio_research,
             prospective_record=_prospective_view(prospective_lifecycle, ticker),
         )
+        if current_research_scope_supplied:
+            card["official_research_scope"] = current_research_official_universe_scope_module.ticker_scope_view(
+                current_research_scope, ticker,
+            )
+        cards[ticker] = card
 
     if set(cards) != set(tickers):
         raise InvestmentDecisionWorkspaceError("SILENT_TICKER_DROP")
+
+    pre_scope_ticker_count = len(cards)
+    official_scope_coverage: dict[str, Any] | None = None
+    if current_research_scope_supplied:
+        _scope_mod = current_research_official_universe_scope_module
+        in_scope = sum(card["official_research_scope"]["scope_bucket"] == _scope_mod.SIMPLE_IN_SCOPE for card in cards.values())
+        outside_scope = sum(card["official_research_scope"]["scope_bucket"] == _scope_mod.SIMPLE_OUTSIDE_SCOPE for card in cards.values())
+        unknown_scope = len(cards) - in_scope - outside_scope
+        official_scope_coverage = {
+            "temporally_eligible": current_research_scope_applied,
+            "disposition": current_research_scope.get("disposition") if isinstance(current_research_scope, Mapping) else None,
+            "research_session": current_research_scope.get("research_session") if isinstance(current_research_scope, Mapping) else None,
+            "official_snapshot_observed_at": current_research_scope.get("official_snapshot_observed_at") if isinstance(current_research_scope, Mapping) else None,
+            "workspace_denominator": len(cards),
+            "current_official_research_scope_count": in_scope,
+            "outside_current_official_scope_count": outside_scope,
+            "current_official_scope_unknown_count": unknown_scope,
+        }
 
     stance_counts = Counter(card["research_stance"] or "NONE" for card in cards.values())
     entry_state_counts = Counter(card["entry_state"] or "NONE" for card in cards.values())
@@ -417,16 +461,24 @@ def build_artifacts(
         "market_sector_leadership": (leadership or {}).get("artifact_identity"),
         "portfolio_research_context": (portfolio_research or {}).get("artifact_identity"),
         "prospective_thesis_lifecycle": (prospective_lifecycle or {}).get("artifact_identity"),
+        "current_research_official_universe_scope": (
+            {"research_session": current_research_scope.get("research_session"), "official_snapshot_observed_at": current_research_scope.get("official_snapshot_observed_at")}
+            if current_research_scope_supplied else None
+        ),
     }
 
     artifact: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION, "contract_version": CONTRACT_VERSION, "milestone": MILESTONE,
         "requested_at": requested_at, "as_of_session": opportunity_artifact.get("as_of_session"),
         "source_artifacts": source_artifacts,
+        "official_scope_coverage": official_scope_coverage,
         "coverage": {
             "ticker_denominator": len(cards),
             "workspace_coverage": len(cards),
             "zero_silent_ticker_drops": True,
+            "pre_scope_ticker_count": pre_scope_ticker_count,
+            "current_research_scope_supplied": current_research_scope_supplied,
+            "current_research_scope_applied": current_research_scope_applied,
             "research_stance_distribution": dict(sorted(stance_counts.items())),
             "entry_state_distribution": dict(sorted(entry_state_counts.items())),
             "valuation_relative_state_distribution": dict(sorted(valuation_counts.items())),

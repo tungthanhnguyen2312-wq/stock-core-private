@@ -48,7 +48,13 @@ def _write_min_fixture(root: Path) -> None:
     )
     (root / "data" / "investment_decision_workspace.json").write_text(
         json.dumps({
-            "schema_version": "investment_decision_workspace_dashboard_projection/v1",
+            # Real Workspace artifacts carry these as two distinct fields (see
+            # investment_decision_workspace_projection.py's SCHEMA_VERSION/CONTRACT_VERSION) --
+            # this fixture used to encode the old, buggy single-field contract publish_dashboard.py
+            # validated against; both are fixed together (CURRENT_OFFICIAL_RESEARCH_UNIVERSE_
+            # PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1).
+            "schema_version": "1.0.0",
+            "contract_version": "investment_decision_workspace_projection/v1",
             "as_of_session": "2026-07-17",
             "producer_artifact_identity": "investment_decision_workspace_projection/v1:fixture",
             "cards": {"HPG": {"ticker": "HPG"}},
@@ -369,7 +375,8 @@ def _write_backend_fixture(root: Path, session: str, *, live_session: str | None
         json.dumps({"summary": {"session_date": session}}), encoding="utf-8")
     (root / "data").mkdir(parents=True, exist_ok=True)
     (root / "data" / "investment_decision_workspace.json").write_text(json.dumps({
-        "schema_version": "investment_decision_workspace_dashboard_projection/v1",
+        "schema_version": "1.0.0",
+        "contract_version": "investment_decision_workspace_projection/v1",
         "as_of_session": session,
         "producer_artifact_identity": "investment_decision_workspace_projection/v1:fixture",
         "cards": {"HPG": {"ticker": "HPG"}},
