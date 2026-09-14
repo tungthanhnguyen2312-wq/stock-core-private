@@ -729,6 +729,8 @@ def run_canonical_daily_operation(
             macro_presentation_context=macro_presentation_context,
             **({"daily_integrated_decision_brief_builder": preseal_brief_builder} if preseal_brief_builder is not None else {}),
         )
+        if producer_fn is None:
+            producer_kwargs["runtime_root_override"] = runtime_root
         if operation_output_root != root:
             producer_kwargs.update(
                 output_root=operation_output_root / "operations-review" / "daily-producer-runs-v1",

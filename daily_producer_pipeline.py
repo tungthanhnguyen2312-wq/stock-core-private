@@ -254,6 +254,7 @@ def run_daily_producer(
     integrated_investment_decision_product: Mapping[str, Any] | None = None,
     daily_integrated_decision_brief: Mapping[str, Any] | None = None,
     daily_integrated_decision_brief_builder: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    runtime_root_override: Path | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Run the one-command retained completed-session producer pipeline."""
@@ -311,6 +312,7 @@ def run_daily_producer(
     current_product_projections = materialize_and_write_current_product_projections(
         root=root, session=selected, operation_dir=operation_dir, registry_inputs=inputs,
         requested_at=vn_now().isoformat(timespec="seconds"),
+        runtime_root_override=runtime_root_override,
     )
     run_identity = _run_identity(selected, producer_head, consumer_head, plan, operation["manifest"]["operation_identity"])
     run_dir = output_root / selected / run_identity.split(":", 1)[1]
@@ -360,6 +362,15 @@ def run_daily_producer(
         },
         "daily_session_operation": {"identity": operation["manifest"]["operation_identity"], "directory": _relative_or_absolute(root, operation_dir)},
         "daily_product_identity": operation["product"]["artifact_identity"],
+        "current_product_projections": {
+            **copy.deepcopy(current_product_projections),
+            "completion_status": (
+                "CORE_DAILY_COMPLETE_CURRENT_PRODUCTS_COMPLETE"
+                if current_product_projections.get("status") == "MATERIALIZED"
+                else "CORE_DAILY_COMPLETE_CURRENT_PRODUCTS_UNAVAILABLE"
+            ),
+            "session": selected,
+        },
         "ai_delivery": copied,
         "dashboard_projection": {"identity": json.loads(projection)["projection_identity"], **copied["dashboard/current_decision_cockpit_projection.json"]},
         "coverage_summary": copy.deepcopy(operation["manifest"]["coverage_summary"]),
