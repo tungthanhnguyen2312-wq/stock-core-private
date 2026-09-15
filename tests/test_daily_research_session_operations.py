@@ -23,6 +23,37 @@ def test_explicit_registry_selects_recovered_956_artifact_and_not_stale_763_path
         validate_coherence(stale, "2026-08-21")
 
 
+def test_semantic_note_is_session_parametric_and_never_embeds_historical_coverage_literals():
+    expected = ("The numeric same-session technical coverage field above is authoritative for this "
+                "completed session; superseded pre-recovery coverage is not used.")
+    for session, coverage in (("2026-09-14", 17), ("2026-09-15", 855)):
+        descriptive_identity, screening_identity = "descriptive:" + session, "screening:" + session
+        inputs = {
+            "descriptive": {"session": session, "artifact_identity": descriptive_identity, "records": {},
+                            "market_breadth": {"same_session_technical_feature_available_count": coverage,
+                                              "current_active_equity_denominator": 100,
+                                              "observed_session_cohort": coverage},
+                            "input_lineage": {"technical_history_recovery_artifact_identity": "recovery:" + session}},
+            "screening": {"session": session, "artifact_identity": screening_identity,
+                          "input_lineage": {"current_descriptive_artifact_identity": descriptive_identity}},
+            "tactical": {"session": session, "source_artifacts": {"descriptive": descriptive_identity,
+                         "screening": screening_identity}, "coverage": {"classified_count": coverage}},
+            "triage": {"source_market_session": session}, "valuation": {"valuation_session": session},
+            "corporate_intelligence": {"contract_version": "market_wide_current_corporate_intelligence/v1",
+                                        "session": session, "source_artifact_identities": {"descriptive": descriptive_identity},
+                                        "records": {}, "coverage": {}},
+        }
+        note = validate_coherence(inputs, session)["technical_coverage_semantics"]["semantic_note"]
+        assert note == expected
+        assert "956" not in note
+        assert "763" not in note
+
+    registry = load_registry(ROOT)
+    retained = registry["completed_sessions"]["2026-09-15"]["completion_evidence"]["canonical_post_close_pipeline_evidence"]["session_coherence"]["technical_coverage_semantics"]
+    assert retained["same_session_technical_feature_available_count"] == 855
+    assert retained["semantic_note"] == expected
+
+
 def test_operation_is_deterministic_and_preserves_current_contracts(tmp_path: Path):
     first = build_operation(_resolved(), "2026-08-21", producer_head="producer", consumer_head="consumer")
     second = build_operation(_resolved(), "2026-08-21", producer_head="producer", consumer_head="consumer")

@@ -1,5 +1,18 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Daily 2026-09-15 production acceptance and semantic-note corrective V1 (2026-09-16):**
+`DAILY_20260915_PRODUCTION_ACCEPTANCE_AND_SEMANTIC_NOTE_CORRECTIVE_V1 = COMPLETE /
+GUARDED_DAILY_PRODUCTION_ACCEPTANCE_CLOSED`. The retained 2026-09-15 canonical operation proves the
+previously deferred guarded production-acceptance condition: preflight-gated canonical entry,
+phase-A/phase-B readiness, exact-session input registration/freeze, same-session pre-seal Brief
+lineage, completed Producer run, and ready runtime/trusted-subset release all agree on the same
+session and operation identity. The only correction is the coherence `semantic_note`, now
+session-parametric/non-numeric; the registered count remains 855 and immutable run evidence is not
+rewritten. No successor is queued; normal Daily collection continues under the existing guard.
+Price-basis remains `REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE /
+OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING`; its next gate remains
+`OPERATOR_SUPPLIED_FINITE_OFFICIAL_DETAIL_DOCUMENT_URL_FOR_VC3_HCC_OR_NAG_WITH_RATIO_AND_EXECUTION_EVIDENCE`.
+
 **Real official corporate-action factor-chain evidence V1 (2026-09-15):**
 `REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE /
 OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING`. The existing governed source registry and

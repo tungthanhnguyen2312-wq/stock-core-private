@@ -1,5 +1,23 @@
 # Stock Lookup — Operational State
 
+**Daily 2026-09-15 production acceptance and semantic-note corrective V1 (2026-09-16):**
+`DAILY_20260915_PRODUCTION_ACCEPTANCE_AND_SEMANTIC_NOTE_CORRECTIVE_V1 = COMPLETE /
+GUARDED_DAILY_PRODUCTION_ACCEPTANCE_CLOSED`. The former
+`DAILY_BRIEF_PRESEAL_CORRECTIVE_NEW_SESSION_PRODUCTION_ACCEPTANCE = DEFERRED / NOT_FAILED` gate is
+now `COMPLETE / GUARDED_NEW_SESSION_PRODUCTION_ACCEPTANCE_PASS`: the first accepted post-guard
+production run is 2026-09-15. Retained canonical evidence records phase A `ATTEMPT_ELIGIBLE`, phase
+B `READY`, exact-session registration and freeze, producer completion, runtime release `READY`, and
+trusted-subset `READY`; its retained Producer run
+`daily_producer_run:c16adbf0313511b452d530069eac5fca24c8207e687a87fff5de93fe94cdd318` binds the
+same completed session and the exact Daily operation
+`daily_research_session_operation:2026166fdb3fdea24d3b6c38847cca3bb28d1e35cecdad38ba2a91d3caa106bf`.
+The registry’s numerical technical coverage remains 855. Only its stale non-authoritative
+explanatory note changed; immutable operation/run artifacts and all frozen input identities remain
+unchanged. No Daily rerun, provider call, runtime write, publication, or analytical authority change.
+Price-basis state remains `REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE /
+OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING`; its exact next gate remains
+`OPERATOR_SUPPLIED_FINITE_OFFICIAL_DETAIL_DOCUMENT_URL_FOR_VC3_HCC_OR_NAG_WITH_RATIO_AND_EXECUTION_EVIDENCE`.
+
 **Real official corporate-action factor-chain evidence V1 (2026-09-15):**
 `REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE / OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING`.
 The bounded real cohort is VC3 (2026-08-27), HCC (2026-08-19), and NAG (2026-08-19): all are in

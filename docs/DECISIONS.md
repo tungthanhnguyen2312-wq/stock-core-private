@@ -1,5 +1,26 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-16 - Daily 2026-09-15 Production Acceptance And Semantic-Note Corrective V1
+
+`DAILY_20260915_PRODUCTION_ACCEPTANCE_AND_SEMANTIC_NOTE_CORRECTIVE_V1 = COMPLETE /
+GUARDED_DAILY_PRODUCTION_ACCEPTANCE_CLOSED`.
+
+1. **Decision: make coherence prose session-parametric.** The numerical
+   `same_session_technical_feature_available_count` remains the sole coverage authority. The
+   generator and the 2026-09-15 governed registry now use invariant prose and never carry the stale
+   956/763 historical literals. The 2026-09-15 numerical value remains 855.
+2. **Decision: correct the governed registry, not immutable execution evidence.** Completion and
+   lineage validation read `status`, `trading_day_valid`, and frozen input identities; the note is
+   descriptive metadata. The exact registry note is corrected without changing those locked values.
+   Retained operation and Producer manifests remain byte-for-byte untouched.
+3. **Decision: close the guarded acceptance gate on retained evidence.** The canonical Daily entry
+   invokes the execution-environment preflight before acquisition. The retained 2026-09-15 canonical
+   record shows phase-A eligible, phase-B ready, registration/freeze, producer completion, runtime
+   release ready, and trusted-subset ready; the Producer manifest records completed-session gate PASS,
+   frozen closure, and same-session pre-seal Brief lineage. This is the first accepted post-guard
+   production run, without granting any analytical, price-basis, PIT, liquidity, sizing, or execution
+   authority.
+
 ## 2026-09-15 - Real Official Corporate-Action Factor-Chain Evidence V1
 
 `REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE /

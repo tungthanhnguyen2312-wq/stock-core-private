@@ -580,7 +580,7 @@
               "same_session_technical_feature_available_count": 855,
               "current_active_equity_denominator": 1503,
               "observed_session_cohort": 855,
-              "semantic_note": "956 is same-session technical feature coverage and tactical classified count after retained technical recovery; 763 is superseded pre-recovery coverage and is rejected."
+              "semantic_note": "The numeric same-session technical coverage field above is authoritative for this completed session; superseded pre-recovery coverage is not used."
             },
             "corporate_intelligence_coverage": {
               "any_intelligence_coverage": 3,
