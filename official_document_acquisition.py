@@ -40,6 +40,7 @@ PERIODS = frozenset({"2022", "2023", "2024", "2025", "2026"})
 CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS, MAX_RESPONSE_BYTES = 5, 15, 32 * 1024 * 1024
 MAX_REDIRECTS = 5
 REQUEST_HEADERS = {"Accept": "application/pdf,text/html;q=0.9", "User-Agent": "StockLookupOfficialEvidence/1.1"}
+DISCOVERY_RSS_MEDIA_TYPE = "application/rss+xml"
 
 
 def canonical_url(url: str) -> str:
@@ -68,6 +69,13 @@ def _sniff_media_type(reported_content_type: str, prefix: bytes) -> tuple[str | 
         return ("application/pdf", "declared_header") if prefix.startswith(b"%PDF") else (None, None)
     if raw in {"text/html", "application/xhtml+xml"}:
         return ("text/html", "declared_header") if (b"<html" in prefix.lower() or b"<!doctype html" in prefix.lower()) else (None, None)
+    # RSS is a registry-declared *discovery input* for HNX, never a corporate-action
+    # observation.  It must nevertheless be retained as immutable XML before its exact,
+    # first-party item links can be parsed.  Admit it only when the response both declares an
+    # XML/RSS media type and carries an RSS root; a generic XML response remains unsupported.
+    if raw in {"application/rss+xml", "application/xml", "text/xml"}:
+        lowered = prefix.lower()
+        return (DISCOVERY_RSS_MEDIA_TYPE, "declared_rss_xml") if b"<rss" in lowered else (None, None)
     if raw in {"application/octet-stream", "binary/octet-stream", ""}:
         if prefix.startswith(b"%PDF"):
             return "application/pdf", "magic_bytes_octet_stream"
@@ -183,7 +191,7 @@ def fetch_http(url: str, *, temporary_path: Path, timeout_seconds: int = READ_TI
         first_chunk = next(chunks, b"")
         prefix.extend(first_chunk[:1024])
         detected_ct, _ = _sniff_media_type(_content_type(headers), bytes(prefix))
-        if detected_ct not in {"application/pdf", "text/html"}: return status, headers, bytes(prefix), current
+        if detected_ct not in {"application/pdf", "text/html", DISCOVERY_RSS_MEDIA_TYPE}: return status, headers, bytes(prefix), current
         total = len(first_chunk)
         try:
             with temporary_path.open("wb") as out:
@@ -212,7 +220,7 @@ def _response_failure(status: int, headers: Mapping[str, str], prefix: bytes, si
     if status in {401, 403}: return "robots_or_anti_bot_block" if b"robot" in text or b"captcha" in text else "access_denied"
     if not 200 <= status < 300: return "access_denied" if status in {404, 410} else "network_error"
     detected_ct, _ = _sniff_media_type(_content_type(headers), prefix)
-    if detected_ct not in {"application/pdf", "text/html"}: return "invalid_content_type"
+    if detected_ct not in {"application/pdf", "text/html", DISCOVERY_RSS_MEDIA_TYPE}: return "invalid_content_type"
     if not size or not _supported(_content_type(headers), prefix): return "empty_or_truncated_document"
     return None
 
@@ -225,6 +233,7 @@ def _cached(root: Path, records: Iterable[Mapping[str, Any]], ticker: str, url: 
 
 
 def _extraction_state(path: Path) -> str:
+    if path.suffix.lower() == ".xml": return "ready_for_discovery_parsing"
     if path.suffix.lower() == ".html": return "ready_for_direct_citations"
     try:
         from pypdf import PdfReader
@@ -308,7 +317,9 @@ def acquire(requests_: Iterable[Mapping[str, Any]], destination: Path, *, fetche
                 continue
         raw_ct = _content_type(headers)
         detected_ct, detection_rationale = _sniff_media_type(raw_ct, prefix)
-        sha256 = _sha_file(temporary); suffix = ".pdf" if detected_ct == "application/pdf" else ".html"; relative = Path("documents") / ticker / period / _safe(document_class) / f"{sha256}{suffix}"; path = root / relative; path.parent.mkdir(parents=True, exist_ok=True)
+        sha256 = _sha_file(temporary)
+        suffix = ".pdf" if detected_ct == "application/pdf" else ".xml" if detected_ct == DISCOVERY_RSS_MEDIA_TYPE else ".html"
+        relative = Path("documents") / ticker / period / _safe(document_class) / f"{sha256}{suffix}"; path = root / relative; path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists() and _sha_file(path) != sha256:
             temporary.unlink(missing_ok=True); outcomes.append({"ticker": ticker, "canonical_url": url, "state": "hash_conflict", "http_status": status}); continue
         if not path.exists(): os.replace(temporary, path)

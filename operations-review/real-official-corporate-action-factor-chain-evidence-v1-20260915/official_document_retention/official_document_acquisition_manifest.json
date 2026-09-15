@@ -1,0 +1,110 @@
+{
+  "records": [
+    {
+      "a1_temporal_projection": {
+        "authority_boundaries": {
+          "historical_price_pit": "BLOCKED",
+          "http_metadata_is_not_publication": true,
+          "raw_as_traded": "NOT_PROMOTED",
+          "same_close_execution": "NOT_ESTABLISHED"
+        },
+        "knowledge_resolution": {
+          "close_price_execution_eligibility": "NOT_ESTABLISHED",
+          "eod_resolution_rule": "FIRST_OBSERVED_CONSERVATIVE",
+          "historical_reconstruction_scope": "FROM_FIRST_OBSERVED_FORWARD_ONLY",
+          "knowledge_available_at": "2026-09-15T16:56:08.422616Z",
+          "knowledge_available_research_session": null,
+          "knowledge_time_status": "KNOWLEDGE_RESOLVED_FIRST_OBSERVED_CONSERVATIVE",
+          "warnings": [
+            "SESSION_RESOLUTION_UNAVAILABLE"
+          ]
+        },
+        "observation_time": {
+          "first_observed_at": "2026-09-15T16:56:08.422616Z",
+          "first_observed_status": "RETAINED",
+          "observation_identity": "e5ff6c07e72ebcc82079452812438d25dee84cb40e8fcaf4124917221f5f5440",
+          "observation_identity_status": "OBSERVATION_IDENTITY_READY"
+        },
+        "provider_temporal_metadata": {
+          "provider_event_time": null,
+          "provider_record_update_time": null,
+          "provider_reported_date": null,
+          "provider_time_precision": "UNKNOWN",
+          "timezone_status": "UNKNOWN",
+          "warnings": [
+            "PROVIDER_TEMPORAL_MAPPING_UNAVAILABLE"
+          ]
+        },
+        "publication_time": {
+          "publication_authority_tier": "UNVERIFIED",
+          "qualification_status": "RETAINED_METADATA",
+          "source_identity": "hnx",
+          "source_published_at": null,
+          "source_published_at_precision": "UNKNOWN",
+          "timezone_status": "UNKNOWN"
+        },
+        "retention_fitness": {
+          "historical_price_pit": "BLOCKED",
+          "raw_as_traded": "NOT_PROMOTED",
+          "reason": "provider_or_unqualified_source_receipt",
+          "same_close_execution": "NOT_ESTABLISHED",
+          "temporal_fitness": "FIRST_OBSERVED_FORWARD_ONLY"
+        }
+      },
+      "acquisition_status": "retained",
+      "canonical_url": "https://www.hnx.vn/3/vi_vn/thong-tin-cong-bo-tu-to-chuc-phat-hanh.rss",
+      "content_length": 47142,
+      "content_type": "application/rss+xml",
+      "discovery_provenance": {
+        "purpose": "bounded_locator_for_real_corporate_action_factor_evidence",
+        "route": "config/official_source_registry.json:hnx.index_document_types"
+      },
+      "document_class": "disclosure_rss_feed",
+      "document_id": "779a25c37264c6453bfba55b990fb813c98420749cace40980bb4c697df0eaee",
+      "extraction_status": "ready_for_discovery_parsing",
+      "final_url": "https://www.hnx.vn/vi-vn/3/vi_vn/thong-tin-cong-bo-tu-to-chuc-phat-hanh.rss",
+      "http_status": 200,
+      "media_type_detection_rationale": "declared_rss_xml",
+      "observed_at": "2026-09-15T16:56:08.422616Z",
+      "published_at": null,
+      "relative_path": "documents/DTP/2026/disclosure_rss_feed/e5ff6c07e72ebcc82079452812438d25dee84cb40e8fcaf4124917221f5f5440.xml",
+      "reported_content_type": "application/rss+xml",
+      "reporting_period": "2026",
+      "sha256": "e5ff6c07e72ebcc82079452812438d25dee84cb40e8fcaf4124917221f5f5440",
+      "source_authority": "exchange",
+      "source_id": "hnx",
+      "supersedes_document_id": null,
+      "temporal_retention": {
+        "acquisition_method": "GOVERNED_OFFICIAL_DOCUMENT_ACQUISITION_V1",
+        "content_type": "application/rss+xml",
+        "first_observed_at": "2026-09-15T16:56:08.422616Z",
+        "first_observed_status": "RETAINED",
+        "http_etag": null,
+        "http_last_modified": null,
+        "http_response_date": "Tue, 15 Sep 2026 16:56:10 GMT",
+        "last_observed_at": "2026-09-15T16:56:08.422616Z",
+        "observation_count": 1,
+        "observation_identity": "e5ff6c07e72ebcc82079452812438d25dee84cb40e8fcaf4124917221f5f5440",
+        "observation_identity_method": "RAW_BYTES_SHA256",
+        "observation_identity_status": "OBSERVATION_IDENTITY_READY",
+        "provider_event_at": null,
+        "provider_or_source": "hnx",
+        "provider_record_update_at": null,
+        "provider_reported_date": null,
+        "publication_authority_tier": "UNVERIFIED",
+        "raw_received_at": "2026-09-15T16:56:08.422616Z",
+        "raw_received_timezone": "UTC",
+        "source_identity": "hnx",
+        "source_published_at": null,
+        "source_published_at_precision": "UNKNOWN",
+        "temporal_retention_contract_version": "provider_temporal_retention/v1",
+        "warnings": [
+          "HTTP_METADATA_NOT_PUBLICATION_AUTHORITY",
+          "OFFICIAL_PUBLICATION_NOT_QUALIFIED"
+        ]
+      },
+      "ticker": "DTP"
+    }
+  ],
+  "schema_version": "1.2.0"
+}

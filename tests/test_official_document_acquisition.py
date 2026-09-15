@@ -15,6 +15,9 @@ FIXTURE_REGISTRY={"schema_version":"1.0.0","approval_state":{"state":"APPROVED",
  "global_policy":{"connect_timeout_seconds":5,"read_timeout_seconds":15,"max_attempts":2,"max_response_bytes":20971520,"user_agent":"test"},
  "sources":[{"source_id":"issuer_ir","activation":"approved","allowed_hosts":["issuer.example","cdn.example"],
    "document_types":["corporate_action_notice","reviewed_interim_financial_statements","corporate_governance_report","annual_report","amendment_or_supersession_notice"],
+   "min_request_interval_seconds":0,"parser_version":"1.0.0"},
+  {"source_id":"hnx","activation":"approved","allowed_hosts":["hnx.example"],
+   "document_types":[],"index_document_types":["disclosure_rss_feed"],
    "min_request_interval_seconds":0,"parser_version":"1.0.0"}]}
 
 class AcquisitionTests(unittest.TestCase):
@@ -89,6 +92,15 @@ class AcquisitionTests(unittest.TestCase):
   self.assertEqual(future["outcomes"][0]["state"],"unsupported_request")
  def test_index_observed_dtp_is_a_finite_supported_ticker(self):
   self.assertIn("DTP",TICKERS)
+ def test_declared_rss_discovery_input_is_retained_as_xml_but_not_evidence(self):
+  rss=b'<?xml version="1.0"?><rss><channel><title>HNX</title></channel></rss>'
+  spec={"ticker":"DTP","source_id":"hnx","canonical_url":"https://hnx.example/feed.rss","document_class":"disclosure_rss_feed","reporting_period":"2026","source_authority":"exchange","observed_at":"2026-09-15T00:00:00Z"}
+  result=acquire([spec],self.root,fetcher=lambda *_a,**_k:(200,{"Content-Type":"application/rss+xml"},rss))
+  self.assertEqual(result["outcomes"][0]["state"],"retained")
+  record=json.loads((self.root/MANIFEST).read_text())["records"][0]
+  self.assertEqual(record["content_type"],"application/rss+xml")
+  self.assertEqual(record["extraction_status"],"ready_for_discovery_parsing")
+  self.assertTrue(record["relative_path"].endswith(".xml"))
  def test_reviewed_interim_statement_is_supported(self):
   result=acquire([self.spec(reporting_period="2026",document_class="reviewed_interim_financial_statements")],self.root,fetcher=self.fetch)
   self.assertEqual(result["outcomes"][0]["state"],"retained")

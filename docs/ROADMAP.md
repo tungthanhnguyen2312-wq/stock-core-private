@@ -1,5 +1,17 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Real official corporate-action factor-chain evidence V1 (2026-09-15):**
+`REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE /
+OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING`. The existing governed source registry and
+ledger/factor-chain pipeline were reused unchanged. A deterministic, at-most-three HNX cohort selects
+VC3/HCC/NAG from the current reference collection and preserves each index record's official ex-date,
+source identity, and record date through an `EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION` bridge.
+The one approved HNX RSS discovery input was retained and parsed, but its finite current window has no
+exact candidate detail link. No ratio, lifecycle, publication cutoff, factor, or price basis is
+invented. This is a real source ceiling, not a code failure: the next gate is an exact finite official
+detail document URL (HNX, VSDC, or issuer IR) carrying the missing documentary facts. No successor is
+queued automatically.
+
 **Price basis factor-chain and PIT series qualification V1 (2026-09-15):**
 `PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1 = COMPLETE / FACTOR_CHAIN_PIPELINE_READY_PIT_SERIES_PARTIAL_BY_EVIDENCE`.
 Fills the gate recorded below: converts a qualified `official_corporate_action_ledger.py` entry

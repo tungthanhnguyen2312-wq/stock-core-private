@@ -1,5 +1,24 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-15 - Real Official Corporate-Action Factor-Chain Evidence V1
+
+`REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE /
+OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING`. Owner-authorized bounded continuation of the
+standing factor-chain evidence gate.
+
+1. **Decision: real ex-date evidence is preserved, not transformed into a ledger fact.** The selected
+   VC3/HCC/NAG HNX rights-index rows retain their exact source identity, source record identity, URL,
+   event type, ex-date, and record date in an `EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION` bridge.
+   All three are `OTHER_EVIDENCE_GAP`; no explicit ex-date is reclassified as missing.
+2. **Decision: the RSS index is a governed discovery input only.** The exact HNX RSS response was
+   admitted, byte-retained, and parsed offline after the minimal acquirer XML support fix. It contains
+   no target detail locator in its finite 100-item window. It is never adopted to the official
+   document store and cannot supply a ratio, executed lifecycle, or publication cutoff.
+3. **Decision: stop at the source ceiling.** No approved finite direct document URL exists for the
+   selected candidates. Historical pagination/search and generated URL patterns remain prohibited;
+   no provider/raw-price/Daily route is attempted. The result is partial official evidence acquisition,
+   with zero real `FACTOR_CHAIN_QUALIFIED` and no PIT evaluation, rather than fabricated evidence.
+
 ## 2026-09-15 - Price Basis Factor-Chain And PIT Series Qualification V1
 
 `PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1 = COMPLETE / FACTOR_CHAIN_PIPELINE_READY

@@ -1,0 +1,153 @@
+{
+  "artifact_identity": "real_official_corporate_action_factor_chain_evidence:4fd5d13ab7fb61e63ecba773474f7ff99f610bde9740adf661526410ec694afd",
+  "artifact_sha256": "4fd5d13ab7fb61e63ecba773474f7ff99f610bde9740adf661526410ec694afd",
+  "authority_boundary": {
+    "daily_execution": false,
+    "dashboard_publication": false,
+    "ledger_ratio_or_share_count_inferred": false,
+    "official_index_bridge": "EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION",
+    "planned_or_future_execution_treated_as_executed": false,
+    "provider_network_calls": false,
+    "runtime_root_written": false
+  },
+  "candidate_selection": {
+    "candidate_limit": 3,
+    "candidates": [
+      {
+        "bridge_contract": "hnx_rights_event_index_ex_date_bridge/v1",
+        "bridge_scope": "EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION",
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_id": "current_official_event:b2399e7125da00882acf1338f0416881fc4bf0c7d0a01643b1d5952fecd4ed8c",
+        "event_type": "STOCK_DIVIDEND",
+        "ex_date": "2026-08-27",
+        "execution_date": null,
+        "ledger_observation_emitted": false,
+        "reason_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "record_date": "2026-08-28",
+        "source_contract": "hnx_official_rights_event_index/v1",
+        "source_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7",
+        "source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:VC3:STOCK_DIVIDEND:2026-08-27:2026-08-28::1",
+        "source_url": "https://hnx.vn",
+        "ticker": "VC3"
+      },
+      {
+        "bridge_contract": "hnx_rights_event_index_ex_date_bridge/v1",
+        "bridge_scope": "EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION",
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_id": "current_official_event:0b25ee8337ce6d9095a656ea10d3424852fd2a92eb6cf14bc22b9fee2f346c72",
+        "event_type": "STOCK_DIVIDEND",
+        "ex_date": "2026-08-19",
+        "execution_date": null,
+        "ledger_observation_emitted": false,
+        "reason_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "record_date": "2026-08-20",
+        "source_contract": "hnx_official_rights_event_index/v1",
+        "source_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7",
+        "source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:HCC:STOCK_DIVIDEND:2026-08-19:2026-08-20::1",
+        "source_url": "https://hnx.vn",
+        "ticker": "HCC"
+      },
+      {
+        "bridge_contract": "hnx_rights_event_index_ex_date_bridge/v1",
+        "bridge_scope": "EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION",
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_id": "current_official_event:f58590898fe1c54103a7966610446591e9b632f7f2eb02990ab31edb219d0213",
+        "event_type": "STOCK_DIVIDEND",
+        "ex_date": "2026-08-19",
+        "execution_date": null,
+        "ledger_observation_emitted": false,
+        "reason_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
+        "record_date": "2026-08-20",
+        "source_contract": "hnx_official_rights_event_index/v1",
+        "source_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7",
+        "source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:NAG:STOCK_DIVIDEND:2026-08-19:2026-08-20::1",
+        "source_url": "https://hnx.vn",
+        "ticker": "NAG"
+      }
+    ],
+    "cutoff_date": "2026-09-15",
+    "eligible_event_count": 237,
+    "excluded_completed_event_reasons": [
+      {
+        "event_id": "current_official_event:9e424ee7484639145eb1ae694071cc7bd3c5485c2cd34403f98b0210abbd9327",
+        "reason": "future_execution_date_not_treated_as_executed",
+        "ticker": "D11"
+      },
+      {
+        "event_id": "current_official_event:0bfdc041994103d23f687a2a01dcf88fe4993443828940ed0d5de154fbb33484",
+        "reason": "missing_explicit_ex_date",
+        "ticker": "G20"
+      }
+    ],
+    "reference_collection_ticker_count": 1703,
+    "selected_count": 3,
+    "selection_contract": "real_official_corporate_action_factor_evidence_candidate_selection/v1",
+    "selection_order": "event_type_stock_dividend_then_bonus_then_rights__newest_ex_date__ticker__event_id"
+  },
+  "contract_version": "real_official_corporate_action_factor_chain_evidence/v1",
+  "factor_chain_evaluation": {
+    "ledger_observations_emitted": 0,
+    "real_factor_chain_qualified_count": 0,
+    "reason": "no_exact_candidate_official_detail_notice_locator_in_retained_approved_hnx_rss_window"
+  },
+  "milestone": "REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1",
+  "pit_price_series_qualification": {
+    "reason": "raw_input_basis_authority_not_requested_without_real_factor_chain",
+    "status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED"
+  },
+  "retained_feed_parse": {
+    "candidate_count": 16,
+    "item_count": 100,
+    "target_item_count": 0,
+    "target_items": [],
+    "target_tickers": [
+      "HCC",
+      "NAG",
+      "VC3"
+    ]
+  },
+  "session": "2026-09-15",
+  "source_artifacts": {
+    "hnx_rights_event_index": {
+      "artifact_identity": "current_official_event_context:ba62a516b3c2189e27be8e98f653e9e4a14509495795b5ce956a6a2183d9127b",
+      "path": "operations-review\\current-official-event-context-integration-v1-20260824\\current_official_event_context_artifact.json",
+      "source_contract": "hnx_official_rights_event_index/v1"
+    },
+    "reference_collection": {
+      "artifact_identity": "current_official_market_universe:c8ba0f166d6fa051304aba6a0e22c53ac4ee764eaea481e3bad7444a49bcb0cd",
+      "path": "operations-review\\current-official-market-universe-refresh-v1-20260913\\current_official_market_universe_artifact.json",
+      "record_count": 1703
+    },
+    "retained_hnx_disclosure_feed": {
+      "canonical_url": "https://www.hnx.vn/3/vi_vn/thong-tin-cong-bo-tu-to-chuc-phat-hanh.rss",
+      "content_sha256": "e5ff6c07e72ebcc82079452812438d25dee84cb40e8fcaf4124917221f5f5440",
+      "document_id": "779a25c37264c6453bfba55b990fb813c98420749cace40980bb4c697df0eaee",
+      "extraction_status": "ready_for_discovery_parsing",
+      "observed_at": "2026-09-15T16:56:08.422616Z"
+    }
+  },
+  "source_ceiling": {
+    "reason_codes": [
+      "retained_hnx_rss_window_has_no_exact_candidate_detail_locator",
+      "hnx_rights_event_index_has_no_ratio_or_executed_lifecycle_fields",
+      "no_operator_supplied_finite_vsdc_or_issuer_ir_document_url",
+      "unbounded_historical_search_or_url_pattern_invention_prohibited"
+    ],
+    "status": "OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING"
+  }
+}

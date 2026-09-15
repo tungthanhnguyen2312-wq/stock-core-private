@@ -1,5 +1,21 @@
 # Stock Lookup — Operational State
 
+**Real official corporate-action factor-chain evidence V1 (2026-09-15):**
+`REAL_OFFICIAL_CORPORATE_ACTION_FACTOR_CHAIN_EVIDENCE_V1 = COMPLETE / OFFICIAL_EVIDENCE_ACQUIRED_PARTIAL_BY_SOURCE_CEILING`.
+The bounded real cohort is VC3 (2026-08-27), HCC (2026-08-19), and NAG (2026-08-19): all are in
+the retained current reference collection and have real explicit official HNX ex-dates. Their
+source-bound index bridge is deliberately `EXPLICIT_EX_DATE_ONLY_NOT_LEDGER_OBSERVATION`; each is
+therefore `OTHER_EVIDENCE_GAP`, never `MISSING_EXPLICIT_EX_DATE`. The governed exact HNX disclosure
+RSS input was retained immutably (`application/rss+xml`, raw SHA
+`e5ff6c07e72ebcc82079452812438d25dee84cb40e8fcaf4124917221f5f5440`) and parsed offline. Its
+100-item window contains no exact VC3/HCC/NAG historical detail locator. With no operator-supplied
+finite VSDC/issuer-IR URL, the approved routes cannot obtain a documentary ratio, executed lifecycle,
+or publication cutoff without prohibited unbounded historical search or invented URL patterns. Zero
+real events reach `FACTOR_CHAIN_QUALIFIED`; PIT is not evaluated and no raw input is requested.
+Artifact: `operations-review/real-official-corporate-action-factor-chain-evidence-v1-20260915/`.
+No provider call, Daily, runtime write, Dashboard publication, RAW_AS_TRADED/PIT promotion, or
+canonical classification change occurred.
+
 **Price basis factor-chain and PIT series qualification V1 (2026-09-15):**
 `PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1 = COMPLETE / FACTOR_CHAIN_PIPELINE_READY_PIT_SERIES_PARTIAL_BY_EVIDENCE`.
 Owner-authorized successor to `PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1` (below), which reused
