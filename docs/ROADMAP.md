@@ -1,5 +1,19 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Current research AI handoff packet V1 (2026-09-15):**
+`CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1 = COMPLETE_LOCAL`. Consumer transport / fitness-for-use
+only, closing the gap where a fresh AI research chat could not reliably access Stock Lookup's own
+current research/decision artifacts for HPG/SSI/PAN and fell back to external overlays. New
+`current_research_ai_handoff_packet/v1` (`current_research_ai_handoff_packet.py`) is a
+deterministic pass-through join over already-materialized Investment Decision Workspace + Screener
+Master Projection (never their own new analytical model), plus a two-session market-breadth
+context and the existing official-research-scope classification, all wrapped in a machine-readable
+`AI_MAY_*` boundary that forbids invented price triggers, position sizing, target prices, and
+probabilities. New `tools/build_current_research_ai_handoff_packet.py` CLI; real 2026-09-15
+validation reproduces the released 1,683/1,504/179 official-scope split exactly. See
+`docs/STATE.md` for the full trace, real validation numbers, and test results. No successor is
+queued.
+
 **Official scope evidence operationalization and Dashboard cutover readiness V1 (2026-09-15):**
 `OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1 = COMPLETE_LOCAL`.
 Closes an authority-lifecycle/portability gap left open by

@@ -1,5 +1,58 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-15 - Current Research AI Handoff Packet V1
+
+`CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1 = COMPLETE_LOCAL`, local checkpoint only, not pushed.
+Owner-authorized despite `queued_next=[]` (AGENTS.md "Default lightweight bootstrap").
+
+1. **Decision: transport/fitness-for-use only, never a new analytical model.** The owner's stated
+   gap was that a fresh AI chat cannot reach Stock Lookup's own current research artifacts for
+   HPG/SSI/PAN -- not that the artifacts are missing or wrong. Rejected any design that computed a
+   new indicator, score, rank, or recommendation to "fill in" the packet; every field traces to an
+   existing Workspace/Screener card field or is an explicit `NOT_AVAILABLE`. Mandatory flow:
+   retained qualified evidence -> existing deterministic analysis -> existing current product ->
+   packet -- never `AI -> invented missing analytics -> packet`.
+2. **Decision: union of Workspace and Screener ticker sets, never their intersection.** Workspace
+   and Screener are both keyed by ticker but built from slightly different denominators (Workspace
+   from the watchlist/valuation registry union, Screener from the canonical screen snapshot). An
+   intersection would silently drop any ticker present in only one product; the packet instead
+   unions both sets and records an explicit `data_availability` flag per card, so nothing a
+   downstream consumer could reach directly is ever hidden by joining two products together.
+3. **Decision: re-join `official_research_scope` at packet-assembly time rather than requiring the
+   Workspace/Screener artifacts to already carry it.** The real 2026-09-15 Workspace/Screener
+   artifacts retained on disk (`operations-review/daily-research-session-operations-v1/2026-09-15/
+   .../{investment_decision_workspace_projection,screener_master_projection}.json`) predate the
+   official-scope axis being threaded through their own production run (that axis was only
+   validated in a local rehearsal by `OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_
+   CUTOVER_READINESS_V1`, never actually wired into the Daily run that produced these files).
+   Rather than block on re-running Daily or rebuilding Workspace/Screener, the packet independently
+   resolves `canonical_current_product_projections.resolve_current_research_official_universe_
+   scope` and joins the same `current_research_official_universe_scope.ticker_scope_view` those two
+   build functions already apply internally when the axis is supplied to them -- reusing the exact
+   classification, not re-deriving it, and confirmed to reproduce the same 1,683/1,504/179 numbers
+   `OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1` already
+   validated for this session.
+4. **Decision: `market_context` is always two sessions, never one.** A single session's advance/
+   decline/MA-participation breadth is easy for an AI reader to over-interpret as a regime shift.
+   The packet always resolves the current session's `market_wide_current_descriptive_research/v1`
+   plus exactly one prior governed session (via the existing `governed_previous_operation.py`
+   resolver -- never a filesystem glob or latest-mtime guess) and computes deterministic deltas
+   between the two; it never invents a new "regime" label, passing through the existing
+   `breadth_descriptor`/`momentum_descriptor` (`market_regime_breadth_context/v1`) with their own
+   rule identity instead.
+5. **Decision: never read Workspace's `portfolio` field, at all.** Rather than filtering private-
+   position data out of an included field, the packet's card builder simply never reads Workspace's
+   `portfolio` section in the first place -- there is no code path through which private-portfolio,
+   account, credential, or sizing data could reach the packet. Verified with a test that includes a
+   deliberately-tagged private-position marker in a fixture Workspace card and asserts it never
+   appears anywhere in the serialized packet output.
+6. **Decision: primary artifact stays large; the watchlist subset is the actually-portable one.**
+   The full `investment_research_handoff_packet.json` (1,683 cards, ~50 MB for 2026-09-15) is the
+   repository-side reference artifact, not designed for upload to a chat session. `build_watchlist_
+   subset` produces a much smaller, genuinely portable projection for an explicit ticker list
+   (901 KB for the 12 required validation tickers) that preserves every source identity and
+   `market_context` unchanged and never silently drops a requested ticker.
+
 ## 2026-09-15 - Official Scope Evidence Operationalization And Dashboard Cutover Readiness V1
 
 `OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1 = COMPLETE_LOCAL`,

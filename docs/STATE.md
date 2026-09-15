@@ -1,5 +1,98 @@
 # Stock Lookup — Operational State
 
+**Current research AI handoff packet V1 (2026-09-15):**
+`CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1 = COMPLETE_LOCAL / OWNER_REVIEW_FOR_PUBLICATION`. Closes a
+real consumer transport / fitness-for-use gap: Stock Lookup already produces rich per-ticker
+current research/decision artifacts (Investment Decision Workspace, Screener Master Projection),
+but a fresh AI research chat has no way to read them, so it fell back to Finhay/web overlays for
+HPG/SSI/PAN -- risking blurred authority between Stock Lookup's governed evidence and un-governed
+external claims, and inviting invented sizing or exact technical triggers on an unbound price
+basis. `AUTHORITY_EFFECT = AI_RESEARCH_TRANSPORT_AND_FITNESS_FOR_USE_ONLY /
+NO_NEW_MARKET_DATA_PIT_LIQUIDITY_SIZING_EXECUTION_RECOMMENDATION_AUTHORITY`: no new analytical
+engine, no new recommendation engine, no new market-data provider, no universal score/rank.
+
+**Mandatory flow enforced structurally, never bypassed:** retained qualified evidence -> existing
+deterministic analysis (Workspace/Screener/descriptive research/official-universe scope) ->
+existing current product -> `current_research_ai_handoff_packet/v1`
+(`current_research_ai_handoff_packet.py`). The module performs zero new analysis: every card field
+is either a direct pass-through of an already-built Workspace/Screener card field, or an explicit
+`NOT_AVAILABLE` for a measurement Stock Lookup genuinely does not produce today (per-ticker
+moving-average/momentum/volatility/relative-volume values -- only market-wide breadth aggregates
+and Screener's own close/session-return exist at the per-ticker join). Cards are built over the
+**union** of Workspace and Screener ticker sets, never their intersection, so a ticker present in
+only one product is still surfaced (with an explicit `data_availability` flag), never silently
+dropped. `market_context` is a two-session snapshot -- current session plus the one prior governed
+session, both resolved the same already-governed way
+(`daily_research_session_operations.resolve_inputs` / `governed_previous_operation.py`) -- so a
+single session's breadth can never be read by the AI as a confirmed regime transition; no new
+regime label is invented, the existing `breadth_descriptor`/`momentum_descriptor`
+(`market_regime_breadth_context/v1`) are passed through with their own rule identity intact.
+`official_research_scope` per card reuses `canonical_current_product_projections.resolve_current_
+research_official_universe_scope` + `current_research_official_universe_scope.ticker_scope_view`
+-- the exact same pinned, identity-verified evidence Workspace/Screener already apply internally
+-- joined at packet-assembly time, since the real 2026-09-15 Workspace/Screener artifacts already
+retained on disk predate that axis being threaded through their own production run; this is the
+same reusable join those two build functions already perform when the axis is supplied to them,
+not a new classification.
+
+**Every packet and every card carries the machine-readable AI boundary verbatim:**
+`AI_MAY_EXPLAIN`/`AI_MAY_COMPARE`/`AI_MAY_FORM_CONDITIONAL_RESEARCH_SCENARIOS`/
+`AI_MAY_IDENTIFY_COUNTER_THESIS = true`; `AI_MAY_PROMOTE_AUTHORITY`/`AI_MAY_CREATE_EXECUTION_ORDER`/
+`AI_MAY_INVENT_PRICE_TRIGGER`/`AI_MAY_INVENT_POSITION_SIZE`/`AI_MAY_INVENT_TARGET_PRICE`/
+`AI_MAY_INVENT_PROBABILITY = false`; `RESEARCH_STANCE_IS_NOT_EXECUTION_ORDER`/
+`PRIORITY_NOW_IS_NOT_BUY_NOW = true`. Workspace's own private-portfolio section
+(`build_ticker_card`'s `portfolio` field) is never read by this module at all -- there is no
+private-position, account, credential, or private-sizing input in scope, so there is nothing to
+leak; verified by a test that serializes a full packet (built from a fixture Workspace card that
+deliberately includes a private portfolio marker) and asserts neither the `portfolio` key nor the
+marker string appears anywhere in the output.
+
+**Portability:** primary artifact `investment_research_handoff_packet.json` (full reference
+denominator, 1,683 cards for 2026-09-15, ~50 MB); `build_watchlist_subset` produces the smaller,
+genuinely-portable `investment_research_handoff_watchlist.json` for an explicit ticker list --
+preserves all source identities and `market_context`, never recomputes a field, and never silently
+drops a requested ticker (an out-of-scope/misspelled ticker gets an explicit
+`NOT_COVERED_BY_CURRENT_PRODUCTS` card instead of being omitted). New operator tool
+`tools/build_current_research_ai_handoff_packet.py` resolves everything from already-retained
+evidence only (the session's operation directory, the input registry, the governed-previous-
+operation resolver, the pinned official-universe evidence) -- no acquisition, no Daily rerun, no
+recomputation -- and writes both artifacts into the session's own operation directory by default.
+
+**Real 2026-09-15 validation**, against the actual released governed operation
+(`daily_research_session_operation:2026166fdb3fdea24d3b6c38847cca3bb28d1e35cecdad38ba2a91d3caa106bf`):
+reference denominator 1,683, current official research scope 1,504, outside scope 179 -- an exact
+match to `OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1`'s own
+numbers below, re-derived from the same pinned evidence, never recomputed. All 12 required
+validation tickers (HPG, SSI, PAN, FPT, VCB, PNJ, PVD, QNS, VNM, EVF, POW, NVL) present with
+`COVERED` cards and non-null `research_stance`/`fundamental.state`; a 13th, deliberately
+nonexistent ticker in the watchlist subset correctly resolves `NOT_COVERED_BY_CURRENT_PRODUCTS`,
+not a silent drop. `market_context` 2026-09-15 vs. the governed prior session 2026-09-14 (resolved
+via `governed_previous_operation.resolve_governed_previous_operation`): advancing 428 vs. 210,
+declining 228 vs. 442, above-MA20 234 vs. 212.
+
+**Tests**: 17 new focused tests
+(`tests/test_current_research_ai_handoff_packet.py`) -- contract/schema rejection, zero-silent-
+ticker-drop union semantics, official-scope join (in-scope/outside-scope/unknown), two-session
+market-context deltas plus explicit no-prior-session degradation, no-private-portfolio-leak,
+no-score/rank/probability/target/sizing field scan (the fixed `blocked_outputs` prohibition
+sentinels are explicitly excluded and asserted to stay fixed strings, never a real value),
+`NOT_AVAILABLE` technical-measurement honesty, watchlist-subset never-drops semantics, and one
+real-evidence 2026-09-15/HPG/SSI/PAN validation test (skipped, not failed, when the gitignored
+`operations-review/` evidence is absent in a fresh checkout, matching this repository's existing
+test convention). Regression sweep: Workspace + Screener suites 38/38, canonical current-product
+projections suite 19/19, all green -- this milestone touches none of their source files.
+`py_compile`, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`) all
+clean.
+
+**GUARDRAILS HELD**: no provider/network call, no Daily rerun, no mutation of any retained
+Producer artifact, no recomputation of any Workspace/Screener/descriptive-research field, no
+production runtime write, no Dashboard publication, no push, no merge to main, no
+`RAW_AS_TRADED`/PIT/liquidity/sizing/execution/recommendation authority change. A pre-existing
+`publish_dashboard.py` `WORKSPACE_SCHEMA` naming-mismatch gap flagged in a prior session remains
+unfixed and out of this milestone's bounded scope -- not a blocker here, since this packet reads
+Workspace/Screener artifacts directly, never through that publisher path. No successor milestone
+is queued.
+
 **Official scope evidence operationalization and Dashboard cutover readiness V1 (2026-09-15):**
 `OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1 = COMPLETE_LOCAL /
 READY_FOR_RELEASE_AND_DASHBOARD_CUTOVER`, isolated worktree rooted exactly at the released
