@@ -1,6 +1,6 @@
 {
-  "artifact_identity": "real_official_corporate_action_factor_chain_evidence:4fd5d13ab7fb61e63ecba773474f7ff99f610bde9740adf661526410ec694afd",
-  "artifact_sha256": "4fd5d13ab7fb61e63ecba773474f7ff99f610bde9740adf661526410ec694afd",
+  "artifact_identity": "real_official_corporate_action_factor_chain_evidence:d5d437b8d23100264f37b68dda18c519790f7d28a29ce35829f3d7559e59267e",
+  "artifact_sha256": "d5d437b8d23100264f37b68dda18c519790f7d28a29ce35829f3d7559e59267e",
   "authority_boundary": {
     "daily_execution": false,
     "dashboard_publication": false,
@@ -20,8 +20,23 @@
         "event_id": "current_official_event:b2399e7125da00882acf1338f0416881fc4bf0c7d0a01643b1d5952fecd4ed8c",
         "event_type": "STOCK_DIVIDEND",
         "ex_date": "2026-08-27",
+        "exact_blocker_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
         "execution_date": null,
+        "execution_status": "NOT_EXECUTED_NO_DOCUMENTARY_EVIDENCE",
+        "factor_chain_classification": "OTHER_EVIDENCE_GAP",
+        "factor_status": "NOT_QUALIFIED",
+        "knowledge_cutoff_status": "MISSING_DOCUMENTARY_PUBLICATION_CUTOFF",
         "ledger_observation_emitted": false,
+        "ledger_qualification": "NOT_EVALUATED_NOT_LEDGER_OBSERVATION",
+        "official_ex_date_status": "EXPLICIT_OFFICIAL",
+        "pit_raw_input_status": "NOT_REQUESTED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "pit_series_status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "ratio_share_evidence_status": "MISSING_OFFICIAL_DOCUMENTARY_EVIDENCE",
         "reason_codes": [
           "explicit_official_ex_date_present",
           "missing_documentary_stock_ratio_or_share_counts",
@@ -30,6 +45,10 @@
         ],
         "record_date": "2026-08-28",
         "source_contract": "hnx_official_rights_event_index/v1",
+        "source_document_identities": {
+          "index_source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:VC3:STOCK_DIVIDEND:2026-08-27:2026-08-28::1",
+          "retained_detail_document_ids": []
+        },
         "source_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7",
         "source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:VC3:STOCK_DIVIDEND:2026-08-27:2026-08-28::1",
         "source_url": "https://hnx.vn",
@@ -42,8 +61,23 @@
         "event_id": "current_official_event:0b25ee8337ce6d9095a656ea10d3424852fd2a92eb6cf14bc22b9fee2f346c72",
         "event_type": "STOCK_DIVIDEND",
         "ex_date": "2026-08-19",
+        "exact_blocker_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
         "execution_date": null,
+        "execution_status": "NOT_EXECUTED_NO_DOCUMENTARY_EVIDENCE",
+        "factor_chain_classification": "OTHER_EVIDENCE_GAP",
+        "factor_status": "NOT_QUALIFIED",
+        "knowledge_cutoff_status": "MISSING_DOCUMENTARY_PUBLICATION_CUTOFF",
         "ledger_observation_emitted": false,
+        "ledger_qualification": "NOT_EVALUATED_NOT_LEDGER_OBSERVATION",
+        "official_ex_date_status": "EXPLICIT_OFFICIAL",
+        "pit_raw_input_status": "NOT_REQUESTED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "pit_series_status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "ratio_share_evidence_status": "MISSING_OFFICIAL_DOCUMENTARY_EVIDENCE",
         "reason_codes": [
           "explicit_official_ex_date_present",
           "missing_documentary_stock_ratio_or_share_counts",
@@ -52,6 +86,10 @@
         ],
         "record_date": "2026-08-20",
         "source_contract": "hnx_official_rights_event_index/v1",
+        "source_document_identities": {
+          "index_source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:HCC:STOCK_DIVIDEND:2026-08-19:2026-08-20::1",
+          "retained_detail_document_ids": []
+        },
         "source_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7",
         "source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:HCC:STOCK_DIVIDEND:2026-08-19:2026-08-20::1",
         "source_url": "https://hnx.vn",
@@ -64,8 +102,23 @@
         "event_id": "current_official_event:f58590898fe1c54103a7966610446591e9b632f7f2eb02990ab31edb219d0213",
         "event_type": "STOCK_DIVIDEND",
         "ex_date": "2026-08-19",
+        "exact_blocker_codes": [
+          "explicit_official_ex_date_present",
+          "missing_documentary_stock_ratio_or_share_counts",
+          "missing_documentary_executed_lifecycle_evidence",
+          "missing_documentary_publication_cutoff"
+        ],
         "execution_date": null,
+        "execution_status": "NOT_EXECUTED_NO_DOCUMENTARY_EVIDENCE",
+        "factor_chain_classification": "OTHER_EVIDENCE_GAP",
+        "factor_status": "NOT_QUALIFIED",
+        "knowledge_cutoff_status": "MISSING_DOCUMENTARY_PUBLICATION_CUTOFF",
         "ledger_observation_emitted": false,
+        "ledger_qualification": "NOT_EVALUATED_NOT_LEDGER_OBSERVATION",
+        "official_ex_date_status": "EXPLICIT_OFFICIAL",
+        "pit_raw_input_status": "NOT_REQUESTED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "pit_series_status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "ratio_share_evidence_status": "MISSING_OFFICIAL_DOCUMENTARY_EVIDENCE",
         "reason_codes": [
           "explicit_official_ex_date_present",
           "missing_documentary_stock_ratio_or_share_counts",
@@ -74,6 +127,10 @@
         ],
         "record_date": "2026-08-20",
         "source_contract": "hnx_official_rights_event_index/v1",
+        "source_document_identities": {
+          "index_source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:NAG:STOCK_DIVIDEND:2026-08-19:2026-08-20::1",
+          "retained_detail_document_ids": []
+        },
         "source_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7",
         "source_record_identity": "beda6682026494ba24b3cf4dd79d8aae2876ef806271d4ca3bbcfdbb9ef2c6b7:NAG:STOCK_DIVIDEND:2026-08-19:2026-08-20::1",
         "source_url": "https://hnx.vn",

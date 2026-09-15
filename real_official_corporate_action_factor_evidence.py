@@ -42,8 +42,22 @@ def bridge_index_event(event: Mapping[str, Any]) -> dict[str, Any]:
         "source_identity": event.get("source_identity"),
         "source_record_identity": event.get("source_record_identity"),
         "source_url": event.get("source_url"),
+        "source_document_identities": {
+            "index_source_record_identity": event.get("source_record_identity"),
+            "retained_detail_document_ids": [],
+        },
+        "official_ex_date_status": "EXPLICIT_OFFICIAL" if event.get("ex_date") else "MISSING_EXPLICIT_OFFICIAL",
+        "ratio_share_evidence_status": "MISSING_OFFICIAL_DOCUMENTARY_EVIDENCE",
+        "execution_status": "NOT_EXECUTED_NO_DOCUMENTARY_EVIDENCE",
+        "knowledge_cutoff_status": "MISSING_DOCUMENTARY_PUBLICATION_CUTOFF",
+        "ledger_qualification": "NOT_EVALUATED_NOT_LEDGER_OBSERVATION",
+        "factor_status": "NOT_QUALIFIED",
+        "factor_chain_classification": classification,
+        "pit_raw_input_status": "NOT_REQUESTED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
+        "pit_series_status": "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED",
         "classification": classification,
         "reason_codes": reasons,
+        "exact_blocker_codes": reasons,
         "ledger_observation_emitted": False,
     }
 

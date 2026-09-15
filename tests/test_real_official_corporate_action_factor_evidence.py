@@ -25,6 +25,11 @@ class CandidateSelectionTests(unittest.TestCase):
         self.assertEqual([row["ticker"] for row in selected["candidates"]], ["VC3", "HCC", "NAG"])
         self.assertIn("future_execution_date_not_treated_as_executed",
                       {row["reason"] for row in selected["excluded_completed_event_reasons"]})
+        for row in selected["candidates"]:
+            self.assertEqual(row["official_ex_date_status"], "EXPLICIT_OFFICIAL")
+            self.assertEqual(row["ledger_qualification"], "NOT_EVALUATED_NOT_LEDGER_OBSERVATION")
+            self.assertEqual(row["factor_chain_classification"], "OTHER_EVIDENCE_GAP")
+            self.assertEqual(row["pit_series_status"], "NOT_EVALUATED_NO_REAL_FACTOR_CHAIN_QUALIFIED")
 
 
 if __name__ == "__main__":
