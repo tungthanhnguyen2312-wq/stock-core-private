@@ -1,5 +1,46 @@
 # Stock Lookup — Operational State
 
+**Price basis factor-chain and PIT series qualification V1 (2026-09-15):**
+`PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1 = COMPLETE / FACTOR_CHAIN_PIPELINE_READY_PIT_SERIES_PARTIAL_BY_EVIDENCE`.
+Owner-authorized successor to `PRICE_BASIS_SEMANTICS_AND_FEATURE_FITNESS_V1` (below), which reused
+its vocabulary/`evaluate_feature_fitness`/provider basis registry unmodified. This milestone builds
+the one adapter that was missing: `qualified_corporate_action_factor_chain.py` converts an
+`official_corporate_action_ledger.py` entry into the `factor_chain` shape
+`price_basis_feature_fitness.price_series_context()` already accepted but that nothing produced,
+classifying every ledger entry fail-closed into `FACTOR_CHAIN_QUALIFIED` /
+`MISSING_EXPLICIT_EX_DATE` / `NOT_EXECUTED` / `CONFLICTING` / `FACTOR_NOT_APPLICABLE` /
+`OTHER_EVIDENCE_GAP`; a knowledge/publication cutoff must be supplied by the caller from retained
+temporal evidence or `FACTOR_CHAIN_QUALIFIED` is refused even when the ledger factor is otherwise
+`ready`. `pit_price_series_qualification.py` adds the session-by-session PIT gate on top: a session
+qualifies only inside a bounded raw-input-basis authority (`provider_price_basis_registry.
+bounded_price_basis_for`) with every applicable factor-chain event both `QUALIFIED` and knowable
+strictly by the caller's `decision_as_of` (no-look-ahead); it never fills a missing session and
+never splices across an authority-window gap.
+
+Real-evidence inventory (this checkout): no raw corporate-action documents/ledger observations are
+present to run through `official_corporate_action_ledger.build_ledger()`. The real, retained
+`operations-review/current-official-event-context-integration-v1-20260824/
+current_official_event_context_artifact.json` (HNX official rights-event index, 4,450 events /
+1,101 tickers) does carry real official `ex_date`s for 239 share-affecting (`STOCK_DIVIDEND`/
+`BONUS`/`RIGHTS`) events, but -- being an event calendar, not a share-ratio ledger -- retains no
+`stock_ratio`/share-count and no ledger-grade executed-lifecycle evidence, so it is structurally
+out of `official_corporate_action_ledger`'s schema and cannot itself produce an adjustment factor.
+Zero real events in this repository reach `FACTOR_CHAIN_QUALIFIED`. Positive QUALIFIED mechanics
+(including the PIT session gate and `EXECUTION_RAW_REPLAY`/`PIT_BACKTEST` feature-fitness
+integration) are proven only via a clearly-labelled synthetic fixture cohort
+(`tools/run_price_basis_factor_chain_qualification.py`, ticker `TST*`), never reported as real
+qualification evidence. Also traced and resolved without widening authority: the exact-session
+current-market-evidence label `CURRENT_DESCRIPTIVE_NOT_PROMOTED_RAW_AS_TRADED` has no source-lineage
+proof of `ADJUSTED_RETROSPECTIVE`; `price_basis_feature_fitness._basis()` now maps it to
+`BASIS_UNKNOWN` explicitly (previously an accidental fallback default) -- zero authority change.
+Deterministic gap-table artifact:
+`operations-review/price-basis-factor-chain-and-pit-series-qualification-v1-20260915/
+price_basis_factor_chain_and_pit_series_qualification_gap_table_20260915.json`. No Daily, provider/
+network call, runtime write, canonical classification change, or RAW_AS_TRADED/PIT/liquidity/
+execution/sizing promotion. Next gate: acquire/retain real official corporate-action documents
+(ex-date + share-ratio evidence) for at least one ticker so a real `FACTOR_CHAIN_QUALIFIED` case can
+be produced through this same pipeline without any code change.
+
 **Current research AI handoff packet V1 corrective technical pass-through and release (2026-09-15):**
 `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_RELEASE = COMPLETE`.
 Corrects a real field-coverage error in the milestone directly below: the prior pass reported

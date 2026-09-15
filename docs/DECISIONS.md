@@ -1,5 +1,78 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-15 - Price Basis Factor-Chain And PIT Series Qualification V1
+
+`PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1 = COMPLETE / FACTOR_CHAIN_PIPELINE_READY
+/ PIT_SERIES_PARTIAL_BY_EVIDENCE`. Owner-authorized next strategic program; explicit override
+`OWNER_AUTHORIZATION_2026_09_15_PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1` (roadmap
+`queued_next` was empty, as expected -- this is a new program, not a continuation).
+
+1. **Decision: build one adapter, not a new vocabulary.** `official_corporate_action_ledger.py`
+   already derives an `adjustment_factor` with its own vocabulary; `price_basis_feature_fitness.
+   price_series_context()` already accepts a `factor_chain` mapping with a different vocabulary
+   (`status`, `official_execution_status`, `ex_date_status`, `knowledge_cutoff`). Nothing before
+   this milestone converted one into the other. New `qualified_corporate_action_factor_chain.py`
+   is exactly that one translation, derives no new fact, and computes no new factor -- it only
+   relabels an already-produced ledger verdict or reports why it cannot.
+2. **Decision: six-bucket fail-closed classification, evidence chooses the cohort.**
+   `FACTOR_CHAIN_QUALIFIED` / `MISSING_EXPLICIT_EX_DATE` / `NOT_EXECUTED` / `CONFLICTING` /
+   `FACTOR_NOT_APPLICABLE` / `OTHER_EVIDENCE_GAP`. A record date is never read as a substitute for
+   an ex-date (preserves the standing SSI `2026-08-18` invariant); a planned/announced lifecycle is
+   never read as executed. `build_factor_chain_cohort()` walks every retained ledger entry rather
+   than pre-selecting tickers.
+3. **Decision: knowledge/publication cutoff must be caller-supplied, never derived here.**
+   `official_corporate_action_ledger` entries retain only corporate-event dates (ex-date, record
+   date, payment/execution date), not a publication or first-observed timestamp. A missing cutoff
+   blocks `FACTOR_CHAIN_QUALIFIED` even when the ledger factor is otherwise `ready` --
+   `bitemporal_semantic_contract.project_official_evidence_temporal_metadata()` is the intended
+   resolver, applied by the caller to the qualifying event's original source document/observation.
+4. **Real-evidence inventory finding: zero events in this repository reach `FACTOR_CHAIN_QUALIFIED`.**
+   No raw corporate-action documents or ledger-shaped observations are present in this checkout to
+   run through `build_ledger()`. The real, retained `operations-review/current-official-event-
+   context-integration-v1-20260824/current_official_event_context_artifact.json` (HNX official
+   rights-event index, 4,450 events / 1,101 tickers) has genuine official `ex_date`s for 239
+   share-affecting (`STOCK_DIVIDEND`/`BONUS`/`RIGHTS`) events, but zero of them carry a
+   `stock_ratio`/share-count or ledger-grade executed-lifecycle evidence -- it is an event
+   calendar, not a share-ratio ledger, and is therefore structurally out of
+   `official_corporate_action_ledger`'s schema regardless of ex-date presence. Decision: do not
+   build a bridge from this source into the ledger schema by inventing lifecycle/ratio fields it
+   does not have; report the real ceiling honestly instead (see the committed gap-table artifact).
+   This also respects `current_official_event_context.py`'s own declared authority boundary
+   (`NO_PRICE_ADJUSTMENT_RAW_AS_TRADED_PIT_OR_BACKTEST_PROMOTION`), which a schema bridge would
+   have silently widened.
+5. **Decision: prove positive mechanics only via a clearly-labelled synthetic fixture, never as
+   real evidence.** `tools/run_price_basis_factor_chain_qualification.py` builds a `TST*`-ticker
+   synthetic ledger cohort through the real `build_ledger()` → `qualified_corporate_action_factor_
+   chain.py` → `price_series_context()` pipeline to demonstrate `FACTOR_CHAIN_QUALIFIED` and the
+   full `pit_price_series_qualification.py` session gate end-to-end -- something the real corpus
+   in this repository cannot currently demonstrate. Every synthetic artifact is tagged
+   `evidence_type: SYNTHETIC_FIXTURE_MECHANICS_ONLY_NOT_REAL_EVIDENCE`.
+6. **Decision: vocabulary reconciliation resolves to `BASIS_UNKNOWN`, not a new alias for
+   `ADJUSTED_RETROSPECTIVE`.** `CURRENT_DESCRIPTIVE_NOT_PROMOTED_RAW_AS_TRADED` (the label
+   `multi_source_market_evidence_contract.py`/`multi_source_exact_session_resolver.py` stamp on
+   exact-session current observations) was already silently falling back to `BASIS_UNKNOWN` in
+   `price_basis_feature_fitness._basis()`, because it matched no recognized alias. Traced the
+   underlying source lineage: no per-row proof of retrospective adjustment exists for it (unlike
+   the two-ticker, evidence-bounded DNSE HPG/VCB pilot in `dnse_ohlc_price_basis_capability.py`,
+   which remains the only per-row-proven `ADJUSTED_RETROSPECTIVE` case in the repository). Made the
+   existing fallback an explicit, documented alias entry instead of an accidental default --
+   zero authority change, zero new vocabulary value, one line.
+7. **PIT session gate: bounded authority, no splicing, no-look-ahead.** `pit_price_series_
+   qualification.py` resolves each requested session's raw-input basis via `provider_price_basis_
+   registry.bounded_price_basis_for()` (DNSE's real bounded windows: HPG `2026-05-15..2026-06-03`,
+   VCB `2026-07-13..2026-07-31`) and blocks closed for any session outside a named window -- it
+   never borrows a neighboring window's basis. Every applicable qualified factor's
+   `knowledge_cutoff` must be `<= decision_as_of`; a factor knowable only after the requested
+   decision date blocks that session (no-look-ahead). A `PARTIAL` series (some but not all
+   requested sessions qualified) is rendered `BASIS_UNKNOWN`, not `POINT_IN_TIME_ADJUSTED`, so
+   every price-derived feature fails closed for it rather than only `PIT_BACKTEST`.
+8. **Terminal disposition: `FACTOR_CHAIN_PIPELINE_READY / PIT_SERIES_PARTIAL_BY_EVIDENCE`.** Not
+   `PIT_PRICE_SERIES_QUALIFIED_FOR_BOUNDED_REAL_COHORT` (no real event reaches
+   `FACTOR_CHAIN_QUALIFIED`) and not `BLOCKED_BY_OFFICIAL_EX_DATE_OR_RAW_INPUT_EVIDENCE` (the
+   pipeline itself is complete, tested, and demonstrably correct end-to-end against synthetic
+   fixtures and real DNSE-bounded PIT windows). Next gate: acquire real official corporate-action
+   documents (explicit ex-date + share-ratio) for at least one ticker.
+
 ## 2026-09-15 - Current Research AI Handoff Packet V1 Corrective Technical Pass-Through And Release
 
 `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_RELEASE = COMPLETE`,

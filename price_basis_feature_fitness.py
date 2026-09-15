@@ -137,6 +137,14 @@ def _basis(value: Any) -> str:
         "PIT_ADJUSTED": POINT_IN_TIME_ADJUSTED,
         "UNKNOWN": BASIS_UNKNOWN,
         "BASIS_UNKNOWN": BASIS_UNKNOWN,
+        # Exact-session current-market-evidence producers (multi_source_market_evidence_contract.py,
+        # multi_source_exact_session_resolver.py) stamp this literal label. It is a distinct claim
+        # from CURRENT_RETROSPECTIVE_ADJUSTED -- "not promoted to raw-as-traded" -- with no retained
+        # per-row proof of retrospective adjustment either. PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_
+        # QUALIFICATION_V1 traced this seam and found no source lineage that proves ADJUSTED_RETROSPECTIVE
+        # for it; the explicit entry below documents that the fallback to BASIS_UNKNOWN is a deliberate
+        # decision, not an accidental default.
+        "CURRENT_DESCRIPTIVE_NOT_PROMOTED_RAW_AS_TRADED": BASIS_UNKNOWN,
     }
     return aliases.get(normalized, BASIS_UNKNOWN)
 

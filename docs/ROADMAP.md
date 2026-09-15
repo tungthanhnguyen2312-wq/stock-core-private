@@ -1,5 +1,21 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Price basis factor-chain and PIT series qualification V1 (2026-09-15):**
+`PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1 = COMPLETE / FACTOR_CHAIN_PIPELINE_READY_PIT_SERIES_PARTIAL_BY_EVIDENCE`.
+Fills the gate recorded below: converts a qualified `official_corporate_action_ledger.py` entry
+into the `factor_chain` shape `price_basis_feature_fitness.price_series_context()` already accepted
+but nothing produced (`qualified_corporate_action_factor_chain.py`), then gates a session-level PIT
+verdict on top (`pit_price_series_qualification.py`) against a bounded raw-input-basis authority and
+a no-look-ahead knowledge-cutoff check. Zero real retained corporate-action events in this
+repository reach `FACTOR_CHAIN_QUALIFIED` -- the real HNX official rights-event index has genuine
+official ex-dates for 239 share-affecting events but no share-ratio/executed-lifecycle evidence, so
+it is structurally out of the ledger's schema; positive mechanics are proven only via a
+clearly-labelled synthetic fixture cohort, never reported as real evidence. See `docs/STATE.md` for
+the full trace, the real-evidence inventory, and the deterministic gap-table artifact. No Daily,
+provider/network call, or RAW_AS_TRADED/PIT/liquidity/execution/sizing promotion. Next gate: acquire
+real official corporate-action documents (explicit ex-date + share-ratio) for at least one ticker so
+a real `FACTOR_CHAIN_QUALIFIED` case can be produced through this same pipeline.
+
 **Current research AI handoff packet V1 corrective technical pass-through and release (2026-09-15):**
 `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_RELEASE = COMPLETE`.
 Corrects a real coverage error in the milestone below: per-ticker RSI/MACD/moving-average/

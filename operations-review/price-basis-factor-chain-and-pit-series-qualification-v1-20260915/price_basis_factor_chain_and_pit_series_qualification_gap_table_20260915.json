@@ -1,0 +1,946 @@
+{
+  "artifact_identity": "price_basis_factor_chain_and_pit_series_qualification_gap_table:bad0089faab03ca2aed4a12e3aa118ac0a3e0dffb26fd1f6e9a979dd2d64f6a9",
+  "artifact_sha256": "bad0089faab03ca2aed4a12e3aa118ac0a3e0dffb26fd1f6e9a979dd2d64f6a9",
+  "authority_boundary": {
+    "daily_or_canonical_classifications_modified": false,
+    "historical_pit": "NOT_PROMOTED_MARKET_WIDE_BOUNDED_MECHANICS_ONLY",
+    "planned_issuance_treated_as_executed": false,
+    "provider_or_network_calls": false,
+    "raw_as_traded": "NOT_PROMOTED",
+    "record_date_inferred_as_ex_date": false,
+    "runtime_root_written": false
+  },
+  "contract_summaries": {
+    "pit_price_series_qualification": {
+      "authority_effect": "NONE",
+      "continuity_alone_never_implies_pit": true,
+      "contract_version": "pit_price_series_qualification/v1",
+      "eligible_raw_input_bases": [
+        "ADJUSTED_RETROSPECTIVE",
+        "RAW_AS_TRADED"
+      ],
+      "never_fills_missing_sessions": true,
+      "never_splices_incompatible_provider_series": true,
+      "series_states": [
+        "BLOCKED",
+        "PARTIAL",
+        "QUALIFIED"
+      ]
+    },
+    "price_basis_feature_fitness": {
+      "authority_effect": "NONE",
+      "basis_vocabulary": [
+        "BASIS_UNKNOWN",
+        "CURRENT_RETROSPECTIVE_ADJUSTED",
+        "POINT_IN_TIME_ADJUSTED",
+        "RAW_AS_TRADED"
+      ],
+      "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+      "feature_vocabulary": [
+        "EXECUTION_RAW_REPLAY",
+        "LOCAL_PRICE_ACTION",
+        "MA20",
+        "MA200",
+        "MA50",
+        "MOMENTUM_RETURN",
+        "PIT_BACKTEST",
+        "RSI"
+      ],
+      "fitness_states": [
+        "BASIS_COMPATIBLE",
+        "BASIS_COMPATIBLE_RESEARCH_ONLY",
+        "BASIS_INCOMPATIBLE",
+        "BASIS_UNVERIFIED",
+        "POINT_IN_TIME_SEMANTICS_UNQUALIFIED"
+      ],
+      "numeric_divergence_is_authority_gate": false,
+      "raw_as_traded_authority": "NOT_PROMOTED",
+      "record_date_inferred_as_ex_date": false
+    },
+    "qualified_corporate_action_factor_chain": {
+      "authority_effect": "NONE",
+      "classifications": [
+        "CONFLICTING",
+        "FACTOR_CHAIN_QUALIFIED",
+        "FACTOR_NOT_APPLICABLE",
+        "MISSING_EXPLICIT_EX_DATE",
+        "NOT_EXECUTED",
+        "OTHER_EVIDENCE_GAP"
+      ],
+      "contract_version": "qualified_corporate_action_factor_chain/v1",
+      "planned_issuance_treated_as_executed": false,
+      "record_date_inferred_as_ex_date": false
+    }
+  },
+  "contract_version": "price_basis_factor_chain_and_pit_series_qualification_gap_table/v1",
+  "feature_fitness_demonstration": {
+    "current_retrospective_adjusted_research_only_context": {
+      "context": {
+        "adjustment_knowledge_cutoff": null,
+        "authority_effect": "NONE",
+        "basis_confidence": "UNVERIFIED",
+        "basis_lineage_identity": "historical_series_failover_demo",
+        "basis_provenance": [
+          "historical_series_failover_demo"
+        ],
+        "context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+        "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+        "corporate_action_factor_chain": {
+          "event_types": [],
+          "identity": null,
+          "knowledge_cutoff": null,
+          "reason_codes": [
+            "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+          ],
+          "status": "NOT_PROVIDED"
+        },
+        "observed_basis": "CURRENT_RETROSPECTIVE_ADJUSTED",
+        "provider": "DNSE",
+        "raw_as_traded_authority": "NOT_PROMOTED",
+        "reason_codes": [],
+        "schema_version": "1.0.0",
+        "session_end": "2026-09-15",
+        "session_start": "2026-09-01",
+        "source_identity": "historical_series_failover_demo",
+        "ticker": "HPG"
+      },
+      "fitness": {
+        "EXECUTION_RAW_REPLAY": "BASIS_INCOMPATIBLE",
+        "LOCAL_PRICE_ACTION": "BASIS_COMPATIBLE_RESEARCH_ONLY",
+        "MA20": "BASIS_COMPATIBLE_RESEARCH_ONLY",
+        "MOMENTUM_RETURN": "BASIS_COMPATIBLE_RESEARCH_ONLY",
+        "PIT_BACKTEST": "POINT_IN_TIME_SEMANTICS_UNQUALIFIED",
+        "RSI": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+      },
+      "full_verdicts": {
+        "EXECUTION_RAW_REPLAY": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "decision_as_of": "2026-09-15",
+          "feature": "EXECUTION_RAW_REPLAY",
+          "fitness_identity": "price_basis_feature_fitness:c909cb8f065219d51bd6645527458861e17d696613258fd8e308ad1c070b6dc6",
+          "history_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "EXECUTION_REPLAY_REQUIRES_RAW_AS_TRADED"
+          ],
+          "state": "BASIS_INCOMPATIBLE"
+        },
+        "LOCAL_PRICE_ACTION": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "decision_as_of": "2026-09-15",
+          "feature": "LOCAL_PRICE_ACTION",
+          "fitness_identity": "price_basis_feature_fitness:1e203cabb23ba8d995d724fd84c48e893989da2b540ea70be8a9ad54361ff273",
+          "history_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+          ],
+          "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+        },
+        "MA20": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "decision_as_of": "2026-09-15",
+          "feature": "MA20",
+          "fitness_identity": "price_basis_feature_fitness:2d0648cf31fdb491834babaa1ff9e5265fc74e8bce825e3753cf9cbbcda89e6d",
+          "history_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+          ],
+          "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+        },
+        "MOMENTUM_RETURN": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "decision_as_of": "2026-09-15",
+          "feature": "MOMENTUM_RETURN",
+          "fitness_identity": "price_basis_feature_fitness:bd686a39a50d6f9427a199220fcd90d982a14b830827152f63224733697a30b4",
+          "history_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+          ],
+          "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+        },
+        "PIT_BACKTEST": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "decision_as_of": "2026-09-15",
+          "feature": "PIT_BACKTEST",
+          "fitness_identity": "price_basis_feature_fitness:2e5aba227e326c79040c07adff1feb9a9a59bcd5d0845275beb553219aa32695",
+          "history_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "PIT_REQUIRES_POINT_IN_TIME_ADJUSTED_SERIES"
+          ],
+          "state": "POINT_IN_TIME_SEMANTICS_UNQUALIFIED"
+        },
+        "RSI": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "decision_as_of": "2026-09-15",
+          "feature": "RSI",
+          "fitness_identity": "price_basis_feature_fitness:740c8d4e33aea9e5f130c7edb184648cc615e147d49b1a129c22af20fa1e3b75",
+          "history_context_identity": "price_basis_context:b3108820fd3d98e8de104367018b972f10db15d3ef994b32d356fcdf4ed65d4e",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "CURRENT_RETROSPECTIVE_ADJUSTED_RESEARCH_ONLY"
+          ],
+          "state": "BASIS_COMPATIBLE_RESEARCH_ONLY"
+        }
+      }
+    },
+    "real_evidence_blocked_context": {
+      "context": {
+        "adjustment_knowledge_cutoff": null,
+        "authority_effect": "NONE",
+        "basis_confidence": "UNVERIFIED",
+        "basis_lineage_identity": "market_wide_current_descriptive_research",
+        "basis_provenance": [
+          "market_wide_current_descriptive_research"
+        ],
+        "context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+        "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+        "corporate_action_factor_chain": {
+          "event_types": [],
+          "identity": null,
+          "knowledge_cutoff": null,
+          "reason_codes": [
+            "NO_QUALIFIED_CORPORATE_ACTION_FACTOR_CHAIN"
+          ],
+          "status": "NOT_PROVIDED"
+        },
+        "observed_basis": "BASIS_UNKNOWN",
+        "provider": null,
+        "raw_as_traded_authority": "NOT_PROMOTED",
+        "reason_codes": [
+          "BASIS_UNKNOWN_OR_UNSUPPORTED",
+          "PROVIDER_IDENTITY_NOT_RETAINED"
+        ],
+        "schema_version": "1.0.0",
+        "session_end": "2026-09-15",
+        "session_start": "2026-09-15",
+        "source_identity": "market_wide_current_descriptive_research",
+        "ticker": "HPG"
+      },
+      "fitness": {
+        "EXECUTION_RAW_REPLAY": "BASIS_UNVERIFIED",
+        "LOCAL_PRICE_ACTION": "BASIS_UNVERIFIED",
+        "MA20": "BASIS_UNVERIFIED",
+        "MOMENTUM_RETURN": "BASIS_UNVERIFIED",
+        "PIT_BACKTEST": "BASIS_UNVERIFIED",
+        "RSI": "BASIS_UNVERIFIED"
+      },
+      "full_verdicts": {
+        "EXECUTION_RAW_REPLAY": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "decision_as_of": "2026-09-15",
+          "feature": "EXECUTION_RAW_REPLAY",
+          "fitness_identity": "price_basis_feature_fitness:603e0257ab5bcbe4af411554ad773d9d13b0ea06370e2473025b705c5a6130a0",
+          "history_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "BASIS_UNKNOWN_OR_UNSUPPORTED"
+          ],
+          "state": "BASIS_UNVERIFIED"
+        },
+        "LOCAL_PRICE_ACTION": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "decision_as_of": "2026-09-15",
+          "feature": "LOCAL_PRICE_ACTION",
+          "fitness_identity": "price_basis_feature_fitness:5449461e0b3fa9bc269946921622a596030cd17b011e49cc67e05cfcc43ea9c3",
+          "history_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "BASIS_UNKNOWN_OR_UNSUPPORTED"
+          ],
+          "state": "BASIS_UNVERIFIED"
+        },
+        "MA20": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "decision_as_of": "2026-09-15",
+          "feature": "MA20",
+          "fitness_identity": "price_basis_feature_fitness:bc3249ffa2554b8c292bcd9d65377f96d2491f2a3ea9706ba1c358e8ce3f8aca",
+          "history_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "BASIS_UNKNOWN_OR_UNSUPPORTED"
+          ],
+          "state": "BASIS_UNVERIFIED"
+        },
+        "MOMENTUM_RETURN": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "decision_as_of": "2026-09-15",
+          "feature": "MOMENTUM_RETURN",
+          "fitness_identity": "price_basis_feature_fitness:38feba9c5bf01f321b81965318902addf28e4b5f042fc09eec9fc52d6b8cc2c9",
+          "history_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "BASIS_UNKNOWN_OR_UNSUPPORTED"
+          ],
+          "state": "BASIS_UNVERIFIED"
+        },
+        "PIT_BACKTEST": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "decision_as_of": "2026-09-15",
+          "feature": "PIT_BACKTEST",
+          "fitness_identity": "price_basis_feature_fitness:2eb6ab7937c536859fc401d501db9c0245f6f7bb38c0c4423865925a97681526",
+          "history_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "BASIS_UNKNOWN_OR_UNSUPPORTED"
+          ],
+          "state": "BASIS_UNVERIFIED"
+        },
+        "RSI": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "decision_as_of": "2026-09-15",
+          "feature": "RSI",
+          "fitness_identity": "price_basis_feature_fitness:041b31ee4841002399b95f348e9c055723e64e43c4205480cdd940949fc2932a",
+          "history_context_identity": "price_basis_context:c07de838b7a27c747455eb60777dc04dbcfb0ffa602d0ab30bfcd0dbf08146f5",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "BASIS_UNKNOWN_OR_UNSUPPORTED"
+          ],
+          "state": "BASIS_UNVERIFIED"
+        }
+      }
+    },
+    "synthetic_fully_qualified_pit_context": {
+      "evidence_type": "SYNTHETIC_FIXTURE_MECHANICS_ONLY_NOT_REAL_EVIDENCE",
+      "fitness": {
+        "EXECUTION_RAW_REPLAY": "BASIS_INCOMPATIBLE",
+        "LOCAL_PRICE_ACTION": "BASIS_COMPATIBLE",
+        "MA20": "BASIS_COMPATIBLE",
+        "MOMENTUM_RETURN": "BASIS_COMPATIBLE",
+        "PIT_BACKTEST": "BASIS_COMPATIBLE",
+        "RSI": "BASIS_COMPATIBLE"
+      },
+      "full_verdicts": {
+        "EXECUTION_RAW_REPLAY": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "decision_as_of": "2026-06-01",
+          "feature": "EXECUTION_RAW_REPLAY",
+          "fitness_identity": "price_basis_feature_fitness:a2fcbec2b67a28872ca41e38c334a065e61419c39c1231cf172b1850478888ca",
+          "history_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "EXECUTION_REPLAY_REQUIRES_RAW_AS_TRADED"
+          ],
+          "state": "BASIS_INCOMPATIBLE"
+        },
+        "LOCAL_PRICE_ACTION": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "decision_as_of": "2026-06-01",
+          "feature": "LOCAL_PRICE_ACTION",
+          "fitness_identity": "price_basis_feature_fitness:33a1afaa0f3d2f6ec9c35c93d647ef0a90becc68bd03484cda9079f24a06400e",
+          "history_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "POINT_IN_TIME_ADJUSTED_LINEAGE_COMPATIBLE"
+          ],
+          "state": "BASIS_COMPATIBLE"
+        },
+        "MA20": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "decision_as_of": "2026-06-01",
+          "feature": "MA20",
+          "fitness_identity": "price_basis_feature_fitness:924fa3fd6930509a61d7682c81856bf8e152a676f9b3a0a92f43dc1f200c091b",
+          "history_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "POINT_IN_TIME_ADJUSTED_LINEAGE_COMPATIBLE"
+          ],
+          "state": "BASIS_COMPATIBLE"
+        },
+        "MOMENTUM_RETURN": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "decision_as_of": "2026-06-01",
+          "feature": "MOMENTUM_RETURN",
+          "fitness_identity": "price_basis_feature_fitness:48941a44a29cf4a203299eedc5fb42e99249ccd214a9d8ed33e8010fe22c5cba",
+          "history_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "POINT_IN_TIME_ADJUSTED_LINEAGE_COMPATIBLE"
+          ],
+          "state": "BASIS_COMPATIBLE"
+        },
+        "PIT_BACKTEST": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "decision_as_of": "2026-06-01",
+          "feature": "PIT_BACKTEST",
+          "fitness_identity": "price_basis_feature_fitness:cc83e6d52d5e0cec41c8dd4bcc058472a82f5fa9f332f65a922fd8645e776b49",
+          "history_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "PIT_FACTORS_AND_SERIES_KNOWABLE_BY_DECISION_CUTOFF"
+          ],
+          "state": "BASIS_COMPATIBLE"
+        },
+        "RSI": {
+          "authority_effect": "NONE",
+          "contract_version": "price_basis_semantics_and_feature_fitness/v1",
+          "current_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "decision_as_of": "2026-06-01",
+          "feature": "RSI",
+          "fitness_identity": "price_basis_feature_fitness:974717618662812ee1b0443db066257106acd480c63fc2f907d94d24832be6f4",
+          "history_context_identity": "price_basis_context:ececbb82706fd313a03510a2c999aac290b2d1bfcedfc6dd2ec2839a0e1acf17",
+          "not_an_execution_or_backtest_authorization": true,
+          "numeric_divergence": {
+            "authority_gate": false,
+            "observed_price_divergence_pct": null,
+            "reason_codes": []
+          },
+          "reason_codes": [
+            "POINT_IN_TIME_ADJUSTED_LINEAGE_COMPATIBLE"
+          ],
+          "state": "BASIS_COMPATIBLE"
+        }
+      }
+    }
+  },
+  "milestone": "PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1",
+  "pit_series_demonstration": {
+    "dnse_active_bounded_authorities": [
+      {
+        "authority_id": "DNSE:ohlc_1D:HPG:ISS:2026-05-25",
+        "coverage_generalization": "not_authorized",
+        "dataset": "ohlc_1D",
+        "dataset_aliases": [
+          "ohlc",
+          "ohlc_1d"
+        ],
+        "effective_from": "2026-05-15",
+        "effective_to": "2026-06-03",
+        "event_code": "ISS",
+        "event_type": "stock_dividend_bonus_issue",
+        "evidence_contract_version": "dnse_ohlc_price_basis/2026-08-10",
+        "evidence_record_id": "31135d0d92c49322d66f26813bf4161505ce100e71d94057be4891b8467d7775",
+        "exright_date": "2026-05-25",
+        "instrument": "HPG",
+        "price_basis": "ADJUSTED_RETROSPECTIVE",
+        "provider": "DNSE"
+      },
+      {
+        "authority_id": "DNSE:ohlc_1D:VCB:DIV:2026-07-23",
+        "coverage_generalization": "not_authorized",
+        "dataset": "ohlc_1D",
+        "dataset_aliases": [
+          "ohlc",
+          "ohlc_1d"
+        ],
+        "effective_from": "2026-07-13",
+        "effective_to": "2026-07-31",
+        "event_code": "DIV",
+        "event_type": "cash_dividend",
+        "evidence_contract_version": "dnse_ohlc_price_basis/2026-08-10",
+        "evidence_record_id": "11ff5ae3e7ebbb8a0aca4d0240a33165b117ddafb1cee6d977d5a9c76cd2e534",
+        "exright_date": "2026-07-23",
+        "instrument": "VCB",
+        "price_basis": "ADJUSTED_RETROSPECTIVE",
+        "provider": "DNSE"
+      }
+    ],
+    "real_dnse_scope_boundary_control_ssi_blocked": {
+      "blocked_session_count": 1,
+      "contract_version": "pit_price_series_qualification/v1",
+      "dataset": "ohlc_1D",
+      "decision_as_of": "2026-06-01",
+      "instrument": "SSI",
+      "provider": "DNSE",
+      "qualified_session_count": 0,
+      "schema_version": "1.0.0",
+      "series_identity": "pit_price_series_qualification:65e4369b8852a69a23c977d262d1874eeb65e4c778cb37821643c5599f1f476c",
+      "sessions": [
+        {
+          "reason_codes": [
+            "PIT_SERIES_BLOCKED_RAW_INPUT_BASIS_UNQUALIFIED",
+            "no_bounded_price_basis_authority_for_provider_dataset_instrument_session"
+          ],
+          "session": "2026-05-16",
+          "state": "BLOCKED"
+        }
+      ],
+      "state": "BLOCKED",
+      "ticker": "SSI",
+      "total_session_count": 1
+    },
+    "synthetic_qualified_within_dnse_bounded_window": {
+      "blocked_session_count": 0,
+      "contract_version": "pit_price_series_qualification/v1",
+      "dataset": "ohlc_1D",
+      "decision_as_of": "2026-06-01",
+      "instrument": "HPG",
+      "provider": "DNSE",
+      "qualified_session_count": 3,
+      "schema_version": "1.0.0",
+      "series_identity": "pit_price_series_qualification:558b7efba401385969fce5c4a471a72fff426fc74dda1fa757c5ac6025ff46de",
+      "sessions": [
+        {
+          "applicable_factor_event_ids": [
+            "synthetic_demo_event"
+          ],
+          "raw_input_authority_reason": "bounded_price_basis_authority:DNSE:ohlc_1D:HPG:ISS:2026-05-25",
+          "raw_input_basis": "ADJUSTED_RETROSPECTIVE",
+          "reason_codes": [],
+          "session": "2026-05-16",
+          "state": "QUALIFIED"
+        },
+        {
+          "applicable_factor_event_ids": [
+            "synthetic_demo_event"
+          ],
+          "raw_input_authority_reason": "bounded_price_basis_authority:DNSE:ohlc_1D:HPG:ISS:2026-05-25",
+          "raw_input_basis": "ADJUSTED_RETROSPECTIVE",
+          "reason_codes": [],
+          "session": "2026-05-17",
+          "state": "QUALIFIED"
+        },
+        {
+          "applicable_factor_event_ids": [
+            "synthetic_demo_event"
+          ],
+          "raw_input_authority_reason": "bounded_price_basis_authority:DNSE:ohlc_1D:HPG:ISS:2026-05-25",
+          "raw_input_basis": "ADJUSTED_RETROSPECTIVE",
+          "reason_codes": [],
+          "session": "2026-05-18",
+          "state": "QUALIFIED"
+        }
+      ],
+      "state": "QUALIFIED",
+      "ticker": "HPG",
+      "total_session_count": 3
+    }
+  },
+  "real_official_event_index_evidence": {
+    "authority_boundary_declared_by_source": "CURRENT_FACTUAL_EVENT_CONTEXT_ONLY; NO_EVENT_SCORE_OR_IMPACT; NO_PRICE_ADJUSTMENT_RAW_AS_TRADED_PIT_OR_BACKTEST_PROMOTION",
+    "examples": [
+      {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_type": "RIGHTS",
+        "ex_date": "2026-01-14",
+        "execution_date": null,
+        "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+        "reason": "source is an event calendar (hnx_official_rights_event_index/v1): it retains no stock_ratio/share-count and no ledger-grade executed-lifecycle evidence, so no adjustment factor can be computed from it regardless of ex-date presence",
+        "record_date": "2026-01-15",
+        "ticker": "ABB"
+      },
+      {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_type": "STOCK_DIVIDEND",
+        "ex_date": "2026-07-09",
+        "execution_date": null,
+        "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+        "reason": "source is an event calendar (hnx_official_rights_event_index/v1): it retains no stock_ratio/share-count and no ledger-grade executed-lifecycle evidence, so no adjustment factor can be computed from it regardless of ex-date presence",
+        "record_date": "2026-07-10",
+        "ticker": "ABB"
+      },
+      {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_type": "STOCK_DIVIDEND",
+        "ex_date": "2025-09-11",
+        "execution_date": null,
+        "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+        "reason": "source is an event calendar (hnx_official_rights_event_index/v1): it retains no stock_ratio/share-count and no ledger-grade executed-lifecycle evidence, so no adjustment factor can be computed from it regardless of ex-date presence",
+        "record_date": "2025-09-12",
+        "ticker": "ABI"
+      },
+      {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_type": "BONUS",
+        "ex_date": "2025-09-11",
+        "execution_date": null,
+        "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+        "reason": "source is an event calendar (hnx_official_rights_event_index/v1): it retains no stock_ratio/share-count and no ledger-grade executed-lifecycle evidence, so no adjustment factor can be computed from it regardless of ex-date presence",
+        "record_date": "2025-09-12",
+        "ticker": "ABI"
+      },
+      {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_type": "STOCK_DIVIDEND",
+        "ex_date": "2025-08-07",
+        "execution_date": null,
+        "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+        "reason": "source is an event calendar (hnx_official_rights_event_index/v1): it retains no stock_ratio/share-count and no ledger-grade executed-lifecycle evidence, so no adjustment factor can be computed from it regardless of ex-date presence",
+        "record_date": "2025-08-08",
+        "ticker": "ACV"
+      },
+      {
+        "classification": "OTHER_EVIDENCE_GAP",
+        "event_type": "STOCK_DIVIDEND",
+        "ex_date": "2025-05-05",
+        "execution_date": null,
+        "qualification": "EX_DATE_OFFICIAL_QUALIFIED",
+        "reason": "source is an event calendar (hnx_official_rights_event_index/v1): it retains no stock_ratio/share-count and no ledger-grade executed-lifecycle evidence, so no adjustment factor can be computed from it regardless of ex-date presence",
+        "record_date": "2025-05-06",
+        "ticker": "AGP"
+      }
+    ],
+    "factor_chain_qualified_count": 0,
+    "ledger_grade_ratio_or_share_count_fields_present": false,
+    "missing_explicit_ex_date": 1,
+    "out_of_official_corporate_action_ledger_schema_scope": true,
+    "share_affecting_event_count": 239,
+    "share_affecting_event_types_scanned": [
+      "STOCK_DIVIDEND",
+      "BONUS",
+      "RIGHTS"
+    ],
+    "share_affecting_tickers": 165,
+    "source_contract": "current_official_event_context/v1",
+    "source_path": "operations-review\\current-official-event-context-integration-v1-20260824\\current_official_event_context_artifact.json",
+    "source_status": "PRESENT_REAL_RETAINED_EVIDENCE",
+    "total_event_records": 4450,
+    "total_tickers": 1101,
+    "underlying_source": "hnx_official_rights_event_index/v1",
+    "verdict": "Real, retained official ex-date evidence exists for 239 share-affecting events across 165 tickers, but this source carries no stock_ratio/share-count and no ledger-grade executed-lifecycle evidence. Zero of these events can reach FACTOR_CHAIN_QUALIFIED from this source alone; every one is, at best, MISSING_EXPLICIT_EX_DATE or OTHER_EVIDENCE_GAP.",
+    "with_execution_date_populated": 8,
+    "with_explicit_official_ex_date": 238
+  },
+  "schema_version": "1.0.0",
+  "session": "2026-09-15",
+  "synthetic_mechanics_cohort": {
+    "cohort": {
+      "classification_counts": {
+        "CONFLICTING": 1,
+        "FACTOR_CHAIN_QUALIFIED": 1,
+        "FACTOR_NOT_APPLICABLE": 1,
+        "MISSING_EXPLICIT_EX_DATE": 1,
+        "NOT_EXECUTED": 1,
+        "OTHER_EVIDENCE_GAP": 0
+      },
+      "cohort_size": 5,
+      "contract_version": "qualified_corporate_action_factor_chain/v1",
+      "events": [
+        {
+          "classification": "CONFLICTING",
+          "event_id": "3493575b94406b5608ae9cd51c10bfa4584e0fd83336007d205eb5ea112385a0",
+          "event_type": "stock_dividend",
+          "factor_chain": {
+            "adjustment_authority": "official_corporate_action_ledger",
+            "adjustment_factor": null,
+            "authority_state": "outside_production_authority",
+            "classification": "CONFLICTING",
+            "contract_version": "qualified_corporate_action_factor_chain/v1",
+            "event_types": [
+              "stock_dividend"
+            ],
+            "ex_date": "2026-05-26",
+            "ex_date_status": "EXPLICIT_OFFICIAL",
+            "factor_chain_identity": null,
+            "identity": null,
+            "knowledge_cutoff": null,
+            "official_execution_status": "EXECUTED",
+            "reason_codes": [
+              "documents_conflict"
+            ],
+            "record_date": null,
+            "schema_version": "1.0.0",
+            "source_content_hashes": [
+              "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+              "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+            ],
+            "source_document_ids": [
+              "d5",
+              "d6"
+            ],
+            "source_event_id": "3493575b94406b5608ae9cd51c10bfa4584e0fd83336007d205eb5ea112385a0",
+            "source_ledger_entry_identity": "3493575b94406b5608ae9cd51c10bfa4584e0fd83336007d205eb5ea112385a0",
+            "status": "NOT_QUALIFIED"
+          },
+          "ticker": "TST_CONFLICTING"
+        },
+        {
+          "classification": "FACTOR_NOT_APPLICABLE",
+          "event_id": "ee7f49d207ceac22704c185eed8798f72012a3911f2a079c0b5a129857cc17d3",
+          "event_type": "cash_dividend",
+          "factor_chain": {
+            "adjustment_authority": "official_corporate_action_ledger",
+            "adjustment_factor": null,
+            "authority_state": "outside_production_authority",
+            "classification": "FACTOR_NOT_APPLICABLE",
+            "contract_version": "qualified_corporate_action_factor_chain/v1",
+            "event_types": [
+              "cash_dividend"
+            ],
+            "ex_date": "2026-05-26",
+            "ex_date_status": "EXPLICIT_OFFICIAL",
+            "factor_chain_identity": null,
+            "identity": null,
+            "knowledge_cutoff": null,
+            "official_execution_status": "EXECUTED",
+            "reason_codes": [
+              "event_type_not_dilutive_or_concentrating"
+            ],
+            "record_date": null,
+            "schema_version": "1.0.0",
+            "source_content_hashes": [
+              "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            ],
+            "source_document_ids": [
+              "d4"
+            ],
+            "source_event_id": "ee7f49d207ceac22704c185eed8798f72012a3911f2a079c0b5a129857cc17d3",
+            "source_ledger_entry_identity": "ee7f49d207ceac22704c185eed8798f72012a3911f2a079c0b5a129857cc17d3",
+            "status": "NOT_QUALIFIED"
+          },
+          "ticker": "TST_FACTOR_NOT_APPLICABLE"
+        },
+        {
+          "classification": "MISSING_EXPLICIT_EX_DATE",
+          "event_id": "f0363a47a0fe58d3c22c250d61579ff684934f64b697b1b5a8ea195c976310e0",
+          "event_type": "stock_dividend",
+          "factor_chain": {
+            "adjustment_authority": "official_corporate_action_ledger",
+            "adjustment_factor": null,
+            "authority_state": "outside_production_authority",
+            "classification": "MISSING_EXPLICIT_EX_DATE",
+            "contract_version": "qualified_corporate_action_factor_chain/v1",
+            "event_types": [
+              "stock_dividend"
+            ],
+            "ex_date": null,
+            "ex_date_status": "MISSING",
+            "factor_chain_identity": null,
+            "identity": null,
+            "knowledge_cutoff": null,
+            "official_execution_status": "EXECUTED",
+            "reason_codes": [
+              "missing_explicit_official_ex_date",
+              "record_date_does_not_establish_ex_date"
+            ],
+            "record_date": "2026-05-24",
+            "schema_version": "1.0.0",
+            "source_content_hashes": [
+              "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "source_document_ids": [
+              "d2"
+            ],
+            "source_event_id": "f0363a47a0fe58d3c22c250d61579ff684934f64b697b1b5a8ea195c976310e0",
+            "source_ledger_entry_identity": "f0363a47a0fe58d3c22c250d61579ff684934f64b697b1b5a8ea195c976310e0",
+            "status": "NOT_QUALIFIED"
+          },
+          "ticker": "TST_MISSING_EX_DATE"
+        },
+        {
+          "classification": "NOT_EXECUTED",
+          "event_id": "2f8e9f1811b456095686f9a937965fa05766ee837632bddde5cf65a1178f2c5e",
+          "event_type": "stock_dividend",
+          "factor_chain": {
+            "adjustment_authority": "official_corporate_action_ledger",
+            "adjustment_factor": null,
+            "authority_state": "outside_production_authority",
+            "classification": "NOT_EXECUTED",
+            "contract_version": "qualified_corporate_action_factor_chain/v1",
+            "event_types": [
+              "stock_dividend"
+            ],
+            "ex_date": "2026-05-26",
+            "ex_date_status": "EXPLICIT_OFFICIAL",
+            "factor_chain_identity": null,
+            "identity": null,
+            "knowledge_cutoff": null,
+            "official_execution_status": "ANNOUNCED",
+            "reason_codes": [
+              "lifecycle_not_executed:announced"
+            ],
+            "record_date": null,
+            "schema_version": "1.0.0",
+            "source_content_hashes": [
+              "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            ],
+            "source_document_ids": [
+              "d3"
+            ],
+            "source_event_id": "2f8e9f1811b456095686f9a937965fa05766ee837632bddde5cf65a1178f2c5e",
+            "source_ledger_entry_identity": "2f8e9f1811b456095686f9a937965fa05766ee837632bddde5cf65a1178f2c5e",
+            "status": "NOT_QUALIFIED"
+          },
+          "ticker": "TST_NOT_EXECUTED"
+        },
+        {
+          "classification": "FACTOR_CHAIN_QUALIFIED",
+          "event_id": "c6aa5c3ee09a67210877df8e999e0368bc2b55c2f529f584d69b7dc59f3a71cb",
+          "event_type": "stock_dividend",
+          "factor_chain": {
+            "adjustment_authority": "official_corporate_action_ledger",
+            "adjustment_factor": 0.909090909091,
+            "authority_state": "outside_production_authority",
+            "classification": "FACTOR_CHAIN_QUALIFIED",
+            "contract_version": "qualified_corporate_action_factor_chain/v1",
+            "event_types": [
+              "stock_dividend"
+            ],
+            "ex_date": "2026-05-26",
+            "ex_date_status": "EXPLICIT_OFFICIAL",
+            "factor_chain_identity": "qualified_corporate_action_factor_chain:21d310f59b2f3f43cce2e01212e2a8bb6811f212f497d7a9b7528e58e37f2646",
+            "identity": "qualified_corporate_action_factor_chain:21d310f59b2f3f43cce2e01212e2a8bb6811f212f497d7a9b7528e58e37f2646",
+            "knowledge_cutoff": "2026-05-26T00:00:00+00:00",
+            "official_execution_status": "EXECUTED",
+            "reason_codes": [],
+            "record_date": null,
+            "schema_version": "1.0.0",
+            "source_content_hashes": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ],
+            "source_document_ids": [
+              "d1"
+            ],
+            "source_event_id": "c6aa5c3ee09a67210877df8e999e0368bc2b55c2f529f584d69b7dc59f3a71cb",
+            "source_ledger_entry_identity": "c6aa5c3ee09a67210877df8e999e0368bc2b55c2f529f584d69b7dc59f3a71cb",
+            "status": "QUALIFIED"
+          },
+          "ticker": "TST_QUALIFIED"
+        }
+      ],
+      "qualified_count": 1,
+      "schema_version": "1.0.0"
+    },
+    "evidence_type": "SYNTHETIC_FIXTURE_MECHANICS_ONLY_NOT_REAL_EVIDENCE",
+    "qualified_entry": {
+      "adjustment_authority": "official_corporate_action_ledger",
+      "adjustment_factor": 0.909090909091,
+      "authority_state": "outside_production_authority",
+      "classification": "FACTOR_CHAIN_QUALIFIED",
+      "contract_version": "qualified_corporate_action_factor_chain/v1",
+      "event_types": [
+        "stock_dividend"
+      ],
+      "ex_date": "2026-05-26",
+      "ex_date_status": "EXPLICIT_OFFICIAL",
+      "factor_chain_identity": "qualified_corporate_action_factor_chain:21d310f59b2f3f43cce2e01212e2a8bb6811f212f497d7a9b7528e58e37f2646",
+      "identity": "qualified_corporate_action_factor_chain:21d310f59b2f3f43cce2e01212e2a8bb6811f212f497d7a9b7528e58e37f2646",
+      "knowledge_cutoff": "2026-05-26T00:00:00+00:00",
+      "official_execution_status": "EXECUTED",
+      "reason_codes": [],
+      "record_date": null,
+      "schema_version": "1.0.0",
+      "source_content_hashes": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "source_document_ids": [
+        "d1"
+      ],
+      "source_event_id": "c6aa5c3ee09a67210877df8e999e0368bc2b55c2f529f584d69b7dc59f3a71cb",
+      "source_ledger_entry_identity": "c6aa5c3ee09a67210877df8e999e0368bc2b55c2f529f584d69b7dc59f3a71cb",
+      "status": "QUALIFIED"
+    }
+  }
+}
