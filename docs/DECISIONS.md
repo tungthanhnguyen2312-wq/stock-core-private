@@ -1,5 +1,64 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-15 - Current Research AI Handoff Packet V1 Corrective Technical Pass-Through And Release
+
+`CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_RELEASE = COMPLETE`,
+child commit of `372c13c`. Normal implementation/checkpoint/push already owner-authorized for this
+roadmap continuation.
+
+1. **Correction, not a new decision: the prior milestone's field-coverage claim was wrong.**
+   `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1` reported per-ticker RSI/MACD/moving-average/momentum/
+   structure/relative-volume as `NOT_CURRENTLY_PRODUCED`. Direct repository inspection (`ls
+   operations-review/integrated-investment-decision-product-v1-20260915/`,
+   `daily_session_level2_package.session_artifact_paths()`) proves `tactical_momentum_context/v1`
+   and `technical_structure_context/v2` already retain these per current session. The correct
+   classification is `PRODUCED_AND_RESEARCH_USABLE` / `NOT_EXPOSED_BY_OLD_WORKSPACE_SCREENER_
+   JOIN`, distinct from genuine absence (`ADX`/`MFI`, confirmed absent by repo-wide search before
+   writing the classification, not assumed).
+2. **Decision: extend the existing seam, do not rearchitect the packet.** The union-denominator,
+   watchlist-subset, `market_context`, official-scope-join, authority-boundary, and privacy-
+   boundary design from the base milestone are all preserved byte-for-byte in shape. Only
+   `build_card`/`build_packet` gain three new, independently optional parameters for the three
+   technical producers -- an intentionally narrow, additive change so the corrective pass cannot
+   introduce a regression in anything the base milestone already validated (confirmed: the base
+   milestone's own 1,683/1,504/179 numbers are unchanged after this pass).
+3. **Decision: read the three raw producing artifacts directly, not the condensed
+   `integrated_investment_decision_product/v1` bundle.** That bundle embeds byte-identical copies
+   of `momentum_context`/`tactical_confirmation_context` (verified) but its own
+   `source_identities.tactical_structure_identity` is `null` for the real 2026-09-15 operation --
+   it does not preserve `technical_structure_context`'s own identity. Reading the three raw
+   artifacts directly, each via the same deterministic `daily_session_level2_package.
+   session_artifact_paths()` contract, lets every technical block bind its own real, correct
+   `artifact_identity` into packet lineage, matching "bind exact artifact identities into packet
+   lineage" rather than accepting a lossy shortcut for one axis.
+4. **Decision: preserve the producer's own per-field status/reason verbatim, never gate on a
+   single top-level eligibility flag.** `tactical_momentum_context`/`technical_structure_context`
+   retain a record for every ticker (1,683/1,683), with each sub-field (rsi, macd, moving_
+   averages, relative_volume, ...) already carrying its own `AVAILABLE`/`NOT_AVAILABLE`/
+   `NOT_ELIGIBLE` status. The packet copies these verbatim rather than filtering on `eligibility.
+   status` and substituting a single blanket `NOT_AVAILABLE` -- a producer's own honest partial
+   result (e.g. `relative_volume: NOT_AVAILABLE` for an otherwise-eligible ticker like HPG) stays
+   visible exactly as retained, matching "if a producer says NOT_AVAILABLE, packet says
+   NOT_AVAILABLE" precisely at the sub-field level, not just the record level. Aggregate `coverage`
+   counters (`momentum_eligible_count`, etc.) are computed from the real `eligibility.status`,
+   confirmed to match each producer's own `coverage.eligible_count` exactly (855/1,683).
+5. **Decision: reuse `price_basis_feature_fitness.py` unmodified, including its own vocabulary and
+   its own answer.** Rather than declare technical measurements uniformly "research-only," each
+   ticker gets a real verdict from the module's own `evaluate_feature_fitness()`, fed a context
+   built from Screener's own retained price basis and `tactical_momentum_context`'s own technical-
+   history lineage -- never a new rule. The real 2026-09-15 answer is `BASIS_UNVERIFIED` for every
+   ticker, because Screener's own basis label this session doesn't match any alias the module
+   recognizes; this was verified as the module's genuine, correct behavior (not a bug introduced
+   here) by calling the module directly with the recognized `ADJUSTED_RETROSPECTIVE` alias and
+   confirming it resolves to `BASIS_COMPATIBLE_RESEARCH_ONLY` as expected. No alias was added, and
+   no verdict was widened to make the real answer look more permissive.
+6. **Decision: MACD gets an explicit approximation note, not a fabricated exact verdict.**
+   `price_basis_feature_fitness.PRICE_DERIVED_FEATURES` has no `MACD` entry. Rather than silently
+   evaluate MACD under the `RSI` feature id (implying an exactness that doesn't exist) or skip
+   fitness for MACD entirely, the packet computes RSI/MA20 verdicts from the same observed-basis
+   context and attaches an explicit `macd_fitness_note` stating that MACD shares the same context
+   but was not separately evaluated against its own named feature id.
+
 ## 2026-09-15 - Current Research AI Handoff Packet V1
 
 `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1 = COMPLETE_LOCAL`, local checkpoint only, not pushed.

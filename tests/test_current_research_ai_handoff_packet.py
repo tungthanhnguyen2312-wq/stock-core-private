@@ -385,19 +385,217 @@ def test_no_score_rank_probability_target_sizing_fields():
     )
 
 
-def test_missing_technical_measurement_is_not_available_not_substituted():
+def test_technical_axes_omitted_degrade_explicitly_not_silently():
+    """When the three technical-producer axes are not supplied to build_packet at all (the
+    caller only has Workspace/Screener on hand), every technical block is an explicit
+    NOT_AVAILABLE with a stated reason -- never silently absent, never a computed substitute."""
     workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
     screener = _screener_artifact({"AAA": _screener_card("AAA")})
     packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
                           workspace_artifact=workspace, screener_artifact=screener)
     measurements = packet["cards"]["AAA"]["tactical"]["measurements"]
-    assert measurements["moving_average_value"] == "NOT_AVAILABLE"
-    assert measurements["momentum_value"] == "NOT_AVAILABLE"
-    assert measurements["volatility_value"] == "NOT_AVAILABLE"
-    assert measurements["relative_volume_value"] == "NOT_AVAILABLE"
+    assert measurements["momentum"] == {"status": "NOT_AVAILABLE", "reason": "AXIS_NOT_SUPPLIED_THIS_BUILD"}
+    assert measurements["structure"] == {"status": "NOT_AVAILABLE", "reason": "AXIS_NOT_SUPPLIED_THIS_BUILD"}
+    assert measurements["confirmation_synthesis"] == {"status": "NOT_AVAILABLE", "reason": "AXIS_NOT_SUPPLIED_THIS_BUILD"}
+    assert measurements["price_basis_fitness"]["status"] == "NOT_AVAILABLE"
     # Real pass-through fields ARE populated (from Screener's price view).
     assert measurements["close"] == 25.6
     assert measurements["session_return_pct"] == 0.012
+    assert packet["coverage"]["momentum_context_supplied"] is False
+    assert packet["coverage"]["momentum_eligible_count"] == 0
+
+
+def _momentum_artifact(records: dict, *, session: str = SESSION):
+    return {
+        "contract_version": "tactical_momentum_context/v1", "target_session": session,
+        "artifact_identity": "tactical_momentum_context:momentum_abc", "records": records,
+    }
+
+
+def _momentum_record(ticker: str, *, eligible: bool = True, rsi_value: float = 43.3, ma20_value: float = 21.6):
+    if not eligible:
+        return {
+            "ticker": ticker, "eligibility": {"status": "NOT_ELIGIBLE", "reason": "TECHNICAL_FEATURES_UNAVAILABLE_OR_NOT_CURRENT_SESSION"},
+            "close_history_depth": 0, "price_direction_1d": None,
+            "rsi": {"status": "NOT_AVAILABLE", "reason": "TECHNICAL_FEATURES_UNAVAILABLE_OR_NOT_CURRENT_SESSION"},
+            "rsi_divergence": {"status": "NOT_AVAILABLE"}, "moving_averages": {}, "moving_average_ordering": {"status": "NOT_AVAILABLE"},
+            "macd": {"status": "NOT_AVAILABLE"}, "technical_history_lineage": None,
+            "authority_boundary": {"rsi_zone_is_measurement_not_buy_sell_signal": True},
+        }
+    return {
+        "ticker": ticker, "eligibility": {"status": "ELIGIBLE"}, "close_history_depth": 249, "price_direction_1d": "UP",
+        "rsi": {"status": "AVAILABLE", "value": rsi_value, "zone": "NEUTRAL", "direction": "RISING", "method": "WILDER_RSI_14"},
+        "rsi_divergence": {"status": "AVAILABLE", "divergence_state": "NO_DIVERGENCE_CANDIDATE"},
+        "moving_averages": {"20": {"status": "AVAILABLE", "value": ma20_value, "price_above": False, "price_below": True}},
+        "moving_average_ordering": {"status": "AVAILABLE", "ma_ordering": "DESCENDING_SHORT_UNDER_LONG"},
+        "macd": {"status": "AVAILABLE", "macd_line": -0.14, "signal_line": -0.08, "histogram": -0.06, "cross_event": "NONE"},
+        "technical_history_lineage": {"provider": "KBS", "source": "RETAINED_TECHNICAL_HISTORY_RECOVERY", "recovery_artifact_identity": "market_wide_current_technical_coverage_scaleout:xyz"},
+        "authority_boundary": {"rsi_zone_is_measurement_not_buy_sell_signal": True, "macd_cross_is_measurement_not_confirmation_signal": True},
+    }
+
+
+def _structure_artifact(records: dict, *, session: str = SESSION):
+    return {
+        "contract_version": "technical_structure_context/v2", "session": session,
+        "artifact_identity": "technical_structure_context:structure_abc", "records": records,
+    }
+
+
+def _structure_record(ticker: str, *, eligible: bool = True):
+    if not eligible:
+        return {"ticker": ticker, "eligibility": {"status": "NOT_ELIGIBLE", "reason": "INSUFFICIENT_STRUCTURE"}}
+    return {
+        "ticker": ticker, "eligibility": {"status": "ELIGIBLE"}, "authority_tier": "SHADOW_ONLY",
+        "trend_context": {"status": "AVAILABLE", "momentum_20d": -0.21, "trend_state": "AT_OR_BELOW_MA20"},
+        "structure_context": {"status": "AVAILABLE", "structure_status": "NEAR_RECENT_SUPPORT", "support": {"value": 20.9}, "resistance": {"value": 22.25}},
+        "contraction_context": {"status": "AVAILABLE", "range_state": "RANGE_STABLE"},
+        "relative_volume": {"status": "NOT_AVAILABLE", "relative_volume_provider_scoped": None},
+        "swing_structure": {"status": "AVAILABLE", "market_structure_state": "EARLY_BEARISH_REVERSAL"},
+        "bos_context": {"status": "AVAILABLE", "bos_state": "BEARISH_BOS_DETECTED_BY_RULE"},
+        "choch_context": {"status": "AVAILABLE", "choch_state": "NO_CHOCH"},
+        "breakout_context": {"status": "AVAILABLE", "event": "RE_ENTRY_ABOVE_SUPPORT"},
+        "breakout_state_v3": "BELOW_PIVOT",
+        "trigger_context": {"status": "AVAILABLE", "trigger_state": "TRIGGERED"},
+        "invalidation_context": {"status": "AVAILABLE", "invalidation_level": 22.05},
+        "pivot_context": {"status": "AVAILABLE", "pivot_price": 22.05},
+        "high_low_basis": {"status": "NOT_COMPATIBLE", "reason": "HIGH_LOW_BASIS_NOT_COMPATIBLE"},
+        "blockers": [],
+        "authority_boundary": {"invalidation_level_is_not_a_stop_loss": True},
+    }
+
+
+def _confirmation_artifact(records: dict, *, session: str = SESSION):
+    return {
+        "contract_version": "tactical_confirmation_context/v1", "session": session,
+        "artifact_identity": "tactical_confirmation_context:confirmation_abc", "records": records,
+    }
+
+
+def _confirmation_record(ticker: str, *, state: str = "NEUTRAL"):
+    return {
+        "ticker": ticker, "tactical_confirmation_state": state, "structure_stance": "BEARISH",
+        "structure_phase_label": "BREAKDOWN", "momentum_direction": "MIXED",
+        "participation_detail": {"participation_state": "INSUFFICIENT_EVIDENCE"}, "price_direction_1d": "UP",
+        "supporting_reasons": [], "contradicting_reasons": [],
+        "authority_boundary": {"not_a_recommendation_or_execution_instruction": True},
+    }
+
+
+def test_technical_measurements_pass_through_exact_upstream_values():
+    workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
+    screener = _screener_artifact({"AAA": _screener_card("AAA")})
+    momentum = _momentum_artifact({"AAA": _momentum_record("AAA", rsi_value=43.321958231, ma20_value=21.595)})
+    structure = _structure_artifact({"AAA": _structure_record("AAA")})
+    confirmation = _confirmation_artifact({"AAA": _confirmation_record("AAA")})
+    packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                          workspace_artifact=workspace, screener_artifact=screener,
+                          momentum_context_artifact=momentum, structure_context_artifact=structure,
+                          confirmation_context_artifact=confirmation)
+    measurements = packet["cards"]["AAA"]["tactical"]["measurements"]
+    assert measurements["momentum"]["status"] == "AVAILABLE"
+    assert measurements["momentum"]["rsi"]["value"] == 43.321958231
+    assert measurements["momentum"]["moving_averages"]["20"]["value"] == 21.595
+    assert measurements["momentum"]["source_artifact_identity"] == "tactical_momentum_context:momentum_abc"
+    assert measurements["structure"]["trend_context"]["momentum_20d"] == -0.21
+    assert measurements["structure"]["structure_context"]["support"]["value"] == 20.9
+    assert measurements["structure"]["relative_volume"]["status"] == "NOT_AVAILABLE"  # producer's own NOT_AVAILABLE preserved verbatim
+    assert measurements["structure"]["source_artifact_identity"] == "technical_structure_context:structure_abc"
+    assert measurements["confirmation_synthesis"]["tactical_confirmation_state"] == "NEUTRAL"
+    assert measurements["confirmation_synthesis"]["source_artifact_identity"] == "tactical_confirmation_context:confirmation_abc"
+    assert packet["source_artifacts"]["tactical_momentum_context"] == "tactical_momentum_context:momentum_abc"
+    assert packet["source_artifacts"]["technical_structure_context"] == "technical_structure_context:structure_abc"
+    assert packet["source_artifacts"]["tactical_confirmation_context"] == "tactical_confirmation_context:confirmation_abc"
+    assert packet["coverage"]["momentum_eligible_count"] == 1
+    assert packet["coverage"]["structure_eligible_count"] == 1
+
+
+def test_producer_own_not_available_is_never_rewritten_to_available():
+    workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
+    screener = _screener_artifact({"AAA": _screener_card("AAA")})
+    momentum = _momentum_artifact({"AAA": _momentum_record("AAA", eligible=False)})
+    structure = _structure_artifact({"AAA": _structure_record("AAA", eligible=False)})
+    confirmation = _confirmation_artifact({"AAA": _confirmation_record("AAA", state="INSUFFICIENT_EVIDENCE")})
+    packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                          workspace_artifact=workspace, screener_artifact=screener,
+                          momentum_context_artifact=momentum, structure_context_artifact=structure,
+                          confirmation_context_artifact=confirmation)
+    measurements = packet["cards"]["AAA"]["tactical"]["measurements"]
+    assert measurements["momentum"]["eligibility"]["status"] == "NOT_ELIGIBLE"
+    assert measurements["momentum"]["rsi"]["status"] == "NOT_AVAILABLE"
+    assert measurements["structure"]["eligibility"]["status"] == "NOT_ELIGIBLE"
+    assert measurements["confirmation_synthesis"]["tactical_confirmation_state"] == "INSUFFICIENT_EVIDENCE"
+    assert packet["coverage"]["momentum_eligible_count"] == 0
+    assert packet["coverage"]["structure_eligible_count"] == 0
+    assert packet["coverage"]["confirmation_evaluated_count"] == 0
+    # Not eligible -> price-basis fitness is explicitly unavailable, never computed anyway.
+    assert measurements["price_basis_fitness"]["status"] == "NOT_AVAILABLE"
+    assert measurements["price_basis_fitness"]["reason"] == "MOMENTUM_CONTEXT_TICKER_NOT_ELIGIBLE_THIS_SESSION"
+
+
+def test_price_basis_fitness_reuses_existing_contract_never_widens_verdict():
+    import price_basis_feature_fitness
+
+    workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
+    screener = _screener_artifact({"AAA": _screener_card("AAA")})
+    momentum = _momentum_artifact({"AAA": _momentum_record("AAA")})
+    packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                          workspace_artifact=workspace, screener_artifact=screener, momentum_context_artifact=momentum)
+    fitness = packet["cards"]["AAA"]["tactical"]["measurements"]["price_basis_fitness"]
+    assert fitness["status"] == "AVAILABLE"
+    assert fitness["rsi_fitness"]["contract_version"] == "price_basis_semantics_and_feature_fitness/v1"
+    assert fitness["rsi_fitness"]["state"] in price_basis_feature_fitness.FITNESS_STATES
+    assert fitness["moving_average_fitness"]["state"] in price_basis_feature_fitness.FITNESS_STATES
+    # The Screener fixture's own basis ("ADJUSTED_RETROSPECTIVE") is a genuinely recognized
+    # basis in price_basis_feature_fitness's vocabulary -> a real, non-fabricated verdict.
+    assert fitness["context"]["observed_basis"] in price_basis_feature_fitness.BASIS_VOCABULARY
+
+
+def test_technical_semantic_guard_flags_present_on_every_card():
+    workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
+    screener = _screener_artifact({"AAA": _screener_card("AAA")})
+    packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                          workspace_artifact=workspace, screener_artifact=screener)
+    boundary = packet["cards"]["AAA"]["authority_boundary"]
+    assert boundary["TECHNICAL_MEASUREMENT_IS_NOT_EXECUTION_INSTRUCTION"] is True
+    assert boundary["PRICE_DERIVED_LEVEL_REQUIRES_BASIS_FITNESS_INTERPRETATION"] is True
+    assert boundary["CURRENT_RESEARCH_MEASUREMENT_DOES_NOT_GRANT_PIT_AUTHORITY"] is True
+    assert boundary == AI_BOUNDARY
+    assert packet["authority_boundary"] == AI_BOUNDARY
+
+
+def test_watchlist_subset_preserves_technical_values_exactly():
+    workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
+    screener = _screener_artifact({"AAA": _screener_card("AAA")})
+    momentum = _momentum_artifact({"AAA": _momentum_record("AAA", rsi_value=61.5)})
+    packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                          workspace_artifact=workspace, screener_artifact=screener, momentum_context_artifact=momentum)
+    subset = build_watchlist_subset(packet, ["AAA"])
+    assert subset["cards"]["AAA"] == packet["cards"]["AAA"]
+    assert subset["cards"]["AAA"]["tactical"]["measurements"]["momentum"]["rsi"]["value"] == 61.5
+
+
+def test_momentum_context_wrong_contract_version_rejected():
+    workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
+    screener = _screener_artifact({"AAA": _screener_card("AAA")})
+    momentum = _momentum_artifact({"AAA": _momentum_record("AAA")})
+    momentum["contract_version"] = "not_the_real_contract/v1"
+    with pytest.raises(CurrentResearchAiHandoffPacketError):
+        build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                    workspace_artifact=workspace, screener_artifact=screener, momentum_context_artifact=momentum)
+
+
+def test_technical_field_coverage_correctly_classifies_produced_vs_absent():
+    from current_research_ai_handoff_packet import TECHNICAL_FIELD_COVERAGE
+    available = TECHNICAL_FIELD_COVERAGE["available_from_stocklookup"]
+    absent = TECHNICAL_FIELD_COVERAGE["not_currently_produced"]
+    for field in ("rsi_14", "moving_average_20_50_100_200", "macd_12_26_9", "momentum_20d", "support_resistance_levels"):
+        assert field in available
+    for field in ("adx", "mfi"):
+        assert field in absent
+    # The corrected classification must never claim RSI/MA/MACD are absent.
+    for field in absent:
+        assert "rsi" not in field.lower() or field == "adx"  # ADX itself never mentions rsi; sanity guard only
+    assert not any("moving_average" in field or "macd" in field or "rsi" in field for field in absent)
 
 
 def test_ticker_absent_from_both_products_is_explicit_not_dropped():
@@ -424,6 +622,22 @@ _REAL_OP_DIR = (
 )
 
 
+def _load_real_technical_axes(root: Path, session: str):
+    import daily_session_level2_package as level2
+
+    paths = level2.session_artifact_paths(root, session)
+
+    def _maybe_load(key: str):
+        path = paths.get(key)
+        return json.loads(path.read_text(encoding="utf-8")) if isinstance(path, Path) and path.is_file() else None
+
+    return (
+        _maybe_load("tactical_momentum_context"),
+        _maybe_load("technical_structure_context"),
+        _maybe_load("tactical_confirmation_context"),
+    )
+
+
 @pytest.mark.skipif(
     not (_REAL_OP_DIR / "investment_decision_workspace_projection.json").is_file(),
     reason="real 2026-09-15 operations-review evidence not present in this checkout",
@@ -444,13 +658,16 @@ def test_real_20260915_packet_matches_released_counts_and_validation_tickers():
         previous_values, _ = dso.resolve_inputs(root, previous["previous_session"], registry)
         descriptive_previous = previous_values.get("descriptive")
     scope = ccpp.resolve_current_research_official_universe_scope(root, SESSION)
+    momentum, structure, confirmation = _load_real_technical_axes(root, SESSION)
 
     packet = build_packet(
         session=SESSION, requested_at="2026-09-15T12:00:00Z", producer_commit="test", daily_operation_identity="test",
         workspace_artifact=workspace, screener_artifact=screener,
         descriptive_current=values.get("descriptive"), descriptive_previous=descriptive_previous,
         previous_session=previous.get("previous_session"), current_research_scope=scope,
+        momentum_context_artifact=momentum, structure_context_artifact=structure, confirmation_context_artifact=confirmation,
     )
+    # Existing 1683 / 1504 / 179 contract must be exactly unchanged by the technical corrective pass.
     assert packet["coverage"]["reference_denominator"] == 1683
     assert packet["coverage"]["current_official_research_scope_count"] == 1504
     assert packet["coverage"]["outside_current_official_research_scope_count"] == 179
@@ -467,3 +684,65 @@ def test_real_20260915_packet_matches_released_counts_and_validation_tickers():
         assert card["decision_context"]["research_stance"] is not None
         assert card["fundamental"]["state"] is not None
         assert card["blocked_outputs"]["target_price"] == "NOT_EMITTED"
+        # No private portfolio/account data anywhere in the real HPG/SSI/PAN cards.
+        assert "portfolio" not in card
+
+
+@pytest.mark.skipif(
+    not (_REAL_OP_DIR / "investment_decision_workspace_projection.json").is_file(),
+    reason="real 2026-09-15 operations-review evidence not present in this checkout",
+)
+def test_real_20260915_hpg_ssi_pan_technical_field_availability():
+    """All 12 validation tickers are genuinely eligible in the real 2026-09-15 technical
+    producers (verified: 855/855/855 eligible market-wide, matching each producer's own
+    ``coverage`` block exactly), so this proves real RSI/MA/MACD/structure pass-through for
+    HPG/SSI/PAN specifically -- not merely that the packet builds without error."""
+    import daily_session_level2_package as level2
+    import price_basis_feature_fitness
+
+    root = REPO_ROOT
+    workspace = json.loads((_REAL_OP_DIR / "investment_decision_workspace_projection.json").read_text(encoding="utf-8"))
+    screener = json.loads((_REAL_OP_DIR / "screener_master_projection.json").read_text(encoding="utf-8"))
+    momentum, structure, confirmation = _load_real_technical_axes(root, SESSION)
+    assert momentum is not None and structure is not None and confirmation is not None, "real technical producers must be present for this session"
+
+    packet = build_packet(
+        session=SESSION, requested_at="2026-09-15T12:00:00Z", producer_commit="test", daily_operation_identity="test",
+        workspace_artifact=workspace, screener_artifact=screener,
+        momentum_context_artifact=momentum, structure_context_artifact=structure, confirmation_context_artifact=confirmation,
+    )
+    # Cross-check against the producer's own real coverage counters (855/855/855 for 2026-09-15).
+    momentum_coverage = momentum.get("coverage") or {}
+    assert packet["coverage"]["momentum_eligible_count"] == momentum_coverage.get("eligible_count")
+
+    for ticker in VALIDATION_TICKERS:
+        measurements = packet["cards"][ticker]["tactical"]["measurements"]
+        assert measurements["momentum"]["status"] == "AVAILABLE", f"{ticker} momentum record missing"
+        assert measurements["momentum"]["eligibility"]["status"] == "ELIGIBLE", f"{ticker} not eligible for technical momentum this real session"
+        assert isinstance(measurements["momentum"]["rsi"]["value"], float)
+        assert isinstance(measurements["momentum"]["macd"]["macd_line"], float)
+        assert "20" in measurements["momentum"]["moving_averages"]
+        assert measurements["structure"]["status"] == "AVAILABLE"
+        assert measurements["structure"]["eligibility"]["status"] == "ELIGIBLE"
+        # relative_volume genuinely varies per ticker (NOT_AVAILABLE for some, AVAILABLE for
+        # others, e.g. HPG/SSI vs. PAN/VCB on 2026-09-15) -- report actual per-ticker status,
+        # never assume uniform availability across the validation cohort.
+        assert measurements["structure"]["relative_volume"]["status"] in ("AVAILABLE", "NOT_AVAILABLE")
+        assert measurements["confirmation_synthesis"]["tactical_confirmation_state"] is not None
+        fitness = measurements["price_basis_fitness"]
+        assert fitness["status"] == "AVAILABLE"
+        assert fitness["rsi_fitness"]["state"] in price_basis_feature_fitness.FITNESS_STATES
+
+
+def test_no_external_provider_fallback_in_module_source():
+    """Static guard: the packet module and its CLI never call out to an external market-data
+    provider, HTTP client, or web-fetch mechanism -- every field is a pass-through of already-
+    retained Stock Lookup evidence. (The module docstring legitimately *mentions* "Finhay" as the
+    problem this milestone solves, so that word itself is not scanned -- only real fetch-call
+    tokens are.)"""
+    import current_research_ai_handoff_packet as module
+
+    source = Path(module.__file__).read_text(encoding="utf-8")
+    forbidden = ["requests.", "urllib.request", "http.client", "httpx.", "aiohttp.", "socket.connect"]
+    for token in forbidden:
+        assert token not in source, f"forbidden external-fetch token found in packet module: {token}"

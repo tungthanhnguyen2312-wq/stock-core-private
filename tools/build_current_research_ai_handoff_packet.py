@@ -26,7 +26,14 @@ if str(REPO_ROOT) not in sys.path:
 import canonical_current_product_projections as ccpp  # noqa: E402
 import current_research_ai_handoff_packet as packet_module  # noqa: E402
 import daily_research_session_operations as dso  # noqa: E402
+import daily_session_level2_package as level2  # noqa: E402
 import governed_previous_operation as gpo  # noqa: E402
+
+_TECHNICAL_AXES = {
+    "momentum_context_artifact": "tactical_momentum_context",
+    "structure_context_artifact": "technical_structure_context",
+    "confirmation_context_artifact": "tactical_confirmation_context",
+}
 
 _OPERATIONS = Path("operations-review") / "daily-research-session-operations-v1"
 
@@ -98,6 +105,17 @@ def build(*, root: Path, session: str, requested_at: str, operation_dir: str | N
 
     current_research_scope = ccpp.resolve_current_research_official_universe_scope(root, session)
 
+    # Existing current-session technical producers, resolved via the same deterministic
+    # session-path contract Workspace's own supplementary technical axes already use (never a
+    # glob, never a "latest" search). Any file legitimately absent (e.g. an older session before
+    # a producer existed) degrades that axis to NOT_AVAILABLE inside the packet -- never blocks
+    # the build, never substituted with a computed value.
+    technical_paths = level2.session_artifact_paths(root, session)
+    technical_axes: dict[str, dict | None] = {}
+    for kwarg_name, path_key in _TECHNICAL_AXES.items():
+        path = technical_paths.get(path_key)
+        technical_axes[kwarg_name] = _load_json(path) if isinstance(path, Path) and path.is_file() else None
+
     packet = packet_module.build_packet(
         session=session,
         requested_at=requested_at,
@@ -109,6 +127,7 @@ def build(*, root: Path, session: str, requested_at: str, operation_dir: str | N
         descriptive_previous=descriptive_previous,
         previous_session=previous_session if descriptive_previous is not None else None,
         current_research_scope=current_research_scope,
+        **technical_axes,
     )
     return packet, op_dir
 

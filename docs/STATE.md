@@ -1,5 +1,98 @@
 # Stock Lookup — Operational State
 
+**Current research AI handoff packet V1 corrective technical pass-through and release (2026-09-15):**
+`CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_RELEASE = COMPLETE`.
+Corrects a real field-coverage error in the milestone directly below: the prior pass reported
+per-ticker RSI/MACD/moving-average/momentum/structure/relative-volume as
+`NOT_CURRENTLY_PRODUCED`. That was wrong. Repository inspection proves Stock Lookup already
+produces and retains these per current session -- `tactical_momentum_context/v1` (RSI-14 with
+zone/direction/level-cross-event, confirmed-swing RSI divergence, MA20/50/100/200 with price-
+above/below and slope, MA ordering, MACD 12/26/9, price direction, close-history depth),
+`technical_structure_context/v2` (support/resistance, trend context with `momentum_20d`,
+contraction/self-relative-volatility state, provider-scoped relative volume, swing structure,
+BOS/CHoCH, breakout/breakout-v3/trigger/invalidation/pivot context, `high_low_basis` fitness
+caveats), and `tactical_confirmation_context/v1` (confirmation-synthesis state/stance/phase). The
+real correction is `NOT_EXPOSED_BY_OLD_WORKSPACE_SCREENER_JOIN`, not `NOT_CURRENTLY_PRODUCED`:
+these three producers were simply never threaded through Workspace/Screener's own card shape, and
+were therefore invisible to a consumer (like the AI handoff packet) that only read those two
+products. Only `ADX` and `MFI` are genuinely absent from this repository -- confirmed by repo-wide
+search, not assumed.
+
+**Fix, without rewriting the packet architecture.** `current_research_ai_handoff_packet.py`'s
+union-denominator, watchlist-subset, `market_context`, official-scope-join, authority-boundary,
+and privacy-boundary design are all unchanged. Only the per-card `tactical.measurements` seam is
+extended: `build_packet` gains three new optional parameters
+(`momentum_context_artifact`/`structure_context_artifact`/`confirmation_context_artifact`), each
+independently omittable (degrading that card block to an explicit `NOT_AVAILABLE` /
+`AXIS_NOT_SUPPLIED_THIS_BUILD` -- never silently absent, never a computed substitute). The three
+artifacts are resolved the same deterministic way Workspace's own existing supplementary technical
+axes (`technical_structure`, `tactical_setup_tags`, `tactical_boundaries`) already are --
+`daily_session_level2_package.session_artifact_paths(root, session)` -- never a glob or "latest"
+search, and never duplicating any calculation: every RSI/MACD/MA/structure field is read verbatim
+from the producing artifact's own per-ticker record, including that record's own
+status/reason/eligibility, which is never rewritten (a producer's own `NOT_AVAILABLE`/
+`NOT_ELIGIBLE` stays exactly that in the packet). The higher-level condensed
+`integrated_investment_decision_product/v1` artifact was inspected as a candidate single source
+but rejected for the structure axis: its own `source_identities.tactical_structure_identity` is
+`null` for the real 2026-09-15 operation (it does not preserve `technical_structure_context`'s own
+identity), so the three raw producing artifacts are read directly instead, each binding its own
+real `artifact_identity` into packet lineage/`source_artifacts`.
+
+**Price-basis / feature-fitness, reused not reinvented.** Each eligible ticker's numeric technical
+measurements are paired with a `price_basis_fitness` block built from the existing, completely
+unmodified `price_basis_feature_fitness.py` (`price_basis_semantics_and_feature_fitness/v1`):
+`price_series_context()` for the observed basis/provider/source-identity/provenance context (from
+Screener's own retained `price.basis` plus `tactical_momentum_context`'s own
+`technical_history_lineage`), then `evaluate_feature_fitness()` (feature `RSI`, feature `MA20`,
+the module's own closed vocabulary) for a genuine verdict -- never a new compatibility rule, never
+a widened one. On the real 2026-09-15 evidence this consistently resolves to `BASIS_UNVERIFIED`
+for every validation ticker: Screener's own retained basis label for this session
+(`CURRENT_DESCRIPTIVE_NOT_PROMOTED_RAW_AS_TRADED`) does not match any alias in
+`price_basis_feature_fitness._basis()`'s recognized vocabulary (`RAW_AS_TRADED`,
+`CURRENT_RETROSPECTIVE_ADJUSTED`/`ADJUSTED_RETROSPECTIVE`, `POINT_IN_TIME_ADJUSTED`) -- this is the
+correct, honest, fail-closed answer (confirmed by a direct unit test using the vocabulary's own
+recognized `ADJUSTED_RETROSPECTIVE` alias, which does resolve to `BASIS_COMPATIBLE_RESEARCH_ONLY`
+as expected), not a defect in this milestone; no alias was added or widened to force a different
+outcome. MACD has no exact entry in `PRICE_DERIVED_FEATURES`; the packet states this explicitly
+(`macd_fitness_note`) rather than silently treating MACD as RSI-equivalent. `AI_BOUNDARY` gains
+three new flags on every packet and card:
+`TECHNICAL_MEASUREMENT_IS_NOT_EXECUTION_INSTRUCTION`,
+`PRICE_DERIVED_LEVEL_REQUIRES_BASIS_FITNESS_INTERPRETATION`,
+`CURRENT_RESEARCH_MEASUREMENT_DOES_NOT_GRANT_PIT_AUTHORITY` -- all `true`.
+
+**Real 2026-09-15 validation**, real technical producers (`tactical_momentum_context:8696028a...`,
+`technical_structure_context:f3af0e6a...`, `tactical_confirmation_context:e0f07cf9...`): the
+existing 1,683 / 1,504 / 179 official-scope split is byte-for-byte unchanged. Market-wide technical
+eligibility is 855/1,683 for all three axes -- exactly matching each real producer's own
+`coverage.eligible_count` (cross-checked, not merely asserted). All 12 required validation
+tickers (HPG, SSI, PAN, FPT, VCB, PNJ, PVD, QNS, VNM, EVF, POW, NVL) are genuinely `ELIGIBLE` this
+real session with real RSI/MA20/MACD values (e.g. HPG RSI 43.32, MA20 21.595; PAN RSI 30.12);
+`relative_volume` honestly varies per ticker (`NOT_AVAILABLE` for HPG/SSI/FPT/POW,
+`AVAILABLE` for PAN/VCB/PNJ/PVD/QNS/VNM/EVF/NVL on this session) -- reported per-ticker, never
+assumed uniform. The watchlist subset preserves every technical value byte-for-byte (verified
+identity-equal card comparison), never recomputes.
+
+**Tests**: 9 new/rewritten tests in `tests/test_current_research_ai_handoff_packet.py` (26 total in
+that file): exact upstream RSI/MA/MACD pass-through, producer's-own-`NOT_AVAILABLE` preserved
+verbatim (never rewritten to available), price-basis-fitness reuse without a widened verdict,
+technical semantic-guard flags on every card, watchlist-subset technical-value preservation,
+contract-version rejection for a malformed momentum axis, corrected `TECHNICAL_FIELD_COVERAGE`
+classification, real 2026-09-15 HPG/SSI/PAN technical-field-availability validation (cross-checked
+against each real producer's own coverage counters), and a static no-external-fetch-token guard.
+Full regression sweep: this file (26/26) + Workspace (38 combined with Screener) + Screener +
+canonical current-product projections (19/19) + `test_tactical_momentum_context.py` +
+`test_technical_structure_context.py` + `test_price_basis_feature_fitness.py` = 131/131 passed,
+zero failures -- this corrective pass touches none of those five producers' own source files.
+`py_compile`, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`) all
+clean.
+
+**GUARDRAILS HELD**: no provider/network call (verified by a static source-scan test), no Daily
+rerun, no recomputation of any RSI/MACD/MA/structure/momentum/relative-volume value (every one is
+a verbatim producer pass-through), no widened price-basis/feature-fitness verdict, no
+`RAW_AS_TRADED`/PIT/liquidity/sizing/execution/recommendation authority change, no mutation of any
+retained Producer artifact, no production runtime write, no Dashboard publication. See below for
+the full `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1` base milestone this corrects.
+
 **Current research AI handoff packet V1 (2026-09-15):**
 `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1 = COMPLETE_LOCAL / OWNER_REVIEW_FOR_PUBLICATION`. Closes a
 real consumer transport / fitness-for-use gap: Stock Lookup already produces rich per-ticker
@@ -12,13 +105,20 @@ NO_NEW_MARKET_DATA_PIT_LIQUIDITY_SIZING_EXECUTION_RECOMMENDATION_AUTHORITY`: no 
 engine, no new recommendation engine, no new market-data provider, no universal score/rank.
 
 **Mandatory flow enforced structurally, never bypassed:** retained qualified evidence -> existing
-deterministic analysis (Workspace/Screener/descriptive research/official-universe scope) ->
-existing current product -> `current_research_ai_handoff_packet/v1`
-(`current_research_ai_handoff_packet.py`). The module performs zero new analysis: every card field
-is either a direct pass-through of an already-built Workspace/Screener card field, or an explicit
-`NOT_AVAILABLE` for a measurement Stock Lookup genuinely does not produce today (per-ticker
-moving-average/momentum/volatility/relative-volume values -- only market-wide breadth aggregates
-and Screener's own close/session-return exist at the per-ticker join). Cards are built over the
+deterministic analysis (Workspace/Screener/descriptive research/official-universe scope, and --
+since the corrective pass above -- the existing `tactical_momentum_context`/`technical_structure_
+context`/`tactical_confirmation_context` technical producers) -> existing current product ->
+`current_research_ai_handoff_packet/v1` (`current_research_ai_handoff_packet.py`). The module
+performs zero new analysis: every card field is either a direct pass-through of an already-built
+Workspace/Screener card field, an already-built technical-producer record field, or an explicit
+`NOT_AVAILABLE` only when the producing artifact genuinely has no value for that ticker/session.
+**Corrected classification (see the corrective entry above this one):** per-ticker RSI-14, MA20/50/
+100/200 with slope/ordering, MACD 12/26/9, momentum_20d, structure/support/resistance,
+self-relative-volatility, and provider-scoped relative volume ARE produced and retained per
+current session -- `PRODUCED_AND_RESEARCH_USABLE`, previously misreported as
+`NOT_CURRENTLY_PRODUCED` when the real gap was `NOT_EXPOSED_BY_OLD_WORKSPACE_SCREENER_JOIN`. Only
+`ADX` and `MFI` are genuinely `NOT_CURRENTLY_PRODUCED` (confirmed absent repo-wide). Cards are
+built over the
 **union** of Workspace and Screener ticker sets, never their intersection, so a ticker present in
 only one product is still surfaced (with an explicit `data_availability` flag), never silently
 dropped. `market_context` is a two-session snapshot -- current session plus the one prior governed

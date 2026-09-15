@@ -12,14 +12,34 @@ inviting the AI to invent sizing or exact technical triggers on an unbound price
 consumer transport / fitness-for-use gap, not a missing analytical capability.
 
 Mandatory flow, enforced structurally by this module: retained qualified evidence (Workspace,
-Screener, market-wide descriptive research, official-universe scope) -> already-computed by
+Screener, market-wide descriptive research, official-universe scope, and -- as of the
+``CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_RELEASE`` corrective
+pass -- the existing current-session technical producers ``tactical_momentum_context/v1``,
+``technical_structure_context/v2``, ``tactical_confirmation_context/v1``) -> already-computed by
 those modules -> this packet. This module performs ZERO new analysis: every field is either a
-direct pass-through of an already-built Workspace/Screener card field, or an explicit
-``NOT_AVAILABLE`` when Stock Lookup genuinely does not produce that measurement today (see
-``_tactical_measurement_view``). It never computes RSI/ADX/MFI, never derives a target price,
-probability, position size, or execution level, and never reads private portfolio/account state
-(Workspace's own ``portfolio`` section, which is private-position context, is deliberately never
-read by this module -- see ``build_card``).
+direct pass-through of an already-built Workspace/Screener card field or an already-built
+technical-producer record, or an explicit ``NOT_AVAILABLE`` only when the producing artifact
+genuinely does not have a value for that ticker/session (see ``_technical_measurements_view``). It
+never computes RSI/MACD/moving averages/structure itself (those are read verbatim from
+``tactical_momentum_context``/``technical_structure_context``, never recalculated), never invents
+ADX/MFI (genuinely absent from this repository), never derives a target price, probability,
+position size, or execution level, and never reads private portfolio/account state (Workspace's
+own ``portfolio`` section, which is private-position context, is deliberately never read by this
+module -- see ``build_card``).
+
+Correction to an earlier pass of this milestone: RSI/MACD/moving-average/momentum/structure/
+relative-volume measurements were previously reported as ``NOT_CURRENTLY_PRODUCED``. That was
+wrong -- they are already produced and retained per current session by
+``tactical_momentum_context.py``/``technical_structure_context.py`` (resolved here via the exact
+same deterministic ``daily_session_level2_package.session_artifact_paths()`` path contract
+Workspace's own supplementary technical axes already use), simply not yet threaded through
+Workspace/Screener's own card shape. The gap was ``NOT_EXPOSED_BY_OLD_WORKSPACE_SCREENER_JOIN``,
+not ``NOT_CURRENTLY_PRODUCED``. Numeric price-derived technical measurements are additionally
+paired with a reused ``price_basis_feature_fitness`` (``price_basis_semantics_and_feature_
+fitness/v1``) verdict per ticker, exactly the module's existing, unmodified evaluator and
+vocabulary (``BASIS_COMPATIBLE`` / ``BASIS_COMPATIBLE_RESEARCH_ONLY`` / ``BASIS_UNVERIFIED`` /
+``BASIS_INCOMPATIBLE`` / ``POINT_IN_TIME_SEMANTICS_UNQUALIFIED``), so a numeric level never reads
+as execution-qualified.
 
 ``market_context`` is built from two independently governed sessions'
 ``market_wide_current_descriptive_research/v1`` artifacts (current + the one prior governed
@@ -45,6 +65,7 @@ import json
 from typing import Any, Mapping, Sequence
 
 import current_research_official_universe_scope as current_research_official_universe_scope_module
+import price_basis_feature_fitness
 
 CONTRACT_VERSION = "current_research_ai_handoff_packet/v1"
 WATCHLIST_CONTRACT_VERSION = "current_research_ai_handoff_watchlist/v1"
@@ -70,6 +91,11 @@ AI_BOUNDARY: dict[str, bool] = {
     "AI_MAY_INVENT_PROBABILITY": False,
     "RESEARCH_STANCE_IS_NOT_EXECUTION_ORDER": True,
     "PRIORITY_NOW_IS_NOT_BUY_NOW": True,
+    # Corrective technical pass-through seam: a numeric technical measurement is a research
+    # observation, never an instruction, a stop, an execution eligibility grant, or PIT authority.
+    "TECHNICAL_MEASUREMENT_IS_NOT_EXECUTION_INSTRUCTION": True,
+    "PRICE_DERIVED_LEVEL_REQUIRES_BASIS_FITNESS_INTERPRETATION": True,
+    "CURRENT_RESEARCH_MEASUREMENT_DOES_NOT_GRANT_PIT_AUTHORITY": True,
 }
 
 BLOCKED_OUTPUTS: dict[str, str] = {
@@ -89,17 +115,29 @@ PRIVACY_BOUNDARY: dict[str, str] = {
     "private_user_policy_limits": "NEVER_INCLUDED",
 }
 
+#: Corrected per CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_
+#: RELEASE: RSI/MA/MACD/structure/momentum/relative-volume ARE produced and retained per current
+#: session (tactical_momentum_context/v1, technical_structure_context/v2,
+#: tactical_confirmation_context/v1) -- the earlier "not currently produced" claim for these
+#: fields was wrong; they were simply not yet threaded through Workspace/Screener's own card
+#: shape (PRODUCED_AND_RESEARCH_USABLE / NOT_EXPOSED_BY_OLD_WORKSPACE_SCREENER_JOIN, not
+#: NOT_CURRENTLY_PRODUCED). Only ADX and MFI are genuinely absent from this repository.
 TECHNICAL_FIELD_COVERAGE: dict[str, list[str]] = {
     "available_from_stocklookup": [
-        "entry_state", "entry_action", "setup_tags", "close", "session_return_pct",
-        "price_basis", "market_wide_moving_average_participation",
+        "entry_state", "entry_action", "setup_tags", "close", "session_return_pct", "price_basis",
+        "rsi_14", "rsi_zone_direction_cross_event", "rsi_divergence_confirmed_swing",
+        "moving_average_20_50_100_200", "moving_average_price_above_below", "moving_average_slope",
+        "moving_average_ordering", "macd_12_26_9", "price_direction_1d", "close_history_depth",
+        "momentum_20d", "trend_state", "support_resistance_levels", "structure_status",
+        "swing_structure_market_structure_state", "bos_choch_context", "breakout_context",
+        "breakout_state_v3", "trigger_context", "invalidation_context", "pivot_context",
+        "contraction_range_state", "self_relative_volatility_state",
+        "relative_volume_provider_scoped_research_context", "tactical_confirmation_synthesis",
+        "price_basis_feature_fitness_verdict", "market_wide_moving_average_participation",
         "market_wide_advance_decline_breadth", "market_wide_momentum_breadth",
     ],
     "not_currently_produced": [
-        "per_ticker_moving_average_value", "per_ticker_momentum_value",
-        "per_ticker_volatility_value", "per_ticker_relative_volume_value",
-        "per_ticker_rsi_adx_mfi", "deterministic_technical_structure_pattern_detail",
-        "target_price", "position_size", "probability_of_success", "execution_eligibility",
+        "adx", "mfi", "target_price", "position_size", "probability_of_success", "execution_eligibility",
     ],
 }
 
@@ -198,12 +236,158 @@ def _market_context(
     }
 
 
-def _tactical_measurement_view(screener_card: Mapping[str, Any] | None) -> dict[str, Any]:
-    """Numeric technical measurements genuinely available at the per-ticker join today (close,
-    session return, price basis, from Screener's price view) vs. what is honestly not produced.
-    Never computes RSI/ADX/MFI or any other indicator not already an existing artifact field."""
+def _artifact_session(artifact: Mapping[str, Any] | None) -> str | None:
+    if not isinstance(artifact, Mapping):
+        return None
+    return artifact.get("session") or artifact.get("target_session")
+
+
+def _price_basis_fitness_view(
+    *, ticker: str, session: str, price_basis: str | None, momentum_record: Mapping[str, Any] | None,
+    momentum_identity: str | None,
+) -> dict[str, Any]:
+    """Reuse the existing, unmodified ``price_basis_feature_fitness`` evaluator to attach a
+    genuine basis/fitness verdict to the numeric technical measurements below -- never a new
+    compatibility rule, never a widened verdict. Only computed when there is a real eligible
+    momentum record and a real observed price basis to reason about; otherwise explicit
+    ``NOT_AVAILABLE`` rather than a fabricated context.
+
+    The evaluator compares a "current" against a "history" price-series context; this module has
+    only one retained context per session at this layer (no separate historical comparison
+    series), so the same context is deliberately passed as both -- this yields a same-session,
+    single-basis classification (typically ``BASIS_COMPATIBLE_RESEARCH_ONLY`` for the qualified
+    ``ADJUSTED_RETROSPECTIVE``/``CURRENT_RETROSPECTIVE_ADJUSTED`` basis this repository already
+    uses), not a cross-period PIT/backtest claim. ``feature`` is chosen from the module's own
+    closed ``PRICE_DERIVED_FEATURES`` vocabulary; MACD has no exact match in that vocabulary and
+    is deliberately noted as an approximate mapping rather than silently treated as exact.
+    """
+    eligible = isinstance(momentum_record, Mapping) and (momentum_record.get("eligibility") or {}).get("status") == "ELIGIBLE"
+    if not eligible or not price_basis:
+        return {
+            "status": NOT_AVAILABLE,
+            "reason": (
+                "MOMENTUM_CONTEXT_TICKER_NOT_ELIGIBLE_THIS_SESSION" if not eligible
+                else "NO_OBSERVED_PRICE_BASIS_AVAILABLE_FROM_SCREENER"
+            ),
+            "context": None, "rsi_fitness": None, "moving_average_fitness": None,
+        }
+    lineage = momentum_record.get("technical_history_lineage") if isinstance(momentum_record.get("technical_history_lineage"), Mapping) else {}
+    provider = lineage.get("provider")
+    source_identity = momentum_identity or lineage.get("recovery_artifact_identity")
+    provenance = [str(item) for item in (lineage.get("source"), lineage.get("recovery_artifact_identity")) if item]
+    context = price_basis_feature_fitness.price_series_context(
+        ticker=ticker, provider=provider, source_identity=source_identity,
+        session_start=session, session_end=session, observed_basis=str(price_basis),
+        basis_provenance=provenance, basis_confidence="SOURCE_SCOPED_CURRENT_RESEARCH_ONLY",
+        basis_lineage_identity=source_identity,
+    )
+    rsi_fitness = price_basis_feature_fitness.evaluate_feature_fitness(
+        feature=price_basis_feature_fitness.RSI, current_context=context, history_context=context,
+        decision_as_of=session,
+    )
+    ma_fitness = price_basis_feature_fitness.evaluate_feature_fitness(
+        feature=price_basis_feature_fitness.MA20, current_context=context, history_context=context,
+        decision_as_of=session,
+    )
+    return {
+        "status": "AVAILABLE",
+        "reason": None,
+        "context": context,
+        "rsi_fitness": rsi_fitness,
+        "moving_average_fitness": ma_fitness,
+        "macd_fitness_note": (
+            "MACD has no exact entry in price_basis_feature_fitness.PRICE_DERIVED_FEATURES; the "
+            "RSI/MA verdicts above -- built from the same observed price-basis context -- apply "
+            "equally to MACD, which shares that same context, not a separately-evaluated verdict."
+        ),
+    }
+
+
+def _technical_measurements_view(
+    *, ticker: str, session: str, screener_card: Mapping[str, Any] | None,
+    momentum_record: Mapping[str, Any] | None, momentum_identity: str | None, momentum_supplied: bool,
+    structure_record: Mapping[str, Any] | None, structure_identity: str | None, structure_supplied: bool,
+    confirmation_record: Mapping[str, Any] | None, confirmation_identity: str | None, confirmation_supplied: bool,
+) -> dict[str, Any]:
+    """Technical measurements: close/session-return (Screener's price view, as before) plus a
+    verbatim pass-through of the real per-ticker ``tactical_momentum_context``/
+    ``technical_structure_context``/``tactical_confirmation_context`` records when those optional
+    axes are supplied to ``build_packet``. Every sub-field keeps the producing module's own
+    status/reason exactly as retained -- a producer's own ``NOT_AVAILABLE``/``NOT_ELIGIBLE`` is
+    never rewritten, and this module never fills a gap with a computed or invented value. When an
+    axis is not supplied to this build at all, its block is explicitly ``NOT_AVAILABLE`` with
+    ``AXIS_NOT_SUPPLIED_THIS_BUILD`` -- never silently omitted, never confused with the producer
+    itself reporting no data for an ineligible ticker.
+    """
     price = (screener_card or {}).get("price") if isinstance(screener_card, Mapping) else None
     price = price if isinstance(price, Mapping) else {}
+
+    if not momentum_supplied:
+        momentum_view: dict[str, Any] = {"status": NOT_AVAILABLE, "reason": "AXIS_NOT_SUPPLIED_THIS_BUILD"}
+    elif not isinstance(momentum_record, Mapping):
+        momentum_view = {"status": NOT_AVAILABLE, "reason": "TICKER_ABSENT_FROM_TACTICAL_MOMENTUM_CONTEXT"}
+    else:
+        momentum_view = {
+            "status": "AVAILABLE",
+            "eligibility": momentum_record.get("eligibility"),
+            "close_history_depth": momentum_record.get("close_history_depth"),
+            "price_direction_1d": momentum_record.get("price_direction_1d"),
+            "rsi": momentum_record.get("rsi"),
+            "rsi_divergence": momentum_record.get("rsi_divergence"),
+            "moving_averages": momentum_record.get("moving_averages"),
+            "moving_average_ordering": momentum_record.get("moving_average_ordering"),
+            "macd": momentum_record.get("macd"),
+            "technical_history_lineage": momentum_record.get("technical_history_lineage"),
+            "authority_boundary": momentum_record.get("authority_boundary"),
+            "source_artifact_identity": momentum_identity,
+        }
+
+    if not structure_supplied:
+        structure_view: dict[str, Any] = {"status": NOT_AVAILABLE, "reason": "AXIS_NOT_SUPPLIED_THIS_BUILD"}
+    elif not isinstance(structure_record, Mapping):
+        structure_view = {"status": NOT_AVAILABLE, "reason": "TICKER_ABSENT_FROM_TECHNICAL_STRUCTURE_CONTEXT"}
+    else:
+        structure_view = {
+            "status": "AVAILABLE",
+            "eligibility": structure_record.get("eligibility"),
+            "authority_tier": structure_record.get("authority_tier"),
+            "trend_context": structure_record.get("trend_context"),
+            "structure_context": structure_record.get("structure_context"),
+            "contraction_context": structure_record.get("contraction_context"),
+            "relative_volume": structure_record.get("relative_volume"),
+            "swing_structure": structure_record.get("swing_structure"),
+            "bos_context": structure_record.get("bos_context"),
+            "choch_context": structure_record.get("choch_context"),
+            "breakout_context": structure_record.get("breakout_context"),
+            "breakout_state_v3": structure_record.get("breakout_state_v3"),
+            "trigger_context": structure_record.get("trigger_context"),
+            "invalidation_context": structure_record.get("invalidation_context"),
+            "pivot_context": structure_record.get("pivot_context"),
+            "high_low_basis": structure_record.get("high_low_basis"),
+            "blockers": list(structure_record.get("blockers") or []),
+            "authority_boundary": structure_record.get("authority_boundary"),
+            "source_artifact_identity": structure_identity,
+        }
+
+    if not confirmation_supplied:
+        confirmation_view: dict[str, Any] = {"status": NOT_AVAILABLE, "reason": "AXIS_NOT_SUPPLIED_THIS_BUILD"}
+    elif not isinstance(confirmation_record, Mapping):
+        confirmation_view = {"status": NOT_AVAILABLE, "reason": "TICKER_ABSENT_FROM_TACTICAL_CONFIRMATION_CONTEXT"}
+    else:
+        confirmation_view = {
+            "status": "AVAILABLE",
+            "tactical_confirmation_state": confirmation_record.get("tactical_confirmation_state"),
+            "structure_stance": confirmation_record.get("structure_stance"),
+            "structure_phase_label": confirmation_record.get("structure_phase_label"),
+            "momentum_direction": confirmation_record.get("momentum_direction"),
+            "participation_detail": confirmation_record.get("participation_detail"),
+            "price_direction_1d": confirmation_record.get("price_direction_1d"),
+            "supporting_reasons": list(confirmation_record.get("supporting_reasons") or []),
+            "contradicting_reasons": list(confirmation_record.get("contradicting_reasons") or []),
+            "authority_boundary": confirmation_record.get("authority_boundary"),
+            "source_artifact_identity": confirmation_identity,
+        }
+
     return {
         "close": price.get("value"),
         "close_status": price.get("status"),
@@ -213,16 +397,18 @@ def _tactical_measurement_view(screener_card: Mapping[str, Any] | None) -> dict[
         "session_return_pct_status": price.get("change_pct_status"),
         "price_basis": price.get("basis"),
         "price_as_of": price.get("as_of"),
-        "moving_average_value": NOT_AVAILABLE,
-        "momentum_value": NOT_AVAILABLE,
-        "volatility_value": NOT_AVAILABLE,
-        "relative_volume_value": NOT_AVAILABLE,
-        "deterministic_technical_structure_detail": NOT_AVAILABLE,
+        "momentum": momentum_view,
+        "structure": structure_view,
+        "confirmation_synthesis": confirmation_view,
+        "price_basis_fitness": _price_basis_fitness_view(
+            ticker=ticker, session=session, price_basis=price.get("basis"),
+            momentum_record=momentum_record if momentum_supplied else None, momentum_identity=momentum_identity,
+        ),
         "not_available_reason": (
-            "STOCK_LOOKUP_DOES_NOT_PRODUCE_A_PER_TICKER_MOVING_AVERAGE_MOMENTUM_VOLATILITY_OR_"
-            "RELATIVE_VOLUME_JOIN_IN_WORKSPACE_OR_SCREENER_TODAY -- market-wide cross-sectional "
-            "aggregates exist (see market_context), never substituted here for a missing "
-            "per-ticker measurement."
+            None if (momentum_supplied or structure_supplied or confirmation_supplied) else
+            "NO_TECHNICAL_PRODUCER_AXIS_SUPPLIED_TO_THIS_BUILD -- tactical_momentum_context/"
+            "technical_structure_context/tactical_confirmation_context were not passed to "
+            "build_packet; only Screener's own close/session_return are available."
         ),
     }
 
@@ -244,18 +430,29 @@ def _unknown_scope_view(reason: str) -> dict[str, Any]:
 def build_card(
     *,
     ticker: str,
+    session: str,
     workspace_card: Mapping[str, Any] | None,
     screener_card: Mapping[str, Any] | None,
     current_research_scope: Mapping[str, Any] | None,
     workspace_identity: str | None,
     screener_identity: str | None,
+    momentum_record: Mapping[str, Any] | None = None,
+    momentum_identity: str | None = None,
+    momentum_supplied: bool = False,
+    structure_record: Mapping[str, Any] | None = None,
+    structure_identity: str | None = None,
+    structure_supplied: bool = False,
+    confirmation_record: Mapping[str, Any] | None = None,
+    confirmation_identity: str | None = None,
+    confirmation_supplied: bool = False,
 ) -> dict[str, Any]:
-    """Compose one AI-consumer card from already-built Workspace/Screener cards for ``ticker``.
+    """Compose one AI-consumer card from already-built Workspace/Screener cards for ``ticker``,
+    plus (when supplied) the real per-ticker technical-producer records.
 
     Never reads Workspace's own ``portfolio`` section (private-position context) -- this module
     has no private-portfolio input in scope at all, so there is nothing to accidentally leak.
     Never computes a new field; every value below traces to an existing Workspace/Screener card
-    field or is an explicit ``NOT_AVAILABLE``."""
+    field, an existing technical-producer record field, or is an explicit ``NOT_AVAILABLE``."""
     if workspace_card is None and screener_card is None:
         return {
             "ticker": ticker,
@@ -326,7 +523,12 @@ def build_card(
             "setup_tags": list(tactical_state.get("setup_tags") or []),
             "freshness_status": tactical_state.get("freshness_status"),
             "source_session": tactical_state.get("source_session"),
-            "measurements": _tactical_measurement_view(s),
+            "measurements": _technical_measurements_view(
+                ticker=ticker, session=session, screener_card=s,
+                momentum_record=momentum_record, momentum_identity=momentum_identity, momentum_supplied=momentum_supplied,
+                structure_record=structure_record, structure_identity=structure_identity, structure_supplied=structure_supplied,
+                confirmation_record=confirmation_record, confirmation_identity=confirmation_identity, confirmation_supplied=confirmation_supplied,
+            ),
         },
         "market_sector": {
             "breadth_regime": market_sector.get("breadth_regime"),
@@ -394,6 +596,9 @@ def build_packet(
     descriptive_previous: Mapping[str, Any] | None = None,
     previous_session: str | None = None,
     current_research_scope: Mapping[str, Any] | None = None,
+    momentum_context_artifact: Mapping[str, Any] | None = None,
+    structure_context_artifact: Mapping[str, Any] | None = None,
+    confirmation_context_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build ``current_research_ai_handoff_packet/v1`` over the union of Workspace and Screener
     ticker sets -- never their intersection, so a ticker present in only one product is still
@@ -406,6 +611,16 @@ def build_packet(
     resolve_scope`` (typically via ``canonical_current_product_projections.resolve_current_
     research_official_universe_scope``); omitted, every card's ``official_research_scope``
     degrades to an explicit unknown state, never a fabricated bucket.
+
+    ``momentum_context_artifact``/``structure_context_artifact``/``confirmation_context_artifact``
+    (all optional) are the real, already-materialized ``tactical_momentum_context/v1`` /
+    ``technical_structure_context/v1`` or ``/v2`` / ``tactical_confirmation_context/v1``
+    artifacts for the same ``session`` -- resolved by the caller via the existing deterministic
+    ``daily_session_level2_package.session_artifact_paths()`` path contract, never a search. Any
+    of the three may be omitted independently (e.g. a caller with only Workspace/Screener on
+    hand); an omitted axis degrades every card's corresponding technical block to an explicit
+    ``NOT_AVAILABLE`` with ``AXIS_NOT_SUPPLIED_THIS_BUILD``, never silently absent and never
+    substituted with a computed value. Session mismatch on a *supplied* axis fails closed.
     """
     if workspace_artifact.get("contract_version") != "investment_decision_workspace_projection/v1":
         raise CurrentResearchAiHandoffPacketError("WORKSPACE_CONTRACT_UNSUPPORTED")
@@ -415,6 +630,36 @@ def build_packet(
         raise CurrentResearchAiHandoffPacketError("WORKSPACE_SESSION_MISMATCH")
     if screener_artifact.get("as_of_session") != session:
         raise CurrentResearchAiHandoffPacketError("SCREENER_SESSION_MISMATCH")
+
+    momentum_supplied = momentum_context_artifact is not None
+    if momentum_supplied:
+        if momentum_context_artifact.get("contract_version") != "tactical_momentum_context/v1":
+            raise CurrentResearchAiHandoffPacketError("MOMENTUM_CONTEXT_CONTRACT_UNSUPPORTED")
+        if _artifact_session(momentum_context_artifact) != session:
+            raise CurrentResearchAiHandoffPacketError("MOMENTUM_CONTEXT_SESSION_MISMATCH")
+    momentum_records = momentum_context_artifact.get("records") if momentum_supplied else None
+    momentum_records = momentum_records if isinstance(momentum_records, Mapping) else {}
+    momentum_identity = momentum_context_artifact.get("artifact_identity") if momentum_supplied else None
+
+    structure_supplied = structure_context_artifact is not None
+    if structure_supplied:
+        if structure_context_artifact.get("contract_version") not in ("technical_structure_context/v1", "technical_structure_context/v2"):
+            raise CurrentResearchAiHandoffPacketError("STRUCTURE_CONTEXT_CONTRACT_UNSUPPORTED")
+        if _artifact_session(structure_context_artifact) != session:
+            raise CurrentResearchAiHandoffPacketError("STRUCTURE_CONTEXT_SESSION_MISMATCH")
+    structure_records = structure_context_artifact.get("records") if structure_supplied else None
+    structure_records = structure_records if isinstance(structure_records, Mapping) else {}
+    structure_identity = structure_context_artifact.get("artifact_identity") if structure_supplied else None
+
+    confirmation_supplied = confirmation_context_artifact is not None
+    if confirmation_supplied:
+        if confirmation_context_artifact.get("contract_version") != "tactical_confirmation_context/v1":
+            raise CurrentResearchAiHandoffPacketError("CONFIRMATION_CONTEXT_CONTRACT_UNSUPPORTED")
+        if _artifact_session(confirmation_context_artifact) != session:
+            raise CurrentResearchAiHandoffPacketError("CONFIRMATION_CONTEXT_SESSION_MISMATCH")
+    confirmation_records = confirmation_context_artifact.get("records") if confirmation_supplied else None
+    confirmation_records = confirmation_records if isinstance(confirmation_records, Mapping) else {}
+    confirmation_identity = confirmation_context_artifact.get("artifact_identity") if confirmation_supplied else None
 
     workspace_cards = workspace_artifact.get("cards")
     screener_cards = screener_artifact.get("cards")
@@ -432,11 +677,15 @@ def build_packet(
     for ticker in tickers:
         cards[ticker] = build_card(
             ticker=ticker,
+            session=session,
             workspace_card=workspace_cards.get(ticker),
             screener_card=screener_cards.get(ticker),
             current_research_scope=current_research_scope,
             workspace_identity=workspace_identity if ticker in workspace_cards else None,
             screener_identity=screener_identity if ticker in screener_cards else None,
+            momentum_record=momentum_records.get(ticker), momentum_identity=momentum_identity, momentum_supplied=momentum_supplied,
+            structure_record=structure_records.get(ticker), structure_identity=structure_identity, structure_supplied=structure_supplied,
+            confirmation_record=confirmation_records.get(ticker), confirmation_identity=confirmation_identity, confirmation_supplied=confirmation_supplied,
         )
     if set(cards) != set(tickers):
         raise CurrentResearchAiHandoffPacketError("SILENT_TICKER_DROP")
@@ -461,6 +710,22 @@ def build_packet(
         "current_official_research_scope_count": in_scope,
         "outside_current_official_research_scope_count": outside_scope,
         "current_official_research_scope_unknown_count": unknown_scope,
+        "momentum_context_supplied": momentum_supplied,
+        "momentum_eligible_count": sum(
+            1 for card in cards.values()
+            if (card.get("tactical", {}).get("measurements", {}).get("momentum", {}).get("eligibility") or {}).get("status") == "ELIGIBLE"
+        ),
+        "structure_context_supplied": structure_supplied,
+        "structure_eligible_count": sum(
+            1 for card in cards.values()
+            if (card.get("tactical", {}).get("measurements", {}).get("structure", {}).get("eligibility") or {}).get("status") == "ELIGIBLE"
+        ),
+        "confirmation_context_supplied": confirmation_supplied,
+        "confirmation_evaluated_count": sum(
+            1 for card in cards.values()
+            if card.get("tactical", {}).get("measurements", {}).get("confirmation_synthesis", {}).get("tactical_confirmation_state")
+            not in (None, "INSUFFICIENT_EVIDENCE")
+        ),
     }
 
     source_artifacts = {
@@ -472,6 +737,9 @@ def build_packet(
         "market_wide_current_descriptive_research_previous": (
             descriptive_previous.get("artifact_identity") if isinstance(descriptive_previous, Mapping) else None
         ),
+        "tactical_momentum_context": momentum_identity,
+        "technical_structure_context": structure_identity,
+        "tactical_confirmation_context": confirmation_identity,
         "current_research_official_universe_scope": (
             {
                 "research_session": current_research_scope.get("research_session"),

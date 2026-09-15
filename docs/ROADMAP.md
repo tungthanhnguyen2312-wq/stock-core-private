@@ -1,5 +1,25 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Current research AI handoff packet V1 corrective technical pass-through and release (2026-09-15):**
+`CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1_CORRECTIVE_TECHNICAL_PASS_THROUGH_AND_RELEASE = COMPLETE`.
+Corrects a real coverage error in the milestone below: per-ticker RSI/MACD/moving-average/
+momentum/structure/relative-volume were wrongly reported `NOT_CURRENTLY_PRODUCED`. Repository
+inspection proves Stock Lookup already produces and retains these per current session
+(`tactical_momentum_context/v1`, `technical_structure_context/v2`, `tactical_confirmation_
+context/v1`) -- the real gap was `NOT_EXPOSED_BY_OLD_WORKSPACE_SCREENER_JOIN`, not `NOT_
+CURRENTLY_PRODUCED`. Only `ADX`/`MFI` are genuinely absent. The packet's existing architecture
+(union denominator, watchlist subset, market_context, official-scope join, authority/privacy
+boundary) is unchanged; only the per-card `tactical.measurements` seam is extended with a verbatim
+pass-through of the three real technical producers, resolved via the same deterministic
+`daily_session_level2_package.session_artifact_paths()` contract Workspace's own supplementary
+technical axes already use, plus a reused (never modified) `price_basis_feature_fitness` verdict
+per ticker so a numeric level never reads as execution-qualified. Real 2026-09-15 validation:
+1,683/1,504/179 unchanged; all 12 validation tickers genuinely `ELIGIBLE` with real RSI/MA/MACD
+values, cross-checked against each producer's own 855/1,683 coverage counter. See `docs/STATE.md`
+for the full trace. This closes the AI transport milestone; the next strategic program returns to
+core authority hardening (see `PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1` gate
+recorded below) -- not implemented this run, only the next gate is recorded.
+
 **Current research AI handoff packet V1 (2026-09-15):**
 `CURRENT_RESEARCH_AI_HANDOFF_PACKET_V1 = COMPLETE_LOCAL`. Consumer transport / fitness-for-use
 only, closing the gap where a fresh AI research chat could not reliably access Stock Lookup's own
