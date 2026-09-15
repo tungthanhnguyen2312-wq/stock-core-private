@@ -1,5 +1,79 @@
 # Stock Lookup — Operational State
 
+**Official scope evidence operationalization and Dashboard cutover readiness V1 (2026-09-15):**
+`OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1 = COMPLETE_LOCAL /
+READY_FOR_RELEASE_AND_DASHBOARD_CUTOVER`, isolated worktree rooted exactly at the released
+`47a4264d7eec78e464b9a36f2395f9143e755e50` (branch
+`feature/official-scope-evidence-operationalization-20260915`). Owner-authorized despite
+`queued_next=None`.
+
+**Root cause, confirmed by a genuinely cold checkout (not the same worktree lineage the
+milestone below already validated in):** the two milestones below already wired
+`canonical_current_product_projections.resolve_current_research_official_universe_scope()` to
+read the pinned, versioned HNX/UPCoM-enriched evidence at
+`CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE` and already validated real 2026-09-14 numbers
+against it -- but only from worktrees descended from the milestone that originally produced that
+evidence file. `operations-review/` is gitignored; a brand-new `git worktree add` off
+`47a4264...` (this milestone's own starting state) has an empty `operations-review/`, so
+`resolve_current_research_official_universe_scope` degrades to `None` there and
+`canonical_current_product_projections`/Workspace/Screener silently lose the entire official-scope
+axis -- reproduced directly before any fix. This is the same structural gap already documented
+repeatedly across this file for other `operations-review/` evidence (a fresh worktree lacking
+prior local history), now traced specifically for this evidence and closed rather than
+re-catalogued.
+
+**Fix: operationalize the already-qualified evidence, not re-qualify it.** Repository precedent
+(`git ls-files operations-review/` already force-tracks ~350 otherwise-gitignored milestone
+artifacts up to 31 MB, e.g. `operations-review/current-official-market-universe-integration-v1-
+20260824/`) is the existing durable-evidence pattern here -- not a new `config/promoted_*.json`
+duplication. `git add -f` the exact pinned evidence
+(`operations-review/hnx-upcom-official-security-status-enrichment-v1-20260913/
+current_official_market_universe_with_security_status_artifact.json`, verified byte-identical via
+SHA-256 across all three prior worktrees that held it, self-identity
+`current_official_market_universe:92ddcca20563cbc9350f77dd4e227946426cbf7e09f8766ca1c31f0bbc9cace7`)
+plus its companion base-refresh artifact and manifests, so any future checkout of this branch has
+them without depending on any specific worktree. Added defense-in-depth the milestone below did
+not have: `current_official_market_universe.verify_retained_artifact()` (self-hash, contract, and
+an explicit `CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_EXPECTED_IDENTITY` pin) now runs inside the
+resolver on every read, failing closed (to `None`, never a fabricated scope) on corrupted bytes, a
+wrong artifact identity, or a wrong `contract_version` -- not just a missing file. New bounded,
+explicit-source, no-network, idempotent, conflict-refusing migration tool
+(`current_official_universe_evidence_retention.py`,
+`tools/retain_current_official_universe_evidence.py`) for the next time this evidence needs
+re-pinning; it never discovers its source automatically.
+
+**Real replay reproduces the milestone-below's numbers exactly, now from the cold worktree, via
+the actual production entrypoint** (`canonical_current_product_projections.
+materialize_and_write_current_product_projections`, real retained 2026-09-14 `tactical`/
+`valuation` registry inputs, real `dashboard-runtime/screen_snapshot.csv`): reference 1,683,
+official scope 1,504, outside scope 179, official-only-excluded 20; price 853/830; tactical
+852/831; in-scope price 853/651, outside-scope price 0/179; in-scope tactical 852/652,
+outside-scope tactical 0/179; Screener's `source_artifacts.investment_decision_workspace` exactly
+equals Workspace's own `artifact_identity`. 2026-09-11 negative control still
+`TEMPORALLY_INELIGIBLE_FOR_SESSION` with no numeric denominator. A local-only
+`dashboard_release_publisher.publish_dashboard_release()` rehearsal against this replay's
+disposable operation directory (writes redirected to a throwaway staging directory; the real
+`market-dashboard`/`dashboard-runtime` checkouts untouched) returns
+`LOCAL_VALIDATED_NO_GIT_MUTATION` with `investment_workspace`/`screener_master` both
+`CURRENT`/`EXACT_SESSION`; `cockpit` correctly reports `UNAVAILABLE` (this disposable recovery
+directory never contained a `current_decision_cockpit_projection.json` -- no cockpit is
+fabricated). `DASHBOARD_PRESENTATION_PATCH_REQUIRED = NO`: the existing generic
+`official_scope_coverage`/scope-metadata surfaces already carry everything a Dashboard consumer
+needs; `market-dashboard` was inspected read-only and not modified.
+
+**GUARDRAILS HELD**: no new source qualification, no re-derivation, no provider/network call, no
+Daily rerun, no mutation of the immutable completed 2026-09-14 Daily operation
+(`daily_research_session_operation:7ae3e33c06106dfa41cd0ed11182c7e7c8fe59bc3cbe7245b2b7635bc20a2b5a`),
+no production runtime write, no `ACTIVE_UNIVERSE`/historical-PIT/RAW_AS_TRADED/liquidity/execution/
+sizing authority change, no Dashboard publication, no push, no merge to main. 13 new focused
+tests (`tests/test_official_scope_evidence_operationalization_20260915.py`); `py_compile`,
+`git diff --check`, and `tools/stocklookup_roadmap.py --check` (drift `PASS`) all clean. Focused
+regression sweep across the directly-touched suites reproduces the same pre-existing, unrelated
+gitignored-`operations-review`-evidence-absent-in-a-fresh-worktree failures already catalogued
+throughout this file (missing 2026-08-23/2026-08-24 evidence unrelated to this milestone) --
+confirmed identical against the untouched parent `stock-core-private` checkout, zero regressions
+attributable to this milestone. No successor is queued.
+
 **Workspace publisher lineage contract reconciliation V1 (2026-09-15):**
 `WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1 = COMPLETE_LOCAL /
 READY_FOR_OWNER_CUTOVER_REVIEW`, child commit of `0488ef6`. Local publisher rehearsal of the

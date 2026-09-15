@@ -75,6 +75,7 @@ from typing import Any, Mapping
 
 from atomic_io import atomic_write_file, atomic_write_json
 import canonical_daily_financial_v2_materialization
+import current_official_market_universe
 import current_research_official_universe_scope
 import current_thesis_case_context
 import current_valuation_opportunity_integration
@@ -99,11 +100,32 @@ VCI_INDUSTRY_SNAPSHOT_RELATIVE = "registry_snapshots/metadata/vnstock_metadata_s
 #: trading/control status on the 56-ticker no-bar cohort). Like ``VCI_INDUSTRY_SNAPSHOT_RELATIVE``
 #: above, this is NOT session-templated: the evidence's own ``official_observed_at`` governs
 #: temporal eligibility per requested session (see ``current_research_official_universe_scope``),
-#: never this pin's own acquisition date. Absent (e.g. an older checkout) degrades to current
-#: official-scope semantics being unavailable this run -- never a fabricated scope.
+#: never this pin's own acquisition date.
+#:
+#: Unlike ``VCI_INDUSTRY_SNAPSHOT_RELATIVE`` (deliberately gitignored generated data, see
+#: ``docs/metadata_registry_snapshot_contract.md``), this specific file is force-tracked in git
+#: (``git add -f``, the same durable-evidence pattern already used for ~350 other
+#: ``operations-review/`` milestone artifacts -- see e.g. ``operations-review/current-official-
+#: market-universe-integration-v1-20260824/``) as of OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_
+#: AND_DASHBOARD_CUTOVER_READINESS_V1, precisely because it is already-qualified evidence a
+#: released checkout must be able to resolve without depending on the specific worktree that
+#: originally produced it. See ``resolve_current_research_official_universe_scope`` below for the
+#: identity/contract binding that still fails this axis closed (never a fabricated scope) if a
+#: future checkout's tracked bytes were ever corrupted, downgraded, or re-pinned to a differently
+#: qualified artifact. An older, pre-operationalization checkout without this commit still
+#: degrades gracefully to current official-scope semantics being unavailable that run.
 CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE = (
     "operations-review/hnx-upcom-official-security-status-enrichment-v1-20260913/"
     "current_official_market_universe_with_security_status_artifact.json"
+)
+
+#: The exact ``artifact_identity`` this pin was verified against at operationalization time (see
+#: the milestone's evidence-lifecycle trace). Binds the pin to *this specific qualification*, not
+#: merely to "whatever bytes happen to be at this path" -- a future re-pin to a newer refresh must
+#: update this constant deliberately, in the same change that updates the path/pin above, never
+#: silently.
+CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_EXPECTED_IDENTITY = (
+    "current_official_market_universe:92ddcca20563cbc9350f77dd4e227946426cbf7e09f8766ca1c31f0bbc9cace7"
 )
 
 WORKSPACE_ARTIFACT_FILENAME = "investment_decision_workspace_projection.json"
@@ -185,18 +207,26 @@ def resolve_supplementary_inputs(root: Path, session: str) -> dict[str, dict[str
 
 def resolve_current_research_official_universe_scope(root: Path, session: str) -> dict[str, Any] | None:
     """Resolve the current official research-universe scope for ``session`` from the pinned,
-    versioned evidence at ``CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE`` -- never a glob, never
-    an acquisition. Returns ``None`` (never a fabricated scope, never raised out to the caller)
-    when the pinned evidence is absent or malformed; the temporal-eligibility gate itself is
-    handled inside ``current_research_official_universe_scope.resolve_scope`` -- a session before
-    the evidence's own observation date still resolves here (to an explicitly-ineligible scope
-    result), it just never narrows or admits anything downstream.
+    versioned, git-tracked evidence at ``CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE`` -- never a
+    glob, never an acquisition, never a different worktree. Returns ``None`` (never a fabricated
+    scope, never raised out to the caller) when the pinned evidence is absent, malformed, fails
+    its own self-hash, carries an unexpected ``contract_version``, or does not match
+    ``CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_EXPECTED_IDENTITY`` -- fail-closed applies equally to a
+    missing file and to tracked-but-corrupted/mismatched bytes. The temporal-eligibility gate
+    itself is handled inside ``current_research_official_universe_scope.resolve_scope`` -- a
+    session before the evidence's own observation date still resolves here (to an
+    explicitly-ineligible scope result), it just never narrows or admits anything downstream.
     """
     path = Path(root) / CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE
     if not path.is_file():
         return None
     try:
         official_artifact = _load_json(path)
+        current_official_market_universe.verify_retained_artifact(
+            official_artifact,
+            label="CURRENT_OFFICIAL_UNIVERSE_EVIDENCE",
+            expected_identity=CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_EXPECTED_IDENTITY,
+        )
         return current_research_official_universe_scope.resolve_scope(
             official_artifact=official_artifact, research_session=session,
         )

@@ -1,5 +1,18 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Official scope evidence operationalization and Dashboard cutover readiness V1 (2026-09-15):**
+`OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1 = COMPLETE_LOCAL`.
+Closes an authority-lifecycle/portability gap left open by
+`CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1`: the pinned
+current-official-universe evidence those milestones wired and validated lived only in
+`operations-review/` (gitignored), so a genuinely clean checkout of the released baseline could
+resolve it only if it happened to descend from the specific worktree that produced it. Durable
+fix is operationalization of already-qualified evidence (force-track the exact pinned artifact in
+git, the same pattern ~350 other `operations-review/` milestone artifacts already use here, plus a
+new identity/hash/contract fail-closed binding and a bounded migration tool for future re-pins) --
+never a new source qualification, never an `ACTIVE_UNIVERSE`/historical-PIT authority promotion.
+See `docs/STATE.md` for the full trace and real 2026-09-14 replay numbers. No successor is queued.
+
 **Historical tactical replay evidence foundation V1 (2026-09-10):**
 `HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1 = COMPLETE /
 RETROSPECTIVE_RESEARCH_REPLAY_READY / PIT_AUTHORITY_UNCHANGED`. The bounded local foundation

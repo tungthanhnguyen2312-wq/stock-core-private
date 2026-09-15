@@ -1,0 +1,219 @@
+{
+  "old_2026_08_24": {
+    "identity_conflicts": 0,
+    "official_hnx_upcom_match": 1104,
+    "official_hose_match": 403,
+    "official_only_not_in_stocklookup": 18,
+    "official_only_tickers": [
+      "CMP",
+      "CNA",
+      "CPH",
+      "DMX",
+      "EGL",
+      "LPS",
+      "MBN",
+      "MES",
+      "PCB",
+      "PQN",
+      "TAH",
+      "TBW",
+      "TQW",
+      "ULG",
+      "UTT",
+      "V68",
+      "VDB",
+      "VTM"
+    ],
+    "official_total_match": 1507,
+    "residual_disposition": {
+      "DELISTED_OR_NO_LONGER_CURRENT": 173,
+      "NON_COMMON_SECURITY": 0,
+      "OTHER_MARKET_OR_UNSUPPORTED": 0,
+      "SYMBOL_IDENTITY_DRIFT": 3,
+      "UNRESOLVED": 0
+    },
+    "stocklookup_only_unresolved": 176,
+    "stocklookup_universe_count": 1683
+  },
+  "refreshed_2026_09_13": {
+    "identity_conflicts": 0,
+    "official_hnx_upcom_match": 1101,
+    "official_hose_match": 403,
+    "official_only_not_in_stocklookup": 20,
+    "official_only_tickers": [
+      "CMP",
+      "CNA",
+      "CPH",
+      "DMX",
+      "EGL",
+      "GTX",
+      "KAI",
+      "LPS",
+      "MBN",
+      "MES",
+      "PCB",
+      "PQN",
+      "TAH",
+      "TBW",
+      "TQW",
+      "ULG",
+      "UTT",
+      "V68",
+      "VDB",
+      "VTM"
+    ],
+    "official_total_match": 1504,
+    "residual_disposition": {
+      "DELISTED_OR_NO_LONGER_CURRENT": 173,
+      "NON_COMMON_SECURITY": 0,
+      "OTHER_MARKET_OR_UNSUPPORTED": 0,
+      "SYMBOL_IDENTITY_DRIFT": 0,
+      "UNRESOLVED": 6
+    },
+    "stocklookup_only_unresolved": 179,
+    "stocklookup_universe_count": 1683
+  },
+  "delta": {
+    "official_hnx_upcom_match": -3,
+    "official_hose_match": 0,
+    "official_total_match": -3,
+    "stocklookup_only_unresolved": 3,
+    "official_only_not_in_stocklookup": 2
+  },
+  "symbol_identity_drift_resolution": {
+    "old_drift_tickers": [
+      "BCG",
+      "BCR",
+      "VTS"
+    ],
+    "new_classification": {
+      "BCG": "UNRESOLVED",
+      "BCR": "UNRESOLVED",
+      "VTS": "UNRESOLVED"
+    },
+    "note": "All 3 confirmed absent from live 2026-09-13 HNX/UPCOM and HOSE official master lists (were present 2026-08-24); reclassified UNRESOLVED because DNSE now also rejects them (activity_and_session_state=UNKNOWN) but VCI exchange reference has not yet caught up to DELISTED for these 3."
+  },
+  "six_unresolved_provider_rejected_tickers": {
+    "BCG": {
+      "in_fresh_hnx_upcom_list": false,
+      "in_fresh_hose_list": false,
+      "was_in_2026_08_24_hnx_list": false,
+      "issuer_name_2026_08_24": null,
+      "classification": "UNRESOLVED"
+    },
+    "BCR": {
+      "in_fresh_hnx_upcom_list": false,
+      "in_fresh_hose_list": false,
+      "was_in_2026_08_24_hnx_list": false,
+      "issuer_name_2026_08_24": null,
+      "classification": "UNRESOLVED"
+    },
+    "DAN": {
+      "in_fresh_hnx_upcom_list": false,
+      "in_fresh_hose_list": false,
+      "was_in_2026_08_24_hnx_list": true,
+      "issuer_name_2026_08_24": "Công ty cổ phần Dược Danapha",
+      "classification": "UNRESOLVED"
+    },
+    "DVT": {
+      "in_fresh_hnx_upcom_list": false,
+      "in_fresh_hose_list": false,
+      "was_in_2026_08_24_hnx_list": true,
+      "issuer_name_2026_08_24": "Công ty Cổ phần Đào tạo và Dịch vụ Giao thông vận tải Bình Định",
+      "classification": "UNRESOLVED"
+    },
+    "LTG": {
+      "in_fresh_hnx_upcom_list": false,
+      "in_fresh_hose_list": false,
+      "was_in_2026_08_24_hnx_list": true,
+      "issuer_name_2026_08_24": "CTCP Tập đoàn Lộc Trời",
+      "classification": "UNRESOLVED"
+    },
+    "VTS": {
+      "in_fresh_hnx_upcom_list": false,
+      "in_fresh_hose_list": false,
+      "was_in_2026_08_24_hnx_list": false,
+      "issuer_name_2026_08_24": null,
+      "classification": "UNRESOLVED"
+    }
+  },
+  "official_only_rows": {
+    "old_18": [
+      "CMP",
+      "CNA",
+      "CPH",
+      "DMX",
+      "EGL",
+      "LPS",
+      "MBN",
+      "MES",
+      "PCB",
+      "PQN",
+      "TAH",
+      "TBW",
+      "TQW",
+      "ULG",
+      "UTT",
+      "V68",
+      "VDB",
+      "VTM"
+    ],
+    "new_20": [
+      "CMP",
+      "CNA",
+      "CPH",
+      "DMX",
+      "EGL",
+      "GTX",
+      "KAI",
+      "LPS",
+      "MBN",
+      "MES",
+      "PCB",
+      "PQN",
+      "TAH",
+      "TBW",
+      "TQW",
+      "ULG",
+      "UTT",
+      "V68",
+      "VDB",
+      "VTM"
+    ],
+    "added": [
+      "GTX",
+      "KAI"
+    ],
+    "removed": []
+  },
+  "502_cross_tab": {
+    "OFFICIAL_CURRENT_STOCK_LIST_CANDIDATE": 472,
+    "OFFICIAL_CURRENT_EXCHANGE_SECURITY": 30
+  },
+  "50_cross_tab": {
+    "OFFICIAL_CURRENT_STOCK_LIST_CANDIDATE": 50,
+    "OFFICIAL_CURRENT_EXCHANGE_SECURITY": 0
+  },
+  "coverage_impact": {
+    "price_coverage_over_1683": "952/1683 = 56.57%",
+    "price_coverage_over_refreshed_official_1504": "952/1504 = 63.30%",
+    "tactical_coverage_over_1683": "951/1683 = 56.51%",
+    "tactical_coverage_over_refreshed_official_1504": "951/1504 = 63.23%",
+    "missing_price_within_official_1504_denominator": 552
+  },
+  "shadow_comparison": {
+    "before_1683": {
+      "price": 952,
+      "tactical": 951,
+      "strategy_eligible": 296,
+      "scenario_ready": 515
+    },
+    "after_1504": {
+      "price": 952,
+      "tactical": 951,
+      "strategy_eligible": 296,
+      "scenario_ready": 515
+    },
+    "note": "Numerators are byte-identical before/after because ALL 502+50 gap tickers matched the refreshed official universe (0 further exclusion beyond the pre-existing 179 delisted+unresolved) -- the refresh corroborates the existing 1,504 denominator via an independent official-source signal, it does not change it."
+  }
+}

@@ -1,0 +1,964 @@
+{
+  "milestone": "HNX_UPCOM_OFFICIAL_SECURITY_STATUS_ENRICHMENT_V1",
+  "generated_at": "2026-09-13",
+  "artifact_identity": "hnx_upcom_official_security_status:75b41f4296d258b3d9c7da94e8394ab61b3fe6dd8a458228e547fc13293eab15",
+  "target_session": "2026-09-11",
+  "acquired_at_date": "2026-09-13",
+  "total_captures": 106,
+  "captures": [
+    {
+      "ticker": "ART",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=ART",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=ART",
+      "retrieved_at": "2026-09-13T09:06:26Z",
+      "http_status": 200,
+      "sha256": "d2d015e6144e01d47765341b533a88b0fbfc988bf93280a8c9653e63644f5e13"
+    },
+    {
+      "ticker": "ART",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-art.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-art.html",
+      "retrieved_at": "2026-09-13T09:06:29Z",
+      "http_status": 200,
+      "sha256": "e682676a15b1be0784abea5313ffd2bf9e198e8f22ddbe8a68a5271915c7196c"
+    },
+    {
+      "ticker": "BCV",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BCV",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BCV",
+      "retrieved_at": "2026-09-13T09:06:39Z",
+      "http_status": 200,
+      "sha256": "5f5d3a2696d0bb726a5bc846767628f82d23038490d6dfcb46d939f123c57b51"
+    },
+    {
+      "ticker": "BCV",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-bcv.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-bcv.html",
+      "retrieved_at": "2026-09-13T09:06:44Z",
+      "http_status": 200,
+      "sha256": "81eac48b1510e3654ad7e05c9d035ebdd37b8012d3cf0b2267899f5faf6c106c"
+    },
+    {
+      "ticker": "BHG",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BHG",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BHG",
+      "retrieved_at": "2026-09-13T09:06:48Z",
+      "http_status": 200,
+      "sha256": "17b03fc907f7b75419bb6c63982f4989fdfddf2054d1faecabce9731916c111a"
+    },
+    {
+      "ticker": "BHG",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-bhg.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-bhg.html",
+      "retrieved_at": "2026-09-13T09:06:49Z",
+      "http_status": 200,
+      "sha256": "e11fc274774d88e334bbf0ace01d0ef577dc2fcaae4dcf4c4a41dc7f4a4085dc"
+    },
+    {
+      "ticker": "BT6",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BT6",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BT6",
+      "retrieved_at": "2026-09-13T09:06:54Z",
+      "http_status": 200,
+      "sha256": "0fe3ab04849e11f38cc2b6abe1d37767c670525f66fef3cbc43061d6ec5c9b2a"
+    },
+    {
+      "ticker": "BT6",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-bt6.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-bt6.html",
+      "retrieved_at": "2026-09-13T09:06:55Z",
+      "http_status": 200,
+      "sha256": "16fc2da4d500995cfdcda3811a132e4816121a61b80ff022b3aceb68acb19e02"
+    },
+    {
+      "ticker": "CDG",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=CDG",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=CDG",
+      "retrieved_at": "2026-09-13T09:06:56Z",
+      "http_status": 200,
+      "sha256": "86cd8437b0d1b3609a91c194ea7ebc9187d757e89721770c39fd165bbb719bca"
+    },
+    {
+      "ticker": "CDG",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-cdg.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-cdg.html",
+      "retrieved_at": "2026-09-13T09:06:57Z",
+      "http_status": 200,
+      "sha256": "b119020c3075000a0dacf6a9dcc9201657f01824556b7e6077d25a5d8c67f8f2"
+    },
+    {
+      "ticker": "CMK",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=CMK",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=CMK",
+      "retrieved_at": "2026-09-13T09:06:58Z",
+      "http_status": 200,
+      "sha256": "87dfc867338366f48be7c17b1a34d7ac29e7078335e2516eb3f7332765b0310e"
+    },
+    {
+      "ticker": "CMK",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-cmk.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-cmk.html",
+      "retrieved_at": "2026-09-13T09:06:59Z",
+      "http_status": 200,
+      "sha256": "c129f5a954aa1d49a4fcf8f6bad64f3112e73dd67d1cab19d472de7affcd1d18"
+    },
+    {
+      "ticker": "DAG",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DAG",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DAG",
+      "retrieved_at": "2026-09-13T09:07:02Z",
+      "http_status": 200,
+      "sha256": "1324a6d9578547f8efebbdb40430b8a98e22d9a1e8c46ee1eb753742b3bf9486"
+    },
+    {
+      "ticker": "DAG",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-dag.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-dag.html",
+      "retrieved_at": "2026-09-13T09:07:02Z",
+      "http_status": 200,
+      "sha256": "7b2f75b0c61c920a89923d8b3e5d971ccafe8838c1923bcae87ecc0aa4f1103b"
+    },
+    {
+      "ticker": "DKC",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DKC",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DKC",
+      "retrieved_at": "2026-09-13T09:07:05Z",
+      "http_status": 200,
+      "sha256": "3e4ff12e714f249e2e4b7107ab17783390a741df77da0af3d7a34312c875a17b"
+    },
+    {
+      "ticker": "DKC",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-dkc.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-dkc.html",
+      "retrieved_at": "2026-09-13T09:07:06Z",
+      "http_status": 200,
+      "sha256": "ec983fe0bace2b69074cbb07440643c803c6662e85dd7411e566ea1041931d30"
+    },
+    {
+      "ticker": "DPP",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DPP",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DPP",
+      "retrieved_at": "2026-09-13T09:07:09Z",
+      "http_status": 200,
+      "sha256": "aeee43dea8f3ff24a6a4cec37a7e4356549a49ae4a007c20f05e17ddba972b24"
+    },
+    {
+      "ticker": "DPP",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-dpp.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-dpp.html",
+      "retrieved_at": "2026-09-13T09:07:09Z",
+      "http_status": 200,
+      "sha256": "0a5551110ba74bc0f18e76fb1a7a8e1c6a77399ced303bcfa00d8e34bc144cda"
+    },
+    {
+      "ticker": "FBC",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=FBC",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=FBC",
+      "retrieved_at": "2026-09-13T09:07:13Z",
+      "http_status": 200,
+      "sha256": "9c53d4ba2e1bc51d41855d734f2cce4facc2b1dd1a75dafe703cc2ac63ecece1"
+    },
+    {
+      "ticker": "FBC",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-fbc.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-fbc.html",
+      "retrieved_at": "2026-09-13T09:07:17Z",
+      "http_status": 200,
+      "sha256": "01615473b0ad282a6bd6b8c99462af7c42a22dd99279eaa79608a464cb75e312"
+    },
+    {
+      "ticker": "FHN",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=FHN",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=FHN",
+      "retrieved_at": "2026-09-13T09:07:19Z",
+      "http_status": 200,
+      "sha256": "540697ee936d4459225ed372a2fa3df2dac1f426159bae22b55e58162bce07cb"
+    },
+    {
+      "ticker": "FHN",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-fhn.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-fhn.html",
+      "retrieved_at": "2026-09-13T09:07:20Z",
+      "http_status": 200,
+      "sha256": "79aaa9187ed244cee65f17c6d1f6defbdec9271897563e465a4280e50942a2de"
+    },
+    {
+      "ticker": "GH3",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=GH3",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=GH3",
+      "retrieved_at": "2026-09-13T09:07:23Z",
+      "http_status": 200,
+      "sha256": "1deaced59da2efc036b5d294007794ea775cb6f0796dc08fa6325d83d7abc72f"
+    },
+    {
+      "ticker": "GH3",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-gh3.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-gh3.html",
+      "retrieved_at": "2026-09-13T09:07:26Z",
+      "http_status": 200,
+      "sha256": "d94475c9a0c8dcba97d1e26ef359c43ef071f462dd734ff814f554010240102d"
+    },
+    {
+      "ticker": "GLC",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=GLC",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=GLC",
+      "retrieved_at": "2026-09-13T09:07:31Z",
+      "http_status": 200,
+      "sha256": "1478d444aaf8089ebb7d47c5ef3aafad603c6a12544d1196816e5b65ad02c61d"
+    },
+    {
+      "ticker": "GLC",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-glc.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-glc.html",
+      "retrieved_at": "2026-09-13T09:07:32Z",
+      "http_status": 200,
+      "sha256": "a6440eba026c90f744eac2b9d46fd585e6ee83b3c72b5c57ceb484ea6b645ca9"
+    },
+    {
+      "ticker": "GTT",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=GTT",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=GTT",
+      "retrieved_at": "2026-09-13T09:07:34Z",
+      "http_status": 200,
+      "sha256": "447cd6e56074e0539592795f31e83b3789d0c9bd4be7814d0b4babaa789e4321"
+    },
+    {
+      "ticker": "GTT",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-gtt.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-gtt.html",
+      "retrieved_at": "2026-09-13T09:07:35Z",
+      "http_status": 200,
+      "sha256": "efa353a3e37990b590a4a0a55ae5c3289d8c8975b2473e8a6adaa296254d3a58"
+    },
+    {
+      "ticker": "HHN",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HHN",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HHN",
+      "retrieved_at": "2026-09-13T09:07:38Z",
+      "http_status": 200,
+      "sha256": "bae525127e9c084d97d83904ca75888dc87dc6d6eda5bbd774572eb1a5312a5a"
+    },
+    {
+      "ticker": "HHN",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hhn.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hhn.html",
+      "retrieved_at": "2026-09-13T09:07:43Z",
+      "http_status": 200,
+      "sha256": "6030f80e1dbfc931745cc309f80cc25d992160e76bf9d91e3e829bd6dac1d038"
+    },
+    {
+      "ticker": "HLA",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HLA",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HLA",
+      "retrieved_at": "2026-09-13T09:07:46Z",
+      "http_status": 200,
+      "sha256": "68263ef38c6644024e14e4deb54e16cc8950bcd9f99c5c803ad28d3bdb9737df"
+    },
+    {
+      "ticker": "HLA",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hla.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hla.html",
+      "retrieved_at": "2026-09-13T09:07:50Z",
+      "http_status": 200,
+      "sha256": "7b704e1e170342eab486569814bdf8e37ba34e967b3122ca702b504a05181b4c"
+    },
+    {
+      "ticker": "HLT",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HLT",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HLT",
+      "retrieved_at": "2026-09-13T09:07:54Z",
+      "http_status": 200,
+      "sha256": "bd1bf184bc720f5d1ecda7a6aef08c758ac7facca0ea7635efe5ee4e74d65c09"
+    },
+    {
+      "ticker": "HLT",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hlt.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hlt.html",
+      "retrieved_at": "2026-09-13T09:07:55Z",
+      "http_status": 200,
+      "sha256": "434bedb24d9918172975847065296a64393461b615fa03744ef8b4bcd4c129a8"
+    },
+    {
+      "ticker": "HNR",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HNR",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HNR",
+      "retrieved_at": "2026-09-13T09:07:57Z",
+      "http_status": 200,
+      "sha256": "248cb8ecda87e44b184a66153fa8a54c3f0b8512fbf04835b9781acd602eb9a2"
+    },
+    {
+      "ticker": "HNR",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hnr.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hnr.html",
+      "retrieved_at": "2026-09-13T09:07:59Z",
+      "http_status": 200,
+      "sha256": "17688f456ca8fb4243f71c60c29eb6a642ee35424675fe4981339a7e4e668f25"
+    },
+    {
+      "ticker": "HSA",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HSA",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=HSA",
+      "retrieved_at": "2026-09-13T09:08:01Z",
+      "http_status": 200,
+      "sha256": "a63852c82b19ca6ac724d4210b525974d12b4888db9fdaa3afe10cafebdb24b3"
+    },
+    {
+      "ticker": "HSA",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hsa.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-hsa.html",
+      "retrieved_at": "2026-09-13T09:08:02Z",
+      "http_status": 200,
+      "sha256": "498345b9499b741c28e6e8ef9041adbc3931fd0782abbeec1ad56d624fac2de3"
+    },
+    {
+      "ticker": "ITA",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=ITA",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=ITA",
+      "retrieved_at": "2026-09-13T09:08:04Z",
+      "http_status": 200,
+      "sha256": "a420eacd7008174cded4f37e15fe0772d5c90c2a14a1447957f101ffb9e920f6"
+    },
+    {
+      "ticker": "ITA",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ita.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ita.html",
+      "retrieved_at": "2026-09-13T09:08:07Z",
+      "http_status": 200,
+      "sha256": "d3082fd88bf4676c7e35766fad436c22bbcbc42d13dc5ec023d826824773fb69"
+    },
+    {
+      "ticker": "KPF",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=KPF",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=KPF",
+      "retrieved_at": "2026-09-13T09:08:09Z",
+      "http_status": 200,
+      "sha256": "cd19f1b414421e531f25d836df5373014ba3fddc9a9c59cde94e594d7fdcbc70"
+    },
+    {
+      "ticker": "KPF",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-kpf.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-kpf.html",
+      "retrieved_at": "2026-09-13T09:08:09Z",
+      "http_status": 200,
+      "sha256": "1c904a8c891bfcef4337fd1dd31eec4e8b1a038cc9ca6b6475e6f35518ad13c8"
+    },
+    {
+      "ticker": "KTT",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=KTT",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=KTT",
+      "retrieved_at": "2026-09-13T09:08:11Z",
+      "http_status": 200,
+      "sha256": "83236c20e490e94425c8038f9a3a25e6cf50718191754ed6945ab26dd8dd40f2"
+    },
+    {
+      "ticker": "KTT",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ktt.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ktt.html",
+      "retrieved_at": "2026-09-13T09:08:11Z",
+      "http_status": 200,
+      "sha256": "259aba8eb39276d4301f423508cf57dae546c70354b340afd7a6574d0275f9d2"
+    },
+    {
+      "ticker": "LCD",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=LCD",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=LCD",
+      "retrieved_at": "2026-09-13T09:08:13Z",
+      "http_status": 200,
+      "sha256": "fc64c65d3669d17adc94d0da5ed8c72173d1310a970ea4d70e2d53b4b78f571c"
+    },
+    {
+      "ticker": "LCD",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-ny-lcd.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-ny-lcd.html",
+      "retrieved_at": "2026-09-13T09:08:14Z",
+      "http_status": 200,
+      "sha256": "c86a3d880cc48eeb826519bcaa0f6bf87c2d04ae9580b18c2cce17d70ac42900"
+    },
+    {
+      "ticker": "MHL",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=MHL",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=MHL",
+      "retrieved_at": "2026-09-13T09:08:16Z",
+      "http_status": 200,
+      "sha256": "3012293d159d15682c2e5b38781e6d36fa246cc7ef801750c422228295d147dc"
+    },
+    {
+      "ticker": "MHL",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-mhl.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-mhl.html",
+      "retrieved_at": "2026-09-13T09:08:16Z",
+      "http_status": 200,
+      "sha256": "025056506b4adad4b39a75c34a3d0e8a094725ba3f06681d655558be49ec0a76"
+    },
+    {
+      "ticker": "MTB",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=MTB",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=MTB",
+      "retrieved_at": "2026-09-13T09:08:18Z",
+      "http_status": 200,
+      "sha256": "d97a23c27b84cc30313c761a185c720bf23ae4b87791f7d2ce86bc2be1cc42f5"
+    },
+    {
+      "ticker": "MTB",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-mtb.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-mtb.html",
+      "retrieved_at": "2026-09-13T09:08:18Z",
+      "http_status": 200,
+      "sha256": "e7147c063d19c826f54205b3c30ba3392b42f5ae0805fbfbdac155ffa5def063"
+    },
+    {
+      "ticker": "NAC",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NAC",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NAC",
+      "retrieved_at": "2026-09-13T09:08:23Z",
+      "http_status": 200,
+      "sha256": "e0496c0b2222b4e4f36e82b6c7105c1d97d27bb68de5a528f2b8c74b631b4333"
+    },
+    {
+      "ticker": "NAC",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-nac.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-nac.html",
+      "retrieved_at": "2026-09-13T09:08:25Z",
+      "http_status": 200,
+      "sha256": "801d4da5b72147aac5936d1a76488f97357feaa6b0b909e2a3f28f52840082aa"
+    },
+    {
+      "ticker": "NDF",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NDF",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NDF",
+      "retrieved_at": "2026-09-13T09:08:30Z",
+      "http_status": 200,
+      "sha256": "cf0091dac1f75f47e2ff9dee7c4577f22a492671b19cd4997e1ee104be1ce299"
+    },
+    {
+      "ticker": "NDF",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ndf.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ndf.html",
+      "retrieved_at": "2026-09-13T09:08:35Z",
+      "http_status": 200,
+      "sha256": "2699a649e98931843ea2b6225cc39fd707c7ee59ec4c908777ce856ac94026ac"
+    },
+    {
+      "ticker": "NHV",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NHV",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NHV",
+      "retrieved_at": "2026-09-13T09:08:39Z",
+      "http_status": 200,
+      "sha256": "27f83823d095dc80e74d2c5ea0de258cacafe59a323d06e1d366486e8bbabda0"
+    },
+    {
+      "ticker": "NHV",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-nhv.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-nhv.html",
+      "retrieved_at": "2026-09-13T09:08:39Z",
+      "http_status": 200,
+      "sha256": "e64c8e21ccf5c62ffca63c27d5c170ac892e37cf641490c21c6f82330a9fe40e"
+    },
+    {
+      "ticker": "NSS",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NSS",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=NSS",
+      "retrieved_at": "2026-09-13T09:08:41Z",
+      "http_status": 200,
+      "sha256": "014b5f77027b7d4d00393e2c4a76b5f5d509c614a06c5e3de44cdfad1168f76f"
+    },
+    {
+      "ticker": "NSS",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-nss.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-nss.html",
+      "retrieved_at": "2026-09-13T09:08:42Z",
+      "http_status": 200,
+      "sha256": "b460c570af46417495cd427da33f6303d32539a7d6880964a0d6a7f4fab58c3c"
+    },
+    {
+      "ticker": "PID",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=PID",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=PID",
+      "retrieved_at": "2026-09-13T09:08:46Z",
+      "http_status": 200,
+      "sha256": "2d907a502b1a2ffdd0e6c5697f267646dec0fcd666a729385bfa71dd416b916f"
+    },
+    {
+      "ticker": "PID",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-pid.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-pid.html",
+      "retrieved_at": "2026-09-13T09:08:46Z",
+      "http_status": 200,
+      "sha256": "2d061f1bf37368cf84188b398ae1c7528b0474c91744512bdf386cb6499f44f5"
+    },
+    {
+      "ticker": "PPI",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=PPI",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=PPI",
+      "retrieved_at": "2026-09-13T09:08:48Z",
+      "http_status": 200,
+      "sha256": "889a48dc9f0c02788b0ad9e5211e1f006d16a9ea6c3bb7e00e982b68290a52a7"
+    },
+    {
+      "ticker": "PPI",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ppi.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ppi.html",
+      "retrieved_at": "2026-09-13T09:08:50Z",
+      "http_status": 200,
+      "sha256": "1ba3deaedb9b08c0d3f735d729aef664a560ed980c9e3db2cf015a515425dd20"
+    },
+    {
+      "ticker": "PSH",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=PSH",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=PSH",
+      "retrieved_at": "2026-09-13T09:08:53Z",
+      "http_status": 200,
+      "sha256": "586f6eb30df2f194c2e199e2b0a81e23b087f9cab3aabb001dc0976a5c6232bb"
+    },
+    {
+      "ticker": "PSH",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-psh.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-psh.html",
+      "retrieved_at": "2026-09-13T09:08:53Z",
+      "http_status": 200,
+      "sha256": "db8be98515c3f54673b0e4e8ad26d466949ec3a5f3336006281e3f28e710d488"
+    },
+    {
+      "ticker": "SD8",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SD8",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SD8",
+      "retrieved_at": "2026-09-13T09:08:56Z",
+      "http_status": 200,
+      "sha256": "b05208b5bde3ac11f7adab19e8b8051553bc816796b8b6f77cb7b398b5c2536a"
+    },
+    {
+      "ticker": "SD8",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-sd8.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-sd8.html",
+      "retrieved_at": "2026-09-13T09:08:58Z",
+      "http_status": 200,
+      "sha256": "61895f6d874e7d0fcee0d234752becf0947010d40fa04dc105dbd3d05dcda11f"
+    },
+    {
+      "ticker": "SJF",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SJF",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SJF",
+      "retrieved_at": "2026-09-13T09:08:59Z",
+      "http_status": 200,
+      "sha256": "ca39d030c9b8c24e7bdbe441b54ba58ee6a233a67411c4aed5b52383e5d89f2c"
+    },
+    {
+      "ticker": "SJF",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-sjf.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-sjf.html",
+      "retrieved_at": "2026-09-13T09:09:00Z",
+      "http_status": 200,
+      "sha256": "5ca9fdfb0142c2565727f65a1135f4a59df583dff082fc0549737963a6ef9145"
+    },
+    {
+      "ticker": "SPI",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SPI",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SPI",
+      "retrieved_at": "2026-09-13T09:09:01Z",
+      "http_status": 200,
+      "sha256": "a3388a0cacefdbcf02341a4c2b186a076f0ca9bac6be3ea8dbc8171937d4314a"
+    },
+    {
+      "ticker": "SPI",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-spi.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-spi.html",
+      "retrieved_at": "2026-09-13T09:09:02Z",
+      "http_status": 200,
+      "sha256": "609c9f850274fa53b26f37a3fb44b36b64bf70a5b5ac3bba0002587a1298d211"
+    },
+    {
+      "ticker": "SVH",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SVH",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=SVH",
+      "retrieved_at": "2026-09-13T09:09:10Z",
+      "http_status": 200,
+      "sha256": "fafd63bf8f7924bf1887339b7510d3f4a450df31e65a3e5b9ea36d313af55054"
+    },
+    {
+      "ticker": "SVH",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-svh.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-svh.html",
+      "retrieved_at": "2026-09-13T09:09:12Z",
+      "http_status": 200,
+      "sha256": "5f35783e89e280eee29b22157a55a4bd34358e8ba1d350b92f50d55f264efda9"
+    },
+    {
+      "ticker": "TGG",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TGG",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TGG",
+      "retrieved_at": "2026-09-13T09:09:14Z",
+      "http_status": 200,
+      "sha256": "92514bcdf6021291d1dfeb2217e70dbe73b18d3deed574d3f108fcee2c6987e7"
+    },
+    {
+      "ticker": "TGG",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-tgg.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-tgg.html",
+      "retrieved_at": "2026-09-13T09:09:18Z",
+      "http_status": 200,
+      "sha256": "3658e36ff979d4317e149af63fbcf439f80a91bc84149e79d030779cabeab93e"
+    },
+    {
+      "ticker": "TKA",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TKA",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TKA",
+      "retrieved_at": "2026-09-13T09:09:20Z",
+      "http_status": 200,
+      "sha256": "b751259cf798f2049e019b24f11cba1a1d553a50193478ba68ce0c82900a27d1"
+    },
+    {
+      "ticker": "TKA",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-tka.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-tka.html",
+      "retrieved_at": "2026-09-13T09:09:20Z",
+      "http_status": 200,
+      "sha256": "89030ebff2d7d5b90bd3e5f92948f1310d109c8beec6351b71a609ffb056cf80"
+    },
+    {
+      "ticker": "TNA",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TNA",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TNA",
+      "retrieved_at": "2026-09-13T09:09:25Z",
+      "http_status": 200,
+      "sha256": "b1492707408f0b5cfde6dad2bf15a5fd92853897ed149fbda41247e34d305ad8"
+    },
+    {
+      "ticker": "TNA",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-tna.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-tna.html",
+      "retrieved_at": "2026-09-13T09:09:26Z",
+      "http_status": 200,
+      "sha256": "6daa99b704164585de522b63ccac0ba8738d9a9c15535dc22726e7e26ab1b753"
+    },
+    {
+      "ticker": "TOP",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TOP",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TOP",
+      "retrieved_at": "2026-09-13T09:09:28Z",
+      "http_status": 200,
+      "sha256": "44730e40b30ef5cf3aea525a462396d4e84ccf23d7512d8d17ae32380d85fd7c"
+    },
+    {
+      "ticker": "TOP",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-top.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-top.html",
+      "retrieved_at": "2026-09-13T09:09:29Z",
+      "http_status": 200,
+      "sha256": "49ccf253462a59cf946c700151eb6437406d728cc5b04810c6a057b9e55a7009"
+    },
+    {
+      "ticker": "TTB",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TTB",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TTB",
+      "retrieved_at": "2026-09-13T09:09:33Z",
+      "http_status": 200,
+      "sha256": "0a1060a441ebec6790014ec224c0e5bf12ca350ce4c6d7906c87e0819f06fdc9"
+    },
+    {
+      "ticker": "TTB",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ttb.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ttb.html",
+      "retrieved_at": "2026-09-13T09:09:38Z",
+      "http_status": 200,
+      "sha256": "f22e09db30c0a58b3d2d47208bfc61795ff2f1677579f0d72ea02d834e81259e"
+    },
+    {
+      "ticker": "TTZ",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TTZ",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=TTZ",
+      "retrieved_at": "2026-09-13T09:09:40Z",
+      "http_status": 200,
+      "sha256": "be7916dec61b698e273fe6c1b36661409654f724c649f5e7aab7558c1d5cdce3"
+    },
+    {
+      "ticker": "TTZ",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ttz.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-ttz.html",
+      "retrieved_at": "2026-09-13T09:09:42Z",
+      "http_status": 200,
+      "sha256": "a60580f8b24c1c486fb5b3ace7f96a18621ccc979422f3568a32f722a115a3c8"
+    },
+    {
+      "ticker": "UMC",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=UMC",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=UMC",
+      "retrieved_at": "2026-09-13T09:09:44Z",
+      "http_status": 200,
+      "sha256": "53c3d977e9e8d31672830a106533ec22f067fd9caa45416bf19c914ca0b0ae2e"
+    },
+    {
+      "ticker": "UMC",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-umc.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-umc.html",
+      "retrieved_at": "2026-09-13T09:09:45Z",
+      "http_status": 200,
+      "sha256": "5c1e707f8aede435f668fe60d5ea59d89255cecc0e34b75c445c2e8e5b63ddd3"
+    },
+    {
+      "ticker": "VCE",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VCE",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VCE",
+      "retrieved_at": "2026-09-13T09:09:47Z",
+      "http_status": 200,
+      "sha256": "8cd4fb36ddef868b5a900a054e858f0c7dfd7112a4a556f5c494d9015d68e1ec"
+    },
+    {
+      "ticker": "VCE",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vce.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vce.html",
+      "retrieved_at": "2026-09-13T09:09:47Z",
+      "http_status": 200,
+      "sha256": "82f126eb52282e13aedc00b414e2a13fd66e6a46c509952a6cb3bc5ee5a8c62f"
+    },
+    {
+      "ticker": "VCT",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VCT",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VCT",
+      "retrieved_at": "2026-09-13T09:09:49Z",
+      "http_status": 200,
+      "sha256": "00626b0458e33bd03a61f0e2d096082a0a661ff2fdaf0a701f93aaf84aa0b221"
+    },
+    {
+      "ticker": "VCT",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vct.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vct.html",
+      "retrieved_at": "2026-09-13T09:09:49Z",
+      "http_status": 200,
+      "sha256": "183773959e87dab50640d5fea389ad839a9a727943ff1f9c2235ea615d53e803"
+    },
+    {
+      "ticker": "VLP",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VLP",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VLP",
+      "retrieved_at": "2026-09-13T09:09:51Z",
+      "http_status": 200,
+      "sha256": "61004d9b9313c1c1722f3503f59214f2acfd82af307d0cbfaad613060ed03f4c"
+    },
+    {
+      "ticker": "VLP",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vlp.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vlp.html",
+      "retrieved_at": "2026-09-13T09:09:51Z",
+      "http_status": 200,
+      "sha256": "666512143bab61a90c6c0a7b16ee1739aefcb80afcede07d9e36baebc46da399"
+    },
+    {
+      "ticker": "VMA",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VMA",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VMA",
+      "retrieved_at": "2026-09-13T09:09:53Z",
+      "http_status": 200,
+      "sha256": "0c064c0150f1f6dc0c6bfa59efc22ca8a8b547c7a6d0b8cfdd6fac712fccbb70"
+    },
+    {
+      "ticker": "VMA",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vma.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vma.html",
+      "retrieved_at": "2026-09-13T09:09:54Z",
+      "http_status": 200,
+      "sha256": "909b96fd202f46487dc36106e2dc483dfaada12cf8289d932467f5d30a3d7d0f"
+    },
+    {
+      "ticker": "VPW",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VPW",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VPW",
+      "retrieved_at": "2026-09-13T09:09:56Z",
+      "http_status": 200,
+      "sha256": "400a1689b5fba4937abbaa8b6b82c67c8ba888539f16d3df74c5e2b91ee0f201"
+    },
+    {
+      "ticker": "VPW",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vpw.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vpw.html",
+      "retrieved_at": "2026-09-13T09:09:57Z",
+      "http_status": 200,
+      "sha256": "316e280fc7fd82bc9ec8357ec1faaaa1612b79bda37754878e92cb9c8c368200"
+    },
+    {
+      "ticker": "VXP",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VXP",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VXP",
+      "retrieved_at": "2026-09-13T09:09:59Z",
+      "http_status": 200,
+      "sha256": "9615e83b5968167cf99113146585cdc58eeb2e062a3c79666191de32f6165bbf"
+    },
+    {
+      "ticker": "VXP",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vxp.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-vxp.html",
+      "retrieved_at": "2026-09-13T09:09:59Z",
+      "http_status": 200,
+      "sha256": "92ad7c3e0ec61a846b3484d35696b2f6b7df7315c9909589e1bc0d5338e2c0d0"
+    },
+    {
+      "ticker": "X77",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=X77",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=X77",
+      "retrieved_at": "2026-09-13T09:10:01Z",
+      "http_status": 200,
+      "sha256": "e0631216705adb426cad6ad113535239edcd8c85a225f98d0de005983d098c6e"
+    },
+    {
+      "ticker": "X77",
+      "surface": "issuer_profile",
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-x77.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chi-tiet-chung-khoan-uc-x77.html",
+      "retrieved_at": "2026-09-13T09:10:03Z",
+      "http_status": 200,
+      "sha256": "6569f428631aef3f45bcd6ea8ce8cb914e855cfbf21733397a19b3b49792be68"
+    },
+    {
+      "ticker": "BCG",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BCG",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BCG",
+      "retrieved_at": "2026-09-13T09:10:08Z",
+      "http_status": 200,
+      "sha256": "71ee5b08082f8d3f5791ef40ea2ba9254b017f29785bc470fb3f681cece96627"
+    },
+    {
+      "ticker": "BCR",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BCR",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=BCR",
+      "retrieved_at": "2026-09-13T09:10:14Z",
+      "http_status": 200,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "ticker": "DAN",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DAN",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DAN",
+      "retrieved_at": "2026-09-13T09:10:19Z",
+      "http_status": 200,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "ticker": "DVT",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DVT",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=DVT",
+      "retrieved_at": "2026-09-13T09:10:19Z",
+      "http_status": 200,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "ticker": "LTG",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=LTG",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=LTG",
+      "retrieved_at": "2026-09-13T09:10:19Z",
+      "http_status": 200,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "ticker": "VTS",
+      "surface": "issuer_search",
+      "requested_url": "https://hnx.vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VTS",
+      "official_url": "https://hnx.vn/vi-vn/ModuleSearchALL/SearchDataHNX/SearchSuggestSymbol?pSymbol=VTS",
+      "retrieved_at": "2026-09-13T09:10:26Z",
+      "http_status": 200,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ]
+}

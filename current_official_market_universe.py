@@ -41,6 +41,27 @@ def _verify(artifact: Mapping[str, Any], label: str) -> None:
         raise ValueError(f"{label}_IDENTITY_MISMATCH")
 
 
+def verify_retained_artifact(
+    artifact: Mapping[str, Any], *, label: str, expected_identity: str | None = None,
+) -> None:
+    """Fail-closed identity/contract binding for a retained (already-qualified, non-network)
+    ``current_official_market_universe`` artifact loaded from a durable, git-tracked evidence
+    location -- e.g. ``canonical_current_product_projections.resolve_current_research_official_
+    universe_scope``'s durable evidence resolver, or ``tools/retain_current_official_universe_
+    evidence.py``'s migration tool. Raises on any of: corrupted/tampered bytes (self-hash
+    mismatch, via ``_verify``), an unexpected ``contract_version`` (this module's producing
+    contract itself changed), or -- when ``expected_identity`` is supplied -- a byte-identical
+    but *differently qualified* artifact than the one this call site was pinned to accept. Never
+    silently accepts a wrong-contract or wrong-identity artifact merely because it is internally
+    self-consistent.
+    """
+    _verify(artifact, label)
+    if artifact.get("contract_version") != CONTRACT_VERSION:
+        raise ValueError(f"{label}_CONTRACT_MISMATCH")
+    if expected_identity is not None and artifact.get("artifact_identity") != expected_identity:
+        raise ValueError(f"{label}_UNEXPECTED_IDENTITY")
+
+
 def _rows(artifact: Mapping[str, Any], dataset: str) -> list[Mapping[str, Any]]:
     rows = artifact.get("datasets", {}).get(dataset)
     if not isinstance(rows, list):

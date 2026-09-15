@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.15.1",
+  "roadmap_version": "2026.09.15.2",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1",
+    "milestone": "OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1",
     "state": "COMPLETE_LOCAL"
   },
   "queued_next": [],
@@ -1471,7 +1471,9 @@
       "dependencies": [
         "MACRO_NETWORK_GOVERNANCE_AND_VNSTOCK_DECOUPLING_V1"
       ],
-      "unlocks": ["CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1"],
+      "unlocks": [
+        "CANONICAL_RECURRING_DECISION_CONTEXT_MATERIALIZATION_V1"
+      ],
       "authority_effect": "NONE / PRODUCT_MATERIALIZATION_AND_DASHBOARD_BINDING_ONLY / NO_ANALYTICAL_OR_SOURCE_AUTHORITY_CHANGE",
       "owner_authorized": true,
       "source_doc": "Owner-directed CANONICAL_CURRENT_PRODUCT_PROJECTIONS_AND_DASHBOARD_BINDING_V1 brief (2026-09-12), delivered directly in chat; owner-authorized despite queued_next=[] per AI_RULES.md rule 11's explicit-override provision.",
@@ -1574,6 +1576,24 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_15_WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1",
       "notes": "COMPLETE_LOCAL / READY_FOR_OWNER_CUTOVER_REVIEW. Local publisher rehearsal of the parent milestone's real Workspace artifact against publish_dashboard.py's validate_workspace_projection() failed with CURRENT_PRODUCT_ARTIFACT_NOT_PUBLISHED: missing source artifact identity -- the validator required a top-level producer_artifact_identity field. Traced via `git log -S producer_artifact_identity` across the whole repository: no Workspace producer, past or present, has ever emitted that field at the top level. It was invented in isolation in af999e7 (2026-09-01) when this validator was first written, before investment_decision_workspace_projection.py's own real content-identity field (artifact_identity, f'{CONTRACT_VERSION}:{digest}') was ever wired to a live producer, and never reconciled. The sibling validate_screener_master_projection already validates the analogous real field (artifact_identity) on the Screener contract -- classification: STALE_PUBLISHER_LINEAGE_REQUIREMENT. Fix: validate_workspace_projection now requires artifact_identity (matching Screener's own pattern) instead of the phantom field; two test fixtures and one byte-preserving-copy test that encoded the old fixture value were updated, and five new regression tests added (real canonical shape accepted without the phantom field; missing/empty artifact_identity rejected; a stray leftover producer_artifact_identity value is ignored, not specially treated). dashboard_release_publisher.py (the actual live Dashboard-release binding path) was independently confirmed to never have shared this defect -- its own _bind_current_product_json binds purely on as_of_session match and already reports Workspace/Screener artifact_identity correctly; a full local_only=True rehearsal against the real 2026-09-14 Workspace/Screener artifacts (all writes redirected to a disposable staging directory, nothing written to the real market-dashboard or dashboard-runtime checkouts) confirms investment_workspace and screener_master both bind CURRENT/EXACT_SESSION with correct identities, and Screener's source_artifacts.investment_decision_workspace exactly equals Workspace's own artifact_identity (lineage trace verified byte-for-byte). Real 2026-09-14 replay numbers unchanged: reference 1,683, official scope 1,504, outside scope 179, official-only-excluded 20, price 853/830, tactical 852/831; 2026-09-11 negative control still TEMPORALLY_INELIGIBLE_FOR_SESSION. Focused suites: 128 passed / 15 failed / 1 skipped, all 15 failures reproducing the same pre-existing checkout-path-authority and missing-fixture causes already catalogued by the parent milestone -- zero regressions. No provider/network call, no Daily rerun, no production runtime write, no Dashboard publication, no push, no merge to main. Local checkpoint: branch feature/official-research-product-cutover-20260914, child commit of 0488ef6."
+    },
+    {
+      "milestone_id": "OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1",
+      "state": "COMPLETE_LOCAL",
+      "narrative_disposition": "READY_FOR_RELEASE_AND_DASHBOARD_CUTOVER",
+      "starting_checkpoint": "47a4264d7eec78e464b9a36f2395f9143e755e50",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1",
+        "CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_CUTOVER_READINESS_LOCAL_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner-issued OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1 directive (2026-09-15): authority-lifecycle trace, durable retention design, implementation, real primary replay, and full local Dashboard release rehearsal for the current-official-universe evidence portability gap.",
+      "state_history": [],
+      "owner_override": "OWNER_AUTHORIZATION_2026_09_15_OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1",
+      "notes": "COMPLETE_LOCAL / READY_FOR_RELEASE_AND_DASHBOARD_CUTOVER. Isolated worktree rooted exactly at released 47a4264d7eec78e464b9a36f2395f9143e755e50 (branch feature/official-scope-evidence-operationalization-20260915), never reusing the worktree lineage that originally produced the evidence. Root cause confirmed by a genuinely cold `git worktree add`: canonical_current_product_projections.resolve_current_research_official_universe_scope already existed at 47a4264 and reads CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE, but that path lives under gitignored operations-review/ and was never git-tracked, so a fresh checkout degrades the whole official-scope axis to None. Fix: `git add -f` the exact pinned evidence (byte-identical SHA-256 verified across all three prior worktrees that held it, self-identity current_official_market_universe:92ddcca20563cbc9350f77dd4e227946426cbf7e09f8766ca1c31f0bbc9cace7) plus its companion base-refresh artifact -- the same force-track pattern ~350 other operations-review/ artifacts already use here, not a new config/promoted_*.json duplication. Added current_official_market_universe.verify_retained_artifact() (self-hash, contract_version, and an explicit CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_EXPECTED_IDENTITY pin), wired into the resolver so corrupted/wrong-identity/wrong-contract bytes fail closed to None exactly like a missing file. New bounded, explicit-source, no-network, idempotent, conflict-refusing migration tool (current_official_universe_evidence_retention.py, tools/retain_current_official_universe_evidence.py) for future re-pins. Real 2026-09-14 replay via the actual production entrypoint (materialize_and_write_current_product_projections, real retained tactical/valuation registry inputs, real dashboard-runtime/screen_snapshot.csv) reproduces the numbers the dependency milestones already validated, now from the cold worktree: reference 1,683, official scope 1,504, outside scope 179, official-only-excluded 20, price 853/830, tactical 852/831, in-scope price 853/651, outside-scope price 0/179, in-scope tactical 852/652, outside-scope tactical 0/179; 2026-09-11 negative control still TEMPORALLY_INELIGIBLE_FOR_SESSION. Local-only dashboard_release_publisher.publish_dashboard_release() rehearsal against this replay (writes redirected to a disposable staging directory; real market-dashboard/dashboard-runtime untouched) returns LOCAL_VALIDATED_NO_GIT_MUTATION with investment_workspace/screener_master both CURRENT/EXACT_SESSION and Screener source_artifacts.investment_decision_workspace exactly equal to Workspace artifact_identity. DASHBOARD_PRESENTATION_PATCH_REQUIRED = NO. 13 new focused tests (tests/test_official_scope_evidence_operationalization_20260915.py); py_compile, git diff --check, and tools/stocklookup_roadmap.py --check (drift PASS) all clean. Focused regression sweep reproduces the same pre-existing gitignored-operations-review-evidence-absent-in-a-fresh-worktree failures already catalogued throughout docs/STATE.md (unrelated 2026-08-23/2026-08-24 evidence), confirmed identical against the untouched parent stock-core-private checkout -- zero regressions. No provider/network call, no Daily rerun, no mutation of the immutable completed 2026-09-14 Daily operation (daily_research_session_operation:7ae3e33c06106dfa41cd0ed11182c7e7c8fe59bc3cbe7245b2b7635bc20a2b5a), no production runtime write, no ACTIVE_UNIVERSE/historical-PIT/RAW_AS_TRADED/liquidity/execution/sizing authority change, no Dashboard publication, no push, no merge to main. Local checkpoint: branch feature/official-scope-evidence-operationalization-20260915, parent 47a4264d7eec78e464b9a36f2395f9143e755e50."
     }
   ],
   "blocked_capabilities": [

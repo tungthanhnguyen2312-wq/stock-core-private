@@ -1,0 +1,151 @@
+{
+  "milestone": "CURRENT_OFFICIAL_MARKET_UNIVERSE_REFRESH_AND_SECURITY_STATUS_V1",
+  "generated_at": "2026-09-13",
+  "final_artifact_identity": "current_official_market_universe:c8ba0f166d6fa051304aba6a0e22c53ac4ee764eaea481e3bad7444a49bcb0cd",
+  "source_artifact_identities": {
+    "descriptive": "market_wide_current_descriptive_research:441d0a39d6537f64da5423003b346389ac74a3310a6c82d6aa0b4ec27169a815",
+    "hnx": "hnx_enumerable_universe_kllh_event_disclosure_scaleout:f9a367e2421d740676d050ee404695b5840e38ea7566885b7771dae81993a572",
+    "hose": "hose_public_xhr_and_periodic_series_recon:c2f82e707a299580dd90d66641841d62ce9cee16b5b0626b41eb53f89d78fd05",
+    "scenario": "current_evidence_bound_scenario:4ad69850a97d6843747dc0a4a42a75d84356ceaaaf0ccb1f9cfb8cbd636d50a6",
+    "screening": "current_market_screening_opportunity_comparison_foundation:af1adc5a3aec59de20ac250816ea5c027fc7aeacbc41219b196b64653a7481ca",
+    "status": "current_universe_status_and_session_coverage_resolution:8a38dbb6399233f7f743724191db3c229cba9710b72d5239e505df1c8b7e34ef",
+    "strategy": "polymorphic_current_strategy_classification:4cc46da473110b8d08a071aeb68986b341c594aed990851be96317b9c753a87d",
+    "tactical": "watchlist_tactical_entry_classifier:a76329bb217392c934d996372fcf891c9fa17d305a3f9e43745735d59b4b1273"
+  },
+  "hnx_captures": [
+    {
+      "surface": "hnx_listed_list_landing",
+      "page": null,
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chung-khoan-ny.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chung-khoan-ny.html",
+      "retrieved_at": "2026-09-13T08:06:19Z",
+      "http_status": 200,
+      "sha256": "9ad684f69e1f778f4fb312415c6029dbb311cfb20eb6b8a4d700e290bec8d4a0"
+    },
+    {
+      "surface": "hnx_listed_list_bulk",
+      "page": 1,
+      "requested_url": "https://hnx.vn/ModuleIssuer/List/ListSearch_Datas",
+      "official_url": "https://hnx.vn/ModuleIssuer/List/ListSearch_Datas",
+      "retrieved_at": "2026-09-13T08:06:20Z",
+      "http_status": 200,
+      "sha256": "def17553e6537427fbe041749459e0e8062be08d9c42a7fe59834f030382c8e2"
+    },
+    {
+      "surface": "upcom_list_landing",
+      "page": null,
+      "requested_url": "https://hnx.vn/vi-vn/cophieu-etfs/chung-khoan-uc.html",
+      "official_url": "https://hnx.vn/vi-vn/cophieu-etfs/chung-khoan-uc.html",
+      "retrieved_at": "2026-09-13T08:06:21Z",
+      "http_status": 200,
+      "sha256": "36da785a98fe0acc118d7a82552b33e7fe865f19b1ff928852ae217cc00062e1"
+    },
+    {
+      "surface": "upcom_list_bulk",
+      "page": 1,
+      "requested_url": "https://hnx.vn/ModuleIssuer/UC_Issuer/ListSearch_Datas",
+      "official_url": "https://hnx.vn/ModuleIssuer/UC_Issuer/ListSearch_Datas",
+      "retrieved_at": "2026-09-13T08:06:26Z",
+      "http_status": 200,
+      "sha256": "d2b64100d042657d10b01ffee583864eed905be047526b0af9ff08b2c04075ed"
+    }
+  ],
+  "hose_captures": [
+    {
+      "surface": "listing_dashboard",
+      "requested_url": "https://api.hsx.vn/l/api/v1/securities/listing-dashboard",
+      "official_url": "https://api.hsx.vn/l/api/v1/securities/listing-dashboard",
+      "retrieved_at": "2026-09-13T08:08:05Z",
+      "http_status": 200,
+      "sha256": "75bcbe932b5280e7b9b35b9142ed05ff047b9280e348fe7dfd6805ef82060f5b"
+    },
+    {
+      "surface": "stock_master",
+      "requested_url": "https://api.hsx.vn/l/api/v1/1/securities/stock?pageIndex=1&pageSize=1000&code=&alphabet=&sectorId=",
+      "official_url": "https://api.hsx.vn/l/api/v1/1/securities/stock?pageIndex=1&pageSize=1000&code=&alphabet=&sectorId=",
+      "retrieved_at": "2026-09-13T08:08:05Z",
+      "http_status": 200,
+      "sha256": "73c99cb051ff4a670f17d63c45fd2a146756d33da74f4fdc15822d6cc7fa67e6"
+    },
+    {
+      "surface": "index_catalog",
+      "requested_url": "https://api.hsx.vn/l/api/v1/1/securities/indicies/0",
+      "official_url": "https://api.hsx.vn/l/api/v1/1/securities/indicies/0",
+      "retrieved_at": "2026-09-13T08:08:07Z",
+      "http_status": 200,
+      "sha256": "3347088f83e990486f3aa8ecf569f7e1bf4aacf894356ce1b9a487f6ea44b2b6"
+    },
+    {
+      "surface": "vn30_constituents",
+      "requested_url": "https://api.hsx.vn/l/api/v1/1/indicies/5/securities?pageIndex=1&pageSize=100",
+      "official_url": "https://api.hsx.vn/l/api/v1/1/indicies/5/securities?pageIndex=1&pageSize=100",
+      "retrieved_at": "2026-09-13T08:08:07Z",
+      "http_status": 200,
+      "sha256": "d8814bfd77e3b9863e89b3ae03e77931aacb24540542fddb0ea9e6ff7145cb51"
+    },
+    {
+      "surface": "hpg_detail",
+      "requested_url": "https://api.hsx.vn/l/api/v1/1/securities/2458",
+      "official_url": "https://api.hsx.vn/l/api/v1/1/securities/2458",
+      "retrieved_at": "2026-09-13T08:08:07Z",
+      "http_status": 200,
+      "sha256": "e89a39251ca76adc37682c1c429d14b5ef1c6de0d1834b821124822bf2522e28"
+    },
+    {
+      "surface": "hpg_foreign_room",
+      "requested_url": "https://api.hsx.vn/mk/api/v1/market/securities/foreign/HPG?pageSize=100",
+      "official_url": "https://api.hsx.vn/mk/api/v1/market/securities/foreign/HPG?pageSize=100",
+      "retrieved_at": "2026-09-13T08:08:07Z",
+      "http_status": 200,
+      "sha256": "4f71d10725f45fa28b7c660c6a7d2ce71b4f524a9e992d330fb8cebd65e3a986"
+    },
+    {
+      "surface": "hpg_current_market",
+      "requested_url": "https://api.hsx.vn/mk/api/v1/market/securities/HPG",
+      "official_url": "https://api.hsx.vn/mk/api/v1/market/securities/HPG",
+      "retrieved_at": "2026-09-13T08:08:09Z",
+      "http_status": 200,
+      "sha256": "5770d825c2de1f4e61d76e27dbd3d40f83aa0e084387f6df64d96b7fb41e69eb"
+    },
+    {
+      "surface": "hpg_rights",
+      "requested_url": "https://api.hsx.vn/l/api/v1/1/securities/dividend/2458",
+      "official_url": "https://api.hsx.vn/l/api/v1/1/securities/dividend/2458",
+      "retrieved_at": "2026-09-13T08:08:10Z",
+      "http_status": 200,
+      "sha256": "866ed41d1161a5b564a6728a45affaede01af04a3024607046be62813e27c3b2"
+    },
+    {
+      "surface": "rss_index",
+      "requested_url": "https://api.hsx.vn/n/api/v1/News/NewsFeed",
+      "official_url": "https://api.hsx.vn/n/api/v1/News/NewsFeed",
+      "retrieved_at": "2026-09-13T08:08:10Z",
+      "http_status": 200,
+      "sha256": "16f9c868265b0cdd3ed9a9c914faf05240cdc65bf44443cc55556bb4d26d9c6c"
+    },
+    {
+      "surface": "market_disclosures",
+      "requested_url": "https://api.hsx.vn/n/api/v1/1/news/securitiesType/1?pageIndex=1&pageSize=1000&startDate=2026-02-24&endDate=2026-09-13",
+      "official_url": "https://api.hsx.vn/n/api/v1/1/news/securitiesType/1?pageIndex=1&pageSize=1000&startDate=2026-02-24&endDate=2026-09-13",
+      "retrieved_at": "2026-09-13T08:08:10Z",
+      "http_status": 200,
+      "sha256": "74dbc5611d3e6cafaf0d13567a7fb0fe0409ffb075eed65e3b6b4622bd6fd7b5"
+    },
+    {
+      "surface": "hpg_disclosures",
+      "requested_url": "https://api.hsx.vn/n/api/v1/1/news/securities/2458/1?pageIndex=1&pageSize=100&startDate=2026-02-24&endDate=2026-09-13",
+      "official_url": "https://api.hsx.vn/n/api/v1/1/news/securities/2458/1?pageIndex=1&pageSize=100&startDate=2026-02-24&endDate=2026-09-13",
+      "retrieved_at": "2026-09-13T08:08:34Z",
+      "http_status": 200,
+      "sha256": "c4ef0cd7fbc6615b9f8eaae3a5f76b1feb57299ca341881218a9a00c22b9990c"
+    }
+  ],
+  "dataset_freshness": {
+    "hnx_official_disclosure_index/v1": "CARRIED_FORWARD_FROM_2026-08-24_NOT_REFRESHED_THIS_MILESTONE",
+    "hnx_official_equity_universe/v1": "LIVE_REFRESH_2026-09-13",
+    "hnx_official_rights_event_index/v1": "CARRIED_FORWARD_FROM_2026-08-24_NOT_REFRESHED_THIS_MILESTONE",
+    "reason": "UPCOM's rights/event endpoint enforces a small server-side page size regardless of the requested pNumRecord and requires 300+ sequential pages to exhaust -- not a bounded acquisition, and not read by current_official_market_universe.build_artifact's 1,683-ticker reconciliation math (only its descriptive event_context_linkage summary field). Left for a dedicated future acquisition using the existing declared-slice pattern (tools/acquire_hnx_enumerable_event_slice.py)."
+  },
+  "hnx_artifact_identity": "hnx_enumerable_universe_kllh_event_disclosure_scaleout:f9a367e2421d740676d050ee404695b5840e38ea7566885b7771dae81993a572",
+  "hose_artifact_identity": "hose_public_xhr_and_periodic_series_recon:c2f82e707a299580dd90d66641841d62ce9cee16b5b0626b41eb53f89d78fd05"
+}

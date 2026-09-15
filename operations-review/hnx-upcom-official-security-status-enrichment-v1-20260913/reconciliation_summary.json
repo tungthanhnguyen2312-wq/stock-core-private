@@ -1,0 +1,31 @@
+{
+  "by_market": {
+    "HNX_LISTED": {
+      "OFFICIALLY_ACTIVE_BUT_NO_RETAINED_BAR": 1
+    },
+    "UPCOM": {
+      "OFFICIALLY_RESTRICTED": 26,
+      "OFFICIALLY_SUSPENDED": 23
+    }
+  },
+  "current_status_acquired": 50,
+  "no_bar_explained_by_official_status": 49,
+  "no_bar_population": 50,
+  "no_bar_still_source_gap": 1,
+  "official_active": 1,
+  "official_cancelled_or_delisted": 0,
+  "official_restricted": 26,
+  "official_suspended": 23,
+  "official_temporarily_stopped": 0,
+  "six_residual": {
+    "BCG": "OFFICIAL_STATUS_UNAVAILABLE",
+    "BCR": "OFFICIAL_STATUS_UNAVAILABLE",
+    "DAN": "OFFICIAL_STATUS_UNAVAILABLE",
+    "DVT": "OFFICIAL_STATUS_UNAVAILABLE",
+    "LTG": "OFFICIAL_STATUS_UNAVAILABLE",
+    "VTS": "OFFICIAL_STATUS_UNAVAILABLE"
+  },
+  "status_unavailable": 0,
+  "target_session_status_qualified": 0,
+  "temporally_unresolved": 0
+}

@@ -1,5 +1,74 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-15 - Official Scope Evidence Operationalization And Dashboard Cutover Readiness V1
+
+`OFFICIAL_SCOPE_EVIDENCE_OPERATIONALIZATION_AND_DASHBOARD_CUTOVER_READINESS_V1 = COMPLETE_LOCAL`,
+isolated worktree rooted exactly at released `47a4264d7eec78e464b9a36f2395f9143e755e50`, local
+checkpoint only, not pushed. Owner-authorized despite `queued_next=None` (AGENTS.md "Default
+lightweight bootstrap").
+
+1. **Decision: the durable-evidence pattern is "force-track the specific artifact in
+   `operations-review/`", not a new `config/promoted_*.json` duplication.** Before designing
+   anything, surveyed existing durable-evidence patterns in this repository:
+   `config/daily_research_session_input_registry.json` (a tracked manifest of `path` +
+   `artifact_identity` pointers, but the paths it points at are still gitignored
+   `operations-review/` files -- it documents provenance, it does not itself make evidence
+   durable); `config/promoted_entity_classifications*.json` (tracked, self-contained, up to
+   1.26 MB -- real precedent for git-tracking a promoted evidence payload directly, and
+   `tools/run_legacy_entity_classification_recovery_v1.py` solved the exact same "qualified
+   evidence exists only in an untracked sibling-worktree artifact" problem this way before);
+   `docs/metadata_registry_snapshot_contract.md`'s `registry_snapshots/` (deliberately gitignored
+   generated data -- explicitly NOT the pattern for evidence that must survive a checkout); and,
+   decisively, `git ls-files operations-review/` already force-tracks ~350 milestone evidence
+   files up to 31 MB (e.g. `operations-review/current-official-market-universe-integration-v1-
+   20260824/`, `operations-review/market-wide-structured-financial-period-semantics-v1-20260905/
+   structured_financial_period_semantics_facts.jsonl.gz`). The last is the repository's actual,
+   already-dominant answer to "evidence that must survive worktree deletion": `git add -f` the
+   specific file, in its natural `operations-review/` location, at far larger scale than this
+   2.1 MB artifact. Chose that pattern over inventing a `config/`-relocated duplicate: it requires
+   zero code change to `CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_RELATIVE`'s existing path/pin, matches
+   established convention exactly, and avoids a second copy of the same bytes living at two paths.
+2. **Decision: fail-closed identity/contract binding belongs in the evidence's own producing
+   module, not a new parallel module.** `current_official_market_universe.py` already had a
+   private `_verify()` self-hash check (used internally for tamper detection on its own
+   `build_artifact`/`attach_hnx_upcom_security_status` outputs). Added a public
+   `verify_retained_artifact(artifact, *, label, expected_identity=None)` wrapper there --
+   self-hash plus `contract_version` plus an optional exact-identity pin -- reused by both the
+   resolver (`canonical_current_product_projections.resolve_current_research_official_universe_
+   scope`) and the new migration tool, rather than duplicating hash/contract logic in either
+   caller. `canonical_current_product_projections.CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_EXPECTED_
+   IDENTITY` pins the exact qualification this milestone verified
+   (`current_official_market_universe:92ddcca20563cbc9350f77dd4e227946426cbf7e09f8766ca1c31f0bbc9cace7`);
+   a future re-pin to newer evidence must update the path and this constant together, deliberately,
+   never silently.
+3. **Decision: the migration tool never runs git itself.** `current_official_universe_evidence_
+   retention.retain_evidence()` (explicit `--source`, verifies self-hash/contract/optional
+   identity, refuses a conflicting existing destination, is idempotent, performs no network
+   access) only places verified bytes on disk. Tracking the result in git
+   (`git add -f <path>`) is left as an explicit, separate, auditable operator action -- a data
+   tool should not have git side effects baked in.
+4. **Decision: reuse the existing `resolve_current_research_official_universe_scope(root,
+   session)` signature and path-under-`root` resolution unchanged**, rather than switching to a
+   path relative to the module file (as the `config/promoted_*` tier does). The evidence now lives
+   at a git-tracked path *within the checkout*, so `root`-relative resolution already gives
+   worktree-independent behavior once the file is tracked -- switching to a module-relative path
+   would have been unnecessary churn and would have silently changed
+   `test_21_canonical_current_product_path_wires_official_scope_non_destructively`'s existing
+   "bogus root still returns `None`" contract instead of preserving it.
+
+**REPLAY / VALIDATION**: see `docs/STATE.md` for the full real 2026-09-14 replay (reference 1,683
+/ official scope 1,504 / outside 179 / official-only-excluded 20; price 853/830; tactical
+852/831; identical cross-tabs to the milestone this operationalizes) and the local-only
+`dashboard_release_publisher.publish_dashboard_release()` rehearsal, both run from a `git worktree
+add` rooted exactly at `47a4264...` with no prior local history -- the portability proof this
+milestone exists to deliver.
+
+**GUARDRAILS HELD**: no new source qualification or re-derivation of already-qualified evidence;
+no provider/network call; no Daily rerun; no mutation of the immutable completed 2026-09-14 Daily
+operation; no production runtime write; no `ACTIVE_UNIVERSE`, historical-PIT, RAW_AS_TRADED,
+liquidity, execution, or sizing authority change; no Dashboard publication; no push; no merge to
+main. No successor is queued.
+
 ## 2026-09-15 - Workspace Publisher Lineage Contract Reconciliation V1
 
 `WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1 = COMPLETE_LOCAL`, local checkpoint only,
