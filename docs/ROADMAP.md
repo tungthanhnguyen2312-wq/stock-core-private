@@ -1,5 +1,21 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Personal investment decision action center V1 (2026-09-16):**
+`PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1 = COMPLETE / PERSONAL_ACTION_CENTER_RELEASED`. First
+product-layer milestone on top of `PERSONAL_DECISION_INPUT_TRUTH_V1`: turns existing research
+engines into one deterministic owner-facing daily surface (`stocklookup.py action-center`), with no
+new data engine or recomputed decision anywhere. Seven sections -- MARKET, PORTFOLIO (confirmed
+holdings only, six-value bounded action vocabulary), UNRESOLVED_PORTFOLIO (review-only),
+WATCHLIST, DISCOVERY (full universe, portfolio-independent), CAPITAL_ROTATION (same-sector,
+posture-evidence-only, never cost basis, never an unresolved source), and ATTENTION_QUEUE
+(categorical, no score). Every numeric price-sensitive field fails closed on a stale/unevaluated
+`price_freshness`; qualitative research fields never do. Found and closed a real gap: the
+portfolio-aware decision chain alone cannot distinguish a held position under an `AVOID` posture
+from a genuinely fine hold -- confirmed live against 2026-09-16, where all 5 real confirmed
+holdings correctly now surface `EXIT_REVIEW`. Private-portfolio-optional throughout; local-only
+output (`%USERPROFILE%\.stocklookup\action_center\`), never Git/Dashboard/public AI-handoff. Next
+gate: `PERSONAL_CAPITAL_ALLOCATION_CONTEXT_V1`.
+
 **Personal decision-input truth V1 (2026-09-16):**
 `PERSONAL_DECISION_INPUT_TRUTH_V1 = COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED`. First
 milestone of the personal-application correctness track: a reconciliation-blocked reconstructed

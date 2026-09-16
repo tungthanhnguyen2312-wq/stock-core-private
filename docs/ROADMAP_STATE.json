@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PERSONAL_DECISION_INPUT_TRUTH_V1",
+    "milestone": "PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PERSONAL_ACTION_CENTER_RELEASED",
+      "starting_checkpoint": "48d8f9b270d79d738052a3f1803ee87678632c7e",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "PERSONAL_DECISION_INPUT_TRUTH_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / PRESENTATION_COMPOSITION_ONLY_NO_NEW_DECISION_AUTHORITY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1 (this session, 2026-09-16)",
+      "state_history": [],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_16_PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1",
+      "notes": "COMPLETE / PERSONAL_ACTION_CENTER_RELEASED. New personal_investment_decision_action_center.py (personal_investment_decision_action_center/v1) + `stocklookup.py action-center` CLI: a pure composition layer over already-governed retained artifacts (integrated_investment_decision_product, asymmetric_dislocation_research, market_wide_current_descriptive_research, current_market_sector_leadership_context, and -- optionally -- portfolio_aware_decision). Seven sections: MARKET, PORTFOLIO (CURRENT_CONFIRMED holdings only, six-value bounded action vocabulary via deterministic remap of existing position_state/portfolio_action_research/security_research_action_posture), UNRESOLVED_PORTFOLIO (review-only), WATCHLIST (config/owner_research_focus.json scope), DISCOVERY (full 1,683-ticker universe, portfolio-independent), CAPITAL_ROTATION (same-sector, posture/evidence only, never cost basis, never sourced from an unresolved position), ATTENTION_QUEUE (five categorical buckets, no score). Found and closed a real gap: portfolio_aware_decision.py's own vocabulary cannot distinguish HELD+AVOID from a genuinely fine HELD+HOLD (both report HOLD_EXISTING_NO_ACTION); the Action Center's remap correctly surfaces HELD+AVOID as EXIT_REVIEW, confirmed live -- all 5 real 2026-09-16 confirmed holdings carry posture AVOID and now correctly surface EXIT_REVIEW with full evidence attached. Every evidence block carries price_freshness (from same_session_technical_coverage_disposition when retained); numeric trigger/invalidation fields fail closed on stale/unevaluated freshness while qualitative posture/why_now/fundamental fields are never touched by a price or coverage-authority gap. Verified private-portfolio-optional: MARKET/WATCHLIST/DISCOVERY/ATTENTION_QUEUE are byte-identical with and without a supplied portfolio root; PORTFOLIO/UNRESOLVED_PORTFOLIO/CAPITAL_ROTATION degrade to explicit PRIVATE_PORTFOLIO_NOT_SUPPLIED. Local-only output at %USERPROFILE%\\.stocklookup\\action_center\\<session>\\ (JSON + owner-readable Markdown render), never Git/operations-review/Dashboard/public AI-handoff; console summary is counts/status only. 20 new tests; 192 pass across the full directly-relevant suite, zero regressions; py_compile/git diff --check clean. No Daily, provider call, Dashboard, public AI-handoff, or new sizing/execution authority. See docs/STATE.md and docs/DECISIONS.md for full detail."
+    },
     {
       "milestone_id": "PERSONAL_DECISION_INPUT_TRUTH_V1",
       "state": "COMPLETE",

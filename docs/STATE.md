@@ -1,5 +1,107 @@
 # Stock Lookup — Operational State
 
+**Personal investment decision action center V1 (2026-09-16):**
+`PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1 = COMPLETE / PERSONAL_ACTION_CENTER_RELEASED`. Owner
+directive (this session): turn Stock Lookup's existing research engines into one deterministic
+owner-facing daily decision surface, without building a second data engine. New
+`personal_investment_decision_action_center.py` (`personal_investment_decision_action_center/v1`)
+is a pure composition layer -- it computes no new decision anywhere; every field is read straight
+from already-governed retained artifacts for one completed session
+(`integrated_investment_decision_product/v1` for posture/trigger/invalidation/evidence axes,
+`asymmetric_dislocation_research/v1` for discovery lanes, `market_wide_current_descriptive_research/v1`
++ `current_market_sector_leadership_context/v1` for market regime, and -- only when present -- the
+just-released `portfolio_aware_decision/v1` current-position-truth chain from
+`PERSONAL_DECISION_INPUT_TRUTH_V1`). New CLI `stocklookup.py action-center` (top-level, not nested
+under `portfolio`, since the product works with or without one).
+
+**Contract.** Seven sections: MARKET (regime/breadth/momentum-participation/sector-leadership/
+previous-session deltas), PORTFOLIO (confirmed holdings only, action from a bounded six-value
+vocabulary -- `ADD_CANDIDATE`/`HOLD`/`HOLD_NO_ADD`/`REDUCE_REVIEW`/`EXIT_REVIEW`/
+`WAIT_FOR_CONFIRMATION` -- a pure deterministic lookup over already-computed `position_state`/
+`portfolio_action_research`/`security_research_action_posture`, no new threshold anywhere),
+UNRESOLVED_PORTFOLIO (`CURRENT_POSITION_UNRESOLVED` review-only, explicitly states owner
+reconciliation is required, never a BUY/SELL), WATCHLIST (the governed
+`config/owner_research_focus.json` scope, remapped to `BUY_PROBE_CANDIDATE`/`WAIT_FOR_CONFIRMATION`/
+`WATCH`/`AVOID_NEW_ENTRY`), DISCOVERY (the full 1,683-ticker research universe, deliberately
+portfolio-independent -- four lanes: `TACTICAL_SETUP`/`EARLY_REVERSAL` from
+`research_action_posture`, `VALUATION_DISLOCATION`/`ASYMMETRIC_RECOVERY_CASE` from
+`asymmetric_dislocation_research`'s own opportunity/risk split, reusing exactly
+`portfolio_aware_opportunity_shortlist.py`'s existing `_RECOVERY`/`_RISK` distinction rather than a
+new one), CAPITAL_ROTATION (a rotation pair only ever cites posture/evidence, never cost basis;
+source must be `CURRENT_CONFIRMED` with `EXIT_REVIEW`/`REDUCE_REVIEW`, destination must be a
+same-sector -- via `portfolio_aware_decision.resolve_sector_by_ticker`, itself public, no private
+data needed -- `TACTICAL_SETUP`/`VALUATION_DISLOCATION` discovery candidate; no same-sector
+destination means no pair, fail closed rather than an arbitrary cross-sector comparison), and
+ATTENTION_QUEUE (five categorical buckets, priority-ordered, never a score).
+
+**Real gap this composition layer closes.** `portfolio_aware_decision.py`'s own action vocabulary
+cannot distinguish a `HELD` position under an `AVOID` research posture from a genuinely fine `HELD`
++ `HOLD` position -- both report `portfolio_action_research = HOLD_EXISTING_NO_ACTION` (that module
+was never asked to sub-classify an already-held position by its own posture; only
+add/probe-eligible postures branch there). The Action Center's `_holding_action` remap reads
+`security_research_action_posture` (already computed, never re-derived) to correctly surface this
+distinction as `EXIT_REVIEW`. Confirmed against the real 2026-09-16 session: all 5 of the owner's
+real confirmed holdings carry `security_research_action_posture = AVOID` today (consistent with the
+session's own broadly negative momentum breadth, `MOMENTUM_BREADTH_NEGATIVE`) and all 5 now
+correctly surface as `EXIT_REVIEW` with full evidence (`why_now`, counter-thesis, trigger/
+invalidation) attached -- not a bare label, and not a sell instruction (`authority_boundary` and
+the per-record evidence block both carry this explicitly).
+
+**Exact-session price semantics, extended.** Every evidence block carries `freshness.price_freshness`
+(`CURRENT`/`STALE_OR_UNAVAILABLE`/`NOT_EVALUATED`), sourced from the already-retained
+`same_session_technical_coverage_disposition/v1` artifact when present -- never re-derived. When
+`price_freshness != CURRENT`, `trigger.trigger_level`/`distance_to_trigger_pct` and
+`invalidation.invalidation_level`/`distance_to_invalidation_pct` are withheld (`None`,
+`numeric_fields_withheld_stale_price: true`); the qualitative `research_action_posture`/`why_now`/
+`tactical_phase`/`fundamental_state` fields are never touched -- a system authority gap (missing
+coverage artifact, or a genuine per-ticker provider gap) degrades only numeric, price-sensitive
+language, never current technical/fundamental research itself (`AI_RULES.md`'s "a system authority
+gap must not automatically produce WAIT").
+
+**Private-portfolio-optional, always.** MARKET/WATCHLIST/DISCOVERY/a general ATTENTION_QUEUE are
+produced identically whether or not a private portfolio is present (verified: real
+`security_denominator=1683`, `discovery_lane_counts` byte-identical with and without a supplied
+portfolio root). PORTFOLIO/UNRESOLVED_PORTFOLIO/CAPITAL_ROTATION degrade to an explicit
+`PRIVATE_PORTFOLIO_NOT_SUPPLIED` status (never a silent empty result indistinguishable from "no
+holdings") when `private_portfolio_context.portfolio_status` is not `READY`. `stocklookup.py` is
+never made to depend on a private portfolio for this command.
+
+**Privacy.** Local-only output, always, at `%USERPROFILE%\.stocklookup\action_center\<session>\`
+(a JSON artifact plus an owner-readable `.md` render, the first Markdown-render precedent this
+module follows exactly, e.g. `human_research_review_pack.markdown`) -- never Git,
+`operations-review/`, the Dashboard, or the public `current_research_ai_handoff_packet`/
+`stocklookup-ai-handoffs` path, even the portfolio-free baseline: this product is the owner's own
+local daily read, not a second public artifact. Console output (`public_console_summary`) is
+counts/status/identity only, never a ticker. No second AI reasoning engine: nothing here calls an
+LLM; the JSON is already structured enough for an external AI research consumer to explain without
+recomputing anything, and the owner shares the non-private MARKET/WATCHLIST/DISCOVERY sections with
+one externally by their own choice, exactly as with `private_portfolio_research_handoff/v1`.
+
+**Real 2026-09-16 validation** (counts only; see above for the private-portfolio-optional and
+AVOID/EXIT_REVIEW findings): confirmed-holding count 5, unresolved-portfolio count 2 (both
+correctly excluded from PORTFOLIO and never a rotation source), 0 `CLOSED` positions present in any
+active section, 1 owner-excluded ticker (from `PERSONAL_DECISION_INPUT_TRUTH_V1`'s
+`research_exclusions.json`) confirmed absent from portfolio/watchlist/discovery/attention-queue
+output. Discovery: 83 `TACTICAL_SETUP`, 178 `EARLY_REVERSAL`, 13 `VALUATION_DISLOCATION`, 184
+`ASYMMETRIC_RECOVERY_CASE` -- identical whether or not the private portfolio was supplied.
+Rotation: 5 pairs, all same-sector, all citing posture/evidence only. Watchlist: 11 governed
+owner-focus/broader-watchlist tickers evaluated. Attention queue: 2 `PORTFOLIO_DATA_REVIEW`
+(unresolved), 6 `ACTION_REVIEW_NOW`, 3 `CONFIRMATION_WATCH`, 7 `NO_ACTION_REQUIRED`.
+
+**Tests.** 20 new focused tests in `tests/test_personal_investment_decision_action_center.py`
+(confirmed-holding action surface, AVOID-on-HELD distinction, closed-position exclusion,
+unresolved-review-only, owner-exclusion absence across every section, no-private-portfolio
+baseline, stale/current/not-evaluated price freshness and numeric-trigger fail-closed, technical
+research not blocked by a missing coverage artifact, discovery outside the watchlist, no
+universal-score/probability/target-price anywhere, rotation sourced only from confirmed holdings
+and only same-sector, deterministic identity, Markdown rendering, console-summary privacy). 192
+tests pass across the full directly-relevant suite (this module, portfolio-aware decision,
+opportunity shortlist, private decision packet, Integrated Decision, Workspace, Screener, AI
+handoff packet, asymmetric dislocation), zero regressions. `py_compile` and `git diff --check`
+clean. No Daily run, provider call, Dashboard publication, or public AI-handoff write. No portfolio
+sizing or execution authority created. Next gate: `PERSONAL_CAPITAL_ALLOCATION_CONTEXT_V1`
+(household/family/cashflow/sizing context -- explicitly out of this milestone's scope).
+
 **Personal decision-input truth V1 (2026-09-16):**
 `PERSONAL_DECISION_INPUT_TRUTH_V1 = COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED`. Owner
 directive (this session, 2026-09-16): move Stock Lookup toward a real personal investment

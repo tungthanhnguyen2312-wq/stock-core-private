@@ -1,5 +1,38 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-16 - Personal Investment Decision Action Center V1
+
+`PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1 = COMPLETE / PERSONAL_ACTION_CENTER_RELEASED`. Owner
+directive (this session): compose existing research engines into one daily decision surface. See
+`docs/STATE.md` for the full trace and real-validation counts.
+
+1. **Decision: composition only, zero new decision logic.** Every field in the artifact is read
+   from an already-governed retained artifact (`integrated_investment_decision_product`,
+   `asymmetric_dislocation_research`, `portfolio_aware_decision`, descriptive/sector-leadership
+   context). The only new logic anywhere in this module is a small set of deterministic lookup
+   tables remapping already-computed posture/state fields onto a bounded presentation vocabulary
+   (`_holding_action`, `_watchlist_action`) -- never a new threshold, score, or recomputation.
+2. **Decision: `CURRENT_POSITION_UNRESOLVED` is structurally excluded, not filtered.** An
+   unresolved position lives only in `unresolved_portfolio.items`; it is absent from
+   `portfolio.holdings` and `capital_rotation` by construction (both are built only from
+   `position_state in (HELD, HELD_ABOVE_POLICY_CAP)`), not by a downstream filter a caller could
+   accidentally skip.
+3. **Decision: stale price fails closed on numbers, never on research.** `price_freshness != CURRENT`
+   withholds only `trigger_level`/`distance_to_trigger_pct`/`invalidation_level`/
+   `distance_to_invalidation_pct`. `research_action_posture`, `why_now`, `tactical_phase`,
+   `fundamental_state`, and every other qualitative field pass through unchanged -- a price/PIT gap
+   is not allowed to silently suppress current technical or fundamental research (`AI_RULES.md`).
+4. **Decision: capital rotation requires a same-sector destination or emits nothing.** No fuzzy
+   "best match" ranking was built to force a pair for every deteriorating holding; sector
+   comparability (via the already-public `resolve_sector_by_ticker`) is the only qualifying rule,
+   and cost basis is never read anywhere in the rotation builder.
+5. **Decision: this product is local-only even without a private portfolio.** The whole artifact
+   -- not just the portfolio-derived sections -- is written under
+   `%USERPROFILE%\.stocklookup\action_center\`, never `operations-review/` (which, though
+   gitignored, is the established location for public per-session research products) and never the
+   public AI-handoff path. The Action Center is the owner's own daily read, not a new public
+   artifact class.
+
 ## 2026-09-16 - Personal Decision-Input Truth V1
 
 `PERSONAL_DECISION_INPUT_TRUTH_V1 = COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED`. Owner

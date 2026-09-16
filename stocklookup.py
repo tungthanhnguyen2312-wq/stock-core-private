@@ -208,6 +208,18 @@ def main(argv=None) -> int:
     portfolio_review = portfolio_sub.add_parser("review", help="Build a private deterministic owner review packet from the retained shortlist.")
     portfolio_review.add_argument("--portfolio-root", type=Path, default=None)
     portfolio_review.add_argument("--session", required=True)
+    action_center = sub.add_parser(
+        "action-center",
+        help=(
+            "Personal Investment Decision Action Center: one deterministic local daily view "
+            "(market/portfolio/watchlist/discovery/rotation/attention). Read-only over already-"
+            "retained same-session artifacts; a private portfolio is optional. Never enters Git, "
+            "the Dashboard, or the public AI handoff."
+        ),
+    )
+    action_center.add_argument("--session", default=None, help="Explicit YYYY-MM-DD session (default: latest retained completed session).")
+    action_center.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
+    action_center.add_argument("--action-center-root", type=Path, default=None, help="Local output root (default: %%USERPROFILE%%\\.stocklookup\\action_center).")
     a = p.parse_args(argv)
 
     if a.command == "roadmap":
@@ -309,6 +321,23 @@ def main(argv=None) -> int:
         except PortfolioImportError as exc:
             print(f"STATUS: {exc}")
             return 2
+
+    if a.command == "action-center":
+        import datetime as _dt_ac
+
+        import personal_investment_decision_action_center as ac
+        try:
+            artifact = ac.evaluate_from_retained_artifacts(
+                repo_root=ROOT, session=a.session, portfolio_root=a.portfolio_root,
+                requested_at=_dt_ac.datetime.now().isoformat(timespec="seconds"),
+            )
+        except FileNotFoundError as exc:
+            print(json.dumps({"status": "BLOCKED", "reason_code": str(exc)}, ensure_ascii=False, sort_keys=True))
+            return 2
+        destination = ac.write_private_artifact(artifact, root=a.action_center_root)
+        markdown_destination = ac.write_markdown(artifact, root=a.action_center_root)
+        print(json.dumps(ac.public_console_summary(artifact, destination=destination, markdown_destination=markdown_destination), ensure_ascii=False, sort_keys=True))
+        return 0
 
     daily_runtime: Path | None = None
     daily_retained_evidence_root = ROOT
