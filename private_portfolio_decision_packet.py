@@ -13,7 +13,7 @@ def _id(x: Mapping[str, Any]) -> dict[str,str]:
     return {"artifact_sha256":d,"artifact_identity":f"{CONTRACT_VERSION}:{d}"}
 def _state(r: Mapping[str,Any]) -> str:
     b=r["bucket"]
-    return {"CORE_POSITION_REVIEW":"HOLD_CORE_REVIEW","TACTICAL_ADD_CANDIDATE":"REVIEW_FOR_TACTICAL_ADD","TACTICAL_PROBE_CANDIDATE":"REVIEW_FOR_PROBE","NEW_POSITION_CANDIDATE":"REVIEW_FOR_NEW_POSITION","ASYMMETRIC_RECOVERY_WATCH":"MONITOR_ASYMMETRIC_RECOVERY","SIGNAL_VALID_BUT_PORTFOLIO_BLOCKED":"PORTFOLIO_BLOCKED","RISK_REVIEW":"RISK_REVIEW"}.get(b,"NO_ACTION")
+    return {"CORE_POSITION_REVIEW":"HOLD_CORE_REVIEW","CURRENT_POSITION_UNRESOLVED_REVIEW":"CURRENT_POSITION_UNRESOLVED_REVIEW","TACTICAL_ADD_CANDIDATE":"REVIEW_FOR_TACTICAL_ADD","TACTICAL_PROBE_CANDIDATE":"REVIEW_FOR_PROBE","NEW_POSITION_CANDIDATE":"REVIEW_FOR_NEW_POSITION","ASYMMETRIC_RECOVERY_WATCH":"MONITOR_ASYMMETRIC_RECOVERY","SIGNAL_VALID_BUT_PORTFOLIO_BLOCKED":"PORTFOLIO_BLOCKED","RISK_REVIEW":"RISK_REVIEW"}.get(b,"NO_ACTION")
 def build_artifact(*, shortlist: Mapping[str,Any], integrated_decision: Mapping[str,Any]|None=None, portfolio_aware_decision: Mapping[str,Any]|None=None, asymmetric_dislocation: Mapping[str,Any]|None=None, requested_at: str|None=None) -> dict[str,Any]:
     if shortlist.get("contract_version")!="portfolio_aware_opportunity_shortlist/v1": raise PacketError("SHORTLIST_CONTRACT_MISMATCH")
     session=shortlist.get("session")

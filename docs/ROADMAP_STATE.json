@@ -15,11 +15,26 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DAILY_20260915_PRODUCTION_ACCEPTANCE_AND_SEMANTIC_NOTE_CORRECTIVE_V1",
+    "milestone": "PERSONAL_DECISION_INPUT_TRUTH_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "PERSONAL_DECISION_INPUT_TRUTH_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PERSONAL_DECISION_INPUT_TRUTH_RELEASED",
+      "starting_checkpoint": "33a029308ea870f12abcd23f99aafb0b27d24488",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / PRIVATE_LOCAL_ONLY_CURRENT_POSITION_TRUTH_CORRECTIVE",
+      "owner_authorized": true,
+      "source_doc": "Owner directive PERSONAL_DECISION_INPUT_TRUTH_V1 (this session, 2026-09-16)",
+      "state_history": [],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_16_PERSONAL_DECISION_INPUT_TRUTH_V1",
+      "notes": "COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED. Root-caused and fixed a real phantom-current-holding defect: SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING blocked the ledger reconstruction but never withheld the stale current_quantity it froze, so a reconciliation-blocked ticker could read as a confirmed current holding downstream. New portfolio_snapshot_v1 position field current_position_status (CURRENT_CONFIRMED/CLOSED/CURRENT_POSITION_UNRESOLVED) is now the sole current-holding authority across private_portfolio_context.py, portfolio_aware_decision.py, portfolio_aware_opportunity_shortlist.py, private_portfolio_decision_packet.py; current_position_count now counts only CURRENT_CONFIRMED. New generic local-only owner_research_exclusions.py + portfolio exclude CLI, and new local-only private_portfolio_research_handoff/v1 + portfolio handoff CLI. IMPORT_LAYOUT_VERSION bumped V4->V5 for the schema change. Fixed a dropped price_freshness field in current_research_ai_handoff_packet.py's per-ticker card. Real validation against the owner's actual workbook and the completed 2026-09-16 session: 25 tracked tickers (6 CURRENT_CONFIRMED / 17 CLOSED / 2 real CURRENT_POSITION_UNRESOLVED, including ticker VND), one owner-named delisted ticker (reconciliation-clean, excluded via the new mechanism) confirmed absent from active evaluate/shortlist/review output while its ledger is untouched, 5 genuine holdings unchanged. 22 new tests, zero regressions; py_compile/git diff --check/roadmap --check clean. No Daily, Dashboard, public AI-handoff, or portfolio sizing/execution authority change. See docs/STATE.md and docs/DECISIONS.md for full detail."
+    },
     {
       "milestone_id": "HISTORICAL_TACTICAL_REPLAY_EVIDENCE_FOUNDATION_V1",
       "state": "COMPLETE",

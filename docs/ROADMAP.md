@@ -1,5 +1,25 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Personal decision-input truth V1 (2026-09-16):**
+`PERSONAL_DECISION_INPUT_TRUTH_V1 = COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED`. First
+milestone of the personal-application correctness track: a reconciliation-blocked reconstructed
+quantity (`SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING`) could previously surface as a stale, confidently-
+positive current holding. `portfolio_snapshot_v1` positions now carry an explicit
+`current_position_status` (`CURRENT_CONFIRMED`/`CLOSED`/`CURRENT_POSITION_UNRESOLVED`), and every
+downstream private consumer (`portfolio_aware_decision.py`, `portfolio_aware_opportunity_shortlist.py`,
+`private_portfolio_decision_packet.py`) reads it instead of a bare quantity check.
+`current_position_count` now means actual confirmed current positions. New generic, local-only owner
+research-exclusion mechanism (`owner_research_exclusions.py`, `portfolio exclude` CLI) removes a
+named ticker from active holdings/watchlist/opportunity/capital-rotation/AI-handoff surfaces without
+touching its historical ledger. New local-only `private_portfolio_research_handoff/v1`
+(`portfolio handoff` CLI) is the one deterministic file meant for manual upload to a research chat.
+Also fixed a real gap in the AI handoff packet's per-ticker price labeling: the screener's own
+`freshness` (`CURRENT`/`STALE_BUT_RESEARCH_USABLE`) verdict now passes through as `price_freshness`
+on every card instead of being silently dropped. Validated against the owner's real workbook and the
+completed 2026-09-16 session (counts only; see `docs/STATE.md`). No portfolio sizing or execution
+authority created or changed; no Daily/Dashboard/public-handoff involvement. Next gate:
+`PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1`.
+
 **Daily 2026-09-15 production acceptance and semantic-note corrective V1 (2026-09-16):**
 `DAILY_20260915_PRODUCTION_ACCEPTANCE_AND_SEMANTIC_NOTE_CORRECTIVE_V1 = COMPLETE /
 GUARDED_DAILY_PRODUCTION_ACCEPTANCE_CLOSED`. The retained 2026-09-15 canonical operation proves the

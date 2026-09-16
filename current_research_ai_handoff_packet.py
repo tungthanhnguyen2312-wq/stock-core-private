@@ -397,6 +397,16 @@ def _technical_measurements_view(
         "session_return_pct_status": price.get("change_pct_status"),
         "price_basis": price.get("basis"),
         "price_as_of": price.get("as_of"),
+        # Screener's own per-ticker freshness verdict (CURRENT/STALE_BUT_RESEARCH_USABLE/
+        # UNAVAILABLE, from screener_master_projection._price_view: CURRENT iff `price_as_of ==
+        # session`) -- surfaced explicitly here, not just left implicit in the two date strings a
+        # reader would otherwise have to diff themselves. `as_of_session` (the packet's own
+        # session) is this ticker's *research* session; `price_as_of` is this ticker's own last
+        # observed price bar, which can lag `as_of_session` for a specific ticker (e.g. a
+        # provider gap that day) even when the overall packet and its source artifacts are all
+        # genuinely dated to the current session. A reader must never read `as_of_session` alone
+        # and assume `close` is today's traded mark -- check `price_freshness` first.
+        "price_freshness": price.get("freshness"),
         "momentum": momentum_view,
         "structure": structure_view,
         "confirmation_synthesis": confirmation_view,

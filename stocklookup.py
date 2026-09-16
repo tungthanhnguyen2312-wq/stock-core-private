@@ -187,7 +187,21 @@ def main(argv=None) -> int:
     portfolio_evaluate.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
     portfolio_evaluate.add_argument("--session", default=None, help="Explicit YYYY-MM-DD session (default: latest retained completed session).")
     portfolio_evaluate.add_argument("--sector-snapshot", type=Path, default=None, help="Optional explicit exchange_industry_classification snapshot path.")
-    portfolio_evaluate.add_argument("--exclude", action="append", default=[], help="Ticker to exclude from active portfolio workflow (repeatable).")
+    portfolio_evaluate.add_argument("--exclude", action="append", default=[], help="Ticker to exclude from active portfolio workflow (repeatable); additive on top of any persisted research_exclusions.json entries.")
+    portfolio_exclude = portfolio_sub.add_parser(
+        "exclude",
+        help="Manage the local, persistent owner research-exclusion list (research_exclusions.json). Never enters Git.",
+    )
+    portfolio_exclude.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
+    portfolio_exclude.add_argument("--add", action="append", default=[], metavar="TICKER", help="Ticker to add to the persistent exclusion list (repeatable).")
+    portfolio_exclude.add_argument("--remove", action="append", default=[], metavar="TICKER", help="Ticker to remove from the persistent exclusion list (repeatable).")
+    portfolio_exclude.add_argument("--reason", default=None, help="Reason recorded for tickers added in this invocation.")
+    portfolio_exclude.add_argument("--list", action="store_true", help="Print the current exclusion count only (never the tickers).")
+    portfolio_handoff = portfolio_sub.add_parser(
+        "handoff",
+        help="Materialize the local private_portfolio_research_handoff/v1 file for manual upload to a research chat. Never enters Git.",
+    )
+    portfolio_handoff.add_argument("--portfolio-root", type=Path, default=None, help="Private local artifact root (default: %%USERPROFILE%%\\.stocklookup\\portfolio).")
     portfolio_shortlist = portfolio_sub.add_parser("shortlist", help="Compose a private retained-evidence owner research shortlist; no Daily or provider call.")
     portfolio_shortlist.add_argument("--portfolio-root", type=Path, default=None)
     portfolio_shortlist.add_argument("--session", required=True)
@@ -250,6 +264,30 @@ def main(argv=None) -> int:
                     print(json.dumps({"status":"BLOCKED","reason_code":"RETAINED_SHORTLIST_UNAVAILABLE_OR_INCOMPATIBLE"},sort_keys=True)); return 2
                 packet.write_private_artifact(artifact, root)
                 print(json.dumps(packet.public_console_summary(artifact),ensure_ascii=False,sort_keys=True)); return 0
+            if a.portfolio_action == "exclude":
+                import datetime as _dt_exclude
+                import owner_research_exclusions as ore
+                try:
+                    for ticker in a.remove:
+                        ore.remove_research_exclusion(ticker, portfolio_root=a.portfolio_root)
+                    for ticker in a.add:
+                        ore.add_research_exclusion(ticker, reason=a.reason, excluded_since=_dt_exclude.date.today().isoformat(), portfolio_root=a.portfolio_root)
+                except ore.OwnerResearchExclusionError as exc:
+                    print(json.dumps({"status": "BLOCKED", "reason_code": str(exc)}, ensure_ascii=False, sort_keys=True))
+                    return 2
+                current = ore.load_research_exclusions(a.portfolio_root)
+                # Console output is counts only -- never the excluded tickers themselves.
+                print(json.dumps({
+                    "status": "OK", "excluded_ticker_count": len(current.get("excluded_tickers") or []),
+                    "added_this_invocation": len(a.add), "removed_this_invocation": len(a.remove),
+                }, ensure_ascii=False, sort_keys=True))
+                return 0
+            if a.portfolio_action == "handoff":
+                import private_portfolio_research_handoff as handoff
+                artifact = handoff.build_artifact(portfolio_root=a.portfolio_root)
+                destination = handoff.write_private_artifact(artifact, portfolio_root=a.portfolio_root)
+                print(json.dumps(handoff.public_console_summary(artifact, destination=destination), ensure_ascii=False, sort_keys=True))
+                return 0
             # a.portfolio_action == "evaluate"
             import datetime as _dt
 

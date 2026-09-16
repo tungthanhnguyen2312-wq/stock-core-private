@@ -1,5 +1,42 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-16 - Personal Decision-Input Truth V1
+
+`PERSONAL_DECISION_INPUT_TRUTH_V1 = COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED`. Owner
+directive (this session): fix decision-input truth before any new analytical engine. See
+`docs/STATE.md` for the full trace and real-validation counts.
+
+1. **Decision: fix the semantic contract, not the individual ticker.** The event-ledger
+   reconstruction algorithm in `_snapshot_from_ledger` (`private_portfolio_context.py`) is
+   unchanged -- it still freezes rather than guesses past a `SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING`
+   failure. What changed is what a blocked reconstruction is allowed to assert: a new
+   `current_position_status` field (`CURRENT_CONFIRMED`/`CLOSED`/`CURRENT_POSITION_UNRESOLVED`)
+   distinguishes HISTORICAL_EVENT_LEDGER_STATE (always preserved) from CURRENT_POSITION_TRUTH (only
+   `CURRENT_CONFIRMED` may be read as an actual holding); `current_quantity` is withheld entirely
+   for `CURRENT_POSITION_UNRESOLVED`, never a stale positive number.
+2. **Decision: reconciliation truth and owner exclusion are separate, both required.** Real
+   validation found one owner-named delisted ticker that reconciles perfectly cleanly
+   (`CURRENT_CONFIRMED`) because the workbook simply never recorded the event that actually closed
+   it -- no reconciliation fix could have caught this. The new local-only, generic
+   `owner_research_exclusions.py` mechanism exists specifically for this class of gap; it is never
+   used as a substitute for the reconciliation fix in decision 1, which independently and
+   correctly resolved the two real `SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING` cases found in the same
+   real workbook (one of them ticker VND) to `CURRENT_POSITION_UNRESOLVED`.
+3. **Decision: `Total` stays advisory-only; no broker current-position authority promoted.** The
+   real workbook has no sheet distinct from the transaction ledger capable of serving as an
+   independent current-position authority. `Total` remains exactly what it already was
+   (`TOTAL_VIEW_HINT_QUANTITY_MISMATCH`-only, never factual authority) -- nothing was promoted
+   merely because it would have been convenient.
+4. **Decision: a schema change to `portfolio_snapshot_v1` gets a new immutable import layout.**
+   `IMPORT_LAYOUT_VERSION` bumped `V4` -> `V5`, per this module's own established convention (see
+   the V2->V3->V4 precedent in the same file), so re-importing an unchanged real workbook lands in
+   a new layout directory instead of conflicting with the frozen V4 snapshot's different schema.
+5. **Decision: the private research handoff is a new, narrow, local-only artifact -- not a reuse
+   of the public AI-handoff packet.** `private_portfolio_research_handoff/v1` never enters Git,
+   operations-review, the Dashboard, or `current_research_ai_handoff_packet.py`'s public contract;
+   it is qualification-gated (quantity/cost basis only for `CURRENT_CONFIRMED` positions) and
+   materialized only by an explicit owner-run CLI command, never transmitted automatically.
+
 ## 2026-09-16 - Daily 2026-09-15 Production Acceptance And Semantic-Note Corrective V1
 
 `DAILY_20260915_PRODUCTION_ACCEPTANCE_AND_SEMANTIC_NOTE_CORRECTIVE_V1 = COMPLETE /

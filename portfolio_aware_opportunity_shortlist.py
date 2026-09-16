@@ -37,6 +37,11 @@ def _bucket(*, portfolio: Mapping[str, Any], dislocation: Mapping[str, Any], int
     posture = integrated.get("research_action_posture")
     state = dislocation.get("primary_research_state")
     held = portfolio.get("position_state") in {"HELD", "HELD_ABOVE_POLICY_CAP"}
+    if portfolio.get("position_state") == "CURRENT_POSITION_UNRESOLVED":
+        # Presence cannot be proven either way -- this must never fall through to RISK_REVIEW
+        # or any opportunity bucket, both of which would silently assert a holding fact this
+        # ticker's own reconciliation warning says is unknown.
+        return "CURRENT_POSITION_UNRESOLVED_REVIEW"
     if state in _RISK:
         return "RISK_REVIEW"
     if posture in _POSITIVE and action in {"NO_ADD", "OVER_LIMIT_REVIEW"}:
@@ -53,9 +58,9 @@ def _bucket(*, portfolio: Mapping[str, Any], dislocation: Mapping[str, Any], int
 
 
 def _sort_key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
-    bucket = {"CORE_POSITION_REVIEW": 0, "TACTICAL_ADD_CANDIDATE": 1, "TACTICAL_PROBE_CANDIDATE": 2,
-              "NEW_POSITION_CANDIDATE": 3, "ASYMMETRIC_RECOVERY_WATCH": 4,
-              "SIGNAL_VALID_BUT_PORTFOLIO_BLOCKED": 5, "RISK_REVIEW": 6, "NO_ACTION": 7}[row["bucket"]]
+    bucket = {"CORE_POSITION_REVIEW": 0, "CURRENT_POSITION_UNRESOLVED_REVIEW": 1, "TACTICAL_ADD_CANDIDATE": 2,
+              "TACTICAL_PROBE_CANDIDATE": 3, "NEW_POSITION_CANDIDATE": 4, "ASYMMETRIC_RECOVERY_WATCH": 5,
+              "SIGNAL_VALID_BUT_PORTFOLIO_BLOCKED": 6, "RISK_REVIEW": 7, "NO_ACTION": 8}[row["bucket"]]
     action = row["portfolio_action_research"]
     action_rank = 0 if action.startswith("ADD_") else 1 if action.startswith("PROBE_") else 2
     posture = {"INITIATE_ON_BREAKOUT": 0, "ACCUMULATE_ON_RETEST": 1, "EARLY_WATCH": 2}.get(row["research_action_posture"], 3)
@@ -81,6 +86,14 @@ def build_artifact(*, session: str, integrated_decision: Mapping[str, Any], port
         portfolio = (portfolio_aware_decision.get("records") or {}).get(ticker)
         dislocation = (asymmetric_dislocation.get("records") or {}).get(ticker)
         _require(isinstance(portfolio, Mapping) and isinstance(dislocation, Mapping), f"TICKER_INPUT_MISSING:{ticker}")
+        if portfolio.get("position_state") == "EXCLUDED_INACTIVE":
+            # Owner research exclusion (private_portfolio_context excluded_tickers, itself either
+            # CLI-supplied or loaded from the local owner_research_exclusions.json file): this is
+            # the active opportunity-discovery output, so an excluded ticker never enters it at
+            # all -- not even in a low-priority bucket. Its historical ledger is untouched by this
+            # module; it may still surface in the raw portfolio_aware_decision per-ticker join
+            # (an explicit debug/audit context), just never here.
+            continue
         _require((portfolio.get("evidence_lineage") or {}).get("security_decision_identity") == decision.get("decision_identity"), f"PORTFOLIO_DECISION_IDENTITY_MISMATCH:{ticker}")
         _require(dislocation.get("source_decision_identity") == decision.get("decision_identity"), f"ASYMMETRIC_DECISION_IDENTITY_MISMATCH:{ticker}")
         row = {

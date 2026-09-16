@@ -361,6 +361,54 @@ def test_16_excluded_position_is_inactive_and_does_not_count_toward_exposure():
     assert unrelated_record["portfolio_action_research"] == "ADD_WITHIN_RISK_CEILING"
 
 
+# ── 16b. Reconciliation-blocked current position is neither HELD nor NOT_HELD ──
+
+def test_16b_current_position_unresolved_never_reads_as_held_or_sizes_new_exposure():
+    unresolved_position = make_position("BBB", 0)
+    unresolved_position["current_quantity"] = None
+    unresolved_position["current_position_status"] = "CURRENT_POSITION_UNRESOLVED"
+    snapshot = make_snapshot(
+        positions=[unresolved_position],
+        account={"cash_available": "50000000", "net_asset_value": "100000000"},
+    )
+    decision = make_security_decision("BBB", "INITIATE_ON_BREAKOUT", trigger_level=50, invalidation_level=45)
+    record = decide("BBB", snapshot, decision, prices={"BBB": 50}, sector_by_ticker={"BBB": "TECHNOLOGY"})
+
+    assert record["position_state"] == "CURRENT_POSITION_UNRESOLVED"
+    assert record["current_quantity"] == 0.0
+    assert record["current_position_status"] == "CURRENT_POSITION_UNRESOLVED"
+    assert record["current_weight"] is None
+    assert record["current_weight_status"] == "UNAVAILABLE_CURRENT_POSITION_UNRESOLVED"
+    # Never sized as a new add or a probe despite an otherwise add-eligible posture -- an unknown
+    # current holding must not be compounded by a fresh sizing decision either.
+    assert record["sizing_mode"] == "NOT_APPLICABLE"
+    assert record["portfolio_action_research"] == "CURRENT_POSITION_UNRESOLVED_REVIEW_NEEDED"
+    assert record["binding_constraint"] == "NONE"
+
+
+def test_16c_unresolved_position_excluded_from_active_position_count_and_gross_exposure():
+    unresolved_position = make_position("BBB", 0)
+    unresolved_position["current_quantity"] = None
+    unresolved_position["current_position_status"] = "CURRENT_POSITION_UNRESOLVED"
+    confirmed_position = make_position("AAA", 1000, cost_basis=40)
+    snapshot = make_snapshot(
+        positions=[unresolved_position, confirmed_position],
+        account={"cash_available": "50000000", "net_asset_value": "100000000"},
+    )
+    integrated_decision_artifact = {
+        "session": "2026-09-08",
+        "records": {
+            "AAA": make_security_decision("AAA", "HOLD"),
+            "BBB": make_security_decision("BBB", "HOLD"),
+        },
+    }
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot, prices={"AAA": 40, "BBB": 50}, sector_by_ticker={"AAA": "TECHNOLOGY", "BBB": "TECHNOLOGY"})
+    # A reconciliation-unresolved position never contributes a market value to gross exposure.
+    assert state["positions"]["BBB"]["current_market_value"] is None
+    artifact = pad.build_artifact(session="2026-09-08", requested_at="2026-09-08T00:00:00", portfolio_state=state, integrated_decision_artifact=integrated_decision_artifact)
+    assert artifact["coverage"]["active_position_count"] == 1
+
+
 # ── 17. No execution qualification when liquidity authority is absent ──────────
 
 def test_17_execution_qualified_quantity_is_always_not_qualified():

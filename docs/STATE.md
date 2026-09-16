@@ -1,5 +1,134 @@
 # Stock Lookup — Operational State
 
+**Personal decision-input truth V1 (2026-09-16):**
+`PERSONAL_DECISION_INPUT_TRUTH_V1 = COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED`. Owner
+directive (this session, 2026-09-16): move Stock Lookup toward a real personal investment
+application by fixing decision-input truth before any new analytical engine. Root cause: when a
+`SELL` exceeded `private_portfolio_context._snapshot_from_ledger`'s derived running quantity for a
+ticker, the code correctly set `accounting_blocked`/`SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING` and
+skipped the SELL, but never propagated that failure into the position's own `current_quantity` --
+the frozen, pre-block quantity (often still positive) was reported at face value as if reconciled,
+and every downstream consumer (`portfolio_aware_decision.py`'s `position_state`/`is_held`,
+`portfolio_aware_opportunity_shortlist.py`'s `HELD` bucket routing, `public_import_summary`'s
+`current_position_count`) trusted it uncritically. A second, related gap: a ticker whose *only*
+activity was a failed SELL with no opening BUY at all was silently dropped from `positions`
+entirely by the zero-quantity/zero-purchase-count filter, so its reconciliation failure never
+surfaced anywhere.
+
+**CURRENT_POSITION_TRUTH contract.** Every `portfolio_snapshot_v1` position now carries an explicit
+`current_position_status`: `CURRENT_CONFIRMED` (reconciled, quantity > 0 -- the only status a
+consumer may treat as an actual current holding), `CLOSED` (reconciled, quantity == 0), or
+`CURRENT_POSITION_UNRESOLVED` (a SELL exceeded the derived holding; presence cannot be proven
+either way). `current_quantity` is withheld (`None`), never a stale positive number, whenever
+status is `CURRENT_POSITION_UNRESOLVED` -- mirroring the existing `realized_pnl`/`realized_pnl_status`
+pairing. The event-ledger reconstruction algorithm itself is unchanged (still freezes rather than
+guesses past a broken SELL, per the owner's own "fix the semantic contract, not the individual
+ticker" instruction); only what a blocked reconstruction is allowed to assert changed. The
+zero-quantity/zero-purchase-count position-row filter now also retains an `accounting_blocked`
+ticker so a missing-opening-position SELL surfaces as `CURRENT_POSITION_UNRESOLVED` instead of
+silently vanishing. `public_import_summary`/`public_status_summary`'s `current_position_count` now
+counts only `CURRENT_CONFIRMED` positions (a new `current_position_status_counts` breakdown makes it
+auditable), replacing the old `len(snapshot["positions"])`, which counted every ticker with any
+historical activity -- closed and unresolved included -- as if it were a current holding. The
+`Total` workbook sheet was re-examined against this contract and confirmed to remain correctly
+advisory-only (`TOTAL_VIEW_HINT_QUANTITY_MISMATCH`, never authority): the real workbook has no
+independent broker current-position view distinct from the transaction ledger, so nothing was
+promoted. `IMPORT_LAYOUT_VERSION` bumped `V4` -> `V5` (this is a real schema change to
+`portfolio_snapshot_v1`, per this module's own established convention) so a fresh import of an
+unchanged real workbook lands in a new immutable layout directory rather than conflicting with the
+frozen V4 one.
+
+`portfolio_aware_decision.py` propagates the new status end to end: `position_state` gains a fifth
+value, `CURRENT_POSITION_UNRESOLVED` (deliberately neither `HELD` nor `NOT_HELD`, both of which
+would be a false confident claim), which forces `sizing_mode = NOT_APPLICABLE` and
+`portfolio_action_research = CURRENT_POSITION_UNRESOLVED_REVIEW_NEEDED` -- an unresolved holding is
+never compounded by a fresh add/probe sizing decision. `current_market_value`/`current_weight`/
+`cost_basis_per_share` are all withheld for an unresolved position, so `active_position_count` and
+`gross_exposure_weight` never count it. `portfolio_aware_opportunity_shortlist.py._bucket()` routes
+it to its own `CURRENT_POSITION_UNRESOLVED_REVIEW` bucket, checked before the risk-state branch, so
+it can never fall through into `RISK_REVIEW` (or any opportunity bucket) and silently assert a
+holding fact its own data says is unknown; `private_portfolio_decision_packet.py` carries the
+matching `review_state`.
+
+**Owner research exclusions.** New `owner_research_exclusions.py` (local-only,
+`%USERPROFILE%\.stocklookup\portfolio\research_exclusions.json`, never Git) is a generic
+ticker/reason/date exclusion list, independent of the reconciliation contract above -- it exists for
+the case reconciliation *cannot* detect: a ticker whose ledger arithmetic is perfectly clean
+(`CURRENT_CONFIRMED`) because the workbook simply never recorded the event that actually closed it
+(e.g. a delisting settled outside the normal SELL flow). New CLI `portfolio exclude --add/--remove
+TICKER --reason ... / --list` (console output is counts only, never the excluded tickers).
+`portfolio_aware_decision.evaluate_from_retained_artifacts()` now merges the persisted file with any
+CLI `--exclude` flags (union, additive) so the exclusion applies on every evaluation without
+repeating the flag. `portfolio_aware_opportunity_shortlist.build_artifact()` now skips an
+`EXCLUDED_INACTIVE` ticker entirely rather than letting it fall through `_bucket()`'s own logic --
+before this fix an excluded ticker whose asymmetric-dislocation state happened to be a risk state
+would still have surfaced in the highly-visible `RISK_REVIEW` bucket, silently defeating the
+exclusion. Historical ledger events for an excluded ticker are never touched or hidden; it only
+disappears from the active-research surfaces above.
+
+**Private research handoff.** New `private_portfolio_research_handoff.py`
+(`private_portfolio_research_handoff/v1`, local-only, `%USERPROFILE%\.stocklookup\portfolio\
+private_portfolio_research_handoff\`) projects confirmed holdings (quantity/cost basis included only
+for `CURRENT_CONFIRMED` positions -- withheld for `CURRENT_POSITION_UNRESOLVED`/`CLOSED`),
+reconciliation status, owner research exclusions (ticker + reason, so a reader knows never to
+research them), safe account/policy context, exact private artifact identities, and freshness/as-of
+state. Owner-excluded tickers never appear in `holdings`. New CLI `portfolio handoff` materializes
+it in one command (console output is counts/identity only). Nothing in this module or CLI command
+transmits the file anywhere; upload to a research chat is a manual owner action.
+
+**Exact-session price semantics.** Investigated, not assumed: `technical_structure_context.py`
+already fails closed per-ticker (`sessions[-1] != target_session`) and `tactical_momentum_context.py`
+already gates `ELIGIBLE` on `is_current_session is True`, so neither can silently emit a stale bar as
+current. `screener_master_projection._price_view()` already computes a genuine per-ticker
+`freshness` verdict (`CURRENT` iff `price_as_of == session`, else `STALE_BUT_RESEARCH_USABLE`/
+`UNAVAILABLE`) from the ticker's own observed bar date -- but `current_research_ai_handoff_packet.py`
+`_technical_measurements_view()` dropped that field when assembling a card, passing through
+`price_as_of` (the raw date) without the loud `price_freshness` disposition the screener already
+computed. A reader could in principle diff `as_of_session` against `price_as_of` by hand to notice a
+lag, but nothing forced that comparison. Fixed: the card now also carries `price_freshness`
+verbatim. This is the real, narrow gap behind the report's "2026-09-16 packet still exposes a
+2026-09-15 price mark" finding -- a specific ticker's own last observed bar genuinely can lag the
+packet's overall research session (e.g. a provider gap for that ticker that day) even when every
+source artifact is itself correctly dated to the current session; the fix makes that lag
+impossible to miss instead of trying to eliminate it (the underlying per-ticker gap is a data-
+availability fact, not a labeling bug, and remains out of this milestone's scope).
+
+**Real private validation** (owner's actual workbook, re-imported under the new V5 layout, joined
+against the completed 2026-09-16 session; counts only, no values below or anywhere in this record):
+25 tickers with any historical activity -- 6 `CURRENT_CONFIRMED`, 17 `CLOSED`, 2
+`CURRENT_POSITION_UNRESOLVED` (both real `SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING` cases, not
+synthetic). `current_position_count` correctly reports 6, not 25. One owner-named delisted ticker
+(reconciliation-clean, `CURRENT_CONFIRMED` -- confirming the two mechanisms above are genuinely
+independent: reconciliation truth alone could never have caught it) is excluded via
+`research_exclusions.json` and confirmed absent from `portfolio evaluate`/`shortlist`/`review`
+output (`EXCLUDED_FROM_ACTIVE_PORTFOLIO`, shortlist size drops by exactly one, present nowhere in
+`RISK_REVIEW` or any bucket) while its historical ledger rows are untouched. The remaining 5
+genuinely active holdings evaluate unchanged (`active_position_count = 5`,
+`HOLD_EXISTING_NO_ACTION = 5`, `CORE_POSITION_REVIEW = 5`). The private handoff materializes 24
+holdings (25 minus the one exclusion) and 1 owner exclusion entry. No real holding, ticker,
+quantity, price, cost basis, NAV, cash, or margin value appears anywhere in Git, this record, or any
+tool-call output made while producing it.
+
+**Tests.** 12 new focused tests (oversize SELL / missing-opening-position SELL / fully-closed
+position / mixed-cohort `current_position_count` in `tests/test_private_portfolio_context.py`; two
+`CURRENT_POSITION_UNRESOLVED` propagation cases in `tests/test_portfolio_aware_decision.py`; owner-
+exclusion and unresolved-bucket cases in `tests/test_portfolio_aware_opportunity_shortlist.py`; a
+stale-per-ticker-price case in `tests/test_current_research_ai_handoff_packet.py`) plus two new
+suites (`tests/test_owner_research_exclusions.py`, `tests/test_private_portfolio_research_handoff.py`,
+5 tests each). Zero regressions: every pre-existing portfolio/handoff/Workspace/Screener/session-
+lineage test still passes (only two pre-existing tests needed updating for the intentional contract
+change itself -- the buggy-behavior-asserting reconciliation test, and a hardcoded `V4` layout-
+version literal). `py_compile`, `git diff --check`, and `tools/stocklookup_roadmap.py --check` (exit
+0, no ERROR findings) all clean; three unrelated pre-existing failures
+(`test_governance_tools.py::test_handoff_reads_canonical_state_and_contract`,
+`test_portfolio_risk_analysis.py::test_archetypes_differ_and_bank_is_not_corporate`,
+`test_next_session_decision_brief.py::TestReal27To28Replay::test_handoff_inclusion`) were confirmed,
+via a stash-and-rerun, to reproduce identically before this milestone's changes and are untouched.
+No Daily run, provider call, Dashboard publication, or public AI-handoff repository write. No
+portfolio sizing or execution authority created or changed. Next gate:
+`PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1` (not queued automatically; this file's
+`queued_next` stays empty per house convention).
+
 **Daily 2026-09-15 production acceptance and semantic-note corrective V1 (2026-09-16):**
 `DAILY_20260915_PRODUCTION_ACCEPTANCE_AND_SEMANTIC_NOTE_CORRECTIVE_V1 = COMPLETE /
 GUARDED_DAILY_PRODUCTION_ACCEPTANCE_CLOSED`. The former

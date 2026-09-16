@@ -39,6 +39,7 @@ from typing import Any, Mapping, Sequence
 
 import empirical_setup_outcome_calibration as _empirical_calibration
 import exchange_industry_classification as _industry_classification
+import owner_research_exclusions as _owner_research_exclusions
 import private_portfolio_context as _private_portfolio_context
 
 CONTRACT_VERSION = "portfolio_aware_decision/v1"
@@ -47,7 +48,12 @@ MARGIN_ECONOMICS_CONTRACT_VERSION = "margin_economics/v1"
 PORTFOLIO_STATE_CONTRACT = "portfolio_state/v1"
 MILESTONE = "PORTFOLIO_AWARE_DECISION_AND_RISK_SIZING_V1"
 
-POSITION_STATES = frozenset({"NOT_HELD", "HELD", "HELD_ABOVE_POLICY_CAP", "EXCLUDED_INACTIVE"})
+#: CURRENT_POSITION_UNRESOLVED mirrors private_portfolio_context's own CURRENT_POSITION_TRUTH
+#: vocabulary (portfolio_snapshot/v1 position["current_position_status"]): a reconciliation-
+#: blocked reconstructed quantity (e.g. SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING) is neither HELD nor
+#: NOT_HELD -- both would be a false confident claim -- so it gets its own terminal state that
+#: never participates in add/probe sizing and never counts toward active-position coverage.
+POSITION_STATES = frozenset({"NOT_HELD", "HELD", "HELD_ABOVE_POLICY_CAP", "EXCLUDED_INACTIVE", "CURRENT_POSITION_UNRESOLVED"})
 POSITION_LANES = frozenset({"CORE", "TACTICAL", "UNSPECIFIED"})
 
 # Full-size add: the security decision's own trigger already fired (or a bullish retest is
@@ -73,6 +79,7 @@ SECTOR_SOURCE_NOT_EVALUATED = "NOT_EVALUATED_MISSING_SECTOR"
 PORTFOLIO_ACTION_RESEARCH_STATES = frozenset({
     "NOT_EVALUATED",
     "EXCLUDED_FROM_ACTIVE_PORTFOLIO",
+    "CURRENT_POSITION_UNRESOLVED_REVIEW_NEEDED",
     "INSUFFICIENT_FOR_PORTFOLIO_DECISION",
     "OVER_LIMIT_REVIEW",
     "HOLD_EXISTING_NO_ACTION",
@@ -337,19 +344,25 @@ def derive_portfolio_state(
         ticker = str(row.get("ticker") or "").upper()
         if not ticker:
             continue
-        quantity = _num(row.get("current_quantity")) or 0.0
+        # CURRENT_POSITION_TRUTH: only a CURRENT_CONFIRMED row's quantity is reliable. A row
+        # absent this field entirely (a snapshot predating PERSONAL_DECISION_INPUT_TRUTH_V1)
+        # defaults to CURRENT_CONFIRMED so old, already-clean snapshots behave unchanged.
+        current_position_status = row.get("current_position_status") or "CURRENT_CONFIRMED"
+        reliable = current_position_status == "CURRENT_CONFIRMED"
+        quantity = (_num(row.get("current_quantity")) or 0.0) if reliable else 0.0
         price = prices_map.get(ticker)
-        market_value = quantity * price if price is not None else None
+        market_value = quantity * price if (reliable and price is not None) else None
         if market_value is not None:
             priced_market_value_sum += market_value
         lane_context, lane_reconciliation = _resolve_lane_context(quantity, lanes_by_ticker.get(ticker) or {})
         positions[ticker] = {
             "ticker": ticker,
-            "current_quantity": quantity,
+            "current_quantity": quantity if reliable else None,
+            "current_position_status": current_position_status,
             "current_price": price,
             "current_market_value": market_value,
-            "cost_basis_per_share": _num(row.get("current_position_cost_basis_per_share")),
-            "cost_basis_method": row.get("current_position_cost_basis_method"),
+            "cost_basis_per_share": _num(row.get("current_position_cost_basis_per_share")) if reliable else None,
+            "cost_basis_method": row.get("current_position_cost_basis_method") if reliable else None,
             "lifetime_cash_recovery_breakeven": _num(row.get("lifetime_cash_recovery_breakeven")),
             "lifetime_cash_recovery_breakeven_method": row.get("lifetime_cash_recovery_breakeven_method"),
             "position_episode_holding_days": row.get("position_episode_holding_days"),
@@ -382,7 +395,12 @@ def derive_portfolio_state(
     for pos in positions.values():
         if not pos["is_active"] or pos["current_market_value"] is None or not effective_nav:
             pos["current_weight"] = None
-            pos["current_weight_status"] = "UNAVAILABLE_NO_PRICE_OR_NAV" if pos["is_active"] else "EXCLUDED_INACTIVE"
+            if not pos["is_active"]:
+                pos["current_weight_status"] = "EXCLUDED_INACTIVE"
+            elif pos["current_position_status"] != "CURRENT_CONFIRMED":
+                pos["current_weight_status"] = "UNAVAILABLE_CURRENT_POSITION_UNRESOLVED"
+            else:
+                pos["current_weight_status"] = "UNAVAILABLE_NO_PRICE_OR_NAV"
             continue
         weight = pos["current_market_value"] / effective_nav
         pos["current_weight"] = weight
@@ -706,6 +724,8 @@ def _decide_portfolio_action_research(
 ) -> tuple[str, str, str]:
     if position_state == "EXCLUDED_INACTIVE":
         return "EXCLUDED_FROM_ACTIVE_PORTFOLIO", "NOT_APPLICABLE", "NONE"
+    if position_state == "CURRENT_POSITION_UNRESOLVED":
+        return "CURRENT_POSITION_UNRESOLVED_REVIEW_NEEDED", "NOT_APPLICABLE", "NONE"
     if posture == "INSUFFICIENT_CURRENT_RESEARCH":
         return "INSUFFICIENT_FOR_PORTFOLIO_DECISION", "NOT_APPLICABLE", "NONE"
 
@@ -835,6 +855,13 @@ def _build_narrative(
         counter.append("EXISTING_POSITION_ABOVE_SINGLE_POSITION_CAP")
         would_change.append("This is a review flag, not a sell instruction; NAV growth or weight reduction elsewhere would clear it.")
 
+    if position_state == "CURRENT_POSITION_UNRESOLVED":
+        uncertainties.append("CURRENT_POSITION_QUANTITY_RECONCILIATION_UNRESOLVED")
+        would_change.append(
+            "Correcting the SELL row(s) that exceed the derived running holding (see the private "
+            "snapshot's reconciliation warnings) would resolve whether this ticker is currently held."
+        )
+
     counter.extend(f"SECURITY_LEVEL:{item}" for item in (security_decision.get("counter_thesis") or [])[:5])
 
     dedupe = lambda items: list(dict.fromkeys(items))
@@ -920,6 +947,7 @@ def _not_evaluated_record(*, ticker: str, security_decision: Mapping[str, Any], 
         "existing_position_lane_context": {},
         "sizing_mode": SIZING_MODE_NOT_APPLICABLE,
         "current_quantity": None,
+        "current_position_status": "NOT_EVALUATED",
         "current_weight": None,
         "current_weight_status": "UNAVAILABLE",
         "cost_basis_context": _cost_basis_context(None),
@@ -1006,7 +1034,8 @@ def build_ticker_portfolio_aware_decision(
     invalidation = security_decision.get("invalidation") or {}
 
     default_pos = {
-        "current_quantity": 0.0, "current_price": (portfolio_state.get("prices") or {}).get(ticker),
+        "current_quantity": 0.0, "current_position_status": "CURRENT_CONFIRMED",
+        "current_price": (portfolio_state.get("prices") or {}).get(ticker),
         "current_market_value": 0.0, "current_weight": 0.0 if portfolio_state.get("effective_nav") else None,
         "current_weight_status": "AVAILABLE" if portfolio_state.get("effective_nav") else "UNAVAILABLE_NO_PRICE_OR_NAV",
         "sector": (portfolio_state.get("sector_by_ticker") or {}).get(ticker),
@@ -1015,6 +1044,7 @@ def build_ticker_portfolio_aware_decision(
     }
     pos = (portfolio_state.get("positions") or {}).get(ticker) or default_pos
     current_quantity = pos.get("current_quantity") or 0.0
+    current_position_status = pos.get("current_position_status", "CURRENT_CONFIRMED")
     is_active = pos.get("is_active", True)
 
     effective_policy = portfolio_state.get("effective_policy") or {}
@@ -1034,6 +1064,10 @@ def build_ticker_portfolio_aware_decision(
 
     if not is_active:
         position_state = "EXCLUDED_INACTIVE"
+    elif current_position_status == "CURRENT_POSITION_UNRESOLVED":
+        # Presence cannot be proven either way -- CURRENT_POSITION_UNRESOLVED is deliberately
+        # neither HELD nor NOT_HELD, both of which would be a false confident claim.
+        position_state = "CURRENT_POSITION_UNRESOLVED"
     elif current_quantity > 0:
         weight = pos.get("current_weight")
         position_state = "HELD_ABOVE_POLICY_CAP" if (max_single is not None and weight is not None and weight > max_single + _EPS) else "HELD"
@@ -1049,7 +1083,7 @@ def build_ticker_portfolio_aware_decision(
 
     add_eligible = posture in ADD_ELIGIBLE_POSTURES
     probe_eligible = (not add_eligible) and _probe_eligible(posture=posture, invalidation_price=invalidation_price, entry_price=entry_price)
-    if position_state == "EXCLUDED_INACTIVE" or posture == "INSUFFICIENT_CURRENT_RESEARCH":
+    if position_state in ("EXCLUDED_INACTIVE", "CURRENT_POSITION_UNRESOLVED") or posture == "INSUFFICIENT_CURRENT_RESEARCH":
         sizing_mode = SIZING_MODE_NOT_APPLICABLE
     elif add_eligible:
         sizing_mode = SIZING_MODE_FULL
@@ -1213,6 +1247,7 @@ def build_ticker_portfolio_aware_decision(
         "existing_position_lane_context": pos.get("existing_position_lane_context") or {},
         "sizing_mode": sizing_mode,
         "current_quantity": current_quantity,
+        "current_position_status": current_position_status,
         "current_weight": pos.get("current_weight"),
         "current_weight_status": pos.get("current_weight_status"),
         "cost_basis_context": _cost_basis_context(pos),
@@ -1300,7 +1335,7 @@ def build_artifact(
 
     active_position_count = sum(
         1 for pos in (portfolio_state.get("positions") or {}).values()
-        if pos.get("is_active", True) and (pos.get("current_quantity") or 0) > 0
+        if pos.get("is_active", True) and pos.get("current_position_status") == "CURRENT_CONFIRMED" and (pos.get("current_quantity") or 0) > 0
     )
 
     artifact: dict[str, Any] = {
@@ -1484,9 +1519,16 @@ def evaluate_from_retained_artifacts(
     portfolio_snapshot = status.get("snapshot") if status.get("status") == "READY" else None
     prices = load_descriptive_prices(repo_root, resolved_session)
     governed_sector_snapshot = load_governed_sector_snapshot(repo_root, explicit_path=sector_snapshot_path)
+    # Persisted owner research exclusions (research_exclusions.json under the private portfolio
+    # root) apply on every evaluation without needing a repeated --exclude flag; an explicit
+    # caller-supplied `excluded_tickers` is additive on top, never a replacement.
+    persisted_exclusions = _owner_research_exclusions.excluded_ticker_set(
+        _owner_research_exclusions.load_research_exclusions(portfolio_root)
+    )
+    effective_excluded_tickers = sorted(persisted_exclusions | {str(t).upper() for t in (excluded_tickers or [])})
     portfolio_state = derive_portfolio_state(
         portfolio_snapshot=portfolio_snapshot, prices=prices, governed_sector_snapshot=governed_sector_snapshot,
-        position_lanes=None, excluded_tickers=excluded_tickers,
+        position_lanes=None, excluded_tickers=effective_excluded_tickers,
     )
     return build_artifact(
         session=resolved_session, requested_at=requested_at, portfolio_state=portfolio_state,
@@ -1524,7 +1566,10 @@ def project_portfolio_fit_for_integrated_decision(portfolio_state: Mapping[str, 
         return {"status": "NOT_PROVIDED", "is_held": False,
                 "policy_note": "No explicit portfolio supplied; security attractiveness is independently evaluated."}
     pos = (portfolio_state.get("positions") or {}).get(ticker) or {}
-    is_held = bool(pos and (pos.get("current_quantity") or 0) > 0 and pos.get("is_active", True))
+    is_held = bool(
+        pos and pos.get("current_position_status") == "CURRENT_CONFIRMED"
+        and (pos.get("current_quantity") or 0) > 0 and pos.get("is_active", True)
+    )
     weight = pos.get("current_weight")
     max_single = (portfolio_state.get("effective_policy") or {}).get("max_single_position_weight")
     concentration_flag = bool(weight is not None and max_single is not None and weight > max_single + _EPS)

@@ -401,8 +401,29 @@ def test_technical_axes_omitted_degrade_explicitly_not_silently():
     # Real pass-through fields ARE populated (from Screener's price view).
     assert measurements["close"] == 25.6
     assert measurements["session_return_pct"] == 0.012
+    assert measurements["price_freshness"] == "CURRENT"
     assert packet["coverage"]["momentum_context_supplied"] is False
     assert packet["coverage"]["momentum_eligible_count"] == 0
+
+
+def test_stale_per_ticker_price_is_explicitly_flagged_not_just_a_diffable_date():
+    """PERSONAL_DECISION_INPUT_TRUTH_V1: a ticker whose own last observed price bar lags the
+    packet's research session (e.g. a provider gap for that one ticker) must carry an explicit
+    STALE disposition, not just a `price_as_of` date a reader would have to manually diff
+    against `as_of_session` to notice."""
+    stale_card = _screener_card("AAA")
+    stale_card["price"]["as_of"] = "2026-09-12"
+    stale_card["price"]["freshness"] = "STALE_BUT_RESEARCH_USABLE"
+    workspace = _workspace_artifact({"AAA": _workspace_card("AAA")})
+    screener = _screener_artifact({"AAA": stale_card})
+    packet = build_packet(session=SESSION, requested_at="now", producer_commit="abc", daily_operation_identity="op:abc",
+                          workspace_artifact=workspace, screener_artifact=screener)
+    measurements = packet["cards"]["AAA"]["tactical"]["measurements"]
+
+    assert packet["as_of_session"] == SESSION
+    assert measurements["price_as_of"] == "2026-09-12"
+    assert measurements["price_as_of"] != packet["as_of_session"]
+    assert measurements["price_freshness"] == "STALE_BUT_RESEARCH_USABLE"
 
 
 def _momentum_artifact(records: dict, *, session: str = SESSION):

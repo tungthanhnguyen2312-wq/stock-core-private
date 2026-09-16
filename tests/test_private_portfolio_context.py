@@ -9,10 +9,15 @@ from openpyxl import Workbook
 import private_portfolio_context as portfolio_context
 from private_portfolio_context import (
     CURRENT_COST_BASIS_METHOD,
+    CURRENT_POSITION_STATUS_CLOSED,
+    CURRENT_POSITION_STATUS_CONFIRMED,
+    CURRENT_POSITION_STATUS_UNRESOLVED,
     LIFETIME_BREAKEVEN_METHOD,
     PortfolioImportError,
     import_workbook,
     portfolio_status,
+    public_import_summary,
+    public_status_summary,
 )
 from stocklookup import main
 
@@ -75,6 +80,7 @@ def test_trade_dividend_margin_and_cost_semantics_are_deterministic(tmp_path: Pa
     position = _position(result)
 
     assert position["current_quantity"] == "10"
+    assert position["current_position_status"] == CURRENT_POSITION_STATUS_CONFIRMED
     assert position["position_episode_holding_days"] == 5
     assert position["current_position_carrying_cost"] == "780.6"
     assert position["current_position_cost_basis_per_share"] == "78.06"
@@ -106,16 +112,95 @@ def test_reopened_position_has_new_episode_without_rewriting_lifetime_history(tm
     assert position["sale_count"] == 1
 
 
-def test_inconsistent_quantity_is_a_warning_not_a_silent_repair(tmp_path: Path):
+def test_oversize_sell_never_leaves_a_phantom_current_holding(tmp_path: Path):
+    """PERSONAL_DECISION_INPUT_TRUTH_V1: a SELL that exceeds the derived running holding must
+    never leave a stale positive `current_quantity` readable as a confirmed current holding --
+    the reconstructed quantity is withheld entirely and the position is flagged
+    CURRENT_POSITION_UNRESOLVED, distinct from both a genuine current holding and a closed one."""
     result = import_workbook(workbook_path=_workbook(tmp_path / "inconsistent.xlsx", inconsistent=True), portfolio_root=tmp_path / "private")
     position = _position(result)
 
-    assert position["current_quantity"] == "10"
+    assert position["current_position_status"] == CURRENT_POSITION_STATUS_UNRESOLVED
+    assert position["current_quantity"] is None
     assert position["realized_pnl"] is None
     assert position["realized_pnl_status"] == "UNRESOLVED_RECONCILIATION_WARNING"
     codes = result["snapshot"]["reconciliation"]["warning_counts"]
     assert codes["SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING"] == 1
     assert codes["TOTAL_VIEW_HINT_QUANTITY_MISMATCH"] == 1
+    # HISTORICAL_EVENT_LEDGER_STATE is untouched: every real event, including the oversize
+    # SELL itself, is still retained verbatim in the ledger despite the position being unresolved.
+    sell_events = [event for event in result["ledger"]["events"] if event["event_type"] == "SELL" and event["ticker"] == "AAA"]
+    assert len(sell_events) == 2
+    assert result["snapshot"]["current_position_status_counts"] == {CURRENT_POSITION_STATUS_UNRESOLVED: 1}
+    # A reconciliation-blocked position must never count as an actual current position.
+    assert public_import_summary(result)["current_position_count"] == 0
+
+
+def test_missing_historical_opening_position_sell_with_no_prior_buy_is_unresolved(tmp_path: Path):
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    # No opening BUY at all for this ticker -- the very first event is a SELL.
+    trade.append(["2026-01-01", "ZZZ", "SELL", 5, 100])
+    path = tmp_path / "no-opening-position.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    position = _position(result, ticker="ZZZ")
+
+    assert position["current_position_status"] == CURRENT_POSITION_STATUS_UNRESOLVED
+    assert position["current_quantity"] is None
+    assert "SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING" in result["snapshot"]["reconciliation"]["warning_counts"]
+
+
+def test_fully_sold_down_position_is_closed_not_current(tmp_path: Path):
+    result = import_workbook(workbook_path=_workbook(tmp_path / "reopened.xlsx", reopened=True), portfolio_root=tmp_path / "private")
+    # `_workbook(reopened=True)` ends with a positive quantity (BUY 1, SELL 1, BUY 2); build a
+    # fresh fixture that instead sells the full position back down to zero.
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    trade.append(["2026-01-01", "AAA", "BUY", 10, 100])
+    trade.append(["2026-01-02", "AAA", "SELL", 10, 110])
+    path = tmp_path / "closed-position.xlsx"
+    workbook.save(path)
+
+    closed_result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private-closed")
+    position = _position(closed_result)
+
+    assert position["current_position_status"] == CURRENT_POSITION_STATUS_CLOSED
+    assert position["current_quantity"] == "0"
+    assert closed_result["snapshot"]["reconciliation"]["status"] == "RECONCILED"
+    assert public_import_summary(closed_result)["current_position_count"] == 0
+    assert public_status_summary(portfolio_status(portfolio_root=tmp_path / "private-closed"))["current_position_count"] == 0
+    # Sanity: the CURRENT_CONFIRMED position from the unrelated reopened-position fixture above
+    # is unaffected by any of this (confirms the fix is per-ticker, not a global state leak).
+    assert _position(result)["current_position_status"] == CURRENT_POSITION_STATUS_CONFIRMED
+
+
+def test_current_position_count_excludes_closed_and_unresolved_positions(tmp_path: Path):
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    trade.append(["2026-01-01", "AAA", "BUY", 10, 100])  # stays CURRENT_CONFIRMED
+    trade.append(["2026-01-01", "BBB", "BUY", 5, 100])
+    trade.append(["2026-01-02", "BBB", "SELL", 5, 110])  # fully closed -> CLOSED
+    trade.append(["2026-01-01", "CCC", "SELL", 3, 100])  # no opening buy -> UNRESOLVED
+    path = tmp_path / "mixed-positions.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    summary = public_import_summary(result)
+
+    assert summary["current_position_count"] == 1
+    assert summary["current_position_status_counts"] == {
+        CURRENT_POSITION_STATUS_CLOSED: 1,
+        CURRENT_POSITION_STATUS_CONFIRMED: 1,
+        CURRENT_POSITION_STATUS_UNRESOLVED: 1,
+    }
 
 
 def test_absent_account_and_policy_are_explicit_not_zero_filled(tmp_path: Path):
@@ -285,7 +370,7 @@ def test_corrective_import_layout_preserves_a_prior_same_workbook_sha_artifact(t
     assert result["status"] == "IMPORTED"
     assert result["private_artifact_directory"] != legacy_directory
     assert legacy_artifact.read_text(encoding="utf-8") == '{"legacy":"immutable"}\n'
-    assert result["manifest"]["import_layout_version"] == "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V4"
+    assert result["manifest"]["import_layout_version"] == "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V5"
     assert result["private_artifact_directory"].parent == legacy_directory
 
 

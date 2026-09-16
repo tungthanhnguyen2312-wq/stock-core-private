@@ -23,6 +23,16 @@ from typing import Any, Iterable, Mapping
 EVENT_LEDGER_CONTRACT = "portfolio_event_ledger/v1"
 SNAPSHOT_CONTRACT = "portfolio_snapshot/v1"
 POLICY_CONTRACT = "portfolio_policy/v1"
+# PERSONAL_DECISION_INPUT_TRUTH_V1: the required distinction between HISTORICAL_EVENT_LEDGER_STATE
+# (the raw, always-preserved event trail -- see build_event_ledger) and CURRENT_POSITION_TRUTH (what
+# a position row below is allowed to assert about presence *today*). CURRENT_CONFIRMED is the only
+# status a consumer may treat as an actual current holding; CURRENT_POSITION_UNRESOLVED means the
+# reconstructed quantity is not trustworthy (e.g. a SELL exceeded the derived running holding) and
+# must never be read as a phantom holding, positive or otherwise. CLOSED means reconciliation is
+# clean and the position is genuinely flat.
+CURRENT_POSITION_STATUS_CONFIRMED = "CURRENT_CONFIRMED"
+CURRENT_POSITION_STATUS_CLOSED = "CLOSED"
+CURRENT_POSITION_STATUS_UNRESOLVED = "CURRENT_POSITION_UNRESOLVED"
 SYSTEM_DEFAULT_POLICY_CONTRACT = "system_default_policy/v1"
 IMPORT_MANIFEST_CONTRACT = "portfolio_import_manifest/v1"
 # V2 -> V3: real-workbook schema adaptation (new header aliases, the
@@ -33,7 +43,13 @@ IMPORT_MANIFEST_CONTRACT = "portfolio_import_manifest/v1"
 # column over the frequently-blank nominal one). Each revision's own prior
 # attempt -- including a failed one -- must never be silently overwritten; a
 # new layout version creates its own immutable revision alongside it instead.
-IMPORT_LAYOUT_VERSION = "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V4"
+# V4 -> V5 (PERSONAL_DECISION_INPUT_TRUTH_V1): CURRENT_POSITION_TRUTH schema change -- every
+# position row now carries `current_position_status` and `current_quantity` is withheld (None)
+# whenever that status is CURRENT_POSITION_UNRESOLVED, instead of the prior version's stale
+# positive quantity. A V4-layout snapshot predates this contract and must never be silently
+# reinterpreted in place; re-running import_workbook against an unchanged real workbook lands in
+# a new V5 layout directory instead of conflicting with the frozen V4 one.
+IMPORT_LAYOUT_VERSION = "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V5"
 CURRENT_COST_BASIS_METHOD = "WEIGHTED_AVERAGE_CARRYING_COST"
 LIFETIME_BREAKEVEN_METHOD = "LIFETIME_NET_CASH_OUTFLOW_PER_CURRENT_SHARE"
 REPOSITORY_ROOT = Path(__file__).resolve().parent
@@ -903,6 +919,13 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
             state["sale_proceeds"] += proceeds
             state["sale_count"] += 1
             if quantity > state["quantity"]:
+                # The running derived quantity cannot absorb this SELL -- the reconstruction
+                # itself is broken from this point forward, not just this one row. `quantity`
+                # is deliberately left untouched (never coerced to 0 or to this SELL's size):
+                # once broken, no further arithmetic on it is trustworthy either. The position
+                # row below turns this into CURRENT_POSITION_UNRESOLVED and withholds
+                # `current_quantity` entirely -- this flag must never let a stale positive
+                # quantity read as a confirmed current holding downstream.
                 state["accounting_blocked"] = True
                 warnings.append({"code": "SELL_QUANTITY_EXCEEDS_DERIVED_HOLDING", "sheet": event["source"]["sheet"], "row": event["source"]["row"]})
                 continue
@@ -931,7 +954,10 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
     snapshot_as_of_basis = "ACCOUNT_SNAPSHOT_AS_OF_DATE" if account_as_of else "LATEST_LEDGER_EVENT_DATE" if snapshot_as_of_date else "UNAVAILABLE"
     positions = []
     for ticker, state in sorted(states.items()):
-        if state["quantity"] <= 0 and state["purchase_count"] == 0 and state["stock_distribution_quantity"] == 0:
+        # A ticker whose only activity is a SELL that exceeded its (zero) opening holding --
+        # e.g. a missing historical opening position -- must still surface as
+        # CURRENT_POSITION_UNRESOLVED, never be silently dropped as if it never existed.
+        if state["quantity"] <= 0 and state["purchase_count"] == 0 and state["stock_distribution_quantity"] == 0 and not state["accounting_blocked"]:
             continue
         total_hint = total_quantity_hint.get(ticker)
         if total_hint is not None and total_hint != state["quantity"]:
@@ -947,9 +973,20 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
                 episode_holding_days = (as_of - episode_start).days
             else:
                 warnings.append({"code": "ACCOUNT_SNAPSHOT_BEFORE_POSITION_EPISODE", "ticker": ticker})
+        if state["accounting_blocked"]:
+            current_position_status = CURRENT_POSITION_STATUS_UNRESOLVED
+        elif state["quantity"] > 0:
+            current_position_status = CURRENT_POSITION_STATUS_CONFIRMED
+        else:
+            current_position_status = CURRENT_POSITION_STATUS_CLOSED
         positions.append({
             "ticker": ticker,
-            "current_quantity": _number(state["quantity"]),
+            # CURRENT_POSITION_TRUTH: `current_quantity` is withheld (None), never a stale
+            # reconstructed number, whenever `current_position_status` is not CURRENT_CONFIRMED.
+            # A caller must read `current_position_status` before treating a ticker as held --
+            # this mirrors the existing `realized_pnl`/`realized_pnl_status` pairing below.
+            "current_quantity": _number(state["quantity"]) if current_position_status != CURRENT_POSITION_STATUS_UNRESOLVED else None,
+            "current_position_status": current_position_status,
             "position_episode_start_date": state["current_episode_start_date"],
             "position_episode_holding_days": episode_holding_days,
             "first_acquisition_date": state["first_acquisition_date"],
@@ -970,6 +1007,7 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
             "unrealized_pnl_status": "UNAVAILABLE_NO_OWNER_MARK_PRICE",
         })
     warning_codes = sorted(Counter(warning["code"] for warning in warnings).items())
+    current_position_status_counts = dict(sorted(Counter(position["current_position_status"] for position in positions).items()))
     body = {
         "schema_version": "portfolio_snapshot_v1",
         "contract_version": SNAPSHOT_CONTRACT,
@@ -979,6 +1017,9 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
         "snapshot_as_of_date": snapshot_as_of_date,
         "snapshot_as_of_basis": snapshot_as_of_basis,
         "positions": positions,
+        # `current_position_count` (public summaries below) counts only CURRENT_CONFIRMED --
+        # this breakdown is what makes that count auditable without re-scanning `positions`.
+        "current_position_status_counts": current_position_status_counts,
         "account_snapshot": account_snapshot,
         "portfolio_policy": policy,
         "account_level_unallocated_margin_cost": _number(unallocated_margin_cost),
@@ -991,6 +1032,8 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
             "unrealized_pnl_requires_owner_supplied_mark_price": True,
             "no_position_sizing_or_investment_recommendation": True,
             "policy_cap_excess_is_not_an_automatic_sell_instruction": True,
+            "current_position_status_is_the_sole_current_holding_authority": True,
+            "reconciliation_blocked_quantity_is_never_reported_as_a_current_holding": True,
         },
     }
     return {**body, **_identity("portfolio_snapshot", body)}
@@ -1098,6 +1141,15 @@ def portfolio_status(*, portfolio_root: Path | None = None) -> dict[str, Any]:
     return {"status": "READY", "pointer": pointer, "manifest": manifest, "snapshot": snapshot, "portfolio_root": root}
 
 
+def _current_position_count(snapshot: Mapping[str, Any]) -> int:
+    """Actual CONFIRMED current positions only -- never a count of every ticker with any
+    historical portfolio activity (CLOSED and CURRENT_POSITION_UNRESOLVED are excluded)."""
+    return sum(
+        1 for position in snapshot.get("positions") or []
+        if position.get("current_position_status") == CURRENT_POSITION_STATUS_CONFIRMED
+    )
+
+
 def public_import_summary(result: Mapping[str, Any]) -> dict[str, Any]:
     """Safe CLI surface: identities/counts/codes only, never private values or tickers."""
     snapshot = result["snapshot"]
@@ -1106,7 +1158,8 @@ def public_import_summary(result: Mapping[str, Any]) -> dict[str, Any]:
         "import_manifest_identity": result["manifest"]["artifact_identity"],
         "workbook_sha256": result["manifest"]["workbook_sha256"],
         "event_count": len(result["ledger"]["events"]),
-        "current_position_count": len(snapshot["positions"]),
+        "current_position_count": _current_position_count(snapshot),
+        "current_position_status_counts": snapshot.get("current_position_status_counts"),
         "reconciliation_warning_counts": snapshot["reconciliation"]["warning_counts"],
         "provider_calls": "NOT_USED",
         "daily_run": "NOT_USED",
@@ -1121,7 +1174,8 @@ def public_status_summary(result: Mapping[str, Any]) -> dict[str, Any]:
         "status": result["status"],
         "import_manifest_identity": result["manifest"]["artifact_identity"],
         "workbook_sha256": result["manifest"]["workbook_sha256"],
-        "current_position_count": len(snapshot["positions"]),
+        "current_position_count": _current_position_count(snapshot),
+        "current_position_status_counts": snapshot.get("current_position_status_counts"),
         "reconciliation_warning_counts": snapshot["reconciliation"]["warning_counts"],
         "provider_calls": "NOT_USED",
         "daily_run": "NOT_USED",

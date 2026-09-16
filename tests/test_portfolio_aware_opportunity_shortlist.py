@@ -28,3 +28,23 @@ def test_cross_session_and_identity_fail_closed():
 def test_console_summary_is_aggregate_only():
     iid,pad,adr = _inputs(); out = shortlist.public_console_summary(shortlist.build_artifact(session="2026-09-09", integrated_decision=iid, portfolio_aware_decision=pad, asymmetric_dislocation=adr))
     assert "records" not in out and "portfolio_risk_quantity_ceiling" not in str(out)
+
+def test_owner_excluded_ticker_never_enters_the_shortlist_even_via_risk_review():
+    iid, pad, adr = _inputs()
+    pad["records"]["CCC"]["position_state"] = "EXCLUDED_INACTIVE"
+    pad["records"]["CCC"]["portfolio_action_research"] = "EXCLUDED_FROM_ACTIVE_PORTFOLIO"
+    # CCC's own dislocation state is VALUE_TRAP_RISK (would otherwise bucket as RISK_REVIEW) --
+    # an owner exclusion must suppress it from the shortlist entirely, not just relabel it.
+    artifact = shortlist.build_artifact(session="2026-09-09", integrated_decision=iid, portfolio_aware_decision=pad, asymmetric_dislocation=adr)
+    tickers = [r["ticker"] for r in artifact["records"]]
+    assert "CCC" not in tickers
+    assert artifact["coverage"]["shortlist_size"] == 2
+
+def test_current_position_unresolved_gets_its_own_bucket_not_risk_or_core():
+    iid, pad, adr = _inputs()
+    pad["records"]["CCC"]["position_state"] = "CURRENT_POSITION_UNRESOLVED"
+    pad["records"]["CCC"]["portfolio_action_research"] = "CURRENT_POSITION_UNRESOLVED_REVIEW_NEEDED"
+    artifact = shortlist.build_artifact(session="2026-09-09", integrated_decision=iid, portfolio_aware_decision=pad, asymmetric_dislocation=adr)
+    ccc_row = next(r for r in artifact["records"] if r["ticker"] == "CCC")
+    assert ccc_row["bucket"] == "CURRENT_POSITION_UNRESOLVED_REVIEW"
+    assert artifact["coverage"]["active_positions_represented"] == 0
