@@ -16,13 +16,15 @@ Write-Host '================================================'
 Write-Host ' STOCK LOOKUP DAILY'
 Write-Host (" Date: " + (Get-Date -Format 'yyyy-MM-dd'))
 Write-Host '================================================'
-Write-Host '[1/7] Repository preflight'
-Write-Host '[2/7] Canonical Daily'
-Write-Host '[3/7] Daily completion verification'
-Write-Host '[4/7] Producer state publication'
-Write-Host '[5/7] AI handoff build'
-Write-Host '[6/7] GitHub publication'
-Write-Host '[7/7] Verification'
+Write-Host '[1/9] Repository preflight'
+Write-Host '[2/9] Canonical Daily'
+Write-Host '[3/9] Daily completion verification'
+Write-Host '[4/9] Producer state publication'
+Write-Host '[5/9] AI handoff build'
+Write-Host '[6/9] GitHub publication'
+Write-Host '[7/9] Remote verification'
+Write-Host '[8/9] Personal Action Center'
+Write-Host '[9/9] Open owner view'
 
 $arguments = @('-u', (Join-Path $PSScriptRoot 'run_owner_daily.py'), '--runtime-root', $runtime, '--result-path', $result)
 if ($ReplayCompletedSession) { $arguments += @('--replay-completed-session', $ReplayCompletedSession) }
@@ -42,6 +44,19 @@ if (Test-Path $result) {
         Write-Host ("AI_LATEST_SESSION = " + $summary.ai_handoff.remote.latest_session)
         Write-Host ("AI_LATEST_POINTER = " + $summary.ai_handoff.remote.latest_pointer)
         Write-Host ("AI_REMOTE_SHA = " + $summary.ai_handoff.remote.remote_sha)
+        Write-Host ("ACTION_CENTER_STATUS: " + $summary.action_center.status)
+        Write-Host ("ACTION_CENTER_JSON: " + $summary.action_center.json_path)
+        Write-Host ("ACTION_CENTER_VIEW: " + $summary.action_center.view_path)
+        if ($summary.action_center.view_open.status -eq 'READY_VIEW_OPEN_FAILED') {
+            Write-Host ("ACTION_CENTER_VIEW_NOTE: " + $summary.action_center.view_open.reason) -ForegroundColor Yellow
+        }
+    } elseif ($summary.status -eq 'PARTIAL') {
+        Write-Host ''
+        Write-Host 'FINAL STATUS: PARTIAL' -ForegroundColor Yellow
+        Write-Host ("SESSION: " + $summary.session)
+        Write-Host 'AI_GITHUB_STATUS: READY_FOR_AI'
+        Write-Host ("ACTION_CENTER_STATUS: " + $summary.action_center.status)
+        Write-Host ("REASON: " + $summary.action_center.reason)
     } else {
         Write-Host ''
         Write-Host 'FINAL STATUS: FAILED' -ForegroundColor Red

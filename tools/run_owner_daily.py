@@ -1,4 +1,4 @@
-"""Safe, versioned owner workflow for Canonical Daily and private AI Git handoff.
+"""Safe, versioned owner workflow for Canonical Daily, AI Git handoff, and Action Center.
 
 The desktop .cmd only calls the paired PowerShell presentation script.  This module is
 deliberately testable and contains the workflow gates; it never accesses portfolio data.
@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -162,6 +164,34 @@ def publish_ai_handoff(root: Path, handoff_repo: Path, completion: Mapping[str, 
     return {"publication": published, "remote": verify_remote_publication(handoff_repo, published)}
 
 
+def materialize_action_center(root: Path, session: str) -> dict[str, Any]:
+    """Use the released local-only Action Center; it never enters either Git publication path."""
+    import personal_investment_decision_action_center as action_center
+    try:
+        artifact = action_center.evaluate_from_retained_artifacts(
+            repo_root=root, session=session, requested_at=datetime.now().astimezone().isoformat(timespec="seconds"),
+        )
+        json_path = action_center.write_private_artifact(artifact)
+        markdown_path = action_center.write_markdown(artifact)
+    except Exception as exc:  # The core Daily and AI handoff have already passed at this point.
+        return {"status": "PARTIAL", "reason": f"ACTION_CENTER_MATERIALIZATION_FAILED:{type(exc).__name__}:{exc}"}
+    return {
+        "status": "READY", "session": artifact.get("session"),
+        "portfolio_status": (artifact.get("portfolio") or {}).get("status"),
+        "json_path": str(json_path), "view_path": str(markdown_path),
+        "identity": artifact.get("artifact_identity"),
+    }
+
+
+def open_action_center_view(path: str) -> dict[str, str]:
+    """Opening the local Markdown is convenience only, never a Daily data gate."""
+    try:
+        os.startfile(path)  # type: ignore[attr-defined]  # Windows owner launcher contract.
+    except Exception as exc:
+        return {"status": "READY_VIEW_OPEN_FAILED", "reason": f"VIEW_OPEN_FAILED:{type(exc).__name__}:{exc}"}
+    return {"status": "READY"}
+
+
 def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                  handoff_repo: Path = DEFAULT_HANDOFF_REPO, replay_completed_session: str | None = None) -> dict[str, Any]:
     root, runtime_root, handoff_repo = root.resolve(), runtime_root.resolve(), handoff_repo.resolve()
@@ -175,9 +205,15 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         daily_status = "COMPLETED"
     producer_state = commit_daily_state(root, str(completion["session"]))
     handoff = publish_ai_handoff(root, handoff_repo, completion)
+    action_center = materialize_action_center(root, str(completion["session"]))
+    if action_center["status"] == "PARTIAL":
+        return {"status": "PARTIAL", "session": completion["session"], "daily_status": daily_status,
+                "producer_preflight": producer, "producer_state": producer_state,
+                "ai_handoff": handoff, "action_center": action_center}
+    action_center["view_open"] = open_action_center_view(str(action_center["view_path"]))
     return {"status": "PASS", "session": completion["session"], "daily_status": daily_status,
             "producer_preflight": producer, "producer_state": producer_state,
-            "ai_handoff": handoff}
+            "ai_handoff": handoff, "action_center": action_center}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,6 +228,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = run_workflow(runtime_root=args.runtime_root, handoff_repo=args.handoff_repo,
                               replay_completed_session=args.replay_completed_session)
+        if result["status"] == "PARTIAL":
+            code = 3
     except OwnerDailyError as exc:
         code = 1
         result = {"status": "FAILED", "failed_step": exc.step, "reason": exc.reason, "hint": exc.hint}

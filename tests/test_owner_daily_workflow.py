@@ -63,10 +63,50 @@ def test_successful_replay_allows_publication_and_reuses_daily(monkeypatch, tmp_
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: calls.append("publish") or {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda _root, session: {"status": "READY", "session": session, "json_path": "private.json", "view_path": "private.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _path: {"status": "READY"})
     result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
     assert result["status"] == "PASS"
     assert result["daily_status"] == "ALREADY_COMPLETED / REUSED"
     assert calls == ["publish"]
+
+
+def test_action_center_receives_the_exact_completed_session(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    seen: list[str] = []
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda _root, session: seen.append(session) or {"status": "READY", "session": session, "json_path": "private.json", "view_path": "private.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _path: {"status": "READY"})
+    assert workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)["status"] == "PASS"
+    assert seen == [SESSION]
+
+
+def test_action_center_failure_is_partial_after_core_success(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "PARTIAL", "reason": "ACTION_CENTER_MATERIALIZATION_FAILED:test"})
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+    assert result["status"] == "PARTIAL"
+    assert result["ai_handoff"]["remote"]["remote_sha"] == "ai"
+
+
+def test_view_open_failure_is_non_fatal(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "private.json", "view_path": "private.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _path: {"status": "READY_VIEW_OPEN_FAILED", "reason": "VIEW_OPEN_FAILED:test"})
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+    assert result["status"] == "PASS"
+    assert result["action_center"]["view_open"]["status"] == "READY_VIEW_OPEN_FAILED"
 
 
 def test_failed_daily_prevents_publication(monkeypatch, tmp_path):
