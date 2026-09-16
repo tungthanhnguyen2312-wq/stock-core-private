@@ -1,7 +1,8 @@
 """Safe, versioned owner workflow for Canonical Daily, AI Git handoff, and Action Center.
 
-The desktop .cmd only calls the paired PowerShell presentation script.  This module is
-deliberately testable and contains the workflow gates; it never accesses portfolio data.
+The desktop .cmd only calls the paired PowerShell presentation script. This module is
+deliberately testable and contains the workflow gates. Its Action Center step may use the
+existing optional local portfolio contract, but no private artifact reaches Git publication.
 """
 from __future__ import annotations
 

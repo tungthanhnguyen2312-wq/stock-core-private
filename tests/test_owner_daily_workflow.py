@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 import subprocess
 from pathlib import Path
 
@@ -117,9 +118,11 @@ def test_failed_daily_prevents_publication(monkeypatch, tmp_path):
         workflow.run_workflow(root=tmp_path, runtime_root=tmp_path, handoff_repo=tmp_path / "handoff")
 
 
-def test_workflow_has_no_portfolio_access_or_unsafe_git_shortcuts():
+def test_workflow_keeps_private_action_center_out_of_publication_and_uses_safe_git_shortcuts():
     source = Path(workflow.__file__).read_text(encoding="utf-8")
-    assert ".stocklookup\\portfolio" not in source
+    publication = inspect.getsource(workflow.publish_ai_handoff).lower()
+    assert "action_center" not in publication
+    assert "portfolio" not in publication
     assert "git add ." not in source
     assert "reset --hard" not in source
     assert '"rebase"' not in source
