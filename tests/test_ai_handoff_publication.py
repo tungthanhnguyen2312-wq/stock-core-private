@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json, subprocess
 import pytest
-from ai_handoff_publication import HandoffPublicationError, build_package, publish
+from ai_handoff_publication import HandoffPublicationError, build_package, publish, verify_remote_publication
 
 def git(path,*args): subprocess.run(["git","-C",str(path),*args],check=True,capture_output=True)
 def source(path, *, version="one"):
@@ -169,3 +169,13 @@ def test_daily_integrated_decision_brief_alongside_decision_brief(tmp_path):
     result=publish(r,s,"2026-08-28",producer_checkpoint="abc",push=False,decision_brief=decision_brief,daily_integrated_decision_brief=daily_brief)
     assert result["package"]["lineage"]["next_session_decision_brief_identity"]=="next_session_decision_brief:abc"
     assert result["package"]["lineage"]["daily_integrated_decision_brief_identity"]=="daily_integrated_decision_brief/v1:xyz"
+
+def test_remote_verification_binds_latest_pointer_session_hashes_and_lineage(tmp_path):
+    s,r=tmp_path/"source",tmp_path/"repo"; source(s); repo(r)
+    remote=tmp_path/"remote.git"; subprocess.run(["git","init","--bare","-q",str(remote)],check=True)
+    git(r,"branch","-M","main"); git(r,"remote","add","origin",str(remote)); git(r,"push","-u","origin","main")
+    result=publish(r,s,"2026-08-28",producer_checkpoint="abc",push=True)
+    verified=verify_remote_publication(r,result)
+    assert verified["status"]=="READY_FOR_AI"
+    assert verified["latest_session"]=="2026-08-28"
+    assert verified["remote_sha"]==result["handoff_commit"]

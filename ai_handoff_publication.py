@@ -14,6 +14,11 @@ def _git(repo: Path, *args: str) -> str:
     result=subprocess.run(["git","-C",str(repo),*args],capture_output=True,text=True,encoding="utf-8")
     if result.returncode: raise HandoffPublicationError("GIT_"+args[0].upper()+":"+(result.stderr.strip() or result.stdout.strip()))
     return result.stdout.strip()
+def _git_bytes(repo: Path, *args: str) -> bytes:
+    result=subprocess.run(["git","-C",str(repo),*args],capture_output=True,check=False)
+    if result.returncode:
+        raise HandoffPublicationError("GIT_"+args[0].upper()+":"+result.stderr.decode("utf-8", errors="replace").strip())
+    return result.stdout
 def _unsafe(value: Any) -> bool:
     if isinstance(value,str): return bool(_ABSOLUTE_PATH.match(value))
     if isinstance(value,dict): return any(_unsafe(v) for v in value.values())
@@ -95,7 +100,13 @@ def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None,
         return {"status":"LOCAL_VALIDATED_NO_GIT_MUTATION","session":session,"package":payload,"immutable_session_path":target.relative_to(repo).as_posix()}
     if target.exists():
         current={name:sha(target/name) for name in files if (target/name).is_file()}
-        if current==payload["files"]: return {"status":"NO_OP_ALREADY_PUBLISHED","session":session,"package":payload,"immutable_session_path":target.relative_to(repo).as_posix()}
+        if current==payload["files"]:
+            latest_path = repo / "LATEST.json"
+            latest = json.loads(latest_path.read_text(encoding="utf-8")) if latest_path.is_file() else {}
+            return {"status":"NO_OP_ALREADY_PUBLISHED","session":session,"package":payload,
+                    "immutable_session_path":target.relative_to(repo).as_posix(),
+                    "handoff_commit":latest.get("handoff_commit"),
+                    "immutable_handoff_commit":latest.get("handoff_commit")}
         raise HandoffPublicationError("FAIL_CLOSED_HANDOFF_BUILD_CONFLICT:"+payload["handoff_build_id"])
     target.mkdir(parents=True,exist_ok=False)
     for name,path in files.items(): shutil.copyfile(path,target/name)
@@ -112,3 +123,43 @@ def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None,
     pointer_commit=_git(repo,"rev-parse","HEAD")
     if push: _git(repo,"push")
     return {"status":"PUBLISHED_READY_FOR_AI","session":session,"handoff_commit":pointer_commit,"immutable_handoff_commit":build_commit,"immutable_session_path":immutable_session_path,"package":payload}
+
+
+def verify_remote_publication(repo: Path, published: Mapping[str, Any]) -> dict[str, Any]:
+    """Verify the handoff from ``origin/main``, never just the working tree."""
+    _git(repo, "fetch", "origin")
+    remote_sha = _git(repo, "rev-parse", "origin/main")
+    expected_commit = str(published.get("handoff_commit") or "")
+    if expected_commit and remote_sha != expected_commit:
+        raise HandoffPublicationError(f"REMOTE_HANDOFF_SHA_MISMATCH:{expected_commit}:{remote_sha}")
+    try:
+        latest = json.loads(_git(repo, "show", "origin/main:LATEST.json"))
+    except (json.JSONDecodeError, HandoffPublicationError) as exc:
+        raise HandoffPublicationError("REMOTE_LATEST_JSON_INVALID") from exc
+    package = published.get("package") or {}
+    session = str(published.get("session") or "")
+    path = str(published.get("immutable_session_path") or "")
+    if (latest.get("status") != "READY_FOR_AI" or latest.get("latest_session") != session
+            or latest.get("immutable_session_path") != path
+            or latest.get("handoff_build_id") != package.get("handoff_build_id")):
+        raise HandoffPublicationError("REMOTE_LATEST_POINTER_MISMATCH")
+    names = set(_git(repo, "ls-tree", "-r", "--name-only", "origin/main", path).splitlines())
+    expected_files = set((package.get("files") or {}).keys())
+    missing = sorted(f"{path}/{name}" for name in expected_files if f"{path}/{name}" not in names)
+    if missing:
+        raise HandoffPublicationError("REMOTE_IMMUTABLE_FILES_MISSING:" + ",".join(missing))
+    for name, expected_hash in (package.get("files") or {}).items():
+        remote_name = f"{path}/{name}"
+        # Resolve the blob first: Windows Git treats a long ``rev:path`` argument to
+        # ``show`` as a filesystem path, while object IDs are platform-neutral.
+        tree = _git(repo, "ls-tree", "origin/main", "--", remote_name)
+        fields = tree.split("\t", 1)[0].split()
+        if len(fields) < 3:
+            raise HandoffPublicationError("REMOTE_IMMUTABLE_BLOB_MISSING:" + name)
+        data = _git_bytes(repo, "cat-file", "blob", fields[2])
+        if hashlib.sha256(data).hexdigest() != expected_hash:
+            raise HandoffPublicationError("REMOTE_FILE_HASH_MISMATCH:" + name)
+    if latest.get("producer_lineage") != package.get("lineage"):
+        raise HandoffPublicationError("REMOTE_LINEAGE_MISMATCH")
+    return {"status": "READY_FOR_AI", "latest_session": session,
+            "latest_pointer": path, "remote_sha": remote_sha}
