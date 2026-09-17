@@ -260,8 +260,12 @@ def test_reference_trigger_display_never_implies_a_fired_confirmed_entry():
     assert trigger["entry_authority"] is False
     assert trigger["trigger_condition_satisfied"] is False
     assert trigger["status"] == "NOT_AVAILABLE"
-    assert out["cards"]["AAA"]["tactical"]["reference_trigger"] == trigger
-    assert out["cards"]["AAA"]["why"]["tactical_evidence"]["reference_trigger"] == trigger
+    # RETAINED_WORKSPACE_DIAGNOSTIC_REMATERIALIZATION_V1: reference_trigger lives exactly once
+    # (top-level card["reference_trigger"]) -- never duplicated into card["tactical"] or
+    # why.tactical_evidence, which the shipped Dashboard renderer never reads it from anyway
+    # (it prefers card["reference_trigger"] first in its own fallback chain).
+    assert "reference_trigger" not in out["cards"]["AAA"]["tactical"]
+    assert "reference_trigger" not in out["cards"]["AAA"]["why"]["tactical_evidence"]
 
 
 def test_fundamental_catalyst_liquidity_sector_diagnostics_additive_and_present():

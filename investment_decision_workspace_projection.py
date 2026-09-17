@@ -379,22 +379,42 @@ def build_ticker_card(
         "entry_state": decision_record.get("entry_state"),
         "entry_action": decision_record.get("entry_action"),
         "setup_tags": list(tactical.get("setup_tags") or []),
-        # B. Why
+        # B. Why -- a compact headline summary. Full diagnostic detail (current_features,
+        # method_diagnostics, event_classifications, sector_diagnostic, reference_trigger, ...)
+        # lives exactly once, in each axis's own raw top-level block below (`fundamental`,
+        # `valuation`, `catalyst`, `market_sector`, `reference_trigger`) -- never duplicated
+        # here. The released Dashboard renderer (investment-workspace.js) already reads these
+        # axes via a `card.X || why.X_evidence` fallback that prefers `card.X` first (and
+        # `card.valuation` exclusively, never `why.valuation_evidence` at all), so this was
+        # already fully redundant weight, not new information -- confirmed by reading the
+        # shipped renderer before trimming (RETAINED_WORKSPACE_DIAGNOSTIC_REMATERIALIZATION_V1:
+        # a duplicated ~117MB Workspace artifact exceeded GitHub's 100MB push limit).
         "why": {
-            "fundamental_evidence": fundamental_view,
-            "valuation_evidence": valuation_view,
+            "fundamental_evidence": {
+                "state": fundamental_view.get("state"), "trajectory": fundamental_view.get("trajectory"),
+                "readiness": fundamental_view.get("readiness"), "research_fitness": fundamental_view.get("research_fitness"),
+            },
+            "valuation_evidence": {
+                "relative_research_state": valuation_view.get("relative_research_state"),
+                "readiness": valuation_view.get("readiness"),
+                "usable_relative_method_count": valuation_view.get("usable_relative_method_count"),
+            },
             "tactical_evidence": {
                 "primary_entry_state": tactical.get("primary_entry_state"),
                 "entry_action": tactical.get("entry_action"),
                 "setup_tags": list(tactical.get("setup_tags") or []),
-                "reference_trigger": trigger_reference,
             },
             "market_sector_evidence": {
                 "breadth_regime": market.get("breadth_regime"),
                 "sector_relative_context": market.get("sector_relative_context"),
-                "sector_diagnostic": sector_diagnostic,
             },
-            "catalyst_evidence": catalyst_view,
+            "catalyst_evidence": {
+                "status": catalyst_view.get("status"),
+                "qualified_current_catalysts": catalyst_view.get("qualified_current_catalysts"),
+                "pending_watch_items": catalyst_view.get("pending_watch_items"),
+                "event_count": catalyst_view.get("event_count"),
+                "freshness_status": catalyst_view.get("freshness_status"),
+            },
             "deterministic_reasons": list(reasons),
             "financial_analysis": {
                 "status": financial.get("status"), "supporting": list(financial.get("supporting") or []),
@@ -431,7 +451,8 @@ def build_ticker_card(
             "setup_tags": list(tactical.get("setup_tags") or []),
             "freshness_status": (tactical.get("freshness") or {}).get("freshness_status"),
             "source_session": (tactical.get("freshness") or {}).get("source_session"),
-            "reference_trigger": trigger_reference,
+            # reference_trigger lives once, at the card's top level (see "reference_trigger" key
+            # below) -- never duplicated here.
         },
         "market_sector": {
             "breadth_regime": market.get("breadth_regime"), "sector_relative_context": market.get("sector_relative_context"),
