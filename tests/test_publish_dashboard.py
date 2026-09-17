@@ -320,6 +320,23 @@ class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
         self.assertEqual(build_info["investment_workspace"]["status"], "CURRENT")
         self.assertEqual(build_info["investment_workspace"]["source_session"], build_info["market_session"])
 
+    def test_live_publish_succeeds_when_web_root_never_had_a_required_artifact_yet(self):
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: the real 2026-09-16
+        # validation against the live market-dashboard checkout found data/candle_signals.json
+        # (a required SAFE_WEB_ARTIFACTS entry) genuinely absent from WEB_ROOT -- present only
+        # in BACKEND_ROOT, about to be copied. validate_json_artifacts()/build_whitelist() ran
+        # BEFORE that copy even in --live mode, so the very first publish of a required artifact
+        # could never succeed. Simulate exactly that: absent from WEB_ROOT, present in BACKEND_ROOT.
+        for relative in ("data/candle_signals.json", "data/candle_signals.js"):
+            (self.tmp / relative).unlink()
+            (self.backend / relative).write_text('{"fixture": true}' if relative.endswith(".json") else "/* fixture */\n", encoding="utf-8")
+        self.fake_git.status_output = " M dashboard.html\n"
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd, "publish_live", return_value=0):
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.tmp / "data" / "candle_signals.json").is_file())
+
     def test_atomic_all_mode_explicitly_verifies_and_stages_full_trusted_subset(self):
         """The final whole-market publisher cannot rely on incidental asset references."""
         self.fake_git.status_output = " M dashboard.html\n"

@@ -929,13 +929,23 @@ def main() -> int:
         manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live, workspace=workspace)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
         companion_plan = compute_current_session_companions(market_session, str(manifest["build_id"]))
-        validate_json_artifacts()
-        whitelist = build_whitelist()
-        if args.include_trusted_subset:
-            whitelist = sorted(set(whitelist) | set(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS))
-        whitelist = dashboard_session_companions.extend_whitelist(
-            whitelist, companion_plan, web_root=WEB_ROOT, require_exist=False,
-        )
+        # LIVE mode validates the real post-copy state below (after copy_public_artifacts()) --
+        # that is the meaningful check, and `whitelist` is fully recomputed there too. This
+        # pre-copy validate/whitelist pass only serves the dry-run preview, where no copy ever
+        # happens so it is the only signal available; requiring it to already hold in LIVE mode
+        # too meant the very first publish of a not-yet-fully-published WEB_ROOT could never
+        # succeed, since copy_plan above is only a plan, not yet applied (surfaced by
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1's real 2026-09-16
+        # validation against the live market-dashboard checkout).
+        whitelist: list[str] = []
+        if not args.live:
+            validate_json_artifacts()
+            whitelist = build_whitelist()
+            if args.include_trusted_subset:
+                whitelist = sorted(set(whitelist) | set(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS))
+            whitelist = dashboard_session_companions.extend_whitelist(
+                whitelist, companion_plan, web_root=WEB_ROOT, require_exist=False,
+            )
     except (OSError, ValueError, json.JSONDecodeError, csv.Error,
             dashboard_session_companions.DashboardSessionCompanionError) as exc:
         return fail(str(exc))
