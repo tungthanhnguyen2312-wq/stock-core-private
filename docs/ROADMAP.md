@@ -1,5 +1,32 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Personal portfolio quantitative risk decomposition V1 (2026-09-17):**
+`PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1 = COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED`.
+New `personal_portfolio_quant_risk_decomposition.py`
+(`personal_portfolio_quant_risk_decomposition/v1`): descriptive-only concentration (HHI/effective
+N), per-security volatility, pairwise correlation, covariance integrity, two portfolio-volatility
+views (`EQUITY_SLEEVE_VOLATILITY`/`NAV_SCALED_EQUITY_RISK`), risk contribution, diversification, and
+a `MOVE_POSITION_TO_CASH_VOLATILITY_SENSITIVITY` sensitivity over the real current portfolio. Reuses
+`current_portfolio_risk_research.py`'s return/window/volatility/correlation/joint-matrix engine
+directly (same functions, not reimplemented) and `correlation_concentration_guard.py`'s frozen 0.80
+cluster threshold verbatim; sources quantities/NAV/sector from
+`portfolio_aware_decision.derive_portfolio_state`. No BUY/SELL, sizing, VaR/CVaR, or optimization
+authority. New informational `PORTFOLIO QUANT RISK` Action Center section, never wired into any
+action/attention-queue computation. See `docs/STATE.md` for full detail. Next gate:
+`USE_IN_PRODUCTION / ACCUMULATE_PROSPECTIVE_EVIDENCE` (no new coding milestone queued).
+
+**Private multi-broker investment account context V1 (2026-09-17, recorded retroactively; released at commit `03959e9`):**
+`PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1 = COMPLETE / MULTI_BROKER_INVESTMENT_CONTEXT_RELEASED`.
+New `investment_account_context/v1` (multi-row `AccountSnapshot` support) and
+`investment_accounts_portfolio_context/v1` (fail-closed aggregate), additive alongside the existing
+single-account `account_snapshot/v1`. Additive per-event `source_account_id` and per-position
+`account_attribution` lineage; `current_position_status`/`current_quantity` unchanged.
+`portfolio_aware_decision.derive_portfolio_state` prefers the qualified aggregate for NAV/cash/
+margin-debt, falling back to the legacy single account. `private_portfolio_research_handoff.py`
+anonymizes accounts to ordinal labels, never a raw alias/account number. See `docs/STATE.md` for
+full detail; this entry itself closes the `docs/ROADMAP_STATE.json` sync gap between this milestone
+and the one below.
+
 **Personal investment decision action center V1 (2026-09-16):**
 `PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1 = COMPLETE / PERSONAL_ACTION_CENTER_RELEASED`. First
 product-layer milestone on top of `PERSONAL_DECISION_INPUT_TRUTH_V1`: turns existing research
@@ -13,8 +40,10 @@ posture-evidence-only, never cost basis, never an unresolved source), and ATTENT
 portfolio-aware decision chain alone cannot distinguish a held position under an `AVOID` posture
 from a genuinely fine hold -- confirmed live against 2026-09-16, where all 5 real confirmed
 holdings correctly now surface `EXIT_REVIEW`. Private-portfolio-optional throughout; local-only
-output (`%USERPROFILE%\.stocklookup\action_center\`), never Git/Dashboard/public AI-handoff. Next
-gate: `PERSONAL_CAPITAL_ALLOCATION_CONTEXT_V1`.
+output (`%USERPROFILE%\.stocklookup\action_center\`), never Git/Dashboard/public AI-handoff. Actual
+next gate turned out to be `PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1` (see below) --
+`PERSONAL_CAPITAL_ALLOCATION_CONTEXT_V1` was never started and is explicitly rejected scope
+(household personal-finance capability, out of bounds for this investment-management application).
 
 **Personal decision-input truth V1 (2026-09-16):**
 `PERSONAL_DECISION_INPUT_TRUTH_V1 = COMPLETE / PERSONAL_DECISION_INPUT_TRUTH_RELEASED`. First

@@ -65,13 +65,13 @@ def _coverage_artifact(dispositions: dict[str, str]) -> dict:
 _OWNER_FOCUS = {"owner_focus_tickers": ("AAA",), "broader_watchlist": ("AAA", "BBB")}
 
 
-def _build(*, integrated, portfolio=None, asymmetric=None, coverage=None, owner_focus=None, sector_by_ticker=None, excluded_tickers=frozenset(), portfolio_snapshot=None):
+def _build(*, integrated, portfolio=None, asymmetric=None, coverage=None, owner_focus=None, sector_by_ticker=None, excluded_tickers=frozenset(), portfolio_snapshot=None, quant_risk_artifact=None):
     return ac.build_artifact(
         session=SESSION, requested_at="2026-09-16T17:00:00", integrated_decision_artifact=integrated,
         asymmetric_dislocation_artifact=asymmetric, coverage_disposition_artifact=coverage,
         owner_focus=owner_focus, portfolio_aware_decision_artifact=portfolio,
         sector_by_ticker=sector_by_ticker or {}, excluded_tickers=excluded_tickers,
-        portfolio_snapshot=portfolio_snapshot,
+        portfolio_snapshot=portfolio_snapshot, quant_risk_artifact=quant_risk_artifact,
     )
 
 
@@ -383,3 +383,69 @@ def test_investment_account_values_never_alter_holding_actions():
 
     assert without_cash["portfolio"]["holdings"][0]["action"] == with_cash["portfolio"]["holdings"][0]["action"]
     assert without_cash["attention_queue"]["bucket_counts"] == with_cash["attention_queue"]["bucket_counts"]
+
+
+# ── PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1: PORTFOLIO QUANT RISK section ─────────────────
+
+_QUANT_ARTIFACT_FIXTURE = {
+    "status": "AVAILABLE",
+    "source_coverage": {"status": "PORTFOLIO_INPUT_COVERAGE_PARTIAL"},
+    "unresolved_positions": {"count": 1},
+    "exposure_and_concentration": {
+        "equity_exposure_to_nav": 0.4, "broker_cash_to_nav": 0.6, "margin_debt_to_nav": None,
+        "single_name_weights": {"AAA": 0.25, "BBB": 0.15},
+        "concentration": {"hhi": 0.0725, "effective_n": 13.79},
+    },
+    "coverage_by_horizon": {"L20": {"status": "FULL_PORTFOLIO_RISK_READY"}, "L60": {"status": "INSUFFICIENT_RISK_COVERAGE"}, "L120": {"status": "INSUFFICIENT_RISK_COVERAGE"}, "L250": {"status": "INSUFFICIENT_RISK_COVERAGE"}},
+    "risk_contribution": {"NAV_SCALED_EQUITY_RISK": {"L20": {
+        "status": "AVAILABLE",
+        "per_ticker": {
+            "AAA": {"capital_weight": 0.25, "component_contribution_pct": 0.6, "capital_weight_minus_risk_contribution_pct": -0.35},
+            "BBB": {"capital_weight": 0.15, "component_contribution_pct": 0.4, "capital_weight_minus_risk_contribution_pct": -0.25},
+        },
+    }}},
+    "diversification": {"NAV_SCALED_EQUITY_RISK": {"L20": {"diversification_ratio": 1.4, "correlation_concentration_group_count": 1}}},
+    "sensitivity_leave_one_to_cash": {"L20": {"status": "AVAILABLE", "per_ticker": {
+        "AAA": {"status": "AVAILABLE", "absolute_delta": -0.02},
+        "BBB": {"status": "AVAILABLE", "absolute_delta": -0.01},
+    }}},
+    "warnings": ["DESCRIPTIVE_RESEARCH_ONLY_NOT_EXECUTION_OR_SIZING_AUTHORITY"],
+    "authority_boundary": {"descriptive_research_only": True},
+    "artifact_identity": "personal_portfolio_quant_risk_decomposition/v1:test",
+}
+
+
+def test_portfolio_quant_risk_absent_without_a_private_portfolio():
+    integrated = _integrated_artifact({"AAA": _integrated_record("AAA", "HOLD")})
+    artifact = _build(integrated=integrated)
+    assert artifact["portfolio_quant_risk"]["status"] == "PRIVATE_PORTFOLIO_NOT_SUPPLIED"
+    text = ac.markdown(artifact)
+    assert "## PORTFOLIO QUANT RISK" in text
+
+
+def test_portfolio_quant_risk_section_surfaces_measurement_summary():
+    integrated = _integrated_artifact({"AAA": _integrated_record("AAA", "HOLD")})
+    portfolio = _portfolio_artifact({"AAA": _portfolio_row("AAA", "HELD", posture="HOLD")})
+    artifact = _build(integrated=integrated, portfolio=portfolio, quant_risk_artifact=_QUANT_ARTIFACT_FIXTURE)
+    section = artifact["portfolio_quant_risk"]
+
+    assert section["status"] == "AVAILABLE"
+    assert section["measured_horizon"] == "L20"
+    assert section["risk"]["top_risk_contributors"][0] == ("AAA", 0.6)
+    assert section["sensitivities"]["largest_volatility_reduction_if_moved_to_cash"]["ticker"] == "AAA"
+    text = ac.markdown(artifact)
+    assert "PORTFOLIO QUANT RISK" in text
+    assert "Top risk contributors" in text
+
+
+def test_portfolio_quant_risk_never_alters_holding_actions_or_attention_queue():
+    """Section 14: the quant artifact is measurement-only and must never change any BUY/SELL/HOLD
+    label, capital-rotation pairing, or attention-queue bucket."""
+    integrated = _integrated_artifact({"AAA": _integrated_record("AAA", "AVOID")})
+    portfolio = _portfolio_artifact({"AAA": _portfolio_row("AAA", "HELD", posture="AVOID")})
+    without_quant = _build(integrated=integrated, portfolio=portfolio, sector_by_ticker={"AAA": "STEEL"})
+    with_quant = _build(integrated=integrated, portfolio=portfolio, sector_by_ticker={"AAA": "STEEL"}, quant_risk_artifact=_QUANT_ARTIFACT_FIXTURE)
+
+    assert without_quant["portfolio"]["holdings"] == with_quant["portfolio"]["holdings"]
+    assert without_quant["attention_queue"] == with_quant["attention_queue"]
+    assert without_quant["capital_rotation"] == with_quant["capital_rotation"]

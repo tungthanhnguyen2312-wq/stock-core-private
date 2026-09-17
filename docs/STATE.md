@@ -1,5 +1,102 @@
 # Stock Lookup — Operational State
 
+**Personal portfolio quantitative risk decomposition V1 (2026-09-17):**
+`PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1 = COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED`.
+Owner directive (this session): a deterministic, local-only descriptive risk decomposition over the
+owner's real current portfolio -- concentration (HHI/effective N), per-security realized volatility,
+pairwise correlation, covariance integrity, two distinguished portfolio-volatility views
+(`EQUITY_SLEEVE_VOLATILITY` normalizes covered equity weights to 1; `NAV_SCALED_EQUITY_RISK` uses
+market value / NAV and deliberately retains a >1 weight sum under margin/gross exposure rather than
+renormalizing it away), descriptive risk contribution (`component_contribution_pct`, reconciled to
+sum to the portfolio volatility / 1.0 within tolerance), diversification (ratio, average/top ready
+pairwise correlations, correlation clusters), and a mechanical
+`MOVE_POSITION_TO_CASH_VOLATILITY_SENSITIVITY` per named holding. New
+`personal_portfolio_quant_risk_decomposition.py` (`personal_portfolio_quant_risk_decomposition/v1`).
+Explicitly descriptive/research-only: no BUY/SELL decision, optimal portfolio, target weights, Kelly
+sizing, VaR/CVaR authority, probability-based sizing, expected-return optimization, efficient
+frontier, Sharpe ranking, automatic capital rotation, or execution; a high measured risk-contribution
+figure is never itself a REDUCE/SELL signal.
+
+**Reuse, not a second engine.** The return/window/volatility/pairwise-correlation/joint-covariance
+math is the exact same pure functions `current_portfolio_risk_research.py` already uses (imported
+directly, not reimplemented), so results are byte-identical in method to that module's own; the
+correlation-cluster view reuses `correlation_concentration_guard.py` verbatim, including its frozen,
+un-retuned `0.80` `DETERMINISTIC_RESEARCH_HEURISTIC_NOT_STATISTICALLY_CALIBRATED` threshold. Current
+quantities/market values/NAV weights/sector/the qualified multi-account NAV-cash-margin aggregate
+all come from `portfolio_aware_decision.derive_portfolio_state`, never re-derived. Portfolio
+volatility (`w' Sigma w`), risk contribution, diversification ratio, and the leave-one-to-cash
+sensitivity are new to this milestone (the pre-existing `current_portfolio_risk_envelope.py`
+explicitly still marks `portfolio_volatility`/`correlation`/`VaR`/`CVaR`/`position_sizing` as
+`BLOCKED` for its own, unrelated explicit-portfolio contract).
+
+**Portfolio-truth boundary preserved.** Only `CURRENT_CONFIRMED` positions ever receive a numeric
+weight or risk contribution. `CURRENT_POSITION_UNRESOLVED` tickers are named only in a coverage
+section, never priced. An owner-excluded ticker's current confirmed exposure is retained in every
+NAV/exposure denominator (a research exclusion never manufactures zero economic exposure) but its
+identity never appears anywhere in the artifact -- only an anonymized `excluded_confirmed_exposure`
+aggregate bucket, mirroring the identity-scrubbing precedent already established for owner
+exclusions elsewhere in this codebase.
+
+**Source-coverage gate is dynamic, not hardcoded.** `_source_coverage` reads the private event
+ledger's own `sheet_inventory` and flags any workbook sheet outside the recognized
+Trade/Dividend/Money/margin/AccountSnapshot/PortfolioPolicy/Total set as an unadmitted source --
+this is how the real workbook's `FUESSVN30` sheet (found during
+`PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1`, its account-identifier namespace not
+crosswalked, and deliberately never guessed) keeps real coverage at `QUALIFIED_COVERED_SUBSET`
+rather than a fabricated `FULL_PORTFOLIO_COVERAGE`. `CURRENT_POSITION_UNRESOLVED` tickers or any
+ledger activity with no per-event account attribution degrade coverage further
+(`PORTFOLIO_INPUT_COVERAGE_PARTIAL`), and zero `CURRENT_CONFIRMED` positions is the fail-closed
+floor (`INSUFFICIENT_PORTFOLIO_TRUTH`) -- confirmed against the real portfolio, which currently
+lands on `PORTFOLIO_INPUT_COVERAGE_PARTIAL` (unresolved positions present).
+
+**Account-level boundary.** Account NAV/cash/margin context is always available whenever the
+multi-account aggregate itself is qualified, independent of position-level attribution. Per-account
+*position* risk decomposition, however, is computed only when every named holding's
+`account_attribution` is fully `ATTRIBUTED` (no `ACCOUNT_ATTRIBUTION_UNRESOLVED` bucket, no
+reconciliation-blocked row); otherwise it reports `ACCOUNT_LEVEL_POSITION_RISK_NOT_QUALIFIED` and
+portfolio-wide risk remains available regardless. Confirmed against the real portfolio: the
+multi-account aggregate is `AGGREGATED`, but per-account position risk is currently
+`ACCOUNT_LEVEL_POSITION_RISK_NOT_QUALIFIED` (not every named holding has exact per-account
+attribution yet).
+
+**Action Center integration.** A new, purely informational `PORTFOLIO QUANT RISK` section (JSON +
+Markdown) surfaces coverage, exposure/concentration, top capital weights vs. top risk contributors,
+diversification, and the largest leave-one-to-cash volatility reduction. It is never consulted by
+`_holding_action`, `_watchlist_action`, `_build_rotation_section`, or `_build_attention_queue` --
+confirmed by an explicit regression test that holding actions/attention-queue buckets/rotation pairs
+are byte-identical with and without the quant artifact supplied.
+
+**Governance note.** The prior milestone, `PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1`
+(multi-broker `investment_account_context/v1` + `investment_accounts_portfolio_context/v1`, per-event
+`source_account_id` and additive per-position `account_attribution`, released at commit `03959e9`),
+had gone un-synchronized in `docs/ROADMAP_STATE.json` (still showing the prior Action Center
+milestone as `current`); this session's governance update records both that milestone and this one.
+
+**Private multi-broker investment account context V1 (2026-09-17, recorded retroactively; released at commit `03959e9`):**
+`PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1 = COMPLETE / MULTI_BROKER_INVESTMENT_CONTEXT_RELEASED`.
+Owner directive: represent the owner's multiple brokerage accounts, additive alongside the
+pre-existing single-account `account_snapshot/v1`. New `investment_account_context/v1` (one record
+per real `AccountSnapshot` row -- the real workbook's own second, aliased row had been silently
+dropped by the prior single-row-only reader) and a deterministic
+`investment_accounts_portfolio_context/v1` aggregate (`total_broker_cash`/`total_reserved_cash`/
+`total_receivables`/`total_margin_debt`/`total_broker_reported_nav`/
+`total_broker_reported_securities_market_value`), fail-closed on any as-of-date/currency mismatch or
+incomplete per-field account coverage rather than silently summing a stale and a current snapshot. A
+single alias-less `AccountSnapshot` row still imports as one stable `LEGACY_UNSPECIFIED_ACCOUNT`.
+Ledger events now carry an additive `source_account_id` from existing per-row account columns in
+`Trade`/`Dividend`/`Money`, rolled into each position's additive `account_attribution` lineage --
+`current_position_status`/`current_quantity` remain the unchanged, sole current-holding authority.
+`portfolio_aware_decision.derive_portfolio_state` sources NAV/cash/margin-debt from the qualified
+aggregate when available, falling back to the legacy single account otherwise; no risk-policy
+threshold was retuned. `IMPORT_LAYOUT_VERSION` bumped to V6. Confirmed live against the real
+workbook: 2 investment accounts detected, aggregate `AGGREGATED` with consistent as-of dates, and a
+real, previously-unrecognized second trade-shaped sheet (its own distinct account-identifier
+namespace, not crosswalked) found and deliberately left unadmitted rather than guessed -- the
+`PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1` entry above shows this same finding still gating
+`FULL_PORTFOLIO_COVERAGE` today. `private_portfolio_research_handoff.py` anonymizes every account to
+an ordinal `ACCOUNT_1`/`ACCOUNT_2` label -- the real account alias, which can literally be a
+brokerage account number, never appears in that externally-uploadable artifact.
+
 **Personal investment decision action center V1 (2026-09-16):**
 `PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1 = COMPLETE / PERSONAL_ACTION_CENTER_RELEASED`. Owner
 directive (this session): turn Stock Lookup's existing research engines into one deterministic

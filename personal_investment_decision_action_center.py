@@ -47,6 +47,7 @@ from typing import Any, Mapping, Sequence
 import asymmetric_dislocation_research as _asymmetric
 import owner_research_exclusions as _owner_research_exclusions
 import owner_research_focus as _owner_focus
+import personal_portfolio_quant_risk_decomposition as _quant
 import portfolio_aware_decision as _pad
 import private_portfolio_context as _private_portfolio_context
 
@@ -416,6 +417,85 @@ def _build_investment_accounts_section(portfolio_snapshot: Mapping[str, Any] | N
     }
 
 
+_QUANT_RISK_HORIZON_ORDER = ("L20", "L60", "L120", "L250")
+
+
+def _build_portfolio_quant_risk_section(quant_risk_artifact: Mapping[str, Any] | None) -> dict[str, Any]:
+    """PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1, Section 14: measurement-only owner view.
+
+    Deliberately never consulted by ``_holding_action``, ``_watchlist_action``,
+    ``_build_rotation_section``, or ``_build_attention_queue`` -- this is the whole point of the
+    "measurement first" boundary: a high measured risk contribution or concentration figure never
+    itself changes a BUY/SELL/HOLD label or attention-queue bucket in this milestone.
+    """
+    if not isinstance(quant_risk_artifact, Mapping):
+        return {"status": "PRIVATE_PORTFOLIO_NOT_SUPPLIED"}
+    if quant_risk_artifact.get("status") != "AVAILABLE":
+        return {"status": quant_risk_artifact.get("status", "NOT_AVAILABLE"),
+                "source_coverage_status": (quant_risk_artifact.get("source_coverage") or {}).get("status")}
+
+    exposure = quant_risk_artifact.get("exposure_and_concentration") or {}
+    concentration = exposure.get("concentration") or {}
+    coverage_by_horizon = quant_risk_artifact.get("coverage_by_horizon") or {}
+    risk_contribution_nav = (quant_risk_artifact.get("risk_contribution") or {}).get("NAV_SCALED_EQUITY_RISK") or {}
+    diversification_nav = (quant_risk_artifact.get("diversification") or {}).get("NAV_SCALED_EQUITY_RISK") or {}
+    sensitivity_by_horizon = quant_risk_artifact.get("sensitivity_leave_one_to_cash") or {}
+
+    single_name_weights = {ticker: weight for ticker, weight in (exposure.get("single_name_weights") or {}).items() if weight is not None}
+    top_capital_weights = sorted(single_name_weights.items(), key=lambda item: item[1], reverse=True)[:5]
+
+    measured_horizon = next((horizon for horizon in _QUANT_RISK_HORIZON_ORDER if (risk_contribution_nav.get(horizon) or {}).get("status") == "AVAILABLE"), None)
+    top_risk_contributors: list[tuple[str, float]] = []
+    capital_vs_risk_gaps: list[tuple[str, float]] = []
+    if measured_horizon:
+        per_ticker = risk_contribution_nav[measured_horizon].get("per_ticker") or {}
+        top_risk_contributors = sorted(((ticker, row["component_contribution_pct"]) for ticker, row in per_ticker.items()), key=lambda item: item[1], reverse=True)[:5]
+        capital_vs_risk_gaps = sorted(((ticker, row["capital_weight_minus_risk_contribution_pct"]) for ticker, row in per_ticker.items()), key=lambda item: abs(item[1]), reverse=True)[:5]
+
+    diversification_row = diversification_nav.get(measured_horizon) if measured_horizon else None
+    largest_reduction: dict[str, Any] | None = None
+    sensitivity_row = sensitivity_by_horizon.get(measured_horizon) if measured_horizon else None
+    if isinstance(sensitivity_row, Mapping) and sensitivity_row.get("status") == "AVAILABLE":
+        candidates = [(ticker, row["absolute_delta"]) for ticker, row in (sensitivity_row.get("per_ticker") or {}).items() if row.get("status") == "AVAILABLE"]
+        if candidates:
+            ticker, delta = min(candidates, key=lambda item: item[1])
+            largest_reduction = {"ticker": ticker, "absolute_volatility_delta": delta}
+
+    return {
+        "status": "AVAILABLE",
+        "measured_horizon": measured_horizon,
+        "coverage": {
+            "source_coverage_status": (quant_risk_artifact.get("source_coverage") or {}).get("status"),
+            "coverage_by_horizon_status": {horizon: row.get("status") for horizon, row in coverage_by_horizon.items()},
+            "unresolved_position_count": (quant_risk_artifact.get("unresolved_positions") or {}).get("count"),
+        },
+        "exposure": {
+            "equity_exposure_to_nav": exposure.get("equity_exposure_to_nav"),
+            "broker_cash_to_nav": exposure.get("broker_cash_to_nav"),
+            "margin_debt_to_nav": exposure.get("margin_debt_to_nav"),
+        },
+        "concentration": {
+            "largest_weights": top_capital_weights, "hhi": concentration.get("hhi"), "effective_positions": concentration.get("effective_n"),
+        },
+        "risk": {
+            "top_capital_weights": top_capital_weights, "top_risk_contributors": top_risk_contributors,
+            "capital_weight_vs_risk_contribution_gaps": capital_vs_risk_gaps,
+        },
+        "diversification": {
+            "correlation_concentration_group_count": (diversification_row or {}).get("correlation_concentration_group_count"),
+            "effective_n": concentration.get("effective_n"),
+            "diversification_ratio": (diversification_row or {}).get("diversification_ratio"),
+        },
+        "sensitivities": {"largest_volatility_reduction_if_moved_to_cash": largest_reduction},
+        "warnings": list(quant_risk_artifact.get("warnings") or []),
+        "authority_boundary": {
+            **(quant_risk_artifact.get("authority_boundary") or {}),
+            "measurement_only_never_wired_into_holding_action_or_attention_queue": True,
+        },
+        "source_artifact_identity": quant_risk_artifact.get("artifact_identity"),
+    }
+
+
 def _build_rotation_section(
     *, holdings: Sequence[Mapping[str, Any]], discovery_lanes: Mapping[str, list[dict[str, Any]]],
     sector_by_ticker: Mapping[str, str],
@@ -502,7 +582,7 @@ def build_artifact(
     asymmetric_dislocation_artifact: Mapping[str, Any] | None = None, coverage_disposition_artifact: Mapping[str, Any] | None = None,
     owner_focus: Mapping[str, Any] | None = None, portfolio_aware_decision_artifact: Mapping[str, Any] | None = None,
     sector_by_ticker: Mapping[str, str] | None = None, excluded_tickers: frozenset[str] = frozenset(),
-    portfolio_snapshot: Mapping[str, Any] | None = None,
+    portfolio_snapshot: Mapping[str, Any] | None = None, quant_risk_artifact: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Pure composition over already-built artifacts for one session -- no file I/O, no
     recomputation. See ``evaluate_from_retained_artifacts`` for the real-session, file-resolving
@@ -542,6 +622,7 @@ def build_artifact(
         watchlist_entries=watchlist.get("entries") or [],
     )
     investment_accounts = _build_investment_accounts_section(portfolio_snapshot)
+    portfolio_quant_risk = _build_portfolio_quant_risk_section(quant_risk_artifact)
 
     body: dict[str, Any] = {
         "schema_version": "1.0.0",
@@ -556,6 +637,7 @@ def build_artifact(
         "discovery": discovery,
         "capital_rotation": rotation,
         "investment_accounts": investment_accounts,
+        "portfolio_quant_risk": portfolio_quant_risk,
         "attention_queue": attention,
         "coverage": {
             "security_denominator": len(integrated_records),
@@ -662,6 +744,7 @@ def evaluate_from_retained_artifacts(
     status = _private_portfolio_context.portfolio_status(portfolio_root=portfolio_root)
     portfolio_aware_decision_artifact = None
     portfolio_snapshot = None
+    quant_risk_artifact = None
     excluded_tickers: frozenset[str] = frozenset()
     if status.get("status") == "READY":
         portfolio_aware_decision_artifact = _pad.evaluate_from_retained_artifacts(
@@ -669,6 +752,14 @@ def evaluate_from_retained_artifacts(
         )
         portfolio_snapshot = status.get("snapshot")
         excluded_tickers = _owner_research_exclusions.excluded_ticker_set(_owner_research_exclusions.load_research_exclusions(portfolio_root))
+        try:
+            quant_risk_artifact = _quant.evaluate_from_retained_artifacts(
+                repo_root=repo_root, portfolio_root=portfolio_root, session=resolved_session, requested_at=requested_at,
+            )
+        except FileNotFoundError:
+            # No retained price-history snapshot for this session (or no private portfolio) --
+            # degrade this one section, never the rest of the Action Center.
+            quant_risk_artifact = None
 
     return build_artifact(
         session=resolved_session, requested_at=requested_at, integrated_decision_artifact=integrated_decision_artifact,
@@ -677,6 +768,7 @@ def evaluate_from_retained_artifacts(
         asymmetric_dislocation_artifact=asymmetric_dislocation_artifact, coverage_disposition_artifact=coverage_disposition_artifact,
         owner_focus=owner_focus, portfolio_aware_decision_artifact=portfolio_aware_decision_artifact,
         sector_by_ticker=sector_by_ticker, excluded_tickers=excluded_tickers, portfolio_snapshot=portfolio_snapshot,
+        quant_risk_artifact=quant_risk_artifact,
     )
 
 
@@ -701,6 +793,7 @@ def public_console_summary(artifact: Mapping[str, Any], *, destination: Path | N
         "market_status": (artifact.get("market") or {}).get("status"),
         "portfolio_status": (artifact.get("portfolio") or {}).get("status"),
         "investment_accounts_status": (artifact.get("investment_accounts") or {}).get("status"),
+        "portfolio_quant_risk_status": (artifact.get("portfolio_quant_risk") or {}).get("status"),
         "watchlist_status": (artifact.get("watchlist") or {}).get("status"),
         "discovery_lane_counts": (artifact.get("discovery") or {}).get("lane_counts"),
         "attention_bucket_counts": (artifact.get("attention_queue") or {}).get("bucket_counts"),
@@ -780,6 +873,33 @@ def markdown(artifact: Mapping[str, Any]) -> str:
         lines.append(f"- Broker-reported NAV: {accounts.get('broker_reported_nav')}")
         lines.append(f"- Account freshness: {accounts.get('as_of_consistency')}")
         lines.append("- Cash availability is capital context only, never a BUY/SELL signal by itself.")
+    lines.append("")
+
+    lines.append("## PORTFOLIO QUANT RISK")
+    quant = artifact.get("portfolio_quant_risk") or {}
+    if quant.get("status") != "AVAILABLE":
+        lines.append(f"- {quant.get('status', 'NOT_AVAILABLE')} — measurement only, never affects the actions above.")
+    else:
+        coverage = quant.get("coverage") or {}
+        exposure = quant.get("exposure") or {}
+        concentration = quant.get("concentration") or {}
+        risk = quant.get("risk") or {}
+        diversification = quant.get("diversification") or {}
+        sensitivities = quant.get("sensitivities") or {}
+        lines.append(f"- Coverage: source={coverage.get('source_coverage_status')}, measured horizon={quant.get('measured_horizon')}, unresolved={coverage.get('unresolved_position_count')}")
+        lines.append(f"- Equity exposure/NAV: {exposure.get('equity_exposure_to_nav')} · Cash/NAV: {exposure.get('broker_cash_to_nav')} · Margin/NAV: {exposure.get('margin_debt_to_nav')}")
+        lines.append(f"- Concentration: HHI={concentration.get('hhi')}, effective positions={concentration.get('effective_positions')}")
+        if concentration.get("largest_weights"):
+            lines.append(f"  - Largest weights: {', '.join(f'{t}={w:.3f}' for t, w in concentration['largest_weights'])}")
+        if risk.get("top_risk_contributors"):
+            lines.append(f"- Top risk contributors ({quant.get('measured_horizon')}): {', '.join(f'{t}={p:.3f}' for t, p in risk['top_risk_contributors'])}")
+        if risk.get("capital_weight_vs_risk_contribution_gaps"):
+            lines.append(f"  - Capital-weight vs risk-weight gaps: {', '.join(f'{t}={g:+.3f}' for t, g in risk['capital_weight_vs_risk_contribution_gaps'])}")
+        lines.append(f"- Diversification ratio: {diversification.get('diversification_ratio')} · Correlation clusters: {diversification.get('correlation_concentration_group_count')} · Effective N: {diversification.get('effective_n')}")
+        reduction = sensitivities.get("largest_volatility_reduction_if_moved_to_cash")
+        if reduction:
+            lines.append(f"- Largest volatility reduction if moved to cash: {reduction['ticker']} ({reduction['absolute_volatility_delta']:+.6f})")
+        lines.append("- Descriptive/research measurement only: not a BUY/SELL/REDUCE instruction.")
     lines.append("")
 
     lines.append("## WATCHLIST")

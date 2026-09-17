@@ -1,7 +1,7 @@
 {
   "schema_version": "stocklookup_roadmap_execution_state/1.0.0",
   "roadmap_id": "stock-core-private",
-  "roadmap_version": "2026.09.16.1",
+  "roadmap_version": "2026.09.17.1",
   "narrative_authority": {
     "strategic_roadmap": "docs/ROADMAP.md",
     "operational_narrative": "docs/STATE.md",
@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1",
+    "milestone": "PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -1713,6 +1713,42 @@
       "state_history": [],
       "owner_override": "OWNER_AUTHORIZATION_2026_09_15_PRICE_BASIS_FACTOR_CHAIN_AND_PIT_SERIES_QUALIFICATION_V1",
       "notes": "COMPLETE / FACTOR_CHAIN_PIPELINE_READY / PIT_SERIES_PARTIAL_BY_EVIDENCE. New qualified_corporate_action_factor_chain.py adapts a qualified official_corporate_action_ledger entry into the factor_chain shape price_basis_feature_fitness.price_series_context() already accepted but nothing produced, classifying every entry fail-closed into FACTOR_CHAIN_QUALIFIED / MISSING_EXPLICIT_EX_DATE / NOT_EXECUTED / CONFLICTING / FACTOR_NOT_APPLICABLE / OTHER_EVIDENCE_GAP; a caller-supplied knowledge/publication cutoff is required for FACTOR_CHAIN_QUALIFIED. New pit_price_series_qualification.py adds a session-by-session PIT gate (bounded raw-input basis + no-look-ahead knowledge cutoff), never filling a missing session or splicing across an authority window. Real-evidence inventory found zero retained corporate-action events in this repository reach FACTOR_CHAIN_QUALIFIED: the real, retained HNX official rights-event index (operations-review/current-official-event-context-integration-v1-20260824/) carries genuine official ex-dates for 239 share-affecting events but no share-ratio/executed-lifecycle evidence, so it is structurally out of the ledger schema. Positive QUALIFIED mechanics (including the PIT session gate and PIT_BACKTEST/EXECUTION_RAW_REPLAY feature-fitness integration) are proven only via a clearly-labelled synthetic fixture cohort (tools/run_price_basis_factor_chain_qualification.py, ticker TST*), never reported as real qualification evidence. Also traced and resolved without widening authority: CURRENT_DESCRIPTIVE_NOT_PROMOTED_RAW_AS_TRADED has no source-lineage proof of ADJUSTED_RETROSPECTIVE; price_basis_feature_fitness._basis() now maps it to BASIS_UNKNOWN explicitly (previously an accidental fallback default) -- zero authority change. Deterministic gap-table artifact committed under operations-review/price-basis-factor-chain-and-pit-series-qualification-v1-20260915/. No Daily, provider/network call, runtime mutation, canonical classification change, or RAW_AS_TRADED/PIT/liquidity/execution/sizing promotion. Next gate: acquire real official corporate-action documents (explicit ex-date + share-ratio) for at least one ticker so a real FACTOR_CHAIN_QUALIFIED case can be produced through this same pipeline without any code change. No successor queued."
+    },
+    {
+      "milestone_id": "PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "MULTI_BROKER_INVESTMENT_CONTEXT_RELEASED",
+      "starting_checkpoint": "95baee1c5cfe9e7a40f77f321f72e6a2a2890abb",
+      "checkpoint": "03959e9fa57f441ee7d9e5ccf17ac2904d67f98d",
+      "dependencies": [
+        "PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1"
+      ],
+      "unlocks": [
+        "PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1"
+      ],
+      "authority_effect": "PRIVATE_LOCAL_ONLY_INVESTMENT_ACCOUNT_CONTEXT / NO_EXECUTION_AUTHORITY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1 (prior session, 2026-09-17)",
+      "state_history": [],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_17_PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1",
+      "notes": "COMPLETE / MULTI_BROKER_INVESTMENT_CONTEXT_RELEASED. Recorded retroactively in this session governance reconciliation -- this milestone was released at commit 03959e9 but never synced into docs/ROADMAP_STATE.json (still showed the prior Action Center milestone as current with queued_next=[]). New investment_account_context/v1 (multi-row AccountSnapshot support -- the real workbooks second, aliased row had been silently dropped by the prior single-row-only reader) and investment_accounts_portfolio_context/v1 aggregate, additive alongside the unchanged single-account account_snapshot/v1; fails closed on any as-of/currency mismatch or incomplete per-field account coverage. Additive per-event source_account_id and per-position account_attribution lineage; current_position_status/current_quantity unchanged. portfolio_aware_decision.derive_portfolio_state sources NAV/cash/margin-debt from the qualified aggregate when available, falling back to the legacy single account otherwise; no risk-policy threshold retuned. IMPORT_LAYOUT_VERSION bumped to V6. Confirmed live: 2 investment accounts detected, aggregate AGGREGATED with consistent as-of dates; a real, previously-unrecognized second trade-shaped sheet (FUESSVN30, its own distinct account-identifier namespace) found and deliberately left unadmitted rather than crosswalked-by-guess. private_portfolio_research_handoff.py anonymizes every account to an ordinal label, never the raw alias/account number. See docs/STATE.md and docs/DECISIONS.md for full detail."
+    },
+    {
+      "milestone_id": "PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED",
+      "starting_checkpoint": "03959e9fa57f441ee7d9e5ccf17ac2904d67f98d",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "DESCRIPTIVE_RESEARCH_ONLY / NO_SIZING_OR_EXECUTION_AUTHORITY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1 (this session, 2026-09-17)",
+      "state_history": [],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_17_PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1",
+      "notes": "COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED. New personal_portfolio_quant_risk_decomposition.py (personal_portfolio_quant_risk_decomposition/v1): descriptive-only concentration (HHI/effective N), per-security volatility, pairwise correlation, covariance integrity, two portfolio-volatility views (EQUITY_SLEEVE_VOLATILITY/NAV_SCALED_EQUITY_RISK), risk contribution (reconciled to portfolio volatility / 1.0 within tolerance), diversification, and a MOVE_POSITION_TO_CASH_VOLATILITY_SENSITIVITY per named holding. Reuses current_portfolio_risk_research.py return/window/volatility/correlation/joint-matrix pure functions directly (not reimplemented) and correlation_concentration_guard.py verbatim including its frozen, un-retuned 0.80 threshold; sources quantities/NAV/sector/the qualified multi-account aggregate from portfolio_aware_decision.derive_portfolio_state. Source-coverage status is derived dynamically from the private event ledgers own sheet_inventory (never hardcoded), correctly keeping real coverage at QUALIFIED_COVERED_SUBSET/ PORTFOLIO_INPUT_COVERAGE_PARTIAL rather than a fabricated FULL_PORTFOLIO_COVERAGE. An owner-excluded tickers current confirmed exposure stays in every NAV/exposure denominator but its identity never appears anywhere in the artifact. Account-level position risk is qualification-gated (ACCOUNT_LEVEL_POSITION_RISK_NOT_QUALIFIED unless every named holdings account_attribution is fully ATTRIBUTED). New informational PORTFOLIO QUANT RISK Action Center section, verified never wired into _holding_action/_watchlist_action/ _build_rotation_section/_build_attention_queue. No BUY/SELL, sizing, VaR/CVaR, Kelly, or optimization authority anywhere. Confirmed live against the real portfolio (counts/status only; see docs/STATE.md). No Daily run, provider call, Dashboard, or public AI-handoff involvement. Next gate: USE_IN_PRODUCTION / ACCUMULATE_PROSPECTIVE_EVIDENCE (no new coding milestone queued)."
     }
   ],
   "blocked_capabilities": [

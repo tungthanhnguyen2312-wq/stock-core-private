@@ -1,5 +1,76 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-17 - Personal Portfolio Quantitative Risk Decomposition V1
+
+`PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1 = COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED`.
+Owner directive (this session): a deterministic, descriptive-only quantitative risk decomposition
+over the real current portfolio. See `docs/STATE.md` for the full trace and real-validation counts.
+
+1. **Decision: reuse the existing return/covariance engine's pure functions directly, rather than
+   re-derive C1's own public `build_artifact` contract or reimplement the math.** C1
+   (`current_portfolio_risk_research.build_artifact`) requires shadow-candidate-specific inputs
+   (`shadow_readiness`/`research_cases`) that have nothing to do with an actual holding; forcing
+   real holdings through a fake `READY_SHADOW` shape to satisfy that precondition would pollute
+   semantics for no benefit. Importing C1's pure, stateless window/volatility/pairwise/joint-matrix
+   functions directly guarantees byte-identical math and thresholds without a second, subtly
+   different implementation, and without lying about what a held position is.
+2. **Decision: two portfolio-volatility views, never one blended figure.**
+   `EQUITY_SLEEVE_VOLATILITY` (weights renormalized to 1 over covered equity only) answers "how
+   volatile is the invested sleeve itself"; `NAV_SCALED_EQUITY_RISK` (weights = market value / NAV,
+   never renormalized) answers "how much equity volatility is embedded in current NAV" and
+   deliberately keeps a >1 weight sum visible under margin/gross exposure rather than hiding it.
+3. **Decision: owner-excluded exposure stays in every denominator, never in a named breakdown.** A
+   research exclusion is a "don't actively research this ticker" flag, not a "pretend this money
+   doesn't exist" flag -- excluded confirmed exposure is summed into NAV/equity totals but only ever
+   surfaces as one anonymized `excluded_confirmed_exposure` bucket, never by ticker identity,
+   anywhere in this artifact (including the local-only JSON, not just external-facing surfaces).
+4. **Decision: source-coverage status is derived dynamically from the ledger's own sheet inventory,
+   not hardcoded institutional knowledge.** `_source_coverage` flags any workbook sheet outside the
+   recognized set as "unadmitted" by reading `sheet_inventory` fresh each run, rather than a
+   permanent hardcoded warning -- so the real workbook's known-but-not-crosswalked `FUESSVN30` sheet
+   is caught genuinely, and the status would correctly upgrade on its own if the owner's workbook
+   shape ever changes, without a follow-up code change.
+5. **Decision: account-level position risk is qualification-gated, not attempted best-effort.**
+   Account NAV/cash/margin context is always available whenever the multi-account aggregate is
+   qualified. Per-account equity-exposure decomposition, however, requires every named holding's
+   `account_attribution` to be fully `ATTRIBUTED`; a single unresolved or reconciliation-blocked
+   attribution row anywhere in the named cohort reports the whole thing
+   `ACCOUNT_LEVEL_POSITION_RISK_NOT_QUALIFIED` rather than a partially-correct allocation.
+6. **Decision: measurement never feeds the Action Center's action vocabulary.** The new
+   `PORTFOLIO QUANT RISK` section is wired into `build_artifact` as a sibling of, never an input to,
+   `_holding_action`/`_watchlist_action`/`_build_rotation_section`/`_build_attention_queue` --
+   verified by a regression test asserting byte-identical holdings/attention-queue/rotation output
+   with and without the quant artifact supplied.
+
+## 2026-09-17 - Private Multi-Broker Investment Account Context V1 (recorded retroactively; released at commit `03959e9`)
+
+`PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1 = COMPLETE / MULTI_BROKER_INVESTMENT_CONTEXT_RELEASED`.
+This entry was omitted from `docs/DECISIONS.md`/`docs/ROADMAP_STATE.json` at release time; it is
+recorded now as part of this session's governance reconciliation, not amended into the original
+commit. See `docs/STATE.md` for the full trace and real-validation counts.
+
+1. **Decision: additive contracts alongside the existing single-account one, never a breaking
+   schema change.** `investment_account_context/v1` and `investment_accounts_portfolio_context/v1`
+   are new, additive artifacts; `account_snapshot/v1` and every existing single-account consumer
+   are untouched, so a legacy workbook with one alias-less `AccountSnapshot` row keeps working
+   exactly as before (imported as one stable `LEGACY_UNSPECIFIED_ACCOUNT`).
+2. **Decision: the multi-account aggregate fails closed on any as-of/currency mismatch or per-field
+   coverage gap, rather than sum what it can.** Silently summing a stale account snapshot against a
+   current one would misrepresent real NAV/cash/margin; a total is `None` (not a partial figure)
+   whenever any as-of-qualified account omits that specific field.
+3. **Decision: event-level account attribution reuses whatever the workbook's own per-row account
+   column already says, and never backfills a missing one.** `Trade`/`Dividend`/`Money` rows
+   already carried real per-row account identifiers that the prior single-account importer simply
+   never captured; a row without one becomes `ACCOUNT_ATTRIBUTION_UNRESOLVED`, never a guess.
+4. **Decision: a second, differently-account-numbered trade-shaped sheet found in the real workbook
+   (`FUESSVN30`) is deliberately left unadmitted this milestone**, rather than ingested on a guessed
+   crosswalk between its account-number namespace and the admitted one -- flagged explicitly for a
+   future milestone instead of risking a misattributed real financial history.
+5. **Decision: the externally-uploadable research handoff artifact anonymizes every account to an
+   ordinal label.** The real workbook's own `account_alias` can literally be a brokerage account
+   number; `private_portfolio_research_handoff.py` exposes only `ACCOUNT_1`/`ACCOUNT_2`/... plus
+   non-sensitive fields (broker name, account type), never the raw alias.
+
 ## 2026-09-16 - Personal Investment Decision Action Center V1
 
 `PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1 = COMPLETE / PERSONAL_ACTION_CENTER_RELEASED`. Owner
