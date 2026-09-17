@@ -36,7 +36,7 @@ def make_position(ticker, quantity, cost_basis=None, breakeven=None):
     }
 
 
-def make_snapshot(*, positions=None, account=None, policy=None, as_of_date="2026-09-08"):
+def make_snapshot(*, positions=None, account=None, policy=None, as_of_date="2026-09-08", investment_accounts_aggregate=None):
     account_fields = {
         "as_of_date": as_of_date, "currency": "VND",
         "cash_available": None, "cash_reserved": None, "margin_debt": None,
@@ -55,6 +55,7 @@ def make_snapshot(*, positions=None, account=None, policy=None, as_of_date="2026
         "positions": positions or [],
         "account_snapshot": {"fields": account_fields},
         "portfolio_policy": {"effective_fields": effective_fields},
+        "investment_accounts_portfolio_context": investment_accounts_aggregate or {"status": "NOT_PROVIDED", "totals": {}},
     }
 
 
@@ -538,3 +539,56 @@ def test_21b_empirical_reward_context_attaches_without_changing_execution_or_mar
     assert with_hook["margin_economics"]["status"] == without_hook["margin_economics"]["status"]
     assert with_hook["portfolio_risk_quantity_ceiling"] == without_hook["portfolio_risk_quantity_ceiling"]
     assert with_hook["portfolio_action_research"] == without_hook["portfolio_action_research"]
+
+
+# ── PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1 ───────────────────────────────────────
+
+def test_qualified_multi_account_aggregate_sources_nav_cash_and_margin_debt():
+    """A fully qualified (AGGREGATED) multi-account aggregate sources cash/NAV/margin-debt in
+    preference to the single legacy account_snapshot fields -- with no change to policy bands."""
+    snapshot = make_snapshot(
+        account={"cash_available": "1", "net_asset_value": "1", "margin_debt": "1"},  # legacy figures a qualified aggregate must override
+        investment_accounts_aggregate={
+            "status": "AGGREGATED",
+            "artifact_identity": "investment_accounts_portfolio_context:test",
+            "totals": {"total_broker_cash": "300000000", "total_reserved_cash": None, "total_margin_debt": "10000000", "total_broker_reported_nav": "500000000"},
+        },
+    )
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot)
+
+    assert state["cash_available"] == 300000000.0
+    assert state["margin_debt"] == 10000000.0
+    assert state["effective_nav"] == 500000000.0
+    assert state["nav_basis"] == "NAV_BROKER_REPORTED"
+    assert state["investment_accounts_aggregate_status"] == "AGGREGATED"
+    assert state["source_identities"]["investment_accounts_portfolio_context_identity"] == "investment_accounts_portfolio_context:test"
+
+
+def test_unqualified_multi_account_aggregate_falls_back_to_legacy_single_account():
+    """A mismatched/partial aggregate must never override the legacy single-account fields --
+    this is the common case for every pre-existing single-account workbook."""
+    snapshot = make_snapshot(
+        account={"cash_available": "100000000", "net_asset_value": "100000000", "margin_debt": "5000000"},
+        investment_accounts_aggregate={
+            "status": "PARTIAL_MULTI_ACCOUNT_MISMATCH",
+            "totals": {"total_broker_cash": None, "total_margin_debt": None, "total_broker_reported_nav": None},
+        },
+    )
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot)
+
+    assert state["cash_available"] == 100000000.0
+    assert state["margin_debt"] == 5000000.0
+    assert state["effective_nav"] == 100000000.0
+    assert state["investment_accounts_aggregate_status"] == "PARTIAL_MULTI_ACCOUNT_MISMATCH"
+
+
+def test_no_investment_accounts_context_behaves_exactly_as_before():
+    """A snapshot produced before this milestone (no `investment_accounts_portfolio_context` key
+    at all) must derive portfolio state identically -- pure backward compatibility."""
+    snapshot = make_snapshot(account={"cash_available": "100000000", "net_asset_value": "100000000"})
+    del snapshot["investment_accounts_portfolio_context"]
+    state = pad.derive_portfolio_state(portfolio_snapshot=snapshot)
+
+    assert state["cash_available"] == 100000000.0
+    assert state["effective_nav"] == 100000000.0
+    assert state["investment_accounts_aggregate_status"] == "NOT_PROVIDED"

@@ -77,3 +77,34 @@ def test_written_artifact_never_lands_inside_the_repository(tmp_path: Path):
     destination = handoff.write_private_artifact(artifact, portfolio_root=tmp_path)
     assert destination.is_file()
     assert tmp_path in destination.parents
+
+
+def _multi_account_workbook(path: Path) -> Path:
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    trade.append(["2026-01-01", "AAA", "BUY", 10, 100])
+    account = workbook.create_sheet("AccountSnapshot")
+    account.append(["as_of", "account_alias", "broker", "cash_investable"])
+    account.append(["2026-02-01", "105C793100", "SSI", 1000])
+    account.append(["2026-02-01", "001302384", "VNDIRECT", 2000])
+    workbook.save(path)
+    return path
+
+
+def test_investment_accounts_context_never_leaks_a_raw_account_alias(tmp_path: Path):
+    """Section 10: the real workbook's own account_alias can literally be a brokerage account
+    number (e.g. "105C793100") -- this externally-uploadable artifact must never carry it."""
+    import_workbook(workbook_path=_multi_account_workbook(tmp_path / "wb.xlsx"), portfolio_root=tmp_path)
+    artifact = handoff.build_artifact(portfolio_root=tmp_path)
+    context = artifact["investment_accounts_context"]
+
+    assert context["status"] == "AGGREGATED"
+    assert context["account_count"] == 2
+    labels = {account["handoff_account_label"] for account in context["accounts"]}
+    assert labels == {"ACCOUNT_1", "ACCOUNT_2"}
+    brokers = {account["broker"] for account in context["accounts"]}
+    assert brokers == {"SSI", "VNDIRECT"}
+    assert "105C793100" not in str(artifact)
+    assert "001302384" not in str(artifact)

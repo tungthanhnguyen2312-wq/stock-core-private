@@ -91,6 +91,60 @@ sector `0.45` NAV, maximum gross exposure `1.15` NAV, maximum margin debt
 rate `15.0` percent per annum. Other optional policy fields remain unavailable
 unless the owner supplied them.
 
+## Multi-account context (`PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1`)
+
+`AccountSnapshot` may hold more than one row -- each becomes one candidate
+brokerage account instead of only the sheet's first row. Three additional
+identity columns are recognized on that same sheet, additive to the
+single-account fields above:
+
+| Field | Meaning |
+| --- | --- |
+| `account_alias` | Owner-chosen stable identifier for this account (can be a real account number -- it never leaves this local root; see "Privacy" below). Required to disambiguate more than one row. |
+| `broker` | Broker/company name, e.g. `SSI`. Optional. |
+| `account_type` | Owner-defined account kind, e.g. `CASH`, `MARGIN`. Optional. |
+
+A single alias-less row (every pre-existing legacy workbook) still imports as
+exactly one account, `LEGACY_UNSPECIFIED_ACCOUNT`. More than one alias-less
+row is genuinely ambiguous and is never guessed: each gets its own
+row-qualified identity plus an `ACCOUNT_ALIAS_MISSING_FOR_MULTI_ACCOUNT_ROW`
+reconciliation warning instead.
+
+Example (no real owner values):
+
+```text
+as_of        account_alias   broker      cash_investable   margin_debt   broker_nav
+2026-06-30   MAIN-CASH       BROKER_A    120000000         0             150000000
+2026-06-30   MAIN-MARGIN     BROKER_B    30000000          10000000      95000000
+```
+
+Each row materializes an `investment_account_context/v1` record. A
+deterministic `investment_accounts_portfolio_context/v1` aggregate sums
+`total_broker_cash`, `total_reserved_cash`, `total_receivables`,
+`total_margin_debt`, `total_broker_reported_nav`, and
+`total_broker_reported_securities_market_value` -- but only across accounts
+whose `as_of_date` and `currency` agree, and only for a field every such
+account actually reports; otherwise that total (or the whole aggregate) is
+`None`/`PARTIAL_MULTI_ACCOUNT_MISMATCH`, never a manufactured or partially
+summed figure.
+
+`Trade`, `Dividend`, and `Money` rows may also carry their own per-row account
+column (`Tai khoan` / `So tai khoan` / `Account`). When present, it tags that
+event's `source_account_id` and rolls up into each position's additive
+`account_attribution` list (one row per account actually seen, plus an
+`ACCOUNT_ATTRIBUTION_UNRESOLVED` bucket for events with no such column) --
+this is a separate identifier namespace from `AccountSnapshot`'s own
+`account_alias` and the two are never cross-referenced except by exact string
+match. `account_attribution` is purely additive lineage; it never changes
+`current_position_status`/`current_quantity`, which remain the sole
+current-holding authority.
+
+**Privacy:** `investment_account_context/v1` and its aggregate stay under the
+same local-only root as everything else in this module. The one place a raw
+`account_alias` must never appear is the external-upload-facing
+`private_portfolio_research_handoff/v1` artifact, which instead anonymizes
+each account to an ordinal `ACCOUNT_1`, `ACCOUNT_2`, ... label.
+
 ## Local artifacts
 
 - `portfolio_event_ledger_v1.json` retains normalized trade, dividend, money,
@@ -107,6 +161,8 @@ unless the owner supplied them.
   absent policy fields.
 - `portfolio_import_manifest_v1.json` binds all private artifact identities to
   the source workbook SHA-256.
+- `investment_accounts_v1.json` and `investment_accounts_portfolio_context_v1.json`
+  hold the per-account and aggregate multi-broker context described above.
 
 The current-position method is explicitly
 `WEIGHTED_AVERAGE_CARRYING_COST`. Cash dividends and net sale proceeds affect

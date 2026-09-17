@@ -23,6 +23,21 @@ from typing import Any, Iterable, Mapping
 EVENT_LEDGER_CONTRACT = "portfolio_event_ledger/v1"
 SNAPSHOT_CONTRACT = "portfolio_snapshot/v1"
 POLICY_CONTRACT = "portfolio_policy/v1"
+# PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: additive, local-only per-account and
+# aggregate contracts layered alongside the existing single ``account_snapshot/v1`` (which is
+# never removed or reinterpreted -- see ``_account_snapshot_contract``). A workbook with no
+# recognizable multi-account structure produces zero ``investment_account_context/v1`` records
+# and a ``NOT_PROVIDED`` aggregate; every existing single-account consumer is unaffected.
+INVESTMENT_ACCOUNT_CONTEXT_CONTRACT = "investment_account_context/v1"
+INVESTMENT_ACCOUNTS_PORTFOLIO_CONTEXT_CONTRACT = "investment_accounts_portfolio_context/v1"
+# The one stable identity a single, alias-less AccountSnapshot row (every pre-existing real or
+# fixture workbook) resolves to -- never invented per-row when more than one row lacks an alias,
+# which instead becomes ACCOUNT_ALIAS_MISSING_FOR_MULTI_ACCOUNT_ROW (see
+# ``_investment_account_contexts``).
+LEGACY_UNSPECIFIED_ACCOUNT_ID = "LEGACY_UNSPECIFIED_ACCOUNT"
+# A ledger event or position-level account-attribution row whose source workbook row carries no
+# recognizable per-row account column value. Never retrospectively guessed or backfilled.
+ACCOUNT_ATTRIBUTION_UNRESOLVED = "ACCOUNT_ATTRIBUTION_UNRESOLVED"
 # PERSONAL_DECISION_INPUT_TRUTH_V1: the required distinction between HISTORICAL_EVENT_LEDGER_STATE
 # (the raw, always-preserved event trail -- see build_event_ledger) and CURRENT_POSITION_TRUTH (what
 # a position row below is allowed to assert about presence *today*). CURRENT_CONFIRMED is the only
@@ -49,7 +64,14 @@ IMPORT_MANIFEST_CONTRACT = "portfolio_import_manifest/v1"
 # positive quantity. A V4-layout snapshot predates this contract and must never be silently
 # reinterpreted in place; re-running import_workbook against an unchanged real workbook lands in
 # a new V5 layout directory instead of conflicting with the frozen V4 one.
-IMPORT_LAYOUT_VERSION = "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V5"
+# V5 -> V6 (PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1): every ledger event now carries a
+# `source_account_id` field, every position now carries an additive `account_attribution` list,
+# and two new artifacts (``investment_account_context/v1`` per account, plus the
+# ``investment_accounts_portfolio_context/v1`` aggregate) are materialized alongside the unchanged
+# single-account ``account_snapshot/v1``. A V5-layout snapshot predates this schema and must never
+# be silently reinterpreted in place; a fresh import against an unchanged real workbook lands in a
+# new V6 layout directory instead of conflicting with the frozen V5 one.
+IMPORT_LAYOUT_VERSION = "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V6"
 CURRENT_COST_BASIS_METHOD = "WEIGHTED_AVERAGE_CARRYING_COST"
 LIFETIME_BREAKEVEN_METHOD = "LIFETIME_NET_CASH_OUTFLOW_PER_CURRENT_SHARE"
 REPOSITORY_ROOT = Path(__file__).resolve().parent
@@ -224,6 +246,11 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "stock_quantity": ("stockquantity", "bonusshares", "stockdividendshares", "sharedividend", "cophieunhan", "soluongcophieu", "sockduocnhanduocmua"),
     "key": ("key", "field", "metric", "name", "parameter", "chi tieu", "chitieu"),
     "value": ("value", "amount", "number", "gia tri", "giatri"),
+    # A per-row brokerage account identifier already present on some real Trade/Dividend/Money
+    # rows (e.g. "So tai khoan" / "Tai khoan"). This is an independent identifier namespace from
+    # AccountSnapshot's own `account_alias` (see ACCOUNT_IDENTITY_FIELDS below) -- the two are
+    # never cross-referenced or assumed equal, only ever compared by exact string match.
+    "source_account": ("account", "accountid", "accountnumber", "taikhoan", "sotaikhoan"),
 }
 FIELD_ALIAS_NORMALS = {field: {_normal(alias) for alias in aliases} for field, aliases in FIELD_ALIASES.items()}
 
@@ -248,6 +275,38 @@ ACCOUNT_FIELDS = {
     # field is never treated as anything other than the broker's own figure.
     "net_asset_value": ("netassetvalue", "nav", "taisanrong", "brokernav"),
     "gross_market_value": ("grossmarketvalue", "marketvalue", "giatrithitruong"),
+}
+# PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: identity-only fields that make a single
+# AccountSnapshot row one candidate brokerage account rather than the sole implicit account.
+# Deliberately excludes a bare "account"/"tai khoan" alias -- that generic token is reserved for
+# FIELD_ALIASES["source_account"]'s own, independent per-row event identifier namespace.
+ACCOUNT_IDENTITY_FIELDS = {
+    "account_alias": ("accountalias", "accountid", "accountname", "tentaikhoan"),
+    "broker": ("broker", "brokername", "congtyck", "ctck", "securitiescompany"),
+    "account_type": ("accounttype", "loaitaikhoan", "accountkind"),
+}
+# The new per-account contract's own monetary/date field name -> the pre-existing ACCOUNT_FIELDS
+# key it reuses (same header aliases, same semantics). ``broker_reported_nav`` and
+# ``broker_reported_securities_market_value`` are the milestone's own spec names for what
+# ACCOUNT_FIELDS already calls ``net_asset_value``/``gross_market_value``.
+INVESTMENT_ACCOUNT_FIELD_SOURCE = {
+    "cash_available": "cash_available",
+    "cash_reserved": "cash_reserved",
+    "receivable_cash": "receivable_cash",
+    "receivable_dividends": "receivable_dividends",
+    "margin_debt": "margin_debt",
+    "margin_available_minimum": "margin_available_minimum",
+    "margin_available_maximum": "margin_available_maximum",
+    "annual_margin_rate_percent": "annual_margin_rate_percent",
+    "accrued_margin_interest": "accrued_margin_interest",
+    "broker_reported_nav": "net_asset_value",
+    "broker_reported_securities_market_value": "gross_market_value",
+}
+INVESTMENT_ACCOUNT_FIELD_CANDIDATES: dict[str, tuple[str, ...]] = {
+    **ACCOUNT_IDENTITY_FIELDS,
+    "as_of_date": ACCOUNT_FIELDS["as_of_date"],
+    "currency": ACCOUNT_FIELDS["currency"],
+    **{new: ACCOUNT_FIELDS[old] for new, old in INVESTMENT_ACCOUNT_FIELD_SOURCE.items()},
 }
 POLICY_FIELDS = {
     "as_of_date": ACCOUNT_FIELDS["as_of_date"],
@@ -288,6 +347,14 @@ ACCOUNT_FIELD_SEMANTICS = {
     "accrued_margin_interest": "VND",
     "net_asset_value": "VND",
     "gross_market_value": "VND",
+}
+INVESTMENT_ACCOUNT_FIELD_SEMANTICS: dict[str, str] = {
+    "account_alias": "TEXT_IDENTITY",
+    "broker": "TEXT_IDENTITY",
+    "account_type": "TEXT_IDENTITY",
+    "as_of_date": "ISO_DATE",
+    "currency": "ISO_CURRENCY_CODE",
+    **{new: ACCOUNT_FIELD_SEMANTICS[old] for new, old in INVESTMENT_ACCOUNT_FIELD_SOURCE.items()},
 }
 POLICY_FIELD_SEMANTICS = {
     "as_of_date": "ISO_DATE",
@@ -368,7 +435,7 @@ def _event_identity(event: Mapping[str, Any]) -> str:
     return "portfolio_event:" + _identity("portfolio_event", event)["artifact_sha256"]
 
 
-def _event(*, event_type: str, effective_date: str, source_sheet: str, source_row: int, ticker: str | None = None, quantity: Decimal | None = None, gross_amount: Decimal | None = None, fee: Decimal | None = None, tax: Decimal | None = None, note: str | None = None, monetary_currency: str | None = None, monetary_unit_basis: str | None = None) -> dict[str, Any]:
+def _event(*, event_type: str, effective_date: str, source_sheet: str, source_row: int, ticker: str | None = None, quantity: Decimal | None = None, gross_amount: Decimal | None = None, fee: Decimal | None = None, tax: Decimal | None = None, note: str | None = None, monetary_currency: str | None = None, monetary_unit_basis: str | None = None, source_account_id: str | None = None) -> dict[str, Any]:
     body = {
         "event_type": event_type,
         "effective_date": effective_date,
@@ -381,9 +448,18 @@ def _event(*, event_type: str, effective_date: str, source_sheet: str, source_ro
         "note_class": note,
         "monetary_currency": monetary_currency,
         "monetary_unit_basis": monetary_unit_basis,
+        # PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: the row's own account column value
+        # (FIELD_ALIASES["source_account"]), never retrospectively assigned when the row carries
+        # none -- see ACCOUNT_ATTRIBUTION_UNRESOLVED.
+        "source_account_id": source_account_id,
     }
     body["event_identity"] = _event_identity(body)
     return body
+
+
+def _account_id(value: Any) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    return text or None
 
 
 def _side(value: Any) -> str | None:
@@ -424,7 +500,8 @@ def _trade_events(sheet: Any, warnings: list[dict[str, Any]]) -> list[dict[str, 
         if gross is None or gross < 0 or fee < 0 or tax < 0:
             warnings.append({"code": "TRADE_CASHFLOW_UNRESOLVED", "sheet": sheet.title, "row": source_row})
             continue
-        events.append(_event(event_type=event_type, effective_date=effective_date, source_sheet=sheet.title, source_row=source_row, ticker=ticker, quantity=quantity, gross_amount=gross, fee=fee, tax=tax))
+        source_account_id = _account_id(_cell(row, mapping, "source_account"))
+        events.append(_event(event_type=event_type, effective_date=effective_date, source_sheet=sheet.title, source_row=source_row, ticker=ticker, quantity=quantity, gross_amount=gross, fee=fee, tax=tax, source_account_id=source_account_id))
     return events
 
 
@@ -462,14 +539,15 @@ def _dividend_events(sheet: Any, warnings: list[dict[str, Any]]) -> list[dict[st
         if not effective_date or not ticker:
             warnings.append({"code": "DIVIDEND_ROW_INVALID", "sheet": sheet.title, "row": source_row})
             continue
+        source_account_id = _account_id(_cell(row, mapping, "source_account"))
         stock_like = stock_quantity is not None or any(token in event_hint for token in ("stock", "bonus", "share", "co phieu", "cophieu"))
         if stock_like:
             if stock_quantity is None or stock_quantity <= 0:
                 warnings.append({"code": "STOCK_DISTRIBUTION_QUANTITY_UNRESOLVED", "sheet": sheet.title, "row": source_row})
                 continue
-            events.append(_event(event_type="STOCK_DISTRIBUTION", effective_date=effective_date, source_sheet=sheet.title, source_row=source_row, ticker=ticker, quantity=stock_quantity, gross_amount=Decimal(0)))
+            events.append(_event(event_type="STOCK_DISTRIBUTION", effective_date=effective_date, source_sheet=sheet.title, source_row=source_row, ticker=ticker, quantity=stock_quantity, gross_amount=Decimal(0), source_account_id=source_account_id))
         elif cash_amount is not None and cash_amount >= 0:
-            events.append(_event(event_type="CASH_DIVIDEND", effective_date=effective_date, source_sheet=sheet.title, source_row=source_row, ticker=ticker, gross_amount=cash_amount))
+            events.append(_event(event_type="CASH_DIVIDEND", effective_date=effective_date, source_sheet=sheet.title, source_row=source_row, ticker=ticker, gross_amount=cash_amount, source_account_id=source_account_id))
         else:
             warnings.append({"code": "CASH_DIVIDEND_AMOUNT_UNRESOLVED", "sheet": sheet.title, "row": source_row})
     return events
@@ -507,6 +585,7 @@ def _money_events(sheet: Any, warnings: list[dict[str, Any]], *, margin: bool = 
             note="OWNER_REPORTED_CASHFLOW",
             monetary_currency="VND",
             monetary_unit_basis="WORKBOOK_FIELD_IDENTITY_VND_NO_FORMAT_OR_MAGNITUDE_INFERENCE",
+            source_account_id=_account_id(_cell(row, mapping, "source_account")),
         ))
     return events
 
@@ -628,6 +707,8 @@ def _import_layout() -> dict[str, Any]:
             POLICY_CONTRACT,
             SYSTEM_DEFAULT_POLICY_CONTRACT,
             "account_snapshot/v1",
+            INVESTMENT_ACCOUNT_CONTEXT_CONTRACT,
+            INVESTMENT_ACCOUNTS_PORTFOLIO_CONTEXT_CONTRACT,
             IMPORT_MANIFEST_CONTRACT,
         ],
         "system_default_policy_version": SYSTEM_DEFAULT_POLICY_VERSION,
@@ -771,6 +852,272 @@ def _account_snapshot_contract(account_sheet: Any | None, margin_sheet: Any | No
     return {**body, **_identity("account_snapshot", body)}
 
 
+# ── PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: per-account and aggregate contracts ──────
+# Additive alongside `_account_snapshot_contract` above (never replaces it): every existing
+# single-account consumer keeps reading `account_snapshot/v1` unchanged.
+
+_INVESTMENT_ACCOUNT_FIELD_INTERPRETATION = "WORKBOOK_FIELD_IDENTITY_NO_CELL_FORMAT_OR_MAGNITUDE_INFERENCE"
+
+
+def _investment_account_field_rows(sheet: Any | None) -> list[dict[str, Any]]:
+    """Every truthy AccountSnapshot data row, unlike `_optional_contract`'s single-row read
+    (`next(... for row in ... if truthy)`), which would silently drop every row after the first."""
+    if sheet is None:
+        return []
+    header = _header_map(sheet, candidates=INVESTMENT_ACCOUNT_FIELD_CANDIDATES, required=set(), limit=10)
+    if header is None:
+        return []
+    header_row, mapping = header
+    if not any(field not in {"as_of_date", "currency"} for field in mapping):
+        # Mirrors `_has_account_snapshot_fields`'s guard: matching only as_of/currency is not a
+        # recognizable account-fields header at all (e.g. an unrelated date/currency column).
+        return []
+    rows: list[dict[str, Any]] = []
+    for source_row, row in enumerate(sheet.iter_rows(min_row=header_row + 1, values_only=True), start=header_row + 1):
+        if not _truthy_cells(row):
+            continue
+        raw = {field: _cell(row, mapping, field) for field in INVESTMENT_ACCOUNT_FIELD_CANDIDATES}
+        if not any(value not in (None, "") for value in raw.values()):
+            continue
+        rows.append({"source_row": source_row, "raw": raw})
+    return rows
+
+
+def _investment_account_contexts(sheet: Any | None, warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One ``investment_account_context/v1`` record per real AccountSnapshot row.
+
+    A single alias-less row (every pre-existing real or fixture workbook) resolves to the one
+    stable ``LEGACY_UNSPECIFIED_ACCOUNT_ID`` -- Section 6's required legacy-import compatibility.
+    More than one alias-less row is genuinely ambiguous (which is "the" legacy account?) and is
+    never guessed: each gets its own row-qualified identity plus a reconciliation warning.
+    """
+    rows = _investment_account_field_rows(sheet)
+    if not rows:
+        return []
+    unaliased_rows = [row for row in rows if not _account_id(row["raw"].get("account_alias"))]
+    accounts: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for row in rows:
+        raw, source_row = row["raw"], row["source_row"]
+        alias = _account_id(raw.get("account_alias"))
+        if alias:
+            account_id, account_id_basis = alias, "OWNER_SUPPLIED_ACCOUNT_ALIAS"
+        elif len(unaliased_rows) == 1:
+            account_id, account_id_basis = LEGACY_UNSPECIFIED_ACCOUNT_ID, "LEGACY_UNSPECIFIED_SINGLE_ACCOUNT"
+        else:
+            account_id, account_id_basis = f"UNSPECIFIED_ACCOUNT_ROW_{source_row}", "ACCOUNT_ALIAS_MISSING_AMBIGUOUS_MULTI_ROW"
+            warnings.append({"code": "ACCOUNT_ALIAS_MISSING_FOR_MULTI_ACCOUNT_ROW", "sheet": sheet.title, "row": source_row})
+        if account_id in seen_ids:
+            warnings.append({"code": "DUPLICATE_ACCOUNT_ALIAS", "sheet": sheet.title, "row": source_row})
+            continue
+        seen_ids.add(account_id)
+        fields: dict[str, Any] = {}
+        for field in INVESTMENT_ACCOUNT_FIELD_CANDIDATES:
+            if field == "account_alias":
+                continue
+            value = raw.get(field)
+            if field == "as_of_date":
+                fields[field] = _date(value)
+            elif field in ("broker", "account_type"):
+                fields[field] = str(value).strip() if value not in (None, "") else None
+            elif field == "currency":
+                fields[field] = str(value).strip().upper() if value not in (None, "") else None
+            else:
+                fields[field] = _number(_decimal(value))
+        body = {
+            "schema_version": "investment_account_context_v1",
+            "contract_version": INVESTMENT_ACCOUNT_CONTEXT_CONTRACT,
+            "account_id": account_id,
+            "account_id_basis": account_id_basis,
+            "status": "PROVIDED",
+            "fields": fields,
+            "field_semantics": {
+                field: {"unit_or_format": INVESTMENT_ACCOUNT_FIELD_SEMANTICS[field], "value_interpretation": _INVESTMENT_ACCOUNT_FIELD_INTERPRETATION}
+                for field in fields
+            },
+            "source": {"sheet": sheet.title, "row": source_row},
+            "authority_boundary": {
+                "margin_availability_is_not_margin_debt": True,
+                "broker_reported_nav_is_not_independently_computed": True,
+                "not_a_position_sizing_or_investment_recommendation": True,
+            },
+        }
+        accounts.append({**body, **_identity("investment_account_context", body)})
+    return accounts
+
+
+_AGGREGATE_TOTAL_FROM_FIELD = {
+    "cash_available": "total_broker_cash",
+    "cash_reserved": "total_reserved_cash",
+    "margin_debt": "total_margin_debt",
+    "broker_reported_nav": "total_broker_reported_nav",
+    "broker_reported_securities_market_value": "total_broker_reported_securities_market_value",
+}
+_INVESTMENT_ACCOUNTS_AGGREGATE_AUTHORITY_BOUNDARY = {
+    "sums_only_same_as_of_date_and_currency_qualified_accounts": True,
+    "total_is_unavailable_not_zero_when_any_qualified_account_omits_the_field": True,
+    "broker_reported_nav_is_never_independently_recomputed_here": True,
+    "not_a_position_sizing_or_investment_recommendation": True,
+    "local_private_only_never_producer_dashboard_or_public_ai_handoff": True,
+}
+
+
+def _accounts_aggregate(accounts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Deterministic ``investment_accounts_portfolio_context/v1``.
+
+    Never sums across accounts with inconsistent as-of dates or currencies (fails the whole
+    aggregate closed with ``MULTI_ACCOUNT_AS_OF_MISMATCH``/``MULTI_ACCOUNT_CURRENCY_MISMATCH``
+    rather than silently mixing a stale and a current snapshot), and never sums a field for which
+    any as-of-qualified account is missing a value (a total is ``None`` -- UNKNOWN -- not a
+    manufactured partial figure).
+    """
+    if not accounts:
+        body = {
+            "schema_version": "investment_accounts_portfolio_context_v1",
+            "contract_version": INVESTMENT_ACCOUNTS_PORTFOLIO_CONTEXT_CONTRACT,
+            "status": "NOT_PROVIDED",
+            "reason_codes": ["NO_INVESTMENT_ACCOUNT_CONTEXT_AVAILABLE"],
+            "account_count": 0,
+            "account_ids": [],
+            "as_of_dates": {},
+            "as_of_consistency": "NOT_APPLICABLE_NO_ACCOUNTS",
+            "currency_consistency": "NOT_APPLICABLE_NO_ACCOUNTS",
+            "totals": {},
+            "total_field_basis": {},
+            "account_identities": [],
+            "authority_boundary": _INVESTMENT_ACCOUNTS_AGGREGATE_AUTHORITY_BOUNDARY,
+        }
+        return {**body, **_identity("investment_accounts_portfolio_context", body)}
+
+    as_of_by_account = {account["account_id"]: account["fields"].get("as_of_date") for account in accounts}
+    currency_by_account = {account["account_id"]: account["fields"].get("currency") for account in accounts}
+    distinct_as_of = {value for value in as_of_by_account.values() if value is not None}
+    distinct_currency = {value for value in currency_by_account.values() if value is not None}
+    as_of_consistent = len(distinct_as_of) <= 1
+    currency_consistent = len(distinct_currency) <= 1
+    consistent = as_of_consistent and currency_consistent
+    reason_codes: list[str] = []
+    if not as_of_consistent:
+        reason_codes.append("MULTI_ACCOUNT_AS_OF_MISMATCH")
+    if not currency_consistent:
+        reason_codes.append("MULTI_ACCOUNT_CURRENCY_MISMATCH")
+
+    def _sum_field(field: str) -> tuple[str | None, dict[str, Any]]:
+        if not consistent:
+            return None, {"status": "UNAVAILABLE", "reason": reason_codes[0]}
+        values = {account["account_id"]: account["fields"].get(field) for account in accounts}
+        missing = sorted(account_id for account_id, value in values.items() if value is None)
+        if missing:
+            return None, {"status": "UNAVAILABLE", "reason": "INCOMPLETE_ACCOUNT_COVERAGE_FOR_FIELD", "accounts_missing_field": missing}
+        total = sum((Decimal(value) for value in values.values()), Decimal(0))
+        return _number(total), {"status": "AVAILABLE", "contributing_accounts": sorted(values)}
+
+    totals: dict[str, str | None] = {}
+    total_field_basis: dict[str, dict[str, Any]] = {}
+    for field, total_name in _AGGREGATE_TOTAL_FROM_FIELD.items():
+        totals[total_name], total_field_basis[total_name] = _sum_field(field)
+
+    # `total_receivables` is the milestone's single aggregate figure for the two distinct
+    # per-account receivable fields; it is available only when both constituent totals are.
+    cash_receivable_total, cash_receivable_basis = _sum_field("receivable_cash")
+    dividend_receivable_total, dividend_receivable_basis = _sum_field("receivable_dividends")
+    if cash_receivable_total is not None and dividend_receivable_total is not None:
+        totals["total_receivables"] = _number(Decimal(cash_receivable_total) + Decimal(dividend_receivable_total))
+        total_field_basis["total_receivables"] = {
+            "status": "AVAILABLE",
+            "constituents": {"receivable_cash": cash_receivable_basis, "receivable_dividends": dividend_receivable_basis},
+        }
+    else:
+        totals["total_receivables"] = None
+        total_field_basis["total_receivables"] = {
+            "status": "UNAVAILABLE",
+            "reason": reason_codes[0] if reason_codes else "INCOMPLETE_RECEIVABLE_CONSTITUENT_COVERAGE",
+            "constituents": {"receivable_cash": cash_receivable_basis, "receivable_dividends": dividend_receivable_basis},
+        }
+
+    body = {
+        "schema_version": "investment_accounts_portfolio_context_v1",
+        "contract_version": INVESTMENT_ACCOUNTS_PORTFOLIO_CONTEXT_CONTRACT,
+        "status": "AGGREGATED" if consistent else "PARTIAL_MULTI_ACCOUNT_MISMATCH",
+        "reason_codes": reason_codes,
+        "account_count": len(accounts),
+        "account_ids": sorted(as_of_by_account),
+        "as_of_dates": as_of_by_account,
+        "as_of_consistency": "CONSISTENT" if as_of_consistent else "MULTI_ACCOUNT_AS_OF_MISMATCH",
+        "currency_consistency": "CONSISTENT" if currency_consistent else "MULTI_ACCOUNT_CURRENCY_MISMATCH",
+        "totals": totals,
+        "total_field_basis": total_field_basis,
+        "account_identities": [
+            {
+                "account_id": account["account_id"],
+                "broker": account["fields"].get("broker"),
+                "account_type": account["fields"].get("account_type"),
+                "as_of_date": account["fields"].get("as_of_date"),
+                "artifact_identity": account["artifact_identity"],
+            }
+            for account in accounts
+        ],
+        "authority_boundary": _INVESTMENT_ACCOUNTS_AGGREGATE_AUTHORITY_BOUNDARY,
+    }
+    return {**body, **_identity("investment_accounts_portfolio_context", body)}
+
+
+_ACCOUNT_ATTRIBUTION_EVENT_TYPES = frozenset({"BUY", "SELL", "STOCK_DISTRIBUTION"})
+
+
+def _position_account_attribution(events: Iterable[Mapping[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Ticker -> per-account current-quantity lineage, additive to (never a replacement for) the
+    existing global per-ticker CURRENT_POSITION_TRUTH in `_snapshot_from_ledger`.
+
+    Only ``source_account_id``-bearing BUY/SELL/STOCK_DISTRIBUTION events ever populate a named
+    account bucket; every other event falls into ``ACCOUNT_ATTRIBUTION_UNRESOLVED``. A ticker held
+    in two accounts keeps two separate rows -- never collapsed into one -- and a ledger with no
+    account identity anywhere is never retroactively assigned one.
+    """
+    per_ticker: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+    for event in events:
+        event_type, ticker = event.get("event_type"), event.get("ticker")
+        if not ticker or event_type not in _ACCOUNT_ATTRIBUTION_EVENT_TYPES:
+            continue
+        account_id = event.get("source_account_id") or ACCOUNT_ATTRIBUTION_UNRESOLVED
+        bucket = per_ticker[ticker].setdefault(account_id, {
+            "quantity": Decimal(0), "purchase_count": 0, "sale_count": 0, "accounting_blocked": False,
+        })
+        quantity = _decimal(event.get("quantity")) or Decimal(0)
+        if event_type == "BUY":
+            bucket["quantity"] += quantity
+            bucket["purchase_count"] += 1
+        elif event_type == "STOCK_DISTRIBUTION":
+            bucket["quantity"] += quantity
+        elif event_type == "SELL":
+            bucket["sale_count"] += 1
+            if quantity > bucket["quantity"]:
+                # Mirrors the global reconciliation rule: once an account-level SELL exceeds its
+                # own derived running holding, that account's quantity is never trustworthy again.
+                bucket["accounting_blocked"] = True
+                continue
+            bucket["quantity"] -= quantity
+    result: dict[str, list[dict[str, Any]]] = {}
+    for ticker, accounts in per_ticker.items():
+        rows = []
+        for account_id, state in sorted(accounts.items()):
+            if account_id == ACCOUNT_ATTRIBUTION_UNRESOLVED:
+                status = "ACCOUNT_ATTRIBUTION_UNRESOLVED"
+            elif state["accounting_blocked"]:
+                status = "ACCOUNT_LEVEL_RECONCILIATION_BLOCKED"
+            else:
+                status = "ATTRIBUTED"
+            rows.append({
+                "account_id": account_id,
+                "attribution_status": status,
+                "current_quantity": None if status != "ATTRIBUTED" else _number(state["quantity"]),
+                "purchase_count": state["purchase_count"],
+                "sale_count": state["sale_count"],
+            })
+        result[ticker] = rows
+    return result
+
+
 def _total_quantity_hint(sheet: Any | None, warnings: list[dict[str, Any]]) -> dict[str, Decimal]:
     if sheet is None:
         return {}
@@ -835,6 +1182,8 @@ def build_event_ledger(*, workbook_path: Path, workbook_sha256: str) -> tuple[di
                 warnings.append({"code": "MARGIN_HEADER_UNRECOGNIZED", "sheet": margin.title})
     events.sort(key=lambda item: (item["effective_date"], item["source"]["sheet"], item["source"]["row"], item["event_identity"]))
     account = _account_snapshot_contract(_sheet_by_normalized_name(workbook, "AccountSnapshot"), margin, warnings)
+    investment_accounts = _investment_account_contexts(_sheet_by_normalized_name(workbook, "AccountSnapshot"), warnings)
+    investment_accounts_portfolio_context = _accounts_aggregate(investment_accounts)
     owner_policy = _optional_contract(
         _sheet_by_normalized_name(workbook, "PortfolioPolicy"),
         contract_version=POLICY_CONTRACT,
@@ -877,14 +1226,20 @@ def build_event_ledger(*, workbook_path: Path, workbook_sha256: str) -> tuple[di
     ledger = {**body, **_identity("portfolio_event_ledger", body)}
     # The Total data is intentionally held only in-process, never retained as authority.
     workbook.close()
-    return ledger, account, {"policy": policy, "system_default_policy": system_default_policy, "total_quantity_hint": total_hint}
+    return ledger, account, {
+        "policy": policy,
+        "system_default_policy": system_default_policy,
+        "total_quantity_hint": total_hint,
+        "investment_accounts": investment_accounts,
+        "investment_accounts_portfolio_context": investment_accounts_portfolio_context,
+    }
 
 
 def _amount_from_event(event: Mapping[str, Any], field: str = "gross_amount") -> Decimal:
     return _decimal(event.get(field)) or Decimal(0)
 
 
-def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mapping[str, Any], policy: Mapping[str, Any], total_quantity_hint: Mapping[str, Decimal]) -> dict[str, Any]:
+def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mapping[str, Any], policy: Mapping[str, Any], total_quantity_hint: Mapping[str, Decimal], investment_accounts: list[dict[str, Any]] | None = None, investment_accounts_portfolio_context: Mapping[str, Any] | None = None) -> dict[str, Any]:
     states: dict[str, dict[str, Any]] = defaultdict(lambda: {
         "quantity": Decimal(0), "carrying_cost": Decimal(0), "current_episode_start_date": None,
         "first_acquisition_date": None, "last_acquisition_date": None, "purchase_count": 0, "sale_count": 0,
@@ -952,6 +1307,7 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
     account_as_of = ((account_snapshot.get("fields") or {}).get("as_of_date"))
     snapshot_as_of_date = account_as_of or max(event_dates, default=None)
     snapshot_as_of_basis = "ACCOUNT_SNAPSHOT_AS_OF_DATE" if account_as_of else "LATEST_LEDGER_EVENT_DATE" if snapshot_as_of_date else "UNAVAILABLE"
+    account_attribution_by_ticker = _position_account_attribution(ledger.get("events") or [])
     positions = []
     for ticker, state in sorted(states.items()):
         # A ticker whose only activity is a SELL that exceeded its (zero) opening holding --
@@ -1005,9 +1361,27 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
             "realized_pnl_status": "UNRESOLVED_RECONCILIATION_WARNING" if state["accounting_blocked"] else "AVAILABLE",
             "unrealized_pnl": None,
             "unrealized_pnl_status": "UNAVAILABLE_NO_OWNER_MARK_PRICE",
+            # PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: additive per-account lineage.
+            # Never consulted by `current_position_status`/`current_quantity` above -- those
+            # remain the sole current-holding authority, unchanged by this milestone.
+            "account_attribution": account_attribution_by_ticker.get(ticker, []),
         })
     warning_codes = sorted(Counter(warning["code"] for warning in warnings).items())
     current_position_status_counts = dict(sorted(Counter(position["current_position_status"] for position in positions).items()))
+    tickers_with_attributed_account = sum(
+        1 for rows in account_attribution_by_ticker.values() if any(row["attribution_status"] == "ATTRIBUTED" for row in rows)
+    )
+    tickers_unresolved_attribution_only = sum(
+        1 for rows in account_attribution_by_ticker.values()
+        if rows and all(row["attribution_status"] != "ATTRIBUTED" for row in rows)
+    )
+    position_account_attribution_summary = {
+        "total_tickers_with_any_activity": len(account_attribution_by_ticker),
+        "tickers_with_attributed_account": tickers_with_attributed_account,
+        "tickers_unresolved_attribution_only": tickers_unresolved_attribution_only,
+    }
+    investment_accounts_list = list(investment_accounts or [])
+    investment_accounts_context = investment_accounts_portfolio_context if investment_accounts_portfolio_context is not None else _accounts_aggregate([])
     body = {
         "schema_version": "portfolio_snapshot_v1",
         "contract_version": SNAPSHOT_CONTRACT,
@@ -1023,6 +1397,11 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
         "account_snapshot": account_snapshot,
         "portfolio_policy": policy,
         "account_level_unallocated_margin_cost": _number(unallocated_margin_cost),
+        # PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: additive, alongside the unchanged
+        # single-account `account_snapshot` above.
+        "investment_accounts": investment_accounts_list,
+        "investment_accounts_portfolio_context": investment_accounts_context,
+        "position_account_attribution_summary": position_account_attribution_summary,
         "reconciliation": {"status": "WARNING" if warnings else "RECONCILED", "warning_counts": dict(warning_codes), "warning_count": len(warnings)},
         "authority_boundary": {
             "cash_dividends_and_sale_proceeds_do_not_change_current_position_carrying_cost": True,
@@ -1034,6 +1413,8 @@ def _snapshot_from_ledger(*, ledger: Mapping[str, Any], account_snapshot: Mappin
             "policy_cap_excess_is_not_an_automatic_sell_instruction": True,
             "current_position_status_is_the_sole_current_holding_authority": True,
             "reconciliation_blocked_quantity_is_never_reported_as_a_current_holding": True,
+            "account_attribution_is_additive_lineage_never_a_current_holding_authority": True,
+            "cash_availability_is_capital_context_not_a_buy_signal": True,
         },
     }
     return {**body, **_identity("portfolio_snapshot", body)}
@@ -1076,7 +1457,19 @@ def import_workbook(*, workbook_path: Path | None = None, portfolio_root: Path |
     ledger, account_snapshot, extras = build_event_ledger(workbook_path=workbook_path, workbook_sha256=workbook_sha256)
     policy = extras["policy"]
     system_default_policy = extras["system_default_policy"]
-    snapshot = _snapshot_from_ledger(ledger=ledger, account_snapshot=account_snapshot, policy=policy, total_quantity_hint=extras["total_quantity_hint"])
+    investment_accounts = extras["investment_accounts"]
+    investment_accounts_portfolio_context = extras["investment_accounts_portfolio_context"]
+    snapshot = _snapshot_from_ledger(
+        ledger=ledger, account_snapshot=account_snapshot, policy=policy, total_quantity_hint=extras["total_quantity_hint"],
+        investment_accounts=investment_accounts, investment_accounts_portfolio_context=investment_accounts_portfolio_context,
+    )
+    investment_accounts_document_body = {
+        "schema_version": "investment_accounts_v1",
+        "contract_version": INVESTMENT_ACCOUNT_CONTEXT_CONTRACT,
+        "accounts": investment_accounts,
+        "account_count": len(investment_accounts),
+    }
+    investment_accounts_document = {**investment_accounts_document_body, **_identity("investment_accounts_document", investment_accounts_document_body)}
     import_layout = _import_layout()
     relative_directory = Path("imports") / workbook_sha256 / import_layout["artifact_sha256"]
     manifest_body = {
@@ -1086,7 +1479,15 @@ def import_workbook(*, workbook_path: Path | None = None, portfolio_root: Path |
         "workbook_filename": workbook_path.name,
         "import_layout_version": IMPORT_LAYOUT_VERSION,
         "import_layout_identity": import_layout["artifact_identity"],
-        "artifact_identities": {"portfolio_event_ledger_v1": ledger["artifact_identity"], "portfolio_snapshot_v1": snapshot["artifact_identity"], "portfolio_policy_v1": policy["artifact_identity"], "system_default_policy_v1": system_default_policy["artifact_identity"], "account_snapshot_v1": account_snapshot["artifact_identity"]},
+        "artifact_identities": {
+            "portfolio_event_ledger_v1": ledger["artifact_identity"],
+            "portfolio_snapshot_v1": snapshot["artifact_identity"],
+            "portfolio_policy_v1": policy["artifact_identity"],
+            "system_default_policy_v1": system_default_policy["artifact_identity"],
+            "account_snapshot_v1": account_snapshot["artifact_identity"],
+            "investment_accounts_v1": investment_accounts_document["artifact_identity"],
+            "investment_accounts_portfolio_context_v1": investment_accounts_portfolio_context["artifact_identity"],
+        },
         "relative_directory": relative_directory.as_posix(),
         "authority_boundary": {"local_only": True, "workbook_values_not_written_to_repository": True, "provider_calls": "NOT_USED", "daily_run": "NOT_USED"},
     }
@@ -1098,6 +1499,8 @@ def import_workbook(*, workbook_path: Path | None = None, portfolio_root: Path |
         _write_immutable_json(destination / "portfolio_policy_v1.json", policy),
         _write_immutable_json(destination / "system_default_policy_v1.json", system_default_policy),
         _write_immutable_json(destination / "account_snapshot_v1.json", account_snapshot),
+        _write_immutable_json(destination / "investment_accounts_v1.json", investment_accounts_document),
+        _write_immutable_json(destination / "investment_accounts_portfolio_context_v1.json", investment_accounts_portfolio_context),
         _write_immutable_json(destination / "portfolio_import_manifest_v1.json", manifest),
     ]
     pointer = {"schema_version": "portfolio_latest_import_pointer/v1", "workbook_sha256": workbook_sha256, "import_manifest_identity": manifest["artifact_identity"], "relative_directory": relative_directory.as_posix()}
@@ -1110,6 +1513,8 @@ def import_workbook(*, workbook_path: Path | None = None, portfolio_root: Path |
         "policy": policy,
         "system_default_policy": system_default_policy,
         "account_snapshot": account_snapshot,
+        "investment_accounts": investment_accounts_document,
+        "investment_accounts_portfolio_context": investment_accounts_portfolio_context,
         "storage_root": portfolio_root,
         "private_artifact_directory": destination,
     }
@@ -1150,6 +1555,18 @@ def _current_position_count(snapshot: Mapping[str, Any]) -> int:
     )
 
 
+def _investment_accounts_public_summary(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    """Safe CLI surface for the multi-account context: counts/status only, never a real account
+    alias, broker name, or monetary value."""
+    aggregate = snapshot.get("investment_accounts_portfolio_context") or {}
+    return {
+        "investment_account_count": len(snapshot.get("investment_accounts") or []),
+        "investment_accounts_aggregate_status": aggregate.get("status"),
+        "investment_accounts_as_of_consistency": aggregate.get("as_of_consistency"),
+        "position_account_attribution_summary": snapshot.get("position_account_attribution_summary"),
+    }
+
+
 def public_import_summary(result: Mapping[str, Any]) -> dict[str, Any]:
     """Safe CLI surface: identities/counts/codes only, never private values or tickers."""
     snapshot = result["snapshot"]
@@ -1161,6 +1578,7 @@ def public_import_summary(result: Mapping[str, Any]) -> dict[str, Any]:
         "current_position_count": _current_position_count(snapshot),
         "current_position_status_counts": snapshot.get("current_position_status_counts"),
         "reconciliation_warning_counts": snapshot["reconciliation"]["warning_counts"],
+        **_investment_accounts_public_summary(snapshot),
         "provider_calls": "NOT_USED",
         "daily_run": "NOT_USED",
     }
@@ -1177,6 +1595,7 @@ def public_status_summary(result: Mapping[str, Any]) -> dict[str, Any]:
         "current_position_count": _current_position_count(snapshot),
         "current_position_status_counts": snapshot.get("current_position_status_counts"),
         "reconciliation_warning_counts": snapshot["reconciliation"]["warning_counts"],
+        **_investment_accounts_public_summary(snapshot),
         "provider_calls": "NOT_USED",
         "daily_run": "NOT_USED",
     }

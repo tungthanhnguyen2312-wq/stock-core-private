@@ -323,6 +323,7 @@ def derive_portfolio_state(
             "effective_policy": {},
             "sector_weights": {},
             "gross_exposure_weight": None,
+            "investment_accounts_aggregate_status": "NOT_PROVIDED",
             "source_identities": {"portfolio_snapshot_identity": None, "governed_sector_snapshot_identity": governed_sector_snapshot_identity},
         }
 
@@ -330,13 +331,33 @@ def derive_portfolio_state(
     policy = portfolio_snapshot.get("portfolio_policy") or {}
     effective_policy = {key: _num(value) for key, value in (policy.get("effective_fields") or {}).items()}
 
-    cash_available = _num(account_fields.get("cash_available"))
-    cash_reserved = _num(account_fields.get("cash_reserved"))
-    margin_debt = _num(account_fields.get("margin_debt"))
+    # PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: when the owner has multiple brokerage
+    # accounts and their as-of dates/currency are mutually consistent (aggregate `status ==
+    # "AGGREGATED"`), portfolio-level NAV/cash/margin-debt are sourced from that qualified
+    # multi-account aggregate instead of the single legacy `account_snapshot`. A workbook with no
+    # multi-account structure, or an aggregate that is not fully qualified (e.g.
+    # MULTI_ACCOUNT_AS_OF_MISMATCH, or one account missing a field another provides), falls back
+    # to the pre-existing single-account fields exactly as before -- this is additive sourcing
+    # only, never a change to the risk policy itself (thresholds/bands are untouched).
+    investment_accounts_aggregate = portfolio_snapshot.get("investment_accounts_portfolio_context") or {}
+    aggregate_qualified = investment_accounts_aggregate.get("status") == "AGGREGATED"
+    aggregate_totals = investment_accounts_aggregate.get("totals") or {}
+
+    def _prefer_aggregate(total_field: str, legacy_value: float | None) -> float | None:
+        if aggregate_qualified and aggregate_totals.get(total_field) is not None:
+            return _num(aggregate_totals.get(total_field))
+        return legacy_value
+
+    cash_available = _prefer_aggregate("total_broker_cash", _num(account_fields.get("cash_available")))
+    cash_reserved = _prefer_aggregate("total_reserved_cash", _num(account_fields.get("cash_reserved")))
+    margin_debt = _prefer_aggregate("total_margin_debt", _num(account_fields.get("margin_debt")))
+    broker_nav = _prefer_aggregate("total_broker_reported_nav", _num(account_fields.get("net_asset_value")))
+    # Margin availability bands and the margin interest rate have no multi-account aggregate
+    # analogue in this milestone (see private_portfolio_context._AGGREGATE_TOTAL_FROM_FIELD) --
+    # always the single legacy account's own fields.
     margin_min = _num(account_fields.get("margin_available_minimum"))
     margin_max = _num(account_fields.get("margin_available_maximum"))
     annual_margin_rate_percent = _num(account_fields.get("annual_margin_rate_percent"))
-    broker_nav = _num(account_fields.get("net_asset_value"))
 
     positions: dict[str, dict[str, Any]] = {}
     priced_market_value_sum = 0.0
@@ -435,9 +456,11 @@ def derive_portfolio_state(
         "effective_policy": effective_policy,
         "sector_weights": sector_weights,
         "gross_exposure_weight": gross_exposure_weight,
+        "investment_accounts_aggregate_status": investment_accounts_aggregate.get("status", "NOT_PROVIDED"),
         "source_identities": {
             "portfolio_snapshot_identity": portfolio_snapshot.get("artifact_identity"),
             "governed_sector_snapshot_identity": governed_sector_snapshot_identity,
+            "investment_accounts_portfolio_context_identity": investment_accounts_aggregate.get("artifact_identity"),
         },
     }
 

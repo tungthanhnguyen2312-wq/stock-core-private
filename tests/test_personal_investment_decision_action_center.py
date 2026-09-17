@@ -65,12 +65,13 @@ def _coverage_artifact(dispositions: dict[str, str]) -> dict:
 _OWNER_FOCUS = {"owner_focus_tickers": ("AAA",), "broader_watchlist": ("AAA", "BBB")}
 
 
-def _build(*, integrated, portfolio=None, asymmetric=None, coverage=None, owner_focus=None, sector_by_ticker=None, excluded_tickers=frozenset()):
+def _build(*, integrated, portfolio=None, asymmetric=None, coverage=None, owner_focus=None, sector_by_ticker=None, excluded_tickers=frozenset(), portfolio_snapshot=None):
     return ac.build_artifact(
         session=SESSION, requested_at="2026-09-16T17:00:00", integrated_decision_artifact=integrated,
         asymmetric_dislocation_artifact=asymmetric, coverage_disposition_artifact=coverage,
         owner_focus=owner_focus, portfolio_aware_decision_artifact=portfolio,
         sector_by_ticker=sector_by_ticker or {}, excluded_tickers=excluded_tickers,
+        portfolio_snapshot=portfolio_snapshot,
     )
 
 
@@ -328,3 +329,57 @@ def test_console_summary_has_no_ticker_or_evidence_values():
     summary = ac.public_console_summary(artifact)
     assert "holdings" not in summary
     assert "AAA" not in str(summary)
+
+
+# ── PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1: INVESTMENT ACCOUNTS section ──────────────
+
+def test_investment_accounts_section_absent_without_a_private_portfolio():
+    integrated = _integrated_artifact({"AAA": _integrated_record("AAA", "HOLD")})
+    artifact = _build(integrated=integrated)
+    assert artifact["investment_accounts"]["status"] == "PRIVATE_PORTFOLIO_NOT_SUPPLIED"
+    text = ac.markdown(artifact)
+    assert "## INVESTMENT ACCOUNTS" in text
+    assert "PRIVATE_PORTFOLIO_NOT_SUPPLIED" in text
+
+
+def test_investment_accounts_section_surfaces_qualified_aggregate_only():
+    integrated = _integrated_artifact({"AAA": _integrated_record("AAA", "HOLD")})
+    portfolio = _portfolio_artifact({"AAA": _portfolio_row("AAA", "HELD", posture="HOLD")})
+    snapshot = {
+        "investment_accounts_portfolio_context": {
+            "status": "AGGREGATED", "account_count": 2, "as_of_consistency": "CONSISTENT",
+            "artifact_identity": "investment_accounts_portfolio_context:test",
+            "totals": {
+                "total_broker_cash": "300000000", "total_reserved_cash": None, "total_receivables": None,
+                "total_margin_debt": "10000000", "total_broker_reported_nav": "500000000",
+                "total_broker_reported_securities_market_value": "190000000",
+            },
+        },
+    }
+    artifact = _build(integrated=integrated, portfolio=portfolio, portfolio_snapshot=snapshot)
+    section = artifact["investment_accounts"]
+
+    assert section["status"] == "AGGREGATED"
+    assert section["broker_account_count"] == 2
+    assert section["broker_cash"] == "300000000"
+    assert section["margin_debt"] == "10000000"
+    assert section["broker_reported_nav"] == "500000000"
+    # Never a per-account raw identity/alias in this local-owner-facing surface.
+    assert "account_id" not in str(section)
+    text = ac.markdown(artifact)
+    assert "Broker accounts: 2" in text
+    assert "capital context only" in text
+
+
+def test_investment_account_values_never_alter_holding_actions():
+    """Cash existing must never change a holding's derived action -- this section is purely
+    informational and structurally cannot feed `_holding_action`."""
+    integrated = _integrated_artifact({"AAA": _integrated_record("AAA", "HOLD")})
+    portfolio = _portfolio_artifact({"AAA": _portfolio_row("AAA", "HELD", posture="HOLD")})
+    snapshot = {"investment_accounts_portfolio_context": {"status": "AGGREGATED", "account_count": 1, "totals": {"total_broker_cash": "999999999999"}}}
+
+    without_cash = _build(integrated=integrated, portfolio=portfolio)
+    with_cash = _build(integrated=integrated, portfolio=portfolio, portfolio_snapshot=snapshot)
+
+    assert without_cash["portfolio"]["holdings"][0]["action"] == with_cash["portfolio"]["holdings"][0]["action"]
+    assert without_cash["attention_queue"]["bucket_counts"] == with_cash["attention_queue"]["bucket_counts"]

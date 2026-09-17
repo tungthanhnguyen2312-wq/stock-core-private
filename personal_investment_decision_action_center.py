@@ -389,6 +389,33 @@ def _build_discovery_section(
     }
 
 
+def _build_investment_accounts_section(portfolio_snapshot: Mapping[str, Any] | None) -> dict[str, Any]:
+    """PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1, Section 8: an aggregate-only owner
+    summary (never a per-account breakdown, never a raw account alias/number -- see
+    ``private_portfolio_research_handoff.py`` for the anonymized per-account form meant for
+    external upload). Purely informational: nothing here is read by ``_holding_action``,
+    ``_watchlist_action``, or ``_build_attention_queue`` -- cash existing is capital context, not
+    a BUY signal."""
+    if not isinstance(portfolio_snapshot, Mapping):
+        return {"status": "PRIVATE_PORTFOLIO_NOT_SUPPLIED"}
+    aggregate = portfolio_snapshot.get("investment_accounts_portfolio_context") or {}
+    if aggregate.get("status") in (None, "NOT_PROVIDED"):
+        return {"status": "NOT_PROVIDED", "broker_account_count": 0}
+    totals = aggregate.get("totals") or {}
+    return {
+        "status": aggregate.get("status"),
+        "broker_account_count": aggregate.get("account_count", 0),
+        "broker_cash": totals.get("total_broker_cash"),
+        "reserved_cash": totals.get("total_reserved_cash"),
+        "receivables": totals.get("total_receivables"),
+        "margin_debt": totals.get("total_margin_debt"),
+        "broker_reported_nav": totals.get("total_broker_reported_nav"),
+        "broker_reported_securities_market_value": totals.get("total_broker_reported_securities_market_value"),
+        "as_of_consistency": aggregate.get("as_of_consistency"),
+        "source_artifact_identity": aggregate.get("artifact_identity"),
+    }
+
+
 def _build_rotation_section(
     *, holdings: Sequence[Mapping[str, Any]], discovery_lanes: Mapping[str, list[dict[str, Any]]],
     sector_by_ticker: Mapping[str, str],
@@ -475,6 +502,7 @@ def build_artifact(
     asymmetric_dislocation_artifact: Mapping[str, Any] | None = None, coverage_disposition_artifact: Mapping[str, Any] | None = None,
     owner_focus: Mapping[str, Any] | None = None, portfolio_aware_decision_artifact: Mapping[str, Any] | None = None,
     sector_by_ticker: Mapping[str, str] | None = None, excluded_tickers: frozenset[str] = frozenset(),
+    portfolio_snapshot: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Pure composition over already-built artifacts for one session -- no file I/O, no
     recomputation. See ``evaluate_from_retained_artifacts`` for the real-session, file-resolving
@@ -513,6 +541,7 @@ def build_artifact(
         holdings=portfolio_section.get("holdings") or [], unresolved=unresolved_section.get("items") or [],
         watchlist_entries=watchlist.get("entries") or [],
     )
+    investment_accounts = _build_investment_accounts_section(portfolio_snapshot)
 
     body: dict[str, Any] = {
         "schema_version": "1.0.0",
@@ -526,6 +555,7 @@ def build_artifact(
         "watchlist": watchlist,
         "discovery": discovery,
         "capital_rotation": rotation,
+        "investment_accounts": investment_accounts,
         "attention_queue": attention,
         "coverage": {
             "security_denominator": len(integrated_records),
@@ -549,6 +579,8 @@ def build_artifact(
             "closed_and_excluded_positions_never_enter_active_portfolio_decisions": True,
             "pit_authority_gap_does_not_block_current_technical_or_fundamental_research": True,
             "private_local_only_never_git_dashboard_or_public_ai_handoff": True,
+            "cash_availability_is_capital_context_not_a_buy_signal": True,
+            "investment_account_values_never_alter_security_or_portfolio_action_computation": True,
         },
     }
     return {**body, **_identity(body)}
@@ -629,11 +661,13 @@ def evaluate_from_retained_artifacts(
 
     status = _private_portfolio_context.portfolio_status(portfolio_root=portfolio_root)
     portfolio_aware_decision_artifact = None
+    portfolio_snapshot = None
     excluded_tickers: frozenset[str] = frozenset()
     if status.get("status") == "READY":
         portfolio_aware_decision_artifact = _pad.evaluate_from_retained_artifacts(
             repo_root=repo_root, session=resolved_session, portfolio_root=portfolio_root, requested_at=requested_at,
         )
+        portfolio_snapshot = status.get("snapshot")
         excluded_tickers = _owner_research_exclusions.excluded_ticker_set(_owner_research_exclusions.load_research_exclusions(portfolio_root))
 
     return build_artifact(
@@ -642,7 +676,7 @@ def evaluate_from_retained_artifacts(
         previous_descriptive_artifact=previous_descriptive_artifact, previous_session=previous_session,
         asymmetric_dislocation_artifact=asymmetric_dislocation_artifact, coverage_disposition_artifact=coverage_disposition_artifact,
         owner_focus=owner_focus, portfolio_aware_decision_artifact=portfolio_aware_decision_artifact,
-        sector_by_ticker=sector_by_ticker, excluded_tickers=excluded_tickers,
+        sector_by_ticker=sector_by_ticker, excluded_tickers=excluded_tickers, portfolio_snapshot=portfolio_snapshot,
     )
 
 
@@ -666,6 +700,7 @@ def public_console_summary(artifact: Mapping[str, Any], *, destination: Path | N
         "personal_investment_decision_action_center_identity": artifact.get("artifact_identity"),
         "market_status": (artifact.get("market") or {}).get("status"),
         "portfolio_status": (artifact.get("portfolio") or {}).get("status"),
+        "investment_accounts_status": (artifact.get("investment_accounts") or {}).get("status"),
         "watchlist_status": (artifact.get("watchlist") or {}).get("status"),
         "discovery_lane_counts": (artifact.get("discovery") or {}).get("lane_counts"),
         "attention_bucket_counts": (artifact.get("attention_queue") or {}).get("bucket_counts"),
@@ -729,6 +764,22 @@ def markdown(artifact: Mapping[str, Any]) -> str:
     else:
         for item in unresolved["items"]:
             lines.append(f"- **{item['ticker']}** — {item['note']}")
+    lines.append("")
+
+    lines.append("## INVESTMENT ACCOUNTS")
+    accounts = artifact.get("investment_accounts") or {}
+    if accounts.get("status") in ("PRIVATE_PORTFOLIO_NOT_SUPPLIED", "NOT_PROVIDED", None):
+        lines.append(f"- {accounts.get('status', 'NOT_PROVIDED')} — capital context only, never a BUY/SELL signal by itself.")
+    else:
+        lines.append(f"- Broker accounts: {accounts.get('broker_account_count')} _(aggregate status: {accounts.get('status')})_")
+        lines.append(f"- Broker cash: {accounts.get('broker_cash')}")
+        lines.append(f"- Reserved cash: {accounts.get('reserved_cash')}")
+        lines.append(f"- Receivables: {accounts.get('receivables')}")
+        lines.append(f"- Margin debt: {accounts.get('margin_debt')}")
+        lines.append(f"- Broker-reported securities market value: {accounts.get('broker_reported_securities_market_value')}")
+        lines.append(f"- Broker-reported NAV: {accounts.get('broker_reported_nav')}")
+        lines.append(f"- Account freshness: {accounts.get('as_of_consistency')}")
+        lines.append("- Cash availability is capital context only, never a BUY/SELL signal by itself.")
     lines.append("")
 
     lines.append("## WATCHLIST")

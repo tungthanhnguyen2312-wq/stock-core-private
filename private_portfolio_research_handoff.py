@@ -42,7 +42,34 @@ _AUTHORITY_BOUNDARY = {
     "historical_ledger_untouched_by_this_module": True,
     "manual_owner_upload_only_no_automatic_transmission": True,
     "no_position_sizing_or_investment_recommendation": True,
+    # PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1, Section 10: this artifact is meant for
+    # manual upload to an external research chat -- a real brokerage account number/alias (the
+    # owner's own `investment_account_context/v1` `account_id`, which the real workbook shows can
+    # literally be an account number) is never included here, only an anonymized ordinal label.
+    "no_raw_broker_account_identifier_in_this_external_facing_artifact": True,
 }
+
+
+def _anonymized_investment_accounts_context(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    aggregate = snapshot.get("investment_accounts_portfolio_context") or {}
+    if aggregate.get("status") in (None, "NOT_PROVIDED"):
+        return {"status": "NOT_PROVIDED", "accounts": []}
+    identities = sorted(aggregate.get("account_identities") or [], key=lambda entry: str(entry.get("account_id")))
+    return {
+        "status": aggregate.get("status"),
+        "account_count": aggregate.get("account_count"),
+        "as_of_consistency": aggregate.get("as_of_consistency"),
+        "totals": aggregate.get("totals"),
+        "accounts": [
+            {
+                "handoff_account_label": f"ACCOUNT_{index + 1}",
+                "broker": entry.get("broker"),
+                "account_type": entry.get("account_type"),
+                "as_of_date": entry.get("as_of_date"),
+            }
+            for index, entry in enumerate(identities)
+        ],
+    }
 
 
 class PrivateHandoffError(ValueError):
@@ -70,6 +97,7 @@ def _not_available_body(*, generated_at: str, reason: str, exclusions: Mapping[s
         "reconciliation": None,
         "owner_research_exclusions": [dict(entry) for entry in exclusions.get("excluded_tickers") or []],
         "account_and_policy_context": None,
+        "investment_accounts_context": {"status": "NOT_PROVIDED", "accounts": []},
         "freshness": None,
         "source_artifact_identities": {},
         "authority_boundary": dict(_AUTHORITY_BOUNDARY),
@@ -135,6 +163,7 @@ def build_artifact(*, portfolio_root: Path | None = None) -> dict[str, Any]:
             "net_asset_value": account_fields.get("net_asset_value"),
             "effective_policy": policy_fields,
         },
+        "investment_accounts_context": _anonymized_investment_accounts_context(snapshot),
         "freshness": {
             "snapshot_as_of_date": snapshot.get("snapshot_as_of_date"),
             "snapshot_as_of_basis": snapshot.get("snapshot_as_of_basis"),

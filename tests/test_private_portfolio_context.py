@@ -370,7 +370,7 @@ def test_corrective_import_layout_preserves_a_prior_same_workbook_sha_artifact(t
     assert result["status"] == "IMPORTED"
     assert result["private_artifact_directory"] != legacy_directory
     assert legacy_artifact.read_text(encoding="utf-8") == '{"legacy":"immutable"}\n'
-    assert result["manifest"]["import_layout_version"] == "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V5"
+    assert result["manifest"]["import_layout_version"] == "PORTFOLIO_CONTEXT_IMPORT_LAYOUT_V6"
     assert result["private_artifact_directory"].parent == legacy_directory
 
 
@@ -585,3 +585,177 @@ def test_labeled_net_trade_amount_does_not_double_count_fee_or_tax(tmp_path: Pat
     position = _position(result)
     assert [event["gross_amount"] for event in events] == ["100", "120"]
     assert position["realized_pnl"] == "10"
+
+
+# ── PRIVATE_MULTI_BROKER_INVESTMENT_ACCOUNT_CONTEXT_V1 ───────────────────────────────────────
+
+
+def test_legacy_single_unaliased_account_row_imports_as_one_legacy_account(tmp_path: Path):
+    """Section 6: an existing legacy workbook (one AccountSnapshot row, no account_alias column
+    populated) must still import successfully, as exactly one account with an explicit
+    legacy/unspecified identity -- never zero accounts, never a fabricated alias."""
+    result = import_workbook(workbook_path=_workbook(tmp_path / "legacy.xlsx", account_policy=True), portfolio_root=tmp_path / "private")
+    accounts = result["investment_accounts"]["accounts"]
+
+    assert len(accounts) == 1
+    assert accounts[0]["account_id"] == portfolio_context.LEGACY_UNSPECIFIED_ACCOUNT_ID
+    assert accounts[0]["account_id_basis"] == "LEGACY_UNSPECIFIED_SINGLE_ACCOUNT"
+    assert accounts[0]["fields"]["cash_available"] == "1000"
+    assert accounts[0]["fields"]["margin_debt"] == "200"
+    assert accounts[0]["fields"]["broker_reported_nav"] == "5000"
+    aggregate = result["investment_accounts_portfolio_context"]
+    assert aggregate["status"] == "AGGREGATED"
+    assert aggregate["account_count"] == 1
+    assert aggregate["totals"]["total_broker_cash"] == "1000"
+    assert aggregate["totals"]["total_margin_debt"] == "200"
+    assert aggregate["totals"]["total_broker_reported_nav"] == "5000"
+    # The pre-existing single-account contract is completely unaffected by the new one.
+    assert result["account_snapshot"]["fields"]["cash_available"] == "1000"
+
+
+def _multi_account_workbook(path: Path) -> Path:
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price", "Account"])
+    trade.append(["2026-01-01", "AAA", "BUY", 10, 100, "ACC-A"])
+    trade.append(["2026-01-02", "AAA", "BUY", 5, 100, "ACC-B"])
+    trade.append(["2026-01-03", "BBB", "BUY", 4, 50, None])  # no per-row account -> unresolved
+
+    account = workbook.create_sheet("AccountSnapshot")
+    account.append(["as_of", "account_alias", "broker", "cash_investable", "margin_debt", "broker_nav"])
+    account.append(["2026-02-01", "ACC-A", "SSI", 1000, 100, 5000])
+    account.append(["2026-02-01", "ACC-B", "VNDIRECT", 2000, 0, 8000])
+    workbook.save(path)
+    return path
+
+
+def test_multiple_aliased_accounts_and_consistent_as_of_aggregate_deterministically(tmp_path: Path):
+    """Section 3/4: two distinct broker accounts, each independently represented, aggregate
+    deterministically when their as-of dates and currency agree."""
+    result = import_workbook(workbook_path=_multi_account_workbook(tmp_path / "multi.xlsx"), portfolio_root=tmp_path / "private")
+    accounts = {account["account_id"]: account for account in result["investment_accounts"]["accounts"]}
+
+    assert set(accounts) == {"ACC-A", "ACC-B"}
+    assert accounts["ACC-A"]["fields"]["broker"] == "SSI"
+    assert accounts["ACC-A"]["fields"]["cash_available"] == "1000"
+    assert accounts["ACC-B"]["fields"]["broker"] == "VNDIRECT"
+    assert accounts["ACC-B"]["fields"]["cash_available"] == "2000"
+
+    aggregate = result["investment_accounts_portfolio_context"]
+    assert aggregate["status"] == "AGGREGATED"
+    assert aggregate["account_count"] == 2
+    assert aggregate["as_of_consistency"] == "CONSISTENT"
+    # Each account's own cash is summed exactly once -- no double counting.
+    assert aggregate["totals"]["total_broker_cash"] == "3000"
+    assert aggregate["totals"]["total_margin_debt"] == "100"
+    assert aggregate["totals"]["total_broker_reported_nav"] == "13000"
+
+    # Global CURRENT_POSITION_TRUTH is untouched by per-account attribution: AAA's total quantity
+    # (10 + 5 across both accounts) is still the single authoritative current_quantity/status.
+    aaa_position = _position(result, "AAA")
+    assert aaa_position["current_quantity"] == "15"
+    assert aaa_position["current_position_status"] == CURRENT_POSITION_STATUS_CONFIRMED
+
+    # Section 5: the same ticker (AAA) held in two accounts keeps two separate lineage rows.
+    aaa_attribution = {row["account_id"]: row for row in _position(result, "AAA")["account_attribution"]}
+    assert aaa_attribution["ACC-A"]["current_quantity"] == "10"
+    assert aaa_attribution["ACC-B"]["current_quantity"] == "5"
+    assert aaa_attribution["ACC-A"]["attribution_status"] == "ATTRIBUTED"
+    # BBB's only event carries no per-row account -> unresolved, never guessed.
+    bbb_attribution = _position(result, "BBB")["account_attribution"]
+    assert len(bbb_attribution) == 1
+    assert bbb_attribution[0]["account_id"] == portfolio_context.ACCOUNT_ATTRIBUTION_UNRESOLVED
+    assert bbb_attribution[0]["attribution_status"] == "ACCOUNT_ATTRIBUTION_UNRESOLVED"
+
+    summary = result["snapshot"]["position_account_attribution_summary"]
+    assert summary["tickers_with_attributed_account"] == 1
+    assert summary["tickers_unresolved_attribution_only"] == 1
+
+
+def test_mismatched_account_as_of_dates_fail_closed_never_silently_summed(tmp_path: Path):
+    """Section 4: accounts with different as-of dates must never be silently summed together."""
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    account = workbook.create_sheet("AccountSnapshot")
+    account.append(["as_of", "account_alias", "cash_investable"])
+    account.append(["2026-02-01", "ACC-A", 1000])
+    account.append(["2026-01-15", "ACC-B", 2000])
+    path = tmp_path / "mismatched-as-of.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    aggregate = result["investment_accounts_portfolio_context"]
+
+    assert aggregate["status"] == "PARTIAL_MULTI_ACCOUNT_MISMATCH"
+    assert aggregate["as_of_consistency"] == "MULTI_ACCOUNT_AS_OF_MISMATCH"
+    assert "MULTI_ACCOUNT_AS_OF_MISMATCH" in aggregate["reason_codes"]
+    assert aggregate["totals"]["total_broker_cash"] is None
+    assert aggregate["totals"]["total_broker_reported_nav"] is None
+
+
+def test_incomplete_field_coverage_never_manufactures_a_partial_total(tmp_path: Path):
+    """Section 4: a total is UNKNOWN, never a partial/manufactured figure, when any qualified
+    account omits that specific field (e.g. only one account reports broker NAV)."""
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    account = workbook.create_sheet("AccountSnapshot")
+    account.append(["as_of", "account_alias", "cash_investable", "broker_nav"])
+    account.append(["2026-02-01", "ACC-A", 1000, 5000])
+    account.append(["2026-02-01", "ACC-B", 2000, None])
+    path = tmp_path / "incomplete-coverage.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    aggregate = result["investment_accounts_portfolio_context"]
+
+    assert aggregate["status"] == "AGGREGATED"
+    assert aggregate["totals"]["total_broker_cash"] == "3000"
+    assert aggregate["totals"]["total_broker_reported_nav"] is None
+    assert aggregate["total_field_basis"]["total_broker_reported_nav"]["reason"] == "INCOMPLETE_ACCOUNT_COVERAGE_FOR_FIELD"
+
+
+def test_ambiguous_unaliased_multi_row_never_collapses_or_guesses_identity(tmp_path: Path):
+    """Two AccountSnapshot rows both missing an alias is genuinely ambiguous -- never silently
+    treated as one legacy account, never silently dropped."""
+    workbook = Workbook()
+    trade = workbook.active
+    trade.title = "Trade"
+    trade.append(["Date", "Ticker", "Side", "Quantity", "Price"])
+    account = workbook.create_sheet("AccountSnapshot")
+    account.append(["as_of", "account_alias", "cash_investable"])
+    account.append(["2026-02-01", None, 1000])
+    account.append(["2026-02-01", None, 2000])
+    path = tmp_path / "ambiguous.xlsx"
+    workbook.save(path)
+
+    result = import_workbook(workbook_path=path, portfolio_root=tmp_path / "private")
+    accounts = result["investment_accounts"]["accounts"]
+
+    assert len(accounts) == 2
+    assert all(account["account_id_basis"] == "ACCOUNT_ALIAS_MISSING_AMBIGUOUS_MULTI_ROW" for account in accounts)
+    assert len({account["account_id"] for account in accounts}) == 2
+    codes = {warning["code"] for warning in result["ledger"]["reconciliation_warnings"]}
+    assert "ACCOUNT_ALIAS_MISSING_FOR_MULTI_ACCOUNT_ROW" in codes
+
+
+def test_no_account_snapshot_sheet_yields_no_accounts_and_not_provided_aggregate(tmp_path: Path):
+    result = import_workbook(workbook_path=_workbook(tmp_path / "no-accounts.xlsx"), portfolio_root=tmp_path / "private")
+
+    assert result["investment_accounts"]["accounts"] == []
+    assert result["investment_accounts_portfolio_context"]["status"] == "NOT_PROVIDED"
+    assert result["investment_accounts_portfolio_context"]["account_count"] == 0
+
+
+def test_investment_account_import_is_deterministic_and_content_addressed(tmp_path: Path):
+    workbook_path = _multi_account_workbook(tmp_path / "multi.xlsx")
+    first = import_workbook(workbook_path=workbook_path, portfolio_root=tmp_path / "private")
+    second = import_workbook(workbook_path=workbook_path, portfolio_root=tmp_path / "private")
+
+    assert second["status"] == "REUSED_IDENTICAL"
+    assert first["investment_accounts"]["artifact_identity"] == second["investment_accounts"]["artifact_identity"]
+    assert first["investment_accounts_portfolio_context"]["artifact_identity"] == second["investment_accounts_portfolio_context"]["artifact_identity"]
