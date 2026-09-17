@@ -705,6 +705,13 @@ def build_whitelist() -> list[str]:
     cleaned: set[str] = set()
     for raw in paths:
         relative = raw.replace("\\", "/").split("?", 1)[0].split("#", 1)[0]
+        # A bare in-page anchor (`href="#"`, `href="#section"`) strips to "" here -- a real,
+        # ordinary placeholder/jump link, never a file reference. Requiring an empty string to
+        # exist as a file was a latent defect this milestone's real-checkout validation surfaced
+        # (WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1), independent of any
+        # actual missing artifact.
+        if not relative:
+            continue
         if relative.startswith(("http://", "https://", "//", "/", "data:")) or ".." in relative.split("/"):
             continue
         if relative in NEVER_PUBLISH:

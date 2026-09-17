@@ -622,6 +622,18 @@ class AnalysisLatestPublicationContractTests(_PublishDashboardTestBase):
             "a file not referenced by any HTML/JS and not in SAFE_WEB_ARTIFACTS must never "
             "enter the whitelist merely by existing in WEB_ROOT")
 
+    def test_bare_anchor_href_never_requires_an_empty_file_to_exist(self):
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: a real --live
+        # publish against the actual served checkout surfaced this -- an ordinary
+        # placeholder/jump link (href="#" or href="#section") strips to an empty string
+        # after the `?`/`#` split and must never be treated as a missing file reference.
+        (self.tmp / "extra.html").write_text(
+            '<html><body><a href="#">Top</a><a href="#section-2">Jump</a></body></html>',
+            encoding="utf-8",
+        )
+        whitelist = pd.build_whitelist()
+        self.assertNotIn("", whitelist)
+
     def test_protected_staging_rejects_a_pre_staged_unexpected_file(self):
         """publish_live()'s own guard: something already staged outside the whitelist before
         it runs must refuse the whole publish -- proves analysis_latest.json's addition to
