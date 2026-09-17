@@ -151,7 +151,7 @@ def verify_dashboard_session(web_dir: Path, session: str) -> dict[str, Any]:
     """Prove the published Dashboard bytes actually carry the exact resolved Daily session.
 
     Reads only what the governed publisher (`publish_dashboard.py`, via `tools/release_
-    orchestrator.py whole-market --live`) itself just wrote to `web_dir` -- never a second,
+    orchestrator.py all --live`) itself just wrote to `web_dir` -- never a second,
     independent session resolution. Requires both `build_info.market_session` and the
     additive `build_info.investment_workspace.source_session` to equal the exact Daily
     session; either mismatching (or the file being unreadable) fails closed.
@@ -175,25 +175,43 @@ def verify_dashboard_session(web_dir: Path, session: str) -> dict[str, Any]:
            "build_id": build_info.get("build_id")}
 
 
-def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, web_dir: Path = DEFAULT_WEB_DIR) -> dict[str, Any]:
+def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, web_dir: Path = DEFAULT_WEB_DIR,
+                              complete_publication: bool = True) -> dict[str, Any]:
     """Publish the EXACT resolved Daily session to the Dashboard via the existing governed
-    `tools/release_orchestrator.py whole-market --live` entry point -- never a second/new
-    Dashboard publisher, and never a second "latest session" resolution: `session` is the
-    only session this function ever passes downstream. Idempotent: `publish_dashboard.py`
-    itself is a no-op commit/push when the whitelist is already byte-identical (see its own
-    `Không có thay đổi; exit 0` path), so a replay of an already-published session performs
-    no duplicate Dashboard commit.
+    `tools/release_orchestrator.py all --live` entry point -- never a second/new Dashboard
+    publisher, and never a second "latest session" resolution: `session` is the only session
+    this function ever passes downstream.
+
+    Group ``all`` (not ``whole-market`` alone) is required: the Dashboard's own release-smoke
+    gate (tests/release-smoke.test.js, "checked-out source session is coherent for public
+    verification") fails closed whenever the trusted-ai bundle's own retained session diverges
+    from the whole-market session being published -- a whole-market-only publish would leave a
+    stale trusted-ai bundle next to a fresh market session. ``--complete-publication`` (default
+    on) additionally requires Dashboard CI and Deploy Pages to pass on the exact pushed SHA and
+    proves cache-busted public-byte identity before reporting PUBLISHED, per the governed
+    vocabulary in governed_publication_completion.py -- the "prefer remote/public bytes over
+    local files" verification this milestone asks for.
+
+    Idempotent: `publish_dashboard.py` itself is a no-op commit/push when the whitelist is
+    already byte-identical (see its own `Không có thay đổi; exit 0` path), so a replay of an
+    already-published session performs no duplicate Dashboard commit.
     """
+    argv = [sys.executable, "-u", str(root / "tools" / "release_orchestrator.py"), "all",
+           "--live", "--expected-session", session, "--backend-dir", str(runtime_root), "--web-dir", str(web_dir)]
+    if complete_publication:
+        argv.append("--complete-publication")
     result = subprocess.run(
-        [sys.executable, "-u", str(root / "tools" / "release_orchestrator.py"), "whole-market",
-         "--live", "--expected-session", session, "--backend-dir", str(runtime_root), "--web-dir", str(web_dir)],
-        cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+        argv, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
     )
     if result.returncode != 0:
         tail = (result.stderr or result.stdout or "").strip()[-2000:]
         return {"status": "FAILED", "expected_session": session, "observed_session": None,
                 "reason": f"RELEASE_ORCHESTRATOR_EXIT_{result.returncode}:{tail}"}
-    return verify_dashboard_session(web_dir, session)
+    outcome = verify_dashboard_session(web_dir, session)
+    for line in (result.stdout or "").splitlines():
+        if line.startswith("PUBLICATION_STATE="):
+            outcome["publication_state"] = line.split("=", 1)[1]
+    return outcome
 
 
 def _run_daily(root: Path, runtime_root: Path) -> None:
@@ -250,7 +268,8 @@ def open_action_center_view(path: str) -> dict[str, str]:
 
 def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                  handoff_repo: Path = DEFAULT_HANDOFF_REPO, dashboard_web_dir: Path = DEFAULT_WEB_DIR,
-                 publish_dashboard: bool = True, replay_completed_session: str | None = None) -> dict[str, Any]:
+                 publish_dashboard: bool = True, dashboard_complete_publication: bool = True,
+                 replay_completed_session: str | None = None) -> dict[str, Any]:
     root, runtime_root, handoff_repo = root.resolve(), runtime_root.resolve(), handoff_repo.resolve()
     dashboard_web_dir = dashboard_web_dir.resolve()
     producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
@@ -268,7 +287,8 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
     # Dashboard on a stale session. A Dashboard failure does not block the independent
     # downstream steps below; it degrades the final status to PARTIAL instead (see main()).
     dashboard = (
-        publish_dashboard_release(root, runtime_root, str(completion["session"]), web_dir=dashboard_web_dir)
+        publish_dashboard_release(root, runtime_root, str(completion["session"]), web_dir=dashboard_web_dir,
+                                  complete_publication=dashboard_complete_publication)
         if publish_dashboard else {"status": "SKIPPED", "expected_session": str(completion["session"]), "observed_session": None, "reason": "DASHBOARD_PUBLICATION_DISABLED"}
     )
     handoff = publish_ai_handoff(root, handoff_repo, completion)
@@ -292,6 +312,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="Dashboard checkout to publish the exact resolved Daily session into.")
     parser.add_argument("--no-publish-dashboard", action="store_true",
                         help="Skip the Dashboard publication step entirely (diagnostic/offline use only).")
+    parser.add_argument("--no-complete-publication", action="store_true",
+                        help="Skip Dashboard CI/Deploy Pages/public-byte-identity verification after push "
+                             "(faster, but only proves the source push, not PUBLISHED).")
     parser.add_argument("--replay-completed-session", default=None, help="Validate/publish an already completed session without acquisition.")
     parser.add_argument("--result-path", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -301,6 +324,7 @@ def main(argv: list[str] | None = None) -> int:
         result = run_workflow(runtime_root=args.runtime_root, handoff_repo=args.handoff_repo,
                               dashboard_web_dir=args.dashboard_web_dir,
                               publish_dashboard=not args.no_publish_dashboard,
+                              dashboard_complete_publication=not args.no_complete_publication,
                               replay_completed_session=args.replay_completed_session)
         if result["status"] == "PARTIAL":
             code = 3

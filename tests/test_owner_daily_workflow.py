@@ -212,9 +212,39 @@ def test_verify_dashboard_session_ready_when_both_sessions_match(tmp_path):
     assert result["observed_session"] == SESSION
 
 
-def test_publish_dashboard_release_invokes_whole_market_group_with_exact_session(monkeypatch, tmp_path):
-    """No `--generate`/trusted-ai/provider-acquisition flags, and never a bare `--expected-
+def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypatch, tmp_path):
+    """Group `all` (not `whole-market` alone -- see publish_dashboard_release's own docstring
+    for why a whole-market-only publish fails the Dashboard's own release-smoke session-
+    coherence gate). No `--generate`/provider-acquisition flags, and never a bare `--expected-
     session` omission that would let the child re-resolve "latest" on its own."""
+    captured = {}
+
+    class _Result:
+        returncode = 0
+        stdout = "PUBLICATION_STATE=PUBLISHED\n"
+        stderr = ""
+
+    def _fake_run(argv, **kwargs):
+        captured["argv"] = argv
+        return _Result()
+
+    monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
+    monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
+    web_dir = tmp_path / "web"
+    result = workflow.publish_dashboard_release(tmp_path, tmp_path / "runtime", SESSION, web_dir=web_dir)
+    argv = captured["argv"]
+    assert any("release_orchestrator.py" in str(part) for part in argv)
+    assert "all" in argv
+    assert "whole-market" not in argv
+    assert "--live" in argv
+    assert "--complete-publication" in argv
+    assert "--expected-session" in argv and argv[argv.index("--expected-session") + 1] == SESSION
+    assert "--generate" not in argv
+    assert result["status"] == "READY"
+    assert result["publication_state"] == "PUBLISHED"
+
+
+def test_publish_dashboard_release_can_skip_complete_publication(monkeypatch, tmp_path):
     captured = {}
 
     class _Result:
@@ -228,16 +258,8 @@ def test_publish_dashboard_release_invokes_whole_market_group_with_exact_session
 
     monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
-    web_dir = tmp_path / "web"
-    result = workflow.publish_dashboard_release(tmp_path, tmp_path / "runtime", SESSION, web_dir=web_dir)
-    argv = captured["argv"]
-    assert any("release_orchestrator.py" in str(part) for part in argv)
-    assert "whole-market" in argv
-    assert "--live" in argv
-    assert "--expected-session" in argv and argv[argv.index("--expected-session") + 1] == SESSION
-    assert "--generate" not in argv
-    assert "all" not in argv
-    assert result["status"] == "READY"
+    workflow.publish_dashboard_release(tmp_path, tmp_path / "runtime", SESSION, web_dir=tmp_path / "web", complete_publication=False)
+    assert "--complete-publication" not in captured["argv"]
 
 
 def test_verify_dashboard_session_fails_closed_when_build_info_missing(tmp_path):
