@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1",
+    "milestone": "WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PRODUCER_DIAGNOSTIC_AND_DASHBOARD_BINDING_RELEASED",
+      "starting_checkpoint": "9a6c0e6621517e2d6930f3c087cead3ec1be9980",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / DIAGNOSTIC_DISPLAY_AND_PUBLICATION_BINDING_ONLY_NO_NEW_DECISION_AUTHORITY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1 (this session, 2026-09-17)",
+      "state_history": [],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_17_WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1",
+      "notes": "COMPLETE / PRODUCER_DIAGNOSTIC_AND_DASHBOARD_BINDING_RELEASED. Two owner-observed production gaps closed. Gap A (Daily succeeded, Dashboard stayed on prior session): tools/run_owner_daily.py now calls the existing governed tools/release_orchestrator.py whole-market --live path with the EXACT resolved Daily session (never a second latest-session resolution), then fails closed to PARTIAL (never PASS) unless the published build_info.json proves market_session == the new additive investment_workspace.source_session == the Daily session; AI handoff/Action Center still run independently on a Dashboard failure. publish_dashboard.py additively records investment_workspace{status,source_session,artifact_identity} on build_info.json (omitted, byte-identical, when no workspace payload is supplied -- backward compatible). Real 2026-09-16 replay validated end to end against retained evidence (no provider acquisition, no Daily rerun): see docs/STATE.md. Gap B (availability conflated with authority): current_research_valuation_context.py gains AVAILABLE_QUALIFIED/AVAILABLE_REFERENCE_ONLY/NOT_AVAILABLE per-method diagnostic state plus a valuation_summary rollup (never DCF/fair-value/target-price -- existing ABSOLUTE_RESEARCH_ONLY/relative-state vocabulary untouched); investment_decision_workspace_projection.py passes these through additively (method_diagnostics) alongside new additive fundamental (financial_health/current_features/peer_relative/warnings_blockers), catalyst (adverse_events/event_classifications), liquidity (current_session_volume/authority_boundary), and market_sector (breadth_support_state/momentum percentile) diagnostics -- all already computed upstream but previously dropped at the workspace join, never recomputed. New reference_trigger display (trigger_level_exists/trigger_condition_attached/trigger_condition_satisfied/entry_authority=false) sourced by joining technical_structure_context.py's already-computed V3 trigger/invalidation level into tactical_behavior_context.py (previously dropped one hop before opportunity_context.py ever saw it) -- diagnostic reference level only, never a confirmed entry. All existing research_stance/entry_state/relative_research_state assertions byte-identical before/after. ~100 new/updated tests across current_research_valuation_context, investment_decision_workspace_projection, tactical_behavior_context, publish_dashboard, run_owner_daily; zero regressions in every directly-touched or downstream-consumer suite exercised this session; py_compile/git diff --check clean; roadmap --check DRIFT CHECK PASS. No household finance, calibration, PIT architecture, generic source acquisition, Kelly/CVaR, or portfolio optimization reopened. Next milestone (not started): DIAGNOSTIC_TRANSPARENCY_WORKSPACE_UI_V1 in C:\\Projects\\StockLookup\\market-dashboard, to render these diagnostics -- this milestone's new projection fields are additive only, current Dashboard UI stays backward-compatible."
+    },
     {
       "milestone_id": "PERSONAL_INVESTMENT_DECISION_ACTION_CENTER_V1",
       "state": "COMPLETE",

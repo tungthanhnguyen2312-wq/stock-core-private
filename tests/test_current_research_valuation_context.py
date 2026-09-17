@@ -6,11 +6,14 @@ from __future__ import annotations
 import pytest
 
 from current_research_valuation_context import (
-    ENGINE_PEER_FEATURES, ENTITY_CLASS_COHORT_LEVEL, EV_EBITDA, EV_EBITDA_CALC_READY, INPUT_BLOCKED,
-    NOT_APPLICABLE, PE_NOT_MEANINGFUL, PE_TTM, PS_TTM, SECTOR_COHORT_LEVEL,
+    AVAILABLE_QUALIFIED, AVAILABLE_REFERENCE_ONLY, ENGINE_PEER_FEATURES, ENTITY_CLASS_COHORT_LEVEL,
+    EV_EBITDA, EV_EBITDA_CALC_READY, INPUT_BLOCKED, NOT_AVAILABLE,
+    NOT_APPLICABLE, PE_NOT_MEANINGFUL, PE_TTM, PS_TTM, RELATIVE_METHODS, SECTOR_COHORT_LEVEL,
     _calculation_readiness_method, _calculation_readiness_reconciliation, _monetary_basis_compatible,
     _select_ttm, attach_engine_fundamental_peers, attach_peer_relative, evaluate_ticker_valuation,
+    method_availability_state, valuation_axis,
 )
+from opportunity_axis_freshness import CURRENT
 import monetary_basis_contract as basis_contract
 
 BLOCKED_METHOD = {"status": "BLOCKED", "value": None, "blocked_reasons": []}
@@ -431,3 +434,99 @@ def test_fcf_yield_ttm_is_explicitly_blocked_no_ttm_fcf_retained():
     row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
     assert row["fcf_yield_ttm"]["status"] == "BLOCKED"
     assert row["fcf_yield_ttm"]["blocker_reason_codes"] == ["FCF_TTM_NOT_RETAINED_STANDALONE_QUARTER_PROXY_ONLY"]
+
+
+# --- WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: availability/authority ---
+
+def _freshness(session="2026-09-16"):
+    return {"freshness_status": CURRENT, "source_session": session}
+
+
+def test_method_availability_qualified_only_with_peer_relative_ready():
+    method = {"status": "RESEARCH_USABLE", "value": 12.0}
+    assert method_availability_state(method, {"status": "READY_RESEARCH_ONLY"}) == AVAILABLE_QUALIFIED
+    assert method_availability_state(method, {"status": "INSUFFICIENT_PEER_COUNT"}) == AVAILABLE_REFERENCE_ONLY
+    assert method_availability_state(method, None) == AVAILABLE_REFERENCE_ONLY
+
+
+def test_method_availability_reference_only_for_pe_not_meaningful():
+    method = {"status": PE_NOT_MEANINGFUL, "value": None}
+    assert method_availability_state(method, None) == AVAILABLE_REFERENCE_ONLY
+
+
+def test_method_availability_not_available_when_input_blocked_or_not_applicable():
+    assert method_availability_state({"status": INPUT_BLOCKED, "value": None}, None) == NOT_AVAILABLE
+    assert method_availability_state({"status": NOT_APPLICABLE, "value": None}, None) == NOT_AVAILABLE
+
+
+def test_peer_blocker_does_not_erase_the_underlying_usable_multiple():
+    """A method usable but below the minimum peer cohort stays visible as reference-only,
+    never silently erased/collapsed to NOT_AVAILABLE just because peer-relative is blocked."""
+    rows = attach_peer_relative({"AAA": evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)})
+    axis = valuation_axis(ticker="AAA", decision_session="2026-09-16", valuation_artifact={"as_of_session": "2026-09-16"},
+                          feature_store=None, row=rows["AAA"], freshness=_freshness())
+    pe_ttm = axis["applicable_methods"][PE_TTM]
+    assert pe_ttm["value"] == pytest.approx(20.0)
+    assert pe_ttm["peer_relative"]["status"] == "INSUFFICIENT_PEER_COUNT"
+    assert pe_ttm["availability_state"] == AVAILABLE_REFERENCE_ONLY
+    assert axis["valuation_summary"]["valuation_display_state"] == "RESEARCH_METHODS_AVAILABLE_NOT_PEER_QUALIFIED"
+    assert axis["valuation_summary"]["qualified_relative_method_count"] == 0
+    assert axis["valuation_summary"]["available_method_count"] >= 1
+
+
+def test_method_level_value_survives_projection_once_peer_cohort_qualifies():
+    cohort = {
+        f"T{i}": evaluate(net_income=qualified_feature(400_000 * (i + 1)), market_cap_value=8_000_000)
+        for i in range(5)
+    }
+    rows = attach_peer_relative(cohort)
+    axis = valuation_axis(ticker="T0", decision_session="2026-09-16", valuation_artifact={"as_of_session": "2026-09-16"},
+                          feature_store=None, row=rows["T0"], freshness=_freshness())
+    pe_ttm = axis["applicable_methods"][PE_TTM]
+    assert pe_ttm["status"] == "RESEARCH_USABLE"
+    assert pe_ttm["value"] is not None
+    assert pe_ttm["peer_relative"]["status"] == "READY_RESEARCH_ONLY"
+    assert pe_ttm["availability_state"] == AVAILABLE_QUALIFIED
+    assert axis["valuation_summary"]["qualified_relative_method_count"] >= 1
+    assert axis["valuation_summary"]["valuation_display_state"] == "PEER_RELATIVE_QUALIFIED"
+
+
+def test_truly_missing_method_stays_not_available_never_a_fabricated_number():
+    row = evaluate(net_income=None, revenue=None)
+    rows = attach_peer_relative({"AAA": row})
+    axis = valuation_axis(ticker="AAA", decision_session="2026-09-16", valuation_artifact={"as_of_session": "2026-09-16"},
+                          feature_store=None, row=rows["AAA"], freshness=_freshness())
+    for method_id in RELATIVE_METHODS:
+        method = axis["applicable_methods"][method_id]
+        assert method["availability_state"] == NOT_AVAILABLE
+        assert method["value"] is None
+    summary = axis["valuation_summary"]
+    assert summary["valuation_display_state"] == "NO_VALUATION_METHOD_AVAILABLE"
+    assert summary["available_method_count"] == 0
+    assert summary["missing_method_count"] == len(RELATIVE_METHODS)
+
+
+def test_valuation_summary_never_implies_intrinsic_fair_value_or_target_price():
+    row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    rows = attach_peer_relative({"AAA": row})
+    axis = valuation_axis(ticker="AAA", decision_session="2026-09-16", valuation_artifact={"as_of_session": "2026-09-16"},
+                          feature_store=None, row=rows["AAA"], freshness=_freshness())
+    summary = axis["valuation_summary"]
+    assert summary["not_intrinsic_fair_value"] is True
+    assert summary["not_dcf_or_target_price"] is True
+    assert "target_price" not in summary and "fair_value" not in summary and "dcf" not in summary
+    assert "absolute valuation model" not in summary["display_note"].lower()
+    assert "fair value" not in summary["display_note"].lower()
+
+
+def test_raw_upstream_relative_state_preserved_separately_from_availability_state():
+    """`status`/`applicability` (the raw upstream fields) are untouched by the new
+    `availability_state` diagnostic lens -- additive, not a silent rename/replacement."""
+    row = evaluate(net_income=qualified_feature(400_000), market_cap_value=8_000_000)
+    rows = attach_peer_relative({"AAA": row})
+    axis = valuation_axis(ticker="AAA", decision_session="2026-09-16", valuation_artifact={"as_of_session": "2026-09-16"},
+                          feature_store=None, row=rows["AAA"], freshness=_freshness())
+    pe_ttm = axis["applicable_methods"][PE_TTM]
+    assert pe_ttm["status"] == "RESEARCH_USABLE"
+    assert pe_ttm["applicability"] == "APPLICABLE"
+    assert "availability_state" in pe_ttm

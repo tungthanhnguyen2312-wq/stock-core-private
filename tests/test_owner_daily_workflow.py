@@ -57,18 +57,24 @@ def test_unexpected_post_daily_diff_is_refused(monkeypatch, tmp_path):
         workflow.commit_daily_state(tmp_path, SESSION)
 
 
+def _ready_dashboard(_root, _runtime, session, **_k):
+    return {"status": "READY", "expected_session": session, "observed_session": session, "build_id": "b"}
+
+
 def test_successful_replay_allows_publication_and_reuses_daily(monkeypatch, tmp_path):
     _write_completion(tmp_path)
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     calls: list[str] = []
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: calls.append("publish") or {"remote": {"remote_sha": "ai"}})
     monkeypatch.setattr(workflow, "materialize_action_center", lambda _root, session: {"status": "READY", "session": session, "json_path": "private.json", "view_path": "private.md"})
     monkeypatch.setattr(workflow, "open_action_center_view", lambda _path: {"status": "READY"})
     result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
     assert result["status"] == "PASS"
     assert result["daily_status"] == "ALREADY_COMPLETED / REUSED"
+    assert result["dashboard"]["status"] == "READY"
     assert calls == ["publish"]
 
 
@@ -78,6 +84,7 @@ def test_action_center_receives_the_exact_completed_session(monkeypatch, tmp_pat
     seen: list[str] = []
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
     monkeypatch.setattr(workflow, "materialize_action_center", lambda _root, session: seen.append(session) or {"status": "READY", "session": session, "json_path": "private.json", "view_path": "private.md"})
     monkeypatch.setattr(workflow, "open_action_center_view", lambda _path: {"status": "READY"})
@@ -90,11 +97,13 @@ def test_action_center_failure_is_partial_after_core_success(monkeypatch, tmp_pa
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
     monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "PARTIAL", "reason": "ACTION_CENTER_MATERIALIZATION_FAILED:test"})
     result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
     assert result["status"] == "PARTIAL"
     assert result["ai_handoff"]["remote"]["remote_sha"] == "ai"
+    assert result["dashboard"]["status"] == "READY"
 
 
 def test_view_open_failure_is_non_fatal(monkeypatch, tmp_path):
@@ -102,12 +111,140 @@ def test_view_open_failure_is_non_fatal(monkeypatch, tmp_path):
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
     monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "private.json", "view_path": "private.md"})
     monkeypatch.setattr(workflow, "open_action_center_view", lambda _path: {"status": "READY_VIEW_OPEN_FAILED", "reason": "VIEW_OPEN_FAILED:test"})
     result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
     assert result["status"] == "PASS"
     assert result["action_center"]["view_open"]["status"] == "READY_VIEW_OPEN_FAILED"
+
+
+# --- WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: Daily -> Dashboard ---
+
+def test_daily_resolved_session_passed_exactly_into_dashboard_publisher(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    seen = {}
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    def _capture_and_publish(root, rt, session, **k):
+        seen["session"] = session
+        return _ready_dashboard(root, rt, session)
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _capture_and_publish)
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+    assert seen["session"] == SESSION
+    assert result["status"] == "PASS"
+
+
+def test_stale_dashboard_session_produces_partial_never_pass(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: {
+        "status": "FAILED", "expected_session": SESSION, "observed_session": "2026-09-15",
+        "reason": "DASHBOARD_SESSION_MISMATCH:build_info.market_session='2026-09-15'",
+    })
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: pytest.fail("must not open view on PARTIAL"))
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+    assert result["status"] == "PARTIAL"
+    assert result["dashboard"]["status"] == "FAILED"
+    assert result["dashboard"]["expected_session"] == SESSION
+    assert result["dashboard"]["observed_session"] == "2026-09-15"
+
+
+def test_dashboard_publish_failure_does_not_prevent_ai_handoff_or_action_center(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    calls: list[str] = []
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: {"status": "FAILED", "expected_session": SESSION, "observed_session": None, "reason": "x"})
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: calls.append("handoff") or {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: calls.append("action_center") or {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+    assert result["status"] == "PARTIAL"
+    assert calls == ["handoff", "action_center"]
+    assert result["ai_handoff"]["remote"]["remote_sha"] == "ai"
+    assert result["action_center"]["status"] == "READY"
+
+
+def test_dashboard_disabled_flag_skips_publication_and_never_fails_workflow(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: pytest.fail("must not be called when disabled"))
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+                                   replay_completed_session=SESSION, publish_dashboard=False)
+    assert result["status"] == "PASS"
+    assert result["dashboard"]["status"] == "SKIPPED"
+
+
+def test_verify_dashboard_session_requires_both_market_and_workspace_session(tmp_path):
+    web = tmp_path / "web"; (web / "data").mkdir(parents=True)
+    (web / "data" / "build_info.json").write_text(json.dumps({
+        "market_session": SESSION,
+        "investment_workspace": {"status": "CURRENT", "source_session": "2026-09-15"},
+    }), encoding="utf-8")
+    result = workflow.verify_dashboard_session(web, SESSION)
+    assert result["status"] == "FAILED"
+    assert "DASHBOARD_SESSION_MISMATCH" in result["reason"]
+
+
+def test_verify_dashboard_session_ready_when_both_sessions_match(tmp_path):
+    web = tmp_path / "web"; (web / "data").mkdir(parents=True)
+    (web / "data" / "build_info.json").write_text(json.dumps({
+        "market_session": SESSION, "build_id": "abc",
+        "investment_workspace": {"status": "CURRENT", "source_session": SESSION},
+    }), encoding="utf-8")
+    result = workflow.verify_dashboard_session(web, SESSION)
+    assert result["status"] == "READY"
+    assert result["observed_session"] == SESSION
+
+
+def test_publish_dashboard_release_invokes_whole_market_group_with_exact_session(monkeypatch, tmp_path):
+    """No `--generate`/trusted-ai/provider-acquisition flags, and never a bare `--expected-
+    session` omission that would let the child re-resolve "latest" on its own."""
+    captured = {}
+
+    class _Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def _fake_run(argv, **kwargs):
+        captured["argv"] = argv
+        return _Result()
+
+    monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
+    monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
+    web_dir = tmp_path / "web"
+    result = workflow.publish_dashboard_release(tmp_path, tmp_path / "runtime", SESSION, web_dir=web_dir)
+    argv = captured["argv"]
+    assert any("release_orchestrator.py" in str(part) for part in argv)
+    assert "whole-market" in argv
+    assert "--live" in argv
+    assert "--expected-session" in argv and argv[argv.index("--expected-session") + 1] == SESSION
+    assert "--generate" not in argv
+    assert "all" not in argv
+    assert result["status"] == "READY"
+
+
+def test_verify_dashboard_session_fails_closed_when_build_info_missing(tmp_path):
+    web = tmp_path / "web"; web.mkdir()
+    result = workflow.verify_dashboard_session(web, SESSION)
+    assert result["status"] == "FAILED"
+    assert result["observed_session"] is None
 
 
 def test_failed_daily_prevents_publication(monkeypatch, tmp_path):

@@ -191,6 +191,11 @@ def _tactical_axis(*, behavior: Mapping[str, Any] | None, watchlist: Mapping[str
         "price_volume_behavior": (behavior or {}).get("price_volume_behavior") or {},
         "trend_context": (behavior or {}).get("trend_context") or {},
         "structure_context": (behavior or {}).get("structure_context") or {},
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: passthrough only,
+        # see tactical_behavior_context.py::_record's reference_trigger_context comment.
+        "reference_trigger_context": (behavior or {}).get("reference_trigger_context") or {
+            "trigger_level_exists": False, "status": "NOT_AVAILABLE", "entry_authority": False,
+        },
         "freshness": freshness,
         "research_usable": usable,
         "rewritten_as_current": False,

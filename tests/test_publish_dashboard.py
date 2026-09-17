@@ -235,6 +235,22 @@ class DryRunIsFullyReadOnlyTests(_PublishDashboardTestBase):
         self.assertEqual(contract["volume_basis"], "unknown")
         self.assertFalse(contract["volume_basis_verified"])
 
+    def test_investment_workspace_field_absent_without_workspace_argument(self):
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: additive only --
+        # every pre-existing caller that never passes `workspace` gets a byte-identical manifest.
+        rows, breadth, market_session = pd.validate_snapshot()
+        manifest, _content = pd.compute_manifest(rows, breadth, market_session, "0" * 40)
+        self.assertNotIn("investment_workspace", manifest)
+
+    def test_investment_workspace_field_records_session_when_workspace_supplied(self):
+        rows, breadth, market_session = pd.validate_snapshot()
+        workspace = pd.validate_workspace_projection(pd.BACKEND_ROOT / pd.WORKSPACE_ASSET, market_session)
+        manifest, _content = pd.compute_manifest(rows, breadth, market_session, "0" * 40, workspace=workspace)
+        self.assertEqual(manifest["investment_workspace"], {
+            "status": "CURRENT",
+            "source_session": market_session,
+            "artifact_identity": workspace["artifact_identity"],
+        })
 
 class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
     """--live: the same three write functions must run, in order, and only touch the
@@ -290,6 +306,19 @@ class LiveModeAppliesWritesInOrderTests(_PublishDashboardTestBase):
         self.assertTrue((self.tmp / "data" / "screener_data.js").exists())
         html = (self.tmp / "dashboard.html").read_text(encoding="utf-8")
         self.assertIn("?v=", html, "update_asset_versions() phải thêm cache-busting token khi --live")
+
+    def test_live_publish_records_investment_workspace_session_in_build_info(self):
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: a real --live
+        # publish must record the Workspace product's own session directly on build_info.json
+        # so tools/run_owner_daily.py's Dashboard session gate can verify it post-publish.
+        self.fake_git.status_output = " M dashboard.html\n"
+        with mock.patch.object(pd, "run_release_smoke_tests", return_value=0), \
+             mock.patch.object(pd, "publish_live", return_value=0):
+            rc = self._run(["publish_dashboard.py", "--live"])
+        self.assertEqual(rc, 0)
+        build_info = json.loads((self.tmp / "data" / "build_info.json").read_text(encoding="utf-8"))
+        self.assertEqual(build_info["investment_workspace"]["status"], "CURRENT")
+        self.assertEqual(build_info["investment_workspace"]["source_session"], build_info["market_session"])
 
     def test_atomic_all_mode_explicitly_verifies_and_stages_full_trusted_subset(self):
         """The final whole-market publisher cannot rely on incidental asset references."""

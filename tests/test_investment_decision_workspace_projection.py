@@ -159,6 +159,137 @@ def test_mismatched_lineage_pair_rejected():
         build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
 
 
+# ---------------------------------------------------------------------------
+# WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1
+# ---------------------------------------------------------------------------
+
+def test_method_level_usable_value_survives_workspace_projection():
+    tickers = ("AAA", "BBB", "CCC", "DDD", "EEE")
+    opportunity, decision = real_pair(tickers=tickers, pes={t: 10.0 + i for i, t in enumerate(tickers)})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    diagnostics = out["cards"]["AAA"]["valuation"]["method_diagnostics"]["P/E"]
+    assert diagnostics["status"] == "RESEARCH_USABLE"
+    assert diagnostics["value"] == pytest.approx(10.0)
+    assert diagnostics["availability_state"] == "AVAILABLE_QUALIFIED"
+
+
+def test_peer_relative_blocker_does_not_erase_available_underlying_multiple():
+    # Single ticker: well below MIN_COHORT_MEMBERS, so P/E has no qualified peer cohort --
+    # the multiple itself must still survive as AVAILABLE_REFERENCE_ONLY, not disappear.
+    opportunity, decision = real_pair(tickers=("AAA",), pes={"AAA": 12.0})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    diagnostics = out["cards"]["AAA"]["valuation"]["method_diagnostics"]["P/E"]
+    assert diagnostics["status"] == "RESEARCH_USABLE"
+    assert diagnostics["value"] == pytest.approx(12.0)
+    assert diagnostics["availability_state"] == "AVAILABLE_REFERENCE_ONLY"
+    summary = out["cards"]["AAA"]["valuation"]["valuation_summary"]
+    assert summary["qualified_relative_method_count"] == 0
+    assert summary["available_method_count"] >= 1
+
+
+def test_truly_missing_method_stays_none_never_fabricated():
+    opportunity, decision = real_pair(tickers=("AAA",), pes={"AAA": None})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    diagnostics = out["cards"]["AAA"]["valuation"]["method_diagnostics"]["P/E"]
+    assert diagnostics["value"] is None
+    assert diagnostics["availability_state"] == "NOT_AVAILABLE"
+
+
+def test_blocked_or_proxy_method_cannot_become_qualified_merely_by_being_displayed():
+    opportunity, decision = real_pair(tickers=("AAA",), pes={"AAA": 12.0})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    diagnostics = out["cards"]["AAA"]["valuation"]["method_diagnostics"]
+    # P/B, P/S, EV/Sales, EV/EBITDA are all BLOCKED in this fixture -- displaying them
+    # (they are present in method_diagnostics) never upgrades their availability_state.
+    for method_id in ("P/B", "P/S", "EV/Sales", "EV/EBITDA"):
+        assert diagnostics[method_id]["availability_state"] == "NOT_AVAILABLE"
+        assert diagnostics[method_id]["value"] is None
+
+
+def test_no_target_price_fair_value_or_dcf_created_by_diagnostic_passthrough():
+    opportunity, decision = real_pair(tickers=("AAA",), pes={"AAA": 12.0})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    valuation = out["cards"]["AAA"]["valuation"]
+    assert "target_price" not in valuation and "fair_value" not in valuation and "dcf" not in valuation
+    for detail in valuation["method_diagnostics"].values():
+        assert "target_price" not in detail and "fair_value" not in detail
+
+
+def test_valuation_summary_never_calls_existing_multiples_intrinsic_fair_value():
+    opportunity, decision = real_pair(tickers=("AAA",), pes={"AAA": 12.0})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    summary = out["cards"]["AAA"]["valuation"]["valuation_summary"]
+    assert summary["not_intrinsic_fair_value"] is True
+    assert "absolute valuation model" not in summary["display_note"].lower()
+
+
+def test_raw_upstream_relative_state_preserved_separately_from_diagnostics():
+    opportunity, decision = real_pair(tickers=("AAA",), pes={"AAA": 12.0})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    valuation = out["cards"]["AAA"]["valuation"]
+    assert "raw_upstream_relative_research_state" in valuation
+    assert "method_diagnostics" in valuation
+    assert valuation["relative_research_state"] not in RELATIVE_VALUATION_LABELS
+
+
+def test_diagnostic_passthrough_never_absent_when_upstream_lacks_new_field():
+    # An older/rigged opportunity_record without "applicable_methods" must degrade to an
+    # empty diagnostics map, never crash -- this module never requires requalification.
+    card = build_ticker_card(
+        ticker="ZZZ",
+        opportunity_record={
+            "usable_major_axes": [],
+            "fundamental": {}, "tactical": {}, "market_sector": {}, "catalyst": {}, "liquidity": {},
+            "valuation": {"peer_relative_context": {}, "absolute_research_context": {}},
+            "data_authority": {},
+        },
+        decision_record={"deterministic_research_inference": {}, "warnings_counter_thesis": {}},
+        sector="UNKNOWN", portfolio_research=None, prospective_record={"status": "NO_RETAINED_CURRENT_CASES"},
+    )
+    assert card["valuation"]["method_diagnostics"] == {}
+    assert card["valuation"]["valuation_summary"] is None
+
+
+def test_reference_trigger_display_never_implies_a_fired_confirmed_entry():
+    # real_pair's fixture behavior records carry no reference_trigger_context -- the card
+    # must degrade to a safe, explicitly-not-available reference, never fabricate a fired
+    # trigger or entry authority.
+    opportunity, decision = real_pair(tickers=("AAA",))
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    trigger = out["cards"]["AAA"]["reference_trigger"]
+    assert trigger["entry_authority"] is False
+    assert trigger["trigger_condition_satisfied"] is False
+    assert trigger["status"] == "NOT_AVAILABLE"
+    assert out["cards"]["AAA"]["tactical"]["reference_trigger"] == trigger
+    assert out["cards"]["AAA"]["why"]["tactical_evidence"]["reference_trigger"] == trigger
+
+
+def test_fundamental_catalyst_liquidity_sector_diagnostics_additive_and_present():
+    opportunity, decision = real_pair(tickers=("AAA",))
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    card = out["cards"]["AAA"]
+    assert "financial_health" in card["fundamental"]
+    assert "peer_relative" in card["fundamental"]
+    assert "warnings_blockers" in card["fundamental"]
+    assert "adverse_events" in card["catalyst"]
+    assert "event_classifications" in card["catalyst"]
+    assert "current_session_volume" in card["liquidity"]
+    assert "authority_boundary" in card["liquidity"]
+    assert "sector_diagnostic" in card["market_sector"]
+    # Pre-existing fields are untouched by the additive diagnostics.
+    assert card["fundamental"]["state"] == card["why"]["fundamental_evidence"]["state"]
+
+
+def test_existing_research_stance_byte_identical_with_diagnostic_passthrough():
+    tickers = ("AAA", "BBB", "CCC", "DDD", "EEE")
+    opportunity, decision = real_pair(tickers=tickers, pes={t: 10.0 + i for i, t in enumerate(tickers)})
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    card = out["cards"]["AAA"]
+    assert card["research_stance"] == decision["records"]["AAA"]["research_stance"]
+    assert card["entry_state"] == decision["records"]["AAA"]["entry_state"]
+    assert card["valuation"]["relative_research_state"] == card["why"]["valuation_evidence"]["relative_research_state"]
+
+
 def test_empty_denominator_rejected():
     opportunity, decision = real_pair(tickers=("AAA",))
     empty_opportunity = {**opportunity, "records": {}}

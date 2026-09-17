@@ -151,6 +151,29 @@ class CompactProductTests(unittest.TestCase):
         for forbidden in ("\"score\":", "\"rank\":", "\"target_price\":"):
             self.assertNotIn(forbidden, blob)
 
+    def test_reference_trigger_context_passed_through_diagnostically(self) -> None:
+        """WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: the real V3
+        trigger/invalidation level technical_structure_context.py already computes must
+        survive this join -- previously dropped entirely -- while never carrying entry
+        authority."""
+        trigger = self.records["BRK"]["reference_trigger_context"]
+        self.assertTrue(trigger["trigger_level_exists"])
+        self.assertIsInstance(trigger["trigger_level"], (int, float))
+        self.assertEqual(trigger["entry_authority"], False)
+        self.assertIn(trigger["status"], {"AVAILABLE", "NOT_AVAILABLE", "INSUFFICIENT_STRUCTURE", "NO_DEFENSIBLE_LEVEL"})
+
+    def test_reference_trigger_context_degrades_to_not_available_without_structure(self) -> None:
+        record = compact_module._record(
+            ticker="ZZZ", session=SESSION, tactical_record={"entry_state": "DOWNTREND"},
+            structure_record={}, setup_record={}, boundary_record=None,
+            leadership_context=None, market_breadth_state=None,
+        )
+        trigger = record["reference_trigger_context"]
+        self.assertFalse(trigger["trigger_level_exists"])
+        self.assertIsNone(trigger["trigger_level"])
+        self.assertEqual(trigger["entry_authority"], False)
+        self.assertEqual(trigger["status"], "NOT_AVAILABLE")
+
 
 if __name__ == "__main__":
     unittest.main()

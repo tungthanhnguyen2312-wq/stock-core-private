@@ -85,12 +85,32 @@ def _valuation_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
     if guard_applied:
         display_state = "ABSOLUTE_RESEARCH_ONLY" if usable_count else "UNAVAILABLE"
     market_cap_detail = methods.get("market_cap") if isinstance(methods, Mapping) else None
+    applicable_methods = valuation.get("applicable_methods") or {}
+    # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: pass through the
+    # already-computed per-method AVAILABLE_QUALIFIED/AVAILABLE_REFERENCE_ONLY/NOT_AVAILABLE
+    # diagnostic and the display-oriented summary unchanged -- never recomputed here, never
+    # replacing `relative_research_state`/`supporting_methods` above (which stay byte-identical
+    # to their pre-existing behavior; see current_research_valuation_context.method_availability_state
+    # / _valuation_display_summary for the source of truth).
+    method_diagnostics = {
+        method_id: {
+            "status": detail.get("status"), "value": detail.get("value"),
+            "availability_state": detail.get("availability_state"),
+            "blocker_reason_codes": detail.get("blocker_reason_codes"),
+            "period_basis": detail.get("period_basis"), "share_basis": detail.get("share_basis"),
+            "peer_relative": detail.get("peer_relative"),
+        }
+        for method_id, detail in applicable_methods.items()
+        if isinstance(detail, Mapping)
+    }
     return {
         "relative_research_state": display_state,
         "raw_upstream_relative_research_state": raw_state,
         "market_cap_semantic_guard_applied": guard_applied,
         "usable_relative_method_count": usable_count,
         "supporting_methods": supporting,
+        "valuation_summary": valuation.get("valuation_summary"),
+        "method_diagnostics": method_diagnostics,
         "market_cap_size_context": {
             "percentile": (market_cap_detail or {}).get("percentile"),
             "peer_count": (market_cap_detail or {}).get("peer_count"),
@@ -111,6 +131,12 @@ def _catalyst_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
         "status": catalyst.get("status"),
         "qualified_current_catalysts": list(catalyst.get("qualified_current_catalysts") or []),
         "pending_watch_items": list(catalyst.get("pending_watch_items") or []),
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: already computed on
+        # the opportunity record (`opportunity_context.py::_catalyst_axis`) but previously
+        # dropped here -- a genuinely observed adverse/negative event existed upstream while the
+        # card rendered no catalyst signal at all. Passthrough only, additive.
+        "adverse_events": list(catalyst.get("adverse_events") or []),
+        "event_classifications": list(catalyst.get("event_classifications") or []),
         "event_count": catalyst.get("event_count"),
         "freshness_status": (catalyst.get("freshness") or {}).get("freshness_status"),
         "source_session": (catalyst.get("freshness") or {}).get("source_session"),
@@ -123,8 +149,89 @@ def _liquidity_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
         "readiness": liquidity.get("readiness"),
         "descriptive_research_state": liquidity.get("descriptive_research_state"),
         "exact_execution_capacity_status": liquidity.get("exact_execution_capacity_status"),
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: already present on
+        # the opportunity record (`opportunity_context.py::_liquidity_row`) but previously
+        # dropped here even though it survived that far. Passthrough only, additive.
+        "current_session_volume": liquidity.get("current_session_volume"),
+        "research_usable": liquidity.get("research_usable"),
+        "authority_boundary": liquidity.get("authority_boundary"),
         "freshness_status": (liquidity.get("freshness") or {}).get("freshness_status"),
         "source_session": (liquidity.get("freshness") or {}).get("source_session"),
+    }
+
+
+def _fundamental_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
+    """Additive diagnostic lens over the fundamental axis -- never recomputed.
+
+    `financial_health`/`current_features` (with each feature's own `blocker_reason_codes`)/
+    `peer_relative`/`entity_type`/`entity_applicability`/`warnings_blockers` are already
+    retained on `opportunity_context.py::_fundamental_axis`'s output but were previously
+    dropped at this join -- a ticker genuinely blocked for a specific documented reason
+    rendered identically to a ticker with no fundamental data at all.
+    """
+    fundamental = opportunity_record.get("fundamental") or {}
+    return {
+        "state": fundamental.get("state"), "trajectory": fundamental.get("trajectory"),
+        "readiness": fundamental.get("readiness"), "research_fitness": fundamental.get("research_fitness"),
+        "financial_health": fundamental.get("financial_health"),
+        "current_features": fundamental.get("current_features") or {},
+        "peer_relative": fundamental.get("peer_relative") or {},
+        "entity_type": fundamental.get("entity_type"), "entity_applicability": fundamental.get("entity_applicability"),
+        "warnings_blockers": list(fundamental.get("warnings_blockers") or []),
+        "freshness_status": (fundamental.get("freshness") or {}).get("freshness_status"),
+        "source_period": (fundamental.get("freshness") or {}).get("source_period"),
+    }
+
+
+def _sector_diagnostic_view(leadership_records: Mapping[str, Any], ticker: str) -> dict[str, Any]:
+    """Additive diagnostic lens over the full leadership record already looked up for
+    `_sector_label` -- previously discarded immediately after extracting the bare group
+    string. `current_market_sector_leadership_context.py` computes real percentile/peer-
+    median/observation-count/breadth-support detail per ticker that never reached the card.
+    """
+    record = leadership_records.get(ticker) or {}
+    market_relative = record.get("market_relative_momentum") or {}
+    sector_relative = record.get("sector_relative_momentum") or {}
+    return {
+        "breadth_support_state": record.get("breadth_support_state"),
+        "coverage_limitations": list(record.get("coverage_limitations") or []),
+        "market_relative_momentum": {
+            "status": market_relative.get("status"),
+            "momentum_percentile_descriptive": market_relative.get("momentum_percentile_descriptive"),
+            "peer_median_momentum_20d": market_relative.get("peer_median_momentum_20d"),
+            "valid_observation_count": market_relative.get("valid_observation_count"),
+        } if market_relative else None,
+        "sector_relative_momentum": {
+            "status": sector_relative.get("status"),
+            "momentum_percentile_descriptive": sector_relative.get("momentum_percentile_descriptive"),
+            "peer_median_momentum_20d": sector_relative.get("peer_median_momentum_20d"),
+            "valid_observation_count": sector_relative.get("valid_observation_count"),
+        } if sector_relative else None,
+        "group_coverage_ratio": (record.get("sector_leadership_context") or {}).get("group_coverage_ratio"),
+    }
+
+
+def _trigger_reference_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
+    """Diagnostic-only reference trigger/invalidation level -- never a confirmed entry.
+
+    Preserves the four concepts the milestone requires kept distinct: whether a reference
+    price level exists at all, whether a condition is attached to it, whether that
+    condition has actually fired, and that none of this carries entry/execution authority.
+    """
+    tactical = opportunity_record.get("tactical") or {}
+    trigger = tactical.get("reference_trigger_context") or {}
+    return {
+        "trigger_level_exists": bool(trigger.get("trigger_level_exists")),
+        "trigger_level": trigger.get("trigger_level"),
+        "trigger_type": trigger.get("trigger_type"),
+        "trigger_condition_attached": bool(trigger.get("trigger_condition_attached")),
+        "trigger_condition_satisfied": bool(trigger.get("trigger_condition_satisfied")),
+        "trigger_state": trigger.get("trigger_state"),
+        "invalidation_level": trigger.get("invalidation_level"),
+        "invalidation_method": trigger.get("invalidation_method"),
+        "entry_authority": False,
+        "status": trigger.get("status", "NOT_AVAILABLE"),
+        "display_note": "Reference level only -- not a confirmed entry (điểm mua) unless trigger_condition_satisfied is true.",
     }
 
 
@@ -247,6 +354,7 @@ def _lineage_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
 def build_ticker_card(
     *, ticker: str, opportunity_record: Mapping[str, Any], decision_record: Mapping[str, Any],
     sector: str, portfolio_research: Mapping[str, Any] | None, prospective_record: Mapping[str, Any],
+    leadership_records: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compose one seven-section decision-workspace card for a single ticker."""
     fundamental = opportunity_record.get("fundamental") or {}
@@ -255,6 +363,9 @@ def build_ticker_card(
     usable_axes = set(opportunity_record.get("usable_major_axes") or [])
     valuation_view = _valuation_view(opportunity_record)
     catalyst_view = _catalyst_view(opportunity_record)
+    fundamental_view = _fundamental_view(opportunity_record)
+    sector_diagnostic = _sector_diagnostic_view(leadership_records or {}, ticker)
+    trigger_reference = _trigger_reference_view(opportunity_record)
     reasons = (decision_record.get("deterministic_research_inference") or {}).get("reasons") or []
     warnings = (decision_record.get("warnings_counter_thesis") or {}).get("warnings") or decision_record.get("warnings") or []
     financial = decision_record.get("financial_analysis") or {"status": "NOT_SUPPLIED", "compact": None}
@@ -270,19 +381,18 @@ def build_ticker_card(
         "setup_tags": list(tactical.get("setup_tags") or []),
         # B. Why
         "why": {
-            "fundamental_evidence": {
-                "state": fundamental.get("state"), "trajectory": fundamental.get("trajectory"),
-                "readiness": fundamental.get("readiness"), "research_fitness": fundamental.get("research_fitness"),
-            },
+            "fundamental_evidence": fundamental_view,
             "valuation_evidence": valuation_view,
             "tactical_evidence": {
                 "primary_entry_state": tactical.get("primary_entry_state"),
                 "entry_action": tactical.get("entry_action"),
                 "setup_tags": list(tactical.get("setup_tags") or []),
+                "reference_trigger": trigger_reference,
             },
             "market_sector_evidence": {
                 "breadth_regime": market.get("breadth_regime"),
                 "sector_relative_context": market.get("sector_relative_context"),
+                "sector_diagnostic": sector_diagnostic,
             },
             "catalyst_evidence": catalyst_view,
             "deterministic_reasons": list(reasons),
@@ -305,6 +415,8 @@ def build_ticker_card(
         },
         # D. Confirmation
         "confirmation": dict(decision_record.get("confirmation_boundary") or {"status": "UNAVAILABLE"}),
+        # Reference trigger/invalidation level -- diagnostic only, never a confirmed entry.
+        "reference_trigger": trigger_reference,
         # E. Invalidation
         "invalidation": {
             "technical": dict(decision_record.get("technical_invalidation") or {"status": "UNAVAILABLE"}),
@@ -312,22 +424,19 @@ def build_ticker_card(
             "future_financial_invalidation_watch": list(financial.get("future_financial_invalidation_watch") or []),
         },
         # Supporting axes shown alongside the card
-        "fundamental": {
-            "state": fundamental.get("state"), "trajectory": fundamental.get("trajectory"),
-            "readiness": fundamental.get("readiness"), "research_fitness": fundamental.get("research_fitness"),
-            "freshness_status": (fundamental.get("freshness") or {}).get("freshness_status"),
-            "source_period": (fundamental.get("freshness") or {}).get("source_period"),
-        },
+        "fundamental": fundamental_view,
         "valuation": valuation_view,
         "tactical": {
             "primary_entry_state": tactical.get("primary_entry_state"), "entry_action": tactical.get("entry_action"),
             "setup_tags": list(tactical.get("setup_tags") or []),
             "freshness_status": (tactical.get("freshness") or {}).get("freshness_status"),
             "source_session": (tactical.get("freshness") or {}).get("source_session"),
+            "reference_trigger": trigger_reference,
         },
         "market_sector": {
             "breadth_regime": market.get("breadth_regime"), "sector_relative_context": market.get("sector_relative_context"),
             "freshness_status": (market.get("freshness") or {}).get("freshness_status"),
+            "sector_diagnostic": sector_diagnostic,
         },
         "catalyst": catalyst_view,
         "liquidity": _liquidity_view(opportunity_record),
@@ -413,6 +522,7 @@ def build_artifacts(
             sector=sector,
             portfolio_research=portfolio_research,
             prospective_record=_prospective_view(prospective_lifecycle, ticker),
+            leadership_records=leadership_records,
         )
         if current_research_scope_supplied:
             card["official_research_scope"] = current_research_official_universe_scope_module.ticker_scope_view(

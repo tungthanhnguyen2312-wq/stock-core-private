@@ -72,6 +72,30 @@ def _record(*, ticker: str, session: str, tactical_record: Mapping[str, Any], st
 
     confirmation = (boundary_record or {}).get("confirmation_boundary") or {"status": "UNAVAILABLE", "reason": "BOUNDARY_ARTIFACT_NOT_SUPPLIED"}
     invalidation = (boundary_record or {}).get("technical_invalidation_boundary") or {"status": "UNAVAILABLE", "reason": "BOUNDARY_ARTIFACT_NOT_SUPPLIED"}
+    # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: `technical_structure_
+    # context.py` already computes a genuine reference trigger/invalidation price level
+    # (`_trigger_v3`/`_invalidation_v3`) on every structure record, entirely separate from
+    # whether the tactical/technical confirmation `boundary_record` above ever fires. It was
+    # never joined here before -- pure passthrough, no new computation. Kept as its own
+    # `reference_trigger_context` (not merged into `confirmation_boundary`) so a displayed
+    # reference level is never mistaken for a confirmed trigger.
+    trigger_v3 = structure_record.get("trigger_context") or {}
+    invalidation_v3 = structure_record.get("invalidation_context") or {}
+    trigger_level = trigger_v3.get("trigger_level")
+    reference_trigger_context = {
+        "trigger_level_exists": isinstance(trigger_level, (int, float)) and not isinstance(trigger_level, bool),
+        "trigger_level": trigger_level,
+        "trigger_type": trigger_v3.get("trigger_type"),
+        "trigger_condition_attached": trigger_v3.get("trigger_type") not in (None, "NO_TRIGGER"),
+        "trigger_condition_satisfied": trigger_v3.get("trigger_state") == "TRIGGERED",
+        "trigger_state": trigger_v3.get("trigger_state"),
+        "distance_to_trigger_pct": trigger_v3.get("distance_to_trigger_pct"),
+        "invalidation_level": invalidation_v3.get("invalidation_level"),
+        "invalidation_method": invalidation_v3.get("invalidation_method"),
+        "status": trigger_v3.get("status", "NOT_AVAILABLE"),
+        "entry_authority": False,
+        "authority_note": "REFERENCE_LEVEL_ONLY_NOT_A_CONFIRMED_ENTRY_OR_EXECUTION_INSTRUCTION",
+    }
 
     blockers = list(structure_record.get("blockers") or [])
     if structure_record.get("high_low_basis", {}).get("status") == "NOT_COMPATIBLE":
@@ -108,6 +132,7 @@ def _record(*, ticker: str, session: str, tactical_record: Mapping[str, Any], st
         "market_regime_context": {"current_breadth_state": market_breadth_state, "authority": "CONTEXT_ONLY_NOT_A_GATE"},
         "sector_context": {"leadership_state": sector_leadership_state},
         "confirmation_boundary": confirmation, "technical_invalidation_boundary": invalidation,
+        "reference_trigger_context": reference_trigger_context,
         "data_coverage": {
             "technical_eligible": structure_record.get("eligibility", {}).get("status") == "ELIGIBLE",
             "close_history_depth": structure_record.get("close_history_depth"),

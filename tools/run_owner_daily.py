@@ -22,6 +22,12 @@ DEFAULT_HANDOFF_REPO = ROOT.parent / "stocklookup-ai-handoffs"
 DAILY_STATE_ALLOWLIST = ("config/daily_research_session_input_registry.json",)
 SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from release_checkout_identity import CANONICAL_WEB_ROOT  # noqa: E402
+
+DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
+
 
 class OwnerDailyError(RuntimeError):
     def __init__(self, step: str, reason: str, hint: str = "") -> None:
@@ -141,6 +147,55 @@ def commit_daily_state(root: Path, session: str) -> dict[str, str]:
     return {"status": "COMMITTED", "sha": _git(root, "rev-parse", "HEAD")}
 
 
+def verify_dashboard_session(web_dir: Path, session: str) -> dict[str, Any]:
+    """Prove the published Dashboard bytes actually carry the exact resolved Daily session.
+
+    Reads only what the governed publisher (`publish_dashboard.py`, via `tools/release_
+    orchestrator.py whole-market --live`) itself just wrote to `web_dir` -- never a second,
+    independent session resolution. Requires both `build_info.market_session` and the
+    additive `build_info.investment_workspace.source_session` to equal the exact Daily
+    session; either mismatching (or the file being unreadable) fails closed.
+    """
+    build_info_path = web_dir / "data" / "build_info.json"
+    try:
+        build_info = json.loads(build_info_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"status": "FAILED", "expected_session": session, "observed_session": None,
+                "reason": f"DASHBOARD_BUILD_INFO_UNREADABLE:{type(exc).__name__}:{exc}"}
+    market_session = build_info.get("market_session")
+    workspace_session = (build_info.get("investment_workspace") or {}).get("source_session")
+    if market_session != session or workspace_session != session:
+        return {
+            "status": "FAILED", "expected_session": session, "observed_session": market_session,
+            "reason": ("DASHBOARD_SESSION_MISMATCH:"
+                      f"build_info.market_session={market_session!r}:"
+                      f"build_info.investment_workspace.source_session={workspace_session!r}"),
+        }
+    return {"status": "READY", "expected_session": session, "observed_session": market_session,
+           "build_id": build_info.get("build_id")}
+
+
+def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, web_dir: Path = DEFAULT_WEB_DIR) -> dict[str, Any]:
+    """Publish the EXACT resolved Daily session to the Dashboard via the existing governed
+    `tools/release_orchestrator.py whole-market --live` entry point -- never a second/new
+    Dashboard publisher, and never a second "latest session" resolution: `session` is the
+    only session this function ever passes downstream. Idempotent: `publish_dashboard.py`
+    itself is a no-op commit/push when the whitelist is already byte-identical (see its own
+    `Không có thay đổi; exit 0` path), so a replay of an already-published session performs
+    no duplicate Dashboard commit.
+    """
+    result = subprocess.run(
+        [sys.executable, "-u", str(root / "tools" / "release_orchestrator.py"), "whole-market",
+         "--live", "--expected-session", session, "--backend-dir", str(runtime_root), "--web-dir", str(web_dir)],
+        cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+    )
+    if result.returncode != 0:
+        tail = (result.stderr or result.stdout or "").strip()[-2000:]
+        return {"status": "FAILED", "expected_session": session, "observed_session": None,
+                "reason": f"RELEASE_ORCHESTRATOR_EXIT_{result.returncode}:{tail}"}
+    return verify_dashboard_session(web_dir, session)
+
+
 def _run_daily(root: Path, runtime_root: Path) -> None:
     result = subprocess.run([sys.executable, "-u", "daily_analysis_pipeline.py", "--runtime-root", str(runtime_root),
                              "--canonical-post-close"], cwd=root, check=False)
@@ -194,8 +249,10 @@ def open_action_center_view(path: str) -> dict[str, str]:
 
 
 def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
-                 handoff_repo: Path = DEFAULT_HANDOFF_REPO, replay_completed_session: str | None = None) -> dict[str, Any]:
+                 handoff_repo: Path = DEFAULT_HANDOFF_REPO, dashboard_web_dir: Path = DEFAULT_WEB_DIR,
+                 publish_dashboard: bool = True, replay_completed_session: str | None = None) -> dict[str, Any]:
     root, runtime_root, handoff_repo = root.resolve(), runtime_root.resolve(), handoff_repo.resolve()
+    dashboard_web_dir = dashboard_web_dir.resolve()
     producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
     if replay_completed_session:
         completion = verify_daily_completion(root, runtime_root, session=replay_completed_session)
@@ -205,22 +262,36 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         completion = verify_daily_completion(root, runtime_root)
         daily_status = "COMPLETED"
     producer_state = commit_daily_state(root, str(completion["session"]))
+    # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: publish the exact
+    # resolved Daily session to the Dashboard via the existing governed release path before
+    # AI handoff / Action Center -- a successful Daily must never leave the owner-facing
+    # Dashboard on a stale session. A Dashboard failure does not block the independent
+    # downstream steps below; it degrades the final status to PARTIAL instead (see main()).
+    dashboard = (
+        publish_dashboard_release(root, runtime_root, str(completion["session"]), web_dir=dashboard_web_dir)
+        if publish_dashboard else {"status": "SKIPPED", "expected_session": str(completion["session"]), "observed_session": None, "reason": "DASHBOARD_PUBLICATION_DISABLED"}
+    )
     handoff = publish_ai_handoff(root, handoff_repo, completion)
     action_center = materialize_action_center(root, str(completion["session"]))
-    if action_center["status"] == "PARTIAL":
+    dashboard_failed = dashboard["status"] not in {"READY", "SKIPPED"}
+    if action_center["status"] == "PARTIAL" or dashboard_failed:
         return {"status": "PARTIAL", "session": completion["session"], "daily_status": daily_status,
                 "producer_preflight": producer, "producer_state": producer_state,
-                "ai_handoff": handoff, "action_center": action_center}
+                "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center}
     action_center["view_open"] = open_action_center_view(str(action_center["view_path"]))
     return {"status": "PASS", "session": completion["session"], "daily_status": daily_status,
             "producer_preflight": producer, "producer_state": producer_state,
-            "ai_handoff": handoff, "action_center": action_center}
+            "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime-root", type=Path, default=DEFAULT_RUNTIME)
     parser.add_argument("--handoff-repo", type=Path, default=DEFAULT_HANDOFF_REPO)
+    parser.add_argument("--dashboard-web-dir", type=Path, default=DEFAULT_WEB_DIR,
+                        help="Dashboard checkout to publish the exact resolved Daily session into.")
+    parser.add_argument("--no-publish-dashboard", action="store_true",
+                        help="Skip the Dashboard publication step entirely (diagnostic/offline use only).")
     parser.add_argument("--replay-completed-session", default=None, help="Validate/publish an already completed session without acquisition.")
     parser.add_argument("--result-path", type=Path, required=True)
     args = parser.parse_args(argv)
@@ -228,6 +299,8 @@ def main(argv: list[str] | None = None) -> int:
     code = 0
     try:
         result = run_workflow(runtime_root=args.runtime_root, handoff_repo=args.handoff_repo,
+                              dashboard_web_dir=args.dashboard_web_dir,
+                              publish_dashboard=not args.no_publish_dashboard,
                               replay_completed_session=args.replay_completed_session)
         if result["status"] == "PARTIAL":
             code = 3

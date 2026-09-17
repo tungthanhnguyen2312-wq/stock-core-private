@@ -49,6 +49,14 @@ PE_NOT_MEANINGFUL = "PE_NOT_MEANINGFUL"
 TURNAROUND_CONTEXT = "TURNAROUND_CONTEXT"
 READY_STATUSES = frozenset({"READY_RESEARCH", "READY_RESEARCH_PROXY", "PARTIAL_RESEARCH", "RESEARCH_USABLE", "READY"})
 IMPLIED_EXPECTATIONS_UNAVAILABLE = "IMPLIED_EXPECTATIONS_UNAVAILABLE"
+# WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: availability and authority
+# are orthogonal. AVAILABLE_QUALIFIED / AVAILABLE_REFERENCE_ONLY / NOT_AVAILABLE describe
+# whether a genuine retained value exists and, if so, whether it is qualified for the stronger
+# (peer-relative) use -- never a replacement for `status`/`applicability`, only an additive
+# display-oriented lens over them.
+AVAILABLE_QUALIFIED = "AVAILABLE_QUALIFIED"
+AVAILABLE_REFERENCE_ONLY = "AVAILABLE_REFERENCE_ONLY"
+NOT_AVAILABLE = "NOT_AVAILABLE"
 
 
 def share_basis_class(share: Mapping[str, Any] | None) -> str:
@@ -795,6 +803,63 @@ def attach_engine_fundamental_peers(engine_records: Mapping[str, Mapping[str, An
     return out
 
 
+def method_availability_state(method: Mapping[str, Any], peer_detail: Mapping[str, Any] | None) -> str:
+    """Diagnostic availability for one valuation method -- orthogonal to `status`/`applicability`.
+
+    A usable multiple with a numeric value is AVAILABLE_QUALIFIED only when its own
+    peer-relative comparison is itself qualified (enough same-basis peers, see
+    `attach_peer_relative`); otherwise it is AVAILABLE_REFERENCE_ONLY -- the multiple is
+    real and displayable research context, it just does not support a relative-valuation
+    label (ATTRACTIVE/EXPENSIVE_RELATIVE_RESEARCH). PE_NOT_MEANINGFUL retains a genuine
+    observed `earnings_state` even though the ratio's own value is deliberately None --
+    also AVAILABLE_REFERENCE_ONLY, never NOT_AVAILABLE (the state itself is real evidence).
+    Everything else (INPUT_BLOCKED, NOT_APPLICABLE) has no genuine retained value to show.
+    """
+    if method.get("status") in {"RESEARCH_USABLE", "READY"} and _numeric(method.get("value")):
+        if isinstance(peer_detail, Mapping) and peer_detail.get("status") == "READY_RESEARCH_ONLY":
+            return AVAILABLE_QUALIFIED
+        return AVAILABLE_REFERENCE_ONLY
+    if method.get("status") == PE_NOT_MEANINGFUL:
+        return AVAILABLE_REFERENCE_ONLY
+    return NOT_AVAILABLE
+
+
+def _valuation_display_summary(methods_view: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Display-oriented rollup: never a target/fair value, never "N absolute valuation models".
+
+    Only counts the true relative-valuation method identities (`RELATIVE_METHODS`) -- market
+    cap is size context, not a valuation method, and is deliberately excluded here exactly as
+    `attach_peer_relative` excludes it from ATTRACTIVE/EXPENSIVE_RELATIVE_RESEARCH labelling.
+    """
+    relevant = {method_id: method for method_id, method in methods_view.items() if method_id in RELATIVE_METHODS}
+    qualified = {mid: m for mid, m in relevant.items() if m.get("availability_state") == AVAILABLE_QUALIFIED}
+    reference_only = {mid: m for mid, m in relevant.items() if m.get("availability_state") == AVAILABLE_REFERENCE_ONLY}
+    missing = {mid: m for mid, m in relevant.items() if m.get("availability_state") == NOT_AVAILABLE}
+    available_count = len(qualified) + len(reference_only)
+    if qualified:
+        display_state = "PEER_RELATIVE_QUALIFIED"
+    elif available_count:
+        display_state = "RESEARCH_METHODS_AVAILABLE_NOT_PEER_QUALIFIED"
+    else:
+        display_state = "NO_VALUATION_METHOD_AVAILABLE"
+    return {
+        "valuation_display_state": display_state,
+        "available_method_count": available_count,
+        "qualified_relative_method_count": len(qualified),
+        "reference_only_method_count": len(reference_only),
+        "missing_method_count": len(missing),
+        "summary_reason_codes": sorted({
+            code for m in missing.values() for code in (m.get("blocker_reason_codes") or [])
+        }),
+        "display_note": (
+            f"{available_count} valuation method(s) available for research. "
+            + ("Peer-relative valuation qualified." if qualified else "Peer-relative valuation not yet qualified.")
+        ) if available_count else "No valuation method available for research.",
+        "not_intrinsic_fair_value": True,
+        "not_dcf_or_target_price": True,
+    }
+
+
 def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Mapping[str, Any] | None,
                    feature_store: Mapping[str, Any] | None, row: Mapping[str, Any],
                    freshness: Mapping[str, Any]) -> dict[str, Any]:
@@ -822,10 +887,12 @@ def valuation_axis(*, ticker: str, decision_session: str, valuation_artifact: Ma
             "ttm_monetary_basis": method.get("ttm_monetary_basis"),
             "market_cap_monetary_basis": method.get("market_cap_monetary_basis"),
             "peer_relative": (row.get("peer_relative") or {}).get(method_id),
+            "availability_state": method_availability_state(method, (row.get("peer_relative") or {}).get(method_id)),
         }
         for method_id, method in (row.get("methods") or {}).items()
     }
     return {
+        "valuation_summary": _valuation_display_summary(methods_view),
         "readiness": readiness,
         "freshness": dict(freshness),
         "entity_class": row.get("entity_class"),

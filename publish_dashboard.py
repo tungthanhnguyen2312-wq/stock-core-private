@@ -27,6 +27,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Mapping
 
 from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
 import dashboard_session_companions
@@ -482,13 +483,24 @@ def compute_published_at(existing: dict[str, object], build_id: str, live: bool,
 
 
 def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
-                     market_session: str, head: str, live: bool = False) -> tuple[dict[str, object], str]:
+                     market_session: str, head: str, live: bool = False,
+                     workspace: Mapping[str, object] | None = None) -> tuple[dict[str, object], str]:
     """Pure: compute the manifest dict + the screener_data.js content it references.
 
     Reads existing on-disk files (screen_snapshot.csv, market_breadth.csv, the
     build-signature inputs, and the previous data/build_info.json if present)
     but never writes anything. Safe to call in dry-run. `live` only selects which value
     published_at computes to (see compute_published_at) -- it never triggers I/O here.
+
+    ``workspace``, when supplied, is the already-validated `validate_workspace_projection()`
+    payload for this exact release (its ``as_of_session`` is already proven == market_session
+    before this function is ever called -- see main()). WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_
+    DAILY_DASHBOARD_BINDING_V1: additive only. This records the Workspace product's own session
+    directly on the manifest this publisher writes, so `tools/run_owner_daily.py`'s Dashboard
+    session gate can prove ``build_info.market_session == investment_workspace.source_session``
+    against the exact bytes this governed publisher produced, without a second/parallel
+    build_info schema. Never required by any existing caller: omitted, the manifest is
+    byte-identical to before.
     """
     signature = build_signature(market_session, head)
     build_id = f"{market_session}-{head[:7]}-{signature[:10]}"
@@ -563,6 +575,12 @@ def compute_manifest(rows: list[dict[str, str]], breadth: list[dict[str, str]],
         "price_basis_contract": basis_contract,
         "files": files,
     }
+    if workspace is not None:
+        manifest["investment_workspace"] = {
+            "status": "CURRENT" if workspace.get("as_of_session") == market_session else "SESSION_MISMATCH",
+            "source_session": workspace.get("as_of_session"),
+            "artifact_identity": workspace.get("artifact_identity"),
+        }
     return manifest, screener_js_content
 
 
@@ -901,7 +919,7 @@ def main() -> int:
         if screener_source.is_file():
             screener = validate_screener_master_projection(screener_source, market_session)
         copy_plan = plan_copy_artifacts()
-        manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live)
+        manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live, workspace=workspace)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
         companion_plan = compute_current_session_companions(market_session, str(manifest["build_id"]))
         validate_json_artifacts()
