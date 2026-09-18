@@ -1,5 +1,13 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-18 - Signal Velocity V1.2 Acceleration-Semantic Closeout
+
+V1.1 inferred acceleration from repeated ordinal categorical changes. This was
+overstated: ranks are ordering helpers, not cardinal rate measurements. V1.2
+retains V1.1 source semantics but fail-closes categorical acceleration, reports
+separate trajectory patterns and continuity metadata, and renames the four real
+latest accelerating records to persistent improvement. V1.1 bytes remain intact.
+
 ## 2026-09-18 - Signal Velocity V1.1 Semantic Corrective
 
 V1 incorrectly called `FUNDAMENTAL` evidence structural repair and counted

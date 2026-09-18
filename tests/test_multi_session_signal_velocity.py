@@ -90,7 +90,7 @@ def test_categorical_early_transition_and_source_identity_are_deterministic(tmp_
     assert row["overall_transition_state"] == "MIXED_TRANSITION"
     assert row["axes"]["setup_maturation"]["trajectory"]["latest_transition"] == "IMPROVING"
     assert row["source_paths"]["snapshot"].endswith("prospective_decision_snapshot.json")
-    assert row["axes"]["structural_repair"]["trajectory"]["observation_count"] == 2
+    assert row["axes"]["structural_repair"]["trajectory"]["valid_observation_count"] == 2
     assert not {"score", "probability", "recommendation", "target_price"}.intersection(row)
 
 
@@ -171,7 +171,7 @@ def test_two_observations_never_claim_persistence_or_acceleration():
     history = [{"state": "ADVERSE"}, {"state": "REPAIRING"}]
     state = velocity._trajectory("structural_repair", history)
     assert state["persistence"] == "INSUFFICIENT_HISTORY"
-    assert state["acceleration_state"] == "INSUFFICIENT_HISTORY"
+    assert state["acceleration_state"] == "NOT_EVALUABLE_CATEGORICAL_ONLY"
 
 
 def test_three_and_five_session_categorical_trajectory_states():
@@ -185,7 +185,8 @@ def test_noisy_reversal_and_missing_observation_remain_explicit():
     noisy = velocity._trajectory("price_momentum", [{"state": "DETERIORATING"}, {"state": "IMPROVING"}, {"state": "DETERIORATING"}])
     missing = velocity._trajectory("price_momentum", [{"state": "DETERIORATING"}, {"state": "UNAVAILABLE"}, {"state": "IMPROVING"}])
     assert noisy["persistence"] == "MIXED"
-    assert missing["observation_count"] == 2
+    assert missing["valid_observation_count"] == 2
+    assert missing["continuity_state"] == "GAPS_OR_UNAVAILABLE_OBSERVATIONS"
 
 
 def test_critical_structure_or_setup_veto_blocks_constructive_overall():
@@ -193,3 +194,21 @@ def test_critical_structure_or_setup_veto_blocks_constructive_overall():
     axes["structural_repair"]["state"] = "ADVERSE"
     result, _, veto = velocity._overall(axes, "PARTIAL_RETAINED_EVIDENCE")
     assert result == "DETERIORATING" and veto == ["structural_repair"]
+
+
+def test_repeated_categorical_improvement_is_persistent_not_accelerating():
+    state = velocity._trajectory("structural_repair", [{"state": "ADVERSE", "session": "1"}, {"state": "REPAIRING", "session": "2"}, {"state": "CONSTRUCTIVE", "session": "3"}, {"state": "CONSTRUCTIVE", "session": "4"}])
+    assert state["trajectory_pattern"] == "CONTINUING_IMPROVEMENT"
+    assert state["acceleration_state"] == "NOT_EVALUABLE_CATEGORICAL_ONLY"
+
+
+def test_repeated_categorical_deterioration_never_claims_acceleration():
+    state = velocity._trajectory("structural_repair", [{"state": "CONSTRUCTIVE", "session": "1"}, {"state": "REPAIRING", "session": "2"}, {"state": "ADVERSE", "session": "3"}, {"state": "ADVERSE", "session": "4"}])
+    assert state["trajectory_pattern"] == "CONTINUING_DETERIORATION"
+    assert state["acceleration_state"] == "NOT_EVALUABLE_CATEGORICAL_ONLY"
+
+
+def test_public_overall_vocabulary_has_no_accelerating_state():
+    axes = {name: {"state": "CONSTRUCTIVE", "source_identity": name, "trajectory": {"persistence": "IMPROVEMENT_PERSISTENT", "acceleration_state": "NOT_EVALUABLE_CATEGORICAL_ONLY", "latest_transition": "IMPROVING"}} for name in velocity.AXES}
+    result, _, _ = velocity._overall(axes, "COMPLETE_RETAINED_EVIDENCE")
+    assert result == "PERSISTENT_IMPROVEMENT"

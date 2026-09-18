@@ -1,5 +1,9 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Signal velocity V1.2 acceleration closeout (2026-09-18):** Final bounded
+corrective continuation; V1.1 is immutable and superseded for acceleration
+terminology. Categorical progression/persistence is not a rate-of-change claim.
+
 **Signal velocity V1.1 semantic corrective (2026-09-18):** A corrective continuation
 of `MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1`, not a new
 milestone. V1 is preserved and superseded; V1.1 corrects source meanings and adds

@@ -1,5 +1,13 @@
 # Stock Lookup — Operational State
 
+**Signal velocity V1.2 acceleration closeout (2026-09-18):** V1.1 is preserved
+but superseded specifically for categorical acceleration terminology. Categorical
+ordinal ranks establish order only, never rate; V1.2 emits
+`NOT_EVALUABLE_CATEGORICAL_ONLY` for acceleration and separately reports
+continuation/reversal/stalled/mixed patterns, valid-observation span and gaps.
+The four V1.1 accelerating names (`HHP`, `KKC`, `MBT`, `QNW`) are now truthful
+`PERSISTENT_IMPROVEMENT`. No authority changes.
+
 **Signal velocity V1.1 semantic corrective (2026-09-18):** The original V1 is
 `SUPERSEDED_BY_SEMANTIC_CORRECTIVE`, retained immutable, and must not be treated
 as a validated cohort. V1.1 separates retained momentum, technical structure,
