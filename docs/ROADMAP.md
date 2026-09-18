@@ -1,5 +1,11 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Owner-authorized bounded repair (2026-09-17):**
+`DAILY_CURRENT_PRODUCT_RUNTIME_PUBLICATION_REPAIR_V1 = COMPLETE_LOCAL` repairs the retained-operation-to-runtime
+Workspace publication binding and completed-session replay ordering. Scope is local integration
+validation and one unpushed checkpoint; no passed/blocked analytical milestone is reopened and
+no successor is started. See `STATE.md` and `DECISIONS.md` for the materialization contract.
+
 **Personal portfolio quantitative risk decomposition V1 (2026-09-17):**
 `PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1 = COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED`.
 New `personal_portfolio_quant_risk_decomposition.py`

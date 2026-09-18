@@ -1,5 +1,24 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-17 - Daily Current-Product Runtime Publication Repair V1
+
+Owner directive authorizes a local-only publication/integration repair. Preserve the existing
+Workspace producer and semantic contract; extend the canonical runtime release allowlist with
+its retained exact-operation Workspace bytes. Verify the Producer manifest's workspace identity
+against the projection's existing `content_identity()` contract and the operation manifest's
+session/identity. Stage and validate before any promotion, include nested-file backup/rollback,
+and bind the lineage in the runtime authority manifest. Owner replay uses the completed record's
+Producer run identity through this same adapter before invoking the existing release orchestrator.
+No latest-file selection, stale fallback, manual operational copy, or second semantic producer.
+Historical runs without a retained current-product projection now fail closed at this publication
+boundary. Acquisition/research/registry semantics and Dashboard UI remain unchanged.
+
+Takeover correction (2026-09-18): the interrupted run's own August fail-closed fix
+(`tests/test_canonical_daily_operation.py`) did not extend to the one other real test that drives
+the runtime materializer against the same pre-Workspace 2026-08-26 session
+(`tests/test_canonical_trusted_subset_release.py`); that test was repointed at the real
+2026-09-17 retained session rather than weakened, keeping the same fail-closed authority intact.
+
 ## 2026-09-17 - Personal Portfolio Quantitative Risk Decomposition V1
 
 `PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1 = COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED`.

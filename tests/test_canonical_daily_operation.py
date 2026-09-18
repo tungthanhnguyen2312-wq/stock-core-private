@@ -947,8 +947,8 @@ def test_contradictory_pre_acquisition_evidence_blocks_before_acquire(tmp_path, 
     assert exc.value.stage == cdo.STAGE_BLOCKED_PRE_ACQUISITION
 
 
-def test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch(tmp_path, monkeypatch):
-    """Retained 26/8 evidence -> Phase B -> runtime -> trusted -> read-only publication reuse."""
+def test_retained_pre_workspace_session_fails_closed_before_publication(tmp_path, monkeypatch):
+    """The August operation predates Workspace retention; publication must fail closed."""
     from tests.test_governed_publication_completion import (
         FakeGh, FakeGit, PUBLIC_LINE, CI_ID, PAGES_ID, CANONICAL_ORIGIN,
     )
@@ -1048,28 +1048,21 @@ def test_isolated_2026_08_26_full_replay_reaches_published_without_dispatch(tmp_
     monkeypatch.setattr(cdo, "register_session_inputs", lambda *a, **k: {"status": "ALREADY_FROZEN_IDENTICAL"})
     monkeypatch.setattr(cdo, "validate_and_freeze_completed_session", lambda *a, **k: {"status": "ALREADY_COMPLETED"})
 
-    record = cdo.run_canonical_daily_operation(
-        tmp_path, runtime, SESSION, now=POST_CLOSE,
-        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
-        complete_publication=True,
-        acquire_fn=acquire,
-        producer_fn=lambda *a, **k: _producer(tmp_path, SESSION),
-        runtime_fn=runtime_mat,
-        trusted_fn=trusted_mat,
-        publication_runner=publication_runner,
-        out_dir=tmp_path / "operations-review",
-        consumer_root=ROOT.parent / "ai-core-private",
-    )
-    assert record["daily_operation_state"] == "PUBLISHED"
-    assert record["phase_b"]["status"] == gate.STATUS_READY
-    assert record["session"] == SESSION
-    assert record["runtime_release_status"] == "READY"
-    assert record["trusted_subset_status"] == "READY"
-    assert record["publication"]["ci_reused"] is True
-    assert record["publication"]["pages_reused"] is True
+    with pytest.raises(cdo.CanonicalDailyOperationError, match="WORKSPACE_PRODUCER_MATERIALIZATION_UNAVAILABLE") as exc:
+        cdo.run_canonical_daily_operation(
+            tmp_path, runtime, SESSION, now=POST_CLOSE,
+            working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+            complete_publication=True,
+            acquire_fn=acquire,
+            producer_fn=lambda *a, **k: _producer(tmp_path, SESSION),
+            runtime_fn=runtime_mat,
+            trusted_fn=trusted_mat,
+            publication_runner=publication_runner,
+            out_dir=tmp_path / "operations-review",
+            consumer_root=ROOT.parent / "ai-core-private",
+        )
+    assert exc.value.stage == cdo.STAGE_BLOCKED_RUNTIME_RELEASE
     assert gh.ci_dispatch_count == 0
     assert gh.pages_dispatch_count == 0
     assert len(acquire_calls) == 1
-    assert record["capability_first_collector_invoked"] is False
-    assert record["publication"]["public_byte_identity"] == "PASS"
-    assert record["publication"]["release_source_sha"] == SOURCE_SHA
+    assert not (runtime / "bundle_manifest.json").exists()

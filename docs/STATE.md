@@ -1,5 +1,47 @@
 # Stock Lookup — Operational State
 
+**Daily current-product runtime publication repair V1 (2026-09-17):**
+`DAILY_CURRENT_PRODUCT_RUNTIME_PUBLICATION_REPAIR_V1 = COMPLETE_LOCAL / READY_FOR_REVIEW`.
+Owner-authorized bounded integration repair; one local checkpoint only, no push or publication.
+The retained 2026-09-17 operation already contains a valid 1,683-card Workspace. The runtime
+adapter omitted this asset, while the owner replay skipped the adapter and invoked the live
+publisher that requires it. `canonical_dashboard_runtime_release.py` now stages the exact
+Producer-run-linked operation projection at `data/investment_decision_workspace.json`, verifies
+session, schema/contract, canonical content identity, Producer/operation lineage and coverage,
+and promotes it within the existing manifest-last rollback boundary. Missing/invalid evidence
+fails closed; no workspace semantics are recalculated. The owner publication boundary invokes
+this same adapter using the completed record's Producer run identity before publisher validation.
+A local temporary-runtime replay validates the retained 2026-09-17 bytes through the live
+publisher's validator. No production runtime, acquisition, database, external publication or
+Dashboard checkout change is authorized by this repair. No successor is opened.
+
+Validation (takeover session, 2026-09-18): `tests/test_canonical_dashboard_runtime_release.py`
+(31), `tests/test_owner_daily_workflow.py` + `tests/test_canonical_daily_operation.py` (66
+combined) all pass, including the pre-Workspace August publication expectation updated to assert
+fail-closed refusal (`WORKSPACE_PRODUCER_MATERIALIZATION_UNAVAILABLE`). The takeover found one
+additional real regression the interrupted prior pass missed:
+`tests/test_canonical_trusted_subset_release.py::test_temp_end_to_end_retained_2026_08_26` also
+drove the real runtime materializer against the same pre-Workspace 2026-08-26 session and
+therefore now fails the same closed gate; it was repointed at the nearest real retained session
+that carries a qualified Workspace (`2026-09-17`, renamed
+`test_temp_end_to_end_retained_2026_09_17`) rather than weakened, and the full 11-test suite
+passes. Four unrelated failures in `tests/test_publish_dashboard.py` (1) and
+`tests/test_dashboard_session_companions.py` (3) were confirmed PRE_EXISTING by reproducing them
+against the checkout with this repair's diff stashed out: their own synthetic fixtures never
+included `data/investment_decision_workspace.json`, which `publish_dashboard.py` already required
+independently of this repair; left unchanged as out of scope. The broader
+`tests/test_canonical_post_close_pipeline.py` suite (54 passed / 1 failed) was also run; its one
+failure is a pre-existing, environment-dependent Daily preflight gate reproduced against the
+starting implementation too (missing `vn_stock.db` runtime capability there; a dirty-checkout
+refusal here only because this checkout carries this repair's own unstaged diff), not a
+current-patch regression. Compilation and `git diff --check`
+pass on all changed files. Two independent real 2026-09-17 temporary-runtime materializations with
+sockets monkeypatched to raise on any connection attempt produce byte-identical governed release
+files, 1,683 workspace cards, zero silent drops, and pass `publish_dashboard.validate_workspace_projection`
+directly; retained/copy byte SHA-256: `52ed502e5aa0a37030c5e6a13bf6bc1104d366dac624c973632ea3ce9fb6c8d1`.
+Producer run: `649207624f0bb908f70964e257f487636b872dbbfbebfcdde50dff68437dac1d`;
+operation: `caaad572e738d607a5fbb0a356b8a3b5ae80d87a3ab3561568c997e66bf2a87d`.
+
 **Personal portfolio quantitative risk decomposition V1 (2026-09-17):**
 `PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1 = COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED`.
 Owner directive (this session): a deterministic, local-only descriptive risk decomposition over the

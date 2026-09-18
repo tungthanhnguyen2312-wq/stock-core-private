@@ -18,11 +18,12 @@ from typing import Any, Mapping
 from atomic_io import atomic_copy_file, atomic_write_file, atomic_write_json, validate_csv_file
 from daily_research_session_operations import load_registry
 import release_session_contract
+import investment_decision_workspace_projection as workspace_contract
 
 CONTRACT_VERSION = "canonical_dashboard_runtime_release/v1"
 REQUIRED_INPUTS = ("descriptive", "screening", "tactical", "triage", "official_universe")
 RELEASE_FILES = ("screen_snapshot.csv", "screen_snapshot_live.csv", "market_breadth.csv",
-                 "analysis_latest.json", "bundle_manifest.json")
+                 "analysis_latest.json", "data/investment_decision_workspace.json", "bundle_manifest.json")
 RELEASE_SESSION_FILES = ("screen_snapshot.csv", "market_breadth.csv", "analysis_latest.json",
                          "screen_snapshot_live.csv")
 
@@ -184,9 +185,64 @@ def _write_csv(path: Path, fields: tuple[str, ...], rows: list[dict[str, Any]]) 
     atomic_write_file(path, buffer.getvalue(), validator=lambda candidate: validate_csv_file(candidate, fields))
 
 
+def _stage_workspace(root: Path, session: str, staging: Path, run_manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Bind only the selected Producer run's retained operation; never rebuild semantics."""
+    operation = run_manifest.get("daily_session_operation") or {}
+    directory, operation_identity = operation.get("directory"), operation.get("identity")
+    if not isinstance(directory, str) or not directory or not operation_identity:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_OPERATION_LINEAGE_MISSING")
+    operation_dir = root / directory
+    operation_manifest_path = operation_dir / "run_manifest.json"
+    operation_manifest = _load(operation_manifest_path)
+    if operation_manifest.get("operation_identity") != operation_identity:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_OPERATION_IDENTITY_MISMATCH")
+    if operation_manifest.get("market_session") != session:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_OPERATION_SESSION_MISMATCH")
+    projections = run_manifest.get("current_product_projections") or {}
+    declared = projections.get("workspace") or {}
+    if projections.get("status") != "MATERIALIZED" or projections.get("session") != session:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_PRODUCER_MATERIALIZATION_UNAVAILABLE")
+    source = operation_dir / "investment_decision_workspace_projection.json"
+    if not source.is_file():
+        raise CanonicalRuntimeReleaseError(f"WORKSPACE_EXACT_SESSION_PROJECTION_MISSING:{source}")
+    # Validate the staged bytes, so the bytes checked are exactly those promoted.
+    target = staging / "data/investment_decision_workspace.json"
+    atomic_copy_file(source, target)
+    payload = _load(target)
+    if payload.get("schema_version") != workspace_contract.SCHEMA_VERSION:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_SCHEMA_VERSION_MISMATCH")
+    if payload.get("contract_version") != workspace_contract.CONTRACT_VERSION:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_CONTRACT_VERSION_MISMATCH")
+    if payload.get("as_of_session") != session or declared.get("as_of_session") != session:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_SESSION_MISMATCH")
+    cards, coverage = payload.get("cards"), payload.get("coverage")
+    if not isinstance(cards, dict) or not cards:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_EMPTY_CORPUS")
+    if (not isinstance(coverage, dict) or type(coverage.get("ticker_denominator")) is not int
+            or coverage["ticker_denominator"] != len(cards)
+            or declared.get("ticker_denominator") != len(cards)
+            or coverage.get("zero_silent_ticker_drops") is not True):
+        raise CanonicalRuntimeReleaseError("WORKSPACE_DENOMINATOR_OR_SILENT_DROP_VIOLATION")
+    try:
+        identity = workspace_contract.content_identity(payload)
+    except (TypeError, ValueError) as exc:
+        raise CanonicalRuntimeReleaseError("WORKSPACE_CONTENT_IDENTITY_INVALID") from exc
+    if (payload.get("artifact_identity") != identity["artifact_identity"]
+            or payload.get("artifact_sha256") != identity["artifact_sha256"]
+            or declared.get("artifact_identity") != identity["artifact_identity"]):
+        raise CanonicalRuntimeReleaseError("WORKSPACE_CONTENT_IDENTITY_MISMATCH")
+    return {"path": source.relative_to(root).as_posix() if source.is_relative_to(root) else str(source),
+            "sha256": _sha256(target), **identity,
+            "session": session, "operation_identity": operation_identity,
+            "operation_manifest_sha256": _sha256(operation_manifest_path),
+            "producer_run_identity": run_manifest.get("run_identity"),
+            "ticker_denominator": len(cards), "zero_silent_ticker_drops": True}
+
+
 def _build_release(root: Path, session: str, staging: Path, *, producer_run_identity: str | None = None) -> dict[str, Any]:
     sources, _registry = _source_paths(root, session)
     run_path, run_manifest, bundle_path, producer_bundle = _producer_run(root, session, sources, run_identity=producer_run_identity)
+    workspace_lineage = _stage_workspace(root, session, staging, run_manifest)
     tier_lineage = _verify_retained_tier_lineage(root, session, run_manifest)
     snapshot = _p3_snapshot(root, session, sources)
     descriptive = sources["descriptive"][1]
@@ -247,6 +303,7 @@ def _build_release(root: Path, session: str, staging: Path, *, producer_run_iden
                for name, (path, data) in sources.items()}
     lineage["daily_producer_run"] = {"run_identity": run_manifest.get("run_identity"), "sha256": _sha256(run_path), "path": str(run_path.relative_to(root))}
     lineage["daily_producer_bundle"] = {"sha256": _sha256(bundle_path), "path": str(bundle_path.relative_to(root))}
+    lineage["investment_decision_workspace"] = workspace_lineage
     if tier_lineage:
         lineage["retained_tier_handoff"] = tier_lineage
     analysis = {
@@ -292,6 +349,7 @@ def materialize_canonical_runtime_release(
         for name in RELEASE_FILES:
             target = runtime_root / name
             if target.exists():
+                (backup / name).parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(target, backup / name)
         try:
             for name in (*RELEASE_FILES[:-1], RELEASE_FILES[-1]):

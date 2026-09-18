@@ -25,6 +25,9 @@ SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from release_checkout_identity import CANONICAL_WEB_ROOT  # noqa: E402
+from canonical_dashboard_runtime_release import (  # noqa: E402
+    CanonicalRuntimeReleaseError, materialize_canonical_runtime_release,
+)
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -176,7 +179,8 @@ def verify_dashboard_session(web_dir: Path, session: str) -> dict[str, Any]:
 
 
 def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, web_dir: Path = DEFAULT_WEB_DIR,
-                              complete_publication: bool = True) -> dict[str, Any]:
+                              complete_publication: bool = True,
+                              producer_run_identity: str | None = None) -> dict[str, Any]:
     """Publish the EXACT resolved Daily session to the Dashboard via the existing governed
     `tools/release_orchestrator.py all --live` entry point -- never a second/new Dashboard
     publisher, and never a second "latest session" resolution: `session` is the only session
@@ -196,6 +200,15 @@ def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, w
     already byte-identical (see its own `Không có thay đổi; exit 0` path), so a replay of an
     already-published session performs no duplicate Dashboard commit.
     """
+    # Completed-session replay skips Canonical Daily. Reuse its exact retained run
+    # through the same runtime materializer before the live publisher validates it.
+    try:
+        materialize_canonical_runtime_release(
+            root, runtime_root, session, producer_run_identity=producer_run_identity,
+        )
+    except CanonicalRuntimeReleaseError as exc:
+        return {"status": "FAILED", "expected_session": session, "observed_session": None,
+                "reason": f"CANONICAL_RUNTIME_MATERIALIZATION_FAILED:{exc}"}
     argv = [sys.executable, "-u", str(root / "tools" / "release_orchestrator.py"), "all",
            "--live", "--expected-session", session, "--backend-dir", str(runtime_root), "--web-dir", str(web_dir)]
     if complete_publication:
@@ -288,6 +301,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
     # downstream steps below; it degrades the final status to PARTIAL instead (see main()).
     dashboard = (
         publish_dashboard_release(root, runtime_root, str(completion["session"]), web_dir=dashboard_web_dir,
+                                  producer_run_identity=completion["record"]["daily_producer_run_identity"],
                                   complete_publication=dashboard_complete_publication)
         if publish_dashboard else {"status": "SKIPPED", "expected_session": str(completion["session"]), "observed_session": None, "reason": "DASHBOARD_PUBLICATION_DISABLED"}
     )

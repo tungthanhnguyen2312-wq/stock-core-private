@@ -228,6 +228,7 @@ def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypa
         captured["argv"] = argv
         return _Result()
 
+    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", lambda *a, **k: {})
     monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
     web_dir = tmp_path / "web"
@@ -256,6 +257,7 @@ def test_publish_dashboard_release_can_skip_complete_publication(monkeypatch, tm
         captured["argv"] = argv
         return _Result()
 
+    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", lambda *a, **k: {})
     monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
     workflow.publish_dashboard_release(tmp_path, tmp_path / "runtime", SESSION, web_dir=tmp_path / "web", complete_publication=False)

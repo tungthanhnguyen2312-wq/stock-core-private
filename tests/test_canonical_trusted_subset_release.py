@@ -213,21 +213,27 @@ def test_period_end_helper_is_calendar_not_clock():
     assert trusted.reporting_period_end("2026") == date(2026, 12, 31)
 
 
-def test_temp_end_to_end_retained_2026_08_26(tmp_path):
+def test_temp_end_to_end_retained_2026_09_17(tmp_path):
+    # 2026-08-26 predates retained Workspace projection evidence, so the shared runtime
+    # materializer now fails that session closed (see test_canonical_daily_operation.py's
+    # equivalent August fixed-closed assertion); this end-to-end proof uses the nearest
+    # real retained session that carries a qualified Workspace projection instead.
     from _runtime_root import RUNTIME_ROOT
+    session = "2026-09-17"
+    generated_at = trusted._session_generated_at(session)
     runtime = tmp_path / "runtime"
-    runtime_release.materialize_canonical_runtime_release(ROOT, runtime, SESSION)
+    runtime_release.materialize_canonical_runtime_release(ROOT, runtime, session)
     src = RUNTIME_ROOT / "data_bctc"
     dest = runtime / "data_bctc"
     dest.mkdir()
     for ticker in DEFAULT_TICKERS:
         shutil.copy2(src / f"{ticker}_balance_sheet_quarter.parquet", dest / f"{ticker}_balance_sheet_quarter.parquet")
     result = trusted.materialize_canonical_trusted_subset(
-        ROOT, runtime, SESSION, consumer_root=CONSUMER, tickers=list(DEFAULT_TICKERS),
+        ROOT, runtime, session, consumer_root=CONSUMER, tickers=list(DEFAULT_TICKERS),
     )
     sidecar = json.loads((runtime / "statement_taxonomy_sidecar.json").read_text(encoding="utf-8"))
-    assert sidecar["session_identity"] == SESSION
-    assert sidecar["generated_at"] == GENERATED_AT
+    assert sidecar["session_identity"] == session
+    assert sidecar["generated_at"] == generated_at
     assert sidecar["producer_contract_version"] == PRODUCER_BUNDLE_CONTRACT_VERSION
     assert result["sidecar_records"] == len(DEFAULT_TICKERS)
     report = verify_trusted_subset(runtime)
