@@ -1,8 +1,8 @@
-"""Canonical Dashboard Release Publisher.
+"""Legacy local Dashboard release validator.
 
-Binds the exact Producer run identity to the authoritative Dashboard release,
-materializes runtime & web artifacts, generates canonical build_info metadata,
-and validates session coherence across all required Dashboard files.
+This module is retained only for explicit offline/replay validation of generated Dashboard
+bytes.  It is not a publication control plane and may not commit or push.  The sole governed
+remote transaction is ``tools/release_orchestrator.py all --live --complete-publication``.
 """
 from __future__ import annotations
 
@@ -27,10 +27,6 @@ from canonical_dashboard_runtime_release import (
     materialize_canonical_runtime_release,
 )
 from dashboard_session_companions import companion_relpaths
-from release_checkout_identity import (
-    CANONICAL_BRANCH,
-    assert_web_checkout_identity,
-)
 import release_session_contract
 
 
@@ -100,112 +96,6 @@ def _atomic_copy(source: Path, target: Path) -> None:
 
 def _atomic_write_text(target: Path, content: str) -> None:
     _atomic_write_bytes(target, content.encode("utf-8"))
-
-
-def _git(web_root: Path, *args: str) -> str:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=web_root,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
-    if result.returncode:
-        raise DashboardReleaseError(
-            f"DASHBOARD_GIT_FAILED:{' '.join(args)}:{result.stderr.strip() or result.stdout.strip()}"
-        )
-    return result.stdout.strip()
-
-
-def _dashboard_preflight(web_root: Path) -> None:
-    """Refuse a live publish unless the canonical Dashboard checkout starts clean."""
-    top = Path(_git(web_root, "rev-parse", "--show-toplevel"))
-    branch = _git(web_root, "branch", "--show-current")
-    origin = _git(web_root, "remote", "get-url", "origin")
-    _git(web_root, "fetch", "origin", CANONICAL_BRANCH)
-    relation = _git(web_root, "rev-list", "--left-right", "--count", f"HEAD...origin/{CANONICAL_BRANCH}")
-    ahead, behind = (int(value) for value in relation.split())
-    if behind:
-        raise DashboardReleaseError("DASHBOARD_REMOTE_AHEAD_OR_DIVERGED")
-    try:
-        assert_web_checkout_identity(
-            web_root,
-            origin_url=origin,
-            branch=branch,
-            live=True,
-            git_toplevel=top,
-        )
-    except Exception as exc:
-        raise DashboardReleaseError(f"DASHBOARD_CHECKOUT_IDENTITY_FAILED:{exc}") from exc
-    if _git(web_root, "status", "--porcelain", "--untracked-files=all"):
-        raise DashboardReleaseError("DASHBOARD_CHECKOUT_NOT_CLEAN")
-
-
-def _changed_paths(web_root: Path) -> list[str]:
-    changed = set(filter(None, _git(web_root, "diff", "--name-only").splitlines()))
-    changed.update(filter(None, _git(web_root, "diff", "--cached", "--name-only").splitlines()))
-    changed.update(filter(None, _git(web_root, "ls-files", "--others", "--exclude-standard").splitlines()))
-    return sorted(changed)
-
-
-def _publish_generated_release(
-    web_root: Path,
-    *,
-    session: str,
-    release_id: str,
-    companion_paths: tuple[str, ...],
-) -> dict[str, Any]:
-    """Commit and push exactly one verified generated Dashboard release."""
-    allowed = set(DASHBOARD_RELEASE_ALLOWLIST) | set(companion_paths)
-    changed = _changed_paths(web_root)
-    escaped = sorted(set(changed) - allowed)
-    if escaped:
-        raise DashboardReleaseError(
-            "DASHBOARD_RELEASE_ALLOWLIST_VIOLATION:" + ",".join(escaped)
-        )
-    if not changed:
-        return {"status": "NO_OP_ALREADY_PUBLISHED", "commit": _git(web_root, "rev-parse", "HEAD")}
-
-    _git(web_root, "add", "--", *changed)
-    staged = sorted(filter(None, _git(web_root, "diff", "--cached", "--name-only").splitlines()))
-    if set(staged) != set(changed) or set(staged) - allowed:
-        raise DashboardReleaseError("DASHBOARD_RELEASE_STAGING_VIOLATION")
-    byte_mismatches = []
-    for rel in staged:
-        target = web_root / rel
-        if not target.is_file():
-            # Removing an obsolete generated sidecar is a valid, governed release
-            # transition.  The allowlist and staged-path checks above still bind it.
-            continue
-        blob = subprocess.run(
-            ["git", "cat-file", "blob", f":{rel}"], cwd=web_root,
-            capture_output=True, check=False,
-        )
-        if blob.returncode or hashlib.sha256(blob.stdout).hexdigest() != _sha256(target):
-            byte_mismatches.append(rel)
-    if byte_mismatches:
-        raise DashboardReleaseError(
-            "DASHBOARD_RELEASE_GIT_BYTE_MISMATCH:" + ",".join(byte_mismatches)
-        )
-    _git(web_root, "commit", "-m", f"data(daily): publish dashboard {session}")
-    commit = _git(web_root, "rev-parse", "HEAD")
-    remaining = _changed_paths(web_root)
-    if remaining:
-        raise DashboardReleaseError(
-            "DASHBOARD_RELEASE_POST_COMMIT_DIRTY:" + ",".join(remaining)
-        )
-    _git(web_root, "push", "origin", f"HEAD:{CANONICAL_BRANCH}")
-    remote = _git(web_root, "ls-remote", "origin", f"refs/heads/{CANONICAL_BRANCH}").split()
-    if not remote or remote[0] != commit:
-        raise DashboardReleaseError("DASHBOARD_PUSH_VERIFICATION_FAILED")
-    return {
-        "status": "PUBLISHED_READY",
-        "commit": commit,
-        "release_identity": release_id,
-        "staged": staged,
-    }
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, Any]]:
@@ -424,7 +314,7 @@ def publish_dashboard_release(
     push: bool = False,
     local_only: bool = False,
 ) -> dict[str, Any]:
-    """Publish a canonical Dashboard release bound to the exact Producer run identity.
+    """Validate a canonical Dashboard release bound to the exact Producer run identity.
 
     ``local_only=True`` is a structural guarantee, not a caller convention: every write this
     function makes below is redirected to a throwaway staging directory rather than the real
@@ -438,6 +328,12 @@ def publish_dashboard_release(
     needs to remember to also pass ``push=False``; there is exactly one way to ask for zero Git
     mutation, not two flags that must agree.
     """
+    if push and not local_only:
+        raise DashboardReleaseError(
+            "LEGACY_DASHBOARD_PUBLISHER_REMOTE_DISABLED: use "
+            "tools/release_orchestrator.py all --live --complete-publication"
+        )
+
     operation_dir = Path(operation_dir)
     runtime_root = Path(runtime_root)
     web_root = Path(web_root)
@@ -457,9 +353,6 @@ def publish_dashboard_release(
             staging_data_dir.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(existing_build_info_src, staging_data_dir / "build_info.json")
         web_root = local_only_staging
-
-    if push:
-        _dashboard_preflight(web_root)
 
     previous_build_info: dict[str, Any] | None = None
     existing_build_info = web_root / "data" / "build_info.json"
@@ -701,13 +594,6 @@ def publish_dashboard_release(
         "web_root": str(web_root),
         "validated_artifacts": [r.name for r in report.results if r.status == "ok"],
     }
-    if push:
-        result.update(_publish_generated_release(
-            web_root,
-            session=session,
-            release_id=release_id,
-            companion_paths=companion_paths,
-        ))
     if local_only_staging is not None:
         result["status"] = "LOCAL_VALIDATED_NO_GIT_MUTATION"
         result["web_root"] = str(real_web_root)

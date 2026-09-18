@@ -280,7 +280,7 @@ def _git(cwd: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
-def test_publish_dashboard_release_pushes_only_generated_files_and_is_idempotent(tmp_path, monkeypatch):
+def test_legacy_publisher_refuses_remote_commit_or_push(tmp_path, monkeypatch):
     remote = tmp_path / "remote.git"
     _git(tmp_path, "init", "--bare", str(remote))
     web_root = tmp_path / "web"
@@ -312,21 +312,11 @@ def test_publish_dashboard_release_pushes_only_generated_files_and_is_idempotent
         json.dumps({"freshness": {"reference_session": session}}), encoding="utf-8",
     )
 
-    first = publish_dashboard_release(
-        session=session, operation_dir=operation, runtime_root=runtime_root,
-        web_root=web_root, replay_local=True, push=True,
-    )
-    assert first["status"] == "PUBLISHED_READY"
-    assert set(first["staged"]).issubset({
-        "screen_snapshot.csv", "market_breadth.csv", "analysis_latest.json", "bundle_manifest.json",
-        "data/screener_data.js", "data/build_info.json", "data/build_info.js",
-    })
-    remote_head = _git(web_root, "ls-remote", "origin", "refs/heads/main").split()[0]
-    assert remote_head == first["commit"]
-
-    second = publish_dashboard_release(
-        session=session, operation_dir=operation, runtime_root=runtime_root,
-        web_root=web_root, replay_local=True, push=True,
-    )
-    assert second["status"] == "NO_OP_ALREADY_PUBLISHED"
-    assert second["commit"] == first["commit"]
+    before = _git(web_root, "rev-parse", "HEAD")
+    with pytest.raises(DashboardReleaseError, match="LEGACY_DASHBOARD_PUBLISHER_REMOTE_DISABLED"):
+        publish_dashboard_release(
+            session=session, operation_dir=operation, runtime_root=runtime_root,
+            web_root=web_root, replay_local=True, push=True,
+        )
+    assert _git(web_root, "rev-parse", "HEAD") == before
+    assert _git(web_root, "ls-remote", "origin", "refs/heads/main").split()[0] == before

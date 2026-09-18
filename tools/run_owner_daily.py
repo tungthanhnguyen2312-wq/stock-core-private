@@ -228,13 +228,29 @@ def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, w
         argv, cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
     )
     if result.returncode != 0:
-        tail = (result.stderr or result.stdout or "").strip()[-2000:]
-        return {"status": "FAILED", "expected_session": session, "observed_session": None,
-                "reason": f"RELEASE_ORCHESTRATOR_EXIT_{result.returncode}:{tail}"}
+        output = (result.stderr or result.stdout or "")
+        tail = output.strip()[-2000:]
+        outcome = {"status": "FAILED", "expected_session": session, "observed_session": None,
+                   "reason": f"RELEASE_ORCHESTRATOR_EXIT_{result.returncode}:{tail}"}
+        recoverable = re.search(r"RECOVERABLE_RELEASE_SOURCE_SHA=([0-9a-fA-F]{40})", output)
+        if recoverable:
+            # A source push is recoverable evidence, never a successful publication.  Preserve
+            # its exact SHA for an owner replay to resume CI/Pages/public-byte completion.
+            outcome["publication_state"] = "GITHUB_SOURCE_UPDATED"
+            outcome["recoverable_release_source_sha"] = recoverable.group(1)
+        return outcome
     outcome = verify_dashboard_session(web_dir, session)
     for line in (result.stdout or "").splitlines():
         if line.startswith("PUBLICATION_STATE="):
             outcome["publication_state"] = line.split("=", 1)[1]
+    if complete_publication and outcome.get("publication_state") != "PUBLISHED":
+        observed = outcome.get("publication_state") or "MISSING_PUBLICATION_STATE"
+        outcome.update({
+            "status": "FAILED",
+            "reason": f"GOVERNED_PUBLICATION_COMPLETION_UNATTESTED:{observed}",
+        })
+    elif not complete_publication:
+        outcome.setdefault("publication_state", "GITHUB_SOURCE_UPDATED")
     return outcome
 
 

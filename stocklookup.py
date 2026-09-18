@@ -143,6 +143,38 @@ def _daily_integrated_decision_brief(
         return None
 
 
+def complete_governed_dashboard_publication(
+    *, session: str, runtime_root: Path, web_root: Path, producer_run_identity: str,
+) -> dict:
+    """Delegate normal Daily to the same completed-session release boundary as owner replay.
+
+    ``tools.run_owner_daily.publish_dashboard_release`` is deliberately the only adapter used
+    here: it materializes the retained run's canonical runtime (including Workspace and
+    Screener), materializes the trusted subset, and invokes the sole live transaction,
+    ``release_orchestrator.py all --live --complete-publication``.  This function adds no
+    publishing semantics; it merely prevents this CLI from translating a retained source push
+    into a false ``PUBLISHED`` result.
+    """
+    from tools.run_owner_daily import publish_dashboard_release
+
+    result = publish_dashboard_release(
+        ROOT,
+        runtime_root,
+        session,
+        web_dir=web_root,
+        complete_publication=True,
+        producer_run_identity=producer_run_identity,
+    )
+    if result.get("status") != "READY":
+        raise RuntimeError(result.get("reason") or f"GOVERNED_DASHBOARD_RELEASE_{result.get('status')}")
+    if result.get("publication_state") != "PUBLISHED":
+        raise RuntimeError(
+            "GOVERNED_PUBLICATION_COMPLETION_UNATTESTED:"
+            f"{result.get('publication_state') or 'MISSING_PUBLICATION_STATE'}"
+        )
+    return result
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="command", required=True)
@@ -429,23 +461,33 @@ def main(argv=None) -> int:
         return 1
 
     try:
-        from dashboard_release_publisher import publish_dashboard_release
         web_root = Path(os.environ.get("STOCK_LOOKUP_WEB_DIR", ROOT.parent / "market-dashboard"))
-        dash_res = publish_dashboard_release(
-            session=session,
-            operation_dir=operation,
-            runtime_root=daily_runtime or _runtime(),
-            web_root=web_root,
-            replay_local=a.replay_local or a.local_only,
-            push=not (a.replay_local or a.local_only),
-            local_only=a.local_only,
-        )
+        if a.replay_local or a.local_only:
+            # The retired publisher remains a bounded no-Git local validation helper for
+            # explicitly offline/replay diagnostics only.  It cannot push; normal Daily and
+            # owner replay below share the governed remote-completion contract.
+            from dashboard_release_publisher import publish_dashboard_release as validate_dashboard_release_locally
+            dash_res = validate_dashboard_release_locally(
+                session=session,
+                operation_dir=operation,
+                runtime_root=daily_runtime or _runtime(),
+                web_root=web_root,
+                replay_local=True,
+                local_only=a.local_only,
+            )
+        else:
+            dash_res = complete_governed_dashboard_publication(
+                session=session,
+                runtime_root=daily_runtime or _runtime(),
+                web_root=web_root,
+                producer_run_identity=run_identity,
+            )
         lines = [
             "STOCK LOOKUP DAILY",
             f"Session: {session}",
             f"AI Handoff: {result['status']}",
             f"Dashboard: {dash_res['status']}",
-            f"REMOTE_PUBLICATION={'SKIPPED_LOCAL_MODE' if a.local_only else 'PUBLISHED'}",
+            f"REMOTE_PUBLICATION={'SKIPPED_LOCAL_MODE' if (a.replay_local or a.local_only) else dash_res['publication_state']}",
         ]
         if a.local_only:
             # The local, session-scoped AI artifact pointer already exists on disk -- these are
