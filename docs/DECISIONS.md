@@ -1,5 +1,15 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-18 - Signal Velocity V1.1 Semantic Corrective
+
+V1 incorrectly called `FUNDAMENTAL` evidence structural repair and counted
+one-session axis changes. V1.1 is separately materialized and immutable: technical
+structure drives structural repair; momentum drives price momentum; participation,
+market/sector, setup, and fundamentals remain explicit separate domains. Shared
+technical source identities cannot create independent convergence; adverse structure
+or invalid setup vetoes constructive overall labels. Persistence and acceleration
+require sufficient valid retained observations. V1 remains historical evidence only.
+
 ## 2026-09-18 - Multi-Session Signal Velocity and Early Transition Intelligence V1
 
 `MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.

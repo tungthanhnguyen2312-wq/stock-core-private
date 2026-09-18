@@ -1,5 +1,15 @@
 # Stock Lookup — Operational State
 
+**Signal velocity V1.1 semantic corrective (2026-09-18):** The original V1 is
+`SUPERSEDED_BY_SEMANTIC_CORRECTIVE`, retained immutable, and must not be treated
+as a validated cohort. V1.1 separates retained momentum, technical structure,
+participation/confirmation, setup, market, sector, and fundamental sources;
+structural repair never reads fundamental evidence. It adds categorical valid-
+observation 3/5-session persistence and acceleration, distinct-source guards,
+and a technical/setup adverse veto. Seven exact snapshots qualify (09-10..18;
+09-09 lacks its exact retained handoff snapshot), producing no outcome/return
+calibration authority. Daily now writes the new `v1.1` immutable path, never V1.
+
 **Multi-session signal velocity and early transition intelligence V1 (2026-09-18):**
 `MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.
 Owner-authorized retained-session research projection only. New

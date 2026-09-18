@@ -1,5 +1,11 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Signal velocity V1.1 semantic corrective (2026-09-18):** A corrective continuation
+of `MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1`, not a new
+milestone. V1 is preserved and superseded; V1.1 corrects source meanings and adds
+categorical 3/5-session trajectory/persistence/acceleration without outcome or
+authority promotion. No successor is queued.
+
 **Multi-session signal velocity and early transition intelligence V1 (2026-09-18):**
 `MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.
 The retained-only `multi_session_signal_velocity/v1` projection admits a session solely through

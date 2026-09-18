@@ -17,13 +17,18 @@ def _write(path: Path, value: object) -> None:
 def _decision(session: str, *, price: str = "DOWNTREND", participation: str = "WEAKENING", setup: str = "BASE_BUILDING", structural: str = "WEAKENING", support: str = "ADVERSE") -> dict:
     return {
         "ticker": "FPT", "as_of_session": session, "decision_identity": f"decision:FPT:{session}",
-        "market_structure_state": price, "fundamental_state": structural,
+        "market_structure_state": structural, "fundamental_state": "INSUFFICIENT",
+        "momentum_context": {"price_direction_1d": "UP" if price == "UPTREND" else "DOWN"},
+        "breakout_state_v3": setup,
         "current_decision_state": {"entry_state": setup},
         "participation": {"status": participation},
         "market_sector_context": {"market_regime": support},
         "evidence_axes": {
-            "TACTICAL_STRUCTURE": {"state": price}, "PARTICIPATION_CONFIRMATION": {"state": participation},
-            "FUNDAMENTAL": {"state": structural}, "MARKET_SECTOR": {"state": support},
+            "TACTICAL_STRUCTURE": {"state": structural, "context": {"market_structure_state": structural, "breakout_state_v3": setup}, "lineage": {"source_artifact_identity": "technical:" + session}},
+            "MOMENTUM": {"state": "ELIGIBLE", "lineage": {"source_artifact_identity": "momentum:" + session}},
+            "PARTICIPATION_CONFIRMATION": {"state": participation, "context": {"participation_detail": {"participation_state": participation}}, "lineage": {"participation_artifact_identity": "participation:" + session}},
+            "FUNDAMENTAL": {"state": "INSUFFICIENT", "lineage": {"source_artifact_identity": "fundamental:" + session}},
+            "MARKET_SECTOR": {"state": support, "context": {"market_regime": support, "sector_leadership": support}, "lineage": {"source_artifact_identity": "market:" + session}},
         },
     }
 
@@ -82,10 +87,10 @@ def test_categorical_early_transition_and_source_identity_are_deterministic(tmp_
     second = velocity.build_from_retained_root(tmp_path)
     assert first == second
     row = [item for item in first["records"] if item["session"] == "2026-01-03"][0]
-    assert row["overall_transition_state"] == "EARLY_TRANSITION_EMERGING"
-    assert row["axis_transitions"]["setup_maturation"] == "MATURING"
+    assert row["overall_transition_state"] == "MIXED_TRANSITION"
+    assert row["axes"]["setup_maturation"]["trajectory"]["latest_transition"] == "IMPROVING"
     assert row["source_paths"]["snapshot"].endswith("prospective_decision_snapshot.json")
-    assert row["observations_count"] == 2
+    assert row["axes"]["structural_repair"]["trajectory"]["observation_count"] == 2
     assert not {"score", "probability", "recommendation", "target_price"}.intersection(row)
 
 
@@ -96,9 +101,9 @@ def test_missing_axes_are_explicit_and_never_imputed(tmp_path: Path):
     _fixture(tmp_path, [("2026-01-02", decision)])
     artifact = velocity.build_from_retained_root(tmp_path)
     row = artifact["records"][0]
-    assert row["axes"]["participation"]["state"] == "UNAVAILABLE"
+    assert row["axes"]["participation_confirmation"]["state"] == "UNAVAILABLE"
     assert row["evidence_quality"]["state"] == "PARTIAL_RETAINED_EVIDENCE"
-    assert row["overall_transition_state"] == "INITIAL_OBSERVATION"
+    assert row["overall_transition_state"] == "STABLE"
 
 
 def test_no_future_data_can_change_an_earlier_session_record(tmp_path: Path):
@@ -116,8 +121,8 @@ def test_setup_failure_and_divergence_stay_categorical(tmp_path: Path):
         ("2026-01-03", _decision("2026-01-03", price="DOWNTREND", participation="WEAKENING", setup="DOWNTREND", structural="REPAIRING", support="SUPPORTIVE")),
     ])
     row = velocity.build_from_retained_root(tmp_path)["records"][-1]
-    assert row["axis_transitions"]["setup_maturation"] == "FAILED_OR_INVALIDATED"
-    assert row["overall_transition_state"] == "DIVERGENT_TRANSITION"
+    assert row["axes"]["setup_maturation"]["state"] == "INVALID"
+    assert row["overall_transition_state"] == "DETERIORATING"
 
 
 def test_runner_writes_idempotent_immutable_artifact(tmp_path: Path):
@@ -142,3 +147,49 @@ def test_optional_daily_shadow_collector_is_nonblocking_and_idempotent(tmp_path:
     assert first["status"] == second["status"] == "COLLECTED"
     assert first["artifact_identity"] == second["artifact_identity"]
     assert (tmp_path / first["path"]).is_file()
+
+
+def test_structural_repair_never_reads_fundamental_and_fundamental_is_explicit():
+    decision = _decision("2026-01-02", structural="BREAKDOWN")
+    decision["evidence_axes"]["FUNDAMENTAL"]["state"] = "IMPROVING"
+    structural = velocity._axis(decision, "structural_repair")
+    fundamental = velocity._axis(decision, "fundamental_trajectory")
+    assert structural["state"] == "ADVERSE"
+    assert structural["source_field"].startswith("TACTICAL_STRUCTURE")
+    assert fundamental["state"] == "IMPROVING"
+
+
+def test_technical_axes_share_identity_but_cannot_be_independent_support():
+    axes = {name: {"state": "CONSTRUCTIVE", "source_identity": "same-technical", "trajectory": {"persistence": "IMPROVEMENT_PERSISTENT", "acceleration_state": "ACCELERATING", "latest_transition": "IMPROVING"}} for name in velocity.AXES}
+    axes["setup_maturation"]["state"] = "CONFIRMED"
+    result, supporting, _ = velocity._overall(axes, "COMPLETE_RETAINED_EVIDENCE")
+    assert result == "EARLY_IMPROVEMENT"
+    assert len({axes[name]["source_identity"] for name in supporting}) == 1
+
+
+def test_two_observations_never_claim_persistence_or_acceleration():
+    history = [{"state": "ADVERSE"}, {"state": "REPAIRING"}]
+    state = velocity._trajectory("structural_repair", history)
+    assert state["persistence"] == "INSUFFICIENT_HISTORY"
+    assert state["acceleration_state"] == "INSUFFICIENT_HISTORY"
+
+
+def test_three_and_five_session_categorical_trajectory_states():
+    three = velocity._trajectory("structural_repair", [{"state": "ADVERSE"}, {"state": "REPAIRING"}, {"state": "CONSTRUCTIVE"}])
+    five = velocity._trajectory("structural_repair", [{"state": "ADVERSE"}, {"state": "REPAIRING"}, {"state": "CONSTRUCTIVE"}, {"state": "CONSTRUCTIVE"}, {"state": "CONSTRUCTIVE"}])
+    assert three["persistence"] == "IMPROVEMENT_PERSISTENT"
+    assert five["window_5_state"] in {"IMPROVEMENT_PERSISTENT", "NO_CLEAR_DIRECTION"}
+
+
+def test_noisy_reversal_and_missing_observation_remain_explicit():
+    noisy = velocity._trajectory("price_momentum", [{"state": "DETERIORATING"}, {"state": "IMPROVING"}, {"state": "DETERIORATING"}])
+    missing = velocity._trajectory("price_momentum", [{"state": "DETERIORATING"}, {"state": "UNAVAILABLE"}, {"state": "IMPROVING"}])
+    assert noisy["persistence"] == "MIXED"
+    assert missing["observation_count"] == 2
+
+
+def test_critical_structure_or_setup_veto_blocks_constructive_overall():
+    axes = {name: {"state": "NEUTRAL", "source_identity": name, "trajectory": {"persistence": "NO_CLEAR_DIRECTION", "acceleration_state": "STABLE", "latest_transition": "UNCHANGED"}} for name in velocity.AXES}
+    axes["structural_repair"]["state"] = "ADVERSE"
+    result, _, veto = velocity._overall(axes, "PARTIAL_RETAINED_EVIDENCE")
+    assert result == "DETERIORATING" and veto == ["structural_repair"]

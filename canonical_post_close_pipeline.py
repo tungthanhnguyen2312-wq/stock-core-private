@@ -922,7 +922,7 @@ def run_multi_session_signal_velocity_shadow(root: Path, session: str) -> dict[s
     """
     from multi_session_signal_velocity import build_from_retained_root, write_immutable
 
-    output = root / "operations-review" / "multi-session-signal-velocity-v1" / session / "multi_session_signal_velocity_artifact.json"
+    output = root / "operations-review" / "multi-session-signal-velocity-v1.1" / session / "multi_session_signal_velocity_artifact.json"
     try:
         artifact = build_from_retained_root(root)
         if session not in artifact["validation"]["retained_sessions"]:
