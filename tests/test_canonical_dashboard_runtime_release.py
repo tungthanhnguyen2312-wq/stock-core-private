@@ -397,13 +397,22 @@ def test_completed_session_replay_materializes_before_publisher_without_acquisit
         from types import SimpleNamespace
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
+    def trusted_subset(*args, **kwargs):
+        assert args == (root.resolve(), runtime.resolve(), "2026-09-17")
+        asset = runtime / "data/investment_decision_workspace.json"
+        validate_workspace_projection(asset, "2026-09-17")
+        assert asset.read_bytes() == source.read_bytes()
+        seen.append("trusted_subset")
+        return {"session": "2026-09-17", "trusted_subset_ready": True}
+
     monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", exact_materialize)
+    monkeypatch.setattr(workflow, "materialize_canonical_trusted_subset", trusted_subset)
     monkeypatch.setattr(workflow.subprocess, "run", publisher_validation)
     result = workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
                                    replay_completed_session="2026-09-17")
     assert result["status"] == "PASS"
     assert result["daily_status"] == "ALREADY_COMPLETED / REUSED"
-    assert seen == ["materialize", "validate"]
+    assert seen == ["materialize", "trusted_subset", "validate"]
 
 
 def test_replay_materialization_failure_never_invokes_live_publisher(tmp_path, monkeypatch):

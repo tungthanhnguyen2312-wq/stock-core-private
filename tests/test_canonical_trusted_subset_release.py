@@ -154,6 +154,15 @@ def test_missing_required_taxonomy_fails_closed(tmp_path, monkey_sources):
         )
 
 
+def test_missing_statement_payload_root_fails_closed(tmp_path, monkey_sources):
+    runtime = _fixture(tmp_path)
+    shutil.rmtree(runtime / "data_bctc")
+    with pytest.raises(trusted.CanonicalTrustedSubsetError, match="STATEMENT_PAYLOAD_ROOT_MISSING"):
+        trusted.materialize_canonical_trusted_subset(
+            ROOT, runtime, SESSION, consumer_root=CONSUMER, tickers=["HPG", "SSI"],
+        )
+
+
 def test_tampered_statement_payload_hash_fails_closed(tmp_path, monkey_sources):
     runtime = _fixture(tmp_path)
     trusted.materialize_canonical_trusted_subset(
@@ -183,6 +192,30 @@ def test_trusted_artifact_hash_mismatch_fails_closed(tmp_path, monkey_sources):
     bundle.write_text(bundle.read_text(encoding="utf-8").replace(SESSION, "2026-08-24"), encoding="utf-8")
     report = verify_trusted_subset(runtime)
     assert not report.ready
+
+
+def test_promotion_failure_restores_every_governed_trusted_file(tmp_path, monkey_sources, monkeypatch):
+    runtime = _fixture(tmp_path)
+    trusted.materialize_canonical_trusted_subset(
+        ROOT, runtime, SESSION, consumer_root=CONSUMER, tickers=["HPG", "SSI"],
+    )
+    before = {name: (runtime / name).read_bytes() for name in trusted.TRUSTED_FILES}
+    original_copy = trusted.atomic_copy_file
+    failed = False
+
+    def fail_focus_once(source, destination, **kwargs):
+        nonlocal failed
+        if destination == runtime / "focus_extract.json" and not failed:
+            failed = True
+            raise OSError("trusted promotion failure")
+        return original_copy(source, destination, **kwargs)
+
+    monkeypatch.setattr(trusted, "atomic_copy_file", fail_focus_once)
+    with pytest.raises(OSError, match="trusted promotion failure"):
+        trusted.materialize_canonical_trusted_subset(
+            ROOT, runtime, SESSION, consumer_root=CONSUMER, tickers=["HPG", "SSI"],
+        )
+    assert before == {name: (runtime / name).read_bytes() for name in trusted.TRUSTED_FILES}
 
 
 def test_consumer_exact_session_validator_accepts_temp_release(tmp_path, monkey_sources):
@@ -238,6 +271,45 @@ def test_temp_end_to_end_retained_2026_09_17(tmp_path):
     assert result["sidecar_records"] == len(DEFAULT_TICKERS)
     report = verify_trusted_subset(runtime)
     assert report.ready
+
+    sys.path.insert(0, str(ROOT / "tools"))
+    import publish_release as release
+    dest_web = tmp_path / "web"
+    dest_web.mkdir()
+    publisher = release.ReleasePublisher(runtime, dest_web, live=False, use_git=False, consumer_root=CONSUMER)
+    code, payload = release.run_publication(publisher)
+    assert code == 0
+    assert payload["outcome"] == "dry_run_ok"
+
+
+def test_temp_end_to_end_retained_2026_09_18_preserves_exact_workspace(tmp_path, monkeypatch):
+    """The completed-session proof never resolves a latest session or contacts a provider."""
+    import socket
+    from _runtime_root import RUNTIME_ROOT
+    from publish_dashboard import validate_workspace_projection
+
+    monkeypatch.setattr(
+        socket, "create_connection",
+        lambda *a, **k: pytest.fail("retained-session proof must not open a network connection"),
+    )
+
+    session = "2026-09-18"
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(ROOT, runtime, session)
+    src = RUNTIME_ROOT / "data_bctc"
+    dest = runtime / "data_bctc"
+    dest.mkdir()
+    for ticker in DEFAULT_TICKERS:
+        shutil.copy2(src / f"{ticker}_balance_sheet_quarter.parquet", dest / f"{ticker}_balance_sheet_quarter.parquet")
+
+    result = trusted.materialize_canonical_trusted_subset(
+        ROOT, runtime, session, consumer_root=CONSUMER, tickers=list(DEFAULT_TICKERS),
+    )
+    assert result["session"] == session
+    assert result["trusted_subset_ready"] is True
+    assert verify_trusted_subset(runtime).ready
+    workspace = validate_workspace_projection(runtime / "data/investment_decision_workspace.json", session)
+    assert workspace["as_of_session"] == session
 
     sys.path.insert(0, str(ROOT / "tools"))
     import publish_release as release

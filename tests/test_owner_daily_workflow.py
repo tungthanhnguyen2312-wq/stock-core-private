@@ -140,6 +140,25 @@ def test_daily_resolved_session_passed_exactly_into_dashboard_publisher(monkeypa
     assert result["status"] == "PASS"
 
 
+def test_normal_daily_uses_the_same_dashboard_publication_boundary(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    seen: list[str] = []
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: seen.append("daily"))
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: seen.append("dashboard") or _ready_dashboard(*a, **k))
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff")
+
+    assert result["status"] == "PASS"
+    assert result["daily_status"] == "COMPLETED"
+    assert seen == ["daily", "dashboard"]
+
+
 def test_stale_dashboard_session_produces_partial_never_pass(monkeypatch, tmp_path):
     _write_completion(tmp_path)
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
@@ -218,6 +237,7 @@ def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypa
     coherence gate). No `--generate`/provider-acquisition flags, and never a bare `--expected-
     session` omission that would let the child re-resolve "latest" on its own."""
     captured = {}
+    stages: list[str] = []
 
     class _Result:
         returncode = 0
@@ -225,10 +245,22 @@ def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypa
         stderr = ""
 
     def _fake_run(argv, **kwargs):
+        assert stages == ["runtime", "trusted_subset"]
         captured["argv"] = argv
         return _Result()
 
-    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", lambda *a, **k: {})
+    def _runtime(*args, **kwargs):
+        assert args == (tmp_path, tmp_path / "runtime", SESSION)
+        stages.append("runtime")
+        return {}
+
+    def _trusted(*args, **kwargs):
+        assert args == (tmp_path, tmp_path / "runtime", SESSION)
+        stages.append("trusted_subset")
+        return {"session": SESSION, "trusted_subset_ready": True}
+
+    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", _runtime)
+    monkeypatch.setattr(workflow, "materialize_canonical_trusted_subset", _trusted)
     monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
     web_dir = tmp_path / "web"
@@ -241,6 +273,7 @@ def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypa
     assert "--complete-publication" in argv
     assert "--expected-session" in argv and argv[argv.index("--expected-session") + 1] == SESSION
     assert "--generate" not in argv
+    assert stages == ["runtime", "trusted_subset"]
     assert result["status"] == "READY"
     assert result["publication_state"] == "PUBLISHED"
 
@@ -258,10 +291,26 @@ def test_publish_dashboard_release_can_skip_complete_publication(monkeypatch, tm
         return _Result()
 
     monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", lambda *a, **k: {})
+    monkeypatch.setattr(workflow, "materialize_canonical_trusted_subset", lambda *a, **k: {})
     monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
     workflow.publish_dashboard_release(tmp_path, tmp_path / "runtime", SESSION, web_dir=tmp_path / "web", complete_publication=False)
     assert "--complete-publication" not in captured["argv"]
+
+
+def test_publish_dashboard_release_refuses_missing_trusted_evidence_before_orchestrator(monkeypatch, tmp_path):
+    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", lambda *a, **k: {})
+    monkeypatch.setattr(
+        workflow, "materialize_canonical_trusted_subset",
+        lambda *a, **k: (_ for _ in ()).throw(workflow.CanonicalTrustedSubsetError("STATEMENT_PAYLOAD_ROOT_MISSING")),
+    )
+    monkeypatch.setattr(workflow.subprocess, "run", lambda *a, **k: pytest.fail("orchestrator must not run"))
+
+    result = workflow.publish_dashboard_release(tmp_path, tmp_path / "runtime", SESSION, web_dir=tmp_path / "web")
+
+    assert result["status"] == "FAILED"
+    assert result["expected_session"] == SESSION
+    assert result["reason"] == "CANONICAL_TRUSTED_SUBSET_MATERIALIZATION_FAILED:STATEMENT_PAYLOAD_ROOT_MISSING"
 
 
 def test_verify_dashboard_session_fails_closed_when_build_info_missing(tmp_path):

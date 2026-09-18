@@ -28,6 +28,9 @@ from release_checkout_identity import CANONICAL_WEB_ROOT  # noqa: E402
 from canonical_dashboard_runtime_release import (  # noqa: E402
     CanonicalRuntimeReleaseError, materialize_canonical_runtime_release,
 )
+from canonical_trusted_subset_release import (  # noqa: E402
+    CanonicalTrustedSubsetError, materialize_canonical_trusted_subset,
+)
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -201,7 +204,10 @@ def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, w
     already-published session performs no duplicate Dashboard commit.
     """
     # Completed-session replay skips Canonical Daily. Reuse its exact retained run
-    # through the same runtime materializer before the live publisher validates it.
+    # through the same runtime materializer, then build the exact trusted subset
+    # from that runtime, before the governed publisher validates either release.
+    # Normal Daily reaches this same boundary after its canonical completion record
+    # is verified, so neither route can send an unproven bundle_manifest downstream.
     try:
         materialize_canonical_runtime_release(
             root, runtime_root, session, producer_run_identity=producer_run_identity,
@@ -209,6 +215,11 @@ def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, w
     except CanonicalRuntimeReleaseError as exc:
         return {"status": "FAILED", "expected_session": session, "observed_session": None,
                 "reason": f"CANONICAL_RUNTIME_MATERIALIZATION_FAILED:{exc}"}
+    try:
+        materialize_canonical_trusted_subset(root, runtime_root, session)
+    except CanonicalTrustedSubsetError as exc:
+        return {"status": "FAILED", "expected_session": session, "observed_session": None,
+                "reason": f"CANONICAL_TRUSTED_SUBSET_MATERIALIZATION_FAILED:{exc}"}
     argv = [sys.executable, "-u", str(root / "tools" / "release_orchestrator.py"), "all",
            "--live", "--expected-session", session, "--backend-dir", str(runtime_root), "--web-dir", str(web_dir)]
     if complete_publication:
