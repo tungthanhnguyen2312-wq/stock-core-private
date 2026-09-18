@@ -1,5 +1,17 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Multi-session signal velocity and early transition intelligence V1 (2026-09-18):**
+`MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.
+The retained-only `multi_session_signal_velocity/v1` projection admits a session solely through
+the completed-session ledger, its exact canonical handoff, and the handoff-declared immutable T0
+snapshot identity. It emits five categorical axes and explicit transition/evidence states only;
+it does not scan for a latest artifact, reconstruct history, read future prices/outcomes, acquire
+data, or change recommendation/execution/portfolio/PIT authority. Eight qualified retained
+sessions yield 13,464 observations; the latest cohort has five `EARLY_TRANSITION_ADVANCING` and
+1,678 `STABLE_RETAINED_STATE`. Lead-time and false-transition metrics remain explicitly not
+evaluable pending a distinct, qualified future-outcome contract. The post-close observer is
+best-effort and cannot block Daily or AI handoff. No successor is queued.
+
 **Owner-authorized bounded repair (2026-09-17):**
 `DAILY_CURRENT_PRODUCT_RUNTIME_PUBLICATION_REPAIR_V1 = COMPLETE_LOCAL` repairs the retained-operation-to-runtime
 Workspace publication binding and completed-session replay ordering. Scope is local integration

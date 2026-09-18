@@ -1,0 +1,22 @@
+{
+  "artifact_identity": "multi_session_signal_velocity:f3cea3b2c3bbfce94c8521913dedda4d940bf403d096d9a4b2fff002c9f6cf2e",
+  "contract_version": "multi_session_signal_velocity/v1",
+  "false_transition_diagnostic": "NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT",
+  "latest_session_cohort_counts": {
+    "EARLY_TRANSITION_ADVANCING": 5,
+    "STABLE_RETAINED_STATE": 1678
+  },
+  "lead_time_diagnostic": "NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT",
+  "observation_count": 13464,
+  "qualified_retained_sessions": [
+    "2026-09-09",
+    "2026-09-10",
+    "2026-09-11",
+    "2026-09-14",
+    "2026-09-15",
+    "2026-09-16",
+    "2026-09-17",
+    "2026-09-18"
+  ],
+  "validation_mode": "LOCAL_RETAINED_EVIDENCE_LIVE_EQUIVALENT_NO_PROVIDER_OR_PUBLICATION"
+}

@@ -15,11 +15,26 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1",
+    "milestone": "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PARTIAL_BY_EVIDENCE / RETAINED_SESSION_RESEARCH_ONLY / NO_AUTHORITY_PROMOTION",
+      "starting_checkpoint": "ab028772309f1866156066c804684c0ff6eaa76f",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "NONE / PIT_SAFE_RETAINED_SESSION_SIGNAL_VELOCITY_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 (this session, 2026-09-18)",
+      "state_history": ["ACTIVE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_18_QUEUED_NEXT_EMPTY_MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
+      "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Explicit owner-authorized roadmap override while queued_next was empty. multi_session_signal_velocity/v1 selects only completed-session-ledger identities, then exact canonical handoff and hash-addressed immutable T0 snapshot paths; it validates snapshot, source Integrated Decision, same-session handoff, and completed Producer operation identities without snapshot-tree scan, latest fallback, provider/network use, daily operation, or history reconstruction. Categorical axes: price trend, participation, setup maturation, structural repair, market/sector support; overall output remains INITIAL_OBSERVATION/STABLE/EARLY_TRANSITION/DIVERGENT/INSUFFICIENT only. Live-equivalent local retained evidence: 8 qualified sessions (2026-09-09..2026-09-18), 13,464 observations, latest 5 EARLY_TRANSITION_ADVANCING / 1,678 STABLE; lead-time and false-transition stay NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT because no future outcome contract is consumed. Canonical post-close invokes this only after current handoff binding, as best-effort non-blocking immutable shadow collection; unavailable collection cannot block Daily or AI handoff. No score, probability, recommendation, target, sizing, execution, portfolio, PIT, RAW_AS_TRADED, provider, or Dashboard authority change. Evidence: operations-review/multi-session-signal-velocity-v1-20260918/. No successor queued."
+    },
     {
       "milestone_id": "WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1",
       "state": "COMPLETE",

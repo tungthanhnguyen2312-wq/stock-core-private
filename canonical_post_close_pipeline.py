@@ -912,6 +912,32 @@ def retain_prospective_decision_snapshot(
     return {"status": "RETAINED", "artifact": snapshot, "path": path}
 
 
+def run_multi_session_signal_velocity_shadow(root: Path, session: str) -> dict[str, Any]:
+    """Optional retained-only transition projection after the canonical handoff exists.
+
+    The current immutable snapshot is intentionally not admitted until
+    ``build_tiered_bundle`` has written its same-session handoff binding.  Any
+    diagnostic problem is visible but cannot revise a completed Daily result,
+    block the AI handoff, or trigger data acquisition.
+    """
+    from multi_session_signal_velocity import build_from_retained_root, write_immutable
+
+    output = root / "operations-review" / "multi-session-signal-velocity-v1" / session / "multi_session_signal_velocity_artifact.json"
+    try:
+        artifact = build_from_retained_root(root)
+        if session not in artifact["validation"]["retained_sessions"]:
+            return {"status": "UNAVAILABLE", "session": session, "reason": "CURRENT_SESSION_SNAPSHOT_NOT_QUALIFIED_AFTER_HANDOFF"}
+        write_immutable(output, artifact)
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "session": session, "reason": f"RETAINED_SIGNAL_VELOCITY_FAILED:{type(exc).__name__}:{exc}"}
+    return {
+        "status": "COLLECTED", "session": session, "path": _rel(root, output),
+        "artifact_identity": artifact["artifact_identity"],
+        "latest_session_cohort_counts": artifact["validation"]["latest_session_cohort_counts"],
+        "authority_boundary": "RETAINED_ONLY_CATEGORICAL_TRANSITION_RESEARCH_NOT_A_CURRENT_DECISION_INPUT",
+    }
+
+
 def register_session_inputs(
     root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
     retained_evidence_root: Path | None = None,
@@ -1364,11 +1390,18 @@ def run_canonical_post_close(
         artifact_root=artifact_root,
         runtime_release=runtime_release,
     )
+    # The tiered bundle above writes the sole binding that qualifies today's
+    # immutable T0 snapshot.  Run the new observer only afterwards; it is
+    # deliberately best-effort and cannot change Producer or handoff success.
+    signal_velocity = run_multi_session_signal_velocity_shadow(root, session)
+    tier1 = tiers["session_handoff_bundle"]
+    tier1["multi_session_signal_velocity"] = signal_velocity
+    _write_json(tiers["bundle_dir"] / "session_handoff_bundle.json", tier1)
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
         "producer_result": producer_result, "decision_packet": decision_packet,
         "prospective": prospective, "prospective_snapshot": prospective_snapshot,
-        "runtime_release": runtime_release, "tiers": tiers,
+        "runtime_release": runtime_release, "tiers": tiers, "multi_session_signal_velocity": signal_velocity,
         "producer_head": producer_head, "consumer_head": consumer_head,
     }
 

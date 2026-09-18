@@ -1,5 +1,23 @@
 # Stock Lookup — Operational State
 
+**Multi-session signal velocity and early transition intelligence V1 (2026-09-18):**
+`MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.
+Owner-authorized retained-session research projection only. New
+`multi_session_signal_velocity/v1` begins with the governed completed-session ledger and follows
+each exact canonical-handoff-declared content identity to its immutable T0 decision snapshot; it
+does not enumerate artifact trees, choose a latest file, reconstruct prior decisions, invoke a
+provider, or use future prices/outcomes. Five categorical axes — price trend, participation,
+setup maturation, structural repair, and market/sector support — produce only explicit state
+transitions and evidence-quality states. No score, probability, expected return, recommendation,
+target, sizing, execution, portfolio, PIT, RAW_AS_TRADED, or Dashboard authority is introduced.
+The canonical post-close pipeline invokes this observer only after it has written the same-session
+handoff binding; it is immutable and non-blocking, so an unavailable observer remains visible but
+cannot fail Daily or AI handoff. Local retained-evidence validation admitted eight sessions
+(`2026-09-09` through `2026-09-18`) and 13,464 observations; latest cohort has five
+`EARLY_TRANSITION_ADVANCING` and 1,678 `STABLE_RETAINED_STATE`. Lead-time and false-transition
+diagnostics are explicitly `NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT`, not inferred. Evidence:
+`operations-review/multi-session-signal-velocity-v1-20260918/`. No successor is queued.
+
 **Daily current-product runtime publication repair V1 (2026-09-17):**
 `DAILY_CURRENT_PRODUCT_RUNTIME_PUBLICATION_REPAIR_V1 = COMPLETE_LOCAL / READY_FOR_REVIEW`.
 Owner-authorized bounded integration repair; one local checkpoint only, no push or publication.

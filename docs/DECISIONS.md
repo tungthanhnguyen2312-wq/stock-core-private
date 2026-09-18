@@ -1,5 +1,29 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-18 - Multi-Session Signal Velocity and Early Transition Intelligence V1
+
+`MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.
+
+1. The projection reuses immutable `prospective_decision_snapshot/v1` records instead of
+   recomputing any technical, fundamental, setup, market, sector, or Integrated Decision engine.
+   The completed-session ledger is the sole session selector. For every candidate it reads only
+   the exact canonical handoff and hash-addressed snapshot declared for that session, then verifies
+   snapshot content, source decision, operation, and same-session handoff identities.
+2. The only new states are categorical research descriptions for price trend, participation, setup
+   maturation, structural repair, market/sector support, evidence quality, and aggregate transition.
+   Missing retained T0 fields remain `UNAVAILABLE`; no state is filled from another session and no
+   score, probability, expected return, recommendation, target, sizing, execution, or portfolio
+   instruction is emitted.
+3. Canonical post-close runs the optional collector only after the current snapshot's handoff is
+   written, which is the condition for the snapshot to be eligible. Failure returns an explicit
+   `UNAVAILABLE` diagnostic and cannot revise a completed Daily Producer result or block AI
+   handoff. Its output is immutable and idempotent.
+4. Retained-only live-equivalent validation reports eight qualified sessions and 13,464
+   observations. Latest cohort: five `EARLY_TRANSITION_ADVANCING`, 1,678
+   `STABLE_RETAINED_STATE`. Lead-time and false-transition results are intentionally
+   `NOT_EVALUABLE_NO_FORWARD_OUTCOME_CONTRACT`: no future outcome/price contract is consumed.
+   See `operations-review/multi-session-signal-velocity-v1-20260918/`.
+
 ## 2026-09-17 - Daily Current-Product Runtime Publication Repair V1
 
 Owner directive authorizes a local-only publication/integration repair. Preserve the existing
