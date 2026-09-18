@@ -504,9 +504,10 @@ class PathResolutionReadsFreshBackendTests(_PublishDashboardTestBase):
         """BACKEND_ROOT lacking an optional artifact (e.g. analysis_bundle.json was never
         generated there) must not crash source_root() — it degrades to WEB_ROOT for that
         one name, same as a single-root invocation would. analysis_latest.json is written
-        here (unlike analysis_bundle.json) only because it is now a REQUIRED session
-        artifact -- its presence is a fixture precondition for reaching the code path this
-        test actually exercises, not something this test is itself about."""
+        here (unlike analysis_bundle.json) only because it and the current-product
+        Workspace are required session artifacts -- their presence is a fixture
+        precondition for reaching the code path this test actually exercises, not
+        something this test is itself about."""
         backend = Path(tempfile.mkdtemp(prefix="publish_dashboard_backend_"))
         self.addCleanup(shutil.rmtree, backend, ignore_errors=True)
         (backend / "screen_snapshot.csv").write_text(
@@ -514,6 +515,9 @@ class PathResolutionReadsFreshBackendTests(_PublishDashboardTestBase):
         (backend / "market_breadth.csv").write_text("group,date,n_up\nALL,2026-07-17,1\n", encoding="utf-8")
         (backend / "analysis_latest.json").write_text(
             json.dumps({"summary": {"session_date": "2026-07-17"}}), encoding="utf-8")
+        (backend / "data").mkdir()
+        shutil.copy2(self.tmp / "data" / "investment_decision_workspace.json",
+                     backend / "data" / "investment_decision_workspace.json")
         pd.BACKEND_ROOT = backend
 
         self.assertEqual(pd.source_root("analysis_bundle.json"), pd.WEB_ROOT)

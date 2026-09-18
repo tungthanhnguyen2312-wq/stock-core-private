@@ -156,7 +156,7 @@ def test_retained_tier_handoff_rejects_changed_sources(tmp_path):
 
 
 def test_retained_canonical_session_materializes_exact_runtime_contract(tmp_path):
-    from publish_dashboard import validate_workspace_projection
+    from publish_dashboard import validate_screener_master_projection, validate_workspace_projection
     # The older August fixture predates the mandatory current-product contract.
     session = "2026-09-17"
     result = runtime_release.materialize_canonical_runtime_release(ROOT, tmp_path, session)
@@ -180,6 +180,12 @@ def test_retained_canonical_session_materializes_exact_runtime_contract(tmp_path
     assert len(payload["cards"]) == 1683
     assert payload["artifact_identity"] == lineage["artifact_identity"]
     assert workspace.read_bytes() == (ROOT / lineage["path"]).read_bytes()
+    screener = tmp_path / "data/screener_master_projection.json"
+    screener_payload = validate_screener_master_projection(screener, session)
+    screener_lineage = result["lineage"]["screener_master_projection"]
+    assert len(screener_payload["cards"]) == 1683
+    assert screener_payload["artifact_identity"] == screener_lineage["artifact_identity"]
+    assert screener.read_bytes() == (ROOT / screener_lineage["path"]).read_bytes()
 
 
 def test_tampered_frozen_identity_fails_closed(tmp_path, monkeypatch):
@@ -251,11 +257,19 @@ def _workspace_release_fixture(tmp_path, monkeypatch):
                  "coverage": {"ticker_denominator": 1, "zero_silent_ticker_drops": True}}
     workspace.update(runtime_release.workspace_contract.content_identity(workspace))
     source = write(operation / "investment_decision_workspace_projection.json", workspace)
+    screener = {"schema_version": runtime_release.screener_contract.SCHEMA_VERSION,
+                "contract_version": runtime_release.screener_contract.CONTRACT_VERSION,
+                "as_of_session": session, "cards": {"AAA": {}},
+                "coverage": {"ticker_denominator": 1, "zero_silent_drops": True}}
+    screener.update(runtime_release.screener_contract.content_identity(screener))
+    screener_source = write(operation / "screener_master_projection.json", screener)
     write(operation / "run_manifest.json", {"market_session": session, "operation_identity": "operation:exact"})
     write(operation / "unrelated.json", {"must_not_promote": True})
     manifest = {"run_identity": "run:exact", "daily_session_operation": {"directory": "operation", "identity": "operation:exact"},
                 "current_product_projections": {"status": "MATERIALIZED", "session": session,
-                    "workspace": {"artifact_identity": workspace["artifact_identity"], "as_of_session": session, "ticker_denominator": 1}}}
+                    "workspace": {"artifact_identity": workspace["artifact_identity"], "as_of_session": session, "ticker_denominator": 1},
+                    "screener_master_projection": {"artifact_identity": screener["artifact_identity"], "as_of_session": session,
+                        "denominator": {"ticker_count": 1}}}}
     run_path = write(root / "run_manifest.json", manifest)
     bundle_path = write(root / "bundle.json", {})
     sources = {}
@@ -288,6 +302,40 @@ def test_workspace_materialization_is_exact_deterministic_and_allowlisted(tmp_pa
     assert first == second
     assert set(second) == set(runtime_release.RELEASE_FILES) | {"unrelated.json"}
     assert second["unrelated.json"] == b"preserve"
+
+
+def test_screener_materialization_is_exact_and_rejects_stale_runtime_copy(tmp_path, monkeypatch):
+    from publish_dashboard import validate_screener_master_projection
+    root, workspace_source, _, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    source = workspace_source.parent / "screener_master_projection.json"
+    target = tmp_path / "runtime"
+    stale = target / "data/screener_master_projection.json"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"stale projection")
+    runtime_release.materialize_canonical_runtime_release(root, target, "2026-09-17")
+    payload = validate_screener_master_projection(stale, "2026-09-17")
+    assert payload["artifact_identity"] == runtime_release.screener_contract.content_identity(payload)["artifact_identity"]
+    assert stale.read_bytes() == source.read_bytes()
+
+
+@pytest.mark.parametrize("field,value,reason", [
+    ("as_of_session", "2026-09-16", "SCREENER_SESSION_MISMATCH"),
+    ("contract_version", "invalid", "SCREENER_CONTRACT_VERSION_MISMATCH"),
+    ("artifact_identity", "tampered", "SCREENER_CONTENT_IDENTITY_MISMATCH"),
+    ("cards", {}, "SCREENER_EMPTY_CORPUS"),
+])
+def test_invalid_screener_fails_before_any_runtime_promotion(tmp_path, monkeypatch, field, value, reason):
+    root, source, _, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    screener_source = source.parent / "screener_master_projection.json"
+    screener = json.loads(screener_source.read_text(encoding="utf-8"))
+    screener[field] = value
+    screener_source.write_text(json.dumps(screener), encoding="utf-8")
+    target = tmp_path / "runtime"
+    target.mkdir()
+    (target / "bundle_manifest.json").write_bytes(b"prior release")
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError, match=reason):
+        runtime_release.materialize_canonical_runtime_release(root, target, "2026-09-17")
+    assert {p.name: p.read_bytes() for p in target.iterdir()} == {"bundle_manifest.json": b"prior release"}
 
 
 @pytest.mark.parametrize("field,value,reason", [
