@@ -197,6 +197,128 @@ def test_workspace_threads_supplementary_velocity_and_flow_price_into_every_card
     assert cards["AAA"]["flow_price"]["cohort_membership"] == "OUTSIDE_CURRENT_FLOW_RESEARCH_COHORT"
 
 
+def _write_value_observation(runtime_root, ticker, session, *, buy=100, sell=40):
+    # Raw store shape (current_foreign_flow_retention.write_exact_value_observation): keys are
+    # NOT _vnd-suffixed on disk -- dnse_foreign_flow_store.build_series re-projects them through
+    # _value_observation() to the _vnd-suffixed shape on read.
+    import dnse_foreign_flow_store as store
+    store.write_observations(runtime_root, ticker, [{
+        "ticker": ticker, "session_date": session, "observed_at": f"{session} 15:00:00.000",
+        "foreign_buy_value": buy, "foreign_sell_value": sell, "foreign_net_value": buy - sell,
+        "source": store.PROVIDER, "source_contract_version": store.SOURCE_CONTRACT_VERSION,
+        "value_unit": "vnd", "provenance": {}, "qualification_status": store.VALUE_QUALIFICATION_STATUS,
+        "warnings": [],
+    }])
+
+
+def test_flow_price_prefers_operation_linked_current_evidence_over_a_stale_static_artifact(tmp_path, monkeypatch):
+    """FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 regression: a stale
+    pre-live flow_price_divergence_shadow_artifact.json supplied via ``supplementary`` (the old
+    resolution path) must never be consumed for presentation once a newer, independently-
+    verifiable current-session VALUE observation exists in the runtime store. This must fail if
+    the fix regresses to reading only the stale static artifact.
+
+    ``monkeypatch.setenv`` overrides conftest.py's session-wide STOCK_LOOKUP_RUNTIME_ROOT (which
+    points every test at the shared dashboard-runtime checkout) so this test's VALUE store lives
+    under its own isolated ``tmp_path``, exactly like the other runtime-dependent tests in this
+    file already do.
+    """
+    monkeypatch.setenv("STOCK_LOOKUP_RUNTIME_ROOT", str(tmp_path))
+    session = SESSION
+    velocity_artifact = {
+        "contract_version": "multi_session_signal_velocity/v1.2",
+        "artifact_identity": "multi_session_signal_velocity:test",
+        "records": [{
+            "ticker": "HPG", "session": session, "overall_transition_state": "MIXED_TRANSITION",
+            "evidence_quality": {"state": "COMPLETE_RETAINED_EVIDENCE"},
+            "axes": {"structural_repair": {"trajectory": {}}},
+            "independent_supporting_axes": [], "contradicting_axes": [],
+        }],
+    }
+    # Real current-session VALUE evidence, independently verifiable via
+    # current_foreign_flow_enrichment_operation.verify_ticker_current.
+    _write_value_observation(tmp_path, "HPG", session, buy=520_495_564_350, sell=269_865_036_850)
+
+    # A stale, pre-live static artifact claiming HPG is FLOW_UNAVAILABLE -- exactly the shape the
+    # old (buggy) resolution path would have handed to presentation.
+    stale_flow_price_artifact = {
+        "contract_version": "flow_price_divergence_shadow/v1",
+        "artifact_identity": "flow_price_divergence_shadow:stale-pre-live",
+        "records": [{
+            "ticker": "HPG", "reference_session": session,
+            "flow": {"state": "FLOW_UNAVAILABLE"}, "price": {"state": "PRICE_EVIDENCE_INSUFFICIENT"},
+            "relationship": "FLOW_UNAVAILABLE", "evidence_quality": "INSUFFICIENT_RETAINED_EVIDENCE",
+            "session_alignment": {"state": "UNAVAILABLE"}, "limitations": [],
+        }],
+    }
+
+    bundle = ccpp.materialize_current_investment_decision_workspace(
+        session=session, registry_inputs=_registry_inputs(tickers=("HPG", "BBB"), session=session),
+        supplementary={"signal_velocity": velocity_artifact, "flow_price": stale_flow_price_artifact},
+        requested_at=f"{session}T18:00:00+07:00", root=tmp_path,
+    )
+    card = bundle["workspace"]["cards"]["HPG"]
+    assert card["flow_price"]["relationship"] != "FLOW_UNAVAILABLE"
+    assert card["flow_price"]["foreign_flow_state"] == "NET_FOREIGN_BUY"
+    assert card["flow_price"]["cohort_membership"] == "IN_CURRENT_FLOW_RESEARCH_COHORT"
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+_LIVE_VELOCITY_PATH = REPO_ROOT / "operations-review" / "multi-session-signal-velocity-v1.2" / "2026-09-18" / "multi_session_signal_velocity_artifact.json"
+_LIVE_ENRICHMENT_OPERATION_PATH = REPO_ROOT / "operations-review" / "current-foreign-flow-enrichment-v1" / "2026-09-18" / "current_foreign_flow_enrichment_operation.json"
+_LIVE_OBSERVATIONS_DIR = REPO_ROOT / "data" / "dnse-foreign-flow" / "observations"
+
+
+@pytest.mark.skipif(
+    not (_LIVE_VELOCITY_PATH.is_file() and _LIVE_ENRICHMENT_OPERATION_PATH.is_file() and _LIVE_OBSERVATIONS_DIR.is_dir()),
+    reason="real retained 2026-09-18 live foreign-flow evidence not present in this checkout",
+)
+def test_real_2026_09_18_live_enrichment_reproduces_the_accepted_relationship_distribution(monkeypatch):
+    """FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 real-artifact
+    acceptance: rebuilding Flow-Price from the genuine retained 2026-09-18 live foreign-flow
+    VALUE store (data/dnse-foreign-flow/observations/, independently re-verified via
+    current_foreign_flow_enrichment_operation.verify_ticker_current) reproduces the owner's
+    accepted 11/11 evaluable relationship distribution -- proving the root-caused presentation
+    bug (resolving a stale pre-live static artifact) is fixed against real evidence, not just a
+    synthetic fixture. This checkout's exact claimed artifact_identity
+    (flow_price_divergence_shadow:6ed1974...) does not independently reproduce byte-for-byte and
+    was not found anywhere in this repository's tracked history -- only the counted distribution
+    is asserted here, not a specific identity hash.
+    """
+    monkeypatch.setenv("STOCK_LOOKUP_RUNTIME_ROOT", str(REPO_ROOT))
+    velocity_artifact = json.loads(_LIVE_VELOCITY_PATH.read_text(encoding="utf-8"))
+    cohort = ccpp.resolve_flow_research_cohort_tickers()
+    artifact = ccpp.materialize_current_flow_price_divergence_shadow(
+        root=REPO_ROOT, session="2026-09-18", velocity_artifact=velocity_artifact, flow_cohort_tickers=cohort,
+    )
+    assert artifact is not None
+    assert artifact["validation"]["relationship_counts"] == {
+        "FLOW_PRICE_MIXED": 7,
+        "FOREIGN_BUYING_PRICE_WEAKNESS": 2,
+        "FOREIGN_SELLING_PRICE_WEAKNESS": 2,
+        "FLOW_UNAVAILABLE": 1672,
+    }
+    assert artifact["validation"]["relationship_evaluable_count"] == 11
+    assert artifact["validation"]["current_exact_session_aligned_count"] == 11
+
+
+def test_flow_price_degrades_gracefully_when_no_root_supplied():
+    """Backward compatibility: omitting ``root`` (existing/older callers) must still produce an
+    explicit unavailable Flow-Price, never a crash."""
+    velocity_artifact = {
+        "contract_version": "multi_session_signal_velocity/v1.2", "artifact_identity": "x",
+        "records": [{"ticker": "HPG", "session": SESSION, "overall_transition_state": "STABLE",
+                     "evidence_quality": {"state": "COMPLETE_RETAINED_EVIDENCE"}, "axes": {},
+                     "independent_supporting_axes": [], "contradicting_axes": []}],
+    }
+    bundle = ccpp.materialize_current_investment_decision_workspace(
+        session=SESSION, registry_inputs=_registry_inputs(tickers=("HPG",)),
+        supplementary={"signal_velocity": velocity_artifact},
+        requested_at="2026-09-11T18:00:00+07:00",
+    )
+    assert bundle["workspace"]["cards"]["HPG"]["flow_price"]["relationship"] == "FLOW_UNAVAILABLE"
+
+
 def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contract():
     statuses = ccpp.unavailable_recurring_context_axes()
     assert statuses == {

@@ -80,6 +80,9 @@ import current_research_official_universe_scope
 import current_thesis_case_context
 import current_valuation_opportunity_integration
 import financial_v2_current_input_authority
+import current_foreign_flow_enrichment_operation
+import dnse_foreign_flow_store
+import flow_price_divergence_shadow
 import investment_decision_workspace_projection
 import market_wide_fundamental_feature_store
 import screener_master_projection
@@ -228,6 +231,80 @@ def resolve_velocity_and_flow_price_inputs(root: Path, session: str) -> dict[str
         path = root / "operations-review" / dir_slug / session / filename
         resolved[name] = _load_json(path) if path.is_file() else None
     return resolved
+
+
+def materialize_current_flow_price_divergence_shadow(
+    *, root: Path, session: str, velocity_artifact: Mapping[str, Any] | None,
+    flow_cohort_tickers: frozenset[str],
+) -> dict[str, Any] | None:
+    """Rebuild ``flow_price_divergence_shadow/v1`` fresh, in-process, from the current-session
+    VALUE store -- never by resolving a static dated artifact file.
+
+    FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 root cause: this
+    contract's own ``write_immutable`` treats one dated ``operations-review/flow-price-
+    divergence-shadow-v1/<session>/`` path as permanent -- a byte-for-byte conflict is a hard
+    error, by design (SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1's own tests require
+    this). That is exactly right for a retained historical snapshot, but it means a corrected or
+    later-arriving live enrichment result can never overwrite an earlier snapshot at that same
+    path -- so a presentation layer that resolves "the artifact at the known dated path" can read
+    genuinely stale, pre-live evidence even after the real acquisition has completed and been
+    independently verified. ``multi_session_signal_velocity/v1.2`` does not have this problem
+    (it is materialized once per session, with no separate "live enrichment" step that can lag
+    it), so only Flow-Price needs this dynamic path.
+
+    Each cohort ticker's current-session VALUE observation is independently re-verified here via
+    ``current_foreign_flow_enrichment_operation.verify_ticker_current`` (the same check the
+    enrichment operation itself performs) -- never trusted from a stale prior manifest. A ticker
+    that fails verification (or was never enriched) is simply excluded from ``flow_series``;
+    ``flow_price_divergence_shadow.build_artifact`` already reports an excluded/absent ticker as
+    ``FLOW_UNAVAILABLE``, never a fabricated relationship.
+
+    Returns ``None`` (never raises) when Velocity is absent/wrong-contract, or when no cohort
+    ticker currently verifies -- an absent Flow-Price axis must never block the Workspace.
+    """
+    if not isinstance(velocity_artifact, Mapping) or velocity_artifact.get("contract_version") != velocity_flow_price_presentation_projection.SIGNAL_VELOCITY_CONTRACT_VERSION:
+        return None
+    runtime = runtime_root(root)
+    series: dict[str, Any] = {}
+    for ticker in sorted(flow_cohort_tickers):
+        try:
+            verification = current_foreign_flow_enrichment_operation.verify_ticker_current(runtime, ticker, session)
+        except Exception:  # noqa: BLE001 - one ticker's verification failure must not block the rest
+            continue
+        if verification.get("status") != "CURRENT":
+            continue
+        series[ticker] = dnse_foreign_flow_store.build_series(runtime, ticker, reference_session_date=session)
+    if not series:
+        return None
+    try:
+        artifact = flow_price_divergence_shadow.build_artifact(
+            reference_session=session, flow_series=series, velocity_artifact=velocity_artifact,
+        )
+    except Exception:  # noqa: BLE001 - this axis must never block core Daily / current products
+        return None
+    _persist_current_flow_price_divergence_shadow(root=root, session=session, artifact=artifact)
+    return artifact
+
+
+def _persist_current_flow_price_divergence_shadow(*, root: Path, session: str, artifact: Mapping[str, Any]) -> None:
+    """Durably record this rebuild under an operation-linked path distinct from the historical
+    dated snapshot -- never overwriting it, per PHASE 6's immutability/rebuild policy. The path
+    includes the enrichment operation's own identity so a later corrective re-run (e.g. after a
+    pagination fix) naturally gets its own new path instead of an ``IMMUTABLE_ARTIFACT_CONFLICT``
+    against an earlier, now-superseded rebuild. Best-effort only: a write failure here must never
+    block presentation, since the caller already has the artifact in hand.
+    """
+    try:
+        operation_path = root / "operations-review" / "current-foreign-flow-enrichment-v1" / session / "current_foreign_flow_enrichment_operation.json"
+        operation = _load_json(operation_path) if operation_path.is_file() else {}
+        operation_identity = str(operation.get("operation_identity") or "unverified-operation").split(":")[-1]
+        destination = (
+            root / "operations-review" / "flow-price-divergence-shadow-v1" / session
+            / f"current-operation-{operation_identity}" / "flow_price_divergence_shadow_artifact.json"
+        )
+        flow_price_divergence_shadow.write_immutable(destination, artifact)
+    except Exception:  # noqa: BLE001 - persistence is best-effort, never blocking
+        pass
 
 
 def resolve_flow_research_cohort_tickers() -> frozenset[str]:
@@ -424,6 +501,7 @@ def materialize_current_investment_decision_workspace(
     feature_store: Mapping[str, Any] | None = None,
     tactical_behavior: Mapping[str, Any] | None = None,
     current_research_scope: Mapping[str, Any] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     """Build the current-session Investment Decision Workspace from already-resolved inputs.
 
@@ -488,6 +566,24 @@ def materialize_current_investment_decision_workspace(
         financial_analysis_context=None,
         requested_at=requested_at,
     )
+    flow_research_cohort_tickers = resolve_flow_research_cohort_tickers()
+    signal_velocity_artifact = supplementary.get("signal_velocity")
+    # FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1: Flow-Price is
+    # rebuilt fresh here, never resolved from the static dated artifact
+    # ``supplementary.get("flow_price")`` used to point at -- see
+    # ``materialize_current_flow_price_divergence_shadow``'s docstring for why that path can go
+    # stale even after a live enrichment has completed and verified. ``root`` is optional only to
+    # preserve existing callers/tests that build a Workspace without a filesystem root; when
+    # absent, Flow-Price is simply unavailable for this call, exactly like any other optional
+    # axis degrading gracefully.
+    flow_price_artifact = (
+        materialize_current_flow_price_divergence_shadow(
+            root=Path(root), session=session, velocity_artifact=signal_velocity_artifact,
+            flow_cohort_tickers=flow_research_cohort_tickers,
+        )
+        if root is not None else None
+    )
+    import sys as _dbg_sys; print("DEBUG root=", root, "flow_price_artifact=", flow_price_artifact, file=_dbg_sys.stderr)
     workspace = investment_decision_workspace_projection.build_artifacts(
         opportunity_artifact=opportunity_and_decision["opportunity_context"],
         decision_artifact=opportunity_and_decision["security_decision_context"],
@@ -496,9 +592,9 @@ def materialize_current_investment_decision_workspace(
         prospective_lifecycle=None,
         requested_at=requested_at,
         current_research_scope=current_research_scope,
-        signal_velocity_artifact=supplementary.get("signal_velocity"),
-        flow_price_artifact=supplementary.get("flow_price"),
-        flow_research_cohort_tickers=resolve_flow_research_cohort_tickers(),
+        signal_velocity_artifact=signal_velocity_artifact,
+        flow_price_artifact=flow_price_artifact,
+        flow_research_cohort_tickers=flow_research_cohort_tickers,
     )
     return {
         "opportunity_context": opportunity_and_decision["opportunity_context"],
@@ -584,6 +680,7 @@ def materialize_and_write_current_product_projections(
             session=session, registry_inputs=registry_inputs, supplementary=supplementary,
             requested_at=requested_at, feature_store=feature_store_artifact,
             tactical_behavior=tactical_behavior_artifact, current_research_scope=current_research_scope,
+            root=root,
         )
         workspace = workspace_bundle["workspace"]
         snapshot_root = Path(runtime_root_override) if runtime_root_override is not None else runtime_root(root)

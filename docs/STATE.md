@@ -1,5 +1,78 @@
 # Stock Lookup — Operational State
 
+**Flow-Price canonical source backfill and presentation corrective V1 (2026-09-19):**
+`FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 = COMPLETE (root-cause
+fix and governance correction) / BLOCKED (historical multi-session backfill)`.
+
+**This entry SUPERSEDES the "corrective finding" in the very next entry below** ("Signal
+Velocity / Flow-Price decision presentation V1 (2026-09-19)"), which was itself WRONG on its
+central factual claim. That entry is preserved unedited immediately below for the record; do
+not trust its "corrective finding" paragraph.
+
+**What was actually wrong:** the prior session's audit checked only
+`operations-review/flow-price-divergence-shadow-v1/2026-09-18/flow_price_divergence_shadow_
+artifact.json` (a genuine retained artifact, correctly showing 0 evaluable relationships) and
+concluded from it that the live 11-ticker DNSE foreign-VALUE acquisition had never been run.
+That conclusion was false. It never inspected `data/dnse-foreign-flow/observations/` (11 real
+per-ticker VALUE observation files, one per cohort ticker) or
+`operations-review/current-foreign-flow-enrichment-v1/2026-09-18/current_foreign_flow_
+enrichment_operation.json` (the retained enrichment operation record, `complete_count: 11`,
+every ticker independently verified `source_is_dnse`, `qualification_status_value_only`,
+`freshness_current`, `buy_sell_net_arithmetic_consistent` against the exact 2026-09-18 session).
+
+**Independent re-verification this session** (not merely trusting either the owner's claim or
+the prior audit): rebuilt `flow_price_divergence_shadow/v1` directly from this real VALUE store
+plus the real `multi_session_signal_velocity/v1.2` artifact. The relationship distribution
+reproduces EXACTLY the owner's accepted result: `FLOW_PRICE_MIXED=7,
+FOREIGN_BUYING_PRICE_WEAKNESS=2, FOREIGN_SELLING_PRICE_WEAKNESS=2` (11/11 evaluable; the
+remaining 1,672 non-cohort tickers correctly stay `FLOW_UNAVAILABLE`, a cohort-scope fact, not a
+data failure). Real tickers per class: MIXED = HPG/PNJ/POW/PVD/QNS/SSI/VNM; buying-weakness =
+FPT/NVL; selling-weakness = EVF/PAN. The owner's specifically claimed artifact identity
+(`flow_price_divergence_shadow:6ed1974ca9053adec8122524763fa3026467fce6516c4a9d5272d3767
+bbb8e63`) does **not** independently reproduce byte-for-byte from these retained bytes and was
+not found anywhere in this repository's tracked files or git history (exhaustive `git log -S`
+search); this rebuild's own reproducible identity is
+`flow_price_divergence_shadow:27ad45e879dd98a9cfd2f2773120f5f7a36a8d2c39c1146188cec846d2c
+27b9c`, durably persisted at `operations-review/flow-price-divergence-shadow-v1/2026-09-18/
+current-operation-481f9a791a47438fa9d637adfb4f64ef927fd268183f806af70f340bb9766fa0/
+flow_price_divergence_shadow_artifact.json`.
+
+**Root cause of the stale presentation:** `flow_price_divergence_shadow.write_immutable()`
+treats one dated `operations-review/flow-price-divergence-shadow-v1/<session>/` path as
+permanent (a byte-conflict there is a hard error, by design). The pre-live 0-evaluable snapshot
+was written to that path first; the live enrichment that completed afterward (with genuinely
+zero new network calls -- see `current_foreign_flow_enrichment_operation.json`'s
+`network.network_calls_made: 0`, reusing 78 already-retained raw pages plus commit `d6f02b2`'s
+pagination-reduction fix) had no path it could durably write its corrected result to without
+conflicting with that earlier snapshot, so it was never persisted anywhere the presentation
+layer's naive "read the artifact at the known dated path" resolver could find it.
+
+**Fix:** `canonical_current_product_projections.materialize_current_flow_price_divergence_
+shadow` now rebuilds Flow-Price fresh, in-process, from the current-session VALUE store on every
+call -- independently re-verifying each cohort ticker via `current_foreign_flow_enrichment_
+operation.verify_ticker_current` -- and persists the result at a new operation-identity-scoped
+path (`.../current-operation-<enrichment_operation_identity>/...`) that naturally avoids the
+immutability conflict on any future corrective re-run. It never again resolves "the artifact at
+the known dated path." A regression test (`test_flow_price_prefers_operation_linked_current_
+evidence_over_a_stale_static_artifact`) locks this in: it fails if the fix ever regresses to
+consuming a stale static artifact while newer, independently-verifiable evidence exists.
+
+**Blocked:** the 6-session historical backfill (2026-09-10, 2026-09-11, 2026-09-14, 2026-09-15,
+2026-09-16, 2026-09-17 -- the Signal Velocity V1.2 qualified sessions other than 2026-09-18) was
+NOT performed. `current_foreign_flow_enrichment_operation.json` itself records
+`credentials_available: false` for the one run that IS retained -- no DNSE API key/secret is
+configured anywhere in this environment (no env vars, no `.env` file). The 78 already-retained
+raw pages behind the 2026-09-18 result were acquired at an earlier time outside this repository's
+visible history; this session has no means to acquire the 6 additional sessions' raw pages. This
+is an environment/credential limitation, not a policy one.
+
+**Dashboard:** `data/investment_decision_workspace.json` and `data/build_info.json` refreshed
+again from the corrected operation-linked artifact (identity
+`investment_decision_workspace_projection/v1:42784a17f6d89e834286b3b291e6afb6cac89d364210
+adfb4cd78091bb37cb3a`). Real browser acceptance confirmed all three evaluable relationship
+classes render correctly (HPG=MIXED, FPT=buying-weakness, EVF=selling-weakness), plus one
+outside-cohort ticker (AAA) and one in-cohort-but-verifying ticker.
+
 **Signal Velocity / Flow-Price decision presentation V1 (2026-09-19):**
 `SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1 = COMPLETE`. Bounded presentation-only
 milestone: the two already-governed research engines above (`multi_session_signal_velocity/v1.2`,

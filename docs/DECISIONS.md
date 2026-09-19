@@ -1,5 +1,34 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-19 - Flow-Price Canonical Source Backfill and Presentation Corrective V1
+
+`FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 = COMPLETE (fix) /
+BLOCKED (backfill)`. Corrects the "Signal Velocity and Flow-Price Decision Presentation V1"
+entry immediately below, whose central factual claim (no live 11-ticker acquisition had run)
+was independently re-verified this session and found to be wrong -- that audit never inspected
+`data/dnse-foreign-flow/observations/` or `operations-review/current-foreign-flow-enrichment-
+v1/`. See docs/STATE.md's "Flow-Price canonical source backfill and presentation corrective V1"
+entry for the full verification trail; this decision record covers only the durable design fix.
+
+1. Never resolve a static dated artifact for a value that has a separate live-enrichment step.
+   `flow_price_divergence_shadow`'s own `write_immutable` makes one dated path permanent, which
+   is correct for a historical snapshot but means a later, corrected live result can never
+   overwrite an earlier snapshot at that same path. Any contract with this shape (a retained
+   engine artifact PLUS a separate, potentially-later-completing enrichment step) must have its
+   presentation layer rebuild fresh from the current-session store, never resolve "the file at
+   the known path."
+2. Independent re-verification, not inherited trust. `materialize_current_flow_price_
+   divergence_shadow` calls `current_foreign_flow_enrichment_operation.verify_ticker_current`
+   itself for each cohort ticker rather than trusting a prior manifest's recorded status --
+   a ticker whose store state has since changed is re-evaluated, not assumed.
+3. New evidence gets a new path, never a forced overwrite. The corrected artifact is persisted
+   under an enrichment-operation-identity-scoped subpath, so a later corrective re-run
+   automatically gets its own path with no manual "force" and no risk of silently discarding the
+   prior snapshot.
+4. A regression test is mandatory for this exact failure mode, not optional coverage: supplying
+   only a stale static artifact while a newer, independently-verifiable operation exists must
+   fail the test if the fix regresses.
+
 ## 2026-09-19 - Signal Velocity and Flow-Price Decision Presentation V1
 
 `SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1 = COMPLETE`.

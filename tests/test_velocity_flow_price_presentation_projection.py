@@ -164,10 +164,17 @@ def test_real_deteriorating_ticker_projects_correctly():
 
 @pytestmark_real
 def test_real_flow_price_cohort_member_is_honestly_unavailable_today():
-    """Ground truth as of 2026-09-18: the real DNSE current-flow acquisition has not been run
-    (docs/STATE.md, current-foreign-flow-retention-productionization-v1-20260919). Every ticker,
-    including the 11-name configured cohort, is genuinely FLOW_UNAVAILABLE. This test locks in
-    that the projection reports that honestly instead of ever fabricating an evaluable relationship."""
+    """CORRECTED (FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1): this
+    file (`operations-review/flow-price-divergence-shadow-v1/2026-09-18/`) is a genuine retained
+    PRE-LIVE historical snapshot -- 0 evaluable relationships is correct FOR THIS SNAPSHOT, and it
+    is deliberately preserved immutably rather than overwritten (PHASE 6). It is NOT the real
+    current state: the live 11-ticker DNSE acquisition was subsequently run and independently
+    reproduces (see test_canonical_current_product_projections.py's operation-linked regression
+    test) a real 7 MIXED / 2 buying-weakness / 2 selling-weakness distribution. Presentation now
+    resolves that live evidence dynamically (canonical_current_product_projections.
+    materialize_current_flow_price_divergence_shadow), never this static file -- this test only
+    proves the *projection layer* still degrades this one pre-live snapshot honestly if it were
+    ever handed to it directly."""
     flow_artifact = json.loads(FLOW_PRICE_PATH.read_text(encoding="utf-8"))
     owner_focus = json.loads(OWNER_FOCUS_PATH.read_text(encoding="utf-8"))
     cohort = bridge.cohort_tickers_from_owner_focus(owner_focus)
@@ -189,10 +196,11 @@ def test_real_flow_price_non_cohort_ticker_is_outside_scope_not_missing():
 
 @pytestmark_real
 def test_real_flow_relationship_distribution_has_no_evaluable_category_today():
-    """A regression guard: if a future refresh of this fixture ever contains a genuinely
-    evaluable relationship, this test's assumption should be revisited -- it exists to make sure
-    nobody accidentally re-introduces the brief's originally-claimed (fabricated) 11/7/2/2
-    distribution into a fixture believing it to be real."""
+    """This locks in that the specific PRE-LIVE historical snapshot at FLOW_PRICE_PATH stays
+    exactly what it was when retained (0 evaluable) -- it must never be silently overwritten to
+    look like a later live result. The real, currently evaluable 7/2/2 distribution lives in the
+    dynamically-rebuilt operation-linked artifact, not in this file; see
+    test_canonical_current_product_projections.py for that coverage."""
     flow_artifact = json.loads(FLOW_PRICE_PATH.read_text(encoding="utf-8"))
     relationships = {row.get("relationship") for row in flow_artifact.get("records", [])}
     assert relationships == {"FLOW_UNAVAILABLE"}
