@@ -6,6 +6,14 @@ The platform enforces strict computational determinism, immutable provenance tra
 
 Contributions are welcome, especially reproducible bug reports, tests, documentation improvements, and bounded engineering changes. See the [MIT License](LICENSE), [CONTRIBUTING.md](CONTRIBUTING.md), and [SECURITY.md](SECURITY.md).
 
+## Public / Open-Core Boundary
+
+This repository is the **public MIT-licensed engineering core** of Stock Lookup. Public source does not mean that operational datasets, credentials, private portfolio state, proprietary calibration, execution configuration, or every future commercial capability are part of the public repository.
+
+The project intentionally separates inspectable research infrastructure from sensitive or separately licensed operating assets. See [Public / Open-Core Boundary](docs/PUBLIC_OPEN_CORE_POLICY.md) and [Commercialization & Licensing Notes](docs/COMMERCIALIZATION.md).
+
+Third-party market data and retained evidence keep their own redistribution terms; the repository's MIT License does not automatically grant rights to redistribute those external datasets.
+
 ---
 
 ## 1. Core Authority Model & Architectural Principles
@@ -91,6 +99,8 @@ For development and governance, consult the following authoritative documents:
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Chronological architectural decision records with formal rationales. | Human & AI Operators |
 | [AGENTS.md](AGENTS.md) | Agent working rules, scope boundaries, and execution protocols. | AI Executors |
 | [docs/AI_RULES.md](docs/AI_RULES.md) | Engineering safety policies, market data doctrine, and fail-closed rules. | AI Executors & Reviewers |
+| [docs/PUBLIC_OPEN_CORE_POLICY.md](docs/PUBLIC_OPEN_CORE_POLICY.md) | Public/open-core boundary and assets that must stay outside the public repository. | Public, Maintainers & Contributors |
+| [docs/COMMERCIALIZATION.md](docs/COMMERCIALIZATION.md) | MIT/commercialization posture, data-rights separation, and future product boundary. | Public & Maintainers |
 | [LICENSE](LICENSE) | MIT Open Source License terms. | Public & Contributors |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution and maintainer guidelines. | Public & Contributors |
 | [SECURITY.md](SECURITY.md) | Security vulnerability reporting protocol. | Public & Contributors |
@@ -108,7 +118,7 @@ For development and governance, consult the following authoritative documents:
 
 ### Running Deterministic Unit Tests
 ```powershell
-# Run core deterministic test suite:
+# Run core deterministic unit tests:
 python -m pytest tests/test_market_analysis_artifact.py tests/test_field_temporal_contract.py tests/test_canonical_universe_tiers.py tests/test_market_volume_value_semantic_contract.py tests/test_official_corporate_action_pillar.py
 
 # Verify syntax & compilation:
