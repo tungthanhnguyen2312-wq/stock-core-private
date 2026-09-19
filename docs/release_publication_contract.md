@@ -31,15 +31,37 @@ not live authority. Validation, `git add`, commit, and push must use the same ca
 
 ## Current Workspace product projection
 
-`data/investment_decision_workspace.json` is the required current Dashboard product asset. It is
-not a Dashboard-generated report and is not inferred from `analysis_latest.json` or candle files.
-The Producer publisher accepts `--workspace-projection-source <path>` (otherwise the canonical
-runtime path), validates `investment_decision_workspace_dashboard_projection/v1`, a matching
-market session, a non-empty producer identity, card denominator equality, and the explicit
-zero-silent-drop assertion, then copies the verified bytes atomically into the served checkout.
-The asset is included in the served-file allowlist. A missing, malformed, stale, or incoherent
-projection fails publication before any public write. Candle and sector sidecars remain optional
-presentation data and cannot replace this current product contract.
+`data/investment_decision_workspace.json` (the canonical runtime artifact, read from
+`BACKEND_ROOT`) is the required current Dashboard product source. It is not a Dashboard-generated
+report and is not inferred from `analysis_latest.json` or candle files. The Producer publisher
+accepts `--workspace-projection-source <path>` (otherwise the canonical runtime path), validates
+`investment_decision_workspace_projection/v1`, a matching market session, a non-empty producer
+identity, card denominator equality, and the explicit zero-silent-drop assertion.
+
+As of `DASHBOARD_PAYLOAD_COMPACTION_AND_INVESTOR_FIRST_IA_V1`, this validated ~95MB runtime
+artifact is never itself copied into the served checkout (a single file that size is a Git/Pages
+release-size concern, and every consumer page only ever needed a thin per-ticker slice up front
+plus one ticker's full detail at a time). `materialize_workspace_read_model()`
+(`workspace_public_read_model.py`) instead splits it, presentation-only, into:
+
+* `data/workspace_index.json` (`workspace_index/v1`) — one small "thin card" per ticker (the
+  fields the list/filter/search views actually read) plus a deterministic `detail_shard`
+  reference, and every top-level field (`coverage`, `blocked_outputs`, `display_metric_catalog`,
+  ...) unchanged.
+* `data/workspace_detail/<A-Z|_>.json` (`workspace_detail_shard/v1`) — the full, unmodified
+  per-ticker card, one shard per ticker's first letter.
+
+Both carry the source artifact's own `as_of_session`/`artifact_identity`, so
+`verify_workspace_read_model_binding()` can prove, from the bytes actually written to the served
+checkout, that every shard the index's `shard_manifest` declares exists with the exact recorded
+hash and the same session/identity as the index — the property that rules out a browser ever
+combining an index from one session with a shard from another. The pre-migration monolithic
+`data/investment_decision_workspace.json` in the served checkout is actively retired
+(`retire_legacy_workspace_monolith()`) rather than kept alongside the new read model. Both the
+index and whichever shard files currently exist are included in the served-file allowlist. A
+missing, malformed, stale, or incoherent source projection — or a binding mismatch after
+materialization — fails publication before any public write. Candle and sector sidecars remain
+optional presentation data and cannot replace this current product contract.
 
 ## Workspace topology invariant
 

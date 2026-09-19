@@ -774,16 +774,60 @@ class WorkspacePublicationContractTests(_PublishDashboardTestBase):
         with self.assertRaisesRegex(ValueError, "CURRENT_PRODUCT_ARTIFACT_SESSION_MISMATCH"):
             pd.validate_workspace_projection(source, "2026-07-17")
 
-    def test_workspace_projection_copy_is_explicit_and_byte_preserving(self):
+    def test_workspace_read_model_materializes_index_and_shard_and_is_a_no_op_when_unchanged(self):
         source = self.backend / "data" / "investment_decision_workspace.json"
         payload = json.loads(source.read_text(encoding="utf-8"))
         payload["artifact_identity"] = "investment_decision_workspace_projection/v1:changed-fixture"
-        source.write_text(json.dumps(payload), encoding="utf-8")
-        before = source.read_bytes()
-        self.assertTrue(pd.copy_workspace_projection(source))
-        target = self.tmp / "data" / "investment_decision_workspace.json"
-        self.assertEqual(target.read_bytes(), before)
-        self.assertFalse(pd.copy_workspace_projection(source))
+        payload["cards"] = {"HPG": {"ticker": "HPG", "sector": "STEEL"}}
+        payload["coverage"] = {"ticker_denominator": 1, "zero_silent_ticker_drops": True}
+
+        result = pd.materialize_workspace_read_model(payload)
+        self.assertTrue(result["index_changed"])
+        self.assertEqual(result["ticker_count"], 1)
+        self.assertEqual(result["shard_count"], 1)
+
+        index_target = self.tmp / "data" / "workspace_index.json"
+        self.assertTrue(index_target.is_file())
+        index_document = json.loads(index_target.read_text(encoding="utf-8"))
+        self.assertEqual(index_document["cards"]["HPG"]["sector"], "STEEL")
+        self.assertEqual(index_document["source_artifact_identity"], payload["artifact_identity"])
+
+        shard_target = self.tmp / "data" / "workspace_detail" / "H.json"
+        self.assertTrue(shard_target.is_file())
+        shard_document = json.loads(shard_target.read_text(encoding="utf-8"))
+        self.assertEqual(shard_document["tickers"]["HPG"], {"ticker": "HPG", "sector": "STEEL"})
+
+        pd.verify_workspace_read_model_binding()  # must not raise
+
+        before_index_mtime = index_target.stat().st_mtime_ns
+        before_shard_mtime = shard_target.stat().st_mtime_ns
+        repeat = pd.materialize_workspace_read_model(payload)
+        self.assertFalse(repeat["index_changed"])
+        self.assertEqual(repeat["shards_changed"], 0)
+        self.assertEqual(index_target.stat().st_mtime_ns, before_index_mtime,
+                          "no-op republish must not even rewrite identical bytes")
+        self.assertEqual(shard_target.stat().st_mtime_ns, before_shard_mtime)
+
+    def test_workspace_read_model_retires_stale_shard_no_longer_produced(self):
+        source = self.backend / "data" / "investment_decision_workspace.json"
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        payload["cards"] = {"VNM": {"ticker": "VNM"}}
+        payload["coverage"] = {"ticker_denominator": 1, "zero_silent_ticker_drops": True}
+        pd.materialize_workspace_read_model(payload)
+        self.assertTrue((self.tmp / "data" / "workspace_detail" / "V.json").is_file())
+
+        payload["cards"] = {"HPG": {"ticker": "HPG"}}
+        result = pd.materialize_workspace_read_model(payload)
+        self.assertEqual(result["shards_removed"], 1)
+        self.assertFalse((self.tmp / "data" / "workspace_detail" / "V.json").exists())
+        self.assertTrue((self.tmp / "data" / "workspace_detail" / "H.json").is_file())
+
+    def test_legacy_monolith_is_retired_when_present(self):
+        legacy = self.tmp / "data" / "investment_decision_workspace.json"
+        legacy.write_text("{}", encoding="utf-8")
+        self.assertEqual(pd.retire_legacy_workspace_monolith(), "data/investment_decision_workspace.json")
+        self.assertFalse(legacy.exists())
+        self.assertIsNone(pd.retire_legacy_workspace_monolith())
 
     def test_workspace_projection_real_canonical_shape_is_accepted_without_producer_artifact_identity(self):
         # WORKSPACE_PUBLISHER_LINEAGE_CONTRACT_RECONCILIATION_V1: a payload shaped exactly like

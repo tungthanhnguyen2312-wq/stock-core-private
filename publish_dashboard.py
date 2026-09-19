@@ -33,6 +33,7 @@ from atomic_io import atomic_copy_file, atomic_write_file, validate_json_file
 import dashboard_session_companions
 import release_session_contract
 import trusted_subset_contract
+import workspace_public_read_model
 from release_checkout_identity import (
     CANONICAL_BACKEND_ROOT,
     CANONICAL_WEB_ROOT,
@@ -90,6 +91,11 @@ COPY_ARTIFACTS = (
     "data/candle_signals.json", "data/candle_signals.js",
     "data/sector_heatmap.json", "data/sector_heatmap.js",
 )
+# The Producer's canonical RUNTIME artifact (BACKEND_ROOT-relative). Read and validated here,
+# but -- since DASHBOARD_PAYLOAD_COMPACTION_AND_INVESTOR_FIRST_IA_V1 -- never itself copied into
+# the served checkout: it is a ~95MB monolith (all 1,683 tickers' full diagnostic detail) and a
+# GitHub/Pages release-size concern in its own right. What gets published is the two-layer
+# public read model derived from it -- see workspace_public_read_model.py.
 WORKSPACE_ASSET = "data/investment_decision_workspace.json"
 # ``schema_version`` (the artifact's structural/versioning field -- currently "1.0.0") and
 # ``contract_version`` (the semantic contract identifier) are two distinct fields on the real
@@ -101,6 +107,13 @@ WORKSPACE_ASSET = "data/investment_decision_workspace.json"
 # RELEASE_INTEGRATION_V1 -- validate both fields against their own real expected values.
 WORKSPACE_SCHEMA_VERSION = "1.0.0"
 WORKSPACE_CONTRACT_VERSION = "investment_decision_workspace_projection/v1"
+# The PUBLIC two-layer read model materialized from the validated WORKSPACE_ASSET payload (see
+# materialize_workspace_read_model() / workspace_public_read_model.py). WORKSPACE_INDEX_ASSET is
+# a required, statically-known path; shard files under WORKSPACE_DETAIL_DIR are dynamically
+# named per workspace_public_read_model.shard_key_for_ticker() and are discovered on disk (see
+# build_whitelist()/validate_json_artifacts()), never statically enumerated here.
+WORKSPACE_INDEX_ASSET = "data/workspace_index.json"
+WORKSPACE_DETAIL_DIR = "data/workspace_detail"
 SCREENER_MASTER_ASSET = "data/screener_master_projection.json"
 SCREENER_MASTER_JS_ASSET = "data/screener_master_projection.js"
 SCREENER_MASTER_SCHEMA = "screener_master_projection/v1"
@@ -109,8 +122,12 @@ OPTIONAL_SAFE_WEB_ARTIFACTS = {
     SCREENER_MASTER_JS_ASSET,
 }
 SAFE_WEB_ARTIFACTS = set(COPY_ARTIFACTS) | {
-    WORKSPACE_ASSET, "data/screener_data.js", "data/build_info.json", "data/build_info.js",
+    WORKSPACE_INDEX_ASSET, "data/screener_data.js", "data/build_info.json", "data/build_info.js",
 }
+# A legacy web-root artifact this publisher must actively retire (never re-create) once found --
+# see retire_legacy_workspace_monolith(). Distinct from NEVER_PUBLISH (paths that were never
+# meant to be published at all); this one WAS the governed public asset before this milestone.
+LEGACY_WORKSPACE_MONOLITH_ASSET = "data/investment_decision_workspace.json"
 NEVER_PUBLISH = {
     "vn_stock.db", "config.json", "publish_log.txt", "tickers.txt",
     "sync_and_publish.bat", "sync_and_push.bat",
@@ -286,14 +303,86 @@ def validate_workspace_projection(source: Path, market_session: str) -> dict[str
     return payload
 
 
-def copy_workspace_projection(source: Path) -> bool:
-    """Materialize the validated, explicit Workspace projection as a governed web asset."""
-    target = WEB_ROOT / WORKSPACE_ASSET
-    if target.is_file() and sha256(target) == sha256(source):
-        return False
-    target.parent.mkdir(parents=True, exist_ok=True)
-    atomic_copy_file(source, target, validator=validate_json_file)
-    return True
+def materialize_workspace_read_model(workspace: Mapping[str, object]) -> dict[str, object]:
+    """Split the already-validated Workspace artifact into the public index + detail shards and
+    write only what actually changed (LIVE only). Pure split logic lives in
+    workspace_public_read_model.py; this function owns the I/O and the no-op-republish guarantee
+    (unchanged content -> untouched mtimes -> no git diff), same contract the old single-file
+    copy_workspace_projection() gave.
+
+    Also retires any stale shard file this run no longer produces (e.g. a ticker whose first
+    letter previously had a shard but now has zero tickers) -- the shard set is a function of the
+    current ticker universe, not append-only.
+    """
+    index_document, shards = workspace_public_read_model.build_public_read_model(workspace)
+
+    index_target = WEB_ROOT / WORKSPACE_INDEX_ASSET
+    index_content = json.dumps(index_document, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    index_changed = write_if_changed(index_target, index_content)
+
+    detail_dir = WEB_ROOT / WORKSPACE_DETAIL_DIR
+    detail_dir.mkdir(parents=True, exist_ok=True)
+    existing_shard_files = {path.name for path in detail_dir.glob("*.json")}
+    written_shard_files: set[str] = set()
+    changed_shards = 0
+    for key, shard_document in shards.items():
+        filename = f"{key}.json"
+        written_shard_files.add(filename)
+        content = json.dumps(shard_document, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        if write_if_changed(detail_dir / filename, content):
+            changed_shards += 1
+
+    stale_shard_files = existing_shard_files - written_shard_files
+    for filename in stale_shard_files:
+        (detail_dir / filename).unlink()
+
+    return {
+        "index_changed": index_changed,
+        "shard_count": len(shards),
+        "shards_changed": changed_shards,
+        "shards_removed": len(stale_shard_files),
+        "ticker_count": len(index_document["cards"]),
+    }
+
+
+def verify_workspace_read_model_binding() -> None:
+    """Fail closed if the index and the shard files actually sitting on disk right now disagree
+    -- the one check that makes "never combine an index from one session with a shard from
+    another" a proven property of what was just written, not just of the pure split function."""
+    index_path = WEB_ROOT / WORKSPACE_INDEX_ASSET
+    index_document = json.loads(index_path.read_text(encoding="utf-8-sig"))
+    shard_manifest = index_document.get("shard_manifest")
+    if not isinstance(shard_manifest, dict) or not shard_manifest:
+        raise ValueError("WORKSPACE_READ_MODEL_NOT_PUBLISHED: empty shard manifest")
+    for key, entry in shard_manifest.items():
+        shard_path = WEB_ROOT / str(entry.get("path") or f"{WORKSPACE_DETAIL_DIR}/{key}.json")
+        if not shard_path.is_file():
+            raise ValueError(f"WORKSPACE_READ_MODEL_SHARD_MISSING: {shard_path}")
+        shard_document = json.loads(shard_path.read_text(encoding="utf-8-sig"))
+        actual_sha256 = workspace_public_read_model._sha256_of(shard_document)
+        if actual_sha256 != entry.get("sha256"):
+            raise ValueError(f"WORKSPACE_READ_MODEL_SHARD_HASH_MISMATCH: {shard_path}")
+        if shard_document.get("as_of_session") != index_document.get("as_of_session"):
+            raise ValueError(f"WORKSPACE_READ_MODEL_SHARD_SESSION_MISMATCH: {shard_path}")
+        if shard_document.get("source_artifact_identity") != index_document.get("source_artifact_identity"):
+            raise ValueError(f"WORKSPACE_READ_MODEL_SHARD_IDENTITY_MISMATCH: {shard_path}")
+    extra_shard_files = {path.name for path in (WEB_ROOT / WORKSPACE_DETAIL_DIR).glob("*.json")} - {
+        f"{key}.json" for key in shard_manifest
+    }
+    if extra_shard_files:
+        raise ValueError(f"WORKSPACE_READ_MODEL_UNDECLARED_SHARD_FILES: {sorted(extra_shard_files)}")
+
+
+def retire_legacy_workspace_monolith() -> str | None:
+    """Delete the pre-migration ~95MB monolithic workspace file from the served checkout if it
+    is still sitting there (e.g. from before this milestone), so a normal publish converges the
+    repository onto the new read model instead of keeping the old artifact forever alongside it.
+    Returns the relative path if a deletion happened, so main() can stage it for this commit."""
+    legacy_path = WEB_ROOT / LEGACY_WORKSPACE_MONOLITH_ASSET
+    if not legacy_path.is_file():
+        return None
+    legacy_path.unlink()
+    return LEGACY_WORKSPACE_MONOLITH_ASSET
 
 
 def validate_screener_master_projection(source: Path, market_session: str) -> dict[str, object]:
@@ -671,13 +760,27 @@ def update_asset_versions(build_id: str) -> list[str]:
     return changed
 
 
+def discover_workspace_shard_files() -> list[str]:
+    """Every workspace detail shard currently on disk in WEB_ROOT, as repo-relative paths.
+
+    Shard filenames are dynamic (one per workspace_public_read_model.shard_key_for_ticker()
+    bucket actually populated this run), so -- unlike WORKSPACE_INDEX_ASSET -- they cannot be a
+    static SAFE_WEB_ARTIFACTS entry. Discovered by directory listing instead, same as
+    OPTIONAL_SAFE_WEB_ARTIFACTS' existence-conditional inclusion just above.
+    """
+    detail_dir = WEB_ROOT / WORKSPACE_DETAIL_DIR
+    if not detail_dir.is_dir():
+        return []
+    return sorted(f"{WORKSPACE_DETAIL_DIR}/{path.name}" for path in detail_dir.glob("*.json"))
+
+
 def validate_json_artifacts() -> None:
     required = set(SAFE_WEB_ARTIFACTS)
     optional_present = {
         relative for relative in OPTIONAL_SAFE_WEB_ARTIFACTS
         if (WEB_ROOT / relative).is_file()
     }
-    for relative in sorted(required | optional_present):
+    for relative in sorted(required | optional_present | set(discover_workspace_shard_files())):
         if not relative.endswith(".json"):
             continue
         path = WEB_ROOT / relative
@@ -690,7 +793,7 @@ def validate_json_artifacts() -> None:
 
 def build_whitelist() -> list[str]:
     pages = sorted(path.name for path in WEB_ROOT.glob("*.html"))
-    paths = set(pages) | SAFE_WEB_ARTIFACTS
+    paths = set(pages) | SAFE_WEB_ARTIFACTS | set(discover_workspace_shard_files())
     for relative in OPTIONAL_SAFE_WEB_ARTIFACTS:
         if (WEB_ROOT / relative).is_file():
             paths.add(relative)
@@ -955,7 +1058,9 @@ def main() -> int:
             "HTML/CSS/JS, CHƯA git add/commit/push. Không file nào trên đĩa bị thay đổi.")
         log(f"[DRY-RUN] Sẽ copy {len(copy_plan)} artifact từ backend: "
             f"{', '.join(copy_plan) or '(không có — backend=web hoặc đã khớp)'}")
+        planned_index, planned_shards = workspace_public_read_model.build_public_read_model(workspace)
         log(f"[DRY-RUN] Workspace product: {workspace_source} · {len(workspace['cards'])} cards · session {workspace['as_of_session']} · {workspace['artifact_identity']}")
+        log(f"[DRY-RUN] Workspace read model dự kiến: {WORKSPACE_INDEX_ASSET} + {len(planned_shards)} shard trong {WORKSPACE_DETAIL_DIR}/ ({len(planned_index['cards'])} mã)")
         if screener is None:
             log("[DRY-RUN] Screener master projection: optional / not supplied")
         else:
@@ -975,8 +1080,17 @@ def main() -> int:
 
     try:
         copy_public_artifacts()
-        workspace_changed = copy_workspace_projection(workspace_source)
-        log(f"Workspace product: {'đã materialize' if workspace_changed else 'không đổi'} ({len(workspace['cards'])} cards).")
+        read_model_result = materialize_workspace_read_model(workspace)
+        log(
+            "Workspace read model: "
+            f"index {'đã materialize' if read_model_result['index_changed'] else 'không đổi'} · "
+            f"{read_model_result['shard_count']} shard ({read_model_result['shards_changed']} thay đổi, "
+            f"{read_model_result['shards_removed']} gỡ bỏ) · {read_model_result['ticker_count']} mã."
+        )
+        verify_workspace_read_model_binding()
+        retired_legacy = retire_legacy_workspace_monolith()
+        if retired_legacy:
+            log(f"Đã gỡ bỏ artifact Workspace cũ (đơn khối, không còn publish): {retired_legacy}")
         if screener is not None:
             screener_changed = copy_screener_master_projection(screener_source)
             log(f"Screener master projection: {'đã materialize' if screener_changed else 'không đổi'} ({len(screener['cards'])} cards).")
@@ -987,6 +1101,8 @@ def main() -> int:
             log("Session companions written before release-smoke: " + ", ".join(written))
         validate_json_artifacts()
         whitelist = build_whitelist()
+        if retired_legacy:
+            whitelist = sorted(set(whitelist) | {retired_legacy})
         if args.include_trusted_subset:
             whitelist = sorted(set(whitelist) | set(trusted_subset_contract.TRUSTED_SUBSET_ARTIFACTS))
         whitelist = dashboard_session_companions.extend_whitelist(
