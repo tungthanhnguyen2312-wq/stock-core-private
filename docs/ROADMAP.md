@@ -1,5 +1,20 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Indicator and metric availability reconciliation V1 (2026-09-19):**
+`INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 = COMPLETE`. Owner-directed, backend-only:
+new `indicator_metric_availability/v1` + `indicator_metric_display_state/v1` contracts give
+every product-visible metric a deterministic six-state availability answer (capability exists?
+current value present? exact blocker class? recoverable now or needing new evidence/future
+session/an authority decision? PIT-restricted for historical/backtest use only, or blocked for
+current display too? sector-inapplicable or merely out of a bounded acquisition cohort?) instead
+of leaving the Dashboard to infer availability from an arbitrary null. Computes nothing new;
+reconciles the already-materialized `investment_decision_workspace_projection/v1` card. Does not
+touch `market-dashboard` (read-only this milestone) or any acquisition/engine code. See
+`docs/STATE.md`'s matching entry for the full real-artifact findings (EBITDA presentation
+transport gap, absent VN-Index level, corporate-event staleness, foreign-flow cohort scope) and
+`operations-review/indicator-metric-availability-reconciliation-v1-20260919/` for the validation
+artifacts. No successor queued; frontend wiring is a separate, later, owner-authorized milestone.
+
 **Current foreign-flow retention productionization V1 (2026-09-19):**
 `CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 = IMPLEMENTATION_COMPLETE /
 NO_NETWORK_LIVE_ACCEPTANCE_PENDING`.  Owner-directed, architecture-only: wires the existing

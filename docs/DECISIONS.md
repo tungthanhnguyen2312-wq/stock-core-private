@@ -1,5 +1,85 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-19 - Indicator and Metric Availability Reconciliation V1
+
+`INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 = COMPLETE`. This milestone was directed
+by an explicit, detailed owner briefing typed directly into this session (not inferred from a
+completed dependency or an agent's own judgment that follow-on work was ready) -- it is recorded
+here, and in `docs/ROADMAP_STATE.json`'s `owner_override` field, as the authorization required
+by `docs/AI_RULES.md` rule 11 to start a milestone the roadmap-state tool had not previously
+registered.
+
+1. **A metric's absence must never collapse into one vague "insufficient data."** Every
+   unavailable metric gets one of 16 named `blocker_class` values (`MISSING_FINANCIAL_COMPONENT`,
+   `MISSING_PRICE_BASIS_AUTHORITY`, `PRESENTATION_TRANSPORT_GAP`, `SECTOR_NOT_APPLICABLE`,
+   `OUTSIDE_CURRENT_ACQUISITION_SCOPE`, `GENUINELY_WAITING_FUTURE_OBSERVATIONS`, etc.) plus an
+   independent `recoverability`. `NOT MATERIALIZED` and `DATA DOES NOT EXIST` both present as
+   `INSUFFICIENT_DATA`/`TEMPORARILY_UNAVAILABLE` at this contract's boundary, but never share a
+   `blocker_class` -- the distinction survives in the record, not just in an engineer's memory.
+
+2. **`PRESENTATION_TRANSPORT_GAP` gets its own state, not a generic "blocked."** Where an engine
+   is real and has produced results somewhere (a bounded replay, a dormant opt-in bundle section)
+   but is not wired into the live session's projection, the record reports
+   `TEMPORARILY_UNAVAILABLE` with `recoverability=REQUIRES_AUTHORITY_DECISION` -- distinct from a
+   genuinely missing input (`INSUFFICIENT_DATA`/`REQUIRES_NEW_EVIDENCE`). EBITDA is the concrete
+   case: `market_wide_calculation_readiness.py` already has 231 tickers EBITDA-ready in a bounded
+   2026-09-05 replay, but `canonical_financial_bundle_section.attach`'s `include=False` default
+   (itself a recorded, deliberate 2026-09-05 owner decision, not a defect) keeps that engine out
+   of the live 1,683-ticker Daily card. This milestone does not flip that default -- doing so
+   would silently re-open a decision the owner already made deliberately -- it only makes the gap
+   named and visible instead of an undifferentiated absence.
+
+3. **T5/T10/T20 history vs. prospective outcome is a hard category boundary, never conflated.**
+   Historical-lookback indicators (MA20/50/100/200, 5/10-session foreign-flow persistence) are
+   never classified `BUILDING_HISTORY`: if the retained daily/session history exists or is
+   recoverable via an existing tool (extended DNSE lookback recovery), the record says so
+   (`RECOVER_NOW_EXISTING_PROVIDER_PATH`), even when the raw count is momentarily zero for one
+   ticker. Only `prospective_decision_outcome_measurement.py`'s T5/T10/T20/T60 forward-outcome
+   horizons and the tactical-reversal prospective shadow lifecycle set
+   `requires_future_observation=true`. A real naming collision was found and documented (not
+   fixed, since it spans modules outside this milestone's scope): "T20" also names a *trailing*
+   20-session ADTV/liquidity lookback window in `kbs_trading_value_coverage.py` -- the same token,
+   the opposite semantic category, in a different module.
+
+4. **PIT restriction is reported as two independent booleans, never one that shadows the other.**
+   Every record carries `current_research_allowed` and `historical_pit_allowed` separately.
+   Per `docs/STATE.md` Section 3 Invariant 1 (`RAW_AS_TRADED` not promoted), every technical/
+   valuation/flow record in this pass reports `historical_pit_allowed=false` regardless of its
+   `availability_state` -- confirmed live: 41,214/47,124 records in the real 2026-09-18 artifact
+   are `current_research_allowed=true` while 0 are `historical_pit_allowed=true`. Missing PIT
+   authority never suppresses an otherwise-legitimate current display.
+
+5. **Cohort scope is not a data failure.** The 11-ticker `owner_research_focus.broader_watchlist`
+   foreign-flow cohort continues to render `NOT_TRACKED` (never `INSUFFICIENT_DATA`) for the
+   other 1,672 tickers -- reusing, not reimplementing, the distinction
+   `velocity_flow_price_presentation_projection.py` already established for this exact field
+   family; this milestone generalizes that same discipline to every other metric family.
+
+6. **No new provider/network call; no live-tool re-run for figures this environment cannot
+   compute honestly.** This checkout's `data/` tree is missing the full retained financial
+   evidence store (`canonical-financial-facts`, `official-evidence`, `data_bctc`), so
+   `tools/report_market_wide_readiness.py` could not be re-run live here. Every coverage figure
+   in this pass is either read directly from the real, current `market-dashboard`
+   `investment_decision_workspace_projection/v1` artifact (1,683 tickers, session 2026-09-18) or
+   cited from its original dated `docs/STATE.md`/`operations-review/` source -- never presented
+   as freshly recomputed when it was not.
+
+7. **Presentation is a strict, tested whitelist, never a passthrough.**
+   `indicator_metric_display_state.py` only ever emits one of six governed states and their fixed
+   Vietnamese text; an unrecognized internal `availability_state` fails closed to
+   `INSUFFICIENT_DATA` rather than leaking a raw value, and a parametrized test asserts no
+   blocker class, reason code, recovery-action code, source identity, or PIT/pipeline/provider
+   term ever reaches `display_text`/`value`.
+
+Deferred, not fixed, in this pass (see `docs/STATE.md`'s matching entry and
+`operations-review/indicator-metric-availability-reconciliation-v1-20260919/validation_report.json`
+for the full list): the entity-class-unresolved-vs-genuinely-not-applicable distinction for the
+three corporate-only valuation metrics; wiring these two new contracts into any live Daily
+artifact or the Dashboard itself (a separate, later, owner-authorized frontend-simplification
+milestone); and the `shadow-recommendations.js` Dashboard surface, which this pass's read-only
+audit found to be the single largest remaining raw-technical-language leak and which needs its
+own frontend pass before this contract can help it.
+
 ## 2026-09-19 - Flow-Price Canonical Source Backfill and Presentation Corrective V1
 
 `FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 = COMPLETE (fix) /

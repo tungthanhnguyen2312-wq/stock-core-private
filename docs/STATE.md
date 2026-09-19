@@ -1,5 +1,75 @@
 # Stock Lookup — Operational State
 
+**Indicator and metric availability reconciliation V1 (2026-09-19):**
+`INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 = COMPLETE`. Owner-directed,
+backend-only milestone (this session): builds one authoritative availability/recoverability
+layer so a product-visible metric's absence is never collapsed into a vague "insufficient
+data." New `indicator_metric_availability/v1` (`indicator_metric_availability.py`) is a
+deterministic reconciliation layer over already-materialized
+`investment_decision_workspace_projection/v1` ticker cards -- it computes nothing new and
+makes zero network calls -- that answers, per ticker per metric, one of six governed
+`availability_state`s (`READY`/`INSUFFICIENT_DATA`/`BUILDING_HISTORY`/`NOT_APPLICABLE`/
+`NOT_TRACKED`/`TEMPORARILY_UNAVAILABLE`) plus a named `blocker_class` (16-value vocabulary:
+`MISSING_FINANCIAL_COMPONENT`, `MISSING_PRICE_BASIS_AUTHORITY`, `PRESENTATION_TRANSPORT_GAP`,
+`SECTOR_NOT_APPLICABLE`, `OUTSIDE_CURRENT_ACQUISITION_SCOPE`, etc.), `recoverability`, and
+independent `current_research_allowed`/`historical_pit_allowed` flags. New
+`indicator_metric_display_state/v1` (`indicator_metric_display_state.py`) is a pure
+whitelist/reshape presentation layer (mirrors `velocity_flow_price_presentation_projection.py`'s
+established pattern) that strips all of that internal reasoning down to the six frontend-facing
+states with governed Vietnamese text ("Chưa đủ dữ liệu" / "Đang tích lũy chuỗi phiên" / "Không
+áp dụng" / "Chưa theo dõi" / "Tạm chưa có dữ liệu") -- no reason code, blocker class,
+provider/pipeline/contract name, or PIT terminology is ever rendered (locked in by a
+parametrized forbidden-language test over every governed state).
+
+31 product-relevant metrics across all 6 required families (MARKET, PRICE_TECHNICAL, FLOW,
+FUNDAMENTALS, VALUATION, CORPORATE_RESEARCH_CONTEXT) were evaluated against the real, live
+1,683-ticker `investment_decision_workspace_projection/v1` artifact for session 2026-09-18
+(identity `...42784a17f6d89e834286b3b291e6afb6cac89d364210adfb4cd78091bb37cb3a`), not synthetic
+fixtures. Real findings, not fabricated: (1) EBITDA has no dedicated per-ticker line on the
+Dashboard-facing card today -- it is read off `EV/EBITDA_CALC_READY`'s own blocker for 1,385
+corporate tickers, which is `CALCULATION_READINESS_CONTEXT_UNAVAILABLE` because
+`canonical_financial_bundle_section.attach`'s `include=False` default (a recorded, deliberate
+2026-09-05 owner decision, not a bug) keeps `market_wide_calculation_readiness.py`'s dormant
+231-ticker-ready engine out of live Daily -- classified `TEMPORARILY_UNAVAILABLE` /
+`PRESENTATION_TRANSPORT_GAP` / `REQUIRES_AUTHORITY_DECISION`, never silently absent. (2) No
+VN-Index price level/change is produced anywhere in this repository (confirmed exhaustively) --
+classified `TEMPORARILY_UNAVAILABLE` / `NOT_CURRENTLY_PRODUCED`, an honest gap rather than an
+inferred "wait for T20." (3) Same-provider ROE/ROA/leverage/cash-quality/CFO-to-NI remain 0/1,683
+`READY` market-wide (matches the already-documented same-provider-pair scarcity), correctly
+`INSUFFICIENT_DATA` rather than `BUILDING_HISTORY` -- no future session recovers a same-provider
+pairing gap. (4) `catalyst_event_context` is `TEMPORARILY_UNAVAILABLE` for 582/1,683 tickers,
+consistent with the already-known `corporate_event_context` staleness (frozen research_session).
+(5) Foreign-flow metrics are `READY` for exactly the 11 `owner_research_focus.broader_watchlist`
+cohort tickers and `NOT_TRACKED` (never `INSUFFICIENT_DATA`) for the other 1,672 -- cohort scope
+is not a data failure. T5/T10/T20 audit confirms the existing distinction already documented
+market-wide: `prospective_decision_outcome_measurement.py`'s horizons are exclusively genuine
+future-outcome tracking (`GENUINELY_WAITING_FUTURE_OBSERVATIONS`), while MA20/50/100/200 and
+5/10-session foreign-flow persistence are historical-lookback and were never classified as
+future-waiting by this reconciliation. One real naming collision flagged: "T20" also names a
+*trailing* 20-session ADTV/liquidity lookback window in `kbs_trading_value_coverage.py` --
+opposite semantic category from the same string in the prospective-outcome contract.
+
+Does not modify `market_wide_calculation_readiness.py`, `canonical_financial_bundle_section.py`,
+`investment_decision_workspace_projection.py`, any acquisition path, or the `market-dashboard`
+repository (read-only this milestone, confirmed unmodified). Makes no new provider/network call
+and fabricates no evidence: this local runtime checkout's `data/` tree does not carry the full
+retained financial evidence store (`canonical-financial-facts`, `official-evidence`,
+`data_bctc` are absent here), so every count in this pass is either read directly from the real,
+current `market-dashboard` artifact or cited from its original dated `docs/STATE.md`/
+`operations-review/` source -- never re-fabricated as if freshly computed. 39 new focused tests
+(`tests/test_indicator_metric_availability.py`, `tests/test_indicator_metric_display_state.py`),
+including real-artifact acceptance against the live artifact and a parametrized
+forbidden-technical-language gate; all pre-existing financial/valuation/tactical/flow suites
+(208 tests) pass unchanged. Evidence:
+`operations-review/indicator-metric-availability-reconciliation-v1-20260919/`. Known residual:
+entity-class resolution for the three corporate-only valuation metrics treats a null/unresolved
+`entity_class` as `NOT_APPLICABLE` rather than a distinct unresolved state -- a small number of
+the 298 `NOT_APPLICABLE` `ebitda` records may be unclassified rather than genuinely
+bank/securities/insurance; flagged, not fixed, in this pass. `READY_FOR_FRONTEND_SIMPLIFICATION
+= YES` (backend contract only; no Dashboard file was touched; frontend wiring is a separate,
+later, owner-authorized milestone per the `frontend_handoff.md` mapping in the evidence
+directory above).
+
 **Flow-Price canonical source backfill and presentation corrective V1 (2026-09-19):**
 `FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 = COMPLETE (root-cause
 fix and governance correction) / BLOCKED (historical multi-session backfill)`.

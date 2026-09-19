@@ -15,8 +15,8 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
-    "state": "PARTIAL_BY_EVIDENCE"
+    "milestone": "INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1",
+    "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
@@ -28,12 +28,16 @@
       "notes_credential_correction": "The prior absolute credential wording in notes is superseded by credential_claim_correction; no credential discovery was performed for this corrective.",
       "starting_checkpoint": "20e40545c4d8f1c656b070fb4e8d0d5a3385ea44",
       "checkpoint": "HEAD",
-      "dependencies": ["SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1"],
+      "dependencies": [
+        "SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / DASHBOARD_DOES_NOT_GAIN_ANALYTICAL_AUTHORITY",
       "owner_authorized": true,
       "source_doc": "Owner directive FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 (this session, 2026-09-19)",
-      "state_history": ["ACTIVE"],
+      "state_history": [
+        "ACTIVE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_19_FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
       "notes": "SUPERSEDES the 'CORRECTIVE FINDING' in SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1's own notes below, which was wrong: it never inspected data/dnse-foreign-flow/observations/ or operations-review/current-foreign-flow-enrichment-v1/2026-09-18/, both of which retain a genuine, independently-verified live 11-ticker DNSE VALUE acquisition for 2026-09-18 (complete_count: 11, every ticker source_is_dnse/qualification_status_value_only/freshness_current/arithmetic-consistent). Independently rebuilding flow_price_divergence_shadow/v1 from this real store plus the real Signal Velocity artifact reproduces the owner's accepted relationship distribution EXACTLY (FLOW_PRICE_MIXED=7, FOREIGN_BUYING_PRICE_WEAKNESS=2, FOREIGN_SELLING_PRICE_WEAKNESS=2, 11/11 evaluable) -- the owner's specifically claimed artifact identity (flow_price_divergence_shadow:6ed1974...) does not reproduce byte-for-byte and was not found anywhere in tracked history; this rebuild's own reproducible identity is flow_price_divergence_shadow:27ad45e879dd98a9cfd2f2773120f5f7a36a8d2c39c1146188cec846d2c27b9c. ROOT CAUSE: flow_price_divergence_shadow.write_immutable()'s one-artifact-per-dated-path design meant the live-corrected result could never durably overwrite the earlier pre-live 0-evaluable snapshot at that same path, so presentation kept reading stale evidence. FIX: canonical_current_product_projections.materialize_current_flow_price_divergence_shadow rebuilds Flow-Price fresh in-process every call (independently re-verifying each cohort ticker via current_foreign_flow_enrichment_operation.verify_ticker_current, never trusting a static file), persisting to a new enrichment-operation-identity-scoped path. Mandatory regression test added (test_flow_price_prefers_operation_linked_current_evidence_over_a_stale_static_artifact) plus a real-artifact acceptance test against the genuine 2026-09-18 store. Dashboard data refreshed again (investment_decision_workspace_projection/v1:42784a17f6d89e834286b3b291e6afb6cac89d364210adfb4cd78091bb37cb3a); real browser acceptance confirmed all three evaluable relationship classes (HPG=MIXED, FPT=buying-weakness, EVF=selling-weakness). BLOCKED: the 6-session historical backfill (2026-09-10/11/14/15/16/17) was not performed -- current_foreign_flow_enrichment_operation.json itself records credentials_available: false, and no DNSE API key/secret exists anywhere in this environment (no env var, no .env file); this is an environment/credential limitation, not a policy one. No successor queued for the backfill until credentials are available."
     },
@@ -47,11 +51,15 @@
         "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
         "FLOW_PRICE_DIVERGENCE_SHADOW_V1"
       ],
-      "unlocks": ["FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1"],
+      "unlocks": [
+        "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1"
+      ],
       "authority_effect": "NONE / DASHBOARD_DOES_NOT_GAIN_ANALYTICAL_AUTHORITY",
       "owner_authorized": true,
       "source_doc": "Owner directive SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1 (this session, 2026-09-19)",
-      "state_history": ["ACTIVE"],
+      "state_history": [
+        "ACTIVE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_19_SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1",
       "superseded_by": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
       "notes_correction": "WRONG -- see FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1 above. The 'CORRECTIVE FINDING' paragraph in this entry's own 'notes' field below (claiming the live 11-ticker acquisition had never run) was itself based on an incomplete audit and is false. Preserved unedited for the historical record; do not act on it.",
@@ -63,12 +71,16 @@
       "narrative_disposition": "IMPLEMENTATION_COMPLETE / NO_NETWORK_LIVE_ACCEPTANCE_PENDING",
       "starting_checkpoint": "a0e883595d93d99bb4f32b5518634556be461f00",
       "checkpoint": "HEAD",
-      "dependencies": ["FLOW_PRICE_DIVERGENCE_SHADOW_V1"],
+      "dependencies": [
+        "FLOW_PRICE_DIVERGENCE_SHADOW_V1"
+      ],
       "unlocks": [],
       "authority_effect": "NONE / VALUE_ONLY_NON_ACTIONABLE_LIVE_ACQUISITION_REMAINS_A_SEPARATE_OWNER_GATE",
       "owner_authorized": true,
       "source_doc": "Owner directive CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 (this session, 2026-09-19)",
-      "state_history": ["ACTIVE"],
+      "state_history": [
+        "ACTIVE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_19_CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1",
       "notes": "COMPLETE / IMPLEMENTATION_COMPLETE / NO_NETWORK_LIVE_ACCEPTANCE_PENDING. New current_foreign_flow_enrichment_operation/v1 (mutable) layered strictly above the existing immutable current_foreign_flow_acquisition_manifest/v1; one network boundary (acquire_foreign_flow_for_manifest allow_network=False by default, no env-var override) reused by a new Daily post-handoff step and a new operator command (tools/enrich_current_foreign_flow.py). Reuses tools/bulk_ingest_dnse_foreign_trading_raw.py and current_foreign_flow_retention.py's adapter/store unmodified; exact-session idempotency and conflict-guard come from the existing store, not a new state machine. current_foreign_flow_positioning_bridge.py investigates and answers Phase 13 (store can feed current_market_flow_positioning/v1) but is deliberately not wired into live Daily -- a second producer of that contract is a distinct future owner decision. 24 new tests (simulated CASE A-L) plus 104 pre-existing foreign-flow/flow-price/bulk-ingest tests pass unchanged. Zero live DNSE requests made. Evidence: operations-review/current-foreign-flow-retention-productionization-v1-20260919/. No successor queued."
     },
@@ -85,7 +97,9 @@
       "authority_effect": "NONE / NON_CAUSAL_VALUE_FLOW_PRICE_RELATIONSHIP_RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "Owner directive FLOW_PRICE_DIVERGENCE_SHADOW_V1 (2026-09-19)",
-      "state_history": ["ACTIVE"],
+      "state_history": [
+        "ACTIVE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_19_FLOW_PRICE_DIVERGENCE_SHADOW_V1",
       "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. New flow_price_divergence_shadow/v1 reuses dnse_foreign_flow_store VALUE-only observations and multi_session_signal_velocity/v1.2 only. Exact-session alignment is mandatory; stale, missing, future and mismatched flow cannot create a current relationship. Volume, room, unqualified denominators, causality, intent, score, probability, recommendation, sizing, execution, RAW_AS_TRADED and historical price PIT authority are excluded. The canonical post-close observer runs post-handoff, is immutable/idempotent/non-blocking, and contributes compact metadata only. Retained replay 2026-09-18: 1,683 Velocity records; 3 stale flow series; 1,680 missing; zero exact aligned/evaluable relationships. Evidence: operations-review/flow-price-divergence-shadow-v1-20260919/. No successor queued."
     },
@@ -100,7 +114,9 @@
       "authority_effect": "NONE / PIT_SAFE_RETAINED_SESSION_SIGNAL_VELOCITY_RESEARCH_ONLY",
       "owner_authorized": true,
       "source_doc": "Owner directive MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1 (this session, 2026-09-18)",
-      "state_history": ["ACTIVE"],
+      "state_history": [
+        "ACTIVE"
+      ],
       "owner_override": "OWNER_DIRECTIVE_2026_09_18_QUEUED_NEXT_EMPTY_MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
       "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. Final V1.2 closeout: V1 and V1.1 are immutable historical evidence, V1.1 superseded specifically for categorical acceleration terminology. V1.2 retains source-semantics correction but declares categorical acceleration NOT_EVALUABLE_CATEGORICAL_ONLY; trajectory_pattern truthfully reports continuation/reversal/stalled/mixed and records valid-observation count, retained-session span and gaps without interpolation. Exact retained replay: V1.1 4 ACCELERATING_IMPROVEMENT becomes V1.2 4 PERSISTENT_IMPROVEMENT (HHP, KKC, MBT, QNW), with remaining latest counts unchanged. Daily writes v1.2 only, best-effort/non-blocking. No outcome, return, score, probability, recommendation, target, sizing, execution, portfolio, PIT, RAW_AS_TRADED, provider, or Dashboard authority. Evidence: operations-review/multi-session-signal-velocity-v1.2-20260918/. No successor queued."
     },
@@ -1850,6 +1866,21 @@
       "state_history": [],
       "owner_override": "OWNER_DIRECTIVE_2026_09_17_PERSONAL_PORTFOLIO_QUANT_RISK_DECOMPOSITION_V1",
       "notes": "COMPLETE / PERSONAL_PORTFOLIO_QUANT_RISK_RELEASED. New personal_portfolio_quant_risk_decomposition.py (personal_portfolio_quant_risk_decomposition/v1): descriptive-only concentration (HHI/effective N), per-security volatility, pairwise correlation, covariance integrity, two portfolio-volatility views (EQUITY_SLEEVE_VOLATILITY/NAV_SCALED_EQUITY_RISK), risk contribution (reconciled to portfolio volatility / 1.0 within tolerance), diversification, and a MOVE_POSITION_TO_CASH_VOLATILITY_SENSITIVITY per named holding. Reuses current_portfolio_risk_research.py return/window/volatility/correlation/joint-matrix pure functions directly (not reimplemented) and correlation_concentration_guard.py verbatim including its frozen, un-retuned 0.80 threshold; sources quantities/NAV/sector/the qualified multi-account aggregate from portfolio_aware_decision.derive_portfolio_state. Source-coverage status is derived dynamically from the private event ledgers own sheet_inventory (never hardcoded), correctly keeping real coverage at QUALIFIED_COVERED_SUBSET/ PORTFOLIO_INPUT_COVERAGE_PARTIAL rather than a fabricated FULL_PORTFOLIO_COVERAGE. An owner-excluded tickers current confirmed exposure stays in every NAV/exposure denominator but its identity never appears anywhere in the artifact. Account-level position risk is qualification-gated (ACCOUNT_LEVEL_POSITION_RISK_NOT_QUALIFIED unless every named holdings account_attribution is fully ATTRIBUTED). New informational PORTFOLIO QUANT RISK Action Center section, verified never wired into _holding_action/_watchlist_action/ _build_rotation_section/_build_attention_queue. No BUY/SELL, sizing, VaR/CVaR, Kelly, or optimization authority anywhere. Confirmed live against the real portfolio (counts/status only; see docs/STATE.md). No Daily run, provider call, Dashboard, or public AI-handoff involvement. Next gate: USE_IN_PRODUCTION / ACCUMULATE_PROSPECTIVE_EVIDENCE (no new coding milestone queued)."
+    },
+    {
+      "milestone_id": "INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "INDICATOR_METRIC_AVAILABILITY_AND_DISPLAY_STATE_CONTRACTS_RELEASED_BACKEND_ONLY",
+      "starting_checkpoint": "9a662ae3e134030e2b2b8fe7b5b4b7f3e69acb90",
+      "checkpoint": "HEAD",
+      "dependencies": [],
+      "unlocks": [],
+      "authority_effect": "DESCRIPTIVE_RECONCILIATION_ONLY / NO_NEW_ACQUISITION_OR_ENGINE_AUTHORITY / DASHBOARD_NOT_MODIFIED",
+      "owner_authorized": true,
+      "source_doc": "Owner directive INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 (this session, 2026-09-19)",
+      "state_history": [],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_19_INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1",
+      "notes": "COMPLETE / BACKEND_ONLY. New indicator_metric_availability/v1 (indicator_metric_availability.py) and indicator_metric_display_state/v1 (indicator_metric_display_state.py): a deterministic, network-free reconciliation + presentation layer over the already-materialized investment_decision_workspace_projection/v1 card, giving every product-visible metric one of six governed availability states plus a named blocker_class/recoverability instead of an undifferentiated null. Evaluated against the real, live 1,683-ticker workspace artifact (session 2026-09-18, identity ...42784a17f6d89e834286b3b291e6afb6cac89d364210adfb4cd78091bb37cb3a), not synthetic fixtures. Real findings: EBITDA/EV-EBITDA-CALC-READY is a genuine PRESENTATION_TRANSPORT_GAP for 1,385 corporate tickers (market_wide_calculation_readiness.py has 231 EBITDA-ready tickers in a bounded 2026-09-05 replay, but canonical_financial_bundle_section.attach include=False keeps it out of live Daily -- a recorded prior owner decision, not reopened here); no VN-Index level/change is produced anywhere in this repository (NOT_CURRENTLY_PRODUCED); catalyst_event_context is TEMPORARILY_UNAVAILABLE for 582/1,683 tickers consistent with the known corporate_event_context staleness; foreign-flow metrics are READY for exactly the 11-ticker owner_research_focus cohort and NOT_TRACKED (never INSUFFICIENT_DATA) for the other 1,672. T5/T10/T20 audit confirms historical-lookback indicators (MA20-200, 5/10-session flow) are never classified BUILDING_HISTORY; only genuine forward-outcome horizons (prospective_decision_outcome_measurement.py) are, and a real T20 naming collision (trailing ADTV lookback vs. forward outcome horizon) is flagged. Every technical/valuation/flow record reports historical_pit_allowed=false while current_research_allowed=true where legitimate (41,214/47,124 records), per docs/STATE.md Invariant 1. 39 new tests including real-artifact acceptance and a parametrized forbidden-technical-language gate on the presentation layer; 208 pre-existing financial/valuation/tactical/flow tests pass unchanged. Does not modify market_wide_calculation_readiness.py, canonical_financial_bundle_section.py, investment_decision_workspace_projection.py, any acquisition path, or the market-dashboard repository (read-only, confirmed unmodified). No network call made; this local checkout lacks the full retained financial evidence store (canonical-financial-facts/official-evidence/data_bctc), so no live coverage tool was re-run -- every count is read from the real current artifact or cited from its original dated source. Known residual: entity-class-unresolved vs. genuinely-not-applicable is not yet distinguished for the three corporate-only valuation metrics (flagged, not fixed). Next gate: frontend wiring into the Dashboard is a separate, later, owner-authorized milestone -- see operations-review/indicator-metric-availability-reconciliation-v1-20260919/frontend_handoff.md. No successor queued."
     }
   ],
   "blocked_capabilities": [
