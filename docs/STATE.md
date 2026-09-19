@@ -1,5 +1,47 @@
 # Stock Lookup — Operational State
 
+**Current foreign-flow retention productionization V1 (2026-09-19):**
+`CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 = IMPLEMENTATION_COMPLETE /
+NO_NETWORK_LIVE_ACCEPTANCE_PENDING`.  Owner-directed architecture-only milestone (this
+session): productionize the whole current-foreign-flow enrichment path so a later,
+separately-authorized live run is a single bounded command.  New
+`current_foreign_flow_enrichment_operation/v1` (`current_foreign_flow_enrichment_operation.py`)
+is the mutable, resumable per-ticker operation contract layered strictly above the existing
+immutable `current_foreign_flow_acquisition_manifest/v1`
+(`current_foreign_flow_retention.py`); it never mutates cohort membership.  Twelve explicit
+per-ticker states (`PENDING`, `RAW_ALREADY_RETAINED`, `RAW_ACQUIRED`, `VALUE_ALREADY_RETAINED`,
+`VALUE_PERSISTED`, `COMPLETE`, `FAILED_RETRYABLE`, `FAILED_TERMINAL`, `SESSION_MISSING`,
+`SESSION_MISMATCH`, `RAW_CONFLICT`, `VALUE_CONFLICT`, `SKIPPED_ALREADY_COMPLETE`,
+`NETWORK_DISABLED_PENDING_ACQUISITION`, `CREDENTIAL_UNAVAILABLE`) reduce deterministically to
+one operation status (`COMPLETE`/`PARTIAL`/`PENDING_NETWORK`/`UNAVAILABLE`/`BLOCKED_CONFLICT`/
+`FAILED_OPERATIONAL`).  The one network boundary,
+`acquire_foreign_flow_for_manifest(..., allow_network=False)`, defaults closed: every caller
+that omits `allow_network=True` -- including the new
+`canonical_post_close_pipeline.run_current_foreign_flow_enrichment` step wired into normal
+Daily -- makes zero DNSE calls and never reads credentials.  It reuses, never reimplements,
+`tools/bulk_ingest_dnse_foreign_trading_raw.py` for raw acquisition (called once per pending
+ticker, so its existing checkpoint/retry/lock machinery gives per-ticker resumability for
+free) and `current_foreign_flow_retention.normalize_exact_raw_page` /
+`write_exact_value_observation` for the raw-to-VALUE adapter and conflict guard.  Exact-session
+idempotency: an already-retained qualified VALUE observation is trusted without reacquisition
+when no raw is retained; when raw IS retained (fresh or prior), it is always re-normalized and
+handed to the existing store conflict guard, so an identical rerun is a harmless no-op and a
+genuine mismatch surfaces as `VALUE_CONFLICT`, never a silent overwrite.  New operator command
+`tools/enrich_current_foreign_flow.py` (`--session`, `--dry-run`/default, `--live`,
+`--retry-failed`) is the one future live invocation.  A new, deliberately unwired investigation
+module `current_foreign_flow_positioning_bridge.py` answers Phase 13's question (yes,
+`current_market_flow_positioning/v1` can consume the retained VALUE store directly through a
+minimal `canonical_market_evidence_integration` projection) without introducing a second
+producer of that contract into live Daily -- that remains an explicit future owner integration
+decision, not made here.  24 new tests simulate CASE A-L (11/11 success, 8/2/1 partial,
+already-complete, raw-without-store, VALUE conflict, provider ticker/session mismatch,
+multi-page-raw-resumes-then-adapter-fails-closed-on-pagination, network-disabled,
+credential-unavailable-under-live-flag, Flow-Price staying honest when Velocity is absent, and
+idempotent rerun with zero further network calls); all pre-existing foreign-flow/flow-price/
+market-flow-positioning/bulk-ingest suites (104 tests) pass unchanged.  No live DNSE request
+was made in this session; `LIVE_OPERATIONAL` is not claimed.  Evidence:
+`operations-review/current-foreign-flow-retention-productionization-v1-20260919/`.
+
 **Flow / price divergence shadow V1 (2026-09-19):**
 `FLOW_PRICE_DIVERGENCE_SHADOW_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.  New
 `flow_price_divergence_shadow/v1` is a retained-only, exact-session descriptive

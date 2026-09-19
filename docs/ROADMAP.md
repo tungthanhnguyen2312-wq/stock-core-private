@@ -1,5 +1,16 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Current foreign-flow retention productionization V1 (2026-09-19):**
+`CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 = IMPLEMENTATION_COMPLETE /
+NO_NETWORK_LIVE_ACCEPTANCE_PENDING`.  Owner-directed, architecture-only: wires the existing
+foreign-flow foundation (manifest, raw retention, adapter, VALUE store) into one resumable,
+network-off-by-default operation contract, plus one future operator command.  Normal Daily
+gains a post-handoff, best-effort `current_foreign_flow_enrichment` step (network off) placed
+before the existing Flow/Price Divergence Shadow collector, so a same-day owner-approved live
+run is reflected in that step without either one depending on the other beyond read order.  No
+DNSE request is made by this milestone; the exact future live command is
+`tools/enrich_current_foreign_flow.py --session <date> --live`.  No successor is queued.
+
 **Flow / price divergence shadow V1 (2026-09-19):**
 `FLOW_PRICE_DIVERGENCE_SHADOW_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.  This is a
 retained, VALUE-only descriptive research observer over exact-session DNSE flow

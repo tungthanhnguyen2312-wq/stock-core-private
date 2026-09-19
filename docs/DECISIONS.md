@@ -1,5 +1,49 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-19 - Current Foreign-Flow Retention Productionization V1
+
+`CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 = IMPLEMENTATION_COMPLETE /
+NO_NETWORK_LIVE_ACCEPTANCE_PENDING`.
+
+1. Strict contract separation: `current_foreign_flow_acquisition_manifest/v1` (immutable, what
+   should be acquired) vs. `current_foreign_flow_enrichment_operation/v1` (mutable, what has
+   happened). A retry never changes cohort membership; a changed owner focus produces a
+   different manifest identity, never a mutated one.
+2. One network boundary. `acquire_foreign_flow_for_manifest(..., allow_network=False)` is the
+   only function permitted to reach DNSE for this contract, and only on an explicit
+   `allow_network=True` from the caller -- never an environment variable. Normal Daily's new
+   post-handoff step always passes the default. A ticker needing acquisition under the default
+   reports `NETWORK_DISABLED_PENDING_ACQUISITION`, a status, never an exception.
+3. Reuse over reimplementation. Raw acquisition reuses
+   `tools/bulk_ingest_dnse_foreign_trading_raw.run()` unmodified, called once per pending ticker
+   so its existing per-scope checkpoint/retry/lock semantics give free per-ticker
+   resumability without a second HTTP client or retry policy. The VALUE adapter reuses
+   `current_foreign_flow_retention.normalize_exact_raw_page` /
+   `write_exact_value_observation` unmodified, including that adapter's existing single-page
+   (no-continuation) constraint: a genuinely multi-page raw session resumes correctly at the
+   raw layer (proven by the existing `bulk_ingest` suite and a new multi-page test here) but the
+   VALUE adapter fails closed with `FAILED_TERMINAL:RAW_PAGE_PAGINATION_NOT_COMPLETE` rather
+   than silently reading only the first page -- a known, documented limitation, not a defect,
+   matching the endpoint's observed real-world single-page behavior from the 2026-08-10 pilots.
+4. Exact-session idempotency without a second engine. If no raw is retained, an existing
+   qualified VALUE observation is trusted without reacquisition. If raw IS retained (fresh or
+   prior), it is always re-normalized and handed to the store's own conflict guard: identical
+   content is a harmless rewrite (a correct rerun), differing content is `VALUE_CONFLICT` and is
+   never silently overwritten. This is the entire resume/idempotency story; no separate resume
+   state machine was built.
+5. `current_foreign_flow_positioning_bridge.py` answers Phase 13 of the owner brief (yes,
+   `current_market_flow_positioning/v1` can consume the retained VALUE store through a minimal,
+   source-preserving `canonical_market_evidence_integration` projection bridging only the
+   already-qualified FOREIGN_BUY/SELL/NET_VALUE triple) but is deliberately left unwired from
+   live Daily: `current_market_flow_positioning/v1` already has one live producer
+   (`tools/collect_market_evidence.py` via `build_enrichment_components`), and introducing a
+   second producer of the same contract-versioned artifact into production is a distinct
+   integration decision this milestone does not make.
+6. Governance: registered as a fresh owner-directed milestone in `ROADMAP_STATE.json` (no prior
+   `queued_next` entry existed for it); disposition is `IMPLEMENTATION_COMPLETE /
+   NO_NETWORK_LIVE_ACCEPTANCE_PENDING`, never `LIVE_OPERATIONAL`, until a real owner-authorized
+   `--live` run occurs. Zero DNSE requests were made anywhere in this session.
+
 ## 2026-09-19 - Flow / Price Divergence Shadow V1
 
 `FLOW_PRICE_DIVERGENCE_SHADOW_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.

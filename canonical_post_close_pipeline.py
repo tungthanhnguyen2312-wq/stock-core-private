@@ -994,6 +994,40 @@ def run_flow_price_divergence_shadow(root: Path, runtime_root: Path, session: st
     }
 
 
+def run_current_foreign_flow_enrichment(root: Path, runtime_root: Path, session: str, *,
+                                        allow_network: bool = False) -> dict[str, Any]:
+    """Optional, best-effort, resumable current foreign-flow enrichment after the canonical
+    handoff exists and after Signal Velocity V1.2 -- deliberately before
+    ``run_flow_price_divergence_shadow`` so a same-day owner-approved live acquisition (run
+    separately via ``tools/enrich_current_foreign_flow.py --live``, or here when
+    ``allow_network=True`` is explicitly passed) is reflected in that step's exact-session read
+    of the VALUE store. ``allow_network`` defaults to False: normal Daily never reaches DNSE for
+    this contract, never reads credentials, and cannot fail Core Daily or the AI handoff on any
+    error here -- every failure degrades to a visible, non-blocking status.
+    """
+    from current_foreign_flow_enrichment_operation import acquire_foreign_flow_for_manifest, CONTRACT_VERSION
+    from current_foreign_flow_retention import build_manifest_from_root
+
+    output = (root / "operations-review" / "current-foreign-flow-enrichment-v1" / session
+             / "current_foreign_flow_enrichment_operation.json")
+    try:
+        manifest = build_manifest_from_root(root, session)
+        operation = acquire_foreign_flow_for_manifest(manifest, runtime_root=runtime_root, allow_network=allow_network)
+        _write_json(output, operation)
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": f"CURRENT_FOREIGN_FLOW_ENRICHMENT_FAILED:{type(exc).__name__}:{exc}"}
+    return {
+        "status": operation["status"], "session": session, "contract_version": CONTRACT_VERSION,
+        "path": _rel(root, output), "operation_identity": operation["operation_identity"],
+        "manifest_identity": operation["acquisition_manifest_identity"],
+        "requested_count": len(operation["requested_tickers"]), "complete_count": operation["complete_count"],
+        "pending_count": operation["pending_count"], "failed_count": operation["failed_count"],
+        "conflict_count": operation["conflict_count"], "network_calls_made": operation["network"]["network_calls_made"],
+        "authority_boundary": "VALUE_ONLY_NON_ACTIONABLE_NO_LIQUIDITY_OR_SIZING_NOT_A_DECISION_INPUT",
+    }
+
+
 def register_session_inputs(
     root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
     retained_evidence_root: Path | None = None,
@@ -1393,6 +1427,7 @@ def build_tiered_bundle(
 
 def run_canonical_post_close(
     root: Path, runtime_root: Path, session: str, *, workers: int = 12, now: datetime | None = None,
+    enable_current_foreign_flow_live: bool = False,
 ) -> dict[str, Any]:
     if not isinstance(session, str) or not session.strip():
         raise CanonicalPostCloseError("REFUSE_CANONICAL_POST_CLOSE:EXPLICIT_SESSION_REQUIRED")
@@ -1450,9 +1485,13 @@ def run_canonical_post_close(
     # immutable T0 snapshot.  Run the new observer only afterwards; it is
     # deliberately best-effort and cannot change Producer or handoff success.
     signal_velocity = run_multi_session_signal_velocity_shadow(root, session)
+    current_foreign_flow_enrichment = run_current_foreign_flow_enrichment(
+        root, runtime_root, session, allow_network=enable_current_foreign_flow_live,
+    )
     flow_price_divergence = run_flow_price_divergence_shadow(root, runtime_root, session, signal_velocity)
     tier1 = tiers["session_handoff_bundle"]
     tier1["multi_session_signal_velocity"] = signal_velocity
+    tier1["current_foreign_flow_enrichment"] = current_foreign_flow_enrichment
     tier1["flow_price_divergence_shadow"] = flow_price_divergence
     _write_json(tiers["bundle_dir"] / "session_handoff_bundle.json", tier1)
     return {
@@ -1460,6 +1499,7 @@ def run_canonical_post_close(
         "producer_result": producer_result, "decision_packet": decision_packet,
         "prospective": prospective, "prospective_snapshot": prospective_snapshot,
         "runtime_release": runtime_release, "tiers": tiers, "multi_session_signal_velocity": signal_velocity,
+        "current_foreign_flow_enrichment": current_foreign_flow_enrichment,
         "flow_price_divergence_shadow": flow_price_divergence,
         "producer_head": producer_head, "consumer_head": consumer_head,
     }
@@ -1485,6 +1525,10 @@ def print_terminal_handoff(result: Mapping[str, Any]) -> None:
     print(f"PROSPECTIVE_COHORT_SNAPSHOT_ID: {tier1['prospective_cohort_snapshot_identity']}")
     print(f"BLOCKED_DIMENSIONS: {tier1['blocked_dimensions']}")
     print(f"WARNINGS: {tier1['warnings']}")
+    foreign_flow = tier1.get("current_foreign_flow_enrichment") or {}
+    print(f"CURRENT_FOREIGN_FLOW_ENRICHMENT: {foreign_flow.get('status')} "
+         f"({foreign_flow.get('complete_count')}/{foreign_flow.get('requested_count')} complete, "
+         f"network_calls={foreign_flow.get('network_calls_made')})")
     runtime_release = result.get("runtime_release") or result["tiers"]["dashboard_release_set_index"].get("runtime_release") or {}
     print(f"DASHBOARD_RUNTIME_READY: {'YES' if runtime_release.get('ready') else 'NO'}")
     print(f"DASHBOARD_RUNTIME_SESSION: {runtime_release.get('resolved_session') or 'UNRESOLVED'}")
@@ -1500,9 +1544,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runtime-root", required=True)
     parser.add_argument("--session", required=True, help="Explicit completed market session YYYY-MM-DD.")
     parser.add_argument("--workers", type=int, default=12)
+    parser.add_argument("--enable-current-foreign-flow-live", action="store_true",
+                        help="Explicit owner authorization for a real DNSE current foreign-flow "
+                             "acquisition after this session's canonical handoff is written. "
+                             "Default (omitted) is network-off, matching normal Daily.")
     args = parser.parse_args(argv)
     try:
-        result = run_canonical_post_close(ROOT, Path(args.runtime_root), args.session, workers=args.workers)
+        result = run_canonical_post_close(ROOT, Path(args.runtime_root), args.session, workers=args.workers,
+                                          enable_current_foreign_flow_live=args.enable_current_foreign_flow_live)
     except CanonicalPostCloseError as exc:
         print(f"STATUS: {exc}")
         return 2

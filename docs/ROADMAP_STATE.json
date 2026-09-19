@@ -15,11 +15,26 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "FLOW_PRICE_DIVERGENCE_SHADOW_V1",
+    "milestone": "CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "IMPLEMENTATION_COMPLETE / NO_NETWORK_LIVE_ACCEPTANCE_PENDING",
+      "starting_checkpoint": "a0e883595d93d99bb4f32b5518634556be461f00",
+      "checkpoint": "HEAD",
+      "dependencies": ["FLOW_PRICE_DIVERGENCE_SHADOW_V1"],
+      "unlocks": [],
+      "authority_effect": "NONE / VALUE_ONLY_NON_ACTIONABLE_LIVE_ACQUISITION_REMAINS_A_SEPARATE_OWNER_GATE",
+      "owner_authorized": true,
+      "source_doc": "Owner directive CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 (this session, 2026-09-19)",
+      "state_history": ["ACTIVE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_19_CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1",
+      "notes": "COMPLETE / IMPLEMENTATION_COMPLETE / NO_NETWORK_LIVE_ACCEPTANCE_PENDING. New current_foreign_flow_enrichment_operation/v1 (mutable) layered strictly above the existing immutable current_foreign_flow_acquisition_manifest/v1; one network boundary (acquire_foreign_flow_for_manifest allow_network=False by default, no env-var override) reused by a new Daily post-handoff step and a new operator command (tools/enrich_current_foreign_flow.py). Reuses tools/bulk_ingest_dnse_foreign_trading_raw.py and current_foreign_flow_retention.py's adapter/store unmodified; exact-session idempotency and conflict-guard come from the existing store, not a new state machine. current_foreign_flow_positioning_bridge.py investigates and answers Phase 13 (store can feed current_market_flow_positioning/v1) but is deliberately not wired into live Daily -- a second producer of that contract is a distinct future owner decision. 24 new tests (simulated CASE A-L) plus 104 pre-existing foreign-flow/flow-price/bulk-ingest tests pass unchanged. Zero live DNSE requests made. Evidence: operations-review/current-foreign-flow-retention-productionization-v1-20260919/. No successor queued."
+    },
     {
       "milestone_id": "FLOW_PRICE_DIVERGENCE_SHADOW_V1",
       "state": "COMPLETE",
