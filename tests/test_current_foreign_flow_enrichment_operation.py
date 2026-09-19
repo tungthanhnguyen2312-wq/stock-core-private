@@ -206,15 +206,14 @@ def test_case_g_provider_session_mismatch_fails_closed(tmp_path):
         api_key="k", api_secret="s", request_get=get, sleep=lambda _s: None, max_retries=1,
         backoff_seconds=0.0, request_delay_seconds=0.0, retry_failed=False, run_id="r",
     )
-    assert outcome["state"] == op.SESSION_MISMATCH
+    assert outcome["state"] == op.SESSION_MISSING
     assert store.read_observations(tmp_path, "HPG") == []
 
 
 # ---------------------------------------------------------------------------
-# CASE H: multi-page raw resumes correctly, but the single-page VALUE adapter
-# fails closed rather than silently reading only the first page.
+# CASE H: a complete retained multi-page chain is reduced offline.
 # ---------------------------------------------------------------------------
-def test_case_h_multipage_raw_resumes_then_adapter_fails_closed_on_pagination(tmp_path):
+def test_case_h_multipage_raw_resumes_then_adapter_reduces_complete_sequence_offline(tmp_path):
     calls = []
 
     def get(url, *, params, headers, timeout):
@@ -228,14 +227,21 @@ def test_case_h_multipage_raw_resumes_then_adapter_fails_closed_on_pagination(tm
                                 request_get=get, sleep=lambda _s: None)
     assert result["status"] == "COMPLETE"
     assert len(calls) == 2  # both pages retained; no re-fetch of page 0 on the second request
+    scope = op.raw_contract.compute_run_scope_id(symbols=["HPG"], session_date=SESSION)
+    checkpoint = op.lake.load_checkpoint(tmp_path, op.raw_contract.PROVIDER, op.raw_contract.DATASET, scope)
+    assert op._page_request_count(checkpoint, op.raw_contract.work_unit_id("HPG", SESSION)) == 2
+    raw_files = [Path(unit["raw_file"]) for name, unit in checkpoint["units"].items() if "__page_" in name]
+    raw_bytes_before = {path: path.read_bytes() for path in raw_files}
 
     outcome = op._process_ticker(
         ticker="HPG", session=SESSION, runtime_root=tmp_path, allow_network=False, credentials_available=False,
         api_key=None, api_secret=None, request_get=None, sleep=lambda _s: None, max_retries=1,
         backoff_seconds=0.0, request_delay_seconds=0.0, retry_failed=False, run_id="r",
     )
-    assert outcome["state"] == op.FAILED_TERMINAL
-    assert outcome["detail"] == "RAW_PAGE_PAGINATION_NOT_COMPLETE"
+    assert outcome["state"] == op.COMPLETE
+    assert outcome["network_calls"] == 0
+    assert store.read_observations(tmp_path, "HPG")[0]["foreign_buy_value"] == 100
+    assert {path: path.read_bytes() for path in raw_files} == raw_bytes_before
 
 
 # ---------------------------------------------------------------------------

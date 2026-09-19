@@ -146,32 +146,44 @@ def verify_ticker_current(runtime_root: Path | str, ticker: str, session: str) -
     }
 
 
-def _read_first_page(runtime_root: Path | str, scope: str, root_unit: str) -> dict[str, Any]:
-    """Read back the exact first retained page (cursor=None) for one raw work unit.
-
-    Only page 0 is ever read: the adapter's own pagination-completeness guard
-    (``current_foreign_flow_retention.normalize_exact_raw_page``) requires a single,
-    non-continued page -- see that function's docstring for why DESC-order page 0 is the
-    correct (most recent, session-closing cumulative) snapshot to normalize.
-    """
+def _read_retained_pages(runtime_root: Path | str, scope: str, root_unit: str) -> list[dict[str, Any]]:
+    """Read the complete, already-retained cursor chain without network access."""
     import pandas as pd
 
     checkpoint = lake.load_checkpoint(runtime_root, raw_contract.PROVIDER, raw_contract.DATASET, scope)
-    page_unit = raw_contract.page_unit_id(root_unit, None)
-    unit = (checkpoint.get("units", {}) or {}).get(page_unit)
-    if not isinstance(unit, Mapping) or unit.get("status") != "success" or not unit.get("raw_file"):
-        raise FileNotFoundError(f"first_page_not_retained:{page_unit}")
-    frame = pd.read_parquet(unit["raw_file"])
-    if len(frame) != 1:
-        raise FileNotFoundError(f"first_page_malformed:{page_unit}")
-    row = frame.iloc[0]
-    provenance = json.loads(row["provenance_json"])
-    raw_payload = json.loads(row["raw_payload_json"])
-    return {
-        "instrument": row["instrument"], "source_event_time": row["source_event_time"],
-        "endpoint": provenance.get("endpoint"), "provenance": provenance,
-        "raw_payload": raw_payload, "raw_sha256": row["raw_payload_hash"],
-    }
+    units = checkpoint.get("units", {}) or {}
+    if lake.unit_status(checkpoint, root_unit) != "success":
+        raise FileNotFoundError(f"root_not_complete:{root_unit}")
+    pagination = raw_contract.pagination_state(checkpoint, root_unit)
+    if not pagination or pagination.get("next_cursor") is not None:
+        raise FileNotFoundError(f"pagination_not_complete:{root_unit}")
+    pages: list[dict[str, Any]] = []
+    prefix = root_unit + "__page_"
+    for page_unit, unit in units.items():
+        if not str(page_unit).startswith(prefix):
+            continue
+        if not isinstance(unit, Mapping) or unit.get("status") != "success" or not unit.get("raw_file"):
+            raise FileNotFoundError(f"page_not_retained:{page_unit}")
+        frame = pd.read_parquet(unit["raw_file"])
+        if len(frame) != 1:
+            raise FileNotFoundError(f"page_malformed:{page_unit}")
+        row = frame.iloc[0]
+        provenance = json.loads(row["provenance_json"])
+        pages.append({
+            "instrument": row["instrument"], "source_event_time": row["source_event_time"],
+            "endpoint": provenance.get("endpoint"), "provenance": provenance,
+            "raw_payload": json.loads(row["raw_payload_json"]), "raw_sha256": row["raw_payload_hash"],
+        })
+    if len(pages) != pagination.get("page_count"):
+        raise FileNotFoundError(f"page_count_mismatch:{root_unit}")
+    return sorted(pages, key=lambda page: (page.get("provenance") or {}).get("page_index", -1))
+
+
+def _page_request_count(checkpoint: Mapping[str, Any], root_unit: str) -> int:
+    """Count actual attempted HTTP pages, distinct from logical ticker roots."""
+    prefix = root_unit + "__page_"
+    return sum(int((unit or {}).get("attempts") or 0) for name, unit in (checkpoint.get("units", {}) or {}).items()
+               if str(name).startswith(prefix))
 
 
 _RAW_PAGE_ERROR_STATE = {
@@ -181,6 +193,13 @@ _RAW_PAGE_ERROR_STATE = {
     "RAW_PAGE_PROVIDER_TICKER_MISMATCH": RAW_CONFLICT,
     "RAW_PAGE_HASH_MISMATCH": RAW_CONFLICT,
     "RAW_PAGE_PAGINATION_NOT_COMPLETE": FAILED_TERMINAL,
+    "RAW_SEQUENCE_EXACT_SESSION_MISSING": SESSION_MISSING,
+    "RAW_SEQUENCE_TICKER_OR_REQUESTED_SESSION_MISMATCH": SESSION_MISMATCH,
+    "RAW_SEQUENCE_PAGE_HASH_MISMATCH": RAW_CONFLICT,
+    "RAW_SEQUENCE_ENDPOINT_MISMATCH": RAW_CONFLICT,
+    "RAW_SEQUENCE_PROVIDER_TICKER_MISMATCH": RAW_CONFLICT,
+    "RAW_SEQUENCE_DUPLICATE_PAGE_IDENTITY": RAW_CONFLICT,
+    "RAW_SEQUENCE_CONFLICTING_EXACT_SESSION_RECORDS": RAW_CONFLICT,
 }
 
 
@@ -189,12 +208,12 @@ def _normalize_and_persist(*, ticker: str, session: str, runtime_root: Path | st
     scope = raw_contract.compute_run_scope_id(symbols=[ticker], session_date=session)
     root_unit = raw_contract.work_unit_id(ticker, session)
     try:
-        page = _read_first_page(runtime_root, scope, root_unit)
+        pages = _read_retained_pages(runtime_root, scope, root_unit)
     except FileNotFoundError as exc:
         return _result(ticker, FAILED_TERMINAL, f"RAW_PAGE_FILE_MISSING:{exc}", network_calls, history)
 
     try:
-        observation = retention.normalize_exact_raw_page(ticker=ticker, reference_session=session, page=page)
+        observation = retention.normalize_exact_raw_sequence(ticker=ticker, reference_session=session, pages=pages)
     except DnseForeignFlowError as exc:
         message = str(exc)
         state = SESSION_MISMATCH if message.startswith("point_in_time_mismatch") else RAW_CONFLICT
@@ -252,10 +271,10 @@ def _process_ticker(*, ticker: str, session: str, runtime_root: Path | str, allo
             backoff_seconds=backoff_seconds, request_delay_seconds=request_delay_seconds,
             request_get=request_get, sleep=sleep, retry_failed=retry_failed,
         )
-        network_calls = int(raw_result["coverage_report"]["attempted_work_units"])
         if raw_result["status"] == "AUTHENTICATION_FAILED_MID_RUN":
             return _result(ticker, CREDENTIAL_UNAVAILABLE, "DNSE_AUTHENTICATION_FAILED", network_calls, history)
         checkpoint = lake.load_checkpoint(runtime_root, raw_contract.PROVIDER, raw_contract.DATASET, scope)
+        network_calls = _page_request_count(checkpoint, root_unit)
         root_status = lake.unit_status(checkpoint, root_unit)
         if root_status != "success":
             error_code = str((checkpoint.get("units", {}).get(root_unit) or {}).get("error_code"))
@@ -376,7 +395,10 @@ def acquire_foreign_flow_for_manifest(
         "conflict_count": conflict_count, "session_issue_count": session_issue_count,
         "network": {
             "allow_network": allow_network, "credentials_available": credentials_available,
-            "credential_note": credential_note, "network_calls_made": total_network_calls,
+            "credential_note": credential_note,
+            "root_acquisition_units": sum(1 for item in records.values() if item["network_calls"] > 0),
+            "http_page_requests": total_network_calls,
+            "network_calls_made": total_network_calls,
         },
         "authority_boundary": {
             "value_only": True, "no_volume_or_room": True, "no_liquidity_or_sizing": True,

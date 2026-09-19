@@ -100,6 +100,78 @@ def normalize_exact_raw_page(*, ticker: str, reference_session: str, page: Mappi
     return observation
 
 
+def normalize_exact_raw_sequence(*, ticker: str, reference_session: str,
+                                 pages: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Reduce one complete retained DNSE cursor chain to one exact-session VALUE record.
+
+    Page zero is the newest page under the provider's DESC order, but it is not
+    necessarily terminal.  The whole retained chain must therefore validate before
+    its newest exact-session snapshot can be admitted.
+    """
+    ticker = ticker.upper()
+    if not pages:
+        raise ValueError("RAW_SEQUENCE_EMPTY")
+    expected_cursor = None
+    seen_payloads: set[str] = set()
+    candidates: list[Mapping[str, Any]] = []
+    baseline_query: dict[str, Any] | None = None
+    for index, page in enumerate(pages):
+        payload = page.get("raw_payload") or page.get("body")
+        provenance = page.get("provenance") or {}
+        endpoint = provenance.get("endpoint") or page.get("endpoint")
+        if page.get("instrument") not in {None, ticker} or page.get("source_event_time") not in {None, reference_session}:
+            raise ValueError("RAW_SEQUENCE_TICKER_OR_REQUESTED_SESSION_MISMATCH")
+        if endpoint != f"/price/{ticker}/foreign-trading":
+            raise ValueError("RAW_SEQUENCE_ENDPOINT_MISMATCH")
+        if not isinstance(payload, Mapping) or not isinstance(payload.get("foreigners"), list):
+            raise ValueError("RAW_SEQUENCE_PAGE_MALFORMED")
+        digest = hashlib.sha256(canonical_json(payload).encode()).hexdigest()
+        supplied = page.get("raw_sha256") or page.get("raw_payload_hash")
+        if supplied is not None and supplied != digest:
+            raise ValueError("RAW_SEQUENCE_PAGE_HASH_MISMATCH")
+        if digest in seen_payloads:
+            raise ValueError("RAW_SEQUENCE_DUPLICATE_PAGE_IDENTITY")
+        seen_payloads.add(digest)
+        page_index = provenance.get("page_index")
+        if page_index is not None and page_index != index:
+            raise ValueError("RAW_SEQUENCE_PAGE_INDEX_GAP")
+        cursor = provenance.get("page_cursor")
+        if index == 0:
+            if cursor not in {None, ""}:
+                raise ValueError("RAW_SEQUENCE_INITIAL_CURSOR_INVALID")
+        elif cursor != expected_cursor:
+            raise ValueError("RAW_SEQUENCE_CURSOR_LINEAGE_BROKEN")
+        query = dict(provenance.get("request_parameters") or page.get("query_sent") or {})
+        query_without_cursor = {key: value for key, value in query.items() if key != "nextPageToken"}
+        if baseline_query is None:
+            baseline_query = query_without_cursor
+        elif query_without_cursor != baseline_query:
+            raise ValueError("RAW_SEQUENCE_REQUEST_SCOPE_MISMATCH")
+        if index and expected_cursor is not None and query.get("nextPageToken") != expected_cursor:
+            raise ValueError("RAW_SEQUENCE_REQUEST_CURSOR_MISMATCH")
+        records = payload["foreigners"]
+        if any(not isinstance(row, Mapping) or str(row.get("symbol", "")).upper() != ticker for row in records):
+            raise ValueError("RAW_SEQUENCE_PROVIDER_TICKER_MISMATCH")
+        candidates.extend(row for row in records if str(row.get("time", "")).split(" ", 1)[0] == reference_session)
+        next_cursor = payload.get("nextPageToken")
+        expected_cursor = next_cursor if isinstance(next_cursor, str) and next_cursor else None
+    if expected_cursor is not None:
+        raise ValueError("RAW_SEQUENCE_PAGINATION_NOT_COMPLETE")
+    if not candidates:
+        raise ValueError("RAW_SEQUENCE_EXACT_SESSION_MISSING")
+    # The endpoint is DESC ordered.  Make selection independent of storage order;
+    # equal timestamps must be byte-identical or remain an explicit conflict.
+    latest_time = max(str(row.get("time", "")) for row in candidates)
+    latest = [row for row in candidates if str(row.get("time", "")) == latest_time]
+    latest_payloads = {canonical_json(row) for row in latest}
+    if len(latest_payloads) != 1:
+        raise ValueError("RAW_SEQUENCE_CONFLICTING_EXACT_SESSION_RECORDS")
+    observation = normalize_record(latest[0], source_endpoint=f"/price/{ticker}/foreign-trading",
+                                   query_window=baseline_query)
+    assert_point_in_time_consistency(requested_session_date=reference_session, observations=[observation])
+    return observation
+
+
 def write_exact_value_observation(runtime_root: str | Path, ticker: str, observation: Mapping[str, Any]) -> None:
     """Guard the store's historical last-write behavior against conflicting raw bytes."""
     provenance = observation.get("provenance") or {}
