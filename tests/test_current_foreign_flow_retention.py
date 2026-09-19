@@ -35,7 +35,9 @@ def test_conflicting_exact_store_write_fails_closed_and_same_write_is_idempotent
     retention.write_exact_value_observation(tmp_path, "HPG", observation)
     retention.write_exact_value_observation(tmp_path, "HPG", observation)
     stored = json.loads((tmp_path / "data/dnse-foreign-flow/observations/HPG.json").read_text())
-    assert "volume" not in json.dumps(stored).lower() and "room" not in json.dumps(stored).lower()
+    retained = stored["observations"][0]
+    assert not any("volume" in key or "room" in key for key in retained)
+    assert "event_scoped" not in retained["provenance"]
     changed = dict(observation); changed["foreign_buy_value"] = 101
     with pytest.raises(ValueError, match="CONFLICTING"):
         retention.write_exact_value_observation(tmp_path, "HPG", changed)

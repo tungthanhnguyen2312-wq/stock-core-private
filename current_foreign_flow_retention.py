@@ -102,7 +102,9 @@ def normalize_exact_raw_page(*, ticker: str, reference_session: str, page: Mappi
 
 def write_exact_value_observation(runtime_root: str | Path, ticker: str, observation: Mapping[str, Any]) -> None:
     """Guard the store's historical last-write behavior against conflicting raw bytes."""
-    value_only = {key: observation.get(key) for key in ("ticker", "session_date", "observed_at", "foreign_buy_value", "foreign_sell_value", "foreign_net_value", "source", "source_contract_version", "value_unit", "provenance", "qualification_status", "warnings")}
+    provenance = observation.get("provenance") or {}
+    value_only = {key: observation.get(key) for key in ("ticker", "session_date", "observed_at", "foreign_buy_value", "foreign_sell_value", "foreign_net_value", "source", "source_contract_version", "value_unit", "qualification_status", "warnings")}
+    value_only["provenance"] = {key: provenance.get(key) for key in ("source_endpoint", "board_id", "exchange", "trading_session_id", "query_window")}
     existing = read_observations(runtime_root, ticker)
     same = [row for row in existing if row.get("session_date") == observation.get("session_date")]
     if same and json.dumps(same[0], sort_keys=True) != json.dumps(value_only, sort_keys=True):
