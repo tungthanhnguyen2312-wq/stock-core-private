@@ -78,6 +78,44 @@ def test_resolve_supplementary_inputs_never_falls_back_to_a_different_session(tm
 
 
 # ---------------------------------------------------------------------------
+# resolve_velocity_and_flow_price_inputs -- separate directory convention, same fail-closed
+# contract as resolve_supplementary_inputs.
+# ---------------------------------------------------------------------------
+
+def test_resolve_velocity_and_flow_price_inputs_reads_exact_deterministic_path(tmp_path):
+    velocity_dir = tmp_path / "operations-review" / "multi-session-signal-velocity-v1.2" / SESSION
+    velocity_dir.mkdir(parents=True)
+    payload = {"artifact_identity": "multi_session_signal_velocity:1", "records": []}
+    (velocity_dir / "multi_session_signal_velocity_artifact.json").write_text(json.dumps(payload), encoding="utf-8")
+    resolved = ccpp.resolve_velocity_and_flow_price_inputs(tmp_path, SESSION)
+    assert resolved["signal_velocity"] == payload
+    assert resolved["flow_price"] is None
+
+
+def test_resolve_velocity_and_flow_price_inputs_missing_is_none_not_an_error(tmp_path):
+    resolved = ccpp.resolve_velocity_and_flow_price_inputs(tmp_path, SESSION)
+    assert resolved == {"signal_velocity": None, "flow_price": None}
+
+
+def test_resolve_velocity_and_flow_price_inputs_never_falls_back_to_a_different_session(tmp_path):
+    stale_dir = tmp_path / "operations-review" / "flow-price-divergence-shadow-v1" / OTHER_SESSION
+    stale_dir.mkdir(parents=True)
+    (stale_dir / "flow_price_divergence_shadow_artifact.json").write_text(
+        json.dumps({"artifact_identity": "flow_price_divergence_shadow:stale"}), encoding="utf-8",
+    )
+    resolved = ccpp.resolve_velocity_and_flow_price_inputs(tmp_path, SESSION)
+    assert resolved["flow_price"] is None
+
+
+def test_resolve_flow_research_cohort_tickers_reads_real_owner_focus_config():
+    """This resolves the actual repo-tracked config, not a fixture -- the cohort must contain
+    the real 11-ticker broader_watchlist (HPG et al.), never an empty/fabricated set."""
+    cohort = ccpp.resolve_flow_research_cohort_tickers()
+    assert "HPG" in cohort
+    assert len(cohort) == 11
+
+
+# ---------------------------------------------------------------------------
 # materialize_current_investment_decision_workspace
 # ---------------------------------------------------------------------------
 
@@ -134,6 +172,29 @@ def test_workspace_portfolio_unavailable_stays_not_evaluated_never_a_share_count
         assert card["portfolio"]["status"] == "NOT_EVALUATED"
         assert card["portfolio"].get("evaluated") is not True
         assert card["portfolio"]["reason"] == "NO_PORTFOLIO_RESEARCH_CONTEXT_SUPPLIED"
+
+
+def test_workspace_threads_supplementary_velocity_and_flow_price_into_every_card():
+    velocity_artifact = {
+        "contract_version": "multi_session_signal_velocity/v1.2",
+        "artifact_identity": "multi_session_signal_velocity:test",
+        "records": [{
+            "ticker": "AAA", "session": SESSION, "overall_transition_state": "EARLY_IMPROVEMENT",
+            "evidence_quality": {"state": "PARTIAL_RETAINED_EVIDENCE"}, "axes": {},
+            "independent_supporting_axes": [], "contradicting_axes": [],
+        }],
+    }
+    bundle = ccpp.materialize_current_investment_decision_workspace(
+        session=SESSION, registry_inputs=_registry_inputs(tickers=("AAA", "BBB")),
+        supplementary={"signal_velocity": velocity_artifact, "flow_price": None},
+        requested_at="2026-09-11T18:00:00+07:00",
+    )
+    cards = bundle["workspace"]["cards"]
+    assert cards["AAA"]["signal_velocity"]["overall_transition_state"] == "EARLY_IMPROVEMENT"
+    assert cards["BBB"]["signal_velocity"]["overall_transition_state"] == "INSUFFICIENT_EVIDENCE"
+    assert cards["AAA"]["flow_price"]["relationship"] == "FLOW_UNAVAILABLE"
+    # The real owner-focus cohort (HPG et al.) never includes fixture tickers AAA/BBB.
+    assert cards["AAA"]["flow_price"]["cohort_membership"] == "OUTSIDE_CURRENT_FLOW_RESEARCH_COHORT"
 
 
 def test_unavailable_recurring_axes_are_explicit_and_do_not_synthesize_a_contract():

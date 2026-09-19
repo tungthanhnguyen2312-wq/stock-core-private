@@ -84,6 +84,8 @@ import investment_decision_workspace_projection
 import market_wide_fundamental_feature_store
 import screener_master_projection
 import tactical_behavior_context
+import velocity_flow_price_presentation_projection
+from owner_research_focus import load_owner_research_focus
 from runtime_paths import runtime_root
 
 CONTRACT_VERSION = "canonical_current_product_projections/v1"
@@ -203,6 +205,41 @@ def resolve_supplementary_inputs(root: Path, session: str) -> dict[str, dict[str
         path = root / "operations-review" / dir_template.format(session=session_compact) / filename
         resolved[name] = _load_json(path) if path.is_file() else None
     return resolved
+
+
+#: Signal Velocity / Flow-Price Divergence use each engine's own established retained-artifact
+#: directory convention (``operations-review/<capability-slug>/<session-with-dashes>/<filename>``)
+#: -- not the ``<slug>-<session_compact>`` convention above -- so they are resolved separately,
+#: with the same fail-closed contract (missing file -> None, never an error, never a substitute
+#: session).
+VELOCITY_FLOW_PRICE_INPUT_PATHS: dict[str, tuple[str, str]] = {
+    "signal_velocity": ("multi-session-signal-velocity-v1.2", "multi_session_signal_velocity_artifact.json"),
+    "flow_price": ("flow-price-divergence-shadow-v1", "flow_price_divergence_shadow_artifact.json"),
+}
+
+
+def resolve_velocity_and_flow_price_inputs(root: Path, session: str) -> dict[str, dict[str, Any] | None]:
+    """Resolve the two already-retained SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1
+    research artifacts for ``session``, or ``None`` for each that is not yet retained. No network,
+    no recomputation -- these engines are run and retained independently of this projection."""
+    root = Path(root)
+    resolved: dict[str, dict[str, Any] | None] = {}
+    for name, (dir_slug, filename) in VELOCITY_FLOW_PRICE_INPUT_PATHS.items():
+        path = root / "operations-review" / dir_slug / session / filename
+        resolved[name] = _load_json(path) if path.is_file() else None
+    return resolved
+
+
+def resolve_flow_research_cohort_tickers() -> frozenset[str]:
+    """The configured current-foreign-flow research cohort (``owner_research_focus.json``'s
+    ``broader_watchlist``) -- a static, pre-flow-configured scope, never a live-observed set.
+    Returns an empty set (never raises) if owner focus cannot be loaded."""
+    try:
+        return velocity_flow_price_presentation_projection.cohort_tickers_from_owner_focus(
+            load_owner_research_focus(),
+        )
+    except Exception:  # noqa: BLE001 - this axis must never block core Daily / current products
+        return frozenset()
 
 
 def resolve_current_research_official_universe_scope(root: Path, session: str) -> dict[str, Any] | None:
@@ -459,6 +496,9 @@ def materialize_current_investment_decision_workspace(
         prospective_lifecycle=None,
         requested_at=requested_at,
         current_research_scope=current_research_scope,
+        signal_velocity_artifact=supplementary.get("signal_velocity"),
+        flow_price_artifact=supplementary.get("flow_price"),
+        flow_research_cohort_tickers=resolve_flow_research_cohort_tickers(),
     )
     return {
         "opportunity_context": opportunity_and_decision["opportunity_context"],
@@ -525,6 +565,7 @@ def materialize_and_write_current_product_projections(
     operation_dir = Path(operation_dir)
     try:
         supplementary = resolve_supplementary_inputs(root, session)
+        supplementary.update(resolve_velocity_and_flow_price_inputs(root, session))
         current_research_scope = resolve_current_research_official_universe_scope(root, session)
         feature_store_result = materialize_current_fundamental_feature_store_context(
             root=root, requested_at=requested_at,

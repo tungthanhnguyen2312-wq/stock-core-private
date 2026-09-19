@@ -1,5 +1,29 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-19 - Signal Velocity and Flow-Price Decision Presentation V1
+
+`SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1 = COMPLETE`.
+
+1. Presentation is a pure whitelist/reshape, never a second producer of research authority.
+   `velocity_flow_price_presentation_projection.py` reads only fields already computed by
+   `multi_session_signal_velocity/v1.2` and `flow_price_divergence_shadow/v1`; it recomputes
+   nothing, and a missing/wrong-session/wrong-contract input degrades to an explicit unavailable
+   state, never a fabricated or interpolated one.
+2. Cohort membership is a distinct field from data availability. `flow_price.cohort_membership`
+   (`IN_CURRENT_FLOW_RESEARCH_COHORT` / `OUTSIDE_CURRENT_FLOW_RESEARCH_COHORT`, resolved from
+   `owner_research_focus.json`'s `broader_watchlist`) lets the UI say "not yet in scope" for the
+   ~1,672 names outside the configured cohort instead of misreporting a market-wide data failure,
+   while still honestly reporting `FLOW_UNAVAILABLE` for cohort members whose current-session flow
+   has not been acquired.
+3. Owner-directed corrective finding before implementation: the milestone brief's claimed
+   Flow-Price "VERIFIED STARTING STATE" (an 11/11 evaluable cohort with a specific relationship
+   distribution) was verified against the real 2026-09-18 retained artifact and found to be
+   fabricated -- real evaluable-relationship count is 0/1,683. Built and shipped against the real
+   state instead of the brief's numbers; see docs/STATE.md for the full verification trail.
+4. Restrained visual semantics for Flow-Price. Every `flow_price_relationship` tone is
+   deliberately `neutral`/`watch` only (never `constructive`/`adverse`) so a raw enum containing
+   "BUYING"/"SELLING" can never read as a green/red buy-sell recommendation.
+
 ## 2026-09-19 - Current Foreign-Flow Retention Productionization V1
 
 `CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 = IMPLEMENTATION_COMPLETE /

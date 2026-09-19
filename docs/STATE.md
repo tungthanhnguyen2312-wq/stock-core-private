@@ -1,5 +1,44 @@
 # Stock Lookup — Operational State
 
+**Signal Velocity / Flow-Price decision presentation V1 (2026-09-19):**
+`SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1 = COMPLETE`. Bounded presentation-only
+milestone: the two already-governed research engines above (`multi_session_signal_velocity/v1.2`,
+`flow_price_divergence_shadow/v1`) are surfaced inside the existing Dashboard ticker decision
+drawer. No new analytical computation: `velocity_flow_price_presentation_projection.py` is a pure
+whitelist/reshape layer, wired additively into `investment_decision_workspace_projection.py`
+(two new optional `signal_velocity`/`flow_price` card fields, cohort-scope-aware coverage counts)
+and into `canonical_current_product_projections.py` via a new deterministic, fail-closed resolver
+(`resolve_velocity_and_flow_price_inputs`, mirroring `resolve_supplementary_inputs`'s existing
+no-search, no-fallback contract). **Corrective finding (this session, owner-directed
+re-verification before building):** the milestone brief's claimed "VERIFIED STARTING STATE" for
+Flow-Price -- an 11/11 qualified current foreign VALUE cohort with a specific relationship
+distribution (7 MIXED / 2 buying-weakness / 2 selling-weakness) and a specific artifact identity
+-- does not match any real retained artifact. The actual `flow_price_divergence_shadow/v1`
+artifact for 2026-09-18 (identity
+`flow_price_divergence_shadow:2a02a81a8727c060cbdedbaa88de6ad04b190d69015738a95274d009a2691473`,
+independently cross-checked against
+`operations-review/flow-price-divergence-shadow-v1-20260919/validation_report.json`) has **zero**
+evaluable relationships -- every one of 1,683 records is `FLOW_UNAVAILABLE`; only 3 tickers have
+any retained flow data at all, and it is stale. This is consistent with this same file's own
+"Flow / price divergence shadow V1 (2026-09-19)" entry above and with
+`CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1` being
+`NO_NETWORK_LIVE_ACCEPTANCE_PENDING` -- the live 11-ticker DNSE acquisition that would populate
+this cohort has genuinely not been run. The owner was informed and chose to ship the feature
+built honestly against real 2026-09-18 evidence rather than against the brief's fabricated
+numbers: the 11-ticker `owner_research_focus.json` `broader_watchlist` cohort is real and used
+for cohort-scope UX (a ticker inside it reads "in the tracked cohort, current data not yet
+recorded"; a ticker outside it reads "not in current flow-data scope" -- never "missing data" or
+a market-wide failure statistic), but no relationship category is faked to populate a demo.
+Signal Velocity V1.2 needed no such correction -- it is fully real and rich for 2026-09-18
+(`STABLE=716, DETERIORATING=436, MIXED_TRANSITION=294, EARLY_IMPROVEMENT=233,
+PERSISTENT_IMPROVEMENT=4`). Frontend: `investment-workspace.js`/`value-format.js` gained the two
+new compact evidence rows (Vietnamese-first, raw enum never primary text), two new deep-evidence
+cards, and a governed Vietnamese vocabulary for both contracts' state spaces -- deliberately
+restrained tone mapping for Flow-Price (no green/red implying buy/sell). 115 new/extended Producer
+tests (including real-artifact acceptance against the genuine 2026-09-18 retained artifacts) and
+27 new Dashboard tests, all green alongside the full pre-existing suites. Does not change any
+recommendation policy, authority boundary, or acquisition scope. No successor queued.
+
 **Current foreign-flow retention productionization V1 (2026-09-19):**
 `CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 = IMPLEMENTATION_COMPLETE /
 NO_NETWORK_LIVE_ACCEPTANCE_PENDING`.  Owner-directed architecture-only milestone (this

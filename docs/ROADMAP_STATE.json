@@ -15,11 +15,29 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1",
+    "milestone": "SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PRESENTATION_ONLY / NO_NEW_ANALYTICAL_AUTHORITY",
+      "starting_checkpoint": "d6f02b257e3762716f6ce2b1410f734e2ad79cc9",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
+        "FLOW_PRICE_DIVERGENCE_SHADOW_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / DASHBOARD_DOES_NOT_GAIN_ANALYTICAL_AUTHORITY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1 (this session, 2026-09-19)",
+      "state_history": ["ACTIVE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_19_SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1",
+      "notes": "COMPLETE. New velocity_flow_price_presentation_projection.py is a narrow, additive presentation bridge (no new analytical computation) whitelisting/reshaping already-governed fields from the two retained engines above onto investment_decision_workspace_projection/v1's per-ticker card as two new optional fields (signal_velocity, flow_price) plus cohort-scoped coverage counts. Wired into canonical_current_product_projections.py via a new deterministic, fail-closed resolver (resolve_velocity_and_flow_price_inputs) mirroring resolve_supplementary_inputs' existing contract, and into the Dashboard's existing card passthrough (no Dashboard-side schema change needed). CORRECTIVE FINDING (owner-directed re-verification, this session): the milestone brief's claimed 'VERIFIED STARTING STATE' for Flow-Price (an 11/11 qualified current foreign VALUE cohort with a specific relationship distribution) does not match any real retained artifact -- the real flow_price_divergence_shadow/v1 artifact for 2026-09-18 (identity flow_price_divergence_shadow:2a02a81a8727c060cbdedbaa88de6ad04b190d69015738a95274d009a2691473) has zero evaluable relationships (all 1,683 records FLOW_UNAVAILABLE; only 3 stale flow tickers retained at all), consistent with docs/STATE.md's own FLOW_PRICE_DIVERGENCE_SHADOW_V1 entry and with CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1 being NO_NETWORK_LIVE_ACCEPTANCE_PENDING (the live 11-ticker DNSE acquisition has not been run). Built and shipped the feature honestly against this real state instead: the 11-ticker owner_research_focus.json broader_watchlist cohort is real and used for cohort-scope UX (Phase 10), but every ticker, cohort member or not, currently and correctly renders as unavailable/outside-scope rather than a fabricated example. Signal Velocity V1.2 is fully real and rich (STABLE=716, DETERIORATING=436, MIXED_TRANSITION=294, EARLY_IMPROVEMENT=233, PERSISTENT_IMPROVEMENT=4 for 2026-09-18) and needed no such correction. 115 new/extended Producer tests (incl. real-artifact acceptance against the genuine 2026-09-18 retained artifacts) plus 27 new Dashboard tests, all green alongside the full pre-existing suites. Evidence: this commit; no operations-review/ evidence directory created (presentation-only, no new research artifact produced). No successor queued."
+    },
     {
       "milestone_id": "CURRENT_FOREIGN_FLOW_RETENTION_PRODUCTIONIZATION_V1",
       "state": "COMPLETE",

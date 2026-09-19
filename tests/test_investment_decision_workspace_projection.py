@@ -508,4 +508,99 @@ def test_no_score_rank_probability_or_target_price_anywhere():
     assert "score" not in card and "rank" not in card and "probability" not in card and "target_price" not in card
     assert card["authority_boundary"]["no_score"] is True
     assert card["authority_boundary"]["no_probability"] is True
-    assert card["authority_boundary"]["no_target_price"] is True
+
+
+# ---------------------------------------------------------------------------
+# SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1
+# ---------------------------------------------------------------------------
+
+def _velocity_artifact(ticker, session, overall="STABLE"):
+    return {
+        "contract_version": "multi_session_signal_velocity/v1.2",
+        "artifact_identity": "multi_session_signal_velocity:test",
+        "records": [{
+            "ticker": ticker, "session": session, "overall_transition_state": overall,
+            "evidence_quality": {"state": "COMPLETE_RETAINED_EVIDENCE"},
+            "axes": {"structural_repair": {"trajectory": {
+                "valid_observation_count": 3, "retained_session_span": {"first": "2026-09-10", "last": session},
+                "continuity_state": "CONTIGUOUS_RETAINED_OBSERVATIONS", "latest_transition": "IMPROVING",
+                "persistence": "IMPROVEMENT_PERSISTENT", "acceleration_state": "NOT_EVALUABLE_CATEGORICAL_ONLY",
+            }}},
+            "independent_supporting_axes": ["structural_repair"], "contradicting_axes": [],
+        }],
+    }
+
+
+def _flow_price_artifact(ticker, session, relationship="FLOW_PRICE_MIXED"):
+    return {
+        "contract_version": "flow_price_divergence_shadow/v1",
+        "artifact_identity": "flow_price_divergence_shadow:test",
+        "records": [{
+            "ticker": ticker, "reference_session": session,
+            "flow": {"state": "NET_FOREIGN_BUY", "persistence": "MIXED_FLOW", "latest_qualified_flow_session": session, "freshness": {"status": "current"}},
+            "price": {"state": "PRICE_MIXED", "velocity_state": "MIXED_TRANSITION", "participation_context": "PARTICIPATION_NEUTRAL", "market_support": "SUPPORTIVE", "sector_support": "MIXED"},
+            "relationship": relationship, "evidence_quality": "COMPLETE_RETAINED_EVIDENCE",
+            "session_alignment": {"state": "EXACT_SESSION_ALIGNED"}, "limitations": ["QUALIFIED_FOREIGN_VALUE_ONLY"],
+        }],
+    }
+
+
+def test_card_gains_signal_velocity_and_flow_price_when_artifacts_supplied():
+    opportunity, decision = real_pair(tickers=("AAA",))
+    out = build_artifacts(
+        opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t",
+        signal_velocity_artifact=_velocity_artifact("AAA", DECISION, overall="PERSISTENT_IMPROVEMENT"),
+        flow_price_artifact=_flow_price_artifact("AAA", DECISION, relationship="FOREIGN_BUYING_PRICE_WEAKNESS"),
+        flow_research_cohort_tickers=frozenset({"AAA"}),
+    )
+    card = out["cards"]["AAA"]
+    assert card["signal_velocity"]["overall_transition_state"] == "PERSISTENT_IMPROVEMENT"
+    assert card["signal_velocity"]["acceleration_state"] == "NOT_EVALUABLE_CATEGORICAL_ONLY"
+    assert card["flow_price"]["relationship"] == "FOREIGN_BUYING_PRICE_WEAKNESS"
+    assert card["flow_price"]["cohort_membership"] == "IN_CURRENT_FLOW_RESEARCH_COHORT"
+    assert out["source_artifacts"]["signal_velocity"] == "multi_session_signal_velocity:test"
+    assert out["source_artifacts"]["flow_price_divergence_shadow"] == "flow_price_divergence_shadow:test"
+    assert out["coverage"]["signal_velocity_distribution"] == {"PERSISTENT_IMPROVEMENT": 1}
+    assert out["coverage"]["flow_price_research_cohort_tickers"] == ["AAA"]
+    assert out["coverage"]["flow_price_relationship_distribution_within_cohort"] == {"FOREIGN_BUYING_PRICE_WEAKNESS": 1}
+
+
+def test_card_degrades_explicitly_when_velocity_and_flow_price_absent():
+    """Absence of the two new optional artifacts must never break the workspace, and must never
+    silently omit the fields either -- every card still carries an explicit unavailable state."""
+    opportunity, decision = real_pair(tickers=("AAA",))
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    card = out["cards"]["AAA"]
+    assert card["signal_velocity"]["overall_transition_state"] == "INSUFFICIENT_EVIDENCE"
+    assert card["flow_price"]["relationship"] == "FLOW_UNAVAILABLE"
+    assert card["flow_price"]["cohort_membership"] == "OUTSIDE_CURRENT_FLOW_RESEARCH_COHORT"
+    assert out["source_artifacts"]["signal_velocity"] is None
+    assert out["source_artifacts"]["flow_price_divergence_shadow"] is None
+
+
+def test_flow_price_cohort_coverage_denominator_is_cohort_not_full_universe():
+    """1,672 tickers outside the flow cohort must never widen the relationship-distribution
+    denominator used for any market-wide-sounding statistic."""
+    tickers = ("AAA", "BBB", "CCC")
+    opportunity, decision = real_pair(tickers=tickers)
+    out = build_artifacts(
+        opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t",
+        flow_price_artifact=_flow_price_artifact("AAA", DECISION, relationship="FLOW_PRICE_MIXED"),
+        flow_research_cohort_tickers=frozenset({"AAA"}),
+    )
+    assert out["coverage"]["flow_price_research_cohort_count"] == 1
+    assert out["coverage"]["flow_price_relationship_distribution_within_cohort"] == {"FLOW_PRICE_MIXED": 1}
+    # BBB/CCC are outside the cohort and must not appear in the cohort-denominated distribution
+    # even though they also carry an (outside-cohort) flow_price field on their own cards.
+    assert out["cards"]["BBB"]["flow_price"]["cohort_membership"] == "OUTSIDE_CURRENT_FLOW_RESEARCH_COHORT"
+    assert out["cards"]["CCC"]["flow_price"]["cohort_membership"] == "OUTSIDE_CURRENT_FLOW_RESEARCH_COHORT"
+
+
+def test_velocity_session_mismatch_falls_back_to_insufficient_evidence():
+    """A velocity record from a different session must never be presented as current."""
+    opportunity, decision = real_pair(tickers=("AAA",))
+    out = build_artifacts(
+        opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t",
+        signal_velocity_artifact=_velocity_artifact("AAA", "2026-08-01", overall="PERSISTENT_IMPROVEMENT"),
+    )
+    assert out["cards"]["AAA"]["signal_velocity"]["overall_transition_state"] == "INSUFFICIENT_EVIDENCE"

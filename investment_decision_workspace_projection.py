@@ -24,6 +24,7 @@ from typing import Any, Mapping
 
 from current_research_valuation_context import RELATIVE_METHODS
 import current_research_official_universe_scope as current_research_official_universe_scope_module
+import velocity_flow_price_presentation_projection as velocity_flow_price
 
 CONTRACT_VERSION = "investment_decision_workspace_projection/v1"
 MILESTONE = "INVESTMENT_DECISION_WORKSPACE_V1"
@@ -355,6 +356,9 @@ def build_ticker_card(
     *, ticker: str, opportunity_record: Mapping[str, Any], decision_record: Mapping[str, Any],
     sector: str, portfolio_research: Mapping[str, Any] | None, prospective_record: Mapping[str, Any],
     leadership_records: Mapping[str, Any] | None = None,
+    signal_velocity_artifact: Mapping[str, Any] | None = None,
+    flow_price_artifact: Mapping[str, Any] | None = None,
+    flow_research_cohort_tickers: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Compose one seven-section decision-workspace card for a single ticker."""
     fundamental = opportunity_record.get("fundamental") or {}
@@ -369,10 +373,19 @@ def build_ticker_card(
     reasons = (decision_record.get("deterministic_research_inference") or {}).get("reasons") or []
     warnings = (decision_record.get("warnings_counter_thesis") or {}).get("warnings") or decision_record.get("warnings") or []
     financial = decision_record.get("financial_analysis") or {"status": "NOT_SUPPLIED", "compact": None}
+    as_of_session = decision_record.get("as_of_session") or opportunity_record.get("as_of_session")
     return {
         "ticker": ticker,
-        "as_of_session": decision_record.get("as_of_session") or opportunity_record.get("as_of_session"),
+        "as_of_session": as_of_session,
         "sector": sector,
+        # Signal Velocity V1.2 / Flow-Price Divergence Shadow V1 -- presentation only, no new
+        # analytical computation. See velocity_flow_price_presentation_projection.py.
+        "signal_velocity": velocity_flow_price.signal_velocity_view(
+            ticker=ticker, artifact=signal_velocity_artifact, as_of_session=as_of_session,
+        ),
+        "flow_price": velocity_flow_price.flow_price_view(
+            ticker=ticker, artifact=flow_price_artifact, cohort_tickers=flow_research_cohort_tickers,
+        ),
         # A. Current stance
         "research_stance": decision_record.get("research_stance"),
         "research_stance_readiness": decision_record.get("research_stance_readiness"),
@@ -485,6 +498,9 @@ def build_artifacts(
     prospective_lifecycle: Mapping[str, Any] | None = None,
     requested_at: str,
     current_research_scope: Mapping[str, Any] | None = None,
+    signal_velocity_artifact: Mapping[str, Any] | None = None,
+    flow_price_artifact: Mapping[str, Any] | None = None,
+    flow_research_cohort_tickers: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Join a matched opportunity_context/v1 + security_decision_context/v1 pair into the
     compact investment_decision_workspace_projection/v1 artifact. Raises fail-closed if the two
@@ -544,6 +560,9 @@ def build_artifacts(
             portfolio_research=portfolio_research,
             prospective_record=_prospective_view(prospective_lifecycle, ticker),
             leadership_records=leadership_records,
+            signal_velocity_artifact=signal_velocity_artifact,
+            flow_price_artifact=flow_price_artifact,
+            flow_research_cohort_tickers=flow_research_cohort_tickers,
         )
         if current_research_scope_supplied:
             card["official_research_scope"] = current_research_official_universe_scope_module.ticker_scope_view(
@@ -585,6 +604,14 @@ def build_artifacts(
         if any(status not in {None, "CURRENT"} for status in (card["lineage"]["per_axis_freshness"] or {}).values())
     )
     financial_available_count = sum(card["why"]["financial_analysis"]["status"] == "AVAILABLE" for card in cards.values())
+    signal_velocity_distribution = Counter(card["signal_velocity"]["overall_transition_state"] for card in cards.values())
+    # Flow-Price coverage is deliberately denominated against the configured research cohort,
+    # never the full Daily ticker universe -- FLOW_UNAVAILABLE for a ticker outside that cohort
+    # is a scope fact, not a data-quality failure, and must never read like a market statistic.
+    cohort_in_workspace = sorted(t for t in flow_research_cohort_tickers if t in cards)
+    flow_relationship_distribution_within_cohort = Counter(
+        cards[t]["flow_price"]["relationship"] for t in cohort_in_workspace
+    )
 
     source_artifacts = {
         "opportunity_context": opportunity_artifact.get("artifact_identity"),
@@ -596,6 +623,8 @@ def build_artifacts(
             {"research_session": current_research_scope.get("research_session"), "official_snapshot_observed_at": current_research_scope.get("official_snapshot_observed_at")}
             if current_research_scope_supplied else None
         ),
+        "signal_velocity": (signal_velocity_artifact or {}).get("artifact_identity"),
+        "flow_price_divergence_shadow": (flow_price_artifact or {}).get("artifact_identity"),
     }
 
     artifact: dict[str, Any] = {
@@ -618,6 +647,10 @@ def build_artifacts(
             "prospective_cases_available_count": prospective_available_count,
             "stale_axis_present_count": stale_axis_count,
             "financial_analysis_available_count": financial_available_count,
+            "signal_velocity_distribution": dict(sorted(signal_velocity_distribution.items())),
+            "flow_price_research_cohort_tickers": cohort_in_workspace,
+            "flow_price_research_cohort_count": len(cohort_in_workspace),
+            "flow_price_relationship_distribution_within_cohort": dict(sorted(flow_relationship_distribution_within_cohort.items())),
         },
         "blocked_outputs": {
             "universal_score": "SCORING_PROHIBITED", "ordinal_rank": "RANKING_PROHIBITED",
