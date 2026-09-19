@@ -60,11 +60,18 @@ consuming a stale static artifact while newer, independently-verifiable evidence
 **Blocked:** the 6-session historical backfill (2026-09-10, 2026-09-11, 2026-09-14, 2026-09-15,
 2026-09-16, 2026-09-17 -- the Signal Velocity V1.2 qualified sessions other than 2026-09-18) was
 NOT performed. `current_foreign_flow_enrichment_operation.json` itself records
-`credentials_available: false` for the one run that IS retained -- no DNSE API key/secret is
-configured anywhere in this environment (no env vars, no `.env` file). The 78 already-retained
+`credentials_available: false` for the historical-backfill attempt: DNSE credentials were not
+visible/configured in the execution environment used for that attempt. The 78 already-retained
 raw pages behind the 2026-09-18 result were acquired at an earlier time outside this repository's
 visible history; this session has no means to acquire the 6 additional sessions' raw pages. This
 is an environment/credential limitation, not a policy one.
+
+**Daily readiness distinction:** `CORE_DAILY_AND_PRESENTATION_READY = YES`;
+`EXPLICIT_FOREIGN_FLOW_LIVE_PATH_READY = YES`; and
+`AUTOMATIC_LIVE_FOREIGN_FLOW_ON_DEFAULT_DAILY = NO`. Normal Daily calls
+`run_current_foreign_flow_enrichment(..., allow_network=False)` through its default
+`enable_current_foreign_flow_live=False` path, so it makes no foreign-flow DNSE request unless
+the separately governed explicit live operator is used.
 
 **Dashboard:** `data/investment_decision_workspace.json` and `data/build_info.json` refreshed
 again from the corrected operation-linked artifact (identity

@@ -583,7 +583,6 @@ def materialize_current_investment_decision_workspace(
         )
         if root is not None else None
     )
-    import sys as _dbg_sys; print("DEBUG root=", root, "flow_price_artifact=", flow_price_artifact, file=_dbg_sys.stderr)
     workspace = investment_decision_workspace_projection.build_artifacts(
         opportunity_artifact=opportunity_and_decision["opportunity_context"],
         decision_artifact=opportunity_and_decision["security_decision_context"],

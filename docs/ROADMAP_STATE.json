@@ -23,7 +23,9 @@
     {
       "milestone_id": "FLOW_PRICE_CANONICAL_SOURCE_BACKFILL_AND_PRESENTATION_CORRECTIVE_V1",
       "state": "PARTIAL_BY_EVIDENCE",
-      "narrative_disposition": "ROOT_CAUSE_FIXED_AND_GOVERNANCE_CORRECTED / HISTORICAL_BACKFILL_BLOCKED_NO_CREDENTIALS",
+      "narrative_disposition": "ROOT_CAUSE_FIXED_AND_GOVERNANCE_CORRECTED / HISTORICAL_BACKFILL_ENVIRONMENT_UNAVAILABLE",
+      "credential_claim_correction": "DNSE credentials were not visible/configured in the execution environment used for the historical-backfill attempt.",
+      "notes_credential_correction": "The prior absolute credential wording in notes is superseded by credential_claim_correction; no credential discovery was performed for this corrective.",
       "starting_checkpoint": "20e40545c4d8f1c656b070fb4e8d0d5a3385ea44",
       "checkpoint": "HEAD",
       "dependencies": ["SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1"],
