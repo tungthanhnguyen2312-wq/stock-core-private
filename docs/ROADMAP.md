@@ -1,5 +1,15 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Flow / price divergence shadow V1 (2026-09-19):**
+`FLOW_PRICE_DIVERGENCE_SHADOW_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.  This is a
+retained, VALUE-only descriptive research observer over exact-session DNSE flow
+and Signal Velocity V1.2; it does not add ingestion, a price model, causal claims,
+recommendation authority, execution authority, historical PIT promotion or
+Dashboard work.  Exact session alignment is mandatory and stale flow is historical
+context only.  Current local evidence has three stale flow series and no
+flow/price-evaluable relationship, so no broad conclusion is admitted.  The Daily
+collector is post-handoff, best-effort and non-blocking.  No successor is queued.
+
 **Signal velocity V1.2 acceleration closeout (2026-09-18):** Final bounded
 corrective continuation; V1.1 is immutable and superseded for acceleration
 terminology. Categorical progression/persistence is not a rate-of-change claim.

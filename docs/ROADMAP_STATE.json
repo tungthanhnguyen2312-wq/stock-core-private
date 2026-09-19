@@ -15,11 +15,28 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
+    "milestone": "FLOW_PRICE_DIVERGENCE_SHADOW_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
   "milestones": [
+    {
+      "milestone_id": "FLOW_PRICE_DIVERGENCE_SHADOW_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "PARTIAL_BY_EVIDENCE / RETAINED_VALUE_ONLY_SHADOW_RESEARCH",
+      "starting_checkpoint": "da6efb39c1a27ad62d4c3ea1c5d0a408a4827fc9",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "NONE / NON_CAUSAL_VALUE_FLOW_PRICE_RELATIONSHIP_RESEARCH_ONLY",
+      "owner_authorized": true,
+      "source_doc": "Owner directive FLOW_PRICE_DIVERGENCE_SHADOW_V1 (2026-09-19)",
+      "state_history": ["ACTIVE"],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_19_FLOW_PRICE_DIVERGENCE_SHADOW_V1",
+      "notes": "COMPLETE / PARTIAL_BY_EVIDENCE. New flow_price_divergence_shadow/v1 reuses dnse_foreign_flow_store VALUE-only observations and multi_session_signal_velocity/v1.2 only. Exact-session alignment is mandatory; stale, missing, future and mismatched flow cannot create a current relationship. Volume, room, unqualified denominators, causality, intent, score, probability, recommendation, sizing, execution, RAW_AS_TRADED and historical price PIT authority are excluded. The canonical post-close observer runs post-handoff, is immutable/idempotent/non-blocking, and contributes compact metadata only. Retained replay 2026-09-18: 1,683 Velocity records; 3 stale flow series; 1,680 missing; zero exact aligned/evaluable relationships. Evidence: operations-review/flow-price-divergence-shadow-v1-20260919/. No successor queued."
+    },
     {
       "milestone_id": "MULTI_SESSION_SIGNAL_VELOCITY_AND_EARLY_TRANSITION_INTELLIGENCE_V1",
       "state": "COMPLETE",

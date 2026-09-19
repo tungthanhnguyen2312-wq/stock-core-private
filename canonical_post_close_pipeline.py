@@ -27,6 +27,7 @@ multi_source_exact_session_resolver.py's own module docstring for the four-pass 
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -938,6 +939,61 @@ def run_multi_session_signal_velocity_shadow(root: Path, session: str) -> dict[s
     }
 
 
+def run_flow_price_divergence_shadow(root: Path, runtime_root: Path, session: str,
+                                     signal_velocity: Mapping[str, Any]) -> dict[str, Any]:
+    """Optional, exact-session retained VALUE-flow observer after Velocity V1.2.
+
+    It is intentionally downstream of the canonical handoff and signal-velocity
+    collector.  Any retained-store or artifact issue is visible here but cannot
+    alter a completed Daily, decision policy, or AI handoff.
+    """
+    from flow_price_divergence_shadow import (
+        VELOCITY_CONTRACT_VERSION, collect_from_retained_runtime, write_immutable,
+    )
+
+    if signal_velocity.get("status") != "COLLECTED":
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": "SIGNAL_VELOCITY_V1_2_NOT_COLLECTED"}
+    velocity_path = root / str(signal_velocity.get("path") or "")
+    velocity = _load(velocity_path)
+    if not isinstance(velocity, Mapping) or velocity.get("contract_version") != VELOCITY_CONTRACT_VERSION:
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": "EXACT_SIGNAL_VELOCITY_V1_2_ARTIFACT_UNAVAILABLE"}
+    if velocity.get("artifact_identity") != signal_velocity.get("artifact_identity"):
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": "SIGNAL_VELOCITY_IDENTITY_MISMATCH"}
+    velocity_body = {key: value for key, value in velocity.items()
+                     if key not in {"artifact_identity", "artifact_sha256"}}
+    velocity_digest = hashlib.sha256(
+        json.dumps(velocity_body, ensure_ascii=False, sort_keys=True,
+                   separators=(",", ":"), allow_nan=False).encode("utf-8")
+    ).hexdigest()
+    if (velocity.get("artifact_sha256") != velocity_digest or
+            velocity.get("artifact_identity") != "multi_session_signal_velocity:" + velocity_digest):
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": "SIGNAL_VELOCITY_CONTENT_IDENTITY_INVALID"}
+    if (velocity.get("validation") or {}).get("latest_session") != session:
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": "SIGNAL_VELOCITY_REFERENCE_SESSION_MISMATCH"}
+    output = root / "operations-review" / "flow-price-divergence-shadow-v1" / session / "flow_price_divergence_shadow_artifact.json"
+    try:
+        artifact = collect_from_retained_runtime(
+            root=root, runtime_root=runtime_root, reference_session=session,
+            velocity_artifact=velocity,
+        )
+        write_immutable(output, artifact)
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": f"RETAINED_FLOW_PRICE_DIVERGENCE_FAILED:{type(exc).__name__}:{exc}"}
+    return {
+        "status": "COLLECTED", "session": session, "contract_version": artifact["contract_version"],
+        "path": _rel(root, output), "artifact_identity": artifact["artifact_identity"],
+        "relationship_evaluable_count": artifact["validation"]["relationship_evaluable_count"],
+        "coverage_status": "PARTIAL_BY_EVIDENCE" if artifact["validation"]["relationship_evaluable_count"] < artifact["validation"]["record_count"] else "COMPLETE_RETAINED_EVIDENCE",
+        "authority_boundary": "RETAINED_VALUE_ONLY_NON_CAUSAL_SHADOW_RESEARCH_NOT_A_DECISION_INPUT",
+    }
+
+
 def register_session_inputs(
     root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
     retained_evidence_root: Path | None = None,
@@ -1394,14 +1450,17 @@ def run_canonical_post_close(
     # immutable T0 snapshot.  Run the new observer only afterwards; it is
     # deliberately best-effort and cannot change Producer or handoff success.
     signal_velocity = run_multi_session_signal_velocity_shadow(root, session)
+    flow_price_divergence = run_flow_price_divergence_shadow(root, runtime_root, session, signal_velocity)
     tier1 = tiers["session_handoff_bundle"]
     tier1["multi_session_signal_velocity"] = signal_velocity
+    tier1["flow_price_divergence_shadow"] = flow_price_divergence
     _write_json(tiers["bundle_dir"] / "session_handoff_bundle.json", tier1)
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
         "producer_result": producer_result, "decision_packet": decision_packet,
         "prospective": prospective, "prospective_snapshot": prospective_snapshot,
         "runtime_release": runtime_release, "tiers": tiers, "multi_session_signal_velocity": signal_velocity,
+        "flow_price_divergence_shadow": flow_price_divergence,
         "producer_head": producer_head, "consumer_head": consumer_head,
     }
 

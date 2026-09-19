@@ -1,5 +1,28 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-19 - Flow / Price Divergence Shadow V1
+
+`FLOW_PRICE_DIVERGENCE_SHADOW_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.
+
+1. Reuse `dnse_foreign_flow_store` as the only foreign-flow authority.  Its
+   VALUE-only projection is consumed directly; volume, room and any unqualified
+   denominator never reach this contract.
+2. Reuse only `multi_session_signal_velocity/v1.2`.  V1/V1.1 cannot silently
+   substitute.  Structure ADVERSE and setup INVALID are hard technical vetoes;
+   participation, market and sector are separate context rather than duplicate
+   proof or a veto override.
+3. A relationship is current solely for `EXACT_SESSION_ALIGNED` retained evidence.
+   Missing, stale, future and mismatched flow receives an explicit unavailable or
+   non-comparable state, never a filled value or a current divergence label.
+4. The canonical post-close collector runs after the Velocity handoff binding and
+   is immutable, idempotent and non-blocking.  It only contributes compact status
+   metadata to the Daily handoff, leaving AI handoff, Action Center, policy,
+   acquisition and Dashboard independent.
+
+The first retained replay is `PARTIAL_BY_EVIDENCE`: three flow files are stale for
+2026-09-18 and the remaining 1,680 Velocity tickers lack retained flow; zero
+relationships are evaluable.  This is a coverage result, not a market inference.
+
 ## 2026-09-18 - Signal Velocity V1.2 Acceleration-Semantic Closeout
 
 V1.1 inferred acceleration from repeated ordinal categorical changes. This was

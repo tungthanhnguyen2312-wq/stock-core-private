@@ -1,5 +1,29 @@
 # Stock Lookup — Operational State
 
+**Flow / price divergence shadow V1 (2026-09-19):**
+`FLOW_PRICE_DIVERGENCE_SHADOW_V1 = COMPLETE / PARTIAL_BY_EVIDENCE`.  New
+`flow_price_divergence_shadow/v1` is a retained-only, exact-session descriptive
+join of DNSE-qualified foreign VALUE flow and `multi_session_signal_velocity/v1.2`.
+It reads neither foreign volume nor room, computes no denominator-normalized flow,
+and contains no causal, intent, prediction, recommendation, sizing, liquidity or
+execution authority.  A current relationship requires an exact same-session flow
+observation and V1.2 price/technical record; stale, missing, future or semantically
+blocked flow is never joined as current.  The five-session sustained-flow label also
+requires a complete store window and a matching direction streak, so an aggregate
+dominated by one day cannot claim persistence.  Technical ADVERSE structure or an
+INVALID setup vetoes constructive price wording; market, sector and participation
+remain separately attributed context.
+
+Local retained validation for `2026-09-18` produced 1,683 V1.2 records, but only
+three retained flow tickers (all stale), 1,680 missing flow series, zero exact
+alignments and therefore zero evaluable relationships.  It is honestly
+`PARTIAL_BY_EVIDENCE`, not a market conclusion.  The post-close collector runs
+after Velocity V1.2, is immutable/idempotent and non-blocking; its handoff exposes
+only status, version, identity, path and coverage.  It does not change AI handoff,
+Action Center, Daily decision policy, acquisition or Dashboard behavior.  Evidence:
+`operations-review/flow-price-divergence-shadow-v1-20260919/`.  No successor is
+queued.
+
 **Signal velocity V1.2 acceleration closeout (2026-09-18):** V1.1 is preserved
 but superseded specifically for categorical acceleration terminology. Categorical
 ordinal ranks establish order only, never rate; V1.2 emits

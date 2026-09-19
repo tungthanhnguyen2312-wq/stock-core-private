@@ -1,0 +1,100 @@
+{
+  "artifact_identity": "flow_price_divergence_shadow:2a02a81a8727c060cbdedbaa88de6ad04b190d69015738a95274d009a2691473",
+  "authority_boundary": {
+    "is_actionable": false,
+    "no_causality_or_intent": true,
+    "no_normalized_flow_ratio": true,
+    "no_score_probability_recommendation_or_execution": true,
+    "no_volume_or_room": true,
+    "qualified_foreign_value_only": true
+  },
+  "contract_version": "flow_price_divergence_shadow/v1",
+  "disposition": "PARTIAL_BY_EVIDENCE",
+  "flow_coverage": {
+    "current_exact_session_aligned_count": 0,
+    "five_session_complete_count": 3,
+    "flow_velocity_crosstab": {
+      "counts": {},
+      "eligible_denominator": 0
+    },
+    "missing_count": 1680,
+    "record_count": 1683,
+    "reference_session": "2026-09-18",
+    "relationship_counts": {
+      "FLOW_UNAVAILABLE": 1683
+    },
+    "relationship_evaluable_count": 0,
+    "signal_velocity_coverage": 1683,
+    "stale_count": 3,
+    "ten_session_complete_count": 0
+  },
+  "input_identities": {
+    "signal_velocity": "multi_session_signal_velocity:6d42f7630af6e54fe2d90eff99b7b2a3e061049714ee606950c6bcb8e8b8082d"
+  },
+  "limitations": [
+    "FLOW_STATE_IS_DESCRIPTIVE_NOT_DIRECTIONAL_AUTHORITY",
+    "NO_HISTORICAL_PRICE_RECONSTRUCTION",
+    "NO_FORWARD_OUTCOME_CONTRACT"
+  ],
+  "reference_session": "2026-09-18",
+  "representative_cases": [
+    {
+      "evidence_quality": "INSUFFICIENT_RETAINED_EVIDENCE",
+      "flow": {
+        "freshness": {
+          "latest_qualified_session_date": null,
+          "reason": "no_qualified_foreign_flow_session_retained",
+          "reference_session_date": "2026-09-18",
+          "sessions_behind": null,
+          "status": "not_applicable"
+        },
+        "latest_qualified_flow_session": null,
+        "latest_qualified_net_value_vnd": null,
+        "persistence": "INSUFFICIENT_HISTORY",
+        "reason_codes": [
+          "NO_QUALIFIED_VALUE_FLOW_RETAINED"
+        ],
+        "source_identity": "dnse_foreign_flow_series:71548fd865f7ebd45d1d12c30269c9454ae9c5859bf6e3da1ae9be57b570d342",
+        "state": "FLOW_UNAVAILABLE",
+        "window_completeness": {
+          "10_session": "incomplete",
+          "5_session": "incomplete"
+        },
+        "window_sessions": {
+          "10_session": [],
+          "5_session": []
+        }
+      },
+      "limitations": [
+        "QUALIFIED_FOREIGN_VALUE_ONLY",
+        "NO_FLOW_NORMALIZATION",
+        "NO_CAUSAL_OR_INTENT_INTERPRETATION",
+        "NO_FORWARD_OUTCOME_CLAIM"
+      ],
+      "price": {
+        "market_support": "MIXED",
+        "participation_context": "PARTICIPATION_CONTRADICTS",
+        "reason_codes": [
+          "TECHNICAL_VETO"
+        ],
+        "sector_support": "MIXED",
+        "source_identity": "prospective_decision_snapshot:7cc74c68b25f1072a9816f2d97073345f1a27be66907daea9ab7c444157c35af",
+        "state": "PRICE_INVALID_OR_BREAKDOWN",
+        "technical_source_identity": "market_structure_breakout_product_projection/v1:a22684fc31042399d0310a50198934fa2a83d4f189fa3db017607092eb8ebe64",
+        "velocity_state": "DETERIORATING"
+      },
+      "relationship": "FLOW_UNAVAILABLE",
+      "session_alignment": {
+        "flow_window_sessions": {
+          "10_session": [],
+          "5_session": []
+        },
+        "latest_qualified_flow_session": null,
+        "reference_session": "2026-09-18",
+        "sessions_behind": null,
+        "state": "UNAVAILABLE"
+      },
+      "ticker": "A32"
+    }
+  ]
+}
