@@ -68,7 +68,7 @@ def main() -> int:
         flow_price_artifact=flow_price_artifact, flow_cohort_tickers=cohort,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(enriched, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+    args.output.write_text(json.dumps(enriched, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     velocity_states = {}
     flow_relationships = {}
     for card in enriched["cards"].values():
