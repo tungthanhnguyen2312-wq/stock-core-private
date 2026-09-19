@@ -25,6 +25,7 @@ from typing import Any, Mapping
 from current_research_valuation_context import RELATIVE_METHODS
 import current_research_official_universe_scope as current_research_official_universe_scope_module
 import velocity_flow_price_presentation_projection as velocity_flow_price
+import indicator_metric_display_state as indicator_display_state
 
 CONTRACT_VERSION = "investment_decision_workspace_projection/v1"
 MILESTONE = "INVESTMENT_DECISION_WORKSPACE_V1"
@@ -374,7 +375,7 @@ def build_ticker_card(
     warnings = (decision_record.get("warnings_counter_thesis") or {}).get("warnings") or decision_record.get("warnings") or []
     financial = decision_record.get("financial_analysis") or {"status": "NOT_SUPPLIED", "compact": None}
     as_of_session = decision_record.get("as_of_session") or opportunity_record.get("as_of_session")
-    return {
+    card: dict[str, Any] = {
         "ticker": ticker,
         "as_of_session": as_of_session,
         "sector": sector,
@@ -487,6 +488,14 @@ def build_ticker_card(
             "portfolio_fit_does_not_mutate_research_stance": True,
         },
     }
+    # DASHBOARD_INVESTOR_FIRST_PRESENTATION_SIMPLIFICATION_V1: additive, presentation-only
+    # bridge -- reconciles fields already on this exact card into the six-state
+    # indicator_metric_display_state/v1 contract. Computes nothing new; see
+    # indicator_metric_availability.py / indicator_metric_display_state.py.
+    card["display_metrics"] = indicator_display_state.build_ticker_display_metrics(
+        ticker, card, cohort_tickers=flow_research_cohort_tickers,
+    )
+    return card
 
 
 def build_artifacts(
@@ -659,6 +668,10 @@ def build_artifacts(
         },
         "cards": cards,
         "authority_effect": "NONE / PRODUCT_WORKSPACE_ONLY",
+        # Static per-metric_id label/family, published exactly once (never per ticker) --
+        # see indicator_metric_display_state.py's module docstring for the size rationale.
+        # Per-ticker display_state/value live at card["display_metrics"][metric_id].
+        "display_metric_catalog": indicator_display_state.DISPLAY_METRIC_CATALOG,
     }
     artifact.update(content_identity(artifact))
     return artifact

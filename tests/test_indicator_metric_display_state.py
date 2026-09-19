@@ -129,6 +129,89 @@ def test_no_forbidden_technical_language_for_any_state(availability_state):
         assert forbidden not in visible_text.lower(), f"leaked {forbidden!r} into display text: {visible_text!r}"
 
 
+# ---------------------------------------------------------------------------
+# build_ticker_display_metrics -- the compact investor-facing bridge
+# ---------------------------------------------------------------------------
+
+def _minimal_card(**overrides):
+    card = {
+        "as_of_session": "2026-09-18",
+        "fundamental": {"entity_applicability": "GENERIC_RESEARCH_PRIMITIVES_ALLOWED",
+                        "current_features": {}, "financial_health": {}},
+        "valuation": {"entity_class": "corporate", "method_diagnostics": {}},
+        "tactical": {}, "confirmation": {}, "invalidation": {"technical": {}},
+        "signal_velocity": {}, "market_sector": {"sector_diagnostic": {}},
+        "flow_price": {}, "catalyst": {},
+    }
+    card.update(overrides)
+    return card
+
+
+def test_every_investor_metric_has_a_catalog_entry_with_label_and_family():
+    for metric_id in display.INVESTOR_METRIC_ORDER:
+        entry = display.DISPLAY_METRIC_CATALOG[metric_id]
+        assert entry["label"]
+        assert entry["family"] in availability.FAMILIES
+
+
+def test_catalog_is_static_not_duplicated_per_ticker():
+    """The size-safety invariant this bridge exists to protect: per-ticker records carry
+    only display_state/value -- label/tooltip live once in DISPLAY_METRIC_CATALOG/TOOLTIP_VI."""
+    result = display.build_ticker_display_metrics("ZZZ", _minimal_card(), cohort_tickers=COHORT)
+    for record in result.values():
+        assert set(record) == {"display_state", "value"}
+
+
+def test_build_ticker_display_metrics_never_omits_a_registered_slot():
+    result = display.build_ticker_display_metrics("ZZZ", _minimal_card(), cohort_tickers=COHORT)
+    assert set(result) == set(display.INVESTOR_METRIC_ORDER)
+    for record in result.values():
+        assert record["display_state"] in availability.AVAILABILITY_STATES
+
+
+def test_ebitda_missing_shows_insufficient_data_state_not_omitted():
+    card = _minimal_card(valuation={"entity_class": "corporate", "method_diagnostics": {
+        "EV/EBITDA_CALC_READY": {"availability_state": "NOT_AVAILABLE", "blocker_reason_codes": ["ebitda_not_ready"]},
+    }})
+    result = display.build_ticker_display_metrics("HPG", card, cohort_tickers=COHORT)
+    assert result["ebitda"]["display_state"] == "INSUFFICIENT_DATA"
+    assert display.DISPLAY_METRIC_CATALOG["ebitda"]["label"] == "EBITDA"
+
+
+def test_ev_ebitda_consolidates_two_internal_methods_into_one_investor_slot():
+    card = _minimal_card(valuation={"entity_class": "corporate", "method_diagnostics": {
+        "EV/EBITDA": {"availability_state": "NOT_AVAILABLE", "blocker_reason_codes": ["EXACT_EBITDA_COMPARABILITY_NOT_RETAINED"]},
+        "EV/EBITDA_CALC_READY": {"availability_state": "AVAILABLE_REFERENCE_ONLY", "value": 8.86},
+    }})
+    result = display.build_ticker_display_metrics("HPG", card, cohort_tickers=COHORT)
+    assert "ev_ebitda" in result
+    assert "ev_ebitda_calc_ready" not in result
+    assert result["ev_ebitda"]["display_state"] == "AVAILABLE"
+    assert result["ev_ebitda"]["value"] == 8.86
+
+
+def test_ev_ebitda_not_applicable_for_bank():
+    card = _minimal_card(valuation={"entity_class": "bank", "method_diagnostics": {}})
+    result = display.build_ticker_display_metrics("VCB", card, cohort_tickers=COHORT)
+    assert result["ev_ebitda"]["display_state"] == "NOT_APPLICABLE"
+    assert display.DISPLAY_TEXT_VI["NOT_APPLICABLE"] == "Không áp dụng"
+
+
+def test_flow_outside_cohort_is_neutral_not_tracked_state():
+    result = display.build_ticker_display_metrics("AAA", _minimal_card(), cohort_tickers=COHORT)
+    assert result["foreign_flow_state"]["display_state"] == "NOT_TRACKED"
+    assert display.DISPLAY_TEXT_VI["NOT_TRACKED"] == "Chưa theo dõi"
+
+
+@pytest.mark.skipif(not WORKSPACE_ARTIFACT_PATH.exists(), reason="sibling market-dashboard checkout not present")
+def test_real_hpg_card_display_metrics_bridge():
+    artifact = json.loads(WORKSPACE_ARTIFACT_PATH.read_text(encoding="utf-8"))
+    result = display.build_ticker_display_metrics("HPG", artifact["cards"]["HPG"], cohort_tickers=COHORT)
+    assert result["foreign_flow_state"]["display_state"] == "AVAILABLE"
+    assert result["signal_velocity_state"]["display_state"] == "AVAILABLE"
+    assert "ev_ebitda_calc_ready" not in result
+
+
 @pytest.mark.skipif(not WORKSPACE_ARTIFACT_PATH.exists(), reason="sibling market-dashboard checkout not present")
 def test_real_workspace_projection_has_no_forbidden_language_in_display_text():
     artifact = json.loads(WORKSPACE_ARTIFACT_PATH.read_text(encoding="utf-8"))

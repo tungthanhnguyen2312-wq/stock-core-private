@@ -284,6 +284,29 @@ def test_fundamental_catalyst_liquidity_sector_diagnostics_additive_and_present(
     assert card["fundamental"]["state"] == card["why"]["fundamental_evidence"]["state"]
 
 
+def test_display_metrics_bridge_present_and_never_omits_a_registered_slot():
+    """DASHBOARD_INVESTOR_FIRST_PRESENTATION_SIMPLIFICATION_V1: every card gets an additive
+    display_metrics block from indicator_metric_display_state.py, covering every investor
+    -facing metric slot regardless of whether the underlying value is available."""
+    import indicator_metric_display_state as display
+
+    opportunity, decision = real_pair(tickers=("AAA",))
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    card = out["cards"]["AAA"]
+    assert "display_metrics" in card
+    assert set(card["display_metrics"]) == set(display.INVESTOR_METRIC_ORDER)
+    for metric_id, record in card["display_metrics"].items():
+        assert record["display_state"] in display.DISPLAY_STATES
+        # Compact per-ticker shape: label/family/tooltip are static, published once at
+        # the artifact's top-level display_metric_catalog, never repeated per ticker.
+        assert set(record) == {"display_state", "value"}
+    assert "display_metric_catalog" in out
+    assert set(out["display_metric_catalog"]) == set(display.INVESTOR_METRIC_ORDER)
+    assert out["display_metric_catalog"]["ebitda"]["label"] == "EBITDA"
+    # Pre-existing fields are untouched by this additive bridge.
+    assert card["research_stance"] == decision["records"]["AAA"]["research_stance"]
+
+
 def test_existing_research_stance_byte_identical_with_diagnostic_passthrough():
     tickers = ("AAA", "BBB", "CCC", "DDD", "EEE")
     opportunity, decision = real_pair(tickers=tickers, pes={t: 10.0 + i for i, t in enumerate(tickers)})
