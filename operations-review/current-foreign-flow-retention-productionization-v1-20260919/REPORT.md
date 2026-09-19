@@ -223,6 +223,14 @@ records.
 - `python tools/stocklookup_roadmap.py --check` after the `ROADMAP_STATE.json` update: `PASS`
   (drift check, dependency consistency, checkpoint existence, stale-next-pointers, multiple
   active writers all pass).
+- Full `tests/test_canonical_post_close_pipeline.py` (broader, not directly targeted by this
+  milestone): 55 passed / 1 failed. The one failure
+  (`test_canonical_post_close_flag_never_invokes_legacy_step_runner`) is confirmed
+  **pre-existing**: reproduced identically against a temporary detached worktree at the pristine
+  starting commit `a0e883595d93d99bb4f32b5518634556be461f00`, before any change in this
+  milestone. Its preflight gate requires `HEAD == origin/main`; this checkout was already
+  intentionally kept several commits ahead of `origin/main` before this session began (per the
+  owner's own starting instructions), so the gate fails closed regardless of this diff.
 
 ## 21. Files changed / added
 
