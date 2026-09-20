@@ -195,7 +195,10 @@ DISPLAY_METRIC_CATALOG: dict[str, dict[str, str]] = {
 
 
 def build_ticker_display_metrics(ticker: str, card: Mapping[str, Any], *,
-                                  cohort_tickers: frozenset[str]) -> dict[str, dict[str, Any]]:
+                                  cohort_tickers: frozenset[str],
+                                  technical_coverage_disposition_record: Mapping[str, Any] | None = None,
+                                  technical_history_recovery_record: Mapping[str, Any] | None = None,
+                                  ) -> dict[str, dict[str, Any]]:
     """The compact, investor-facing ``display_metrics`` block attached to one Workspace card.
 
     Reuses ``indicator_metric_availability.evaluate_ticker`` (classification) and
@@ -203,11 +206,23 @@ def build_ticker_display_metrics(ticker: str, card: Mapping[str, Any], *,
     no EBITDA/valuation/technical figure. Every id in ``INVESTOR_METRIC_ORDER`` is present in
     the result (never omitted for being unavailable).
 
+    ``technical_coverage_disposition_record``/``technical_history_recovery_record`` (both
+    optional) are this one ticker's own real, already session-coherence-checked evidence rows
+    (see ``investment_decision_workspace_projection._coherent_technical_evidence()``), passed
+    straight through to ``evaluate_ticker()`` for precise ``technical_trend_entry_state``
+    blocker classification (INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_
+    V1). Omitted, classification fails closed exactly as it always has -- no display-state
+    vocabulary change either way.
+
     Deliberately compact: only ``display_state`` and ``value`` vary per ticker. ``label`` and
     ``tooltip`` are static per ``metric_id`` -- read them once from ``DISPLAY_METRIC_CATALOG``/
     ``TOOLTIP_VI`` (keyed by ``display_state``), never repeat them per ticker.
     """
-    availability_records = availability.evaluate_ticker(ticker, card, cohort_tickers=cohort_tickers)
+    availability_records = availability.evaluate_ticker(
+        ticker, card, cohort_tickers=cohort_tickers,
+        technical_coverage_disposition=technical_coverage_disposition_record,
+        technical_history_recovery_record=technical_history_recovery_record,
+    )
     display_records = {metric_id: to_display_state(record) for metric_id, record in availability_records.items()}
 
     ev_ebitda_candidates = [display_records[m] for m in _EV_EBITDA_PREFERENCE if m in display_records]

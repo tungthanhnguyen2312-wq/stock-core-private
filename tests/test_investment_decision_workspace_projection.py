@@ -1,6 +1,9 @@
 """Focused tests for investment_decision_workspace_projection.py."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from current_valuation_opportunity_integration import build_artifacts as build_opportunity_artifacts
@@ -317,6 +320,192 @@ def test_existing_research_stance_byte_identical_with_diagnostic_passthrough():
     assert card["valuation"]["relative_research_state"] == card["why"]["valuation_evidence"]["relative_research_state"]
 
 
+# ---------------------------------------------------------------------------
+# INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 (2026-09-20) continuation:
+# wiring same_session_technical_coverage_disposition/v1 + market_wide_current_technical_
+# coverage_scaleout/v1 evidence into the real live caller chain (build_artifacts ->
+# build_ticker_card -> indicator_metric_display_state.build_ticker_display_metrics ->
+# indicator_metric_availability.evaluate_ticker).
+# ---------------------------------------------------------------------------
+
+import same_session_technical_coverage_disposition as _disposition_module
+import market_wide_current_technical_coverage_scaleout as _scaleout_module
+from investment_decision_workspace_projection import _coherent_technical_evidence
+
+
+def _disposition_artifact(records: dict, *, session: str = DECISION) -> dict:
+    payload = {"schema_version": "1.0.0", "contract_version": "same_session_technical_coverage_disposition/v1",
+               "session": session, "records": records}
+    return {**payload, **_disposition_module.content_identity(payload)}
+
+
+def _recovery_artifact(records: dict, *, session: str = DECISION) -> dict:
+    payload = {"schema_version": "1.0.0", "contract_version": "market_wide_current_technical_coverage_scaleout/v1",
+               "target_session": session, "records": records}
+    return {**payload, **_scaleout_module.content_identity(payload)}
+
+
+_MINIMAL_OPPORTUNITY_RECORD = {
+    "usable_major_axes": [], "fundamental": {}, "tactical": {}, "market_sector": {}, "catalyst": {}, "liquidity": {},
+    "valuation": {"peer_relative_context": {}, "absolute_research_context": {}}, "data_authority": {},
+}
+_MINIMAL_DECISION_RECORD = {"deterministic_research_inference": {}, "warnings_counter_thesis": {}}
+
+
+def _minimal_card(ticker, **kwargs):
+    return build_ticker_card(
+        ticker=ticker, opportunity_record=_MINIMAL_OPPORTUNITY_RECORD, decision_record=_MINIMAL_DECISION_RECORD,
+        sector="UNKNOWN", portfolio_research=None, prospective_record={"status": "NO_RETAINED_CURRENT_CASES"},
+        **kwargs,
+    )
+
+
+def test_coherent_technical_evidence_accepts_matching_session_and_identity():
+    disposition = _disposition_artifact({"AAA": {"disposition": "PROVIDER_SESSION_UNAVAILABLE"}})
+    recovery = _recovery_artifact({})
+    disp_records, rec_records = _coherent_technical_evidence(
+        as_of_session=DECISION, technical_coverage_disposition=disposition, technical_history_recovery=recovery,
+    )
+    assert disp_records == disposition["records"]
+    assert rec_records == recovery["records"]
+
+
+def test_coherent_technical_evidence_rejects_stale_session():
+    stale = _disposition_artifact({"AAA": {"disposition": "PROVIDER_SESSION_UNAVAILABLE"}}, session="1999-01-01")
+    disp_records, rec_records = _coherent_technical_evidence(
+        as_of_session=DECISION, technical_coverage_disposition=stale, technical_history_recovery=None,
+    )
+    assert disp_records is None
+    assert rec_records is None
+
+
+def test_coherent_technical_evidence_rejects_tampered_content_identity():
+    disposition = _disposition_artifact({"AAA": {"disposition": "PROVIDER_SESSION_UNAVAILABLE"}})
+    tampered = dict(disposition, records={"AAA": {"disposition": "SAME_SESSION_TECHNICAL_COVERED"}})
+    disp_records, _ = _coherent_technical_evidence(
+        as_of_session=DECISION, technical_coverage_disposition=tampered, technical_history_recovery=None,
+    )
+    assert disp_records is None
+
+
+def test_coherent_technical_evidence_rejects_wrong_contract_version():
+    disposition = _disposition_artifact({"AAA": {"disposition": "PROVIDER_SESSION_UNAVAILABLE"}})
+    wrong = dict(disposition, contract_version="something_else/v1")
+    disp_records, _ = _coherent_technical_evidence(
+        as_of_session=DECISION, technical_coverage_disposition=wrong, technical_history_recovery=None,
+    )
+    assert disp_records is None
+
+
+def test_coherent_technical_evidence_drops_recovery_when_disposition_incoherent():
+    """recovery is only ever consulted from inside a disposition-driven branch -- if disposition
+    fails coherence, recovery must never be applied on its own, even if it is itself coherent."""
+    stale_disposition = _disposition_artifact({"AAA": {"disposition": "PROVIDER_SESSION_UNAVAILABLE"}}, session="1999-01-01")
+    coherent_recovery = _recovery_artifact({})
+    disp_records, rec_records = _coherent_technical_evidence(
+        as_of_session=DECISION, technical_coverage_disposition=stale_disposition, technical_history_recovery=coherent_recovery,
+    )
+    assert disp_records is None
+    assert rec_records is None
+
+
+def test_coherent_technical_evidence_handles_absent_evidence():
+    disp_records, rec_records = _coherent_technical_evidence(
+        as_of_session=DECISION, technical_coverage_disposition=None, technical_history_recovery=None,
+    )
+    assert disp_records is None
+    assert rec_records is None
+
+
+def test_build_ticker_card_without_technical_evidence_is_backward_compatible():
+    """Old callers (no technical_coverage_disposition_records/technical_history_recovery_records
+    kwargs at all) keep working exactly as before -- fails closed, never crashes."""
+    card = _minimal_card("ZZZ")
+    assert card["display_metrics"]["technical_trend_entry_state"]["display_state"] == "INSUFFICIENT_DATA"
+
+
+def test_build_ticker_card_wires_provider_session_unavailable_evidence():
+    card = _minimal_card(
+        "ZZZ",
+        technical_coverage_disposition_records={"ZZZ": {"disposition": "PROVIDER_SESSION_UNAVAILABLE", "reason_code": "X"}},
+    )
+    assert card["display_metrics"]["technical_trend_entry_state"]["display_state"] == "INSUFFICIENT_DATA"
+
+
+def test_build_ticker_card_wires_invalid_delisted_symbol_to_not_applicable_display():
+    """The one investor-visible effect of this milestone: a delisted/invalid symbol renders
+    NOT_APPLICABLE through the real card-building path, not a misleading INSUFFICIENT_DATA."""
+    card = _minimal_card(
+        "ZZZ",
+        technical_coverage_disposition_records={"ZZZ": {"disposition": "PROVIDER_REJECTED_OR_INVALID_SYMBOL",
+                                                          "reason_code": "DELISTED_OR_NO_LONGER_CURRENT"}},
+    )
+    assert card["display_metrics"]["technical_trend_entry_state"]["display_state"] == "NOT_APPLICABLE"
+
+
+def test_build_ticker_card_wires_exhausted_provider_chain_evidence():
+    card = _minimal_card(
+        "ZZZ",
+        technical_coverage_disposition_records={"ZZZ": {"disposition": "PIPELINE_ELIGIBILITY_OR_FILTER_EXCLUSION"}},
+        technical_history_recovery_records={"ZZZ": {"state": "INSUFFICIENT_HISTORY_AFTER_EXTENDED_LOOKBACK",
+                                                      "reason": "NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES"}},
+    )
+    assert card["display_metrics"]["technical_trend_entry_state"]["display_state"] == "INSUFFICIENT_DATA"
+
+
+def test_build_ticker_card_ticker_mismatch_is_absent_evidence_not_a_crash():
+    """Evidence keyed under a DIFFERENT ticker than the one being built must never leak in --
+    a plain dict lookup miss, degrading to the same fail-closed default as no evidence at all."""
+    card = _minimal_card(
+        "ZZZ",
+        technical_coverage_disposition_records={"SOME_OTHER_TICKER": {"disposition": "PROVIDER_REJECTED_OR_INVALID_SYMBOL"}},
+    )
+    assert card["display_metrics"]["technical_trend_entry_state"]["display_state"] == "INSUFFICIENT_DATA"
+
+
+def test_build_artifacts_wires_coherent_evidence_through_the_full_live_path():
+    opportunity, decision = real_pair(tickers=("AAA",), behaviors={"AAA": None})
+    disposition = _disposition_artifact({"AAA": {"disposition": "PROVIDER_REJECTED_OR_INVALID_SYMBOL",
+                                                  "reason_code": "DELISTED_OR_NO_LONGER_CURRENT"}})
+    out = build_artifacts(
+        opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t",
+        technical_coverage_disposition=disposition,
+    )
+    card = out["cards"]["AAA"]
+    assert card["display_metrics"]["technical_trend_entry_state"]["display_state"] == "NOT_APPLICABLE"
+    assert out["source_artifacts"]["technical_coverage_disposition"] == disposition["artifact_identity"]
+    assert out["source_artifacts"]["technical_history_recovery"] is None
+
+
+def test_build_artifacts_rejects_stale_session_evidence_end_to_end():
+    """The old blanket 727-style RECOVER_NOW_EXISTING_PROVIDER_PATH claim can never recur even
+    via a stale evidence artifact reaching build_artifacts: a session mismatch drops the
+    evidence entirely, so the card falls back to the existing fail-closed UNKNOWN_BLOCKER/
+    INSUFFICIENT_DATA default, never a fabricated recovery claim."""
+    opportunity, decision = real_pair(tickers=("AAA",), behaviors={"AAA": None})
+    stale_disposition = _disposition_artifact(
+        {"AAA": {"disposition": "PIPELINE_ELIGIBILITY_OR_FILTER_EXCLUSION"}}, session="1999-01-01",
+    )
+    out = build_artifacts(
+        opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t",
+        technical_coverage_disposition=stale_disposition,
+    )
+    card = out["cards"]["AAA"]
+    assert card["display_metrics"]["technical_trend_entry_state"]["display_state"] == "INSUFFICIENT_DATA"
+    assert out["source_artifacts"]["technical_coverage_disposition"] is None
+
+
+def test_build_artifacts_without_technical_evidence_kwargs_is_unaffected():
+    """Every existing caller of build_artifacts() that never supplies the two new keyword
+    arguments must build byte-for-byte the same cards as before this milestone's continuation."""
+    opportunity, decision = real_pair(tickers=("AAA", "BBB"))
+    out = build_artifacts(opportunity_artifact=opportunity, decision_artifact=decision, requested_at="t")
+    assert out["source_artifacts"]["technical_coverage_disposition"] is None
+    assert out["source_artifacts"]["technical_history_recovery"] is None
+    for ticker in ("AAA", "BBB"):
+        assert "display_metrics" in out["cards"][ticker]
+
+
 def test_empty_denominator_rejected():
     opportunity, decision = real_pair(tickers=("AAA",))
     empty_opportunity = {**opportunity, "records": {}}
@@ -627,3 +816,84 @@ def test_velocity_session_mismatch_falls_back_to_insufficient_evidence():
         signal_velocity_artifact=_velocity_artifact("AAA", "2026-08-01", overall="PERSISTENT_IMPROVEMENT"),
     )
     assert out["cards"]["AAA"]["signal_velocity"]["overall_transition_state"] == "INSUFFICIENT_EVIDENCE"
+
+
+# ---------------------------------------------------------------------------
+# Real-evidence acceptance: the actual retained 2026-09-18 same_session_technical_coverage_
+# disposition/v1 + market_wide_current_technical_coverage_scaleout/v1 artifacts, joined through
+# the ACTUAL live path (indicator_metric_availability.evaluate_ticker /
+# indicator_metric_display_state.build_ticker_display_metrics), not just build_ticker_card's
+# minimal synthetic fixtures above. Guarded by skipif since these dated operations-review/
+# artifacts are gitignored and only exist in a checkout where the 2026-09-18 Daily session (and
+# its milestone-scoped disposition/recovery tool runs) actually happened -- e.g. the long-lived
+# primary checkout, never a freshly created isolated milestone worktree.
+# ---------------------------------------------------------------------------
+
+import indicator_metric_availability as _availability  # noqa: E402
+import indicator_metric_display_state as _display_state  # noqa: E402
+
+_OPS = Path(__file__).resolve().parents[1] / "operations-review"
+_REAL_WORKSPACE_PATH = (
+    _OPS / "daily-research-session-operations-v1/2026-09-18"
+    / "8a857ca4204136e42982dd2d1b953ebb857f3a6599837d7b0d20b3a820c3b95f"
+    / "investment_decision_workspace_projection.json"
+)
+_REAL_DISPOSITION_PATH = (
+    _OPS / "same-session-technical-coverage-recovery-v1-20260918" / "same_session_technical_coverage_disposition_artifact.json"
+)
+_REAL_RECOVERY_PATH = (
+    _OPS / "market-wide-current-technical-coverage-scaleout-v1-20260918" / "market_wide_current_technical_coverage_recovery_artifact.json"
+)
+_REAL_EVIDENCE_AVAILABLE = _REAL_WORKSPACE_PATH.exists() and _REAL_DISPOSITION_PATH.exists() and _REAL_RECOVERY_PATH.exists()
+
+
+@pytest.mark.skipif(not _REAL_EVIDENCE_AVAILABLE, reason="real 2026-09-18 technical evidence artifacts not retained in this checkout")
+def test_real_20260918_live_path_reconciles_to_the_exact_evidence_verified_counts():
+    """Phase 6/7/8 real end-to-end proof: the LIVE display-metrics caller (not a helper called
+    in isolation) reconciles the real, retained 2026-09-18 universe (1,683 tickers) to exactly
+    956 READY / 544 PROVIDER_SESSION_UNAVAILABLE / 180 INVALID_OR_DELISTED_SYMBOL / 3
+    NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES / 0 genuinely-recoverable-now / 0 UNKNOWN_BLOCKER
+    -- see operations-review/indicator-metric-availability-recovery-classification-corrective-
+    v1-20260920/live_path_before_after.json for the full run this test also reproduces."""
+    ws = json.loads(_REAL_WORKSPACE_PATH.read_text(encoding="utf-8"))
+    disposition = json.loads(_REAL_DISPOSITION_PATH.read_text(encoding="utf-8"))
+    recovery = json.loads(_REAL_RECOVERY_PATH.read_text(encoding="utf-8"))
+
+    disp_records, rec_records = _coherent_technical_evidence(
+        as_of_session=ws.get("as_of_session"),
+        technical_coverage_disposition=disposition,
+        technical_history_recovery=recovery,
+    )
+    assert disp_records is not None and len(disp_records) == 1683
+    assert rec_records is not None and len(rec_records) == 7
+
+    from collections import Counter
+    blocker_counts: Counter = Counter()
+    display_counts: Counter = Counter()
+    cohort = frozenset({"EVF", "FPT", "HPG", "NVL", "PAN", "PNJ", "POW", "PVD", "QNS", "SSI", "VNM"})
+    for ticker, card in ws["cards"].items():
+        disp_row = disp_records.get(ticker)
+        rec_row = rec_records.get(ticker)
+        record = _availability.evaluate_ticker(
+            ticker, card, cohort_tickers=cohort,
+            technical_coverage_disposition=disp_row, technical_history_recovery_record=rec_row,
+        )["technical_trend_entry_state"]
+        blocker_counts[record["blocker_class"]] += 1
+        display_metrics = _display_state.build_ticker_display_metrics(
+            ticker, card, cohort_tickers=cohort,
+            technical_coverage_disposition_record=disp_row, technical_history_recovery_record=rec_row,
+        )
+        display_counts[display_metrics["technical_trend_entry_state"]["display_state"]] += 1
+
+    assert blocker_counts["READY"] == 956
+    assert blocker_counts["PROVIDER_SESSION_UNAVAILABLE"] == 544
+    assert blocker_counts["INVALID_OR_DELISTED_SYMBOL"] == 180
+    assert blocker_counts["NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES"] == 3
+    assert blocker_counts.get("RECOVERABLE_BY_EXISTING_BACKFILL", 0) == 0
+    assert blocker_counts.get("UNKNOWN_BLOCKER", 0) == 0
+    assert sum(blocker_counts.values()) == 1683
+
+    assert display_counts["AVAILABLE"] == 956
+    assert display_counts["INSUFFICIENT_DATA"] == 547
+    assert display_counts["NOT_APPLICABLE"] == 180
+    assert set(display_counts) <= set(_display_state.DISPLAY_STATES)

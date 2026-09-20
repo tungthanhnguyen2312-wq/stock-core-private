@@ -26,6 +26,8 @@ from current_research_valuation_context import RELATIVE_METHODS
 import current_research_official_universe_scope as current_research_official_universe_scope_module
 import velocity_flow_price_presentation_projection as velocity_flow_price
 import indicator_metric_display_state as indicator_display_state
+import same_session_technical_coverage_disposition as technical_coverage_disposition_module
+import market_wide_current_technical_coverage_scaleout as technical_coverage_scaleout_module
 
 CONTRACT_VERSION = "investment_decision_workspace_projection/v1"
 MILESTONE = "INVESTMENT_DECISION_WORKSPACE_V1"
@@ -353,6 +355,56 @@ def _lineage_view(opportunity_record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _coherent_technical_evidence(
+    *, as_of_session: str | None,
+    technical_coverage_disposition: Mapping[str, Any] | None,
+    technical_history_recovery: Mapping[str, Any] | None,
+) -> tuple[Mapping[str, Any] | None, Mapping[str, Any] | None]:
+    """Session-coherence + content-identity gate for the two optional technical-blocker
+    evidence artifacts (INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1).
+
+    Both ``same_session_technical_coverage_disposition/v1`` and ``market_wide_current_
+    technical_coverage_scaleout/v1`` are real, retained, session-bound artifacts -- but they
+    are produced by bounded, milestone-scoped tool runs, not the recurring Daily pipeline, so
+    a caller may hand this function a disposition/recovery artifact from a DIFFERENT session
+    than the one this Workspace build is for (a stale evidence directory, a leftover file from
+    a prior run). Returns ``(disposition_records, recovery_records)`` -- both ``None`` unless
+    every one of these holds for a given artifact: right contract, right session, and its own
+    recomputed content identity matches its stored identity (guards against a corrupted or
+    hand-edited artifact). Never partially trusts a broken artifact, and never mixes sessions:
+    if disposition evidence fails coherence, recovery evidence is dropped too, since indicator_
+    metric_availability.py only ever consults a recovery record from inside a disposition-
+    driven branch. On any failure this returns ``(None, None)`` -- the whole build degrades to
+    indicator_metric_availability.py's own existing fail-closed ``UNKNOWN_BLOCKER`` default for
+    every ticker, never a partial or a resurrected blanket ``RECOVER_NOW_EXISTING_PROVIDER_PATH``.
+    """
+    disposition_records: Mapping[str, Any] | None = None
+    recovery_records: Mapping[str, Any] | None = None
+    if isinstance(technical_coverage_disposition, Mapping) and as_of_session is not None:
+        coherent = (
+            technical_coverage_disposition.get("contract_version") == "same_session_technical_coverage_disposition/v1"
+            and technical_coverage_disposition.get("session") == as_of_session
+            and technical_coverage_disposition_module.content_identity(technical_coverage_disposition).get("artifact_sha256")
+                == technical_coverage_disposition.get("artifact_sha256")
+        )
+        if coherent:
+            records = technical_coverage_disposition.get("records")
+            if isinstance(records, Mapping):
+                disposition_records = records
+    if disposition_records is not None and isinstance(technical_history_recovery, Mapping) and as_of_session is not None:
+        coherent = (
+            technical_history_recovery.get("contract_version") == "market_wide_current_technical_coverage_scaleout/v1"
+            and technical_history_recovery.get("target_session") == as_of_session
+            and technical_coverage_scaleout_module.content_identity(technical_history_recovery).get("artifact_sha256")
+                == technical_history_recovery.get("artifact_sha256")
+        )
+        if coherent:
+            records = technical_history_recovery.get("records")
+            if isinstance(records, Mapping):
+                recovery_records = records
+    return disposition_records, recovery_records
+
+
 def build_ticker_card(
     *, ticker: str, opportunity_record: Mapping[str, Any], decision_record: Mapping[str, Any],
     sector: str, portfolio_research: Mapping[str, Any] | None, prospective_record: Mapping[str, Any],
@@ -360,8 +412,17 @@ def build_ticker_card(
     signal_velocity_artifact: Mapping[str, Any] | None = None,
     flow_price_artifact: Mapping[str, Any] | None = None,
     flow_research_cohort_tickers: frozenset[str] = frozenset(),
+    technical_coverage_disposition_records: Mapping[str, Any] | None = None,
+    technical_history_recovery_records: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Compose one seven-section decision-workspace card for a single ticker."""
+    """Compose one seven-section decision-workspace card for a single ticker.
+
+    ``technical_coverage_disposition_records``/``technical_history_recovery_records`` (both
+    optional) are already session-coherence-checked per-ticker record maps (see
+    ``_coherent_technical_evidence()`` / ``build_artifacts()``) -- looked up by ``ticker`` and
+    passed to ``indicator_display_state.build_ticker_display_metrics()`` below. Absent, they
+    change nothing: the display-metrics bridge still fails closed exactly as before.
+    """
     fundamental = opportunity_record.get("fundamental") or {}
     tactical = opportunity_record.get("tactical") or {}
     market = opportunity_record.get("market_sector") or {}
@@ -494,6 +555,8 @@ def build_ticker_card(
     # indicator_metric_availability.py / indicator_metric_display_state.py.
     card["display_metrics"] = indicator_display_state.build_ticker_display_metrics(
         ticker, card, cohort_tickers=flow_research_cohort_tickers,
+        technical_coverage_disposition_record=(technical_coverage_disposition_records or {}).get(ticker),
+        technical_history_recovery_record=(technical_history_recovery_records or {}).get(ticker),
     )
     return card
 
@@ -510,6 +573,8 @@ def build_artifacts(
     signal_velocity_artifact: Mapping[str, Any] | None = None,
     flow_price_artifact: Mapping[str, Any] | None = None,
     flow_research_cohort_tickers: frozenset[str] = frozenset(),
+    technical_coverage_disposition: Mapping[str, Any] | None = None,
+    technical_history_recovery: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Join a matched opportunity_context/v1 + security_decision_context/v1 pair into the
     compact investment_decision_workspace_projection/v1 artifact. Raises fail-closed if the two
@@ -524,6 +589,20 @@ def build_artifacts(
     is built EXACTLY as before -- decision fields (research_stance, entry_state, valuation,
     thesis/counter-thesis, confirmation, invalidation, financial context, ...) are never
     re-derived or mutated by scope.
+
+    ``technical_coverage_disposition``/``technical_history_recovery`` (both optional, both a
+    fully opt-in explicit seam like ``current_research_scope`` above) are real
+    ``same_session_technical_coverage_disposition/v1``/``market_wide_current_technical_
+    coverage_scaleout/v1`` artifacts for feeding ``indicator_metric_availability.py``'s
+    precise technical-trend blocker classification (INDICATOR_METRIC_AVAILABILITY_RECOVERY_
+    CLASSIFICATION_CORRECTIVE_V1). Both are session-coherence- and content-identity-checked
+    once here (``_coherent_technical_evidence()``) against this call's own resolved
+    ``as_of_session`` before any per-ticker lookup -- a stale, mismatched, or corrupted
+    artifact is dropped entirely, never partially trusted or silently mixed across sessions.
+    Omitted (the default) or dropped for incoherence, every card's ``technical_trend_entry_
+    state`` availability record degrades to indicator_metric_availability.py's own existing
+    fail-closed ``UNKNOWN_BLOCKER`` -- it never re-fabricates the corrected blanket
+    ``RECOVER_NOW_EXISTING_PROVIDER_PATH`` claim. No other card field is affected either way.
 
     CURRENT_OFFICIAL_RESEARCH_UNIVERSE_PRODUCT_CUTOVER_AND_RELEASE_INTEGRATION_V1: supplying
     ``current_research_scope`` never narrows or drops the Daily ticker denominator -- every card
@@ -553,6 +632,12 @@ def build_artifacts(
     if not isinstance(leadership_records, Mapping):
         leadership_records = {}
 
+    technical_disposition_records, technical_recovery_records = _coherent_technical_evidence(
+        as_of_session=opportunity_artifact.get("as_of_session") or decision_artifact.get("as_of_session"),
+        technical_coverage_disposition=technical_coverage_disposition,
+        technical_history_recovery=technical_history_recovery,
+    )
+
     current_research_scope_supplied = current_research_scope is not None
     current_research_scope_applied = bool(
         isinstance(current_research_scope, Mapping) and current_research_scope.get("temporally_eligible")
@@ -572,6 +657,8 @@ def build_artifacts(
             signal_velocity_artifact=signal_velocity_artifact,
             flow_price_artifact=flow_price_artifact,
             flow_research_cohort_tickers=flow_research_cohort_tickers,
+            technical_coverage_disposition_records=technical_disposition_records,
+            technical_history_recovery_records=technical_recovery_records,
         )
         if current_research_scope_supplied:
             card["official_research_scope"] = current_research_official_universe_scope_module.ticker_scope_view(
@@ -634,6 +721,14 @@ def build_artifacts(
         ),
         "signal_velocity": (signal_velocity_artifact or {}).get("artifact_identity"),
         "flow_price_divergence_shadow": (flow_price_artifact or {}).get("artifact_identity"),
+        "technical_coverage_disposition": (
+            technical_coverage_disposition.get("artifact_identity")
+            if technical_disposition_records is not None else None
+        ),
+        "technical_history_recovery": (
+            technical_history_recovery.get("artifact_identity")
+            if technical_recovery_records is not None else None
+        ),
     }
 
     artifact: dict[str, Any] = {

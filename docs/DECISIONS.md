@@ -64,6 +64,36 @@ that tool.
    `indicator_metric_display_state.py` already renders for other metrics -- no new UI
    terminology, per this milestone's own Phase 6 boundary.
 
+5. **A corrected classifier that no caller feeds is not "done" -- wiring the live path is part
+   of the same milestone, not a follow-on.** The first commit (`c5443aa`) corrected
+   `_technical_trend_record()`'s logic but left `indicator_metric_display_state.build_ticker_
+   display_metrics` -- the one real production caller -- still calling it with no evidence, so
+   every real ticker fell to the new `UNKNOWN_BLOCKER` fail-closed default rather than its true
+   classification. This same-session continuation wires `same_session_technical_coverage_
+   disposition/v1` and `market_wide_current_technical_coverage_scaleout/v1` into
+   `investment_decision_workspace_projection.build_artifacts()`/`build_ticker_card()` as two
+   more fully-opt-in, defaulted-`None` seams -- the same established pattern this module
+   already uses for `leadership`/`portfolio_research`/`signal_velocity_artifact`/`flow_price_
+   artifact`/`current_research_scope`, not a new loader framework. Verified end-to-end against
+   the real retained 2026-09-18 evidence: 956 READY / 544 `PROVIDER_SESSION_UNAVAILABLE` / 180
+   `INVALID_OR_DELISTED_SYMBOL` / 3 `NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES` / 0
+   `UNKNOWN_BLOCKER`, run through the actual `build_ticker_display_metrics` caller for all
+   1,683 tickers, not a helper function in isolation.
+
+6. **A session-coherence and content-identity gate is required because these two evidence
+   artifacts are milestone-scoped tool outputs, not recurring-pipeline artifacts.** Unlike
+   `leadership`/`portfolio_research`/etc. (produced by the regular Daily run every session),
+   `same_session_technical_coverage_disposition/v1` and `market_wide_current_technical_
+   coverage_scaleout/v1` are only ever produced by bounded, milestone-scoped tool runs into
+   dated `operations-review/` folders -- a caller could plausibly hand this pipeline a stale
+   artifact from a prior investigation. `_coherent_technical_evidence()` checks contract
+   version, the artifact's own session/`target_session` field against the current build's
+   `as_of_session`, and a recomputed content identity against the artifact's stored hash,
+   before any per-ticker lookup; failing any check drops BOTH artifacts for the entire build
+   (never a partial application, never a silently mixed session). Verified against a
+   deliberately stale-session and a deliberately tampered-identity variant of the real
+   artifact -- both correctly rejected.
+
 ## 2026-09-20 - Dashboard Home Summary and Cache-Busting V1 (Producer side)
 
 `DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1 = COMPLETE (Producer side, local, unpushed)`.

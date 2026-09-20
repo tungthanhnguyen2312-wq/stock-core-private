@@ -2,8 +2,17 @@
 
 **Indicator metric availability recovery classification corrective V1 (2026-09-20):**
 `INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 = COMPLETE (local,
-unpushed)`. Owner-directed, backend-only, release-only-operator-scoped corrective milestone
-(this session, isolated worktree
+unpushed)`. This entry originally recorded `COMPLETE` after commit `c5443aa` alone -- that
+commit is correctly understood as the **classification-layer checkpoint only**: it corrected
+`indicator_metric_availability.py` so it *could* distinguish the real blocker populations, but
+the one real production caller (`indicator_metric_display_state.build_ticker_display_metrics`,
+reached from `investment_decision_workspace_projection.build_ticker_card`) did not yet pass the
+two evidence artifacts into it, so the corrected classification was not yet reachable from the
+live product path. This same-session continuation (commit after `c5443aa`) wires that
+consumption path; `COMPLETE` below now reflects both the classification fix and its live-path
+wiring, verified end-to-end against the real retained 2026-09-18 evidence (see the live-path
+paragraph below). Owner-directed, backend-only, release-only-operator-scoped corrective
+milestone (this session, isolated worktree
 `feature/indicator-metric-availability-recovery-classification-corrective-v1-20260920` rooted
 exactly at `origin/main` `80b979f57704d37bf896b338223f5c8ac2899260`, per
 `docs/AI_RULES.md` rule 11's `owner_override
@@ -77,8 +86,40 @@ not exist outside the long-lived primary checkout -- confirmed unrelated to this
 worktree's diff touches only `indicator_metric_availability.py` and its own test file).
 Evidence:
 `operations-review/indicator-metric-availability-recovery-classification-corrective-v1-20260920/`.
-`ec2de05` remains an unmerged, untouched historical local checkpoint in the primary checkout.
-No successor is queued.
+
+**Live-path continuation (same session, second commit):** wires the two evidence artifacts
+into the real product call chain -- `investment_decision_workspace_projection.build_artifacts()`
+gained two new optional keyword parameters (`technical_coverage_disposition`,
+`technical_history_recovery`), validated ONCE per build by a new
+`_coherent_technical_evidence()` gate (right contract, right session against this build's own
+`as_of_session`, and a recomputed content-identity match against the artifact's own stored
+hash) before any per-ticker lookup; a stale, mismatched, or corrupted artifact is dropped
+entirely for the WHOLE build, never partially trusted or silently mixed across sessions. The
+resulting per-ticker records thread through `build_ticker_card()` into
+`indicator_metric_display_state.build_ticker_display_metrics()` (also two new optional,
+defaulted-`None` parameters) into `evaluate_ticker()` -- the exact function signature `c5443aa`
+already added. No existing caller (none currently passes the two new artifacts) is affected;
+`test_build_artifacts_without_technical_evidence_kwargs_is_unaffected` pins this. Real
+end-to-end verification against the actual retained 2026-09-18 evidence (`investment_decision_
+workspace_projection.json`, `same_session_technical_coverage_disposition_artifact.json`,
+`market_wide_current_technical_coverage_recovery_artifact.json`, all session-coherent and
+content-identity-verified, read-only from the primary checkout) run through the real
+`build_ticker_display_metrics` caller for all 1,683 tickers reconciles EXACTLY: 956 READY /
+544 `PROVIDER_SESSION_UNAVAILABLE` / 180 `INVALID_OR_DELISTED_SYMBOL` / 3
+`NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES` / 0 genuinely-recoverable-now / 0
+`UNKNOWN_BLOCKER` (956+544+180+3=1,683); display states reconcile to 956 `AVAILABLE` / 547
+`INSUFFICIENT_DATA` / 180 `NOT_APPLICABLE`, no new UI vocabulary. A deliberately stale-session
+and a deliberately tampered-identity variant of the real disposition artifact are both
+correctly rejected by the coherence gate (verified by test and by the live validation run). 26
+new focused tests in `tests/test_investment_decision_workspace_projection.py` (coherence-gate
+unit tests, `build_ticker_card`/`build_artifacts` wiring tests, backward-compatibility tests,
+and one skip-guarded real-2026-09-18-evidence acceptance test reproducing the exact counts
+above); 169 tests pass across the directly relevant suites, 0 regressions. No network call, no
+re-poll of the 544, no Dashboard change, no authority promotion, no push. Evidence additionally
+includes `live_path_before_after.json`, `live_path_representative_cases.json`,
+`session_coherence_validation.json`, `final_reconciliation.json` in the same evidence
+directory. `ec2de05` remains an unmerged, untouched historical local checkpoint in the primary
+checkout. No successor is queued.
 
 **Dashboard Home summary and cache-busting V1 (2026-09-20):**
 `DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1 = COMPLETE (Producer side, local, unpushed)`.
