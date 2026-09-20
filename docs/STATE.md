@@ -1,5 +1,67 @@
 # Stock Lookup — Operational State
 
+**Dashboard Home summary and cache-busting V1 (2026-09-20):**
+`DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1 = COMPLETE (Producer side, local, unpushed)`.
+Owner-directed, publication/presentation-infrastructure-only milestone (this session,
+isolated worktree `feature/dashboard-home-summary-cache-busting-v1-20260920` rooted
+exactly at origin/main `cbf458e9ac6796994a9ed0d44d59b823f3d60550`, deliberately never
+incorporating the unrelated local `CURRENT_TECHNICAL_RECOVERABLE_COVERAGE_COMPLETION_V1`
+commit `ec2de05` sitting ahead of origin/main in the primary checkout). New
+`dashboard_home_summary.py` (`dashboard_home_summary/v1`) is a pure, presentation-only
+re-aggregation of the already-governed `screener_master_projection/v1` artifact -- same
+breadth/stance/tactical/liquidity/sector counts Home's `dashboard-product-summary.js`
+already computed client-side, just derived once, server-side, and shipped as a ~3.6KB
+artifact instead of downloading and iterating the full ~6.4MB (6,734,405 bytes on disk)
+projection on every Home load -- a 99.95% size reduction, verified with zero numerical
+drift against the real retained 2026-09-18 session (`tests/test_dashboard_home_summary.py`'s
+real-artifact parity test, and market-dashboard's own JS-side
+`dashboard-home-summary-cutover.test.js` cross-checking the small artifact against
+`summarizeScreenerOverview()`'s output over the full projection). No new analytical
+authority: `blocked_outputs` explicitly forbids score/rank/probability/target-price, and
+the module reads only fields the JS layer already consumed.
+
+Wired into the normal recurring Producer path: `canonical_current_product_projections.
+materialize_and_write_current_product_projections()` now also materializes and writes
+`dashboard_home_summary.json`/`.js` immediately after Screener Master Projection, in its
+own try/except so a defect in this newer, additive step can never invalidate the
+already-working Workspace/Screener writes (mirrors the existing feature_store/
+tactical_behavior/thesis_cases pattern). `canonical_dashboard_runtime_release.py`'s
+`_stage_dashboard_home_summary()` mirrors `_stage_screener_master_projection()`'s exact
+session/identity/content-identity fail-closed checks, plus one more Phase-3 binding this
+artifact alone needs: it must cite the SAME Screener projection `artifact_identity` this
+release already staged, never a Home summary left over from a different projection. It
+gracefully returns `None` (nothing staged, no lineage, no failure) only for the one real
+backward-compatibility case verified against retained evidence: a pre-migration Producer
+run manifest whose `current_product_projections` never declared this axis at all -- a
+manifest that DOES declare it is held to the same fail-closed bar as every other axis.
+`publish_dashboard.py` gained the analogous `validate_dashboard_home_summary()`/
+`copy_dashboard_home_summary()` pair and `--home-summary-source` CLI flag, following
+`validate_screener_master_projection()`'s exact established shape.
+
+Real retained-evidence verification could not be run through the full CLI end-to-end in
+this isolated worktree by design: `publish_dashboard.py --live` unconditionally refuses
+to run from anywhere but the one canonical
+`C:\Projects\StockLookup\stock-core-private\publish_dashboard.py` path
+(`assert_producer_publisher_file`), and several real-2026-09-17-session tests
+(`test_canonical_dashboard_runtime_release.py`'s retained-session tests,
+`test_canonical_daily_operation.py`/`test_daily_producer_pipeline.py`'s own) depend on
+gitignored `operations-review/` evidence that exists only in the long-lived primary
+checkout, never in a freshly created worktree -- both independently confirmed identical
+on a completely clean, unmodified worktree via `git stash`/rerun, before and after this
+milestone's changes; zero regressions attributable to this work. In their place: the new
+module's own unit + fail-closed tests, direct-call tests for the two new
+`publish_dashboard.py` functions (bypassing the CLI entrypoint entirely, the same way the
+existing `validate_screener_master_projection` has no CLI-level test either), and the
+real-artifact parity test above.
+
+A genuinely real Home summary instance for the retained 2026-09-18 session was generated
+directly (calling `build_home_summary()` against market-dashboard's own retained
+`screener_master_projection.json`) and committed into market-dashboard alongside its own
+consumer cutover -- see that repository's own dated STATE-equivalent entry. No push, no
+new provider, no ranking/score/recommendation, no PIT/RAW_AS_TRADED change, no Dashboard
+redesign. Evidence: `tests/test_dashboard_home_summary.py`,
+`tests/test_publish_dashboard_home_summary.py`. No successor is queued.
+
 **Indicator and metric availability reconciliation V1 (2026-09-19):**
 `INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 = COMPLETE`. Owner-directed,
 backend-only milestone (this session): builds one authoritative availability/recoverability

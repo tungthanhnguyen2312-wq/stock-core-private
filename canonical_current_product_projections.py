@@ -79,6 +79,7 @@ import current_official_market_universe
 import current_research_official_universe_scope
 import current_thesis_case_context
 import current_valuation_opportunity_integration
+import dashboard_home_summary
 import financial_v2_current_input_authority
 import current_foreign_flow_enrichment_operation
 import dnse_foreign_flow_store
@@ -136,6 +137,8 @@ CURRENT_OFFICIAL_UNIVERSE_EVIDENCE_EXPECTED_IDENTITY = (
 WORKSPACE_ARTIFACT_FILENAME = "investment_decision_workspace_projection.json"
 SCREENER_MASTER_JSON_FILENAME = "screener_master_projection.json"
 SCREENER_MASTER_JS_FILENAME = "screener_master_projection.js"
+HOME_SUMMARY_JSON_FILENAME = "dashboard_home_summary.json"
+HOME_SUMMARY_JS_FILENAME = "dashboard_home_summary.js"
 FEATURE_STORE_ARTIFACT_FILENAME = "market_wide_fundamental_feature_store_artifact.json"
 FEATURE_STORE_RECORDS_FILENAME = "market_wide_fundamental_feature_store_records.jsonl.gz"
 TACTICAL_BEHAVIOR_ARTIFACT_FILENAME = "tactical_behavior_context_artifact.json"
@@ -705,6 +708,39 @@ def materialize_and_write_current_product_projections(
     atomic_write_json(screener_json_path, screener_master)
     atomic_write_file(screener_js_path, screener_master_projection.js_fallback(screener_master), encoding="utf-8", newline="\n")
 
+    # Presentation-only Home summary, derived purely from the Screener Master Projection
+    # just written above -- a small aggregate re-derivation, no new analytical authority
+    # (see dashboard_home_summary.py). Its own try/except keeps a bug in this newer,
+    # additive step from invalidating the already-written, already-working Workspace/
+    # Screener artifacts above -- same "never block core Daily" posture as feature_store/
+    # tactical_behavior/thesis_cases below, just scoped to this one additive axis instead
+    # of the whole current-product-projections step.
+    home_summary_status: dict[str, Any]
+    try:
+        home_summary = dashboard_home_summary.build_home_summary(screener_master, requested_at=requested_at)
+        home_summary_json_path = operation_dir / HOME_SUMMARY_JSON_FILENAME
+        home_summary_js_path = operation_dir / HOME_SUMMARY_JS_FILENAME
+        atomic_write_json(home_summary_json_path, home_summary)
+        atomic_write_file(
+            home_summary_js_path, dashboard_home_summary.js_fallback(home_summary),
+            encoding="utf-8", newline="\n",
+        )
+        home_summary_status = {
+            "status": "MATERIALIZED",
+            "json_path": str(home_summary_json_path),
+            "js_path": str(home_summary_js_path),
+            "as_of_session": home_summary.get("as_of_session"),
+            "artifact_identity": home_summary.get("artifact_identity"),
+            "source_artifact_identity": home_summary.get("source_artifact_identity"),
+            "denominator": home_summary.get("denominator"),
+        }
+    except Exception as exc:  # noqa: BLE001 - additive/optional axis, must never block core Daily
+        home_summary_status = {
+            "status": "SKIPPED",
+            "reason_code": type(exc).__name__,
+            "detail": str(exc),
+        }
+
     fundamental_feature_store_status: dict[str, Any] = {"status": feature_store_result.get("status")}
     if feature_store_artifact is not None:
         # Preserve the Feature Store's own scalable summary/records-payload representation
@@ -781,6 +817,8 @@ def materialize_and_write_current_product_projections(
         unavailable_optional_axes.append("tactical_behavior")
     if thesis_case_artifact is None:
         unavailable_optional_axes.append("thesis_cases")
+    if home_summary_status.get("status") != "MATERIALIZED":
+        unavailable_optional_axes.append("dashboard_home_summary")
 
     return {
         "status": "MATERIALIZED",
@@ -799,6 +837,7 @@ def materialize_and_write_current_product_projections(
             "artifact_identity": screener_master.get("artifact_identity"),
             "denominator": screener_master.get("denominator"),
         },
+        "dashboard_home_summary": home_summary_status,
         "fundamental_feature_store": fundamental_feature_store_status,
         "tactical_behavior_context": tactical_behavior_status,
         "thesis_case_context": thesis_case_status,

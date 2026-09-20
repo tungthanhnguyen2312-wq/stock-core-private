@@ -18,6 +18,7 @@ from typing import Any, Mapping
 from atomic_io import atomic_copy_file, atomic_write_file, atomic_write_json, validate_csv_file
 from daily_research_session_operations import load_registry
 import release_session_contract
+import dashboard_home_summary
 import investment_decision_workspace_projection as workspace_contract
 import screener_master_projection as screener_contract
 
@@ -25,7 +26,8 @@ CONTRACT_VERSION = "canonical_dashboard_runtime_release/v1"
 REQUIRED_INPUTS = ("descriptive", "screening", "tactical", "triage", "official_universe")
 RELEASE_FILES = ("screen_snapshot.csv", "screen_snapshot_live.csv", "market_breadth.csv",
                  "analysis_latest.json", "data/investment_decision_workspace.json",
-                 "data/screener_master_projection.json", "bundle_manifest.json")
+                 "data/screener_master_projection.json", "data/dashboard_home_summary.json",
+                 "bundle_manifest.json")
 RELEASE_SESSION_FILES = ("screen_snapshot.csv", "market_breadth.csv", "analysis_latest.json",
                          "screen_snapshot_live.csv")
 
@@ -301,11 +303,85 @@ def _stage_screener_master_projection(
             "ticker_denominator": len(cards), "zero_silent_ticker_drops": True}
 
 
+def _stage_dashboard_home_summary(
+    root: Path, session: str, staging: Path, run_manifest: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Bind the selected Producer run's exact Home-summary bytes to the runtime release.
+
+    Mirrors ``_stage_screener_master_projection`` exactly (same operation-lineage,
+    session, and content-identity checks): a stale/mismatched Home summary must never
+    silently ride along in a release for a different session's Screener projection.
+
+    Returns ``None`` (no lineage, nothing staged, home summary simply absent from this
+    release) only for the one genuine backward-compatibility case: a retained Producer
+    run manifest from BEFORE DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1 existed, whose
+    ``current_product_projections`` never declares a ``dashboard_home_summary`` key at
+    all. A manifest that DOES declare this axis (any status) is held to the same
+    fail-closed bar as every other axis here -- a declared-but-broken summary is a real
+    defect, never silently dropped.
+    """
+    operation = run_manifest.get("daily_session_operation") or {}
+    directory, operation_identity = operation.get("directory"), operation.get("identity")
+    if not isinstance(directory, str) or not directory or not operation_identity:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_OPERATION_LINEAGE_MISSING")
+    operation_dir = root / directory
+    operation_manifest_path = operation_dir / "run_manifest.json"
+    operation_manifest = _load(operation_manifest_path)
+    if operation_manifest.get("operation_identity") != operation_identity:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_OPERATION_IDENTITY_MISMATCH")
+    if operation_manifest.get("market_session") != session:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_OPERATION_SESSION_MISMATCH")
+    projections = run_manifest.get("current_product_projections") or {}
+    if "dashboard_home_summary" not in projections:
+        return None
+    declared = projections.get("dashboard_home_summary") or {}
+    if projections.get("status") != "MATERIALIZED" or projections.get("session") != session:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_PRODUCER_MATERIALIZATION_UNAVAILABLE")
+    if declared.get("status") != "MATERIALIZED":
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_NOT_MATERIALIZED")
+    source = operation_dir / "dashboard_home_summary.json"
+    if not source.is_file():
+        raise CanonicalRuntimeReleaseError(f"HOME_SUMMARY_EXACT_SESSION_ARTIFACT_MISSING:{source}")
+    target = staging / "data/dashboard_home_summary.json"
+    atomic_copy_file(source, target)
+    payload = _load(target)
+    if payload.get("schema_version") != dashboard_home_summary.SCHEMA_VERSION:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_SCHEMA_VERSION_MISMATCH")
+    if payload.get("contract_version") != dashboard_home_summary.CONTRACT_VERSION:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_CONTRACT_VERSION_MISMATCH")
+    if payload.get("as_of_session") != session or declared.get("as_of_session") != session:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_SESSION_MISMATCH")
+    if not isinstance(payload.get("denominator"), int) or payload["denominator"] <= 0:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_EMPTY_DENOMINATOR")
+    try:
+        identity = dashboard_home_summary.content_identity(payload)
+    except (TypeError, ValueError) as exc:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_CONTENT_IDENTITY_INVALID") from exc
+    if (payload.get("artifact_identity") != identity["artifact_identity"]
+            or payload.get("artifact_sha256") != identity["artifact_sha256"]
+            or declared.get("artifact_identity") != identity["artifact_identity"]):
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_CONTENT_IDENTITY_MISMATCH")
+    # The Home summary's own bound source (the Screener Master Projection it was derived
+    # from, same run) must be the exact same artifact this release already staged above --
+    # never a Home summary left over from a different Screener projection.
+    screener_lineage_identity = (run_manifest.get("current_product_projections") or {}) \
+        .get("screener_master_projection", {}).get("artifact_identity")
+    if payload.get("source_artifact_identity") != screener_lineage_identity:
+        raise CanonicalRuntimeReleaseError("HOME_SUMMARY_SOURCE_SCREENER_IDENTITY_MISMATCH")
+    return {"path": source.relative_to(root).as_posix() if source.is_relative_to(root) else str(source),
+            "sha256": _sha256(target), **identity,
+            "session": session, "operation_identity": operation_identity,
+            "operation_manifest_sha256": _sha256(operation_manifest_path),
+            "producer_run_identity": run_manifest.get("run_identity"),
+            "denominator": payload["denominator"], "source_artifact_identity": payload.get("source_artifact_identity")}
+
+
 def _build_release(root: Path, session: str, staging: Path, *, producer_run_identity: str | None = None) -> dict[str, Any]:
     sources, _registry = _source_paths(root, session)
     run_path, run_manifest, bundle_path, producer_bundle = _producer_run(root, session, sources, run_identity=producer_run_identity)
     workspace_lineage = _stage_workspace(root, session, staging, run_manifest)
     screener_lineage = _stage_screener_master_projection(root, session, staging, run_manifest)
+    home_summary_lineage = _stage_dashboard_home_summary(root, session, staging, run_manifest)
     tier_lineage = _verify_retained_tier_lineage(root, session, run_manifest)
     snapshot = _p3_snapshot(root, session, sources)
     descriptive = sources["descriptive"][1]
@@ -368,6 +444,8 @@ def _build_release(root: Path, session: str, staging: Path, *, producer_run_iden
     lineage["daily_producer_bundle"] = {"sha256": _sha256(bundle_path), "path": str(bundle_path.relative_to(root))}
     lineage["investment_decision_workspace"] = workspace_lineage
     lineage["screener_master_projection"] = screener_lineage
+    if home_summary_lineage is not None:
+        lineage["dashboard_home_summary"] = home_summary_lineage
     if tier_lineage:
         lineage["retained_tier_handoff"] = tier_lineage
     analysis = {
@@ -381,10 +459,15 @@ def _build_release(root: Path, session: str, staging: Path, *, producer_run_iden
         "lineage": lineage,
     }
     atomic_write_json(staging / "analysis_latest.json", analysis)
+    # RELEASE_FILES lists every file a NORMAL release stages; dashboard_home_summary is the
+    # one entry that can legitimately be absent (a retained pre-migration Producer run -- see
+    # _stage_dashboard_home_summary's own None-return contract), so the manifest's own
+    # "release_files" record reflects what THIS release actually staged, not the static list.
+    staged_release_files = [name for name in RELEASE_FILES if (staging / name).is_file()]
     manifest = {"schema_version": CONTRACT_VERSION, "freshness": {"reference_session": session, "status": "fresh", "blocked": False},
         "release_contract": {"source": "retained_canonical_daily_producer", "session": session,
             "unavailable_legacy_fields": ["historical_indicator_suite", "strict_valuation", "liquidity_sizing_execution", "macro_optional", "explicit_portfolio"]},
-        "lineage": lineage, "release_files": list(RELEASE_FILES)}
+        "lineage": lineage, "release_files": staged_release_files}
     atomic_write_json(staging / "bundle_manifest.json", manifest)
     return {"session": session, "lineage": lineage, "live_count": len(live_rows), "snapshot_count": len(rows)}
 
@@ -417,6 +500,13 @@ def materialize_canonical_runtime_release(
                 shutil.copy2(target, backup / name)
         try:
             for name in (*RELEASE_FILES[:-1], RELEASE_FILES[-1]):
+                if not (staging / name).is_file():
+                    # Only dashboard_home_summary can legitimately be absent here (a
+                    # retained pre-migration Producer run -- see
+                    # _stage_dashboard_home_summary's None-return contract). Whatever the
+                    # runtime already has for this optional file, if anything, is left
+                    # untouched rather than silently dropped or backdated.
+                    continue
                 validator = validate_csv_file if name.endswith(".csv") else None
                 atomic_copy_file(staging / name, runtime_root / name, validator=validator)
         except Exception:

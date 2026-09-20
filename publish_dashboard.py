@@ -117,9 +117,19 @@ WORKSPACE_DETAIL_DIR = "data/workspace_detail"
 SCREENER_MASTER_ASSET = "data/screener_master_projection.json"
 SCREENER_MASTER_JS_ASSET = "data/screener_master_projection.js"
 SCREENER_MASTER_SCHEMA = "screener_master_projection/v1"
+# DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1: the small, presentation-only Home summary
+# (dashboard_home_summary.py) derived from SCREENER_MASTER_ASSET above. Optional in the
+# same sense as the Screener projection itself (a retained pre-migration Producer run may
+# not have materialized it yet -- see canonical_dashboard_runtime_release._stage_dashboard_
+# home_summary's None-return contract), but present on every normal run going forward.
+HOME_SUMMARY_ASSET = "data/dashboard_home_summary.json"
+HOME_SUMMARY_JS_ASSET = "data/dashboard_home_summary.js"
+HOME_SUMMARY_SCHEMA = "dashboard_home_summary/v1"
 OPTIONAL_SAFE_WEB_ARTIFACTS = {
     SCREENER_MASTER_ASSET,
     SCREENER_MASTER_JS_ASSET,
+    HOME_SUMMARY_ASSET,
+    HOME_SUMMARY_JS_ASSET,
 }
 SAFE_WEB_ARTIFACTS = set(COPY_ARTIFACTS) | {
     WORKSPACE_INDEX_ASSET, "data/screener_data.js", "data/build_info.json", "data/build_info.js",
@@ -417,6 +427,59 @@ def copy_screener_master_projection(source: Path) -> bool:
 
     target = WEB_ROOT / SCREENER_MASTER_ASSET
     js_target = WEB_ROOT / SCREENER_MASTER_JS_ASSET
+    payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    js_content = js_fallback(payload)
+    changed = False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not (target.is_file() and sha256(target) == sha256(source)):
+        atomic_copy_file(source, target, validator=validate_json_file)
+        changed = True
+    if not js_target.is_file() or content_sha256(js_target.read_text(encoding="utf-8")) != content_sha256(js_content):
+        atomic_write_file(js_target, js_content)
+        changed = True
+    return changed
+
+
+def validate_dashboard_home_summary(source: Path, market_session: str, *, screener_artifact_identity: str | None) -> dict[str, object]:
+    """Fail closed when a Home summary is supplied for publication.
+
+    Mirrors ``validate_screener_master_projection`` exactly, plus one additional check
+    this small presentation artifact alone needs: it must be bound to the SAME Screener
+    projection this publish is already about to serve, never a Home summary left over
+    from a different Screener projection (Phase 3's session/identity-binding
+    requirement).
+    """
+    if not source.is_file():
+        raise ValueError(f"DASHBOARD_HOME_SUMMARY_NOT_PUBLISHED: missing {source}")
+    try:
+        payload = json.loads(source.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"DASHBOARD_HOME_SUMMARY_NOT_PUBLISHED: unreadable {source}") from exc
+    if not isinstance(payload, dict) or payload.get("contract_version") != HOME_SUMMARY_SCHEMA:
+        raise ValueError("DASHBOARD_HOME_SUMMARY_NOT_PUBLISHED: unsupported contract")
+    if payload.get("as_of_session") != market_session:
+        raise ValueError(
+            "DASHBOARD_HOME_SUMMARY_SESSION_MISMATCH: "
+            f"summary={payload.get('as_of_session')} market={market_session}"
+        )
+    if not isinstance(payload.get("artifact_identity"), str) or not payload["artifact_identity"]:
+        raise ValueError("DASHBOARD_HOME_SUMMARY_NOT_PUBLISHED: missing artifact identity")
+    if not isinstance(payload.get("denominator"), int) or payload["denominator"] <= 0:
+        raise ValueError("DASHBOARD_HOME_SUMMARY_NOT_PUBLISHED: invalid denominator")
+    if screener_artifact_identity is not None and payload.get("source_artifact_identity") != screener_artifact_identity:
+        raise ValueError(
+            "DASHBOARD_HOME_SUMMARY_SOURCE_SCREENER_IDENTITY_MISMATCH: "
+            f"summary_source={payload.get('source_artifact_identity')} screener={screener_artifact_identity}"
+        )
+    return payload
+
+
+def copy_dashboard_home_summary(source: Path) -> bool:
+    """Copy the Producer Home-summary JSON and emit the identical JS fallback."""
+    from dashboard_home_summary import js_fallback
+
+    target = WEB_ROOT / HOME_SUMMARY_ASSET
+    js_target = WEB_ROOT / HOME_SUMMARY_JS_ASSET
     payload = json.loads(source.read_text(encoding="utf-8-sig"))
     js_content = js_fallback(payload)
     changed = False
@@ -983,6 +1046,8 @@ def main() -> int:
                         help="Explicit validated Investment Workspace dashboard projection required for current product surfaces.")
     parser.add_argument("--screener-projection-source", type=Path, default=None,
                         help="Optional Producer screener_master_projection/v1 JSON copied into the Dashboard allowlist when present.")
+    parser.add_argument("--home-summary-source", type=Path, default=None,
+                        help="Optional Producer dashboard_home_summary/v1 JSON copied into the Dashboard allowlist when present.")
     args = parser.parse_args()
 
     global LIVE_MODE
@@ -1028,6 +1093,13 @@ def main() -> int:
         screener = None
         if screener_source.is_file():
             screener = validate_screener_master_projection(screener_source, market_session)
+        home_summary_source = args.home_summary_source or (BACKEND_ROOT / HOME_SUMMARY_ASSET)
+        home_summary = None
+        if home_summary_source.is_file():
+            home_summary = validate_dashboard_home_summary(
+                home_summary_source, market_session,
+                screener_artifact_identity=screener.get("artifact_identity") if screener else None,
+            )
         copy_plan = plan_copy_artifacts()
         manifest, screener_js_content = compute_manifest(rows, breadth, market_session, head, live=args.live, workspace=workspace)
         version_plan = plan_asset_versions(str(manifest["build_id"]))
@@ -1065,6 +1137,10 @@ def main() -> int:
             log("[DRY-RUN] Screener master projection: optional / not supplied")
         else:
             log(f"[DRY-RUN] Screener master projection: {screener_source} · {len(screener['cards'])} cards · {screener['artifact_identity']}")
+        if home_summary is None:
+            log("[DRY-RUN] Dashboard Home summary: optional / not supplied")
+        else:
+            log(f"[DRY-RUN] Dashboard Home summary: {home_summary_source} · {home_summary['denominator']} mã · {home_summary['artifact_identity']}")
         log(f"[DRY-RUN] Build id dự kiến (phiên {market_session}): {manifest['build_id']}")
         log(f"[DRY-RUN] Sẽ cập nhật asset-version trên {len(version_plan)} trang HTML: "
             f"{', '.join(version_plan) or '(không có)'}")
@@ -1094,6 +1170,9 @@ def main() -> int:
         if screener is not None:
             screener_changed = copy_screener_master_projection(screener_source)
             log(f"Screener master projection: {'đã materialize' if screener_changed else 'không đổi'} ({len(screener['cards'])} cards).")
+        if home_summary is not None:
+            home_summary_changed = copy_dashboard_home_summary(home_summary_source)
+            log(f"Dashboard Home summary: {'đã materialize' if home_summary_changed else 'không đổi'} ({home_summary['denominator']} mã).")
         write_build_manifest(manifest, screener_js_content)
         update_asset_versions(str(manifest["build_id"]))
         if not companion_plan.omitted:

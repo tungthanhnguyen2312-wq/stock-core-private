@@ -1,5 +1,80 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-20 - Dashboard Home Summary and Cache-Busting V1 (Producer side)
+
+`DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1 = COMPLETE (Producer side, local, unpushed)`.
+Owner-directed; authorized via `owner_override
+OWNER_DIRECTIVE_2026_09_20_DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1` per
+`docs/AI_RULES.md` rule 11, the same pattern as the two immediately preceding
+owner-directed milestones this session. Executed in an isolated worktree
+(`feature/dashboard-home-summary-cache-busting-v1-20260920`) rooted exactly at
+`origin/main` per explicit instruction, so as to never incorporate the unrelated local
+`ec2de05` commit sitting ahead of `origin/main` in the primary checkout.
+
+1. **A small server-side re-aggregation beats a client-side one over a 6.4MB download,
+   even when the two are numerically identical.** `dashboard_home_summary.py` computes
+   nothing `assets/js/dashboard-product-summary.js`'s `summarizeScreenerOverview()`
+   didn't already compute -- it just does it once, in Python, over data the Producer
+   already has in memory, instead of once per browser tab over a downloaded-and-parsed
+   6.4MB artifact. Verified byte-for-byte numerically identical against the real retained
+   2026-09-18 session on both sides of the language boundary.
+
+2. **An artifact derived from another artifact must bind to that exact artifact, not
+   just to a session string.** Two different Screener projections could share an
+   `as_of_session` (a corrective re-materialization, a replay) while disagreeing on
+   content. `_stage_dashboard_home_summary()` and `validate_dashboard_home_summary()`
+   both require the Home summary's own `source_artifact_identity` to equal the exact
+   Screener projection `artifact_identity` this same release/publish is already staging
+   -- session equality alone was judged insufficient for Phase 3's binding requirement.
+
+3. **A new axis on an existing "never block core Daily" pipeline gets its own
+   try/except, not a bigger one.** `dashboard_home_summary` materialization sits inside
+   `canonical_current_product_projections.py`'s existing optional-axis pattern
+   (feature_store/tactical_behavior/thesis_cases) rather than inside the same try/except
+   that produces Workspace/Screener -- a defect in this brand-new, less-proven code path
+   must never regress the two already-load-bearing artifacts it depends on.
+
+4. **A retained pre-migration Producer run is not a defect to fail on -- it is the one
+   case this new axis is allowed to be silently absent for.**
+   `_stage_dashboard_home_summary()` returns `None` (nothing staged, no error) only when
+   `current_product_projections` never declares this key at all (verified against the
+   real retained 2026-09-17 fixture, which predates this milestone). A manifest that DOES
+   declare the axis -- MATERIALIZED or SKIPPED -- is held to the same fail-closed bar as
+   every other axis; this distinction was only discovered by actually running the
+   pre-existing test suite against the change and finding real historical-replay tests
+   broken, not designed in up front.
+
+5. **CI-time regression is the right cache-busting enforcement point in this repository,
+   not deploy-time HTML rewriting.** `market-dashboard/.github/workflows/deploy-pages.yml`
+   already asserts served `dashboard.html`/`investment-workspace.html`/`portfolio.html`
+   bytes are byte-IDENTICAL to the just-checked-out repository source (`"Verify public
+   Pages bytes"`) -- rewriting asset URLs at deploy time would conflict with that existing
+   integrity gate. The chosen authority instead stays publication-time stamping
+   (`publish_dashboard.py`'s pre-existing `update_asset_versions()`), with a new CI test
+   (`tests/test_asset_cache_version_contract.py`, wired into `dashboard-ci.yml`, which
+   already gates `Deploy Pages` via `workflow_run`) verifying every committed HTML page's
+   local asset tokens actually match `data/build_info.json`'s `build_id` -- closing the
+   real gap, which was never a missing mechanism but a missing enforcement that the
+   mechanism had actually been run before a commit (exactly what happened, twice, earlier
+   in this session's own prior milestones).
+
+6. **A hardcoded version string inside a `.js` file is invisible to an HTML-attribute
+   regex rewriter, and this is not hypothetical.** Live-verified during this milestone:
+   `app.js`'s dynamically-injected `company-panel.js` load carried a literal
+   `?v=2026-09-18-6f6effe-...` string that had silently never advanced across multiple
+   real publishes, because `update_asset_versions()` only scans `src=`/`href=` HTML
+   attributes, never JS string literals. Fixed by reading the current `build_id` from
+   `currentBuildInfo`/`window.BUILD_INFO` at call time instead; a new regression test
+   (`test_no_js_file_hardcodes_a_literal_build_id_style_version_string`) scans every `.js`
+   file for the same failure shape recurring.
+
+Evidence: `tests/test_dashboard_home_summary.py`,
+`tests/test_publish_dashboard_home_summary.py` (this repository);
+`tests/test_asset_cache_version_contract.py`,
+`tests/dashboard-home-summary-cutover.test.js` (market-dashboard). No push, no new
+provider, no ranking/score/recommendation, no PIT/RAW_AS_TRADED change, no Dashboard
+redesign.
+
 ## 2026-09-19 - Indicator and Metric Availability Reconciliation V1
 
 `INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 = COMPLETE`. This milestone was directed

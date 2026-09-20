@@ -263,13 +263,21 @@ def _workspace_release_fixture(tmp_path, monkeypatch):
                 "coverage": {"ticker_denominator": 1, "zero_silent_drops": True}}
     screener.update(runtime_release.screener_contract.content_identity(screener))
     screener_source = write(operation / "screener_master_projection.json", screener)
+    home_summary = {"schema_version": runtime_release.dashboard_home_summary.SCHEMA_VERSION,
+                     "contract_version": runtime_release.dashboard_home_summary.CONTRACT_VERSION,
+                     "as_of_session": session, "source_artifact_identity": screener["artifact_identity"],
+                     "denominator": 1}
+    home_summary.update(runtime_release.dashboard_home_summary.content_identity(home_summary))
+    write(operation / "dashboard_home_summary.json", home_summary)
     write(operation / "run_manifest.json", {"market_session": session, "operation_identity": "operation:exact"})
     write(operation / "unrelated.json", {"must_not_promote": True})
     manifest = {"run_identity": "run:exact", "daily_session_operation": {"directory": "operation", "identity": "operation:exact"},
                 "current_product_projections": {"status": "MATERIALIZED", "session": session,
                     "workspace": {"artifact_identity": workspace["artifact_identity"], "as_of_session": session, "ticker_denominator": 1},
                     "screener_master_projection": {"artifact_identity": screener["artifact_identity"], "as_of_session": session,
-                        "denominator": {"ticker_count": 1}}}}
+                        "denominator": {"ticker_count": 1}},
+                    "dashboard_home_summary": {"status": "MATERIALIZED", "artifact_identity": home_summary["artifact_identity"],
+                        "as_of_session": session, "source_artifact_identity": screener["artifact_identity"], "denominator": 1}}}
     run_path = write(root / "run_manifest.json", manifest)
     bundle_path = write(root / "bundle.json", {})
     sources = {}
