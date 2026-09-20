@@ -1,5 +1,85 @@
 # Stock Lookup — Operational State
 
+**Indicator metric availability recovery classification corrective V1 (2026-09-20):**
+`INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 = COMPLETE (local,
+unpushed)`. Owner-directed, backend-only, release-only-operator-scoped corrective milestone
+(this session, isolated worktree
+`feature/indicator-metric-availability-recovery-classification-corrective-v1-20260920` rooted
+exactly at `origin/main` `80b979f57704d37bf896b338223f5c8ac2899260`, per
+`docs/AI_RULES.md` rule 11's `owner_override
+OWNER_DIRECTIVE_2026_09_20_INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1`,
+reopening `INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1`'s (2026-09-19, COMPLETE)
+contract for exactly the one granularity defect
+`CURRENT_TECHNICAL_RECOVERABLE_COVERAGE_COMPLETION_V1` (2026-09-20, local commit `ec2de05`,
+unpushed, sitting ahead of `origin/main` in the primary checkout) flagged but did not fix,
+because that fix belonged to a different, already-closed milestone).
+
+Fixes the real, precisely-diagnosed defect: `indicator_metric_availability.py`'s
+`_technical_trend_record()` used to label EVERY ticker lacking `tactical.primary_entry_state`
+with one blanket `blocker_class=MISSING_PERIOD_COMPATIBILITY` /
+`recoverability=RECOVER_NOW_EXISTING_PROVIDER_PATH` /
+`recovery_action_code=EXTENDED_LOOKBACK_TECHNICAL_HISTORY_RECOVERY`, regardless of true cause.
+Verified against the real, retained 2026-09-18 session (1,683 tickers; evidence transcribed
+read-only from `ec2de05`'s own retained
+`operations-review/current-technical-recoverable-coverage-completion-v1-20260920/` in the
+primary checkout, not re-derived, since that gitignored evidence does not exist in a freshly
+created worktree -- an already-documented, pre-existing limitation): 956 READY (unchanged);
+of the 727 gaps, only 3 (DUS, GLC, TVG) ever matched the blanket label's own recovery
+mechanism, and those 3 had already exhausted the DNSE→KBS→VCI feature-safe chain this exact
+session (`NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES`) before this corrective milestone
+existed; the remaining 724 were mislabeled entirely -- 544 `PROVIDER_SESSION_UNAVAILABLE`
+(the target session's own price bar, not the historical window, is absent -- a different,
+same-session bar-gap recovery mechanism) and 180 `PROVIDER_REJECTED_OR_INVALID_SYMBOL`
+(delisted/invalid, not a data gap; now correctly `NOT_APPLICABLE` instead of a misleading
+`INSUFFICIENT_DATA`).
+
+Fix joins `_technical_trend_record()`'s existing per-ticker `card` input with two already-
+existing, optional per-ticker evidence records it previously ignored:
+`same_session_technical_coverage_disposition.py`'s own `disposition`/`reason_code` (new
+optional `coverage_disposition` parameter) and `market_wide_current_technical_coverage_
+scaleout.py`'s own recovery `state`/`reason` (new optional `recovery_record` parameter),
+threaded through `evaluate_ticker()`/`evaluate_workspace_artifact()` as new, defaulted-`None`
+keyword parameters -- fully backward compatible; no existing caller (`indicator_metric_
+display_state.build_ticker_display_metrics`, still the only real caller today) passes them
+yet, since wiring live production disposition/recovery artifacts into that call site is a
+separate, later, owner-authorized milestone. Without evidence, the record now fails closed to
+`UNKNOWN_BLOCKER`/`NO_IMPLEMENTATION` (honest "cause not evidenced") instead of fabricating
+`RECOVER_NOW_EXISTING_PROVIDER_PATH` -- the corrected defect. Three new governed
+`blocker_class` values (`PROVIDER_SESSION_UNAVAILABLE`, `INVALID_OR_DELISTED_SYMBOL`,
+`NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES`); the existing `RECOVERABLE_BY_EXISTING_
+BACKFILL`/`RECOVER_NOW_EXISTING_PROVIDER_PATH` pair is now reserved for the one population it
+actually describes (a true, not-yet-attempted window-recovery candidate); the existing
+`RECOVERABLE_FROM_RETAINED_DATA`/`RECOVER_NOW_RETAINED_ONLY` pair is now reachable via a new
+optional `coverage_disposition["recoverable_from_retained_bytes_only"]` flag, though zero real
+2026-09-18 tickers currently set it. `indicator_metric_display_state.py`'s six-state
+whitelist/reshape layer is untouched and needed no change (it only ever reads
+`availability_state`, never `blocker_class`); the only investor-visible effect is the 180
+delisted/invalid tickers now correctly rendering `NOT_APPLICABLE` ("Không áp dụng") instead of
+`INSUFFICIENT_DATA` -- an existing display state, not a new one. `historical_pit_allowed`
+stays `False` and `RAW_AS_TRADED` stays not-promoted in every branch, unchanged.
+`_blocker_class_for_codes()`/`_BLOCKER_CODE_TO_CLASS` (every other metric resolver's shared
+table) was never the source of the defect and is unchanged -- no other `metric_id`'s
+classification is affected.
+
+No network call, no re-poll of the 544 `PROVIDER_SESSION_UNAVAILABLE` tickers, no fundamental/
+valuation work, no Dashboard change, no authority promotion, no push. 15 new/corrected focused
+tests in `tests/test_indicator_metric_availability.py` (one existing test,
+`test_technical_trend_missing_is_recoverable_not_building_history`, encoded the defect itself
+and is corrected, not merely extended); 4 real-evidence acceptance tests transcribe the exact
+retained 2026-09-18 facts for HPG/FPT/SSI (already READY), BHC/DLD/SD7/UCT (recovered, already
+READY), DUS/GLC/TVG (exhausted chain, now `NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES`), and
+the two 544/180 structural populations. 87 tests pass across the directly relevant suites
+(availability + display-state + technical coverage scaleout + tactical confirmation context),
+0 regressions; `test_same_session_technical_coverage_disposition.py` and
+`test_p1g_data_authority.py` fail in this isolated worktree only for the already-documented,
+pre-existing reason that their gitignored `operations-review/`/runtime-database fixtures do
+not exist outside the long-lived primary checkout -- confirmed unrelated to this change (this
+worktree's diff touches only `indicator_metric_availability.py` and its own test file).
+Evidence:
+`operations-review/indicator-metric-availability-recovery-classification-corrective-v1-20260920/`.
+`ec2de05` remains an unmerged, untouched historical local checkpoint in the primary checkout.
+No successor is queued.
+
 **Dashboard Home summary and cache-busting V1 (2026-09-20):**
 `DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1 = COMPLETE (Producer side, local, unpushed)`.
 Owner-directed, publication/presentation-infrastructure-only milestone (this session,

@@ -1,5 +1,69 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-20 - Indicator Metric Availability Recovery Classification Corrective V1
+
+`INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 = COMPLETE (local,
+unpushed)`. Owner-directed; authorized via `owner_override
+OWNER_DIRECTIVE_2026_09_20_INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1`
+per `docs/AI_RULES.md` rule 11, reopening `INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_
+V1`'s (2026-09-19, COMPLETE) contract for exactly the one defect
+`CURRENT_TECHNICAL_RECOVERABLE_COVERAGE_COMPLETION_V1` (2026-09-20) flagged, not fixed. This
+entry refines item 3 of the `2026-09-19 - Indicator and Metric Availability Reconciliation V1`
+decision record below: that item's premise ("if the retained daily/session history exists or
+is recoverable via an existing tool, the record says so, even when the raw count is
+momentarily zero for one ticker") was correct in intent but was implemented as an
+unconditional default applied to every technical-trend gap, not only the true candidates for
+that tool.
+
+1. **A blanket default for "possibly recoverable" degrades to "definitely mislabeled" at
+   scale.** `indicator_metric_availability.py`'s `_technical_trend_record()` assigned
+   `recoverability=RECOVER_NOW_EXISTING_PROVIDER_PATH` to every one of 727 real 2026-09-18
+   tickers lacking `tactical.primary_entry_state`. Only 3 of those 727 (DUS, GLC, TVG) ever
+   matched `market_wide_current_technical_coverage_scaleout.py`'s own candidate definition
+   (target-session bar present, 20-session window incomplete), and even those 3 had already
+   exhausted the DNSE→KBS→VCI feature-safe chain and failed
+   (`NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES`) before this milestone existed. The other 724
+   needed an entirely different mechanism (544 `PROVIDER_SESSION_UNAVAILABLE` -- the target
+   session's own bar, not the historical window, is absent) or no mechanism at all (180
+   `PROVIDER_REJECTED_OR_INVALID_SYMBOL` -- delisted/invalid). The lesson generalizes beyond
+   this one metric: a resolver that hardcodes a recoverability verdict instead of deriving it
+   from the specific evidence that would prove it is a latent version of this same defect,
+   waiting for its population to grow past the handful of cases it was written against.
+
+2. **The fix joins two already-existing evidence artifacts at the point of use, rather than
+   inventing a third parallel classification path.** `same_session_technical_coverage_
+   disposition.py` (2026-08-24) already computes the exact real disposition
+   (`SAME_SESSION_TECHNICAL_COVERED` / `PROVIDER_SESSION_UNAVAILABLE` /
+   `PROVIDER_REJECTED_OR_INVALID_SYMBOL` / `RAW_SAME_SESSION_PRESENT_TECHNICAL_
+   MATERIALIZATION_MISSING` / `PIPELINE_ELIGIBILITY_OR_FILTER_EXCLUSION` / ...) per ticker, and
+   `market_wide_current_technical_coverage_scaleout.py`'s recovery artifact already records
+   per-ticker recovery `state`/`reason` for every ticker it actually attempted. Neither module
+   was modified; `_technical_trend_record()` gained two new, optional, defaulted-`None`
+   keyword parameters (`coverage_disposition`, `recovery_record`) that a caller supplies when
+   it has that evidence. This is deliberately the smallest layer that can fix the defect:
+   `_blocker_class_for_codes()`/`_BLOCKER_CODE_TO_CLASS` (the table every other metric resolver
+   in this module already funnels through) was never broken and needed no change.
+
+3. **Without evidence, fail closed to `UNKNOWN_BLOCKER`, never re-fabricate the old default.**
+   `indicator_metric_display_state.build_ticker_display_metrics` -- the one real production
+   caller today -- does not yet pass `coverage_disposition`/`recovery_record` (wiring the real
+   artifacts into that call site is a separate, later, owner-authorized milestone). Rather than
+   leave the old blanket `RECOVER_NOW_EXISTING_PROVIDER_PATH` default in place for that
+   unwired path, the corrected default is `blocker_class=UNKNOWN_BLOCKER` /
+   `recoverability=NO_IMPLEMENTATION`: an honest "cause not evidenced," matching this module's
+   own established fail-closed stance (`_blocker_class_for_codes()` already does the same for
+   an unmapped code). `indicator_metric_display_state.py` needed no change: it only ever reads
+   `availability_state` (still `INSUFFICIENT_DATA` in this branch), never `blocker_class` --
+   the six-state investor-facing vocabulary is completely unaffected.
+
+4. **`INVALID_OR_DELISTED_SYMBOL` renders `NOT_APPLICABLE`, not `INSUFFICIENT_DATA` -- a more
+   accurate use of an existing display state, not a new one.** A delisted/invalid symbol is a
+   universe-membership fact, not a data gap; no technical-trend construct applies to an
+   instrument that is not being traded. This is the one investor-visible change from this
+   milestone (180/1,683 real tickers), and it uses `NOT_APPLICABLE` ("Không áp dụng"), a state
+   `indicator_metric_display_state.py` already renders for other metrics -- no new UI
+   terminology, per this milestone's own Phase 6 boundary.
+
 ## 2026-09-20 - Dashboard Home Summary and Cache-Busting V1 (Producer side)
 
 `DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1 = COMPLETE (Producer side, local, unpushed)`.

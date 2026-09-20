@@ -75,6 +75,13 @@ BLOCKER_CLASSES = (
     "NOT_CURRENTLY_PRODUCED",
     "PRESENTATION_TRANSPORT_GAP",
     "UNKNOWN_BLOCKER",
+    # INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 (2026-09-20): the
+    # precise technical-trend blocker population same_session_technical_coverage_disposition.py
+    # and market_wide_current_technical_coverage_scaleout.py already distinguish -- see
+    # _technical_trend_record()'s module-native disposition/recovery-record join.
+    "PROVIDER_SESSION_UNAVAILABLE",
+    "INVALID_OR_DELISTED_SYMBOL",
+    "NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES",
 )
 
 RECOVERABILITY_STATES = (
@@ -235,6 +242,9 @@ _BLOCKER_CLASS_TO_RECOVERABILITY: dict[str, str] = {
     "NOT_CURRENTLY_PRODUCED": "REQUIRES_NEW_EVIDENCE",
     "PRESENTATION_TRANSPORT_GAP": "REQUIRES_AUTHORITY_DECISION",
     "UNKNOWN_BLOCKER": "NO_IMPLEMENTATION",
+    "PROVIDER_SESSION_UNAVAILABLE": "REQUIRES_NEW_EVIDENCE",
+    "INVALID_OR_DELISTED_SYMBOL": "NOT_APPLICABLE",
+    "NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES": "REQUIRES_AUTHORITY_DECISION",
 }
 
 
@@ -442,17 +452,135 @@ def ebitda_case_study_record(card: Mapping[str, Any], as_of: str | None) -> dict
 # PRICE_TECHNICAL family
 # ---------------------------------------------------------------------------
 
-def _technical_trend_record(card: Mapping[str, Any], as_of: str | None) -> dict[str, Any]:
+#: INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 (2026-09-20):
+#: ``same_session_technical_coverage_disposition/v1``'s own ``disposition`` value ->
+#: this contract's blocker class, for the two dispositions that are never recoverable
+#: through the technical-history/provider recovery path at all (a different mechanism,
+#: or no mechanism, applies). ``RAW_SAME_SESSION_PRESENT_TECHNICAL_MATERIALIZATION_MISSING``
+#: and ``PIPELINE_ELIGIBILITY_OR_FILTER_EXCLUSION`` are handled separately below because
+#: they additionally depend on the recovery record (attempted vs. exhausted vs. untried).
+_TECHNICAL_DISPOSITION_TO_BLOCKER_CLASS: dict[str, str] = {
+    "PROVIDER_REJECTED_OR_INVALID_SYMBOL": "INVALID_OR_DELISTED_SYMBOL",
+    "PROVIDER_SESSION_UNAVAILABLE": "PROVIDER_SESSION_UNAVAILABLE",
+}
+
+#: Dispositions meaning the target-session bar IS present and only the 20-session technical
+#: window is incomplete -- the one population ``EXTENDED_LOOKBACK_TECHNICAL_HISTORY_RECOVERY``
+#: actually applies to, per ``market_wide_current_technical_coverage_scaleout.recovery_candidates()``.
+_TECHNICAL_WINDOW_INCOMPLETE_DISPOSITIONS = frozenset({
+    "RAW_SAME_SESSION_PRESENT_TECHNICAL_MATERIALIZATION_MISSING",
+    "PIPELINE_ELIGIBILITY_OR_FILTER_EXCLUSION",
+})
+
+
+def _technical_trend_record(card: Mapping[str, Any], as_of: str | None, *,
+                             coverage_disposition: Mapping[str, Any] | None = None,
+                             recovery_record: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Classify a ``technical_trend_entry_state`` gap by its real blocker, not one blanket label.
+
+    Real, precisely-diagnosed defect (INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1,
+    2026-09-19; corrected here under INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_
+    CORRECTIVE_V1): this function used to label EVERY ticker lacking
+    ``tactical.primary_entry_state`` with one blanket ``recoverability=
+    RECOVER_NOW_EXISTING_PROVIDER_PATH``, regardless of true cause. Verified against the real
+    2026-09-18 session (1,683 tickers, 956 READY / 727 gaps): only 7 gaps ever matched that
+    recovery mechanism's own candidate definition (target-session bar present, 20-session
+    window incomplete) -- the other 724 need a different mechanism entirely (544
+    ``PROVIDER_SESSION_UNAVAILABLE``, the target session's own bar is absent) or are not
+    recoverable by any mechanism (180 ``PROVIDER_REJECTED_OR_INVALID_SYMBOL``, delisted/
+    invalid). Of the 7 true candidates, 4 already recovered (now READY, never reach this
+    branch) and 3 exhausted the DNSE->KBS->VCI feature-safe chain
+    (``NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES``). See
+    ``operations-review/current-technical-recoverable-coverage-completion-v1-20260920/``.
+
+    ``coverage_disposition`` is one ticker's row from
+    ``same_session_technical_coverage_disposition.build()["records"]`` (has ``disposition``,
+    ``reason_code``, and optionally ``recoverable_from_retained_bytes_only`` for the rare case
+    a window gap closes from bytes already retained, zero new network calls).
+    ``recovery_record`` is one ticker's row from
+    ``market_wide_current_technical_coverage_scaleout.build_recovery_artifact()["records"]``
+    (has ``state``/``reason``) -- present only for tickers the recovery mechanism actually
+    attempted. Neither input is required: without ``coverage_disposition`` evidence this
+    function never fabricates a recovery path -- it fails closed to ``UNKNOWN_BLOCKER`` /
+    ``NO_IMPLEMENTATION``, honestly reporting "cause not evidenced" rather than guessing.
+    """
     tactical = card.get("tactical") or {}
     state = tactical.get("primary_entry_state")
     if state:
         return _ready("technical_trend_entry_state", "PRICE_TECHNICAL", value=state, as_of=as_of,
                       evidence_fitness=tactical.get("freshness_status"))
+
+    disposition = (coverage_disposition or {}).get("disposition")
+    reason_code = (coverage_disposition or {}).get("reason_code")
+
+    mapped_blocker_class = _TECHNICAL_DISPOSITION_TO_BLOCKER_CLASS.get(disposition)
+    if mapped_blocker_class:
+        # PROVIDER_REJECTED_OR_INVALID_SYMBOL -> INVALID_OR_DELISTED_SYMBOL: a universe-
+        # membership fact, never a data gap; nothing to recover, so this metric does not apply.
+        # PROVIDER_SESSION_UNAVAILABLE -> the target session's own bar is absent, a different
+        # (same-session bar-gap) capability from this metric's own window-recovery mechanism.
+        availability_state = "NOT_APPLICABLE" if mapped_blocker_class == "INVALID_OR_DELISTED_SYMBOL" else "INSUFFICIENT_DATA"
+        return _record(
+            "technical_trend_entry_state", "PRICE_TECHNICAL", availability_state=availability_state,
+            value_present=False, as_of=as_of, blocker_class=mapped_blocker_class,
+            recoverability=_BLOCKER_CLASS_TO_RECOVERABILITY[mapped_blocker_class],
+            current_research_allowed=(availability_state != "NOT_APPLICABLE"),
+            recovery_action_code=reason_code or disposition,
+        )
+
+    if disposition in _TECHNICAL_WINDOW_INCOMPLETE_DISPOSITIONS:
+        if (coverage_disposition or {}).get("recoverable_from_retained_bytes_only"):
+            return _record(
+                "technical_trend_entry_state", "PRICE_TECHNICAL", availability_state="INSUFFICIENT_DATA",
+                value_present=False, as_of=as_of, blocker_class="RECOVERABLE_FROM_RETAINED_DATA",
+                recoverability="RECOVER_NOW_RETAINED_ONLY",
+                recovery_action_code="RETAINED_BYTES_ALREADY_SUFFICIENT_FOR_20_SESSION_WINDOW",
+            )
+        recovery_state = (recovery_record or {}).get("state")
+        recovery_reason = (recovery_record or {}).get("reason")
+        if recovery_state is None:
+            # A true candidate for market_wide_current_technical_coverage_scaleout.py, not yet
+            # attempted -- this is the ONLY population EXTENDED_LOOKBACK_TECHNICAL_HISTORY_
+            # RECOVERY genuinely applies to.
+            return _record(
+                "technical_trend_entry_state", "PRICE_TECHNICAL", availability_state="INSUFFICIENT_DATA",
+                value_present=False, as_of=as_of, blocker_class="RECOVERABLE_BY_EXISTING_BACKFILL",
+                recoverability="RECOVER_NOW_EXISTING_PROVIDER_PATH",
+                recovery_action_code="EXTENDED_LOOKBACK_TECHNICAL_HISTORY_RECOVERY",
+            )
+        if recovery_state == "RECOVERED_COMPLETE_TECHNICAL_HISTORY":
+            # Contradicts primary_entry_state being absent above -- never fabricate READY from
+            # a conflicting signal; fail closed and name the conflict for triage.
+            return _record(
+                "technical_trend_entry_state", "PRICE_TECHNICAL", availability_state="INSUFFICIENT_DATA",
+                value_present=False, as_of=as_of, blocker_class="UNKNOWN_BLOCKER",
+                recoverability="NO_IMPLEMENTATION",
+                recovery_action_code="RECOVERY_RECORD_CONFLICTS_WITH_ABSENT_PRIMARY_ENTRY_STATE",
+            )
+        if recovery_reason == "NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES":
+            # Already exhausted DNSE->KBS->VCI this exact session: only a new provider (owner
+            # decision, docs/AI_RULES.md rule 8) or a future session could close this.
+            return _record(
+                "technical_trend_entry_state", "PRICE_TECHNICAL", availability_state="INSUFFICIENT_DATA",
+                value_present=False, as_of=as_of, blocker_class="NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES",
+                recoverability="REQUIRES_AUTHORITY_DECISION", recovery_action_code=recovery_reason,
+            )
+        # Attempted and failed for some other reason (fetch failure, malformed response, target
+        # session still not recovered) -- genuinely needs new evidence, not a re-run of the same
+        # existing-provider-path attempt that already failed today.
+        return _record(
+            "technical_trend_entry_state", "PRICE_TECHNICAL", availability_state="INSUFFICIENT_DATA",
+            value_present=False, as_of=as_of, blocker_class="MISSING_PERIOD_COMPATIBILITY",
+            recoverability="REQUIRES_NEW_EVIDENCE", recovery_action_code=recovery_reason or recovery_state,
+        )
+
+    # No coverage-disposition evidence supplied, or a residual disposition this contract does
+    # not yet name a dedicated blocker for (OUTSIDE_OFFICIAL_RESEARCH_UNIVERSE,
+    # MALFORMED_OR_CONFLICTED) -- fail closed, never fabricate a recovery path.
     return _record(
         "technical_trend_entry_state", "PRICE_TECHNICAL", availability_state="INSUFFICIENT_DATA",
-        value_present=False, as_of=as_of, blocker_class="MISSING_PERIOD_COMPATIBILITY",
-        recoverability="RECOVER_NOW_EXISTING_PROVIDER_PATH",
-        recovery_action_code="EXTENDED_LOOKBACK_TECHNICAL_HISTORY_RECOVERY",
+        value_present=False, as_of=as_of, blocker_class="UNKNOWN_BLOCKER", recoverability="NO_IMPLEMENTATION",
+        recovery_action_code=disposition or "NO_COVERAGE_DISPOSITION_EVIDENCE_SUPPLIED",
     )
 
 
@@ -609,8 +737,19 @@ def market_wide_records(cards: Mapping[str, Mapping[str, Any]], as_of: str | Non
 # ---------------------------------------------------------------------------
 
 def evaluate_ticker(ticker: str, card: Mapping[str, Any], *, cohort_tickers: frozenset[str],
-                     as_of_session: str | None = None) -> dict[str, dict[str, Any]]:
-    """All governed metric records for one ticker, keyed by ``metric_id``."""
+                     as_of_session: str | None = None,
+                     technical_coverage_disposition: Mapping[str, Any] | None = None,
+                     technical_history_recovery_record: Mapping[str, Any] | None = None
+                     ) -> dict[str, dict[str, Any]]:
+    """All governed metric records for one ticker, keyed by ``metric_id``.
+
+    ``technical_coverage_disposition``/``technical_history_recovery_record`` are optional,
+    per-ticker evidence feeding ``_technical_trend_record()`` (see its docstring) -- pass
+    ``same_session_technical_coverage_disposition.build()["records"][ticker]`` and
+    ``market_wide_current_technical_coverage_scaleout.build_recovery_artifact()["records"]
+    [ticker]`` respectively when available. Omitting them is always safe: the record fails
+    closed to ``UNKNOWN_BLOCKER`` rather than fabricating a recovery path.
+    """
     as_of = as_of_session or card.get("as_of_session")
     records: dict[str, dict[str, Any]] = {}
 
@@ -623,7 +762,10 @@ def evaluate_ticker(ticker: str, card: Mapping[str, Any], *, cohort_tickers: fro
         records[metric_id] = _valuation_method_record(metric_id, method_key, card, as_of)
     records["ebitda"] = ebitda_case_study_record(card, as_of)
 
-    records["technical_trend_entry_state"] = _technical_trend_record(card, as_of)
+    records["technical_trend_entry_state"] = _technical_trend_record(
+        card, as_of, coverage_disposition=technical_coverage_disposition,
+        recovery_record=technical_history_recovery_record,
+    )
     records["technical_confirmation_trigger"] = _technical_confirmation_record(card, as_of)
     records["technical_invalidation"] = _technical_invalidation_record(card, as_of)
     records["signal_velocity_state"] = _signal_velocity_record(card, as_of)
@@ -641,17 +783,35 @@ def evaluate_ticker(ticker: str, card: Mapping[str, Any], *, cohort_tickers: fro
 
 
 def evaluate_workspace_artifact(artifact: Mapping[str, Any], *,
-                                 cohort_tickers: frozenset[str]) -> dict[str, Any]:
+                                 cohort_tickers: frozenset[str],
+                                 technical_coverage_disposition: Mapping[str, Any] | None = None,
+                                 technical_history_recovery: Mapping[str, Any] | None = None
+                                 ) -> dict[str, Any]:
     """Every ticker in a real ``investment_decision_workspace_projection/v1`` artifact.
 
     Returns ``{"as_of_session", "artifact_identity", "tickers": {ticker: {metric_id: record}},
     "market_wide": {metric_id: record}}``. Zero silent drops: every ticker key in the
     source artifact's ``cards`` produces an entry here.
+
+    ``technical_coverage_disposition`` (optional) is a real, whole
+    ``same_session_technical_coverage_disposition/v1`` artifact; ``technical_history_recovery``
+    (optional) is a real, whole ``market_wide_current_technical_coverage_scaleout/v1`` recovery
+    artifact. Both are looked up per ticker and passed to ``evaluate_ticker()``. Neither is
+    required -- without them, ``technical_trend_entry_state`` gaps classify as
+    ``UNKNOWN_BLOCKER`` (see ``_technical_trend_record()``), never a fabricated recovery claim.
     """
     cards = artifact.get("cards") or {}
     as_of = artifact.get("as_of_session")
-    tickers = {ticker: evaluate_ticker(ticker, card, cohort_tickers=cohort_tickers, as_of_session=as_of)
-               for ticker, card in cards.items()}
+    disposition_records = (technical_coverage_disposition or {}).get("records") or {}
+    recovery_records = (technical_history_recovery or {}).get("records") or {}
+    tickers = {
+        ticker: evaluate_ticker(
+            ticker, card, cohort_tickers=cohort_tickers, as_of_session=as_of,
+            technical_coverage_disposition=disposition_records.get(ticker),
+            technical_history_recovery_record=recovery_records.get(ticker),
+        )
+        for ticker, card in cards.items()
+    }
     return {
         "contract_version": CONTRACT_VERSION,
         "as_of_session": as_of,

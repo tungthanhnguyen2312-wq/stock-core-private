@@ -15,7 +15,7 @@
     "config/daily_research_session_input_registry.json"
   ],
   "current": {
-    "milestone": "DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1",
+    "milestone": "INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1",
     "state": "COMPLETE"
   },
   "queued_next": [],
@@ -1896,6 +1896,23 @@
       "state_history": [],
       "owner_override": "OWNER_DIRECTIVE_2026_09_20_DASHBOARD_HOME_SUMMARY_AND_CACHE_BUSTING_V1",
       "notes": "COMPLETE (Producer side, local, unpushed). New dashboard_home_summary.py (dashboard_home_summary/v1) is a pure, presentation-only re-aggregation of the already-governed screener_master_projection/v1 artifact -- same breadth/stance/tactical/liquidity/sector counts Home already computed client-side, now derived once server-side and shipped as a ~3.6KB artifact instead of the full ~6.4MB projection (6,734,405 bytes), a 99.95% reduction, verified with zero numerical drift against the real retained 2026-09-18 session on both the Python and JS sides. Wired into the normal recurring path: canonical_current_product_projections.py materializes and writes it right after Screener Master Projection (own try/except, never blocks core Daily); canonical_dashboard_runtime_release.py stages it with the same fail-closed session/identity/content-identity checks as the Screener projection plus one more (must cite the exact same Screener artifact_identity this release already staged), gracefully returning None only for a genuine pre-migration manifest gap (verified against the real retained 2026-09-17 fixture); publish_dashboard.py gained the analogous validate/copy pair and --home-summary-source flag. Could not exercise the full CLI --live path in this isolated worktree by design (assert_producer_publisher_file refuses to run from anywhere but the one canonical checkout path) nor several real-2026-09-17-session tests (gitignored operations-review/ evidence absent from a fresh worktree) -- both independently confirmed identical on a clean, unmodified worktree via git stash before/after, zero regressions attributable to this work. Cache-busting: chose CI-time regression (new tests/test_asset_cache_version_contract.py in market-dashboard, gating Deploy Pages via the existing workflow_run dependency) over deploy-time HTML rewriting, since deploy-pages.yml already asserts served HTML bytes are identical to the committed source (rewriting there would conflict with that existing integrity gate). Found and fixed a real live bug in the same pass: app.js hardcoded a literal stale build_id string for its dynamically-injected company-panel.js load, invisible to the HTML-attribute regex rewriter -- fixed to read build_id at call time; a new regression test guards against recurrence. No push, no new provider, no ranking/score/recommendation, no PIT/RAW_AS_TRADED change, no Dashboard redesign. Evidence: tests/test_dashboard_home_summary.py, tests/test_publish_dashboard_home_summary.py (this repo); tests/test_asset_cache_version_contract.py, tests/dashboard-home-summary-cutover.test.js (market-dashboard). No successor is queued."
+    },
+    {
+      "milestone_id": "INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1",
+      "state": "COMPLETE",
+      "narrative_disposition": "TECHNICAL_TREND_BLOCKER_CLASSIFICATION_CORRECTED_ZERO_COVERAGE_CHANGE_LOCAL_UNPUSHED",
+      "starting_checkpoint": "80b979f57704d37bf896b338223f5c8ac2899260",
+      "checkpoint": "HEAD",
+      "dependencies": [
+        "INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1"
+      ],
+      "unlocks": [],
+      "authority_effect": "BACKEND_ONLY / NO_NEW_ANALYTICAL_AUTHORITY / NO_RANKING_SCORE_RECOMMENDATION / NO_DASHBOARD_CHANGE / NO_NETWORK_CALL / NO_COVERAGE_COUNT_CHANGE",
+      "owner_authorized": true,
+      "source_doc": "Owner directive INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 (this session, 2026-09-20)",
+      "state_history": [],
+      "owner_override": "OWNER_DIRECTIVE_2026_09_20_INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1",
+      "notes": "Reopens INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 (2026-09-19, COMPLETE) for exactly the one granularity defect CURRENT_TECHNICAL_RECOVERABLE_COVERAGE_COMPLETION_V1 (2026-09-20, local commit ec2de05, unpushed) flagged, not fixed. indicator_metric_availability.py's _technical_trend_record() used to label all 727 real 2026-09-18 technical_trend_entry_state gaps RECOVER_NOW_EXISTING_PROVIDER_PATH regardless of true cause; corrected to join the existing same_session_technical_coverage_disposition.py disposition and market_wide_current_technical_coverage_scaleout.py recovery-record evidence (two new optional keyword parameters, backward compatible, no other caller changed). Real 2026-09-18 breakdown: 956 READY (unchanged), 3 NO_FEATURE_SAFE_COMPATIBLE_PROVIDER_SERIES (DUS/GLC/TVG, already exhausted DNSE->KBS->VCI), 544 PROVIDER_SESSION_UNAVAILABLE (structural target-session-bar-absent), 180 INVALID_OR_DELISTED_SYMBOL (now NOT_APPLICABLE display state instead of a misleading INSUFFICIENT_DATA). No coverage count changed; this is a classification-precision fix, not a recovery. See docs/DECISIONS.md and operations-review/indicator-metric-availability-recovery-classification-corrective-v1-20260920/ for full reconciliation. ec2de05 preserved untouched in the primary checkout."
     }
   ],
   "blocked_capabilities": [
