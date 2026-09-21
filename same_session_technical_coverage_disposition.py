@@ -108,6 +108,17 @@ def _classify_one(
             reason = "TARGET_SESSION_GAP_WITH_NEARBY_OBSERVED_ACTIVITY"
         else:
             reason = "NO_OBSERVED_TRADING_ACTIVITY_IN_RETAINED_WINDOW"
+    elif source_disp == "TRANSPORT_FAILED":
+        # mva_exact_session_snapshot.py's fetch loop: a rate-limited or connection-level failure
+        # (rate_limited / request_failed_*), retried once and still unsuccessful. Purely a
+        # transport outcome -- it carries no provider signal about symbol validity, so it must
+        # never collapse into PROVIDER_REJECTED_OR_INVALID_SYMBOL.
+        disposition, reason = "PROVIDER_SESSION_UNAVAILABLE", "PROVIDER_TRANSPORT_FAILURE_NO_QUALIFIED_OBSERVATION"
+    elif source_disp == "MALFORMED":
+        # Same producer: a response whose body was not the expected shape (BODY_NOT_OBJECT) or
+        # whose observation rows failed to parse (MALFORMED_RESPONSE) -- genuinely malformed
+        # retained evidence, distinct from a missing session or a provider rejection.
+        disposition, reason = "MALFORMED_OR_CONFLICTED", "PROVIDER_RESPONSE_MALFORMED"
     else:
         disposition, reason = "UNEXPLAINED", "NO_MUTUALLY_EXCLUSIVE_RULE_MATCHED"
 

@@ -13,6 +13,7 @@ from market_wide_current_descriptive_research import (
 from market_wide_current_technical_coverage_scaleout import recovery_candidates
 from same_session_technical_coverage_disposition import (
     DISPOSITIONS,
+    _classify_one,
     build,
     content_identity,
     official_research_universe,
@@ -155,3 +156,211 @@ def test_disposition_identity_is_deterministic_and_governed_inputs_are_unchanged
     assert freeze["snapshot_id"] == PROTECTED_FREEZE_ID
     committed = OPS / "same-session-technical-coverage-recovery-v1-20260824/same_session_technical_coverage_disposition_artifact.json"
     assert json.loads(committed.read_text(encoding="utf-8"))["artifact_identity"] == first["artifact_identity"]
+
+
+# =====================================================================================
+# 2026-09-21 SAME_SESSION_TECHNICAL_COVERAGE_DISPOSITION_20260921_CORRECTIVE_V1: real
+# retained evidence for 2026-09-21 had 8 TRANSPORT_FAILED tickers (rate-limited/connection
+# failure, retried once, still unsuccessful) that no existing rule covered, so they fell
+# through to the UNEXPLAINED fail-closed sentinel. TRANSPORT_FAILED and MALFORMED are now
+# classified explicitly; UNEXPLAINED itself is untouched and must still fail closed for any
+# genuinely unmodeled disposition.
+# =====================================================================================
+
+_MINIMAL_DESCRIPTIVE_NOT_APPLICABLE = {
+    "technical_features": {"status": "NOT_APPLICABLE", "is_current_session": False},
+    "activity_and_session_state": "UNKNOWN",
+}
+_MINIMAL_OFFICIAL = {"qualification": "FIRST_PARTY_CURRENT_HOSE_STOCK_MASTER_ROW"}
+
+
+def test_transport_failed_is_provider_session_unavailable_not_invalid_symbol():
+    row = _classify_one(
+        ticker="ZZT",
+        descriptive=_MINIMAL_DESCRIPTIVE_NOT_APPLICABLE,
+        snapshot={"disposition": "TRANSPORT_FAILED", "status": "FETCH_FAILED", "reason": "request_failed_ConnectTimeout"},
+        status={},
+        official=_MINIMAL_OFFICIAL,
+        target_session="2026-09-21",
+        official_tickers={"ZZT"},
+    )
+    assert row["disposition"] == "PROVIDER_SESSION_UNAVAILABLE"
+    assert row["disposition"] != "PROVIDER_REJECTED_OR_INVALID_SYMBOL"
+    assert row["reason_code"] == "PROVIDER_TRANSPORT_FAILURE_NO_QUALIFIED_OBSERVATION"
+
+
+def test_malformed_response_is_malformed_or_conflicted_with_precise_reason():
+    row = _classify_one(
+        ticker="ZZM",
+        descriptive=_MINIMAL_DESCRIPTIVE_NOT_APPLICABLE,
+        snapshot={"disposition": "MALFORMED", "status": "MALFORMED_RESPONSE", "reason": "BODY_NOT_OBJECT"},
+        status={},
+        official=_MINIMAL_OFFICIAL,
+        target_session="2026-09-21",
+        official_tickers={"ZZM"},
+    )
+    assert row["disposition"] == "MALFORMED_OR_CONFLICTED"
+    assert row["reason_code"] == "PROVIDER_RESPONSE_MALFORMED"
+
+
+def test_exact_session_current_session_conflict_still_malformed_or_conflicted():
+    row = _classify_one(
+        ticker="ZZC",
+        descriptive={
+            "technical_features": {"status": "SHADOW_ONLY", "is_current_session": True},
+            "activity_and_session_state": "ACTIVE_LISTED",
+        },
+        snapshot={"disposition": "SESSION_MISSING", "status": "EXACT_SESSION_MISSING", "reason": "EXACT_SESSION_MISSING", "observations": []},
+        status={},
+        official=_MINIMAL_OFFICIAL,
+        target_session="2026-09-21",
+        official_tickers={"ZZC"},
+    )
+    assert row["disposition"] == "MALFORMED_OR_CONFLICTED"
+    assert row["reason_code"] == "CONFLICTING_SAME_SESSION_AND_SOURCE_STATE"
+
+
+def test_session_missing_classification_unchanged():
+    row = _classify_one(
+        ticker="ZZS",
+        descriptive={"technical_features": {"status": "MISSING"}, "activity_and_session_state": "UNKNOWN"},
+        snapshot={"disposition": "SESSION_MISSING", "status": "EXACT_SESSION_MISSING", "reason": "EXACT_SESSION_MISSING", "observations": []},
+        status={"nearby_observation_count_in_retained_window": 0},
+        official=_MINIMAL_OFFICIAL,
+        target_session="2026-09-21",
+        official_tickers={"ZZS"},
+    )
+    assert row["disposition"] == "PROVIDER_SESSION_UNAVAILABLE"
+    assert row["reason_code"] == "NO_OBSERVED_TRADING_ACTIVITY_IN_RETAINED_WINDOW"
+
+
+def test_provider_rejected_classification_unchanged():
+    row = _classify_one(
+        ticker="ZZR",
+        descriptive={"technical_features": {}, "activity_and_session_state": "UNKNOWN"},
+        snapshot={"disposition": "PROVIDER_REJECTED", "status": "FETCH_FAILED", "reason": "invalid_symbol"},
+        status={},
+        official=_MINIMAL_OFFICIAL,
+        target_session="2026-09-21",
+        official_tickers={"ZZR"},
+    )
+    assert row["disposition"] == "PROVIDER_REJECTED_OR_INVALID_SYMBOL"
+
+
+def test_outside_official_universe_classification_unchanged():
+    row = _classify_one(
+        ticker="ZZO",
+        descriptive={"technical_features": {}, "activity_and_session_state": "UNKNOWN"},
+        snapshot={"disposition": "SESSION_MISSING", "status": "EXACT_SESSION_MISSING", "reason": "EXACT_SESSION_MISSING", "observations": []},
+        status={},
+        official=None,
+        target_session="2026-09-21",
+        official_tickers=set(),
+    )
+    assert row["disposition"] == "OUTSIDE_OFFICIAL_RESEARCH_UNIVERSE"
+
+
+def test_unknown_future_disposition_still_falls_to_unexplained():
+    row = _classify_one(
+        ticker="ZZU",
+        descriptive=_MINIMAL_DESCRIPTIVE_NOT_APPLICABLE,
+        snapshot={"disposition": "SOME_BRAND_NEW_DISPOSITION_NOT_YET_MODELED", "status": "UNKNOWN"},
+        status={},
+        official=_MINIMAL_OFFICIAL,
+        target_session="2026-09-21",
+        official_tickers={"ZZU"},
+    )
+    assert row["disposition"] == "UNEXPLAINED"
+    assert row["reason_code"] == "NO_MUTUALLY_EXCLUSIVE_RULE_MATCHED"
+
+
+def test_build_still_fails_closed_for_a_genuinely_unmodeled_disposition():
+    # Fully synthetic, single-ticker scenario (independent of any real retained fixture) whose
+    # snapshot disposition matches no rule at all -- build() must still refuse, not silently drop
+    # the fail-closed sentinel just because two new dispositions are now explicitly modeled.
+    session = "2026-09-21"
+    descriptive = {
+        "session": session,
+        "records": {
+            "ZZFAIL": {
+                "technical_features": {"status": "NOT_APPLICABLE", "is_current_session": False},
+                "activity_and_session_state": "UNKNOWN",
+            },
+        },
+    }
+    official_universe = {
+        "records": {
+            "ZZFAIL": {"stocklookup_candidate": True, "current_universe_status": "OFFICIAL_CURRENT_EXCHANGE_SECURITY"},
+        },
+    }
+    snapshot = {
+        "resolved_completed_session": session,
+        "records": {
+            "ZZFAIL": {"disposition": "SOME_BRAND_NEW_DISPOSITION_NOT_YET_MODELED", "status": "UNKNOWN", "observations": []},
+        },
+    }
+    universe_status = {
+        "input_candidates": {"resolved_completed_session": session},
+        "records": {"ZZFAIL": {}},
+    }
+    tactical = {"coverage": {"classified_count": 0}}
+    recovery = {"recovered_history_overrides": {}}
+    with pytest.raises(ValueError, match="UNEXPLAINED_COVERAGE_DISPOSITION:1"):
+        build(
+            descriptive=descriptive, official_universe=official_universe, p3f9b_snapshot=snapshot,
+            universe_status=universe_status, tactical=tactical, recovery=recovery,
+        )
+
+
+def _retained_20260921() -> dict:
+    return build(
+        descriptive=_load("market-wide-current-descriptive-research-v1-20260921/market_wide_current_descriptive_research_artifact.json"),
+        official_universe=_load("current-official-market-universe-integration-v1-20260824/current_official_market_universe_artifact.json"),
+        p3f9b_snapshot=_load("p3f9b-market-wide-exact-session-scaleout-20260921/p3f9b_mva_exact_session_snapshot.json"),
+        universe_status=_load("current-universe-status-and-session-coverage-resolution-v1-20260921/current_universe_status_and_session_coverage_resolution_artifact.json"),
+        tactical=_load("watchlist-tactical-entry-decision-v1-20260921/watchlist_tactical_entry_classifier_artifact.json"),
+        recovery=_load("market-wide-current-technical-coverage-scaleout-v1-20260921/market_wide_current_technical_coverage_recovery_artifact.json"),
+    )
+
+
+_REAL_20260921_TRANSPORT_FAILED_TICKERS = ("PSW", "PTE", "PTG", "PTH", "PTI", "PTL", "PTM", "PTS")
+
+
+def test_real_2026_09_21_candidate_universe_reconciles_with_zero_unexplained():
+    artifact = _retained_20260921()
+    counts = artifact["candidate_universe"]["disposition_counts"]
+    assert artifact["candidate_universe"]["count"] == 1683
+    assert sum(counts[name] for name in DISPOSITIONS) == 1683
+    assert counts["UNEXPLAINED"] == 0
+    assert artifact["coverage_ceiling"]["unexplained"] == 0
+    assert counts["SAME_SESSION_TECHNICAL_COVERED"] == 838
+    assert counts["PROVIDER_SESSION_UNAVAILABLE"] == 664
+    assert counts["PROVIDER_REJECTED_OR_INVALID_SYMBOL"] == 179
+    assert counts["OUTSIDE_OFFICIAL_RESEARCH_UNIVERSE"] == 1
+    assert counts["PIPELINE_ELIGIBILITY_OR_FILTER_EXCLUSION"] == 1
+    assert counts["MALFORMED_OR_CONFLICTED"] == 0
+
+
+def test_real_2026_09_21_all_eight_transport_failed_tickers_classify_deterministically():
+    artifact = _retained_20260921()
+    for ticker in _REAL_20260921_TRANSPORT_FAILED_TICKERS:
+        row = artifact["records"][ticker]
+        assert row["snapshot_disposition"] == "TRANSPORT_FAILED"
+        assert row["disposition"] == "PROVIDER_SESSION_UNAVAILABLE"
+        assert row["reason_code"] == "PROVIDER_TRANSPORT_FAILURE_NO_QUALIFIED_OBSERVATION"
+    reasons = artifact["candidate_universe"]["reason_counts"]
+    assert reasons["PROVIDER_TRANSPORT_FAILURE_NO_QUALIFIED_OBSERVATION"] == len(_REAL_20260921_TRANSPORT_FAILED_TICKERS)
+
+
+def test_real_2026_09_21_tactical_classified_count_coherent():
+    artifact = _retained_20260921()
+    tactical = _load("watchlist-tactical-entry-decision-v1-20260921/watchlist_tactical_entry_classifier_artifact.json")
+    covered = artifact["candidate_universe"]["disposition_counts"]["SAME_SESSION_TECHNICAL_COVERED"]
+    assert tactical["coverage"]["classified_count"] == covered
+
+
+def test_real_2026_09_21_disposition_identity_is_deterministic():
+    first, second = _retained_20260921(), _retained_20260921()
+    assert first["artifact_identity"] == second["artifact_identity"]
+    assert content_identity(first)["artifact_sha256"] == first["artifact_sha256"]
+    assert first["session"] == "2026-09-21"
