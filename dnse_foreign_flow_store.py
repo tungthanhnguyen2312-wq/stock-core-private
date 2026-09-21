@@ -66,6 +66,13 @@ PROOF_CONTINUOUS = "PROVEN_CONTINUOUS"
 PROOF_GAP = "PROVEN_GAP"
 PROOF_UNVERIFIABLE = "UNVERIFIABLE"
 
+# A ticker can have a real, non-empty exhaustive OHLCV history that is simply stale
+# relative to the candidate interval (e.g. vn_stock.db retained through 2026-08-25,
+# candidate window 2026-09-14..18). Non-empty is not the same as CAPABLE of proving
+# THIS interval -- see `_exhaustive_reference_covers_interval`.
+EXHAUSTIVE_REFERENCE_INTERVAL_COVERED = "EXHAUSTIVE_REFERENCE_INTERVAL_COVERED"
+EXHAUSTIVE_REFERENCE_INTERVAL_NOT_COVERED = "EXHAUSTIVE_REFERENCE_INTERVAL_NOT_COVERED"
+
 _STANDING_WARNINGS: tuple[str, ...] = (
     "foreign_volume_not_represented_here_unqualified_by_contract",
     "foreign_room_not_represented_here_unqualified_by_contract",
@@ -188,6 +195,18 @@ def _civil_day_gap(prev_date: str, date: str) -> int:
     return (_date.fromisoformat(date) - _date.fromisoformat(prev_date)).days
 
 
+def _exhaustive_reference_covers_interval(exhaustive_dates: set[str], candidate_dates: Sequence[str]) -> bool:
+    """A non-empty exhaustive OHLCV reference is only CAPABLE of proving a candidate
+    interval when its own retained range actually spans it. A real, non-empty vn_
+    stock.db that simply stopped updating before the candidate window began (stale,
+    not absent) must never be treated as authoritative for that window -- it has no
+    opinion on dates outside its own retained range, which is different from having
+    checked them and found no gap."""
+    if not exhaustive_dates:
+        return False
+    return min(exhaustive_dates) <= candidate_dates[0] and max(exhaustive_dates) >= candidate_dates[-1]
+
+
 def _prove_continuity(
     candidate_dates: Sequence[str], *, exhaustive_dates: set[str], registry_dates: frozenset[str],
 ) -> dict[str, Any]:
@@ -195,42 +214,52 @@ def _prove_continuity(
     pair in `candidate_dates` (sorted, len >= 2), and name exactly which authority
     proved it.
 
-    Precedence: the EXHAUSTIVE vn_stock.db OHLCV reference is used whenever it is
-    non-empty for this ticker (existing exact-comparison semantics, unchanged). Only
-    when it is unavailable does this fall back to the non-exhaustive Daily completed-
-    session registry, which may prove continuity ONLY when every candidate date is
-    itself registry-qualified AND every adjacent pair is exactly one civil day apart
-    (so there is no calendar date in between for a market session to have gone
-    unrecorded). A registry gap wider than one civil day can never be resolved to
-    "complete" or "incomplete" -- it is always UNVERIFIABLE, because the registry's
-    silence about an intervening date is not proof that date was not a trading day.
+    Precedence: the EXHAUSTIVE vn_stock.db OHLCV reference is used only when it is
+    both non-empty AND actually spans the candidate interval (existing exact-
+    comparison semantics, unchanged, once that capability check passes) -- a stale-
+    but-nonempty reference whose own retained range ends before the candidate window
+    starts is NOT_COVERED, never treated as a gap, and falls through exactly like an
+    entirely absent reference would. Only then does this fall back to the non-
+    exhaustive Daily completed-session registry, which may prove continuity ONLY
+    when every candidate date is itself registry-qualified AND every adjacent pair
+    is exactly one civil day apart (so there is no calendar date in between for a
+    market session to have gone unrecorded). A registry gap wider than one civil day
+    can never be resolved to "complete" or "incomplete" -- it is always
+    UNVERIFIABLE, because the registry's silence about an intervening date is not
+    proof that date was not a trading day.
     """
-    if exhaustive_dates:
+    if _exhaustive_reference_covers_interval(exhaustive_dates, candidate_dates):
         expected = sorted(d for d in exhaustive_dates if candidate_dates[0] <= d <= candidate_dates[-1])
         if expected == list(candidate_dates):
             return {"proof_state": PROOF_CONTINUOUS, "source": CONTINUITY_SOURCE_VN_STOCK_DB,
-                    "authority_scope": AUTHORITY_SCOPE_EXHAUSTIVE, "exhaustive": True, "reason": None}
+                    "authority_scope": AUTHORITY_SCOPE_EXHAUSTIVE, "exhaustive": True, "reason": None,
+                    "interval_capability": EXHAUSTIVE_REFERENCE_INTERVAL_COVERED}
         missing = sorted(set(expected) - set(candidate_dates))
         return {"proof_state": PROOF_GAP, "source": CONTINUITY_SOURCE_VN_STOCK_DB,
                 "authority_scope": AUTHORITY_SCOPE_EXHAUSTIVE, "exhaustive": True,
-                "reason": f"gap detected -- missing session(s): {missing}"}
+                "reason": f"gap detected -- missing session(s): {missing}",
+                "interval_capability": EXHAUSTIVE_REFERENCE_INTERVAL_COVERED}
     unqualified = [d for d in candidate_dates if d not in registry_dates]
+    interval_capability = (EXHAUSTIVE_REFERENCE_INTERVAL_NOT_COVERED if exhaustive_dates else None)
     if unqualified:
         return {"proof_state": PROOF_UNVERIFIABLE, "source": CONTINUITY_SOURCE_DAILY_SESSION_REGISTRY,
                 "authority_scope": AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE, "exhaustive": False,
-                "reason": ("no vn_stock.db trading-date reference available, and session(s) not "
-                           "registry-qualified as COMPLETED_RETAINED_EVIDENCE/trading_day_valid=true: "
+                "interval_capability": interval_capability,
+                "reason": ("no vn_stock.db trading-date reference covers this interval, and session(s) "
+                           "not registry-qualified as COMPLETED_RETAINED_EVIDENCE/trading_day_valid=true: "
                            f"{unqualified}")}
     for prev_date, date in zip(candidate_dates, candidate_dates[1:]):
         if _civil_day_gap(prev_date, date) != 1:
             return {"proof_state": PROOF_UNVERIFIABLE, "source": CONTINUITY_SOURCE_DAILY_SESSION_REGISTRY,
                     "authority_scope": AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE, "exhaustive": False,
+                    "interval_capability": interval_capability,
                     "reason": (f"calendar gap between {prev_date} and {date} exceeds one civil day; "
                                "the non-exhaustive Daily completed-session registry cannot prove no "
                                "market session fell in between -- its silence about an intervening "
                                "date is never treated as proof that date was not a trading day")}
     return {"proof_state": PROOF_CONTINUOUS, "source": CONTINUITY_SOURCE_DAILY_SESSION_REGISTRY,
-            "authority_scope": AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE, "exhaustive": False, "reason": None}
+            "authority_scope": AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE, "exhaustive": False, "reason": None,
+            "interval_capability": interval_capability}
 
 
 def _streaks_and_counts(
@@ -273,10 +302,12 @@ def _streaks_and_counts(
 
 def _continuity_reference_provenance(proof: Mapping[str, Any]) -> dict[str, Any]:
     """The bounded provenance surfaced on every window summary -- enough for a
-    caller to tell which authority produced the coverage verdict, never internal
-    implementation detail (no raw date sets, no registry file contents)."""
+    caller to tell which authority produced the coverage verdict, and whether a
+    non-empty exhaustive reference was actually capable of covering this interval
+    (never internal implementation detail: no raw date sets, no registry contents)."""
     return {"source": proof["source"], "authority_scope": proof["authority_scope"],
-            "exhaustive": proof["exhaustive"], "proof_state": proof["proof_state"]}
+            "exhaustive": proof["exhaustive"], "proof_state": proof["proof_state"],
+            "interval_capability": proof.get("interval_capability")}
 
 
 def _window_summary(
@@ -361,16 +392,26 @@ def _freshness(
         # what an out-of-order retained session means.
         return {**base, "status": FRESHNESS_UNKNOWN,
                 "reason": "latest_qualified_session_is_after_the_reference_session"}
-    if not trading_dates:
+    # A real, non-empty `trading_dates` that simply stopped updating before
+    # `reference_session_date` (stale, not absent -- the same shape
+    # `_exhaustive_reference_covers_interval` guards against for window/streak
+    # proof) is NOT capable of proving an exact lag count either: it has no
+    # opinion on whether real trading sessions exist beyond its own retained
+    # range, so silently counting only the dates it happens to have (here, zero)
+    # would misreport an unverifiable lag as "0 sessions behind" right next to a
+    # "stale" status. Only trust the count when the exhaustive reference's own
+    # range actually reaches at least as far as the reference session.
+    if not trading_dates or max(trading_dates) < reference_session_date:
         # The non-exhaustive Daily completed-session registry is deliberately never
-        # consulted here: it cannot prove an EXACT trading-session lag count, only
-        # that specific individual dates were sessions -- see _prove_continuity's
-        # docstring. A lag is reported (stale, never silently current), but the exact
-        # count stays None rather than an unprovable guess.
+        # consulted here either: it cannot prove an EXACT trading-session lag count,
+        # only that specific individual dates were sessions -- see
+        # _prove_continuity's docstring. A lag is reported (stale, never silently
+        # current), but the exact count stays None rather than an unprovable guess.
         return {**base, "status": FRESHNESS_STALE,
                 "reason": "retained foreign-flow data predates the reference session; exact "
-                          "trading-session lag could not be verified against vn_stock.db, and the "
-                          "non-exhaustive Daily completed-session registry cannot prove an exact count"}
+                          "trading-session lag could not be verified against vn_stock.db (absent, or "
+                          "stale and not reaching the reference session), and the non-exhaustive Daily "
+                          "completed-session registry cannot prove an exact count"}
     sessions_behind = len(sorted(d for d in trading_dates
                                  if latest_qualified_session_date < d <= reference_session_date))
     return {**base, "status": FRESHNESS_STALE, "sessions_behind": sessions_behind,
