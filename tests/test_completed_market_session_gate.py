@@ -267,6 +267,11 @@ def test_pre_cutoff_exact_session_is_insufficient():
 
 
 def test_provider_evidence_unavailable_is_deterministic():
+    """DAILY_RETAINED_EXACT_SESSION_RESUME_RESILIENCE_V1 (2026-09-21): qualified retained
+    exact-session evidence for the exact requested session now resumes READY even when
+    working_dates is entirely unavailable (e.g. a probe timeout) -- see
+    RETAINED_EXACT_SESSION_RESUME_REASON. Genuinely absent exact evidence still fails closed;
+    see test_after_floor_time_alone_never_ready."""
     result = gate.evaluate_completed_market_session_gate(
         requested_at=AFTER,
         requested_session=SESSION,
@@ -274,9 +279,10 @@ def test_provider_evidence_unavailable_is_deterministic():
         exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T18:05:00+07:00"),
         allow_provider_probe=False,
     )
-    assert result["completion_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+    assert result["completion_gate_status"] == gate.STATUS_READY
     assert result["provider_semantic_strength"] == gate.PROVIDER_SEMANTIC_STRENGTH_UNAVAILABLE
     assert result["authority_statement"]["provider_confirmed_completed"] is False
+    assert gate.RETAINED_EXACT_SESSION_RESUME_REASON in result["reason_codes"]
 
 
 def test_thin_p3f9b_coverage_is_insufficient():
@@ -496,3 +502,156 @@ def test_no_test_requires_the_old_18_00_rule():
     assert "time(18, 0)" not in inspect.getsource(gate)
     this_module_source = Path(__file__).read_text(encoding="utf-8")
     assert not re.search(r"datetime\(2026, \d+, \d+, 18,", this_module_source)
+
+
+# =====================================================================================
+# 2026-09-21 DAILY_RETAINED_EXACT_SESSION_RESUME_RESILIENCE_V1: a retained exact-session
+# resume must not depend on a fresh working_dates network call when qualified retained
+# exact-session evidence already proves the exact target session. Required test matrix.
+# =====================================================================================
+
+
+def test_phase_a_retained_exact_session_resume_when_working_dates_unavailable():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=AFTER,
+        requested_session=SESSION,
+        working_dates_evidence=None,
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T15:35:00+07:00"),
+        allow_provider_probe=False,
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_ATTEMPT_ELIGIBLE
+    assert result["resolved_session"] == SESSION
+    assert gate.RETAINED_EXACT_SESSION_RESUME_REASON in result["reason_codes"]
+    assert result["authority_statement"]["provider_confirmed_completed"] is False
+
+
+def test_phase_b_retained_exact_session_resume_when_working_dates_unavailable():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=AFTER,
+        requested_session=SESSION,
+        working_dates_evidence=None,
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T15:35:00+07:00"),
+        allow_provider_probe=False,
+    )
+    assert result["completion_gate_status"] == gate.STATUS_READY
+    assert result["resolved_session"] == SESSION
+    assert result["ready_semantic"] == gate.READY_SEMANTIC
+    assert gate.RETAINED_EXACT_SESSION_RESUME_REASON in result["reason_codes"]
+    assert result["provider_semantic_strength"] == gate.PROVIDER_SEMANTIC_STRENGTH_UNAVAILABLE
+
+
+def test_retained_exact_session_resume_session_mismatch_is_blocked():
+    mismatched = _p3f9b("2026-08-25", requested_at="2026-08-26T15:35:00+07:00")
+    phase_a = gate.evaluate_attempt_eligibility(
+        requested_at=AFTER, requested_session=SESSION,
+        working_dates_evidence=None, exact_session_evidence=mismatched,
+    )
+    assert phase_a["attempt_gate_status"] == gate.STATUS_SESSION_MISMATCH
+    phase_b = gate.evaluate_completed_market_session_gate(
+        requested_at=AFTER, requested_session=SESSION,
+        working_dates_evidence=None, exact_session_evidence=mismatched,
+    )
+    assert phase_b["completion_gate_status"] == gate.STATUS_SESSION_MISMATCH
+
+
+def test_retained_exact_session_resume_insufficient_evidence_fails_closed():
+    thin = _p3f9b(SESSION, requested_at="2026-08-26T15:35:00+07:00", exact=10, total=1683)
+    phase_a = gate.evaluate_attempt_eligibility(
+        requested_at=AFTER, requested_session=SESSION,
+        working_dates_evidence=None, exact_session_evidence=thin,
+    )
+    assert phase_a["attempt_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+    assert phase_a["attempt_gate_status"] != gate.STATUS_ATTEMPT_ELIGIBLE
+    phase_b = gate.evaluate_completed_market_session_gate(
+        requested_at=AFTER, requested_session=SESSION,
+        working_dates_evidence=None, exact_session_evidence=thin,
+    )
+    assert phase_b["completion_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+    assert phase_b["completion_gate_status"] != gate.STATUS_READY
+
+
+def test_retained_exact_session_resume_before_safety_floor_still_blocked():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=BEFORE, requested_session=SESSION,
+        working_dates_evidence=None,
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00+07:00"),
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_TOO_EARLY
+    assert result["attempt_gate_status"] != gate.STATUS_ATTEMPT_ELIGIBLE
+    assert "BEFORE_SAFETY_FLOOR" in result["reason_codes"]
+
+
+def test_retained_exact_session_resume_future_session_still_blocked():
+    result = gate.evaluate_attempt_eligibility(
+        requested_at=AFTER, requested_session="2026-08-27",
+        working_dates_evidence=None,
+        exact_session_evidence=_p3f9b("2026-08-27", requested_at="2026-08-27T15:35:00+07:00"),
+    )
+    assert result["attempt_gate_status"] == gate.STATUS_BLOCKED
+    assert "FUTURE_SESSION" in result["reason_codes"]
+
+
+def test_retained_exact_session_resume_weekend_session_still_blocked():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=datetime(2026, 8, 29, 20, 5, tzinfo=VN_TZ),
+        requested_session="2026-08-29",
+        working_dates_evidence=None,
+        exact_session_evidence=_p3f9b("2026-08-29", requested_at="2026-08-29T19:19:00+07:00"),
+    )
+    assert result["completion_gate_status"] == gate.STATUS_NON_WORKING_DATE
+    assert result["completion_gate_status"] != gate.STATUS_READY
+    assert "WEEKEND_SESSION" in result["reason_codes"]
+
+
+def test_omitted_session_without_exact_evidence_still_requires_working_dates():
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=AFTER, requested_session=None,
+        working_dates_evidence=None, exact_session_evidence=None,
+    )
+    assert result["completion_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+    assert "WORKING_DATES_UNAVAILABLE" in result["reason_codes"]
+    phase_a = gate.evaluate_attempt_eligibility(
+        requested_at=AFTER, requested_session=None,
+        working_dates_evidence=None, exact_session_evidence=None,
+    )
+    assert phase_a["attempt_gate_status"] == gate.STATUS_PROVIDER_EVIDENCE_UNAVAILABLE
+
+
+def test_retained_exact_session_resume_eligible_helper_true_when_sufficient():
+    eligible, reasons = gate.retained_exact_session_resume_eligible(
+        requested_at=AFTER,
+        session=SESSION,
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T15:35:00+07:00"),
+    )
+    assert eligible is True
+    assert gate.RETAINED_EXACT_SESSION_RESUME_REASON in reasons
+
+
+def test_retained_exact_session_resume_eligible_helper_false_when_absent():
+    eligible, reasons = gate.retained_exact_session_resume_eligible(
+        requested_at=AFTER, session=SESSION, exact_session_evidence=None,
+    )
+    assert eligible is False
+    assert "EXACT_SESSION_EVIDENCE_ABSENT" in reasons
+
+
+def test_retained_exact_session_resume_eligible_helper_false_when_future():
+    eligible, reasons = gate.retained_exact_session_resume_eligible(
+        requested_at=AFTER, session="2026-08-27", exact_session_evidence=None,
+    )
+    assert eligible is False
+    assert reasons == ["FUTURE_SESSION"]
+
+
+def test_online_working_dates_path_unaffected_by_retained_resume():
+    """Normal online path: a valid, currently-covering working_dates window still governs
+    ordinary sessions exactly as before -- the retained-resume bypass only ever fires when
+    working_dates itself is unavailable."""
+    result = gate.evaluate_completed_market_session_gate(
+        requested_at=POST_CLOSE,
+        requested_session=SESSION,
+        working_dates_evidence=_working_dates(SESSION, "2026-08-27"),
+        exact_session_evidence=_p3f9b(SESSION, requested_at="2026-08-26T19:19:00.376043+07:00"),
+    )
+    assert result["completion_gate_status"] == gate.STATUS_READY
+    assert gate.RETAINED_EXACT_SESSION_RESUME_REASON not in result["reason_codes"]

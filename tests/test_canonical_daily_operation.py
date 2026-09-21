@@ -1066,3 +1066,79 @@ def test_retained_pre_workspace_session_fails_closed_before_publication(tmp_path
     assert gh.pages_dispatch_count == 0
     assert len(acquire_calls) == 1
     assert not (runtime / "bundle_manifest.json").exists()
+
+
+# =====================================================================================
+# 2026-09-21 DAILY_RETAINED_EXACT_SESSION_RESUME_RESILIENCE_V1 real acceptance: this repo's
+# ACTUAL retained operations-review evidence for 2026-09-21 (copied byte-for-byte into an
+# isolated tmp_path -- never touching the real repository) must let a same-day resume after
+# the safety floor skip working_dates entirely, end to end through run_canonical_daily_operation.
+# =====================================================================================
+
+
+def test_real_2026_09_21_retained_evidence_skips_working_dates_probe(tmp_path: Path, monkeypatch):
+    session = "2026-09-21"
+    now = datetime(2026, 9, 21, 19, 0, tzinfo=VN_TZ)
+    real_evidence_dir = ROOT / "operations-review" / "p3f9b-market-wide-exact-session-scaleout-20260921"
+    real_snapshot_path = real_evidence_dir / "p3f9b_mva_exact_session_snapshot.json"
+    assert real_snapshot_path.is_file(), "real retained 2026-09-21 evidence must exist for this acceptance test"
+
+    dest_dir = tmp_path / "operations-review" / "p3f9b-market-wide-exact-session-scaleout-20260921"
+    dest_dir.mkdir(parents=True)
+    shutil.copy2(real_snapshot_path, dest_dir / "p3f9b_mva_exact_session_snapshot.json")
+    evidence_sibling = real_evidence_dir / "multi_source_exact_session_market_evidence.json"
+    if evidence_sibling.is_file():
+        shutil.copy2(evidence_sibling, dest_dir / "multi_source_exact_session_market_evidence.json")
+
+    real_snapshot = json.loads(real_snapshot_path.read_text(encoding="utf-8"))
+    assert real_snapshot.get("resolved_completed_session") == session
+
+    # The loader/eligibility helpers must recognize the real retained evidence copy.
+    loaded = gate.load_exact_session_evidence_from_root(tmp_path, session)
+    assert loaded is not None
+    assert "records" not in loaded
+    eligible, reasons = gate.retained_exact_session_resume_eligible(
+        requested_at=now, session=session, exact_session_evidence=loaded,
+    )
+    assert eligible is True
+    assert gate.RETAINED_EXACT_SESSION_RESUME_REASON in reasons
+
+    def forbidden_net(*a, **k):
+        raise AssertionError("network_forbidden: working_dates must not be probed for a qualified retained resume")
+
+    monkeypatch.setattr(socket, "create_connection", forbidden_net)
+    _patch_downstream(monkeypatch, tmp_path)
+    runtime = tmp_path / "runtime"
+    _write_runtime(runtime, session)
+
+    probe_calls = {"count": 0}
+
+    def counting_probe():
+        probe_calls["count"] += 1
+        raise AssertionError("working_dates probe must not be called for a qualified retained resume")
+
+    calls = {"acquire": 0}
+
+    def acquire(*a, **k):
+        calls["acquire"] += 1
+        return _acquired(tmp_path, session)
+
+    record = cdo.run_canonical_daily_operation(
+        tmp_path,
+        runtime,
+        session,
+        now=now,
+        working_dates_evidence=None,
+        exact_session_evidence=None,
+        working_dates_fetcher=counting_probe,
+        allow_provider_probe=True,
+        acquire_fn=acquire,
+        producer_fn=lambda *a, **k: _producer(tmp_path, session),
+        runtime_fn=lambda *a, **k: {"session": session, "live_count": 889},
+        trusted_fn=lambda *a, **k: {"session": session, "trusted_subset_ready": True, "records_fingerprint": "fp"},
+        out_dir=tmp_path / "operations-review-out",
+    )
+    assert probe_calls["count"] == 0
+    assert calls["acquire"] == 1
+    assert record["session"] == session
+    assert record["session_gate_semantic"] == gate.READY_SEMANTIC

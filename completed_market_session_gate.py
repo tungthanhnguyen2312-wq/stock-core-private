@@ -55,6 +55,10 @@ PROVIDER_SEMANTIC_STRENGTH = "WORKING_DATE_IDENTITY_AND_NEIGHBOR_SESSIONS"
 PROVIDER_SEMANTIC_STRENGTH_UNAVAILABLE = "UNAVAILABLE"
 READY_SEMANTIC = "EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR"
 ATTEMPT_ELIGIBLE_SEMANTIC = "PRE_ACQUISITION_ATTEMPT_ELIGIBLE"
+# A retained exact-session resume bypasses the working_dates dependency entirely: qualified
+# retained evidence for the exact requested/resolved session already establishes session
+# identity, so an unavailable (never a contradictory) working_dates probe is not a blocker.
+RETAINED_EXACT_SESSION_RESUME_REASON = "RETAINED_EXACT_SESSION_IDENTITY_CONFIRMED_WORKING_DATES_UNAVAILABLE"
 OPERATING_TIMEZONE = "Asia/Ho_Chi_Minh"
 # Owner operational post-close stabilization floor (2026-09-03 rebaseline, was 18:00): the earliest
 # local time a bounded post-close acquisition attempt may start. 30 minutes after the market-wide
@@ -302,6 +306,7 @@ def normalize_exact_session_evidence(evidence: Mapping[str, Any] | None) -> dict
         evidence.get("requested_at")
         or resolved_block.get("execution_timestamp")
         or evidence.get("execution_timestamp")
+        or evidence.get("observed_at")
     )
     observed = evidence.get("exact_session_observed_count")
     if observed is None:
@@ -380,6 +385,55 @@ def _exact_session_sufficient(normalized: Mapping[str, Any], session: str, *, sa
     return not reasons, reasons
 
 
+def _retained_exact_session_resume(
+    *, session: str, exact: Mapping[str, Any], safety_floor: time,
+) -> tuple[bool, list[str]]:
+    """Whether qualified retained exact-session evidence alone already establishes
+    ``session`` well enough that an unavailable DNSE working_dates calendar is not a
+    blocker -- e.g. a same-day resume after a working_dates probe timeout when the
+    exact-session snapshot for that exact date was already retained and qualified.
+
+    Never synthesizes working_dates evidence and never claims PROVIDER_CONFIRMED_COMPLETED;
+    it only judges the *already-retained* exact-session evidence's own sufficiency and
+    identity match against ``session``. Future/weekend/before-floor timing checks are the
+    caller's responsibility -- this is purely an evidence-sufficiency judgment.
+    """
+    if exact.get("resolved_completed_session") not in {None, session} and exact.get("status") != "ABSENT":
+        return False, ["EXACT_SESSION_IDENTITY_MISMATCH"]
+    sufficient, exact_reasons = _exact_session_sufficient(exact, session, safety_floor=safety_floor)
+    if not sufficient:
+        return False, exact_reasons
+    return True, [RETAINED_EXACT_SESSION_RESUME_REASON]
+
+
+def retained_exact_session_resume_eligible(
+    *,
+    requested_at: datetime | str,
+    session: str,
+    timezone_name: str = OPERATING_TIMEZONE,
+    safety_floor: time = DEFAULT_SAFETY_FLOOR,
+    exact_session_evidence: Mapping[str, Any] | None,
+) -> tuple[bool, list[str]]:
+    """Orchestration-facing check: may a caller skip a working_dates network probe entirely
+    because retained exact-session evidence already qualifies ``session``?
+
+    This mirrors the same identity/sufficiency judgment the gates apply internally when their
+    injected working_dates evidence turns out to be unavailable, but is exposed so an orchestrator
+    can decide *before* issuing the network call, not merely explain away its failure afterward.
+    """
+    instant = parse_requested_at(requested_at, timezone_name=timezone_name)
+    local_date = instant.date().isoformat()
+    session = parse_session_date(session)
+    if session > local_date:
+        return False, ["FUTURE_SESSION"]
+    if session == local_date and instant.timetz().replace(tzinfo=None) < safety_floor:
+        return False, ["BEFORE_SAFETY_FLOOR"]
+    if _weekend(session):
+        return False, ["WEEKEND_SESSION"]
+    exact = normalize_exact_session_evidence(exact_session_evidence)
+    return _retained_exact_session_resume(session=session, exact=exact, safety_floor=safety_floor)
+
+
 def _weekend(session: str) -> bool:
     return datetime.fromisoformat(session).weekday() >= 5
 
@@ -391,16 +445,22 @@ def _evidence_acquired_at(payload: Mapping[str, Any]) -> str:
         or resolved.get("execution_timestamp")
         or payload.get("execution_timestamp")
         or payload.get("created_at")
+        or payload.get("observed_at")
         or ""
     )
     return str(value)
 
 
 def load_exact_session_evidence_from_root(root: Path, session: str) -> dict[str, Any] | None:
-    """Load a small retained envelope; never open the full-universe P3F9B snapshot records map.
+    """Load a small retained envelope for ``session``.
 
     When several scaleout envelopes exist for the same session, keep the latest
     acquisition timestamp so a pre-floor artifact cannot hide a later post-floor one.
+    A canonical Level-2 MVA exact-session snapshot (daily_session_level2_package.
+    session_artifact_paths' "exact_session_snapshot" -- the current in-process
+    acquisition's own output) is read only for its top-level identity/coverage
+    fields; its full-universe per-ticker ``records`` map is discarded immediately
+    and never retained or exposed by this eligibility pre-check.
     """
     nodash = session.replace("-", "")
     packet_candidates = [
@@ -418,20 +478,33 @@ def load_exact_session_evidence_from_root(root: Path, session: str) -> dict[str,
                 return payload
     scaleout_name = f"p3f9b-market-wide-exact-session-scaleout-{nodash}"
     scaleout_file = "p3f9b_market_wide_exact_session_scaleout_artifact.json"
-    scaleout_candidates = []
+    mva_snapshot_file = "p3f9b_mva_exact_session_snapshot.json"
     canonical_session = root / "operations-review" / "canonical-post-close-v1" / session
-    if canonical_session.is_dir():
-        for attempt in sorted(canonical_session.glob("post-close-attempt-*"), reverse=True):
-            scaleout_candidates.append(
-                attempt / "operations-review" / scaleout_name / scaleout_file
-            )
+    attempt_dirs = (
+        sorted(canonical_session.glob("post-close-attempt-*"), reverse=True)
+        if canonical_session.is_dir() else []
+    )
+    scaleout_candidates = [
+        attempt / "operations-review" / scaleout_name / scaleout_file for attempt in attempt_dirs
+    ]
     scaleout_candidates.append(root / "operations-review" / scaleout_name / scaleout_file)
+    mva_candidates = [
+        attempt / "operations-review" / scaleout_name / mva_snapshot_file for attempt in attempt_dirs
+    ]
+    mva_candidates.append(root / "operations-review" / scaleout_name / mva_snapshot_file)
     found: list[dict[str, Any]] = []
     for path in scaleout_candidates:
         if path.is_file():
             payload = json.loads(path.read_text(encoding="utf-8"))
             if isinstance(payload, dict):
                 payload = dict(payload)
+                payload["_evidence_path"] = str(path.as_posix())
+                found.append(payload)
+    for path in mva_candidates:
+        if path.is_file():
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                payload = {key: value for key, value in payload.items() if key != "records"}
                 payload["_evidence_path"] = str(path.as_posix())
                 found.append(payload)
     if not found:
@@ -612,6 +685,22 @@ def evaluate_completed_market_session_gate(
         return emit(STATUS_TOO_EARLY, ["BEFORE_SAFETY_FLOOR"], explicit_session, "EXPLICIT_SESSION")
 
     if working.get("status") not in {"OBSERVED"}:
+        resume_reasons: list[str] = []
+        if explicit_session is not None:
+            if _weekend(explicit_session):
+                return emit(STATUS_NON_WORKING_DATE, ["WEEKEND_SESSION"], explicit_session, "EXPLICIT_SESSION")
+            eligible, resume_reasons = _retained_exact_session_resume(
+                session=explicit_session, exact=exact, safety_floor=safety_floor,
+            )
+            if eligible:
+                return emit(
+                    STATUS_READY,
+                    ["EXACT_SESSION_OBSERVED_AFTER_SAFETY_FLOOR", *resume_reasons],
+                    explicit_session,
+                    "EXPLICIT_SESSION",
+                )
+            if "EXACT_SESSION_IDENTITY_MISMATCH" in resume_reasons:
+                return emit(STATUS_SESSION_MISMATCH, resume_reasons, explicit_session, "EXPLICIT_SESSION")
         if not safety_floor_pass and (explicit_session is None or explicit_session == local_date):
             return emit(
                 STATUS_TOO_EARLY,
@@ -621,7 +710,7 @@ def evaluate_completed_market_session_gate(
             )
         return emit(
             STATUS_PROVIDER_EVIDENCE_UNAVAILABLE,
-            ["WORKING_DATES_UNAVAILABLE"],
+            ["WORKING_DATES_UNAVAILABLE", *resume_reasons] if explicit_session else ["WORKING_DATES_UNAVAILABLE"],
             explicit_session,
             "EXPLICIT_SESSION" if explicit_session else "OMITTED_SESSION",
         )
@@ -841,6 +930,22 @@ def evaluate_attempt_eligibility(
         return emit(STATUS_TOO_EARLY, ["BEFORE_SAFETY_FLOOR"], explicit_session, "EXPLICIT_SESSION")
 
     if working.get("status") not in {"OBSERVED"}:
+        resume_reasons: list[str] = []
+        if explicit_session is not None:
+            if _weekend(explicit_session):
+                return emit(STATUS_NON_WORKING_DATE, ["WEEKEND_SESSION"], explicit_session, "EXPLICIT_SESSION")
+            eligible, resume_reasons = _retained_exact_session_resume(
+                session=explicit_session, exact=exact, safety_floor=safety_floor,
+            )
+            if eligible:
+                return emit(
+                    STATUS_ATTEMPT_ELIGIBLE,
+                    ["ATTEMPT_ELIGIBLE_AFTER_SAFETY_FLOOR", *resume_reasons],
+                    explicit_session,
+                    "EXPLICIT_SESSION",
+                )
+            if "EXACT_SESSION_IDENTITY_MISMATCH" in resume_reasons:
+                return emit(STATUS_SESSION_MISMATCH, resume_reasons, explicit_session, "EXPLICIT_SESSION")
         if not safety_floor_pass and (explicit_session is None or explicit_session == local_date):
             return emit(
                 STATUS_TOO_EARLY,
@@ -850,7 +955,7 @@ def evaluate_attempt_eligibility(
             )
         return emit(
             STATUS_PROVIDER_EVIDENCE_UNAVAILABLE,
-            ["WORKING_DATES_UNAVAILABLE"],
+            ["WORKING_DATES_UNAVAILABLE", *resume_reasons] if explicit_session else ["WORKING_DATES_UNAVAILABLE"],
             explicit_session,
             "EXPLICIT_SESSION" if explicit_session else "OMITTED_SESSION",
         )

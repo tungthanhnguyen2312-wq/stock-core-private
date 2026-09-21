@@ -289,7 +289,7 @@ def main(argv=None, runner=subprocess.run) -> int:
             result = run_canonical_daily_operation(
                 SCRIPT_DIR,
                 root,
-                args.session,
+                intended_session,
                 now=instant,
                 workers=args.workers,
                 complete_publication=args.complete_publication,

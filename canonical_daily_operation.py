@@ -87,6 +87,7 @@ from completed_market_session_gate import (
     parse_requested_at,
     parse_session_date,
     resolve_latest_qualified_completed_session,
+    retained_exact_session_resume_eligible,
 )
 from daily_producer_pipeline import DailyProducerError, run_daily_producer
 from daily_research_session_operations import load_registry
@@ -560,9 +561,23 @@ def run_canonical_daily_operation(
     resolved_exact_evidence = exact_session_evidence
     if resolved_exact_evidence is None and explicit_session:
         resolved_exact_evidence = load_exact_session_evidence_from_root(root, explicit_session)
+    # If retained exact-session evidence already qualifies the explicit intended session, a
+    # working_dates probe buys nothing -- skip it outright rather than issue the network call
+    # and merely tolerate its failure afterward (a retained resume must not depend on a fresh
+    # DNSE working_dates GET when it already has everything it needs).
+    retained_resume_eligible = False
+    if working_dates_evidence is None and explicit_session is not None:
+        retained_resume_eligible, _retained_resume_reasons = retained_exact_session_resume_eligible(
+            requested_at=instant,
+            session=explicit_session,
+            safety_floor=DEFAULT_POST_CLOSE_ATTEMPT_FLOOR,
+            exact_session_evidence=resolved_exact_evidence,
+        )
     phase_working_dates = working_dates_evidence
-    if phase_working_dates is None and probe is not None:
+    if phase_working_dates is None and probe is not None and not retained_resume_eligible:
         phase_working_dates = probe()
+        probe = None
+    elif retained_resume_eligible:
         probe = None
     phase_session = explicit_session
     automatic_non_trading_resolution: dict[str, Any] | None = None
