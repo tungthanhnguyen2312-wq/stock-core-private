@@ -35,10 +35,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import date as _date
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from atomic_io import atomic_write_file, validate_json_file
+from daily_session_completion_reference import load_qualified_completed_sessions
 from dnse_foreign_flow_capability import PROVIDER, SOURCE_CONTRACT_VERSION
 
 STORE_SCHEMA_VERSION = "1.0.0"
@@ -50,6 +52,19 @@ STATUS_MISSING = "missing"
 STATUS_AVAILABLE = "available"
 VALUE_QUALIFICATION_STATUS = "QUALIFIED_VALUE_ONLY"
 POINT_IN_TIME_STATUS = "qualified"
+
+# Session-continuity proof: two distinct authority scopes, never conflated (see
+# daily_session_completion_reference.py's module docstring for the boundary this
+# encodes). A caller can always tell, from `continuity_reference["authority_scope"]`,
+# whether a "complete"/"gap" verdict came from the exhaustive vn_stock.db OHLCV
+# reference or from the non-exhaustive Daily completed-session registry fallback.
+AUTHORITY_SCOPE_EXHAUSTIVE = "EXHAUSTIVE_TRADING_DATE_REFERENCE"
+AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE = "QUALIFIED_COMPLETED_SESSION_SET"
+CONTINUITY_SOURCE_VN_STOCK_DB = "vn_stock_db_ohlcv"
+CONTINUITY_SOURCE_DAILY_SESSION_REGISTRY = "daily_research_session_input_registry"
+PROOF_CONTINUOUS = "PROVEN_CONTINUOUS"
+PROOF_GAP = "PROVEN_GAP"
+PROOF_UNVERIFIABLE = "UNVERIFIABLE"
 
 _STANDING_WARNINGS: tuple[str, ...] = (
     "foreign_volume_not_represented_here_unqualified_by_contract",
@@ -161,18 +176,77 @@ def _value_observation(raw: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _has_gap(prev_date: str, date: str, trading_dates: set[str]) -> bool:
-    return any(prev_date < d < date for d in trading_dates)
+def _civil_day_gap(prev_date: str, date: str) -> int:
+    """Calendar-day difference between two ISO dates.
+
+    Used ONLY to prove that no OTHER calendar date exists between two market
+    sessions that are ALREADY individually qualified by some proof source -- e.g. a
+    diff of exactly 1 means there is no date at all in between, so nothing could be
+    "missing" there. This is never used to infer that any date, adjacent or not, IS
+    itself a trading session; that inference is never made anywhere in this module.
+    """
+    return (_date.fromisoformat(date) - _date.fromisoformat(prev_date)).days
 
 
-def _streaks_and_counts(observations: Sequence[Mapping[str, Any]], trading_dates: set[str]) -> dict[str, Any]:
+def _prove_continuity(
+    candidate_dates: Sequence[str], *, exhaustive_dates: set[str], registry_dates: frozenset[str],
+) -> dict[str, Any]:
+    """Decide whether no real trading session could have fallen between any adjacent
+    pair in `candidate_dates` (sorted, len >= 2), and name exactly which authority
+    proved it.
+
+    Precedence: the EXHAUSTIVE vn_stock.db OHLCV reference is used whenever it is
+    non-empty for this ticker (existing exact-comparison semantics, unchanged). Only
+    when it is unavailable does this fall back to the non-exhaustive Daily completed-
+    session registry, which may prove continuity ONLY when every candidate date is
+    itself registry-qualified AND every adjacent pair is exactly one civil day apart
+    (so there is no calendar date in between for a market session to have gone
+    unrecorded). A registry gap wider than one civil day can never be resolved to
+    "complete" or "incomplete" -- it is always UNVERIFIABLE, because the registry's
+    silence about an intervening date is not proof that date was not a trading day.
+    """
+    if exhaustive_dates:
+        expected = sorted(d for d in exhaustive_dates if candidate_dates[0] <= d <= candidate_dates[-1])
+        if expected == list(candidate_dates):
+            return {"proof_state": PROOF_CONTINUOUS, "source": CONTINUITY_SOURCE_VN_STOCK_DB,
+                    "authority_scope": AUTHORITY_SCOPE_EXHAUSTIVE, "exhaustive": True, "reason": None}
+        missing = sorted(set(expected) - set(candidate_dates))
+        return {"proof_state": PROOF_GAP, "source": CONTINUITY_SOURCE_VN_STOCK_DB,
+                "authority_scope": AUTHORITY_SCOPE_EXHAUSTIVE, "exhaustive": True,
+                "reason": f"gap detected -- missing session(s): {missing}"}
+    unqualified = [d for d in candidate_dates if d not in registry_dates]
+    if unqualified:
+        return {"proof_state": PROOF_UNVERIFIABLE, "source": CONTINUITY_SOURCE_DAILY_SESSION_REGISTRY,
+                "authority_scope": AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE, "exhaustive": False,
+                "reason": ("no vn_stock.db trading-date reference available, and session(s) not "
+                           "registry-qualified as COMPLETED_RETAINED_EVIDENCE/trading_day_valid=true: "
+                           f"{unqualified}")}
+    for prev_date, date in zip(candidate_dates, candidate_dates[1:]):
+        if _civil_day_gap(prev_date, date) != 1:
+            return {"proof_state": PROOF_UNVERIFIABLE, "source": CONTINUITY_SOURCE_DAILY_SESSION_REGISTRY,
+                    "authority_scope": AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE, "exhaustive": False,
+                    "reason": (f"calendar gap between {prev_date} and {date} exceeds one civil day; "
+                               "the non-exhaustive Daily completed-session registry cannot prove no "
+                               "market session fell in between -- its silence about an intervening "
+                               "date is never treated as proof that date was not a trading day")}
+    return {"proof_state": PROOF_CONTINUOUS, "source": CONTINUITY_SOURCE_DAILY_SESSION_REGISTRY,
+            "authority_scope": AUTHORITY_SCOPE_QUALIFIED_NONEXHAUSTIVE, "exhaustive": False, "reason": None}
+
+
+def _streaks_and_counts(
+    observations: Sequence[Mapping[str, Any]], *, exhaustive_dates: set[str], registry_dates: frozenset[str],
+) -> dict[str, Any]:
     positive = negative = neutral = 0
     consecutive_buy = consecutive_sell = 0
     prev_date: str | None = None
     for obs in observations:
         date = obs["session_date"]
-        if prev_date is not None and trading_dates and _has_gap(prev_date, date, trading_dates):
-            consecutive_buy = consecutive_sell = 0
+        if prev_date is not None:
+            proof = _prove_continuity([prev_date, date], exhaustive_dates=exhaustive_dates,
+                                       registry_dates=registry_dates)
+            if proof["proof_state"] != PROOF_CONTINUOUS:
+                # Continuity unproven (a real gap, or simply unknown) -- never fabricate it.
+                consecutive_buy = consecutive_sell = 0
         net = obs.get("foreign_net_value_vnd")
         if net is None:
             consecutive_buy = consecutive_sell = 0
@@ -197,33 +271,46 @@ def _streaks_and_counts(observations: Sequence[Mapping[str, Any]], trading_dates
     }
 
 
+def _continuity_reference_provenance(proof: Mapping[str, Any]) -> dict[str, Any]:
+    """The bounded provenance surfaced on every window summary -- enough for a
+    caller to tell which authority produced the coverage verdict, never internal
+    implementation detail (no raw date sets, no registry file contents)."""
+    return {"source": proof["source"], "authority_scope": proof["authority_scope"],
+            "exhaustive": proof["exhaustive"], "proof_state": proof["proof_state"]}
+
+
 def _window_summary(
-    observations: Sequence[Mapping[str, Any]], *, window_size: int, trading_dates: set[str]
+    observations: Sequence[Mapping[str, Any]], *, window_size: int,
+    exhaustive_dates: set[str], registry_dates: frozenset[str],
 ) -> dict[str, Any]:
     """The most recent `window_size` qualified sessions -- but only counted
     "complete" when they are exactly the most recent `window_size` retained
-    trading dates for this ticker with no gap between them. Fails closed
-    (coverage != "complete", cumulative value None) otherwise. Never fills a
-    missing session and never treats a calendar date as a trading session."""
+    trading dates for this ticker with no gap between them, as proven by either the
+    exhaustive vn_stock.db OHLCV reference or (only when that is unavailable) the
+    non-exhaustive Daily completed-session registry fallback -- see
+    `_prove_continuity`. Fails closed (coverage != "complete", cumulative value
+    None) otherwise. Never fills a missing session and never treats a calendar date
+    as a trading session."""
     base = {"window_size": window_size, "sessions": [], "cumulative_net_value_vnd": None,
-            "buy_value_vnd": None, "sell_value_vnd": None}
+            "buy_value_vnd": None, "sell_value_vnd": None, "continuity_reference": None}
     if len(observations) < window_size:
         return {**base, "coverage": "incomplete",
                 "reason": f"only {len(observations)} qualified session(s) retained, need {window_size}"}
     candidate = list(observations[-window_size:])
     candidate_dates = [o["session_date"] for o in candidate]
-    if not trading_dates:
-        return {**base, "sessions": candidate_dates, "coverage": "unverifiable",
-                "reason": "no vn_stock.db trading-date reference available for this ticker"}
-    expected = sorted(d for d in trading_dates if candidate_dates[0] <= d <= candidate_dates[-1])
-    if expected != candidate_dates:
-        missing = sorted(set(expected) - set(candidate_dates))
+    proof = _prove_continuity(candidate_dates, exhaustive_dates=exhaustive_dates, registry_dates=registry_dates)
+    continuity_reference = _continuity_reference_provenance(proof)
+    if proof["proof_state"] == PROOF_GAP:
         return {**base, "sessions": candidate_dates, "coverage": "incomplete",
-                "reason": f"gap detected -- missing session(s): {missing}"}
+                "reason": proof["reason"], "continuity_reference": continuity_reference}
+    if proof["proof_state"] == PROOF_UNVERIFIABLE:
+        return {**base, "sessions": candidate_dates, "coverage": "unverifiable",
+                "reason": proof["reason"], "continuity_reference": continuity_reference}
     net_values = [o.get("foreign_net_value_vnd") for o in candidate]
     if any(v is None for v in net_values):
         return {**base, "sessions": candidate_dates, "coverage": "incomplete",
-                "reason": "at least one session in this window has no qualified net value"}
+                "reason": "at least one session in this window has no qualified net value",
+                "continuity_reference": continuity_reference}
     return {
         "window_size": window_size,
         "sessions": candidate_dates,
@@ -232,6 +319,7 @@ def _window_summary(
         "cumulative_net_value_vnd": sum(net_values),
         "buy_value_vnd": sum(o["foreign_buy_value_vnd"] for o in candidate),
         "sell_value_vnd": sum(o["foreign_sell_value_vnd"] for o in candidate),
+        "continuity_reference": continuity_reference,
     }
 
 
@@ -274,9 +362,15 @@ def _freshness(
         return {**base, "status": FRESHNESS_UNKNOWN,
                 "reason": "latest_qualified_session_is_after_the_reference_session"}
     if not trading_dates:
+        # The non-exhaustive Daily completed-session registry is deliberately never
+        # consulted here: it cannot prove an EXACT trading-session lag count, only
+        # that specific individual dates were sessions -- see _prove_continuity's
+        # docstring. A lag is reported (stale, never silently current), but the exact
+        # count stays None rather than an unprovable guess.
         return {**base, "status": FRESHNESS_STALE,
                 "reason": "retained foreign-flow data predates the reference session; exact "
-                          "trading-session lag could not be verified against vn_stock.db"}
+                          "trading-session lag could not be verified against vn_stock.db, and the "
+                          "non-exhaustive Daily completed-session registry cannot prove an exact count"}
     sessions_behind = len(sorted(d for d in trading_dates
                                  if latest_qualified_session_date < d <= reference_session_date))
     return {**base, "status": FRESHNESS_STALE, "sessions_behind": sessions_behind,
@@ -286,6 +380,7 @@ def _freshness(
 
 def build_series(
     runtime_root: Path | str, ticker: str, *, reference_session_date: str | None = None,
+    qualified_session_registry_path: Path | str | None = None,
 ) -> dict[str, Any]:
     """The canonical per-ticker foreign_flow contract: raw session observations plus
     bounded, fail-closed deterministic summaries. Generic across tickers -- identical
@@ -294,30 +389,47 @@ def build_series(
     `reference_session_date` is optional and defaults to None (freshness reports
     "unknown") so every existing caller/test that does not pass it keeps its prior
     behavior unchanged; a production caller (export_ai_bundle.py) always supplies the
-    bundle's own already-resolved exact session identity."""
+    bundle's own already-resolved exact session identity.
+
+    `qualified_session_registry_path` is optional and defaults to None (no registry
+    fallback -- window/streak continuity is provable only via vn_stock.db, exactly
+    the pre-existing behavior every caller that omits it keeps). When a caller passes
+    the explicit path to Daily's own config/daily_research_session_input_registry.json
+    (never discovered from CWD or a guessed location -- see
+    daily_session_completion_reference.py), this ticker's window/streak continuity
+    may ALSO be proven via that non-exhaustive, fail-closed fallback whenever
+    vn_stock.db has no OHLCV rows for this ticker. See `_prove_continuity`."""
     raw_observations = read_observations(runtime_root, ticker)
     observations = [_value_observation(raw) for raw in raw_observations]
     observations.sort(key=lambda o: o["session_date"])
-    trading_dates = _retained_trading_dates(runtime_root, ticker)
+    exhaustive_dates = _retained_trading_dates(runtime_root, ticker)
+    registry_dates = (
+        load_qualified_completed_sessions(qualified_session_registry_path)
+        if qualified_session_registry_path is not None else frozenset()
+    )
 
     status = STATUS_AVAILABLE if observations else STATUS_MISSING
     qualified_with_net = [o for o in observations if o["foreign_net_value_vnd"] is not None]
 
-    counts = _streaks_and_counts(observations, trading_dates)
+    counts = _streaks_and_counts(observations, exhaustive_dates=exhaustive_dates, registry_dates=registry_dates)
     window_summaries = {
-        "5_session": _window_summary(qualified_with_net, window_size=5, trading_dates=trading_dates),
-        "10_session": _window_summary(qualified_with_net, window_size=10, trading_dates=trading_dates),
+        "5_session": _window_summary(qualified_with_net, window_size=5,
+                                      exhaustive_dates=exhaustive_dates, registry_dates=registry_dates),
+        "10_session": _window_summary(qualified_with_net, window_size=10,
+                                       exhaustive_dates=exhaustive_dates, registry_dates=registry_dates),
     }
     freshness = _freshness(
         observations[-1]["session_date"] if observations else None,
-        reference_session_date, trading_dates,
+        reference_session_date, exhaustive_dates,
     )
 
     limitations = list(_STANDING_LIMITATIONS)
-    if not trading_dates:
+    if not exhaustive_dates:
         limitations.append(
             "vn_stock.db has no retained OHLCV rows for this ticker; window completeness "
-            "could not be independently verified against a trading-day reference."
+            "could not be independently verified against a trading-day reference"
+            + (", falling back to the non-exhaustive Daily completed-session registry where it "
+               "can prove continuity." if registry_dates else ".")
         )
 
     return {

@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
+from daily_session_completion_reference import registry_path as _session_registry_path
 from dnse_foreign_flow_store import build_series, observations_root
 
 CONTRACT_VERSION = "flow_price_divergence_shadow/v1"
@@ -153,14 +154,26 @@ def write_immutable(path: str | Path, artifact: Mapping[str, Any]) -> Path:
     return destination
 
 def collect_from_retained_runtime(*, root: str | Path, runtime_root: str | Path, reference_session: str, velocity_artifact: Mapping[str, Any], series_builder: Callable[..., dict[str, Any]] = build_series) -> dict[str, Any]:
-    """Read only the requested retained series; no provider/network operation exists here."""
+    """Read only the requested retained series; no provider/network operation exists here.
+
+    `root` is the SOURCE checkout (distinct from `runtime_root`, the evidence root) --
+    used only to resolve the one deterministic, explicit path to Daily's own
+    config/daily_research_session_input_registry.json (see
+    daily_session_completion_reference.py), never re-derived from CWD. Passing it to
+    every `series_builder` call lets a ticker's window/streak continuity be proven by
+    that non-exhaustive registry fallback whenever vn_stock.db has no OHLCV rows for
+    it -- vn_stock.db-backed continuity (when available) is unaffected and unchanged.
+    """
     runtime = Path(runtime_root)
+    registry = _session_registry_path(root)
     velocity_tickers = {str(r.get("ticker")) for r in velocity_artifact.get("records", []) if isinstance(r, Mapping) and r.get("session") == reference_session}
     stored_tickers = {path.stem.upper() for path in observations_root(runtime).glob("*.json")} if observations_root(runtime).is_dir() else set()
     # Use the store contract for every declared Velocity ticker, including an
     # explicit missing result.  This keeps the per-ticker retained-series
     # identity and its own freshness/window semantics authoritative.
-    series = {ticker: series_builder(runtime, ticker, reference_session_date=reference_session) for ticker in sorted(velocity_tickers | stored_tickers)}
+    series = {ticker: series_builder(runtime, ticker, reference_session_date=reference_session,
+                                      qualified_session_registry_path=registry)
+              for ticker in sorted(velocity_tickers | stored_tickers)}
     return build_artifact(reference_session=reference_session, flow_series=series, velocity_artifact=velocity_artifact)
 
 def representative_cases(artifact: Mapping[str, Any]) -> list[dict[str, Any]]:

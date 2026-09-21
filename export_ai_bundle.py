@@ -3182,12 +3182,14 @@ def attach_current_market_flow_positioning(bundle_entries: dict[str, dict], incl
 
 def build_dnse_foreign_flow_for_ticker_safe(
     ticker: str, root: Path, reference_session_date: str | None,
+    qualified_session_registry_path: Path | None = None,
 ) -> dict[str, Any] | None:
     """Fail-closed wrapper: a local build failure for this ticker returns None (so no
     foreign_flow key is attached for it) and never raises into the caller's per-ticker
     loop or corrupts any other field on this or any other ticker's entry."""
     try:
-        return build_dnse_foreign_flow_series(root, ticker, reference_session_date=reference_session_date)
+        return build_dnse_foreign_flow_series(root, ticker, reference_session_date=reference_session_date,
+                                              qualified_session_registry_path=qualified_session_registry_path)
     except Exception:
         return None
 
@@ -3195,6 +3197,7 @@ def build_dnse_foreign_flow_for_ticker_safe(
 def attach_dnse_foreign_flow(
     bundle_entries: dict[str, dict], root: Path, include: bool,
     reference_session_date: str | None = None,
+    qualified_session_registry_path: Path | None = None,
 ) -> dict[str, dict]:
     """Disabled-by-default opt-in (default include=False): when include is False,
     build_dnse_foreign_flow_series() is never called and no foreign_flow key is ever
@@ -3207,11 +3210,22 @@ def attach_dnse_foreign_flow(
     `reference_session_date` is this export's own already-resolved exact session
     identity (the same value that becomes the bundle's `reference_session_date`), passed
     straight through so each ticker's `foreign_flow.freshness` compares against the
-    release session actually being built -- never a wall-clock read, never invented."""
+    release session actually being built -- never a wall-clock read, never invented.
+
+    `qualified_session_registry_path` defaults to the one deterministic, explicit
+    location of Daily's own config/daily_research_session_input_registry.json
+    beneath this script's own SOURCE checkout (`SCRIPT_DIR`, never `root`, which is
+    the separate runtime/evidence root, and never CWD) -- a test may still override
+    it explicitly for isolation. See daily_session_completion_reference.py for the
+    non-exhaustive proof boundary this registry may be used for."""
     if not include:
         return bundle_entries
+    registry_path = (
+        qualified_session_registry_path if qualified_session_registry_path is not None
+        else SCRIPT_DIR / "config" / "daily_research_session_input_registry.json"
+    )
     for tk, entry in bundle_entries.items():
-        result = build_dnse_foreign_flow_for_ticker_safe(tk, root, reference_session_date)
+        result = build_dnse_foreign_flow_for_ticker_safe(tk, root, reference_session_date, registry_path)
         if result is not None:
             entry["foreign_flow"] = result
     return bundle_entries
