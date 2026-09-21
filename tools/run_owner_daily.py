@@ -12,6 +12,7 @@ import os
 import re
 import subprocess
 import sys
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
@@ -368,6 +369,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     result: dict[str, Any]
     code = 0
+    reraise: BaseException | None = None
     try:
         result = run_workflow(runtime_root=args.runtime_root, handoff_repo=args.handoff_repo,
                               dashboard_web_dir=args.dashboard_web_dir,
@@ -379,9 +381,30 @@ def main(argv: list[str] | None = None) -> int:
     except OwnerDailyError as exc:
         code = 1
         result = {"status": "FAILED", "failed_step": exc.step, "reason": exc.reason, "hint": exc.hint}
+    except KeyboardInterrupt as exc:
+        # The owner (or the console itself) cut the run short. Record what we can before the
+        # interrupt propagates, so this is never a bare log with no matching result.json.
+        code = 130
+        result = {"status": "INTERRUPTED", "failed_step": "UNKNOWN", "reason": "KEYBOARD_INTERRUPT",
+                  "hint": "The run was stopped (Ctrl+C or console close) before reaching a known gate. "
+                          "Read the log for the last completed step, then rerun; already-completed "
+                          "work upstream of the interrupted step is reused, not redone."}
+        reraise = exc
+    except Exception as exc:  # noqa: BLE001 -- last resort so a bug here still leaves a result.
+        # Keep the traceback visible in the tee'd log exactly as an uncaught exception normally
+        # would, but no longer let it also swallow the result file the owner depends on.
+        traceback.print_exc()
+        code = 2
+        result = {"status": "INTERRUPTED", "failed_step": "UNKNOWN",
+                  "reason": f"UNCAUGHT_EXCEPTION:{type(exc).__name__}:{exc}",
+                  "hint": "An unexpected error interrupted Daily outside any known gate. Read the "
+                          "log for the traceback; already-completed work upstream of the "
+                          "interrupted step is reused, not redone, on rerun."}
     args.result_path.parent.mkdir(parents=True, exist_ok=True)
     args.result_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print("OWNER_DAILY_RESULT=" + str(args.result_path))
+    if reraise is not None:
+        raise reraise
     return code
 
 

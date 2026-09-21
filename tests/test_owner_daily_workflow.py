@@ -57,6 +57,32 @@ def test_unexpected_post_daily_diff_is_refused(monkeypatch, tmp_path):
         workflow.commit_daily_state(tmp_path, SESSION)
 
 
+def test_main_writes_a_result_file_on_an_uncaught_exception(monkeypatch, tmp_path):
+    def _boom(**_k):
+        raise RuntimeError("SIMULATED_UNEXPECTED_FAILURE")
+
+    monkeypatch.setattr(workflow, "run_workflow", _boom)
+    result_path = tmp_path / "result.json"
+    code = workflow.main(["--result-path", str(result_path)])
+    assert code == 2
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "INTERRUPTED"
+    assert "SIMULATED_UNEXPECTED_FAILURE" in payload["reason"]
+
+
+def test_main_writes_a_result_file_on_keyboard_interrupt_then_reraises(monkeypatch, tmp_path):
+    def _interrupt(**_k):
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(workflow, "run_workflow", _interrupt)
+    result_path = tmp_path / "result.json"
+    with pytest.raises(KeyboardInterrupt):
+        workflow.main(["--result-path", str(result_path)])
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "INTERRUPTED"
+    assert payload["reason"] == "KEYBOARD_INTERRUPT"
+
+
 def _ready_dashboard(_root, _runtime, session, **_k):
     return {"status": "READY", "expected_session": session, "observed_session": session, "build_id": "b"}
 

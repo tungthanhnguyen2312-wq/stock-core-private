@@ -7,12 +7,13 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Mapping
+from typing import Callable, Mapping
 
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from atomic_io import atomic_write_json
 from dnse_access import CREDENTIAL_ENV_PAIRS, credentials_for_request
 from dnse_bulk_market_data import fetch_capability_raw
 from dnse_secrets_env import ensure_credentials_loaded
@@ -128,11 +129,17 @@ def _feature_safe_record(*, ticker: str, dnse_record: Mapping, snapshot_record: 
     return recovery_record_from_selection(selection=selection, provider_series=series)
 
 
-def _recover_records(*, snapshot: Mapping, tickers: list[str]) -> tuple[list[dict], dict]:
+def _recover_records(
+    *, snapshot: Mapping, tickers: list[str], on_record: Callable[[str, dict], None] | None = None,
+) -> tuple[list[dict], dict]:
     """Fetch a cohort under one invocation-scoped Vnstock governor.
 
     DNSE remains the primary request.  KBS and VCI are called only by the feature-safe
     selector, and therefore never contribute a mixed-provider series or a volume feature.
+
+    ``on_record``, when given, is called with ``(ticker, record)`` immediately after each
+    ticker is fetched -- before moving on to the next one -- so a caller can durably persist
+    incremental progress without splitting this invocation's single governor scope.
     """
     target = datetime.fromisoformat(snapshot["resolved_completed_session"]).replace(tzinfo=VN_TZ)
     start = target - timedelta(days=EXACT_SESSION_OHLC_LOOKBACK_CALENDAR_DAYS)
@@ -164,7 +171,10 @@ def _recover_records(*, snapshot: Mapping, tickers: list[str]) -> tuple[list[dic
                 target_session=snapshot["resolved_completed_session"], retrieved_at=retrieved_at,
                 start=start.date().isoformat(), end=target.date().isoformat(),
             )
-            records.append({**record, "raw_response_body": response.get("body") if response.get("ok") else None})
+            full_record = {**record, "raw_response_body": response.get("body") if response.get("ok") else None}
+            records.append(full_record)
+            if on_record is not None:
+                on_record(ticker, full_record)
         diagnostic = governor.diagnostic()
         diagnostic.update({
             "scope": "ONE_HISTORICAL_RECOVERY_INVOCATION",
@@ -204,11 +214,53 @@ def run_batch(*, baseline: Mapping, snapshot: Mapping, out: Path, batch: int, ba
     print(path)
 
 
+def _checkpoint_path(out: Path) -> Path:
+    return out / "market_wide_current_technical_coverage_recovery_checkpoint.json"
+
+
+def _load_checkpoint(
+    out: Path, *, target_session: str, baseline_identity: str | None, p3f9b_snapshot_identity: str | None,
+) -> dict[str, dict]:
+    """Return already-recovered ticker -> record entries safe to reuse for this exact run.
+
+    A checkpoint from a different session or a different baseline/snapshot lineage is never
+    reused -- it is silently treated as absent, so a resumed ``--all`` invocation can never mix
+    a stale prior-session recovery (e.g. 2026-09-18) into the current one.  A corrupt or
+    unreadable checkpoint (e.g. left mid-write by a hard kill) degrades the same way: restart
+    clean rather than trust partial bytes.
+    """
+    path = _checkpoint_path(out)
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    if (payload.get("target_session") != target_session
+            or payload.get("baseline_identity") != baseline_identity
+            or payload.get("p3f9b_snapshot_identity") != p3f9b_snapshot_identity):
+        return {}
+    records = payload.get("records")
+    return dict(records) if isinstance(records, dict) else {}
+
+
 def run_all(*, baseline: Mapping, snapshot: Mapping, out: Path) -> None:
     """Materialize all recovery candidates in a single governed process.
 
     Daily uses this rather than launching one process per ten tickers.  It makes the rate
     governor genuinely global for every KBS/VCI outbound call in the recovery invocation.
+
+    Resumable across a hard interruption (killed process, closed window, uncaught exception):
+    each candidate's record is checkpointed to a sibling ``*_checkpoint.json`` immediately
+    after it is fetched, so a re-run of this exact command skips whatever was already
+    completed and only spends provider budget on the remaining candidates -- still under one
+    governor for whichever candidates this invocation itself still has to fetch. The
+    checkpoint is a distinct filename the Daily resolver never looks for (it only ever opens
+    the final ``*_recovery_artifact.json``), so a partial checkpoint can never be mistaken for
+    a complete, authoritative artifact. The final artifact is written -- and the checkpoint
+    removed -- only once every candidate has a record.
     """
     output = out / "market_wide_current_technical_coverage_recovery_artifact.json"
     if output.exists():
@@ -222,7 +274,33 @@ def run_all(*, baseline: Mapping, snapshot: Mapping, out: Path) -> None:
             "projected_maximum_governor_seconds": 0.0,
         }
     else:
-        records, diagnostic = _recover_records(snapshot=snapshot, tickers=candidates)
+        target_session = snapshot["resolved_completed_session"]
+        baseline_identity = baseline.get("artifact_identity")
+        p3f9b_snapshot_identity = snapshot.get("snapshot_identity")
+        checkpoint_records = _load_checkpoint(
+            out, target_session=target_session, baseline_identity=baseline_identity,
+            p3f9b_snapshot_identity=p3f9b_snapshot_identity,
+        )
+        checkpoint_records = {ticker: record for ticker, record in checkpoint_records.items() if ticker in candidates}
+        remaining = [ticker for ticker in candidates if ticker not in checkpoint_records]
+
+        def _persist(ticker: str, record: dict) -> None:
+            checkpoint_records[ticker] = record
+            atomic_write_json(_checkpoint_path(out), {
+                "target_session": target_session, "baseline_identity": baseline_identity,
+                "p3f9b_snapshot_identity": p3f9b_snapshot_identity, "records": checkpoint_records,
+            })
+
+        if remaining:
+            _, diagnostic = _recover_records(snapshot=snapshot, tickers=remaining, on_record=_persist)
+        else:
+            diagnostic = {
+                "contract_version": "vnstock_rate_governor/v1", "scope": "ONE_HISTORICAL_RECOVERY_INVOCATION",
+                "attempts": 0, "cache_hits": len(checkpoint_records),
+                "runtime_budget_seconds": HISTORICAL_FALLBACK_RUNTIME_BUDGET_SECONDS,
+                "projected_maximum_governor_seconds": 0.0,
+            }
+        records = [checkpoint_records[ticker] for ticker in candidates]
     artifact = build_recovery_artifact(
         baseline_artifact=baseline, p3f9b_snapshot=snapshot,
         batch_records=[{"records": records, "history_rate_governor": diagnostic}],
@@ -230,6 +308,9 @@ def run_all(*, baseline: Mapping, snapshot: Mapping, out: Path) -> None:
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(artifact, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    checkpoint = _checkpoint_path(out)
+    if checkpoint.exists():
+        checkpoint.unlink()
     print(output)
 
 

@@ -230,3 +230,138 @@ def test_run_all_produces_a_self_consistent_artifact_that_downstream_accepts_and
             universe_resolution_artifact=ur, p3f9b_snapshot=snapshot, liquidity_artifact=liq,
             entity_classifications={}, technical_history_recovery_artifact=mutated,
         )
+
+
+def _checkpoint_path(out):
+    return out / "market_wide_current_technical_coverage_recovery_checkpoint.json"
+
+
+def _two_candidate_fixtures():
+    baseline = _baseline({
+        "AAA": {"in_current_descriptive_scope": True, "technical_features": {"status": "MISSING"}},
+        "BBB": {"in_current_descriptive_scope": True, "technical_features": {"status": "MISSING"}},
+    })
+    snapshot = _snapshot({
+        "AAA": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": TARGET, "close": 29.0, "volume": 129}]},
+        "BBB": {"disposition": "EXACT_SESSION_RETAINED", "observations": [{"session": TARGET, "close": 29.0, "volume": 55}]},
+    })
+    return baseline, snapshot
+
+
+def test_run_all_resumes_after_interruption_without_refetching_completed_candidates(tmp_path, monkeypatch):
+    """A crash/kill mid-`--all` must not force the resumed run to re-spend provider budget on
+    candidates the interrupted run already durably recorded."""
+    baseline, snapshot = _two_candidate_fixtures()
+    body = _run_all_ohlc_body()
+    fetched: list[str] = []
+
+    def _fetch(capability, *, api_key, api_secret, query):
+        fetched.append(query["symbol"])
+        if query["symbol"] == "BBB":
+            raise RuntimeError("SIMULATED_HARD_INTERRUPTION")
+        return {"ok": True, "body": body, "provider": "DNSE", "endpoint": "/price/ohlc"}
+
+    monkeypatch.setattr(runner, "ensure_credentials_loaded", lambda: None)
+    monkeypatch.setattr(runner, "credentials_for_request", lambda: ("key", "secret"))
+    monkeypatch.setattr(runner, "fetch_capability_raw", _fetch)
+
+    out = tmp_path / "out"
+    with pytest.raises(RuntimeError, match="SIMULATED_HARD_INTERRUPTION"):
+        runner.run_all(baseline=baseline, snapshot=snapshot, out=out)
+
+    # The interrupted run never reached build_recovery_artifact(): no final artifact yet, but
+    # AAA's already-fetched record survived to a checkpoint.
+    assert not _artifact_path(out).is_file()
+    checkpoint = json.loads(_checkpoint_path(out).read_text(encoding="utf-8"))
+    assert set(checkpoint["records"]) == {"AAA"}
+    assert fetched == ["AAA", "BBB"]
+
+    # Resume: BBB must succeed this time, and AAA must not be re-fetched.
+    fetched.clear()
+
+    def _fetch_resume(capability, *, api_key, api_secret, query):
+        fetched.append(query["symbol"])
+        return {"ok": True, "body": body, "provider": "DNSE", "endpoint": "/price/ohlc"}
+
+    monkeypatch.setattr(runner, "fetch_capability_raw", _fetch_resume)
+    runner.run_all(baseline=baseline, snapshot=snapshot, out=out)
+
+    assert fetched == ["BBB"]
+    assert _artifact_path(out).is_file()
+    assert not _checkpoint_path(out).exists()
+    artifact = json.loads(_artifact_path(out).read_text(encoding="utf-8"))
+    assert set(artifact["candidate_selection"]["tickers"]) == {"AAA", "BBB"}
+    assert artifact["recovered_history_overrides"]["AAA"]["state"] == "RECOVERED_COMPLETE_TECHNICAL_HISTORY"
+    assert artifact["recovered_history_overrides"]["BBB"]["state"] == "RECOVERED_COMPLETE_TECHNICAL_HISTORY"
+    recomputed = content_identity(artifact)
+    assert artifact["artifact_sha256"] == recomputed["artifact_sha256"]
+
+
+def test_run_all_never_reuses_a_checkpoint_from_a_different_session(tmp_path, monkeypatch):
+    baseline, snapshot = _two_candidate_fixtures()
+    out = tmp_path / "out"
+    out.mkdir(parents=True)
+    _checkpoint_path(out).write_text(json.dumps({
+        "target_session": "2026-08-18", "baseline_identity": "stale", "p3f9b_snapshot_identity": "stale",
+        "records": {
+            "AAA": {"ticker": "AAA", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
+            "BBB": {"ticker": "BBB", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
+        },
+    }), encoding="utf-8")
+
+    body = _run_all_ohlc_body()
+    fetched: list[str] = []
+    monkeypatch.setattr(runner, "ensure_credentials_loaded", lambda: None)
+    monkeypatch.setattr(runner, "credentials_for_request", lambda: ("key", "secret"))
+    monkeypatch.setattr(runner, "fetch_capability_raw", lambda *a, **k: (fetched.append(k["query"]["symbol"]) or {"ok": True, "body": body, "provider": "DNSE", "endpoint": "/price/ohlc"}))
+
+    runner.run_all(baseline=baseline, snapshot=snapshot, out=out)
+
+    # The mismatched-session checkpoint must be ignored entirely: both candidates refetched.
+    assert set(fetched) == {"AAA", "BBB"}
+
+
+def test_run_all_treats_a_corrupt_checkpoint_as_absent(tmp_path, monkeypatch):
+    baseline, snapshot = _two_candidate_fixtures()
+    out = tmp_path / "out"
+    out.mkdir(parents=True)
+    _checkpoint_path(out).write_text("{not valid json", encoding="utf-8")
+
+    body = _run_all_ohlc_body()
+    monkeypatch.setattr(runner, "ensure_credentials_loaded", lambda: None)
+    monkeypatch.setattr(runner, "credentials_for_request", lambda: ("key", "secret"))
+    monkeypatch.setattr(runner, "fetch_capability_raw", lambda *a, **k: {"ok": True, "body": body, "provider": "DNSE", "endpoint": "/price/ohlc"})
+
+    runner.run_all(baseline=baseline, snapshot=snapshot, out=out)
+
+    assert _artifact_path(out).is_file()
+    assert not _checkpoint_path(out).exists()
+
+
+def test_run_all_with_fully_satisfied_checkpoint_makes_no_provider_calls(tmp_path, monkeypatch):
+    """If every candidate is already checkpointed (e.g. the final artifact write itself was the
+    step that got interrupted), a resume must not re-hit the provider for any of them."""
+    baseline, snapshot = _two_candidate_fixtures()
+    baseline_identity = baseline.get("artifact_identity")
+    p3f9b_snapshot_identity = snapshot.get("snapshot_identity")
+    out = tmp_path / "out"
+    out.mkdir(parents=True)
+    _checkpoint_path(out).write_text(json.dumps({
+        "target_session": TARGET, "baseline_identity": baseline_identity, "p3f9b_snapshot_identity": p3f9b_snapshot_identity,
+        "records": {
+            "AAA": {"ticker": "AAA", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
+            "BBB": {"ticker": "BBB", "state": "RECOVERED_COMPLETE_TECHNICAL_HISTORY", "observations": []},
+        },
+    }), encoding="utf-8")
+
+    def _fail_fetch(*args, **kwargs):
+        pytest.fail("provider boundary reached; every candidate was already checkpointed")
+
+    monkeypatch.setattr(runner, "fetch_capability_raw", _fail_fetch)
+
+    runner.run_all(baseline=baseline, snapshot=snapshot, out=out)
+
+    assert _artifact_path(out).is_file()
+    assert not _checkpoint_path(out).exists()
+    artifact = json.loads(_artifact_path(out).read_text(encoding="utf-8"))
+    assert set(artifact["candidate_selection"]["tickers"]) == {"AAA", "BBB"}
