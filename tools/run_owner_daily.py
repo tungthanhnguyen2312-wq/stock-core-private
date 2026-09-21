@@ -31,6 +31,7 @@ from canonical_dashboard_runtime_release import (  # noqa: E402
 from canonical_trusted_subset_release import (  # noqa: E402
     CanonicalTrustedSubsetError, materialize_canonical_trusted_subset,
 )
+from checkout_cleanliness_contract import classify_checkout_cleanliness  # noqa: E402
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -66,10 +67,16 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
     _git(root, "fetch", "origin")
     if _git(root, "branch", "--show-current") != "main":
         raise OwnerDailyError("Repository preflight", "BRANCH_IS_NOT_MAIN", "Switch to main without discarding work.")
-    dirty = _tracked_changes(root)
-    if dirty:
-        raise OwnerDailyError("Repository preflight", "UNEXPECTED_TRACKED_CHANGES:" + ";".join(dirty),
+    cleanliness = classify_checkout_cleanliness(root)
+    if cleanliness.tracked_dirty_paths:
+        raise OwnerDailyError("Repository preflight",
+                              "UNEXPECTED_TRACKED_CHANGES:" + ";".join(cleanliness.tracked_dirty_paths),
                               "Commit, stash, or otherwise resolve the tracked work before Daily.")
+    if cleanliness.unsafe_untracked_paths:
+        raise OwnerDailyError("Repository preflight",
+                              "UNSAFE_UNTRACKED_CHECKOUT:" + ";".join(cleanliness.unsafe_untracked_paths),
+                              "Remove or govern the unexpected untracked file(s) before Daily; "
+                              "only approved runtime/evidence paths may remain untracked.")
     head, remote_head = _git(root, "rev-parse", "HEAD"), _git(root, "rev-parse", "origin/main")
     if head == remote_head:
         return {"head": head, "status": "UP_TO_DATE"}

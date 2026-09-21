@@ -367,3 +367,20 @@ def test_dirty_producer_is_refused(tmp_path):
     (root / "README.md").write_text("dirty\n")
     with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES"):
         workflow.preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
+
+
+def test_approved_untracked_runtime_evidence_does_not_block_preflight(tmp_path):
+    root, _origin = _clone_with_origin(tmp_path)
+    evidence = root / "data" / "dnse-foreign-flow" / "observations" / "HPG.json"
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text("{}", encoding="utf-8")
+    result = workflow.preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
+    assert result["status"] == "UP_TO_DATE"
+    assert evidence.is_file()
+
+
+def test_unsafe_untracked_file_is_refused(tmp_path):
+    root, _origin = _clone_with_origin(tmp_path)
+    (root / "unexpected_module.py").write_text("x = 1\n", encoding="utf-8")
+    with pytest.raises(workflow.OwnerDailyError, match="UNSAFE_UNTRACKED_CHECKOUT"):
+        workflow.preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")

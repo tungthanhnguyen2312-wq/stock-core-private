@@ -15,6 +15,8 @@ import subprocess
 from pathlib import Path
 from typing import Any, Mapping
 
+from checkout_cleanliness_contract import classify_checkout_cleanliness
+
 
 RUNTIME_ROOT_ENV = "STOCK_LOOKUP_RUNTIME_ROOT"
 RETAINED_EVIDENCE_ROOT_ENV = "STOCK_LOOKUP_RETAINED_EVIDENCE_ROOT"
@@ -78,20 +80,35 @@ def _git(root: Path, *args: str) -> tuple[int, str]:
 
 
 def producer_release_qualification(producer_root: Path) -> dict[str, Any]:
-    """Require a clean checkout exactly at the locally governed ``origin/main`` ref."""
+    """Require a clean checkout exactly at the locally governed ``origin/main`` ref.
+
+    "Clean" is decided by the one shared contract in ``checkout_cleanliness_
+    contract.py`` -- the same contract ``tools/run_owner_daily.py::preflight_
+    repository`` uses -- so a checkout carrying only approved untracked runtime/
+    evidence (e.g. ``data/dnse-foreign-flow/``) cannot pass the owner's repository
+    preflight and then fail here as ``RELEASE_CHECKOUT_DIRTY``.
+    """
     root = Path(producer_root)
     code, head = _git(root, "rev-parse", "HEAD")
     origin_code, origin_main = _git(root, "rev-parse", "origin/main")
-    dirty_code, dirty = _git(root, "status", "--porcelain")
-    result = {
+    result: dict[str, Any] = {
         "producer_code_root": str(root), "head": head or None,
-        "origin_main": origin_main or None, "dirty": bool(dirty),
-        "qualified": False,
+        "origin_main": origin_main or None, "qualified": False,
     }
-    if code or origin_code or dirty_code:
+    if code or origin_code:
+        result.update(dirty=None, reason_code="GIT_RELEASE_AUTHORITY_UNAVAILABLE")
+        return result
+    cleanliness = classify_checkout_cleanliness(root)
+    result.update(
+        dirty=bool(cleanliness.tracked_dirty_paths or cleanliness.unsafe_untracked_paths),
+        tracked_dirty_paths=list(cleanliness.tracked_dirty_paths),
+        approved_untracked_paths=list(cleanliness.approved_untracked_paths),
+        unsafe_untracked_paths=list(cleanliness.unsafe_untracked_paths),
+    )
+    if cleanliness.reason_code == "GIT_STATUS_UNAVAILABLE":
         result["reason_code"] = "GIT_RELEASE_AUTHORITY_UNAVAILABLE"
         return result
-    if dirty:
+    if not cleanliness.qualified:
         result["reason_code"] = "RELEASE_CHECKOUT_DIRTY"
         return result
     if head != origin_main:
@@ -415,4 +432,10 @@ def format_preflight(result: Mapping[str, Any]) -> str:
     ]
     if result.get("failure_code"):
         lines.append("REFUSAL: " + str(result["failure_code"]) + (":" + str(result["failure_detail"]) if result.get("failure_detail") else ""))
+    if release.get("tracked_dirty_paths"):
+        lines.append("TRACKED_DIRTY: " + ",".join(release["tracked_dirty_paths"]))
+    if release.get("unsafe_untracked_paths"):
+        lines.append("UNSAFE_UNTRACKED: " + ",".join(release["unsafe_untracked_paths"]))
+    if release.get("approved_untracked_paths"):
+        lines.append("APPROVED_RUNTIME_UNTRACKED: " + ",".join(release["approved_untracked_paths"]))
     return "\n".join(lines)
