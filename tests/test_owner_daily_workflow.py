@@ -410,3 +410,117 @@ def test_unsafe_untracked_file_is_refused(tmp_path):
     (root / "unexpected_module.py").write_text("x = 1\n", encoding="utf-8")
     with pytest.raises(workflow.OwnerDailyError, match="UNSAFE_UNTRACKED_CHECKOUT"):
         workflow.preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
+
+
+# =====================================================================================
+# OWNER_DAILY_GIT_PORCELAIN_STATE_PUBLICATION_CORRECTIVE_V1: `_git`'s whole-stdout `.strip()`
+# silently ate the leading space of a `git status --porcelain` record whose XY status code
+# starts with a space (e.g. " M path" for an unstaged-only modification), shifting every
+# downstream fixed-offset `line[3:]` path slice one character into the path. Real, unmocked git
+# repos below so this cannot regress silently through a mocked `_tracked_changes` again.
+# =====================================================================================
+
+REGISTRY_PATH = "config/daily_research_session_input_registry.json"
+
+
+def _clone_with_registry(tmp_path: Path, session: str = SESSION) -> tuple[Path, Path]:
+    """Like `_clone_with_origin`, but the seeded repo also carries an already-committed
+    ``config/daily_research_session_input_registry.json`` with an empty completed-sessions
+    ledger, so a test can apply just the session's completion update as an uncommitted change."""
+    root, origin = _clone_with_origin(tmp_path)
+    registry_dir = root / "config"
+    registry_dir.mkdir(exist_ok=True)
+    (registry_dir / "daily_research_session_input_registry.json").write_text(
+        json.dumps({"completed_sessions": {}}), encoding="utf-8",
+    )
+    _git(root, "add", REGISTRY_PATH)
+    _git(root, "commit", "-qm", "seed registry")
+    _git(root, "push")
+    return root, origin
+
+
+def _write_completed_registry(root: Path, session: str = SESSION) -> None:
+    (root / REGISTRY_PATH).write_text(
+        json.dumps({"completed_sessions": {session: {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}}}),
+        encoding="utf-8",
+    )
+
+
+def test_tracked_changes_preserves_leading_status_space_for_unstaged_modification(tmp_path):
+    root, _origin = _clone_with_registry(tmp_path)
+    _write_completed_registry(root)
+    lines = workflow._tracked_changes(root)
+    assert lines == [" M " + REGISTRY_PATH]
+    assert {line[3:] for line in lines} == {REGISTRY_PATH}
+
+
+def test_commit_daily_state_accepts_real_unstaged_registry_modification(tmp_path):
+    root, origin = _clone_with_registry(tmp_path)
+    _write_completed_registry(root)
+    result = workflow.commit_daily_state(root, SESSION)
+    assert result["status"] == "COMMITTED"
+    assert workflow._tracked_changes(root) == []
+    remote_head = subprocess.run(["git", "-C", str(origin), "rev-parse", "main"], check=True, capture_output=True, text=True).stdout.strip()
+    assert remote_head == result["sha"]
+
+
+def test_commit_daily_state_accepts_staged_only_registry_modification(tmp_path):
+    root, _origin = _clone_with_registry(tmp_path)
+    _write_completed_registry(root)
+    _git(root, "add", REGISTRY_PATH)
+    lines = workflow._tracked_changes(root)
+    assert lines == ["M  " + REGISTRY_PATH]
+    result = workflow.commit_daily_state(root, SESSION)
+    assert result["status"] == "COMMITTED"
+
+
+def test_commit_daily_state_accepts_staged_and_worktree_registry_modification(tmp_path):
+    root, _origin = _clone_with_registry(tmp_path)
+    _write_completed_registry(root)
+    _git(root, "add", REGISTRY_PATH)
+    (root / REGISTRY_PATH).write_text(
+        json.dumps({"completed_sessions": {SESSION: {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}}, "note": "second edit"}),
+        encoding="utf-8",
+    )
+    lines = workflow._tracked_changes(root)
+    assert lines == ["MM " + REGISTRY_PATH]
+    result = workflow.commit_daily_state(root, SESSION)
+    assert result["status"] == "COMMITTED"
+
+
+def test_commit_daily_state_still_rejects_unexpected_tracked_file(tmp_path):
+    root, _origin = _clone_with_registry(tmp_path)
+    (root / "README.md").write_text("unexpected change\n", encoding="utf-8")
+    with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_POST_DAILY_DIFF:README.md"):
+        workflow.commit_daily_state(root, SESSION)
+
+
+def test_commit_daily_state_still_rejects_mixed_allowlisted_and_unexpected_files(tmp_path):
+    root, _origin = _clone_with_registry(tmp_path)
+    _write_completed_registry(root)
+    (root / "README.md").write_text("unexpected change\n", encoding="utf-8")
+    with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_POST_DAILY_DIFF:README.md") as exc:
+        workflow.commit_daily_state(root, SESSION)
+    assert REGISTRY_PATH not in str(exc.value)
+
+
+def test_commit_daily_state_stages_only_allowlisted_path(tmp_path):
+    root, _origin = _clone_with_registry(tmp_path)
+    _write_completed_registry(root)
+    (root / "scratch_untracked.txt").write_text("ignored by this function\n", encoding="utf-8")
+    result = workflow.commit_daily_state(root, SESSION)
+    assert result["status"] == "COMMITTED"
+    committed_files = subprocess.run(
+        ["git", "-C", str(root), "show", "--stat", "--pretty=format:", "HEAD"],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    assert REGISTRY_PATH in committed_files
+    assert "scratch_untracked.txt" not in committed_files
+    # The untracked scratch file must remain on disk, untouched by this function.
+    assert (root / "scratch_untracked.txt").is_file()
+
+
+def test_commit_daily_state_no_change_when_registry_already_matches_committed_state(tmp_path):
+    root, _origin = _clone_with_registry(tmp_path)
+    result = workflow.commit_daily_state(root, SESSION)
+    assert result["status"] == "NO_CHANGE"

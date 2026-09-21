@@ -53,8 +53,28 @@ def _git(root: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def _git_unstripped(root: Path, *args: str) -> str:
+    """Like `_git`, but returns raw stdout with no whole-string whitespace trim.
+
+    `_git`'s `.strip()` is safe for every scalar HEAD/branch/remote-url caller, but
+    `_tracked_changes` depends on each `git status --porcelain` line's exact fixed 3-character
+    ``XY `` status prefix (2 status columns + 1 separating space) to recover the path via a
+    fixed-offset slice. When the very first record's status code starts with a space (e.g.
+    ``" M path"`` for an unstaged-only modification), a whole-string `.strip()` silently eats
+    that leading space before the text is even split into lines, shifting every downstream
+    fixed-offset slice one character into the path.
+    """
+    result = subprocess.run(["git", "-C", str(root), *args], capture_output=True,
+                            text=True, encoding="utf-8", check=False)
+    if result.returncode:
+        raise OwnerDailyError("Repository preflight", "GIT_" + args[0].upper() + ":" +
+                              (result.stderr.strip() or result.stdout.strip()),
+                              "Resolve the Git error and run again.")
+    return result.stdout
+
+
 def _tracked_changes(root: Path) -> list[str]:
-    return [line for line in _git(root, "status", "--porcelain", "--untracked-files=no").splitlines() if line]
+    return [line for line in _git_unstripped(root, "status", "--porcelain", "--untracked-files=no").splitlines() if line]
 
 
 def preflight_repository(root: Path, *, expected_name: str, expected_remote_fragment: str) -> dict[str, str]:
