@@ -1181,3 +1181,90 @@ def test_current_research_coverage_reports_narrower_ratio_never_touching_the_gat
     assert coverage["current_equity_exact"] == 958
     assert coverage["current_equity_coverage_ratio"] == 0.636122
     assert coverage["not_authoritative"] is True
+
+
+# ---- run_post_handoff_observers / run_post_handoff_prospective_outcome_feedback
+# (CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1): shared by both the
+# production canonical Daily kernel (canonical_daily_operation.py) and this diagnostic
+# module's own run_canonical_post_close, so neither can silently diverge on post-handoff
+# sequencing again. ----
+
+def test_run_post_handoff_observers_writes_amended_tier1_and_returns_all_three(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    bundle_dir = tmp_path / "bundle"
+    tiers = {"session_handoff_bundle": {"session": session}, "bundle_dir": bundle_dir}
+
+    monkeypatch.setattr(cpc, "run_multi_session_signal_velocity_shadow",
+                        lambda root, s: {"status": "COLLECTED", "session": s})
+    monkeypatch.setattr(cpc, "run_current_foreign_flow_enrichment",
+                        lambda root, runtime_root, s, **k: {"status": "UNAVAILABLE", "allow_network": k.get("allow_network")})
+    monkeypatch.setattr(cpc, "run_flow_price_divergence_shadow",
+                        lambda root, runtime_root, s, velocity: {"status": "COLLECTED", "velocity_status": velocity.get("status")})
+
+    result = cpc.run_post_handoff_observers(tmp_path, tmp_path / "runtime", session, tiers)
+
+    assert result["multi_session_signal_velocity"]["status"] == "COLLECTED"
+    assert result["current_foreign_flow_enrichment"]["allow_network"] is False
+    assert result["flow_price_divergence_shadow"]["velocity_status"] == "COLLECTED"
+    written = json.loads((bundle_dir / "session_handoff_bundle.json").read_text(encoding="utf-8"))
+    assert written["multi_session_signal_velocity"]["status"] == "COLLECTED"
+    assert written["current_foreign_flow_enrichment"]["status"] == "UNAVAILABLE"
+    assert written["flow_price_divergence_shadow"]["status"] == "COLLECTED"
+    assert written["session"] == session
+
+
+def test_run_post_handoff_observers_never_enables_live_foreign_flow_network_by_default(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    tiers = {"session_handoff_bundle": {}, "bundle_dir": tmp_path}
+    seen = {}
+
+    def fake_foreign_flow(root, runtime_root, s, **k):
+        seen.update(k)
+        return {"status": "UNAVAILABLE"}
+
+    monkeypatch.setattr(cpc, "run_multi_session_signal_velocity_shadow", lambda root, s: {"status": "UNAVAILABLE"})
+    monkeypatch.setattr(cpc, "run_current_foreign_flow_enrichment", fake_foreign_flow)
+    monkeypatch.setattr(cpc, "run_flow_price_divergence_shadow", lambda *a, **k: {"status": "UNAVAILABLE"})
+
+    cpc.run_post_handoff_observers(tmp_path, tmp_path / "runtime", session, tiers)
+    assert seen["allow_network"] is False
+
+
+def test_run_post_handoff_prospective_outcome_feedback_writes_to_distinct_post_handoff_path(tmp_path, monkeypatch):
+    session = "2026-08-25"
+
+    class FakeCompleted:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd, **kwargs):
+        output_path = Path(cmd[cmd.index("--output") + 1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps({"artifact_identity": "prospective_decision_outcome_feedback:test"}),
+                               encoding="utf-8")
+        return FakeCompleted()
+
+    monkeypatch.setattr(cpc.subprocess, "run", fake_run)
+    result = cpc.run_post_handoff_prospective_outcome_feedback(tmp_path, session, output_root=tmp_path)
+
+    assert result["status"] == "COLLECTED"
+    assert result["artifact_identity"] == "prospective_decision_outcome_feedback:test"
+    expected_path = ("operations-review/prospective-decision-outcome-feedback-post-handoff-v1/"
+                     f"{session}/prospective_decision_feedback_artifact.json")
+    assert result["path"] == expected_path
+    # Distinct from run_prospective_collection's own pre-handoff immutable artifact path --
+    # this must never write to (or conflict with) that historical evidence.
+    assert "prospective-decision-outcome-feedback-v1" not in expected_path
+
+
+def test_run_post_handoff_prospective_outcome_feedback_degrades_on_subprocess_failure(tmp_path, monkeypatch):
+    class FakeFailed:
+        returncode = 1
+        stdout = ""
+        stderr = "boom"
+
+    monkeypatch.setattr(cpc.subprocess, "run", lambda *a, **k: FakeFailed())
+    result = cpc.run_post_handoff_prospective_outcome_feedback(tmp_path, "2026-08-25")
+    assert result["status"] == "UNAVAILABLE"
+    assert "boom" in result["reason"]

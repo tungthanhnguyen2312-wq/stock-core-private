@@ -134,14 +134,27 @@ def _patch_downstream(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(cdo, "build_tiered_bundle", lambda *a, **k: {
         "session_handoff_bundle": {}, "bundle_dir": tmp_path,
     })
+    monkeypatch.setattr(cdo, "run_post_handoff_observers", lambda *a, **k: {
+        "multi_session_signal_velocity": {"status": "UNAVAILABLE"},
+        "current_foreign_flow_enrichment": {"status": "UNAVAILABLE"},
+        "flow_price_divergence_shadow": {"status": "UNAVAILABLE"},
+    })
+    monkeypatch.setattr(cdo, "run_post_handoff_prospective_outcome_feedback", lambda *a, **k: {"status": "UNAVAILABLE"})
 
 
 def _run(tmp_path: Path, monkeypatch, *, now=POST_CLOSE, session=SESSION, complete_publication=False,
          acquire_fn=None, producer_fn=None, runtime_fn=None, trusted_fn=None, publication_runner=None,
-         working=None, exact=None, runtime_session=None, enrichment_fn=None, **kwargs):
+         working=None, exact=None, runtime_session=None, enrichment_fn=None,
+         tiered_bundle_fn=None, post_handoff_observers_fn=None, post_handoff_feedback_fn=None, **kwargs):
     _patch_downstream(monkeypatch, tmp_path)
     if enrichment_fn is not None:
         monkeypatch.setattr(cdo, "build_enrichment_components", enrichment_fn)
+    if tiered_bundle_fn is not None:
+        monkeypatch.setattr(cdo, "build_tiered_bundle", tiered_bundle_fn)
+    if post_handoff_observers_fn is not None:
+        monkeypatch.setattr(cdo, "run_post_handoff_observers", post_handoff_observers_fn)
+    if post_handoff_feedback_fn is not None:
+        monkeypatch.setattr(cdo, "run_post_handoff_prospective_outcome_feedback", post_handoff_feedback_fn)
     runtime = tmp_path / "runtime"
     _write_runtime(runtime, runtime_session or session)
 
@@ -886,6 +899,80 @@ def test_idempotent_replay_creates_no_duplicate_semantic_operation(tmp_path, mon
     first = _run(tmp_path, monkeypatch, complete_publication=True)
     second = _run(tmp_path, monkeypatch, complete_publication=True)
     assert first["operation_identity"] == second["operation_identity"]
+    assert second["is_idempotent_replay"] is True
+
+
+def test_post_handoff_observers_run_after_tiered_bundle_and_land_in_record(tmp_path, monkeypatch):
+    """CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1: normal Daily must
+    attempt Signal Velocity / current foreign flow / Flow-Price only after the same-session
+    canonical handoff (session_handoff_bundle.json via build_tiered_bundle) is bound, and the
+    prospective outcome-feedback rerun must happen in that same post-handoff position."""
+    order: list[str] = []
+    seen_tiers = {}
+
+    def tiered_bundle(*a, **k):
+        order.append("build_tiered_bundle")
+        return {"session_handoff_bundle": {}, "bundle_dir": tmp_path}
+
+    def post_handoff_observers(root, runtime_root, session, tiers, **k):
+        order.append("run_post_handoff_observers")
+        seen_tiers["tiers"] = tiers
+        assert session == SESSION
+        assert k.get("enable_current_foreign_flow_live") is False
+        return {
+            "multi_session_signal_velocity": {"status": "COLLECTED"},
+            "current_foreign_flow_enrichment": {"status": "UNAVAILABLE"},
+            "flow_price_divergence_shadow": {"status": "COLLECTED"},
+        }
+
+    def post_handoff_feedback(root, session, **k):
+        order.append("run_post_handoff_prospective_outcome_feedback")
+        assert session == SESSION
+        return {"status": "COLLECTED", "path": "prospective-decision-outcome-feedback-post-handoff-v1/x"}
+
+    record = _run(
+        tmp_path, monkeypatch, complete_publication=True,
+        tiered_bundle_fn=tiered_bundle,
+        post_handoff_observers_fn=post_handoff_observers,
+        post_handoff_feedback_fn=post_handoff_feedback,
+    )
+    assert order == [
+        "build_tiered_bundle", "run_post_handoff_observers", "run_post_handoff_prospective_outcome_feedback",
+    ]
+    assert seen_tiers["tiers"]["bundle_dir"] == tmp_path
+    assert record["post_handoff_observers"]["multi_session_signal_velocity"]["status"] == "COLLECTED"
+    assert record["post_handoff_observers"]["flow_price_divergence_shadow"]["status"] == "COLLECTED"
+    assert record["post_handoff_prospective_decision_feedback"]["status"] == "COLLECTED"
+
+
+def test_post_handoff_observer_variance_never_triggers_immutable_conflict_on_replay(tmp_path, monkeypatch):
+    """Post-handoff observer/feedback content may genuinely vary run-to-run (a transient
+    network hiccup, a newly matured cohort) without that variance meaning the Daily production
+    result changed -- it must never raise IMMUTABLE_OPERATION_RECORD_CONFLICT on replay."""
+    call = {"n": 0}
+
+    def post_handoff_observers(*a, **k):
+        call["n"] += 1
+        return {
+            "multi_session_signal_velocity": {"status": "COLLECTED", "run": call["n"]},
+            "current_foreign_flow_enrichment": {"status": "UNAVAILABLE"},
+            "flow_price_divergence_shadow": {"status": "UNAVAILABLE"},
+        }
+
+    def post_handoff_feedback(*a, **k):
+        return {"status": "COLLECTED", "run": call["n"]}
+
+    first = _run(
+        tmp_path, monkeypatch, complete_publication=True,
+        post_handoff_observers_fn=post_handoff_observers, post_handoff_feedback_fn=post_handoff_feedback,
+    )
+    second = _run(
+        tmp_path, monkeypatch, complete_publication=True,
+        post_handoff_observers_fn=post_handoff_observers, post_handoff_feedback_fn=post_handoff_feedback,
+    )
+    assert first["post_handoff_observers"]["multi_session_signal_velocity"]["run"] == 1
+    assert second["post_handoff_observers"]["multi_session_signal_velocity"]["run"] == 2
+    assert second["operation_identity"] == first["operation_identity"]
     assert second["is_idempotent_replay"] is True
 
 

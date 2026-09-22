@@ -1,5 +1,52 @@
 # Stock Lookup — Operational State
 
+**Canonical Daily post-handoff observer wiring corrective V1 (2026-09-22):** Owner-directed
+bounded corrective, isolated worktree
+`feature/canonical-daily-owner-workflow-reconciliation-v1` rooted at `origin/main` `6679179
+6d3c0e538d671bcc9eec7414fb5911733`. Follows a same-day owner architecture/governance audit that
+found two real production-integration gaps, both verified directly against source (not merely
+asserted): (1) `canonical_daily_operation.py` -- the actual production kernel reached by
+`stocklookup.ps1 daily` -> `stocklookup.py` -> `daily_analysis_pipeline.py
+--canonical-post-close` -> `run_canonical_daily_operation` -- never imported or called
+`run_multi_session_signal_velocity_shadow`, `run_current_foreign_flow_enrichment`, or
+`run_flow_price_divergence_shadow`; those existed only inside `canonical_post_close_pipeline.
+run_canonical_post_close()`, a separate diagnostic orchestrator normal Daily never invokes,
+which is exactly why the Workspace reported `SIGNAL_VELOCITY_ARTIFACT_NOT_SUPPLIED` on
+2026-09-22. (2) `prospective_decision_retention.discover_snapshots` only admits a session's T0
+snapshot as `GENUINE` once its canonical handoff (`session_handoff_bundle.json`, written by
+`build_tiered_bundle`) is bound, but `canonical_daily_operation.py` ran `run_prospective_
+collection` (which includes outcome-feedback maturity evaluation) *before* `build_tiered_
+bundle` -- so a prior cohort whose maturation horizon lands exactly on today's session was
+invisible to that same-run feedback and would only be credited starting tomorrow's run.
+
+Fix: added a new shared `canonical_post_close_pipeline.run_post_handoff_observers()` (Signal
+Velocity, current foreign-flow with `allow_network=False`, Flow-Price Divergence -- unchanged
+network-off/non-blocking semantics) called by both the diagnostic `run_canonical_post_close()`
+and the production `canonical_daily_operation.run_canonical_daily_operation()`, in both cases
+strictly after `build_tiered_bundle` writes the same-session handoff binding, so neither path
+can silently diverge on this sequencing again. Added a new `run_post_handoff_prospective_
+outcome_feedback()` that reruns the existing read-only feedback builder after that same
+binding, writing to a new, distinct path
+(`operations-review/prospective-decision-outcome-feedback-post-handoff-v1/<session>/`) --
+the original pre-handoff artifact `run_prospective_collection` already retains is untouched
+and remains immutable historical evidence of what feedback could see before this session's own
+handoff existed; no historical artifact was rewritten or reinterpreted. Both new results are
+excluded from `canonical_daily_operation.py`'s idempotent-replay comparison (same treatment as
+the existing `tactical_reversal_shadow_collection`), since their content can legitimately vary
+run-to-run without meaning the Daily production result itself changed.
+
+Explicitly deferred, not attempted this session (flagged for a separate owner-authorized
+follow-on, not fixed here): the full owner-workflow unification across `stocklookup.py` /
+`tools/run_owner_daily.py` / the desktop launcher into one durable resumable state machine; a
+crash/interrupt/resume operation journal; a post-handoff presentation/overlay join so the
+Dashboard/AI handoff can consume same-session Signal Velocity/Flow-Price/prospective-feedback
+identities without mutating sealed Producer artifacts (Investment Decision Workspace is still
+materialized inside Daily Producer, pre-handoff, and by construction can never see the *same*
+session's own post-handoff observers -- only a later session's Workspace could reference
+today's); and the Integrated Decision `research_action_posture` vs. Workspace `research_
+stance`/`entry_action` dual-decision-surface naming reconciliation. See `docs/DECISIONS.md`
+2026-09-22 entry for the full audit-to-fix rationale.
+
 **Indicator metric availability recovery classification corrective V1 (2026-09-20):**
 `INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 = COMPLETE (local,
 unpushed)`. This entry originally recorded `COMPLETE` after commit `c5443aa` alone -- that

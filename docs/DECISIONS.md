@@ -1,5 +1,61 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-22 - Canonical Daily Post-Handoff Observer Wiring Corrective V1
+
+`CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1` = bounded corrective
+subset COMPLETE (local, unpushed at write time); owner-directed via chat instruction
+2026-09-22, following the same-day owner architecture/governance audit. That audit's full
+19-section scope (one-owner-workflow unification, crash/resume journal, presentation-overlay
+join, dual-decision-surface naming) was intentionally NOT attempted in full this session --
+only the two concrete, source-verified production-integration gaps below were fixed, per the
+mission's own "smallest correct additive architecture" instruction. The remainder is deferred
+to a separate owner-authorized follow-on; see `docs/STATE.md`'s matching 2026-09-22 entry for
+the full deferred list.
+
+1. **Signal Velocity / current foreign-flow / Flow-Price were never reachable from normal
+   Daily.** `canonical_daily_operation.py` (the real production kernel behind `stocklookup.ps1
+   daily`) imported acquisition/producer/runtime/trusted-subset/prospective helpers from
+   `canonical_post_close_pipeline.py` but never `run_multi_session_signal_velocity_shadow`,
+   `run_current_foreign_flow_enrichment`, or `run_flow_price_divergence_shadow` -- those three
+   existed only inside `canonical_post_close_pipeline.run_canonical_post_close()`, a second,
+   independently-evolving orchestrator that normal Daily never invokes. This is the exact,
+   verified root cause of the observed `SIGNAL_VELOCITY_ARTIFACT_NOT_SUPPLIED` on 2026-09-22.
+   Fix: extracted the shared `run_post_handoff_observers(root, runtime_root, session, tiers,
+   *, enable_current_foreign_flow_live=False)` helper into `canonical_post_close_pipeline.py`,
+   called by both `run_canonical_post_close()` and `canonical_daily_operation.
+   run_canonical_daily_operation()` immediately after `build_tiered_bundle` writes
+   `session_handoff_bundle.json` -- so neither path can silently diverge on this sequencing
+   again. `enable_current_foreign_flow_live` stays `False` in both callers; normal Daily still
+   never reaches DNSE for that contract.
+
+2. **Prospective outcome-feedback under-counted same-day cohort maturation by construction.**
+   `prospective_decision_retention.discover_snapshots()` only classifies a session's T0
+   snapshot `GENUINE` (admissible into the maturity "chain") once that session's own canonical
+   handoff (`session_handoff_bundle.json`) binds it. `canonical_daily_operation.py` ran
+   `run_prospective_collection()` (cohort collection + outcome-feedback) *before*
+   `build_tiered_bundle`, so a prior cohort whose maturation horizon lands exactly on today's
+   session was invisible to that same-run feedback pass and would only be credited starting
+   tomorrow's run -- the exact, verified root cause of the observed same-run
+   under-count of newly matured outcomes on 2026-09-22. Fix: added
+   `run_post_handoff_prospective_outcome_feedback(root, session, *, output_root=None)`, which
+   reruns the existing read-only `prospective_decision_outcome_feedback.build_feedback_
+   artifact` builder after the handoff binding exists, writing to a new, distinct path
+   (`operations-review/prospective-decision-outcome-feedback-post-handoff-v1/<session>/`).
+   The original pre-handoff artifact `run_prospective_collection` already retains is
+   untouched and remains immutable historical evidence; no historical artifact is rewritten,
+   and no `IMMUTABLE_ARTIFACT_CONFLICT` risk was introduced (distinct path, not a second write
+   to the same immutable path).
+
+Both new results (`post_handoff_observers`, `post_handoff_prospective_decision_feedback`) are
+excluded from `canonical_daily_operation.py`'s idempotent-replay content comparison, matching
+the existing treatment of `tactical_reversal_shadow_collection`, since best-effort observer
+content can legitimately vary run-to-run (network/provider results, newly matured cohorts)
+without the Daily production result itself changing. No evidence standard was weakened, no new
+provider was added, no authority was promoted, and no historical Daily operation, T0 snapshot,
+Producer run, or handoff was modified. New targeted tests cover both the sequencing (observers
+run strictly after `build_tiered_bundle`) and the idempotent-replay exclusion in
+`tests/test_canonical_daily_operation.py` and `tests/test_canonical_post_close_pipeline.py`.
+
 ## 2026-09-20 - Indicator Metric Availability Recovery Classification Corrective V1
 
 `INDICATOR_METRIC_AVAILABILITY_RECOVERY_CLASSIFICATION_CORRECTIVE_V1 = COMPLETE (local,
