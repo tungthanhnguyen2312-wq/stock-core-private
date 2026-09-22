@@ -1028,6 +1028,106 @@ def run_current_foreign_flow_enrichment(root: Path, runtime_root: Path, session:
     }
 
 
+def _sealed_workspace_lineage(root: Path, producer_run_dir: Path) -> dict[str, Any] | None:
+    """Read-only: locate the SEALED (pre-handoff) Producer Workspace for lineage comparison.
+
+    Mirrors exactly what ``canonical_dashboard_runtime_release._stage_workspace`` already does
+    to find the operation directory for a Producer run -- never a second, independent
+    resolution. Returns ``None`` (never raises) if anything about the sealed evidence is
+    missing or malformed; the caller treats that as "lineage unverifiable", not fatal.
+    """
+    try:
+        run_manifest = _load(producer_run_dir / "run_manifest.json")
+        operation_ref = (run_manifest or {}).get("daily_session_operation") or {}
+        directory = operation_ref.get("directory")
+        if not isinstance(directory, str) or not directory:
+            return None
+        operation_dir = root / directory
+        sealed = _load(operation_dir / "investment_decision_workspace_projection.json")
+        if not isinstance(sealed, Mapping):
+            return None
+        return {
+            "operation_dir": operation_dir,
+            "artifact_identity": sealed.get("artifact_identity"),
+            "source_artifacts": dict(sealed.get("source_artifacts") or {}),
+        }
+    except Exception:
+        return None
+
+
+def run_post_handoff_presentation_projection(
+    root: Path, runtime_root: Path, session: str, *,
+    producer_run_dir: Path | None = None, output_root: Path | None = None,
+) -> dict[str, Any]:
+    """Additive, presentation-only re-join of the current-product projections (Investment
+    Decision Workspace / Screener Master Projection) now that post-handoff observers (Signal
+    Velocity, Flow-Price) exist for THIS session -- see
+    CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1.
+
+    ``canonical_current_product_projections.materialize_and_write_current_product_projections``
+    is the exact same pure, deterministic join Daily Producer itself calls
+    (``daily_producer_pipeline.py``); this reuses it verbatim with a fresh ``operation_dir``
+    (never the sealed Producer operation directory) so it writes an entirely new, additive
+    artifact set and can never overwrite sealed Producer evidence. ``registry_inputs`` is
+    re-resolved read-only via ``daily_research_session_operations.resolve_inputs`` against the
+    same frozen session registry Producer used -- no new analytical computation, no re-derived
+    opportunity/decision context: only the two previously-absent ``signal_velocity``/
+    ``flow_price`` axes are newly populated (both were None/unavailable when Producer built the
+    sealed Workspace, since post-handoff observers did not exist yet at that point).
+
+    When ``producer_run_dir`` is supplied, the sealed Workspace's own ``source_artifacts.
+    opportunity_context``/``security_decision_context`` identities are compared against this
+    projection's -- a mismatch means the join drifted from Producer's own inputs and this
+    degrades to UNAVAILABLE rather than presenting an inconsistent overlay. Non-blocking: any
+    failure here never revises the completed Daily Producer result.
+    """
+    output_root = output_root or root
+    lineage = _sealed_workspace_lineage(root, producer_run_dir) if producer_run_dir is not None else None
+    try:
+        from daily_research_session_operations import load_registry, resolve_inputs
+        from canonical_current_product_projections import materialize_and_write_current_product_projections
+        from vn_time import vn_now
+
+        registry = load_registry(root)
+        registry_inputs, _metadata = resolve_inputs(root, session, registry)
+        presentation_dir = output_root / "operations-review" / "post-handoff-presentation-projection-v1" / session
+        result = materialize_and_write_current_product_projections(
+            root=root, session=session, operation_dir=presentation_dir, registry_inputs=registry_inputs,
+            requested_at=vn_now().isoformat(timespec="seconds"), runtime_root_override=runtime_root,
+        )
+    except Exception as exc:
+        return {"status": "UNAVAILABLE", "session": session, "reason": f"{type(exc).__name__}:{exc}"}
+    if result.get("status") != "MATERIALIZED":
+        return {"status": "UNAVAILABLE", "session": session,
+                "reason": result.get("reason_code") or "PRESENTATION_PROJECTION_NOT_MATERIALIZED"}
+    workspace_summary = result.get("workspace") or {}
+    workspace_path = presentation_dir / "investment_decision_workspace_projection.json"
+    new_workspace = _load(workspace_path) or {}
+    new_source_artifacts = dict(new_workspace.get("source_artifacts") or {})
+    lineage_status = "UNVERIFIED"
+    if lineage is not None:
+        matches = all(
+            lineage["source_artifacts"].get(key) == new_source_artifacts.get(key)
+            for key in ("opportunity_context", "security_decision_context")
+        )
+        if not matches:
+            return {"status": "UNAVAILABLE", "session": session,
+                    "reason": "PRESENTATION_PROJECTION_LINEAGE_DIVERGED_FROM_SEALED_PRODUCER_WORKSPACE"}
+        lineage_status = "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"
+    return {
+        "status": "COLLECTED", "session": session,
+        "contract_version": "post_handoff_presentation_projection/v1",
+        "path": _rel(root, workspace_path),
+        "workspace_artifact_identity": workspace_summary.get("artifact_identity"),
+        "sealed_producer_workspace_artifact_identity": (lineage or {}).get("artifact_identity"),
+        "screener_master_projection_artifact_identity": (result.get("screener_master_projection") or {}).get("artifact_identity"),
+        "signal_velocity_source_identity": new_source_artifacts.get("signal_velocity"),
+        "flow_price_divergence_shadow_source_identity": new_source_artifacts.get("flow_price_divergence_shadow"),
+        "lineage_status": lineage_status,
+        "authority_boundary": "PRESENTATION_ONLY_JOIN_NOT_A_DECISION_INPUT_NO_ANALYTICAL_RECOMPUTATION_NO_POLICY_MUTATION",
+    }
+
+
 def run_post_handoff_observers(
     root: Path, runtime_root: Path, session: str, tiers: Mapping[str, Any], *,
     enable_current_foreign_flow_live: bool = False,
@@ -1562,6 +1662,9 @@ def run_canonical_post_close(
         root, runtime_root, session, tiers, enable_current_foreign_flow_live=enable_current_foreign_flow_live,
     )
     post_handoff_feedback = run_post_handoff_prospective_outcome_feedback(root, session)
+    post_handoff_presentation_projection = run_post_handoff_presentation_projection(
+        root, runtime_root, session, producer_run_dir=producer_result.get("run_dir"),
+    )
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
         "producer_result": producer_result, "decision_packet": decision_packet,
@@ -1571,6 +1674,7 @@ def run_canonical_post_close(
         "current_foreign_flow_enrichment": post_handoff["current_foreign_flow_enrichment"],
         "flow_price_divergence_shadow": post_handoff["flow_price_divergence_shadow"],
         "post_handoff_prospective_decision_feedback": post_handoff_feedback,
+        "post_handoff_presentation_projection": post_handoff_presentation_projection,
         "producer_head": producer_head, "consumer_head": consumer_head,
     }
 

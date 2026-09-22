@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+import canonical_current_product_projections as ccpp
 import canonical_post_close_pipeline as cpc
+import daily_research_session_operations as dros
 import daily_session_level2_package as level2
 from daily_research_session_operations import load_registry
 from vn_time import VN_TZ
@@ -1268,3 +1270,141 @@ def test_run_post_handoff_prospective_outcome_feedback_degrades_on_subprocess_fa
     result = cpc.run_post_handoff_prospective_outcome_feedback(tmp_path, "2026-08-25")
     assert result["status"] == "UNAVAILABLE"
     assert "boom" in result["reason"]
+
+
+# ---- _sealed_workspace_lineage / run_post_handoff_presentation_projection
+# (CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1): additive, presentation-
+# only re-join of Workspace/Screener now that post-handoff Signal Velocity/Flow-Price exist for
+# THIS session. Must never write to, or read a stale copy of, the sealed Producer operation
+# directory. ----
+
+def _sealed_operation(tmp_path, session, *, artifact_identity="investment_decision_workspace_projection/v1:sealed",
+                      opportunity="opp:1", decision="dec:1"):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    operation_rel = f"operations-review/daily-research-session-operations-v1/{session}/op"
+    (tmp_path / operation_rel).mkdir(parents=True)
+    (run_dir / "run_manifest.json").write_text(json.dumps({
+        "daily_session_operation": {"directory": operation_rel, "identity": "daily_research_session_operation:test"},
+    }), encoding="utf-8")
+    (tmp_path / operation_rel / "investment_decision_workspace_projection.json").write_text(json.dumps({
+        "artifact_identity": artifact_identity,
+        "source_artifacts": {"opportunity_context": opportunity, "security_decision_context": decision},
+    }), encoding="utf-8")
+    return run_dir
+
+
+def test_sealed_workspace_lineage_resolves_via_run_manifest(tmp_path):
+    session = "2026-08-25"
+    run_dir = _sealed_operation(tmp_path, session)
+    lineage = cpc._sealed_workspace_lineage(tmp_path, run_dir)
+    assert lineage["artifact_identity"] == "investment_decision_workspace_projection/v1:sealed"
+    assert lineage["source_artifacts"]["opportunity_context"] == "opp:1"
+
+
+def test_sealed_workspace_lineage_none_when_run_manifest_missing(tmp_path):
+    assert cpc._sealed_workspace_lineage(tmp_path, tmp_path / "nope") is None
+
+
+def test_run_post_handoff_presentation_projection_writes_to_new_directory_never_sealed(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    run_dir = _sealed_operation(tmp_path, session)
+    sealed_path = tmp_path / f"operations-review/daily-research-session-operations-v1/{session}/op/investment_decision_workspace_projection.json"
+    sealed_before = sealed_path.read_bytes()
+
+    monkeypatch.setattr(dros, "load_registry", lambda root: {"fake": "registry"})
+    monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({"fake": "inputs"}, {}))
+
+    written = {}
+
+    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override):
+        written["operation_dir"] = operation_dir
+        operation_dir.mkdir(parents=True, exist_ok=True)
+        (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
+            "artifact_identity": "investment_decision_workspace_projection/v1:new",
+            "source_artifacts": {
+                "opportunity_context": "opp:1", "security_decision_context": "dec:1",
+                "signal_velocity": "multi_session_signal_velocity:x",
+                "flow_price_divergence_shadow": "flow_price_divergence_shadow:y",
+            },
+        }), encoding="utf-8")
+        return {
+            "status": "MATERIALIZED", "session": session,
+            "workspace": {"artifact_identity": "investment_decision_workspace_projection/v1:new"},
+            "screener_master_projection": {"artifact_identity": "screener_master_projection/v1:new"},
+        }
+
+    monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", fake_materialize)
+
+    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session, producer_run_dir=run_dir)
+
+    assert result["status"] == "COLLECTED"
+    assert result["lineage_status"] == "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"
+    assert result["workspace_artifact_identity"] == "investment_decision_workspace_projection/v1:new"
+    assert result["sealed_producer_workspace_artifact_identity"] == "investment_decision_workspace_projection/v1:sealed"
+    assert result["signal_velocity_source_identity"] == "multi_session_signal_velocity:x"
+    assert result["flow_price_divergence_shadow_source_identity"] == "flow_price_divergence_shadow:y"
+    assert written["operation_dir"] == tmp_path / "operations-review" / "post-handoff-presentation-projection-v1" / session
+    assert sealed_path.read_bytes() == sealed_before
+
+
+def test_run_post_handoff_presentation_projection_unavailable_on_lineage_divergence(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    run_dir = _sealed_operation(tmp_path, session, opportunity="opp:1", decision="dec:1")
+
+    monkeypatch.setattr(dros, "load_registry", lambda root: {})
+    monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
+
+    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override):
+        operation_dir.mkdir(parents=True, exist_ok=True)
+        (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
+            "artifact_identity": "investment_decision_workspace_projection/v1:new",
+            "source_artifacts": {"opportunity_context": "opp:DIFFERENT", "security_decision_context": "dec:1"},
+        }), encoding="utf-8")
+        return {"status": "MATERIALIZED", "session": session, "workspace": {}, "screener_master_projection": {}}
+
+    monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", fake_materialize)
+
+    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session, producer_run_dir=run_dir)
+    assert result["status"] == "UNAVAILABLE"
+    assert "LINEAGE_DIVERGED" in result["reason"]
+
+
+def test_run_post_handoff_presentation_projection_degrades_on_skipped_materialization(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    monkeypatch.setattr(dros, "load_registry", lambda root: {})
+    monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
+    monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections",
+                        lambda **k: {"status": "SKIPPED", "reason_code": "TEST_REASON"})
+    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session)
+    assert result["status"] == "UNAVAILABLE"
+    assert result["reason"] == "TEST_REASON"
+
+
+def test_run_post_handoff_presentation_projection_degrades_on_exception(tmp_path, monkeypatch):
+    def boom(root):
+        raise RuntimeError("no registry")
+
+    monkeypatch.setattr(dros, "load_registry", boom)
+    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", "2026-08-25")
+    assert result["status"] == "UNAVAILABLE"
+    assert "no registry" in result["reason"]
+
+
+def test_run_post_handoff_presentation_projection_without_producer_run_dir_skips_lineage_check(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    monkeypatch.setattr(dros, "load_registry", lambda root: {})
+    monkeypatch.setattr(dros, "resolve_inputs", lambda root, s, registry: ({}, {}))
+
+    def fake_materialize(*, root, session, operation_dir, registry_inputs, requested_at, runtime_root_override):
+        operation_dir.mkdir(parents=True, exist_ok=True)
+        (operation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps({
+            "artifact_identity": "investment_decision_workspace_projection/v1:new", "source_artifacts": {},
+        }), encoding="utf-8")
+        return {"status": "MATERIALIZED", "session": session, "workspace": {}, "screener_master_projection": {}}
+
+    monkeypatch.setattr(ccpp, "materialize_and_write_current_product_projections", fake_materialize)
+
+    result = cpc.run_post_handoff_presentation_projection(tmp_path, tmp_path / "runtime", session, producer_run_dir=None)
+    assert result["status"] == "COLLECTED"
+    assert result["lineage_status"] == "UNVERIFIED"

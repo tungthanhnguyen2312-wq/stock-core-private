@@ -140,12 +140,14 @@ def _patch_downstream(monkeypatch, tmp_path: Path) -> None:
         "flow_price_divergence_shadow": {"status": "UNAVAILABLE"},
     })
     monkeypatch.setattr(cdo, "run_post_handoff_prospective_outcome_feedback", lambda *a, **k: {"status": "UNAVAILABLE"})
+    monkeypatch.setattr(cdo, "run_post_handoff_presentation_projection", lambda *a, **k: {"status": "UNAVAILABLE"})
 
 
 def _run(tmp_path: Path, monkeypatch, *, now=POST_CLOSE, session=SESSION, complete_publication=False,
          acquire_fn=None, producer_fn=None, runtime_fn=None, trusted_fn=None, publication_runner=None,
          working=None, exact=None, runtime_session=None, enrichment_fn=None,
-         tiered_bundle_fn=None, post_handoff_observers_fn=None, post_handoff_feedback_fn=None, **kwargs):
+         tiered_bundle_fn=None, post_handoff_observers_fn=None, post_handoff_feedback_fn=None,
+         presentation_projection_fn=None, **kwargs):
     _patch_downstream(monkeypatch, tmp_path)
     if enrichment_fn is not None:
         monkeypatch.setattr(cdo, "build_enrichment_components", enrichment_fn)
@@ -155,6 +157,8 @@ def _run(tmp_path: Path, monkeypatch, *, now=POST_CLOSE, session=SESSION, comple
         monkeypatch.setattr(cdo, "run_post_handoff_observers", post_handoff_observers_fn)
     if post_handoff_feedback_fn is not None:
         monkeypatch.setattr(cdo, "run_post_handoff_prospective_outcome_feedback", post_handoff_feedback_fn)
+    if presentation_projection_fn is not None:
+        monkeypatch.setattr(cdo, "run_post_handoff_presentation_projection", presentation_projection_fn)
     runtime = tmp_path / "runtime"
     _write_runtime(runtime, runtime_session or session)
 
@@ -972,6 +976,66 @@ def test_post_handoff_observer_variance_never_triggers_immutable_conflict_on_rep
     )
     assert first["post_handoff_observers"]["multi_session_signal_velocity"]["run"] == 1
     assert second["post_handoff_observers"]["multi_session_signal_velocity"]["run"] == 2
+    assert second["operation_identity"] == first["operation_identity"]
+    assert second["is_idempotent_replay"] is True
+
+
+def test_presentation_projection_runs_after_post_handoff_observers_and_lands_in_record(tmp_path, monkeypatch):
+    """CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1: the additive
+    presentation join must run after the post-handoff observers (it consumes their Signal
+    Velocity/Flow-Price output) and its result must be attested in the final record without
+    ever gating publication or the Daily Producer result."""
+    order: list[str] = []
+
+    def observers(*a, **k):
+        order.append("observers")
+        return {
+            "multi_session_signal_velocity": {"status": "COLLECTED"},
+            "current_foreign_flow_enrichment": {"status": "UNAVAILABLE"},
+            "flow_price_divergence_shadow": {"status": "COLLECTED"},
+        }
+
+    def presentation(root, runtime_root, session, *, producer_run_dir=None, output_root=None):
+        order.append("presentation")
+        assert session == SESSION
+        assert producer_run_dir == tmp_path  # this test's _producer() fixture sets run_dir=tmp_path
+        return {
+            "status": "COLLECTED", "session": session,
+            "contract_version": "post_handoff_presentation_projection/v1",
+            "workspace_artifact_identity": "investment_decision_workspace_projection/v1:overlay",
+            "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+        }
+
+    record = _run(
+        tmp_path, monkeypatch, complete_publication=True,
+        post_handoff_observers_fn=observers, presentation_projection_fn=presentation,
+    )
+    assert order == ["observers", "presentation"]
+    assert record["post_handoff_presentation_projection"]["status"] == "COLLECTED"
+    assert record["post_handoff_presentation_projection"]["lineage_status"] == "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"
+    assert record["daily_operation_state"] == cdo.STATE_PUBLISHED
+
+
+def test_presentation_projection_unavailable_never_blocks_daily_or_publication(tmp_path, monkeypatch):
+    record = _run(
+        tmp_path, monkeypatch, complete_publication=True,
+        presentation_projection_fn=lambda *a, **k: {"status": "UNAVAILABLE", "reason": "test"},
+    )
+    assert record["post_handoff_presentation_projection"]["status"] == "UNAVAILABLE"
+    assert record["daily_operation_state"] == cdo.STATE_PUBLISHED
+
+
+def test_presentation_projection_variance_never_triggers_immutable_conflict_on_replay(tmp_path, monkeypatch):
+    call = {"n": 0}
+
+    def presentation(*a, **k):
+        call["n"] += 1
+        return {"status": "COLLECTED", "workspace_artifact_identity": f"run-{call['n']}"}
+
+    first = _run(tmp_path, monkeypatch, complete_publication=True, presentation_projection_fn=presentation)
+    second = _run(tmp_path, monkeypatch, complete_publication=True, presentation_projection_fn=presentation)
+    assert first["post_handoff_presentation_projection"]["workspace_artifact_identity"] == "run-1"
+    assert second["post_handoff_presentation_projection"]["workspace_artifact_identity"] == "run-2"
     assert second["operation_identity"] == first["operation_identity"]
     assert second["is_idempotent_replay"] is True
 

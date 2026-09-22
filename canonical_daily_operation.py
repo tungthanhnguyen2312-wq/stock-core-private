@@ -59,6 +59,7 @@ from canonical_post_close_pipeline import (
     register_session_inputs,
     retain_prospective_decision_snapshot,
     run_post_handoff_observers,
+    run_post_handoff_presentation_projection,
     run_post_handoff_prospective_outcome_feedback,
     run_prospective_collection,
     run_tactical_reversal_shadow_collection,
@@ -369,6 +370,8 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
     print(f"SIGNAL_VELOCITY={velocity.get('status')}")
     print(f"FLOW_PRICE_DIVERGENCE={flow_price.get('status')}")
     print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK={post_handoff_feedback.get('status')}")
+    presentation = record.get("post_handoff_presentation_projection") if isinstance(record.get("post_handoff_presentation_projection"), Mapping) else {}
+    print(f"POST_HANDOFF_PRESENTATION_PROJECTION={presentation.get('status')}")
     if record.get("stage"):
         print(f"STAGE={record.get('stage')}")
 
@@ -881,6 +884,15 @@ def run_canonical_daily_operation(
     post_handoff_prospective_decision_feedback = run_post_handoff_prospective_outcome_feedback(
         root, resolved_session, output_root=operation_output_root,
     )
+    # CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1: now that Signal
+    # Velocity / Flow-Price exist for this exact session, additively re-join the current-product
+    # projections (Workspace/Screener) with those now-available axes into a NEW artifact set --
+    # never the sealed Producer operation directory. Presentation-only: no IID recalculation, no
+    # policy mutation. Non-blocking.
+    post_handoff_presentation_projection = run_post_handoff_presentation_projection(
+        root, runtime_root, resolved_session,
+        producer_run_dir=producer_result.get("run_dir"), output_root=operation_output_root,
+    )
 
     publication: dict[str, Any] | None = None
     state = STATE_LOCAL_COMPLETE
@@ -1027,10 +1039,12 @@ def run_canonical_daily_operation(
         # the Daily production result itself changed.
         "post_handoff_observers": post_handoff_observers,
         "post_handoff_prospective_decision_feedback": post_handoff_prospective_decision_feedback,
+        "post_handoff_presentation_projection": post_handoff_presentation_projection,
     }
     persistable = {k: v for k, v in record.items() if k not in {
         "producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment",
         "tactical_reversal_shadow_collection", "post_handoff_observers", "post_handoff_prospective_decision_feedback",
+        "post_handoff_presentation_projection",
     }}
     persistable["lineage"] = {
         "session_gate_phase_a": phase_a.get("gate_identity"),
