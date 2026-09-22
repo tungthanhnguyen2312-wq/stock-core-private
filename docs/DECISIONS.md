@@ -1,5 +1,138 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-22 - Canonical Daily Owner Publication Resume and Presentation Join V1
+
+`CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` = bounded subset COMPLETE
+(local, unpushed at write time); owner-directed via chat instruction 2026-09-22, the residual
+follow-on to the same-day `CANONICAL_DAILY_POST_HANDOFF_OBSERVER_CORRECTIVE_V1` (that milestone
+is renamed in this entry from its original working title `CANONICAL_DAILY_POST_HANDOFF_AND_
+OWNER_WORKFLOW_RECONCILIATION_V1` -- it was always scoped as a bounded observer-wiring
+corrective, not full owner-workflow reconciliation, and this rename makes that explicit so a
+future agent cannot infer reconciliation already happened there). The owner's full directive
+again spanned a much larger scope (one-owner-workflow code unification, a durable crash/resume
+journal, a post-handoff presentation join, dual-decision-surface documentation, and governance
+sync); per its own explicit instruction to finish every safely-completable part and checkpoint
+cleanly rather than force the entire scope, three of five pieces were implemented and tested,
+one was completed as documentation rather than a schema/code change for a specific verified
+risk reason, and one (full owner-entrypoint code unification) was investigated in depth and
+deliberately deferred. Each is recorded below.
+
+1. **Post-handoff presentation join, reaching the real served Dashboard.** Root cause verified
+   from source: the Investment Decision Workspace is materialized inside Daily Producer
+   (`daily_producer_pipeline.py` -> `canonical_current_product_projections.
+   materialize_and_write_current_product_projections`), sealed before Signal Velocity/Flow-Price
+   can exist for that same session -- those are post-handoff observers by the 942ebfb
+   corrective's own design. `SIGNAL_VELOCITY_AND_FLOW_PRICE_DECISION_PRESENTATION_V1`
+   (2026-09-19) already wired the *consumption* side of this correctly
+   (`investment_decision_workspace_projection.build_artifacts` already accepts
+   `signal_velocity_artifact`/`flow_price_artifact`); the gap was purely that nothing re-ran the
+   join once those observers existed. Fix: `canonical_post_close_pipeline.
+   run_post_handoff_presentation_projection(root, runtime_root, session, *, producer_run_dir,
+   output_root)` reuses `materialize_and_write_current_product_projections` verbatim -- the
+   exact pure, deterministic function Daily Producer itself calls -- against a brand-new
+   `operations-review/post-handoff-presentation-projection-v1/<session>/` directory, never the
+   sealed Producer operation directory, so sealed evidence can never be overwritten.
+   `registry_inputs` are re-resolved read-only via `daily_research_session_operations.
+   resolve_inputs` against the same frozen session registry Producer used; no new analytical
+   computation, no re-derived opportunity/decision context. When `producer_run_dir` is
+   supplied, `_sealed_workspace_lineage` (mirrors `canonical_dashboard_runtime_release.
+   _stage_workspace`'s own operation-directory resolution) loads the sealed Workspace's
+   `source_artifacts.opportunity_context`/`security_decision_context` identities and requires
+   them to match the new join's -- any divergence degrades to `UNAVAILABLE` rather than
+   presenting an inconsistent overlay. Wired into both `canonical_daily_operation.py`'s
+   production kernel and the diagnostic `run_canonical_post_close`.
+
+   The join alone was not enough: `materialize_canonical_runtime_release` (which stages
+   `runtime_root/data/investment_decision_workspace.json`/`screener_master_projection.json`)
+   already ran earlier in the same Daily operation, before post-handoff observers exist, so the
+   runtime-served files were still the sealed (always-Velocity-unavailable) copies.
+   `canonical_dashboard_runtime_release.restage_runtime_with_presentation_projection()` closes
+   this: an additive overlay using the same `atomic_copy_file` primitive the base release
+   already uses, gated on the presentation projection having both succeeded AND
+   lineage-verified, and independently re-validating the replacement bytes' own
+   self-consistent content identity and session/contract before writing. Only the
+   runtime-served copies are ever touched -- never the sealed Producer operation/run
+   directories. Non-blocking throughout; excluded from `canonical_daily_operation.py`'s
+   idempotent-replay comparison like the other post-handoff observers.
+
+2. **Durable owner-operation journal + conservative auto-resume.** New, standalone
+   `owner_daily_journal.py`: session-addressed, monotonic (`advance()` never regresses or
+   duplicates history), idempotent, run-id-scoped (refuses to advance a different run's
+   journal, so a stale journal from an earlier invocation can never be silently mistaken for
+   the current one), never raises on a missing/corrupted journal. Wired into `tools/
+   run_owner_daily.py`'s `run_workflow()` -- deliberately NOT into `stocklookup.py`'s own
+   `daily` command; see item 5. Auto-resume is conservative by design: `_auto_resumable_session`
+   only offers a session as resumable when the journal shows it in flight AND
+   `verify_daily_completion` -- the exact same gate an explicit `--replay-completed-session`
+   already uses -- independently confirms that session's canonical Daily operation genuinely
+   reached `LOCAL_COMPLETE`/`READY`/`READY`. A session whose own analytical kernel never
+   finished is never treated as resumable this way (per the owner directive's explicit warning
+   against a second kernel run emitting different Producer Workspace bytes for the same
+   logical Daily) -- the caller falls through to a normal fresh Daily run, exactly as before.
+   Every journal call is wrapped to degrade silently on failure, so a journal write error
+   (disk full, permissions) can never block the real owner workflow, only lose this one run's
+   resume convenience.
+
+3. **Dual-decision-surface semantics: documented, not schema-changed.** Verified from source:
+   `research_action_posture` (`integrated_investment_decision_product.
+   decide_research_action_posture`, a "pure deterministic research policy mapping explicit
+   evidence into research_action_posture") and the Workspace card's `research_stance`/
+   `entry_action` (`security_decision_context.infer_research_stance`, a separate deterministic
+   stance inference over `opportunity_context`) are genuinely two distinct policy functions
+   over overlapping evidence axes, computed independently -- not one recomputing the other.
+   The Workspace card never exposes `research_action_posture` at all (confirmed: zero matches
+   in `investment_decision_workspace_projection.py`), so the ambiguity risk is specifically for
+   a consumer who sees both the AI handoff/Action Center's Integrated Decision and the
+   Dashboard's Workspace side by side. Resolved by documentation
+   (`docs/SYSTEM_MAP.md` stage 9), deliberately NOT by adding a clarifying field to either
+   record: both live on identity-hashed, heavily test-covered hot-path artifacts
+   (`integrated_investment_decision_product/v1`'s per-ticker records; the Workspace card) whose
+   `artifact_identity` is a content hash of every field present -- adding one field changes
+   that hash for every ticker, every future session, and risks cascading through dozens of
+   existing golden-fixture/identity-matching tests this session did not have budget to
+   exhaustively re-verify. A future bounded milestone should add the metadata at the contract
+   level if the owner wants it machine-readable rather than only documented.
+
+4. **Full owner-entrypoint code unification: investigated, deliberately deferred.**
+   `stocklookup.py`'s `daily` command (`stocklookup.ps1 daily`, the doc-designated canonical
+   entrypoint per `AGENTS.md`) and `tools/run_owner_daily.py`'s `run_workflow()` (reached by the
+   desktop one-click launcher via `tools/run_owner_daily.ps1`) are confirmed, by direct source
+   reading, to be genuinely different implementations with different capabilities:
+   `run_owner_daily.py` alone does repository preflight/fast-forward, the governed registry
+   git commit+push (`commit_daily_state`), and Action Center materialization;
+   `stocklookup.py`'s own `main()` alone builds `next_session_decision_brief.json` and
+   `daily_integrated_decision_brief.json` post-hoc per run via `_decision_brief`/
+   `_daily_integrated_decision_brief`, which `run_owner_daily.py` does not do (it consumes only
+   the pre-sealed `daily_integrated_decision_brief_artifact.json` Daily Producer itself now
+   binds via `canonical_daily_operation.py`'s preseal builder). A safe unification (extracting
+   `stocklookup.py`'s daily-command body into a shared module both callers invoke, preserving
+   both sets of capabilities) is designable -- the shape was sketched during this session's
+   investigation -- but implementing and fully re-verifying it was judged too large and too
+   high-blast-radius (it is literally the command the owner runs every day) to do carefully
+   within this session's remaining scope alongside everything else above.
+   `stocklookup.py`'s `daily` command was left completely unmodified; both entrypoints now
+   independently benefit from the presentation-join work in item 1 (which lives inside the
+   shared `canonical_daily_operation.py` kernel both ultimately reach), but only the desktop
+   launcher's path gets the new journal/auto-resume from item 2.
+
+5. **Not attempted:** formal `docs/ROADMAP_STATE.json` milestone registration (a 402KB
+   hand-maintained governance JSON with a read-only reporting CLI and no discovered safe
+   programmatic append path -- hand-editing it under time pressure risked corrupting a file
+   many other sessions depend on) and dedicated `run_canonical_post_close` parity tests beyond
+   the shared-helper design itself (both post-handoff-observer and presentation-join logic are
+   now literally the same functions called from both paths, which is the substantive parity
+   guarantee the owner directive asked for; a thin "same functions" assertion test would add
+   little beyond what the shared implementation already guarantees).
+
+New tests: 7 for the presentation-join function, 6 for the runtime restage overlay, 3 for
+ordering/wiring inside `canonical_daily_operation.py`, 17 for the standalone journal module, 6
+for journal/auto-resume integration in `run_owner_daily.py`'s workflow (including two genuine
+crash-simulation tests: an uncaught exception mid-workflow, and `KeyboardInterrupt`, each
+followed by a second `run_workflow()` invocation proving resume without re-acquisition). All
+pre-existing suites for every touched module pass unchanged; only already-known,
+environment-only failures (missing real retained runtime evidence in a fresh git worktree,
+independently confirmed present on the unmodified checkpoint too) remain.
+
 ## 2026-09-22 - Canonical Daily Post-Handoff Observer Wiring Corrective V1
 
 `CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1` = bounded corrective

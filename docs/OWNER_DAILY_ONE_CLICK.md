@@ -16,6 +16,18 @@ compact private AI handoff.
 Send the displayed failure summary and log path to ChatGPT. Do not run two Daily writers at once,
 and do not manually push generated files while the launcher is running.
 
+## If the console was closed or the machine slept mid-run
+
+A hard terminal close cannot run any cleanup code, so it can leave the run without a final
+`result.json` -- `FINAL STATUS: INTERRUPTED` / `REASON: NO_RESULT_FILE_WRITTEN` on the next
+launch (see the script's own handling of this above). Just double-click the launcher again.
+Since `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` (2026-09-22), the
+workflow keeps its own durable journal (`operations-review/owner-daily-journal-v1/journal.json`)
+written at each stage as it happens; if Canonical Daily itself had already fully completed for
+that session before the interruption, the next run resumes publication straight from there --
+it does not reacquire market data or re-run Daily Producer. Nothing to do manually; this is
+automatic and requires no flag.
+
 ## Keeping the Producer checkout Daily-ready
 
 - Primary `main` should normally sit exactly at `origin/main`. Development happens in isolated

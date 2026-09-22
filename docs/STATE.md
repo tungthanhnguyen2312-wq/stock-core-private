@@ -1,5 +1,85 @@
 # Stock Lookup — Operational State
 
+**Canonical Daily owner publication resume and presentation join V1 (2026-09-22):**
+`CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` = bounded subset COMPLETE
+(local, unpushed at write time), isolated worktree
+`feature/canonical-daily-owner-publication-resume-presentation-v1` rooted at `origin/main`
+`942ebfb7847b1c7210f6e5919646b20407c438bf`. Owner-directed via chat instruction 2026-09-22,
+the residual-architecture follow-on to the same-day `CANONICAL_DAILY_POST_HANDOFF_OBSERVER_
+CORRECTIVE_V1` (renamed from its earlier working title `CANONICAL_DAILY_POST_HANDOFF_AND_
+OWNER_WORKFLOW_RECONCILIATION_V1` below, to make clear that milestone was the bounded observer
+fix only -- owner-workflow reconciliation itself was explicitly NOT completed there). This is
+again a bounded subset of a much larger owner directive, not the full 21-section scope; see
+"Explicitly deferred" below.
+
+1. **Post-handoff presentation join reaches the actual served Dashboard.** The 942ebfb
+   corrective made Signal Velocity/Flow-Price/foreign-flow reachable from normal Daily, but
+   nothing consumed their output: the Investment Decision Workspace is materialized inside
+   Daily Producer, sealed, before those observers can exist for the same session by
+   construction. New `canonical_post_close_pipeline.run_post_handoff_presentation_
+   projection()` -- reuses `canonical_current_product_projections.
+   materialize_and_write_current_product_projections` verbatim (the exact pure join Daily
+   Producer itself calls) with a brand-new `operations-review/post-handoff-presentation-
+   projection-v1/<session>/` directory, never the sealed Producer operation directory, so
+   sealed Producer evidence can never be overwritten; lineage-verifies the new join's
+   `opportunity_context`/`security_decision_context` source identities against the sealed
+   Workspace's own before trusting it. New `canonical_dashboard_runtime_release.
+   restage_runtime_with_presentation_projection()` then overlays only the already-promoted
+   runtime-served copy (`runtime_root/data/investment_decision_workspace.json` and
+   `.../screener_master_projection.json`) with the enriched bytes, using the same
+   `atomic_copy_file` primitive the base release already uses, only after independently
+   re-validating the replacement's own self-consistent content identity and session/contract.
+   Wired into both `canonical_daily_operation.py`'s production kernel and the diagnostic
+   `run_canonical_post_close` via the same shared helpers. No IID recalculation, no policy
+   mutation, no historical artifact rewritten.
+
+2. **Durable owner-operation journal + auto-resume.** New `owner_daily_journal.py`: a small,
+   session-addressed, monotonic, idempotent durable journal (`STARTED` ->
+   `SESSION_RESOLVED` -> `LOCAL_COMPLETE` -> `PRODUCER_STATE_RETAINED` -> `PRESENTATION_BOUND`
+   -> `DASHBOARD_PUBLISHED` -> `AI_HANDOFF_PUBLISHED` -> `ACTION_CENTER_READY` -> `COMPLETE`,
+   plus `FAILED`/`INTERRUPTED`/`BLOCKED` failure metadata), written synchronously at each stage
+   so a hard terminal close leaves enough durable state for the next ordinary invocation to
+   resume. Wired into `tools/run_owner_daily.py`'s `run_workflow()` (the richer, already
+   git-integrated workflow the desktop one-click launcher reaches) at each existing stage
+   boundary. New `_auto_resumable_session()`: a normal invocation with no explicit
+   `--replay-completed-session` now auto-resumes publication when the journal shows an
+   interrupted/partial run whose session already reached full canonical-Daily completion (the
+   same `LOCAL_COMPLETE`/`READY`/`READY` gate an explicit replay already checks) -- Daily
+   Producer is never re-entered for a session that already finished. The `COMPLETE` stage
+   records the owner-complete attestation (session, canonical Daily operation/Producer-run
+   identities, post-handoff presentation-projection status, Dashboard/AI-handoff/Action-Center
+   outcomes). Every journal call degrades silently on failure; it can never block the real
+   owner workflow.
+
+3. **Dual-decision-surface semantics clarified (documentation only).** Verified from source
+   (not assumed): `research_action_posture` (Integrated Decision,
+   `integrated_investment_decision_product.decide_research_action_posture`) and
+   `research_stance`/`entry_action` (Workspace card,
+   `security_decision_context.infer_research_stance`) are two genuinely distinct, independently
+   computed deterministic policy functions over overlapping evidence -- not one recomputing the
+   other, and not two competing BUY/SELL verdicts for the same question. Documented in
+   `docs/SYSTEM_MAP.md` stage 9. **Deliberately not implemented as a code/schema change**: both
+   fields live on identity-hashed, heavily test-covered hot-path records
+   (`integrated_investment_decision_product/v1`, the Workspace card); adding a field to either
+   changes every ticker's content-identity hash for every future session and risks cascading
+   through dozens of existing golden-fixture/identity-matching tests this session did not have
+   budget to exhaustively re-verify. A future bounded milestone should add the clarifying
+   metadata at the contract level if the owner wants it machine-readable, not just documented.
+
+**Explicitly deferred, not attempted this session** (flagged for a separate owner-authorized
+follow-on): full code-level unification of `stocklookup.py`'s own `daily` command (the
+doc-designated canonical entrypoint) with `tools/run_owner_daily.py`'s `run_workflow()` into one
+shared implementation -- real behavioral differences were found between them this session
+(`stocklookup.py` builds its own `next_session_decision_brief.json`/
+`daily_integrated_decision_brief.json` post-hoc per-run; `run_owner_daily.py` does not and
+instead consumes the pre-sealed `daily_integrated_decision_brief_artifact.json` Daily Producer
+itself now binds) and a careless merge risks silently changing what the owner's actual daily
+production command does; `stocklookup.py`'s `daily` command was left completely untouched.
+Formal `docs/ROADMAP_STATE.json` milestone registration (402KB hand-maintained governance JSON,
+no safe programmatic append tool found) and `run_canonical_post_close` dedicated parity tests
+beyond the shared-helper design itself (already the substantive parity guarantee) were also not
+attempted. See `docs/DECISIONS.md`'s matching entry for the full audit-to-fix rationale.
+
 **Canonical Daily post-handoff observer wiring corrective V1 (2026-09-22):** Owner-directed
 bounded corrective, isolated worktree
 `feature/canonical-daily-owner-workflow-reconciliation-v1` rooted at `origin/main` `6679179
