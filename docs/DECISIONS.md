@@ -1,5 +1,53 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-22 - Canonical Daily Owner Publication Resume and Presentation Join V1 -- corrective pass (continuation)
+
+A source review of the entry immediately below (which reported "bounded subset COMPLETE") found
+three real production correctness defects that would have shipped: (1) journal auto-resume
+ignored the intended session (`_auto_resumable_session` called `journal.resumable_state(...,
+intended_session=None)`, defeating its own "different session -> START_FRESH" guard, so a
+COMPLETE journal from an older session could be silently replayed as a newer ordinary
+invocation); (2) `tools/run_owner_daily.py::publish_dashboard_release()`'s second, independent
+call to `materialize_canonical_runtime_release()` unconditionally recopied the sealed
+(pre-handoff) Workspace/Screener bytes over the presentation overlay `canonical_daily_
+operation.py` had just applied in-process, erasing same-session Signal Velocity/Flow-Price from
+the Dashboard on every publication; (3) the journal recorded `PRESENTATION_BOUND` unconditionally
+(bookkeeping, not attestation) and the final `COMPLETE` record tried to read presentation status
+from a persisted field `canonical_daily_operation.py` deliberately never populates, so that
+attestation key was always empty. Full defect-by-defect fix detail, exact new functions/files,
+and the regression tests proving each closed live in `docs/STATE.md`'s matching corrective entry
+(kept there rather than duplicated here, since that document already carries the file:line level
+narrative this ADR would otherwise repeat). Decision taken here specifically:
+
+- **Fix all three in place rather than reopen a new milestone name.** The owner directive was
+  explicit that this remains `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1`
+  and must not be renamed into another bounded subset; the corrective is recorded as a
+  continuation of the same milestone, not a fourth differently-named one.
+- **New dedicated `post_handoff_presentation_attestation.py` artifact, not a schema change to the
+  immutable `daily_operation_record.json`.** That record's own `persistable` exclusion of
+  volatile post-handoff fields is itself correct (their status can legitimately vary run-to-run
+  without the sealed Daily result changing) -- the bug was reading them from the wrong place, not
+  that they were excluded. A dedicated, additive, session-addressed artifact preserves that
+  invariant while giving the journal/AI-handoff/runtime-materializer a governed place to read
+  real attestation from.
+- **`materialize_release_ready_runtime()` as the single boundary, reused by both normal
+  publication and completed-session replay**, per the owner directive's explicit design
+  preference, rather than teaching the publisher to special-case which caller it is.
+- **Stage-aware *skip* logic (directive section 7) deliberately NOT built.** The existing design
+  already makes every resumed step idempotent rather than literally skipped (no reacquisition on
+  auto-resume, `commit_daily_state` NO_CHANGE, `ai_handoff_publication.publish`'s
+  `NO_OP_ALREADY_PUBLISHED`, `publish_dashboard_release`'s no-op push) -- real safety, just not
+  the specific "if DASHBOARD_PUBLISHED: do not require a second Dashboard publication" branching
+  form the directive describes. Building genuine per-stage identity-verified skip logic well
+  enough not to introduce a WORSE bug (skipping a step that should have run) was judged too large
+  to rush inside this pass's remaining budget; flagged as the one concrete open item against
+  directive section 14's completion bar.
+- **`stocklookup.py daily`'s diagnostic/override flags were left on their original separate
+  path.** Only the zero-flag production invocation (what `stocklookup.ps1 daily` and the
+  desktop launcher actually run daily) was unified onto `run_workflow()`; `run_workflow()` has no
+  `--session`/`--output-root`/`--replay-operation`/`--local-only` equivalent, and building that
+  out was judged separate, larger scope than closing this pass's three correctness defects.
+
 ## 2026-09-22 - Canonical Daily Owner Publication Resume and Presentation Join V1
 
 `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` = bounded subset COMPLETE

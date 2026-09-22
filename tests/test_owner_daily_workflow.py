@@ -9,9 +9,21 @@ import pytest
 
 from tools import run_owner_daily as workflow
 import owner_daily_journal as journal
+import post_handoff_presentation_attestation as presentation_attestation
 
 
 SESSION = "2026-09-16"
+
+
+def _write_presentation_attestation(root: Path, session: str = SESSION, *, status: str = "UNAVAILABLE") -> None:
+    """Minimal, valid attestation for tests that only need PRESENTATION_BOUND to be earnable
+    (BOUND or a legitimate UNAVAILABLE both count -- see presentation_bound_state)."""
+    presentation_attestation.write_attestation(
+        root, session,
+        presentation_projection={"status": status, "session": session, "reason": "TEST_FIXTURE"} if status == "UNAVAILABLE"
+        else {"status": "COLLECTED", "session": session, "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+              "workspace_artifact_identity": "workspace:test"},
+    )
 
 
 def _write_completion(root: Path, *, state="LOCAL_COMPLETE", producer="COMPLETED", runtime="READY", trusted="READY") -> Path:
@@ -286,7 +298,7 @@ def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypa
         stages.append("trusted_subset")
         return {"session": SESSION, "trusted_subset_ready": True}
 
-    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", _runtime)
+    monkeypatch.setattr(workflow, "materialize_release_ready_runtime", _runtime)
     monkeypatch.setattr(workflow, "materialize_canonical_trusted_subset", _trusted)
     monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
@@ -317,7 +329,7 @@ def test_publish_dashboard_release_can_skip_complete_publication(monkeypatch, tm
         captured["argv"] = argv
         return _Result()
 
-    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", lambda *a, **k: {})
+    monkeypatch.setattr(workflow, "materialize_release_ready_runtime", lambda *a, **k: {})
     monkeypatch.setattr(workflow, "materialize_canonical_trusted_subset", lambda *a, **k: {})
     monkeypatch.setattr(workflow.subprocess, "run", _fake_run)
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, session: {"status": "READY", "expected_session": session, "observed_session": session})
@@ -326,7 +338,7 @@ def test_publish_dashboard_release_can_skip_complete_publication(monkeypatch, tm
 
 
 def test_publish_dashboard_release_refuses_missing_trusted_evidence_before_orchestrator(monkeypatch, tmp_path):
-    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", lambda *a, **k: {})
+    monkeypatch.setattr(workflow, "materialize_release_ready_runtime", lambda *a, **k: {})
     monkeypatch.setattr(
         workflow, "materialize_canonical_trusted_subset",
         lambda *a, **k: (_ for _ in ()).throw(workflow.CanonicalTrustedSubsetError("STATEMENT_PAYLOAD_ROOT_MISSING")),
@@ -536,7 +548,7 @@ def test_commit_daily_state_no_change_when_registry_already_matches_committed_st
 
 def test_auto_resumable_session_none_without_journal(tmp_path):
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
-    assert workflow._auto_resumable_session(tmp_path, runtime) is None
+    assert workflow._auto_resumable_session(tmp_path, runtime, intended_session=SESSION) is None
 
 
 def test_auto_resumable_session_none_when_journal_session_not_actually_complete(tmp_path):
@@ -545,7 +557,7 @@ def test_auto_resumable_session_none_when_journal_session_not_actually_complete(
     journal.advance(tmp_path, entry["run_id"], journal.LOCAL_COMPLETE, resolved_session=SESSION)
     # No canonical-daily-operation-v1 record exists for SESSION -- verify_daily_completion must
     # fail, so this must never be offered as auto-resumable.
-    assert workflow._auto_resumable_session(tmp_path, runtime) is None
+    assert workflow._auto_resumable_session(tmp_path, runtime, intended_session=SESSION) is None
 
 
 def test_auto_resumable_session_returns_session_when_verifiably_complete(tmp_path):
@@ -553,7 +565,27 @@ def test_auto_resumable_session_returns_session_when_verifiably_complete(tmp_pat
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     entry = journal.start_run(tmp_path)
     journal.advance(tmp_path, entry["run_id"], journal.PRODUCER_STATE_RETAINED, resolved_session=SESSION)
-    assert workflow._auto_resumable_session(tmp_path, runtime) == SESSION
+    assert workflow._auto_resumable_session(tmp_path, runtime, intended_session=SESSION) == SESSION
+
+
+def test_auto_resumable_session_none_when_intended_session_unresolved(tmp_path):
+    """Section 1: resolution failure must disable auto-resume, never fall back to accepting any
+    resolved session (the pre-fix behavior that let a COMPLETE journal be replayed forever)."""
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    entry = journal.start_run(tmp_path)
+    journal.advance(tmp_path, entry["run_id"], journal.PRODUCER_STATE_RETAINED, resolved_session=SESSION)
+    assert workflow._auto_resumable_session(tmp_path, runtime, intended_session=None) is None
+
+
+def test_auto_resumable_session_none_when_journal_session_is_older_than_intended(tmp_path):
+    """Section 1's core regression: a COMPLETE (or merely resumable) journal for an OLDER
+    session must never be offered as auto-resumable once a newer session is intended."""
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    entry = journal.start_run(tmp_path)
+    journal.advance(tmp_path, entry["run_id"], journal.PRODUCER_STATE_RETAINED, resolved_session=SESSION)
+    assert workflow._auto_resumable_session(tmp_path, runtime, intended_session="2026-09-23") is None
 
 
 def test_run_workflow_auto_resumes_without_explicit_replay_flag(monkeypatch, tmp_path):
@@ -564,6 +596,7 @@ def test_run_workflow_auto_resumes_without_explicit_replay_flag(monkeypatch, tmp
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     entry = journal.start_run(tmp_path)
     journal.advance(tmp_path, entry["run_id"], journal.LOCAL_COMPLETE, resolved_session=SESSION)
+    monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire an already-completed session"))
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
@@ -581,8 +614,45 @@ def test_run_workflow_auto_resumes_without_explicit_replay_flag(monkeypatch, tmp
     assert final_journal["resolved_session"] == SESSION
 
 
+def test_run_workflow_never_auto_resumes_an_older_session_when_a_newer_one_is_intended(monkeypatch, tmp_path):
+    """Section 1's exact regression scenario: COMPLETE journal for session N, but the ordinary
+    invocation's own intended session is N+1 -- must START FRESH (reacquire), never replay N."""
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    entry = journal.start_run(tmp_path, intended_session=SESSION)
+    journal.advance(tmp_path, entry["run_id"], journal.LOCAL_COMPLETE, resolved_session=SESSION)
+    journal.advance(tmp_path, entry["run_id"], journal.COMPLETE)
+    monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: "2026-09-23")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    daily_calls: list[str] = []
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: daily_calls.append("acquired"))
+
+    def _latest_completion(_root, _runtime, session=None):
+        return {"session": "2026-09-23", "record": {"daily_producer_run_identity": "run:new",
+                "daily_producer_operation_identity": "op:new", "operation_identity": "canonical:new"},
+                "source": tmp_path / "operations-review" / "daily-research-session-operations-v1" / "2026-09-23" / "op"}
+
+    monkeypatch.setattr(workflow, "verify_daily_completion", _latest_completion)
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", lambda _root, _rt, session, **_k: {
+        "status": "READY", "expected_session": session, "observed_session": session, "build_id": "b"})
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda _root, session: {"status": "READY", "session": session, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff")
+
+    assert daily_calls == ["acquired"]
+    assert result["status"] == "PASS"
+    assert str(result["session"]) == "2026-09-23"
+    final_journal = journal.read_journal(tmp_path)
+    assert final_journal["resolved_session"] == "2026-09-23"
+    assert final_journal["run_id"] != entry["run_id"]
+
+
 def test_run_workflow_writes_journal_stages_through_to_complete(monkeypatch, tmp_path):
     _write_completion(tmp_path)
+    _write_presentation_attestation(tmp_path)
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
@@ -602,6 +672,35 @@ def test_run_workflow_writes_journal_stages_through_to_complete(monkeypatch, tmp
                       journal.ACTION_CENTER_READY, journal.COMPLETE]
     assert final_journal["attestation"]["session"] == SESSION
     assert final_journal["attestation"]["ai_handoff"]["remote_sha"] == "ai"
+    assert final_journal["attestation"]["post_handoff_presentation_projection"]["status"] == "UNAVAILABLE"
+
+
+# Section 10 item F: PRESENTATION_BOUND cannot be recorded from expectation alone -- no
+# attestation artifact at all (older session, or the kernel never wrote one) must leave the
+# journal at PRODUCER_STATE_RETAINED, never advance it based on "the kernel was expected to
+# have attempted it".
+def test_journal_presentation_bound_never_recorded_without_a_real_attestation(monkeypatch, tmp_path):
+    _write_completion(tmp_path)  # deliberately no _write_presentation_attestation(...) call
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+
+    assert result["status"] == "PASS"
+    final_journal = journal.read_journal(tmp_path)
+    stages = [row["stage"] for row in final_journal["stage_history"]]
+    assert journal.PRESENTATION_BOUND not in stages
+    assert stages == [journal.STARTED, journal.LOCAL_COMPLETE, journal.PRODUCER_STATE_RETAINED,
+                      journal.DASHBOARD_PUBLISHED, journal.AI_HANDOFF_PUBLISHED,
+                      journal.ACTION_CENTER_READY, journal.COMPLETE]
+    # COMPLETE still reaches PASS -- the gap is honest, not a block -- but attests UNKNOWN,
+    # never a fabricated BOUND/UNAVAILABLE.
+    assert final_journal["attestation"]["post_handoff_presentation_projection"]["status"] is None
 
 
 def test_run_workflow_partial_advances_to_blocked_not_complete(monkeypatch, tmp_path):
@@ -626,7 +725,9 @@ def test_run_workflow_partial_advances_to_blocked_not_complete(monkeypatch, tmp_
 
 def test_run_workflow_marks_journal_failed_on_exception_and_next_run_resumes_without_reacquisition(monkeypatch, tmp_path):
     _write_completion(tmp_path)
+    _write_presentation_attestation(tmp_path)
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
 
@@ -638,9 +739,9 @@ def test_run_workflow_marks_journal_failed_on_exception_and_next_run_resumes_wit
         workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
 
     interrupted = journal.read_journal(tmp_path)
-    # PRESENTATION_BOUND is unconditional bookkeeping right after PRODUCER_STATE_RETAINED (the
-    # presentation join already happened inside canonical_daily_operation.py itself) -- the
-    # crash happens one step later, at Dashboard publication.
+    # PRESENTATION_BOUND is recorded once the dedicated attestation proves a real outcome (here:
+    # the fixture's legitimate UNAVAILABLE) -- the crash happens one step later, at Dashboard
+    # publication.
     assert interrupted["stage"] == journal.PRESENTATION_BOUND
     assert interrupted["failure"]["stage"] == journal.FAILED
     assert "exploded" in interrupted["failure"]["detail"]["reason"]

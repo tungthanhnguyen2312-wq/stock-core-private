@@ -525,6 +525,54 @@ def materialize_canonical_runtime_release(
         shutil.rmtree(backup, ignore_errors=True)
 
 
+def _patch_runtime_manifest_after_restage(
+    manifest_path: Path, *, session: str,
+    workspace_identity: Mapping[str, Any], workspace_sha256: str,
+    screener_identity: Mapping[str, Any] | None, screener_sha256: str | None,
+) -> str:
+    """Keep ``bundle_manifest.json``'s own lineage record coherent with the just-restaged
+    runtime bytes -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
+    section 2: the runtime must never be left with served files whose identity disagrees with
+    what its own manifest declares. Additive: the sealed baseline identities are preserved under
+    a new ``lineage.presentation_projection`` block rather than silently discarded. Never raises;
+    an unreadable/missing manifest degrades to a reported status, exactly like the restage
+    overlay itself.
+    """
+    if not manifest_path.is_file():
+        return "MANIFEST_MISSING"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "MANIFEST_UNREADABLE"
+    if not isinstance(manifest, dict):
+        return "MANIFEST_NOT_OBJECT"
+    lineage = dict(manifest.get("lineage") or {})
+    sealed_workspace = dict(lineage.get("investment_decision_workspace") or {})
+    sealed_screener = dict(lineage.get("screener_master_projection") or {})
+    lineage["presentation_projection"] = {
+        "session": session,
+        "sealed_workspace_artifact_identity": sealed_workspace.get("artifact_identity"),
+        "sealed_screener_master_projection_artifact_identity": sealed_screener.get("artifact_identity"),
+        "restaged_workspace_artifact_identity": workspace_identity.get("artifact_identity"),
+        "restaged_screener_master_projection_artifact_identity": (screener_identity or {}).get("artifact_identity"),
+    }
+    new_workspace_entry = dict(sealed_workspace)
+    new_workspace_entry.update({**workspace_identity, "sha256": workspace_sha256})
+    lineage["investment_decision_workspace"] = new_workspace_entry
+    if screener_identity is not None and screener_sha256 is not None:
+        new_screener_entry = dict(sealed_screener)
+        new_screener_entry.update({**screener_identity, "sha256": screener_sha256})
+        lineage["screener_master_projection"] = new_screener_entry
+    manifest["lineage"] = lineage
+    try:
+        tmp = manifest_path.with_name(manifest_path.name + ".tmp")
+        tmp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        tmp.replace(manifest_path)
+    except OSError:
+        return "MANIFEST_WRITE_FAILED"
+    return "PATCHED"
+
+
 def restage_runtime_with_presentation_projection(
     runtime_root: Path, root: Path, presentation_result: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -541,9 +589,15 @@ def restage_runtime_with_presentation_projection(
     Workspace, and the replacement bytes independently re-validate (self-consistent content
     identity, matching session/contract) -- any other outcome degrades to SKIPPED and leaves the
     sealed bytes exactly as they were. Never raises.
+
+    A successful overlay also patches ``runtime_root/bundle_manifest.json`` so its own lineage
+    record agrees with the restaged bytes' identity -- a served file whose hash disagrees with
+    what the manifest declares is exactly the incoherence this milestone closes.
     """
-    if (presentation_result.get("status") != "COLLECTED"
-            or presentation_result.get("lineage_status") != "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"):
+    if not isinstance(presentation_result, Mapping) or (
+        presentation_result.get("status") != "COLLECTED"
+        or presentation_result.get("lineage_status") != "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"
+    ):
         return {"status": "SKIPPED", "reason": "PRESENTATION_PROJECTION_UNAVAILABLE_OR_UNVERIFIED"}
     session = presentation_result.get("session")
     path = presentation_result.get("path")
@@ -554,6 +608,7 @@ def restage_runtime_with_presentation_projection(
         source_screener = source_workspace.parent / "screener_master_projection.json"
         target_workspace = Path(runtime_root) / "data" / "investment_decision_workspace.json"
         target_screener = Path(runtime_root) / "data" / "screener_master_projection.json"
+        manifest_path = Path(runtime_root) / "bundle_manifest.json"
         if not source_workspace.is_file() or not target_workspace.is_file():
             return {"status": "SKIPPED", "reason": "SOURCE_OR_TARGET_WORKSPACE_MISSING"}
         new_payload = json.loads(source_workspace.read_text(encoding="utf-8"))
@@ -567,13 +622,77 @@ def restage_runtime_with_presentation_projection(
             return {"status": "SKIPPED", "reason": "WORKSPACE_CONTENT_IDENTITY_MISMATCH"}
         atomic_copy_file(source_workspace, target_workspace)
         screener_status = "SKIPPED"
+        screener_identity: dict[str, Any] | None = None
         if source_screener.is_file() and target_screener.is_file():
+            try:
+                screener_identity = screener_contract.content_identity(json.loads(source_screener.read_text(encoding="utf-8")))
+            except (TypeError, ValueError, OSError, json.JSONDecodeError):
+                screener_identity = None
             atomic_copy_file(source_screener, target_screener)
             screener_status = "RESTAGED"
+        manifest_status = _patch_runtime_manifest_after_restage(
+            manifest_path, session=session,
+            workspace_identity=identity, workspace_sha256=_sha256(target_workspace),
+            screener_identity=screener_identity,
+            screener_sha256=_sha256(target_screener) if screener_status == "RESTAGED" else None,
+        )
         return {
             "status": "RESTAGED", "session": session,
             "workspace_artifact_identity": identity["artifact_identity"],
             "screener_master_projection_status": screener_status,
+            "runtime_manifest_status": manifest_status,
         }
     except Exception as exc:  # noqa: BLE001 - this overlay must never block or fail core Daily
         return {"status": "SKIPPED", "reason": f"{type(exc).__name__}:{exc}"}
+
+
+def _verify_runtime_manifest_coherence(runtime_root: Path) -> None:
+    """After a successful restage, fail loudly (never silently) if the served Workspace bytes
+    and the manifest's own declared identity for them have drifted apart -- the exact
+    incoherence CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 2
+    exists to close."""
+    manifest_path = Path(runtime_root) / "bundle_manifest.json"
+    workspace_path = Path(runtime_root) / "data" / "investment_decision_workspace.json"
+    manifest = _load(manifest_path)
+    workspace = _load(workspace_path)
+    declared = ((manifest.get("lineage") or {}).get("investment_decision_workspace") or {}).get("artifact_identity")
+    if declared != workspace.get("artifact_identity"):
+        raise CanonicalRuntimeReleaseError("RUNTIME_MANIFEST_WORKSPACE_IDENTITY_INCOHERENT_AFTER_RESTAGE")
+
+
+def materialize_release_ready_runtime(
+    root: Path, runtime_root: Path, session: str, *,
+    producer_run_identity: str | None = None,
+    presentation_source: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The one governed boundary that produces a release-ready runtime: sealed Producer baseline
+    materialization, then -- when an exact-session, identity-verified post-handoff presentation
+    projection is available -- its additive overlay. Reused by BOTH normal owner publication and
+    completed-session replay (``tools/run_owner_daily.publish_dashboard_release``), so neither
+    route can leave the runtime on sealed (pre-handoff) bytes after a same-session overlay was
+    already produced, and neither can leave `bundle_manifest.json` disagreeing with the bytes it
+    describes. See CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 2.
+
+    ``presentation_source`` is the exact ``run_post_handoff_presentation_projection`` result to
+    restage from; when omitted, the dedicated ``post_handoff_presentation_attestation`` artifact
+    for ``(root, session)`` is consulted, if one was retained. Absence of either is not a
+    failure: baseline materialization alone is a complete, valid (if presentation-unenriched)
+    release -- exactly the pre-fix behavior for a session that never went through this milestone.
+    """
+    baseline = materialize_canonical_runtime_release(
+        root, runtime_root, session, producer_run_identity=producer_run_identity,
+    )
+    source = presentation_source
+    if source is None:
+        from post_handoff_presentation_attestation import read_attestation
+        attestation = read_attestation(root, session)
+        if attestation is not None:
+            source = attestation.get("presentation_projection")
+    restage = (
+        restage_runtime_with_presentation_projection(runtime_root, root, source)
+        if isinstance(source, Mapping) else {"status": "SKIPPED", "reason": "NO_PRESENTATION_SOURCE_AVAILABLE"}
+    )
+    if restage.get("status") == "RESTAGED":
+        _verify_runtime_manifest_coherence(runtime_root)
+    baseline["presentation_restage"] = restage
+    return baseline

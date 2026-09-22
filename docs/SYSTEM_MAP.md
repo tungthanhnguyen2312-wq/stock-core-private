@@ -27,9 +27,21 @@ stocklookup.ps1
 - **Key Output Contract:** Process exit code and standard console output.
 
 ### 2. Owner CLI Dispatcher
-- **Responsibility:** Command dispatcher for `daily` and `roadmap`; manages preflight checks, pipeline execution, decision brief generation, AI handoff, and dashboard publishing.
+- **Responsibility:** Command dispatcher for `daily`, `roadmap`, `portfolio`, and `action-center`.
 - **Primary Entry Module:** [`stocklookup.py`](../stocklookup.py)
 - **Key Output Contract:** CLI execution status, terminal handoff summary, and process exit code.
+- **`daily` production vs. diagnostic split (since 2026-09-22,
+  `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` corrective pass):** the
+  zero-flag invocation (`stocklookup.ps1 daily` with no extra arguments -- the owner's actual
+  daily command) now delegates entirely to
+  [`tools/run_owner_daily.py`](../tools/run_owner_daily.py)'s `run_workflow()`, the same
+  production entrypoint the desktop one-click launcher (`tools/run_owner_daily.ps1`) already
+  uses: durable crash-resume journal, auto-resume, presentation-binding attestation, governed
+  Dashboard publication, AI handoff, Action Center. Any diagnostic/override flag (`--session`,
+  `--runtime-root`, `--retained-evidence-root`, `--output-root`,
+  `--no-new-provider-acquisition`, `--preflight`, `--replay-local`, `--replay-operation`,
+  `--local-only`) still runs the original separate inline pipeline/decision-brief/handoff/
+  dashboard sequence below it in `stocklookup.py` -- never a second production Daily.
 
 ### 3. Current Canonical Daily Operation
 - **Responsibility:** Sequential post-close lifecycle: session qualification gates (Phase A/B), market-data acquisition, session input registration, daily producer execution, runtime materialization, trusted-subset release, and (since 2026-09-22, `CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1`) post-handoff retained-only observers -- Signal Velocity, current foreign-flow (network-off), Flow-Price Divergence, and a post-handoff prospective outcome-feedback rerun -- run via the shared `canonical_post_close_pipeline.run_post_handoff_observers()` / `run_post_handoff_prospective_outcome_feedback()` helpers strictly after `build_tiered_bundle` binds the same-session canonical handoff.

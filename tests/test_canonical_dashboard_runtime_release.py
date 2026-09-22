@@ -435,7 +435,7 @@ def test_completed_session_replay_materializes_before_publisher_without_acquisit
     monkeypatch.setattr(workflow, "materialize_action_center", lambda *a, **k: {"status": "READY", "view_path": "unused"})
     monkeypatch.setattr(workflow, "open_action_center_view", lambda *a, **k: {})
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda *a: {"status": "READY"})
-    materialize = workflow.materialize_canonical_runtime_release
+    materialize = workflow.materialize_release_ready_runtime
     seen = []
 
     def exact_materialize(*args, **kwargs):
@@ -451,7 +451,7 @@ def test_completed_session_replay_materializes_before_publisher_without_acquisit
         assert asset.read_bytes() == source.read_bytes()
         seen.append("validate")
         from types import SimpleNamespace
-        return SimpleNamespace(returncode=0, stdout="", stderr="")
+        return SimpleNamespace(returncode=0, stdout="PUBLICATION_STATE=PUBLISHED\n", stderr="")
 
     def trusted_subset(*args, **kwargs):
         assert args == (root.resolve(), runtime.resolve(), "2026-09-17")
@@ -461,7 +461,7 @@ def test_completed_session_replay_materializes_before_publisher_without_acquisit
         seen.append("trusted_subset")
         return {"session": "2026-09-17", "trusted_subset_ready": True}
 
-    monkeypatch.setattr(workflow, "materialize_canonical_runtime_release", exact_materialize)
+    monkeypatch.setattr(workflow, "materialize_release_ready_runtime", exact_materialize)
     monkeypatch.setattr(workflow, "materialize_canonical_trusted_subset", trusted_subset)
     monkeypatch.setattr(workflow.subprocess, "run", publisher_validation)
     result = workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
@@ -581,3 +581,115 @@ def test_restage_skipped_on_session_mismatch(tmp_path, monkeypatch):
     result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
     assert result["status"] == "SKIPPED"
     assert result["reason"] == "SESSION_OR_CONTRACT_MISMATCH"
+
+
+# =====================================================================================
+# CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 2 / section 10
+# items C+D: materialize_release_ready_runtime -- the ONE governed release-ready runtime
+# boundary -- and its use through publish_dashboard_release (the exact call site of the
+# original second-materialization erasure defect), never just the isolated restage helper.
+# =====================================================================================
+
+def _enriched_presentation_fixture(root, session, workspace, source):
+    """Write an enriched post-handoff presentation projection plus its dedicated attestation
+    artifact, exactly as canonical_daily_operation.py does after post-handoff observers run."""
+    presentation_dir = root / "operations-review" / "post-handoff-presentation-projection-v1" / session
+    presentation_dir.mkdir(parents=True)
+    enriched_workspace = {k: v for k, v in workspace.items() if k not in ("artifact_identity", "artifact_sha256")}
+    enriched_workspace["cards"] = {"AAA": {"signal_velocity": {"overall_transition_state": "STABLE"}}}
+    enriched_workspace.update(runtime_release.workspace_contract.content_identity(enriched_workspace))
+    (presentation_dir / "investment_decision_workspace_projection.json").write_text(
+        json.dumps(enriched_workspace), encoding="utf-8")
+    screener_source = source.parent / "screener_master_projection.json"
+    (presentation_dir / "screener_master_projection.json").write_text(
+        screener_source.read_text(encoding="utf-8"), encoding="utf-8")
+    presentation_result = {
+        "status": "COLLECTED", "session": session,
+        "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+        "path": str((presentation_dir / "investment_decision_workspace_projection.json").resolve().relative_to(root.resolve())),
+        "workspace_artifact_identity": enriched_workspace["artifact_identity"],
+        "sealed_producer_workspace_artifact_identity": workspace.get("artifact_identity"),
+    }
+    import post_handoff_presentation_attestation as attestation
+    attestation.write_attestation(
+        root, session,
+        presentation_projection=presentation_result,
+        signal_velocity={"status": "COLLECTED", "artifact_identity": "velocity:test"},
+        flow_price_divergence={"status": "COLLECTED", "artifact_identity": "flow_price:test"},
+    )
+    return enriched_workspace, presentation_result
+
+
+def test_materialize_release_ready_runtime_restages_from_dedicated_attestation(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    session = "2026-09-17"
+    enriched_workspace, _ = _enriched_presentation_fixture(root, session, workspace, source)
+    runtime = tmp_path / "runtime"
+
+    result = runtime_release.materialize_release_ready_runtime(root, runtime, session)
+
+    assert result["presentation_restage"]["status"] == "RESTAGED"
+    served = json.loads((runtime / "data" / "investment_decision_workspace.json").read_text(encoding="utf-8"))
+    assert served["cards"]["AAA"]["signal_velocity"]["overall_transition_state"] == "STABLE"
+    assert served["artifact_identity"] == enriched_workspace["artifact_identity"]
+    # Sealed Producer evidence untouched.
+    assert json.loads(source.read_text(encoding="utf-8"))["artifact_identity"] == workspace["artifact_identity"]
+
+
+def test_materialize_release_ready_runtime_without_attestation_is_baseline_only(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    session = "2026-09-17"
+    runtime = tmp_path / "runtime"
+
+    result = runtime_release.materialize_release_ready_runtime(root, runtime, session)
+
+    assert result["presentation_restage"]["status"] == "SKIPPED"
+    served = json.loads((runtime / "data" / "investment_decision_workspace.json").read_text(encoding="utf-8"))
+    assert served["artifact_identity"] == workspace["artifact_identity"]
+
+
+def test_materialize_release_ready_runtime_manifest_identity_agrees_with_restaged_bytes(tmp_path, monkeypatch):
+    """Section 10 item D: final runtime Workspace identity/hash matches the runtime manifest
+    after presentation binding -- not merely the sealed baseline identity."""
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    session = "2026-09-17"
+    enriched_workspace, _ = _enriched_presentation_fixture(root, session, workspace, source)
+    runtime = tmp_path / "runtime"
+
+    runtime_release.materialize_release_ready_runtime(root, runtime, session)
+
+    manifest = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))
+    served = json.loads((runtime / "data" / "investment_decision_workspace.json").read_text(encoding="utf-8"))
+    declared = manifest["lineage"]["investment_decision_workspace"]["artifact_identity"]
+    assert declared == served["artifact_identity"] == enriched_workspace["artifact_identity"]
+    assert manifest["lineage"]["investment_decision_workspace"]["sha256"] == runtime_release._sha256(
+        runtime / "data" / "investment_decision_workspace.json")
+    presentation_lineage = manifest["lineage"]["presentation_projection"]
+    assert presentation_lineage["sealed_workspace_artifact_identity"] == workspace["artifact_identity"]
+    assert presentation_lineage["restaged_workspace_artifact_identity"] == enriched_workspace["artifact_identity"]
+
+
+def test_publish_dashboard_release_survives_presentation_projection_end_to_end(tmp_path, monkeypatch):
+    """Section 10 item C: same-session Signal Velocity must reach the final Dashboard source
+    bytes THROUGH publish_dashboard_release (the second-materialization erasure bug's exact
+    call site), not merely through the isolated restage helper called directly."""
+    from tools import run_owner_daily as workflow
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    session = "2026-09-17"
+    _enriched_presentation_fixture(root, session, workspace, source)
+    runtime = tmp_path / "runtime"
+
+    class _Result:
+        returncode = 0
+        stdout = "PUBLICATION_STATE=PUBLISHED\n"
+        stderr = ""
+
+    monkeypatch.setattr(workflow, "materialize_canonical_trusted_subset", lambda *a, **k: {"session": session, "trusted_subset_ready": True})
+    monkeypatch.setattr(workflow.subprocess, "run", lambda *a, **k: _Result())
+    monkeypatch.setattr(workflow, "verify_dashboard_session", lambda web_dir, s: {"status": "READY", "expected_session": s, "observed_session": s})
+
+    result = workflow.publish_dashboard_release(root, runtime, session, web_dir=tmp_path / "web", producer_run_identity="run:exact")
+
+    assert result["status"] == "READY"
+    served = json.loads((runtime / "data" / "investment_decision_workspace.json").read_text(encoding="utf-8"))
+    assert served["cards"]["AAA"]["signal_velocity"]["overall_transition_state"] == "STABLE"

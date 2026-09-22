@@ -175,6 +175,47 @@ def complete_governed_dashboard_publication(
     return result
 
 
+def _run_owner_daily_workflow() -> int:
+    """The ONE production Daily path. ``stocklookup.ps1 daily`` (this CLI's own default,
+    no-flag invocation) delegates to the exact same ``tools.run_owner_daily`` entrypoint the
+    desktop one-click launcher (``tools/run_owner_daily.ps1``) already uses -- same journal/
+    resume semantics, same presentation binding, same Dashboard publication, same AI handoff,
+    same Action Center -- so the two owner-facing entrypoints can no longer retain separate
+    production semantics. See CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
+    section 5. Diagnostic/override flags (``--session``, ``--replay-*``, ``--local-only``,
+    ``--no-new-provider-acquisition``, ``--preflight``, explicit root overrides) remain the
+    separate, explicit non-production path in ``main()`` below -- never a second production
+    Daily; this function is only reached when NONE of them were given.
+    """
+    import tools.run_owner_daily as owner_daily
+    from datetime import datetime
+
+    result_path = ROOT / "run-logs" / f"stocklookup_daily_result_{datetime.now():%Y%m%d_%H%M%S}.json"
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    code = owner_daily.main(["--result-path", str(result_path)])
+    try:
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        result = {}
+    status = result.get("status")
+    lines = ["STOCK LOOKUP DAILY"]
+    if status in ("PASS", "PARTIAL"):
+        lines += [
+            f"Session: {result.get('session')}",
+            f"Daily: {result.get('daily_status')}",
+            f"AI Handoff: {((result.get('ai_handoff') or {}).get('publication') or {}).get('status')}",
+            f"Dashboard: {(result.get('dashboard') or {}).get('status')}",
+            f"Action Center: {(result.get('action_center') or {}).get('status')}",
+        ]
+    else:
+        lines += [f"Status: {status}", f"Reason: {result.get('reason')}"]
+        if result.get("hint"):
+            lines.append(f"Hint: {result['hint']}")
+    lines.append(f"FINAL STATUS: {status}")
+    print("\n".join(lines))
+    return code
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest="command", required=True)
@@ -375,6 +416,16 @@ def main(argv=None) -> int:
     daily_retained_evidence_root = ROOT
     daily_output_root = ROOT
     if a.command == "daily":
+        # ONE_OWNER_WORKFLOW (section 5): the vanilla, no-flag production invocation -- exactly
+        # what `stocklookup.ps1 daily` runs every trading day -- delegates entirely to
+        # tools.run_owner_daily.run_workflow, the same production entrypoint the desktop
+        # one-click launcher already uses. Any diagnostic/override flag below opts OUT of the
+        # shared production workflow into the pre-existing explicit non-production path.
+        if not any([
+            a.session, a.runtime_root, a.retained_evidence_root, a.output_root,
+            a.no_new_provider_acquisition, a.preflight, a.replay_local, a.replay_operation, a.local_only,
+        ]):
+            return _run_owner_daily_workflow()
         from daily_execution_environment import format_preflight, preflight_canonical_daily
         from daily_session_level2_package import resolve_level2_session
         intended_session = resolve_level2_session(a.session)["session"]

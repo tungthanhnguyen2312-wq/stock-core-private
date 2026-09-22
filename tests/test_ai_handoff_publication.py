@@ -179,3 +179,76 @@ def test_remote_verification_binds_latest_pointer_session_hashes_and_lineage(tmp
     assert verified["status"]=="READY_FOR_AI"
     assert verified["latest_session"]=="2026-08-28"
     assert verified["remote_sha"]==result["handoff_commit"]
+
+
+# =====================================================================================
+# CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 3 / section 10 item
+# E: the AI handoff additively consumes the dedicated post-handoff presentation attestation --
+# never mutating the sealed Producer `source` directory -- and exposes its identities/statuses.
+# =====================================================================================
+
+def _attestation(*, bound=True):
+    projection = (
+        {"status": "COLLECTED", "session": "2026-08-28", "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+         "workspace_artifact_identity": "workspace:enriched"}
+        if bound else {"status": "UNAVAILABLE", "session": "2026-08-28", "reason": "TEST"}
+    )
+    return {
+        "contract_version": "post_handoff_presentation_attestation/v1", "session": "2026-08-28",
+        "presentation_projection": projection,
+        "sealed_producer_workspace_artifact_identity": "workspace:sealed",
+        "signal_velocity": {"status": "COLLECTED", "artifact_identity": "velocity:1"},
+        "flow_price_divergence_shadow": {"status": "COLLECTED", "artifact_identity": "flow_price:1"},
+        "post_handoff_prospective_decision_feedback": {"status": "COLLECTED", "artifact_identity": "feedback:1"},
+    }
+
+
+def test_build_package_is_unaffected_when_no_presentation_attestation_supplied(tmp_path):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    files, payload = build_package(s, "2026-08-28", producer_checkpoint="abc")
+    assert "post_handoff_presentation_state.json" not in files
+    assert "post_handoff_presentation_state" not in payload["lineage"]
+
+
+def test_build_package_adds_additive_presentation_state_without_touching_sealed_source(tmp_path):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    before = {p.name: p.read_bytes() for p in s.iterdir()}
+    files, payload = build_package(s, "2026-08-28", producer_checkpoint="abc", post_handoff_presentation=_attestation())
+    assert {p.name: p.read_bytes() for p in s.iterdir()} == before  # sealed source untouched
+    assert "post_handoff_presentation_state.json" in files
+    assert isinstance(files["post_handoff_presentation_state.json"], (bytes, bytearray))
+    lineage = payload["lineage"]["post_handoff_presentation_state"]
+    assert lineage["status"] == "COLLECTED"
+    assert lineage["workspace_artifact_identity"] == "workspace:enriched"
+    assert lineage["sealed_producer_workspace_artifact_identity"] == "workspace:sealed"
+    assert lineage["signal_velocity_status"] == "COLLECTED"
+    assert lineage["flow_price_divergence_shadow_status"] == "COLLECTED"
+    assert lineage["post_handoff_prospective_decision_feedback_status"] == "COLLECTED"
+
+
+def test_build_package_publishes_legitimate_unavailable_presentation_state_not_fabricated(tmp_path):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    _files, payload = build_package(s, "2026-08-28", producer_checkpoint="abc", post_handoff_presentation=_attestation(bound=False))
+    assert payload["lineage"]["post_handoff_presentation_state"]["status"] == "UNAVAILABLE"
+    assert payload["lineage"]["post_handoff_presentation_state"]["workspace_artifact_identity"] is None
+
+
+def test_publish_writes_presentation_state_file_and_sealed_source_stays_unchanged(tmp_path):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    before = {p.name: p.read_bytes() for p in s.iterdir()}
+    result = publish(r, s, "2026-08-28", producer_checkpoint="abc", push=False, post_handoff_presentation=_attestation())
+    target = r / result["immutable_session_path"]
+    written = json.loads((target / "post_handoff_presentation_state.json").read_text(encoding="utf-8"))
+    assert written["authority_boundary"] == "PRESENTATION_RESEARCH_OBSERVER_STATE_NOT_ANALYTICAL_DECISION_AUTHORITY"
+    assert written["sealed_producer_workspace_artifact_identity"] == "workspace:sealed"
+    assert written["post_handoff_presentation_workspace_artifact_identity"] == "workspace:enriched"
+    assert written["signal_velocity"] == {"status": "COLLECTED", "identity": "velocity:1"}
+    assert {p.name: p.read_bytes() for p in s.iterdir()} == before
+
+
+def test_publish_no_op_replay_still_matches_with_presentation_state_present(tmp_path):
+    s, r = tmp_path / "source", tmp_path / "repo"; source(s); repo(r)
+    first = publish(r, s, "2026-08-28", producer_checkpoint="abc", push=False, post_handoff_presentation=_attestation())
+    second = publish(r, s, "2026-08-28", producer_checkpoint="abc", push=False, post_handoff_presentation=_attestation())
+    assert second["status"] == "NO_OP_ALREADY_PUBLISHED"
+    assert second["package"]["handoff_build_id"] == first["package"]["handoff_build_id"]

@@ -964,6 +964,29 @@ def run_canonical_daily_operation(
     }
     digest = stable_id(identity_payload)
     operation_identity = f"canonical_daily_operation:{digest}"
+
+    # CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 4: a dedicated,
+    # additive record of the presentation-binding outcome -- never folded into `persistable`
+    # below (that immutable record deliberately excludes these volatile post-handoff fields).
+    # This is what the owner journal / release-ready runtime materializer / AI handoff consume
+    # to know whether a presentation projection was genuinely collected, never merely "expected
+    # to have been attempted". Best-effort: must never revise or block the already-sealed Daily
+    # result above.
+    try:
+        from post_handoff_presentation_attestation import write_attestation
+        write_attestation(
+            operation_output_root, resolved_session,
+            presentation_projection=post_handoff_presentation_projection,
+            signal_velocity=post_handoff_observers.get("multi_session_signal_velocity"),
+            flow_price_divergence=post_handoff_observers.get("flow_price_divergence_shadow"),
+            post_handoff_prospective_decision_feedback=post_handoff_prospective_decision_feedback,
+            runtime_restage=post_handoff_runtime_restage,
+            daily_producer_run_identity=producer_result.get("run_identity"),
+            canonical_daily_operation_identity=operation_identity,
+        )
+    except Exception:
+        pass
+
     run_dir = output_root / "canonical-daily-operation-v1" / resolved_session / f"op-{digest}"
     record = {
         "schema_version": CONTRACT_VERSION,

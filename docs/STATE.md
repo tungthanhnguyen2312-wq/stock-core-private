@@ -1,6 +1,120 @@
 # Stock Lookup — Operational State
 
-**Canonical Daily owner publication resume and presentation join V1 (2026-09-22):**
+**Canonical Daily owner publication resume and presentation join V1 -- CORRECTIVE PASS
+(2026-09-22, continuation):** A source review of the entry below (originally reported "bounded
+subset COMPLETE") found three real production correctness defects plus the explicitly-deferred
+owner-workflow unification still open. This corrective pass, isolated worktree
+`feature/daily-owner-resume-presentation-v1` rooted at `origin/main`
+`67aa28c9aab2d6bac0d60b78105851284a50db0`, fixes all three defects with regression coverage,
+adds journal fail-closed-before-material-work (section 6), and unifies `stocklookup.py daily`'s
+default (no-flag) production path onto `tools.run_owner_daily.run_workflow` (section 5). Full
+stage-aware *skip* logic (section 7 -- e.g. "already `DASHBOARD_PUBLISHED`, do not require a
+second publication to continue AI handoff") was NOT added: the existing design already makes
+every resumed step idempotent (no reacquisition, `commit_daily_state` NO_CHANGE, `publish_
+ai_handoff`'s NO_OP_ALREADY_PUBLISHED, `publish_dashboard_release`'s no-op push) rather than
+literally skipping the call, and building genuine per-stage skip-with-identity-verification was
+judged too large a re-architecture to rush safely in this pass. See `docs/DECISIONS.md`'s
+matching corrective entry for the full defect-by-defect detail and exact file:line evidence.
+
+1. **Journal auto-resume ignored the intended session (section 1, real bug).**
+   `tools/run_owner_daily.py`'s `_auto_resumable_session()` called `journal.resumable_state(root,
+   intended_session=None)` -- always `None`, defeating that function's own "different session ->
+   START_FRESH" check entirely. A COMPLETE (or merely interrupted) journal from an OLDER session
+   could be silently offered as "resumable" to a NEWER ordinary invocation, republishing
+   yesterday's session instead of acquiring today's. Fix: new `_resolve_intended_session()`
+   (reuses the existing governed `daily_session_level2_package.resolve_level2_session` calendar
+   contract, no network) resolves "what session does an ordinary invocation intend right now"
+   BEFORE consulting the journal; `_auto_resumable_session` now requires it explicitly and
+   refuses to auto-resume when it cannot be resolved (never falls back to the old unsafe
+   accept-anything behavior). An incomplete journal for a different, older session is now
+   explicitly superseded with a console/log line naming the abandoned run, never silently.
+   Regression: `test_run_workflow_never_auto_resumes_an_older_session_when_a_newer_one_is_
+   intended` (section 10 item A).
+
+2. **Presentation join erased by Dashboard publication's second materialization (section 2, real
+   bug).** `canonical_daily_operation.py` correctly restages the enriched presentation join onto
+   the runtime once, in-process, after Daily Producer completes. But `tools/run_owner_daily.py`'s
+   `publish_dashboard_release()` -- called both after normal Daily and on every completed-session
+   replay -- unconditionally re-ran `materialize_canonical_runtime_release()` a second time,
+   which unconditionally recopies the SEALED (pre-handoff) Workspace/Screener bytes from the
+   Producer operation directory, silently overwriting the just-applied overlay before the
+   Dashboard publisher ever read it. Fix: new `canonical_dashboard_runtime_release.
+   materialize_release_ready_runtime()` -- the one governed release-ready boundary (sealed
+   baseline materialization, then, if a same-session identity-verified presentation projection
+   is available via the new dedicated attestation artifact below, its additive restage) -- is now
+   the ONLY thing `publish_dashboard_release` calls, replacing the bare baseline call. Idempotent
+   either way: it is applied whether or not `canonical_daily_operation.py` already restaged once
+   in-process. `restage_runtime_with_presentation_projection()` now also atomically patches
+   `bundle_manifest.json`'s own lineage so a served file's identity never disagrees with what the
+   manifest declares (a new, additive `lineage.presentation_projection` block preserves the
+   sealed baseline identities alongside the restaged ones). Regression: `test_publish_dashboard_
+   release_survives_presentation_projection_end_to_end` (item C, through the real call site, not
+   just the isolated restage helper) and `test_materialize_release_ready_runtime_manifest_
+   identity_agrees_with_restaged_bytes` (item D).
+
+3. **Journal attested presentation binding from expectation, not evidence (section 4, real
+   bug).** `run_workflow()` unconditionally advanced the journal to `PRESENTATION_BOUND` right
+   after `PRODUCER_STATE_RETAINED`, regardless of whether a presentation projection was ever
+   actually collected -- pure bookkeeping, not attestation. The final `COMPLETE` attestation then
+   tried to read `post_handoff_presentation_projection` off the immutable, persisted `daily_
+   operation_record.json` -- but `canonical_daily_operation.py`'s own `persistable` dict
+   deliberately excludes that and every other post-handoff field (their status can legitimately
+   vary run-to-run without the sealed Daily result changing), so that key was always `None`.
+   Fix: new `post_handoff_presentation_attestation.py` -- a dedicated, additive, session-
+   addressed artifact `canonical_daily_operation.py` writes (best-effort, non-blocking) once it
+   has computed the post-handoff block, carrying the presentation projection, Signal Velocity,
+   Flow-Price, and post-handoff prospective-feedback outcomes plus their identities. The journal
+   now reads THIS artifact (`_presentation_bound_state`) and only records `PRESENTATION_BOUND`
+   for a real `BOUND` or a legitimate, explicit `UNAVAILABLE` -- never merely because the kernel
+   was expected to have attempted it; an unknown outcome (older session, no attestation) leaves
+   the journal honestly at `PRODUCER_STATE_RETAINED`, and downstream stages still advance
+   normally past the gap. The `COMPLETE` attestation detail now reads the same dedicated artifact
+   instead of the always-empty persisted field. Regressions: `test_journal_presentation_bound_
+   never_recorded_without_a_real_attestation` (item F) plus the updated `test_run_workflow_
+   writes_journal_stages_through_to_complete`.
+
+4. **AI handoff additively consumes the same attestation (section 3).** `ai_handoff_publication.
+   build_package()`/`publish()` gained an optional `post_handoff_presentation` parameter: when
+   the dedicated attestation above is available, an additive `post_handoff_presentation_state.
+   json` file (never written into or read back from the sealed Producer `source` directory --
+   generated in-memory, hashed, and written only into the handoff repo's own build directory) is
+   included in the package, exposing the sealed Producer Workspace identity, the post-handoff
+   presentation identity, and Signal Velocity/Flow-Price/prospective-feedback status+identity,
+   explicitly labeled `PRESENTATION_RESEARCH_OBSERVER_STATE_NOT_ANALYTICAL_DECISION_AUTHORITY`.
+   A legitimately unavailable observer publishes as explicit `UNAVAILABLE`, never fabricated.
+   Regressions in `tests/test_ai_handoff_publication.py` (item E): sealed source bytes proven
+   byte-identical before/after, presentation lineage fields asserted, `NO_OP_ALREADY_PUBLISHED`
+   proven stable with the new file present.
+
+5. **Journal write failure now fails closed before material work (section 6).**
+   `tools/run_owner_daily.py`'s `_journal_start()` previously swallowed any write failure and let
+   the real owner workflow proceed unjournaled. It now raises `OwnerDailyError` (before
+   `preflight_repository`/acquisition ever run) if the initial durable journal write fails; every
+   LATER mid-run `journal.advance()` call remains best-effort exactly as before (a hard OS kill
+   still cannot write a final terminal marker, which is expected and unrelated to this gate).
+
+6. **One owner workflow: `stocklookup.py daily`'s default path now shares `run_workflow`
+   (section 5, bounded).** `stocklookup.ps1 daily` (the public owner entrypoint) and the desktop
+   one-click launcher (`tools/run_owner_daily.ps1`) previously ran genuinely different production
+   code: the desktop path had the journal/resume/Action-Center workflow above, `stocklookup.py
+   daily` had none of it and ran its own separate inline acquisition/handoff/dashboard sequence.
+   Fix: `stocklookup.py`'s `daily` command, when invoked with NONE of its diagnostic/override
+   flags (`--session`, `--runtime-root`, `--retained-evidence-root`, `--output-root`,
+   `--no-new-provider-acquisition`, `--preflight`, `--replay-local`, `--replay-operation`,
+   `--local-only`) -- i.e. exactly the vanilla invocation `stocklookup.ps1 daily` performs every
+   trading day -- now delegates entirely to `tools.run_owner_daily.main()` (new
+   `_run_owner_daily_workflow()`), calling it with zero argument overrides so both entrypoints
+   resolve the identical `ROOT`/`DEFAULT_RUNTIME`/`DEFAULT_HANDOFF_REPO`/`DEFAULT_WEB_DIR`
+   defaults `run_workflow()` itself declares -- not merely equivalent values independently
+   computed. Every diagnostic/override flag still runs the pre-existing separate inline path
+   unchanged, per the owner directive's explicit allowance for diagnostic/local/replay modes to
+   remain distinct. This is bounded, not the previously-deferred "one shared Python
+   implementation with `--session` etc. also unified" -- `run_workflow()` still has no session
+   override, output-root override, or replay-operation support; extending it to subsume those
+   diagnostic modes too remains future work if the owner wants full flag parity, not just
+   zero-flag production parity.
+
+**Canonical Daily owner publication resume and presentation join V1 (2026-09-22, original pass):**
 `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` = bounded subset COMPLETE
 (local, unpushed at write time), isolated worktree
 `feature/canonical-daily-owner-publication-resume-presentation-v1` rooted at `origin/main`
@@ -66,19 +180,16 @@ again a bounded subset of a much larger owner directive, not the full 21-section
    budget to exhaustively re-verify. A future bounded milestone should add the clarifying
    metadata at the contract level if the owner wants it machine-readable, not just documented.
 
-**Explicitly deferred, not attempted this session** (flagged for a separate owner-authorized
-follow-on): full code-level unification of `stocklookup.py`'s own `daily` command (the
-doc-designated canonical entrypoint) with `tools/run_owner_daily.py`'s `run_workflow()` into one
-shared implementation -- real behavioral differences were found between them this session
-(`stocklookup.py` builds its own `next_session_decision_brief.json`/
-`daily_integrated_decision_brief.json` post-hoc per-run; `run_owner_daily.py` does not and
-instead consumes the pre-sealed `daily_integrated_decision_brief_artifact.json` Daily Producer
-itself now binds) and a careless merge risks silently changing what the owner's actual daily
-production command does; `stocklookup.py`'s `daily` command was left completely untouched.
-Formal `docs/ROADMAP_STATE.json` milestone registration (402KB hand-maintained governance JSON,
-no safe programmatic append tool found) and `run_canonical_post_close` dedicated parity tests
-beyond the shared-helper design itself (already the substantive parity guarantee) were also not
-attempted. See `docs/DECISIONS.md`'s matching entry for the full audit-to-fix rationale.
+**Explicitly deferred as of the original pass below, resolved in part by the corrective pass
+above:** full code-level unification of `stocklookup.py`'s own `daily` command with
+`tools/run_owner_daily.py`'s `run_workflow()` is now DONE for the zero-flag production
+invocation (see corrective item 6 above) -- `stocklookup.py daily`'s diagnostic/override flags
+(`--session`, `--replay-*`, `--local-only`, `--no-new-provider-acquisition`, `--preflight`,
+explicit root overrides) still run the original separate inline path, since `run_workflow()`
+itself has no equivalent for those and a careless merge still risks silently changing what those
+diagnostic modes do. Formal `docs/ROADMAP_STATE.json` milestone registration and stage-aware
+resume *skip* logic (section 7 -- see corrective preamble above) remain open. See
+`docs/DECISIONS.md`'s matching entries for the full audit-to-fix rationale of both passes.
 
 **Canonical Daily post-handoff observer wiring corrective V1 (2026-09-22):** Owner-directed
 bounded corrective, isolated worktree

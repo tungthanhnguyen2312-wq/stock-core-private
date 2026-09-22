@@ -26,7 +26,16 @@ workflow keeps its own durable journal (`operations-review/owner-daily-journal-v
 written at each stage as it happens; if Canonical Daily itself had already fully completed for
 that session before the interruption, the next run resumes publication straight from there --
 it does not reacquire market data or re-run Daily Producer. Nothing to do manually; this is
-automatic and requires no flag.
+automatic and requires no flag. The journal only ever resumes a session that matches what an
+ordinary invocation would intend right now (today's session) -- an interrupted or even fully
+COMPLETE journal left over from an OLDER session is never silently replayed as today's Daily;
+that older run is superseded and a fresh Daily starts, with a note about the abandoned run
+printed to the console/log (2026-09-22 corrective pass).
+
+Since the same corrective pass, `stocklookup.ps1 daily` run with no extra flags -- the exact
+command above -- shares this identical journal/resume machinery with the desktop one-click
+launcher (both now call `tools.run_owner_daily.run_workflow`). There is only one production
+Daily workflow; the two launchers are different front doors onto the same code.
 
 ## Keeping the Producer checkout Daily-ready
 

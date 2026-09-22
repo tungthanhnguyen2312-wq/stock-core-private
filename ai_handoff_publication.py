@@ -46,8 +46,30 @@ def _financial_lineage(parsed: Mapping[str, Any]) -> str | None:
     return str(source_identity)
 def _identity(payload: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",", ":")).encode("utf-8")).hexdigest()
-def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None) -> tuple[dict[str,Path],dict[str,Any]]:
-    files={name:source/name for name in REQUIRED}
+def _presentation_observer_payload(session: str, attestation: Mapping[str, Any]) -> dict[str, Any]:
+    """Additive, presentation/research-observer state only -- never analytical decision
+    authority. Derived entirely from the dedicated ``post_handoff_presentation_attestation``
+    artifact; never reads or mutates sealed Producer evidence. See
+    CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 3. A legitimately
+    unavailable observer is published as an explicit UNAVAILABLE status here, never fabricated."""
+    projection = attestation.get("presentation_projection") or {}
+    velocity = attestation.get("signal_velocity") or {}
+    flow_price = attestation.get("flow_price_divergence_shadow") or {}
+    feedback = attestation.get("post_handoff_prospective_decision_feedback") or {}
+    return {
+        "schema_version": "post_handoff_presentation_state/v1",
+        "authority_boundary": "PRESENTATION_RESEARCH_OBSERVER_STATE_NOT_ANALYTICAL_DECISION_AUTHORITY",
+        "session": session,
+        "sealed_producer_workspace_artifact_identity": attestation.get("sealed_producer_workspace_artifact_identity"),
+        "post_handoff_presentation_status": projection.get("status"),
+        "post_handoff_presentation_workspace_artifact_identity": projection.get("workspace_artifact_identity"),
+        "post_handoff_presentation_lineage_status": projection.get("lineage_status"),
+        "signal_velocity": {"status": velocity.get("status"), "identity": velocity.get("artifact_identity")},
+        "flow_price_divergence_shadow": {"status": flow_price.get("status"), "identity": flow_price.get("artifact_identity")},
+        "post_handoff_prospective_decision_feedback": {"status": feedback.get("status"), "identity": feedback.get("artifact_identity")},
+    }
+def build_package(source: Path, session: str, previous: Path|None=None, *, producer_checkpoint: str="UNKNOWN", decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None, post_handoff_presentation: Mapping[str, Any]|None=None) -> tuple[dict[str,Any],dict[str,Any]]:
+    files: dict[str, Any] = {name: source / name for name in REQUIRED}
     if previous: files[f"previous_session_bundle_{previous.parent.parent.name}.json"]=previous
     # next_session_decision_brief.json is a pure package-local derived projection (see
     # next_session_decision_brief.py) -- optional and additive, exactly like `previous`, so a
@@ -57,12 +79,23 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
     # AI-facing daily product -- optional and additive on the exact same pattern as decision_brief,
     # so ChatGPT can answer the owner's 11-watchlist review from the published handoff directly.
     if daily_integrated_decision_brief: files["daily_integrated_decision_brief.json"]=daily_integrated_decision_brief
+    # post_handoff_presentation_state.json is generated in-memory (never read from or written
+    # into the sealed Producer `source` directory) -- `files` may hold `bytes` here instead of a
+    # `Path`, handled below and in `publish()`.
+    if post_handoff_presentation is not None:
+        files["post_handoff_presentation_state.json"] = (
+            json.dumps(_presentation_observer_payload(session, post_handoff_presentation),
+                       ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+        ).encode("utf-8")
     parsed: dict[str, Any] = {}
-    for name,path in files.items():
-        if not path.is_file(): raise HandoffPublicationError("HANDOFF_SOURCE_MISSING:"+name)
-        parsed[name]=json.loads(path.read_text(encoding="utf-8"))
+    for name,entry in files.items():
+        if isinstance(entry, (bytes, bytearray)):
+            parsed[name] = json.loads(entry.decode("utf-8"))
+        else:
+            if not entry.is_file(): raise HandoffPublicationError("HANDOFF_SOURCE_MISSING:"+name)
+            parsed[name]=json.loads(entry.read_text(encoding="utf-8"))
         if _unsafe(parsed[name]): raise HandoffPublicationError("HANDOFF_ABSOLUTE_PATH_FORBIDDEN:"+name)
-    hashes={name:sha(path) for name,path in files.items()}
+    hashes={name:(hashlib.sha256(entry).hexdigest() if isinstance(entry, (bytes, bytearray)) else sha(entry)) for name,entry in files.items()}
     package_identity=_identity({"session":session,"files":hashes})
     lineage=_manifest_lineage(source,producer_checkpoint)
     financial_source_identity = _financial_lineage(parsed)
@@ -74,6 +107,16 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
         brief_parsed=parsed["daily_integrated_decision_brief.json"]
         lineage["daily_integrated_decision_brief_identity"]=brief_parsed.get("artifact_identity")
         lineage["daily_integrated_decision_brief_previous_qualified_session"]=brief_parsed.get("previous_qualified_session")
+    if post_handoff_presentation is not None:
+        presentation_parsed = parsed["post_handoff_presentation_state.json"]
+        lineage["post_handoff_presentation_state"] = {
+            "status": presentation_parsed.get("post_handoff_presentation_status"),
+            "workspace_artifact_identity": presentation_parsed.get("post_handoff_presentation_workspace_artifact_identity"),
+            "sealed_producer_workspace_artifact_identity": presentation_parsed.get("sealed_producer_workspace_artifact_identity"),
+            "signal_velocity_status": (presentation_parsed.get("signal_velocity") or {}).get("status"),
+            "flow_price_divergence_shadow_status": (presentation_parsed.get("flow_price_divergence_shadow") or {}).get("status"),
+            "post_handoff_prospective_decision_feedback_status": (presentation_parsed.get("post_handoff_prospective_decision_feedback") or {}).get("status"),
+        }
     handoff_build_id="handoff_build_"+_identity({"session":session,"package_sha256":package_identity,"lineage":lineage})
     payload={"schema_version":CONTRACT_VERSION,"session":session,"status":"READY_FOR_AI","files":hashes,"package_sha256":package_identity,"lineage":lineage,"handoff_build_id":handoff_build_id}
     return files,payload
@@ -84,7 +127,7 @@ def _latest_payload(session: str, payload: Mapping[str, Any], *, immutable_sessi
         latest["comparison_metadata"]=payload["lineage"].get("comparison_metadata")
     if "daily_integrated_decision_brief.json" in payload["files"]: latest["daily_integrated_decision_brief_sha256"]=payload["files"]["daily_integrated_decision_brief.json"]
     return latest
-def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, local_only: bool=False, decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None) -> dict[str,Any]:
+def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None, producer_checkpoint: str="UNKNOWN", push: bool=True, local_only: bool=False, decision_brief: Path|None=None, daily_integrated_decision_brief: Path|None=None, post_handoff_presentation: Mapping[str, Any]|None=None) -> dict[str,Any]:
     """``local_only=True`` builds and validates the package (proving it is genuinely
     publishable -- every required file present, every hash computed, the manifest lineage
     chain checked) but returns before touching ``repo`` at all: no ``mkdir``, no file copy, no
@@ -94,7 +137,7 @@ def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None,
     always takes precedence over ``push`` -- including ``push``'s own default of ``True`` -- so
     a caller never needs to remember to also pass ``push=False``; there is exactly one way to
     ask for zero Git mutation, not two flags that must agree."""
-    files,payload=build_package(source,session,previous,producer_checkpoint=producer_checkpoint,decision_brief=decision_brief,daily_integrated_decision_brief=daily_integrated_decision_brief)
+    files,payload=build_package(source,session,previous,producer_checkpoint=producer_checkpoint,decision_brief=decision_brief,daily_integrated_decision_brief=daily_integrated_decision_brief,post_handoff_presentation=post_handoff_presentation)
     target=repo/"sessions"/session/"builds"/payload["handoff_build_id"]
     if local_only:
         return {"status":"LOCAL_VALIDATED_NO_GIT_MUTATION","session":session,"package":payload,"immutable_session_path":target.relative_to(repo).as_posix()}
@@ -109,7 +152,9 @@ def publish(repo: Path, source: Path, session: str, *, previous: Path|None=None,
                     "immutable_handoff_commit":latest.get("handoff_commit")}
         raise HandoffPublicationError("FAIL_CLOSED_HANDOFF_BUILD_CONFLICT:"+payload["handoff_build_id"])
     target.mkdir(parents=True,exist_ok=False)
-    for name,path in files.items(): shutil.copyfile(path,target/name)
+    for name,entry in files.items():
+        if isinstance(entry, (bytes, bytearray)): (target/name).write_bytes(entry)
+        else: shutil.copyfile(entry,target/name)
     (target/"HANDOFF.md").write_text(f"# Stock Lookup AI handoff\n\nSession: {session}\n\nBuild: {payload['handoff_build_id']}\n\nStatus: READY_FOR_AI\n",encoding="utf-8")
     immutable_session_path=target.relative_to(repo).as_posix()
     _git(repo,"add",immutable_session_path)

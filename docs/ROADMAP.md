@@ -1,5 +1,18 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Canonical Daily owner publication resume and presentation join V1 (2026-09-22, corrective
+pass complete):** `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 =
+CORRECTIVE_COMPLETE`. Owner-directed continuation after a source review of the original pass
+found three real production correctness defects (auto-resume ignored the intended session;
+Dashboard publication's second runtime materialization erased the presentation join it had just
+applied; the journal attested presentation binding from expectation rather than evidence) plus
+the explicitly-deferred one-owner-workflow unification still open. All three defects fixed with
+regression coverage; journal writes now fail closed before material work; `stocklookup.py
+daily`'s zero-flag production invocation now shares `tools.run_owner_daily.run_workflow` with
+the desktop one-click launcher. Stage-aware resume *skip* logic (vs. today's idempotent
+re-execution, which already prevents reacquisition/duplicate publication) remains open future
+work. See `docs/STATE.md` and `docs/DECISIONS.md` for full defect-by-defect detail.
+
 **Indicator and metric availability reconciliation V1 (2026-09-19):**
 `INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 = COMPLETE`. Owner-directed, backend-only:
 new `indicator_metric_availability/v1` + `indicator_metric_display_state/v1` contracts give

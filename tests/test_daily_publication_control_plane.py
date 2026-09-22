@@ -64,7 +64,7 @@ def test_remote_completion_failure_retains_exact_recoverable_source_sha(monkeypa
             "BLOCKER=CI_FAILED\n"
         )
 
-    monkeypatch.setattr(owner, "materialize_canonical_runtime_release", lambda *args, **kwargs: {})
+    monkeypatch.setattr(owner, "materialize_release_ready_runtime", lambda *args, **kwargs: {})
     monkeypatch.setattr(owner, "materialize_canonical_trusted_subset", lambda *args, **kwargs: {})
     monkeypatch.setattr(owner.subprocess, "run", lambda *args, **kwargs: _Result())
 
