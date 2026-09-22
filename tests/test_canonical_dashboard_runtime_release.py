@@ -479,3 +479,105 @@ def test_replay_materialization_failure_never_invokes_live_publisher(tmp_path, m
     result = workflow.publish_dashboard_release(root, tmp_path / "runtime", "2026-09-17", producer_run_identity="run:exact")
     assert result["status"] == "FAILED"
     assert "WORKSPACE_EXACT_SESSION_PROJECTION_MISSING" in result["reason"]
+
+
+# ---- restage_runtime_with_presentation_projection
+# (CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1): additive overlay of the
+# already-promoted runtime-served Workspace/Screener with the post-handoff presentation
+# projection's enriched bytes. Must never touch sealed Producer evidence, and must degrade to
+# SKIPPED (never raise) on anything unproven. ----
+
+def test_restage_skipped_when_presentation_not_collected(tmp_path):
+    result = runtime_release.restage_runtime_with_presentation_projection(
+        tmp_path / "runtime", tmp_path, {"status": "UNAVAILABLE"},
+    )
+    assert result["status"] == "SKIPPED"
+
+
+def test_restage_skipped_when_lineage_not_verified(tmp_path):
+    result = runtime_release.restage_runtime_with_presentation_projection(
+        tmp_path / "runtime", tmp_path, {"status": "COLLECTED", "lineage_status": "UNVERIFIED", "path": "x"},
+    )
+    assert result["status"] == "SKIPPED"
+
+
+def test_restage_skipped_when_source_or_target_missing(tmp_path):
+    runtime = tmp_path / "runtime"
+    result = runtime_release.restage_runtime_with_presentation_projection(
+        runtime, tmp_path,
+        {"status": "COLLECTED", "session": "2026-09-17", "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+         "path": "nope.json"},
+    )
+    assert result["status"] == "SKIPPED"
+    assert result["reason"] == "SOURCE_OR_TARGET_WORKSPACE_MISSING"
+
+
+def test_restage_never_raises_on_malformed_source_json(tmp_path):
+    (tmp_path / "bad.json").write_text("{not json", encoding="utf-8")
+    runtime = tmp_path / "runtime" / "data"
+    runtime.mkdir(parents=True)
+    (runtime / "investment_decision_workspace.json").write_text("{}", encoding="utf-8")
+    result = runtime_release.restage_runtime_with_presentation_projection(
+        tmp_path / "runtime", tmp_path,
+        {"status": "COLLECTED", "session": "2026-09-17", "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+         "path": "bad.json"},
+    )
+    assert result["status"] == "SKIPPED"
+
+
+def test_restage_overlays_valid_runtime_with_enriched_bytes_never_touching_sealed_evidence(tmp_path, monkeypatch):
+    root, source, workspace, manifest = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, "2026-09-17")
+    target_before = (runtime / "data" / "investment_decision_workspace.json").read_bytes()
+    sealed_before = source.read_bytes()
+
+    presentation_dir = root / "operations-review" / "post-handoff-presentation-projection-v1" / "2026-09-17"
+    presentation_dir.mkdir(parents=True)
+    enriched_workspace = {k: v for k, v in workspace.items() if k not in ("artifact_identity", "artifact_sha256")}
+    enriched_workspace["cards"] = {"AAA": {"signal_velocity": {"overall_transition_state": "STABLE"}}}
+    enriched_workspace.update(runtime_release.workspace_contract.content_identity(enriched_workspace))
+    (presentation_dir / "investment_decision_workspace_projection.json").write_text(
+        json.dumps(enriched_workspace), encoding="utf-8")
+    screener_source = source.parent / "screener_master_projection.json"
+    (presentation_dir / "screener_master_projection.json").write_text(
+        screener_source.read_text(encoding="utf-8"), encoding="utf-8")
+
+    presentation_result = {
+        "status": "COLLECTED", "session": "2026-09-17",
+        "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+        "path": str((presentation_dir / "investment_decision_workspace_projection.json").resolve().relative_to(root.resolve())),
+    }
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+
+    assert result["status"] == "RESTAGED"
+    assert result["workspace_artifact_identity"] == enriched_workspace["artifact_identity"]
+    assert result["screener_master_projection_status"] == "RESTAGED"
+    new_target = (runtime / "data" / "investment_decision_workspace.json").read_bytes()
+    assert new_target != target_before
+    assert json.loads(new_target)["cards"]["AAA"]["signal_velocity"]["overall_transition_state"] == "STABLE"
+    # Sealed Producer evidence (the original operation-directory copy) must be untouched.
+    assert source.read_bytes() == sealed_before
+
+
+def test_restage_skipped_on_session_mismatch(tmp_path, monkeypatch):
+    root, source, workspace, manifest = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, "2026-09-17")
+
+    presentation_dir = root / "operations-review" / "post-handoff-presentation-projection-v1" / "2026-09-16"
+    presentation_dir.mkdir(parents=True)
+    mismatched = {k: v for k, v in workspace.items() if k not in ("artifact_identity", "artifact_sha256")}
+    mismatched["as_of_session"] = "2026-09-16"
+    mismatched.update(runtime_release.workspace_contract.content_identity(mismatched))
+    (presentation_dir / "investment_decision_workspace_projection.json").write_text(
+        json.dumps(mismatched), encoding="utf-8")
+
+    presentation_result = {
+        "status": "COLLECTED", "session": "2026-09-16",
+        "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+        "path": str((presentation_dir / "investment_decision_workspace_projection.json").resolve().relative_to(root.resolve())),
+    }
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+    assert result["status"] == "SKIPPED"
+    assert result["reason"] == "SESSION_OR_CONTRACT_MISMATCH"

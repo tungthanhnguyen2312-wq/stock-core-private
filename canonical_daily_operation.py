@@ -46,6 +46,7 @@ from typing import Any, Callable, Mapping
 from canonical_dashboard_runtime_release import (
     CanonicalRuntimeReleaseError,
     materialize_canonical_runtime_release,
+    restage_runtime_with_presentation_projection,
 )
 from canonical_post_close_pipeline import (
     CanonicalPostCloseError,
@@ -372,6 +373,8 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
     print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK={post_handoff_feedback.get('status')}")
     presentation = record.get("post_handoff_presentation_projection") if isinstance(record.get("post_handoff_presentation_projection"), Mapping) else {}
     print(f"POST_HANDOFF_PRESENTATION_PROJECTION={presentation.get('status')}")
+    restage = record.get("post_handoff_runtime_restage") if isinstance(record.get("post_handoff_runtime_restage"), Mapping) else {}
+    print(f"POST_HANDOFF_RUNTIME_RESTAGE={restage.get('status')}")
     if record.get("stage"):
         print(f"STAGE={record.get('stage')}")
 
@@ -893,6 +896,15 @@ def run_canonical_daily_operation(
         root, runtime_root, resolved_session,
         producer_run_dir=producer_result.get("run_dir"), output_root=operation_output_root,
     )
+    # Overlay the already-promoted runtime-served Workspace/Screener bytes with the enriched
+    # presentation projection above -- so the same-session Signal Velocity/Flow-Price that
+    # normal Daily can now genuinely produce actually reaches the Dashboard/AI surfaces that
+    # read from runtime_root, not merely a side artifact nothing consumes. Sealed Producer
+    # evidence is never touched; a no-op/failure here silently leaves the sealed (pre-handoff)
+    # bytes already promoted by materialize_canonical_runtime_release above.
+    post_handoff_runtime_restage = restage_runtime_with_presentation_projection(
+        runtime_root, root, post_handoff_presentation_projection,
+    )
 
     publication: dict[str, Any] | None = None
     state = STATE_LOCAL_COMPLETE
@@ -1040,11 +1052,12 @@ def run_canonical_daily_operation(
         "post_handoff_observers": post_handoff_observers,
         "post_handoff_prospective_decision_feedback": post_handoff_prospective_decision_feedback,
         "post_handoff_presentation_projection": post_handoff_presentation_projection,
+        "post_handoff_runtime_restage": post_handoff_runtime_restage,
     }
     persistable = {k: v for k, v in record.items() if k not in {
         "producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment",
         "tactical_reversal_shadow_collection", "post_handoff_observers", "post_handoff_prospective_decision_feedback",
-        "post_handoff_presentation_projection",
+        "post_handoff_presentation_projection", "post_handoff_runtime_restage",
     }}
     persistable["lineage"] = {
         "session_gate_phase_a": phase_a.get("gate_identity"),

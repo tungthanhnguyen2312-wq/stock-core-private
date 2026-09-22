@@ -523,3 +523,57 @@ def materialize_canonical_runtime_release(
     finally:
         shutil.rmtree(staging, ignore_errors=True)
         shutil.rmtree(backup, ignore_errors=True)
+
+
+def restage_runtime_with_presentation_projection(
+    runtime_root: Path, root: Path, presentation_result: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Additively overlay the already-promoted runtime-served Workspace/Screener bytes with the
+    post-handoff presentation projection's enriched bytes (same-session Signal Velocity /
+    Flow-Price now populated), after ``materialize_canonical_runtime_release`` has already
+    promoted the sealed (pre-handoff) copies -- see
+    CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1.
+
+    Never touches sealed Producer evidence (the operation/run directories) -- only the
+    runtime-served copies under ``runtime_root/data/``, using the same ``atomic_copy_file``
+    primitive ``materialize_canonical_runtime_release`` itself uses. No-op unless the
+    presentation projection both succeeded and lineage-verified against the sealed Producer
+    Workspace, and the replacement bytes independently re-validate (self-consistent content
+    identity, matching session/contract) -- any other outcome degrades to SKIPPED and leaves the
+    sealed bytes exactly as they were. Never raises.
+    """
+    if (presentation_result.get("status") != "COLLECTED"
+            or presentation_result.get("lineage_status") != "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"):
+        return {"status": "SKIPPED", "reason": "PRESENTATION_PROJECTION_UNAVAILABLE_OR_UNVERIFIED"}
+    session = presentation_result.get("session")
+    path = presentation_result.get("path")
+    if not isinstance(path, str) or not path:
+        return {"status": "SKIPPED", "reason": "PRESENTATION_PROJECTION_PATH_MISSING"}
+    try:
+        source_workspace = (Path(root) / path).resolve()
+        source_screener = source_workspace.parent / "screener_master_projection.json"
+        target_workspace = Path(runtime_root) / "data" / "investment_decision_workspace.json"
+        target_screener = Path(runtime_root) / "data" / "screener_master_projection.json"
+        if not source_workspace.is_file() or not target_workspace.is_file():
+            return {"status": "SKIPPED", "reason": "SOURCE_OR_TARGET_WORKSPACE_MISSING"}
+        new_payload = json.loads(source_workspace.read_text(encoding="utf-8"))
+        current_target_payload = json.loads(target_workspace.read_text(encoding="utf-8"))
+        if (new_payload.get("as_of_session") != session
+                or current_target_payload.get("as_of_session") != session
+                or new_payload.get("contract_version") != workspace_contract.CONTRACT_VERSION):
+            return {"status": "SKIPPED", "reason": "SESSION_OR_CONTRACT_MISMATCH"}
+        identity = workspace_contract.content_identity(new_payload)
+        if new_payload.get("artifact_identity") != identity["artifact_identity"]:
+            return {"status": "SKIPPED", "reason": "WORKSPACE_CONTENT_IDENTITY_MISMATCH"}
+        atomic_copy_file(source_workspace, target_workspace)
+        screener_status = "SKIPPED"
+        if source_screener.is_file() and target_screener.is_file():
+            atomic_copy_file(source_screener, target_screener)
+            screener_status = "RESTAGED"
+        return {
+            "status": "RESTAGED", "session": session,
+            "workspace_artifact_identity": identity["artifact_identity"],
+            "screener_master_projection_status": screener_status,
+        }
+    except Exception as exc:  # noqa: BLE001 - this overlay must never block or fail core Daily
+        return {"status": "SKIPPED", "reason": f"{type(exc).__name__}:{exc}"}
