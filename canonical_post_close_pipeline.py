@@ -1028,6 +1028,79 @@ def run_current_foreign_flow_enrichment(root: Path, runtime_root: Path, session:
     }
 
 
+def run_post_handoff_observers(
+    root: Path, runtime_root: Path, session: str, tiers: Mapping[str, Any], *,
+    enable_current_foreign_flow_live: bool = False,
+) -> dict[str, Any]:
+    """Retained-only observers admitted only after ``build_tiered_bundle`` has written the
+    same-session canonical handoff binding (``session_handoff_bundle.json``).
+
+    Shared by both the production canonical Daily kernel (``canonical_daily_operation.py``)
+    and the diagnostic ``run_canonical_post_close`` below so neither can silently diverge on
+    this sequencing again (CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1).
+    Every observer here is best-effort and non-blocking: a failure surfaces as UNAVAILABLE and
+    never revises or blocks the already-completed Daily Producer result or AI handoff.
+    ``enable_current_foreign_flow_live`` stays False by default in both callers -- normal Daily
+    never reaches DNSE for this contract.
+    """
+    signal_velocity = run_multi_session_signal_velocity_shadow(root, session)
+    current_foreign_flow_enrichment = run_current_foreign_flow_enrichment(
+        root, runtime_root, session, allow_network=enable_current_foreign_flow_live,
+    )
+    flow_price_divergence = run_flow_price_divergence_shadow(root, runtime_root, session, signal_velocity)
+    tier1 = tiers["session_handoff_bundle"]
+    tier1["multi_session_signal_velocity"] = signal_velocity
+    tier1["current_foreign_flow_enrichment"] = current_foreign_flow_enrichment
+    tier1["flow_price_divergence_shadow"] = flow_price_divergence
+    _write_json(tiers["bundle_dir"] / "session_handoff_bundle.json", tier1)
+    return {
+        "multi_session_signal_velocity": signal_velocity,
+        "current_foreign_flow_enrichment": current_foreign_flow_enrichment,
+        "flow_price_divergence_shadow": flow_price_divergence,
+    }
+
+
+def run_post_handoff_prospective_outcome_feedback(
+    root: Path, session: str, *, output_root: Path | None = None,
+) -> dict[str, Any]:
+    """Rerun outcome-feedback maturity evaluation after this session's own canonical handoff
+    has bound its T0 snapshot.
+
+    ``prospective_decision_retention.discover_snapshots`` only admits a session's T0 snapshot
+    as GENUINE once ``session_handoff_bundle.json`` binds it (see
+    CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1). ``run_prospective_
+    collection``'s own feedback call runs before that binding exists for the CURRENT session,
+    so a cohort whose maturation horizon lands exactly on today's session is invisible to that
+    earlier run and would otherwise only be credited starting tomorrow. This reruns the same
+    read-only builder afterwards and writes to a distinct path from the pre-handoff artifact
+    ``run_prospective_collection`` already retains -- that earlier artifact remains immutable
+    historical evidence of what outcome-feedback could see before this session's own handoff
+    existed; no historical artifact is rewritten. Non-blocking: any failure degrades to
+    UNAVAILABLE and never revises Daily Producer's completed result.
+    """
+    output_root = output_root or root
+    output = (
+        output_root / "operations-review" / "prospective-decision-outcome-feedback-post-handoff-v1"
+        / session / "prospective_decision_feedback_artifact.json"
+    )
+    cmd = [
+        sys.executable, "tools/run_prospective_decision_outcome_feedback.py",
+        "--root", str(root), "--output", str(output),
+    ]
+    try:
+        result = subprocess.run(cmd, cwd=str(root), capture_output=True, text=True)
+    except OSError as exc:
+        return {"status": "UNAVAILABLE", "session": session, "reason": f"{type(exc).__name__}:{exc}"}
+    if result.returncode != 0:
+        return {"status": "UNAVAILABLE", "session": session, "reason": (result.stderr or result.stdout).strip()[-2000:]}
+    artifact = _load(output)
+    return {
+        "status": "COLLECTED", "session": session, "path": _rel(root, output),
+        "artifact_identity": (artifact or {}).get("artifact_identity"),
+        "authority_boundary": "RETAINED_ONLY_POST_HANDOFF_MATURITY_REFRESH_NOT_A_CURRENT_DECISION_INPUT",
+    }
+
+
 def register_session_inputs(
     root: Path, session: str, *, registry_path: Path | None = None, artifact_root: Path | None = None,
     retained_evidence_root: Path | None = None,
@@ -1482,25 +1555,22 @@ def run_canonical_post_close(
         runtime_release=runtime_release,
     )
     # The tiered bundle above writes the sole binding that qualifies today's
-    # immutable T0 snapshot.  Run the new observer only afterwards; it is
+    # immutable T0 snapshot.  Run the shared post-handoff observers only afterwards
+    # (same helper canonical_daily_operation.py's production kernel calls); they are
     # deliberately best-effort and cannot change Producer or handoff success.
-    signal_velocity = run_multi_session_signal_velocity_shadow(root, session)
-    current_foreign_flow_enrichment = run_current_foreign_flow_enrichment(
-        root, runtime_root, session, allow_network=enable_current_foreign_flow_live,
+    post_handoff = run_post_handoff_observers(
+        root, runtime_root, session, tiers, enable_current_foreign_flow_live=enable_current_foreign_flow_live,
     )
-    flow_price_divergence = run_flow_price_divergence_shadow(root, runtime_root, session, signal_velocity)
-    tier1 = tiers["session_handoff_bundle"]
-    tier1["multi_session_signal_velocity"] = signal_velocity
-    tier1["current_foreign_flow_enrichment"] = current_foreign_flow_enrichment
-    tier1["flow_price_divergence_shadow"] = flow_price_divergence
-    _write_json(tiers["bundle_dir"] / "session_handoff_bundle.json", tier1)
+    post_handoff_feedback = run_post_handoff_prospective_outcome_feedback(root, session)
     return {
         "session": session, "acquisition": acquisition, "enrichment": enrichment,
         "producer_result": producer_result, "decision_packet": decision_packet,
         "prospective": prospective, "prospective_snapshot": prospective_snapshot,
-        "runtime_release": runtime_release, "tiers": tiers, "multi_session_signal_velocity": signal_velocity,
-        "current_foreign_flow_enrichment": current_foreign_flow_enrichment,
-        "flow_price_divergence_shadow": flow_price_divergence,
+        "runtime_release": runtime_release, "tiers": tiers,
+        "multi_session_signal_velocity": post_handoff["multi_session_signal_velocity"],
+        "current_foreign_flow_enrichment": post_handoff["current_foreign_flow_enrichment"],
+        "flow_price_divergence_shadow": post_handoff["flow_price_divergence_shadow"],
+        "post_handoff_prospective_decision_feedback": post_handoff_feedback,
         "producer_head": producer_head, "consumer_head": consumer_head,
     }
 

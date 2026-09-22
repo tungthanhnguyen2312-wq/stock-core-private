@@ -58,6 +58,8 @@ from canonical_post_close_pipeline import (
     evaluate_dashboard_runtime_readiness,
     register_session_inputs,
     retain_prospective_decision_snapshot,
+    run_post_handoff_observers,
+    run_post_handoff_prospective_outcome_feedback,
     run_prospective_collection,
     run_tactical_reversal_shadow_collection,
     validate_and_freeze_completed_session,
@@ -360,6 +362,13 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
     print(f"OPERATION_IDENTITY={record.get('operation_identity')}")
     shadow_collection = record.get("tactical_reversal_shadow_collection") if isinstance(record.get("tactical_reversal_shadow_collection"), Mapping) else {}
     print(f"TACTICAL_REVERSAL_SHADOW_COLLECTION={shadow_collection.get('status')}")
+    post_handoff = record.get("post_handoff_observers") if isinstance(record.get("post_handoff_observers"), Mapping) else {}
+    velocity = post_handoff.get("multi_session_signal_velocity") if isinstance(post_handoff.get("multi_session_signal_velocity"), Mapping) else {}
+    flow_price = post_handoff.get("flow_price_divergence_shadow") if isinstance(post_handoff.get("flow_price_divergence_shadow"), Mapping) else {}
+    post_handoff_feedback = record.get("post_handoff_prospective_decision_feedback") if isinstance(record.get("post_handoff_prospective_decision_feedback"), Mapping) else {}
+    print(f"SIGNAL_VELOCITY={velocity.get('status')}")
+    print(f"FLOW_PRICE_DIVERGENCE={flow_price.get('status')}")
+    print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK={post_handoff_feedback.get('status')}")
     if record.get("stage"):
         print(f"STAGE={record.get('stage')}")
 
@@ -860,6 +869,19 @@ def run_canonical_daily_operation(
         **tier_kwargs,
     )
 
+    # CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1: run every
+    # already-approved post-handoff observer now that build_tiered_bundle has written
+    # today's canonical handoff binding. Same shared helper the diagnostic
+    # run_canonical_post_close() uses, so normal Daily and that diagnostic path cannot
+    # silently diverge again. Non-blocking and network-off by default; never revises the
+    # already-completed Daily Producer result or blocks publication below.
+    post_handoff_observers = run_post_handoff_observers(
+        root, runtime_root, resolved_session, tiers, enable_current_foreign_flow_live=False,
+    )
+    post_handoff_prospective_decision_feedback = run_post_handoff_prospective_outcome_feedback(
+        root, resolved_session, output_root=operation_output_root,
+    )
+
     publication: dict[str, Any] | None = None
     state = STATE_LOCAL_COMPLETE
     if complete_publication:
@@ -999,8 +1021,17 @@ def run_canonical_daily_operation(
         # inside the compared record would risk a spurious IMMUTABLE_OPERATION_RECORD_CONFLICT
         # on an otherwise-identical rerun.
         "tactical_reversal_shadow_collection": tactical_shadow_collection,
+        # Same exclusion rationale as `tactical_reversal_shadow_collection` above: these
+        # post-handoff observers are best-effort and their status can genuinely vary
+        # run-to-run (network/provider hiccups, newly matured cohorts) without meaning
+        # the Daily production result itself changed.
+        "post_handoff_observers": post_handoff_observers,
+        "post_handoff_prospective_decision_feedback": post_handoff_prospective_decision_feedback,
     }
-    persistable = {k: v for k, v in record.items() if k not in {"producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment", "tactical_reversal_shadow_collection"}}
+    persistable = {k: v for k, v in record.items() if k not in {
+        "producer_result", "decision_packet", "prospective", "prospective_decision_snapshot_detail", "enrichment",
+        "tactical_reversal_shadow_collection", "post_handoff_observers", "post_handoff_prospective_decision_feedback",
+    }}
     persistable["lineage"] = {
         "session_gate_phase_a": phase_a.get("gate_identity"),
         "session_gate_phase_b": phase_b.get("gate_identity"),
