@@ -376,6 +376,29 @@ def _journal_advance(root: Path, run_id: str | None, stage: str, **kwargs: Any) 
         pass
 
 
+def _journal_advance_strict(root: Path, run_id: str, stage: str, **kwargs: Any) -> None:
+    """Fail-closed counterpart to `_journal_advance`, for stage transitions that GATE a
+    subsequent external side effect (a Git push, a publication, materializing an artifact the
+    owner will act on) -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
+    section 3. For this production owner workflow, durable stage transitions are the crash/resume
+    authority: if the durable write itself cannot be trusted, blindly continuing to the next side
+    effect would leave the owner unable to tell, after a later crash, whether that side effect
+    ever ran. Raises `OwnerDailyError` (never silently swallows, unlike `_journal_advance`) so the
+    caller stops -- via `run_workflow`'s own outer exception handler, which still records FAILED
+    best-effort -- before that next side effect is attempted.
+    """
+    try:
+        journal.advance(root, run_id, stage, **kwargs)
+    except Exception as exc:
+        raise OwnerDailyError(
+            "Owner journal", f"OWNER_JOURNAL_ADVANCE_FAILED:{stage}:{type(exc).__name__}:{exc}",
+            "A durable owner-journal stage transition could not be recorded, so the next "
+            "external side effect was never attempted. Resolve the underlying issue for "
+            "operations-review/owner-daily-journal-v1/ and rerun; already-completed upstream "
+            "work is independently reverified and reused, not redone.",
+        ) from exc
+
+
 def _resolve_intended_session(now: datetime | None = None) -> str | None:
     """Best-effort resolution of "what session would an ORDINARY fresh Daily invocation intend
     right now", using the same governed calendar contract already used elsewhere
@@ -443,6 +466,66 @@ def _presentation_bound_state(root: Path, session: str) -> str:
         return "UNKNOWN"
 
 
+# --- CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 4: genuine
+# stage-aware resume. Each helper below is a READ-ONLY, independent re-derivation of "did this
+# exact session's side effect already durably happen" from the real external system itself --
+# never from the journal's own stage text, which is only ever used to decide whether Daily
+# Producer acquisition itself may be skipped (see `_auto_resumable_session` above). A caller
+# invokes the corresponding publish/materialize step only when the matching helper here returns
+# None; this makes "journal stale/incomplete + external state already advanced" (section 5) and
+# "verification fails -> resume from the earliest safe stage" (section 4) automatic side effects
+# of always reconciling against truth, regardless of what the journal itself claims.
+def _verify_dashboard_published(web_dir: Path, session: str) -> dict[str, Any] | None:
+    """Reuses the existing `verify_dashboard_session` gate -- the same proof
+    `publish_dashboard_release` itself relies on -- to decide whether the Dashboard already
+    carries the exact resolved session, without re-invoking the (expensive, side-effecting)
+    release pipeline."""
+    result = verify_dashboard_session(web_dir, session)
+    if result.get("status") != "READY":
+        return None
+    verified = dict(result)
+    verified.setdefault("publication_state", "ALREADY_PUBLISHED_VERIFIED")
+    return verified
+
+
+def _verify_ai_handoff_published(handoff_repo: Path, session: str) -> dict[str, Any] | None:
+    """Reuses the existing `preflight_repository` sync (the same one `publish_ai_handoff` itself
+    calls first) to bring the local handoff checkout to a verified `origin/main`, then reads its
+    `LATEST.json` pointer directly -- proof from the remote repository itself, never from journal
+    text. Any failure (repo missing/dirty/unreachable, pointer unreadable) is "not verified",
+    never an error: the caller simply republishes via the existing idempotent `publish_ai_handoff`
+    contract, exactly as it already would with no prior journal at all."""
+    try:
+        preflight = preflight_repository(handoff_repo, expected_name="stocklookup-ai-handoffs",
+                                         expected_remote_fragment="stocklookup-ai-handoffs")
+        latest = json.loads((handoff_repo / "LATEST.json").read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(latest, dict) or latest.get("status") != "READY_FOR_AI" or latest.get("latest_session") != session:
+        return None
+    return {"remote_sha": preflight["head"], "latest_session": session, "handoff_build_id": latest.get("handoff_build_id")}
+
+
+def _verify_action_center_ready(session: str, *, root: Path | None = None) -> dict[str, Any] | None:
+    """Reads the exact-session Action Center artifact the way `materialize_action_center` itself
+    writes it (`personal_investment_decision_action_center.write_private_artifact`/
+    `write_markdown`) and confirms both files exist and the JSON payload is genuinely addressed
+    to `session` with a real identity -- never merely that a file of that name is present."""
+    import personal_investment_decision_action_center as action_center
+    base = root or action_center.default_action_center_root()
+    json_path = base / session / "personal_investment_decision_action_center_v1.json"
+    markdown_path = base / session / "personal_investment_decision_action_center.md"
+    try:
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if (not isinstance(payload, dict) or payload.get("session") != session
+            or not payload.get("artifact_identity") or not markdown_path.is_file()):
+        return None
+    return {"status": "READY", "session": session, "portfolio_status": (payload.get("portfolio") or {}).get("status"),
+           "json_path": str(json_path), "view_path": str(markdown_path), "identity": payload.get("artifact_identity")}
+
+
 def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                  handoff_repo: Path = DEFAULT_HANDOFF_REPO, dashboard_web_dir: Path = DEFAULT_WEB_DIR,
                  publish_dashboard: bool = True, dashboard_complete_publication: bool = True,
@@ -453,12 +536,14 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
     # Read the PRE-EXISTING journal (if any) before superseding it below -- this is the only
     # source of "was a session interrupted mid-publication last time" this invocation has.
     auto_resumed = False
+    intended_session = replay_completed_session
     if not replay_completed_session:
         intended_session = _resolve_intended_session()
         prior_journal = journal.read_journal(root)
         auto_session = _auto_resumable_session(root, runtime_root, intended_session=intended_session)
         if auto_session:
             replay_completed_session = auto_session
+            intended_session = auto_session
             auto_resumed = True
         elif (prior_journal is not None and prior_journal.get("stage") != journal.COMPLETE
               and prior_journal.get("resolved_session") not in (None, intended_session)):
@@ -473,8 +558,28 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             print(f"PRIOR_RUN_ID: {prior_journal.get('run_id')}")
             print(f"NEW_INTENDED_SESSION: {intended_session}")
 
-    run_id = _journal_start(root, intended_session=replay_completed_session)
+    run_id = _journal_start(root, intended_session=intended_session)
     try:
+        # SESSION_RESOLVED must be durable BEFORE any material work begins (repository preflight,
+        # acquisition, ...) -- see section 2. When the exact session is already definitively known
+        # (an explicit replay, or a verified auto-resume) it is recorded immediately, with its
+        # resolved_session set. A genuinely fresh acquisition only has a calendar-arithmetic
+        # INTENDED value at this point -- never authoritative until Daily Producer's own gate
+        # confirms it below -- so the stage is marked reached now, but resolved_session is filled
+        # in once that confirmation exists (right after `_run_daily`), so this can never record a
+        # resolved_session a later confirmation might contradict.
+        if replay_completed_session:
+            _journal_advance_strict(root, run_id, journal.SESSION_RESOLVED, resolved_session=replay_completed_session)
+        else:
+            # `intended_session` (when resolved at all) is only a calendar-arithmetic ESTIMATE of
+            # what a fresh acquisition intends -- it may legitimately differ from what Daily
+            # Producer's own gate eventually confirms below (see `_resolve_intended_session`'s own
+            # docstring). Pre-setting `resolved_session` here to that estimate would make the
+            # confirmation call below raise JOURNAL_SESSION_IDENTITY_MISMATCH on any such benign
+            # divergence -- so only the STAGE is marked reached now; resolved_session is filled in
+            # exactly once, from the one authoritative source, right after `_run_daily` confirms it.
+            _journal_advance_strict(root, run_id, journal.SESSION_RESOLVED)
+
         producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
 
         if replay_completed_session:
@@ -484,43 +589,78 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             _run_daily(root, runtime_root)
             completion = verify_daily_completion(root, runtime_root)
             daily_status = "COMPLETED"
-        _journal_advance(root, run_id, journal.LOCAL_COMPLETE, resolved_session=str(completion["session"]))
+            _journal_advance_strict(root, run_id, journal.SESSION_RESOLVED, resolved_session=str(completion["session"]))
+        _journal_advance_strict(root, run_id, journal.LOCAL_COMPLETE, resolved_session=str(completion["session"]))
 
+        # Section 4.B: `commit_daily_state` is already its own independent verification -- it
+        # reads real tracked Git state and only commits/pushes a genuine diff, returning NO_CHANGE
+        # (never a duplicate commit) when the registry already reflects this session as retained.
+        # Calling it unconditionally on resume both re-verifies and skips redundant Git mutation
+        # in one already-governed step; see PRODUCER_STATE_RETAINED's existing tests.
         producer_state = commit_daily_state(root, str(completion["session"]))
-        _journal_advance(root, run_id, journal.PRODUCER_STATE_RETAINED)
+        _journal_advance_strict(root, run_id, journal.PRODUCER_STATE_RETAINED)
+
         # Presentation binding (Signal Velocity / Flow-Price additively joined into the
         # Workspace/Screener presentation) happens inside canonical_daily_operation.py itself,
         # before this workflow ever sees a completed session. This stage may only be recorded
         # when the dedicated attestation artifact proves a real, verifiable outcome (BOUND or a
         # legitimate UNAVAILABLE) -- never merely because the kernel was expected to have
-        # attempted it (section 4). An UNKNOWN outcome (older session, attestation never
-        # written) leaves the journal at PRODUCER_STATE_RETAINED; downstream stages still
-        # advance normally past the gap.
-        presentation_state = _presentation_bound_state(root, str(completion["session"]))
-        if presentation_state != "UNKNOWN":
-            _journal_advance(root, run_id, journal.PRESENTATION_BOUND, detail={"presentation_state": presentation_state})
+        # attempted it (section 4). An UNKNOWN outcome (older session, attestation never written,
+        # or corrupt) must never reach owner COMPLETE (section 1): publication is refused before
+        # it starts -- core analytical Daily and the governed registry commit above are already
+        # durable (LOCAL_COMPLETE / PRODUCER_STATE_RETAINED), only the owner's own terminal result
+        # is withheld.
+        session = str(completion["session"])
+        presentation_state = _presentation_bound_state(root, session)
+        if presentation_state == "UNKNOWN":
+            _journal_advance(root, run_id, journal.BLOCKED, detail={
+                "reason": "PRESENTATION_UNKNOWN_CANNOT_COMPLETE", "presentation_state": presentation_state,
+            })
+            return {"status": "BLOCKED", "session": completion["session"], "daily_status": daily_status,
+                    "producer_preflight": producer, "producer_state": producer_state,
+                    "presentation_state": presentation_state, "reason": "PRESENTATION_UNKNOWN_CANNOT_COMPLETE",
+                    "hint": "The dedicated post-handoff presentation attestation for this session is missing or "
+                            "does not yet prove BOUND/LEGITIMATE_UNAVAILABLE. Publication was refused before it "
+                            "started; rerun once the attestation is written.",
+                    "journal_run_id": run_id}
+        _journal_advance_strict(root, run_id, journal.PRESENTATION_BOUND, detail={"presentation_state": presentation_state})
 
         # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: publish the exact
         # resolved Daily session to the Dashboard via the existing governed release path before
         # AI handoff / Action Center -- a successful Daily must never leave the owner-facing
         # Dashboard on a stale session. A Dashboard failure does not block the independent
         # downstream steps below; it degrades the final status to PARTIAL instead (see main()).
-        dashboard = (
-            publish_dashboard_release(root, runtime_root, str(completion["session"]), web_dir=dashboard_web_dir,
-                                      producer_run_identity=completion["record"]["daily_producer_run_identity"],
-                                      complete_publication=dashboard_complete_publication)
-            if publish_dashboard else {"status": "SKIPPED", "expected_session": str(completion["session"]), "observed_session": None, "reason": "DASHBOARD_PUBLICATION_DISABLED"}
-        )
+        # Section 4.D: before re-running the (expensive, side-effecting) release pipeline, an
+        # independent verification first checks whether the Dashboard already carries this exact
+        # session -- e.g. a prior run reached DASHBOARD_PUBLISHED and only crashed afterwards.
+        if not publish_dashboard:
+            dashboard = {"status": "SKIPPED", "expected_session": session, "observed_session": None,
+                        "reason": "DASHBOARD_PUBLICATION_DISABLED"}
+        else:
+            verified_dashboard = _verify_dashboard_published(dashboard_web_dir, session)
+            dashboard = verified_dashboard if verified_dashboard is not None else publish_dashboard_release(
+                root, runtime_root, session, web_dir=dashboard_web_dir,
+                producer_run_identity=completion["record"]["daily_producer_run_identity"],
+                complete_publication=dashboard_complete_publication,
+            )
         if dashboard["status"] in {"READY", "SKIPPED"}:
-            _journal_advance(root, run_id, journal.DASHBOARD_PUBLISHED, detail={"status": dashboard["status"]})
+            _journal_advance_strict(root, run_id, journal.DASHBOARD_PUBLISHED, detail={"status": dashboard["status"]})
 
-        handoff = publish_ai_handoff(root, handoff_repo, completion)
-        _journal_advance(root, run_id, journal.AI_HANDOFF_PUBLISHED,
+        # Section 4.E: same pattern -- verify the AI handoff repo's own `origin/main` LATEST.json
+        # pointer before republishing; `publish_ai_handoff` is itself already idempotent
+        # (NO_OP_ALREADY_PUBLISHED), but this additionally skips its `git fetch`/remote-verify
+        # network round trip entirely once independently proven.
+        verified_handoff = _verify_ai_handoff_published(handoff_repo, session)
+        handoff = ({"publication": {"status": "ALREADY_PUBLISHED_VERIFIED"}, "remote": verified_handoff}
+                  if verified_handoff is not None else publish_ai_handoff(root, handoff_repo, completion))
+        _journal_advance_strict(root, run_id, journal.AI_HANDOFF_PUBLISHED,
                          detail={"remote_sha": (handoff.get("remote") or {}).get("remote_sha")})
 
-        action_center = materialize_action_center(root, str(completion["session"]))
+        # Section 4.F: same pattern for the local-only Action Center artifact.
+        verified_action_center = _verify_action_center_ready(session)
+        action_center = verified_action_center if verified_action_center is not None else materialize_action_center(root, session)
         if action_center["status"] != "PARTIAL":
-            _journal_advance(root, run_id, journal.ACTION_CENTER_READY, detail={"status": action_center["status"]})
+            _journal_advance_strict(root, run_id, journal.ACTION_CENTER_READY, detail={"status": action_center["status"]})
 
         dashboard_failed = dashboard["status"] not in {"READY", "SKIPPED"}
         if action_center["status"] == "PARTIAL" or dashboard_failed:
@@ -548,20 +688,32 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         except Exception:
             presentation_attestation = None
         presentation_projection = (presentation_attestation or {}).get("presentation_projection") or {}
-        _journal_advance(root, run_id, journal.COMPLETE, detail={
+        signal_velocity = (presentation_attestation or {}).get("signal_velocity") or {}
+        flow_price = (presentation_attestation or {}).get("flow_price_divergence_shadow") or {}
+        post_handoff_feedback = (presentation_attestation or {}).get("post_handoff_prospective_decision_feedback") or {}
+        runtime_restage = (presentation_attestation or {}).get("runtime_restage") or {}
+        _journal_advance_strict(root, run_id, journal.COMPLETE, detail={
             "session": str(completion["session"]),
             "canonical_daily_operation_identity": record.get("operation_identity"),
             "daily_producer_run_identity": record.get("daily_producer_run_identity"),
             "daily_producer_operation_identity": record.get("daily_producer_operation_identity"),
+            "producer_state_retained": producer_state.get("status"),
+            "presentation_bound_state": presentation_state,
             "post_handoff_presentation_projection": {
                 "status": presentation_projection.get("status"),
                 "lineage_status": presentation_projection.get("lineage_status"),
                 "workspace_artifact_identity": presentation_projection.get("workspace_artifact_identity"),
                 "sealed_producer_workspace_artifact_identity": (presentation_attestation or {}).get("sealed_producer_workspace_artifact_identity"),
             },
-            "dashboard": {"status": dashboard.get("status"), "publication_state": dashboard.get("publication_state")},
-            "ai_handoff": {"remote_sha": (handoff.get("remote") or {}).get("remote_sha")},
-            "action_center": {"status": action_center.get("status"), "identity": action_center.get("identity")},
+            "signal_velocity": {"status": signal_velocity.get("status"), "identity": signal_velocity.get("artifact_identity")},
+            "flow_price_divergence_shadow": {"status": flow_price.get("status"), "identity": flow_price.get("artifact_identity")},
+            "post_handoff_prospective_decision_feedback": {"status": post_handoff_feedback.get("status"), "identity": post_handoff_feedback.get("artifact_identity")},
+            "final_runtime_presentation": {"status": runtime_restage.get("status"), "identity": runtime_restage.get("artifact_identity")},
+            "dashboard": {"session": session, "status": dashboard.get("status"), "publication_state": dashboard.get("publication_state"),
+                         "build_id": dashboard.get("build_id")},
+            "ai_handoff": {"session": session, "remote_sha": (handoff.get("remote") or {}).get("remote_sha"),
+                           "handoff_build_id": (handoff.get("remote") or {}).get("handoff_build_id")},
+            "action_center": {"session": session, "status": action_center.get("status"), "identity": action_center.get("identity")},
         })
         return {"status": "PASS", "session": completion["session"], "daily_status": daily_status,
                 "producer_preflight": producer, "producer_state": producer_state,
@@ -596,7 +748,7 @@ def main(argv: list[str] | None = None) -> int:
                               publish_dashboard=not args.no_publish_dashboard,
                               dashboard_complete_publication=not args.no_complete_publication,
                               replay_completed_session=args.replay_completed_session)
-        if result["status"] == "PARTIAL":
+        if result["status"] in ("PARTIAL", "BLOCKED"):
             code = 3
     except OwnerDailyError as exc:
         code = 1

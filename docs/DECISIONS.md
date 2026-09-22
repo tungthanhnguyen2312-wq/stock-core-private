@@ -1,5 +1,63 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-22 - Canonical Daily Owner Publication Resume and Presentation Join V1 -- final implementation continuation
+
+Closes the remaining gaps the corrective-pass entry immediately below explicitly deferred
+(section 7's stage-aware skip logic) plus three further hardening items from the same owner
+directive that were not yet done: presentation `UNKNOWN` blocking `COMPLETE` (section 1),
+`SESSION_RESOLVED` actually being recorded (section 2), and journal writes that gate a side
+effect failing closed (section 3). Full defect/behavior-by-behavior detail lives in
+`docs/STATE.md`'s matching entry. Decisions taken here specifically:
+
+- **Presentation `UNKNOWN` refuses publication BEFORE it starts, rather than merely skipping
+  `PRESENTATION_BOUND` and continuing anyway.** The corrective pass below already stopped
+  fabricating a `PRESENTATION_BOUND` attestation on an `UNKNOWN` basis, but still let the
+  workflow monotonically jump straight to `DASHBOARD_PUBLISHED`/.../`COMPLETE`, so an
+  unattested session could still reach owner `COMPLETE`. The owner directive's own "preferred"
+  option (fail before publication) was taken over the alternative of publishing anyway and
+  merely withholding `COMPLETE` after the fact -- publishing a product whose final presentation
+  state was never attested defeats the point of the attestation. No separate
+  `LEGACY_PRESENTATION_UNATTESTED` classification for historical replay was added: the directive
+  offered it as optional ("if necessary"), and treating every `UNKNOWN` uniformly is simpler and
+  strictly safer than trying to distinguish "this old session predates the attestation module"
+  from "this attestation write genuinely failed" after the fact.
+- **`SESSION_RESOLVED` is recorded stage-only (no `resolved_session`) for a fresh acquisition,
+  filled in only once Daily Producer's own gate confirms it.** The alternative -- pre-recording
+  `resolved_session` from the calendar-arithmetic `intended_session` estimate immediately -- was
+  tried first and reverted: `owner_daily_journal.advance()`'s own (correct, pre-existing)
+  session-identity-mismatch guard then raised whenever that estimate legitimately differed from
+  Daily Producer's own later confirmation, which is exactly the kind of benign divergence
+  `_resolve_intended_session()`'s own docstring already calls out as expected. Marking the stage
+  reached without asserting an unconfirmed value avoids that failure mode entirely while still
+  satisfying the directive's "durable before material work" requirement.
+- **`_journal_advance_strict` is new and separate from the pre-existing best-effort
+  `_journal_advance`, not a change to `_journal_advance` itself.** Only stage transitions that
+  gate a subsequent external side effect were switched to the strict variant; the three
+  failure-metadata stages (`FAILED`/`INTERRUPTED`/`BLOCKED`) remain best-effort, since they are
+  terminal records with no further side effect to gate, and a hard OS kill can never guarantee
+  writing them anyway.
+- **Stage-aware resume is built as independent, journal-agnostic RE-VERIFICATION, not a
+  journal-stage dispatcher.** A design that branches on "if journal says stage >= X, skip step
+  X" was considered and rejected: it would still be trusting journal text, exactly what the
+  directive's section 4 explicitly warns against ("never trust journal text by itself"). Instead,
+  each of Dashboard/AI-handoff/Action-Center publication now always independently re-derives
+  "did this exact session's side effect already happen" from the real external system (the
+  Dashboard's own `build_info.json`, the AI-handoff repo's own `origin/main` `LATEST.json`
+  pointer, the Action Center's own session-addressed artifact) on EVERY invocation, replay or
+  not -- this is strictly stronger than stage-gated dispatch (it also self-heals a stale/
+  incomplete journal sitting next to already-advanced real state, satisfying section 5's
+  reconciliation requirement for free) and needed no separate "which stage was I resuming from"
+  bookkeeping at all. `PRODUCER_STATE_RETAINED`'s existing `commit_daily_state` was already this
+  exact pattern and needed no new verification function.
+- **Test-module `autouse` fixture stubs the new verifiers to a safe default, rather than editing
+  every one of the ~30 existing `run_workflow` call sites to pass an isolated `dashboard_web_dir`.**
+  The real verifiers read genuine machine-local state (a real Dashboard checkout at
+  `C:\Projects\StockLookup\market-dashboard` on this development machine); without the stub,
+  tests that don't override `dashboard_web_dir` would non-deterministically read that real path.
+  A single `autouse` fixture defaulting all three verifiers (plus the presentation gate) to
+  "not verified" / "legitimate UNAVAILABLE" keeps every pre-existing test's behavior unchanged
+  while the handful of new resume-specific tests override the stub explicitly per test.
+
 ## 2026-09-22 - Canonical Daily Owner Publication Resume and Presentation Join V1 -- corrective pass (continuation)
 
 A source review of the entry immediately below (which reported "bounded subset COMPLETE") found

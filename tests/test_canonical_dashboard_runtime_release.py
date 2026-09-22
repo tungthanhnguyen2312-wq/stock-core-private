@@ -435,6 +435,14 @@ def test_completed_session_replay_materializes_before_publisher_without_acquisit
     monkeypatch.setattr(workflow, "materialize_action_center", lambda *a, **k: {"status": "READY", "view_path": "unused"})
     monkeypatch.setattr(workflow, "open_action_center_view", lambda *a, **k: {})
     monkeypatch.setattr(workflow, "verify_dashboard_session", lambda *a: {"status": "READY"})
+    # CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 1/4: presentation
+    # UNKNOWN now blocks publication before it starts, and the stage-aware resume verifiers probe
+    # real external state by default -- stub all of them here so this test still exercises what it
+    # actually targets (materialize-before-publisher ordering), not the unrelated new gates.
+    monkeypatch.setattr(workflow, "_presentation_bound_state", lambda *a, **k: "LEGITIMATE_UNAVAILABLE")
+    monkeypatch.setattr(workflow, "_verify_dashboard_published", lambda *a, **k: None)
+    monkeypatch.setattr(workflow, "_verify_ai_handoff_published", lambda *a, **k: None)
+    monkeypatch.setattr(workflow, "_verify_action_center_ready", lambda *a, **k: None)
     materialize = workflow.materialize_release_ready_runtime
     seen = []
 

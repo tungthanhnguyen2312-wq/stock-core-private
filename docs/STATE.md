@@ -1,5 +1,108 @@
 # Stock Lookup — Operational State
 
+**Canonical Daily owner publication resume and presentation join V1 -- FINAL IMPLEMENTATION
+CONTINUATION (2026-09-22, second continuation):** Closes the remaining gaps the corrective pass
+below (entry immediately following) explicitly left open, on the same isolated worktree/branch
+`feature/daily-owner-resume-presentation-v1` rooted at `origin/main`
+`c142bf394db40f60ce02ef8aa4aaa1fded61a141`. No Daily run, no provider acquisition, no Dashboard/
+AI-handoff repo push, no deploy this pass.
+
+1. **Presentation `UNKNOWN` is now a real, complete gate (section 1).** Previously an `UNKNOWN`
+   post-handoff presentation attestation (missing/corrupt, or an older session) left
+   `PRESENTATION_BOUND` unrecorded but let the workflow continue straight through to Dashboard/
+   AI handoff/Action Center/`COMPLETE` anyway -- a monotonic-journal jump that let the owner
+   contract claim `COMPLETE` on an unattested presentation. `run_workflow` now refuses BEFORE
+   publication whenever `_presentation_bound_state` returns `UNKNOWN`: it returns `{"status":
+   "BLOCKED", "reason": "PRESENTATION_UNKNOWN_CANNOT_COMPLETE", ...}` without ever calling the
+   Dashboard/AI-handoff/Action-Center publishers, records `journal.BLOCKED` failure metadata
+   with the journal `stage` left at `PRODUCER_STATE_RETAINED` (never `PRESENTATION_BOUND`, never
+   `COMPLETE`). Core analytical Daily (`LOCAL_COMPLETE`) and the governed registry commit
+   (`PRODUCER_STATE_RETAINED`) remain durable either way -- only the owner's own terminal result
+   is withheld. Regression: `test_unknown_presentation_cannot_reach_owner_complete`.
+
+2. **`SESSION_RESOLVED` is now actually recorded (section 2).** The stage existed in
+   `owner_daily_journal.py`'s `STAGE_ORDER` since the prior pass but production code never
+   advanced to it; a fresh acquisition jumped straight from `STARTED` to `LOCAL_COMPLETE`. It is
+   now durably marked reached BEFORE repository preflight/`_run_daily` for every invocation
+   shape: immediately with `resolved_session` set for an explicit replay or a verified
+   auto-resume (the session is already exactly known), or stage-only (no `resolved_session`
+   yet, to avoid ever recording a speculative calendar-arithmetic estimate that Daily Producer's
+   own gate could later legitimately contradict) for a genuinely fresh acquisition --
+   `resolved_session` is then filled in from that one authoritative confirmation immediately
+   after `_run_daily` returns. A `SESSION_RESOLVED`-only journal (from a hard kill before Daily
+   Producer finished) is never treated as a completed Daily by the next invocation -- it safely
+   supersedes and reacquires, exactly like a `STARTED`-only journal always did. Regressions:
+   `test_session_resolved_is_durable_before_run_daily_for_a_fresh_acquisition`,
+   `test_hard_interruption_after_session_resolved_leaves_a_truthful_journal`,
+   `test_session_resolved_only_journal_still_reacquires_on_next_invocation`,
+   `test_different_intended_session_never_reuses_the_prior_journal`.
+
+3. **Durable journal writes that gate a side effect now fail closed (section 3).** Every prior
+   `_journal_advance` call was best-effort (`except Exception: pass`), including the writes
+   immediately BEFORE a Git push or a publication -- a write failure there (disk full,
+   permissions) silently continued straight into that side effect with no durable record it was
+   about to happen. New `_journal_advance_strict` raises `OwnerDailyError` instead, used for
+   every stage transition that gates the next side effect (`SESSION_RESOLVED`, `LOCAL_COMPLETE`,
+   `PRODUCER_STATE_RETAINED`, `PRESENTATION_BOUND`, `DASHBOARD_PUBLISHED`, `AI_HANDOFF_PUBLISHED`,
+   `ACTION_CENTER_READY`, `COMPLETE`); the workflow's existing outer exception handler still
+   records `FAILED` best-effort and re-raises. Terminal failure-metadata writes (`FAILED`/
+   `INTERRUPTED`/the `BLOCKED` early-refusal above) remain best-effort, matching the pre-existing,
+   unchanged "a hard OS kill cannot write a final marker regardless" reality. Regression:
+   `test_journal_stage_write_failure_prevents_advancing_to_next_side_effect`.
+
+4. **Genuine stage-aware resume, independently verified against real external state (section
+   4 -- the one major piece the corrective pass below explicitly deferred).** Three new
+   read-only verification helpers each re-derive "did this exact session's side effect already
+   durably happen" from the real external system itself, never from journal text: `_verify_
+   dashboard_published` (reuses the existing `verify_dashboard_session` gate against the
+   Dashboard's own `build_info.json`), `_verify_ai_handoff_published` (reuses `preflight_
+   repository` to sync the handoff repo to a verified `origin/main`, then reads its own
+   `LATEST.json` pointer), and `_verify_action_center_ready` (reads the Action Center's own
+   session-addressed JSON artifact and confirms its `session`/`artifact_identity` match). Each
+   publish/materialize step now calls its verifier first and only invokes the (already-
+   idempotent) publish/materialize function when verification finds nothing valid --
+   `PRODUCER_STATE_RETAINED`'s own step (`commit_daily_state`) was already exactly this pattern
+   (a real Git-status re-check that only commits a genuine diff) and needed no new code. This
+   design is journal-agnostic by construction: it reconciles against real state on every
+   invocation, resumed or not, so a stale/incomplete journal next to already-advanced real state
+   is handled automatically, and a verification that now fails (state was wiped, or never
+   really happened) always falls through to redoing the real work, regardless of what any prior
+   journal claimed. Regressions (6 tests, valid- and invalid-proof branches):
+   `test_resume_after_producer_state_retained_reverifies_without_a_new_commit`,
+   `test_resume_after_dashboard_published_skips_republish_when_verified` /
+   `_republishes_when_verification_fails`, `test_resume_after_ai_handoff_published_skips_
+   republish_when_verified` / `_republishes_when_verification_fails`, `test_resume_after_
+   action_center_ready_skips_rebuild_when_verified` / `_rebuilds_when_verification_fails`. A new
+   test-module `autouse` fixture (`_no_resume_verification_by_default`) stubs all three
+   verifiers (and the presentation gate) to a safe, deterministic default for every OTHER test
+   in the module, since the real verifiers touch real machine-local paths (e.g. the actual
+   `C:\Projects\StockLookup\market-dashboard` checkout) that must never leak into test outcomes.
+
+5. **`COMPLETE` attestation enriched (section 6).** The terminal `journal.COMPLETE` detail now
+   additionally records `producer_state_retained`, `presentation_bound_state`, Signal Velocity /
+   Flow-Price-divergence / post-handoff prospective-feedback / final-runtime-presentation
+   status+identity (all read from the same dedicated `post_handoff_presentation_attestation.py`
+   record already used for the gate above), and session/build identifiers on the Dashboard/AI-
+   handoff/Action-Center sub-blocks -- on top of the identities the prior pass already recorded
+   (session, canonical/producer operation identities, presentation projection, sealed Producer
+   Workspace identity).
+
+6. **`main()`'s exit code now covers the new `BLOCKED` result** (`status == "BLOCKED"` maps to
+   exit code 3, same as `"PARTIAL"`); `stocklookup.py`'s existing generic
+   `status not in ("PASS", "PARTIAL")` printer branch already renders `BLOCKED`'s `reason`/`hint`
+   correctly with no changes needed there.
+
+Not reopened this pass, per the owner directive's explicit boundary: observer algorithms,
+Integrated Decision policy, tactical thresholds, valuation policy, RAW_AS_TRADED/PIT gates,
+liquidity/sizing authority, the foreign-flow network-off default, `stocklookup.py`'s diagnostic
+override modes, provider architecture, Dashboard UX. Full test suite (`pytest tests/`) run
+green including the new/changed tests above; `py_compile`, `git diff --check`, and
+`python tools/stocklookup_roadmap.py --check` (DRIFT CHECK PASS) all clean. Milestone stays
+`ACTIVE` with narrative disposition
+`IMPLEMENTATION_COMPLETE_AWAITING_NEXT_REAL_DAILY_ACCEPTANCE` -- not `COMPLETE` -- pending the
+next real `stocklookup.ps1 daily` production acceptance run, per the owner directive's own
+closing rule. See `docs/DECISIONS.md`'s matching entry.
+
 **Canonical Daily owner publication resume and presentation join V1 -- CORRECTIVE PASS
 (2026-09-22, continuation):** A source review of the entry below (originally reported "bounded
 subset COMPLETE") found three real production correctness defects plus the explicitly-deferred

@@ -1,17 +1,24 @@
 # Stock Lookup — Architecture & Roadmap
 
-**Canonical Daily owner publication resume and presentation join V1 (2026-09-22, corrective
-pass complete):** `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 =
-CORRECTIVE_COMPLETE`. Owner-directed continuation after a source review of the original pass
-found three real production correctness defects (auto-resume ignored the intended session;
-Dashboard publication's second runtime materialization erased the presentation join it had just
-applied; the journal attested presentation binding from expectation rather than evidence) plus
-the explicitly-deferred one-owner-workflow unification still open. All three defects fixed with
-regression coverage; journal writes now fail closed before material work; `stocklookup.py
-daily`'s zero-flag production invocation now shares `tools.run_owner_daily.run_workflow` with
-the desktop one-click launcher. Stage-aware resume *skip* logic (vs. today's idempotent
-re-execution, which already prevents reacquisition/duplicate publication) remains open future
-work. See `docs/STATE.md` and `docs/DECISIONS.md` for full defect-by-defect detail.
+**Canonical Daily owner publication resume and presentation join V1 (2026-09-22, final
+implementation continuation):**
+`CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 =
+IMPLEMENTATION_COMPLETE_AWAITING_NEXT_REAL_DAILY_ACCEPTANCE`. Closes the remaining gaps left
+after the corrective pass below: presentation `UNKNOWN` now genuinely refuses owner `COMPLETE`
+(fails closed before Dashboard/AI-handoff/Action-Center publication, not merely after);
+`SESSION_RESOLVED` is now actually recorded durably before material work begins; journal writes
+that gate a subsequent side effect now fail closed instead of silently swallowing errors; and
+genuine stage-aware resume is now built -- Dashboard/AI-handoff/Action-Center publication each
+independently re-verify against real external state (the Dashboard's own `build_info.json`, the
+AI-handoff repo's own `origin/main` pointer, the Action Center's own session-addressed artifact)
+before deciding whether to republish, rather than merely relying on idempotent no-ops inside
+each publisher. Milestone remains `ACTIVE` (not `COMPLETE`) pending the next real
+`stocklookup.ps1 daily` production acceptance run. See `docs/STATE.md` and `docs/DECISIONS.md`
+for full detail; the corrective-pass entry (2026-09-22, prior continuation) fixed three earlier
+production defects (auto-resume ignored the intended session; Dashboard publication's second
+runtime materialization erased the presentation join it had just applied; the journal attested
+presentation binding from expectation rather than evidence) and unified `stocklookup.py daily`'s
+zero-flag production invocation onto `tools.run_owner_daily.run_workflow`.
 
 **Indicator and metric availability reconciliation V1 (2026-09-19):**
 `INDICATOR_AND_METRIC_AVAILABILITY_RECONCILIATION_V1 = COMPLETE`. Owner-directed, backend-only:
