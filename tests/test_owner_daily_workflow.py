@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from tools import run_owner_daily as workflow
+import owner_daily_journal as journal
 
 
 SESSION = "2026-09-16"
@@ -524,3 +525,167 @@ def test_commit_daily_state_no_change_when_registry_already_matches_committed_st
     root, _origin = _clone_with_registry(tmp_path)
     result = workflow.commit_daily_state(root, SESSION)
     assert result["status"] == "NO_CHANGE"
+
+
+# =====================================================================================
+# CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1: durable owner-operation
+# journal + auto-resume. A hard terminal close/process kill cannot run cleanup code -- the next
+# ORDINARY invocation (no --replay-completed-session) must resume from the last durable stage
+# without reacquiring/re-running Daily Producer for a session that already fully completed.
+# =====================================================================================
+
+def test_auto_resumable_session_none_without_journal(tmp_path):
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    assert workflow._auto_resumable_session(tmp_path, runtime) is None
+
+
+def test_auto_resumable_session_none_when_journal_session_not_actually_complete(tmp_path):
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    entry = journal.start_run(tmp_path)
+    journal.advance(tmp_path, entry["run_id"], journal.LOCAL_COMPLETE, resolved_session=SESSION)
+    # No canonical-daily-operation-v1 record exists for SESSION -- verify_daily_completion must
+    # fail, so this must never be offered as auto-resumable.
+    assert workflow._auto_resumable_session(tmp_path, runtime) is None
+
+
+def test_auto_resumable_session_returns_session_when_verifiably_complete(tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    entry = journal.start_run(tmp_path)
+    journal.advance(tmp_path, entry["run_id"], journal.PRODUCER_STATE_RETAINED, resolved_session=SESSION)
+    assert workflow._auto_resumable_session(tmp_path, runtime) == SESSION
+
+
+def test_run_workflow_auto_resumes_without_explicit_replay_flag(monkeypatch, tmp_path):
+    """Section 5/13 acceptance: the next ordinary owner invocation resumes without
+    --replay-completed-session and never reacquires (never calls _run_daily again) once the
+    session already fully completed."""
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    entry = journal.start_run(tmp_path)
+    journal.advance(tmp_path, entry["run_id"], journal.LOCAL_COMPLETE, resolved_session=SESSION)
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire an already-completed session"))
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff")
+
+    assert result["status"] == "PASS"
+    assert result["daily_status"] == "ALREADY_COMPLETED / RESUMED"
+    final_journal = journal.read_journal(tmp_path)
+    assert final_journal["stage"] == journal.COMPLETE
+    assert final_journal["resolved_session"] == SESSION
+
+
+def test_run_workflow_writes_journal_stages_through_to_complete(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+
+    assert result["status"] == "PASS"
+    final_journal = journal.read_journal(tmp_path)
+    assert final_journal["stage"] == journal.COMPLETE
+    stages = [row["stage"] for row in final_journal["stage_history"]]
+    assert stages == [journal.STARTED, journal.LOCAL_COMPLETE, journal.PRODUCER_STATE_RETAINED,
+                      journal.PRESENTATION_BOUND, journal.DASHBOARD_PUBLISHED, journal.AI_HANDOFF_PUBLISHED,
+                      journal.ACTION_CENTER_READY, journal.COMPLETE]
+    assert final_journal["attestation"]["session"] == SESSION
+    assert final_journal["attestation"]["ai_handoff"]["remote_sha"] == "ai"
+
+
+def test_run_workflow_partial_advances_to_blocked_not_complete(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: {"status": "FAILED", "expected_session": SESSION, "observed_session": None, "reason": "x"})
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+
+    assert result["status"] == "PARTIAL"
+    final_journal = journal.read_journal(tmp_path)
+    # Dashboard failure never blocks the independent AI handoff / Action Center steps (existing
+    # PARTIAL behavior) -- both still complete and advance the journal; only the final
+    # PASS-only COMPLETE stage is withheld, with BLOCKED recorded as failure metadata.
+    assert final_journal["stage"] == journal.ACTION_CENTER_READY
+    assert final_journal["failure"]["stage"] == journal.BLOCKED
+
+
+def test_run_workflow_marks_journal_failed_on_exception_and_next_run_resumes_without_reacquisition(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+
+    def boom(*a, **k):
+        raise RuntimeError("dashboard publisher exploded")
+
+    monkeypatch.setattr(workflow, "publish_dashboard_release", boom)
+    with pytest.raises(RuntimeError, match="exploded"):
+        workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+
+    interrupted = journal.read_journal(tmp_path)
+    # PRESENTATION_BOUND is unconditional bookkeeping right after PRODUCER_STATE_RETAINED (the
+    # presentation join already happened inside canonical_daily_operation.py itself) -- the
+    # crash happens one step later, at Dashboard publication.
+    assert interrupted["stage"] == journal.PRESENTATION_BOUND
+    assert interrupted["failure"]["stage"] == journal.FAILED
+    assert "exploded" in interrupted["failure"]["detail"]["reason"]
+
+    # The NEXT ordinary invocation (no explicit replay flag) must resume without reacquiring.
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire on resume"))
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff")
+    assert result["status"] == "PASS"
+    assert result["daily_status"] == "ALREADY_COMPLETED / RESUMED"
+    assert journal.read_journal(tmp_path)["stage"] == journal.COMPLETE
+
+
+def test_run_workflow_marks_journal_interrupted_on_keyboard_interrupt(monkeypatch, tmp_path):
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+
+    def interrupt(*a, **k):
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(workflow, "commit_daily_state", interrupt)
+    with pytest.raises(KeyboardInterrupt):
+        workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+    interrupted = journal.read_journal(tmp_path)
+    assert interrupted["stage"] == journal.LOCAL_COMPLETE
+    assert interrupted["failure"]["stage"] == journal.INTERRUPTED
+
+
+def test_run_workflow_never_raises_on_journal_write_failure(monkeypatch, tmp_path):
+    """A journal write failure (disk full, permissions, ...) must degrade the crash-resume
+    convenience for this one run, never the real owner Daily workflow itself."""
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    monkeypatch.setattr(workflow, "publish_dashboard_release", _ready_dashboard)
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+    monkeypatch.setattr(workflow.journal, "advance", lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")))
+
+    result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
+    assert result["status"] == "PASS"

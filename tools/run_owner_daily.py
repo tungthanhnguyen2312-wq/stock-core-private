@@ -33,6 +33,7 @@ from canonical_trusted_subset_release import (  # noqa: E402
     CanonicalTrustedSubsetError, materialize_canonical_trusted_subset,
 )
 from checkout_cleanliness_contract import classify_checkout_cleanliness  # noqa: E402
+import owner_daily_journal as journal  # noqa: E402
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
 
@@ -334,43 +335,144 @@ def open_action_center_view(path: str) -> dict[str, str]:
     return {"status": "READY"}
 
 
+def _journal_start(root: Path, *, intended_session: str | None) -> str | None:
+    """Best-effort: a journal write failure (disk full, permissions, ...) must never block the
+    real owner Daily workflow -- it only loses crash-resume convenience for this one run."""
+    try:
+        return journal.start_run(root, intended_session=intended_session)["run_id"]
+    except Exception:
+        return None
+
+
+def _journal_advance(root: Path, run_id: str | None, stage: str, **kwargs: Any) -> None:
+    if run_id is None:
+        return
+    try:
+        journal.advance(root, run_id, stage, **kwargs)
+    except Exception:
+        pass
+
+
+def _auto_resumable_session(root: Path, runtime_root: Path) -> str | None:
+    """Read-only: if the durable owner journal shows an interrupted/partial run whose session
+    already reached full canonical-Daily completion (LOCAL_COMPLETE/READY/READY -- the same gate
+    an explicit ``--replay-completed-session`` already checks), return that session so the
+    caller can resume publication from it instead of re-running acquisition and Daily Producer.
+    Returns None (never raises) when there is nothing safely resumable -- the caller then runs a
+    normal fresh Daily, exactly as it always has. See CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_
+    AND_PRESENTATION_JOIN_V1 section 13: a session whose own analytical kernel never finished
+    must never be treated as resumable by re-entering Daily Producer -- this only ever resumes
+    from PUBLICATION onward, using the exact same completion gate a manual replay already uses.
+    """
+    try:
+        state = journal.resumable_state(root, intended_session=None)
+    except Exception:
+        return None
+    if state.get("action") not in ("RESUME", "ALREADY_COMPLETE"):
+        return None
+    session = state.get("resolved_session")
+    if not session:
+        return None
+    try:
+        verify_daily_completion(root, runtime_root, session=session)
+    except OwnerDailyError:
+        return None
+    return session
+
+
 def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                  handoff_repo: Path = DEFAULT_HANDOFF_REPO, dashboard_web_dir: Path = DEFAULT_WEB_DIR,
                  publish_dashboard: bool = True, dashboard_complete_publication: bool = True,
                  replay_completed_session: str | None = None) -> dict[str, Any]:
     root, runtime_root, handoff_repo = root.resolve(), runtime_root.resolve(), handoff_repo.resolve()
     dashboard_web_dir = dashboard_web_dir.resolve()
-    producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
-    if replay_completed_session:
-        completion = verify_daily_completion(root, runtime_root, session=replay_completed_session)
-        daily_status = "ALREADY_COMPLETED / REUSED"
-    else:
-        _run_daily(root, runtime_root)
-        completion = verify_daily_completion(root, runtime_root)
-        daily_status = "COMPLETED"
-    producer_state = commit_daily_state(root, str(completion["session"]))
-    # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: publish the exact
-    # resolved Daily session to the Dashboard via the existing governed release path before
-    # AI handoff / Action Center -- a successful Daily must never leave the owner-facing
-    # Dashboard on a stale session. A Dashboard failure does not block the independent
-    # downstream steps below; it degrades the final status to PARTIAL instead (see main()).
-    dashboard = (
-        publish_dashboard_release(root, runtime_root, str(completion["session"]), web_dir=dashboard_web_dir,
-                                  producer_run_identity=completion["record"]["daily_producer_run_identity"],
-                                  complete_publication=dashboard_complete_publication)
-        if publish_dashboard else {"status": "SKIPPED", "expected_session": str(completion["session"]), "observed_session": None, "reason": "DASHBOARD_PUBLICATION_DISABLED"}
-    )
-    handoff = publish_ai_handoff(root, handoff_repo, completion)
-    action_center = materialize_action_center(root, str(completion["session"]))
-    dashboard_failed = dashboard["status"] not in {"READY", "SKIPPED"}
-    if action_center["status"] == "PARTIAL" or dashboard_failed:
-        return {"status": "PARTIAL", "session": completion["session"], "daily_status": daily_status,
+
+    # Read the PRE-EXISTING journal (if any) before superseding it below -- this is the only
+    # source of "was a session interrupted mid-publication last time" this invocation has.
+    auto_resumed = False
+    if not replay_completed_session:
+        auto_session = _auto_resumable_session(root, runtime_root)
+        if auto_session:
+            replay_completed_session = auto_session
+            auto_resumed = True
+
+    run_id = _journal_start(root, intended_session=replay_completed_session)
+    try:
+        producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
+
+        if replay_completed_session:
+            completion = verify_daily_completion(root, runtime_root, session=replay_completed_session)
+            daily_status = "ALREADY_COMPLETED / RESUMED" if auto_resumed else "ALREADY_COMPLETED / REUSED"
+        else:
+            _run_daily(root, runtime_root)
+            completion = verify_daily_completion(root, runtime_root)
+            daily_status = "COMPLETED"
+        _journal_advance(root, run_id, journal.LOCAL_COMPLETE, resolved_session=str(completion["session"]))
+
+        producer_state = commit_daily_state(root, str(completion["session"]))
+        _journal_advance(root, run_id, journal.PRODUCER_STATE_RETAINED)
+        # Presentation binding (Signal Velocity / Flow-Price additively joined into the
+        # Workspace/Screener presentation) now happens inside canonical_daily_operation.py
+        # itself, before this workflow ever sees a completed session -- this stage simply
+        # records that the retained completion being published from already carries it.
+        _journal_advance(root, run_id, journal.PRESENTATION_BOUND)
+
+        # WORKSPACE_DIAGNOSTIC_TRANSPARENCY_AND_DAILY_DASHBOARD_BINDING_V1: publish the exact
+        # resolved Daily session to the Dashboard via the existing governed release path before
+        # AI handoff / Action Center -- a successful Daily must never leave the owner-facing
+        # Dashboard on a stale session. A Dashboard failure does not block the independent
+        # downstream steps below; it degrades the final status to PARTIAL instead (see main()).
+        dashboard = (
+            publish_dashboard_release(root, runtime_root, str(completion["session"]), web_dir=dashboard_web_dir,
+                                      producer_run_identity=completion["record"]["daily_producer_run_identity"],
+                                      complete_publication=dashboard_complete_publication)
+            if publish_dashboard else {"status": "SKIPPED", "expected_session": str(completion["session"]), "observed_session": None, "reason": "DASHBOARD_PUBLICATION_DISABLED"}
+        )
+        if dashboard["status"] in {"READY", "SKIPPED"}:
+            _journal_advance(root, run_id, journal.DASHBOARD_PUBLISHED, detail={"status": dashboard["status"]})
+
+        handoff = publish_ai_handoff(root, handoff_repo, completion)
+        _journal_advance(root, run_id, journal.AI_HANDOFF_PUBLISHED,
+                         detail={"remote_sha": (handoff.get("remote") or {}).get("remote_sha")})
+
+        action_center = materialize_action_center(root, str(completion["session"]))
+        if action_center["status"] != "PARTIAL":
+            _journal_advance(root, run_id, journal.ACTION_CENTER_READY, detail={"status": action_center["status"]})
+
+        dashboard_failed = dashboard["status"] not in {"READY", "SKIPPED"}
+        if action_center["status"] == "PARTIAL" or dashboard_failed:
+            _journal_advance(root, run_id, journal.BLOCKED, detail={
+                "dashboard_failed": dashboard_failed, "action_center_status": action_center["status"],
+            })
+            return {"status": "PARTIAL", "session": completion["session"], "daily_status": daily_status,
+                    "producer_preflight": producer, "producer_state": producer_state,
+                    "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
+                    "journal_run_id": run_id}
+        action_center["view_open"] = open_action_center_view(str(action_center["view_path"]))
+        # OWNER_COMPLETE_ATTESTATION: the durable, single terminal record of every identity a
+        # PASS is supposed to attest -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_
+        # PRESENTATION_JOIN_V1 section 11. Observer/presentation availability itself never needs
+        # to be COLLECTED to PASS (a legitimate UNAVAILABLE is fine); this only records whatever
+        # each step actually reported.
+        record = completion.get("record") or {}
+        _journal_advance(root, run_id, journal.COMPLETE, detail={
+            "session": str(completion["session"]),
+            "canonical_daily_operation_identity": record.get("operation_identity"),
+            "daily_producer_run_identity": record.get("daily_producer_run_identity"),
+            "daily_producer_operation_identity": record.get("daily_producer_operation_identity"),
+            "post_handoff_presentation_projection": (record.get("post_handoff_presentation_projection") or {}).get("status"),
+            "dashboard": {"status": dashboard.get("status"), "publication_state": dashboard.get("publication_state")},
+            "ai_handoff": {"remote_sha": (handoff.get("remote") or {}).get("remote_sha")},
+            "action_center": {"status": action_center.get("status"), "identity": action_center.get("identity")},
+        })
+        return {"status": "PASS", "session": completion["session"], "daily_status": daily_status,
                 "producer_preflight": producer, "producer_state": producer_state,
-                "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center}
-    action_center["view_open"] = open_action_center_view(str(action_center["view_path"]))
-    return {"status": "PASS", "session": completion["session"], "daily_status": daily_status,
-            "producer_preflight": producer, "producer_state": producer_state,
-            "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center}
+                "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
+                "journal_run_id": run_id}
+    except BaseException as exc:
+        _journal_advance(root, run_id, journal.INTERRUPTED if isinstance(exc, KeyboardInterrupt) else journal.FAILED,
+                         detail={"reason": f"{type(exc).__name__}:{exc}"})
+        raise
 
 
 def main(argv: list[str] | None = None) -> int:
