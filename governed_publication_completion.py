@@ -621,6 +621,97 @@ def write_completion_artifact(producer_root: Path, record: Mapping[str, Any]) ->
     return path
 
 
+def resolve_dashboard_origin_main_sha(
+    web_dir: Path,
+    *,
+    git_runner: Callable[..., tuple[int, str]] | None = None,
+) -> str:
+    """Read-only current Dashboard origin/main SHA. Never dispatches CI or Pages."""
+    git = git_runner or _git
+    _fetch_origin_main(web_dir, git)
+    rc, origin_main = git(web_dir, ["rev-parse", f"origin/{CANONICAL_BRANCH}"])
+    sha = (origin_main or "").strip().lower()
+    if rc != 0 or len(sha) != 40 or any(ch not in "0123456789abcdef" for ch in sha):
+        raise PublicationCompletionError(
+            "BLOCKED_DASHBOARD_REMOTE_MISMATCH",
+            "cannot resolve Dashboard origin/main SHA",
+        )
+    return sha
+
+
+def _session_completion_root(producer_root: Path, session: str) -> Path:
+    return producer_root / "operations-review" / "governed-publication-completion-v1" / session
+
+
+def iter_completion_artifact_paths(producer_root: Path, session: str) -> list[Path]:
+    root = _session_completion_root(producer_root, session)
+    if not root.is_dir():
+        return []
+    return sorted(path for path in root.glob("attestation-*/publication_completion.json") if path.is_file())
+
+
+def verify_existing_publication_completion(
+    producer_root: Path,
+    *,
+    session: str,
+    release_source_sha: str,
+) -> dict[str, Any] | None:
+    """Read-only: return the matching PUBLISHED attestation, else None.
+
+    Never dispatches CI or Pages. Absent, stale, conflicting, unreadable, or
+    incomplete proof is None so the existing publisher can run again.
+    """
+    sha = (release_source_sha or "").strip().lower()
+    if len(sha) != 40 or any(ch not in "0123456789abcdef" for ch in sha):
+        return None
+    paths = iter_completion_artifact_paths(producer_root, session)
+    if not paths:
+        return None
+    matches: list[dict[str, Any]] = []
+    for path in paths:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        if not isinstance(payload, dict):
+            return None
+        if not _attestation_proves_published(payload, session=session, release_source_sha=sha):
+            continue
+        matches.append(payload)
+    if not matches:
+        return None
+    canonical = json.dumps(matches[0], sort_keys=True, default=str)
+    if any(json.dumps(row, sort_keys=True, default=str) != canonical for row in matches[1:]):
+        return None
+    return matches[0]
+
+
+def _attestation_proves_published(
+    payload: Mapping[str, Any],
+    *,
+    session: str,
+    release_source_sha: str,
+) -> bool:
+    if payload.get("session") != session:
+        return False
+    if str(payload.get("release_source_sha") or "").strip().lower() != release_source_sha:
+        return False
+    if payload.get("publication_state") != PUBLISHED:
+        return False
+    if payload.get("public_byte_identity") != "PASS":
+        return False
+    proof = payload.get("public_byte_proof")
+    if not isinstance(proof, Mapping):
+        return False
+    if proof.get("session") != session:
+        return False
+    if str(proof.get("sha") or "").strip().lower() != release_source_sha:
+        return False
+    if str(proof.get("status") or "").upper() != "PASS":
+        return False
+    return True
+
+
 def format_handoff(record: Mapping[str, Any]) -> str:
     return "\n".join([
         f"PUBLICATION_STATE={record.get('publication_state')}",

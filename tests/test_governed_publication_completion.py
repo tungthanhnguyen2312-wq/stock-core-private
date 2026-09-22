@@ -490,3 +490,90 @@ def test_existing_orchestrator_without_complete_publication_does_not_call_gh(tmp
     )
     release_orchestrator.orchestrate(args)
     assert calls == []
+
+
+def _attestation_record(*, session=SESSION, sha=SOURCE_SHA, publication_state=PUBLISHED,
+                        public_byte_identity="PASS", digest="deadbeef"):
+    return {
+        "schema_version": gpc.CONTRACT_VERSION,
+        "session": session,
+        "release_source_sha": sha.lower(),
+        "publication_state": publication_state,
+        "public_byte_identity": public_byte_identity,
+        "public_byte_proof": {
+            "status": "PASS" if public_byte_identity == "PASS" else "FAIL",
+            "session": session,
+            "sha": sha.lower(),
+            "line": f"PUBLIC_BYTE_IDENTITY_PASS session={session} sha={sha}",
+        },
+        "attestation_digest": digest,
+        "attestation_identity": f"governed_publication_attestation:{digest}",
+        "content_identity": f"governed_publication_content:{digest}",
+    }
+
+
+def test_verify_existing_publication_completion_matches_published_attestation(tmp_path):
+    record = _attestation_record()
+    gpc.write_completion_artifact(tmp_path, record)
+    found = gpc.verify_existing_publication_completion(
+        tmp_path, session=SESSION, release_source_sha=SOURCE_SHA,
+    )
+    assert found is not None
+    assert found["publication_state"] == PUBLISHED
+    assert found["public_byte_identity"] == "PASS"
+    assert found["release_source_sha"] == SOURCE_SHA
+
+
+def test_verify_existing_publication_completion_rejects_wrong_session(tmp_path):
+    record = _attestation_record(session="2026-09-01")
+    path = gpc._artifact_dir(tmp_path, SESSION, "deadbeef")
+    path.mkdir(parents=True)
+    (path / "publication_completion.json").write_text(json.dumps(record), encoding="utf-8")
+    assert gpc.verify_existing_publication_completion(
+        tmp_path, session=SESSION, release_source_sha=SOURCE_SHA,
+    ) is None
+
+
+def test_verify_existing_publication_completion_rejects_wrong_sha(tmp_path):
+    gpc.write_completion_artifact(tmp_path, _attestation_record(sha=WORKFLOW_HEAD))
+    assert gpc.verify_existing_publication_completion(
+        tmp_path, session=SESSION, release_source_sha=SOURCE_SHA,
+    ) is None
+
+
+def test_verify_existing_publication_completion_rejects_incomplete_state(tmp_path):
+    gpc.write_completion_artifact(tmp_path, _attestation_record(publication_state="GITHUB_SOURCE_UPDATED"))
+    assert gpc.verify_existing_publication_completion(
+        tmp_path, session=SESSION, release_source_sha=SOURCE_SHA,
+    ) is None
+
+
+def test_verify_existing_publication_completion_unreadable_returns_none(tmp_path):
+    path = gpc._artifact_dir(tmp_path, SESSION, "deadbeef")
+    path.mkdir(parents=True)
+    (path / "publication_completion.json").write_text("{not-json", encoding="utf-8")
+    assert gpc.verify_existing_publication_completion(
+        tmp_path, session=SESSION, release_source_sha=SOURCE_SHA,
+    ) is None
+
+
+def test_verify_existing_publication_completion_never_dispatches(tmp_path):
+    source = inspect.getsource(gpc.verify_existing_publication_completion)
+    assert "run_gh" not in source
+    assert "allow_dispatch" not in source
+    assert "complete_publication" not in source
+    gpc.write_completion_artifact(tmp_path, _attestation_record())
+    assert gpc.verify_existing_publication_completion(
+        tmp_path, session=SESSION, release_source_sha=SOURCE_SHA,
+    ) is not None
+
+
+def test_resolve_dashboard_origin_main_sha_is_read_only(web_dir):
+    git = FakeGit()
+    sha = gpc.resolve_dashboard_origin_main_sha(web_dir, git_runner=git)
+    assert sha == SOURCE_SHA
+    assert ["rev-parse", "origin/main"] in git.calls
+    assert not any("workflow" in part for call in git.calls for part in call)
+    source = inspect.getsource(gpc.resolve_dashboard_origin_main_sha)
+    assert "run_gh" not in source
+    assert "complete_publication" not in source

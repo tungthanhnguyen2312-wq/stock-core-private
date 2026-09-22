@@ -10,9 +10,15 @@ import pytest
 from tools import run_owner_daily as workflow
 import owner_daily_journal as journal
 import post_handoff_presentation_attestation as presentation_attestation
+import governed_publication_completion as gpc
+from release_checkout_identity import PUBLISHED
 
 
 SESSION = "2026-09-16"
+T0_IDENTITY = "prospective_decision_snapshot:test-t0"
+DASHBOARD_SHA = "534e4971edf2b9be62467ce89758b6625544558d"
+OTHER_SHA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+_REAL_VERIFY_DASHBOARD_PUBLISHED = workflow._verify_dashboard_published
 
 
 def _write_presentation_attestation(root: Path, session: str = SESSION, *, status: str = "UNAVAILABLE") -> None:
@@ -49,7 +55,8 @@ def _no_resume_verification_by_default(monkeypatch):
     monkeypatch.setattr(workflow, "_presentation_bound_state", lambda *a, **k: "LEGITIMATE_UNAVAILABLE")
 
 
-def _write_completion(root: Path, *, state="LOCAL_COMPLETE", producer="COMPLETED", runtime="READY", trusted="READY") -> Path:
+def _write_completion(root: Path, *, state="LOCAL_COMPLETE", producer="COMPLETED", runtime="READY", trusted="READY",
+                      t0_identity: str | None = T0_IDENTITY) -> Path:
     (root / "config").mkdir(parents=True)
     (root / "config" / "daily_research_session_input_registry.json").write_text(json.dumps({
         "completed_sessions": {SESSION: {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}},
@@ -61,12 +68,19 @@ def _write_completion(root: Path, *, state="LOCAL_COMPLETE", producer="COMPLETED
     (source / "ai_research_bundle_manifest.json").write_text(json.dumps({"operation_identity": "daily_research_session_operation:test"}), encoding="utf-8")
     record_path = root / "operations-review" / "canonical-daily-operation-v1" / SESSION / "op" / "daily_operation_record.json"
     record_path.parent.mkdir(parents=True)
-    record_path.write_text(json.dumps({
+    record = {
         "session": SESSION, "daily_operation_state": state, "daily_producer_status": producer,
         "runtime_release_status": runtime, "trusted_subset_status": trusted,
         "acquisition": {"resolved_completed_session": SESSION}, "daily_producer_run_identity": "run:test",
         "daily_producer_operation_identity": "daily_research_session_operation:test", "operation_identity": "canonical:test",
-    }), encoding="utf-8")
+    }
+    if t0_identity:
+        record["prospective_decision_snapshot"] = {
+            "status": "RETAINED", "identity": t0_identity,
+            "source_integrated_decision_identity": "integrated:test",
+        }
+        record["lineage"] = {"prospective_decision_snapshot": t0_identity}
+    record_path.write_text(json.dumps(record), encoding="utf-8")
     return source
 
 
@@ -120,7 +134,80 @@ def test_main_writes_a_result_file_on_keyboard_interrupt_then_reraises(monkeypat
 
 
 def _ready_dashboard(_root, _runtime, session, **_k):
-    return {"status": "READY", "expected_session": session, "observed_session": session, "build_id": "b"}
+    return {
+        "status": "READY", "expected_session": session, "observed_session": session, "build_id": "b",
+        "publication_state": PUBLISHED, "release_source_sha": DASHBOARD_SHA,
+        "public_byte_identity": "PASS",
+        "attestation_identity": "governed_publication_attestation:test",
+        "content_identity": "governed_publication_content:test",
+    }
+
+
+def _write_dashboard_build_info(web: Path, session: str = SESSION, *, build_id: str = "abc") -> Path:
+    data = web / "data"
+    data.mkdir(parents=True, exist_ok=True)
+    path = data / "build_info.json"
+    path.write_text(json.dumps({
+        "market_session": session, "build_id": build_id,
+        "investment_workspace": {"status": "CURRENT", "source_session": session},
+    }), encoding="utf-8")
+    return path
+
+
+def _write_governed_publication(
+    root: Path, *, session: str = SESSION, sha: str = DASHBOARD_SHA,
+    publication_state: str = PUBLISHED, public_byte_identity: str = "PASS",
+    proof_session: str | None = None, proof_sha: str | None = None,
+    digest: str = "deadbeef", payload_session: str | None = None,
+    path_session: str | None = None,
+) -> Path:
+    payload_session = payload_session if payload_session is not None else session
+    path_session = path_session if path_session is not None else session
+    proof_session = proof_session if proof_session is not None else payload_session
+    proof_sha = (proof_sha if proof_sha is not None else sha).lower()
+    record = {
+        "schema_version": gpc.CONTRACT_VERSION,
+        "session": payload_session,
+        "release_source_sha": sha.lower(),
+        "publication_state": publication_state,
+        "public_byte_identity": public_byte_identity,
+        "public_byte_proof": {
+            "status": "PASS" if public_byte_identity == "PASS" else "FAIL",
+            "session": proof_session,
+            "sha": proof_sha,
+            "line": f"PUBLIC_BYTE_IDENTITY_PASS session={proof_session} sha={proof_sha}",
+        },
+        "attestation_digest": digest,
+        "attestation_identity": f"governed_publication_attestation:{digest}",
+        "content_identity": f"governed_publication_content:{digest}",
+    }
+    if path_session == payload_session:
+        return gpc.write_completion_artifact(root, record)
+    directory = gpc._artifact_dir(root, path_session, digest)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "publication_completion.json"
+    path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+def _pin_dashboard_sha(monkeypatch, sha: str = DASHBOARD_SHA) -> None:
+    monkeypatch.setattr(workflow, "resolve_dashboard_origin_main_sha", lambda *a, **k: sha)
+
+
+def _use_real_dashboard_verifier(monkeypatch) -> None:
+    monkeypatch.setattr(workflow, "_verify_dashboard_published", _REAL_VERIFY_DASHBOARD_PUBLISHED)
+
+
+def _pass_publication_mocks(monkeypatch, *, dashboard=None) -> list[str]:
+    calls: list[str] = []
+    monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
+    monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
+    publisher = dashboard or (lambda *a, **k: calls.append("publish") or _ready_dashboard(*a, **k))
+    monkeypatch.setattr(workflow, "publish_dashboard_release", publisher)
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+    return calls
 
 
 def test_successful_replay_allows_publication_and_reuses_daily(monkeypatch, tmp_path):
@@ -303,7 +390,14 @@ def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypa
 
     class _Result:
         returncode = 0
-        stdout = "PUBLICATION_STATE=PUBLISHED\n"
+        stdout = (
+            "PUBLICATION_STATE=PUBLISHED\n"
+            f"SESSION={SESSION}\n"
+            f"DASHBOARD_RELEASE_SHA={DASHBOARD_SHA}\n"
+            "PUBLIC_BYTE_IDENTITY=PASS\n"
+            "ATTESTATION_IDENTITY=governed_publication_attestation:test\n"
+            "CONTENT_IDENTITY=governed_publication_content:test\n"
+        )
         stderr = ""
 
     def _fake_run(argv, **kwargs):
@@ -338,6 +432,9 @@ def test_publish_dashboard_release_invokes_all_group_with_exact_session(monkeypa
     assert stages == ["runtime", "trusted_subset"]
     assert result["status"] == "READY"
     assert result["publication_state"] == "PUBLISHED"
+    assert result["release_source_sha"] == DASHBOARD_SHA
+    assert result["public_byte_identity"] == "PASS"
+    assert result["attestation_identity"] == "governed_publication_attestation:test"
 
 
 def test_publish_dashboard_release_can_skip_complete_publication(monkeypatch, tmp_path):
@@ -696,6 +793,10 @@ def test_run_workflow_writes_journal_stages_through_to_complete(monkeypatch, tmp
     assert final_journal["attestation"]["session"] == SESSION
     assert final_journal["attestation"]["ai_handoff"]["remote_sha"] == "ai"
     assert final_journal["attestation"]["post_handoff_presentation_projection"]["status"] == "UNAVAILABLE"
+    assert final_journal["attestation"]["t0_snapshot"]["identity"] == T0_IDENTITY
+    assert final_journal["attestation"]["dashboard"]["publication_state"] == PUBLISHED
+    assert final_journal["attestation"]["dashboard"]["release_source_sha"] == DASHBOARD_SHA
+    assert final_journal["attestation"]["dashboard"]["public_byte_identity"] == "PASS"
 
 
 # Section 1 / required test 1: UNKNOWN presentation must never record PRESENTATION_BOUND and
@@ -981,9 +1082,11 @@ def test_resume_after_dashboard_published_skips_republish_when_verified(monkeypa
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
-    monkeypatch.setattr(workflow, "_verify_dashboard_published", lambda web_dir, session: {
-        "status": "READY", "expected_session": session, "observed_session": session,
-        "publication_state": "ALREADY_PUBLISHED_VERIFIED"})
+    monkeypatch.setattr(workflow, "_verify_dashboard_published", lambda *a, **k: {
+        "status": "READY", "expected_session": SESSION, "observed_session": SESSION,
+        "publication_state": PUBLISHED, "release_source_sha": DASHBOARD_SHA,
+        "public_byte_identity": "PASS", "build_id": "abc",
+        "resume_status": "REUSED_EXISTING_PUBLICATION"})
     monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: pytest.fail("must not republish once verified"))
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
     monkeypatch.setattr(workflow, "materialize_action_center", lambda *_a: {"status": "READY", "session": SESSION, "json_path": "p.json", "view_path": "p.md"})
@@ -992,8 +1095,12 @@ def test_resume_after_dashboard_published_skips_republish_when_verified(monkeypa
     result = workflow.run_workflow(root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff", replay_completed_session=SESSION)
 
     assert result["status"] == "PASS"
-    assert result["dashboard"]["publication_state"] == "ALREADY_PUBLISHED_VERIFIED"
+    assert result["dashboard"]["publication_state"] == PUBLISHED
+    assert result["dashboard"]["release_source_sha"] == DASHBOARD_SHA
+    assert result["dashboard"]["public_byte_identity"] == "PASS"
+    assert "ALREADY_PUBLISHED_VERIFIED" not in json.dumps(result["dashboard"])
     assert journal.read_journal(tmp_path)["stage"] == journal.COMPLETE
+    assert journal.read_journal(tmp_path)["attestation"]["dashboard"]["publication_state"] == PUBLISHED
 
 
 def test_resume_after_dashboard_published_republishes_when_verification_fails(monkeypatch, tmp_path):
@@ -1002,7 +1109,7 @@ def test_resume_after_dashboard_published_republishes_when_verification_fails(mo
     runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
     monkeypatch.setattr(workflow, "preflight_repository", lambda *a, **k: {"head": "producer", "status": "UP_TO_DATE"})
     monkeypatch.setattr(workflow, "commit_daily_state", lambda *a, **k: {"sha": "producer", "status": "NO_CHANGE"})
-    monkeypatch.setattr(workflow, "_verify_dashboard_published", lambda web_dir, session: None)
+    monkeypatch.setattr(workflow, "_verify_dashboard_published", lambda *a, **k: None)
     calls: list[str] = []
     monkeypatch.setattr(workflow, "publish_dashboard_release", lambda *a, **k: calls.append("publish") or _ready_dashboard(*a, **k))
     monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
@@ -1092,3 +1199,265 @@ def test_resume_after_action_center_ready_rebuilds_when_verification_fails(monke
 
     assert result["status"] == "PASS"
     assert calls == ["rebuild"]
+
+
+# =====================================================================================
+# Final bounded corrective: Dashboard resume requires governed PUBLISHED proof, and
+# COMPLETE attests exact T0 identity plus Dashboard release SHA / public-byte PASS.
+# =====================================================================================
+
+def test_verify_dashboard_published_local_session_without_attestation_returns_none(monkeypatch, tmp_path):
+    """A: local build_info matches session, but no governed PUBLISHED attestation."""
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _pin_dashboard_sha(monkeypatch)
+    assert _REAL_VERIFY_DASHBOARD_PUBLISHED(web, SESSION, producer_root=tmp_path) is None
+
+
+def test_verify_dashboard_published_matching_attestation_returns_published_facts(monkeypatch, tmp_path):
+    """B: local match + governed PUBLISHED/PASS/exact SHA/session."""
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web, build_id="build-1")
+    _write_governed_publication(tmp_path)
+    _pin_dashboard_sha(monkeypatch)
+    verified = _REAL_VERIFY_DASHBOARD_PUBLISHED(web, SESSION, producer_root=tmp_path)
+    assert verified is not None
+    assert verified["status"] == "READY"
+    assert verified["publication_state"] == PUBLISHED
+    assert verified["release_source_sha"] == DASHBOARD_SHA
+    assert verified["public_byte_identity"] == "PASS"
+    assert verified["build_id"] == "build-1"
+    assert verified["resume_status"] == "REUSED_EXISTING_PUBLICATION"
+    assert "ALREADY_PUBLISHED_VERIFIED" not in json.dumps(verified)
+
+
+def test_verify_dashboard_published_wrong_session_returns_none(monkeypatch, tmp_path):
+    """C: governed attestation has the wrong session."""
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _write_governed_publication(tmp_path, payload_session="2026-09-01", path_session=SESSION)
+    _pin_dashboard_sha(monkeypatch)
+    assert _REAL_VERIFY_DASHBOARD_PUBLISHED(web, SESSION, producer_root=tmp_path) is None
+
+
+def test_verify_dashboard_published_wrong_release_sha_returns_none(monkeypatch, tmp_path):
+    """D: governed attestation has the wrong release SHA."""
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _write_governed_publication(tmp_path, sha=OTHER_SHA)
+    _pin_dashboard_sha(monkeypatch)
+    assert _REAL_VERIFY_DASHBOARD_PUBLISHED(web, SESSION, producer_root=tmp_path) is None
+
+
+@pytest.mark.parametrize("publication_state,public_byte_identity", [
+    ("GITHUB_SOURCE_UPDATED", "PASS"),
+    ("PUBLISHED", "FAIL"),
+    ("CI_FAILED", "PASS"),
+    ("PAGES_FAILED", "PASS"),
+])
+def test_verify_dashboard_published_incomplete_attestation_returns_none(
+    monkeypatch, tmp_path, publication_state, public_byte_identity,
+):
+    """E: GITHUB_SOURCE_UPDATED / CI failed / Pages failed / missing public-byte PASS."""
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _write_governed_publication(
+        tmp_path, publication_state=publication_state, public_byte_identity=public_byte_identity,
+    )
+    _pin_dashboard_sha(monkeypatch)
+    assert _REAL_VERIFY_DASHBOARD_PUBLISHED(web, SESSION, producer_root=tmp_path) is None
+
+
+def test_resume_local_session_without_governed_proof_calls_publisher(monkeypatch, tmp_path):
+    """A + 2: journal may already say DASHBOARD_PUBLISHED; independent proof still required."""
+    _write_completion(tmp_path)
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    entry = journal.start_run(tmp_path, intended_session=SESSION)
+    journal.advance(tmp_path, entry["run_id"], journal.DASHBOARD_PUBLISHED, resolved_session=SESSION)
+    _use_real_dashboard_verifier(monkeypatch)
+    _pin_dashboard_sha(monkeypatch)
+    monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire"))
+    calls = _pass_publication_mocks(monkeypatch)
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        dashboard_web_dir=web,
+    )
+
+    assert result["status"] == "PASS"
+    assert calls == ["publish"]
+    assert result["dashboard"]["publication_state"] == PUBLISHED
+
+
+def test_resume_governed_published_proof_skips_publisher(monkeypatch, tmp_path):
+    """B + F: matching governed proof skips the publisher and keeps PUBLISHED facts."""
+    _write_completion(tmp_path)
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web, build_id="build-skip")
+    _write_governed_publication(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _use_real_dashboard_verifier(monkeypatch)
+    _pin_dashboard_sha(monkeypatch)
+    calls = _pass_publication_mocks(
+        monkeypatch, dashboard=lambda *a, **k: pytest.fail("must not republish once governed proof passes"),
+    )
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        dashboard_web_dir=web, replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    assert calls == []
+    assert result["dashboard"]["publication_state"] == PUBLISHED
+    assert result["dashboard"]["release_source_sha"] == DASHBOARD_SHA
+    assert result["dashboard"]["public_byte_identity"] == "PASS"
+    assert result["dashboard"]["resume_status"] == "REUSED_EXISTING_PUBLICATION"
+    assert "ALREADY_PUBLISHED_VERIFIED" not in json.dumps(result["dashboard"])
+    attestation = journal.read_journal(tmp_path)["attestation"]
+    assert attestation["dashboard"]["publication_state"] == PUBLISHED
+    assert attestation["dashboard"]["release_source_sha"] == DASHBOARD_SHA
+    assert attestation["dashboard"]["public_byte_identity"] == "PASS"
+
+
+def test_resume_wrong_session_attestation_retries_publisher(monkeypatch, tmp_path):
+    """C through workflow."""
+    _write_completion(tmp_path)
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _write_governed_publication(tmp_path, payload_session="2026-09-01", path_session=SESSION)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _use_real_dashboard_verifier(monkeypatch)
+    _pin_dashboard_sha(monkeypatch)
+    calls = _pass_publication_mocks(monkeypatch)
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        dashboard_web_dir=web, replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    assert calls == ["publish"]
+
+
+def test_resume_wrong_release_sha_attestation_retries_publisher(monkeypatch, tmp_path):
+    """D through workflow."""
+    _write_completion(tmp_path)
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _write_governed_publication(tmp_path, sha=OTHER_SHA)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _use_real_dashboard_verifier(monkeypatch)
+    _pin_dashboard_sha(monkeypatch)
+    calls = _pass_publication_mocks(monkeypatch)
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        dashboard_web_dir=web, replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    assert calls == ["publish"]
+
+
+def test_resume_incomplete_publication_attestation_retries_publisher(monkeypatch, tmp_path):
+    """E through workflow: source pushed, remote publication not PUBLISHED."""
+    _write_completion(tmp_path)
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _write_governed_publication(tmp_path, publication_state="GITHUB_SOURCE_UPDATED")
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _use_real_dashboard_verifier(monkeypatch)
+    _pin_dashboard_sha(monkeypatch)
+    calls = _pass_publication_mocks(monkeypatch)
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        dashboard_web_dir=web, replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    assert calls == ["publish"]
+
+
+def test_owner_complete_attests_exact_t0_identity(monkeypatch, tmp_path):
+    """G: final owner COMPLETE contains the exact retained T0 identity."""
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _pass_publication_mocks(monkeypatch, dashboard=_ready_dashboard)
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    t0 = journal.read_journal(tmp_path)["attestation"]["t0_snapshot"]
+    assert t0["identity"] == T0_IDENTITY
+    assert t0["status"] == "RETAINED"
+
+
+def test_owner_complete_records_t0_unavailable_for_legacy_record(monkeypatch, tmp_path):
+    _write_completion(tmp_path, t0_identity=None)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _pass_publication_mocks(monkeypatch, dashboard=_ready_dashboard)
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    t0 = journal.read_journal(tmp_path)["attestation"]["t0_snapshot"]
+    assert t0["status"] == "UNAVAILABLE"
+    assert t0["identity"] is None
+    assert t0["reason"] == "T0_SNAPSHOT_IDENTITY_NOT_RETAINED"
+
+
+def test_owner_complete_attests_dashboard_proof_on_fresh_publication(monkeypatch, tmp_path):
+    """H: fresh publication path records PUBLISHED + release SHA + public-byte PASS."""
+    _write_completion(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _pass_publication_mocks(monkeypatch, dashboard=_ready_dashboard)
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    dashboard = journal.read_journal(tmp_path)["attestation"]["dashboard"]
+    assert dashboard["publication_state"] == PUBLISHED
+    assert dashboard["release_source_sha"] == DASHBOARD_SHA
+    assert dashboard["public_byte_identity"] == "PASS"
+    assert dashboard.get("resume_status") is None
+
+
+def test_owner_complete_attests_dashboard_proof_on_verified_resume_skip(monkeypatch, tmp_path):
+    """H: verified resume-skip path records the same governed PUBLISHED facts."""
+    _write_completion(tmp_path)
+    web = tmp_path / "web"
+    _write_dashboard_build_info(web)
+    _write_governed_publication(tmp_path)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    _use_real_dashboard_verifier(monkeypatch)
+    _pin_dashboard_sha(monkeypatch)
+    _pass_publication_mocks(
+        monkeypatch, dashboard=lambda *a, **k: pytest.fail("must not republish once governed proof passes"),
+    )
+
+    result = workflow.run_workflow(
+        root=tmp_path, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+        dashboard_web_dir=web, replay_completed_session=SESSION,
+    )
+
+    assert result["status"] == "PASS"
+    dashboard = journal.read_journal(tmp_path)["attestation"]["dashboard"]
+    assert dashboard["publication_state"] == PUBLISHED
+    assert dashboard["release_source_sha"] == DASHBOARD_SHA
+    assert dashboard["public_byte_identity"] == "PASS"
+    assert dashboard["resume_status"] == "REUSED_EXISTING_PUBLICATION"
+    assert dashboard["attestation_identity"] == "governed_publication_attestation:deadbeef"

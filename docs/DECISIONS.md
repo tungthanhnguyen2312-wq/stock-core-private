@@ -1,5 +1,26 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-23 - Canonical Daily Owner Publication Resume and Presentation Join V1 -- final bounded corrective
+
+Final acceptance of `bad8e91` found that Dashboard resume treated local `build_info` session
+equality as proof the Dashboard was publicly `PUBLISHED`. Decisions taken here:
+
+- **Reuse the existing governed publication completion contract as a read-only verifier.**
+  New `verify_existing_publication_completion` / `resolve_dashboard_origin_main_sha` in
+  `governed_publication_completion.py` never dispatch CI or Pages. Absent, stale, conflicting,
+  unreadable, or incomplete proof returns `None`, and the existing `publish_dashboard_release`
+  is the side-effecting fallback.
+- **Keep journal-as-hint / external-state-as-truth.** Even a durable `DASHBOARD_PUBLISHED`
+  journal stage cannot skip publication without the governed PUBLISHED attestation.
+- **Do not invent `ALREADY_PUBLISHED_VERIFIED` as a publication state.** A successful
+  resume-skip carries canonical `publication_state=PUBLISHED` plus the verified release SHA and
+  public-byte PASS. Owner-facing `resume_status=REUSED_EXISTING_PUBLICATION` is separate.
+- **COMPLETE reads T0 identity from retained Daily lineage; it does not recompute or mutate
+  T0.** Legacy absence is explicit `UNAVAILABLE`, not a fabricated identity.
+- **Same milestone, still not COMPLETE.** State remains
+  `IMPLEMENTATION_COMPLETE_AWAITING_NEXT_REAL_DAILY_ACCEPTANCE` until the next real Daily
+  passes.
+
 ## 2026-09-22 - Canonical Daily Owner Publication Resume and Presentation Join V1 -- final implementation continuation
 
 Closes the remaining gaps the corrective-pass entry immediately below explicitly deferred

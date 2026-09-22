@@ -1,5 +1,38 @@
 # Stock Lookup — Operational State
 
+**Canonical Daily owner publication resume and presentation join V1 -- FINAL BOUNDED
+CORRECTIVE (2026-09-23):** Closes the one remaining production blocker found by final
+acceptance, plus two COMPLETE-attestation omissions, on the same isolated worktree/branch
+`feature/daily-owner-resume-presentation-v1` rooted at `origin/main`
+`bad8e91631c5e60aab49c0703301778dda86bbb0`. No Daily run, no provider acquisition, no Dashboard
+push, no architecture reopen.
+
+1. **Dashboard resume skip now requires independent governed publication proof.**
+   `_verify_dashboard_published` previously treated local `build_info.json` session equality as
+   enough and invented `publication_state=ALREADY_PUBLISHED_VERIFIED`. A prior attempt can write
+   local Dashboard bytes, push source, then fail CI/Pages/public-byte proof; the next ordinary
+   owner invocation would skip `publish_dashboard_release` and continue toward COMPLETE. Skip is
+   now allowed only when `governed_publication_completion.verify_existing_publication_completion`
+   proves exact session, exact current Dashboard `origin/main` SHA, `publication_state=PUBLISHED`,
+   and `public_byte_identity=PASS` for that same SHA/session. Local session match remains
+   necessary and is never sufficient. Journal `DASHBOARD_PUBLISHED` is never consulted. The
+   verifier is read-only and never dispatches CI/Pages; a failed proof returns `None` so the
+   existing publisher runs again.
+
+2. **COMPLETE attests the retained T0 snapshot identity** from the already-governed Daily
+   lineage (`daily_operation_record.prospective_decision_snapshot.identity`, then lineage, then
+   the canonical handoff bundle). It is never recomputed. A genuine legacy/pre-migration absence
+   is recorded as `UNAVAILABLE` / `T0_SNAPSHOT_IDENTITY_NOT_RETAINED`.
+
+3. **COMPLETE attests the verified Dashboard publication facts** (`session`,
+   `release_source_sha`, `publication_state=PUBLISHED`, `public_byte_identity=PASS`, attestation/
+   content identity, `build_id`) on both a fresh publisher result and a verified resume-skip.
+   Resume may record `resume_status=REUSED_EXISTING_PUBLICATION`; canonical publication state
+   remains `PUBLISHED`.
+
+Milestone stays `ACTIVE` /
+`IMPLEMENTATION_COMPLETE_AWAITING_NEXT_REAL_DAILY_ACCEPTANCE`. See `docs/DECISIONS.md`.
+
 **Canonical Daily owner publication resume and presentation join V1 -- FINAL IMPLEMENTATION
 CONTINUATION (2026-09-22, second continuation):** Closes the remaining gaps the corrective pass
 below (entry immediately following) explicitly left open, on the same isolated worktree/branch

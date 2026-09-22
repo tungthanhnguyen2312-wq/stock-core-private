@@ -1,5 +1,16 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Canonical Daily owner publication resume and presentation join V1 (2026-09-23, final
+bounded corrective):**
+`CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` remains `ACTIVE` /
+`IMPLEMENTATION_COMPLETE_AWAITING_NEXT_REAL_DAILY_ACCEPTANCE`. Dashboard resume may skip
+publication only when independent governed publication completion proof shows exact session,
+exact Dashboard `origin/main` SHA, `publication_state=PUBLISHED`, and
+`public_byte_identity=PASS`. Local `build_info` session equality is never sufficient. Owner
+`COMPLETE` now attests the retained T0 snapshot identity and those same Dashboard publication
+facts on both fresh publish and verified resume-skip. See `docs/STATE.md` and
+`docs/DECISIONS.md`.
+
 **Canonical Daily owner publication resume and presentation join V1 (2026-09-22, final
 implementation continuation):**
 `CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 =

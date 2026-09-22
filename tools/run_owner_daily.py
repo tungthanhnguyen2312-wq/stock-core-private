@@ -33,6 +33,10 @@ from canonical_trusted_subset_release import (  # noqa: E402
     CanonicalTrustedSubsetError, materialize_canonical_trusted_subset,
 )
 from checkout_cleanliness_contract import classify_checkout_cleanliness  # noqa: E402
+from governed_publication_completion import (  # noqa: E402
+    resolve_dashboard_origin_main_sha,
+    verify_existing_publication_completion,
+)
 import owner_daily_journal as journal  # noqa: E402
 
 DEFAULT_WEB_DIR = CANONICAL_WEB_ROOT
@@ -272,9 +276,10 @@ def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, w
             outcome["recoverable_release_source_sha"] = recoverable.group(1)
         return outcome
     outcome = verify_dashboard_session(web_dir, session)
-    for line in (result.stdout or "").splitlines():
-        if line.startswith("PUBLICATION_STATE="):
-            outcome["publication_state"] = line.split("=", 1)[1]
+    outcome.update(_publication_facts_from_orchestrator_output(result.stdout or ""))
+    attested = _bind_written_publication_attestation(root, session, outcome.get("release_source_sha"))
+    if attested:
+        outcome.update(attested)
     if complete_publication and outcome.get("publication_state") != "PUBLISHED":
         observed = outcome.get("publication_state") or "MISSING_PUBLICATION_STATE"
         outcome.update({
@@ -284,6 +289,52 @@ def publish_dashboard_release(root: Path, runtime_root: Path, session: str, *, w
     elif not complete_publication:
         outcome.setdefault("publication_state", "GITHUB_SOURCE_UPDATED")
     return outcome
+
+
+_PUBLICATION_HANDOFF_KEYS = {
+    "PUBLICATION_STATE": "publication_state",
+    "DASHBOARD_RELEASE_SHA": "release_source_sha",
+    "PUBLIC_BYTE_IDENTITY": "public_byte_identity",
+    "ATTESTATION_IDENTITY": "attestation_identity",
+    "CONTENT_IDENTITY": "content_identity",
+}
+
+
+def _publication_facts_from_orchestrator_output(stdout: str) -> dict[str, str]:
+    facts: dict[str, str] = {}
+    for line in (stdout or "").splitlines():
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        mapped = _PUBLICATION_HANDOFF_KEYS.get(key.strip())
+        if mapped:
+            facts[mapped] = value.strip()
+    return facts
+
+
+def _bind_written_publication_attestation(
+    producer_root: Path, session: str, release_source_sha: str | None,
+) -> dict[str, Any] | None:
+    if not release_source_sha:
+        return None
+    try:
+        attested = verify_existing_publication_completion(
+            producer_root, session=session, release_source_sha=release_source_sha,
+        )
+    except Exception:
+        return None
+    if not attested:
+        return None
+    bound = {
+        "publication_state": attested.get("publication_state"),
+        "release_source_sha": attested.get("release_source_sha"),
+        "public_byte_identity": attested.get("public_byte_identity"),
+    }
+    if attested.get("attestation_identity"):
+        bound["attestation_identity"] = attested["attestation_identity"]
+    if attested.get("content_identity"):
+        bound["content_identity"] = attested["content_identity"]
+    return bound
 
 
 def _run_daily(root: Path, runtime_root: Path) -> None:
@@ -455,6 +506,64 @@ def _auto_resumable_session(root: Path, runtime_root: Path, *, intended_session:
     return session
 
 
+def _t0_snapshot_attestation(root: Path, completion: Mapping[str, Any]) -> dict[str, Any]:
+    """Resolve the already-retained T0 snapshot identity. Never recomputes it."""
+    record = completion.get("record") if isinstance(completion.get("record"), Mapping) else {}
+    snapshot = record.get("prospective_decision_snapshot") if isinstance(record.get("prospective_decision_snapshot"), Mapping) else {}
+    identity = snapshot.get("identity")
+    status = snapshot.get("status")
+    source_id = snapshot.get("source_integrated_decision_identity")
+    if not identity:
+        lineage = record.get("lineage") if isinstance(record.get("lineage"), Mapping) else {}
+        identity = lineage.get("prospective_decision_snapshot")
+    if not identity:
+        bundle = _load_session_handoff_bundle(root, completion)
+        declared = bundle.get("prospective_decision_snapshot") if isinstance(bundle, Mapping) else {}
+        if isinstance(declared, Mapping):
+            identity = declared.get("identity")
+            status = status or declared.get("status")
+            source_id = source_id or declared.get("source_integrated_decision_artifact_identity")
+    if isinstance(identity, str) and identity:
+        attested = {"status": status or "RETAINED", "identity": identity}
+        if source_id:
+            attested["source_integrated_decision_identity"] = source_id
+        return attested
+    return {"status": "UNAVAILABLE", "identity": None, "reason": "T0_SNAPSHOT_IDENTITY_NOT_RETAINED"}
+
+
+def _load_session_handoff_bundle(root: Path, completion: Mapping[str, Any]) -> dict[str, Any] | None:
+    candidates: list[Path] = []
+    record = completion.get("record") if isinstance(completion.get("record"), Mapping) else {}
+    relative = ((record.get("tiers") or {}) if isinstance(record.get("tiers"), Mapping) else {}).get("session_handoff_bundle")
+    if relative:
+        candidates.append(Path(root) / str(relative))
+    source = completion.get("source")
+    if source:
+        candidates.append(Path(source) / "session_handoff_bundle.json")
+    for path in candidates:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError):
+            continue
+        if isinstance(payload, dict):
+            return payload
+    return None
+
+
+def _dashboard_complete_attestation(dashboard: Mapping[str, Any], session: str) -> dict[str, Any]:
+    return {
+        "session": session,
+        "status": dashboard.get("status"),
+        "publication_state": dashboard.get("publication_state"),
+        "release_source_sha": dashboard.get("release_source_sha"),
+        "public_byte_identity": dashboard.get("public_byte_identity"),
+        "attestation_identity": dashboard.get("attestation_identity"),
+        "content_identity": dashboard.get("content_identity"),
+        "build_id": dashboard.get("build_id"),
+        "resume_status": dashboard.get("resume_status"),
+    }
+
+
 def _presentation_bound_state(root: Path, session: str) -> str:
     """UNKNOWN on any failure -- the caller must never record ``journal.PRESENTATION_BOUND`` on
     an unknown basis. See CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
@@ -475,17 +584,45 @@ def _presentation_bound_state(root: Path, session: str) -> str:
 # None; this makes "journal stale/incomplete + external state already advanced" (section 5) and
 # "verification fails -> resume from the earliest safe stage" (section 4) automatic side effects
 # of always reconciling against truth, regardless of what the journal itself claims.
-def _verify_dashboard_published(web_dir: Path, session: str) -> dict[str, Any] | None:
-    """Reuses the existing `verify_dashboard_session` gate -- the same proof
-    `publish_dashboard_release` itself relies on -- to decide whether the Dashboard already
-    carries the exact resolved session, without re-invoking the (expensive, side-effecting)
-    release pipeline."""
-    result = verify_dashboard_session(web_dir, session)
-    if result.get("status") != "READY":
+def _verify_dashboard_published(
+    web_dir: Path,
+    session: str,
+    *,
+    producer_root: Path | None = None,
+    git_runner=None,
+) -> dict[str, Any] | None:
+    """Skip Dashboard publication only when independent governed publication proof
+    already shows this exact session PUBLISHED on the current Dashboard origin/main
+    SHA with public-byte identity PASS.
+
+    Local ``build_info.json`` session equality is necessary and never sufficient.
+    Journal text is never consulted. This helper never dispatches CI or Pages; a
+    None result lets the existing idempotent publisher run again.
+    """
+    local = verify_dashboard_session(web_dir, session)
+    if local.get("status") != "READY" or producer_root is None:
         return None
-    verified = dict(result)
-    verified.setdefault("publication_state", "ALREADY_PUBLISHED_VERIFIED")
-    return verified
+    try:
+        release_sha = resolve_dashboard_origin_main_sha(web_dir, git_runner=git_runner)
+        attested = verify_existing_publication_completion(
+            producer_root, session=session, release_source_sha=release_sha,
+        )
+    except Exception:
+        return None
+    if not attested:
+        return None
+    return {
+        "status": "READY",
+        "expected_session": session,
+        "observed_session": local.get("observed_session"),
+        "build_id": local.get("build_id"),
+        "publication_state": attested.get("publication_state"),
+        "release_source_sha": attested.get("release_source_sha"),
+        "public_byte_identity": attested.get("public_byte_identity"),
+        "attestation_identity": attested.get("attestation_identity"),
+        "content_identity": attested.get("content_identity"),
+        "resume_status": "REUSED_EXISTING_PUBLICATION",
+    }
 
 
 def _verify_ai_handoff_published(handoff_repo: Path, session: str) -> dict[str, Any] | None:
@@ -631,13 +768,17 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # Dashboard on a stale session. A Dashboard failure does not block the independent
         # downstream steps below; it degrades the final status to PARTIAL instead (see main()).
         # Section 4.D: before re-running the (expensive, side-effecting) release pipeline, an
-        # independent verification first checks whether the Dashboard already carries this exact
-        # session -- e.g. a prior run reached DASHBOARD_PUBLISHED and only crashed afterwards.
+        # independent verification first checks whether governed publication completion already
+        # proves this exact session PUBLISHED on the current Dashboard origin/main SHA with
+        # public-byte identity PASS. Local build_info session equality is never enough, and
+        # journal DASHBOARD_PUBLISHED is never consulted.
         if not publish_dashboard:
             dashboard = {"status": "SKIPPED", "expected_session": session, "observed_session": None,
                         "reason": "DASHBOARD_PUBLICATION_DISABLED"}
         else:
-            verified_dashboard = _verify_dashboard_published(dashboard_web_dir, session)
+            verified_dashboard = _verify_dashboard_published(
+                dashboard_web_dir, session, producer_root=root,
+            )
             dashboard = verified_dashboard if verified_dashboard is not None else publish_dashboard_release(
                 root, runtime_root, session, web_dir=dashboard_web_dir,
                 producer_run_identity=completion["record"]["daily_producer_run_identity"],
@@ -697,6 +838,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             "canonical_daily_operation_identity": record.get("operation_identity"),
             "daily_producer_run_identity": record.get("daily_producer_run_identity"),
             "daily_producer_operation_identity": record.get("daily_producer_operation_identity"),
+            "t0_snapshot": _t0_snapshot_attestation(root, completion),
             "producer_state_retained": producer_state.get("status"),
             "presentation_bound_state": presentation_state,
             "post_handoff_presentation_projection": {
@@ -709,8 +851,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             "flow_price_divergence_shadow": {"status": flow_price.get("status"), "identity": flow_price.get("artifact_identity")},
             "post_handoff_prospective_decision_feedback": {"status": post_handoff_feedback.get("status"), "identity": post_handoff_feedback.get("artifact_identity")},
             "final_runtime_presentation": {"status": runtime_restage.get("status"), "identity": runtime_restage.get("artifact_identity")},
-            "dashboard": {"session": session, "status": dashboard.get("status"), "publication_state": dashboard.get("publication_state"),
-                         "build_id": dashboard.get("build_id")},
+            "dashboard": _dashboard_complete_attestation(dashboard, session),
             "ai_handoff": {"session": session, "remote_sha": (handoff.get("remote") or {}).get("remote_sha"),
                            "handoff_build_id": (handoff.get("remote") or {}).get("handoff_build_id")},
             "action_center": {"session": session, "status": action_center.get("status"), "identity": action_center.get("identity")},
