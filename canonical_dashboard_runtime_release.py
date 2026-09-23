@@ -525,18 +525,26 @@ def materialize_canonical_runtime_release(
         shutil.rmtree(backup, ignore_errors=True)
 
 
+HOME_SUMMARY_RESTAGE_DERIVATION = "dashboard_home_summary.build_home_summary(restaged_presentation_screener)"
+
+
+class _RestageRefused(Exception):
+    """Internal: a proposed presentation replacement failed validation -- restage is SKIPPED."""
+
+
 def _patch_runtime_manifest_after_restage(
     manifest_path: Path, *, session: str,
     workspace_identity: Mapping[str, Any], workspace_sha256: str,
     screener_identity: Mapping[str, Any] | None, screener_sha256: str | None,
+    home_summary: Mapping[str, Any] | None = None, home_summary_sha256: str | None = None,
 ) -> str:
     """Keep ``bundle_manifest.json``'s own lineage record coherent with the just-restaged
     runtime bytes -- see CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1
     section 2: the runtime must never be left with served files whose identity disagrees with
     what its own manifest declares. Additive: the sealed baseline identities are preserved under
-    a new ``lineage.presentation_projection`` block rather than silently discarded. Never raises;
-    an unreadable/missing manifest degrades to a reported status, exactly like the restage
-    overlay itself.
+    a new ``lineage.presentation_projection`` block rather than silently discarded (and are
+    carried forward, never overwritten by restaged ones, when the same session is restaged
+    again). Never raises; an unreadable/missing manifest degrades to a reported status.
     """
     if not manifest_path.is_file():
         return "MANIFEST_MISSING"
@@ -549,12 +557,25 @@ def _patch_runtime_manifest_after_restage(
     lineage = dict(manifest.get("lineage") or {})
     sealed_workspace = dict(lineage.get("investment_decision_workspace") or {})
     sealed_screener = dict(lineage.get("screener_master_projection") or {})
+    sealed_home_summary = dict(lineage.get("dashboard_home_summary") or {})
+    prior = lineage.get("presentation_projection")
+    prior = prior if isinstance(prior, Mapping) and prior.get("session") == session else {}
+
+    def _sealed(key: str, entry: Mapping[str, Any]) -> Any:
+        return prior[key] if key in prior else entry.get("artifact_identity")
+
+    restaged_home_summary_identity = (home_summary or {}).get("artifact_identity") or prior.get(
+        "restaged_dashboard_home_summary_artifact_identity")
     lineage["presentation_projection"] = {
         "session": session,
-        "sealed_workspace_artifact_identity": sealed_workspace.get("artifact_identity"),
-        "sealed_screener_master_projection_artifact_identity": sealed_screener.get("artifact_identity"),
+        "sealed_workspace_artifact_identity": _sealed("sealed_workspace_artifact_identity", sealed_workspace),
+        "sealed_screener_master_projection_artifact_identity": _sealed(
+            "sealed_screener_master_projection_artifact_identity", sealed_screener),
+        "sealed_dashboard_home_summary_artifact_identity": _sealed(
+            "sealed_dashboard_home_summary_artifact_identity", sealed_home_summary),
         "restaged_workspace_artifact_identity": workspace_identity.get("artifact_identity"),
         "restaged_screener_master_projection_artifact_identity": (screener_identity or {}).get("artifact_identity"),
+        "restaged_dashboard_home_summary_artifact_identity": restaged_home_summary_identity,
     }
     new_workspace_entry = dict(sealed_workspace)
     new_workspace_entry.update({**workspace_identity, "sha256": workspace_sha256})
@@ -563,6 +584,18 @@ def _patch_runtime_manifest_after_restage(
         new_screener_entry = dict(sealed_screener)
         new_screener_entry.update({**screener_identity, "sha256": screener_sha256})
         lineage["screener_master_projection"] = new_screener_entry
+    if home_summary is not None and home_summary_sha256 is not None:
+        new_home_summary_entry = dict(sealed_home_summary)
+        new_home_summary_entry.update({
+            "artifact_identity": home_summary["artifact_identity"],
+            "artifact_sha256": home_summary["artifact_sha256"],
+            "sha256": home_summary_sha256,
+            "session": session,
+            "denominator": home_summary["denominator"],
+            "source_artifact_identity": home_summary["source_artifact_identity"],
+            "derivation": HOME_SUMMARY_RESTAGE_DERIVATION,
+        })
+        lineage["dashboard_home_summary"] = new_home_summary_entry
     manifest["lineage"] = lineage
     try:
         tmp = manifest_path.with_name(manifest_path.name + ".tmp")
@@ -571,6 +604,84 @@ def _patch_runtime_manifest_after_restage(
     except OSError:
         return "MANIFEST_WRITE_FAILED"
     return "PATCHED"
+
+
+def _validate_presentation_screener(
+    payload: Any, *, session: str, runtime_screener: Mapping[str, Any], declared_identity: Any,
+) -> dict[str, str]:
+    """Same bar ``_stage_screener_master_projection`` holds the sealed Screener to, plus: the
+    restaged corpus must keep the runtime's own ticker denominator (a presentation overlay never
+    changes the universe) and, when the presentation result declares its Screener identity, the
+    bytes on disk must be exactly that artifact."""
+    if not isinstance(payload, dict):
+        raise _RestageRefused("PRESENTATION_SCREENER_NOT_OBJECT")
+    if payload.get("schema_version") != screener_contract.SCHEMA_VERSION:
+        raise _RestageRefused("PRESENTATION_SCREENER_SCHEMA_VERSION_MISMATCH")
+    if payload.get("contract_version") != screener_contract.CONTRACT_VERSION:
+        raise _RestageRefused("PRESENTATION_SCREENER_CONTRACT_VERSION_MISMATCH")
+    if payload.get("as_of_session") != session:
+        raise _RestageRefused("PRESENTATION_SCREENER_SESSION_MISMATCH")
+    cards, coverage = payload.get("cards"), payload.get("coverage")
+    if not isinstance(cards, dict) or not cards:
+        raise _RestageRefused("PRESENTATION_SCREENER_EMPTY_CORPUS")
+    if (not isinstance(coverage, dict) or type(coverage.get("ticker_denominator")) is not int
+            or coverage["ticker_denominator"] != len(cards) or coverage.get("zero_silent_drops") is not True):
+        raise _RestageRefused("PRESENTATION_SCREENER_DENOMINATOR_OR_SILENT_DROP_VIOLATION")
+    if (runtime_screener.get("coverage") or {}).get("ticker_denominator") != len(cards):
+        raise _RestageRefused("PRESENTATION_SCREENER_DENOMINATOR_DIVERGES_FROM_RUNTIME")
+    try:
+        identity = screener_contract.content_identity(payload)
+    except (TypeError, ValueError) as exc:
+        raise _RestageRefused("PRESENTATION_SCREENER_CONTENT_IDENTITY_INVALID") from exc
+    if (payload.get("artifact_identity") != identity["artifact_identity"]
+            or payload.get("artifact_sha256") != identity["artifact_sha256"]):
+        raise _RestageRefused("PRESENTATION_SCREENER_CONTENT_IDENTITY_MISMATCH")
+    if declared_identity is not None and declared_identity != identity["artifact_identity"]:
+        raise _RestageRefused("PRESENTATION_SCREENER_IDENTITY_DIVERGES_FROM_PRESENTATION_RESULT")
+    return identity
+
+
+def _derive_restaged_home_summary(
+    screener: Mapping[str, Any], *, session: str, fallback_requested_at: Any,
+) -> dict[str, Any]:
+    """Re-derive the Home summary from the exact restaged Screener through the one governed pure
+    builder -- never copy the sealed summary forward past a Screener change. ``requested_at``
+    follows the Screener's own (identity-excluded) request timestamp, exactly as the Producer's
+    own derivation does, falling back to the baseline summary's only when the Screener has none."""
+    requested_at = screener.get("requested_at") or fallback_requested_at
+    if not isinstance(requested_at, str) or not requested_at:
+        raise _RestageRefused("HOME_SUMMARY_REQUESTED_AT_UNAVAILABLE")
+    try:
+        summary = dashboard_home_summary.build_home_summary(screener, requested_at=requested_at)
+    except Exception as exc:  # noqa: BLE001 - any derivation failure refuses the whole restage
+        raise _RestageRefused(f"HOME_SUMMARY_DERIVATION_FAILED:{type(exc).__name__}:{exc}") from exc
+    if (not isinstance(summary, dict)
+            or summary.get("schema_version") != dashboard_home_summary.SCHEMA_VERSION
+            or summary.get("contract_version") != dashboard_home_summary.CONTRACT_VERSION):
+        raise _RestageRefused("HOME_SUMMARY_DERIVED_CONTRACT_MISMATCH")
+    if summary.get("as_of_session") != session:
+        raise _RestageRefused("HOME_SUMMARY_DERIVED_SESSION_MISMATCH")
+    if (not isinstance(summary.get("denominator"), int) or summary["denominator"] <= 0
+            or summary["denominator"] != len(screener.get("cards") or {})):
+        raise _RestageRefused("HOME_SUMMARY_DERIVED_DENOMINATOR_INVALID")
+    identity = dashboard_home_summary.content_identity(summary)
+    if (summary.get("artifact_identity") != identity["artifact_identity"]
+            or summary.get("artifact_sha256") != identity["artifact_sha256"]):
+        raise _RestageRefused("HOME_SUMMARY_DERIVED_CONTENT_IDENTITY_MISMATCH")
+    if summary.get("source_artifact_identity") != screener.get("artifact_identity"):
+        raise _RestageRefused("HOME_SUMMARY_DERIVED_SOURCE_SCREENER_IDENTITY_MISMATCH")
+    return summary
+
+
+def _restore_runtime_bytes(backups: Mapping[Path, bytes | None]) -> None:
+    for target, data in backups.items():
+        if data is None:
+            if target.exists():
+                target.unlink()
+            continue
+        tmp = target.with_name(target.name + ".restore.tmp")
+        tmp.write_bytes(data)
+        tmp.replace(target)
 
 
 def restage_runtime_with_presentation_projection(
@@ -583,16 +694,19 @@ def restage_runtime_with_presentation_projection(
     CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1.
 
     Never touches sealed Producer evidence (the operation/run directories) -- only the
-    runtime-served copies under ``runtime_root/data/``, using the same ``atomic_copy_file``
-    primitive ``materialize_canonical_runtime_release`` itself uses. No-op unless the
-    presentation projection both succeeded and lineage-verified against the sealed Producer
-    Workspace, and the replacement bytes independently re-validate (self-consistent content
-    identity, matching session/contract) -- any other outcome degrades to SKIPPED and leaves the
+    runtime-served copies under ``runtime_root/data/``. No-op unless the presentation projection
+    both succeeded and lineage-verified against the sealed Producer Workspace, and every
+    replacement independently re-validates -- any other outcome degrades to SKIPPED and leaves the
     sealed bytes exactly as they were. Never raises.
 
-    A successful overlay also patches ``runtime_root/bundle_manifest.json`` so its own lineage
-    record agrees with the restaged bytes' identity -- a served file whose hash disagrees with
-    what the manifest declares is exactly the incoherence this milestone closes.
+    The runtime's presentation dependency graph moves as ONE unit
+    (DASHBOARD_PRESENTATION_RESTAGE_HOME_SUMMARY_COHERENCE_V1): when the Screener changes, the
+    Home summary bound to it is re-derived from that exact Screener, and the whole replacement
+    set (Workspace, Screener, Home summary) is fully validated before the first runtime write.
+    The manifest lineage is then patched and the result proven coherent; any failure after the
+    first write restores every touched runtime file, so the runtime can never be left with an
+    enriched Workspace beside a stale Screener, an enriched Screener beside a Home summary bound
+    to the sealed one, or bytes disagreeing with ``bundle_manifest.json``.
     """
     if not isinstance(presentation_result, Mapping) or (
         presentation_result.get("status") != "COLLECTED"
@@ -608,6 +722,7 @@ def restage_runtime_with_presentation_projection(
         source_screener = source_workspace.parent / "screener_master_projection.json"
         target_workspace = Path(runtime_root) / "data" / "investment_decision_workspace.json"
         target_screener = Path(runtime_root) / "data" / "screener_master_projection.json"
+        target_home_summary = Path(runtime_root) / "data" / "dashboard_home_summary.json"
         manifest_path = Path(runtime_root) / "bundle_manifest.json"
         if not source_workspace.is_file() or not target_workspace.is_file():
             return {"status": "SKIPPED", "reason": "SOURCE_OR_TARGET_WORKSPACE_MISSING"}
@@ -620,44 +735,108 @@ def restage_runtime_with_presentation_projection(
         identity = workspace_contract.content_identity(new_payload)
         if new_payload.get("artifact_identity") != identity["artifact_identity"]:
             return {"status": "SKIPPED", "reason": "WORKSPACE_CONTENT_IDENTITY_MISMATCH"}
-        atomic_copy_file(source_workspace, target_workspace)
-        screener_status = "SKIPPED"
+
+        # Validate the complete replacement set before the first runtime write.
+        screener_status, home_summary_status = "SKIPPED", "BASELINE_PRESERVED"
         screener_identity: dict[str, Any] | None = None
+        home_summary: dict[str, Any] | None = None
         if source_screener.is_file() and target_screener.is_file():
-            try:
-                screener_identity = screener_contract.content_identity(json.loads(source_screener.read_text(encoding="utf-8")))
-            except (TypeError, ValueError, OSError, json.JSONDecodeError):
-                screener_identity = None
-            atomic_copy_file(source_screener, target_screener)
+            new_screener = json.loads(source_screener.read_text(encoding="utf-8"))
+            current_screener = json.loads(target_screener.read_text(encoding="utf-8"))
+            screener_identity = _validate_presentation_screener(
+                new_screener, session=session, runtime_screener=current_screener if isinstance(current_screener, dict) else {},
+                declared_identity=presentation_result.get("screener_master_projection_artifact_identity"),
+            )
             screener_status = "RESTAGED"
-        manifest_status = _patch_runtime_manifest_after_restage(
-            manifest_path, session=session,
-            workspace_identity=identity, workspace_sha256=_sha256(target_workspace),
-            screener_identity=screener_identity,
-            screener_sha256=_sha256(target_screener) if screener_status == "RESTAGED" else None,
-        )
+            if target_home_summary.is_file():
+                current_home_summary = json.loads(target_home_summary.read_text(encoding="utf-8"))
+                current_home_summary = current_home_summary if isinstance(current_home_summary, dict) else {}
+                if (current_home_summary.get("source_artifact_identity") == screener_identity["artifact_identity"]
+                        and current_home_summary.get("as_of_session") == session):
+                    home_summary_status = "ALREADY_BOUND_TO_RESTAGED_SCREENER"
+                else:
+                    home_summary = _derive_restaged_home_summary(
+                        new_screener, session=session,
+                        fallback_requested_at=current_home_summary.get("requested_at"),
+                    )
+                    home_summary_status = "RESTAGED"
+            else:
+                home_summary_status = "ABSENT"
+
+        touched = [target_workspace, manifest_path]
+        if screener_status == "RESTAGED":
+            touched.append(target_screener)
+        if home_summary is not None:
+            touched.append(target_home_summary)
+        backups = {target: (target.read_bytes() if target.is_file() else None) for target in touched}
+        try:
+            atomic_copy_file(source_workspace, target_workspace)
+            if screener_status == "RESTAGED":
+                atomic_copy_file(source_screener, target_screener)
+            if home_summary is not None:
+                atomic_write_json(target_home_summary, home_summary)
+            manifest_status = _patch_runtime_manifest_after_restage(
+                manifest_path, session=session,
+                workspace_identity=identity, workspace_sha256=_sha256(target_workspace),
+                screener_identity=screener_identity,
+                screener_sha256=_sha256(target_screener) if screener_status == "RESTAGED" else None,
+                home_summary=home_summary,
+                home_summary_sha256=_sha256(target_home_summary) if home_summary is not None else None,
+            )
+            if manifest_status != "PATCHED":
+                raise _RestageRefused(f"RUNTIME_MANIFEST_{manifest_status}")
+            _verify_runtime_manifest_coherence(runtime_root)
+        except BaseException as exc:
+            _restore_runtime_bytes(backups)
+            reason = str(exc) if isinstance(exc, (_RestageRefused, CanonicalRuntimeReleaseError)) else f"{type(exc).__name__}:{exc}"
+            return {"status": "SKIPPED", "reason": f"{reason}:RUNTIME_RESTORED"}
         return {
             "status": "RESTAGED", "session": session,
             "workspace_artifact_identity": identity["artifact_identity"],
             "screener_master_projection_status": screener_status,
+            "screener_master_projection_artifact_identity": (screener_identity or {}).get("artifact_identity"),
+            "dashboard_home_summary_status": home_summary_status,
+            "dashboard_home_summary_artifact_identity": (home_summary or {}).get("artifact_identity"),
             "runtime_manifest_status": manifest_status,
         }
+    except _RestageRefused as exc:
+        return {"status": "SKIPPED", "reason": str(exc)}
     except Exception as exc:  # noqa: BLE001 - this overlay must never block or fail core Daily
         return {"status": "SKIPPED", "reason": f"{type(exc).__name__}:{exc}"}
 
 
+_COHERENCE_ARTIFACTS = (
+    ("investment_decision_workspace", "data/investment_decision_workspace.json", "WORKSPACE"),
+    ("screener_master_projection", "data/screener_master_projection.json", "SCREENER"),
+    ("dashboard_home_summary", "data/dashboard_home_summary.json", "HOME_SUMMARY"),
+)
+
+
 def _verify_runtime_manifest_coherence(runtime_root: Path) -> None:
-    """After a successful restage, fail loudly (never silently) if the served Workspace bytes
-    and the manifest's own declared identity for them have drifted apart -- the exact
-    incoherence CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 2
-    exists to close."""
-    manifest_path = Path(runtime_root) / "bundle_manifest.json"
-    workspace_path = Path(runtime_root) / "data" / "investment_decision_workspace.json"
-    manifest = _load(manifest_path)
-    workspace = _load(workspace_path)
-    declared = ((manifest.get("lineage") or {}).get("investment_decision_workspace") or {}).get("artifact_identity")
-    if declared != workspace.get("artifact_identity"):
-        raise CanonicalRuntimeReleaseError("RUNTIME_MANIFEST_WORKSPACE_IDENTITY_INCOHERENT_AFTER_RESTAGE")
+    """After a successful restage, fail loudly (never silently) if any served presentation
+    artifact and the manifest's own declared identity for it have drifted apart, or if the served
+    Home summary is bound to a Screener other than the one actually served -- the exact
+    incoherences CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1 section 2 and
+    DASHBOARD_PRESENTATION_RESTAGE_HOME_SUMMARY_COHERENCE_V1 exist to close. The Workspace is
+    required; the Screener and Home summary are checked whenever the runtime serves them."""
+    manifest = _load(Path(runtime_root) / "bundle_manifest.json")
+    lineage = manifest.get("lineage") or {}
+    served: dict[str, dict[str, Any]] = {}
+    for key, relative, label in _COHERENCE_ARTIFACTS:
+        path = Path(runtime_root) / relative
+        if key != "investment_decision_workspace" and not path.is_file():
+            continue
+        payload = _load(path)
+        declared = lineage.get(key) or {}
+        if declared.get("artifact_identity") != payload.get("artifact_identity"):
+            raise CanonicalRuntimeReleaseError(f"RUNTIME_MANIFEST_{label}_IDENTITY_INCOHERENT_AFTER_RESTAGE")
+        if "sha256" in declared and declared["sha256"] != _sha256(path):
+            raise CanonicalRuntimeReleaseError(f"RUNTIME_MANIFEST_{label}_SHA256_INCOHERENT_AFTER_RESTAGE")
+        served[key] = payload
+    home_summary, screener = served.get("dashboard_home_summary"), served.get("screener_master_projection")
+    if home_summary is not None and screener is not None and (
+            home_summary.get("source_artifact_identity") != screener.get("artifact_identity")):
+        raise CanonicalRuntimeReleaseError("RUNTIME_HOME_SUMMARY_SOURCE_SCREENER_IDENTITY_INCOHERENT_AFTER_RESTAGE")
 
 
 def materialize_release_ready_runtime(

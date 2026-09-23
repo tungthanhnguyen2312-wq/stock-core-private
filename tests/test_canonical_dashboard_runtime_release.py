@@ -701,3 +701,306 @@ def test_publish_dashboard_release_survives_presentation_projection_end_to_end(t
     assert result["status"] == "READY"
     served = json.loads((runtime / "data" / "investment_decision_workspace.json").read_text(encoding="utf-8"))
     assert served["cards"]["AAA"]["signal_velocity"]["overall_transition_state"] == "STABLE"
+
+
+# =====================================================================================
+# DASHBOARD_PRESENTATION_RESTAGE_HOME_SUMMARY_COHERENCE_V1: the post-handoff restage replaced
+# the runtime Screener (identity A -> B) but left the sealed Home summary bound to A, so the
+# governed publisher (correctly) refused DASHBOARD_HOME_SUMMARY_SOURCE_SCREENER_IDENTITY_MISMATCH.
+# The restage must move Workspace + Screener + Home summary + manifest lineage as one unit.
+# =====================================================================================
+
+RESTAGE_SESSION = "2026-09-17"
+RUNTIME_PRESENTATION_FILES = ("data/investment_decision_workspace.json", "data/screener_master_projection.json",
+                              "data/dashboard_home_summary.json", "bundle_manifest.json")
+
+
+def _runtime_bytes(runtime):
+    return {name: (runtime / name).read_bytes() for name in RUNTIME_PRESENTATION_FILES}
+
+
+def _presentation_with_new_screener(root, workspace, source, *, with_screener=True, screener_mutator=None,
+                                    attest=False, declared_screener_identity=True):
+    """Enriched presentation Workspace plus (optionally) a presentation Screener whose content --
+    and therefore identity -- differs from the sealed baseline Screener, exactly like 2026-09-23."""
+    presentation_dir = root / "operations-review" / "post-handoff-presentation-projection-v1" / RESTAGE_SESSION
+    presentation_dir.mkdir(parents=True, exist_ok=True)
+    enriched_workspace = {k: v for k, v in workspace.items() if k not in ("artifact_identity", "artifact_sha256")}
+    enriched_workspace["cards"] = {"AAA": {"signal_velocity": {"overall_transition_state": "STABLE"}}}
+    enriched_workspace.update(runtime_release.workspace_contract.content_identity(enriched_workspace))
+    (presentation_dir / "investment_decision_workspace_projection.json").write_text(json.dumps(enriched_workspace), encoding="utf-8")
+    new_screener = None
+    if with_screener:
+        sealed_screener = json.loads((source.parent / "screener_master_projection.json").read_text(encoding="utf-8"))
+        new_screener = {k: v for k, v in sealed_screener.items() if k not in ("artifact_identity", "artifact_sha256")}
+        new_screener["cards"] = {"AAA": {"signal_velocity": {"overall_transition_state": "STABLE"}}}
+        new_screener["requested_at"] = f"{RESTAGE_SESSION}T17:03:04+07:00"
+        new_screener.update(runtime_release.screener_contract.content_identity(new_screener))
+        assert new_screener["artifact_identity"] != sealed_screener["artifact_identity"]
+        if screener_mutator is not None:
+            screener_mutator(new_screener)
+        (presentation_dir / "screener_master_projection.json").write_text(json.dumps(new_screener), encoding="utf-8")
+    presentation_result = {
+        "status": "COLLECTED", "session": RESTAGE_SESSION,
+        "lineage_status": "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE",
+        "path": str((presentation_dir / "investment_decision_workspace_projection.json").resolve().relative_to(root.resolve())),
+        "workspace_artifact_identity": enriched_workspace["artifact_identity"],
+        "sealed_producer_workspace_artifact_identity": workspace.get("artifact_identity"),
+    }
+    if new_screener is not None and declared_screener_identity:
+        presentation_result["screener_master_projection_artifact_identity"] = new_screener.get("artifact_identity")
+    if attest:
+        import post_handoff_presentation_attestation as attestation
+        attestation.write_attestation(root, RESTAGE_SESSION, presentation_projection=presentation_result)
+    return enriched_workspace, new_screener, presentation_result
+
+
+def _assert_publisher_accepts_runtime_pair(runtime):
+    from publish_dashboard import validate_dashboard_home_summary
+    screener = json.loads((runtime / "data" / "screener_master_projection.json").read_text(encoding="utf-8"))
+    summary = validate_dashboard_home_summary(runtime / "data" / "dashboard_home_summary.json", RESTAGE_SESSION,
+                                              screener_artifact_identity=screener["artifact_identity"])
+    assert summary["source_artifact_identity"] == screener["artifact_identity"]
+
+
+def test_restage_rederives_home_summary_from_restaged_screener(tmp_path, monkeypatch):
+    """The exact 2026-09-23 failure shape: baseline Screener A + Home summary bound to A, then a
+    presentation Screener B. After restage the runtime Home summary must be derived from B."""
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    baseline_screener = json.loads((runtime / "data" / "screener_master_projection.json").read_text(encoding="utf-8"))
+    baseline_home = json.loads((runtime / "data" / "dashboard_home_summary.json").read_text(encoding="utf-8"))
+    assert baseline_home["source_artifact_identity"] == baseline_screener["artifact_identity"]  # A bound to A
+    sealed_home_bytes = (source.parent / "dashboard_home_summary.json").read_bytes()
+    _, new_screener, presentation_result = _presentation_with_new_screener(root, workspace, source)
+
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+
+    assert result["status"] == "RESTAGED"
+    assert result["screener_master_projection_status"] == "RESTAGED"
+    assert result["dashboard_home_summary_status"] == "RESTAGED"
+    served_screener = json.loads((runtime / "data" / "screener_master_projection.json").read_text(encoding="utf-8"))
+    served_home = json.loads((runtime / "data" / "dashboard_home_summary.json").read_text(encoding="utf-8"))
+    assert served_screener["artifact_identity"] == new_screener["artifact_identity"]  # runtime Screener = B
+    assert served_home["source_artifact_identity"] == new_screener["artifact_identity"]  # Home bound to B
+    expected_home = runtime_release.dashboard_home_summary.build_home_summary(
+        new_screener, requested_at=new_screener["requested_at"])
+    assert served_home == expected_home
+    assert served_home["artifact_identity"] != baseline_home["artifact_identity"]
+    assert result["dashboard_home_summary_artifact_identity"] == served_home["artifact_identity"]
+
+    manifest = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))
+    home_entry = manifest["lineage"]["dashboard_home_summary"]
+    assert home_entry["artifact_identity"] == served_home["artifact_identity"]
+    assert home_entry["sha256"] == runtime_release._sha256(runtime / "data" / "dashboard_home_summary.json")
+    assert home_entry["source_artifact_identity"] == new_screener["artifact_identity"]
+    assert home_entry["derivation"] == runtime_release.HOME_SUMMARY_RESTAGE_DERIVATION
+    assert manifest["lineage"]["screener_master_projection"]["artifact_identity"] == new_screener["artifact_identity"]
+    presentation_lineage = manifest["lineage"]["presentation_projection"]
+    assert presentation_lineage["sealed_screener_master_projection_artifact_identity"] == baseline_screener["artifact_identity"]
+    assert presentation_lineage["sealed_dashboard_home_summary_artifact_identity"] == baseline_home["artifact_identity"]
+    assert presentation_lineage["restaged_dashboard_home_summary_artifact_identity"] == served_home["artifact_identity"]
+
+    runtime_release._verify_runtime_manifest_coherence(runtime)
+    _assert_publisher_accepts_runtime_pair(runtime)
+    # Sealed Producer evidence untouched.
+    assert (source.parent / "dashboard_home_summary.json").read_bytes() == sealed_home_bytes
+
+
+def test_materialize_release_ready_runtime_rebinds_home_summary_end_to_end(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    _, new_screener, _ = _presentation_with_new_screener(root, workspace, source, attest=True)
+    runtime = tmp_path / "runtime"
+
+    result = runtime_release.materialize_release_ready_runtime(root, runtime, RESTAGE_SESSION)
+
+    assert result["presentation_restage"]["status"] == "RESTAGED"
+    served_home = json.loads((runtime / "data" / "dashboard_home_summary.json").read_text(encoding="utf-8"))
+    assert served_home["source_artifact_identity"] == new_screener["artifact_identity"]
+    _assert_publisher_accepts_runtime_pair(runtime)
+
+
+def test_publisher_still_refuses_the_pre_fix_mixed_runtime_shape(tmp_path, monkeypatch):
+    """Guard preserved: the pre-fix runtime (Screener B beside a Home summary bound to A) is
+    exactly what the governed publisher must keep refusing."""
+    from publish_dashboard import validate_dashboard_home_summary
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    _, new_screener, _ = _presentation_with_new_screener(root, workspace, source)
+    with pytest.raises(ValueError, match="DASHBOARD_HOME_SUMMARY_SOURCE_SCREENER_IDENTITY_MISMATCH"):
+        validate_dashboard_home_summary(runtime / "data" / "dashboard_home_summary.json", RESTAGE_SESSION,
+                                        screener_artifact_identity=new_screener["artifact_identity"])
+
+
+@pytest.mark.parametrize("breakage,reason", [
+    ("tampered_identity", "PRESENTATION_SCREENER_CONTENT_IDENTITY_MISMATCH"),
+    ("wrong_session", "PRESENTATION_SCREENER_SESSION_MISMATCH"),
+    ("wrong_contract", "PRESENTATION_SCREENER_CONTRACT_VERSION_MISMATCH"),
+    ("denominator", "PRESENTATION_SCREENER_DENOMINATOR_OR_SILENT_DROP_VIOLATION"),
+    ("declared_identity", "PRESENTATION_SCREENER_IDENTITY_DIVERGES_FROM_PRESENTATION_RESULT"),
+    ("not_json", "JSONDecodeError"),
+])
+def test_malformed_presentation_screener_never_creates_a_mixed_runtime(tmp_path, monkeypatch, breakage, reason):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    before = _runtime_bytes(runtime)
+
+    def mutate(screener):
+        if breakage == "tampered_identity":
+            screener["artifact_identity"] = "screener_master_projection/v1:" + "0" * 64
+        elif breakage == "wrong_session":
+            screener["as_of_session"] = "2026-09-16"
+            screener.update(runtime_release.screener_contract.content_identity(screener))
+        elif breakage == "wrong_contract":
+            screener["contract_version"] = "screener_master_projection/v0"
+        elif breakage == "denominator":
+            screener["coverage"] = {"ticker_denominator": 2, "zero_silent_drops": True}
+            screener.update(runtime_release.screener_contract.content_identity(screener))
+
+    _, _, presentation_result = _presentation_with_new_screener(root, workspace, source, screener_mutator=mutate)
+    if breakage == "declared_identity":
+        presentation_result["screener_master_projection_artifact_identity"] = "screener_master_projection/v1:" + "f" * 64
+    if breakage == "not_json":
+        (root / presentation_result["path"]).parent.joinpath("screener_master_projection.json").write_text("{nope", encoding="utf-8")
+
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+
+    assert result["status"] == "SKIPPED"
+    assert reason in result["reason"]
+    assert _runtime_bytes(runtime) == before  # no enriched Workspace beside a stale Screener
+    runtime_release._verify_runtime_manifest_coherence(runtime)
+    _assert_publisher_accepts_runtime_pair(runtime)
+
+
+def test_home_summary_derivation_failure_keeps_baseline_set_and_never_claims_success(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    _presentation_with_new_screener(root, workspace, source, attest=True)
+    runtime = tmp_path / "runtime"
+
+    def _boom(*_a, **_k):
+        raise runtime_release.dashboard_home_summary.DashboardHomeSummaryError("SIMULATED_DERIVATION_FAILURE")
+
+    monkeypatch.setattr(runtime_release.dashboard_home_summary, "build_home_summary", _boom)
+    result = runtime_release.materialize_release_ready_runtime(root, runtime, RESTAGE_SESSION)
+
+    restage = result["presentation_restage"]
+    assert restage["status"] == "SKIPPED"
+    assert "HOME_SUMMARY_DERIVATION_FAILED" in restage["reason"]
+    served_workspace = json.loads((runtime / "data" / "investment_decision_workspace.json").read_text(encoding="utf-8"))
+    assert served_workspace["artifact_identity"] == workspace["artifact_identity"]  # baseline, not enriched
+    manifest = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))
+    assert "presentation_projection" not in manifest["lineage"]
+    runtime_release._verify_runtime_manifest_coherence(runtime)
+    _assert_publisher_accepts_runtime_pair(runtime)
+
+
+def test_failure_after_first_runtime_write_restores_every_touched_file(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    before = _runtime_bytes(runtime)
+    _, _, presentation_result = _presentation_with_new_screener(root, workspace, source)
+    monkeypatch.setattr(runtime_release, "_patch_runtime_manifest_after_restage", lambda *a, **k: "MANIFEST_WRITE_FAILED")
+
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+
+    assert result["status"] == "SKIPPED"
+    assert result["reason"] == "RUNTIME_MANIFEST_MANIFEST_WRITE_FAILED:RUNTIME_RESTORED"
+    assert _runtime_bytes(runtime) == before
+
+
+def test_workspace_only_restage_preserves_baseline_screener_home_summary_pair(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    before = _runtime_bytes(runtime)
+    derivations = []
+    real_build = runtime_release.dashboard_home_summary.build_home_summary
+    monkeypatch.setattr(runtime_release.dashboard_home_summary, "build_home_summary",
+                        lambda *a, **k: derivations.append(1) or real_build(*a, **k))
+    enriched_workspace, _, presentation_result = _presentation_with_new_screener(root, workspace, source, with_screener=False)
+
+    result = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+
+    assert result["status"] == "RESTAGED"
+    assert result["screener_master_projection_status"] == "SKIPPED"
+    assert result["dashboard_home_summary_status"] == "BASELINE_PRESERVED"
+    assert derivations == []
+    after = _runtime_bytes(runtime)
+    for name in ("data/screener_master_projection.json", "data/dashboard_home_summary.json"):
+        assert after[name] == before[name]
+    served_workspace = json.loads(after["data/investment_decision_workspace.json"])
+    assert served_workspace["artifact_identity"] == enriched_workspace["artifact_identity"]
+    runtime_release._verify_runtime_manifest_coherence(runtime)
+    _assert_publisher_accepts_runtime_pair(runtime)
+
+
+def test_repeated_same_presentation_restage_is_idempotent(tmp_path, monkeypatch):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    baseline_manifest = json.loads((runtime / "bundle_manifest.json").read_text(encoding="utf-8"))
+    _, _, presentation_result = _presentation_with_new_screener(root, workspace, source)
+
+    first = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+    after_first = _runtime_bytes(runtime)
+    second = runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)
+    after_second = _runtime_bytes(runtime)
+
+    assert first["status"] == second["status"] == "RESTAGED"
+    assert second["dashboard_home_summary_status"] == "ALREADY_BOUND_TO_RESTAGED_SCREENER"
+    assert after_second == after_first
+    presentation_lineage = json.loads(after_second["bundle_manifest.json"])["lineage"]["presentation_projection"]
+    assert presentation_lineage["sealed_screener_master_projection_artifact_identity"] == \
+        baseline_manifest["lineage"]["screener_master_projection"]["artifact_identity"]
+    assert presentation_lineage["sealed_dashboard_home_summary_artifact_identity"] == \
+        baseline_manifest["lineage"]["dashboard_home_summary"]["artifact_identity"]
+    runtime_release._verify_runtime_manifest_coherence(runtime)
+
+
+def test_coherence_verifier_detects_home_summary_bound_to_another_screener(tmp_path, monkeypatch):
+    """Even when the manifest agrees with the served Home summary bytes, a Home summary bound to a
+    Screener other than the one actually served must fail the runtime coherence check."""
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    _, _, presentation_result = _presentation_with_new_screener(root, workspace, source)
+    assert runtime_release.restage_runtime_with_presentation_projection(runtime, root, presentation_result)["status"] == "RESTAGED"
+    runtime_release._verify_runtime_manifest_coherence(runtime)
+
+    home_path = runtime / "data" / "dashboard_home_summary.json"
+    stale = {k: v for k, v in json.loads(home_path.read_text(encoding="utf-8")).items()
+             if k not in ("artifact_identity", "artifact_sha256")}
+    stale["source_artifact_identity"] = "screener_master_projection/v1:" + "a" * 64
+    stale.update(runtime_release.dashboard_home_summary.content_identity(stale))
+    home_path.write_text(json.dumps(stale), encoding="utf-8")
+    manifest_path = runtime / "bundle_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["lineage"]["dashboard_home_summary"].update(
+        {"artifact_identity": stale["artifact_identity"], "sha256": runtime_release._sha256(home_path)})
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError,
+                       match="RUNTIME_HOME_SUMMARY_SOURCE_SCREENER_IDENTITY_INCOHERENT_AFTER_RESTAGE"):
+        runtime_release._verify_runtime_manifest_coherence(runtime)
+
+
+@pytest.mark.parametrize("key,relative,label", [
+    ("screener_master_projection", "data/screener_master_projection.json", "SCREENER"),
+    ("dashboard_home_summary", "data/dashboard_home_summary.json", "HOME_SUMMARY"),
+])
+def test_coherence_verifier_detects_manifest_identity_drift(tmp_path, monkeypatch, key, relative, label):
+    root, source, workspace, _ = _workspace_release_fixture(tmp_path, monkeypatch)
+    runtime = tmp_path / "runtime"
+    runtime_release.materialize_canonical_runtime_release(root, runtime, RESTAGE_SESSION)
+    runtime_release._verify_runtime_manifest_coherence(runtime)
+    manifest_path = runtime / "bundle_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["lineage"][key]["artifact_identity"] = "drifted"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(runtime_release.CanonicalRuntimeReleaseError,
+                       match=f"RUNTIME_MANIFEST_{label}_IDENTITY_INCOHERENT_AFTER_RESTAGE"):
+        runtime_release._verify_runtime_manifest_coherence(runtime)
