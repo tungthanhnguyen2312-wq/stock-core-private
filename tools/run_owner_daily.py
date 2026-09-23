@@ -82,8 +82,35 @@ def _tracked_changes(root: Path) -> list[str]:
     return [line for line in _git_unstripped(root, "status", "--porcelain", "--untracked-files=no").splitlines() if line]
 
 
-def preflight_repository(root: Path, *, expected_name: str, expected_remote_fragment: str) -> dict[str, str]:
-    """Synchronize a clean main checkout only by safe fast-forward; never discard work."""
+# Porcelain XY codes a pending, not-yet-committed Daily registry update may legitimately carry:
+# an in-place modification that is unstaged, staged, or both. Deletion/rename/add/conflict never.
+_PENDING_DAILY_STATE_STATUS_CODES = frozenset({" M", "M ", "MM"})
+
+
+def _is_sole_pending_daily_state_diff(root: Path) -> bool:
+    lines = _tracked_changes(root)
+    return bool(lines) and all(
+        line[:2] in _PENDING_DAILY_STATE_STATUS_CODES and line[3:].replace("\\", "/") == DAILY_STATE_ALLOWLIST[0]
+        for line in lines
+    )
+
+
+def preflight_repository(root: Path, *, expected_name: str, expected_remote_fragment: str,
+                         completed_session: str | None = None,
+                         runtime_root: Path | None = None) -> dict[str, str]:
+    """Synchronize a clean main checkout only by safe fast-forward; never discard work.
+
+    ``completed_session`` (explicit replay / verified auto-resume only) is the ONE narrow
+    exception to the clean-checkout rule, for a Daily whose analytical kernel completed but was
+    interrupted before ``commit_daily_state``: the governed Daily registry may then be the sole
+    tracked diff. It is tolerated only when (a) it is exactly that one path as an in-place
+    modification, (b) no unsafe untracked path exists, (c) local HEAD already equals the freshly
+    fetched ``origin/main`` -- never a pull/fast-forward across a dirty tracked file -- and (d)
+    ``verify_daily_completion`` proves ``completed_session`` already passed every canonical
+    LOCAL_COMPLETE / retained-evidence gate. The registry itself is then committed and pushed by
+    the existing ``commit_daily_state``. A fresh Daily (``completed_session=None``) keeps the
+    strict clean-checkout contract unchanged.
+    """
     root = root.resolve()
     if root.name != expected_name or not (root / ".git").exists():
         raise OwnerDailyError("Repository preflight", "WRONG_REPOSITORY", f"Expected {expected_name} checkout.")
@@ -94,7 +121,11 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
     if _git(root, "branch", "--show-current") != "main":
         raise OwnerDailyError("Repository preflight", "BRANCH_IS_NOT_MAIN", "Switch to main without discarding work.")
     cleanliness = classify_checkout_cleanliness(root)
-    if cleanliness.tracked_dirty_paths:
+    pending_daily_state = bool(
+        cleanliness.tracked_dirty_paths and completed_session is not None
+        and _is_sole_pending_daily_state_diff(root)
+    )
+    if cleanliness.tracked_dirty_paths and not pending_daily_state:
         raise OwnerDailyError("Repository preflight",
                               "UNEXPECTED_TRACKED_CHANGES:" + ";".join(cleanliness.tracked_dirty_paths),
                               "Commit, stash, or otherwise resolve the tracked work before Daily.")
@@ -104,6 +135,20 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
                               "Remove or govern the unexpected untracked file(s) before Daily; "
                               "only approved runtime/evidence paths may remain untracked.")
     head, remote_head = _git(root, "rev-parse", "HEAD"), _git(root, "rev-parse", "origin/main")
+    if pending_daily_state:
+        if head != remote_head:
+            raise OwnerDailyError("Repository preflight", "PENDING_DAILY_STATE_HEAD_NOT_ORIGIN_MAIN",
+                                  "The pending Daily registry can only be committed on top of origin/main; "
+                                  "integrate main safely first. No pull, reset, or rebase was attempted.")
+        if runtime_root is None:
+            raise OwnerDailyError("Repository preflight", "PENDING_DAILY_STATE_RUNTIME_ROOT_REQUIRED")
+        try:
+            verify_daily_completion(root, runtime_root, session=completed_session)
+        except OwnerDailyError as exc:
+            raise OwnerDailyError("Repository preflight",
+                                  "PENDING_DAILY_STATE_SESSION_NOT_VERIFIED:" + exc.reason,
+                                  "Only a canonically completed exact session may retain its pending registry.") from exc
+        return {"head": head, "status": "PENDING_DAILY_STATE_AT_ORIGIN_MAIN"}
     if head == remote_head:
         return {"head": head, "status": "UP_TO_DATE"}
     # --is-ancestor uses its nonzero exit code as a relationship result, not a Git failure.
@@ -717,7 +762,11 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             # exactly once, from the one authoritative source, right after `_run_daily` confirms it.
             _journal_advance_strict(root, run_id, journal.SESSION_RESOLVED)
 
-        producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
+        # A replay/verified auto-resume may carry the governed Daily registry as its sole pending
+        # diff (kernel completed, then interrupted before `commit_daily_state`); a fresh Daily
+        # passes completed_session=None and keeps the strict clean-checkout contract.
+        producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private",
+                                        completed_session=replay_completed_session, runtime_root=runtime_root)
 
         if replay_completed_session:
             completion = verify_daily_completion(root, runtime_root, session=replay_completed_session)

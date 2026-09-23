@@ -57,7 +57,7 @@ def _no_resume_verification_by_default(monkeypatch):
 
 def _write_completion(root: Path, *, state="LOCAL_COMPLETE", producer="COMPLETED", runtime="READY", trusted="READY",
                       t0_identity: str | None = T0_IDENTITY) -> Path:
-    (root / "config").mkdir(parents=True)
+    (root / "config").mkdir(parents=True, exist_ok=True)
     (root / "config" / "daily_research_session_input_registry.json").write_text(json.dumps({
         "completed_sessions": {SESSION: {"status": "COMPLETED_RETAINED_EVIDENCE", "trading_day_valid": True}},
     }), encoding="utf-8")
@@ -1461,3 +1461,196 @@ def test_owner_complete_attests_dashboard_proof_on_verified_resume_skip(monkeypa
     assert dashboard["public_byte_identity"] == "PASS"
     assert dashboard["resume_status"] == "REUSED_EXISTING_PUBLICATION"
     assert dashboard["attestation_identity"] == "governed_publication_attestation:deadbeef"
+
+
+
+# =====================================================================================
+# OWNER_DAILY_CRASH_RECOVERY_CONTRACT_CORRECTIVE_V1: an interrupted Daily whose analytical kernel
+# completed legitimately leaves the governed Daily registry as the sole tracked diff awaiting
+# `commit_daily_state`, which only runs AFTER `preflight_repository`. Explicit replay / verified
+# auto-resume may tolerate exactly that one pending diff (HEAD == origin/main, exact session
+# canonically verified); a fresh Daily stays strictly clean. Real, unmocked git repos below.
+# =====================================================================================
+
+def _git_out(path: Path, *args: str) -> str:
+    return subprocess.run(["git", "-C", str(path), *args], check=True, capture_output=True, text=True).stdout.strip()
+
+
+def _clone_with_pending_registry(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """A producer clone whose kernel completed SESSION but never ran `commit_daily_state`: the
+    governed registry is the sole tracked diff, canonical completion evidence is retained under
+    the (ignored) operations-review tree, and the runtime release manifest exists."""
+    root, origin = _clone_with_registry(tmp_path)
+    (root / ".gitignore").write_text("operations-review/\n", encoding="utf-8")
+    _git(root, "add", ".gitignore"); _git(root, "commit", "-qm", "ignore evidence"); _git(root, "push")
+    _write_completion(root)
+    runtime = tmp_path / "runtime"; runtime.mkdir(); (runtime / "bundle_manifest.json").write_text("{}")
+    assert workflow._tracked_changes(root) == [" M " + REGISTRY_PATH]
+    return root, origin, runtime
+
+
+def _push_from_other_clone(tmp_path: Path, origin: Path) -> None:
+    other = tmp_path / "other"; subprocess.run(["git", "clone", "-q", str(origin), str(other)], check=True)
+    _git(other, "checkout", "-q", "main"); _git(other, "config", "user.email", "test@example.com"); _git(other, "config", "user.name", "Test")
+    (other / "next.txt").write_text("next\n"); _git(other, "add", "next.txt"); _git(other, "commit", "-qm", "next"); _git(other, "push")
+
+
+def _commit_local_only(root: Path) -> None:
+    _git(root, "config", "user.email", "test@example.com"); _git(root, "config", "user.name", "Test")
+    (root / "local.txt").write_text("local\n"); _git(root, "add", "local.txt"); _git(root, "commit", "-qm", "local")
+
+
+def _replay_preflight(root: Path, runtime: Path, session: str | None = SESSION) -> dict[str, str]:
+    return workflow.preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private",
+                                         completed_session=session, runtime_root=runtime)
+
+
+def _stub_downstream_publication(monkeypatch) -> None:
+    monkeypatch.setattr(workflow, "publish_ai_handoff", lambda *a, **k: {"remote": {"remote_sha": "ai"}})
+    monkeypatch.setattr(workflow, "materialize_action_center", lambda _root, session: {"status": "READY", "session": session, "json_path": "p.json", "view_path": "p.md"})
+    monkeypatch.setattr(workflow, "open_action_center_view", lambda _p: {"status": "READY"})
+
+
+def test_replay_preflight_accepts_sole_pending_registry_for_completed_session(tmp_path):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    head = _git_out(root, "rev-parse", "HEAD")
+    result = _replay_preflight(root, runtime)
+    assert result == {"head": head, "status": "PENDING_DAILY_STATE_AT_ORIGIN_MAIN"}
+    # Preflight itself never mutates the pending registry; commit_daily_state owns that.
+    assert workflow._tracked_changes(root) == [" M " + REGISTRY_PATH]
+    assert _git_out(root, "rev-parse", "HEAD") == head
+
+
+@pytest.mark.parametrize("stage_status", ["M ", "MM"])
+def test_replay_preflight_accepts_staged_pending_registry(tmp_path, stage_status):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    _git(root, "add", REGISTRY_PATH)
+    if stage_status == "MM":
+        (root / REGISTRY_PATH).write_text((root / REGISTRY_PATH).read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    assert workflow._tracked_changes(root) == [stage_status + " " + REGISTRY_PATH]
+    assert _replay_preflight(root, runtime)["status"] == "PENDING_DAILY_STATE_AT_ORIGIN_MAIN"
+
+
+def test_replay_preflight_blocks_a_second_tracked_diff(tmp_path):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    (root / "README.md").write_text("dirty\n", encoding="utf-8")
+    with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES:.*README.md"):
+        _replay_preflight(root, runtime)
+
+
+def test_replay_preflight_blocks_a_deleted_registry(tmp_path):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    (root / REGISTRY_PATH).unlink()
+    with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES"):
+        _replay_preflight(root, runtime)
+
+
+@pytest.mark.parametrize("relative", ["unexpected_module.py", "config/local_override.json"])
+def test_replay_preflight_blocks_unsafe_untracked_path(tmp_path, relative):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    (root / relative).write_text("x = 1\n", encoding="utf-8")
+    with pytest.raises(workflow.OwnerDailyError, match="UNSAFE_UNTRACKED_CHECKOUT"):
+        _replay_preflight(root, runtime)
+
+
+@pytest.mark.parametrize("relationship", ["behind", "ahead", "diverged"])
+def test_replay_preflight_blocks_non_origin_head_with_pending_registry_and_never_pulls(tmp_path, relationship):
+    root, origin, runtime = _clone_with_pending_registry(tmp_path)
+    if relationship in ("behind", "diverged"):
+        _push_from_other_clone(tmp_path, origin)
+    if relationship in ("ahead", "diverged"):
+        _commit_local_only(root)
+    head_before = _git_out(root, "rev-parse", "HEAD")
+    remote_before = _git_out(origin, "rev-parse", "main")
+    with pytest.raises(workflow.OwnerDailyError, match="PENDING_DAILY_STATE_HEAD_NOT_ORIGIN_MAIN"):
+        _replay_preflight(root, runtime)
+    assert _git_out(root, "rev-parse", "HEAD") == head_before
+    assert _git_out(origin, "rev-parse", "main") == remote_before
+    assert not (root / "next.txt").exists()
+    assert workflow._tracked_changes(root) == [" M " + REGISTRY_PATH]
+
+
+def test_fresh_daily_preflight_with_dirty_registry_stays_blocked(tmp_path):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES:" + REGISTRY_PATH):
+        workflow.preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private")
+    with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES"):
+        _replay_preflight(root, runtime, session=None)
+
+
+def test_fresh_run_workflow_with_dirty_registry_never_reaches_daily(monkeypatch, tmp_path):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: "2026-09-17")
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("fresh Daily must not start on a dirty checkout"))
+    with pytest.raises(workflow.OwnerDailyError, match="UNEXPECTED_TRACKED_CHANGES"):
+        workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff", publish_dashboard=False)
+    assert workflow._tracked_changes(root) == [" M " + REGISTRY_PATH]
+
+
+@pytest.mark.parametrize("breakage", ["runtime_manifest_missing", "record_not_local_complete", "other_session"])
+def test_replay_preflight_requires_exact_session_completion_before_tolerating_registry(tmp_path, breakage):
+    root, _origin, runtime = _clone_with_pending_registry(tmp_path)
+    session = SESSION
+    if breakage == "runtime_manifest_missing":
+        (runtime / "bundle_manifest.json").unlink()
+    elif breakage == "record_not_local_complete":
+        record_path = next((root / "operations-review" / "canonical-daily-operation-v1").glob("*/*/daily_operation_record.json"))
+        record = json.loads(record_path.read_text(encoding="utf-8")); record["daily_operation_state"] = "FAILED"
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+    else:
+        session = "2026-09-17"
+    with pytest.raises(workflow.OwnerDailyError, match="PENDING_DAILY_STATE_SESSION_NOT_VERIFIED"):
+        _replay_preflight(root, runtime, session=session)
+    assert workflow._tracked_changes(root) == [" M " + REGISTRY_PATH]
+
+
+def test_explicit_replay_commits_pending_registry_then_replays_idempotently(monkeypatch, tmp_path):
+    root, origin, runtime = _clone_with_pending_registry(tmp_path)
+    _stub_downstream_publication(monkeypatch)
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("replay must never reacquire"))
+    base = _git_out(origin, "rev-parse", "main")
+
+    first = workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+                                  publish_dashboard=False, replay_completed_session=SESSION)
+    assert first["status"] == "PASS"
+    assert first["producer_preflight"]["status"] == "PENDING_DAILY_STATE_AT_ORIGIN_MAIN"
+    assert first["producer_state"]["status"] == "COMMITTED"
+    assert workflow._tracked_changes(root) == []
+    committed = _git_out(origin, "rev-parse", "main")
+    assert committed == first["producer_state"]["sha"] != base
+    assert _git_out(root, "show", "--name-only", "--pretty=format:", committed) == REGISTRY_PATH
+    assert _git_out(origin, "rev-list", "--count", f"{base}..main") == "1"
+
+    second = workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff",
+                                   publish_dashboard=False, replay_completed_session=SESSION)
+    assert second["status"] == "PASS"
+    assert second["producer_preflight"]["status"] == "UP_TO_DATE"
+    assert second["producer_state"] == {"status": "NO_CHANGE", "sha": committed}
+    assert _git_out(origin, "rev-parse", "main") == committed
+
+
+def test_verified_auto_resume_commits_pending_registry_after_post_kernel_crash(monkeypatch, tmp_path):
+    """Hard kill after the kernel completed (journal durably at SESSION_RESOLVED with the confirmed
+    session -- the 368dbbc persistence fix) and before `commit_daily_state`: the next ORDINARY
+    invocation must auto-resume, commit the pending registry exactly once, and never reacquire."""
+    root, origin, runtime = _clone_with_pending_registry(tmp_path)
+    entry = journal.start_run(root, intended_session=SESSION)
+    journal.advance(root, entry["run_id"], journal.SESSION_RESOLVED)
+    journal.advance(root, entry["run_id"], journal.SESSION_RESOLVED, resolved_session=SESSION)
+    assert journal.resumable_state(root, intended_session=SESSION)["action"] == "RESUME"
+    monkeypatch.setattr(workflow, "_resolve_intended_session", lambda: SESSION)
+    monkeypatch.setattr(workflow, "_run_daily", lambda *a: pytest.fail("must not reacquire an already-completed session"))
+    _stub_downstream_publication(monkeypatch)
+    base = _git_out(origin, "rev-parse", "main")
+
+    result = workflow.run_workflow(root=root, runtime_root=runtime, handoff_repo=tmp_path / "handoff", publish_dashboard=False)
+
+    assert result["status"] == "PASS"
+    assert result["daily_status"] == "ALREADY_COMPLETED / RESUMED"
+    assert result["producer_preflight"]["status"] == "PENDING_DAILY_STATE_AT_ORIGIN_MAIN"
+    assert result["producer_state"]["status"] == "COMMITTED"
+    assert _git_out(origin, "rev-list", "--count", f"{base}..main") == "1"
+    assert workflow._tracked_changes(root) == []
+    final_journal = journal.read_journal(root)
+    assert final_journal["stage"] == journal.COMPLETE
+    assert final_journal["resolved_session"] == SESSION
