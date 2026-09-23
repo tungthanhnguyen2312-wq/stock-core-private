@@ -54,6 +54,7 @@ def _presentation_observer_payload(session: str, attestation: Mapping[str, Any])
     unavailable observer is published as an explicit UNAVAILABLE status here, never fabricated."""
     projection = attestation.get("presentation_projection") or {}
     velocity = attestation.get("signal_velocity") or {}
+    foreign_flow = attestation.get("current_foreign_flow_enrichment") or {}
     flow_price = attestation.get("flow_price_divergence_shadow") or {}
     feedback = attestation.get("post_handoff_prospective_decision_feedback") or {}
     return {
@@ -65,6 +66,13 @@ def _presentation_observer_payload(session: str, attestation: Mapping[str, Any])
         "post_handoff_presentation_workspace_artifact_identity": projection.get("workspace_artifact_identity"),
         "post_handoff_presentation_lineage_status": projection.get("lineage_status"),
         "signal_velocity": {"status": velocity.get("status"), "identity": velocity.get("artifact_identity")},
+        "current_foreign_flow_enrichment": {
+            "status": foreign_flow.get("status"),
+            "complete_count": foreign_flow.get("complete_count"),
+            "requested_count": foreign_flow.get("requested_count"),
+            "network_calls_made": foreign_flow.get("network_calls_made"),
+            "reason": foreign_flow.get("reason"),
+        },
         "flow_price_divergence_shadow": {"status": flow_price.get("status"), "identity": flow_price.get("artifact_identity")},
         "post_handoff_prospective_decision_feedback": {"status": feedback.get("status"), "identity": feedback.get("artifact_identity")},
     }
@@ -114,6 +122,7 @@ def build_package(source: Path, session: str, previous: Path|None=None, *, produ
             "workspace_artifact_identity": presentation_parsed.get("post_handoff_presentation_workspace_artifact_identity"),
             "sealed_producer_workspace_artifact_identity": presentation_parsed.get("sealed_producer_workspace_artifact_identity"),
             "signal_velocity_status": (presentation_parsed.get("signal_velocity") or {}).get("status"),
+            "current_foreign_flow_enrichment_status": (presentation_parsed.get("current_foreign_flow_enrichment") or {}).get("status"),
             "flow_price_divergence_shadow_status": (presentation_parsed.get("flow_price_divergence_shadow") or {}).get("status"),
             "post_handoff_prospective_decision_feedback_status": (presentation_parsed.get("post_handoff_prospective_decision_feedback") or {}).get("status"),
         }

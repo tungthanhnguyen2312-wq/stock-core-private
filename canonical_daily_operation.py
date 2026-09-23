@@ -50,6 +50,7 @@ from canonical_dashboard_runtime_release import (
 )
 from canonical_post_close_pipeline import (
     CanonicalPostCloseError,
+    NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE,
     PreCutoffArtifactError,
     acquire_and_materialize,
     assert_post_close_eligible,
@@ -369,6 +370,14 @@ def print_daily_operation_handoff(record: Mapping[str, Any]) -> None:
     flow_price = post_handoff.get("flow_price_divergence_shadow") if isinstance(post_handoff.get("flow_price_divergence_shadow"), Mapping) else {}
     post_handoff_feedback = record.get("post_handoff_prospective_decision_feedback") if isinstance(record.get("post_handoff_prospective_decision_feedback"), Mapping) else {}
     print(f"SIGNAL_VELOCITY={velocity.get('status')}")
+    foreign_flow = post_handoff.get("current_foreign_flow_enrichment") if isinstance(post_handoff.get("current_foreign_flow_enrichment"), Mapping) else {}
+    print(f"CURRENT_FOREIGN_FLOW_ENRICHMENT={foreign_flow.get('status')}")
+    if foreign_flow.get("complete_count") is not None or foreign_flow.get("requested_count") is not None:
+        print(f"CURRENT_FOREIGN_FLOW_COMPLETE={foreign_flow.get('complete_count')}/{foreign_flow.get('requested_count')}")
+    if foreign_flow.get("network_calls_made") is not None:
+        print(f"CURRENT_FOREIGN_FLOW_NETWORK_CALLS={foreign_flow.get('network_calls_made')}")
+    if foreign_flow.get("reason"):
+        print(f"CURRENT_FOREIGN_FLOW_REASON={foreign_flow.get('reason')}")
     print(f"FLOW_PRICE_DIVERGENCE={flow_price.get('status')}")
     print(f"POST_HANDOFF_PROSPECTIVE_DECISION_FEEDBACK={post_handoff_feedback.get('status')}")
     presentation = record.get("post_handoff_presentation_projection") if isinstance(record.get("post_handoff_presentation_projection"), Mapping) else {}
@@ -879,10 +888,13 @@ def run_canonical_daily_operation(
     # already-approved post-handoff observer now that build_tiered_bundle has written
     # today's canonical handoff binding. Same shared helper the diagnostic
     # run_canonical_post_close() uses, so normal Daily and that diagnostic path cannot
-    # silently diverge again. Non-blocking and network-off by default; never revises the
+    # silently diverge again. CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1: production Daily
+    # now enables the already-productionized current-foreign-flow collector for the exact
+    # qualified session. Failure degrades in the observer itself and never revises the
     # already-completed Daily Producer result or blocks publication below.
     post_handoff_observers = run_post_handoff_observers(
-        root, runtime_root, resolved_session, tiers, enable_current_foreign_flow_live=False,
+        root, runtime_root, resolved_session, tiers,
+        enable_current_foreign_flow_live=NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE,
     )
     post_handoff_prospective_decision_feedback = run_post_handoff_prospective_outcome_feedback(
         root, resolved_session, output_root=operation_output_root,
@@ -978,6 +990,7 @@ def run_canonical_daily_operation(
             operation_output_root, resolved_session,
             presentation_projection=post_handoff_presentation_projection,
             signal_velocity=post_handoff_observers.get("multi_session_signal_velocity"),
+            current_foreign_flow_enrichment=post_handoff_observers.get("current_foreign_flow_enrichment"),
             flow_price_divergence=post_handoff_observers.get("flow_price_divergence_shadow"),
             post_handoff_prospective_decision_feedback=post_handoff_prospective_decision_feedback,
             runtime_restage=post_handoff_runtime_restage,

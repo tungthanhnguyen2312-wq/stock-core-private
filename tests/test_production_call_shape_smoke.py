@@ -292,7 +292,17 @@ def _run_offline_production_shape(
         patch.setattr(cdo, "run_tactical_reversal_shadow_collection", lambda *_a, **_k: {
             "status": "SHADOW_COLLECTION_FAILED", "session": SESSION, "reason": "SMOKE_OPTIONAL_FAILURE",
         })
-        patch.setattr(cdo, "build_tiered_bundle", lambda *_a, **_k: {"bundle_dir": output_root / "bundle"})
+        patch.setattr(cdo, "build_tiered_bundle", lambda *_a, **_k: {
+            "session_handoff_bundle": {}, "bundle_dir": output_root / "bundle",
+        })
+        patch.setattr(cdo, "run_post_handoff_observers", lambda *_a, **_k: {
+            "multi_session_signal_velocity": {"status": "UNAVAILABLE"},
+            "current_foreign_flow_enrichment": {"status": "UNAVAILABLE"},
+            "flow_price_divergence_shadow": {"status": "UNAVAILABLE"},
+        })
+        patch.setattr(cdo, "run_post_handoff_prospective_outcome_feedback", lambda *_a, **_k: {"status": "UNAVAILABLE"})
+        patch.setattr(cdo, "run_post_handoff_presentation_projection", lambda *_a, **_k: {"status": "UNAVAILABLE"})
+        patch.setattr(cdo, "restage_runtime_with_presentation_projection", lambda *_a, **_k: {"status": "UNAVAILABLE"})
         patch.setattr(cdo, "invoke_release_orchestrator_complete_publication", lambda *_a, **_k: pytest.fail("publication must be disabled"))
         patch.setattr(cdo, "_git_head", lambda *_a, **_k: "production-call-shape-smoke")
 

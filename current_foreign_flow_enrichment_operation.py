@@ -14,8 +14,10 @@ CONTRACT SEPARATION (do not confuse the two)
 NETWORK BOUNDARY
     ``acquire_foreign_flow_for_manifest`` is the only function in this codebase permitted to
     reach the live DNSE foreign-trading endpoint for this contract, and only when its caller
-    passes ``allow_network=True`` explicitly. Every other caller (normal Daily, dry-run/plan
-    tooling) leaves it at the default ``False``; a ticker that would otherwise need a network
+    passes ``allow_network=True`` explicitly. Production Daily now does so for the exact
+    qualified session (CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1) through
+    ``run_current_foreign_flow_enrichment(..., allow_network=True)``. Dry-run/plan tooling and
+    this function's own default remain ``False``; a ticker that would otherwise need a network
     call is then reported ``NETWORK_DISABLED_PENDING_ACQUISITION`` -- a status, never an
     exception, so it can never fail Core Daily. No environment variable can silently flip this;
     the caller must pass the keyword argument itself.

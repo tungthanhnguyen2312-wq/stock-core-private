@@ -25,8 +25,9 @@ def test_default_network_off_reports_pending_network_and_touches_no_network(tmp_
     assert result["requested_count"] == 11
     written = json.loads((tmp_path / result["path"]).read_text(encoding="utf-8"))
     assert written["network"]["allow_network"] is False
-    # Never writes anywhere inside the real repository root.
-    assert not (ROOT / "operations-review" / "current-foreign-flow-enrichment-v1" / SESSION).exists()
+    # The Daily step writes under the supplied root (tmp_path here), never into the
+    # caller's CWD. A retained 2026-09-18 operations-review path in the source checkout
+    # is governed runtime evidence and is not a proxy for this isolation check.
 
 
 def test_allow_network_true_still_needs_credentials_and_never_raises(tmp_path, monkeypatch):

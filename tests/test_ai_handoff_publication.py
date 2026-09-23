@@ -198,6 +198,9 @@ def _attestation(*, bound=True):
         "presentation_projection": projection,
         "sealed_producer_workspace_artifact_identity": "workspace:sealed",
         "signal_velocity": {"status": "COLLECTED", "artifact_identity": "velocity:1"},
+        "current_foreign_flow_enrichment": {
+            "status": "COMPLETE", "complete_count": 11, "requested_count": 11, "network_calls_made": 11,
+        },
         "flow_price_divergence_shadow": {"status": "COLLECTED", "artifact_identity": "flow_price:1"},
         "post_handoff_prospective_decision_feedback": {"status": "COLLECTED", "artifact_identity": "feedback:1"},
     }
@@ -222,7 +225,11 @@ def test_build_package_adds_additive_presentation_state_without_touching_sealed_
     assert lineage["workspace_artifact_identity"] == "workspace:enriched"
     assert lineage["sealed_producer_workspace_artifact_identity"] == "workspace:sealed"
     assert lineage["signal_velocity_status"] == "COLLECTED"
+    assert lineage["current_foreign_flow_enrichment_status"] == "COMPLETE"
     assert lineage["flow_price_divergence_shadow_status"] == "COLLECTED"
+    presentation = json.loads(files["post_handoff_presentation_state.json"].decode("utf-8"))
+    assert presentation["current_foreign_flow_enrichment"]["status"] == "COMPLETE"
+    assert presentation["current_foreign_flow_enrichment"]["complete_count"] == 11
     assert lineage["post_handoff_prospective_decision_feedback_status"] == "COLLECTED"
 
 

@@ -1,5 +1,26 @@
 # Decisions & Architectural Decision Records
 
+## 2026-09-23 - Current foreign-flow Daily activation V1
+
+`CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1` =
+`IMPLEMENTATION_COMPLETE_AWAITING_2026_09_23_LIVE_ACCEPTANCE`. Decisions:
+
+- **Activate the existing collector on production Daily; do not add a second path.**
+  `canonical_daily_operation.run_canonical_daily_operation` now passes
+  `enable_current_foreign_flow_live=True` into the shared
+  `run_post_handoff_observers` helper. The helper and diagnostic
+  `run_canonical_post_close` still default False so an omitted diagnostic flag cannot
+  silently reach DNSE.
+- **Keep the network boundary explicit.** Production Daily is the caller that passes
+  `allow_network=True`. No environment variable can flip it.
+- **Keep failure non-blocking.** Foreign-flow status is observer-only and excluded from
+  persistable Daily identity. Core Daily / Daily Producer / publication continue.
+- **Keep exact-session VALUE admission.** `verify_ticker_current` remains the post-write
+  gate. Stale 18/09 observations stay historical context for a later session.
+- **Do not reopen 10/09–11/09.** Official-universe temporal ineligibility is unchanged.
+- **Do not broaden cohort or authority.** VALUE-only, 11-ticker broader watchlist, no
+  liquidity/sizing/PIT/recommendation promotion.
+
 ## 2026-09-23 - Canonical Daily Owner Publication Resume and Presentation Join V1 -- final bounded corrective
 
 Final acceptance of `bad8e91` found that Dashboard resume treated local `build_info` session

@@ -41,6 +41,7 @@ def write_attestation(
     *,
     presentation_projection: Mapping[str, Any],
     signal_velocity: Mapping[str, Any] | None = None,
+    current_foreign_flow_enrichment: Mapping[str, Any] | None = None,
     flow_price_divergence: Mapping[str, Any] | None = None,
     post_handoff_prospective_decision_feedback: Mapping[str, Any] | None = None,
     runtime_restage: Mapping[str, Any] | None = None,
@@ -57,6 +58,9 @@ def write_attestation(
         "session": session,
         "presentation_projection": dict(presentation_projection),
         "signal_velocity": dict(signal_velocity) if signal_velocity else None,
+        "current_foreign_flow_enrichment": (
+            dict(current_foreign_flow_enrichment) if current_foreign_flow_enrichment else None
+        ),
         "flow_price_divergence_shadow": dict(flow_price_divergence) if flow_price_divergence else None,
         "post_handoff_prospective_decision_feedback": (
             dict(post_handoff_prospective_decision_feedback) if post_handoff_prospective_decision_feedback else None

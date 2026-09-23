@@ -1232,6 +1232,25 @@ def test_run_post_handoff_observers_never_enables_live_foreign_flow_network_by_d
     assert seen["allow_network"] is False
 
 
+def test_run_post_handoff_observers_forwards_live_foreign_flow_flag(tmp_path, monkeypatch):
+    session = "2026-08-25"
+    tiers = {"session_handoff_bundle": {}, "bundle_dir": tmp_path}
+    seen = {}
+
+    def fake_foreign_flow(root, runtime_root, s, **k):
+        seen.update(k)
+        return {"status": "UNAVAILABLE"}
+
+    monkeypatch.setattr(cpc, "run_multi_session_signal_velocity_shadow", lambda root, s: {"status": "UNAVAILABLE"})
+    monkeypatch.setattr(cpc, "run_current_foreign_flow_enrichment", fake_foreign_flow)
+    monkeypatch.setattr(cpc, "run_flow_price_divergence_shadow", lambda *a, **k: {"status": "UNAVAILABLE"})
+
+    cpc.run_post_handoff_observers(
+        tmp_path, tmp_path / "runtime", session, tiers, enable_current_foreign_flow_live=True,
+    )
+    assert seen["allow_network"] is True
+
+
 def test_run_post_handoff_prospective_outcome_feedback_writes_to_distinct_post_handoff_path(tmp_path, monkeypatch):
     session = "2026-08-25"
 

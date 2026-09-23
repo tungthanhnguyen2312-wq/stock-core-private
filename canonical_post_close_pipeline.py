@@ -56,6 +56,11 @@ from vn_time import VN_TZ, vn_now
 ROOT = Path(__file__).resolve().parent
 CONTRACT_VERSION = "canonical_post_close_pipeline/v1"
 
+# CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1: zero-flag Owner Daily enables the already-
+# productionized DNSE current-foreign-flow path for the exact qualified session. The shared
+# helper default below stays False so the diagnostic CLI remains explicit-opt-in.
+NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE = True
+
 # Registry input class -> daily_session_level2_package.session_artifact_paths() key. Every
 # REQUIRED registry key must resolve; market_flow_positioning is intentionally omitted -- Level-2
 # does not build it and the real 2026-08-24/25 governed sessions register it (see
@@ -998,12 +1003,13 @@ def run_current_foreign_flow_enrichment(root: Path, runtime_root: Path, session:
                                         allow_network: bool = False) -> dict[str, Any]:
     """Optional, best-effort, resumable current foreign-flow enrichment after the canonical
     handoff exists and after Signal Velocity V1.2 -- deliberately before
-    ``run_flow_price_divergence_shadow`` so a same-day owner-approved live acquisition (run
-    separately via ``tools/enrich_current_foreign_flow.py --live``, or here when
-    ``allow_network=True`` is explicitly passed) is reflected in that step's exact-session read
-    of the VALUE store. ``allow_network`` defaults to False: normal Daily never reaches DNSE for
-    this contract, never reads credentials, and cannot fail Core Daily or the AI handoff on any
-    error here -- every failure degrades to a visible, non-blocking status.
+    ``run_flow_price_divergence_shadow`` so the exact-session VALUE result is reflected in that
+    step's read of the VALUE store. Production Daily
+    (``canonical_daily_operation.run_canonical_daily_operation``) passes ``allow_network=True``
+    for the qualified session (CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1). This helper still
+    defaults closed so a diagnostic caller that omits the flag cannot silently reach DNSE.
+    Every failure degrades to a visible, non-blocking status and cannot fail Core Daily or the
+    AI handoff.
     """
     from current_foreign_flow_enrichment_operation import acquire_foreign_flow_for_manifest, CONTRACT_VERSION
     from current_foreign_flow_retention import build_manifest_from_root
@@ -1140,8 +1146,9 @@ def run_post_handoff_observers(
     this sequencing again (CANONICAL_DAILY_POST_HANDOFF_AND_OWNER_WORKFLOW_RECONCILIATION_V1).
     Every observer here is best-effort and non-blocking: a failure surfaces as UNAVAILABLE and
     never revises or blocks the already-completed Daily Producer result or AI handoff.
-    ``enable_current_foreign_flow_live`` stays False by default in both callers -- normal Daily
-    never reaches DNSE for this contract.
+    Production Daily passes ``enable_current_foreign_flow_live=True``
+    (CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1). This helper still defaults False so a
+    diagnostic caller that omits the flag cannot silently reach DNSE.
     """
     signal_velocity = run_multi_session_signal_velocity_shadow(root, session)
     current_foreign_flow_enrichment = run_current_foreign_flow_enrichment(
@@ -1719,9 +1726,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--session", required=True, help="Explicit completed market session YYYY-MM-DD.")
     parser.add_argument("--workers", type=int, default=12)
     parser.add_argument("--enable-current-foreign-flow-live", action="store_true",
-                        help="Explicit owner authorization for a real DNSE current foreign-flow "
+                        help="Explicit authorization for a real DNSE current foreign-flow "
                              "acquisition after this session's canonical handoff is written. "
-                             "Default (omitted) is network-off, matching normal Daily.")
+                             "This diagnostic CLI still defaults network-off; production Daily "
+                             "enables the same collector separately.")
     args = parser.parse_args(argv)
     try:
         result = run_canonical_post_close(ROOT, Path(args.runtime_root), args.session, workers=args.workers,

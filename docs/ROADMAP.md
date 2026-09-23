@@ -1,9 +1,21 @@
 # Stock Lookup — Architecture & Roadmap
 
+**Current foreign-flow Daily activation V1 (2026-09-23):**
+`CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1 =
+IMPLEMENTATION_COMPLETE_AWAITING_2026_09_23_LIVE_ACCEPTANCE`. Normal zero-flag
+`stocklookup.ps1 daily` now runs the already-productionized DNSE current-foreign-flow
+collector for the exact qualified session (`allow_network=True` on
+`run_current_foreign_flow_enrichment`). Failure degrades in the observer and cannot
+invalidate Core Daily. Flow-Price consumes the exact retained current-session VALUE
+result. Stale 18/09 flow cannot be labelled current. Historical 10/09–11/09 temporal
+exclusions are unchanged. No successor is queued; the next gate is the 2026-09-23 live
+Daily. See `docs/STATE.md` and `docs/DECISIONS.md`.
+
 **Canonical Daily owner publication resume and presentation join V1 (2026-09-23, final
 bounded corrective):**
-`CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` remains `ACTIVE` /
-`IMPLEMENTATION_COMPLETE_AWAITING_NEXT_REAL_DAILY_ACCEPTANCE`. Dashboard resume may skip
+`CANONICAL_DAILY_OWNER_PUBLICATION_RESUME_AND_PRESENTATION_JOIN_V1` is `COMPLETE` at
+`862f690`; remaining live Daily acceptance is the 2026-09-23 gate of
+`CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1`. Original implementation: Dashboard resume may skip
 publication only when independent governed publication completion proof shows exact session,
 exact Dashboard `origin/main` SHA, `publication_state=PUBLISHED`, and
 `public_byte_identity=PASS`. Local `build_info` session equality is never sufficient. Owner

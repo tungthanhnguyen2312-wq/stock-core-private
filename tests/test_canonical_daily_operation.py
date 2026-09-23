@@ -922,7 +922,7 @@ def test_post_handoff_observers_run_after_tiered_bundle_and_land_in_record(tmp_p
         order.append("run_post_handoff_observers")
         seen_tiers["tiers"] = tiers
         assert session == SESSION
-        assert k.get("enable_current_foreign_flow_live") is False
+        assert k.get("enable_current_foreign_flow_live") is True
         return {
             "multi_session_signal_velocity": {"status": "COLLECTED"},
             "current_foreign_flow_enrichment": {"status": "UNAVAILABLE"},
@@ -947,6 +947,7 @@ def test_post_handoff_observers_run_after_tiered_bundle_and_land_in_record(tmp_p
     assert record["post_handoff_observers"]["multi_session_signal_velocity"]["status"] == "COLLECTED"
     assert record["post_handoff_observers"]["flow_price_divergence_shadow"]["status"] == "COLLECTED"
     assert record["post_handoff_prospective_decision_feedback"]["status"] == "COLLECTED"
+    assert cdo.NORMAL_DAILY_ENABLE_CURRENT_FOREIGN_FLOW_LIVE is True
 
 
 def test_post_handoff_observer_variance_never_triggers_immutable_conflict_on_replay(tmp_path, monkeypatch):
@@ -1014,6 +1015,49 @@ def test_presentation_projection_runs_after_post_handoff_observers_and_lands_in_
     assert record["post_handoff_presentation_projection"]["status"] == "COLLECTED"
     assert record["post_handoff_presentation_projection"]["lineage_status"] == "VERIFIED_AGAINST_SEALED_PRODUCER_WORKSPACE"
     assert record["daily_operation_state"] == cdo.STATE_PUBLISHED
+
+
+def test_foreign_flow_failure_never_blocks_core_daily_or_publication(tmp_path, monkeypatch):
+    """CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1: credential/network/partial foreign-flow
+    failure is an explicit observer status and cannot invalidate the core Daily result."""
+    def observers(*a, **k):
+        assert k.get("enable_current_foreign_flow_live") is True
+        return {
+            "multi_session_signal_velocity": {"status": "COLLECTED"},
+            "current_foreign_flow_enrichment": {
+                "status": "FAILED_OPERATIONAL", "reason": "CREDENTIAL_UNAVAILABLE",
+                "complete_count": 0, "requested_count": 11, "network_calls_made": 0,
+            },
+            "flow_price_divergence_shadow": {"status": "UNAVAILABLE"},
+        }
+
+    record = _run(
+        tmp_path, monkeypatch, complete_publication=True, post_handoff_observers_fn=observers,
+    )
+    assert record["daily_operation_state"] == cdo.STATE_PUBLISHED
+    assert record["daily_producer_status"] == "COMPLETED"
+    ff = record["post_handoff_observers"]["current_foreign_flow_enrichment"]
+    assert ff["status"] == "FAILED_OPERATIONAL"
+    assert ff["network_calls_made"] == 0
+
+
+def test_print_daily_handoff_surfaces_current_foreign_flow_status(tmp_path, monkeypatch, capsys):
+    def observers(*a, **k):
+        return {
+            "multi_session_signal_velocity": {"status": "COLLECTED"},
+            "current_foreign_flow_enrichment": {
+                "status": "PARTIAL", "complete_count": 8, "requested_count": 11,
+                "network_calls_made": 11, "reason": None,
+            },
+            "flow_price_divergence_shadow": {"status": "COLLECTED"},
+        }
+
+    record = _run(tmp_path, monkeypatch, post_handoff_observers_fn=observers)
+    cdo.print_daily_operation_handoff(record)
+    out = capsys.readouterr().out
+    assert "CURRENT_FOREIGN_FLOW_ENRICHMENT=PARTIAL" in out
+    assert "CURRENT_FOREIGN_FLOW_COMPLETE=8/11" in out
+    assert "CURRENT_FOREIGN_FLOW_NETWORK_CALLS=11" in out
 
 
 def test_presentation_projection_unavailable_never_blocks_daily_or_publication(tmp_path, monkeypatch):

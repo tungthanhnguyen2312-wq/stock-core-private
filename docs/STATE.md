@@ -1,5 +1,42 @@
 # Stock Lookup — Operational State
 
+**Current foreign-flow Daily activation V1 (2026-09-23):**
+`CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1 =
+IMPLEMENTATION_COMPLETE_AWAITING_2026_09_23_LIVE_ACCEPTANCE`. Owner-directed activation of
+the already-productionized DNSE current-foreign-flow path on normal zero-flag Owner Daily
+(`stocklookup.ps1 daily` → `canonical_daily_operation.run_canonical_daily_operation`).
+
+1. **Production Daily enables live current-foreign-flow for the exact qualified session.**
+   `run_post_handoff_observers(..., enable_current_foreign_flow_live=True)` now passes
+   `allow_network=True` into the existing `run_current_foreign_flow_enrichment` step. The
+   collector, manifest, raw retention, VALUE adapter, checkpoint/retry/conflict guards, and
+   11-ticker `owner_research_focus.broader_watchlist` cohort are reused unchanged. No second
+   collector.
+
+2. **Exact-session verification remains the VALUE admission gate.** A ticker is `COMPLETE`
+   only after `verify_ticker_current` passes for the Daily session. A provider session
+   mismatch is `SESSION_MISSING`/`SESSION_MISMATCH` and writes no VALUE.
+
+3. **Rerun is idempotent.** Retained raw/VALUE for the same session is reused; a second
+   Daily attempt makes zero further DNSE requests.
+
+4. **Failure degrades and does not invalidate Core Daily.** Observer status may be
+   `PARTIAL` / `FAILED_OPERATIONAL` / `UNAVAILABLE`. Post-handoff observers stay excluded
+   from persistable Daily identity, so a foreign-flow failure cannot raise
+   `IMMUTABLE_OPERATION_RECORD_CONFLICT` or revise Daily Producer.
+
+5. **Flow-Price and presentation stay exact-session honest.** Flow-Price runs after
+   enrichment and reads the retained current-session VALUE store. Stale 2026-09-18 VALUE
+   against a later reference session is `STALE_NOT_COMPARABLE` / `FLOW_UNAVAILABLE` and
+   cannot be labelled current on Presentation / Dashboard / AI surfaces.
+
+6. **Historical 10/09–11/09 temporal exclusions are unchanged.**
+   `OFFICIAL_UNIVERSE_TEMPORALLY_INELIGIBLE` still refuses those dates.
+
+Diagnostic `run_canonical_post_close` remains network-off by default. No real Daily run
+and no provider acquisition in this coding job. Next gate: live `stocklookup.ps1 daily`
+for 2026-09-23.
+
 **Canonical Daily owner publication resume and presentation join V1 -- FINAL BOUNDED
 CORRECTIVE (2026-09-23):** Closes the one remaining production blocker found by final
 acceptance, plus two COMPLETE-attestation omissions, on the same isolated worktree/branch

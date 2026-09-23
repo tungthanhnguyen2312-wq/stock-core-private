@@ -1,10 +1,10 @@
 """Operator command: current foreign-flow enrichment for one exact, already-completed session.
 
 Default behavior is a no-network plan/status report (zero DNSE calls, no credential read).
-``--live`` is the only way to allow a real network call, and it must be paired with an explicit
-owner authorization to run this after Core Daily/post-close has already produced that session's
-canonical handoff -- this tool never decides that boundary for the owner, it only enforces that
-``allow_network`` is never on by default.
+``--live`` is the only way this operator command allows a real network call. Production
+zero-flag Daily now enables the same collector for the exact qualified session
+(CURRENT_FOREIGN_FLOW_DAILY_ACTIVATION_V1); this command remains the explicit historical
+or retry path. ``allow_network`` is never on by default here.
 
     python tools/enrich_current_foreign_flow.py --session 2026-09-18 --dry-run
     python tools/enrich_current_foreign_flow.py --session 2026-09-18 --live
