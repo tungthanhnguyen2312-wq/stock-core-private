@@ -915,6 +915,24 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         raise
 
 
+def validate_result_path(result_path: Path, *, root: Path) -> Path:
+    """Refuse a ``--result-path`` inside the Producer checkout before any workflow work runs.
+
+    A result file written inside the checkout is an untracked, non-governed path, so the NEXT
+    Daily/replay's own repository preflight refuses it as UNSAFE_UNTRACKED_CHECKOUT -- the CLI
+    would poison its own next run. Normalizes ``..``/symlinks and compares case-insensitively on
+    Windows. Pure check: never creates the file or any parent directory.
+    """
+    resolved = Path(os.path.abspath(Path(result_path).expanduser())).resolve(strict=False)
+    checkout = Path(root).resolve(strict=False)
+    candidate, base = os.path.normcase(str(resolved)), os.path.normcase(str(checkout))
+    if candidate == base or candidate.startswith(base.rstrip(os.sep) + os.sep):
+        raise OwnerDailyError("Result path preflight", "RESULT_PATH_INSIDE_PRODUCER_CHECKOUT:" + str(resolved),
+                              "Write the owner result outside the Producer checkout, e.g. "
+                              r"C:\Projects\StockLookup\owner-daily-run-logs\<run>.result.json.")
+    return resolved
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runtime-root", type=Path, default=DEFAULT_RUNTIME)
@@ -929,6 +947,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--replay-completed-session", default=None, help="Validate/publish an already completed session without acquisition.")
     parser.add_argument("--result-path", type=Path, required=True)
     args = parser.parse_args(argv)
+    try:
+        validate_result_path(args.result_path, root=ROOT)
+    except OwnerDailyError as exc:
+        # No result file is written: the only requested location is the one being refused.
+        print(f"OWNER_DAILY_RESULT_PATH_REJECTED={exc.reason}", file=sys.stderr)
+        print(f"HINT: {exc.hint}", file=sys.stderr)
+        return 1
     result: dict[str, Any]
     code = 0
     reraise: BaseException | None = None

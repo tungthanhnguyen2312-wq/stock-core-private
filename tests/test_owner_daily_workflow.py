@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import inspect
 import subprocess
 from pathlib import Path
@@ -1654,3 +1655,82 @@ def test_verified_auto_resume_commits_pending_registry_after_post_kernel_crash(m
     final_journal = journal.read_journal(root)
     assert final_journal["stage"] == journal.COMPLETE
     assert final_journal["resolved_session"] == SESSION
+
+
+# =====================================================================================
+# OWNER_DAILY_CRASH_RECOVERY_CONTRACT_CORRECTIVE_V1 -- result-path self-poisoning: a
+# `--result-path` inside the Producer checkout leaves an untracked file that makes the NEXT
+# Daily/replay fail UNSAFE_UNTRACKED_CHECKOUT. It is refused before any workflow work, and the
+# refusal itself never creates the file.
+# =====================================================================================
+
+def _fake_checkout(tmp_path: Path, monkeypatch) -> Path:
+    checkout = tmp_path / "stock-core-private"
+    checkout.mkdir()
+    monkeypatch.setattr(workflow, "ROOT", checkout)
+    monkeypatch.setattr(workflow, "run_workflow",
+                        lambda **_k: pytest.fail("material workflow must not start for a refused result path"))
+    return checkout
+
+
+@pytest.mark.parametrize("relative", ["result.json", "run-logs/x.json", "data/dnse-foreign-flow/result.json"])
+def test_result_path_inside_producer_checkout_is_refused_before_material_work(tmp_path, monkeypatch, capsys, relative):
+    checkout = _fake_checkout(tmp_path, monkeypatch)
+    target = checkout / relative
+    code = workflow.main(["--result-path", str(target)])
+    assert code == 1
+    assert "OWNER_DAILY_RESULT_PATH_REJECTED=RESULT_PATH_INSIDE_PRODUCER_CHECKOUT" in capsys.readouterr().err
+    assert not target.exists()
+    assert list(checkout.iterdir()) == []  # not even a parent directory was created
+
+
+@pytest.mark.parametrize("spelling", ["outside/../stock-core-private/run-logs/x.json",
+                                      "stock-core-private/./nested/../run-logs/x.json"])
+def test_result_path_normalization_cannot_bypass_the_guard(tmp_path, monkeypatch, spelling):
+    checkout = _fake_checkout(tmp_path, monkeypatch)
+    (tmp_path / "outside").mkdir()
+    raw = str(tmp_path) + "/" + spelling
+    with pytest.raises(workflow.OwnerDailyError, match="RESULT_PATH_INSIDE_PRODUCER_CHECKOUT"):
+        workflow.validate_result_path(Path(raw), root=checkout)
+    assert workflow.main(["--result-path", raw]) == 1
+    assert list(checkout.iterdir()) == []
+
+
+def test_result_path_guard_is_case_insensitive_where_the_filesystem_is(tmp_path, monkeypatch):
+    checkout = _fake_checkout(tmp_path, monkeypatch)
+    if os.path.normcase("A") != os.path.normcase("a"):
+        pytest.skip("case-sensitive filesystem")
+    upper = Path(str(checkout).upper()) / "run-logs" / "x.json"
+    with pytest.raises(workflow.OwnerDailyError, match="RESULT_PATH_INSIDE_PRODUCER_CHECKOUT"):
+        workflow.validate_result_path(upper, root=checkout)
+
+
+def test_sibling_directory_sharing_the_checkout_name_prefix_is_accepted(tmp_path, monkeypatch):
+    checkout = _fake_checkout(tmp_path, monkeypatch)
+    sibling = tmp_path / "stock-core-private-run-logs" / "x.json"
+    assert workflow.validate_result_path(sibling, root=checkout) == sibling.resolve()
+
+
+def test_external_result_path_is_accepted_and_written_unchanged(tmp_path, monkeypatch):
+    checkout = tmp_path / "stock-core-private"
+    checkout.mkdir()
+    monkeypatch.setattr(workflow, "ROOT", checkout)
+    monkeypatch.setattr(workflow, "run_workflow", lambda **_k: {"status": "PASS", "session": SESSION})
+    target = tmp_path / "owner-daily-run-logs" / "run.result.json"
+    assert workflow.main(["--result-path", str(target)]) == 0
+    assert json.loads(target.read_text(encoding="utf-8")) == {"status": "PASS", "session": SESSION}
+    assert list(checkout.iterdir()) == []
+
+
+def test_result_path_guard_leaves_governed_untracked_data_semantics_unchanged(tmp_path):
+    """The guard is a CLI argument check only: approved runtime/evidence under data/ still passes
+    the (unchanged) shared cleanliness contract and repository preflight."""
+    import checkout_cleanliness_contract as cleanliness
+    assert "data/dnse-foreign-flow/" in cleanliness.APPROVED_RUNTIME_EVIDENCE_PREFIXES
+    root, _origin = _clone_with_origin(tmp_path)
+    evidence = root / "data" / "dnse-foreign-flow" / "observations" / "HPG.json"
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text("{}", encoding="utf-8")
+    assert cleanliness.classify_checkout_cleanliness(root).qualified is True
+    assert workflow.preflight_repository(root, expected_name="stock-core-private",
+                                         expected_remote_fragment="stock-core-private")["status"] == "UP_TO_DATE"
