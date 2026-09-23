@@ -21,6 +21,7 @@ def test_zero_flag_daily_delegates_to_run_owner_daily_main(monkeypatch, tmp_path
         calls.append(argv)
         result_path = [p for p in argv if p.endswith(".json")][0]
         from pathlib import Path
+        Path(result_path).parent.mkdir(parents=True, exist_ok=True)  # as the real main() does
         Path(result_path).write_text(json.dumps({
             "status": "PASS", "session": "2026-09-22", "daily_status": "COMPLETED",
             "ai_handoff": {"publication": {"status": "PUBLISHED_READY_FOR_AI"}},

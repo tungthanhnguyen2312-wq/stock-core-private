@@ -188,10 +188,12 @@ def _run_owner_daily_workflow() -> int:
     Daily; this function is only reached when NONE of them were given.
     """
     import tools.run_owner_daily as owner_daily
-    from datetime import datetime
 
-    result_path = ROOT / "run-logs" / f"stocklookup_daily_result_{datetime.now():%Y%m%d_%H%M%S}.json"
-    result_path.parent.mkdir(parents=True, exist_ok=True)
+    # The result path comes from run_owner_daily's own resolver: the external workspace-level
+    # run-logs directory the desktop launcher uses. A path inside this Producer checkout is
+    # refused by run_owner_daily.validate_result_path (RESULT_PATH_INSIDE_PRODUCER_CHECKOUT), so
+    # this entrypoint must never compute its own. run_owner_daily.main creates the directory.
+    result_path = owner_daily.default_result_path(root=ROOT)
     code = owner_daily.main(["--result-path", str(result_path)])
     try:
         result = json.loads(result_path.read_text(encoding="utf-8"))

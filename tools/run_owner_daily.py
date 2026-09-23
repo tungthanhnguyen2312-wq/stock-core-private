@@ -20,6 +20,10 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_RUNTIME = ROOT.parent / "dashboard-runtime"
 DEFAULT_HANDOFF_REPO = ROOT.parent / "stocklookup-ai-handoffs"
+# The external owner result/log root -- the same workspace-level directory the desktop one-click
+# launcher (tools/run_owner_daily.ps1, $logDir) writes to. Never inside the Producer checkout:
+# validate_result_path() refuses that (RESULT_PATH_INSIDE_PRODUCER_CHECKOUT).
+DEFAULT_RESULT_LOG_ROOT = ROOT.parent / "run-logs"
 DAILY_STATE_ALLOWLIST = ("config/daily_research_session_input_registry.json",)
 SESSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -161,6 +165,24 @@ def preflight_repository(root: Path, *, expected_name: str, expected_remote_frag
                               "Integrate main safely before running Daily; no reset or rebase was attempted.")
     _git(root, "pull", "--ff-only", "origin", "main")
     return {"head": _git(root, "rev-parse", "HEAD"), "status": "FAST_FORWARDED"}
+
+
+def preflight_dashboard_repository(dashboard_web_dir: Path) -> dict[str, str]:
+    """PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1: bring the canonical Dashboard checkout to
+    ``origin/main`` BEFORE any analytical Daily work, with the exact same safe-sync semantics as
+    the Producer (the one shared ``preflight_repository`` engine -- no second Git sync path):
+    ``market-dashboard`` checkout, ``main`` branch, market-dashboard origin, fetch, strictly
+    clean (any tracked change or untracked file blocks), UP_TO_DATE / ``pull --ff-only`` only,
+    ahead or diverged fails closed. Never resets, rebases, stashes, or cleans.
+
+    The Dashboard source can be promoted independently of Daily (e.g. from an isolated
+    worktree), so the canonical checkout may be a clean strict ancestor of ``origin/main`` when
+    Daily starts; the publisher deliberately refuses to pull and would otherwise fail only after
+    the whole analytical Daily. The publisher's own final ``HEAD == origin/main`` guard
+    (release_checkout_identity) is unchanged and still catches a remote advance after this point.
+    """
+    return preflight_repository(dashboard_web_dir, expected_name="market-dashboard",
+                                expected_remote_fragment="market-dashboard")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -767,6 +789,11 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
         # passes completed_session=None and keeps the strict clean-checkout contract.
         producer = preflight_repository(root, expected_name="stock-core-private", expected_remote_fragment="stock-core-private",
                                         completed_session=replay_completed_session, runtime_root=runtime_root)
+        # The canonical Dashboard checkout must be publishable before analytical work starts:
+        # a stale-but-clean checkout is fast-forwarded here, a dirty/ahead/diverged one stops
+        # Daily now instead of failing Dashboard publication after the whole Daily.
+        dashboard_preflight = (preflight_dashboard_repository(dashboard_web_dir) if publish_dashboard
+                               else {"status": "SKIPPED", "reason": "DASHBOARD_PUBLICATION_DISABLED"})
 
         if replay_completed_session:
             completion = verify_daily_completion(root, runtime_root, session=replay_completed_session)
@@ -803,7 +830,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 "reason": "PRESENTATION_UNKNOWN_CANNOT_COMPLETE", "presentation_state": presentation_state,
             })
             return {"status": "BLOCKED", "session": completion["session"], "daily_status": daily_status,
-                    "producer_preflight": producer, "producer_state": producer_state,
+                    "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "producer_state": producer_state,
                     "presentation_state": presentation_state, "reason": "PRESENTATION_UNKNOWN_CANNOT_COMPLETE",
                     "hint": "The dedicated post-handoff presentation attestation for this session is missing or "
                             "does not yet prove BOUND/LEGITIMATE_UNAVAILABLE. Publication was refused before it "
@@ -858,7 +885,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
                 "dashboard_failed": dashboard_failed, "action_center_status": action_center["status"],
             })
             return {"status": "PARTIAL", "session": completion["session"], "daily_status": daily_status,
-                    "producer_preflight": producer, "producer_state": producer_state,
+                    "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "producer_state": producer_state,
                     "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
                     "journal_run_id": run_id}
         action_center["view_open"] = open_action_center_view(str(action_center["view_path"]))
@@ -906,7 +933,7 @@ def run_workflow(*, root: Path = ROOT, runtime_root: Path = DEFAULT_RUNTIME,
             "action_center": {"session": session, "status": action_center.get("status"), "identity": action_center.get("identity")},
         })
         return {"status": "PASS", "session": completion["session"], "daily_status": daily_status,
-                "producer_preflight": producer, "producer_state": producer_state,
+                "producer_preflight": producer, "dashboard_preflight": dashboard_preflight, "producer_state": producer_state,
                 "dashboard": dashboard, "ai_handoff": handoff, "action_center": action_center,
                 "journal_run_id": run_id}
     except BaseException as exc:
@@ -931,6 +958,20 @@ def validate_result_path(result_path: Path, *, root: Path) -> Path:
                               "Write the owner result outside the Producer checkout, e.g. "
                               r"C:\Projects\StockLookup\owner-daily-run-logs\<run>.result.json.")
     return resolved
+
+
+def default_result_path(*, root: Path = ROOT, log_root: Path | None = None, now: datetime | None = None) -> Path:
+    """The one Python-owned owner result-path resolver (PRE_DAILY_WORKSPACE_READINESS_CORRECTIVE_V1).
+
+    Every Python entrypoint that starts the production Owner Daily (``stocklookup.py daily``)
+    takes its ``--result-path`` from here, so it can never drift from ``validate_result_path``
+    again. Defaults to the external workspace-level ``run-logs`` directory the desktop launcher
+    (tools/run_owner_daily.ps1) already uses, with the same file name pattern. The returned path
+    is validated against ``root`` before it is handed out; nothing is created on disk.
+    """
+    base = Path(log_root) if log_root is not None else Path(root).resolve().parent / "run-logs"
+    stamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
+    return validate_result_path(base / f"stock_lookup_daily_{stamp}.result.json", root=root)
 
 
 def main(argv: list[str] | None = None) -> int:
